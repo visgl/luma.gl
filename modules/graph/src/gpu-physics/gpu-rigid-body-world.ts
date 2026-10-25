@@ -628,6 +628,12 @@ export class GPURigidBodyWorld {
     const definitions = [...this.props.bodies];
     definitions.splice(bodyStart, restored.length, ...restored);
     this.props.bodies = definitions;
+    for (
+      let collider = colliderStart;
+      collider < colliderStart + this.props.collisionPartitionSize!;
+      collider++
+    )
+      this.colliderShapeScales.delete(collider);
     this.restoreColliderDefinitions();
     this.ensembleReset.reset(
       instance,
@@ -1214,7 +1220,7 @@ export class GPURigidBodyWorld {
               : entryPoint === 'meshCollide'
                 ? ['velocities', 'angularVelocities', 'manifolds', 'sleepStates', 'targets']
                 : entryPoint === 'integrate'
-                  ? ['manifolds']
+                  ? ['manifolds', ...(this.ensembleBuffer ? ['meshTasks'] : [])]
                   : entryPoint === 'collide'
                     ? [
                         'sleepStates',
@@ -1249,7 +1255,8 @@ export class GPURigidBodyWorld {
       const selectBinding = (name: string) =>
         entryPoint.startsWith('ensemble')
           ? name === 'ensemble' ||
-            (entryPoint === 'ensembleMark' && ['bodies', 'sleepStates'].includes(name))
+            (entryPoint === 'ensembleMark' && ['bodies', 'sleepStates'].includes(name)) ||
+            (entryPoint === 'ensembleClear' && extended && ['meshTasks', 'targets'].includes(name))
           : name === 'ensemble'
             ? usesScheduler
             : !unused.includes(name);

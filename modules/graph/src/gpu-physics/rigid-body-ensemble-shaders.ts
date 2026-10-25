@@ -12,9 +12,9 @@ import type {
 
 export function getEnsembleShader(
   bodyCount: number,
-  colliderCount: number,
   bodiesPerInstance?: number,
-  collidersPerInstance?: number
+  collidersPerInstance?: number,
+  extended = false
 ): string {
   if (!bodiesPerInstance || !collidersPerInstance)
     return `
@@ -42,7 +42,7 @@ fn scheduledCollider(index:u32)->u32{return atomicLoad(&ensemble[INSTANCE_QUEUE+
  let instance=invocation.x;if(instance>=INSTANCE_COUNT){return;}
  atomicStore(&ensemble[16u+instance*8u+1u],0u);
  atomicStore(&ensemble[16u+instance*8u+4u],0u);
- if(instance==0u){atomicStore(&ensemble[0],0u);}
+ if(instance==0u){atomicStore(&ensemble[0],0u);${extended ? 'atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&meshTasks.incomplete,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;' : ''}}
 }
 @compute @workgroup_size(64) fn ensembleMark(@builtin(global_invocation_id) invocation:vec3u){
  let body=invocation.x;if(body>=BODY_COUNT){return;}let instance=body/INSTANCE_BODIES;
@@ -54,8 +54,7 @@ fn scheduledCollider(index:u32)->u32{return atomicLoad(&ensemble[INSTANCE_QUEUE+
  if(atomicLoad(&ensemble[16u+instance*8u+1u])!=0u){let slot=atomicAdd(&ensemble[0],1u);atomicStore(&ensemble[INSTANCE_QUEUE+slot],instance);}
 }
 @compute @workgroup_size(1) fn ensembleDispatch(){
- // Keep one invocation for shared mesh-task counter initialization even when no bodies run.
- atomicStore(&ensemble[4],max(1u,(scheduledBodyCount()+63u)/64u));atomicStore(&ensemble[5],1u);atomicStore(&ensemble[6],1u);
+ atomicStore(&ensemble[4],(scheduledBodyCount()+63u)/64u);atomicStore(&ensemble[5],1u);atomicStore(&ensemble[6],1u);
  atomicStore(&ensemble[8],(scheduledColliderCount()+63u)/64u);atomicStore(&ensemble[9],1u);atomicStore(&ensemble[10],1u);
 }
 `;

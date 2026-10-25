@@ -57,7 +57,13 @@ fn parallelPair(index:u32)->u32 {
  parallelDispatch[9]=1u;parallelDispatch[10]=1u;parallelDispatch[11]=0u;
 }
 fn parallelSolvePair(index:u32)->u32 {
- if(!COMPACT_CONTACTS){return index;}
+ if(!COMPACT_CONTACTS){
+  if(index>=PAIR_CAPACITY||manifolds[index].count==0u){return PAIR_CAPACITY;}
+  // Only scheduled contacts were linked. Reuse adjacency to avoid a ninth storage binding.
+  let first=colliderBody(getFirstCollider(index));let second=colliderBody(getSecondCollider(index));
+  if(atomicLoad(&parallelState.heads[first])==0xffffffffu&&atomicLoad(&parallelState.heads[second])==0xffffffffu){return PAIR_CAPACITY;}
+  return index;
+ }
  if(index>=atomicLoad(&parallelState.diagnostics[3])){return PAIR_CAPACITY;}
  return parallelState.solvePairs[index];
 }
@@ -177,7 +183,7 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
 @compute @workgroup_size(64) fn parallelGather(@builtin(global_invocation_id) invocation:vec3u){
  var body=invocation.x;
  if(COMPACT_CONTACTS){if(body>=atomicLoad(&parallelState.diagnostics[2])){return;}body=parallelState.awakeBodies[body];}if(body>=BODY_COUNT||!dynamic(body)||sleepStates[body].y>0.5){return;}
- var linear=vec3f(0);var angular=vec3f(0);var edge=atomicLoad(&parallelState.heads[body]);
+ var linear=vec3f(0);var angular=vec3f(0);var edge=atomicLoad(&parallelState.heads[body]);if(edge==0xffffffffu){return;}
  loop{if(edge==0xffffffffu){break;}let pair=edge/2u;let endpoint=edge%2u;
   linear+=parallelState.deltas[pair*4u+endpoint*2u].xyz;angular+=parallelState.deltas[pair*4u+endpoint*2u+1u].xyz;edge=parallelState.next[edge];
  }

@@ -338,11 +338,15 @@ it('resets into the rebased coordinate system', async context => {
   }
 });
 
-it('preserves resting contacts through a long pause without synthetic exit events', async context => {
+it.each([
+  true,
+  false
+])('preserves paused contacts and events with compactContacts=%s', async (compactContacts, context) => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip('WebGPU unavailable');
   const ensemble = await GPUPhysicsEnsemble.create(device, {
     template: {
+      compactContacts,
       gravity: [0, -9.81, 0],
       sleepAfter: 0,
       eventCapacity: 256,
@@ -361,12 +365,26 @@ it('preserves resting contacts through a long pause without synthetic exit event
     device.submit(encoder.finish());
     return ensemble.world.readState();
   };
+  const contacts = async () => {
+    const capture = await ensemble.world.captureState({includeRollbackScratch: false});
+    const bytes = capture.buffers.find(buffer => buffer.name === 'manifolds')!.data;
+    const records = [];
+    for (let offset = 0; offset < bytes.length; offset += 416) {
+      const header = new DataView(bytes.buffer, bytes.byteOffset + offset, 416);
+      if (header.getUint32(384, true) && header.getUint32(388, true) < 2)
+        records.push(Array.from(bytes.slice(offset, offset + 416)));
+    }
+    return records;
+  };
   try {
     const before = await step(8);
+    const retained = await contacts();
+    expect(retained.length).toBeGreaterThan(0);
     await ensemble.world.readContactEvents();
     ensemble.setActive(0, false);
     const paused = await step(64);
     expect(paused.slice(0, 2)).toEqual(before.slice(0, 2));
+    expect(await contacts()).toEqual(retained);
     expect(
       (await ensemble.world.readContactEvents()).events.every(event => event.bodies[0] >= 2)
     ).toBe(true);
@@ -374,6 +392,81 @@ it('preserves resting contacts through a long pause without synthetic exit event
     const resumed = await step(8);
     expect(resumed[0].position[1]).toBeCloseTo(0.5, 3);
     expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('clears mesh work when every instance is paused and preserves peers during mesh reset', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const geometry = makeConvexHullGeometry(
+    Array.from({length: 8}, (_, corner) => [
+      corner & 1 ? 0.5 : -0.5,
+      corner & 2 ? 0.5 : -0.5,
+      corner & 4 ? 0.5 : -0.5
+    ]).flat()
+  );
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, -9.81, 0],
+      sleepAfter: 0,
+      bodies: [
+        {position: [0, 0.5, 0], shape: {type: 'convex-hull', geometry}},
+        {position: [0, 0, 0], mass: 0, shape: {type: 'plane'}}
+      ]
+    },
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const step = async () => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, 4);
+    device.submit(encoder.finish());
+    return ensemble.world.readState();
+  };
+  try {
+    const initial = await ensemble.world.readState();
+    const settled = await step();
+    ensemble.setActive(0, false);
+    ensemble.setActive(1, false);
+    expect(await step()).toEqual(settled);
+    expect((await ensemble.readStatus()).activeInstances).toBe(0);
+    await ensemble.reset(1);
+    const reset = await ensemble.world.readState();
+    expect(reset.slice(0, 2)).toEqual(settled.slice(0, 2));
+    expect(reset.slice(2)).toEqual(initial.slice(2));
+    ensemble.setActive(1, true);
+    await step();
+    expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('restores selected collider scales while retaining peer shape edits', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template,
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    ensemble.world.setColliderShapes([
+      {collider: 0, shape: {type: 'sphere', radius: 1}, shapeScale: [2, 2, 2]},
+      {collider: 2, shape: {type: 'sphere', radius: 1.5}, shapeScale: [3, 3, 3]}
+    ]);
+    await ensemble.reset(0);
+    expect(ensemble.world.getColliderShape(0)).toEqual({type: 'sphere', radius: 0.5});
+    expect(ensemble.world.getColliderShapeScale(0)).toEqual([1, 1, 1]);
+    expect(ensemble.world.getColliderShape(2)).toEqual({type: 'sphere', radius: 1.5});
+    expect(ensemble.world.getColliderShapeScale(2)).toEqual([3, 3, 3]);
+    expect(
+      (await ensemble.world.captureState({includeRollbackScratch: false})).colliderShapeScales
+    ).toEqual([[2, [3, 3, 3]]]);
   } finally {
     ensemble.destroy();
   }

@@ -129,6 +129,7 @@ export async function runBatchBenchmark(
       if (ensemble) ensemble.setActive(instance, false);
       else batch.setActive(handles[instance], false);
     }
+    const activeHandles = handles.slice(0, activeWorlds);
     const setupMilliseconds = performance.now() - setupStart;
     const timings: number[] = [];
     const encoding: number[] = [];
@@ -144,7 +145,7 @@ export async function runBatchBenchmark(
         batch.encode(encoder, options.steps);
         device.submit(encoder.finish());
       } else {
-        for (const handle of handles) {
+        for (const handle of activeHandles) {
           const encoder = device.createCommandEncoder();
           batch.encode(encoder, options.steps, [handle]);
           device.submit(encoder.finish());

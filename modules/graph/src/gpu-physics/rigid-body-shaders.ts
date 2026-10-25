@@ -58,7 +58,7 @@ struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f 
 @group(0) @binding(6) var<storage, read_write> manifolds: array<Manifold>;
 @group(0) @binding(7) var<storage, read_write> sleepStates: array<vec4f>;
 @group(0) @binding(9) var<storage, read_write> targets: Targets;
-${getEnsembleShader(count, colliderCount, ensembleBodiesPerInstance, collisionPartitionSize)}
+${getEnsembleShader(count, ensembleBodiesPerInstance, collisionPartitionSize, extended)}
 ${
   sparse
     ? getRigidBodyCacheShader(sparse)
@@ -163,7 +163,7 @@ fn solveFriction(firstCollider:u32,secondCollider:u32,contact:Contact,relative:v
  return tangent;
 }
 @compute @workgroup_size(64) fn integrate(@builtin(global_invocation_id) invocation: vec3u) {
- ${extended ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&meshTasks.incomplete,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
+ ${extended && !ensembleBodiesPerInstance ? 'if(invocation.x==0u){atomicStore(&meshTasks.count,0u);atomicStore(&meshTasks.overflow,0u);atomicStore(&meshTasks.unresolved,0u);atomicStore(&meshTasks.incomplete,0u);atomicStore(&targets.dispatch,0u);targets.vertical=1u;targets.depth=1u;}' : ''}
  let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);
  let rotation=orientations[body]; orientations[body]=select(vec4f(0,0,0,1),normalize(rotation),dot(rotation,rotation)>0.000001);
  if(bodies.bodies[body].motion.x==2.0 && targets.entries[body].position.w>0.0) {
