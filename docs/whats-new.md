@@ -1,5 +1,14 @@
 # What's New
 
+## Active-work GPU physics ensembles
+
+`GPUPhysicsEnsemble` now retains awake-instance state, prepares per-instance contact
+lists, clears touched spatial buckets, and journals changed body/contact/allocator
+state for shared rollback. `readWorkStatistics()` exposes active work and snapshot
+payload sizes without adding readback to simulation encoding. Physics Batch Lab
+adds sleeping and wake-storm workloads and a separate CPU/GPU stage profile.
+See [ensemble scheduling and limits](api-reference/gpgpu/gpu-physics.md#fused-independent-ensembles).
+
 ## Adaptive scientific particle tracing
 
 `ScientificFlowTracer` adds GPU RKF45 integration with physical-unit local error

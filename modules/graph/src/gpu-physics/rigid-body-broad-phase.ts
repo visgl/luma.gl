@@ -29,6 +29,8 @@ export type GPURigidBodyBroadPhaseProps = {
   partitionSize?: number;
   /** GPU compact instance queue produced by the rigid-body ensemble scheduler. */
   activeInstances?: GraphDataView<'uint32'>;
+  /** Optional initially zeroed persistent bucket storage for clearing only previously touched buckets. */
+  bucketState?: GraphDataView<'uint32'>;
   objectMetadata?: GraphDataView<'uint32'>;
   /** Canonical source-row pairs. Order is unspecified; each pair occurs once. */
   pairs: GraphDataView<'uint32x2'>;
@@ -80,6 +82,15 @@ export class GPURigidBodyBroadPhase {
         throw new Error('Invalid active instance queue');
     }
     const count = props.minima.length;
+    if (props.bucketState) {
+      validatePackedView(props.bucketState, ['uint32'], 'persistent buckets');
+      if (
+        !props.activeInstances ||
+        props.bucketState.buffer.transient ||
+        props.bucketState.length !== 2 ** Math.ceil(Math.log2(Math.max(1, count * 2))) + count + 2
+      )
+        throw new Error('Invalid persistent bucket storage');
+    }
     const maximumCandidates = props.maximumCandidateTestsPerQuery ?? 4096;
     const cellSize = props.minimumCellSize ?? 1 / 1024;
     if (
@@ -98,7 +109,11 @@ export class GPURigidBodyBroadPhase {
       maximumCandidates > 65535
     )
       throw new Error('Invalid rigid-body broad-phase layout');
-    const writable = [props.pairs, props.diagnostics];
+    const writable = [
+      props.pairs,
+      props.diagnostics,
+      ...(props.bucketState ? [props.bucketState] : [])
+    ];
     for (const output of writable)
       for (const input of [
         props.minima,
@@ -156,12 +171,14 @@ export class GPURigidBodyBroadPhase {
       ...(this.props.activeInstances
         ? {
             activeInstances: this.props.activeInstances,
-            heads: createTransientView(
-              graph,
-              `${this.id}-heads`,
-              'uint32',
-              2 ** Math.ceil(Math.log2(Math.max(1, count * 2)))
-            )
+            heads:
+              this.props.bucketState ??
+              createTransientView(
+                graph,
+                `${this.id}-heads`,
+                'uint32',
+                2 ** Math.ceil(Math.log2(Math.max(1, count * 2))) + count + 2
+              )
           }
         : {})
     };
@@ -216,6 +233,7 @@ export class GPURigidBodyBroadPhase {
       return createGPUComputeCommandNode<Parameters>({
         id: `${this.id}-${entryPoint}`,
         description: passDescriptions[entryPoint],
+        workload: {commandCount: 1},
         resources: [
           ...(this.props.activeInstances && ['assign', 'discover'].includes(entryPoint)
             ? [{buffer: this.props.activeInstances, usage: 'indirect' as const}]
@@ -232,9 +250,7 @@ export class GPURigidBodyBroadPhase {
     };
     return [
       pass('clear', ['diagnostics'], ['diagnostics'], 1),
-      ...(this.props.activeInstances
-        ? [pass('clearBuckets', ['heads'], ['heads'], Math.ceil(views.heads!.length / 64))]
-        : []),
+      ...(this.props.activeInstances ? [pass('clearBuckets', ['heads'], ['heads'], 1)] : []),
       pass(
         'assign',
         [
@@ -366,12 +382,21 @@ fn emit(first:u32,second:u32){
   if (props.activeInstances) {
     const instances = props.minima.length / props.partitionSize!;
     const queueOffset = offsets['activeInstances'] + 16 + instances * 8;
-    const bucketMask = views['heads'].length - 1;
+    const bucketCount = 2 ** Math.ceil(Math.log2(Math.max(1, props.minima.length * 2)));
+    const bucketMask = bucketCount - 1;
     source += `
 fn activeCount()->u32{return activeInstances[${offsets['activeInstances']}u]*${props.partitionSize}u;}
 fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${props.partitionSize}u]*${props.partitionSize}u+index%${props.partitionSize}u;}
 @compute @workgroup_size(64) fn clearBuckets(@builtin(global_invocation_id) invocation:vec3u){
- if(invocation.x<${views['heads'].length}u){atomicStore(&heads[invocation.x],0xffffffffu);}
+ // First use initializes the table; subsequent steps clear only buckets touched last step.
+ let initialized=${props.bucketState ? `atomicLoad(&heads[${offsets['heads']}u+${bucketCount + 1}u])` : '0u'};
+ let count=select(${bucketCount}u,atomicLoad(&heads[${offsets['heads']}u+${bucketCount}u]),initialized!=0u);
+ for(var index=invocation.x;index<count;index+=64u){
+  var bucket=index;if(initialized!=0u){bucket=atomicLoad(&heads[${offsets['heads']}u+${bucketCount + 2}u+index]);}
+  atomicStore(&heads[${offsets['heads']}u+bucket],0xffffffffu);
+ }
+ storageBarrier();
+ if(invocation.x==0u){atomicStore(&heads[${offsets['heads']}u+${bucketCount}u],0u);atomicStore(&heads[${offsets['heads']}u+${bucketCount + 1}u],1u);}
 }
 `;
     source = source
@@ -386,9 +411,13 @@ fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${p
       )
       .replace(
         'keys[' + offsets['keys'] + 'u+index]=hash(cell(index,level),level,domain(index));',
-        `let key=hash(cell(index,level),level,domain(index));values[${offsets['values']}u+index]=atomicExchange(&heads[key&${bucketMask}u],index);`
+        `let key=hash(cell(index,level),level,domain(index));let bucket=key&${bucketMask}u;let previous=atomicExchange(&heads[${offsets['heads']}u+bucket],index);values[${offsets['values']}u+index]=previous;
+ if(previous==0xffffffffu){let touched=atomicAdd(&heads[${offsets['heads']}u+${bucketCount}u],1u);atomicStore(&heads[${offsets['heads']}u+${bucketCount + 2}u+touched],bucket);}`
       )
-      .replace('var cursor=lowerBound(key);', `var cursor=atomicLoad(&heads[key&${bucketMask}u]);`)
+      .replace(
+        'var cursor=lowerBound(key);',
+        `var cursor=atomicLoad(&heads[${offsets['heads']}u+(key&${bucketMask}u)]);`
+      )
       .replace(
         `if(cursor>=BODY_COUNT||sortedKeys[${offsets['sortedKeys']}u+cursor]!=key){break;}let second=sortedValues[${offsets['sortedValues']}u+cursor];cursor++;`,
         `if(cursor>=BODY_COUNT){break;}if(bucketVisits>=${Math.min(0xffffffff, (props.maximumCandidateTestsPerQuery ?? 4096) * 32)}u){atomicAdd(&diagnostics[${offsets['diagnostics']}u+6u],1u);return;}bucketVisits++;let second=cursor;cursor=values[${offsets['values']}u+second];if(domain(first)!=domain(second)||(levels[${offsets['levels']}u+second]&63u)!=level||any(cell(second,level)!=coordinate)){continue;}`
