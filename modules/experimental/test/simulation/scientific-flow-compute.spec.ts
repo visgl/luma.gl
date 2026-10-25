@@ -125,3 +125,82 @@ it('ScientificFlowGraph converts geographic metres/second to angular displacemen
     graph.destroy();
   }
 });
+
+for (const integrator of ['rk2', 'rk4'] as const) {
+  it(`ScientificFlowGraph ${integrator} rejects mixed-mask cells and recovers failed spawns`, async context => {
+    const device = await getTestDevice('webgpu');
+    if (!device) return context.skip();
+    const valid = new Uint8Array(25).fill(1);
+    valid[12] = 0;
+    const graph = new ScientificFlowGraph(device, {
+      input: {
+        dimensions: ['y', 'x'],
+        shape: [5, 5],
+        eastward: new Float32Array(25).fill(0.3),
+        northward: new Float32Array(25),
+        valid
+      },
+      bounds: [0, 0, 1, 1],
+      particleCount: 4,
+      seed: 5,
+      integrator
+    });
+    const readState = async () => {
+      const bytes = await graph.output.readAsync();
+      return new Float32Array(bytes.buffer, bytes.byteOffset, 16);
+    };
+    try {
+      graph.output.write(
+        new Float32Array([
+          0.4,
+          0.4,
+          1,
+          7, // Three valid corners and one missing corner: reject this cell.
+          0.1,
+          0.1,
+          1,
+          7, // A fully valid cell must continue integrating normally.
+          0,
+          0,
+          -1,
+          0, // Seed 5 first spawns this particle beside the missing sample.
+          0.245,
+          0.4,
+          1,
+          7 // Starts valid; an integration stage enters the masked cell.
+        ])
+      );
+      graph.step(1 / 30);
+      let state = await readState();
+      expect(state[3]).toBe(8);
+      expect(state[15]).toBe(8);
+      expect(state[4]).toBeCloseTo(0.11, 6);
+      expect(state[5]).toBeCloseTo(0.1, 6);
+      expect(state[7]).toBe(7);
+      expect(state[8]).toBeGreaterThan(0.25);
+      expect(state[8]).toBeLessThan(0.75);
+      expect(state[9]).toBeGreaterThan(0.25);
+      expect(state[9]).toBeLessThan(0.75);
+      expect(state[10]).toBe(-1);
+      expect(state[11]).toBe(1);
+
+      graph.step(1 / 30);
+      state = await readState();
+      expect(state[9]).toBeLessThan(0.25);
+      expect(state[10]).toBe(0);
+      expect(state[11]).toBe(2);
+      const recoveredPosition = state.slice(8, 10);
+
+      graph.step(1 / 30);
+      state = await readState();
+      expect(state[4]).toBeCloseTo(0.13, 6);
+      expect(state[7]).toBe(7);
+      expect(state[8]).toBeCloseTo(recoveredPosition[0] + 0.01, 6);
+      expect(state[9]).toBeCloseTo(recoveredPosition[1], 6);
+      expect(state[10]).toBeCloseTo(1 / 30, 6);
+      expect(state[11]).toBe(2);
+    } finally {
+      graph.destroy();
+    }
+  });
+}
