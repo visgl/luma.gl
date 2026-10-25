@@ -176,6 +176,11 @@ export class GPUPhysicsEnsemble {
       this.encoding = this.graph.encode(encoder, {parameters: undefined});
   }
 
+  /** Last-step GPU work and copied payload sizes, read explicitly outside the simulation loop. */
+  readWorkStatistics() {
+    return this.world.readEnsembleWork();
+  }
+
   inspect() {
     return {graph: this.graph, encoding: this.encoding};
   }

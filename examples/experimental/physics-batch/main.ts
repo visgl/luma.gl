@@ -23,7 +23,11 @@ const exportButton = document.querySelector<HTMLButtonElement>('#export')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 let report: Awaited<ReturnType<typeof runBatchBenchmark>> | undefined;
-const device = await luma.createDevice({adapters: [webgpuAdapter], type: 'webgpu'});
+const device = await luma.createDevice({
+  adapters: [webgpuAdapter],
+  type: 'webgpu',
+  optionalFeatures: ['timestamp-query']
+});
 const number = (id: string) => Number(document.querySelector<HTMLInputElement>(`#${id}`)!.value);
 button.onclick = async () => {
   button.disabled = true;
@@ -41,8 +45,7 @@ button.onclick = async () => {
         warmup: 10,
         steps: 1,
         pairsPerBody: number('pairs'),
-        scene:
-          document.querySelector<HTMLSelectElement>('#scene')!.value === 'pile' ? 'pile' : 'sparse',
+        scene: getScenario(),
         submission:
           document.querySelector<HTMLSelectElement>('#submission')!.value === 'ensemble'
             ? 'ensemble'
@@ -55,7 +58,14 @@ button.onclick = async () => {
       },
       diagnostics
     );
-    status.textContent = `Active worlds: ${report.activeWorlds}/${report.options.worlds}\nComplete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds === null ? 'not retained' : `${report.reuseMilliseconds.toFixed(1)} ms`}\nReused slots: ${report.afterReuse.reusedSlots}`;
+    const work = report.workSamples.at(-1);
+    const breakdown = Object.entries(report.profile?.groups ?? {})
+      .map(
+        ([name, timing]) =>
+          `${name}: CPU ${timing.cpuEncodeMilliseconds.toFixed(2)} ms / GPU ${timing.gpuMilliseconds?.toFixed(2) ?? 'unavailable'} ms`
+      )
+      .join('\n');
+    status.textContent = `Active worlds: ${report.activeWorlds}/${report.options.worlds}\nComplete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds === null ? 'not retained' : `${report.reuseMilliseconds.toFixed(1)} ms`}\nReused slots: ${report.afterReuse.reusedSlots}\nLast-step active bodies: ${work?.activeBodies ?? 'unavailable'}\nVisited / journaled contacts: ${work?.visitedContacts ?? 'unavailable'} / ${work?.journaledContacts ?? 'unavailable'}\nTouched hash buckets: ${work?.touchedBuckets ?? 'unavailable'}\nSnapshot bytes: ${work ? work.bodySnapshotBytes + work.contactSnapshotBytes + work.allocatorSnapshotBytes : 'unavailable'}\n\nSeparate profiling sample:\n${breakdown}`;
     canvas.width = innerWidth * devicePixelRatio;
     canvas.height = innerHeight * devicePixelRatio;
     const context = canvas.getContext('2d')!;
@@ -92,3 +102,8 @@ exportButton.onclick = () => {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+function getScenario(): 'sparse' | 'pile' | 'sleeping' | 'wake-storm' {
+  const value = document.querySelector<HTMLSelectElement>('#scene')!.value;
+  return value === 'pile' || value === 'sleeping' || value === 'wake-storm' ? value : 'sparse';
+}

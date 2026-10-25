@@ -29,6 +29,8 @@ export type GPURigidBodyBroadPhaseProps = {
   partitionSize?: number;
   /** GPU compact instance queue produced by the rigid-body ensemble scheduler. */
   activeInstances?: GraphDataView<'uint32'>;
+  /** Optional persistent bucket storage for clearing only previously touched buckets. */
+  bucketState?: GraphDataView<'uint32'>;
   objectMetadata?: GraphDataView<'uint32'>;
   /** Canonical source-row pairs. Order is unspecified; each pair occurs once. */
   pairs: GraphDataView<'uint32x2'>;
@@ -80,6 +82,15 @@ export class GPURigidBodyBroadPhase {
         throw new Error('Invalid active instance queue');
     }
     const count = props.minima.length;
+    if (props.bucketState) {
+      validatePackedView(props.bucketState, ['uint32'], 'persistent buckets');
+      if (
+        !props.activeInstances ||
+        props.bucketState.buffer.transient ||
+        props.bucketState.length !== 2 ** Math.ceil(Math.log2(Math.max(1, count * 2))) + count + 2
+      )
+        throw new Error('Invalid persistent bucket storage');
+    }
     const maximumCandidates = props.maximumCandidateTestsPerQuery ?? 4096;
     const cellSize = props.minimumCellSize ?? 1 / 1024;
     if (
@@ -105,6 +116,7 @@ export class GPURigidBodyBroadPhase {
         props.maxima,
         ...(props.objectMetadata ? [props.objectMetadata] : []),
         ...(props.activeInstances ? [props.activeInstances] : []),
+        ...(props.bucketState ? [props.bucketState] : []),
         ...writable.filter(view => view !== output)
       ])
         if (output.buffer === input.buffer) {
@@ -156,12 +168,14 @@ export class GPURigidBodyBroadPhase {
       ...(this.props.activeInstances
         ? {
             activeInstances: this.props.activeInstances,
-            heads: createTransientView(
-              graph,
-              `${this.id}-heads`,
-              'uint32',
-              2 ** Math.ceil(Math.log2(Math.max(1, count * 2)))
-            )
+            heads:
+              this.props.bucketState ??
+              createTransientView(
+                graph,
+                `${this.id}-heads`,
+                'uint32',
+                2 ** Math.ceil(Math.log2(Math.max(1, count * 2))) + count + 2
+              )
           }
         : {})
     };
@@ -216,6 +230,7 @@ export class GPURigidBodyBroadPhase {
       return createGPUComputeCommandNode<Parameters>({
         id: `${this.id}-${entryPoint}`,
         description: passDescriptions[entryPoint],
+        workload: {commandCount: 1},
         resources: [
           ...(this.props.activeInstances && ['assign', 'discover'].includes(entryPoint)
             ? [{buffer: this.props.activeInstances, usage: 'indirect' as const}]
@@ -232,9 +247,7 @@ export class GPURigidBodyBroadPhase {
     };
     return [
       pass('clear', ['diagnostics'], ['diagnostics'], 1),
-      ...(this.props.activeInstances
-        ? [pass('clearBuckets', ['heads'], ['heads'], Math.ceil(views.heads!.length / 64))]
-        : []),
+      ...(this.props.activeInstances ? [pass('clearBuckets', ['heads'], ['heads'], 1)] : []),
       pass(
         'assign',
         [
@@ -366,12 +379,21 @@ fn emit(first:u32,second:u32){
   if (props.activeInstances) {
     const instances = props.minima.length / props.partitionSize!;
     const queueOffset = offsets['activeInstances'] + 16 + instances * 8;
-    const bucketMask = views['heads'].length - 1;
+    const bucketCount = 2 ** Math.ceil(Math.log2(Math.max(1, props.minima.length * 2)));
+    const bucketMask = bucketCount - 1;
     source += `
 fn activeCount()->u32{return activeInstances[${offsets['activeInstances']}u]*${props.partitionSize}u;}
 fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${props.partitionSize}u]*${props.partitionSize}u+index%${props.partitionSize}u;}
 @compute @workgroup_size(64) fn clearBuckets(@builtin(global_invocation_id) invocation:vec3u){
- if(invocation.x<${views['heads'].length}u){atomicStore(&heads[invocation.x],0xffffffffu);}
+ // First use initializes the table; subsequent steps clear only buckets touched last step.
+ let initialized=${props.bucketState ? `atomicLoad(&heads[${bucketCount + 1}u])` : '0u'};
+ let count=select(${bucketCount}u,atomicLoad(&heads[${bucketCount}u]),initialized!=0u);
+ for(var index=invocation.x;index<count;index+=64u){
+  var bucket=index;if(initialized!=0u){bucket=atomicLoad(&heads[${bucketCount + 2}u+index]);}
+  atomicStore(&heads[bucket],0xffffffffu);
+ }
+ storageBarrier();
+ if(invocation.x==0u){atomicStore(&heads[${bucketCount}u],0u);atomicStore(&heads[${bucketCount + 1}u],1u);}
 }
 `;
     source = source
@@ -386,7 +408,8 @@ fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${p
       )
       .replace(
         'keys[' + offsets['keys'] + 'u+index]=hash(cell(index,level),level,domain(index));',
-        `let key=hash(cell(index,level),level,domain(index));values[${offsets['values']}u+index]=atomicExchange(&heads[key&${bucketMask}u],index);`
+        `let key=hash(cell(index,level),level,domain(index));let bucket=key&${bucketMask}u;let previous=atomicExchange(&heads[bucket],index);values[${offsets['values']}u+index]=previous;
+ if(previous==0xffffffffu){let touched=atomicAdd(&heads[${bucketCount}u],1u);atomicStore(&heads[${bucketCount + 2}u+touched],bucket);}`
       )
       .replace('var cursor=lowerBound(key);', `var cursor=atomicLoad(&heads[key&${bucketMask}u]);`)
       .replace(

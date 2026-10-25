@@ -534,3 +534,195 @@ it('rejects adversarial hash bucket traversal instead of silently ignoring the w
     ensemble.destroy();
   }
 });
+
+it('copies active payloads independently of resident contact capacity and preserves wake notifications', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, 0, 0],
+      sleepAfter: 0.01,
+      bodies: [{position: [0, 0, 0], shape: {type: 'sphere', radius: 0.5}}]
+    },
+    instances: 128,
+    maximumPairs: 16384,
+    maximumResidentBytes: 32 * 1024 * 1024
+  });
+  const step = async (steps = 1) => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, steps);
+    device.submit(encoder.finish());
+    return ensemble.readWorkStatistics();
+  };
+  try {
+    await step(8);
+    expect(await step()).toMatchObject({
+      activeBodies: 0,
+      journaledContacts: 0,
+      visitedContacts: 0,
+      bodySnapshotBytes: 0,
+      contactSnapshotBytes: 0,
+      allocatorSnapshotBytes: 32
+    });
+    ensemble.setActive(7, false);
+    ensemble.wake(7);
+    await step(2);
+    ensemble.setActive(7, true);
+    expect(await step()).toMatchObject({
+      activeInstances: 1,
+      activeBodies: 1,
+      bodySnapshotBytes: 80,
+      allocatorSnapshotBytes: 40
+    });
+    await step(8);
+    ensemble.world.applyImpulse(7, [1, 0, 0]);
+    await step();
+    expect((await ensemble.world.readState())[7].position[0]).toBeGreaterThan(0);
+    expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('retires, reuses and resets sparse contact lists without changing paused peers', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template,
+    instances: 4,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const step = async (steps: number) => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, steps);
+    device.submit(encoder.finish());
+    return ensemble.world.readState();
+  };
+  try {
+    await step(16);
+    ensemble.setActive(3, false);
+    const paused = (await ensemble.world.readState()).slice(6);
+    for (let cycle = 0; cycle < 12; cycle++) {
+      await ensemble.reset(cycle % 3);
+      await step(40);
+      expect((await ensemble.world.readState()).slice(6)).toEqual(paused);
+      const work = await ensemble.readWorkStatistics();
+      expect(work.journaledContacts).toBeLessThanOrEqual(3);
+      expect(work.visitedContacts).toBeLessThanOrEqual(3);
+      expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+    }
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('repeated shared overflow restores contact payloads and allocator ownership', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, 0, 0],
+      bodies: Array.from({length: 12}, (_, index) => ({
+        position: [index * 0.01, 0, 0] as [number, number, number],
+        shape: {type: 'sphere' as const, radius: 0.5}
+      }))
+    },
+    instances: 4,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    const initial = await ensemble.world.readState();
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const encoder = device.createCommandEncoder();
+      ensemble.encode(encoder);
+      device.submit(encoder.finish());
+      expect(await ensemble.world.readState()).toEqual(initial);
+      const capture = await ensemble.world.captureState();
+      const contacts = capture.buffers.find(buffer => buffer.name === 'manifolds')!.data;
+      expect(contacts.slice(0, 64 * 416).every(value => value === 0)).toBe(true);
+      const targets = new Uint32Array(
+        capture.buffers.find(buffer => buffer.name === 'targets')!.data.buffer
+      );
+      const keyOffset = ensemble.world.count * 8 + 8;
+      expect(
+        Array.from(targets.slice(keyOffset, keyOffset + 64 * 2)).every(value => value === 0)
+      ).toBe(true);
+      expect(
+        Array.from(targets.slice(keyOffset + 64 * 2, keyOffset + 64 * 2 + 4)).every(
+          value => value === 0
+        )
+      ).toBe(true);
+    }
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('restores existing contacts and new claims when a later step exhausts discovery', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, 0, 0],
+      timeStep: 1 / 30,
+      sleepAfter: 0,
+      maximumCandidateTestsPerCollider: 4,
+      bodies: [
+        {position: [0, 0, 0], mass: 0, shape: {type: 'sphere', radius: 0.5}},
+        {position: [0.99, 0, 0], shape: {type: 'sphere', radius: 0.5}},
+        ...Array.from({length: 6}, (_, index) => ({
+          position: [12 + index * 6, 0, 0] as [number, number, number],
+          velocity: [-24 - index * 12, 0, 0] as [number, number, number],
+          shape: {type: 'sphere' as const, radius: 0.5}
+        }))
+      ]
+    },
+    instances: 4,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    let rejected = false;
+    let previouslyJournaled = false;
+    for (let step = 0; step < 60; step++) {
+      const before = await ensemble.world.captureState();
+      const encoder = device.createCommandEncoder();
+      ensemble.encode(encoder);
+      device.submit(encoder.finish());
+      const diagnostics = await ensemble.world.readSimulationDiagnostics();
+      if (!diagnostics.complete) {
+        const after = await ensemble.world.captureState();
+        for (const name of [
+          'positions',
+          'orientations',
+          'velocities',
+          'angular-velocities',
+          'sleep',
+          'manifolds',
+          'targets'
+        ]) {
+          const previous = before.buffers.find(buffer => buffer.name === name)!.data;
+          const current = after.buffers.find(buffer => buffer.name === name)!.data;
+          if (name === 'manifolds')
+            expect(current.slice(0, 64 * 416)).toEqual(previous.slice(0, 64 * 416));
+          else if (name === 'targets') {
+            // Header work counters and journal scratch describe the attempted step; ownership must roll back.
+            const start = ensemble.world.count * 32 + 32;
+            const end = start + (64 * 3 + 4 * 2) * 4;
+            expect(current.slice(start, end)).toEqual(previous.slice(start, end));
+          } else expect(current).toEqual(previous);
+        }
+        expect(diagnostics.incompleteQueries).toBeGreaterThan(0);
+        rejected = true;
+        break;
+      }
+      previouslyJournaled ||= (await ensemble.readWorkStatistics()).journaledContacts > 0;
+    }
+    expect(previouslyJournaled).toBe(true);
+    expect(rejected).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});

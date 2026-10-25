@@ -8,8 +8,11 @@ export type RigidBodySparseShaderLayout = {
   diagnosticOffset: number;
 };
 
-export function getRigidBodyCacheShader(layout: RigidBodySparseShaderLayout): string {
-  return /* wgsl */ `
+export function getRigidBodyCacheShader(
+  layout: RigidBodySparseShaderLayout,
+  ensemble = false
+): string {
+  let source = /* wgsl */ `
 const EMPTY_PAIR:u32=0u;
 const DELETED_PAIR:u32=0xffffffffu;
 fn metadataWord(component:u32)->u32{return bodies.geometry[component/4u][component%4u];}
@@ -55,4 +58,51 @@ var<workgroup> cacheEpoch:u32;
  }
 }
 `;
+  if (!ensemble) return source;
+  source = source.replaceAll(
+    'targets.keys[slot].epoch=targets.frame;',
+    'targets.keys[slot].epoch=targets.instanceFrames[first/INSTANCE_COLLIDERS];'
+  );
+  source = source.replace(
+    'targets.keys[reusable].epoch=targets.frame;',
+    `
+   journalManifold(reusable,observed);atomicAdd(&targets.reserved2,1u);
+   let instance=first/INSTANCE_COLLIDERS;
+   targets.links[reusable]=atomicExchange(&targets.instanceHeads[instance],reusable+1u);
+   targets.keys[reusable].epoch=targets.instanceFrames[instance];`
+  );
+  source =
+    source.slice(0, source.indexOf('var<workgroup> cacheEpoch')) +
+    /* wgsl */ `
+// Every slot has one owner during preparation and one successful claimant during discovery.
+// A retired slot reused in this step retains its first snapshot and appears once in the journal.
+fn journalManifold(pair:u32,key:u32){
+ if(targets.journalMarks[pair]!=0u){return;}
+ targets.journalKeys[pair]=vec2u(key,targets.keys[pair].epoch);targets.journalLinks[pair]=targets.links[pair];
+ manifolds[PAIR_CAPACITY+pair]=manifolds[pair];targets.journalMarks[pair]=1u;
+ let index=atomicAdd(&targets.reserved0,1u);targets.journalSlots[index]=pair;
+}
+@compute @workgroup_size(64) fn prepareStart(@builtin(local_invocation_index) invocation:u32){
+ let count=atomicLoad(&targets.reserved0);
+ for(var index=invocation;index<count;index+=64u){targets.journalMarks[targets.journalSlots[index]]=0u;}
+ storageBarrier();
+ if(invocation==0u){targets.frame++;atomicStore(&targets.reserved0,0u);atomicStore(&targets.reserved1,0u);atomicStore(&targets.reserved2,0u);atomicStore(&targets.cacheDropped,0u);}
+}
+@compute @workgroup_size(64) fn prepare(@builtin(global_invocation_id) invocation:vec3u){
+ let work=invocation.x;if(work>=atomicLoad(&ensemble[0])){return;}
+ let instance=atomicLoad(&ensemble[INSTANCE_QUEUE+work]);
+ targets.instanceFrames[instance]++;let epoch=targets.instanceFrames[instance];
+ var previous=0u;var link=atomicLoad(&targets.instanceHeads[instance]);
+ loop{
+  if(link==0u){break;}let pair=link-1u;let next=targets.links[pair];journalManifold(pair,atomicLoad(&targets.keys[pair].key));atomicAdd(&targets.reserved1,1u);
+  manifolds[pair].previousCount=manifolds[pair].count;manifolds[pair].count=0u;manifolds[pair].padding=vec3u(0);
+  if(epoch-targets.keys[pair].epoch>2u){
+   atomicStore(&targets.keys[pair].key,DELETED_PAIR);manifolds[pair].previousCount=0u;
+   if(previous==0u){atomicStore(&targets.instanceHeads[instance],next);}else{targets.links[previous-1u]=next;}
+  }else{previous=link;}
+  link=next;
+ }
+}
+`;
+  return source;
 }
