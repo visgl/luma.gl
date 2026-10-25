@@ -4,7 +4,7 @@
 import type {ScientificVectorFieldInput} from '@luma.gl/experimental';
 
 /** Reproducible analytic benchmarks, not observational ocean or weather data. */
-export function makeField(name: string): ScientificVectorFieldInput {
+export function makeField(name: string, time = 0): ScientificVectorFieldInput {
   const size = 256;
   const eastward = new Float32Array(size * size);
   const northward = new Float32Array(size * size);
@@ -29,8 +29,13 @@ export function makeField(name: string): ScientificVectorFieldInput {
           northward[index] += horizontalDistance * strength;
         }
       } else {
-        eastward[index] = -0.13 * Math.sin(2 * Math.PI * horizontal) * Math.cos(Math.PI * vertical);
-        northward[index] = 0.26 * Math.cos(2 * Math.PI * horizontal) * Math.sin(Math.PI * vertical);
+        const oscillation = 0.25 * Math.sin((2 * Math.PI * time) / 10);
+        const coordinate = 2 * horizontal;
+        const warped = oscillation * coordinate ** 2 + (1 - 2 * oscillation) * coordinate;
+        const derivative = 2 * oscillation * coordinate + 1 - 2 * oscillation;
+        eastward[index] = -0.13 * Math.sin(Math.PI * warped) * Math.cos(Math.PI * vertical);
+        northward[index] =
+          0.26 * Math.cos(Math.PI * warped) * Math.sin(Math.PI * vertical) * derivative;
       }
     }
   }

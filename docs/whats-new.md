@@ -1,5 +1,13 @@
 # What's New
 
+## Time-dependent scientific advection
+
+`ScientificFlowGraph` now accepts timestamped field pairs, samples each Runge–Kutta
+stage in space and time, and rotates snapshots without resetting particles.
+`advance()` uses bounded GPU substeps and exposes simulation time. Vector
+Observatory adds an evolving double gyre and a wall-time-driven simulation clock.
+Analytic trajectory and convergence tests qualify the new temporal path.
+
 ## Scientific vector-field advection
 
 `ScientificFlowGraph` now compiles WebGPU particle advection into a GPU command

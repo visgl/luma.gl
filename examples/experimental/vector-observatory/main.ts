@@ -128,11 +128,18 @@ struct Vertex {@builtin(position) position: vec4f};
   let graph: ScientificFlowGraph;
   let particles: Model;
   let paused = false;
+  let snapshotEnd = 0.25;
+  let previousFrame = performance.now();
   function restart() {
     particles?.destroy();
     graph?.destroy();
+    snapshotEnd = 0.25;
+    previousFrame = performance.now();
     graph = new ScientificFlowGraph(device, {
-      input: makeField(field.value),
+      input: makeField(field.value, 0),
+      ...(field.value === 'gyre'
+        ? {nextInput: makeField(field.value, snapshotEnd), timeRange: [0, snapshotEnd] as const}
+        : {}),
       bounds: [0, 0, 1, 1],
       particleCount: Number(count.value),
       lifetime: 45,
@@ -161,6 +168,7 @@ struct Vertex {@builtin(position) position: vec4f};
       }
     });
     graph.step(0);
+    element<HTMLOutputElement>('simulation-time').value = '0.00 s';
     historyWidth = 0;
     resizeHistory();
   }
@@ -181,8 +189,26 @@ struct Vertex {@builtin(position) position: vec4f};
   function animate(now: number) {
     if (stopped) return;
     try {
-      const deltaTime = Number(speed.value) / 90;
-      if (!paused) graph.step(deltaTime);
+      // Discard long background-tab gaps; normal playback follows elapsed wall time.
+      let deltaTime =
+        Math.min(0.1, Math.max(0, (now - previousFrame) / 1000)) * Number(speed.value);
+      previousFrame = now;
+      if (!paused) {
+        let remainingTime = deltaTime;
+        while (remainingTime > 0) {
+          if (field.value === 'gyre' && snapshotEnd - graph.time < 1e-10) {
+            snapshotEnd += 0.25;
+            graph.setNextSnapshot(makeField(field.value, snapshotEnd), snapshotEnd);
+          }
+          deltaTime =
+            field.value === 'gyre'
+              ? Math.min(remainingTime, snapshotEnd - graph.time)
+              : remainingTime;
+          graph.advance(deltaTime);
+          remainingTime -= deltaTime;
+        }
+        element<HTMLOutputElement>('simulation-time').value = graph.time.toFixed(2) + ' s';
+      }
       view.write(
         new Float32Array([
           canvas.width,

@@ -33,6 +33,7 @@ export type ScientificFlowFieldProps = {
 /** Uploads normalized scientific vector components into a GPU-resident velocity texture. */
 export class ScientificFlowField {
   readonly texture: Texture;
+  readonly maximumCellSpeed: number;
   readonly field: FlowParticleField;
   constructor(device: Device, props: ScientificFlowFieldProps) {
     const {input} = props;
@@ -77,16 +78,28 @@ export class ScientificFlowField {
     validateFlowParticleDomain({bounds, coordinates});
     // Preserve missing samples as finite values; shader validity is authoritative.
     const texels = new Float32Array(width * height * 4);
+    let maximumCellSpeed = 0;
+    const longitudeScale =
+      coordinates === 'lnglat'
+        ? 111195.08 * Math.cos((Math.max(Math.abs(bounds[1]), Math.abs(bounds[3])) * Math.PI) / 180)
+        : 1;
+    const latitudeScale = coordinates === 'lnglat' ? 111195.08 : 1;
     for (let index = 0; index < width * height; index++) {
       if (input.valid[index]) {
         const eastward = input.eastward[index],
           northward = input.northward[index];
         assert(Number.isFinite(eastward) && Number.isFinite(northward));
+        maximumCellSpeed = Math.max(
+          maximumCellSpeed,
+          (Math.abs(eastward) * (width - 1)) / ((bounds[2] - bounds[0]) * longitudeScale),
+          (Math.abs(northward) * (height - 1)) / ((bounds[3] - bounds[1]) * latitudeScale)
+        );
         texels[4 * index] = eastward;
         texels[4 * index + 1] = northward;
         texels[4 * index + 2] = 1;
       }
     }
+    this.maximumCellSpeed = maximumCellSpeed;
     this.texture = device.createTexture({
       id: props.id ?? 'scientific-flow-field',
       width,
