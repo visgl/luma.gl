@@ -47,6 +47,8 @@ try {
         delete result.states;
         results.push({repeat, ...result});
         writeFileSync(values.output, JSON.stringify({browser: browser.version(), results}, null, 2));
+        // Preserve every report while making failed qualification visible to automation.
+        if (!result.complete || !result.quality.passed) process.exitCode = 1;
         console.log(`${repeat} ${dimensions.worlds}x${dimensions.bodies} ${submission}: p95=${result.latencyMilliseconds.p95.toFixed(2)}ms body-steps/s=${result.bodyStepsPerSecond?.toFixed(0)} complete=${result.complete}`);
       }
     }
