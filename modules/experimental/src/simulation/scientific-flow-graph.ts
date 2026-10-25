@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture, type CommandEncoder, type ComputePass, type Device} from '@luma.gl/core';
-import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {
+  GPUCommandGraph,
+  type CompiledGPUCommandGraph,
+  type GPUCommandGraphEncoding
+} from '@luma.gl/graph/gpu-core';
 import {ScientificFlowCompute} from './scientific-flow-compute';
 import {ScientificFlowField, type ScientificVectorFieldInput} from './scientific-flow-field';
 
@@ -112,10 +116,10 @@ export class ScientificFlowGraph {
     return this.output;
   }
 
-  /** Encode the compiled graph; the caller controls command submission. */
-  record(encoder: CommandEncoder, deltaTime: number, substeps = 1): void {
+  /** Encode the compiled graph and return its inspection handle; the caller controls submission. */
+  record(encoder: CommandEncoder, deltaTime: number, substeps = 1): GPUCommandGraphEncoding {
     this.simulation.validateStep(deltaTime, substeps);
-    this.commandGraph.encode(encoder, {
+    return this.commandGraph.encode(encoder, {
       parameters: {deltaTime, substeps},
       textures: {
         'flow-velocity': this.field.texture,

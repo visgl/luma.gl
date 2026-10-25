@@ -5373,7 +5373,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/graph@npm:10.0.0-alpha.4, @luma.gl/graph@workspace:modules/graph":
+"@luma.gl/graph@npm:10.0.0-alpha.4, @luma.gl/graph@workspace:*, @luma.gl/graph@workspace:modules/graph":
   version: 0.0.0-use.local
   resolution: "@luma.gl/graph@workspace:modules/graph"
   dependencies:
@@ -17220,9 +17220,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-vector-observatory@workspace:examples/experimental/vector-observatory"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "workspace:*"
     "@luma.gl/engine": "workspace:*"
     "@luma.gl/experimental": "workspace:*"
+    "@luma.gl/graph": "workspace:*"
+    "@luma.gl/shadertools": "workspace:*"
+    preact: "npm:^10.17.0"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
     vite: "npm:^8.0.0"
   languageName: unknown
   linkType: soft
