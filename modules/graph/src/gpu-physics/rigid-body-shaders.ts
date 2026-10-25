@@ -26,7 +26,8 @@ export function getRigidBodyShader(
   linearDamping = 0,
   angularDamping = 0,
   jointCount = 0,
-  compactContacts = true
+  compactContacts = true,
+  collisionPartitionSize?: number
 ): string {
   return /* wgsl */ `
 const COMPACT_CONTACTS:bool=${compactContacts};
@@ -75,6 +76,7 @@ fn colliderLocal(collider: u32, vector: vec3f) -> vec3f {let rotation=colliderRo
 fn axis(collider: u32, index: u32) -> vec3f {var unit=vec3f(0);unit[index]=1;return rotate(colliderRotation(collider),unit);}
 fn readGeometry(index:u32)->vec4f{return bitcast<vec4f>(bodies.geometry[index]);}
 fn excludes(first:u32,second:u32)->bool {
+ ${collisionPartitionSize ? `if(first/${collisionPartitionSize}u!=second/${collisionPartitionSize}u){return true;}` : ''}
  if(jointExcluded(colliderBody(first),colliderBody(second))){return true;}
  let range=bodies.exclusions[first];let start=u32(range.x);let count=u32(range.y);
  var lower=0u;var upper=count;

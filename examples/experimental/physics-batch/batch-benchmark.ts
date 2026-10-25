@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import type {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import type {Device} from '@luma.gl/core';
-import {GPUPhysicsBatch, type GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
+import {
+  GPUPhysicsBatch,
+  GPUPhysicsEnsemble,
+  type GPURigidBodyWorldProps
+} from '@luma.gl/graph/gpu-physics';
 
 export type BatchBenchmarkOptions = {
   worlds: number;
@@ -11,17 +15,22 @@ export type BatchBenchmarkOptions = {
   frames: number;
   warmup: number;
   steps: number;
+  pairsPerBody?: number;
   scene: 'sparse' | 'pile';
-  submission: 'batched' | 'separate';
+  submission: 'batched' | 'separate' | 'ensemble';
 };
 
-export function makeBatchFixture(count: number, scene: 'sparse' | 'pile'): GPURigidBodyWorldProps {
+export function makeBatchFixture(
+  count: number,
+  scene: 'sparse' | 'pile',
+  pairsPerBody = 16
+): GPURigidBodyWorldProps {
   const width = Math.ceil(Math.sqrt(count));
   const spacing = scene === 'sparse' ? 2 : 0.98;
   return {
     solver: 'parallel',
     broadPhase: 'hierarchical-grid',
-    maximumPairs: 2 ** Math.ceil(Math.log2(Math.max(64, count * 16))),
+    maximumPairs: 2 ** Math.ceil(Math.log2(Math.max(64, count * pairsPerBody))),
     iterations: 8,
     timeStep: 1 / 120,
     gravity: scene === 'pile' ? [0, -9.81, 0] : [0, 0, 0],
@@ -67,12 +76,18 @@ export async function runBatchBenchmark(
   diagnostics?: GPUGraphDiagnostics
 ) {
   if (
+    !Number.isInteger(options.pairsPerBody ?? 16) ||
+    (options.pairsPerBody ?? 16) < 1 ||
+    (options.pairsPerBody ?? 16) > 64 ||
+    !['ensemble', 'separate', 'batched'].includes(options.submission) ||
+    !['sparse', 'pile'].includes(options.scene) ||
+    (options.submission !== 'ensemble' && options.worlds > 128) ||
     !Number.isInteger(options.worlds) ||
     options.worlds < 1 ||
-    options.worlds > 128 ||
+    options.worlds > 4096 ||
     !Number.isInteger(options.bodies) ||
     options.bodies < 1 ||
-    options.bodies > 16384 ||
+    options.bodies > 65535 ||
     !Number.isInteger(options.frames) ||
     options.frames < 1 ||
     options.frames > 2000 ||
@@ -89,20 +104,33 @@ export async function runBatchBenchmark(
     maximumResidentBytes: 512 * 1024 * 1024,
     maximumResidentWorlds: options.worlds
   });
-  const fixture = makeBatchFixture(options.bodies, options.scene);
-  batch.registerTemplate('fixture', fixture);
+  const fixture = makeBatchFixture(options.bodies, options.scene, options.pairsPerBody);
+  let ensemble: GPUPhysicsEnsemble | undefined;
+  if (options.submission !== 'ensemble') batch.registerTemplate('fixture', fixture);
   const setupStart = performance.now();
   try {
     const handles = [];
-    for (let index = 0; index < options.worlds; index++)
-      handles.push(await batch.acquire('fixture', `world-${index}`, [index * 1e9, 0, 0]));
+    if (options.submission === 'ensemble') {
+      ensemble = await GPUPhysicsEnsemble.create(device, {
+        template: fixture,
+        instances: options.worlds,
+        maximumPairs: 2 ** Math.ceil(Math.log2(fixture.maximumPairs! * options.worlds)),
+        maximumResidentBytes: 512 * 1024 * 1024
+      });
+    } else
+      for (let index = 0; index < options.worlds; index++)
+        handles.push(await batch.acquire('fixture', `world-${index}`, [index * 1e9, 0, 0]));
     const setupMilliseconds = performance.now() - setupStart;
     const timings: number[] = [];
     const encoding: number[] = [];
     let complete = true;
     for (let frame = 0; frame < options.frames; frame++) {
       const start = performance.now();
-      if (options.submission === 'batched') {
+      if (ensemble) {
+        const encoder = device.createCommandEncoder();
+        ensemble.encode(encoder, options.steps);
+        device.submit(encoder.finish());
+      } else if (options.submission === 'batched') {
         const encoder = device.createCommandEncoder();
         batch.encode(encoder, options.steps);
         device.submit(encoder.finish());
@@ -126,19 +154,28 @@ export async function runBatchBenchmark(
         encoding.push(encoded - start);
       }
       // Observe every frame so a rejected step cannot disappear in a later sample.
+      if (ensemble) complete &&= (await ensemble.world.readSimulationDiagnostics()).complete;
       for (const handle of handles)
         complete &&= (await batch.getWorld(handle).readSimulationDiagnostics()).complete;
       progress?.(frame + 1);
     }
-    const observation = batch.inspect(handles[0]);
+    const observation = ensemble ? ensemble.inspect() : batch.inspect(handles[0]);
     if (observation.encoding) diagnostics?.record(observation.graph, observation.encoding);
-    const states = await batch.getWorld(handles[0]).readState();
+    const ensembleStates = ensemble ? await ensemble.world.readState() : undefined;
+    const states = ensembleStates
+      ? ensembleStates.slice(0, fixture.bodies.length)
+      : await batch.getWorld(handles[0]).readState();
     let maximumBallisticError = 0;
     let maximumWorldDifference = 0;
     let finite = true;
     const duration = options.frames * options.steps * fixture.timeStep!;
-    for (const handle of handles) {
-      const sample = await batch.getWorld(handle).readState();
+    for (let instance = 0; instance < options.worlds; instance++) {
+      const sample = ensembleStates
+        ? ensembleStates.slice(
+            instance * fixture.bodies.length,
+            (instance + 1) * fixture.bodies.length
+          )
+        : await batch.getWorld(handles[instance]).readState();
       for (const [index, state] of sample.entries()) {
         finite &&= [...state.position, ...state.velocity, ...state.orientation].every(
           Number.isFinite
@@ -174,11 +211,12 @@ export async function runBatchBenchmark(
           : 'Finite states and world equivalence only; no dense-contact accuracy claim.'
     };
     const elapsed = timings.reduce((sum, value) => sum + value, 0);
-    const beforeReuse = batch.getStats();
+    const beforeReuse = ensemble ? {...ensemble.getStats(), reusedSlots: 0} : batch.getStats();
     const recycleStart = performance.now();
     for (const handle of handles) batch.release(handle);
-    for (let index = 0; index < options.worlds; index++)
-      await batch.acquire('fixture', `recycled-${index}`);
+    if (!ensemble)
+      for (let index = 0; index < options.worlds; index++)
+        await batch.acquire('fixture', `recycled-${index}`);
     const recycleFence = device.createFence();
     try {
       await recycleFence.signaled;
@@ -192,7 +230,7 @@ export async function runBatchBenchmark(
       complete,
       quality,
       setupMilliseconds,
-      reuseMilliseconds,
+      reuseMilliseconds: ensemble ? null : reuseMilliseconds,
       latencyMilliseconds: {p50: percentile(timings, 0.5), p95: percentile(timings, 0.95)},
       encodingMilliseconds: {p50: percentile(encoding, 0.5), p95: percentile(encoding, 0.95)},
       worldStepsPerSecond:
@@ -205,12 +243,14 @@ export async function runBatchBenchmark(
             elapsed
           : null,
       beforeReuse,
-      afterReuse: batch.getStats(),
+      afterReuse: ensemble ? {...ensemble.getStats(), reusedSlots: 0} : batch.getStats(),
+      graphEncodingsPerStep: ensemble ? 1 : options.worlds,
       states,
       qualification:
         'Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.'
     };
   } finally {
+    ensemble?.destroy();
     batch.destroy();
   }
 }

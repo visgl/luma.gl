@@ -25,6 +25,8 @@ export type GPURigidBodyBroadPhaseProps = {
   minima: GraphDataView<'float32x3'>;
   maxima: GraphDataView<'float32x3'>;
   /** Optional lower-16-bit body ID and bit-16 dynamic flag; suppress self/static pairs. */
+  /** Equal contiguous collider domains. Different domains never produce pairs. */
+  partitionSize?: number;
   objectMetadata?: GraphDataView<'uint32'>;
   /** Canonical source-row pairs. Order is unspecified; each pair occurs once. */
   pairs: GraphDataView<'uint32x2'>;
@@ -71,6 +73,10 @@ export class GPURigidBodyBroadPhase {
     const maximumCandidates = props.maximumCandidateTestsPerQuery ?? 4096;
     const cellSize = props.minimumCellSize ?? 1 / 1024;
     if (
+      (props.partitionSize !== undefined &&
+        (!Number.isSafeInteger(props.partitionSize) ||
+          props.partitionSize < 1 ||
+          count % props.partitionSize !== 0)) ||
       count !== props.maxima.length ||
       (props.objectMetadata && props.objectMetadata.length !== count) ||
       count > 65535 ||
@@ -234,8 +240,9 @@ fn maximum(index:u32)->vec3f{let offset=${offsets['maxima']}u+index*3u;return ve
 fn valid(index:u32)->bool{let lower=minimum(index);let upper=maximum(index);return all(lower<=upper)&&all(abs(lower)<=vec3f(3.4028234663852886e38))&&all(abs(upper)<=vec3f(3.4028234663852886e38));}
 fn center(index:u32)->vec3f{return minimum(index)*0.5+maximum(index)*0.5;}
 fn cell(index:u32,level:u32)->vec3i{return vec3i(floor(center(index)/(BASE_CELL*exp2(f32(level)))));}
-fn hash(coordinate:vec3i,level:u32)->u32{
- let words=bitcast<vec3u>(coordinate);var result=(words.x*73856093u)^(words.y*19349663u)^(words.z*83492791u)^(level*2654435761u);
+fn domain(index:u32)->u32{return ${props.partitionSize ? `index/${props.partitionSize}u` : '0u'};}
+fn hash(coordinate:vec3i,level:u32,domainIndex:u32)->u32{
+ let words=bitcast<vec3u>(coordinate);var result=(words.x*73856093u)^(words.y*19349663u)^(words.z*83492791u)^(level*2654435761u)^(domainIndex*1597334677u);
  result=(result^(result>>16u))*2246822519u;return result^(result>>13u);
 }
 @compute @workgroup_size(8) fn clear(@builtin(local_invocation_index) index:u32){atomicStore(&diagnostics[${offsets['diagnostics']}u+index],0u);}
@@ -250,10 +257,11 @@ fn hash(coordinate:vec3i,level:u32)->u32{
  if(level<32u&&any(abs(center(index)/(BASE_CELL*exp2(f32(level))))>vec3f(1048576.0))){level=32u;}
  levels[${offsets['levels']}u+index]=level|(${props.objectMetadata ? `(objectMetadata[${offsets['objectMetadata']}u+index]&0x1ffffu)` : '(index|(1u<<16u))'}<<6u);
  if(level>=32u){let slot=atomicAdd(&diagnostics[${offsets['diagnostics']}u+5u],1u);oversized[${offsets['oversized']}u+slot]=index;keys[${offsets['keys']}u+index]=0xffffffffu;return;}
- atomicOr(&diagnostics[${offsets['diagnostics']}u+4u],1u<<level);keys[${offsets['keys']}u+index]=hash(cell(index,level),level);
+ atomicOr(&diagnostics[${offsets['diagnostics']}u+4u],1u<<level);keys[${offsets['keys']}u+index]=hash(cell(index,level),level,domain(index));
 }
 fn lowerBound(key:u32)->u32{var lower=0u;var upper=BODY_COUNT;loop{if(lower>=upper){break;}let middle=(lower+upper)/2u;if(sortedKeys[${offsets['sortedKeys']}u+middle]<key){lower=middle+1u;}else{upper=middle;}}return lower;}
 fn emit(first:u32,second:u32){
+ if(domain(first)!=domain(second)){return;}
  let firstMetadata=levels[${offsets['levels']}u+first]>>6u;let secondMetadata=levels[${offsets['levels']}u+second]>>6u;
  if((firstMetadata&0xffffu)==(secondMetadata&0xffffu)||((firstMetadata|secondMetadata)&0x10000u)==0u){return;}
  if(any(maximum(first)<minimum(second))||any(maximum(second)<minimum(first))){return;}
@@ -266,17 +274,17 @@ fn emit(first:u32,second:u32){
  var tested=0u;var occupied=0u;if(ownLevel<32u){occupied=atomicLoad(&diagnostics[${offsets['diagnostics']}u+4u])&(0xffffffffu<<ownLevel);}
  loop{if(occupied==0u){break;}let level=firstTrailingBit(occupied);occupied&=~(1u<<level);let origin=cell(first,level);
   for(var z=-1;z<=1;z++){for(var y=-1;y<=1;y++){for(var x=-1;x<=1;x++){
-   let coordinate=origin+vec3i(x,y,z);let key=hash(coordinate,level);var cursor=lowerBound(key);
+   let coordinate=origin+vec3i(x,y,z);let key=hash(coordinate,level,domain(first));var cursor=lowerBound(key);
    loop{if(cursor>=BODY_COUNT||sortedKeys[${offsets['sortedKeys']}u+cursor]!=key){break;}let second=sortedValues[${offsets['sortedValues']}u+cursor];cursor++;
     if(tested>=MAXIMUM_CANDIDATES){atomicAdd(&diagnostics[${offsets['diagnostics']}u+6u],1u);return;}tested++;atomicAdd(&diagnostics[${offsets['diagnostics']}u+3u],1u);
     if((levels[${offsets['levels']}u+second]&63u)!=level||(level==ownLevel&&second<=first)){continue;}
-    if(any(cell(second,level)!=coordinate)){continue;}
+    if(domain(first)!=domain(second)||any(cell(second,level)!=coordinate)){continue;}
     emit(first,second);
    }
   }}}
  }
  let oversizedCount=atomicLoad(&diagnostics[${offsets['diagnostics']}u+5u]);
- for(var index=0u;index<oversizedCount;index++){let second=oversized[${offsets['oversized']}u+index];if(second==first||(ownLevel==32u&&second<first)){continue;}
+ for(var index=0u;index<oversizedCount;index++){let second=oversized[${offsets['oversized']}u+index];if(domain(first)!=domain(second)||second==first||(ownLevel==32u&&second<first)){continue;}
   if(tested>=MAXIMUM_CANDIDATES){atomicAdd(&diagnostics[${offsets['diagnostics']}u+6u],1u);return;}tested++;atomicAdd(&diagnostics[${offsets['diagnostics']}u+3u],1u);emit(first,second);
  }
 }

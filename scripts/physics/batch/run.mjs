@@ -13,6 +13,8 @@ const {values} = parseArgs({options: {
   frames: {type: 'string', default: '120'},
   repeats: {type: 'string', default: '3'},
   scene: {type: 'string', default: 'sparse'},
+  modes: {type: 'string', default: 'ensemble,batched,separate'},
+  'pairs-per-body': {type: 'string', default: '16'},
   output: {type: 'string', default: '/tmp/physics-batch-report.json'}
 }});
 const root = fileURLToPath(new URL('../../../', import.meta.url)).replace(/\/$/, '');
@@ -23,6 +25,8 @@ const cases = values.cases.split(',').map(value => {
 });
 const frames = Number(values.frames), repeats = Number(values.repeats);
 if (!Number.isInteger(repeats) || repeats < 1 || repeats > 10 || !['sparse', 'pile'].includes(values.scene)) throw new Error('Invalid repetitions or scene');
+const modes = values.modes.split(',');
+if (!modes.length || modes.some(mode => !['ensemble', 'batched', 'separate'].includes(mode))) throw new Error('Invalid modes');
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', headless: true}));
 const results = [];
 try {
@@ -32,17 +36,17 @@ try {
   await page.goto(`${values.url}/benchmark-shell`);
   for (let repeat = 0; repeat < repeats; repeat++) {
     for (const dimensions of cases) {
-      for (const submission of repeat % 2 ? ['separate', 'batched'] : ['batched', 'separate']) {
+      for (const submission of repeat % 2 ? [...modes].reverse() : modes) {
         const result = await page.evaluate(async ({root, options}) => {
           const [{luma}, {webgpuAdapter}, {runBatchBenchmark}] = await Promise.all([
             import(`${root}/modules/core/src/index.ts`),
             import(`${root}/modules/core/src/webgpu/index.ts`),
-            import(`${root}/examples/experimental/physics-stress/batch-benchmark.ts`)
+            import(`${root}/examples/experimental/physics-batch/batch-benchmark.ts`)
           ]);
           const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter]});
           try { return await runBatchBenchmark(device, options); }
           finally { device.destroy(); }
-        }, {root: `/@fs${root}`, options: {...dimensions, frames, warmup: 10, steps: 1, scene: values.scene, submission}});
+        }, {root: `/@fs${root}`, options: {...dimensions, frames, warmup: 10, steps: 1, scene: values.scene, pairsPerBody: Number(values['pairs-per-body']), submission}});
         // Final sampled states are available in the interactive export; keep suite reports compact.
         delete result.states;
         results.push({repeat, ...result});

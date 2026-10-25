@@ -129,6 +129,8 @@ export type GPURigidBodyWorldProps = {
   /** Additional under-relaxation for the parallel solver, in (0, 1]. Default 1. */
   parallelRelaxation?: number;
   /** Small worlds retain the all-pairs numerical oracle; larger worlds use sparse discovery. */
+  /** Independent equal collider blocks; currently excludes joints, CCD and authored triggers. */
+  collisionPartitionSize?: number;
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
   /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
   solver?: 'ordered' | 'parallel';
@@ -394,6 +396,15 @@ export class GPURigidBodyWorld {
         )
       )
         throw new Error('Invalid collider filter');
+    if (
+      props.collisionPartitionSize !== undefined &&
+      (!Number.isSafeInteger(props.collisionPartitionSize) ||
+        props.collisionPartitionSize < 1 ||
+        !colliders.length ||
+        colliders.length % props.collisionPartitionSize !== 0 ||
+        Boolean(props.joints?.length || props.continuous || props.triggers?.length))
+    )
+      throw new Error('Invalid collision partitions');
     this.colliderCount = colliders.length;
     this.colliderStorageCount = Math.max(1, colliders.length);
     // WGSL fixed arrays require a positive size. A lone private collider cannot
@@ -827,7 +838,8 @@ export class GPURigidBodyWorld {
       this.props.linearDamping ?? 0,
       this.props.angularDamping ?? 0,
       this.props.joints?.length ?? 0,
-      this.props.compactContacts ?? true
+      this.props.compactContacts ?? true,
+      this.props.collisionPartitionSize
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
@@ -1003,6 +1015,7 @@ export class GPURigidBodyWorld {
         const broadPhase = new GPURigidBodyBroadPhase({
           id: `${this.id}-broad-phase`,
           objectMetadata: objectAttributeView,
+          partitionSize: this.props.collisionPartitionSize,
           maximumCandidateTestsPerQuery: this.props.maximumCandidateTestsPerCollider,
           minima: graph.createDataView(minimumBinding.resource, {
             format: 'float32x3',

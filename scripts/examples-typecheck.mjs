@@ -35,6 +35,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/gpu-sphere-world',
   'experimental/gpu-rigid-body-world',
   'experimental/physics-stress',
+  'experimental/physics-batch',
   'experimental/vector-observatory',
   'experimental/gpu-pool',
   'experimental/gpu-trace-viewer',
@@ -92,6 +93,7 @@ const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorial
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'experimental/gpu-rigid-body-world',
   'experimental/physics-stress',
+  'experimental/physics-batch',
   'experimental/vector-observatory',
   'deck/gltf-interactivity',
   'experimental/gpu-sphere-world',

@@ -129,3 +129,5 @@ export type {
   GPUPhysicsWorldHandle,
   GPUPhysicsStreamedWorld
 } from './gpu-physics-batch';
+
+export {GPUPhysicsEnsemble, type GPUPhysicsEnsembleProps} from './gpu-physics-ensemble';

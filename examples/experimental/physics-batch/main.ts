@@ -39,19 +39,22 @@ button.onclick = async () => {
         frames: number('frames'),
         warmup: 10,
         steps: 1,
+        pairsPerBody: number('pairs'),
         scene:
           document.querySelector<HTMLSelectElement>('#scene')!.value === 'pile' ? 'pile' : 'sparse',
         submission:
-          document.querySelector<HTMLSelectElement>('#submission')!.value === 'separate'
-            ? 'separate'
-            : 'batched'
+          document.querySelector<HTMLSelectElement>('#submission')!.value === 'ensemble'
+            ? 'ensemble'
+            : document.querySelector<HTMLSelectElement>('#submission')!.value === 'separate'
+              ? 'separate'
+              : 'batched'
       },
       frame => {
         status.textContent = `Frame ${frame}/${number('frames')}`;
       },
       diagnostics
     );
-    status.textContent = `Complete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds.toFixed(1)} ms\nReused slots: ${report.afterReuse.reusedSlots}`;
+    status.textContent = `Complete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds === null ? 'not retained' : `${report.reuseMilliseconds.toFixed(1)} ms`}\nReused slots: ${report.afterReuse.reusedSlots}`;
     canvas.width = innerWidth * devicePixelRatio;
     canvas.height = innerHeight * devicePixelRatio;
     const context = canvas.getContext('2d')!;
