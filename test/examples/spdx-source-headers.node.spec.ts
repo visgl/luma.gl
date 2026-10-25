@@ -35,12 +35,6 @@ const EXCLUDED_SOURCE_DIRECTORIES = new Set([
 const SPDX_LICENSE_IDENTIFIER_PATTERN = /^\s*(?:\/\/|\/\*+|\*)\s*SPDX-License-Identifier:\s*\S/u;
 const SPDX_FILE_COPYRIGHT_TEXT_PATTERN = /^\s*(?:\/\/|\/\*+|\*)\s*SPDX-FileCopyrightText:\s*\S/u;
 
-// Embedded third-party material needs its actual owners and license expressions reviewed before
-// these existing headers can be normalized without incorrectly assigning ownership to vis.gl.
-const TEMPORARY_MIXED_LICENSE_EXCEPTIONS = new Set([
-  'modules/effects/src/passes/postprocessing/fxaa/fxaa.ts'
-]);
-
 // This declaration file was copied from Spector.js and must retain its independently reviewed
 // upstream ownership instead of receiving a speculative vis.gl copyright claim.
 const THIRD_PARTY_SOURCE_EXCEPTIONS = new Set(['modules/core/src/webgl-debug/spector-types.ts']);
@@ -115,10 +109,6 @@ describe('SPDX source headers', () => {
 
       licensedSourceCount++;
 
-      if (TEMPORARY_MIXED_LICENSE_EXCEPTIONS.has(sourceFile)) {
-        continue;
-      }
-
       if (!sourceHeader.some(headerLine => SPDX_FILE_COPYRIGHT_TEXT_PATTERN.test(headerLine))) {
         missingCopyrightSources.push(sourceFile);
       }
@@ -127,25 +117,6 @@ describe('SPDX source headers', () => {
     expect(licensedSourceCount).toBeGreaterThan(0);
     expect(missingLicenseSources).toEqual([]);
     expect(missingCopyrightSources).toEqual([]);
-  });
-
-  test('removes temporary mixed-license exceptions after their ownership is normalized', () => {
-    const repositorySourceFiles = new Set(REPOSITORY_SOURCE_FILES);
-
-    for (const sourceFile of TEMPORARY_MIXED_LICENSE_EXCEPTIONS) {
-      expect(repositorySourceFiles.has(sourceFile), sourceFile).toBe(true);
-
-      const sourceHeader = readSourceHeader(sourceFile);
-
-      expect(
-        sourceHeader.some(headerLine => SPDX_LICENSE_IDENTIFIER_PATTERN.test(headerLine)),
-        sourceFile
-      ).toBe(true);
-      expect(
-        sourceHeader.some(headerLine => SPDX_FILE_COPYRIGHT_TEXT_PATTERN.test(headerLine)),
-        `${sourceFile} no longer requires a mixed-license exception`
-      ).toBe(false);
-    }
   });
 
   test('keeps copied third-party source exceptions accurate and explicitly unclaimed', () => {

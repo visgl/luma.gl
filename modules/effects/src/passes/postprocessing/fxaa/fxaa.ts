@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
 
 import type {ShaderPass} from '@luma.gl/shadertools';
 

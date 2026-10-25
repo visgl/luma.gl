@@ -54,7 +54,9 @@
   "files": [
     "src",
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "sideEffects": false,
   "peerDependencies": {

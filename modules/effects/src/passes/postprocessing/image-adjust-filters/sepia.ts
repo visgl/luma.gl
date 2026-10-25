@@ -1,6 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+// SPDX-FileCopyrightText: Copyright (C) 2011 by Evan Wallace
+// Classic filter adapted from glfx.js; see the package THIRD-PARTY-NOTICES.md.
 
 import type {ShaderPass} from '@luma.gl/shadertools';
 

@@ -412,6 +412,9 @@ jobs:
       - name: Verify experimental geospatial package imports
         run: yarn test-geospatial-package
 
+      - name: Check attribution and package notices
+        run: yarn check:attributions --pack
+
       - name: Run lint
         run: |
           yarn lint
