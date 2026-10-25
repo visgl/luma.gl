@@ -9,6 +9,9 @@ import {ScientificFlowField, type ScientificVectorFieldInput} from './scientific
 
 export type ScientificFlowGraphProps = {
   input: ScientificVectorFieldInput;
+  /** Optional following snapshot; requires timeRange. Both snapshots share one grid. */
+  nextInput?: ScientificVectorFieldInput;
+  timeRange?: readonly [number, number];
   particleCount?: number;
   lifetime?: number;
   seed?: number;
@@ -19,47 +22,59 @@ export type ScientificFlowGraphProps = {
 
 /** Scientific upload -> bilinear sampling -> Runge–Kutta integration -> GPU storage buffer. */
 export class ScientificFlowGraph {
-  readonly field: ScientificFlowField;
+  private currentField: ScientificFlowField;
+  private readonly fieldOptions: Pick<ScientificFlowGraphProps, 'bounds' | 'coordinates'>;
+  private nextField: ScientificFlowField;
   readonly simulation: ScientificFlowCompute;
-  readonly commandGraph: CompiledGPUCommandGraph<{deltaTime: number}>;
+  readonly commandGraph: CompiledGPUCommandGraph<{deltaTime: number; substeps: number}>;
   private readonly device: Device;
 
   constructor(device: Device, props: ScientificFlowGraphProps) {
     this.device = device;
-    this.field = new ScientificFlowField(device, props);
+    this.fieldOptions = {bounds: props.bounds, coordinates: props.coordinates};
+    if (Boolean(props.nextInput) !== Boolean(props.timeRange)) {
+      throw new Error('nextInput and timeRange must be supplied together');
+    }
+    this.currentField = new ScientificFlowField(device, props);
+    this.nextField = this.field;
     let simulation: ScientificFlowCompute | undefined;
     try {
+      if (props.nextInput)
+        this.nextField = new ScientificFlowField(device, {...props, input: props.nextInput});
       simulation = this.simulation = new ScientificFlowCompute(device, this.field, {
         particleCount: props.particleCount ?? 65536,
         lifetime: props.lifetime ?? 20,
         seed: props.seed ?? 1,
         integrator: props.integrator
       });
-      const graph = new GPUCommandGraph<{deltaTime: number}>(device, {id: 'scientific-flow'});
+      if (props.timeRange)
+        this.simulation.setTimeInterval(this.field, this.nextField, props.timeRange);
+      const graph = new GPUCommandGraph<{deltaTime: number; substeps: number}>(device, {
+        id: 'scientific-flow'
+      });
       const byteLength = this.simulation.output.byteLength;
       const previous = graph.importBuffer({id: 'flow-previous', byteLength, usage: Buffer.STORAGE});
       const next = graph.importBuffer({id: 'flow-next', byteLength, usage: Buffer.STORAGE});
       const uniforms = graph.importBuffer(
-        {id: 'flow-uniforms', byteLength: 48, usage: Buffer.UNIFORM},
+        {id: 'flow-uniforms', byteLength: 64, usage: Buffer.UNIFORM},
         this.simulation.uniforms
       );
-      const velocity = graph.importTexture(
-        {
-          id: 'flow-velocity',
-          width: this.field.texture.width,
-          height: this.field.texture.height,
-          format: 'rgba32float',
-          usage: Texture.SAMPLE
-        },
-        this.field.texture
-      );
+      const textureDescriptor = {
+        width: this.field.texture.width,
+        height: this.field.texture.height,
+        format: 'rgba32float' as const,
+        usage: Texture.SAMPLE
+      };
+      const velocity = graph.importTexture({id: 'flow-velocity', ...textureDescriptor});
+      const nextVelocity = graph.importTexture({id: 'flow-next-velocity', ...textureDescriptor});
       graph.addComputePass({
         id: 'advect-particles',
         resources: [
           {buffer: uniforms, usage: 'uniform'},
           {buffer: previous, usage: 'storage-read'},
           {buffer: next, usage: 'storage-write'},
-          {texture: velocity, usage: 'sampled'}
+          {texture: velocity, usage: 'sampled'},
+          {texture: nextVelocity, usage: 'sampled'}
         ],
         workload: {
           operation: 'RungeKuttaAdvection',
@@ -71,13 +86,14 @@ export class ScientificFlowGraph {
         },
         compile: () => ({
           encode: ({computePass, parameters}) =>
-            this.simulation.encode(computePass, parameters.deltaTime)
+            this.simulation.encode(computePass, parameters.deltaTime, parameters.substeps)
         })
       });
       this.commandGraph = graph.compile();
     } catch (error) {
       simulation?.destroy();
       this.field.destroy();
+      this.nextField.destroy();
       throw error;
     }
   }
@@ -89,6 +105,7 @@ export class ScientificFlowGraph {
 
   /** Advance by at most 1/30 second and submit. No particle readback is performed. */
   step(deltaTime: number): Buffer {
+    this.simulation.validateStep(deltaTime);
     const encoder = this.device.createCommandEncoder();
     this.record(encoder, deltaTime);
     this.device.submit(encoder.finish());
@@ -96,14 +113,63 @@ export class ScientificFlowGraph {
   }
 
   /** Encode the compiled graph; the caller controls command submission. */
-  record(encoder: CommandEncoder, deltaTime: number): void {
+  record(encoder: CommandEncoder, deltaTime: number, substeps = 1): void {
+    this.simulation.validateStep(deltaTime, substeps);
     this.commandGraph.encode(encoder, {
-      parameters: {deltaTime},
+      parameters: {deltaTime, substeps},
+      textures: {
+        'flow-velocity': this.field.texture,
+        'flow-next-velocity': this.nextField.texture
+      },
       buffers: {
         'flow-previous': this.output,
         'flow-next': this.previous
       }
     });
+  }
+
+  get field(): ScientificFlowField {
+    return this.currentField;
+  }
+
+  /** Elapsed simulation time in seconds, initialized from timeRange for temporal fields. */
+  get time(): number {
+    return this.simulation.time;
+  }
+
+  /** Seconds remaining in the resident interval, or infinity for a steady field. */
+  get remainingTime(): number {
+    return this.simulation.remainingTime;
+  }
+
+  /** Advance an interval using half-cell/1/30-second bounded substeps in one GPU dispatch. */
+  advance(deltaTime: number): Buffer {
+    const substeps = Math.max(1, Math.ceil(deltaTime / this.simulation.maximumTimeStep));
+    const stepTime = deltaTime / substeps;
+    this.simulation.validateStep(stepTime, substeps);
+    const encoder = this.device.createCommandEncoder();
+    this.record(encoder, stepTime, substeps);
+    this.device.submit(encoder.finish());
+    return this.output;
+  }
+
+  /** At the interval endpoint, retain its last snapshot and upload the following one. */
+  setNextSnapshot(input: ScientificVectorFieldInput, endTime: number): void {
+    // Submit previously recorded commands before rotating or destroying their textures.
+    if (this.nextField === this.field) throw new Error('A temporal field pair is required');
+    const nextField = new ScientificFlowField(this.device, {
+      input,
+      ...this.fieldOptions
+    });
+    try {
+      this.simulation.setTimeInterval(this.nextField, nextField, [this.time, endTime]);
+    } catch (error) {
+      nextField.destroy();
+      throw error;
+    }
+    this.field.destroy();
+    this.currentField = this.nextField;
+    this.nextField = nextField;
   }
 
   get output(): Buffer {
@@ -118,5 +184,6 @@ export class ScientificFlowGraph {
     this.commandGraph.destroy();
     this.simulation.destroy();
     this.field.destroy();
+    this.nextField.destroy();
   }
 }
