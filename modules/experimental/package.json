@@ -1,5 +1,4 @@
 {
-  "private": true,
   "name": "@luma.gl/experimental",
   "description": "luma.gl experimental features",
   "version": "10.0.0-alpha.4",

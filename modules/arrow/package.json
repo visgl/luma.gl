@@ -1,5 +1,4 @@
 {
-  "private": true,
   "name": "@luma.gl/arrow",
   "description": "luma.gl Apache Arrow bindings",
   "version": "10.0.0-alpha.4",

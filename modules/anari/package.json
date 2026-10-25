@@ -1,7 +1,6 @@
 {
   "name": "@luma.gl/anari",
   "version": "10.0.0-alpha.4",
-  "private": true,
   "description": "ANARI-inspired declarative rendering for luma.gl",
   "type": "module",
   "license": "MIT",

@@ -1,7 +1,9 @@
 {
   "name": "@luma.gl/three",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "10.0.0-alpha.4",
-  "private": true,
   "description": "Experimental Three.js rendering and GPU interoperability for luma.gl",
   "license": "MIT",
   "type": "module",

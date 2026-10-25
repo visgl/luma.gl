@@ -1,5 +1,8 @@
 {
   "name": "@luma.gl/gpgpu",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "10.0.0-alpha.4",
   "description": "General-purpose GPU data and immediate computation for luma.gl",
   "type": "module",
