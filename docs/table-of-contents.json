@@ -155,26 +155,45 @@
       },
       {
         "type": "category",
-        "label": "Scenes, assets, and animation",
+        "label": "Scenegraphs",
         "items": [
           "api-guide/engine/scenegraph",
-          "api-guide/engine/scenegraph-physics",
           "api-guide/engine/scene-controllers",
-          "api-guide/engine/animation",
+          {
+            "type": "category",
+            "label": "Animation and deformation",
+            "items": [
+              "api-guide/engine/animation",
+              "api-guide/engine/features/animation",
+              "api-guide/engine/scenegraph-skins",
+              "api-guide/engine/scenegraph-morphs",
+              "api-guide/engine/features/animated-crowds"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Interactivity and physics",
+            "items": [
+              "api-guide/engine/scenegraph-interactivity",
+              "api-guide/engine/interactivity",
+              "api-guide/engine/scenegraph-physics",
+              "api-guide/engine/scenegraph-joints"
+            ]
+          },
           {
             "type": "category",
             "label": "Scene capabilities",
             "items": [
-              "api-guide/engine/features/animation",
-              "api-guide/engine/features/instancing",
-              "api-guide/engine/features/asset-compression",
               "api-guide/engine/features/visibility",
-              "api-guide/engine/features/animated-crowds"
+              "api-guide/engine/features/instancing",
+              "api-guide/engine/features/material-variants",
+              "api-guide/engine/scenegraph-billboards",
+              "api-guide/engine/scenegraph-lights",
+              "api-guide/engine/scenegraph-audio"
             ]
           }
         ]
       },
-      "api-guide/engine/interactivity",
       {
         "type": "category",
         "label": "Effects and transparency",
@@ -199,7 +218,8 @@
         "label": "Integration",
         "items": [
           "tutorials/external-webgl-context",
-          "api-guide/gpu/html-in-canvas"
+          "api-guide/gpu/html-in-canvas",
+          "api-guide/engine/features/asset-compression"
         ]
       }
     ]
@@ -245,7 +265,6 @@
           "api-guide/engine/features/lightmaps"
         ]
       },
-      "api-guide/engine/features/material-variants",
       "api-guide/shaders/glass-effects",
       "api-reference/experimental/glass-material",
       "api-reference/experimental/reflective-material",

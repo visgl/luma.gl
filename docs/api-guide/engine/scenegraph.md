@@ -14,6 +14,31 @@ hierarchy to engine `Model` rendering. Physics adapters connect selected nodes t
 simulation. Applications still choose the render passes, frame scheduling, and resources
 appropriate for their renderer.
 
+## Scenegraph Capabilities
+
+These are luma.gl engine capabilities. The glTF adapter resolves source data into the same
+nodes, bindings, and controllers used by native scenes; source extensions do not own the runtime.
+Existing glTF assets remain useful inline demonstrations of those engine capabilities.
+
+| Capability | Guide |
+| --- | --- |
+| Keyframes, playback, blending, and animated properties | [Animation](./animation.md), [animated example](./features/animation.mdx) |
+| Skeletons and joint-matrix palettes | [Skins](./scenegraph-skins.mdx) |
+| Vertex-target deformation | [Morph targets](./scenegraph-morphs.mdx) |
+| Behavior graphs and external hosts | [Scenegraph interactivity](./scenegraph-interactivity.mdx) |
+| Browser input, selection, and feedback | [Input and picking](./interactivity.md) |
+| Body ownership, fixed steps, and pose publication | [Physics integration](./scenegraph-physics.md) |
+| Constraint attachments, limits, and drives | [Physical joints](./scenegraph-joints.mdx) |
+| Camera-facing placement | [Billboards](./scenegraph-billboards.mdx) |
+| Punctual and area-light attachments | [Scenegraph lights](./scenegraph-lights.mdx) |
+| Emitters, listener state, graphs, and environments | [Spatial audio](./scenegraph-audio.mdx) |
+| Alternate appearances on existing models | [Material variants](./features/material-variants.mdx) |
+| Visibility, repeated meshes, and crowds | [Visibility](./features/visibility.mdx), [instancing](./features/instancing.mdx), [animated crowds](./features/animated-crowds.mdx) |
+
+Physical joints and skinning joints are separate concepts. The former constrain simulation
+bodies; the latter deform vertices through a palette. Neither is an extra node class inserted
+into the spatial hierarchy.
+
 ## The Scene Representation
 
 | Part | Engine representation | Responsibility |

@@ -8,6 +8,12 @@ Controllers operate on resolved scene objects. They do not require glTF source a
 node indices or JSON pointers during playback. This page describes the engine runtime;
 asset decoding remains the importer's responsibility.
 
+Focused capability guides cover [skins](./scenegraph-skins.mdx),
+[morph targets](./scenegraph-morphs.mdx), [physical joints](./scenegraph-joints.mdx),
+[interactivity](./scenegraph-interactivity.mdx), [billboards](./scenegraph-billboards.mdx),
+[lights](./scenegraph-lights.mdx), and [audio](./scenegraph-audio.mdx).
+This page explains their shared construction and update model.
+
 ## Animation Bindings and Playback
 
 An `AnimationBinding` reads and writes a numeric property. `AnimationTrack` supplies

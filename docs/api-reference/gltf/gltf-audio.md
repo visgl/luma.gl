@@ -1,6 +1,6 @@
 # glTF audio mapping
 
-`parseGLTFAudio()` from `@luma.gl/gltf` resolves emitters, source resources, graph routing, and environments into props for the engine `AudioController`. See [scene controllers](/docs/api-guide/engine/scene-controllers) for the engine APIs.
+`parseGLTFAudio()` from `@luma.gl/gltf` resolves emitters, source resources, graph routing, and environments into props for the engine `AudioController`. See [Spatial audio](/docs/api-guide/engine/scenegraph-audio) for the engine APIs.
 
 Opt-in Web Audio playback of the **draft** `KHR_audio_emitter` extension. Rendering works with either WebGPU or WebGL; audio uses a borrowed browser audio context.
 

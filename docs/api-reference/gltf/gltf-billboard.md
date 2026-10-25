@@ -1,6 +1,6 @@
 # glTF billboard mapping
 
-`parseGLTFBillboards()` from `@luma.gl/gltf` resolves draft billboard attachments into props for the engine `BillboardController`. See [scene controllers](/docs/api-guide/engine/scene-controllers) for the engine APIs.
+`parseGLTFBillboards()` from `@luma.gl/gltf` resolves draft billboard attachments into props for the engine `BillboardController`. See [Scenegraph billboards](/docs/api-guide/engine/scenegraph-billboards) for the engine APIs.
 
 Opt-in camera-facing traversal for a **partial, full-axis profile** of the draft
 [`KHR_billboard` proposal](https://github.com/CesiumGS/glTF/tree/aeb5a437219a33aa757743dc1a5d892e3b8e128a/extensions/2.0/Khronos/KHR_billboard).
