@@ -1,3 +1,4 @@
+import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import {RIGID_BODY_JOINT_STATE_BYTES} from './rigid-body-joints';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -47,12 +48,10 @@ export function getRigidBodyStorageLayout(
     })),
     {
       name: 'targets',
-      byteLength:
-        Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
-        jointCount * RIGID_BODY_JOINT_STATE_BYTES +
-        (ensembleInstances
-          ? Math.ceil((ensembleInstances * 4 + maximumPairs * 6 + 8) / 4) * 16 + maximumPairs * 416
-          : 0),
+      byteLength: ensembleInstances
+        ? getEnsembleContactLayout(bodyCount, ensembleInstances, maximumPairs).byteLength
+        : Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
+          jointCount * RIGID_BODY_JOINT_STATE_BYTES,
       uniform: false
     },
     {

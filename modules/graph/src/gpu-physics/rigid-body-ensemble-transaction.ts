@@ -4,6 +4,7 @@
 
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
+import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import type {GPUCommandGraph, GraphBufferHandle} from '../gpu-core/gpu-command-graph';
 
 type Resource = {buffer: Buffer; resource: GraphBufferHandle};
@@ -23,13 +24,16 @@ export function addEnsembleCheckpoint<GraphParameters>(
   const bodyCount = states[0].buffer.byteLength / 16;
   const instances = bodyCount / bodiesPerInstance;
   const targets = states[5];
-  const headOffset = bodyCount * 8 + 8 + maximumPairs * 2;
-  const linkOffset = headOffset + instances * 2;
-  const journalOffset = bodyCount * 8 + 8 + maximumPairs * 4 + instances * 2;
-  const savedKeyOffset = journalOffset + maximumPairs;
-  const savedLinkOffset = savedKeyOffset + maximumPairs * 2;
-  const savedHeadOffset = savedLinkOffset + maximumPairs;
-  const savedHeaderOffset = savedHeadOffset + instances * 2;
+  const {
+    headOffset,
+    linkOffset,
+    journalOffset,
+    savedKeyOffset,
+    savedLinkOffset,
+    savedHeadOffset,
+    savedHeaderOffset,
+    savedManifoldOffset
+  } = getEnsembleContactLayout(bodyCount, instances, maximumPairs);
   const importAllocation = (name: string, byteLength: number): Resource => {
     const buffer = allocate(name, byteLength);
     return {
@@ -131,7 +135,7 @@ export function addEnsembleCheckpoint<GraphParameters>(
  let count=targets[${bodyCount * 8 + 5}u];
  for(var work=invocation.x;work<count*104u;work+=64u){
   let pair=targets[${journalOffset}u+work/104u];let word=work%104u;
-  manifolds[pair*104u+word]=targets[${savedHeaderOffset + 8}u+pair*104u+word];
+  manifolds[pair*104u+word]=targets[${savedManifoldOffset}u+pair*104u+word];
  }
 }`
     );

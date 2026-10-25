@@ -56,6 +56,7 @@ import {
   type GPURigidBodyTrigger,
   type GPURigidBodyTriggerBatch
 } from './rigid-body-triggers';
+import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import {addEnsembleCheckpoint} from './rigid-body-ensemble-transaction';
 import {addRigidBodyCheckpoint} from './rigid-body-transaction';
 import {
@@ -879,18 +880,14 @@ export class GPURigidBodyWorld {
     this.sleepStates = allocate('sleep', this.count * 16);
     this.targets = allocate(
       'targets',
-      Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16 +
-        (this.props.joints?.length ?? 0) * RIGID_BODY_JOINT_STATE_BYTES +
-        (this.props.ensembleBodiesPerInstance
-          ? Math.ceil(
-              ((4 * this.count) / this.props.ensembleBodiesPerInstance +
-                6 * this.maximumPairs +
-                8) /
-                4
-            ) *
-              16 +
-            this.maximumPairs * 416
-          : 0)
+      this.props.ensembleBodiesPerInstance
+        ? getEnsembleContactLayout(
+            this.count,
+            this.count / this.props.ensembleBodiesPerInstance,
+            this.maximumPairs
+          ).byteLength
+        : Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16 +
+            (this.props.joints?.length ?? 0) * RIGID_BODY_JOINT_STATE_BYTES
     );
     for (const [index, joint] of (this.props.joints ?? []).entries()) {
       this.targets.write(

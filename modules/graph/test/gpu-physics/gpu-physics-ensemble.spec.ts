@@ -617,7 +617,9 @@ it('retires, reuses and resets sparse contact lists without changing paused peer
   }
 });
 
-it('repeated shared overflow restores contact payloads and allocator ownership', async context => {
+it.each([
+  1, 2, 4, 64
+])('restores contact payloads and allocator ownership with %s slots', async (maximumPairs, context) => {
   const device = await getWebGPUTestDevice('core');
   if (!device) return context.skip('WebGPU unavailable');
   const ensemble = await GPUPhysicsEnsemble.create(device, {
@@ -629,7 +631,7 @@ it('repeated shared overflow restores contact payloads and allocator ownership',
       }))
     },
     instances: 4,
-    maximumPairs: 64,
+    maximumPairs,
     maximumResidentBytes: 16 * 1024 * 1024
   });
   try {
@@ -641,18 +643,20 @@ it('repeated shared overflow restores contact payloads and allocator ownership',
       expect(await ensemble.world.readState()).toEqual(initial);
       const capture = await ensemble.world.captureState();
       const contacts = capture.buffers.find(buffer => buffer.name === 'manifolds')!.data;
-      expect(contacts.slice(0, 64 * 416).every(value => value === 0)).toBe(true);
+      expect(contacts.slice(0, maximumPairs * 416).every(value => value === 0)).toBe(true);
       const targets = new Uint32Array(
         capture.buffers.find(buffer => buffer.name === 'targets')!.data.buffer
       );
       const keyOffset = ensemble.world.count * 8 + 8;
       expect(
-        Array.from(targets.slice(keyOffset, keyOffset + 64 * 2)).every(value => value === 0)
-      ).toBe(true);
-      expect(
-        Array.from(targets.slice(keyOffset + 64 * 2, keyOffset + 64 * 2 + 4)).every(
+        Array.from(targets.slice(keyOffset, keyOffset + maximumPairs * 2)).every(
           value => value === 0
         )
+      ).toBe(true);
+      expect(
+        Array.from(
+          targets.slice(keyOffset + maximumPairs * 2, keyOffset + maximumPairs * 2 + 4)
+        ).every(value => value === 0)
       ).toBe(true);
     }
   } finally {
