@@ -830,3 +830,22 @@ resident slots; heterogeneous fused worlds; per-instance reset/pause/streaming; 
 ensembles; hard peak-memory admission; interacting spatial partitions; and hardware qualification.
 The current 16-bit body/collider identity limit still bounds each ensemble to 65,535 entries.
 Larger resident populations require separate ensembles until identity and cache keys are widened.
+
+
+## G10 follow-up — active ensembles and selective lifecycle
+
+The active-instance queue now drives indirect integration, collider bounds, linked-hash broad-phase
+insertion/discovery and pose advancement. Paused or fully sleeping instances preserve their contacts.
+Per-instance pause/resume/wake and selective reset use one shared template-sized reset image, with
+origin-aware restoration and no peer-state reset. Status reports accepted/rejected participation;
+failures still roll back the whole ensemble and do not identify the originating instance.
+
+Qualification includes paused-peer isolation, reset/replay, memory stability across resets,
+sleep/wake, rebased reset and shared-overflow rejection. The Batch Lab compares 1/10/50/100% active
+fractions, reports the actual rounded counts, and excludes inactive bodies from throughput.
+
+Remaining scaling work: capacity-sized wake scans, hash-bucket clearing, contact cache scans and
+rollback copies; demand-grown contact pages; exact failure provenance and independent recovery;
+heterogeneous layouts, per-instance streaming, joints/CCD, wider identities, cross-slot asset sharing,
+interacting partitions, peak-memory admission and long-duration/cross-adapter qualification.
+This package does not close the complete G10 gate.

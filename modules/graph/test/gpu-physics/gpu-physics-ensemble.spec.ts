@@ -72,7 +72,7 @@ it('fuses overlapping contact worlds without cross-world contacts or trajectory 
     expect(events.length).toBeGreaterThan(0);
     for (const event of events)
       expect(Math.floor(event.bodies[0] / 2)).toBe(Math.floor(event.bodies[1] / 2));
-    expect(ensemble.getStats().checkpointBytes).toBe(0);
+    expect(ensemble.getStats().checkpointBytes).toBe(reference.getStats().checkpointBytes);
     expect(() => ensemble.getBodyIndex(16, 0)).toThrow();
   } finally {
     reference.destroy();
@@ -184,6 +184,11 @@ it('rejects shared contact overflow and rolls every instance back atomically', a
     device.submit(encoder.finish());
     expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(false);
     expect(await ensemble.world.readState()).toEqual(initial);
+    const status = await ensemble.readStatus();
+    expect(
+      status.instances.every(instance => instance.sharedFailure && instance.rejectedSteps === 1)
+    ).toBe(true);
+    await expect(ensemble.reset(0)).rejects.toThrow('shared ensemble failure');
   } finally {
     ensemble.destroy();
   }
@@ -230,6 +235,301 @@ it('preserves shared mesh packing through checkpoints and streamed captures', as
       graph.destroy();
       rebuilt.destroy();
     }
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('pauses and selectively resets without moving peers or retaining stale contacts', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template,
+    instances: 4,
+    maximumPairs: 256,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const step = async (steps: number) => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, steps);
+    device.submit(encoder.finish());
+    return ensemble.world.readState();
+  };
+  try {
+    const initial = await ensemble.world.readState();
+    ensemble.setActive(1, false);
+    const moved = await step(36);
+    expect(moved.slice(2, 4)).toEqual(initial.slice(2, 4));
+    expect(moved[0].velocity[0]).toBeLessThan(0);
+    const status = await ensemble.readStatus();
+    expect(status.activeInstances).toBe(3);
+    expect(status.instances[0].acceptedSteps).toBe(36);
+    expect(status.instances[1].acceptedSteps).toBe(0);
+    const bytes = ensemble.getStats().residentBytes;
+    for (let iteration = 0; iteration < 3; iteration++) {
+      await ensemble.reset(2);
+      const reset = await ensemble.world.readState();
+      expect(reset.slice(4, 6)).toEqual(initial.slice(4, 6));
+      expect(reset.slice(0, 4)).toEqual(moved.slice(0, 4));
+      expect(reset.slice(6)).toEqual(moved.slice(6));
+      expect(ensemble.getStats().residentBytes).toBe(bytes);
+    }
+    ensemble.setActive(1, true);
+    const resumed = await step(36);
+    for (const body of [2, 4]) {
+      expect(resumed[body].position[0]).toBeCloseTo(moved[0].position[0], 5);
+      expect(resumed[body].velocity[0]).toBeCloseTo(moved[0].velocity[0], 5);
+    }
+    expect((await ensemble.readStatus()).instances[2].acceptedSteps).toBe(36);
+    expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('skips sleeping instances and wakes only the requested instance', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, 0, 0],
+      sleepAfter: 0.01,
+      bodies: [{position: [0, 0, 0], shape: {type: 'sphere', radius: 0.5}}]
+    },
+    instances: 16,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, 8);
+    device.submit(encoder.finish());
+    expect((await ensemble.readStatus()).activeInstances).toBe(0);
+    expect((await ensemble.world.readState()).every(state => state.sleeping)).toBe(true);
+    ensemble.wake(7);
+    const awake = device.createCommandEncoder();
+    ensemble.encode(awake);
+    device.submit(awake.finish());
+    const status = await ensemble.readStatus();
+    expect(status.activeInstances).toBe(1);
+    expect(status.instances[7].active).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('resets into the rebased coordinate system', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template,
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    ensemble.world.shiftOrigin([128, 0, 0]);
+    const before = await ensemble.world.readState();
+    await ensemble.reset(1);
+    const after = await ensemble.world.readState();
+    expect(after).toEqual(before);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it.each([
+  true,
+  false
+])('preserves paused contacts and events with compactContacts=%s', async (compactContacts, context) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      compactContacts,
+      gravity: [0, -9.81, 0],
+      sleepAfter: 0,
+      eventCapacity: 256,
+      bodies: [
+        {position: [0, 0.5, 0], shape: {type: 'sphere', radius: 0.5}},
+        {position: [0, 0, 0], mass: 0, shape: {type: 'plane'}}
+      ]
+    },
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const step = async (steps: number) => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, steps);
+    device.submit(encoder.finish());
+    return ensemble.world.readState();
+  };
+  const contacts = async () => {
+    const capture = await ensemble.world.captureState({includeRollbackScratch: false});
+    const bytes = capture.buffers.find(buffer => buffer.name === 'manifolds')!.data;
+    const records = [];
+    for (let offset = 0; offset < bytes.length; offset += 416) {
+      const header = new DataView(bytes.buffer, bytes.byteOffset + offset, 416);
+      if (header.getUint32(384, true) && header.getUint32(388, true) < 2)
+        records.push(Array.from(bytes.slice(offset, offset + 416)));
+    }
+    return records;
+  };
+  try {
+    const before = await step(8);
+    const retained = await contacts();
+    expect(retained.length).toBeGreaterThan(0);
+    await ensemble.world.readContactEvents();
+    ensemble.setActive(0, false);
+    const paused = await step(64);
+    expect(paused.slice(0, 2)).toEqual(before.slice(0, 2));
+    expect(await contacts()).toEqual(retained);
+    expect(
+      (await ensemble.world.readContactEvents()).events.every(event => event.bodies[0] >= 2)
+    ).toBe(true);
+    ensemble.setActive(0, true);
+    const resumed = await step(8);
+    expect(resumed[0].position[1]).toBeCloseTo(0.5, 3);
+    expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('clears mesh work when every instance is paused and preserves peers during mesh reset', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const geometry = makeConvexHullGeometry(
+    Array.from({length: 8}, (_, corner) => [
+      corner & 1 ? 0.5 : -0.5,
+      corner & 2 ? 0.5 : -0.5,
+      corner & 4 ? 0.5 : -0.5
+    ]).flat()
+  );
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, -9.81, 0],
+      sleepAfter: 0,
+      bodies: [
+        {position: [0, 0.5, 0], shape: {type: 'convex-hull', geometry}},
+        {position: [0, 0, 0], mass: 0, shape: {type: 'plane'}}
+      ]
+    },
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const step = async () => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, 4);
+    device.submit(encoder.finish());
+    return ensemble.world.readState();
+  };
+  try {
+    const initial = await ensemble.world.readState();
+    const settled = await step();
+    ensemble.setActive(0, false);
+    ensemble.setActive(1, false);
+    expect(await step()).toEqual(settled);
+    expect((await ensemble.readStatus()).activeInstances).toBe(0);
+    await ensemble.reset(1);
+    const reset = await ensemble.world.readState();
+    expect(reset.slice(0, 2)).toEqual(settled.slice(0, 2));
+    expect(reset.slice(2)).toEqual(initial.slice(2));
+    ensemble.setActive(1, true);
+    await step();
+    expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('restores selected collider scales while retaining peer shape edits', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template,
+    instances: 2,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    ensemble.world.setColliderShapes([
+      {collider: 0, shape: {type: 'sphere', radius: 1}, shapeScale: [2, 2, 2]},
+      {collider: 2, shape: {type: 'sphere', radius: 1.5}, shapeScale: [3, 3, 3]}
+    ]);
+    await ensemble.reset(0);
+    expect(ensemble.world.getColliderShape(0)).toEqual({type: 'sphere', radius: 0.5});
+    expect(ensemble.world.getColliderShapeScale(0)).toEqual([1, 1, 1]);
+    expect(ensemble.world.getColliderShape(2)).toEqual({type: 'sphere', radius: 1.5});
+    expect(ensemble.world.getColliderShapeScale(2)).toEqual([3, 3, 3]);
+    expect(
+      (await ensemble.world.captureState({includeRollbackScratch: false})).colliderShapeScales
+    ).toEqual([[2, [3, 3, 3]]]);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('rejects adversarial hash bucket traversal instead of silently ignoring the work budget', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  // Radius 0.5 plus an exactly representable 0.125 margin uses level 12 (cell size 4). Pick 128
+  // distinct cells with the same low 8 hash bits, without overlapping bodies.
+  const coordinates: number[] = [];
+  for (let coordinate = 0; coordinates.length < 128; coordinate++) {
+    let hash = Math.imul(coordinate, 73856093) ^ Math.imul(12, 2654435761);
+    hash = Math.imul(hash ^ (hash >>> 16), 2246822519);
+    hash ^= hash >>> 13;
+    if (
+      (hash & 255) === 0 &&
+      (!coordinates.length || coordinate - coordinates[coordinates.length - 1] >= 3)
+    )
+      coordinates.push(coordinate);
+  }
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, 0, 0],
+      sleepAfter: 0,
+      maximumCandidateTestsPerCollider: 1,
+      contactSlop: 0.125,
+      bodies: coordinates.map(coordinate => ({
+        position: [coordinate * 4, 0, 0],
+        shape: {type: 'sphere', radius: 0.5}
+      }))
+    },
+    instances: 1,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    const initial = await ensemble.world.readState();
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder);
+    device.submit(encoder.finish());
+    const diagnostics = await ensemble.world.readSimulationDiagnostics();
+    expect(diagnostics.complete).toBe(false);
+    expect(diagnostics.incompleteQueries).toBeGreaterThan(0);
+    expect(diagnostics.droppedPairs).toBe(0);
+    expect(diagnostics.maximumCandidateTests).toBeLessThanOrEqual(coordinates.length);
+    const capture = await ensemble.world.captureState({includeRollbackScratch: false});
+    const minima = new Float32Array(
+      capture.buffers.find(buffer => buffer.name === 'minima')!.data.buffer
+    );
+    const maxima = new Float32Array(
+      capture.buffers.find(buffer => buffer.name === 'maxima')!.data.buffer
+    );
+    for (let index = 0; index < coordinates.length; index++) {
+      const size = Math.max(
+        ...[0, 1, 2].map(axis => maxima[index * 3 + axis] - minima[index * 3 + axis])
+      );
+      expect(Math.ceil(Math.log2(size * 2 * 1024))).toBe(12);
+      expect(Math.floor((minima[index * 3] * 0.5 + maxima[index * 3] * 0.5) / 4)).toBe(
+        coordinates[index]
+      );
+    }
+    expect(await ensemble.world.readState()).toEqual(initial);
   } finally {
     ensemble.destroy();
   }

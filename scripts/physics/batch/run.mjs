@@ -13,6 +13,7 @@ const {values} = parseArgs({options: {
   frames: {type: 'string', default: '120'},
   repeats: {type: 'string', default: '3'},
   scene: {type: 'string', default: 'sparse'},
+  'active-fractions': {type: 'string', default: '1'},
   modes: {type: 'string', default: 'ensemble,batched,separate'},
   'pairs-per-body': {type: 'string', default: '16'},
   output: {type: 'string', default: '/tmp/physics-batch-report.json'}
@@ -27,6 +28,8 @@ const frames = Number(values.frames), repeats = Number(values.repeats);
 if (!Number.isInteger(repeats) || repeats < 1 || repeats > 10 || !['sparse', 'pile'].includes(values.scene)) throw new Error('Invalid repetitions or scene');
 const modes = values.modes.split(',');
 if (!modes.length || modes.some(mode => !['ensemble', 'batched', 'separate'].includes(mode))) throw new Error('Invalid modes');
+const activeFractions = values['active-fractions'].split(',').map(Number);
+if (activeFractions.some(value => !Number.isFinite(value) || value <= 0 || value > 1)) throw new Error('Invalid active fractions');
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', headless: true}));
 const results = [];
 try {
@@ -37,6 +40,7 @@ try {
   for (let repeat = 0; repeat < repeats; repeat++) {
     for (const dimensions of cases) {
       for (const submission of repeat % 2 ? [...modes].reverse() : modes) {
+       for (const activeFraction of repeat % 2 ? [...activeFractions].reverse() : activeFractions) {
         const result = await page.evaluate(async ({root, options}) => {
           const [{luma}, {webgpuAdapter}, {runBatchBenchmark}] = await Promise.all([
             import(`${root}/modules/core/src/index.ts`),
@@ -46,14 +50,15 @@ try {
           const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter]});
           try { return await runBatchBenchmark(device, options); }
           finally { device.destroy(); }
-        }, {root: `/@fs${root}`, options: {...dimensions, frames, warmup: 10, steps: 1, scene: values.scene, pairsPerBody: Number(values['pairs-per-body']), submission}});
+        }, {root: `/@fs${root}`, options: {...dimensions, activeFraction, frames, warmup: 10, steps: 1, scene: values.scene, pairsPerBody: Number(values['pairs-per-body']), submission}});
         // Final sampled states are available in the interactive export; keep suite reports compact.
         delete result.states;
         results.push({repeat, ...result});
         writeFileSync(values.output, JSON.stringify({browser: browser.version(), results}, null, 2));
         // Preserve every report while making failed qualification visible to automation.
         if (!result.complete || !result.quality.passed) process.exitCode = 1;
-        console.log(`${repeat} ${dimensions.worlds}x${dimensions.bodies} ${submission}: p95=${result.latencyMilliseconds.p95.toFixed(2)}ms body-steps/s=${result.bodyStepsPerSecond?.toFixed(0)} complete=${result.complete}`);
+        console.log(`${repeat} ${dimensions.worlds}x${dimensions.bodies} ${submission} active=${activeFraction}: p95=${result.latencyMilliseconds.p95.toFixed(2)}ms body-steps/s=${result.bodyStepsPerSecond?.toFixed(0)} complete=${result.complete}`);
+       }
       }
     }
   }

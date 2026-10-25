@@ -59,3 +59,16 @@ results are accepted. Shared geometry across separate resident slots and interac
 partitions remain future work.
 
 See [the fused ensemble report](./ENSEMBLE-QUALIFICATION.md) for the 22-run follow-up through 32,768 bodies and 1,024 independent instances.
+
+
+Active scheduling sweep (actual active counts are rounded up):
+
+```sh
+node scripts/physics/batch/run.mjs --url http://127.0.0.1:5245 --cases 128x16 --modes ensemble --active-fractions 0.01,0.1,0.5,1 --frames 60 --repeats 3
+```
+
+Throughput counts active body/world steps only. Compare completed-frame p50/p95 as well as
+throughput: all modes retain the entire population, and the ensemble still scans/copies some
+capacity-sized buffers. Paused sparse instances must remain at their initial analytic positions;
+active instances must match ballistic motion and one another. Dense cases check finite states
+and active-world equivalence, not contact accuracy. Scheduler status is included in exported JSON.

@@ -75,6 +75,7 @@ fn emitContact(first:u32,second:u32,phase:u32,point:vec3f,normal:vec3f,impulse:f
  for(var pair=0u;pair<PAIR_CAPACITY;pair++){
   let previous=contactHistory[pair];let hasContact=manifolds[pair].count>0u;
   let first=getFirstCollider(pair);let second=getSecondCollider(pair);
+  if(!colliderScheduled(first)){continue;}
   let same=previous.x==first&&previous.y==second;
   if(previous.z!=0u&&(!hasContact||!same)){emitContact(previous.x,previous.y,2u,vec3f(0),vec3f(0),0);}
   if(hasContact){

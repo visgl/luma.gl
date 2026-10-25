@@ -40,7 +40,7 @@ export const RIGID_BODY_BOUND_PUBLICATION_SHADER = /* wgsl */ `
 @group(0) @binding(24) var<storage,read_write> minima:array<f32>;
 @group(0) @binding(25) var<storage,read_write> maxima:array<f32>;
 @compute @workgroup_size(64) fn bounds(@builtin(global_invocation_id) invocation:vec3u){
- let index=invocation.x;if(index>=COLLIDER_COUNT){return;}
+ let work=invocation.x;if(work>=scheduledColliderCount()){return;}let index=scheduledCollider(work);
  let center=colliderPosition(index);let extent=shapeWorldExtent(index)+vec3f(settings.solver.x);
  for(var axisIndex=0u;axisIndex<3u;axisIndex++){
   minima[index*3u+axisIndex]=center[axisIndex]-extent[axisIndex];

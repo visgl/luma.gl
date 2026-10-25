@@ -27,6 +27,8 @@ export type GPURigidBodyBroadPhaseProps = {
   /** Optional lower-16-bit body ID and bit-16 dynamic flag; suppress self/static pairs. */
   /** Equal contiguous collider domains. Different domains never produce pairs. */
   partitionSize?: number;
+  /** GPU compact instance queue produced by the rigid-body ensemble scheduler. */
+  activeInstances?: GraphDataView<'uint32'>;
   objectMetadata?: GraphDataView<'uint32'>;
   /** Canonical source-row pairs. Order is unspecified; each pair occurs once. */
   pairs: GraphDataView<'uint32x2'>;
@@ -69,6 +71,14 @@ export class GPURigidBodyBroadPhase {
     validatePackedView(props.diagnostics, ['uint32'], 'broad-phase diagnostics');
     if (props.objectMetadata)
       validatePackedView(props.objectMetadata, ['uint32'], 'broad-phase object metadata');
+    if (props.activeInstances) {
+      validatePackedView(props.activeInstances, ['uint32'], 'active instances');
+      if (
+        !props.partitionSize ||
+        props.activeInstances.length !== 16 + (9 * props.minima.length) / props.partitionSize
+      )
+        throw new Error('Invalid active instance queue');
+    }
     const count = props.minima.length;
     const maximumCandidates = props.maximumCandidateTestsPerQuery ?? 4096;
     const cellSize = props.minimumCellSize ?? 1 / 1024;
@@ -94,6 +104,7 @@ export class GPURigidBodyBroadPhase {
         props.minima,
         props.maxima,
         ...(props.objectMetadata ? [props.objectMetadata] : []),
+        ...(props.activeInstances ? [props.activeInstances] : []),
         ...writable.filter(view => view !== output)
       ])
         if (output.buffer === input.buffer) {
@@ -117,8 +128,19 @@ export class GPURigidBodyBroadPhase {
     const values = createTransientView(graph, `${this.id}-values`, 'uint32', count);
     const sortedKeys = createTransientView(graph, `${this.id}-sorted-keys`, 'uint32', count);
     const sortedValues = createTransientView(graph, `${this.id}-sorted-values`, 'uint32', count);
-    const levels = createTransientView(graph, `${this.id}-levels`, 'uint32', count);
-    const oversized = createTransientView(graph, `${this.id}-oversized`, 'uint32', count);
+    const levels = createTransientView(
+      graph,
+      `${this.id}-levels`,
+      'uint32',
+      count * (this.props.activeInstances ? 2 : 1)
+    );
+    const oversized = this.props.activeInstances
+      ? graph.createDataView(levels.buffer, {
+          format: 'uint32',
+          length: count,
+          byteOffset: count * 4
+        })
+      : createTransientView(graph, `${this.id}-oversized`, 'uint32', count);
     const views = {
       minima,
       maxima,
@@ -130,7 +152,18 @@ export class GPURigidBodyBroadPhase {
       oversized,
       pairs,
       diagnostics,
-      objectMetadata: this.props.objectMetadata ?? values
+      objectMetadata: this.props.objectMetadata ?? values,
+      ...(this.props.activeInstances
+        ? {
+            activeInstances: this.props.activeInstances,
+            heads: createTransientView(
+              graph,
+              `${this.id}-heads`,
+              'uint32',
+              2 ** Math.ceil(Math.log2(Math.max(1, count * 2)))
+            )
+          }
+        : {})
     };
     const names = Object.keys(views) as (keyof typeof views)[];
     const source = makeBroadPhaseShader(this.props, views);
@@ -145,11 +178,16 @@ export class GPURigidBodyBroadPhase {
       writable: readonly (keyof typeof views)[],
       workgroups: number
     ) => {
+      active = active.filter(
+        name => !this.props.activeInstances || !['keys', 'oversized'].includes(name)
+      );
       const bindings = active.map(name => ({
         name,
         group: 0,
         location: names.indexOf(name),
-        type: ['keys', 'values', 'levels', 'oversized', 'pairs', 'diagnostics'].includes(name)
+        type: ['keys', 'values', 'levels', 'oversized', 'pairs', 'diagnostics', 'heads'].includes(
+          name
+        )
           ? ('storage' as const)
           : ('read-only-storage' as const)
       }));
@@ -163,8 +201,14 @@ export class GPURigidBodyBroadPhase {
         return {
           encode: ({computePass, getBuffer}) => {
             const resolved: Record<string, Binding> = {};
-            for (const name of active) resolved[name] = getViewBinding(views[name], getBuffer);
-            kernel.dispatch(computePass, {bindings: resolved, x: workgroups, y: 1, z: 1});
+            for (const name of active) resolved[name] = getViewBinding(views[name]!, getBuffer);
+            if (this.props.activeInstances && ['assign', 'discover'].includes(entryPoint)) {
+              kernel.dispatchIndirect(computePass, {
+                bindings: resolved,
+                indirectBuffer: getBuffer(this.props.activeInstances.buffer),
+                indirectOffset: getViewBindingRange(this.props.activeInstances).offset + 32
+              });
+            } else kernel.dispatch(computePass, {bindings: resolved, x: workgroups, y: 1, z: 1});
           },
           destroy: () => kernel.destroy()
         };
@@ -172,15 +216,25 @@ export class GPURigidBodyBroadPhase {
       return createGPUComputeCommandNode<Parameters>({
         id: `${this.id}-${entryPoint}`,
         description: passDescriptions[entryPoint],
-        resources: active.map(name => ({
-          buffer: views[name],
-          usage: writable.includes(name) ? 'storage-read-write' : 'storage-read'
-        })),
+        resources: [
+          ...(this.props.activeInstances && ['assign', 'discover'].includes(entryPoint)
+            ? [{buffer: this.props.activeInstances, usage: 'indirect' as const}]
+            : []),
+          ...active.map(name => ({
+            buffer: views[name]!,
+            usage: writable.includes(name)
+              ? ('storage-read-write' as const)
+              : ('storage-read' as const)
+          }))
+        ],
         compile: makeExecutable
       });
     };
     return [
       pass('clear', ['diagnostics'], ['diagnostics'], 1),
+      ...(this.props.activeInstances
+        ? [pass('clearBuckets', ['heads'], ['heads'], Math.ceil(views.heads!.length / 64))]
+        : []),
       pass(
         'assign',
         [
@@ -191,29 +245,41 @@ export class GPURigidBodyBroadPhase {
           'levels',
           'oversized',
           'diagnostics',
-          ...(this.props.objectMetadata ? ['objectMetadata' as const] : [])
+          ...(this.props.objectMetadata ? ['objectMetadata' as const] : []),
+          ...(this.props.activeInstances ? ['heads' as const, 'activeInstances' as const] : [])
         ],
-        ['keys', 'values', 'levels', 'oversized', 'diagnostics'],
+        [
+          'keys',
+          'values',
+          'levels',
+          'oversized',
+          'diagnostics',
+          ...(this.props.activeInstances ? ['heads' as const] : [])
+        ],
         Math.max(1, Math.ceil(count / 64))
       ),
-      ...new GPUSort({
-        id: `${this.id}-sort`,
-        keys,
-        values,
-        outputKeys: sortedKeys,
-        outputValues: sortedValues
-      }).getCommandNodes(graph),
+      ...(this.props.activeInstances
+        ? []
+        : new GPUSort({
+            id: `${this.id}-sort`,
+            keys,
+            values,
+            outputKeys: sortedKeys,
+            outputValues: sortedValues
+          }).getCommandNodes(graph)),
       pass(
         'discover',
         [
           'minima',
           'maxima',
-          'sortedKeys',
-          'sortedValues',
+          ...(this.props.activeInstances ? [] : ['sortedKeys' as const, 'sortedValues' as const]),
           'levels',
           'oversized',
           'pairs',
-          'diagnostics'
+          'diagnostics',
+          ...(this.props.activeInstances
+            ? ['heads' as const, 'keys' as const, 'values' as const, 'activeInstances' as const]
+            : [])
         ],
         ['pairs', 'diagnostics'],
         Math.max(1, Math.ceil(count / 64))
@@ -228,9 +294,17 @@ function makeBroadPhaseShader(
 ): string {
   const names = Object.keys(views);
   const offsets = Object.fromEntries(names.map(name => [name, getViewElementOffset(views[name])]));
-  const writable = new Set(['keys', 'values', 'levels', 'oversized', 'pairs', 'diagnostics']);
-  return /* wgsl */ `
-${names.map((name, index) => `@group(0) @binding(${index}) var<storage, ${writable.has(name) ? 'read_write' : 'read'}> ${name}:array<${name === 'minima' || name === 'maxima' ? 'f32' : name === 'diagnostics' ? 'atomic<u32>' : 'u32'}>;`).join('\n')}
+  const writable = new Set([
+    'keys',
+    'values',
+    'levels',
+    'oversized',
+    'pairs',
+    'diagnostics',
+    'heads'
+  ]);
+  let source = /* wgsl */ `
+${names.map((name, index) => `@group(0) @binding(${index}) var<storage, ${writable.has(name) ? 'read_write' : 'read'}> ${name}:array<${name === 'minima' || name === 'maxima' ? 'f32' : ['diagnostics', 'heads'].includes(name) ? 'atomic<u32>' : 'u32'}>;`).join('\n')}
 const BODY_COUNT:u32=${props.minima.length}u;
 const PAIR_CAPACITY:u32=${props.pairs.length}u;
 const BASE_CELL:f32=${props.minimumCellSize ?? 1 / 1024};
@@ -289,4 +363,37 @@ fn emit(first:u32,second:u32){
  }
 }
 `;
+  if (props.activeInstances) {
+    const instances = props.minima.length / props.partitionSize!;
+    const queueOffset = offsets['activeInstances'] + 16 + instances * 8;
+    const bucketMask = views['heads'].length - 1;
+    source += `
+fn activeCount()->u32{return activeInstances[${offsets['activeInstances']}u]*${props.partitionSize}u;}
+fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${props.partitionSize}u]*${props.partitionSize}u+index%${props.partitionSize}u;}
+@compute @workgroup_size(64) fn clearBuckets(@builtin(global_invocation_id) invocation:vec3u){
+ if(invocation.x<${views['heads'].length}u){atomicStore(&heads[invocation.x],0xffffffffu);}
+}
+`;
+    source = source
+      .replace('var tested=0u;', 'var tested=0u;var bucketVisits=0u;')
+      .replace(
+        'let index=invocation.x;if(index>=BODY_COUNT){return;}',
+        'let work=invocation.x;if(work>=activeCount()){return;}let index=activeObject(work);'
+      )
+      .replace(
+        'let first=invocation.x;if(first>=BODY_COUNT){return;}',
+        'let work=invocation.x;if(work>=activeCount()){return;}let first=activeObject(work);'
+      )
+      .replace(
+        'keys[' + offsets['keys'] + 'u+index]=hash(cell(index,level),level,domain(index));',
+        `let key=hash(cell(index,level),level,domain(index));values[${offsets['values']}u+index]=atomicExchange(&heads[key&${bucketMask}u],index);`
+      )
+      .replace('var cursor=lowerBound(key);', `var cursor=atomicLoad(&heads[key&${bucketMask}u]);`)
+      .replace(
+        `if(cursor>=BODY_COUNT||sortedKeys[${offsets['sortedKeys']}u+cursor]!=key){break;}let second=sortedValues[${offsets['sortedValues']}u+cursor];cursor++;`,
+        `if(cursor>=BODY_COUNT){break;}if(bucketVisits>=${Math.min(0xffffffff, (props.maximumCandidateTestsPerQuery ?? 4096) * 32)}u){atomicAdd(&diagnostics[${offsets['diagnostics']}u+6u],1u);return;}bucketVisits++;let second=cursor;cursor=values[${offsets['values']}u+second];if(domain(first)!=domain(second)||(levels[${offsets['levels']}u+second]&63u)!=level||any(cell(second,level)!=coordinate)){continue;}`
+      );
+    source = source.replace(/keys\[[^\]]+\]=0xffffffffu;/g, '').replace(/oversized\[/g, 'levels[');
+  }
+  return source;
 }

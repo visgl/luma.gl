@@ -17,6 +17,8 @@ import {
 } from '../gpu-core/gpu-command-graph';
 import {shiftRigidBodyBuffers} from './rigid-body-origin';
 import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
+import {addEnsembleStatus, readOnlyEnsembleShader} from './rigid-body-ensemble-shaders';
+import {makeEnsembleReset} from './rigid-body-ensemble-reset';
 import {packRigidBodyShapes} from './rigid-body-geometry';
 import {
   getCompoundBodyInertia,
@@ -131,6 +133,8 @@ export type GPURigidBodyWorldProps = {
   /** Small worlds retain the all-pairs numerical oracle; larger worlds use sparse discovery. */
   /** Independent equal collider blocks; currently excludes joints, CCD and authored triggers. */
   collisionPartitionSize?: number;
+  /** Equal body ranges for GPU-driven ensemble scheduling; requires parallel sparse partitions. */
+  ensembleBodiesPerInstance?: number;
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
   /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
   solver?: 'ordered' | 'parallel';
@@ -220,6 +224,10 @@ export class GPURigidBodyWorld {
   private readonly colliders: readonly (GPURigidBodyCollider & {body: number})[];
   private readonly props: GPURigidBodyWorldProps;
   private readonly ownedBuffers: Buffer[] = [];
+  private ensembleBuffer: Buffer | null = null;
+  private ensembleResetOrigin?: readonly number[];
+  private ensembleReset?: ReturnType<typeof makeEnsembleReset>;
+  private initialEnsembleBodies?: readonly GPURigidBody[];
   private manifolds: Buffer | null = null;
   private meshTasks: Buffer | null = null;
   private parallelState: Buffer | null = null;
@@ -405,6 +413,18 @@ export class GPURigidBodyWorld {
         Boolean(props.joints?.length || props.continuous || props.triggers?.length))
     )
       throw new Error('Invalid collision partitions');
+    if (
+      props.ensembleBodiesPerInstance !== undefined &&
+      (!Number.isSafeInteger(props.ensembleBodiesPerInstance) ||
+        props.ensembleBodiesPerInstance < 1 ||
+        this.count % props.ensembleBodiesPerInstance !== 0 ||
+        !props.collisionPartitionSize ||
+        this.count / props.ensembleBodiesPerInstance !==
+          colliders.length / props.collisionPartitionSize ||
+        this.solver !== 'parallel' ||
+        this.broadPhase !== 'hierarchical-grid')
+    )
+      throw new Error('Invalid ensemble scheduling layout');
     this.colliderCount = colliders.length;
     this.colliderStorageCount = Math.max(1, colliders.length);
     // WGSL fixed arrays require a positive size. A lone private collider cannot
@@ -472,6 +492,8 @@ export class GPURigidBodyWorld {
     const definitions = structuredClone({colliders, props});
     this.colliders = definitions.colliders;
     this.props = definitions.props;
+    if (props.ensembleBodiesPerInstance)
+      this.initialEnsembleBodies = this.props.bodies.slice(0, props.ensembleBodiesPerInstance);
   }
 
   private getStorageLayout() {
@@ -546,7 +568,112 @@ export class GPURigidBodyWorld {
           uniform: false
         }
       );
+    if (this.props.ensembleBodiesPerInstance)
+      storage.buffers.push({
+        name: 'ensemble',
+        byteLength: (16 + (9 * this.count) / this.props.ensembleBodiesPerInstance) * 4,
+        uniform: false
+      });
     return {...storage, triggerLayout};
+  }
+
+  initializeEnsembleReset(): number {
+    if (!this.device || !this.ensembleBuffer || this.destroyed)
+      throw new Error('World has no ensemble scheduler');
+    this.ensembleResetOrigin ??= this.origin;
+    this.ensembleReset ??= makeEnsembleReset(
+      this.device,
+      this.id,
+      this.ownedBuffers,
+      this.count,
+      this.props.ensembleBodiesPerInstance!,
+      this.props.collisionPartitionSize!,
+      this.maximumPairs
+    );
+    return this.ensembleReset.byteLength;
+  }
+
+  resetEnsembleInstance(instance: number): void {
+    this.assertEnsembleInstance(instance);
+    if (!this.ensembleReset) throw new Error('Ensemble reset image unavailable');
+    const bodyStart = instance * this.props.ensembleBodiesPerInstance!;
+    const colliderStart = instance * this.props.collisionPartitionSize!;
+    let colliderIndex = colliderStart;
+    const restored = this.initialEnsembleBodies!.map(body => {
+      if (body.shape) {
+        const current = this.colliders[colliderIndex++].shape;
+        return {
+          ...body,
+          shape:
+            body.shape.type === 'convex-hull' || body.shape.type === 'triangle-mesh'
+              ? current
+              : body.shape
+        };
+      }
+      return {
+        ...body,
+        colliders: body.colliders.map(collider => {
+          const current = this.colliders[colliderIndex++].shape;
+          return {
+            ...collider,
+            shape:
+              collider.shape.type === 'convex-hull' || collider.shape.type === 'triangle-mesh'
+                ? current
+                : collider.shape,
+            excludedColliders: collider.excludedColliders?.map(index => index + colliderStart)
+          };
+        })
+      };
+    });
+    const definitions = [...this.props.bodies];
+    definitions.splice(bodyStart, restored.length, ...restored);
+    this.props.bodies = definitions;
+    for (
+      let collider = colliderStart;
+      collider < colliderStart + this.props.collisionPartitionSize!;
+      collider++
+    )
+      this.colliderShapeScales.delete(collider);
+    this.restoreColliderDefinitions();
+    this.ensembleReset.reset(
+      instance,
+      this.origin.map((value, axis) => value - this.ensembleResetOrigin![axis])
+    );
+    this.ensembleBuffer!.write(new Uint32Array(5), (16 + instance * 8 + 1) * 4);
+    if (this.encodePosePublication) {
+      const encoder = this.device!.createCommandEncoder();
+      this.encodePosePublication(encoder);
+      this.device!.submit(encoder.finish());
+    }
+  }
+
+  wakeEnsembleInstance(instance: number): void {
+    this.assertEnsembleInstance(instance);
+    this.sleepStates!.write(
+      new Uint32Array(this.props.ensembleBodiesPerInstance! * 4),
+      instance * this.props.ensembleBodiesPerInstance! * 16
+    );
+  }
+
+  setEnsembleActive(instance: number, active: boolean): void {
+    this.assertEnsembleInstance(instance);
+    this.ensembleBuffer!.write(new Uint32Array([active ? 1 : 0]), (16 + instance * 8) * 4);
+  }
+
+  async readEnsembleState(): Promise<Uint32Array> {
+    if (!this.ensembleBuffer || this.destroyed) throw new Error('World has no ensemble scheduler');
+    return new Uint32Array((await this.ensembleBuffer.readAsync()).buffer);
+  }
+
+  private assertEnsembleInstance(instance: number): void {
+    if (
+      !this.ensembleBuffer ||
+      this.destroyed ||
+      !Number.isSafeInteger(instance) ||
+      instance < 0 ||
+      instance >= this.count / this.props.ensembleBodiesPerInstance!
+    )
+      throw new Error('Invalid ensemble instance');
   }
 
   /** Allocation preflight without GPU allocation. Graph scratch and driver overhead are separate. */
@@ -604,7 +731,7 @@ export class GPURigidBodyWorld {
           (uniform ? Buffer.UNIFORM : Buffer.STORAGE) |
           Buffer.COPY_DST |
           Buffer.COPY_SRC |
-          (['targets', 'parallel-dispatch', 'continuous-dispatch'].includes(name)
+          (['targets', 'parallel-dispatch', 'continuous-dispatch', 'ensemble'].includes(name)
             ? Buffer.INDIRECT
             : 0)
       });
@@ -745,6 +872,12 @@ export class GPURigidBodyWorld {
       this.parallelState = allocate('parallel-state', parallelByteLength);
       this.parallelDispatch = allocate('parallel-dispatch', 48);
     }
+    if (this.props.ensembleBodiesPerInstance) {
+      const instances = this.count / this.props.ensembleBodiesPerInstance;
+      const state = new Uint32Array(16 + instances * 9);
+      for (let instance = 0; instance < instances; instance++) state[16 + instance * 8] = 1;
+      this.ensembleBuffer = allocate('ensemble', state);
+    }
     const buffers = {
       settings,
       positions: this.positions,
@@ -766,21 +899,27 @@ export class GPURigidBodyWorld {
           }
         : {})
     };
-    const bindings = Object.entries(buffers).map(([name, buffer], location) => ({
+    const scheduledBuffers = {
+      ...buffers,
+      ...(this.ensembleBuffer ? {ensemble: this.ensembleBuffer} : {})
+    };
+    const bindings = Object.entries(scheduledBuffers).map(([name, buffer], location) => ({
       name,
       buffer,
       location:
-        name === 'parallelDispatch'
-          ? 27
-          : name === 'parallelState'
-            ? 26
-            : name === 'minima'
-              ? 24
-              : name === 'maxima'
-                ? 25
-                : location >= 8
-                  ? location + 1
-                  : location,
+        name === 'ensemble'
+          ? 28
+          : name === 'parallelDispatch'
+            ? 27
+            : name === 'parallelState'
+              ? 26
+              : name === 'minima'
+                ? 24
+                : name === 'maxima'
+                  ? 25
+                  : location >= 8
+                    ? location + 1
+                    : location,
       resource: graph.importBuffer(
         {
           id: `${this.id}-${name}`,
@@ -790,7 +929,7 @@ export class GPURigidBodyWorld {
               ? Buffer.UNIFORM
               : Buffer.STORAGE |
                 Buffer.COPY_SRC |
-                (['targets', 'parallelDispatch'].includes(name) ? Buffer.INDIRECT : 0)
+                (['targets', 'parallelDispatch', 'ensemble'].includes(name) ? Buffer.INDIRECT : 0)
         },
         buffer
       )
@@ -841,10 +980,12 @@ export class GPURigidBodyWorld {
       this.props.angularDamping ?? 0,
       this.props.joints?.length ?? 0,
       this.props.compactContacts ?? true,
-      this.props.collisionPartitionSize
+      this.props.collisionPartitionSize,
+      this.props.ensembleBodiesPerInstance
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
+      parallelPrepareSleep: ['parallelState'],
       parallelCompact: ['manifolds', 'parallelState'],
       parallelDispatchCount: ['parallelState', 'parallelDispatch'],
       parallelActive: ['bodies', 'sleepStates', 'manifolds', 'parallelState'],
@@ -884,7 +1025,7 @@ export class GPURigidBodyWorld {
         'bodies',
         'sleepStates',
         'targets',
-        'parallelState'
+        ...(this.ensembleBuffer ? [] : ['parallelState'])
       ],
       parallelMarkSleep: ['settings', 'bodies', 'sleepStates', 'parallelState'],
       parallelSleep: ['velocities', 'angularVelocities', 'bodies', 'sleepStates', 'parallelState']
@@ -984,6 +1125,9 @@ export class GPURigidBodyWorld {
       parallelSleep: 'Put quiet constraint islands to sleep.'
     };
     for (const entryPoint of [
+      ...(this.ensembleBuffer
+        ? ['ensembleClear', 'ensembleMark', 'ensembleCompact', 'ensembleDispatch']
+        : []),
       'integrate',
       ...(sparse ? ['prepare', 'bounds'] : []),
       'collide',
@@ -1005,6 +1149,7 @@ export class GPURigidBodyWorld {
               : []),
             'parallelSolve',
             'parallelAdvance',
+            ...(this.ensembleBuffer ? ['parallelPrepareSleep'] : []),
             'parallelMarkSleep',
             'parallelSleep'
           ]
@@ -1018,6 +1163,14 @@ export class GPURigidBodyWorld {
           id: `${this.id}-broad-phase`,
           objectMetadata: objectAttributeView,
           partitionSize: this.props.collisionPartitionSize,
+          ...(this.ensembleBuffer
+            ? {
+                activeInstances: graph.createDataView(
+                  bindings.find(binding => binding.name === 'ensemble')!.resource,
+                  {format: 'uint32', length: this.ensembleBuffer.byteLength / 4}
+                )
+              }
+            : {}),
           maximumCandidateTestsPerQuery: this.props.maximumCandidateTestsPerCollider,
           minima: graph.createDataView(minimumBinding.resource, {
             format: 'float32x3',
@@ -1067,7 +1220,7 @@ export class GPURigidBodyWorld {
               : entryPoint === 'meshCollide'
                 ? ['velocities', 'angularVelocities', 'manifolds', 'sleepStates', 'targets']
                 : entryPoint === 'integrate'
-                  ? ['manifolds']
+                  ? ['manifolds', ...(this.ensembleBuffer ? ['meshTasks'] : [])]
                   : entryPoint === 'collide'
                     ? [
                         'sleepStates',
@@ -1084,19 +1237,54 @@ export class GPURigidBodyWorld {
         ...(entryPoint.startsWith('parallel') ? [] : ['parallelState', 'parallelDispatch']),
         ...(entryPoint === 'bounds' ? [] : ['minima', 'maxima'])
       ];
-      const activeBindings = bindings.filter(binding => !unused.includes(binding.name));
+      const usesScheduler = [
+        'integrate',
+        'bounds',
+        'prepare',
+        'parallelCompact',
+        'parallelActive',
+        'parallelLink',
+        'parallelUnion',
+        'parallelCompress',
+        'parallelWakeRoots',
+        'parallelWakeBodies',
+        'parallelAdvance',
+        'parallelMarkSleep',
+        'parallelSleep'
+      ].includes(entryPoint);
+      const selectBinding = (name: string) =>
+        entryPoint.startsWith('ensemble')
+          ? name === 'ensemble' ||
+            (entryPoint === 'ensembleMark' && ['bodies', 'sleepStates'].includes(name)) ||
+            (entryPoint === 'ensembleClear' && extended && ['meshTasks', 'targets'].includes(name))
+          : name === 'ensemble'
+            ? usesScheduler
+            : !unused.includes(name);
+      const activeBindings = bindings.filter(binding => selectBinding(binding.name));
       const activeLayout: ShaderLayout = {
         attributes: [],
-        bindings: shaderLayout.bindings!.filter(binding => !unused.includes(binding.name))
+        bindings: shaderLayout
+          .bindings!.filter(binding => selectBinding(binding.name))
+          .map(binding =>
+            binding.name === 'ensemble' && !entryPoint.startsWith('ensemble')
+              ? {...binding, type: 'read-only-storage' as const}
+              : binding
+          )
       };
       const indirectPairs =
         parallel &&
         this.props.compactContacts !== false &&
         ['parallelSolve', 'parallelLink', 'parallelUnion'].includes(entryPoint);
       const dispatchBinding = bindings.find(binding => binding.name === 'parallelDispatch');
-      const indirectResources = indirectPairs
-        ? [{buffer: dispatchBinding!.resource, usage: 'indirect' as const}]
-        : [];
+      const schedulerBinding = bindings.find(binding => binding.name === 'ensemble');
+      const scheduledDispatch = Boolean(
+        this.ensembleBuffer && ['integrate', 'bounds', 'parallelAdvance'].includes(entryPoint)
+      );
+      const indirectResources = scheduledDispatch
+        ? [{buffer: schedulerBinding!.resource, usage: 'indirect' as const}]
+        : indirectPairs
+          ? [{buffer: dispatchBinding!.resource, usage: 'indirect' as const}]
+          : [];
       if (entryPoint === 'parallelSolve') {
         const stages = ['parallelWarm', 'parallelPairs', 'parallelGather'];
         const properties = stages.map(stage => ({
@@ -1181,7 +1369,13 @@ export class GPURigidBodyWorld {
           for (const binding of activeBindings)
             resolved[binding.name] = getBuffer(binding.resource);
           computation.setBindings(resolved);
-          if (indirectPairs) {
+          if (scheduledDispatch) {
+            computation.dispatchIndirect(
+              computePass,
+              getBuffer(schedulerBinding!.resource),
+              entryPoint === 'bounds' ? 32 : 16
+            );
+          } else if (indirectPairs) {
             computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 0);
           } else if (entryPoint === 'meshCollide') {
             const targetBinding = bindings.find(binding => binding.name === 'targets')!;
@@ -1193,21 +1387,29 @@ export class GPURigidBodyWorld {
           } else {
             computation.dispatch(
               computePass,
-              ['parallelLink', 'parallelUnion', 'parallelCompact'].includes(entryPoint)
-                ? Math.ceil(this.maximumPairs / 64)
-                : entryPoint === 'parallelActive'
-                  ? Math.ceil(Math.max(this.maximumPairs, this.count) / 64)
-                  : ['parallelDispatchCount', 'parallelActiveCount'].includes(entryPoint)
-                    ? 1
-                    : entryPoint.startsWith('parallel')
-                      ? Math.ceil(this.count / 64)
-                      : entryPoint === 'collide'
-                        ? Math.ceil(this.maximumPairs / 64)
-                        : entryPoint === 'bounds'
-                          ? Math.ceil(this.colliderStorageCount / 64)
-                          : entryPoint === 'integrate'
-                            ? Math.ceil(this.count / 64)
-                            : 1
+              entryPoint === 'ensembleDispatch'
+                ? 1
+                : entryPoint.startsWith('ensemble')
+                  ? Math.ceil(
+                      (entryPoint === 'ensembleMark'
+                        ? this.count
+                        : this.count / this.props.ensembleBodiesPerInstance!) / 64
+                    )
+                  : ['parallelLink', 'parallelUnion', 'parallelCompact'].includes(entryPoint)
+                    ? Math.ceil(this.maximumPairs / 64)
+                    : entryPoint === 'parallelActive'
+                      ? Math.ceil(Math.max(this.maximumPairs, this.count) / 64)
+                      : ['parallelDispatchCount', 'parallelActiveCount'].includes(entryPoint)
+                        ? 1
+                        : entryPoint.startsWith('parallel')
+                          ? Math.ceil(this.count / 64)
+                          : entryPoint === 'collide'
+                            ? Math.ceil(this.maximumPairs / 64)
+                            : entryPoint === 'bounds'
+                              ? Math.ceil(this.colliderStorageCount / 64)
+                              : entryPoint === 'integrate'
+                                ? Math.ceil(this.count / 64)
+                                : 1
             );
           }
         },
@@ -1215,7 +1417,7 @@ export class GPURigidBodyWorld {
       });
       const computationProps = {
         id: `${this.id}-${entryPoint}`,
-        source,
+        source: entryPoint.startsWith('ensemble') ? source : readOnlyEnsembleShader(source),
         entryPoint,
         shaderLayout: activeLayout
       };
@@ -1229,7 +1431,8 @@ export class GPURigidBodyWorld {
             usage:
               binding.location === 0
                 ? ('uniform' as const)
-                : binding.name === 'bodies'
+                : binding.name === 'bodies' ||
+                    (binding.name === 'ensemble' && !entryPoint.startsWith('ensemble'))
                   ? ('storage-read' as const)
                   : ('storage-read-write' as const)
           })),
@@ -1269,6 +1472,14 @@ export class GPURigidBodyWorld {
       ...(parallel ? {parallelState: diagnosticBinding('parallelState')} : {})
     });
     restoreCheckpoint?.restore();
+    if (this.ensembleBuffer)
+      addEnsembleStatus(
+        graph,
+        this.id,
+        this.count / this.props.ensembleBodiesPerInstance!,
+        diagnosticBinding('ensemble'),
+        {buffer: this.simulationStatistics, resource: statisticsResource}
+      );
     triggers?.publish();
     if (this.props.publicationBounds || this.props.publishPoses) {
       const publication = addRigidBodyPosePublication(
@@ -1292,7 +1503,7 @@ export class GPURigidBodyWorld {
       const contactHistory = allocate('contact-history', this.maximumPairs * 16);
       this.contactEvents = allocate('contact-events', 16 + this.props.eventCapacity * 64);
       const eventBindings = [
-        ...bindings.filter(binding => ['bodies', 'manifolds'].includes(binding.name)),
+        ...bindings.filter(binding => ['bodies', 'manifolds', 'ensemble'].includes(binding.name)),
         ...(this.props.failurePolicy === 'rollback'
           ? [
               {
@@ -2587,6 +2798,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   /** Destroy the compiled graph and finish readbacks before destroying its world. */
   destroy(): void {
     if (this.destroyed) return;
+    this.ensembleReset?.destroy();
     for (const checkpoint of this.gpuCheckpoints) checkpoint.destroy();
     this.destroyed = true;
     this.control?.destroy();
