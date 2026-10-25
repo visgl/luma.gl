@@ -33,24 +33,41 @@ for (const directory of packages) {
   const requiredFiles = new Set(['LICENSE', 'THIRD-PARTY-NOTICES.md']);
   assert.equal(readText(path.join(packageRoot, 'LICENSE')), readText('LICENSE'));
 
-  for (const match of notices.matchAll(/\]\((\.\/[^)#]+)(?:#[^)]*)?\)/gu)) {
-    const filename = path.normalize(path.join(packageRoot, match[1]));
+  const addRequiredNotice = filename => {
     assert(filename.startsWith(packageRoot + path.sep), 'Package notices must stay inside the package');
     assert(existsSync(path.join(repositoryRoot, filename)), 'Broken notice link: ' + filename);
     assert(readText(filename).trim().length > 100, 'Empty notice: ' + filename);
     const relativeFilename = path.relative(packageRoot, filename);
     requiredFiles.add(relativeFilename);
     assert(
-      manifest.files.some(entry => relativeFilename === entry || relativeFilename.startsWith(entry + '/')),
+      !manifest.files || manifest.files.some(entry => relativeFilename === entry || relativeFilename.startsWith(entry + '/')),
       'Notice missing from files manifest: ' + filename
     );
+  };
+  for (const match of notices.matchAll(/\]\((\.\/[^)#]+)(?:#[^)]*)?\)/gu)) {
+    addRequiredNotice(path.normalize(path.join(packageRoot, match[1])));
+  }
+  // The recorded inventory is independent of editable Markdown links.
+  for (const filename of new Set(inventory.sources.flatMap(source => source.notices))) {
+    if (filename.startsWith(packageRoot + '/')) {
+      addRequiredNotice(filename);
+    }
   }
 
   for (const filename of ['LICENSE', 'THIRD-PARTY-NOTICES.md']) {
-    assert(manifest.files.includes(filename), 'Missing package files entry: ' + packageRoot + '/' + filename);
+    assert(!manifest.files || manifest.files.includes(filename), 'Missing package files entry: ' + packageRoot + '/' + filename);
   }
 
-  if (process.argv.includes('--pack') && !manifest.private) {
+  // An absent files allowlist preserves npm's default packaging, including code.
+  for (const filename of ['src/index.ts', manifest.main, manifest.module, manifest.types].filter(Boolean)) {
+    if (existsSync(path.join(repositoryRoot, packageRoot, filename))) {
+      requiredFiles.add(filename);
+      assert(!manifest.files || manifest.files.some(entry => filename === entry || filename.startsWith(entry + '/')),
+        'Code missing from files manifest: ' + packageRoot + '/' + filename);
+    }
+  }
+
+  if (process.argv.includes('--pack')) {
     const output = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
       cwd: path.join(repositoryRoot, packageRoot),
       encoding: 'utf8',
@@ -116,5 +133,5 @@ if (process.argv.includes('--write-distribution')) {
 }
 assert.equal(readText(distributionPath), distributionNotices,
   'Refresh standalone notices with yarn check:attributions --write-distribution');
-console.log('Attribution checks passed for ' + publicPackages.length + ' public packages' +
+console.log('Attribution checks passed for ' + packages.length + ' workspaces (' + publicPackages.length + ' public)' +
   (process.argv.includes('--pack') ? ', including npm pack contents.' : '.'));

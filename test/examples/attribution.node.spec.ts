@@ -119,6 +119,48 @@ describe('Attribution guardrails', () => {
     expect(result.stderr).toContain('Missing upstream attribution');
   });
 
+  test('rejects an inventoried notice dropped from both Markdown and the manifest', () => {
+    const fixtureRoot = makeAttributionFixture();
+    const manifestPath = path.join(fixtureRoot, 'modules/core/package.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    manifest.files = manifest.files.filter((entry: string) => entry !== 'licenses');
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    const noticePath = path.join(fixtureRoot, 'modules/core/THIRD-PARTY-NOTICES.md');
+    writeFileSync(noticePath, readFileSync(noticePath, 'utf8').replace(/^Full terms:.*$/gmu, ''));
+    const result = runAttributionCheck(fixtureRoot);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Notice missing from files manifest');
+  });
+
+  test('rejects removed Evan Wallace filter ownership', () => {
+    const fixtureRoot = makeAttributionFixture();
+    const filename = path.join(
+      fixtureRoot,
+      'modules/effects/src/passes/postprocessing/image-adjust-filters/brightnesscontrast.ts'
+    );
+    writeFileSync(
+      filename,
+      readFileSync(filename, 'utf8').replace('2011 by Evan Wallace', 'upstream')
+    );
+    const result = runAttributionCheck(fixtureRoot);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Missing upstream attribution');
+  });
+
+  test('rejects an allowlist that omits code from a previously unrestricted package', () => {
+    const fixtureRoot = makeAttributionFixture();
+    const sourcePath = 'modules/three/src/index.ts';
+    mkdirSync(path.dirname(path.join(fixtureRoot, sourcePath)), {recursive: true});
+    cpSync(path.join(REPOSITORY_ROOT, sourcePath), path.join(fixtureRoot, sourcePath));
+    const manifestPath = path.join(fixtureRoot, 'modules/three/package.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    manifest.files = ['LICENSE', 'THIRD-PARTY-NOTICES.md'];
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    const result = runAttributionCheck(fixtureRoot);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Code missing from files manifest');
+  });
+
   test('rejects stale standalone distribution notices', () => {
     const fixtureRoot = makeAttributionFixture();
     const filename = path.join(
