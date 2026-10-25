@@ -212,6 +212,14 @@ struct Vertex {@builtin(position) position: vec4f};
       });
       graph.step(0);
     }
+    controls.updateTelemetry({
+      time: graph.time,
+      queuedTime,
+      particleCount: activeCount,
+      integrator: activeIntegrator,
+      framesPerSecond: 0,
+      traceResult
+    });
     updateLegend();
     particles = new Model(device, {
       id: 'scientific-flow-streaks',
