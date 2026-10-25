@@ -748,3 +748,36 @@ it('keeps the journal within default binding limits at the previous contact-capa
   );
   world.destroy();
 });
+
+it('rejects non-finite active-body integration and clears validation counts for an idle step', async context => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      gravity: [0, 0, 0],
+      bodies: [
+        {position: [0, 0, 0], angularVelocity: [1e38, 0, 0], shape: {type: 'sphere', radius: 0.5}}
+      ]
+    },
+    instances: 2,
+    maximumPairs: 4,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  try {
+    ensemble.setActive(1, false);
+    const initial = await ensemble.world.readState();
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder);
+    device.submit(encoder.finish());
+    const rejected = await ensemble.world.readSimulationDiagnostics();
+    expect(rejected.invalidBodyStates).toBe(1);
+    expect(await ensemble.world.readState()).toEqual(initial);
+    ensemble.setActive(0, false);
+    const idle = device.createCommandEncoder();
+    ensemble.encode(idle);
+    device.submit(idle.finish());
+    expect((await ensemble.world.readSimulationDiagnostics()).invalidBodyStates).toBe(1);
+  } finally {
+    ensemble.destroy();
+  }
+});

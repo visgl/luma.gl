@@ -48,12 +48,12 @@ export function addEnsembleCheckpoint<GraphParameters>(
     .slice(0, 5)
     .map((state, index) => importAllocation(`checkpoint-${index}`, state.buffer.byteLength));
   const validity = importAllocation('state-validity', bodyCount * 4);
-  type Input = Resource & {name: string; writable?: boolean};
+  type Input = Resource & {name: string; writable?: boolean; atomic?: boolean};
   const addCompute = (name: string, inputs: Input[], source: string, indirect = false) => {
     const properties = {
       id: `${id}-${name}`,
       entryPoint: 'main',
-      source: `${inputs.map((input, location) => `@group(0) @binding(${location}) var<storage,${input.writable ? 'read_write' : 'read'}> ${input.name}:array<u32>;`).join('\n')}\n${source}`,
+      source: `${inputs.map((input, location) => `@group(0) @binding(${location}) var<storage,${input.writable ? 'read_write' : 'read'}> ${input.name}:array<${input.atomic ? 'atomic<u32>' : 'u32'}>;`).join('\n')}\n${source}`,
       shaderLayout: {
         bindings: inputs.map((input, location) => ({
           name: input.name,
@@ -92,10 +92,12 @@ export function addEnsembleCheckpoint<GraphParameters>(
       'checkpoint-metadata',
       [
         {...targets, name: 'targets', writable: true},
-        {...ensemble, name: 'ensemble'}
+        {...ensemble, name: 'ensemble'},
+        {...validity, name: 'validity', writable: true}
       ],
       `
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
+ if(invocation.x==0u){validity[0]=0u;}
  if(invocation.x<8u){targets[${savedHeaderOffset}u+invocation.x]=targets[${bodyCount * 8}u+invocation.x];}
  for(var work=invocation.x;work<ensemble[0];work+=64u){
   let instance=ensemble[${16 + instances * 8}u+work];
@@ -190,22 +192,18 @@ export function addEnsembleCheckpoint<GraphParameters>(
           ...state,
           name: ['positions', 'orientations', 'velocities', 'angularVelocities'][index]
         })),
-        {...validity, name: 'validity', writable: true},
+        {...validity, name: 'validity', writable: true, atomic: true},
         {...ensemble, name: 'ensemble'}
       ],
       `
-var<workgroup> invalid:atomic<u32>;
 fn finite(value:u32)->bool{return abs(bitcast<f32>(value))<=3.402823466e38;}
-@compute @workgroup_size(64) fn main(@builtin(local_invocation_index) invocation:u32){
- if(invocation==0u){atomicStore(&invalid,0u);}workgroupBarrier();
- for(var work=invocation;work<ensemble[0]*${bodiesPerInstance}u;work+=64u){
-  let body=ensemble[${16 + instances * 8}u+work/${bodiesPerInstance}u]*${bodiesPerInstance}u+work%${bodiesPerInstance}u;
-  var valid=true;
-  for(var word=0u;word<4u;word++){let address=body*4u+word;valid=valid&&finite(positions[address])&&finite(orientations[address])&&finite(velocities[address])&&finite(angularVelocities[address]);}
-  if(!valid){atomicAdd(&invalid,1u);}
- }
- workgroupBarrier();if(invocation==0u){validity[0]=atomicLoad(&invalid);}
-}`
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
+ ${bodyAddress}
+ var valid=true;
+ for(var word=0u;word<4u;word++){let address=body*4u+word;valid=valid&&finite(positions[address])&&finite(orientations[address])&&finite(velocities[address])&&finite(angularVelocities[address]);}
+ if(!valid){atomicAdd(&validity[0],1u);}
+}`,
+      true
     );
   return {save, restore, validate, validity: {...validity, count: 1}};
 }
