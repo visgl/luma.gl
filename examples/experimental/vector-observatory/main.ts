@@ -193,8 +193,10 @@ struct Vertex {@builtin(position) position: vec4f};
       let deltaTime =
         Math.min(0.1, Math.max(0, (now - previousFrame) / 1000)) * Number(speed.value);
       previousFrame = now;
+      resizeHistory();
       if (!paused) {
         let remainingTime = deltaTime;
+        let firstSegment = true;
         while (remainingTime > 0) {
           if (field.value === 'gyre' && snapshotEnd - graph.time < 1e-10) {
             snapshotEnd += 0.25;
@@ -205,26 +207,26 @@ struct Vertex {@builtin(position) position: vec4f};
               ? Math.min(remainingTime, snapshotEnd - graph.time)
               : remainingTime;
           graph.advance(deltaTime);
+          view.write(
+            new Float32Array([
+              canvas.width,
+              canvas.height,
+              deltaTime,
+              (Number(exposure.value) * 1.2 * 65536) / Number(count.value)
+            ])
+          );
+          particles.setBindings({view, current: graph.output, previous: graph.previous});
+          const pass = device.beginRenderPass({framebuffer: history, clearColor: false});
+          if (firstSegment) fade.draw(pass);
+          particles.draw(pass);
+          pass.end();
+          // Submit this segment before the next advance reuses its state and uniform buffers.
+          device.submit();
+          firstSegment = false;
           remainingTime -= deltaTime;
         }
         element<HTMLOutputElement>('simulation-time').value = graph.time.toFixed(2) + ' s';
       }
-      view.write(
-        new Float32Array([
-          canvas.width,
-          canvas.height,
-          deltaTime,
-          (Number(exposure.value) * 1.2 * 65536) / Number(count.value)
-        ])
-      );
-      particles.setBindings({view, current: graph.output, previous: graph.previous});
-      resizeHistory();
-      const pass = device.beginRenderPass({framebuffer: history, clearColor: false});
-      if (!paused) {
-        fade.draw(pass);
-        particles.draw(pass);
-      }
-      pass.end();
       const screen = device.beginRenderPass({clearColor: [0.018, 0.035, 0.055, 1]});
       present.draw(screen);
       screen.end();
