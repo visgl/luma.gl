@@ -375,6 +375,7 @@ fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${p
 }
 `;
     source = source
+      .replace('var tested=0u;', 'var tested=0u;var bucketVisits=0u;')
       .replace(
         'let index=invocation.x;if(index>=BODY_COUNT){return;}',
         'let work=invocation.x;if(work>=activeCount()){return;}let index=activeObject(work);'
@@ -390,7 +391,7 @@ fn activeObject(index:u32)->u32{return activeInstances[${queueOffset}u+index/${p
       .replace('var cursor=lowerBound(key);', `var cursor=atomicLoad(&heads[key&${bucketMask}u]);`)
       .replace(
         `if(cursor>=BODY_COUNT||sortedKeys[${offsets['sortedKeys']}u+cursor]!=key){break;}let second=sortedValues[${offsets['sortedValues']}u+cursor];cursor++;`,
-        `if(cursor>=BODY_COUNT){break;}let second=cursor;cursor=values[${offsets['values']}u+second];if(domain(first)!=domain(second)||(levels[${offsets['levels']}u+second]&63u)!=level||any(cell(second,level)!=coordinate)){continue;}`
+        `if(cursor>=BODY_COUNT){break;}if(bucketVisits>=${Math.min(0xffffffff, (props.maximumCandidateTestsPerQuery ?? 4096) * 32)}u){atomicAdd(&diagnostics[${offsets['diagnostics']}u+6u],1u);return;}bucketVisits++;let second=cursor;cursor=values[${offsets['values']}u+second];if(domain(first)!=domain(second)||(levels[${offsets['levels']}u+second]&63u)!=level||any(cell(second,level)!=coordinate)){continue;}`
       );
     source = source.replace(/keys\[[^\]]+\]=0xffffffffu;/g, '').replace(/oversized\[/g, 'levels[');
   }

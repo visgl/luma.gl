@@ -323,7 +323,9 @@ mesh objects are not content-deduplicated. Shared metadata storage remains owned
 A GPU queue compacts enabled instances containing awake dynamic bodies or kinematics. Indirect
 integration, bounds generation and pose advancement visit only queued ranges. Broad-phase insertion
 and discovery use active collider hash buckets rather than sorting the whole population; collision
-domain and exact cell tests preserve isolation. Sleeping/paused contacts retain their cache slots.
+domain and exact cell tests preserve isolation. Bucket traversal is separately bounded at 32 times
+`maximumCandidateTestsPerCollider`; exhausting either budget rejects the shared step and records
+an incomplete query. Sleeping/paused contacts retain their cache slots.
 Wake detection, bucket clearing, contact-cache/solver preparation and rollback copies still scale
 with total capacity. Low active fractions therefore reduce some work, not all frame cost.
 The Physics Batch Lab and `scripts/physics/batch/run.mjs --active-fractions 0.01,0.1,0.5,1`
