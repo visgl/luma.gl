@@ -81,10 +81,19 @@ export class GPUPhysicsBatch {
   }
 
   /** Stream in a fresh instance. Reusing a released template slot performs GPU copies only. */
-  async acquire(
+  acquire(
     template: string,
     id: string,
     origin: readonly [number, number, number] = [0, 0, 0]
+  ): Promise<GPUPhysicsWorldHandle> {
+    return this.acquireWorld(template, id, origin);
+  }
+
+  private async acquireWorld(
+    template: string,
+    id: string,
+    origin: readonly [number, number, number],
+    state?: GPURigidBodyCapture
   ): Promise<GPUPhysicsWorldHandle> {
     this.assertIdle();
     const definition = this.templates.get(template);
@@ -137,6 +146,8 @@ export class GPUPhysicsBatch {
           throw error;
         }
       }
+      // Restore before publishing the lease or dropping the preparation guard.
+      if (state) slot.world.restoreState(state);
       const handle = Object.freeze({id, generation: ++this.generation});
       slot.handle = handle;
       slot.origin = [...origin];
@@ -155,7 +166,7 @@ export class GPUPhysicsBatch {
     const slot = this.getSlot(handle);
     this.preparing = true;
     try {
-      const state = await slot.world.captureState();
+      const state = await slot.world.captureState({includeRollbackScratch: false});
       slot.handle = null;
       return {template: slot.template, origin: [...slot.origin], state};
     } finally {
@@ -163,15 +174,8 @@ export class GPUPhysicsBatch {
     }
   }
 
-  async streamIn(id: string, snapshot: GPUPhysicsStreamedWorld): Promise<GPUPhysicsWorldHandle> {
-    const handle = await this.acquire(snapshot.template, id, snapshot.origin);
-    try {
-      this.getSlot(handle).world.restoreState(snapshot.state);
-      return handle;
-    } catch (error) {
-      this.release(handle);
-      throw error;
-    }
+  streamIn(id: string, snapshot: GPUPhysicsStreamedWorld): Promise<GPUPhysicsWorldHandle> {
+    return this.acquireWorld(snapshot.template, id, snapshot.origin, snapshot.state);
   }
 
   /** Release residency for reuse; old handles cannot address a recycled instance. */

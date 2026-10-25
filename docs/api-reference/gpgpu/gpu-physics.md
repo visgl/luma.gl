@@ -229,7 +229,7 @@ GPU checkpoint, resetting contacts, events, controls and poses without reallocat
 new template requires space, unused slots are evicted before any live lease can be affected.
 
 For persistence, `streamOut()` explicitly downloads accepted state and releases the lease.
-`streamIn()` restores that snapshot into a compatible registered template. These transfers are
+`streamIn()` restores that snapshot into a compatible registered template before publishing the lease. Streaming snapshots omit rollback scratch that the next step rebuilds. These transfers are
 not hidden in stepping and should be scheduled separately from latency-sensitive rendering.
 Snapshots are implementation-specific debug captures, not a portable asset format.
 

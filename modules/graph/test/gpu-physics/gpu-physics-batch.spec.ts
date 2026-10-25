@@ -183,6 +183,8 @@ it('streams accepted state through eviction and preserves swept sensors, queries
     world.shiftOrigin([8, 0, 0]);
     const expected = await world.readState();
     const saved = await batch.streamOut(handle);
+    expect(saved.state.includeRollbackScratch).toBe(false);
+    expect(saved.state.buffers.some(buffer => buffer.name.startsWith('checkpoint-'))).toBe(false);
     expect(() => batch.getWorld(handle)).toThrow('Stale');
     batch.trim();
     expect(batch.getStats().residentBytes).toBe(0);
@@ -265,6 +267,38 @@ it('rebases kinematic targets and body-local joint anchors together', async cont
       expect(actual[index].position[0] + 16).toBeCloseTo(expected[index].position[0], 3);
       expect(actual[index].position[1] + 8).toBeCloseTo(expected[index].position[1], 3);
     }
+  } finally {
+    batch.destroy();
+  }
+});
+
+it('restores a reused streaming slot before exposing it to immediate encoding', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const batch = new GPUPhysicsBatch({
+    device,
+    maximumResidentBytes: 32 * 1024 * 1024,
+    maximumResidentWorlds: 1
+  });
+  try {
+    batch.registerTemplate('moving', {
+      gravity: [0, 0, 0],
+      timeStep: 0.1,
+      sleepAfter: 0,
+      bodies: [{position: [0, 0, 0], velocity: [1, 0, 0], shape: {type: 'sphere', radius: 0.1}}]
+    });
+    const handle = await batch.acquire('moving', 'first');
+    const encoder = device.createCommandEncoder();
+    batch.encode(encoder, 10);
+    device.submit(encoder.finish());
+    const snapshot = await batch.streamOut(handle);
+    const pending = batch.streamIn('restored', snapshot);
+    // Reuse can finish synchronously, but must never expose the reset state before restoration.
+    const continuation = device.createCommandEncoder();
+    expect(batch.encode(continuation)).toEqual({worldSteps: 1, bodySteps: 1});
+    device.submit(continuation.finish());
+    const restored = await pending;
+    expect((await batch.getWorld(restored).readState())[0].position[0]).toBeCloseTo(1.1, 5);
   } finally {
     batch.destroy();
   }
