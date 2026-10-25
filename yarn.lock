@@ -17200,6 +17200,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-vector-observatory@workspace:examples/experimental/vector-observatory":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-vector-observatory@workspace:examples/experimental/vector-observatory"
+  dependencies:
+    "@luma.gl/core": "workspace:*"
+    "@luma.gl/engine": "workspace:*"
+    "@luma.gl/experimental": "workspace:*"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-wandering@workspace:examples/tutorials/transform":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-wandering@workspace:examples/tutorials/transform"

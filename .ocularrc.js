@@ -43,6 +43,7 @@ const config = {
         three: '/examples/experimental/three',
         'pool': '/examples/experimental/gpu-pool',
         'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
+        'vector-observatory': '/examples/experimental/vector-observatory',
         'physics-stress': '/examples/experimental/physics-stress',
         'space-salvage': '/examples/experimental/space-salvage',
         'sphere-world': '/examples/experimental/gpu-sphere-world',

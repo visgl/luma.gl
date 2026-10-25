@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "types": ["vite/client", "@webgpu/types", "node"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "isolatedModules": true
+  },
+  "include": ["main.ts", "fields.ts", "mobile-support.ts"]
+}

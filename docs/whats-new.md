@@ -1,5 +1,14 @@
 # What's New
 
+## Scientific vector-field advection
+
+`ScientificFlowGraph` now compiles WebGPU particle advection into a GPU command
+graph, with RK2/RK4 integration, missing-data-aware bilinear sampling and
+GPU-resident ping-pong state buffers. The Vector Observatory example explores
+three analytic fields with up to a million particles, speed coloring and HDR
+trail persistence. The input contract accepts normalized regular scientific grids
+without adding a loaders.gl runtime dependency.
+
 ## Authored GPU physics qualification
 
 The pinned physics qualification profile now covers joint attachment frames, filtered
