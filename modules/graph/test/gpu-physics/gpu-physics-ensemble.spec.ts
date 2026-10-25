@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {GPUPhysicsEnsemble, type GPURigidBodyWorldProps} from '../../src/gpu-physics';
+import {
+  GPUPhysicsEnsemble,
+  makeConvexHullGeometry,
+  type GPURigidBodyWorldProps
+} from '../../src/gpu-physics';
 
 const template: GPURigidBodyWorldProps = {
   gravity: [0, 0, 0],
@@ -177,6 +181,37 @@ it('rejects shared contact overflow and rolls every instance back atomically', a
     device.submit(encoder.finish());
     expect((await ensemble.world.readSimulationDiagnostics()).complete).toBe(false);
     expect(await ensemble.world.readState()).toEqual(initial);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('preserves shared mesh packing through checkpoints and streamed captures', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const geometry = makeConvexHullGeometry(
+    Array.from({length: 8}, (_, corner) => [
+      corner & 1 ? 1 : -1,
+      corner & 2 ? 1 : -1,
+      corner & 4 ? 1 : -1
+    ]).flat()
+  );
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {bodies: [{position: [0, 0, 0], mass: 0, shape: {type: 'convex-hull', geometry}}]},
+    instances: 4,
+    maximumPairs: 64,
+    maximumResidentBytes: 32 * 1024 * 1024
+  });
+  try {
+    const bytes = ensemble.getStats().worldBufferBytes;
+    const checkpoint = ensemble.world.createGPUCheckpoint({includeRollbackScratch: false});
+    checkpoint.save();
+    checkpoint.restore();
+    expect(ensemble.getStats().worldBufferBytes).toBe(bytes);
+    const capture = await ensemble.world.captureState({includeRollbackScratch: false});
+    ensemble.world.restoreState(capture);
+    expect(ensemble.getStats().worldBufferBytes).toBe(bytes);
+    checkpoint.destroy();
   } finally {
     ensemble.destroy();
   }

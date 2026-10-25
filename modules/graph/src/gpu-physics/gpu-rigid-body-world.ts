@@ -1828,18 +1828,16 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   }
 
   private restoreColliderDefinitions(): void {
-    for (const [bodyIndex, body] of this.props.bodies.entries()) {
-      const definitions: readonly GPURigidBodyCollider[] =
-        body.colliders ?? (body.shape ? [{shape: body.shape}] : []);
-      let index = 0;
-      for (const collider of this.colliders)
-        if (collider.body === bodyIndex) {
-          const definition = definitions[index++];
-          collider.shape = structuredClone(definition.shape);
-          collider.material = structuredClone(definition.material);
-          collider.position = structuredClone(definition.position);
-          collider.orientation = structuredClone(definition.orientation);
-        }
+    // Clone the full set once: per-collider clones duplicate shared cooked geometry.
+    const definitions = structuredClone(
+      this.props.bodies.flatMap(body => body.colliders ?? (body.shape ? [{shape: body.shape}] : []))
+    );
+    for (const [index, definition] of definitions.entries()) {
+      const collider = this.colliders[index];
+      collider.shape = definition.shape;
+      collider.material = definition.material;
+      collider.position = definition.position;
+      collider.orientation = definition.orientation;
     }
   }
 
