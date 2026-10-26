@@ -45,7 +45,7 @@ struct Target { position: vec4f, orientation: vec4f }
 struct CacheKey { key:atomic<u32>, epoch:u32 }
 struct GeneralConstraint {axes:vec4f,limits:vec4f,control:vec4f,drive:vec4f}
 struct JointState {impulses:array<f32,8>, control:vec4f, limits:vec4f, motor:vec4f, drive:vec4f, spring:vec4f, general:GeneralConstraint}
-struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? ', frame:u32, cacheDropped:atomic<u32>, reserved0:u32, reserved1:u32, reserved2:u32, keys:array<CacheKey,PAIR_CAPACITY>' : ''}${jointCount ? `, joints:array<JointState,${jointCount}>` : ''} }
+struct Targets { entries:array<Target,BODY_COUNT>, dispatch:atomic<u32>, vertical:u32, depth:u32 ${sparse ? `, frame:u32, cacheDropped:atomic<u32>, reserved0:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, reserved1:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, reserved2:${ensembleBodiesPerInstance ? 'atomic<u32>' : 'u32'}, keys:array<CacheKey,PAIR_CAPACITY>` : ''}${ensembleBodiesPerInstance ? `, instanceHeads:array<atomic<u32>,${count / ensembleBodiesPerInstance}>, instanceFrames:array<u32,${count / ensembleBodiesPerInstance}>, links:array<u32,PAIR_CAPACITY>, journalMarks:array<u32,PAIR_CAPACITY>, journalSlots:array<u32,PAIR_CAPACITY>, journalKeys:array<vec2u,PAIR_CAPACITY>, journalLinks:array<u32,PAIR_CAPACITY>, savedHeads:array<u32,${count / ensembleBodiesPerInstance}>, savedFrames:array<u32,${count / ensembleBodiesPerInstance}>, savedHeader:array<u32,8>, journalManifolds:array<Manifold,PAIR_CAPACITY>` : ''}${jointCount ? `, joints:array<JointState,${jointCount}>` : ''} }
 struct Contact { point: vec4f, normal: vec4f, impulse: vec4f, tangent: vec4f, firstAnchor:vec4f, secondAnchor:vec4f }
 struct Manifold { contacts: array<Contact, 4>, count: u32, first:u32, second:u32, previousCount:u32, padding: vec3u }
 struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f }
@@ -61,7 +61,7 @@ struct Settings { gravity: vec4f, solver: vec4f, sleep: vec4f, stability: vec4f 
 ${getEnsembleShader(count, ensembleBodiesPerInstance, collisionPartitionSize, extended)}
 ${
   sparse
-    ? getRigidBodyCacheShader(sparse)
+    ? getRigidBodyCacheShader(sparse, Boolean(ensembleBodiesPerInstance))
     : `
 fn getFirstCollider(pair:u32)->u32{return pair/COLLIDER_COUNT;}
 fn getSecondCollider(pair:u32)->u32{return pair%COLLIDER_COUNT;}
@@ -286,7 +286,17 @@ fn storeContact(pair:u32,slot:u32,point:vec3f,normal:vec3f,depth:f32,previous:Ma
 }
 ${RIGID_BODY_BOUNDS_SHADER}
 ${sparse ? RIGID_BODY_BOUND_PUBLICATION_SHADER : ''}
-${extended ? RIGID_BODY_CONVEX_SHADER : ''}
+${
+  extended
+    ? ensembleBodiesPerInstance
+      ? RIGID_BODY_CONVEX_SHADER.replace(
+          'for(var pair=0u;pair<PAIR_CAPACITY;pair++){',
+          // Only contacts touched by this step own current mesh tasks. Paused caches retain their payloads.
+          'for(var index=0u;index<atomicLoad(&targets.reserved0);index++){let pair=targets.journalSlots[index];if(manifolds[pair].padding.z==0u){continue;}'
+        )
+      : RIGID_BODY_CONVEX_SHADER
+    : ''
+}
 // SAT separates oriented boxes along all six face normals and nine edge cross products.
 @compute @workgroup_size(64) fn collide(@builtin(global_invocation_id) invocation: vec3u) {
  ${

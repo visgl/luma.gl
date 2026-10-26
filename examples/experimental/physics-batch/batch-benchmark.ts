@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import type {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
+import {profileEnsemble} from './batch-profile';
 import type {Device} from '@luma.gl/core';
 import {
   GPUPhysicsBatch,
@@ -17,17 +18,17 @@ export type BatchBenchmarkOptions = {
   warmup: number;
   steps: number;
   pairsPerBody?: number;
-  scene: 'sparse' | 'pile';
+  scene: 'sparse' | 'pile' | 'sleeping' | 'wake-storm';
   submission: 'batched' | 'separate' | 'ensemble';
 };
 
 export function makeBatchFixture(
   count: number,
-  scene: 'sparse' | 'pile',
+  scene: 'sparse' | 'pile' | 'sleeping' | 'wake-storm',
   pairsPerBody = 16
 ): GPURigidBodyWorldProps {
   const width = Math.ceil(Math.sqrt(count));
-  const spacing = scene === 'sparse' ? 2 : 0.98;
+  const spacing = scene === 'pile' ? 0.98 : 2;
   return {
     solver: 'parallel',
     broadPhase: 'hierarchical-grid',
@@ -36,7 +37,7 @@ export function makeBatchFixture(
     timeStep: 1 / 120,
     gravity: scene === 'pile' ? [0, -9.81, 0] : [0, 0, 0],
     failurePolicy: 'rollback',
-    sleepAfter: 0,
+    sleepAfter: scene === 'sleeping' || scene === 'wake-storm' ? 0.025 : 0,
     bodies: [
       ...Array.from({length: count}, (_, index) => ({
         position: [(index % width) * spacing, 1 + Math.floor(index / width) * spacing, 0] as [
@@ -44,7 +45,11 @@ export function makeBatchFixture(
           number,
           number
         ],
-        velocity: [0.1, 0, 0] as [number, number, number],
+        velocity: [scene === 'sleeping' || scene === 'wake-storm' ? 0 : 0.1, 0, 0] as [
+          number,
+          number,
+          number
+        ],
         shape: {type: 'sphere' as const, radius: 0.5},
         friction: 0.4
       })),
@@ -84,7 +89,7 @@ export async function runBatchBenchmark(
     (options.pairsPerBody ?? 16) < 1 ||
     (options.pairsPerBody ?? 16) > 64 ||
     !['ensemble', 'separate', 'batched'].includes(options.submission) ||
-    !['sparse', 'pile'].includes(options.scene) ||
+    !['sparse', 'pile', 'sleeping', 'wake-storm'].includes(options.scene) ||
     (options.submission !== 'ensemble' && options.worlds > 128) ||
     !Number.isInteger(options.worlds) ||
     options.worlds < 1 ||
@@ -134,7 +139,15 @@ export async function runBatchBenchmark(
     const timings: number[] = [];
     const encoding: number[] = [];
     let complete = true;
+    let measuredWorldSteps = 0;
+    let measuredBodySteps = 0;
+    const workSamples: Awaited<ReturnType<GPUPhysicsEnsemble['readWorkStatistics']>>[] = [];
     for (let frame = 0; frame < options.frames; frame++) {
+      if (options.scene === 'wake-storm' && frame % 8 === 0) {
+        if (ensemble)
+          for (let instance = 0; instance < activeWorlds; instance++) ensemble.wake(instance);
+        else for (const handle of activeHandles) batch.getWorld(handle).wake();
+      }
       const start = performance.now();
       if (ensemble) {
         const encoder = device.createCommandEncoder();
@@ -167,6 +180,13 @@ export async function runBatchBenchmark(
       if (ensemble) complete &&= (await ensemble.world.readSimulationDiagnostics()).complete;
       for (const handle of handles)
         complete &&= (await batch.getWorld(handle).readSimulationDiagnostics()).complete;
+      const work = ensemble ? await ensemble.readWorkStatistics() : undefined;
+      if (frame >= options.warmup) {
+        if (work) workSamples.push(work);
+        measuredWorldSteps += (work?.activeInstances ?? activeWorlds) * options.steps;
+        measuredBodySteps +=
+          (work?.activeBodies ?? activeWorlds * fixture.bodies.length) * options.steps;
+      }
       progress?.(frame + 1);
     }
     const observation = ensemble ? ensemble.inspect() : batch.inspect(handles[0]);
@@ -222,6 +242,7 @@ export async function runBatchBenchmark(
           ? 'Finite states, world equivalence and analytic ballistic position within 0.01 units.'
           : 'Finite states and world equivalence only; no dense-contact accuracy claim.'
     };
+    const profile = ensemble ? await profileEnsemble(device, ensemble, diagnostics) : undefined;
     const elapsed = timings.reduce((sum, value) => sum + value, 0);
     const beforeReuse = ensemble ? {...ensemble.getStats(), reusedSlots: 0} : batch.getStats();
     const recycleStart = performance.now();
@@ -239,6 +260,8 @@ export async function runBatchBenchmark(
     return {
       options,
       activeWorlds,
+      profile,
+      workSamples,
       scheduler: ensemble ? await ensemble.readStatus() : undefined,
       device: device.info,
       complete,
@@ -248,17 +271,14 @@ export async function runBatchBenchmark(
       latencyMilliseconds: {p50: percentile(timings, 0.5), p95: percentile(timings, 0.95)},
       encodingMilliseconds: {p50: percentile(encoding, 0.5), p95: percentile(encoding, 0.95)},
       worldStepsPerSecond:
-        complete && quality.passed
-          ? (timings.length * activeWorlds * options.steps * 1000) / elapsed
-          : null,
-      bodyStepsPerSecond:
-        complete && quality.passed
-          ? (timings.length * activeWorlds * options.steps * fixture.bodies.length * 1000) / elapsed
-          : null,
+        complete && quality.passed ? (measuredWorldSteps * 1000) / elapsed : null,
+      bodyStepsPerSecond: complete && quality.passed ? (measuredBodySteps * 1000) / elapsed : null,
       beforeReuse,
       afterReuse: ensemble ? {...ensemble.getStats(), reusedSlots: 0} : batch.getStats(),
       graphEncodingsPerStep: ensemble ? 1 : activeWorlds,
       states,
+      workScope:
+        'Last substep counters sampled outside each timed frame. Multi-substep runs report an estimate of active steps; use steps=1 for activity qualification. Instance scheduling/status still scan resident instance records. Optional events, pose publication and noncompact fallback can scan capacity.',
       qualification:
         'Exploratory single-device throughput. Completion diagnostics are not a collision-accuracy qualification. Timing excludes diagnostics, rendering, compilation and streaming. Encoding includes submission. GPU pipelines and driver allocation overhead are excluded from resident byte accounting.'
     };

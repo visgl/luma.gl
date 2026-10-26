@@ -176,6 +176,7 @@ fn finite(value:vec4f)->bool{return all(abs(value)<=vec4f(3.402823466e38));}
     });
   };
   return {
+    save: undefined,
     restore,
     validate,
     validity: {

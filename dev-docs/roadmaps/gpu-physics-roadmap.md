@@ -849,3 +849,19 @@ rollback copies; demand-grown contact pages; exact failure provenance and indepe
 heterogeneous layouts, per-instance streaming, joints/CCD, wider identities, cross-slot asset sharing,
 interacting partitions, peak-memory admission and long-duration/cross-adapter qualification.
 This package does not close the complete G10 gate.
+
+## G10 follow-up — active-work execution
+
+Implemented persistent awake-instance state with explicit wake notifications, active-range solver
+scratch, touched-bucket clearing, per-instance live contact lists with local aging, and sparse
+rollback of body vectors, manifold payloads and allocator ownership. The batch lab adds sleeping
+and wake-storm workloads, last-step payload counters, and a separate CPU/GPU stage profile.
+
+Qualification covers default WebGPU binding limits, paused cache invariance, reset/contact-slot
+reuse, wake notifications and repeated shared overflow rollback. Fixed-residency performance and
+remaining capacity work are recorded in `scripts/physics/batch/ACTIVE-WORK-QUALIFICATION.md`.
+
+Remaining: scheduling/status still scan instance records; optional events/publication and the
+noncompact fallback retain capacity work. Dense single-instance list traversal, heterogeneous
+ensembles, independent failure recovery, and the multi-vendor device matrix remain open. This
+package advances the G10 throughput gate; it does not claim unrestricted large-world qualification.

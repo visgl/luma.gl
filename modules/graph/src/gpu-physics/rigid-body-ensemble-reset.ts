@@ -59,6 +59,7 @@ struct Settings {selection:vec4u, shift:vec4f}
 ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' : ''}
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
  let index=invocation.x;let selection=settings.selection;
+ if(index==0u){targets[${bodyCount * 8 + 8 + maximumPairs * 2}u+selection.x/${bodiesPerInstance}u]=0u;}
  if(index<${bodiesPerInstance}u){
   let body=selection.x+index;positions[body]=vec4f(positions[body].xyz-settings.shift.xyz,positions[body].w);
   for(var axis=0u;axis<3u;axis++){let address=body*8u+axis;targets[address]=bitcast<u32>(bitcast<f32>(targets[address])-settings.shift[axis]);}

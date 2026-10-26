@@ -136,6 +136,7 @@ fn accumulate(index:u32,value:u32){
   });
   graph.addComputePass({
     id,
+    workload: {commandCount: 1},
     description: 'Summarize contacts, solver limits, and simulation failures for diagnostics.',
     resources: bindings.map(({resource}, index) => ({
       buffer: resource,

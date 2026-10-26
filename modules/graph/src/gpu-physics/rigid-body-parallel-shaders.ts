@@ -29,9 +29,20 @@ fn parallelPair(index:u32)->u32 {
 }
 // One bounded scan builds the queue; every iterative solve reuses original manifold IDs.
 @compute @workgroup_size(64) fn parallelCompact(@builtin(global_invocation_id) invocation:vec3u){
- let pair=invocation.x;if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u||!colliderScheduled(manifolds[pair].first)){return;}
- let slot=atomicAdd(&parallelState.diagnostics[1],1u);
- parallelState.activePairs[slot]=pair;
+ ${
+   ensemble
+     ? `
+ let work=invocation.x;if(work>=atomicLoad(&ensemble[0])){return;}
+ let instance=atomicLoad(&ensemble[INSTANCE_QUEUE+work]);var link=atomicLoad(&targets.instanceHeads[instance]);
+ loop{if(link==0u){break;}let pair=link-1u;link=targets.links[pair];
+  if(manifolds[pair].count==0u){continue;}
+  let slot=atomicAdd(&parallelState.diagnostics[1],1u);parallelState.activePairs[slot]=pair;
+ }`
+     : `
+ let pair=invocation.x;if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u){return;}
+ let slot=atomicAdd(&parallelState.diagnostics[1],1u);parallelState.activePairs[slot]=pair;`
+ }
+
 }
 @compute @workgroup_size(1) fn parallelDispatchCount(){
  parallelDispatch[0]=(atomicLoad(&parallelState.diagnostics[1])+63u)/64u;
@@ -40,7 +51,7 @@ fn parallelPair(index:u32)->u32 {
 // Build solver work only after island wake propagation has completed.
 @compute @workgroup_size(64) fn parallelActive(@builtin(global_invocation_id) invocation:vec3u){
  let index=invocation.x;
- if(index<BODY_COUNT&&bodyScheduled(index)&&dynamic(index)&&sleepStates[index].y<0.5){
+ if(!${ensemble}&&index<BODY_COUNT&&bodyScheduled(index)&&dynamic(index)&&sleepStates[index].y<0.5){
   let slot=atomicAdd(&parallelState.diagnostics[2],1u);parallelState.awakeBodies[slot]=index;
  }
  let pair=parallelPair(index);
@@ -49,6 +60,10 @@ fn parallelPair(index:u32)->u32 {
  if((dynamic(first)&&sleepStates[first].y<0.5)||(dynamic(second)&&sleepStates[second].y<0.5)){
   let slot=atomicAdd(&parallelState.diagnostics[3],1u);parallelState.solvePairs[slot]=pair;
  }
+}
+@compute @workgroup_size(64) fn parallelActiveBodies(@builtin(global_invocation_id) invocation:vec3u){
+ let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);
+ if(dynamic(body)&&sleepStates[body].y<0.5){let slot=atomicAdd(&parallelState.diagnostics[2],1u);parallelState.awakeBodies[slot]=body;}
 }
 @compute @workgroup_size(1) fn parallelActiveCount(){
  parallelDispatch[4]=(atomicLoad(&parallelState.diagnostics[3])+63u)/64u;
@@ -78,10 +93,13 @@ fn parallelRoot(body:u32)->u32 {
  // Incomplete union work prevents sleeping, rather than treating split islands as independent.
  atomicAdd(&parallelState.diagnostics[0],1u);return current;
 }
+@compute @workgroup_size(1) fn parallelResetCounters(){
+ for(var index=0u;index<4u;index++){atomicStore(&parallelState.diagnostics[index],0u);}
+}
 @compute @workgroup_size(64) fn parallelReset(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;
- if(body<4u){atomicStore(&parallelState.diagnostics[body],0u);}
- if(body>=BODY_COUNT){return;}
+ let work=invocation.x;var body=work;if(${ensemble}&&COMPACT_CONTACTS){if(work>=scheduledBodyCount()){return;}body=scheduledBody(work);}
+ if(!(${ensemble}&&COMPACT_CONTACTS)&&body<4u){atomicStore(&parallelState.diagnostics[body],0u);}
+ if(body>=BODY_COUNT||(${ensemble}&&COMPACT_CONTACTS&&work>=scheduledBodyCount())){return;}
  atomicStore(&parallelState.heads[body],0xffffffffu);atomicStore(&parallelState.degrees[body],0u);
  atomicStore(&parallelState.roots[body],body);atomicStore(&parallelState.flags[body],1u);atomicStore(&parallelState.forced[body],0u);
 }
@@ -110,15 +128,15 @@ fn parallelRoot(body:u32)->u32 {
  atomicAdd(&parallelState.diagnostics[0],1u);
 }
 @compute @workgroup_size(64) fn parallelCompress(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;if(body>=BODY_COUNT||!bodyScheduled(body)){return;}
+ let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);if(!bodyScheduled(body)){return;}
  sleepStates[body].z=f32(parallelRoot(body));
 }
 @compute @workgroup_size(64) fn parallelWakeRoots(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;if(body>=BODY_COUNT||!bodyScheduled(body)||!dynamic(body)){return;}
+ let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);if(!bodyScheduled(body)||!dynamic(body)){return;}
  if(sleepStates[body].y<0.5||atomicLoad(&parallelState.forced[body])>0u){atomicStore(&parallelState.flags[u32(sleepStates[body].z)],0u);}
 }
 @compute @workgroup_size(64) fn parallelWakeBodies(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;if(body>=BODY_COUNT||!bodyScheduled(body)||!dynamic(body)){return;}
+ let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);if(!bodyScheduled(body)||!dynamic(body)){return;}
  if(atomicLoad(&parallelState.flags[u32(sleepStates[body].z)])==0u||atomicLoad(&parallelState.diagnostics[0])>0u){
   if(sleepStates[body].y>0.5||atomicLoad(&parallelState.forced[body])>0u){sleepStates[body].x=0.0;}
   sleepStates[body].y=0.0;
@@ -193,14 +211,14 @@ fn writePairDeltas(pair:u32,first:u32,second:u32,impulse:vec3f,firstTorque:vec3f
  let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);finishBody(body);${ensemble ? '' : 'atomicStore(&parallelState.flags[body],1u);'}
 }
 @compute @workgroup_size(64) fn parallelPrepareSleep(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;if(body<BODY_COUNT){atomicStore(&parallelState.flags[body],1u);}
+ let work=invocation.x;if(work<scheduledBodyCount()){let body=scheduledBody(work);atomicStore(&parallelState.flags[body],1u);}
 }
 @compute @workgroup_size(64) fn parallelMarkSleep(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;if(body>=BODY_COUNT||!bodyScheduled(body)||!dynamic(body)){return;}
+ let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);if(!bodyScheduled(body)||!dynamic(body)){return;}
  if(settings.sleep.x<=0.0||sleepStates[body].x<settings.sleep.x||atomicLoad(&parallelState.diagnostics[0])>0u){atomicStore(&parallelState.flags[u32(sleepStates[body].z)],0u);}
 }
 @compute @workgroup_size(64) fn parallelSleep(@builtin(global_invocation_id) invocation:vec3u){
- let body=invocation.x;if(body>=BODY_COUNT||!bodyScheduled(body)||!dynamic(body)){return;}
+ let work=invocation.x;if(work>=scheduledBodyCount()){return;}let body=scheduledBody(work);if(!bodyScheduled(body)||!dynamic(body)){return;}
  if(atomicLoad(&parallelState.flags[u32(sleepStates[body].z)])>0u){sleepStates[body].y=1.0;velocities[body]=vec4f(0,0,0,velocities[body].w);angularVelocities[body]=vec4f(0);}
 }
 `;

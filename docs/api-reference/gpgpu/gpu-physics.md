@@ -326,9 +326,34 @@ and discovery use active collider hash buckets rather than sorting the whole pop
 domain and exact cell tests preserve isolation. Bucket traversal is separately bounded at 32 times
 `maximumCandidateTestsPerCollider`; exhausting either budget rejects the shared step and records
 an incomplete query. Sleeping/paused contacts retain their cache slots.
-Wake detection, bucket clearing, contact-cache/solver preparation and rollback copies still scale
-with total capacity. Low active fractions therefore reduce some work, not all frame cost.
+Scheduling retains an awake flag per instance and consumes explicit wake notifications. Body-level
+sleep checks run only for participating instances. Instance flags and status still require an
+O(instance count) scan; controls on the borrowed world request reclassification of enabled instances.
+Per-instance linked contact lists prepare and compact only scheduled caches, using instance-local
+age counters so pauses do not expire contacts. Persistent hash storage clears only previously
+touched buckets after its initial full initialization.
+
+Rollback snapshots active body vectors and journals each changed manifold, cache key and link once.
+It saves only scheduled instance heads/epochs and a small header. It does not copy every reserved
+contact slot or kinematic target on each step. The whole ensemble still shares one rollback boundary;
+this optimization does **not** provide per-instance failure recovery. Journal storage is reserved at
+capacity, so reduced transfer volume does not imply proportional reduction of resident memory.
+
+`await ensemble.readWorkStatistics()` explicitly reads last-step counters outside encoding:
+`activeInstances`, `activeBodies`, `touchedBuckets`, `visitedContacts`, `claimedContacts`, `journaledContacts`,
+`bodySnapshotBytes`, `contactSnapshotBytes` and `allocatorSnapshotBytes`. Snapshot bytes count payload
+writes, not total memory-bus traffic or reads. Capacity fields report resident instances/bodies and
+contact slots. On rejection these counters describe attempted work. With multiple substeps they
+refer only to the last substep.
+
+The default compact solver uses scheduled body ranges and live-contact lists. The optional
+`compactContacts: false` fallback, contact-event scans, pose publication, selective reset invalidation,
+and explicit capture/readback can still scale with capacity. Per-instance list traversal is serial
+within each participating instance; very large individual worlds need separate qualification.
 The Physics Batch Lab and `scripts/physics/batch/run.mjs --active-fractions 0.01,0.1,0.5,1`
-measure this distinction with actual rounded active counts and active-body throughput.
+measure this distinction with actual rounded active counts and active-body throughput. Sparse,
+dense, mostly sleeping and periodic wake-storm scenarios expose different scheduling costs.
+A separate instrumented step reports CPU encoding and available GPU timestamp costs by stage;
+it is excluded from throughput samples. Missing GPU timestamps are reported as unavailable.
 Destroy the ensemble after submitting its encoded work; do not independently destroy its borrowed
 world or graph. Destroying the ensemble releases its world, graph and any world-owned checkpoints.
