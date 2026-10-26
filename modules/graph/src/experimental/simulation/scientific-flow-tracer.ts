@@ -14,7 +14,7 @@ import {
   type ScientificFlowFieldProps,
   type ScientificVectorFieldInput
 } from './scientific-flow-field';
-import {SCIENTIFIC_FLOW_RK45} from './scientific-flow-rk45.wgsl';
+import {SCIENTIFIC_FLOW_RK45} from './scientific-flow-rk45-shaders';
 
 /** Stable values stored in diagnostics.z; particle identity is its buffer index. */
 export enum ScientificParticleStatus {

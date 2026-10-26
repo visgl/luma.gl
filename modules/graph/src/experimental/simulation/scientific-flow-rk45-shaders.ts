@@ -26,7 +26,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-import {SCIENTIFIC_FLOW_SAMPLING} from './scientific-flow-sampling.wgsl';
+import {SCIENTIFIC_FLOW_SAMPLING} from './scientific-flow-sampling-shaders';
 
 export const SCIENTIFIC_FLOW_RK45 = /* wgsl */ `
 struct Parameters {
