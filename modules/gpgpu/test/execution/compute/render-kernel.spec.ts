@@ -7,7 +7,7 @@ import {Buffer} from '@luma.gl/core';
 import {RenderKernel} from '@luma.gl/gpgpu';
 import {getTestDevice} from '@luma.gl/test-utils';
 
-it('RenderKernel executes instanced WebGL transform feedback with per-draw uniforms', async context => {
+it('RenderKernel executes instanced WebGL transform feedback with per-draw topology and uniforms', async context => {
   const device = await getTestDevice('webgl');
   if (!device) return context.skip();
   const kernel = new RenderKernel(device, {
@@ -22,7 +22,7 @@ void main() {
 precision highp float;
 out vec4 color;
 void main() {color = vec4(0.0);}`,
-    topology: 'point-list',
+    topology: 'triangle-list',
     varyings: ['result']
   });
   const vertexArray = device.createVertexArray({
@@ -44,6 +44,7 @@ void main() {color = vec4(0.0);}`,
         expect(
           kernel.draw(pass, {
             vertexArray,
+            topology: 'point-list',
             vertexCount: 1,
             instanceCount: 3,
             transformFeedback: feedback,
