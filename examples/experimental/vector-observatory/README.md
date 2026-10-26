@@ -50,3 +50,22 @@ reset and CPU/GPU timing for integration. Diagnostics identifies new horizons an
 continuations by dispatch number and target time. Reseeding or switching integrators
 clears prior inspection state. Counter readback and trail rendering are outside
 these graph timings; resource previews explicitly read current GPU allocations.
+
+
+### Weather globe
+
+The default weather case projects animated synthetic wind bands, meandering jets,
+and drifting vortices onto the repository's Earth texture. Drag horizontally to
+turn the globe and vertically to tilt toward either pole, or use **Rotate globe** for automatic rotation. **Pause** freezes
+both the flow and automatic rotation; manual rotation remains available. Trails
+are accumulated in a longitude/latitude atlas, so turning the globe does not smear
+the flow. RK2, RK4 and RK45 retain their Graph/Trace inspection support.
+
+This is an illustrative normalized 2D field projected onto a sphere, not observed
+weather, a forecast, or a spherical atmospheric model. Its seconds and velocities
+are illustrative. The field is sampled at evolving 0.25-second intervals. Both polar caps include evolving angular circulation; meridional motion tends
+to zero at the exact poles. Periodic longitude sampling and wrapped particle
+states preserve trajectories across the antimeridian in all three integrators.
+Trail segments crossing the atlas boundary are drawn on both edges, and the globe
+uses wrapped bilinear sampling to avoid a visible texture seam. Earth imagery reuses
+`examples/showcase/globe/earth.jpg`; no remote data service is required.

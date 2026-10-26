@@ -40,6 +40,7 @@ const WEBGPU_ONLY_EXAMPLES = new Set([
   'arrow/arrow-columns',
   'arrow/arrow-dggs-polygons',
   'deck/gpu-culled-trace',
+  'deck/wind',
   'deck/scene-buffers',
   'deck/ambient-occlusion',
   'deck/soft-shadows',
@@ -138,7 +139,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(131);
+    expect(LIVE_EXAMPLES).toHaveLength(132);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
