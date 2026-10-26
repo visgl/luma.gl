@@ -330,3 +330,18 @@ chunks through `.data` or canonical logical descriptors through `.chunks`.
 ## GPU Graph package
 
 Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
+
+## Module loader dependencies
+
+- `exportGLTF` and its `GLTFExport*` descriptor types moved from `@luma.gl/gltf` to
+  the shared `examples/gltf/gltf-exporter.ts` application helper. Copy it into your application
+  when exporting assets; it uses loaders.gl for GLB encoding.
+- `loadPBREnvironment()` now requires a `loadImage` callback. Pass your application image loader,
+  such as `loadImage: loadImageTexture` from `@loaders.gl/textures`.
+- The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`,
+  `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and
+  `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to
+  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `LuSQLContext`
+  and `LuSQLQuery` remain in the module.
+- Install loaders.gl packages explicitly in applications that use these integrations.
+  Published luma.gl modules no longer install them transitively.

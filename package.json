@@ -63,6 +63,8 @@
     "@loaders.gl/las": "~5.0.0-alpha.12",
     "@loaders.gl/parquet": "~5.0.0-alpha.12",
     "@loaders.gl/polyfills": "~5.0.0-alpha.12",
+    "@loaders.gl/sql": "~5.0.0-alpha.12",
+    "@loaders.gl/textures": "~5.0.0-alpha.12",
     "@luma.gl/ts-transform-inline-webgl-constants": "workspace:*",
     "@math.gl/dggs": "~5.0.0-alpha.19",
     "@math.gl/geospatial": "~5.0.0-alpha.19",

@@ -9,12 +9,12 @@
 # @luma.gl/gltf
 
 Standards-first glTF assets with physically based materials, animated skeletons, morph deformation,
-native animation pointers, and source-faithful `.gltf` / `.glb` interchange on WebGPU and WebGL.
+native animation pointers, and source-faithful rendering on WebGPU and WebGL.
 
 ```ts
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF, exportGLTF, postProcessGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);
 const gltf = postProcessGLTF(asset);
@@ -26,21 +26,18 @@ const {scenes, animator, lights, modelBounds} = createScenegraphsFromGLTF(device
 
 animator.setTime(performance.now());
 
-const exportScene = {name: 'Exported scene', nodes: [{name: 'Root'}]};
-const gltfDocument = exportGLTF(exportScene);
-const binaryAsset = exportGLTF(exportScene, {binary: true});
 ```
 
 The module preserves all 21 supported core/PBR-extension texture slots, sampler filters and
 mipmaps, independent UV transforms and `TEXCOORD_1`, authored punctual lights, node transforms,
-material/texture animation pointers, skin attributes, and animated morph targets. Generic
-`exportGLTF()` descriptors also preserve hierarchy, skins, inverse bind matrices, morph targets,
-animation clips, variants, GPU instancing, cameras, lights, and source-faithful accessors.
+material/texture animation pointers, skin attributes, and animated morph targets.
+Asset export lives in the shared `examples/gltf/gltf-exporter.ts` application helper.
 
 `@loaders.gl/gltf` owns `.gltf` / `.glb` parsing, linked buffers and images, Draco and
 `EXT_meshopt_compression` and `KHR_meshopt_compression` decoding, Basis/KTX2 and supported WebP
-texture selection, typed accessor postprocessing, feature/structural metadata decoding, and GLB
-container encoding. Automatic `EXT_texture_avif` source selection will arrive with the next
+texture selection, feature/structural metadata decoding, and GLB
+container encoding. Applications own those loader dependencies; `@luma.gl/gltf` has none.
+`postProcessGLTF()` and its types are owned by luma.gl. Automatic `EXT_texture_avif` source selection will arrive with the next
 loaders.gl v5 alpha release. Generic animation, scenegraph, and morph primitives remain in
 `@luma.gl/engine`; shared PBR, lighting, and skinning shaders remain in `@luma.gl/shadertools`.
 

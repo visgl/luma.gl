@@ -10,15 +10,15 @@ import {
   type TableQueryOptions
 } from '@loaders.gl/sql';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
-import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
-import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
+import {GPUDataFrameQuery} from '@luma.gl/graph/gpu-dataframe';
 import {
   GPUExpression,
   type GPUExpressionBinaryOperator,
   type GPUExpressionNode,
   type GPUExpressionValue
-} from '../gpu-dataframe/gpu-expression';
-import type {GPUDataFrameQueryParameters} from '../gpu-dataframe/gpu-query-compiler';
+} from '@luma.gl/graph/gpu-dataframe';
+import type {GPUDataFrameQueryParameters} from '@luma.gl/graph/gpu-dataframe';
 
 /** loaders.gl table-query operators currently lowered into GPU dataframe command graphs. */
 export const GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES = Object.freeze({

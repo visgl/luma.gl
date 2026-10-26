@@ -6,6 +6,7 @@ import {
   makeArrowTableFromGPUAnalyticsTable,
   makeGPUAnalyticsTableFromArrowTable
 } from '@luma.gl/arrow';
+import {planGPUDataFrameQuery} from '../../../../examples/experimental/gpu-data-analysis/src/loaders-sql-query';
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
@@ -17,7 +18,7 @@ import {
   CompiledGPUDataFrameJoin as CompiledLuDataFrameJoin,
   GPUDataFrame as LuDataFrame
 } from '@luma.gl/graph/gpu-dataframe';
-import {LuSQLContext, planGPUDataFrameQuery} from '@luma.gl/graph/gpu-sql';
+import {LuSQLContext} from '@luma.gl/graph/gpu-sql';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';

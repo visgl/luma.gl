@@ -4,18 +4,17 @@
 
 import {readFileSync} from 'node:fs';
 
+import {
+  makeGPUExpressionFromSQLPredicate,
+  planGPUDataFrameQuery
+} from '../../../../examples/experimental/gpu-data-analysis/src/loaders-sql-query';
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';
 import * as graphRootModule from '@luma.gl/graph';
 import * as luDataFrameModule from '@luma.gl/graph/gpu-dataframe';
 import {GPUDataFrame as LuDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import * as sqlModule from '@luma.gl/graph/gpu-sql';
-import {
-  LuSQLContext,
-  LuSQLQuery,
-  makeGPUExpressionFromSQLPredicate,
-  planGPUDataFrameQuery
-} from '@luma.gl/graph/gpu-sql';
+import {LuSQLContext, LuSQLQuery} from '@luma.gl/graph/gpu-sql';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -24,7 +23,7 @@ import {describe, expect, test, vi} from 'vitest';
 type LuSQLFixtureColumns = {fare: 'float32'; category: 'uint32'; identifier: 'uint32'};
 
 describe('LuSQL immutable GPU dataframe planning', () => {
-  test('publishes SQL and the loaders.gl planner adapter through its optional package subpath', () => {
+  test('publishes native SQL without a loaders.gl package dependency', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     ) as {
@@ -39,7 +38,8 @@ describe('LuSQL immutable GPU dataframe planning', () => {
       require: './dist/gpu-sql/index.cjs'
     });
     expect(packageJson.sideEffects).toBe(false);
-    expect(packageJson.dependencies?.['@loaders.gl/sql']).toBe('~5.0.0-alpha.12');
+    expect(packageJson.dependencies?.['@loaders.gl/sql']).toBeUndefined();
+    expect('planGPUDataFrameQuery' in sqlModule).toBe(false);
     expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
     expect(sqlModule.LuSQLContext).toBe(LuSQLContext);
     expect('LuSQLContext' in graphRootModule).toBe(false);

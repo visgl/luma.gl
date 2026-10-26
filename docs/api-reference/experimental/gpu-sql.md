@@ -11,9 +11,11 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 existing GPU dataframes by name and lowers supported statements into the same immutable GPU
 dataframe planner. Planning does not upload, submit, allocate query output, or read GPU buffers.
 
-The same subpath also adapts the portable predicate and table-query syntax introduced by
-`@loaders.gl/sql` 5.0. `planGPUDataFrameQuery()` consumes the loaders.gl plan directly; luma.gl does
-not maintain a copied query planner or a second predicate syntax for this integration.
+The optional loaders.gl integration lives in the
+[GPU data analysis example](https://github.com/visgl/luma.gl/blob/master/examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts).
+Its `planGPUDataFrameQuery()` helper consumes the loaders.gl plan directly. Copy the adapter into
+your application and install `@loaders.gl/core` and `@loaders.gl/sql` when needed.
+The `@luma.gl/graph/gpu-sql` module exports the native frontend without a loaders.gl dependency.
 
 ## When to use it
 
@@ -27,7 +29,7 @@ that already emits `TableQueryOptions` and `SQLPredicate` values:
 ```ts
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {planGPUDataFrameQuery} from '@luma.gl/graph/gpu-sql';
+import {planGPUDataFrameQuery} from './loaders-sql-query';
 
 const predicate = parseSQLPredicate('fare >= :minimum AND category IN (0, 1)', {
   preserveParameters: true

@@ -9,7 +9,6 @@ import {
   type TextureCubeData,
   type TextureCubeFace
 } from '@luma.gl/engine';
-import {loadImageTexture} from '@loaders.gl/textures';
 
 /** Environment textures for PBR module */
 export type PBREnvironment = {
@@ -27,6 +26,8 @@ export type PBREnvironmentProps = {
   brdfLutUrl: string;
   /** Callback that returns the URL for a diffuse or specular cubemap face and mip level. */
   getTexUrl: (name: string, dir: number, level: number) => string;
+  /** Application-owned image decoder, for example loaders.gl loadImageTexture. */
+  loadImage: (url: string) => Promise<Texture2DData>;
   /** Number of mip levels in the specular environment map. */
   specularMipLevels?: number;
 };
@@ -44,15 +45,13 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       magFilter: 'linear'
     } as const satisfies SamplerProps,
     // Texture accepts a promise that returns an image as data (Async Textures)
-    data: loadImageTexture(resolveTextureUrl(props.brdfLutUrl))
+    data: props.loadImage(resolveTextureUrl(props.brdfLutUrl))
   });
 
   const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
     getTextureForFace: face =>
-      loadImageTexture(
-        resolveTextureUrl(props.getTexUrl('diffuse', FACES.indexOf(face), 0))
-      ) as Promise<Texture2DData>,
+      props.loadImage(resolveTextureUrl(props.getTexUrl('diffuse', FACES.indexOf(face), 0))),
     sampler: {
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
@@ -68,7 +67,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       const direction = FACES.indexOf(face);
       for (let lod = 0; lod < specularMipLevels; lod++) {
         imageArray.push(
-          loadImageTexture(resolveTextureUrl(props.getTexUrl('specular', direction, lod)))
+          props.loadImage(resolveTextureUrl(props.getTexUrl('specular', direction, lod)))
         );
       }
       return Promise.all(imageArray) as Promise<Texture2DData>;
