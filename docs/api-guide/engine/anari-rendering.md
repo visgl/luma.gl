@@ -2,9 +2,9 @@
 
 [Overview](https://luma.gl/docs/api-guide/engine/anari-rendering.md)[First scene](https://luma.gl/docs/api-guide/engine/anari-first-scene.md)[Architecture](https://luma.gl/docs/api-guide/engine/anari-architecture.md)[JSON scenes](https://luma.gl/docs/api-guide/engine/anari-json-scenes.md)
 
-ExperimentalPrivate workspaceFrom v10
+ExperimentalPublished packageFrom v9.4
 
-`@luma.gl/scene` is an experimental, private retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
+`@luma.gl/scene` is an experimental retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
 
 This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/scene` API reference](https://luma.gl/docs/api-reference/scene.md).
 

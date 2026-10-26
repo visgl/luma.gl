@@ -1,6 +1,6 @@
 # HDR Auto Exposure
 
-Continuously meter scene luminance and adapt camera exposure entirely on the GPU. `createHDRAutoExposureCompositeShaderPass` uses a center-weighted logarithmic luminance pyramid, persistent exposure history, and independent brightening and darkening response speeds.
+Continuously meter scene luminance and adapt camera exposure entirely on the GPU. `createHDRAutoExposureShaderPassPipeline` uses a center-weighted logarithmic luminance pyramid, persistent exposure history, and independent brightening and darkening response speeds.
 
 ### Deferred Rendering: Illumination Lab
 
@@ -14,15 +14,13 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## At a Glance[​](#at-a-glance "Direct link to At a Glance")
 
 | Property          | Value                                                           |
 | ----------------- | --------------------------------------------------------------- |
-| Export            | `createHDRAutoExposureCompositeShaderPass`                      |
+| Export            | `createHDRAutoExposureShaderPassPipeline`                       |
 | Backend           | WebGPU                                                          |
 | Render passes     | Seven: extraction, four reductions, adaptation, and application |
 | Persistent state  | One GPU-owned exposure-history texture                          |
@@ -35,9 +33,9 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 
 import {
 
-  createBloomCompositeShaderPass,
+  createBloomShaderPassPipeline,
 
-  createHDRAutoExposureCompositeShaderPass,
+  createHDRAutoExposureShaderPassPipeline,
 
   toneMapping
 
@@ -51,9 +49,9 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createHDRAutoExposureCompositeShaderPass({meteringScale: 0.25, initialExposure: 1}),
+    createHDRAutoExposureShaderPassPipeline({meteringScale: 0.25, initialExposure: 1}),
 
-    createBloomCompositeShaderPass({quality: 'high'}),
+    createBloomShaderPassPipeline({quality: 'high'}),
 
     toneMapping
 

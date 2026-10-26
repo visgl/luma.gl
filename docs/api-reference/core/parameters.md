@@ -332,8 +332,6 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 * The two colors are first multiplied with chosen factors (controlled by "blend function" parameters).

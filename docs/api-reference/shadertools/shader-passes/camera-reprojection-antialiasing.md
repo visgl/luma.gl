@@ -1,6 +1,6 @@
 # Camera-Reprojection Antialiasing
 
-Reconstruct previous-frame image coordinates from scene depth and camera transforms when a per-pixel velocity buffer is unavailable. `createCameraReprojectionTAACompositeShaderPass` powers the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime.
+Reconstruct previous-frame image coordinates from scene depth and camera transforms when a per-pixel velocity buffer is unavailable. `createCameraReprojectionTAAShaderPassPipeline` powers the camera-aware temporal antialiasing path in luma.gl's ANARI rendering runtime.
 
 [ANARI Scene Lab](/standalone-examples/scene/playground.html)
 
@@ -8,7 +8,7 @@ Reconstruct previous-frame image coordinates from scene depth and camera transfo
 
 | Property         | Value                                                                  |
 | ---------------- | ---------------------------------------------------------------------- |
-| Export           | `createCameraReprojectionTAACompositeShaderPass`                       |
+| Export           | `createCameraReprojectionTAAShaderPassPipeline`                        |
 | Backend          | WebGPU                                                                 |
 | Render passes    | Three: temporal resolve, resolved-color copy, and depth-history copy   |
 | Required binding | `depthTexture`                                                         |
@@ -20,7 +20,7 @@ Reconstruct previous-frame image coordinates from scene depth and camera transfo
 ```
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
-import {createCameraReprojectionTAACompositeShaderPass} from '@luma.gl/effects';
+import {createCameraReprojectionTAAShaderPassPipeline} from '@luma.gl/effects';
 
 
 
@@ -28,7 +28,7 @@ const renderer = new ShaderPassRenderer(device, {
 
   colorFormat: 'rgba16float',
 
-  shaderPasses: [createCameraReprojectionTAACompositeShaderPass()]
+  shaderPasses: [createCameraReprojectionTAAShaderPassPipeline()]
 
 });
 

@@ -6,8 +6,6 @@
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
-
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
 The base shaders keep the vertex interface explicit:
@@ -254,5 +252,3 @@ Prefer `ShaderPlugin` as the public composition layer. Shader hooks are the lowe
 The runnable example includes all nine pattern variants: `none`, `hash0`, `hash45`, `hash90`, `hash135`, `checker0`, `checker45`, `dotgrid`, and `dotgrid45`.
 
 Use shared plugin fields when a contribution is backend-neutral. Use `glsl` or `wgsl` blocks when the shader language needs different code, defines, or modules.
-
-For a plugin that declares an Arrow-backed scalar input and updates only `ShaderInputs` as its range changes, see [Arrow ShaderPlugin Filtering](https://luma.gl/examples/arrow/arrow-filtering).

@@ -465,14 +465,12 @@ export default class GPUFrustumCullingAnimationLoopTemplate extends AnimationLoo
       }
     });
 
-    graph.add(
-      new GPUVisibilityWorkflow({
-        id: 'visible-instances',
-        predicates: [{kind: 'bounds', mask: flags}],
-        output: visibleIdView,
-        count: instanceCount
-      })
-    );
+    new GPUVisibilityWorkflow({
+      id: 'visible-instances',
+      predicates: [{kind: 'bounds', mask: flags}],
+      output: visibleIdView,
+      count: instanceCount
+    }).addToGraph(graph);
 
     graph.addRenderPass({
       id: 'render-visible-instances',

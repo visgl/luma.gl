@@ -1,6 +1,6 @@
 # Create and own GPU resources
 
-[Initialization](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md)[Resources](https://luma.gl/docs/api-guide/gpu/gpu-resources.md)[Data processing](https://luma.gl/docs/api-guide/gpu/gpu-data-processing.md)
+[Initialization](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md)[Resources](https://luma.gl/docs/api-guide/gpu/gpu-resources.md)
 
 ## Outcome[​](#outcome "Direct link to Outcome")
 

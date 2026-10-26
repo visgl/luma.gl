@@ -6,8 +6,6 @@ This tutorial uses `BufferTransform` to update per-instance data on the GPU and 
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
-
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
 `BufferTransform` executes a small shader that reads from one set of buffers and writes results into another. By swapping those buffers each frame we can animate attributes entirely on the GPU. The render shader then consumes the updated positions to display thousands of triangles moving independently.

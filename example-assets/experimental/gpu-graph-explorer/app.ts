@@ -152,6 +152,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   private dragging = false;
   private lastPointer: [number, number] | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private canvasTouchAction = '';
   private statusElement: HTMLElement | null = null;
   private graphSizeElement: HTMLElement | null = null;
   private controlsRoot: HTMLElement | null = null;
@@ -433,6 +434,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      this.canvasTouchAction = canvas.style.touchAction;
       canvas.style.cursor = 'grab';
       canvas.style.touchAction = 'none';
       canvas.addEventListener('pointerdown', this.handlePointerDown);
@@ -527,6 +529,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     this.pendingPick = null;
     this.pendingPickSession = null;
     if (this.canvas) {
+      this.canvas.style.touchAction = this.canvasTouchAction;
       this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
       this.canvas.removeEventListener('pointermove', this.handlePointerMove);
       this.canvas.removeEventListener('pointerup', this.handlePointerUp);

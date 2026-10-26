@@ -24,7 +24,7 @@ import {
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {dofCompositeShaderPass} from '@luma.gl/effects';
+import {dofShaderPassPipeline} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
 import {Matrix4, radians} from '@math.gl/core';
@@ -273,7 +273,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.shaderPassRenderer = new ShaderPassRenderer(device, {
-      shaderPasses: [dofCompositeShaderPass]
+      shaderPasses: [dofShaderPassPipeline]
     });
     this.settingsPanel = new ExampleSettingsPanelManager({
       id: 'dof-settings',

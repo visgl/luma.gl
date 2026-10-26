@@ -40,7 +40,7 @@ The embedded [Million-Row Crossfilter Explorer](https://luma.gl/examples/showcas
 
   WebGPU
 
-[Open full page](https://luma.gl/examples/showcase/million-row-crossfilter)[View source](https://github.com/visgl/luma.gl/tree/master/examples/showcase/million-row-crossfilter)[Inspect graph](https://luma.gl/examples/showcase/million-row-crossfilter?panel=graph)
+[Open full page](https://luma.gl/examples/showcase/million-row-crossfilter)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/showcase/million-row-crossfilter)[Inspect graph](https://luma.gl/examples/showcase/million-row-crossfilter?panel=graph)
 
 Optional interactive WebGPU explorer**Explore one million linked GPU-resident rows.**&#x42;rush a map, scatterplot, or histogram and watch every linked view update together.Launch interactive explorer →
 
@@ -201,4 +201,4 @@ The comparison below reflects the official cuXfilter [26.06 documentation](https
 
 The projects solve related interaction problems in different environments. GPUCrossfilter does not provide cuXfilter feature parity, a migration layer, built-in chart integrations, or distributed GPU execution.
 
-See [GPU Primitives and Command Graphs](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for the underlying compute infrastructure and [GPU Coordinate Projection](https://luma.gl/docs/api-reference/experimental/gpu-project.md) for another browser-native GPU data workflow.
+See GPU Primitives and Command Graphs for the underlying compute infrastructure and [GPU Coordinate Projection](https://luma.gl/docs/api-reference/experimental/gpu-project.md) for another browser-native GPU data workflow.

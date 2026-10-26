@@ -14,23 +14,23 @@ import {
   SphereGeometry
 } from '@luma.gl/engine';
 import {
-  createBloomCompositeShaderPass,
-  createClusteredVolumetricLightingCompositeShaderPass,
-  createGTAOCompositeShaderPass,
-  createHDRAutoExposureCompositeShaderPass,
-  createSSGICompositeShaderPass,
-  createSSRCompositeShaderPass
+  createBloomShaderPassPipeline,
+  createClusteredVolumetricLightingShaderPassPipeline,
+  createGTAOShaderPassPipeline,
+  createHDRAutoExposureShaderPassPipeline,
+  createSSGIShaderPassPipeline,
+  createSSRShaderPassPipeline
 } from '@luma.gl/effects';
 import {
   ClusteredLightGrid,
-  createDeferredAmbientLightingCompositeShaderPass,
-  createClusteredDeferredLightingCompositeShaderPass,
+  createDeferredAmbientLightingShaderPassPipeline,
+  createClusteredDeferredLightingShaderPassPipeline,
   GBuffer,
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
   type DeferredPointLight
 } from '@luma.gl/experimental';
-import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {type Panel, type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
@@ -228,7 +228,7 @@ type DeferredDisplayBindings = {
   clusterLightCounts?: Buffer;
 };
 
-const deferredDisplayPipeline: CompositeShaderPass = {
+const deferredDisplayPipeline: ShaderPassPipeline = {
   name: 'deferredDisplayPipeline',
   steps: [
     {
@@ -831,7 +831,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 function createAmbientLightingRenderer(device: Device): ShaderPassRenderer {
   return new ShaderPassRenderer(device, {
-    shaderPasses: [createDeferredAmbientLightingCompositeShaderPass()],
+    shaderPasses: [createDeferredAmbientLightingShaderPassPipeline()],
     colorFormat: 'rgba16float',
     flipY: true
   });
@@ -867,34 +867,34 @@ function shouldUseVolumetricPipeline(settings: DeferredRenderingSettings): boole
 }
 
 function createRenderer(device: Device, settings: DeferredRenderingSettings): ShaderPassRenderer {
-  const shaderPasses: (ShaderPass | CompositeShaderPass)[] = [
-    createClusteredDeferredLightingCompositeShaderPass(),
+  const shaderPasses: (ShaderPass | ShaderPassPipeline)[] = [
+    createClusteredDeferredLightingShaderPassPipeline(),
     ...(shouldUseAmbientOcclusionPipeline(settings)
       ? [
-          createGTAOCompositeShaderPass({
+          createGTAOShaderPassPipeline({
             composition: 'ambient-only',
             resolutionScale: settings.ambientOcclusionResolution
           })
         ]
       : []),
     ...(shouldUseGlobalIlluminationPipeline(settings)
-      ? [createSSGICompositeShaderPass({resolutionScale: settings.globalIlluminationResolution})]
+      ? [createSSGIShaderPassPipeline({resolutionScale: settings.globalIlluminationResolution})]
       : []),
     ...(shouldUseReflectionPipeline(settings)
-      ? [createSSRCompositeShaderPass({resolutionScale: settings.reflectionResolution})]
+      ? [createSSRShaderPassPipeline({resolutionScale: settings.reflectionResolution})]
       : []),
     ...(shouldUseVolumetricPipeline(settings)
       ? [
-          createClusteredVolumetricLightingCompositeShaderPass({
+          createClusteredVolumetricLightingShaderPassPipeline({
             resolutionScale: settings.atmosphereResolution
           })
         ]
       : []),
     ...(settings.autoExposureEnabled || settings.debugView === 'HDR Luminance'
-      ? [createHDRAutoExposureCompositeShaderPass({initialExposure: settings.minimumExposure})]
+      ? [createHDRAutoExposureShaderPassPipeline({initialExposure: settings.minimumExposure})]
       : []),
     ...(settings.bloomEnabled
-      ? [createBloomCompositeShaderPass({resolutionScale: settings.bloomResolution})]
+      ? [createBloomShaderPassPipeline({resolutionScale: settings.bloomResolution})]
       : []),
     deferredDisplayPipeline
   ];

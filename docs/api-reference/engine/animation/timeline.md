@@ -16,8 +16,6 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Parallel Times[​](#parallel-times "Direct link to Parallel Times")

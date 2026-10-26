@@ -3,9 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
-import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer, luma, type Device} from '@luma.gl/core';
-import {mountStreamingPanel} from './streaming-panel';
 import {
   GPUCommandGraph,
   GPUGridAggregation,
@@ -17,11 +15,12 @@ import {
   type CompiledGPUCommandGraph
 } from '@luma.gl/gpgpu/gpu-core';
 import {
+  column,
   GPUDataFrame,
+  parameter,
   type CompiledGPUDataFrameQuery,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/experimental/gpu-dataframe';
-import {planGPUDataFrameQuery} from '@luma.gl/experimental/gpu-sql';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -71,7 +70,6 @@ class GPUDataAnalysisExample {
   private benchmarkController: AbortController | null = null;
   private readonly benchmarkHistory: GPUDataFrameBenchmarkResult[] = [];
   private destroyed = false;
-  private destroyStreamingPanel?: () => void;
   private hasRunGPUDataFrameDemo = false;
   private runVersion = 0;
 
@@ -117,10 +115,6 @@ class GPUDataAnalysisExample {
         return;
       }
       this.device = device;
-      this.destroyStreamingPanel = mountStreamingPanel(
-        document.getElementById('gpu-data-analysis-app')!,
-        device
-      );
       await this.run();
       if (!this.destroyed) {
         this.elements.gpuDataFrameBenchmark.disabled = false;
@@ -154,7 +148,6 @@ class GPUDataAnalysisExample {
     ]) {
       element.removeEventListener('change', this.handleRun);
     }
-    this.destroyStreamingPanel?.();
     this.releaseResources();
     this.device?.destroy();
     this.device = null;
@@ -334,89 +327,87 @@ class GPUDataAnalysisExample {
         'float32',
         GROUP_COUNT
       );
-      graph.add([
-        new GPUReduction({
-          id: 'extent',
-          input: valuesImport,
-          output: extent,
-          operation: 'extent'
-        }),
-        new GPUHistogram({
-          id: 'histogram',
-          input: valuesImport,
-          output: histogram,
-          ...(histogramEdges ? {edges: histogramEdges} : {domain: extent})
-        }),
-        new GPUScan({
-          id: 'cumulative-histogram',
-          input: histogram,
-          output: cumulativeHistogram,
-          mode: 'inclusive'
-        }),
-        new GPUGridBinning({
-          id: 'grid',
-          positions: positionsImport,
-          output: grid,
-          gridSize: [gridWidth, gridWidth],
-          bounds: [-1, -1, 1, 1]
-        }),
-        new GPUGridAggregation({
-          id: 'grid-weight-sums',
-          positions: positionsImport,
-          weights: valuesImport,
-          output: gridWeightSums,
-          gridSize: [gridWidth, gridWidth],
-          bounds: [-1, -1, 1, 1]
-        }),
-        new GPUGridAggregation({
-          id: 'grid-weight-minimums',
-          positions: positionsImport,
-          weights: valuesImport,
-          output: gridWeightMinimums,
-          operation: 'min',
-          gridSize: [gridWidth, gridWidth],
-          bounds: [-1, -1, 1, 1]
-        }),
-        new GPUGridAggregation({
-          id: 'grid-weight-maximums',
-          positions: positionsImport,
-          weights: valuesImport,
-          output: gridWeightMaximums,
-          operation: 'max',
-          gridSize: [gridWidth, gridWidth],
-          bounds: [-1, -1, 1, 1]
-        }),
-        new GPUGridAggregation({
-          id: 'grid-weight-means',
-          positions: positionsImport,
-          weights: valuesImport,
-          output: gridWeightMeans,
-          operation: 'mean',
-          gridSize: [gridWidth, gridWidth],
-          bounds: [-1, -1, 1, 1]
-        }),
-        new GPUScan({
-          id: 'cumulative-grid-rows',
-          input: grid,
-          output: cumulativeGrid,
-          mode: 'inclusive',
-          segmentFlags: gridSegmentFlags
-        }),
-        new GPUGroupAggregation({
-          id: 'group-counts',
-          keys: groupKeysImport,
-          mask: selectionImport,
-          output: groupCounts
-        }),
-        new GPUGroupAggregation({
-          id: 'group-means',
-          keys: groupKeysImport,
-          values: valuesImport,
-          mask: selectionImport,
-          output: groupMeans,
-          operation: 'mean'
-        })
-      ]);
+      new GPUReduction({
+        id: 'extent',
+        input: valuesImport,
+        output: extent,
+        operation: 'extent'
+      }).addToGraph(graph);
+      new GPUHistogram({
+        id: 'histogram',
+        input: valuesImport,
+        output: histogram,
+        ...(histogramEdges ? {edges: histogramEdges} : {domain: extent})
+      }).addToGraph(graph);
+      new GPUScan({
+        id: 'cumulative-histogram',
+        input: histogram,
+        output: cumulativeHistogram,
+        mode: 'inclusive'
+      }).addToGraph(graph);
+      new GPUGridBinning({
+        id: 'grid',
+        positions: positionsImport,
+        output: grid,
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
+      new GPUGridAggregation({
+        id: 'grid-weight-sums',
+        positions: positionsImport,
+        weights: valuesImport,
+        output: gridWeightSums,
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
+      new GPUGridAggregation({
+        id: 'grid-weight-minimums',
+        positions: positionsImport,
+        weights: valuesImport,
+        output: gridWeightMinimums,
+        operation: 'min',
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
+      new GPUGridAggregation({
+        id: 'grid-weight-maximums',
+        positions: positionsImport,
+        weights: valuesImport,
+        output: gridWeightMaximums,
+        operation: 'max',
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
+      new GPUGridAggregation({
+        id: 'grid-weight-means',
+        positions: positionsImport,
+        weights: valuesImport,
+        output: gridWeightMeans,
+        operation: 'mean',
+        gridSize: [gridWidth, gridWidth],
+        bounds: [-1, -1, 1, 1]
+      }).addToGraph(graph);
+      new GPUScan({
+        id: 'cumulative-grid-rows',
+        input: grid,
+        output: cumulativeGrid,
+        mode: 'inclusive',
+        segmentFlags: gridSegmentFlags
+      }).addToGraph(graph);
+      new GPUGroupAggregation({
+        id: 'group-counts',
+        keys: groupKeysImport,
+        mask: selectionImport,
+        output: groupCounts
+      }).addToGraph(graph);
+      new GPUGroupAggregation({
+        id: 'group-means',
+        keys: groupKeysImport,
+        values: valuesImport,
+        mask: selectionImport,
+        output: groupMeans,
+        operation: 'mean'
+      }).addToGraph(graph);
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;
@@ -599,7 +590,7 @@ class GPUDataAnalysisExample {
     this.resources = null;
   }
 
-  /** Runs a loaders.gl SQL predicate directly over the existing Arrow-uploaded GPU columns. */
+  /** Runs an opt-in dataframe derivation directly over the existing Arrow-uploaded GPU columns. */
   private async runGPUDataFrameDemo(): Promise<void> {
     const device = this.device;
     const resources = this.resources;
@@ -608,19 +599,23 @@ class GPUDataAnalysisExample {
       return;
     }
 
+    const adjustment = Number(this.elements.gpuDataFrameAdjustment.value);
+    const multiplier = Number(this.elements.gpuDataFrameMultiplier.value);
     const threshold = Number(this.elements.gpuDataFrameThreshold.value);
-    if (!Number.isFinite(threshold)) {
-      this.elements.gpuDataFrameResult.textContent = 'The SQL threshold must be finite.';
+    if (![adjustment, multiplier, threshold].every(Number.isFinite)) {
+      this.elements.gpuDataFrameResult.textContent = 'Every expression parameter must be finite.';
       return;
     }
 
     this.hasRunGPUDataFrameDemo = true;
     this.elements.gpuDataFrameRun.disabled = true;
-    this.elements.gpuDataFrameResult.textContent = 'Planning loaders.gl SQL for GPU execution...';
+    this.elements.gpuDataFrameResult.textContent = 'Compiling GPU-resident derived columns...';
     this.elements.gpuDataFrameResult.dataset.state = 'running';
     const executionStarted = performance.now();
     let frame: GPUDataFrame<{value: 'float32'; category: 'uint32'}> | undefined;
-    let compiled: CompiledGPUDataFrameQuery<{category: 'uint32'; value: 'float32'}> | undefined;
+    let compiled:
+      | CompiledGPUDataFrameQuery<{category: 'uint32'; adjustedValue: 'float32'}>
+      | undefined;
 
     try {
       const batches = resources.values.data.map(
@@ -630,35 +625,41 @@ class GPUDataAnalysisExample {
           })
       );
       frame = new GPUDataFrame({table: new GPUTable({batches})});
-      const predicate = parseSQLPredicate('value > :threshold', {preserveParameters: true});
-      const query = planGPUDataFrameQuery(frame, {
-        predicate,
-        columns: ['category', 'value'],
-        parameters: {threshold}
-      });
+      const query = frame
+        .withColumn(
+          'adjustedValue',
+          column('value')
+            .multiply(parameter('multiplier', multiplier))
+            .add(parameter('adjustment', adjustment))
+        )
+        .filter(column('adjustedValue').greaterThan(parameter('threshold', threshold)))
+        .select(['category', 'adjustedValue']);
       const graph = new GPUCommandGraph<GPUDataFrameQueryParameters>(device, {
         id: 'gpu-data-analysis-gpu-dataframe-derived-demo'
       });
       compiled = query.compile(graph);
 
       const commandEncoder = device.createCommandEncoder({id: 'gpu-dataframe-derived-demo'});
-      compiled.encode(commandEncoder, {threshold});
+      compiled.encode(commandEncoder, {adjustment, multiplier, threshold});
       device.submit(commandEncoder.finish());
 
       const countData = compiled.selectedCounts.data[0];
-      const valueData = compiled.table.gpuVectors.value.data[0];
+      const derivedData = compiled.table.gpuVectors.adjustedValue.data[0];
       const countBuffer =
         countData.buffer instanceof Buffer ? countData.buffer : countData.buffer.buffer;
-      const valueBuffer =
-        valueData.buffer instanceof Buffer ? valueData.buffer : valueData.buffer.buffer;
-      const sampleLength = Math.min(valueData.length, 4);
+      const derivedBuffer =
+        derivedData.buffer instanceof Buffer ? derivedData.buffer : derivedData.buffer.buffer;
+      const sampleLength = Math.min(derivedData.length, 4);
       const [countBytes, sampleBytes] = await Promise.all([
         countBuffer.readAsync(countData.byteOffset, Uint32Array.BYTES_PER_ELEMENT),
-        valueBuffer.readAsync(valueData.byteOffset, sampleLength * Float32Array.BYTES_PER_ELEMENT)
+        derivedBuffer.readAsync(
+          derivedData.byteOffset,
+          sampleLength * Float32Array.BYTES_PER_ELEMENT
+        )
       ]);
       const selectedCount = new Uint32Array(countBytes.buffer, countBytes.byteOffset, 1)[0];
       const expectedCount = resources.sourceValues.reduce(
-        (count, value) => count + Number(value > threshold),
+        (count, value) => count + Number(value * multiplier + adjustment > threshold),
         0
       );
       const sample = Array.from(
@@ -678,8 +679,8 @@ class GPUDataAnalysisExample {
         this.elements.gpuDataFrameResult.dataset.state =
           selectedCount === expectedCount ? 'verified' : 'error';
         this.elements.gpuDataFrameResult.textContent =
-          `${selectedCount.toLocaleString()} selected rows · loaders.gl WHERE value > :threshold · ` +
-          `threshold ${threshold} · first GPU values [${sample.join(', ')}] · ${validation}`;
+          `${selectedCount.toLocaleString()} selected rows · adjusted = value × ${multiplier} + ${adjustment} · ` +
+          `first GPU values [${sample.join(', ')}] · ${validation}`;
       }
     } catch (error) {
       if (!this.destroyed) {
@@ -693,14 +694,20 @@ class GPUDataAnalysisExample {
     }
   }
 
-  /** Keeps the visible loaders.gl predicate synchronized without allocating or dispatching work. */
+  /** Keeps the visible expression synchronized without allocating or dispatching GPU work. */
   private updateGPUDataFrameExpression(): void {
-    this.elements.gpuDataFrameExpression.textContent = `value > :threshold  ·  threshold = ${this.elements.gpuDataFrameThreshold.value}`;
+    this.elements.gpuDataFrameExpression.textContent =
+      `value × ${this.elements.gpuDataFrameMultiplier.value} + ` +
+      `${this.elements.gpuDataFrameAdjustment.value} > ${this.elements.gpuDataFrameThreshold.value}`;
   }
 
-  /** Returns the lightweight control that parameterizes the reusable dataframe plan. */
-  private getGPUDataFrameControls(): HTMLInputElement[] {
-    return [this.elements.gpuDataFrameThreshold];
+  /** Returns the three lightweight controls that parameterize the reusable dataframe plan. */
+  private getGPUDataFrameControls(): (HTMLInputElement | HTMLSelectElement)[] {
+    return [
+      this.elements.gpuDataFrameMultiplier,
+      this.elements.gpuDataFrameAdjustment,
+      this.elements.gpuDataFrameThreshold
+    ];
   }
 
   private setStatus(message: string, error = false): void {

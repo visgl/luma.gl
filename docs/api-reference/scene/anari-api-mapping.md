@@ -1,8 +1,8 @@
 # ANARI C API and THREE.js Mapping
 
-ExperimentalPrivate workspaceFrom v10
+ExperimentalPublished packageFrom v9.4
 
-This page maps the official [ANARI 1.1 specification](https://registry.khronos.org/ANARI/specs/1.1/ANARI-1.1.html) to the experimental, private `@luma.gl/scene` implementation and, where helpful, to comparable THREE.js concepts.
+This page maps the official [ANARI 1.1 specification](https://registry.khronos.org/ANARI/specs/1.1/ANARI-1.1.html) to the experimental `@luma.gl/scene` implementation and, where helpful, to comparable THREE.js concepts.
 
 The first column is the authoritative ANARI C vocabulary. The JavaScript column describes what this package **actually implements**, not what a fully conformant ANARI binding would need to implement. The THREE.js column is a conceptual migration aid, not an adapter or dependency.
 

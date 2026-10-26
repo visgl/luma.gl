@@ -157,7 +157,7 @@ class GPUSortExample {
               algorithm,
               direction
             });
-      graph.add(sort);
+      sort.addToGraph(graph);
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;

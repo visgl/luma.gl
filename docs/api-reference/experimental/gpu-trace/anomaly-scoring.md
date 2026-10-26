@@ -57,7 +57,7 @@ new GPUTraceAnomalyScoring({
 }).addToGraph(graph);
 ```
 
-Baselines may come from a saved trace, a deployment cohort, or another GPU Core aggregation. The primitive does not embed one observability product's grouping or anomaly semantics.
+Baselines may come from a saved trace, a deployment cohort, or another GPU scheduling aggregation. The primitive does not embed one observability product's grouping or anomaly semantics.
 
 ## Score[​](#score "Direct link to Score")
 

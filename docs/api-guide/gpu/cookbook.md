@@ -82,7 +82,7 @@ computePass.end();
 device.submit();
 ```
 
-Compute is WebGPU-only. Use GPU Core when several stages need dependency scheduling.
+Compute is WebGPU-only. Use GPU scheduling when several stages need dependency scheduling.
 
 ## Read data back[​](#read-data-back "Direct link to Read data back")
 

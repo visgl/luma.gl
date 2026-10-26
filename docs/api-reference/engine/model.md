@@ -41,7 +41,7 @@ const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 
 
 
-const model = await Model.createAsync(device, {
+const model = new Model(device, {
 
   vs: GLSL_VERTEX_SHADER,
 
@@ -155,10 +155,6 @@ Application-owned metadata attached to the model.
 
 Creates a render model for one device.
 
-### `Model.createAsync(device: Device, props: ModelProps): Promise<Model>`[​](#modelcreateasyncdevice-device-props-modelprops-promisemodel "Direct link to modelcreateasyncdevice-device-props-modelprops-promisemodel")
-
-Creates the model through the device's asynchronous render-pipeline path and resolves after its pipeline and vertex array are ready. Prefer it during WebGPU loading when multiple independent models can be created with `Promise.all()`. The `new Model(...)` constructor remains the synchronous compatibility path.
-
 ### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
 
 Releases cached pipeline and shader references and destroys the internal uniform store.
@@ -193,7 +189,7 @@ Replaces the buffer layout and marks the pipeline dirty.
 
 ### `setParameters(parameters: RenderPipelineParameters): void`[​](#setparametersparameters-renderpipelineparameters-void "Direct link to setparametersparameters-renderpipelineparameters-void")
 
-Updates pipeline parameters and marks the pipeline dirty when needed.
+Updates pipeline parameters. On WebGPU, where parameters are part of the render pipeline, this marks the pipeline dirty when the parameters change. On WebGL the model keeps its pipeline and passes its parameters to each draw call, so `model.pipeline.props.parameters` keeps the parameters the retained pipeline was created with.
 
 ### `setInstanceCount(instanceCount: number): void`[​](#setinstancecountinstancecount-number-void "Direct link to setinstancecountinstancecount-number-void")
 

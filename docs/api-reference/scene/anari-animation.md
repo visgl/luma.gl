@@ -4,7 +4,7 @@
 
 Experimental optional adapter
 
-`@luma.gl/scene` is a private, experimental workspace package. Import the `/gltf` subpath only when glTF animation integration is needed and `@luma.gl/gltf` is available.
+`@luma.gl/scene` is a published experimental package. Import the `/gltf` subpath only when glTF animation integration is needed and `@luma.gl/gltf` is available.
 
 ## Optional entry-point exports[​](#optional-entry-point-exports "Direct link to Optional entry-point exports")
 
