@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type Framebuffer, type VertexArray, Texture} from '@luma.gl/core';
-import {RenderKernel} from '@luma.gl/core/render-kernel';
+import {RenderKernel} from '@luma.gl/gpgpu';
 import {assert} from '@luma.gl/core';
 import {validateFlowParticleField, type FlowParticleField} from './flow-particle-field';
 import {

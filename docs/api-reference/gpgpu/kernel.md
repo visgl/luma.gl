@@ -2,7 +2,7 @@
 
 ## Overview
 
-`Kernel` executes assembled WGSL compute shaders on WebGPU. [`RenderKernel`](/docs/api-reference/core/render-kernel) executes assembled GLSL/WGSL render shaders on WebGL/WebGPU.
+`Kernel` executes assembled WGSL compute shaders on WebGPU. [`RenderKernel`](/docs/api-reference/gpgpu/render-kernel) executes assembled GLSL/WGSL render shaders on WebGL/WebGPU.
 They own compiled shaders and cached pipelines while leaving shader assembly, uniform policy,
 geometry ownership, scene state, and command-graph scheduling to higher-level APIs.
 
@@ -24,6 +24,8 @@ WebGPU execution helper without adopting `Model` or `Computation`.
 `Kernel` wraps one immutable WebGPU compute program:
 
 ```ts
+import {Kernel} from '@luma.gl/gpgpu';
+
 const kernel = new Kernel(device, {
   source,
   shaderLayout
@@ -58,7 +60,7 @@ still uses luma core resource objects.
 while bindings and vertex arrays are supplied per draw:
 
 ```ts
-import {RenderKernel} from '@luma.gl/core/render-kernel';
+import {RenderKernel} from '@luma.gl/gpgpu';
 
 const kernel = new RenderKernel(device, {
   vertexSource,
@@ -74,7 +76,7 @@ kernel.draw(renderPass, {
 });
 ```
 
-It also supports non-indexed and indexed indirect draws on WebGPU. The engine RenderKernel export remains a compatibility alias.
+It also supports non-indexed and indexed indirect draws on WebGPU. Import both classes from `@luma.gl/gpgpu`; engine does not re-export them.
 
 ## What kernels do not do
 

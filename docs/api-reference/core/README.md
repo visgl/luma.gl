@@ -103,5 +103,3 @@ upload, render, compute, readback, resize, and recovery from validation or devic
 `@luma.gl/core/dynamic` provides [DynamicBuffer](/docs/api-reference/core/dynamic/dynamic-buffer) and [DynamicTexture](/docs/api-reference/core/dynamic/dynamic-texture), along with their props, texture data types and binding-source helpers. They wrap ordinary core resources to support replacement, resizing and, for textures, asynchronous initialization and mipmap generation.
 
 Import these conveniences explicitly; the core root does not re-export them. The optional entry point depends only on core internals. Engine and gpgpu retain compatibility exports with identical class identity.
-
-[`RenderKernel`](/docs/api-reference/core/render-kernel), available from `@luma.gl/core/render-kernel`, executes assembled shaders through direct WebGL/WebGPU draws.

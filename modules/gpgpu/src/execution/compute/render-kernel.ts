@@ -9,8 +9,8 @@ import type {
   RenderPipelineProps,
   Shader,
   VertexArray
-} from '../index';
-import {Buffer, Device, PipelineFactory, RenderPipeline, ShaderFactory} from '../index';
+} from '@luma.gl/core';
+import {Buffer, Device, PipelineFactory, RenderPipeline, ShaderFactory} from '@luma.gl/core';
 
 /** Properties for a lightweight immutable render kernel. */
 export type RenderKernelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {

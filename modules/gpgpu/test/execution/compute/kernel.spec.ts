@@ -15,8 +15,7 @@ import {
   type Shader,
   type VertexArray
 } from '@luma.gl/core';
-import {Kernel, RenderKernel as EngineRenderKernel} from '@luma.gl/engine';
-import {RenderKernel} from '@luma.gl/core/render-kernel';
+import {Kernel, RenderKernel} from '@luma.gl/gpgpu';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const source = /* WGSL */ `
@@ -228,8 +227,7 @@ const fragmentSource = /* WGSL */ `
   return vec4f(1.0);
 }`;
 
-it('RenderKernel keeps the engine compatibility export and validates backend requirements', () => {
-  expect(EngineRenderKernel).toBe(RenderKernel);
+it('RenderKernel validates backend requirements', () => {
   expect(() => new RenderKernel({type: 'null'} as Device, {vertexSource})).toThrow(
     'RenderKernel requires WebGL or WebGPU'
   );

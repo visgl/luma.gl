@@ -1,11 +1,11 @@
 # RenderKernel
 
-Import `RenderKernel` from the optional `@luma.gl/core/render-kernel` entry point. The engine export remains a compatibility alias to the same class. The core root does not re-export it.
+Import `RenderKernel` alongside `Kernel` from `@luma.gl/gpgpu`. Neither class is exported by engine or core.
 
 RenderKernel owns compiled shaders and a cached render pipeline. It accepts already assembled GLSL on WebGL or WGSL on WebGPU. Shader assembly, uniforms, geometry ownership, and graph scheduling stay with the caller.
 
 ```typescript
-import {RenderKernel} from '@luma.gl/core/render-kernel';
+import {RenderKernel} from '@luma.gl/gpgpu';
 
 const kernel = new RenderKernel(device, {
   vertexSource,

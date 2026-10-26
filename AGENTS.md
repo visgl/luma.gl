@@ -105,7 +105,7 @@
 - Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.
 
 ## GPU Graph package boundaries
-- `@luma.gl/core/render-kernel` owns the portable assembled-shader render executor. Engine retains compatibility exports; graph operations may use it directly without model dependencies.
+- `@luma.gl/gpgpu` owns Kernel and RenderKernel. Engine does not re-export these execution helpers; graph operations use them directly without model dependencies.
 - `@luma.gl/graph` exposes `GPUGraph` authoring, `GPUGraphCompiler`, and `GPUCommandGraph` execution infrastructure.
 - Graph-based algorithms and table processing use explicit `@luma.gl/graph/*` subpaths.
 - `@luma.gl/gpgpu` retains GPU data primitives and immediate operations and must not depend on `@luma.gl/graph`.
