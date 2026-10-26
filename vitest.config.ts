@@ -140,6 +140,7 @@ const browserBenchmarkTestPatterns = [
   'modules/graph/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',
+  'modules/graph/test/gpu-dataframe/gpu-data-frame-batch-scaling-benchmark.spec.ts',
   'modules/graph/test/gpu-graph/gpu-graph-benchmark.spec.ts',
   'modules/graph/test/gpu-project/projection-benchmark.spec.ts',
   'modules/graph/test/gpu-project/projection-performance.spec.ts',
