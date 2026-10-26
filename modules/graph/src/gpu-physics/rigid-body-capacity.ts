@@ -1,3 +1,4 @@
+import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import {RIGID_BODY_JOINT_STATE_BYTES} from './rigid-body-joints';
 // luma.gl
 // SPDX-License-Identifier: MIT
@@ -26,7 +27,8 @@ export function getRigidBodyStorageLayout(
   enableQueries = false,
   rollback = false,
   continuous = false,
-  jointCount = 0
+  jointCount = 0,
+  ensembleInstances = 0
 ) {
   const geometryOffset = Math.ceil((bodyCount * 12 + colliderCount * 26) / 4) * 4;
   const pairOffset = Math.ceil((geometryOffset + geometryWords) / 64) * 64;
@@ -46,12 +48,17 @@ export function getRigidBodyStorageLayout(
     })),
     {
       name: 'targets',
-      byteLength:
-        Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
-        jointCount * RIGID_BODY_JOINT_STATE_BYTES,
+      byteLength: ensembleInstances
+        ? getEnsembleContactLayout(bodyCount, ensembleInstances, maximumPairs).byteLength
+        : Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
+          jointCount * RIGID_BODY_JOINT_STATE_BYTES,
       uniform: false
     },
-    {name: 'manifolds', byteLength: maximumPairs * 416, uniform: false},
+    {
+      name: 'manifolds',
+      byteLength: maximumPairs * 416,
+      uniform: false
+    },
     {name: 'bodies', byteLength: metadataLength * 4, uniform: false},
     {name: 'settings', byteLength: 64, uniform: true},
     {name: 'control-settings', byteLength: 64, uniform: true},
@@ -98,8 +105,7 @@ export function getRigidBodyStorageLayout(
       'velocities',
       'angular-velocities',
       'sleep',
-      'targets',
-      'manifolds'
+      ...(ensembleInstances ? [] : ['targets', 'manifolds'])
     ];
     const checkpointBuffers = names.map((name, index) => ({
       name: `checkpoint-${index}`,

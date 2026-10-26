@@ -72,3 +72,15 @@ throughput: all modes retain the entire population, and the ensemble still scans
 capacity-sized buffers. Paused sparse instances must remain at their initial analytic positions;
 active instances must match ballistic motion and one another. Dense cases check finite states
 and active-world equivalence, not contact accuracy. Scheduler status is included in exported JSON.
+
+## Active-work qualification
+
+Use `--scene sleeping` to measure quiescent residency and `--scene wake-storm` to wake enabled
+instances every eight frames. `--scene pile` exercises contacts. Use `steps=1` (the CLI default)
+when comparing actual scheduled body/world steps. Last-substep work counters are read outside
+timing and include active ranges, touched buckets, visited/claimed/journaled contacts and snapshot
+payload bytes. A separate additional step requests optional GPU timestamps and reports stage
+costs; missing timestamps remain explicitly unavailable. The default WebGPU storage limits remain
+in force even when timestamp-query is enabled.
+
+See [active-work observations and remaining limits](./ACTIVE-WORK-QUALIFICATION.md).

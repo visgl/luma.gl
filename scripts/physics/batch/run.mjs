@@ -25,7 +25,7 @@ const cases = values.cases.split(',').map(value => {
   return {worlds, bodies};
 });
 const frames = Number(values.frames), repeats = Number(values.repeats);
-if (!Number.isInteger(repeats) || repeats < 1 || repeats > 10 || !['sparse', 'pile'].includes(values.scene)) throw new Error('Invalid repetitions or scene');
+if (!Number.isInteger(repeats) || repeats < 1 || repeats > 10 || !['sparse', 'pile', 'sleeping', 'wake-storm'].includes(values.scene)) throw new Error('Invalid repetitions or scene');
 const modes = values.modes.split(',');
 if (!modes.length || modes.some(mode => !['ensemble', 'batched', 'separate'].includes(mode))) throw new Error('Invalid modes');
 const activeFractions = values['active-fractions'].split(',').map(Number);
@@ -47,7 +47,7 @@ try {
             import(`${root}/modules/core/src/webgpu/index.ts`),
             import(`${root}/examples/experimental/physics-batch/batch-benchmark.ts`)
           ]);
-          const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter]});
+          const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter], optionalFeatures: ['timestamp-query']});
           try { return await runBatchBenchmark(device, options); }
           finally { device.destroy(); }
         }, {root: `/@fs${root}`, options: {...dimensions, activeFraction, frames, warmup: 10, steps: 1, scene: values.scene, pairsPerBody: Number(values['pairs-per-body']), submission}});
