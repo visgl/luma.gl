@@ -479,10 +479,11 @@ export function addGeospatialPass<Parameters>(
         })
       );
       const uniforms = classic ? new UniformStore(device, {fp64arithmetic}) : null;
-      uniforms?.setUniforms({fp64arithmetic: fp64arithmetic.defaultUniforms!});
       const uniformBindings: Record<string, Binding> = uniforms
         ? {[fp64arithmetic.name]: uniforms.getManagedUniformBuffer(fp64arithmetic.name)}
         : {};
+      // Allocate the managed buffer before uploading the arithmetic constants.
+      uniforms?.setUniforms({fp64arithmetic: fp64arithmetic.defaultUniforms!});
       return {
         encode: ({computePass, getBuffer}) => {
           const bindings: Record<string, Binding> = {};
