@@ -44,7 +44,6 @@ export function checkGeospatialDistanceTypes(
   const invalidMixedHaversineInputs: GPUHaversineDistanceProps = {
     left: float32Positions,
     right: float64Positions,
-    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 
@@ -65,7 +64,6 @@ export function checkGeospatialDistanceTypes(
   const invalidFloat64PointOutput: GPUPairwisePointDistanceProps = {
     left: float64Positions,
     right: float64Positions,
-    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 
@@ -73,7 +71,6 @@ export function checkGeospatialDistanceTypes(
   const invalidMixedPointInputs: GPUPairwisePointDistanceProps = {
     left: float32Positions,
     right: float64Positions,
-    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 
@@ -96,7 +93,6 @@ export function checkGeospatialDistanceTypes(
     points: float64Positions,
     segmentStarts: float64Positions,
     segmentEnds: float64Positions,
-    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 
@@ -105,7 +101,6 @@ export function checkGeospatialDistanceTypes(
     points: float32Positions,
     segmentStarts: float64Positions,
     segmentEnds: float32Positions,
-    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 
@@ -175,7 +170,6 @@ export function checkGeospatialDistanceTypes(
     linestringPositions: float64Positions,
     geometryOffsets: offsets,
     linestringOffsets: offsets,
-    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 
@@ -195,7 +189,6 @@ export function checkGeospatialDistanceTypes(
     linestringPositions: float64Positions,
     geometryOffsets: offsets,
     linestringOffsets: offsets,
-    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 
