@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   ScientificFlowTracer,
   ScientificParticleStatus,
@@ -384,6 +384,115 @@ it('ScientificFlowTracer preserves its step proposal across tiny endpoint clips'
     expect(result.numericalFailure).toBe(0);
     expect(accepted).toBe(1);
     expect((await read(tracer.output))[2]).toBe(66);
+  } finally {
+    tracer.destroy();
+  }
+});
+
+it('ScientificFlowTracer inspects real reset/integration encodings across continuation', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const tracer = new ScientificFlowTracer(device, {
+    input: uniform(0.01),
+    bounds: [0, 0, 1, 1],
+    positions: new Float32Array([0.5, 0.5]),
+    tolerance: 1e-5,
+    maximumTimeStep: 0.1,
+    maximumAttempts: 1
+  });
+  try {
+    const first = await tracer.advance(0.2);
+    expect(first.complete).toBe(false);
+    expect(first.dispatchIndex).toBe(1);
+    expect(first.isContinuation).toBe(false);
+    expect(first.targetTime).toBe(0.2);
+    expect(first.encoding.stats.nodes.map(node => [node.id, node.type])).toEqual([
+      ['reset-trace-counters', 'copy'],
+      ['trace-particles-rk45', 'compute']
+    ]);
+    expect(first.encoding.stats.computePassCount).toBe(1);
+    const firstTimings = await first.encoding.readTimings();
+    expect(firstTimings.nodes[0].gpuTimeMilliseconds).toBeUndefined();
+    expect(firstTimings.nodes[1].gpuTimeMilliseconds).toBe(first.gpuMilliseconds);
+    expect(first.encoding.canReadGPUTimings).toBe(device.features.has('timestamp-query'));
+    const next = await tracer.continue();
+    expect(next.complete).toBe(true);
+    expect(next.dispatchIndex).toBe(2);
+    expect(next.isContinuation).toBe(true);
+    expect(next.targetTime).toBe(0.2);
+    expect(next.acceptedSteps).toBe(1); // The reset node prevents counter accumulation.
+    expect(next.active).toBe(1);
+    expect(next.encoding).not.toBe(first.encoding);
+    expect(await first.encoding.readTimings()).toEqual(firstTimings); // Query reuse preserves snapshots.
+    const preview = await next.encoding.readResource!('trace-particles-rk45', 1);
+    const particles = new Float32Array(preview.data.buffer, preview.data.byteOffset, 4);
+    expect(particles[0]).toBeCloseTo(0.502, 6);
+    expect(particles[2]).toBeCloseTo(0.2, 6);
+    const statistics = await next.encoding.readResource!('trace-particles-rk45', 4);
+    expect(
+      Array.from(new Uint32Array(statistics.data.buffer, statistics.data.byteOffset, 9))
+    ).toEqual([1, 0, 0, 0, 0, 0, 0, 1, 0]);
+  } finally {
+    tracer.destroy();
+  }
+});
+
+it('ScientificFlowTracer graph rebinds both textures after snapshot rotation', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const tracer = new ScientificFlowTracer(device, {
+    input: uniform(0),
+    nextInput: uniform(0.2),
+    timeRange: [0, 1],
+    bounds: [0, 0, 1, 1],
+    positions: new Float32Array([0.2, 0.5]),
+    tolerance: 1e-5
+  });
+  try {
+    await finish(tracer, 1);
+    tracer.setNextSnapshot(uniform(0.4), 2);
+    const {result} = await finish(tracer, 1);
+    for (const [resourceIndex, speed] of [
+      [5, 0.2],
+      [6, 0.4]
+    ]) {
+      const preview = await result.encoding.readResource!('trace-particles-rk45', resourceIndex);
+      expect(new Float32Array(preview.data.buffer, preview.data.byteOffset)[0]).toBeCloseTo(speed);
+    }
+    expect((await read(tracer.output))[0]).toBeCloseTo(0.6, 6);
+    expect(result.targetTime).toBe(2);
+  } finally {
+    tracer.destroy();
+  }
+});
+
+it('ScientificFlowTracer retains CPU inspection without timestamp support', async context => {
+  const device = await getTestDevice('webgpu');
+  if (!device) return context.skip();
+  const hasFeature = device.features.has.bind(device.features);
+  const featureCheck = vi
+    .spyOn(device.features, 'has')
+    .mockImplementation(feature => feature !== 'timestamp-query' && hasFeature(feature));
+  let tracer: ScientificFlowTracer;
+  try {
+    tracer = new ScientificFlowTracer(device, {
+      input: uniform(),
+      bounds: [0, 0, 1, 1],
+      positions: new Float32Array([0.5, 0.5]),
+      tolerance: 1e-5
+    });
+  } finally {
+    featureCheck.mockRestore();
+  }
+  try {
+    const result = await tracer.advance(1);
+    expect(result.complete).toBe(true);
+    expect(result.gpuMilliseconds).toBeUndefined();
+    expect(result.encoding.canReadGPUTimings).toBe(false);
+    const report = await result.encoding.readTimings();
+    expect(report.nodes).toHaveLength(2);
+    expect(report.cpuEncodeTimeMilliseconds).toBeGreaterThanOrEqual(0);
+    expect(report.nodes.every(node => node.gpuTimeMilliseconds === undefined)).toBe(true);
   } finally {
     tracer.destroy();
   }

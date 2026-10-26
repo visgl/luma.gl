@@ -42,8 +42,11 @@ RK45-specific controls appear only in adaptive mode. Diagnostics reports every
 particle termination reason separately. The same collapsible, resizable panel
 works in standalone and embedded views, including on mobile.
 
-Graph and Trace inspect actual RK2/RK4 command encodings, resources and sampled
-GPU timestamps. RK45 currently submits direct bounded compute dispatches; those
-tabs explain this distinction and clear prior graphs when the integrator changes.
-Its measured compute time and per-status counts remain available in Diagnostics.
-Graph timings cover advection, not the separately submitted trail renderer.
+Graph and Trace inspect actual command encodings for RK2, RK4 and RK45. The
+adaptive graph resets dispatch counters before running bounded RKF45 integration;
+resource inspection includes particle states, diagnostics, counters and both
+velocity snapshots. Trace samples every 60 encodings, with CPU timing for counter
+reset and CPU/GPU timing for integration. Diagnostics identifies new horizons and
+continuations by dispatch number and target time. Reseeding or switching integrators
+clears prior inspection state. Counter readback and trail rendering are outside
+these graph timings; resource previews explicitly read current GPU allocations.

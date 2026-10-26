@@ -74,6 +74,41 @@ reports compute-pass duration; it excludes readback latency and rendering. A
 submission/readback failure disables further advancement of that tracer; destroy
 it and create a new instance.
 
+## Graph inspection and tracing
+
+Every `advance()` and `continue()` executes the same compiled `commandGraph`:
+`reset-trace-counters` copies nine zero counters, then `trace-particles-rk45`
+runs the bounded adaptive kernel. The graph declares particle, previous-state,
+diagnostic, counter, uniform and velocity-texture access, including the reset-to-compute
+dependency. Snapshot rotation rebinds both velocity textures on the next encoding.
+Use `advance()` and `continue()` for execution; encoding `commandGraph` directly
+bypasses the tracer's request and readback lifecycle.
+
+The returned `encoding` is the actual submitted `GPUCommandGraphEncoding`. Register
+`tracer.commandGraph` with `GPUCommandGraphInspector` and record `result.encoding`
+to inspect it without executing another simulation step. `dispatchIndex` counts
+submitted dispatches from one; `isContinuation` distinguishes resumed work, and
+`targetTime` identifies the requested horizon even while `time` is uncommitted.
+
+```typescript
+const result = await tracer.advance(1);
+const report = await result.encoding.readTimings();
+// report.nodes contains reset CPU cost and adaptive compute CPU/GPU timings.
+```
+
+GPU timing uses immutable per-encoding timestamp snapshots, so later dispatches
+can reuse the query set without changing an earlier report. Without timestamp
+support, CPU encoding and resource inspection remain available. Copy nodes have
+CPU timing only. `gpuMilliseconds` measures the adaptive compute pass, excluding
+counter readback and trail rendering. Resource previews are explicit, additional
+GPU readbacks of current allocations, not historical snapshots of particle data;
+read them before destroying the tracer or rotating away their field textures.
+
+Vector Observatory's Graph and Trace tabs show this graph for RK45 as well as
+RK2/RK4. They sample every 60 encodings and clear on reseed or integrator changes.
+Diagnostics shows the dispatch number, continuation state, target horizon, work
+counts and particle outcomes.
+
 ## GPU buffers and particle identity
 
 Particle index is stable identity. There is no automatic respawn. `lifetime`

@@ -285,6 +285,7 @@ struct Vertex {@builtin(position) position: vec4f};
               queuedTime -= deltaTime;
               traceResult = await graph.advance(deltaTime);
             }
+            controls.diagnostics.record(graph.commandGraph, traceResult.encoding);
           } else {
             const substeps = Math.max(1, Math.ceil(deltaTime / graph.simulation.maximumTimeStep));
             const querySet =

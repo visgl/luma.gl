@@ -1,5 +1,13 @@
 # What's New
 
+## Adaptive advection graph inspection
+
+RK45 now executes a compiled counter-reset and integration graph. Each bounded
+advance or continuation returns its submitted encoding for resource inspection
+and CPU/GPU tracing, with stable timestamp snapshots across dispatches. Vector
+Observatory exposes the adaptive graph in its Graph and Trace tabs and reports
+dispatch numbers, continuation state and target horizons in Diagnostics.
+
 ## Active-work GPU physics ensembles
 
 `GPUPhysicsEnsemble` now retains awake-instance state, prepares per-instance contact

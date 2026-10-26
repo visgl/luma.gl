@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {assert, Buffer, type Device, type QuerySet} from '@luma.gl/core';
+import {assert, Buffer, Texture, type Device, type QuerySet} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/engine';
+import {
+  GPUCommandGraph,
+  type CompiledGPUCommandGraph,
+  type GPUCommandGraphEncoding
+} from '@luma.gl/graph/gpu-core';
 import {
   ScientificFlowField,
   type ScientificFlowFieldProps,
@@ -37,6 +42,13 @@ export type ScientificFlowTracerProps = ScientificFlowFieldProps & {
 };
 
 export type ScientificFlowTraceResult = {
+  /** Submitted encoding; resource previews read current allocations, not historical particles. */
+  encoding: GPUCommandGraphEncoding;
+  /** One-based dispatch number across all requests on this tracer. */
+  dispatchIndex: number;
+  isContinuation: boolean;
+  /** Requested horizon, including while individual particles are still catching up. */
+  targetTime: number;
   complete: boolean;
   /** Committed horizon; unchanged while a request still has unfinished particles. */
   time: number;
@@ -57,6 +69,8 @@ export type ScientificFlowTraceResult = {
 /** Adaptive forward scientific tracing. Each advance/continue submits exactly one bounded dispatch. */
 export class ScientificFlowTracer {
   readonly particleCount: number;
+  /** Execution graph for inspection. Use advance()/continue() to execute it. */
+  readonly commandGraph: CompiledGPUCommandGraph;
   /** Normalized x/y, age in seconds, generation (always 1; no implicit respawning). */
   readonly output: Buffer;
   readonly previous: Buffer;
@@ -68,6 +82,8 @@ export class ScientificFlowTracer {
   private readonly device: Device;
   private readonly uniforms: Buffer;
   private readonly statistics: Buffer;
+  private readonly emptyStatistics: Buffer;
+  private dispatchIndex = 0;
   private readonly kernel: Kernel;
   private readonly queries?: QuerySet;
   private readonly tolerance: number;
@@ -157,11 +173,12 @@ export class ScientificFlowTracer {
       this.previous = makeBuffer('scientific-tracer-previous', particles);
       this.diagnostics = makeBuffer('scientific-tracer-diagnostics', diagnostics);
       this.statistics = makeBuffer('scientific-tracer-statistics', new Uint32Array(9));
+      this.emptyStatistics = makeBuffer('scientific-tracer-empty-statistics', new Uint32Array(9));
       this.uniforms = own(
         device.createBuffer({
           id: 'scientific-tracer-parameters',
           byteLength: 64,
-          usage: Buffer.UNIFORM | Buffer.COPY_DST
+          usage: Buffer.UNIFORM | Buffer.COPY_SRC | Buffer.COPY_DST
         })
       );
       this.kernel = own(
@@ -193,6 +210,7 @@ export class ScientificFlowTracer {
           }
         })
       );
+      this.commandGraph = own(this.makeCommandGraph());
       if (device.features.has('timestamp-query'))
         this.queries = own(device.createQuerySet({type: 'timestamp', count: 2}));
     } catch (error) {
@@ -261,6 +279,7 @@ export class ScientificFlowTracer {
     assert(!this.busy); // Await the outstanding dispatch before destroying its readback resources.
     if (this.destroyed) return;
     this.destroyed = true;
+    this.commandGraph.destroy();
     this.kernel.destroy();
     this.queries?.destroy();
     for (const buffer of [
@@ -268,11 +287,92 @@ export class ScientificFlowTracer {
       this.previous,
       this.diagnostics,
       this.statistics,
+      this.emptyStatistics,
       this.uniforms
     ])
       buffer.destroy();
     this.currentField.destroy();
     if (this.nextField !== this.currentField) this.nextField.destroy();
+  }
+
+  private makeCommandGraph(): CompiledGPUCommandGraph {
+    const graph = new GPUCommandGraph(this.device, {id: 'scientific-flow-rk45'});
+    const importBuffer = (buffer: Buffer) =>
+      graph.importBuffer(
+        {id: buffer.id, byteLength: buffer.byteLength, usage: buffer.usage},
+        buffer
+      );
+    const particles = importBuffer(this.output);
+    const previous = importBuffer(this.previous);
+    const diagnostics = importBuffer(this.diagnostics);
+    const statistics = importBuffer(this.statistics);
+    const emptyStatistics = importBuffer(this.emptyStatistics);
+    const parameters = importBuffer(this.uniforms);
+    const descriptor = {
+      width: this.currentField.texture.width,
+      height: this.currentField.texture.height,
+      format: 'rgba32float' as const,
+      usage: Texture.SAMPLE
+    };
+    const velocity = graph.importTexture({id: 'tracer-velocity', ...descriptor});
+    const nextVelocity = graph.importTexture({id: 'tracer-next-velocity', ...descriptor});
+    graph.addCopyPass({
+      id: 'reset-trace-counters',
+      description: 'Reset the nine per-dispatch counters before adaptive integration.',
+      resources: [
+        {buffer: emptyStatistics, usage: 'copy-source'},
+        {buffer: statistics, usage: 'copy-destination'}
+      ],
+      workload: {
+        operation: 'ResetTraceCounters',
+        commandCount: 1,
+        readByteLength: 36,
+        writeByteLength: 36
+      },
+      compile: () => ({
+        encode: ({commandEncoder, getBuffer}) =>
+          commandEncoder.copyBufferToBuffer({
+            sourceBuffer: getBuffer(emptyStatistics),
+            destinationBuffer: getBuffer(statistics),
+            size: 36
+          })
+      })
+    });
+    graph.addComputePass({
+      id: 'trace-particles-rk45',
+      description: 'Bounded RKF45 trials with persistent particle progress and stopping reasons.',
+      resources: [
+        {buffer: parameters, usage: 'uniform'},
+        {buffer: particles, usage: 'storage-read-write'},
+        {buffer: previous, usage: 'storage-write'},
+        {buffer: diagnostics, usage: 'storage-read-write'},
+        {buffer: statistics, usage: 'storage-read-write'},
+        {texture: velocity, usage: 'sampled'},
+        {texture: nextVelocity, usage: 'sampled'}
+      ],
+      workload: {
+        operation: 'AdaptiveRungeKuttaAdvection',
+        commandCount: 1,
+        maximumWorkgroupCount: Math.ceil(this.particleCount / 128),
+        maximumInvocationCount: Math.ceil(this.particleCount / 128) * 128
+      },
+      compile: () => ({
+        encode: ({computePass, getBuffer, getTexture}) =>
+          this.kernel.dispatch(computePass, {
+            x: Math.ceil(this.particleCount / 128),
+            bindings: {
+              parameters: getBuffer(parameters),
+              particles: getBuffer(particles),
+              previous: getBuffer(previous),
+              velocityField: getTexture(velocity),
+              nextVelocityField: getTexture(nextVelocity),
+              diagnostics: getBuffer(diagnostics),
+              statistics: getBuffer(statistics)
+            }
+          })
+      })
+    });
+    return graph.compile();
   }
 
   private validateField(field: ScientificFlowField): void {
@@ -319,36 +419,20 @@ export class ScientificFlowTracer {
         0
       ].forEach((value, index) => view.setFloat32(48 + index * 4, value, true));
       this.uniforms.write(new Uint8Array(bytes));
-      this.statistics.write(new Uint32Array(9));
-      const encoder = this.device.createCommandEncoder();
-      const pass = encoder.beginComputePass(
-        this.queries
-          ? {
-              timestampQuerySet: this.queries,
-              beginTimestampIndex: 0,
-              endTimestampIndex: 1
-            }
-          : {}
-      );
-      this.kernel.dispatch(pass, {
-        x: Math.ceil(this.particleCount / 128),
-        bindings: {
-          parameters: this.uniforms,
-          particles: this.output,
-          previous: this.previous,
-          velocityField: this.currentField.texture,
-          nextVelocityField: this.nextField.texture,
-          diagnostics: this.diagnostics,
-          statistics: this.statistics
+      const encoder = this.device.createCommandEncoder({timeProfilingQuerySet: this.queries});
+      const encoding = this.commandGraph.encode(encoder, {
+        parameters: undefined,
+        textures: {
+          'tracer-velocity': this.currentField.texture,
+          'tracer-next-velocity': this.nextField.texture
         }
       });
-      pass.end();
       this.device.submit(encoder.finish());
+      this.dispatchIndex++;
       const result = await this.statistics.readAsync();
       const counts = new Uint32Array(result.buffer, result.byteOffset, 9);
-      const gpuMilliseconds = this.queries
-        ? await this.queries.readTimestampDuration(0, 1)
-        : undefined;
+      const {gpuTimeMilliseconds: gpuMilliseconds} = await encoding.readTimings();
+      const targetTime = this.time + duration;
       const complete = counts[6] === 0;
       if (complete) {
         const increment = duration - this.timeCompensation;
@@ -362,6 +446,10 @@ export class ScientificFlowTracer {
         this.pendingDuration = undefined;
       }
       return {
+        encoding,
+        dispatchIndex: this.dispatchIndex,
+        isContinuation: !first,
+        targetTime,
         complete,
         time: this.time,
         active: counts[0],
