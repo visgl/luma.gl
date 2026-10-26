@@ -1024,6 +1024,8 @@ export const GaussianSplatsExample: React.FC<WebsiteExampleProps> = props => {
       subtitle="Progressive HDR Gaussian splat rendering"
       directory="showcase"
       devices={['webgpu', 'webgl2']}
+      // Vertex-stage storage buffers and large sort workgroups exceed compatibility defaults
+      compatibilityMax
       loadTemplate={loadGaussianSplatsApp}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
@@ -1068,6 +1070,8 @@ export const GaussianSplatViewerExample: React.FC<
       directory="showcase"
       sourcePath="examples/showcase/gaussian-splats/app.ts"
       devices={['webgpu', 'webgl2']}
+      // Vertex-stage storage buffers and large sort workgroups exceed compatibility defaults
+      compatibilityMax
       loadTemplate={loadAnimationTemplate}
       config={exampleConfig}
       canvasContextProfile="high-dynamic-range"
@@ -1705,6 +1709,8 @@ export const GlobeExample: React.FC = props => (
     id="globe"
     title="Globe"
     directory="showcase"
+    // Vertex-stage storage buffers and large workgroups exceed compatibility defaults
+    compatibilityMax
     loadTemplate={loadGlobeApp}
     config={exampleConfig}
     canvasContextProfile="high-dynamic-range"
