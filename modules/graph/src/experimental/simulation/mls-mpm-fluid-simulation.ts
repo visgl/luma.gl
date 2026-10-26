@@ -513,7 +513,7 @@ export class MLSMPMFluidSimulation {
       (this.gridSize[0] * this.gridSize[1]) / MLS_MPM_FLUID_WORKGROUP_SIZE
     );
     const particleWorkgroupCount = Math.ceil(this.particleCount / MLS_MPM_FLUID_WORKGROUP_SIZE);
-    const workload = (operation: string, workgroupCount: number) => ({
+    const makeWorkload = (operation: string, workgroupCount: number) => ({
       operation,
       commandCount: 1,
       maximumWorkgroupCount: workgroupCount,
@@ -522,7 +522,7 @@ export class MLSMPMFluidSimulation {
     graph.addComputePass({
       id: MLS_MPM_FLUID_STAGE_ORDER[0],
       resources: [{buffer: grid, usage: 'storage-write'}],
-      workload: workload('ClearMLSMPMGrid', gridWorkgroupCount),
+      workload: makeWorkload('ClearMLSMPMGrid', gridWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
           this.clearGridComputation.dispatch(computePass, gridWorkgroupCount);
@@ -537,7 +537,7 @@ export class MLSMPMFluidSimulation {
         {buffer: grid, usage: 'storage-read-write'},
         {buffer: uniforms, usage: 'uniform'}
       ],
-      workload: workload('ScatterMLSMPMParticles', particleWorkgroupCount),
+      workload: makeWorkload('ScatterMLSMPMParticles', particleWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
           this.particleToGridComputation.dispatch(computePass, particleWorkgroupCount);
@@ -551,7 +551,7 @@ export class MLSMPMFluidSimulation {
         {buffer: grid, usage: 'storage-read-write'},
         {buffer: uniforms, usage: 'uniform'}
       ],
-      workload: workload('UpdateMLSMPMGrid', gridWorkgroupCount),
+      workload: makeWorkload('UpdateMLSMPMGrid', gridWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
           this.updateGridComputation.dispatch(computePass, gridWorkgroupCount);
@@ -567,7 +567,7 @@ export class MLSMPMFluidSimulation {
         {buffer: particlesOutput, usage: 'storage-write'},
         {buffer: uniforms, usage: 'uniform'}
       ],
-      workload: workload('AdvectMLSMPMParticles', particleWorkgroupCount),
+      workload: makeWorkload('AdvectMLSMPMParticles', particleWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
           this.gridToParticleComputation.dispatch(computePass, particleWorkgroupCount);

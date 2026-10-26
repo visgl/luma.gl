@@ -1,6 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
 
-import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
 import {SpectralCausticsExample} from '@site/src/examples';
 
 # SpectralCausticsRenderer

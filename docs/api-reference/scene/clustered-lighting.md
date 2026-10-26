@@ -1,6 +1,5 @@
 import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
 
-import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-tabs';
 import {DeferredRenderingExample} from '@site/src/examples';
 
 # Clustered Lighting
