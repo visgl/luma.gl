@@ -1,5 +1,18 @@
 # Upgrade Guide
 
+## Experimental package removal
+
+Remove `@luma.gl/experimental` from project dependencies and update imports:
+
+| Former APIs | New import |
+| --- | --- |
+| Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari` |
+| Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
+| Path and polygon models | `@luma.gl/graph/experimental/models` |
+| Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
+
+ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
+
 ## GPU graph authoring and command graph names
 
 The application-facing `GPUProgram` is now `GPUGraph`. The former execution-level
@@ -330,15 +343,3 @@ chunks through `.data` or canonical logical descriptors through `.chunks`.
 ## GPU Graph package
 
 Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
-
-### Scene renderer imports
-
-Scene renderers and their PBR, shadow, transparency, and composition helpers have moved from `@luma.gl/graph/experimental` to `@luma.gl/anari`. Update named imports to `@luma.gl/anari`; the `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available.
-
-### Experimental Engine utilities
-
-Import controls, material plugins, texture helpers, and WebXR utilities from `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` respectively. These exports have moved out of `@luma.gl/graph/experimental`; the Engine root API is unchanged.
-
-### Experimental package removal
-
-`@luma.gl/experimental` is removed. Path/polygon models move to `@luma.gl/graph/experimental/models`; flow and fluid simulations move to `@luma.gl/graph/experimental/simulation`. Renderer and Engine utility migrations are listed above.

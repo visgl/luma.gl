@@ -1,5 +1,11 @@
 # What's New
 
+## Experimental API ownership and graph-based fluids
+
+The standalone `@luma.gl/experimental` package is removed. Scene renderers and their PBR, shadow, transparency, and composition helpers now belong to `@luma.gl/anari`. Independent utilities are exposed through `@luma.gl/engine/experimental/{controls,materials,textures,webxr}`. Graph owns path/polygon models under `/experimental/models` and flow/fluid simulations under `/experimental/simulation`.
+
+`MLSMPMFluidSimulation` now records its four ordered stages through a compiled GPU command graph per substep. Particle-buffer ping-pong, CFL splitting, and the WGSL kernels are preserved; the compiled graph and latest encodings expose execution for inspection.
+
 ## Adaptive advection graph inspection
 
 RK45 now executes a compiled counter-reset and integration graph. Each bounded
@@ -310,8 +316,8 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   geospatial, and trace APIs keep intermediate results resident and reusable.
 - **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
   and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-- **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/anari`, and
-  `@luma.gl/graph/experimental` are now published for direct use. These APIs may
+- **Three new experimental libraries** - `@luma.gl/text`, `@luma.gl/splats`, and
+  `@luma.gl/anari` are now published for direct use. These APIs may
   evolve outside the 9.4 semver contract.
 
 **A clearer GPU data stack**
@@ -354,8 +360,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 - **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
   rendering.
-- **`@luma.gl/graph/experimental`** - GPU analytics, simulations, rendering techniques, and WebXR
-  helpers, now published for direct use.
+- **`@luma.gl/graph/experimental`** - Path/polygon models and flow/fluid simulations through explicit experimental subpaths.
 
 **@luma.gl/engine**
 
@@ -481,7 +486,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Render-pass draw commands** - `RenderPass` now owns pipeline, binding, vertex-array, direct-draw, indirect-draw, and render-bundle commands. The former `RenderPipeline` draw and binding APIs remain as deprecated compatibility paths.
 - **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.
 - **Stage-specific storage limits** - `device.limits` now reports storage buffer and storage texture availability separately for vertex and fragment stages, so applications can choose storage-backed rendering only where the requested device supports it.
-- **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper is available from `@luma.gl/graph/experimental`.
+- **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper is available from `@luma.gl/engine/experimental/textures`.
 - **GPU data and buffer-layout utilities** - New exported helpers decode GPU data types, select native or emulated Float16 arrays, and resolve logical attributes over shared or composite buffer layouts.
 
 **@luma.gl/webgl**
@@ -768,7 +773,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 | -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
 | **`@luma.gl/core`**        | New API           | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
 | **`@luma.gl/engine`**      | Light API updates | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
-| **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/graph/experimental`).                                  |
+| **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
 | **`@luma.gl/shadertools`** | Light API updates | The shader assembler API and the shader module library.                                                         |
 | **`@luma.gl/webgl`**       | WebGL backend     | Optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s.       |
 | **`@luma.gl/webgpu`**      | WebGPU backend    | Experimental "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.    |
@@ -788,7 +793,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 
 **`@luma.gl/engine`**
 
-- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`, moved from `@luma.gl/graph/experimental`.
+- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`, moved from `@luma.gl/experimental`.
 - NEW: `ShaderInputs` - Class that manages uniform buffers for a `Model`
 - NEW: `ShaderFactory` - Creates and caches reusable `Shader` resources
 - NEW: `AnimationLoopTemplate` - Helper class for writing cleaner demos and applications in TypeScript.
@@ -796,7 +801,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 
 **`@luma.gl/gltf`**
 
-- New module that exports the glTF classes (moved from `@luma.gl/graph/experimental`).
+- New module that exports the glTF classes (moved from `@luma.gl/experimental`).
 
 **`@luma.gl/shadertools`**
 
@@ -859,7 +864,7 @@ geometry and datum identities across raster and ray rendering.
 
 ### Bounded ray image export
 
-`@luma.gl/graph/experimental` adds `exportRayTracingImage` and
+`@luma.gl/anari` adds `exportRayTracingImage` and
 `iterateRayTracingImageTiles` for streamed RGBA8 output. Full-image coordinates
 and explicit sampling-frame indices keep seeded ray paths stable across tiles.
 Clipped filter/history halos preserve progressive and denoised image seams;
@@ -903,10 +908,3 @@ glTF adds live deformation cooking snapshots and explicit native state export. T
 Authored Scene Stress Lab exercises shared assets and repeated lifecycle operations.
 See [scenegraph physics](./api-guide/engine/scenegraph-physics.md) for the supported
 contracts and remaining qualification limits.
-
-
-### ANARI renderer ownership
-
-`@luma.gl/anari` now owns forward, deferred, ray-tracing, and raymarching renderers, plus their PBR, shadow, transparency, and composition helpers. Import these APIs from `@luma.gl/anari` or the existing `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points. Custom models and simulation utilities now live under `@luma.gl/graph/experimental/*`; the standalone Experimental package is removed.
-
-Engine now exposes incubating controls, material plugins, texture helpers, and WebXR APIs through explicit `@luma.gl/engine/experimental/*` subpaths.

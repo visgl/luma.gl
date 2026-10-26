@@ -7,7 +7,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/engine/experimental/webxr` exposes experimental WebGPU and WebGL WebXR session helpers. They stay outside `@luma.gl/engine` because WebXR brings its own session lifecycle, frame scheduler, per-view rendering state, raw camera access, and future input/depth APIs.
+`@luma.gl/engine/experimental/webxr` exposes experimental WebGPU and WebGL WebXR session helpers. They stay outside the Engine root API because WebXR brings its own session lifecycle, frame scheduler, per-view rendering state, raw camera access, and future input/depth APIs.
 
 ## Scope
 
