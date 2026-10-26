@@ -8,7 +8,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/experimental/lucim` contributes three-dimensional image-processing algorithms to a
+`@luma.gl/graph/lucim` contributes three-dimensional image-processing algorithms to a
 caller-owned [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph).
 LuCIM is inspired by [RAPIDS cuCIM](https://docs.rapids.ai/api/cucim/stable/) and its GPU-accelerated
 n-dimensional image-processing categories. It is not a JavaScript port or an API-compatibility
@@ -54,13 +54,13 @@ The application creates and imports every persistent input and output. LuCIM con
 the nodes and any bounded transient scratch:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUVolumeConnectedComponents,
   GPUVolumeDilation,
   GPUVolumeRegionMeasurements,
   GPUVolumeThreshold
-} from '@luma.gl/experimental/lucim';
+} from '@luma.gl/graph/lucim';
 
 const graph = new GPUCommandGraph(device, {id: 'volume-segmentation'});
 

@@ -6,7 +6,7 @@ import {readdirSync, readFileSync} from 'node:fs';
 import {describe, expect, test} from 'vitest';
 
 const GPU_DATAFRAME_SOURCE_DIRECTORY = new URL(
-  '../../modules/experimental/src/gpu-dataframe/',
+  '../../modules/graph/src/gpu-dataframe/',
   import.meta.url
 );
 const GPU_DATAFRAME_DOCUMENTATION = new URL(

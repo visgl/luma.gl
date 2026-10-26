@@ -1,6 +1,6 @@
 # GPU Project implementation roadmap
 
-This maintainer roadmap tracks the development of `@luma.gl/experimental/gpu-project` from its
+This maintainer roadmap tracks the development of `@luma.gl/graph/gpu-project` from its
 current composable 2D native/adaptive programs into a broader, precision-tiered CRS transformation system
 for GPU command graphs. Numbering expresses dependency order, not a release or staffing
 commitment.
@@ -23,9 +23,9 @@ binary64 semantics.
 
 ## Current foundation
 
-Reconciled against `master` at `afc7822e348f4cdc97691ca5be647464a9896037` on 2026-10-08.
+Reconciled against `master` at `ca4f7a9d3` on 2026-10-08 (2026-10-09 UTC).
 The dependency upgrade in [#3400](https://github.com/visgl/luma.gl/pull/3400) locks
-`@math.gl/crs` and `@math.gl/projection` to `5.0.0-alpha.13`. This assessment uses installed
+`@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` to `5.0.0-alpha.13`. This assessment uses installed
 package sources and documentation at their published math.gl revision
 `4c52326098194bd1b290a72a512a328d10565bfd`, not unreleased upstream changes.
 
@@ -37,9 +37,21 @@ coverage, not native formulas. P.8a's local sweeps and matched CPU comparison la
 [#3283](https://github.com/visgl/luma.gl/pull/3283); cross-vendor and real-consumer evidence
 remain outstanding. P.9a.1 landed in [#3399](https://github.com/visgl/luma.gl/pull/3399):
 `planProjection()` accepts caller-prepared eager or explicitly preloaded synchronous providers.
-This change implements P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline. The next
-interoperability tranche is P.9a.3 (chunk-preserving CPU/GPU table consumer), followed by P.9a.4
-(inline rendering/deck adapter). Neither requires a new native projection formula.
+P.9a.2, P.3d.1, P.3d.2 and the local P.8a.1 rebaseline landed in
+[#3401](https://github.com/visgl/luma.gl/pull/3401). P.9a.3 landed in
+[#3402](https://github.com/visgl/luma.gl/pull/3402):
+`ProjectionTableTransform` executes batch-atomic CPU projection or creates a `GPUProjectionTable`
+that borrows source batches and materializes derived positions/validity in a caller-owned graph.
+P.9a.4 (inline rendering/deck adapter) is proposed separately in
+[#3403](https://github.com/visgl/luma.gl/pull/3403), not assumed landed here.
+[#3404](https://github.com/visgl/luma.gl/pull/3404) landed P.8a.2a's production table benchmark
+foundation. [#3405](https://github.com/visgl/luma.gl/pull/3405) covers **all P.5 items** and extends that benchmark through 4M
+rows, with separate GPU-resident and CPU-round-trip ratios. Native Lambert/Albers are explicit
+Float32 optimizations; high-precision adaptive coverage remains the default. P.5b qualifies bounded
+spherical gnomonic/orthographic domains, not geometry clipping or new native kernels.
+This P.8 change adds fixed-arithmetic routing measurements, opt-in indexed routing, conservative
+domain partitions and an exact-capture execution selector. Inline-render evidence waits for #3403;
+external-vendor captures remain pending rather than inferred from the local adapter.
 
 The implemented module samples an arbitrary CPU projection provider, recursively compiles local
 polynomial patches, and evaluates them over chunk-preserving GPU vectors. Inputs may be
@@ -212,30 +224,33 @@ API interchangeability. Evidence, interoperability and new semantic coverage are
 | P.3b.1 — Native CRS coordinate frames | Normalize explicit PROJJSON axes, units, ellipsoid, prime meridian, and TM/Pseudo Mercator natural-origin parameters; cancel equivalent conversions while retaining datum boundaries | P.3a and existing axis/affine IR | Geographic frame changes and equivalent projected conversions need no sampling; all 60 UTM zones/both hemispheres match the CPU oracle for frame changes; native GPU inverse preserves sub-Float32 detail | Implemented | Complete |
 | P.3b.2 — Native projection conversion lowering | Lower geographic/projected and different projected conversions into native named projection operations; extend explicit PROJ pipelines and retain adaptive fallback | P.3b.1 normalization and P.4 native projection families | Web Mercator and TM/UTM pairs and pipelines lower with explicit arithmetic selection; the default uses double-single fitting of the normalized binary64 reference | Implemented | Complete |
 | P.3c — Verified adaptive PROJJSON coverage | Normalize Lambert 1SP/2SP and Albers method/parameter identifiers or canonical names into the CPU provider; retain custom/unregistered CRS labels and optional throwing diagnostics | P.3a adaptive frontend | Forward/inverse CPU and GPU fixtures agree with independently serialized definitions; unnamed/localized labels, units, axes, invalid definitions, and precision contracts are covered without native Float32 formulas | Implemented | Complete |
-| P.3d.1 — Public CRS semantics and compatibility cleanup | Alignment/coverage: validate public normalized semantics before bounded 2D fitting; remove verified obsolete provider guards | alpha.13 plus existing identifier normalization and native safety checks | Regressions cover zero-parallel conics, 1SP defaults, Pseudo Mercator, axes/units, unnamed/localized identifiers and conflicts; preserve dimension/datum/resource declines and matching normalizer configuration | Implemented (this PR) | Complete |
-| P.3d.2 — Spatial-reference metadata boundary | Interoperability: accept CRSReference/SpatialReference without losing stored order, units, provenance or unsupported dimensions | P.3d.1 and explicit engine preparation | CPU/GPU agree for stored vs authoritative axes; reject unknown/absent, unit mismatches, unsupported vertical/epoch and lossy inputs; separate provenance from GPU numerical error | Implemented (this PR) | Complete |
+| P.3d.1 — Public CRS semantics and compatibility cleanup | Alignment/coverage: validate public normalized semantics before bounded 2D fitting; remove verified obsolete provider guards | alpha.13 plus existing identifier normalization and native safety checks | Regressions cover zero-parallel conics, 1SP defaults, Pseudo Mercator, axes/units, unnamed/localized identifiers and conflicts; preserve dimension/datum/resource declines and matching normalizer configuration | Landed in #3401 | Complete |
+| P.3d.2 — Spatial-reference metadata boundary | Interoperability: accept CRSReference/SpatialReference without losing stored order, units, provenance or unsupported dimensions | P.3d.1 and explicit engine preparation | CPU/GPU agree for stored vs authoritative axes; reject unknown/absent, unit mismatches, unsupported vertical/epoch and lossy inputs; separate provenance from GPU numerical error | Landed in #3401 | Complete |
 | P.4a — Native Web Mercator | Add independently implemented forward/inverse WGSL formulas with explicit Float32 arithmetic, square-world domain/validity, stable parameters, and native CRS/pipeline selection | P.2 and P.3b.1 | CPU oracle and hardware tests cover hemispheres, edges, invalid inputs, inline/graph agreement, all input encodings, and preservation of default sub-Float32 adaptive accuracy | Implemented | Complete |
 | P.4b.1 — Bounded native Transverse Mercator/UTM | Add sixth-order Transverse Mercator/UTM forward and inverse with CRS/pipeline lowering, bounded local-branch validity, and inverse footprint checks | P.4a arithmetic/validity conventions | All 60 WGS84 UTM zones and both hemispheres/directions have CPU-oracle and hardware coverage; all input encodings share inline/graph behavior; no implicit downgrade of double-single requests | Implemented | Complete |
 | P.4b.2 — Explicit angular normalization | Add a named double-single range-reduction operation with declared interval, invalid seam guards and no automatic many-to-one inverse; enable explicit antimeridian-crossing plans | P.4b.1 local-branch contract | CPU and all-input-format hardware seam/branch tests pass; explicit wrapping composes before smooth native/adaptive UTM plans; no implicit wrapping changes existing plans | Implemented | Complete |
 | P.4c — Analytic/adaptive comparison | Compare named native Float32/adaptive double-single programs and an identical inline/materialized consumer against an independent oracle | P.4a/P.4b | Report independent accuracy, parameter/intermediate buffer memory, planning/compilation, first use and synchronized execution on representative hardware; keep output precision fixed and fail invalid results before timing | Implemented | Complete |
-| P.5a.1 — Native Lambert Conformal Conic | **Optimization only**: bounded direct LCC formulas where they improve on adaptive coverage | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Measure planning, memory or execution wins at stated accuracy budgets; retain independent oracle/GPU domain and precision tests | Conditional | Medium |
-| P.5a.2 — Native Albers Equal Area | **Optimization only**: bounded direct Albers formulas where they improve on adaptive coverage | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Parameter variants, equal-area properties and inverse domains pass oracle/GPU tests; measured benefits never silently downgrade precision | Conditional | Medium |
-| P.5b — Visualization projection qualification | Coverage/integration: qualify gnomonic/orthographic clipping and inverse domains; native kernels are optional | Prepared providers and two requesting consumers; no dependency on native conic kernels | Demonstrate bounded adaptive coverage or identify a specific gap; justify any direct WGSL kernel separately | Conditional | Medium |
+| P.5a.1 — Native Lambert Conformal Conic | **Optimization only**: bounded direct LCC 1SP/2SP with explicit Float32 selection | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Oracle/GPU hemispheres, variants, axes/units, guarded inverse footprints; equal-20-m-budget planning/storage/execution evidence with default double-single preserved | Landed in #3405; local-device evidence | Complete |
+| P.5a.2 — Native Albers Equal Area | **Optimization only**: bounded direct Albers with explicit Float32 selection | P.3c/P.3d.1, P.4 conventions and refreshed P.8a evidence | Parameter variants, equal-area Jacobian and inverse domains pass oracle/GPU tests; measured benefits never silently downgrade precision | Landed in #3405; local-device evidence | Complete |
+| P.5b — Visualization projection qualification | Coverage/integration: bounded spherical gnomonic/orthographic forward/inverse domains; no new native kernel | Prepared providers, inline consumer and production table adapter | Independent spherical oracle, public horizon/disk guards and CPU/GPU validity tests; identify crossing-geometry/curved-domain gap explicitly as P.8b.2 | Landed in #3405; bounded clipping added in P.8b.2 | Complete |
 | P.6 — Analytic high-precision math | **Optimization only**: double-single transcendental functions needed by demonstrated analytic wins | Refreshed P.8a evidence of material adaptive cost at equal accuracy | Beat adaptive double-single in throughput or memory at matching error budgets on representative devices, with validated domains; otherwise defer | Conditional | Very large |
 | P.7a.1 — 3D contract and ECEF | Extend dimensions, encodings, metadata, inline/graph interfaces, and validity to height-preserving cartographic/geocentric conversion | P.2/P.3 contracts and an explicit 3D precision design | Ellipsoid/axis/unit, pole, near-origin, invalid-height, and round-trip fixtures match a PROJ oracle; all three components retain the declared precision without silently dropping height | Planned | Large |
 | P.7a.2 — Static Helmert pipelines | Compose explicit static datum transformations with 3D conversions | P.7a.1 | Translation, rotation convention, scale, forward/inverse, and datum fixtures match PROJ; unsupported operation selection is declined | Planned | Medium |
 | P.7b — Grid and epoch resources | Add texture-backed horizontal/vertical grids, bounded residency, coordinate epoch, and time-dependent operations | P.7a.2 plus consumers supplying licensed grid and epoch data | Missing resources fail explicitly; interpolation and temporal fixtures match PROJ; resource ownership and cache bounds are documented and tested | Conditional | Very large |
 | P.8a — Representative performance evidence | Evidence umbrella: landed local sweeps plus refreshed CPU, routing, cross-vendor and consumer measurements | P.4c; P.9a for real workloads | Accuracy-gated reports distinguish equal-budget comparisons from accuracy/speed trade-offs | Partial on master; remaining work split below | Medium |
-| P.8a.1 — alpha.13 CPU/GPU rebaseline | Evidence: scalar, reusable-output, contiguous flat and strided/column CPU APIs against inline/materialized GPU paths | Upgraded math.gl and existing harness; no new kernels required | Separate preparation, fitting/compile, first-use, allocation, upload/readback and resident execution; match domains, validity, accuracy and consumer work; record version/API/layout | Implemented (this PR) | Complete |
-| P.8a.2 — Consumer, routing and cross-vendor evidence | Evidence: isolate patch-routing cost; add real workloads and other GPU vendors | P.8a.1; P.9a.3/P.9a.4 for consumers | Publish reproducible row/patch/reuse sweeps and precision budgets without extrapolating one device to all devices | Planned | Medium |
-| P.8b.1 — Indexed patch routing | **Optimization only**: replace scanning where measured routing cost warrants it | P.8a.2 routing evidence | Indexed/scan paths agree at boundaries and invalid seams; include routing storage/build costs and measured benefit | Evidence-gated | Medium–large |
-| P.8b.2 — Discontinuous-domain partitioning | Coverage: explicitly partition seams, clipping regions and disconnected valid domains | Existing seam validity plus demonstrated consumer domains | Preserve rejected seams and branch-specific inverse domains; derivatives and geographic catalog rectangles are not validity proofs | Conditional | Large |
-| P.8c — Consumer fusion and cost selection | **Optimization only**: choose existing inline/materialized paths from measured costs | P.8a.2 and P.9a consumers; P.8b.1 only for indexed candidates | Thresholds cover row/patch count, reuse, memory and capabilities; preserve precision, validity and caller-controlled submission | Evidence-gated | Medium |
+| P.8a.1 — alpha.13 CPU/GPU rebaseline | Evidence: scalar, reusable-output, contiguous flat and strided/column CPU APIs against inline/materialized GPU paths | Upgraded math.gl and existing harness; no new kernels required | Separate preparation, fitting/compile, first-use, allocation, upload/readback and resident execution; match domains, validity, accuracy and consumer work; record version/API/layout | Landed in #3401 | Complete |
+| P.8a.2 — Consumer, routing and cross-vendor evidence | Evidence umbrella; implementation slices below | P.8a.1; P.9a.3/P.9a.4 for consumers | Reproducible workloads, transfer boundaries and precision budgets; no extrapolation from one device | Partial | — |
+| P.8a.2a — Table-consumer transfer and batching evidence | Evidence, not optimization: production CPU/GPU table adapters; resident, upload/project and round-trip paths | Landed P.9a.3 | Row/batch-size sweeps through 4M, valid/invalid rows, explicit memory/setup; separate resident-data and CPU-memory comparisons at a fixed error budget | Landed in #3404/#3405; local device only | Complete |
+| P.8a.2b — Inline-render consumer evidence | Evidence, not optimization: CPU/materialized/inline projection in the render adapter | P.9a.4 (#3403) | Matched output/visibility, updates, picking and reuse; include frame/upload costs | **Blocked on #3403**; this PR targets master, by explicit request | Medium |
+| P.8a.2c — Routing attribution and cross-vendor qualification | Evidence, not optimization: fixed-fit lookup-only and full-program measurements | Existing harness and available hardware | Report routing/build/storage costs separately; qualify precision on each adapter before timing | Implemented runner; local capture and reproducible external-vendor protocol; **external captures pending** | Partial evidence |
+| P.8b.1 — Indexed patch routing | **Optimization only**: opt-in conservative stackless index, same evaluator and first-match semantics | P.8a.2 routing evidence | Indexed/scan paths agree at boundaries and invalid seams; include routing storage/build costs and measured benefit | Implemented; default remains scan; per-workload/device qualification required | Complete implementation |
+| P.8b.2 — Discontinuous-domain partitioning | Coverage: explicit disjoint branches, conservative disk cells and source-segment clipping | Caller-declared domains, independent forward/inverse providers | Strict per-patch guards preserve gaps; unresolved curved cells are rejected, not sampled; inverse plans are independent | Implemented bounded point/segment coverage; exact curved clipping and polygon reconstruction remain caller-owned | Complete bounded scope |
+| P.8c — Consumer fusion and cost selection | **Optimization only**: measurement-gated selection of existing inline/materialized paths | Qualified reports; P.9a.4 for real-render qualification | Match program, rows, patches, reuse, memory, capabilities and precision; no extrapolation or implicit submission | Implemented exact-capture selector; real-render policy waits for P.8a.2b; no universal thresholds/default changes | Complete mechanism; qualification pending |
 | P.9a.1 — Provider preparation boundary | Caller-prepared synchronous transforms without an engine-catalogue import | Adaptive compiler and program contracts | Eager/preloaded providers share double-single, inverse-domain and failure contracts; bundle/no-implicit-loading tests pass | Landed in #3399; alpha.13 migration in #3400 | Complete |
-| P.9a.2 — Engine factory integration | Interoperability: upstream ProjectionEngine/ProjectionInstance types in an optional preparation adapter with explicit sync/async lifecycle | P.9a.1 and alpha.13, both landed | Default/selective/custom/lazy engines use the same prepared-provider path; test no implicit loading, retry, ownership and CPU reference retention; never bypass custom transforms via native lowering | Implemented (this PR) | Complete |
-| P.9a.3 — Chunk-preserving CPU/GPU table consumer | Interoperability: one table workload with explicit CPU/GPU execution and a shared application contract | P.9a.2 and P.3d.2 for metadata inputs | Preserve batches/ownership; reconcile CPU prefix-commit failures with GPU row validity and output encoding explicitly; no hidden repacking/readback | Planned | Medium |
-| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU transform for picking and the same planned transform in a real render/analysis consumer | P.9a.2; P.3d.2 for coordinate metadata | Specify projected/common-space conversion, origins/units, altitude policy, validity, attributes and invalidation; compare CPU/materialized/inline results and buffer lifecycle | Planned | Medium–large |
-| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.4, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Partial: provider boundary landed | — |
+| P.9a.2 — Engine factory integration | Interoperability: upstream ProjectionEngine/ProjectionInstance types in an optional preparation adapter with explicit sync/async lifecycle | P.9a.1 and alpha.13, both landed | Default/selective/custom/lazy engines use the same prepared-provider path; test no implicit loading, retry, ownership and CPU reference retention; never bypass custom transforms via native lowering | Landed in #3401 | Complete |
+| P.9a.3 — Chunk-preserving CPU/GPU table consumer | Interoperability: ProjectionTableTransform and GPUProjectionTable expose explicit CPU/GPU execution | P.9a.2 and P.3d.2 for metadata inputs | Preserved/empty batches, offsets, source identity, explicit masks, batch-atomic CPU failures, borrowed inputs, caller submission and explicit output encodings; UTM CPU/hardware regressions | Landed in #3402 | Complete |
+| P.9a.4 — Inline rendering/deck adapter | Interoperability: CPU transform for picking and the same planned transform in a real render/analysis consumer | P.9a.2; P.3d.2 for coordinate metadata | Specify projected/common-space conversion, origins/units, altitude policy, validity, attributes and invalidation; compare CPU/materialized/inline results and buffer lifecycle | Proposed in #3403 | Medium–large |
+| P.9a — Production-shaped consumers | Tracking umbrella for P.9a.1–P.9a.4, not another implementation tranche | Existing program contracts and explicit adapters | One preserved-batch table consumer and one inline consumer share a transform contract and supply P.8a workloads | Partial: provider and table boundaries implemented; inline consumer remains | — |
 | P.9b — Package graduation | Freeze proven APIs and move stable execution pieces across reviewed package boundaries | P.9a and demonstrated ownership/API stability; P.8 optimizations only if justified | Build/test gates pass, migration is documented, and the execution core has no math.gl, proj4js, or Arrow dependency | Planned | Medium |
 
 ## Recommended execution order
@@ -254,28 +269,39 @@ materialized Albers is nearly tied with GPU. Comparing a fit with
 the same CPU engine validates approximation, not independent algorithm correctness; use
 independently generated PROJ fixtures for semantic/numerical qualification.
 
-1. **Implemented together: P.9a.2, P.3d.1, P.3d.2 and P.8a.1.** Explicit factory preparation,
+1. **Landed together in #3401: P.9a.2, P.3d.1, P.3d.2 and P.8a.1.** Explicit factory preparation,
    retained CPU transforms, public semantic validation, metadata ingestion and CPU/GPU rebaseline
    form the alignment foundation. `planProjection()` stays synchronous and math.gl-independent.
    GPU materialization is not a synchronous CPU `ProjectionInstance`. No native-kernel or
    3D/datum/grid coverage is implied. Bulk failures remain different from GPU row validity;
    benchmark adapters explicitly compact validated rows and propagate coordinate exceptions.
-2. **Next: P.9a.3, then P.9a.4; complete P.8a.2 using those consumers.** Integrate one preserved-batch
-   table workload and one inline render/analysis workload, with explicit CPU/GPU selection.
+2. **P.9a.3 landed; P.8a.2a measures it. Next land P.9a.4, then P.8a.2b/P.8a.2c.** The table
+   consumer preserves batches and uses explicit CPU/GPU selection without hidden uploads/readbacks.
+   CPU exceptions abort the current batch rather than exposing a bulk API's partially committed prefix;
+   masked/nonfinite/out-of-domain rows use the GPU-compatible validity contract. Add the inline workload.
    The deck adapter must distinguish CRS projected coordinates from deck common space and give
    altitude an explicit reject/pass-through/transform policy; it cannot imply 3D reprojection.
    No upstream deck API change is assumed necessary until an adapter demonstrates a concrete gap.
    Axis-swap fixtures alone are not production consumers.
-3. **Only then choose optimization-only work:** P.5a.1/P.5a.2, P.8b.1, P.8c or P.6, supported by
-   refreshed equal-budget evidence. Native conic formulas are not prerequisites for conic coverage.
+3. **P.5 landed in #3405; P.8 mechanisms are implemented here without changing defaults.** The
+   [native conic capture](../benchmarks/gpu-project-conic-performance.md) supports opt-in Float32
+   planning/storage/execution improvements at a 20 m budget. It does not change default precision.
+   P.5b qualifies safe spherical rectangles through inline and table consumers; the public engine
+   already guards hidden hemispheres/outside-disk inverses. Crossing geometry and curved clipping
+   domains now have explicit conservative branch/disk partitioning and source-segment clipping;
+   exact curved clipping and polygon topology are not claimed. Indexed routing and execution
+   selection remain opt-in and require matching measured evidence; P.6 remains conditional.
+   Native conic formulas are not prerequisites for conic coverage.
    Degree/patch-count sweeps do not isolate routing cost, and Float32 timings at looser accuracy
-   cannot justify replacing double-single fitting. P.8b.2 is separate coverage work: explicit
-   wrapping does not already partition discontinuous domains.
+   cannot justify replacing double-single fitting. The new routing runner holds the complete fit
+   fixed and measures lookup separately. See the [P.8 qualification protocol](../benchmarks/gpu-project-routing-performance.md).
+   Land #3403 before adding real-render captures; collect external vendor captures before claiming
+   cross-vendor qualification. Explicit wrapping still does not automatically infer partitions.
 4. **Independent expansion: P.7a.1, P.7a.2, then conditional P.7b.** CPU ECEF, Helmert, grids and
    temporal pipelines are reference/preparation tools, not implemented GPU capabilities. Validate
    greater-than-Float32 arithmetic in all three components; high/low storage around Float32
    formulas is insufficient. Reuse upstream operation selection/resource identities when needed,
-   without confusing geodetic accuracy with numerical tolerance. Keep P.5b demand-driven and
+   without confusing geodetic accuracy with numerical tolerance. Keep visualization expansion demand-driven and
    graduate stable APIs through P.9b without waiting for every speculative feature.
 
 Across every tranche, unsupported semantics must be declined rather than approximated silently.
@@ -289,8 +315,8 @@ does not acquire an automatic inverse.
   operation modules.
 - `@luma.gl/gpgpu` owns primitive GPU data formats and the graph-safe execution machinery after
   graduation.
-- `@luma.gl/experimental/gpu-project` owns the evolving program, planners, adaptive compiler,
+- `@luma.gl/graph/gpu-project` owns the evolving program, planners, adaptive compiler,
   projection catalog, and optional math.gl adapters.
-- `@math.gl/crs` and `@math.gl/projection` remain optional CPU-side definition/resolution/oracle
+- `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.
 - Arrow upload, conversion, and readback remain in `@luma.gl/arrow`.

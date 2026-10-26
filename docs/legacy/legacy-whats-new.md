@@ -34,7 +34,7 @@ Date: Feb 1, 2021
 
 Date: Oct 12, 2020
 
-- **TypeScript** - definitions are available for `@luma.gl/webgl` module classes (Buffer, Texture, etc.)
+- **TypeScript** - definitions are available for `@luma.gl/core/webgl` module classes (Buffer, Texture, etc.)
 - **glTF** - Support for PBR material.unlit
 
 ## Version 8.1

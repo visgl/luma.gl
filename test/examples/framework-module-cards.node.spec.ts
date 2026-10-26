@@ -29,7 +29,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'portability',
     title: 'Core / WebGPU / WebGL',
-    packageName: '@luma.gl/core + adapters',
+    packageName: '@luma.gl/core',
     documentationPath: 'docs/api-reference/core',
     capabilities: ['WebGPU', 'WebGL2', 'GPU resources'],
     descriptions: [/low-level GPU portability layer/i, /WebGPU and WebGL2/i]
@@ -61,7 +61,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'anari',
     title: 'ANARI',
-    packageName: '@luma.gl/scene',
+    packageName: '@luma.gl/anari',
     documentationPath: 'docs/api-reference/scene',
     capabilities: ['glTF', 'OpenUSD', 'Renderers'],
     descriptions: [/declarative 3D scenes/i, /glTF and OpenUSD/i, /switch renderers/i]

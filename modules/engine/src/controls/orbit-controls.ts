@@ -21,6 +21,8 @@ export type OrbitControlsProps = {
   enableRotate?: boolean;
   enableZoom?: boolean;
   enablePan?: boolean;
+  /** Modifier for mouse panning when enablePan is true. Meta is Command on macOS. */
+  panModifier?: 'shift' | 'meta' | 'ctrl' | 'alt';
   panSpeed?: number;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
@@ -48,6 +50,7 @@ const DEFAULT_PROPS: ResolvedOrbitControlsProps = {
   enableRotate: false,
   enableZoom: true,
   enablePan: false,
+  panModifier: 'shift',
   panSpeed: 0.0018,
   autoRotate: false,
   autoRotateSpeed: 0.1
@@ -271,7 +274,7 @@ export class OrbitControls {
     const deltaX = event.clientX - this.lastPointer[0];
     const deltaY = event.clientY - this.lastPointer[1];
     this.lastPointer = [event.clientX, event.clientY];
-    if (this.props.enablePan && event.shiftKey) {
+    if (this.props.enablePan && event[`${this.props.panModifier}Key`]) {
       this.panTarget(deltaX, deltaY);
     } else {
       this.yaw -= deltaX * this.props.rotateSpeed;

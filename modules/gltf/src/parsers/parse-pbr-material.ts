@@ -2,9 +2,22 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
-import type {Device, ExternalImage, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
-import {log, Texture, textureFormatDecoder} from '@luma.gl/core';
+import type {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
+import type {
+  CompressedImage,
+  CompressedImageDataArray,
+  CompressedImageMipmapArray,
+  CompressedMipLevel
+} from '../types/gltf-types';
+export type {
+  CompressedImage,
+  CompressedImageDataArray,
+  CompressedImageMipmapArray,
+  CompressedMipLevel
+} from '../types/gltf-types';
+import {Matrix3} from '@math.gl/core';
+import type {Device, ExternalImage, SamplerProps, TextureFormat} from '@luma.gl/core';
+import {assert, log, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
@@ -99,6 +112,11 @@ type GLTFMaterialVolumeScatterExtension = {
   scatterAnisotropy?: number;
 };
 
+type GLTFMaterialScatterExtension = GLTFMaterialVolumeScatterExtension & {
+  scatterStrengthFactor?: number;
+  scatterStrengthTexture?: GLTFTexture;
+};
+
 type GLTFMaterialDispersionExtension = {
   dispersion?: number;
 };
@@ -138,7 +156,9 @@ type GLTFMaterialEmissiveStrengthExtension = {
 };
 
 type GLTFMaterialExtensions = {
+  KHR_lightmap?: {lightmapTexture: GLTFTexture; intensity?: number};
   KHR_materials_unlit?: Record<string, never>;
+  KHR_materials_pbrSpecularGlossiness?: Record<string, unknown>;
   KHR_materials_specular?: GLTFMaterialSpecularExtension;
   KHR_materials_ior?: GLTFMaterialIorExtension;
   EXT_materials_bump?: GLTFMaterialBumpExtension;
@@ -146,6 +166,7 @@ type GLTFMaterialExtensions = {
   KHR_materials_diffuse_transmission?: GLTFMaterialDiffuseTransmissionExtension;
   KHR_materials_volume?: GLTFMaterialVolumeExtension;
   KHR_materials_volume_scatter?: GLTFMaterialVolumeScatterExtension;
+  KHR_materials_scatter?: GLTFMaterialScatterExtension;
   KHR_materials_dispersion?: GLTFMaterialDispersionExtension;
   KHR_materials_clearcoat?: GLTFMaterialClearcoatExtension;
   KHR_materials_sheen?: GLTFMaterialSheenExtension;
@@ -158,6 +179,7 @@ type TextureEnabledUniformName =
   | 'baseColorMapEnabled'
   | 'normalMapEnabled'
   | 'emissiveMapEnabled'
+  | 'lightmapMapEnabled'
   | 'metallicRoughnessMapEnabled'
   | 'occlusionMapEnabled'
   | 'specularColorMapEnabled'
@@ -222,6 +244,10 @@ export type ParsePBRMaterialOptions = {
   gltf?: GLTFPostprocessed;
   /** run primitive-attribute diagnostics such as missing TEXCOORD_0 / NORMAL */
   validateAttributes?: boolean;
+  /** Shared resource allocation excludes lightmaps owned by individual primitives. */
+  materialResourcesOnly?: boolean;
+  /** Defer only lightmap UV assertions until node overrides are selected. */
+  validateLightmapAttributes?: boolean;
 };
 
 /**
@@ -295,8 +321,24 @@ export function parsePBRMaterial(
   if (material) {
     if (options.validateAttributes !== false) {
       warnOnMissingExpectedAttributes(material, attributes);
+      const lightmap = material.extensions?.KHR_lightmap;
+      if (lightmap && options.validateLightmapAttributes !== false) {
+        const textureCoordinateSet = resolveTextureCoordinateSet(lightmap.lightmapTexture);
+        // Lightmap UVs must exist on the primitive; shared material creation has no attributes yet.
+        assert(
+          (textureCoordinateSet === 0 || textureCoordinateSet === 1) &&
+            hasGLTFAttribute(attributes, textureCoordinateSet === 0 ? 'TEXCOORD_0' : 'TEXCOORD_1')
+        );
+      }
     }
-    parseMaterial(device, material, parsedMaterial, attributes, options.gltf);
+    parseMaterial(
+      device,
+      material,
+      parsedMaterial,
+      attributes,
+      options.gltf,
+      options.materialResourcesOnly
+    );
   }
 
   return parsedMaterial;
@@ -380,8 +422,11 @@ function parseMaterial(
   material: GLTFPBRMaterial,
   parsedMaterial: ParsedPBRMaterial,
   attributes: Record<string, any>,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  materialResourcesOnly = false
 ): void {
+  parsedMaterial.parameters.cullMode = material.doubleSided ? 'none' : 'back';
+  parsedMaterial.defines['DOUBLE_SIDED'] = Boolean(material.doubleSided);
   parsedMaterial.uniforms.unlit = Boolean(
     material.unlit || material.extensions?.KHR_materials_unlit
   );
@@ -436,7 +481,14 @@ function parseMaterial(
     });
   }
 
-  parseMaterialExtensions(device, material.extensions, parsedMaterial, gltf, attributes);
+  parseMaterialExtensions(
+    device,
+    material.extensions,
+    parsedMaterial,
+    gltf,
+    attributes,
+    materialResourcesOnly
+  );
 
   switch (material.alphaMode || 'OPAQUE') {
     case 'OPAQUE':
@@ -549,10 +601,30 @@ function parseMaterialExtensions(
   extensions: GLTFMaterialExtensions | undefined,
   parsedMaterial: ParsedPBRMaterial,
   gltf?: GLTFPostprocessed,
-  attributes: Record<string, any> = {}
+  attributes: Record<string, any> = {},
+  materialResourcesOnly = false
 ): void {
   if (!extensions) {
     return;
+  }
+
+  const lightmap = extensions.KHR_lightmap;
+  if (lightmap) {
+    const intensity = lightmap.intensity ?? 1;
+    // Lightmap irradiance requires a finite nonnegative multiplier.
+    assert(Number.isFinite(intensity) && intensity >= 0);
+    parsedMaterial.uniforms.lightmapIntensity = intensity;
+    parsedMaterial.uniforms.lightmapUVSet = resolveTextureCoordinateSet(lightmap.lightmapTexture);
+    parsedMaterial.uniforms.lightmapUVTransform = new Matrix3(
+      getTextureTransformMatrix(resolveTextureTransform(lightmap.lightmapTexture))
+    );
+    // Shared material creation has no primitive attributes; lightmaps use independent primitive materials.
+    if (!materialResourcesOnly && Object.keys(attributes).length > 0)
+      addTexture(device, lightmap.lightmapTexture, 'pbr_lightmapSampler', parsedMaterial, {
+        gltf,
+        attributes,
+        featureOptions: {define: 'HAS_LIGHTMAP', enabledUniformName: 'lightmapMapEnabled'}
+      });
   }
 
   if (hasMaterialExtensionShading(extensions)) {
@@ -591,6 +663,38 @@ function parseMaterialExtensions(
     gltf,
     attributes
   );
+  const scatter = extensions.KHR_materials_scatter;
+  if (scatter && extensions.KHR_materials_transmission) {
+    // Initial thin-wall profile: volumetric transport requires separate integration.
+    assert(!extensions.KHR_materials_volume?.thicknessFactor);
+    if (scatter.scatterStrengthTexture) {
+      // Scatter excludes diffuse transmission, so its alpha sampler can serve strength without a new slot.
+      parseDiffuseTransmissionExtension(
+        device,
+        {
+          diffuseTransmissionTexture: scatter.scatterStrengthTexture
+        },
+        parsedMaterial,
+        gltf,
+        attributes
+      );
+    }
+    assert(
+      !extensions.KHR_materials_unlit &&
+        !extensions.KHR_materials_diffuse_transmission &&
+        !extensions.KHR_materials_pbrSpecularGlossiness
+    );
+    const strength = scatter.scatterStrengthFactor ?? 0;
+    const anisotropy = scatter.scatterAnisotropy ?? 0;
+    assert(Number.isFinite(strength) && strength >= 0 && strength <= 1);
+    assert(Number.isFinite(anisotropy) && anisotropy > -1 && anisotropy < 1);
+    parsedMaterial.defines['HAS_MATERIAL_SCATTER'] = true;
+    parsedMaterial.uniforms.scatterStrengthFactor = strength;
+    parseVolumeScatterExtension(device, scatter, {}, parsedMaterial, gltf, attributes);
+    parsedMaterial.uniforms.scatterAnisotropy = anisotropy;
+    parsedMaterial.uniforms.multiscatterColorFactor = scatter.multiscatterColorFactor ??
+      scatter.multiscatterColor ?? [1, 1, 1];
+  }
   parseDispersionExtension(extensions.KHR_materials_dispersion, parsedMaterial);
   parseClearcoatExtension(
     device,
@@ -1220,43 +1324,6 @@ function resolveTextureInfo(gltfTexture: GLTFTexture, gltf?: GLTFPostprocessed):
     texture: resolvedTextureEntry
   };
 }
-
-/** One mip level as produced by loaders.gl compressed texture parsers */
-export type CompressedMipLevel = {
-  data: TypedArray;
-  width: number;
-  height: number;
-  textureFormat?: TextureFormat;
-};
-
-/**
- * Compressed image from current loaders.gl releases.
- * - `mipmaps` is a boolean (true), NOT an array
- * - `data` is an Array of TextureLevel-like objects
- * - Per-level `textureFormat` is already a luma.gl TextureFormat
- * - Top-level `width`/`height` may be undefined
- */
-export type CompressedImageDataArray = {
-  compressed: true;
-  mipmaps?: boolean;
-  width?: number;
-  height?: number;
-  data: CompressedMipLevel[];
-};
-
-/**
- * Hypothetical future format where `mipmaps` is an actual array.
- * Kept for forward compatibility.
- */
-export type CompressedImageMipmapArray = {
-  compressed: true;
-  width?: number;
-  height?: number;
-  mipmaps: CompressedMipLevel[];
-};
-
-/** Union of all known loaders.gl compressed image shapes */
-export type CompressedImage = CompressedImageDataArray | CompressedImageMipmapArray;
 
 function createCompressedTextureFallback(
   device: Device,

@@ -4,7 +4,7 @@
 
 import {COORDINATE_SYSTEM, Deck, MapView} from '@deck.gl/core';
 import {Buffer} from '@luma.gl/core';
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import {WebGPUDevice} from '@luma.gl/core/webgpu';
 import {
   FireflyLayer,
   GlowPointLayer,

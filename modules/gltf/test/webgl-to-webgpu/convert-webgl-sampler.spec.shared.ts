@@ -7,7 +7,7 @@ import {
   convertSamplerToGLTF
 } from '@luma.gl/gltf/webgl-to-webgpu/convert-webgl-sampler';
 import {GLEnum} from '@luma.gl/gltf/webgl-to-webgpu/gltf-webgl-constants';
-import {convertSamplerParametersToWebGL} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
+import {convertSamplerParametersToWebGL} from '@luma.gl/core/webgl/adapter/converters/sampler-parameters';
 import {expect, it} from 'vitest';
 
 export function registerConvertWebGLSamplerTests(): void {

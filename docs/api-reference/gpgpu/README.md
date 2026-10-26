@@ -17,7 +17,34 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 - [`Custom Operations`](/docs/api-reference/gpgpu/custom-operation)
 - [`GPU Evaluators`](/docs/api-reference/gpgpu/gpu-data-evaluator)
 - [`GPU Data`](/docs/api-reference/gpgpu/gpu-data)
+- [GPU time series](/docs/api-reference/experimental/gpu-timeseries): exact chart envelopes over chunked uniform samples.
 - [`cleanEvaluate`](/docs/api-reference/gpgpu/clean-evaluate)
+
+## GPU Graph package
+
+Graph-based submodules now belong to [`@luma.gl/graph`](/docs/api-reference/graph). Import graph subpaths from that package; GPU data primitives remain in `@luma.gl/gpgpu/gpu-data`.
+
+| Subpath | Reference |
+| --- | --- |
+| `gpu-data` | [GPU Data and GPUVector storage](/docs/api-reference/gpgpu/gpu-data) |
+| `gpu-graph` | [GPUCommandGraph execution scheduling](/docs/api-reference/experimental/gpu-core/gpu-command-graph) |
+| `gpu-core` | [Compute primitives, programs, and execution helpers](/docs/api-reference/experimental/gpu-core) |
+| `gpu-graph-algorithms` | [Graph analytics and layouts](/docs/api-reference/experimental/gpu-graph) |
+| `gpu-parse` | [Encoded columnar page decoding](/docs/api-reference/gpgpu/gpu-parse) |
+| `gpu-physics` | [GPU-resident physics](/docs/api-reference/gpgpu/gpu-physics) |
+| `gpu-vector-search` | [Similarity search](/docs/api-reference/gpgpu/gpu-vector-search) |
+| `gpu-timeseries` | [Time series and chart envelopes](/docs/api-reference/experimental/gpu-timeseries) |
+| `gpu-geometry` | [Geometry computations](/docs/api-reference/gpgpu/gpu-geometry) |
+| `gpu-pointcloud` | [Point-cloud operations](/docs/api-reference/gpgpu/gpu-pointcloud) |
+| `gpu-dggs` | [Discrete global grids](/docs/api-reference/experimental/gpu-dggs) |
+| `gpu-h3` | [H3 cell projection](/docs/api-reference/experimental/gpu-h3) |
+| `gpu-a5` | [A5 cell projection](/docs/api-reference/experimental/gpu-a5) |
+
+## GPU Physics
+
+The experimental [GPU physics](./gpu-physics.md) subpath provides separate sphere
+and rigid-body worlds with GPU-resident state, explicit ownership and diagnostics.
+It requires WebGPU; see the world references for supported shapes and limits.
 
 ## GPU Data Primitives
 
@@ -46,7 +73,7 @@ Runtime format strings describe GPU memory, including fixed-width formats such a
 normalized formats such as `unorm8x4`, and variable-length formats such as
 `vertex-list<float32x3>`. Shader compatibility is checked at adapter and model boundaries.
 
-[`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) adds record
+[`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) adds record
 batches, schemas, table bindings, computations, and planners above these primitives.
 [`@luma.gl/arrow`](/docs/api-reference/arrow) converts Apache Arrow inputs to the shared GPU data
 objects; the GPU data types do not depend on Apache Arrow.
@@ -63,7 +90,7 @@ Interleaving two buffers together
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webglAdapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {GPUDataEvaluator, add, interleave} from '@luma.gl/gpgpu';
 
 const inputA = GPUDataEvaluator.fromArray(new Float32Array([0, 0, 0, 1, 0, 0]), {size: 3});
@@ -78,7 +105,7 @@ const outputAlt = interleave(inputA, add(inputB, GPUDataEvaluator.fromConstant(1
 
 const device = await luma.createDevice({
   type: 'webgl',
-  adapters: [webglAdapter]
+  adapters: [webgl2Adapter]
 });
 
 const outputVector = await output.evaluate(device);
@@ -169,3 +196,8 @@ registering CPU handlers for another device type.
 ## Related Engine APIs
 
 `@luma.gl/gpgpu` uses engine compute helpers internally, but it does not re-export them. Import [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform), and [`Computation`](/docs/api-reference/engine/compute/computation) from `@luma.gl/engine` when you need direct access to those lower-level classes.
+
+## Geometry and point clouds
+
+- [GPU Geometry](./gpu-geometry.md): triangle and vertex normals plus adjacency-based mesh smoothing.
+- [GPU Point Cloud](./gpu-pointcloud.md): deterministic voxel sampling and bounded exact radius filtering.

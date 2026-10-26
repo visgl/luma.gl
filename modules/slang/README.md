@@ -1,5 +1,7 @@
 # @luma.gl/slang
 
+**Status: Exploration**
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/visgl/luma.gl/master/website/static/img/standards/slang.svg" />
   <img src="https://raw.githubusercontent.com/visgl/luma.gl/master/website/static/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />

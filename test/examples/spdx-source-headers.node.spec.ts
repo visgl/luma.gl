@@ -43,7 +43,7 @@ const TEMPORARY_MIXED_LICENSE_EXCEPTIONS = new Set([
 
 // This declaration file was copied from Spector.js and must retain its independently reviewed
 // upstream ownership instead of receiving a speculative vis.gl copyright claim.
-const THIRD_PARTY_SOURCE_EXCEPTIONS = new Set(['modules/webgl/src/context/debug/spector-types.ts']);
+const THIRD_PARTY_SOURCE_EXCEPTIONS = new Set(['modules/core/src/webgl-debug/spector-types.ts']);
 
 const PBR_SHADER_SOURCE_FILES = [
   'modules/shadertools/src/modules/lighting/pbr-material/pbr-material-glsl.ts',

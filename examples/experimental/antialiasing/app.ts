@@ -14,7 +14,7 @@ import {
   Model,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {ComparisonSplitter} from '@luma.gl/experimental';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';
 import {

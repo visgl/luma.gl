@@ -66,9 +66,9 @@
 
 ## GPU table API boundaries
 - `@luma.gl/gpgpu/gpu-data` owns primitive GPU concepts: `GPUData`, `GPUDataView`, `GPUVector`, `GPUConstant`, and `GPUVectorFormat`.
-- `@luma.gl/experimental/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
-- `@luma.gl/experimental/models` owns specialized path and polygon rendering models and their GPU input helpers.
-- `@luma.gl/gpgpu` and `@luma.gl/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
+- `@luma.gl/graph/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
+- `@luma.gl/graph/experimental/models` owns specialized path and polygon rendering models and their GPU input helpers.
+- `@luma.gl/gpgpu` and `@luma.gl/graph/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
 - `GPUVector.format` is the canonical type metadata. Arrow `dataType` is adapter/readback compatibility metadata, not the primary GPU type.
 - Keep memory layout and shader value types separate. `GPUVectorFormat` describes stored bytes such as `float32x3`, `unorm8x4`, and `vertex-list<float32x3>`; `ShaderLayout` describes shader-facing values such as `vec3<f32>` and `vec4<f32>`.
 - Use compatibility checks at adapter and model boundaries instead of encoding shader semantics into vector formats.
@@ -102,3 +102,8 @@
 ## Documentation
 - `docs/upgrade-guide.md` should focus on breaking changes and deprecations only.
 - Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.
+
+## GPU Graph package boundaries
+- `@luma.gl/graph` exposes `GPUGraph` authoring, `GPUGraphCompiler`, and `GPUCommandGraph` execution infrastructure.
+- Graph-based algorithms and table processing use explicit `@luma.gl/graph/*` subpaths.
+- `@luma.gl/gpgpu` retains GPU data primitives and immediate operations and must not depend on `@luma.gl/graph`.

@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 import {Buffer, RenderPipelineParameters} from '@luma.gl/core';
-import {Model, WebGPUDevice} from '@luma.gl/webgpu';
+import {Model, WebGPUDevice} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
 
 // import updateSprites from './update-sprites.wgsl?raw';

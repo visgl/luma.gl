@@ -22,9 +22,11 @@ fn equalAll(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<u32, 
 export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluator}> = ({
   inputs,
   output,
-  target
+  target,
+  scope
 }) => {
   runRowComputation({
+    scope,
     module: {name: 'equalAll', source},
     inputs,
     output,
@@ -33,3 +35,5 @@ export const equalAll: OperationHandler<{x: GPUDataEvaluator; y: GPUDataEvaluato
   });
   return {success: true};
 };
+
+equalAll.supportsEvaluationScope = true;

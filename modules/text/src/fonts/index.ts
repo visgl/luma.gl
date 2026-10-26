@@ -42,3 +42,17 @@ export {
   type TextKerning,
   type TextKerningPair
 } from './atlas/text-utils';
+
+export {
+  buildBrowserFontAtlas,
+  resolveBrowserFontAtlasSettings,
+  setFontAtlasCacheLimit,
+  type BrowserFontAtlasBuildOptions,
+  type BrowserFontAtlasSettings,
+  type ResolvedBrowserFontAtlasSettings,
+  type BrowserFontRenderer
+} from './atlas/browser-font-atlas';
+
+export {parseGlyphRange, type Glyph} from './glyph-pbf';
+export {GlyphRangeLoader, type GlyphRangeLoaderOptions} from './glyph-range-loader';
+export {buildGlyphFontAtlas, createGlyphFontRenderer} from './build-glyph-font-atlas';

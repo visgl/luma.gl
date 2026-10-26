@@ -21,7 +21,7 @@ computed/reused/removed batches, submitted batch and merge commands, and persist
 ## Usage: streaming sum
 
 ```ts
-import {GPUIncrementalExecution, GPUReduction} from '@luma.gl/gpgpu/gpu-core';
+import {GPUIncrementalExecution, GPUReduction} from '@luma.gl/graph/gpu-core';
 import type {GPUData, GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
 
 // output is a caller-owned one-row GPUData<'uint32'>.
@@ -93,7 +93,7 @@ partials when histogram domain changes.
 ## Supported decompositions and broader recomputation
 
 This is an explicit composition API. It does not automatically incrementalize arbitrary
-`GPUProgram` operations or dataframe queries.
+`GPUGraph` operations or dataframe queries.
 
 | Operation | Reusable partial | Merge and invalidation rule |
 | --- | --- | --- |

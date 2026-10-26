@@ -10,20 +10,21 @@ import {
   GPUCommandGraph,
   GPUCommandGraphInspector,
   type GPUCommandGraphInspectorObservation,
+  type GPUCommandGraphTimingReport,
   type GPUCommandGraphInspectorSnapshot
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUGridIndex,
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
   GPUPointSpatialQuery
-} from '@luma.gl/experimental/geospatial';
+} from '@luma.gl/graph/geospatial';
 import {
   compileProjectionPlan,
   GPUProjection,
   type ProjectionBounds,
   type ProjectionPlan
-} from '@luma.gl/experimental/gpu-project';
+} from '@luma.gl/graph/gpu-project';
 
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 const STORAGE_BUFFER_OFFSET_ALIGNMENT = 256;
@@ -80,6 +81,8 @@ export type LuSpatialGeographicPointQueryStats = LuSpatialGeographicPointQueryCo
   buildEncodingMilliseconds: number;
   queryEncodingMilliseconds: number;
   inspectorSnapshot: GPUCommandGraphInspectorSnapshot;
+  /** Latest sampled graph span report. Uses the existing diagnostics readback. */
+  trace?: {graphId: string; timingReport: GPUCommandGraphTimingReport};
 };
 
 /** Geographic center and local radius used by the selection query. */
@@ -179,6 +182,7 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
   private readonly buildGraphObservation: GPUCommandGraphInspectorObservation<void>;
   private readonly queryGraphObservation: GPUCommandGraphInspectorObservation<void>;
   private readonly onStats?: (stats: LuSpatialGeographicPointQueryStats) => void;
+  private trace: LuSpatialGeographicPointQueryStats['trace'];
   private deck: EffectContext['deck'] | null = null;
   private selectionCenter: readonly [number, number];
   private selectionRadiusKilometres: number;
@@ -380,12 +384,19 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
       const commandEncoder = device.createCommandEncoder({id: `${this.id}-index-build`});
       const encoding = this.buildGraphObservation.encode(commandEncoder, {parameters: undefined});
       this.buildEncodingMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
+      const trace = {graphId: this.buildGraph.id, timingReport: encoding.stats};
+      this.trace = trace;
       device.submit(commandEncoder.finish());
       this.publishStats();
       if (this.diagnosticsEnabled && encoding.canReadGPUTimings) {
         setTimeout(() => {
           if (!this.destroyed) {
-            void this.buildGraphObservation.recordGPUTimings(encoding);
+            void this.buildGraphObservation.recordGPUTimings(encoding).then(timingReport => {
+              if (!this.destroyed && this.trace === trace && timingReport) {
+                this.trace = {graphId: this.buildGraph.id, timingReport};
+                this.publishStats();
+              }
+            });
           }
         }, 0);
       }
@@ -503,11 +514,18 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
       if (this.diagnosticsEnabled) this.scheduleCountSample(80);
     }
     if (this.diagnosticsEnabled && (this.frameIndex === 1 || this.frameIndex % 30 === 0)) {
+      const trace = {graphId: this.queryGraph.id, timingReport: encoding.stats};
+      this.trace = trace;
       this.scheduleCountSample(0);
       if (encoding.canReadGPUTimings) {
         setTimeout(() => {
           if (!this.destroyed) {
-            void this.queryGraphObservation.recordGPUTimings(encoding);
+            void this.queryGraphObservation.recordGPUTimings(encoding).then(timingReport => {
+              if (!this.destroyed && this.trace === trace && timingReport) {
+                this.trace = {graphId: this.queryGraph.id, timingReport};
+                this.publishStats();
+              }
+            });
           }
         }, 0);
       }
@@ -850,6 +868,7 @@ export class LuSpatialGeographicPointQueryEffect implements Effect {
         this.buildGraph.stats.nodeOrder.length + this.queryGraph.stats.nodeOrder.length,
       buildEncodingMilliseconds: this.buildEncodingMilliseconds,
       queryEncodingMilliseconds: this.queryEncodingMilliseconds,
+      trace: this.trace,
       inspectorSnapshot: this.inspector.getSnapshot()
     });
   }

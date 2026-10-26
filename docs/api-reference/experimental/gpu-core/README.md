@@ -16,7 +16,7 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
 ## Overview
 
 GPU Core is the experimental WebGPU dataflow and scheduling layer in
-`@luma.gl/gpgpu/gpu-core`.
+`@luma.gl/graph/gpu-core`.
 Applications and reusable contributors declare resources, compute/copy/render nodes, dependencies,
 conditions, and work estimates. A compiled graph allocates compatible transient resources, orders
 read/write hazards (resource conflicts), and records work into a caller-owned command encoder.
@@ -24,6 +24,10 @@ read/write hazards (resource conflicts), and records work into a caller-owned co
 GPU Core does not own command submission or the application frame loop. This makes it suitable for
 GPU-resident workflows that combine analysis, culling, indirect rendering, and bounded readback
 without synchronizing the source dataset through JavaScript.
+
+Read [WebGPU foundations](/docs/api-reference/experimental/gpu-core/webgpu-foundations) for the compute and memory primitives,
+[execution techniques](/docs/api-reference/experimental/gpu-core/execution-techniques) for allocation and scheduling, and
+[debugging](/docs/api-reference/experimental/gpu-core/debugging) for the GPU Graph and GPU Trace panels.
 
 ### The small WebGPU leap behind GPU Core
 
@@ -151,7 +155,7 @@ together.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph, GPUScan} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUScan} from '@luma.gl/graph/gpu-core';
 
 const graph = new GPUCommandGraph(device, {id: 'prefix-sum'});
 const input = graph.importBuffer(
@@ -196,7 +200,7 @@ application outcomes to the operations that compose them.
 | Capability | What it enables | Public surface |
 | --- | --- | --- |
 | **Declarative graph** | One schedule for GPU preparation, analysis, indirect drawing, and picking | `GPUCommandGraph` and graph contributors |
-| **Composable primitives** | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback | `GPU*` contributors from `@luma.gl/experimental` |
+| **Composable primitives** | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback | `GPU*` contributors from `@luma.gl/graph/gpu-core` |
 | **GPU-driven output** | Bounded counts, compacted IDs, and indirect commands without source-data readback | `GPUScan`, `GPUCompaction`, `DrawCommandBuffer` |
 | **Batch-preserving execution** | Ordered `GPUVector` chunks without silently repacking a dataset | `GraphVectorView` and chunk-aware contributors |
 | **Conditional execution** | CPU-known work can be omitted and GPU-known empty work can resolve through indirect dispatch | CPU predicates and GPU indirect conditions |
@@ -238,7 +242,7 @@ application outcomes to the operations that compose them.
 | Hash indexes and joins | [`GPUHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-hash-index), [`GPUBatchHashIndex`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index), [`GPUHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-hash-join), [`GPUBatchHashJoin`](/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join) |
 
 Trace-domain algorithms are indexed from the
-[`@luma.gl/experimental/gpu-trace` overview](/docs/api-reference/experimental/gpu-trace).
+[`@luma.gl/graph/gpu-trace` overview](/docs/api-reference/experimental/gpu-trace).
 
 ## Limits and compatibility
 
@@ -250,8 +254,13 @@ Trace-domain algorithms are indexed from the
 
 ## Related modules
 
-- [`@luma.gl/experimental/gpu-trace`](/docs/api-reference/experimental/gpu-trace) adds trace semantics.
-- [GPU Graph](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
+- [`@luma.gl/graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace) adds trace semantics.
+- [GPU Graph Algorithms](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
 - [GPU Raster](/docs/api-reference/experimental/gpu-raster) provides raster and field operations.
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) provides dataframe-style GPU analysis.
 - [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) defines Arrow-independent GPU data containers.
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.

@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {luma, type Device} from '@luma.gl/core';
-import {cleanEvaluate, type GPUDataEvaluator} from '@luma.gl/gpgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {cleanEvaluate, GPUDataEvaluator} from '@luma.gl/gpgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {makeShowcaseData} from './arrow-data';
 import {evaluateExpression} from './expression';
 import {
@@ -34,6 +34,8 @@ export type GPGPUShowcaseHandle = {
 export type GPGPUShowcaseProps = {
   /** Reuse a caller-owned device, such as the device selected by the website DeviceTabs. */
   device?: Device;
+  /** Route expression evaluation through GPUSimpleGraph. */
+  useSimpleGraph?: boolean;
 };
 
 export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUShowcaseHandle {
@@ -50,6 +52,7 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
   let isDestroyed = false;
   let renderer: VirtualGPUTableRenderer | null = null;
   let submitHandler: ((event: SubmitEvent) => void) | null = null;
+  let presetHandler: (() => void) | null = null;
   let beforeUnloadHandler: (() => void) | null = null;
 
   const destroy = (): void => {
@@ -66,6 +69,10 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
       expressionElements.form.removeEventListener('submit', submitHandler);
       submitHandler = null;
     }
+    if (presetHandler) {
+      expressionElements.preset.removeEventListener('change', presetHandler);
+      presetHandler = null;
+    }
     if (beforeUnloadHandler) {
       window.removeEventListener('beforeunload', beforeUnloadHandler);
       beforeUnloadHandler = null;
@@ -80,6 +87,13 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
   if (requestedExpression !== null) {
     expressionElements.input.value = requestedExpression;
   }
+  presetHandler = () => {
+    if (expressionElements.preset.value) {
+      expressionElements.input.value = expressionElements.preset.value;
+      expressionElements.preset.value = '';
+    }
+  };
+  expressionElements.preset.addEventListener('change', presetHandler);
 
   animationFrameId = window.requestAnimationFrame(() => {
     animationFrameId = null;
@@ -87,7 +101,7 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
       return;
     }
 
-    const rowCount = getRequestedRowCount();
+    const rowCount = getRequestedRowCount(props.useSimpleGraph ? 100_000 : DEFAULT_ROW_COUNT);
     const startedAt = performance.now();
     const data = makeShowcaseData(rowCount);
     updateMetadata({
@@ -113,6 +127,7 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
         sourceColumns: data.columns,
         expressionInputs: data.expressionInputs,
         evaluationDevicePromise,
+        useSimpleGraph: props.useSimpleGraph ?? false,
         persistExpression: true
       });
     };
@@ -126,6 +141,7 @@ export function initializeGPGPUShowcase(props: GPGPUShowcaseProps = {}): GPGPUSh
         sourceColumns: data.columns,
         expressionInputs: data.expressionInputs,
         evaluationDevicePromise,
+        useSimpleGraph: props.useSimpleGraph ?? false,
         persistExpression: false
       });
     }
@@ -151,6 +167,7 @@ async function runExpression({
   sourceColumns,
   expressionInputs,
   evaluationDevicePromise,
+  useSimpleGraph,
   persistExpression
 }: {
   expression: string;
@@ -159,6 +176,7 @@ async function runExpression({
   sourceColumns: Parameters<VirtualGPUTableRenderer['setColumns']>[0];
   expressionInputs: Parameters<typeof evaluateExpression>[1];
   evaluationDevicePromise: Promise<Device>;
+  useSimpleGraph: boolean;
   persistExpression: boolean;
 }): Promise<void> {
   let evaluationStartedAt: number | null = null;
@@ -173,20 +191,29 @@ async function runExpression({
     }
     evaluationStartedAt = performance.now();
     messageElement.textContent = 'Evaluating expression...';
-    const output = evaluateExpression(trimmedExpression, expressionInputs);
-
     const device = await evaluationDevicePromise;
-    await cleanEvaluate(device, {
-      ...expressionInputs,
-      output
-    });
+    const graphResult = useSimpleGraph
+      ? await (await import('./simple-graph-expression')).evaluateSimpleGraphExpression(
+          device,
+          trimmedExpression,
+          expressionInputs
+        )
+      : null;
+    const output = graphResult?.output ?? evaluateExpression(trimmedExpression, expressionInputs);
+    const graphNodeCount = graphResult?.nodeCount ?? null;
+    if (!useSimpleGraph) {
+      await cleanEvaluate(device, {...expressionInputs, output});
+    }
 
-    const outputColumn = await makeOutputTableColumn(output, renderer.rowCount, sourceColumns);
-    renderer.setColumns([...sourceColumns, outputColumn]);
+    try {
+      const outputColumn = await makeOutputTableColumn(output, renderer.rowCount, sourceColumns);
+      renderer.setColumns([...sourceColumns, outputColumn], graphResult?.destroy);
+    } catch (error) {
+      graphResult?.destroy();
+      throw error;
+    }
     renderer.scrollToLastColumn();
-    messageElement.textContent = `output = ${output} · evaluated in ${formatDuration(
-      performance.now() - evaluationStartedAt
-    )}`;
+    messageElement.textContent = `output = ${output} · ${graphNodeCount === null ? '' : `${graphNodeCount} graph nodes · `}evaluated in ${formatDuration(performance.now() - evaluationStartedAt)}`;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     messageElement.textContent =
@@ -279,11 +306,11 @@ function formatDuration(milliseconds: number): string {
   return `${(milliseconds / 1_000).toFixed(1)} s`;
 }
 
-function getRequestedRowCount(): number {
+function getRequestedRowCount(defaultRowCount: number): number {
   const params = new URLSearchParams(window.location.search);
-  const requestedRows = Number(params.get('rows') ?? DEFAULT_ROW_COUNT);
+  const requestedRows = Number(params.get('rows') ?? defaultRowCount);
   if (!Number.isFinite(requestedRows) || requestedRows <= 0) {
-    return DEFAULT_ROW_COUNT;
+    return defaultRowCount;
   }
   return Math.min(MAXIMUM_ROW_COUNT, Math.floor(requestedRows));
 }

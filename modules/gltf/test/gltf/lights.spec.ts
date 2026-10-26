@@ -1,5 +1,5 @@
 import {parseGLTFLights} from '@luma.gl/gltf/parsers/parse-gltf-lights';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFPostprocessed} from '@luma.gl/gltf';
 import {expect, it} from 'vitest';
 
 it('gltf#parseGLTFLights - directional', () => {

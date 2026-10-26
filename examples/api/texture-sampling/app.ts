@@ -13,7 +13,7 @@ import {
   type SamplerProps
 } from '@luma.gl/core';
 import {AnimationLoopTemplate, DynamicTexture, type AnimationProps, Model} from '@luma.gl/engine';
-import {ComparisonSplitter} from '@luma.gl/experimental';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
 import {
   ColumnPanel,
   type Panel,

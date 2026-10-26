@@ -1,5 +1,9 @@
 # GPU Project multi-patch, reuse and CPU API measurements
 
+For production table consumers with explicit upload and CPU round-trip timings, see the
+[P.8a.2a table report](gpu-project-table-performance.md). The synthetic consumer measurements
+below remain useful for CPU API and reuse comparisons, but exclude transfers.
+
 ## math.gl alpha.13 rebaseline — 2026-10-08
 
 P.8a.1 adds six CPU API/layout baselines to the same double-single GPU workload. At 65K rows,
@@ -67,7 +71,7 @@ Reproduce from the repository root after other task builds/tests finish:
 ```sh
 VITE_LUPROJ_SWEEP_ROWS=4096,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
-  modules/experimental/test/gpu-project/projection-performance.spec.ts
+  modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
 ## Historical baseline — 2026-09-16
@@ -200,7 +204,7 @@ LUMA_TEST_BROWSER_BENCHMARKS=true \
   VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
   VITE_LUPROJ_SWEEP_GPU_TIMING=false \
   yarn test-headless --no-coverage --silent=false --reporter=verbose --fileParallelism=false \
-  modules/experimental/test/gpu-project/projection-performance.spec.ts
+  modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
 For the separate profile, set `VITE_LUPROJ_SWEEP_ROWS=65536`,

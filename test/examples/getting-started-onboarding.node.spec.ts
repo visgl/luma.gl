@@ -35,16 +35,16 @@ describe('getting-started onboarding', () => {
     const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf-8');
 
     for (const requiredSetup of [
-      'Project Setup',
-      'Installation',
-      'npm install @luma.gl/core @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu',
-      'Step 1. Render a frame',
-      'Step 2. Write the shaders',
-      'Step 3. Render the triangle',
-      'Step 4. Putting it all together'
+      '## Create a project',
+      'cd luma-demo',
+      'npm install @luma.gl/core @luma.gl/engine',
+      '## Render the triangle',
+      '## Follow the frame',
+      '## Troubleshoot'
     ]) {
       expect(onboardingSource).toContain(requiredSetup);
     }
+    expect(onboardingSource.match(/class AppAnimationLoopTemplate/g)).toHaveLength(1);
   });
 
   test('keeps tutorial and developer navigation consistent with the onboarding journey', () => {
@@ -91,9 +91,6 @@ describe('getting-started onboarding', () => {
         label: 'Quality and delivery',
         items: [
           'developer-guide/testing',
-          'developer-guide/debugging',
-          'developer-guide/profiling',
-          'developer-guide/bundling',
           'developer-guide/releasing',
           'developer-guide/working-with-ai'
         ]
@@ -117,19 +114,24 @@ describe('getting-started onboarding', () => {
       readFileSync(DOCUMENTATION_TABLE_OF_CONTENTS_PATH, 'utf8')
     ) as Array<string | {label?: string; items?: string[]}>;
 
-    expect(tableOfContents.slice(0, 3)).toEqual([
-      'README',
-      'getting-started',
-      {
-        type: 'category',
-        label: 'Capabilities',
-        items: [
-          'capabilities',
-          'capabilities/gpu-data-compute',
-          'capabilities/rendering-visualization'
-        ]
-      }
-    ]);
+    expect(tableOfContents[0]).toMatchObject({
+      type: 'category',
+      label: 'Getting Started',
+      items: expect.arrayContaining([
+        'README',
+        'getting-started',
+        {
+          type: 'category',
+          label: 'Capabilities and compatibility',
+          items: [
+            'capabilities',
+            'capabilities/gpu-data-compute',
+            'capabilities/rendering-visualization',
+            'api-guide/background/webgpu-vs-webgl'
+          ]
+        }
+      ])
+    });
 
     expect(onboardingSource).toMatch(
       /<a\b(?=[^>]*\bclassName="docs-api-card")(?=[^>]*\bhref="\/docs\/fundamentals")[^>]*>/

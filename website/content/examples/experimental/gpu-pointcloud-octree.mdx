@@ -1,0 +1,28 @@
+---
+title: Additive Point Cloud Octree
+sidebar_label: Additive Point Cloud Octree
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, command-graphs]
+---
+
+import {GPUPointCloudOctreeExample} from '@site/src/examples';
+
+<GPUPointCloudOctreeExample />
+
+Build an additive octree entirely on the GPU, then reveal successive levels with **Detail depth**
+or **Progressive reveal**. Ancestor points remain visible as children add detail. At the finest
+level every source point appears exactly once. Colors identify the level that owns each point.
+
+**Tile bounds** shows the current frontier: nodes at the selected depth and leaves that terminated
+earlier. Drag to orbit and scroll or pinch to zoom. Source and visible counts show how many points
+are rendered. The **GPU Graph** tab exposes construction passes and scratch resources.
+
+Positions remain immutable. The renderer gathers them using a packed source-ID buffer with a
+contiguous range for each tile. The example reads back status and node metadata once, without
+reading back point IDs or positions. Changing detail depth does not rebuild the tree.
+
+This is a resident-data demonstration, not network streaming or view-dependent tile selection.
+See the [octree API and limitations](/docs/api-reference/gpgpu/gpu-pointcloud#additive-octree).

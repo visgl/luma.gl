@@ -4,7 +4,7 @@ import {LuvsBenchmark} from '@site/src/components/docs/luvs-benchmark';
 
 ## Overview
 
-`@luma.gl/gpgpu/gpu-vector-search` is a headless WebGPU computation backend for high-dimensional vector
+`@luma.gl/graph/gpu-vector-search` is a headless WebGPU computation backend for high-dimensional vector
 similarity. Applications use its GPU-resident nearest neighbors, scores, selection counts, cluster
 labels, and centroids for semantic selection, similar-item highlighting, color encoding, and other
 visualization workflows.
@@ -46,7 +46,7 @@ Arrow FixedSizeList<Float32>[768]
 `GPUTable` preserves source batches and column ownership. `GraphEmbeddingMatrix` is only a
 non-owning, graph-specific description of those existing rows; it neither uploads values nor adds
 another lifetime to destroy. This keeps Apache Arrow in `@luma.gl/arrow`, generic storage in
-`@luma.gl/gpgpu/gpu-data` and `@luma.gl/experimental/gpu-tables`, and similarity algorithms in this optional subpath.
+`@luma.gl/gpgpu/gpu-data` and `@luma.gl/graph/gpu-tables`, and similarity algorithms in this optional subpath.
 
 ### Stable identifiers, logical rows, and validity serve different purposes
 
@@ -322,11 +322,11 @@ and assembled into a `GPURecordBatch`;
 ## Encode an exact nearest-neighbor search
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUSimilaritySearch,
   importGPUEmbeddingTable
-} from '@luma.gl/gpgpu/gpu-vector-search';
+} from '@luma.gl/graph/gpu-vector-search';
 
 const graph = new GPUCommandGraph(device, {id: 'semantic-selection'});
 const dataset = importGPUEmbeddingTable(graph, datasetTable, {
@@ -399,7 +399,7 @@ search. Zero rejects the row; nonzero accepts it. Existing LuxFilter masks alrea
 
 ```ts
 import {LuxFilterSelection} from '@luma.gl/experimental/luxfilter';
-import {GPUSimilaritySearch} from '@luma.gl/gpgpu/gpu-vector-search';
+import {GPUSimilaritySearch} from '@luma.gl/graph/gpu-vector-search';
 
 const selection = new LuxFilterSelection(graph, {
   id: 'visible-category',
@@ -436,7 +436,7 @@ bounded segmented reductions produce caller-owned cluster labels and centroid bu
 cluster-based coloring or IVF training:
 
 ```ts
-import {GPUKMeans} from '@luma.gl/gpgpu/gpu-vector-search';
+import {GPUKMeans} from '@luma.gl/graph/gpu-vector-search';
 
 new GPUKMeans({
   dataset,
@@ -463,7 +463,7 @@ traverse the selected inverted lists directly instead of scanning unrelated data
 index does not build or traverse an approximate neighbor graph:
 
 ```ts
-import {GPUIVFFlatIndex} from '@luma.gl/gpgpu/gpu-vector-search';
+import {GPUIVFFlatIndex} from '@luma.gl/graph/gpu-vector-search';
 
 const index = new GPUIVFFlatIndex({
   dataset,

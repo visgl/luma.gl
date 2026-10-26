@@ -10,7 +10,7 @@ import {GPUTraceViewerExample} from '@site/src/examples';
 
 ## Overview
 
-`@luma.gl/experimental/gpu-trace` is an optional GPU-native execution-trace module. It owns canonical
+`@luma.gl/graph/gpu-trace` is an optional GPU-native execution-trace module. It owns canonical
 span schemas, process/thread relationships, hierarchy parents, dependency links, filtering
 policies, linked-span focus, and trace-specific timeline picking without adding those concepts to
 the generic command graph or flat GPU scene API.
@@ -108,7 +108,7 @@ import trace-domain schemas or interaction policies.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUTraceAggregation,
   GPUTraceCriticalPath,
@@ -118,7 +118,7 @@ import {
   GPUTraceTemporalIndex,
   GPUTraceTimeBuckets,
   getGPUTracePickingShader
-} from '@luma.gl/experimental/gpu-trace';
+} from '@luma.gl/graph/gpu-trace';
 ```
 
 ### Canonical spans and dependency links have stable identities
@@ -223,8 +223,8 @@ rendering model or different interaction policy.
 | [`getGPUTracePickingShader`](/docs/api-reference/experimental/gpu-trace/picking) | Capacity-bounded, visible-span-aware timeline picking shader |
 
 Trace-specific classes, constants, helpers, and types are exported only from
-`@luma.gl/experimental/gpu-trace`; they are intentionally absent from the root
-`@luma.gl/experimental` namespace.
+`@luma.gl/graph/gpu-trace`; they are intentionally absent from the root
+`@luma.gl/graph` namespace.
 
 ## Limits and compatibility
 

@@ -7,7 +7,7 @@ import {
   validateGPUInputVectors,
   type GPUInputSchema,
   type GPUInputVectors
-} from '@luma.gl/experimental/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import type {RecordBatch, Table} from 'apache-arrow';
 
 /** Arrow table-like source accepted by generic Arrow input schemas. */
