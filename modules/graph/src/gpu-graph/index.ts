@@ -51,3 +51,6 @@ export type {
   GPUGraphValidationIssue,
   GPUGraphValidationReport
 } from '../gpu-core/gpu-graph-validation';
+
+export {GPURenderInputs} from '../gpu-core/gpu-render-inputs';
+export type {GPURenderInputsProps} from '../gpu-core/gpu-render-inputs';

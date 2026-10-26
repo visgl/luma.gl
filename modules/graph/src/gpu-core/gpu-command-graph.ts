@@ -932,6 +932,14 @@ export class GPUCommandGraphBuilder<Parameters = void> {
    * framebuffer at encode time. The graph opens and closes the render pass.
    */
   addRenderPass(node: Omit<GPUCommandGraphRenderNode<Parameters>, 'type'>): void {
+    if (
+      this.device.type !== 'webgpu' &&
+      node.inputs
+        ?.getResourceUses()
+        .some(use => 'buffer' in use && use.usage.startsWith('storage-'))
+    ) {
+      throw new Error('Storage render inputs require WebGPU');
+    }
     if (node.attachments) {
       this.validateRenderAttachments(node.id, node.attachments);
     }
@@ -956,7 +964,11 @@ export class GPUCommandGraphBuilder<Parameters = void> {
       : [];
     this.addNode({
       ...node,
-      resources: [...(node.resources ?? []), ...attachmentUses],
+      resources: [
+        ...(node.resources ?? []),
+        ...(node.inputs?.getResourceUses() ?? []),
+        ...attachmentUses
+      ],
       type: 'render'
     });
   }
