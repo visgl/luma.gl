@@ -39,7 +39,7 @@ from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
 [Declarative Scene Rendering](/docs/api-guide/engine/anari-rendering). It introduces
-the experimental, private `@luma.gl/anari` workspace, scene objects, committed parameters,
+the experimental `@luma.gl/anari` package, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
 

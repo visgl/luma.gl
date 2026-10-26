@@ -5,9 +5,9 @@ description: Find the curated and generated API references for every stable and 
 
 # Overview
 
-luma.gl combines published, composable npm modules with private experimental packages under active
-development. Applications can choose the rendering, compute, and visualization functionality they
-need while checking the maturity of each package.
+luma.gl provides published, composable npm modules with stable and experimental APIs, alongside
+private Arrow and deck.gl adapters under active development. Applications can choose the rendering,
+compute, and visualization functionality they need while checking the maturity of each package.
 
 Use the API reference when you want the class-by-class reference pages for a specific module. If you are looking for conceptual guides or an introduction to how the pieces fit together, start in the [API Guide](/docs/api-guide) and then come back here for the detailed type and method docs.
 
@@ -36,7 +36,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 ## Start Here
 
 - [`@luma.gl/engine`][engine] for `Model`, `AnimationLoop`, scenegraph helpers, and compute-oriented utilities.
-- [`@luma.gl/anari`][anari] for experimental, private ANARI-inspired declarative scenes, retained rendering, and instancing.
+- [`@luma.gl/anari`][anari] for experimental ANARI-inspired declarative scenes, retained rendering, and instancing.
 - [`@luma.gl/core`][core] for `Device`, buffers, textures, shaders, render passes, and `RenderPipeline`.
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
 - [`@luma.gl/slang`][slang] for experimental Slang shader authoring on WebGL 2 and WebGPU, available from v10.

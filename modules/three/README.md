@@ -182,7 +182,7 @@ compute interoperability path; it does not require replacing Three's backend.
 
 All paths are experimental and tested against Three **0.185.1**; the deck
 and overlay entry points additionally require this workspace's patched deck **9.4.0** and luma **10**.
-The package is private. These are tested combinations, not a broad version range.
+These are tested combinations, not a broad version range.
 
 | Application needs | Entry point | Rendering and ownership contract |
 | --- | --- | --- |
@@ -214,7 +214,7 @@ The page and controls use a system sans-serif font. Controls disable directional
 independently. The original TSL cube and compute check remain available in the scene selector.
 The example also provides resize and recreation controls.
 The website lists it under **Experimental**, at `/examples/experimental/three`.
-The package remains private and is not published to npm.
+The package is public with experimental APIs.
 The backend selector recreates both renderers on either WebGPU or WebGL2. The
 upstream comparison uses `forceWebGL` when WebGL2 is selected. The mixed-object
 scene is disabled on WebGL2 because that separate adapter still uses WGSL only.

@@ -148,7 +148,7 @@ See [GPU primitive documentation](/docs/api-reference/experimental/gpu-core).
 | Per-batch top-K selection | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Use `topK()` to retain a bounded number of stably ordered rows per source batch without flattening independent inputs. |
 | Graph-compiled query execution | Experimental | WebGPU | `@luma.gl/graph/gpu-dataframe` | Compile compatible dataframe plans into reusable `GPUCommandGraph` work while preserving explicit command submission. |
 
-The `@luma.gl/graph/gpu-dataframe` entry point is private and experimental; its graph-native
+The `@luma.gl/graph/gpu-dataframe` entry point is experimental; its graph-native
 operations are implemented, but non-unique, outer, or multi-key joins, temporal windows, and
 cross-batch global ordering remain opportunities. See [GPU command graphs and reusable
 primitives](/docs/api-reference/experimental/gpu-core).

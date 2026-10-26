@@ -13,7 +13,7 @@ It is separate from the ordinary `@luma.gl/anari` entry point, so applications t
 scenes do not load Zod.
 
 :::caution[Experimental scene format]
-These schemas describe the private luma.gl ANARI playground format. They are not an official ANARI
+These schemas describe the luma.gl ANARI playground format. They are not an official ANARI
 serialization standard, and their structure can change with the experimental package.
 :::
 

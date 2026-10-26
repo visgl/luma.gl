@@ -38,7 +38,6 @@ worker treats decoded pages as resident.
 Use optional `expectedSplatCount` and `expectedBatchCount` hints to reserve graph capacity.
 Renderers borrow source batches, preserve HDR colors, and must be destroyed before their data.
 
-This private package is not published to npm. Reference it from another luma.gl workspace with
-`"@luma.gl/splats": "workspace:*"`.
+This package is public with experimental APIs. Install it with `yarn add @luma.gl/splats`.
 
 See [luma.gl](https://luma.gl/docs/api-reference/splats) for documentation.
