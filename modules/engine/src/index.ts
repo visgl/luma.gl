@@ -282,7 +282,7 @@ export {
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
 export {legacyColorPicking} from './modules/picking/legacy-color-picking';
 
-import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+import {DynamicTexture, type DynamicTextureProps} from '@luma.gl/core/dynamic';
 /** @deprecated use DynamicTexture */
 export const AsyncTexture = DynamicTexture;
 /** @deprecated use DynamicTextureProps */

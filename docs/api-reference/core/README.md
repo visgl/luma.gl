@@ -97,3 +97,9 @@ upload, render, compute, readback, resize, and recovery from validation or devic
 - Move up to [Engine](/docs/api-reference/engine) for managed models and redraw state.
 - Move down to [Shadertools](/docs/api-reference/shadertools) to author reusable shader behavior.
 - Add [GPU Core](/docs/api-reference/experimental/gpu-core) for multi-operation scheduling.
+
+## Optional dynamic resources
+
+`@luma.gl/core/dynamic` provides [DynamicBuffer](/docs/api-reference/core/dynamic/dynamic-buffer) and [DynamicTexture](/docs/api-reference/core/dynamic/dynamic-texture), along with their props, texture data types and binding-source helpers. They wrap ordinary core resources to support replacement, resizing and, for textures, asynchronous initialization and mipmap generation.
+
+Import these conveniences explicitly; the core root does not re-export them. The optional entry point depends only on core internals. Engine and gpgpu retain compatibility exports with identical class identity.

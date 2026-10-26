@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding, type Buffer} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {getGPUVectorFormatInfo, isVertexListGPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUVector, VertexList} from '@luma.gl/gpgpu/gpu-data';

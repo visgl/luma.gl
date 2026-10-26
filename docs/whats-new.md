@@ -495,7 +495,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 **@luma.gl/engine**
 
-- **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
+- **[`DynamicBuffer`](/docs/api-reference/core/dynamic/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
 - **[`VideoTexture`](/docs/api-reference/engine/video-texture)** - Stable live video binding source for caller-owned `HTMLVideoElement` and `VideoFrame` inputs. Portable shaders use copied textures on WebGL and WebGPU, while WGSL `texture_external` can opt into native WebGPU external-video sampling.
 - **`Animator`** - New generic `Animator` and `AnimationClipController` classes manage timeline-driven animation updates. `GLTFAnimator` now builds on the shared controller.
 - **Custom animation-frame providers** - `AnimationLoop` can consume a caller-provided animation-frame source and forward its frame payload, enabling integrations such as WebXR without changing the normal browser loop.
@@ -569,7 +569,7 @@ Release Date: March 31, 2026
 **@luma.gl/engine**
 
 - New **`Material`** and **`MaterialFactory`** classes provide reusable material-owned group-3 bindings for `Scenegraph` models.
-- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture).
+- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/core/dynamic/dynamic-texture).
 - **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
 - **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
 - **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
@@ -710,7 +710,7 @@ Enhanced WebGPU support.
 
 - `makeAnimationLoopTemplate`
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
-- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture)
+- [`DynamicTexture`](/docs/api-reference/core/dynamic/dynamic-texture)
   - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.

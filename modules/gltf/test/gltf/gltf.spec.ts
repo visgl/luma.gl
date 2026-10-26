@@ -16,7 +16,7 @@ import {
   loadPBREnvironment
 } from '@luma.gl/gltf';
 
-import {DynamicTexture} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 
 it('gltf#loading', async () => {
   const webglDevice = await getWebGLTestDevice();

@@ -110,5 +110,5 @@
 - `@luma.gl/gpgpu` retains GPU data primitives and immediate operations and must not depend on `@luma.gl/graph`.
 
 - Package dependency direction is `engine → graph → gpgpu → core/shadertools`. Graph and gpgpu must not import engine, including through public types or relative source paths.
-- Gpgpu owns immediate execution primitives, GPUVectorModel, ShaderInputs, and dynamic resources. Engine may provide compatibility exports but must not duplicate these implementations.
+- Gpgpu owns immediate execution primitives, GPUVectorModel, and ShaderInputs. `@luma.gl/core/dynamic` owns DynamicBuffer, DynamicTexture, and their supporting resource types; core must not depend on gpgpu, graph, or engine. Engine may provide compatibility exports but must not duplicate these implementations.
 - Shared graph effect execution must use gpgpu primitives, not engine rendering models. Run `yarn test-package-layering` after building to verify this boundary.

@@ -12,7 +12,7 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {Model, type ModelProps} from '../../../index';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';

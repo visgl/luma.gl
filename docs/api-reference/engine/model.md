@@ -84,7 +84,8 @@ neither modifies nor repacks input storage.
 ## Usage
 
 ```typescript
-import {CubeGeometry, DynamicTexture, Model} from '@luma.gl/engine';
+import {CubeGeometry, Model} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 
 const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 

@@ -8,7 +8,7 @@ import {
   type Texture2DData,
   type TextureCubeData,
   type TextureCubeFace
-} from '@luma.gl/engine';
+} from '@luma.gl/core/dynamic';
 
 /** Environment textures for PBR module */
 export type PBREnvironment = {
