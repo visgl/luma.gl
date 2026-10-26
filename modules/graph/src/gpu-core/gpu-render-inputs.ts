@@ -48,6 +48,7 @@ export class GPURenderInputs {
   private readonly attributeBufferLayout: BufferLayout[];
   private readonly attributes: NonNullable<GPURenderInputsProps['attributes']>;
   private readonly storage: NonNullable<GPURenderInputsProps['storage']>;
+  private readonly storageViews: Record<string, GraphDataView<'uint32'>>;
   private readonly textures: NonNullable<GPURenderInputsProps['textures']>;
   private readonly samplers: NonNullable<GPURenderInputsProps['samplers']>;
 
@@ -66,17 +67,44 @@ export class GPURenderInputs {
     this.attributeBufferLayout = Object.entries(this.attributes).map(
       ([name, {source, stepMode}]) => ({
         name,
-        format: source.format,
+        ...(source.byteOffset % 4
+          ? {
+              attributes: [
+                {attribute: name, format: source.format, byteOffset: source.byteOffset % 4}
+              ]
+            }
+          : {format: source.format}),
         byteStride: source.byteStride,
         stepMode: stepMode ?? 'vertex'
       })
     );
-    for (const input of Object.values(this.storage)) getStorageRange(input);
+    this.storageViews = Object.fromEntries(
+      Object.entries(this.storage).map(([name, input]) => {
+        const {offset, size} = getStorageRange(input);
+        const buffer = input.source instanceof GraphDataView ? input.source.buffer : input.source;
+        // A contiguous byte-range view declares precisely the storage bytes bound by apply().
+        return [
+          name,
+          new GraphDataView(buffer, {
+            format: 'uint32',
+            length: size / 4,
+            byteOffset: offset,
+            byteStride: 4,
+            rowByteLength: 4
+          })
+        ];
+      })
+    );
   }
 
   /** Layout supplied when constructing the consuming Model. */
   get bufferLayout(): BufferLayout[] {
-    return this.attributeBufferLayout.map(layout => ({...layout}));
+    return this.attributeBufferLayout.map(layout => ({
+      ...layout,
+      ...(layout.attributes
+        ? {attributes: layout.attributes.map(attribute => ({...attribute}))}
+        : {})
+    }));
   }
 
   /** Resource accesses are derived once from the same declarations used for binding. */
@@ -86,8 +114,8 @@ export class GPURenderInputs {
         buffer: source,
         usage: 'vertex' as const
       })),
-      ...Object.values(this.storage).map(({source, access}) => ({
-        buffer: source,
+      ...Object.entries(this.storage).map(([name, {access}]) => ({
+        buffer: this.storageViews[name],
         usage: access === 'read' ? ('storage-read' as const) : ('storage-read-write' as const)
       })),
       ...Object.values(this.textures).map(({source}) => ({
@@ -114,7 +142,7 @@ export class GPURenderInputs {
     const bindings: Bindings = {...this.samplers};
     for (const [name, {source}] of Object.entries(this.attributes)) {
       attributes[name] = context.getBuffer(source);
-      byteOffsets[name] = source.byteOffset;
+      byteOffsets[name] = source.byteOffset - (source.byteOffset % 4);
     }
     for (const [name, input] of Object.entries(this.storage)) {
       const declaration = model.pipeline.shaderLayout.bindings?.find(
