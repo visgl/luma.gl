@@ -4,6 +4,7 @@
 
 import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '@luma.gl/core';
 import {
+  GLSLShaderAssembler,
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformLayoutValidationResult,
   getShaderModuleUniforms,
@@ -143,7 +144,12 @@ const NEXT_GENERATION_MATERIAL_UNIFORM_BUFFER_LAYOUT = {
 const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
   ...CORE_UNIFORM_BUFFER_LAYOUT,
   ...TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT,
-  ...NEXT_GENERATION_MATERIAL_UNIFORM_BUFFER_LAYOUT
+  ...NEXT_GENERATION_MATERIAL_UNIFORM_BUFFER_LAYOUT,
+  lightmapMapEnabled: {offset: 424, size: 1},
+  lightmapIntensity: {offset: 425, size: 1},
+  lightmapUVSet: {offset: 426, size: 1},
+  lightmapUVTransform: {offset: 428, size: 12},
+  scatterStrengthFactor: {offset: 440, size: 1}
 };
 
 const EXPECTED_UNIFORM_NAMES = Object.keys(EXPECTED_UNIFORM_BUFFER_LAYOUT);
@@ -352,7 +358,7 @@ it('shadertools#pbrMaterial uniform buffer layout matches expected std140 packin
   const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
 
   expect(shaderBlockLayout.byteLength, 'uniform buffer layout reports the exact packed size').toBe(
-    1696
+    1776
   );
   expect(
     Object.keys(shaderBlockLayout.fields),
@@ -380,11 +386,11 @@ it('shadertools#pbrMaterial uniform store reports minimum allocation size separa
   expect(
     uniformStore.getUniformBufferByteLength('material'),
     'uniform store keeps the minimum allocation size'
-  ).toBe(1696);
+  ).toBe(1776);
   expect(
     uniformStore.getUniformBufferData('material').byteLength,
     'uniform store serializes only the packed block data'
-  ).toBe(1696);
+  ).toBe(1776);
 
   void 0;
 });
@@ -574,4 +580,50 @@ it('shadertools#pbrMaterial uniform store preserves prior and default values acr
   ).toBe(0);
 
   void 0;
+});
+
+it('shadertools#pbrMaterial compiles lightmap irradiance for core and layered WebGPU materials', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  for (const useMaterialExtensions of [false, true]) {
+    const source = new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WEBGPU_PLATFORM,
+      source: DIFFUSE_TRANSMISSION_UNIFORMITY_SHADER,
+      modules: [pbrMaterial],
+      defines: {
+        HAS_NORMALS: true,
+        HAS_UV: true,
+        HAS_UV_1: true,
+        HAS_LIGHTMAP: true,
+        HAS_OCCLUSIONMAP: true,
+        USE_MATERIAL_EXTENSIONS: useMaterialExtensions
+      }
+    }).source;
+    const shader = device.createShader({id: 'pbr-lightmap', source});
+    try {
+      const errors = (await shader.getCompilationInfo()).filter(
+        message => message.type === 'error'
+      );
+      expect(errors.map(message => message.message)).toEqual([]);
+    } finally {
+      shader.destroy();
+    }
+  }
+});
+
+it('shadertools#pbrMaterial declares scene uniforms before GLSL consumers regardless of module order', () => {
+  for (const modules of [[pbrMaterial], [pbrMaterial, pbrScene], [pbrScene, pbrMaterial]]) {
+    const assembled = new GLSLShaderAssembler().assembleGLSLShaderPair({
+      platformInfo: {...WEBGPU_PLATFORM, type: 'webgl', shaderLanguage: 'glsl'},
+      modules,
+      defines: {USE_SCENE_ENVIRONMENT: true, USE_SCENE_COLOR_MANAGEMENT: true, USE_IBL: true},
+      vs: '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
+      fs: '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }'
+    });
+    const declarationOffset = assembled.fs.indexOf('} pbrScene;');
+    const consumerOffset = assembled.fs.indexOf('pbrScene.environmentMipCount');
+    expect(declarationOffset).toBeGreaterThanOrEqual(0);
+    expect(consumerOffset).toBeGreaterThan(declarationOffset);
+    expect(assembled.fs.match(/} pbrScene;/g)).toHaveLength(1);
+  }
 });

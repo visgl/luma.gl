@@ -42,7 +42,7 @@
     <script type="module">
       import {luma} from '@luma.gl/core';
       import {makeAnimationLoop} from '@luma.gl/engine';
-      import {webgpuAdapter} from '@luma.gl/webgpu';
+      import {webgpuAdapter} from '@luma.gl/core/webgpu';
       import AnimationLoopTemplate from './app.ts';
 
       const supportsHighDynamicRange =
@@ -59,6 +59,8 @@
           device = await luma.createDevice({
             id: 'billion-point-spatial-atlas',
             adapters: [webgpuAdapter],
+            optionalFeatures: ['timestamp-query'],
+            debugGPUTime: true,
             createCanvasContext: supportsHighDynamicRange
               ? {
                   colorFormat: 'rgba16float',
@@ -73,6 +75,8 @@
           device = await luma.createDevice({
             id: 'billion-point-spatial-atlas-sdr-fallback',
             adapters: [webgpuAdapter],
+            optionalFeatures: ['timestamp-query'],
+            debugGPUTime: true,
             createCanvasContext: standardCanvasContext
           });
         }

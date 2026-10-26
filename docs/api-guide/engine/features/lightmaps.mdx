@@ -1,0 +1,28 @@
+import {GLTFFeatureExample} from '@site/src/examples';
+
+# Lightmaps
+
+Lightmaps add precomputed surface illumination to luma.gl materials. They are useful for static
+indirect lighting whose cost has already been paid by an offline bake. They use authored UVs
+and texture data rather than computing light transport at runtime.
+
+## Example
+
+<GLTFFeatureExample feature="lightmap" embedded showStats={false} />
+
+The authored Lightmapped Cornell Box demonstrates the existing material path. The example's
+Attributions tab identifies its source; the importer preserves the source material and UV data.
+
+## Material parameters
+
+`lightmapIntensity` is a nonnegative multiplier with a default of `1`. The linear RGB lightmap
+is supplied through `pbr_lightmapSampler`. Set `HAS_LIGHTMAP: true` on the compatible model and
+set `lightmapMapEnabled: true`, and provide `lightmapUVSet` and `lightmapUVTransform`. A material factor alone does not bind a texture.
+
+The lightmap supplies precomputed illumination; it does not create dynamic shadows or update
+when lights or geometry move. Keep the bake's lighting assumptions consistent with additional
+scene lights to avoid counting the same illumination twice.
+
+See [texture coordinates and transforms](./texture-coordinates.mdx),
+[environment lighting](/docs/api-reference/scene/pbr-environment), and
+[glTF lightmap conversion](/docs/api-reference/gltf/gltf-lightmap) for source mapping and support limits.

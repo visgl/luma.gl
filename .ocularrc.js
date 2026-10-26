@@ -35,20 +35,35 @@ const config = {
       examples: {
         animation: '/examples/api/animation',
         'algebraic-varieties': '/examples/showcase/algebraic-varieties',
-        scenes: '/examples/showcase/scene',
+        scenes: '/examples/anari/scenes',
         'arrow-points': '/examples/arrow/arrow-points',
         'arrow-filtering': '/examples/arrow/arrow-filtering',
         cubemap: '/examples/api/cubemap',
         fp64: '/examples/experimental/fp64',
+        three: '/examples/experimental/three',
+        'pool': '/examples/experimental/gpu-pool',
+        'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
+        'vector-observatory': '/examples/experimental/vector-observatory',
+        'wind': '/examples/deck/wind',
+        'physics-batch': '/examples/experimental/physics-batch',
+        'physics-stress': '/examples/experimental/physics-stress',
+        'space-salvage': '/examples/experimental/space-salvage',
+        'sphere-world': '/examples/experimental/gpu-sphere-world',
         'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',
         'arrow-text-2d': '/examples/arrow/arrow-text-2d',
         'arrow-text-3d': '/examples/arrow/arrow-text-3d',
         'gaussian-splats': '/examples/showcase/gaussian-splats',
-        gltf: '/examples/showcase/gltf',
+        gltf: '/examples/gltf/asset-studio',
+        'gltf-interactivity': '/examples/deck/gltf-interactivity',
+        'gltf-physics': '/examples/gltf/physics',
+        'authored-scene-stress': '/examples/gltf/authored-scene-stress',
         'hello-cube': '/examples/tutorials/hello-cube',
         'hello-instancing': '/examples/tutorials/hello-instancing',
         'hello-triangle-geometry': '/examples/tutorials/hello-triangle-geometry',
+        'gltf-audio': '/examples/showcase/gltf-audio',
+        'gltf-audio-environment': '/examples/showcase/gltf-audio-environment',
+        'gltf-audio-graph': '/examples/showcase/gltf-audio-graph',
         'hello-gltf': '/examples/tutorials/hello-gltf',
         'hello-triangle': '/examples/tutorials/hello-triangle',
         globe: '/examples/showcase/globe',
@@ -65,6 +80,8 @@ const config = {
         'react-strict-mode': '/examples/integrations/react-strict-mode',
         'shader-hooks': '/examples/tutorials/shader-hooks',
         'shader-modules': '/examples/tutorials/shader-modules',
+        'slang-shaders': '/examples/tutorials/slang-shaders',
+        'slang-particles': '/examples/tutorials/slang-particles',
         'texture-3d': '/examples/api/texture-3d',
         'texture-tester': '/examples/api/texture-tester',
         'video-texture': '/examples/api/video-texture',
@@ -87,9 +104,9 @@ const config = {
 
   entry: {
     size: 'test/size/import-nothing.js',
-    'modules/webgl/test/context/create-context.spec.ts':
-      'modules/webgl/test/context/create-browser-context.spec.ts',
-    'modules/webgl/test/context/create-context.spec.ts-browser': 'test/index.html'
+    'modules/core/test/webgl/context/create-context.spec.ts':
+      'modules/core/test/webgl/context/create-browser-context.spec.ts',
+    'modules/core/test/webgl/context/create-context.spec.ts-browser': 'test/index.html'
   }
 };
 

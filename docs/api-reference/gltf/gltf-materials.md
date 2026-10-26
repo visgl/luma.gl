@@ -1,12 +1,15 @@
 import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 
-# glTF Materials, Textures, and Lighting
+# glTF Material Conversion
 
 <GltfDocsTabs active="materials" />
 
 `@luma.gl/gltf` translates source glTF material and lighting data into the existing
 `@luma.gl/shadertools` PBR modules. The same format-owned helpers are reused by retained-scene
 importers, so sampler, UV, color-space, and extension interpretation stay in one place.
+
+For shading behavior and feature examples, see [Materials](/docs/api-guide/engine/materials).
+This page describes how the glTF converter maps source data onto luma.gl materials.
 
 ## Parse a physically based material
 
@@ -260,13 +263,15 @@ legacy byte-style light convention.
 
 ## Image-based lighting
 
-`loadPBREnvironment()` loads an already prepared diffuse cubemap, specular cubemap mip chain, and
-BRDF lookup texture:
+`loadPBREnvironment()` uses an application-supplied `loadImage` callback to load an already
+prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```ts
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
+import {loadImageTexture} from '@loaders.gl/textures';
 
 const environment = loadPBREnvironment(device, {
+  loadImage: loadImageTexture,
   brdfLutUrl: '/environment/brdf-lut.png',
   getTexUrl: (kind, face, level) => `/environment/${kind}/${face}/${level}.png`,
   specularMipLevels: 6
@@ -280,15 +285,15 @@ const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
 This API loads precomputed resources; it does not convert arbitrary HDR images into prefiltered
 lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF
 lookup from an existing equirectangular texture, use the separate
-[`PBREnvironmentGenerator`](/docs/api-reference/experimental/pbr-environment) owned by
-`@luma.gl/experimental`.
+[`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) owned by
+`@luma.gl/anari`.
 
 ## Transmission and rendering-path differences
 
 Transmission and volume factors/textures are preserved across rendering paths, but physical
 refraction depends on the renderer:
 
-- The shared [experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) and
+- The shared [experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) and
   retained ANARI path capture the opaque scene and sample it for screen-space refraction with
   thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and
   roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment

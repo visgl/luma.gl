@@ -9,8 +9,6 @@
   },
   "references": [
     {"path": "../core"},
-    {"path": "../engine"},
-    {"path": "../webgl"},
-    {"path": "../webgpu"}
+    {"path": "../engine"}
   ]
 }

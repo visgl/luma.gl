@@ -1,0 +1,37 @@
+import {GLTFModelExample} from '@site/src/examples';
+
+# Metallic
+
+Metallic controls the transition between a dielectric surface, such as plastic, and a conductor, such as bare metal.
+
+## Example
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf" title="Metallic" embedded showStats={false} />
+
+## Configure the material
+
+The following fields update an existing PBR material; see [Materials guide](/docs/api-guide/engine/materials).
+
+```ts
+material.setProps({
+  pbrMaterial: {
+    metallicRoughnessValues: [1, 0.3]
+  }
+});
+```
+
+## Parameters and textures
+
+`metallicRoughnessValues` stores `[metallic, roughness]`, both defaulting to `1`. Metallic ranges from `0` for dielectrics to `1` for conductors and is multiplied by the blue channel of the linear metallic-roughness texture. Metals have no ordinary diffuse lobe; their base color controls specular reflection. Intermediate values are useful at boundaries in a texture.
+
+## Model integration
+
+Uniform updates do not add shader features or texture resources. The glTF converter supplies the matching defines and bindings when importing these material inputs.
+
+## Related capabilities
+
+- [Base Color](./base-color.mdx)
+- [Roughness](./roughness.mdx)
+- [Specular](./specular.mdx)
+
+See [Textures and UV coordinates](/docs/api-guide/engine/features/texture-coordinates) for binding names, map enablement, and color handling.

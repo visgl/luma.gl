@@ -317,18 +317,14 @@ export class CompressedTexture extends React.PureComponent<
 
       const loader = usesBasisLoader
         ? BasisLoader
-        : ((await selectLoader(src, [
-            CompressedTextureLoader,
-            CrunchWorkerLoader,
-            ImageLoader
-          ])) as {id: string; name: string} | null);
+        : await selectLoader(src, [CompressedTextureLoader, CrunchWorkerLoader, ImageLoader]);
       if (!loader) {
         throw new Error(`No texture loader found for ${src}`);
       }
 
       const result = usesBasisLoader
-        ? await loadBasisTextureSerially(() => load(arrayBuffer, loader as never, options))
-        : await load(arrayBuffer, loader as never, options);
+        ? await loadBasisTextureSerially(() => load(arrayBuffer, loader, options))
+        : await load(arrayBuffer, loader, options);
       if (!this.isPreviewActive(previewGeneration)) {
         return;
       }

@@ -112,9 +112,10 @@
 }
 .luma-example-infobox .control-card select {
   box-sizing: border-box;
-  width: 100%;
+  width: min(96px, 100%);
   min-width: 0;
-  max-width: none;
+  max-width: 100%;
+  justify-self: end;
 }
 .luma-example-infobox .control-card button {
   padding: 4px 8px;

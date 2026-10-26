@@ -20,9 +20,13 @@ const DOCUMENTATION_DIRECTORY = path.join(process.cwd(), 'docs');
 const GENERAL_PURPOSE_GPU_EXAMPLE_IDENTIFIERS = [
   'showcase/million-row-crossfilter',
   'showcase/raster-lab',
+  'experimental/gpu-geometry',
+  'experimental/gpu-pointcloud',
+  'experimental/gpu-pointcloud-octree',
   'showcase/billion-point-spatial-atlas',
   'experimental/gpt-2',
   'v10/gpgpu',
+  'v10/gpu-simple-graph',
   'experimental/gpu-frustum-culling',
   'experimental/gpu-trace-viewer',
   'experimental/gpu-trace-scene',
@@ -112,36 +116,36 @@ describe('GPGPU example catalog navigation', () => {
       label: 'GPURaster: Satellite Raster Lab'
     });
     expect(rasterLabExampleSource).toContain('<RasterLabExample />');
-    expect(rasterLabExampleSource).toContain('@luma.gl/experimental/gpu-raster');
+    expect(rasterLabExampleSource).toContain('@luma.gl/graph/gpu-raster');
     expect(spatialAtlasExample).toBe('showcase/billion-point-spatial-atlas');
     expect(taxiExample).toEqual({
       type: 'doc',
       id: 'deck/luspatial-taxi',
       label: 'luProj + luSpatial: Taxi Explorer'
     });
-    expect(spatialAtlasSource).toContain("from '@luma.gl/experimental/geospatial'");
-    expect(spatialAtlasSource).not.toContain("from '@luma.gl/experimental/gpu-project'");
-    expect(taxiExampleSource).toContain('@luma.gl/experimental/gpu-project');
-    expect(taxiExampleSource).toContain('@luma.gl/experimental/geospatial');
+    expect(spatialAtlasSource).toContain("from '@luma.gl/graph/geospatial'");
+    expect(spatialAtlasSource).not.toContain("from '@luma.gl/graph/gpu-project'");
+    expect(taxiExampleSource).toContain('@luma.gl/graph/gpu-project');
+    expect(taxiExampleSource).toContain('@luma.gl/graph/geospatial');
   });
 
-  test('registers GPUCrossfilter throughout experimental API navigation', () => {
+  test('registers GPUCrossfilter throughout GPU Graph API navigation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const experimentalCategories: ExampleCategory[] = [];
+    const graphCategories: ExampleCategory[] = [];
 
-    const collectExperimentalCategories = (entries: ExampleSidebarEntry[]): void => {
+    const collectGraphCategories = (entries: ExampleSidebarEntry[]): void => {
       for (const entry of entries) {
         if (typeof entry === 'string' || entry.type !== 'category') continue;
-        if (entry.label === '@luma.gl/experimental') experimentalCategories.push(entry);
-        collectExperimentalCategories(entry.items);
+        if (entry.label === '@luma.gl/graph') graphCategories.push(entry);
+        collectGraphCategories(entry.items);
       }
     };
 
-    collectExperimentalCategories(documentationTableOfContents);
-    expect(experimentalCategories).toHaveLength(1);
-    const crossfilterCategory = experimentalCategories[0].items.find(
+    collectGraphCategories(documentationTableOfContents);
+    expect(graphCategories).toHaveLength(1);
+    const crossfilterCategory = graphCategories[0].items.find(
       entry => typeof entry !== 'string' && entry.label === 'GPU Crossfilter'
     );
     expect(crossfilterCategory).toBeDefined();
@@ -188,7 +192,7 @@ describe('GPGPU example catalog navigation', () => {
       expect(
         getExampleSupportDefinition(exampleIdentifier)?.requirements?.backends,
         `${exampleIdentifier} requires a WebGPU device`
-      ).toEqual(['webgpu']);
+      ).toEqual(exampleIdentifier === 'v10/gpu-simple-graph' ? ['webgpu', 'webgl2'] : ['webgpu']);
       const frontmatter = readFileSync(examplePath, 'utf8').match(/^---\n([\s\S]*?)\n---/);
       const metadata = parse(frontmatter![1]) as {sidebar_custom_props?: {topics?: string[]}};
       expect(
@@ -210,9 +214,11 @@ describe('GPGPU example catalog navigation', () => {
     ]);
     expect(readCategoryIdentifiers(nestedCategories[0])).toEqual([
       'v10/gpgpu',
+      'v10/gpu-simple-graph',
       'experimental/gpu-frustum-culling',
       'experimental/gpu-trace-viewer',
       'experimental/gpu-graph-explorer',
+      'experimental/gpu-timeseries',
       'experimental/gpu-trace-scene',
       'experimental/gpu-scene-graph',
       'showcase/vector-field-lab',
@@ -225,12 +231,15 @@ describe('GPGPU example catalog navigation', () => {
       'showcase/million-row-crossfilter',
       'showcase/raster-lab',
       'experimental/gpu-parquet-constellation',
+      'experimental/gpu-geometry',
+      'experimental/gpu-pointcloud',
+      'experimental/gpu-pointcloud-octree',
       'showcase/billion-point-spatial-atlas',
       'experimental/gpt-2'
     ]);
   });
 
-  test('ends with focused GPUGraph deck.gl integrations', () => {
+  test('ends with focused GPUGraphAlgorithmsData deck.gl integrations', () => {
     const tableOfContents = readTableOfContents();
     const finalEntry = tableOfContents.at(-1);
 
@@ -249,29 +258,24 @@ describe('GPGPU example catalog navigation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const applicationProgrammingInterfaceGuide = documentationTableOfContents.find(
-      (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'API Guide'
-    );
-    const generalPurposeGPUProgramming = applicationProgrammingInterfaceGuide?.items.find(
+    const generalPurposeGPUGraphming = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
         typeof entry !== 'string' &&
         entry.type === 'category' &&
-        entry.label === 'GPGPU Programming'
+        entry.label === 'Computing on the GPU'
     );
-    const shaderProgramming = applicationProgrammingInterfaceGuide?.items.find(
+    const shaderProgramming = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' &&
-        entry.type === 'category' &&
-        entry.label === 'Shader-Level Programming'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Writing Shaders'
     );
     const precisionGuideIdentifier = 'api-guide/shaders/gpu-floating-point-precision';
 
-    expect(applicationProgrammingInterfaceGuide).toBeDefined();
-    expect(generalPurposeGPUProgramming).toBeDefined();
+    expect(generalPurposeGPUGraphming).toBeDefined();
     expect(shaderProgramming).toBeDefined();
-    expect(generalPurposeGPUProgramming?.items).toContain(precisionGuideIdentifier);
-    expect(shaderProgramming?.items).not.toContain(precisionGuideIdentifier);
+    expect(readCategoryIdentifiers(generalPurposeGPUGraphming!)).toContain(
+      precisionGuideIdentifier
+    );
+    expect(readCategoryIdentifiers(shaderProgramming!)).not.toContain(precisionGuideIdentifier);
     expect(existsSync(path.join(DOCUMENTATION_DIRECTORY, `${precisionGuideIdentifier}.md`))).toBe(
       true
     );

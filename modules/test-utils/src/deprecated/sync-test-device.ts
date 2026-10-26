@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CanvasContextProps} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
+import {WebGLDevice} from '@luma.gl/core/webgl';
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {
   width: 1,

@@ -25,8 +25,8 @@ import {
   GPUVisibilityWorkflow,
   INDEX_PICKING_READBACK_BYTE_LENGTH,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpgpu/gpu-core';
-import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/experimental';
+} from '@luma.gl/graph/gpu-core';
+import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/anari';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {

@@ -53,3 +53,6 @@ docs/api-reference/generated/
 
 # editor files
 .idea
+
+# Vitest reports, traces, and attachments
+.vitest/

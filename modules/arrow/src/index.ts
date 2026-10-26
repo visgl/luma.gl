@@ -393,6 +393,8 @@ export {
   inferGeoArrowEncodingFromArrowType,
   makeArrowVectorFromGeoArrowColumn,
   makeGeoArrowColumnFromArrowVector,
+  iterateGeoArrowBatchesFromArrowVector,
+  getGeoArrowRowViewFromArrowVector,
   type MakeGeoArrowColumnFromArrowVectorOptions
 } from './arrow/geoarrow/arrow-geoarrow-adapter';
 export {

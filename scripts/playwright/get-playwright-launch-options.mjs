@@ -9,9 +9,14 @@ const ANGLE_SWIFTSHADER_ARGS = [
   '--use-angle=swiftshader',
   '--enable-unsafe-swiftshader'
 ];
+// Retain ANGLE for WebGL parity; Vulkan compositing enables WebGPU capture.
+// Linux headless presentation also requires an X display (xvfb-run in CI).
 const LINUX_WEBGPU_SWIFTSHADER_ARGS = [
   '--use-angle=swiftshader',
-  '--enable-unsafe-swiftshader'
+  '--enable-unsafe-swiftshader',
+  '--enable-gpu',
+  '--enable-features=Vulkan',
+  '--use-vulkan=swiftshader'
 ];
 const WEBGPU_SWIFTSHADER_ARGS = [
   '--use-webgpu-adapter=swiftshader',
@@ -54,7 +59,9 @@ function getSoftwareGPUArguments(backend, platform) {
   if (backend?.startsWith('webgl')) {
     return ANGLE_SWIFTSHADER_ARGS;
   }
-  return [...ANGLE_SWIFTSHADER_ARGS, ...WEBGPU_SWIFTSHADER_ARGS];
+  return platform === 'linux'
+    ? [...ANGLE_SWIFTSHADER_ARGS, ...LINUX_WEBGPU_SWIFTSHADER_ARGS]
+    : [...ANGLE_SWIFTSHADER_ARGS, ...WEBGPU_SWIFTSHADER_ARGS];
 }
 
 function dedupeValues(values) {

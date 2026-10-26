@@ -9,6 +9,37 @@ The layers intentionally do not use deck.gl `AttributeManager` for Arrow columns
 Arrow data is converted once into `GPUVector`/`GPUTable` inputs and bound directly
 to luma.gl models.
 
+## GPUVector-first core family
+
+Arc, Column, GridCell, Icon, Line, PointCloud, and Scatterplot follow a two-level contract:
+
+1. `@deck.gl-community/gpu-layers` renders aligned, batched, caller-owned GPUVectors.
+2. This package resolves Arrow columns, uploads adapter-owned GPUVectors, and releases them when the
+   Arrow layer changes or finalizes.
+
+```ts
+import {ArrowScatterplotLayer} from '@deck.gl-community/arrow-layers';
+
+const layer = new ArrowScatterplotLayer({
+  id: 'arrow-points',
+  data: arrowTable,
+  getPosition: 'geometry',
+  getRadius: 'radius',
+  getFillColor: 'color'
+});
+```
+
+The adapter preserves Arrow record-batch boundaries. Constants remain constants, null-containing
+columns are rejected until the caller selects an explicit replacement policy, and the GPU layer
+never observes an Arrow type. `ArrowTripsLayer` similarly converts aligned timestamp lists before
+delegating to the existing GPUVector path-storage model. `GeoArrowLayer` selects point,
+linestring, polygon, or multipolygon children from field extension metadata without converting to
+GeoJSON.
+
+This package intentionally accepts only Arrow sources. Classic JavaScript arrays and legacy binary
+attributes belong in sibling adapters rather than alternate code paths here. A future unified
+deck.gl public layer may select those adapters internally while retaining the familiar layer names.
+
 ## When to use graph layers
 
 Use the graph adapters when a deck.gl application already owns GPU-resident relationship data and
@@ -68,7 +99,7 @@ the supplied graph and existing layout; it does not transfer ownership or add an
 dependency to this package. Omitting the optional configuration retains the regular exact-layout
 constructor shown above.
 
-The graph algorithms remain in `@luma.gl/gpgpu/gpu-graph`; only this existing private adapter
+The graph algorithms remain in `@luma.gl/graph/gpu-graph-algorithms`; only this existing private adapter
 package depends on deck.gl. Its diagnostics report actual resident populations, visible edge
 detail, CPU encoding, and frame cadence without inventing GPU timings or claiming convergence for
 a fixed iteration budget.

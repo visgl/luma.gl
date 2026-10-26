@@ -21,7 +21,7 @@ features an application can use when a targeted configuration is preferable:
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 const device = await luma.createDevice({
   type: 'webgpu',

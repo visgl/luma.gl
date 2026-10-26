@@ -1,0 +1,48 @@
+import {GLTFModelExample} from '@site/src/examples';
+
+# Volume Scattering
+
+Volume scattering approximates light redirected inside a material using local thickness and a directional phase response.
+
+## Example
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/ScatteringSkull/glTF/ScatteringSkull.gltf" title="Volume Scattering" embedded showStats={false} />
+
+## Configure the material
+
+The following fields update an existing PBR material; see [Materials guide](/docs/api-guide/engine/materials).
+
+```ts
+material.setProps({
+  pbrMaterial: {
+    metallicRoughnessValues: [0, 0.4],
+    thicknessFactor: 0.6,
+    attenuationDistance: 0.6,
+    diffuseTransmissionFactor: 0.7,
+    multiscatterColorFactor: [0.9, 0.35, 0.18],
+    scatterAnisotropy: 0.25
+  }
+});
+```
+
+## Parameters and textures
+
+This capability is experimental. `multiscatterColorFactor` supplies scattering color and its texture uses sRGB RGB. `scatterAnisotropy` ranges from `-1` to `1` and controls the Henyey–Greenstein phase response. The implementation is a local thickness-aware approximation; it does not perform spatial diffusion, a subsurface random walk, or multiple-surface transport. The glTF volume-scatter mapping follows an unratified draft.
+
+`attenuationDistance` controls the optical distance over which scattering becomes significant,
+using the same units as thickness. Set it to a value comparable to `thicknessFactor`: the
+example uses `0.6` for both, giving a scattering probability of approximately `0.63` from
+`1 - exp(-thickness / attenuationDistance)`. The default distance of `1e9` makes volume
+scattering effectively invisible at this thickness. Increasing the distance weakens scattering
+for a fixed thickness; decreasing it strengthens scattering.
+
+## Model integration
+
+Enable `USE_MATERIAL_EXTENSIONS: true` in the compatible model's `defines`. Uniform updates do not add shader features or texture resources. The glTF converter supplies the matching defines and bindings when importing these material inputs.
+
+## Related capabilities
+
+- [Thickness and Attenuation](./volume.mdx)
+- [Diffuse Transmission](./diffuse-transmission.mdx)
+
+See [Textures and UV coordinates](/docs/api-guide/engine/features/texture-coordinates) for binding names, map enablement, and color handling.

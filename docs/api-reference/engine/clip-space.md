@@ -4,7 +4,7 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 <EngineDocsTabs group="fullscreen" active="clip-space" />
 
-`ClipSpace` is a convenience subclass of [`Model`](/docs/api-reference/engine/model) that draws a fullscreen quad in clip space.
+`ClipSpace` is a convenience subclass of [`Model`](/docs/api-reference/engine/model) that draws a fullscreen quad or oversized triangle in clip space.
 
 It is commonly used for fullscreen rendering, postprocessing, texture blits, and shader-pass style effects.
 
@@ -13,8 +13,9 @@ It is commonly used for fullscreen rendering, postprocessing, texture blits, and
 ```typescript
 import {ClipSpace} from '@luma.gl/engine';
 
-const fullscreenQuad = new ClipSpace(device, {
-  fs: FRAGMENT_SHADER
+const fullscreenModel = new ClipSpace(device, {
+  fs: FRAGMENT_SHADER,
+  geometryType: 'triangle'
 });
 ```
 
@@ -23,16 +24,18 @@ const fullscreenQuad = new ClipSpace(device, {
 ### `ClipSpaceProps`
 
 ```ts
-export type ClipSpaceProps = Omit<ModelProps, 'vs' | 'vertexCount' | 'geometry'>;
+export type ClipSpaceProps = Omit<ModelProps, 'vs' | 'vertexCount' | 'geometry'> & {
+  geometryType?: 'quad' | 'triangle';
+};
 ```
 
-The class provides its own vertex shader, quad geometry, and vertex count.
+The class provides its own vertex shader, geometry, and vertex count. `geometryType` defaults to `'quad'` (four vertices, two triangles). Select `'triangle'` for a single oversized triangle (three vertices) clipped to the viewport. Both options interpolate the same `position`, `coordinate`, and `uv` values within the viewport. Performance differences depend on the GPU and fragment shader.
 
 ## Methods
 
 ### `constructor(device: Device, props: ClipSpaceProps)`
 
-Creates a fullscreen quad model. When `props.source` is provided for WGSL, the built-in vertex shader source is prepended automatically.
+Creates a fullscreen model with the selected geometry. When `props.source` is provided for WGSL, the built-in vertex shader source is prepended automatically.
 
 ## Remarks
 
