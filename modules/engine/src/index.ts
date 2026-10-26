@@ -183,18 +183,6 @@ export {SwapFramebuffers} from './compute/swap';
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
 export {getPlatformInfo} from './utils/get-platform-info';
-export type {
-  KernelProps,
-  KernelDispatchOptions,
-  KernelDispatchIndirectOptions
-} from './compute/kernel';
-export {Kernel} from './compute/kernel';
-export type {
-  RenderKernelProps,
-  RenderKernelDrawOptions,
-  RenderKernelIndirectDrawOptions
-} from './compute/render-kernel';
-export {RenderKernel} from './compute/render-kernel';
 
 export type {
   PickInfo,

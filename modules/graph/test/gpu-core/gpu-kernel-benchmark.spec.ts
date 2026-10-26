@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation, Kernel} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {
   GPUCommandGraph,
   summarizeGPUWorkgroupScanBenchmarkSamples as summarizeSamples

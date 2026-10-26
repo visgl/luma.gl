@@ -12,11 +12,11 @@ import type {
 } from '@luma.gl/core';
 import {Buffer, Device, PipelineFactory, RenderPipeline, ShaderFactory} from '@luma.gl/core';
 
-/** Properties for a lightweight immutable WebGPU render kernel. */
+/** Properties for a lightweight immutable render kernel. */
 export type RenderKernelProps = Omit<RenderPipelineProps, 'vs' | 'fs'> & {
-  /** Already assembled WGSL vertex shader source. */
+  /** Already assembled GLSL or WGSL vertex shader source. */
   vertexSource: string;
-  /** Already assembled WGSL fragment shader source. Omit for vertex/depth-only pipelines. */
+  /** Already assembled GLSL or WGSL fragment shader source. Omit for vertex/depth-only pipelines. */
   fragmentSource?: string;
   /** Factory used to create/reuse the render pipeline. */
   pipelineFactory?: PipelineFactory;
@@ -47,7 +47,7 @@ export type RenderKernelIndirectDrawOptions = {
 };
 
 /**
- * Lightweight executable WebGPU render program.
+ * Lightweight executable WebGL/WebGPU render program.
  *
  * `RenderKernel` owns compiled shaders and a cached render pipeline only. Shader assembly,
  * uniforms, geometry ownership, draw counts, command graphs and scene/model policy stay above it.
@@ -92,10 +92,14 @@ export class RenderKernel {
 
   private _pipelineInitialization?: Promise<RenderPipeline>;
   private _destroyed = false;
+  private readonly drawDefaults: Pick<RenderPassDrawOptions, 'parameters' | 'topology'>;
 
   constructor(device: Device, props: RenderKernelProps) {
-    if (device.type !== 'webgpu') {
-      throw new Error('RenderKernel is only supported in WebGPU');
+    if (device.type !== 'webgpu' && device.type !== 'webgl') {
+      throw new Error('RenderKernel requires WebGL or WebGPU');
+    }
+    if (device.type === 'webgl' && !props.fragmentSource) {
+      throw new Error('WebGL RenderKernel requires a fragment shader');
     }
 
     const {
@@ -108,6 +112,10 @@ export class RenderKernel {
     } = props;
 
     this.device = device;
+    this.drawDefaults = {
+      parameters: props.parameters ?? {},
+      topology: props.topology ?? 'triangle-list'
+    };
     this.id = props.id ?? 'render-kernel';
     this.vertexSource = vertexSource;
     this.fragmentSource = fragmentSource;
@@ -155,11 +163,22 @@ export class RenderKernel {
   draw(renderPass: RenderPass, options: RenderKernelDrawOptions): boolean {
     const {bindings = {}, vertexArray, ...drawOptions} = options;
     this._setPipeline(renderPass, bindings, vertexArray);
-    return renderPass.draw(drawOptions);
+    // WebGL pipelines can share programs across kernels with different draw state.
+    return renderPass.draw(
+      this.device.type === 'webgl'
+        ? {
+            ...this.drawDefaults,
+            ...drawOptions,
+            isInstanced: drawOptions.isInstanced ?? drawOptions.instanceCount !== undefined
+          }
+        : drawOptions
+    );
   }
 
   /** Applies per-draw state and records a non-indexed indirect draw. */
   drawIndirect(renderPass: RenderPass, options: RenderKernelIndirectDrawOptions): void {
+    if (this.device.type !== 'webgpu')
+      throw new Error('Indirect drawing is only supported in WebGPU');
     const {bindings = {}, vertexArray, indirectBuffer, indirectOffset = 0} = options;
     this._setPipeline(renderPass, bindings, vertexArray);
     renderPass.drawIndirect(indirectBuffer, indirectOffset);
@@ -167,6 +186,8 @@ export class RenderKernel {
 
   /** Applies per-draw state and records an indexed indirect draw. */
   drawIndexedIndirect(renderPass: RenderPass, options: RenderKernelIndirectDrawOptions): void {
+    if (this.device.type !== 'webgpu')
+      throw new Error('Indirect drawing is only supported in WebGPU');
     const {bindings = {}, vertexArray, indirectBuffer, indirectOffset = 0} = options;
     this._setPipeline(renderPass, bindings, vertexArray);
     renderPass.drawIndexedIndirect(indirectBuffer, indirectOffset);

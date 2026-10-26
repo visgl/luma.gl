@@ -10,7 +10,7 @@ Graph and gpgpu no longer depend on engine. Update these rendering integration i
 | Scenegraph physics adapters, sessions, and `makePhysicsScenegraph` | `@luma.gl/graph/gpu-physics` | `@luma.gl/engine/physics` |
 | Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models` |
 
-GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. Execution primitives (`Kernel`, `Computation`, `GPUVectorModel`, `GPUVectorGeometry`, transforms, `ShaderInputs`, and dynamic resources) are now owned by `@luma.gl/gpgpu`; existing engine imports remain compatibility re-exports of the same implementations. Engine `Model` still extends that single `GPUVectorModel`.
+GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. Execution primitives (`Computation`, `GPUVectorModel`, `GPUVectorGeometry`, transforms, and `ShaderInputs`) are now owned by `@luma.gl/gpgpu`; existing engine imports remain compatibility re-exports of the same implementations. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
 
 ## Experimental package removal
 
@@ -390,3 +390,7 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 ### Table compute execution
 
 `GPUTableComputation` now delegates to Kernel instead of inheriting Computation. Its `inputVectors`, `bindings`, `setBindings()`, `dispatch()`, `dispatchBatches()`, and `destroy()` APIs are retained. Construction takes Kernel pipeline options and assembled WGSL source; assemble shader modules and defines with shadertools before construction. Uniform buffers are explicit bindings owned by the caller.
+
+### Kernel imports
+
+`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/gpgpu`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/gpgpu`.

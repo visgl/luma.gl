@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
-import {GPUVectorModel} from '@luma.gl/gpgpu';
+import {Buffer, type Device, type Framebuffer, type VertexArray, Texture} from '@luma.gl/core';
+import {RenderKernel} from '@luma.gl/gpgpu';
 import {assert} from '@luma.gl/core';
 import {validateFlowParticleField, type FlowParticleField} from './flow-particle-field';
 import {
@@ -67,7 +67,8 @@ export class FlowParticleSimulation {
   private readonly textures: Texture[] = [];
   private readonly framebuffers: Framebuffer[] = [];
   private readonly uniforms: Buffer;
-  private readonly model: GPUVectorModel;
+  private readonly kernel: RenderKernel;
+  private readonly vertexArray: VertexArray;
   private current = 0;
   private previous = 0;
   private stateDeltaTime = 0;
@@ -98,6 +99,8 @@ export class FlowParticleSimulation {
       byteLength: 48,
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
+    let kernel: RenderKernel | undefined;
+    let vertexArray: VertexArray | undefined;
     try {
       for (let index = 0; index < 2; index++) {
         const texture = device.createTexture({
@@ -118,13 +121,13 @@ export class FlowParticleSimulation {
           })
         );
       }
-      this.model = new GPUVectorModel(device, {
+      this.kernel = kernel = new RenderKernel(device, {
         id: identifier,
-        source: FLOW_PARTICLE_WGSL,
-        vs: FLOW_PARTICLE_VERTEX,
-        fs: FLOW_PARTICLE_FRAGMENT,
+        vertexSource: device.type === 'webgpu' ? FLOW_PARTICLE_WGSL : FLOW_PARTICLE_VERTEX,
+        fragmentSource: device.type === 'webgpu' ? FLOW_PARTICLE_WGSL : FLOW_PARTICLE_FRAGMENT,
+        colorAttachmentFormats: ['rgba32float'],
+        depthStencilAttachmentFormat: undefined,
         topology: 'triangle-list',
-        vertexCount: 3,
         shaderLayout: {
           attributes: [],
           bindings: [
@@ -145,15 +148,16 @@ export class FlowParticleSimulation {
             }
           ]
         },
-        parameters: {blend: false},
-        bindings: {
-          flowUniforms: this.uniforms,
-          particleTexture: this.textures[0],
-          velocityTexture: this.field.texture
-        }
+        parameters: {blend: false}
+      });
+      this.vertexArray = vertexArray = device.createVertexArray({
+        shaderLayout: this.kernel.pipeline.shaderLayout,
+        bufferLayout: []
       });
       this.reset();
     } catch (error) {
+      kernel?.destroy();
+      vertexArray?.destroy();
       this.uniforms.destroy();
       for (const framebuffer of this.framebuffers) framebuffer.destroy();
       for (const texture of this.textures) texture.destroy();
@@ -210,19 +214,22 @@ export class FlowParticleSimulation {
           this.field.coordinates === 'lnglat' ? 1 : 0
         ])
       );
-      this.model.setBindings({
-        particleTexture: previousTexture,
-        velocityTexture: this.field.texture
-      });
       const commandEncoder = this.device.createCommandEncoder();
-      this.model.predraw(commandEncoder);
       const next = 1 - this.current;
       const renderPass = commandEncoder.beginRenderPass({
         framebuffer: this.framebuffers[next],
         clearColor: false,
         clearDepth: false
       });
-      this.model.draw(renderPass);
+      this.kernel.draw(renderPass, {
+        vertexArray: this.vertexArray,
+        vertexCount: 3,
+        bindings: {
+          flowUniforms: this.uniforms,
+          particleTexture: previousTexture,
+          velocityTexture: this.field.texture
+        }
+      });
       renderPass.end();
       this.device.submit(commandEncoder.finish());
       this.previous = this.current;
@@ -243,7 +250,8 @@ export class FlowParticleSimulation {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.model.destroy();
+    this.kernel.destroy();
+    this.vertexArray.destroy();
     this.uniforms.destroy();
     for (const framebuffer of this.framebuffers) framebuffer.destroy();
     for (const texture of this.textures) texture.destroy();
