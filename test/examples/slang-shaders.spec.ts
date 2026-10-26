@@ -29,8 +29,15 @@ it.each([
     height: 64
   });
   try {
+    application.updateScene(0, 1, 0);
+    const draw = () => {
+      const pass = device!.beginRenderPass({framebuffer, clearColor: [0.01, 0.02, 0.04, 1]});
+      const drawn = application.model.draw(pass);
+      pass.end();
+      return drawn;
+    };
     await vi.waitFor(() => {
-      const drawn = application.filmGrainPass.draw(application.model, 64, 64, 0, 0, framebuffer);
+      const drawn = draw();
       device!.submit();
       expect(drawn).toBe(true);
     });
@@ -48,8 +55,8 @@ it.each([
       expect(pixels[centerOffset + 2]).toBeGreaterThan(40);
       expect(pixels[centerOffset + 3]).toBe(255);
       // Advancing the shared ConstantBuffer changes the rendered geometry and material.
-      application.updateScene(4, 1);
-      application.filmGrainPass.draw(application.model, 64, 64, 0, 0, framebuffer);
+      application.updateScene(4, 1, 0);
+      draw();
       device!.submit();
       texture.readBuffer(options, buffer);
       const animatedPixels = new Uint8Array(await buffer.readAsync());
@@ -62,18 +69,13 @@ it.each([
         if (difference > 20) changedPixels++;
       }
       expect(changedPixels).toBeGreaterThan(200);
-      // Keep the Slang scene fixed: changing only the native module pass changes the pixels.
-      application.filmGrainPass.draw(application.model, 64, 64, 0, 0.15, framebuffer);
+      // Keep the scene fixed: the typed native call and Slang callback add grain.
+      application.updateScene(4, 1, 0.15);
+      draw();
       device!.submit();
       texture.readBuffer(options, buffer);
       const grainPixels = new Uint8Array(await buffer.readAsync());
       expect(grainPixels).not.toEqual(animatedPixels);
-      // Resizing replaces the sampled target and keeps the native pass bound to the new texture.
-      application.filmGrainPass.draw(application.model, 32, 32, 0, 0.15, framebuffer);
-      expect(application.filmGrainPass.draw(application.model, 64, 64, 0, 0.15, framebuffer)).toBe(
-        true
-      );
-      device!.submit();
     } finally {
       buffer.destroy();
     }
@@ -81,15 +83,15 @@ it.each([
       expect(application.model.vs).toContain('#version 300 es');
       expect(application.model.fs).toContain('_slang_function_getPaletteColor');
       expect(application.model.fs).toContain('_slang_function_getSculptureDistance');
-      expect(application.filmGrainPass.model.fs).toContain('valueNoise_noise(gl_FragCoord.xy');
+      expect(application.model.fs).toContain('valueNoise_noise(coordinates');
+      expect(application.model.fs).toContain('float scaleGrain(');
     } else {
       expect(application.model.props.vertexEntryPoint).toBe('_slang_entry_vertexMain');
       expect(application.model.props.fragmentEntryPoint).toBe('_slang_entry_fragmentMain');
       expect(application.model.source).toContain('_slang_function_getPaletteColor');
       expect(application.model.source).toContain('_slang_function_getSculptureDistance');
-      expect(application.filmGrainPass.model.source).toContain(
-        'valueNoise_noise(input.position.xy'
-      );
+      expect(application.model.source).toContain('valueNoise_noise(coordinates');
+      expect(application.model.source).toContain('fn scaleGrain(');
     }
   } finally {
     application.onFinalize();

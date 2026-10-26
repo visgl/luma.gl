@@ -158,5 +158,5 @@ texture semantics are required.
   ordinary texture data.
 - [`ExternalTexture`](/docs/api-reference/core/resources/external-texture) is the low-level concrete
   one-shot WebGPU external binding.
-- Experimental [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture)
+- Experimental [`WebXRCameraTexture`](/docs/api-reference/engine/experimental/webxr/webxr-camera-texture)
   handles WebXR Raw Camera Access without making WebXR part of `VideoTexture`.

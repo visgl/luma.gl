@@ -16,6 +16,10 @@ import {
   type GraphExplorerNodeSizeMode
 } from '../../experimental/gpu-graph-explorer/graph-data';
 
+import type {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
+import {TabbedPanel} from '@deck.gl-community/panels';
+import {renderExamplePanel} from '../../example-panels';
+
 export const DEFAULT_NEIGHBORHOOD_DEPTH = 2;
 
 export type GraphExplorerControls = {
@@ -24,6 +28,7 @@ export type GraphExplorerControls = {
 };
 
 export type GraphExplorerControlProps = {
+  diagnostics: GPUGraphDiagnostics;
   getEffect: () => GPUGraphDeckEffect | null;
   getStats: () => GPUGraphDeckEffectStats | null;
   getPendingVertexCount: () => number | null;
@@ -172,7 +177,14 @@ export function createExplorerControls(
     <p data-gpu-graph-status role="status" aria-live="polite"
       style="margin:11px 0 3px;color:#b4c5df">Initializing WebGPU graph…</p>
     <p style="margin:4px 0 0;color:#8293ad;font-size:11px">Click a node · drag to pin · scroll to zoom</p>`;
+  const diagnosticsHost = document.createElement('div');
+  panel.appendChild(diagnosticsHost);
+  const diagnosticsPanels = new TabbedPanel({
+    id: 'graph-explorer-diagnostics',
+    panels: [props.diagnostics.inspectorPanel.panel, props.diagnostics.tracePanel.panel]
+  });
   container.appendChild(panel);
+  renderExamplePanel(diagnosticsHost, diagnosticsPanels);
 
   for (const control of panel.querySelectorAll<HTMLElement>('select, button')) {
     Object.assign(control.style, {
@@ -507,6 +519,7 @@ export function createExplorerControls(
       pause?.removeEventListener('click', togglePause);
       reset?.removeEventListener('click', resetLayout);
       release?.removeEventListener('click', clearPins);
+      renderExamplePanel(diagnosticsHost, null);
       panel.remove();
     }
   };

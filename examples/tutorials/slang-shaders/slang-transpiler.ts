@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {transpileSlang, transpileSlangWGSL} from '@luma.gl/slang';
+import {transpileSlang, transpileSlangWGSL, type SlangModuleOptions} from '@luma.gl/slang';
 import {
   getSlangBindingNames,
   getSlangUniformBufferLayouts,
@@ -12,7 +12,7 @@ import {
 import type {ShaderTranspiler} from '@luma.gl/shadertools';
 
 /** Compiler imports and resource-name translation belong to this application. */
-export function createSlangTranspiler(): ShaderTranspiler & {
+export function createSlangTranspiler(options: SlangModuleOptions = {}): ShaderTranspiler & {
   bindingNames: Record<string, string>;
   uniformBufferLayouts: Record<string, SlangUniformBufferLayout>;
 } {
@@ -30,6 +30,7 @@ export function createSlangTranspiler(): ShaderTranspiler & {
     transpile({source, target, stage, entryPoints}) {
       if (target === 'glsl') {
         const result = transpileSlang(source, {
+          ...options,
           target,
           glslVersion: '300 es',
           stage,
@@ -42,6 +43,7 @@ export function createSlangTranspiler(): ShaderTranspiler & {
         Boolean(entryPoint)
       );
       const result = transpileSlangWGSL(source, {
+        ...options,
         entryPoints: selected.length ? selected : undefined
       });
       collectReflection(result);

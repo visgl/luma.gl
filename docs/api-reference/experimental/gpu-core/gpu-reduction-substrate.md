@@ -129,17 +129,10 @@ This avoids an unnecessary `sqrt` while preserving the same convergence decision
 
 Intermediate reduction levels use ordinary transient vector storage. Only the final scalar enters the shared graph value arena, so many solver coefficients continue to consume one arena binding rather than one storage-buffer binding each.
 
-## Performance roadmap
 
-The initial reusable substrate establishes hierarchy and subgroup strategy reuse. Further work should be benchmark driven:
+## Related APIs
 
-- vectorized/coalesced multi-element loads per invocation
-- tuned elements-per-thread
-- workgroup-size specialization
-- subgroup-size-aware final reduction
-- fused map/reduction expressions beyond identity/square/multiply
-- reduced dispatch overhead between hierarchy levels
-- scalar-expression/reduction fusion where profitable
-- reuse the same planner inside general `GPUReduction`
-
-The architectural invariant is that **reduction shape and execution strategy belong to shared infrastructure, not to each mathematical operation independently**.
+See [solver integration](/docs/api-reference/experimental/gpu-core/gpu-cg-integration),
+[adaptive SpMV](/docs/api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution), and
+[execution strategies](/docs/api-reference/experimental/gpu-core/gpu-strategy-selection)
+for current composition and strategy contracts.

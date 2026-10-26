@@ -21,7 +21,7 @@ import {
   INDEX_PICKING_READBACK_BYTE_LENGTH,
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {Matrix4} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {

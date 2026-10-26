@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export type SourceLocation = {offset: number; line: number; column: number};
+export type SourceLocation = {offset: number; line: number; column: number; sourceName?: string};
 export type Token = SourceLocation & {
   text: string;
   kind: 'identifier' | 'number' | 'string' | 'symbol' | 'end';
@@ -33,9 +33,21 @@ export type ShaderFunction = {
   attributes: Attribute[];
   semantic?: string;
   body: Statement;
+  /** A typed native function declaration, supplied through the registry. */
+  prototype?: boolean;
   location: SourceLocation;
 };
-export type Program = {declarations: (Structure | ShaderFunction | Variable)[]};
+export type Program = {
+  declarations: (Structure | ShaderFunction | Variable)[];
+  publicNames?: ReadonlyMap<string, string>;
+  nativeModules?: {
+    name: string;
+    code: string;
+    sourceName: string;
+    functions: string[];
+    imports: string[];
+  }[];
+};
 export type Expression = SourceLocation &
   (
     | {kind: 'identifier' | 'number' | 'boolean'; value: string}

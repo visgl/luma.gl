@@ -3,20 +3,24 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Effect, EffectContext} from '@deck.gl/core';
-import {Buffer, type Device} from '@luma.gl/core';
-import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {Buffer, type Device, type CommandEncoder} from '@luma.gl/core';
 import {
-  GPUGraph,
-  GPUGraphBreadthFirstSearch,
-  GPUGraphConnectedComponents,
-  GPUGraphDegree,
-  GPUGraphForceLayout,
-  GPUGraphLabelPropagation,
-  GPUGraphPageRank,
-  GPUGraphSpatialForceLayout,
-  GPUGraphTopology,
-  type GPUGraphAdjacency
-} from '@luma.gl/gpgpu/gpu-graph';
+  GPUCommandGraph,
+  type CompiledGPUCommandGraph,
+  type GPUCommandGraphEncoding
+} from '@luma.gl/graph/gpu-core';
+import {
+  GPUGraphAlgorithmsData,
+  GPUGraphAlgorithmsBreadthFirstSearch,
+  GPUGraphAlgorithmsConnectedComponents,
+  GPUGraphAlgorithmsDegree,
+  GPUGraphAlgorithmsForceLayout,
+  GPUGraphAlgorithmsLabelPropagation,
+  GPUGraphAlgorithmsPageRank,
+  GPUGraphAlgorithmsSpatialForceLayout,
+  GPUGraphAlgorithmsTopology,
+  type GPUGraphAlgorithmsAdjacency
+} from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 /** Caller-owned graph input preserving original edge partitions and vertex allocations. */
 export type GPUGraphDeckDataset = {
@@ -78,10 +82,15 @@ export type GPUGraphDeckEffectOptions = {
   pointMode?: boolean;
   maxVisibleEdges?: number;
   onStats?: (stats: GPUGraphDeckEffectStats) => void;
+  /** Optional encoding hook for sampled diagnostics; Deck retains ownership of submission. */
+  encodeGraph?: (
+    graph: CompiledGPUCommandGraph<void>,
+    commandEncoder: CommandEncoder
+  ) => GPUCommandGraphEncoding;
   /** Adds an explicitly provided O(E + 4V) contributor without importing application code. */
   addSampledLayoutToGraph?: (
     commandGraph: GPUCommandGraph<void>,
-    layout: GPUGraphForceLayout
+    layout: GPUGraphAlgorithmsForceLayout
   ) => void;
 };
 
@@ -99,15 +108,15 @@ export class GPUGraphDeckEffect implements Effect {
   readonly useInPicking = false;
   readonly device: Device;
   readonly dataset: GPUGraphDeckDataset;
-  readonly graph: GPUGraph;
-  readonly topology: GPUGraphTopology;
-  readonly degree: GPUGraphDegree;
-  readonly pageRank: GPUGraphPageRank;
-  readonly components: GPUGraphConnectedComponents;
-  readonly communities: GPUGraphLabelPropagation;
-  readonly search: GPUGraphBreadthFirstSearch;
-  readonly layout: GPUGraphForceLayout;
-  readonly spatialLayout?: GPUGraphSpatialForceLayout;
+  readonly graph: GPUGraphAlgorithmsData;
+  readonly topology: GPUGraphAlgorithmsTopology;
+  readonly degree: GPUGraphAlgorithmsDegree;
+  readonly pageRank: GPUGraphAlgorithmsPageRank;
+  readonly components: GPUGraphAlgorithmsConnectedComponents;
+  readonly communities: GPUGraphAlgorithmsLabelPropagation;
+  readonly search: GPUGraphAlgorithmsBreadthFirstSearch;
+  readonly layout: GPUGraphAlgorithmsForceLayout;
+  readonly spatialLayout?: GPUGraphAlgorithmsSpatialForceLayout;
   readonly activeLayoutMode: 'exact' | 'spatial' | 'sampled';
   readonly renderMode: 'circles' | 'points';
   readonly renderedVertexCount: number;
@@ -124,6 +133,7 @@ export class GPUGraphDeckEffect implements Effect {
   private readonly pinned: GPUVector<'uint32'>;
   private readonly reset: GPUVector<'uint32'>;
   private readonly pinnedVertices = new Set<number>();
+  private readonly encodeGraph: NonNullable<GPUGraphDeckEffectOptions['encodeGraph']>;
   private readonly onStats?: (stats: GPUGraphDeckEffectStats) => void;
   private readonly analysisStages: CompiledGPUCommandGraph<void>[];
   private selectedVertex: number | null = 0;
@@ -145,6 +155,9 @@ export class GPUGraphDeckEffect implements Effect {
     this.device = device;
     this.dataset = dataset;
     this.onStats = options.onStats;
+    this.encodeGraph =
+      options.encodeGraph ??
+      ((graph, commandEncoder) => graph.encode(commandEncoder, {parameters: undefined}));
     const edgeCount = dataset.sourceChunks.reduce((total, chunk) => total + chunk.length, 0);
     const largestBufferBytes = Math.max(dataset.vertexCount * 8, edgeCount * SCALAR_BYTE_LENGTH);
     if (
@@ -174,38 +187,38 @@ export class GPUGraphDeckEffect implements Effect {
       Math.floor(options.maxVisibleEdges ?? GPU_GRAPH_DECK_MAX_VISIBLE_EDGES)
     );
 
-    this.graph = new GPUGraph({
+    this.graph = new GPUGraphAlgorithmsData({
       vertexCount: dataset.vertexCount,
       directed: true,
       sourceVertices: this.createChunkedVector('source-vertices', dataset.sourceChunks),
       targetVertices: this.createChunkedVector('target-vertices', dataset.targetChunks)
     });
     this.renderedEdgeCount = Math.min(this.graph.edgeCount, visibleEdgeCapacity);
-    this.topology = new GPUGraphTopology({
+    this.topology = new GPUGraphAlgorithmsTopology({
       id: 'gpu-graph-deck-topology',
       graph: this.graph,
       forward: this.createAdjacency('forward', dataset.vertexCount, this.graph.edgeCount),
       reverse: this.createAdjacency('reverse', dataset.vertexCount, this.graph.edgeCount),
       invalidEdgeCount: this.createScalarVector('invalid-edges', 'uint32', 1)
     });
-    this.degree = new GPUGraphDegree({
+    this.degree = new GPUGraphAlgorithmsDegree({
       id: 'gpu-graph-deck-degree',
       topology: this.topology,
       output: this.createScalarVector('degrees', 'uint32', dataset.vertexCount)
     });
-    this.pageRank = new GPUGraphPageRank({
+    this.pageRank = new GPUGraphAlgorithmsPageRank({
       id: 'gpu-graph-deck-page-rank',
       topology: this.topology,
       output: this.createScalarVector('importance', 'float32', dataset.vertexCount),
       iterations: massiveGraph ? 2 : 12
     });
-    this.components = new GPUGraphConnectedComponents({
+    this.components = new GPUGraphAlgorithmsConnectedComponents({
       id: 'gpu-graph-deck-components',
       topology: this.topology,
       output: this.createScalarVector('components', 'uint32', dataset.vertexCount),
       iterations: massiveGraph ? 2 : 16
     });
-    this.communities = new GPUGraphLabelPropagation({
+    this.communities = new GPUGraphAlgorithmsLabelPropagation({
       id: 'gpu-graph-deck-communities',
       topology: this.topology,
       output: this.createScalarVector('communities', 'uint32', dataset.vertexCount),
@@ -220,7 +233,7 @@ export class GPUGraphDeckEffect implements Effect {
       1,
       Uint32Array.of(DEFAULT_NEIGHBORHOOD_DEPTH)
     );
-    this.search = new GPUGraphBreadthFirstSearch({
+    this.search = new GPUGraphAlgorithmsBreadthFirstSearch({
       id: 'gpu-graph-deck-neighborhood',
       topology: this.topology,
       seeds: this.seeds,
@@ -235,7 +248,7 @@ export class GPUGraphDeckEffect implements Effect {
 
     this.pinned = this.createScalarVector('pinned', 'uint32', dataset.vertexCount);
     this.reset = this.createScalarVector('reset', 'uint32', 1, Uint32Array.of(0));
-    this.layout = new GPUGraphForceLayout({
+    this.layout = new GPUGraphAlgorithmsForceLayout({
       id: 'gpu-graph-deck-force-layout',
       topology: this.topology,
       positions: this.createCoordinateVector('positions', dataset.positions, Buffer.VERTEX),
@@ -263,7 +276,7 @@ export class GPUGraphDeckEffect implements Effect {
     if (this.activeLayoutMode === 'spatial') {
       const gridSize = getGPUGraphDeckGridSize(dataset.vertexCount);
       const cellCount = gridSize[0] * gridSize[1];
-      this.spatialLayout = new GPUGraphSpatialForceLayout({
+      this.spatialLayout = new GPUGraphAlgorithmsSpatialForceLayout({
         id: 'gpu-graph-deck-spatial-layout',
         layout: this.layout,
         gridSize,
@@ -362,18 +375,16 @@ export class GPUGraphDeckEffect implements Effect {
     let advancedAnalysis = false;
     if (this.completedAnalysisStages < this.analysisStages.length) {
       const stage = this.analysisStages[this.completedAnalysisStages];
-      const encoding = stage.encode(this.device.commandEncoder, {
-        parameters: undefined
-      });
+      const encoding = this.encodeGraph(stage, this.device.commandEncoder);
       this.analysisEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
       this.completedAnalysisStages++;
       advancedAnalysis = true;
     }
     if (this.searchGraph && this.searchPending && this.completedAnalysisStages > 0) {
-      this.searchGraph.encode(this.device.commandEncoder, {parameters: undefined});
+      this.encodeGraph(this.searchGraph, this.device.commandEncoder);
       this.searchPending = false;
     }
-    const encoding = this.frameGraph.encode(this.device.commandEncoder, {parameters: undefined});
+    const encoding = this.encodeGraph(this.frameGraph, this.device.commandEncoder);
     this.frameCount++;
     const frameTime = performance.now();
     if (this.previousFrameTime > 0 && frameTime > this.previousFrameTime) {
@@ -588,7 +599,11 @@ export class GPUGraphDeckEffect implements Effect {
     return vector;
   }
 
-  private createAdjacency(name: string, vertexCount: number, capacity: number): GPUGraphAdjacency {
+  private createAdjacency(
+    name: string,
+    vertexCount: number,
+    capacity: number
+  ): GPUGraphAlgorithmsAdjacency {
     return {
       offsets: this.createScalarVector(`${name}-offsets`, 'uint32', vertexCount + 1),
       neighbors: this.createScalarVector(`${name}-neighbors`, 'uint32', capacity),

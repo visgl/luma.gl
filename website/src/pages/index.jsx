@@ -23,8 +23,8 @@ const FEATURED_EXAMPLES = [
   },
   {
     title: 'glTF Asset Studio',
-    route: 'showcase/gltf',
-    image: 'showcase/gltf.jpg',
+    route: 'gltf/asset-studio',
+    image: 'gltf/asset-studio.jpg',
     description:
       'Explore standards-first glTF assets with physical materials, animated characters, morph targets, native extensions, and portable WebGPU/WebGL rendering.',
     category: 'glTF',

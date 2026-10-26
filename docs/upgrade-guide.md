@@ -1,5 +1,75 @@
 # Upgrade Guide
 
+## Experimental package removal
+
+Remove `@luma.gl/experimental` from project dependencies and update imports:
+
+| Former APIs | New import |
+| --- | --- |
+| Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari` |
+| Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
+| Path and polygon models | `@luma.gl/graph/experimental/models` |
+| Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
+
+ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
+
+## GPU graph authoring and command graph names
+
+The application-facing `GPUProgram` is now `GPUGraph`. The former execution-level
+`GPUGraph` is now `GPUCommandGraph`; `CompiledGPUGraph` becomes
+`CompiledGPUCommandGraph`. These are naming changes only: constructors, methods,
+compilation, resource ownership, and execution behavior are unchanged.
+
+- Replace `GPUProgramCompiler` with `GPUGraphCompiler` and
+  `createGPUConjugateGradientProgram` with `createGPUConjugateGradientGraph`.
+- Replace the `GPUProgram` prefix on value, binding, operation, validation, and
+  inspection types with `GPUGraph` (for example, `GPUGraphVector` and
+  `GPUGraphCompilation`). Helpers become `validateGPUGraph` and
+  `inspectGPUGraphCompilation`.
+- Import `GPUGraph`, `GPUGraphCompiler`, and graph value types from
+  `@luma.gl/graph`, `@luma.gl/graph/gpu-graph`, or `@luma.gl/graph/gpu-core`.
+- Existing low-level `new GPUGraph(device)` calls must become
+  `new GPUCommandGraph(device)`. The new `GPUGraph` takes the former
+  `GPUProgram` options, not a device.
+
+Compilation result fields retain their existing names: `compilation.program`
+contains the authored `GPUGraph`, and `compilation.graph` contains the lowered
+`GPUCommandGraph`. This change does not introduce a new compile/run lifecycle or
+add WebGL support to the semantic graph compiler.
+
+## Graph package rename
+
+`@luma.gl/gpu-graph` is renamed to `@luma.gl/graph`. Replace the package in your
+project dependencies and update the package prefix in every import:
+
+```typescript
+import {GPUCommandGraph} from '@luma.gl/graph';
+import {GPUGraph} from '@luma.gl/graph/gpu-core';
+```
+
+The package rename preserves subpath suffixes; see the API naming changes below. For example,
+`@luma.gl/gpu-graph/gpu-tables` becomes `@luma.gl/graph/gpu-tables`.
+The source package directory is now `modules/graph`.
+
+## GPU graph naming
+
+Graph analytics now use `@luma.gl/graph/gpu-graph-algorithms` and a shared
+`GPUGraphAlgorithms` prefix for classes, types, and helpers:
+
+- The former analytics `GPUGraph` becomes `GPUGraphAlgorithmsData`.
+- `GPUGraphProps` becomes `GPUGraphAlgorithmsDataProps`.
+- `GPUGraphPageRank` becomes `GPUGraphAlgorithmsPageRank`.
+- `GPUGraphTopology` becomes `GPUGraphAlgorithmsTopology`.
+- `runGPUGraphBenchmark` becomes `runGPUGraphAlgorithmsBenchmark`.
+
+Update analytics imports from `@luma.gl/graph/gpu-graph` to
+`@luma.gl/graph/gpu-graph-algorithms`, including the `/benchmarks` entry point.
+The `gpu-graph` entry point exposes graph authoring and command execution.
+
+The execution scheduler is `GPUCommandGraph`, with compiled instances named
+`CompiledGPUCommandGraph`. Scheduling option and result types retain their
+`GPUCommandGraph` prefixes.
+
 The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications.
 
 Upgrade instructions assume that you are upgrading from the immediately previous release.
@@ -11,6 +81,73 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
 ## Upgrading to v10.0
+
+### math.gl grouped packages
+
+luma.gl now uses math.gl 5.0.0-alpha.19. Replace standalone math.gl dependencies
+with their grouped package roots: `@math.gl/types` becomes `@math.gl/core/types`,
+`@math.gl/polygon` becomes `@math.gl/geometry/polygon`, and CRS, projection, and
+GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
+`@math.gl/earth/sun`. Install the package root when using these subpaths.
+
+
+### Scene controllers move to engine
+
+The glTF-prefixed skin, material-variant, billboard, area-light, audio, and interactivity runtime APIs have been removed from `@luma.gl/gltf`. Import `SkinController`, `MaterialVariants`, `BillboardController`, `AreaLightController`, `AudioController`, and `Interactivity` from `@luma.gl/engine` instead. Audio graph and environment helpers also belong to engine.
+
+Use `parseGLTFSkins()`, `parseGLTFMaterialVariants()`, `parseGLTFBillboards()`, `parseGLTFAreaLights()`, or `parseGLTFAudio()` to map imported data into engine construction props. `createScenegraphsFromGLTF()` already returns engine skin and variant controllers.
+
+`SkinController.getBinding()` now accepts an engine node, not a glTF node index. Resolve an imported index with `scenegraphs.gltfNodeIndexToNodeMap.get(index)` first. Bindings no longer carry glTF node or skin indices. See [scene controllers](/docs/api-guide/engine/scene-controllers).
+
+### glTF physics collider provenance
+
+`GLTFPhysicsCollider.shapeIndex` is now optional. Check it before indexing the
+implicit-shape array; colliders imported through an explicit legacy mesh resolver
+instead identify their source with `meshIndex`.
+
+### Device backend package consolidation
+
+`@luma.gl/webgl`, `@luma.gl/webgpu`, and `@luma.gl/constants` have been removed.
+Remove them from application dependencies and import their APIs from `@luma.gl/core`.
+Backend entry points are available at `@luma.gl/core/webgl` and `@luma.gl/core/webgpu`.
+Import WebGL constants and types from `@luma.gl/core/webgl-constants`, and optional
+debugging helpers from `@luma.gl/core/webgl-debug`. Replace the former
+`@luma.gl/core/webgl/debug` import with this dedicated entry point.
+
+```typescript
+import {luma} from '@luma.gl/core';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {GL} from '@luma.gl/core/webgl-constants';
+```
+
+
+### Render pass draw offsets and counts
+
+Indexed WebGL draws now use `firstIndex` in index elements. Replace uses of
+`firstVertex` as an indexed byte offset with `firstIndex: byteOffset / indexByteSize`.
+`firstVertex` only applies to non-indexed draws. WebGL now rejects `indexCount`
+unless the selected vertex array has an index buffer; attribute-less non-indexed
+draws should use `vertexCount`.
+WebGPU render passes and render bundles now honor explicit zero draw and instance
+counts instead of drawing an implicit instance.
+
+### Model parameters on WebGL
+
+On WebGL, `Model.setParameters()` no longer replaces `model.pipeline`. `Model.draw()` passes
+the model's current parameters to every draw call, as before. Code that draws
+`model.pipeline` directly without passing `parameters` gets the parameters the retained
+pipeline was created with; pass `model.parameters` to the draw call instead.
+
+### CPU geometry validation
+
+Engine geometry now delegates CPU storage and tessellation to `@math.gl/geometry`.
+Indices must reference valid vertices across the entire supplied index array, including entries
+after an explicit draw count. Remove invalid unused indices before constructing a geometry.
+Uint8 indices supplied to the engine compatibility adapter are widened to Uint16.
+`TruncatedConeGeometry` defaults to a bottom radius of 1; provide explicit nonzero radii for
+frusta. Primitive tessellation order can change, so derive face metadata from normals rather
+than relying on vertex or index ordering.
 
 **@luma.gl/gpgpu**
 
@@ -43,7 +180,7 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
   injections into unregistered hooks, because module `inject` entries are often GLSL-only.
   Re-registering a hook with the same name still replaces the earlier declaration.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - `WebGPUDevice.adapter` is now typed `GPUAdapter | null`. It is `null` for devices wrapped with `webgpuAdapter.attach()` / `luma.attachDevice()`, because a `GPUDevice` does not reference its `GPUAdapter`. Devices from `luma.createDevice()` still have an adapter; TypeScript code that reads `device.adapter` needs a null check or non-null assertion. Use `device.adapterInfo` for adapter metadata.
 
@@ -69,11 +206,11 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 - `Model.predraw(commandEncoder)` now requires an explicit command encoder. Call it with the encoder that will be submitted when ordered pre-draw uploads must be shared across multiple draws or viewports. Normal `Model.draw(renderPass)` calls continue to perform their own pre-draw work.
 - `makeGPUGeometry()` now interleaves CPU geometry attributes into a single vertex buffer by default. Callers that require separate attribute buffers should create those buffers and construct `GPUGeometry` explicitly with the corresponding `bufferLayout`.
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
-- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/webgl/debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
+- WebGLDeveloperTools and Spector integration now require `import '@luma.gl/core/webgl-debug'` before enabling `debugWebGL` or `debugSpectorJS`. This keeps debug-only code and the full GL enum out of normal adapter application bundles.
 
-**@luma.gl/webgpu**
+**@luma.gl/core/webgpu**
 
 - `getShaderLayoutFromWGSL()` now uses lightweight interface scanning and returns `null` when WGSL is ambiguous or outside the supported subset. Raw render and compute pipelines must provide an explicit `shaderLayout` in that case. Uniform-buffer member reflection is no longer included in the returned layout.
 
@@ -102,7 +239,7 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 
 ## Upgrading to v9.2
 
-v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
+v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal.
 
 **New VertexFormats**
 - `VertexFormat` Replace `'unorm8-webgl'` with `'unorm8'`.
@@ -118,13 +255,13 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 
 **Removal of WebGL uniform support**
 - The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.
-- `core`: `Renderpipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
+- `core`: `RenderPipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
 - `engine`: `Model.setUniformsWebGL()` deprecated, use uniform buffer bindings
 - `shadertools`: WebGL1 shader modules have been removed, use the new modules uniform buffer-based counterparts.
 
 **`CanvasContext` simplifications**
-- `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas. 
-- Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize` 
+- `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas.
+- Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize`
 - A new `DeviceProps.onResize` callback can be used to react to changes.
 
 **Minor changes**
@@ -136,14 +273,14 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 **Major change: Adapters**
 
-- When initializing luma.gl, applications now import an `Adapter` singleton from the WebGPU and/or the WebGL module, and passes the adapter object(s) to `luma.createDevice()`, `makeAnimationLoop` etc. 
+- When initializing luma.gl, applications now import an `Adapter` singleton from the WebGPU and/or the WebGL module, and passes the adapter object(s) to `luma.createDevice()`, `makeAnimationLoop` etc.
 - `luma.registerDevices()` can be replaced with `luma.registerAdapters()` if global registration is still desired.
 
 **Major change: Texture and AsyncTextures**
 
 - The texture API is being streamlined to work symmetrically across WebGPU and WebGL.
 - `Texture.copyExternalImage()` and `Texture.copyImageData()` replaces `Texture.setImageData()` when initializing texture memory with image data.
-- `Textures` no longer accept promises when setting data (e.g. from `loadImageBitmap(url)`. 
+- `Textures` no longer accept promises when setting data (e.g. from `loadImageBitmap(url)`.
 - Instead, a new `AsyncTexture` class does accept promises and creates actual `Textures` once the promise resolves and data is available.
 - The `Model` class now accepts `AsyncTextures` as bindings and defers rendering until the underlying texture has been created.
 
@@ -162,7 +299,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `glsl` shader template string | Removed | `/* glsl */` comment | Enable syntax highlighting in vscode using before shader string |
 | `depth24unorm-stencil8` | Removed | `depth24plus-stencil8` | The `TextureFormat` was dropped from the WebGPU spec |
 | `rgb8unorm-unsized` | Removed | `rgb8unorm` | Drop support for unsized WebGL1 `TextureFormat` |
-| `rgba8unorm-unsized` | Removed | `rgb8aunorm` | Drop support for unsized WebGL1 `TextureFormat` |
+| `rgba8unorm-unsized` | Removed | `rgba8unorm` | Drop support for unsized WebGL1 `TextureFormat` |
 
 [adapters]: /docs/api-reference/core/luma#lumaregisteradapters
 [canvas]: /docs/api-reference/core/canvas-context#canvascontextprops
@@ -183,7 +320,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 New module. All postprocessing effects that were previously in `@luma.gl/shadertools` are now exported from `@luma.gl/effects`.
 
-**@luma.gl/webgl**
+**@luma.gl/core/webgl**
 
 - `WebGLDeviceContext` - Note that luma.gl v9.1 and onwards set `DeviceProps.webgl.preserveDrawingBuffers` to `true` by default. This can be disabled for some (potential) memory savings and a (potential) minor performance boost on resource limited devices, such as mobile phones, at the cost of not being able to take screenshots or rendering to the screen without clearing it.
 
@@ -194,7 +331,7 @@ luma.gl v9 is a major modernization of the luma.gl API, with many breaking chang
 
 ## Upgrading to v8 and earlier releases
 
-This page only covers luma.gl v9 and later releases. 
+This page only covers luma.gl v9 and later releases.
 For information on upgrading to from v8 and earlier releases, see the [Legacy Upgrade Guide](/docs/legacy/legacy-upgrade-guide).
 
 ## GPU Core composition
@@ -202,10 +339,29 @@ For information on upgrading to from v8 and earlier releases, see the [Legacy Up
 GPU Core primitives now expose `getCommandNodes(graph)` instead of `addToGraph(graph)`. Schedule
 a primitive with `graph.add(primitive)`, which calls `getCommandNodes(graph)` internally. To inspect
 or modify nodes before scheduling, use `addGPUCommandNodes(graph, nodes)`. Graph-independent
-primitives can also be added to `GPUProgram`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
+primitives can also be added to `GPUGraph`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
 removed. The three range/scatter primitives that also publish scratch views expose
 `getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.
 
-`GPUProgramBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector`
+`GPUGraphBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector`
 instead of raw buffers. Compiler vector resolution returns `GraphVectorView`; access physical
 chunks through `.data` or canonical logical descriptors through `.chunks`.
+
+## GPU Graph package
+
+Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
+
+## Module loader dependencies
+
+- `exportGLTF` and its `GLTFExport*` descriptor types moved from `@luma.gl/gltf` to
+  the shared `examples/gltf/gltf-exporter.ts` application helper. Copy it into your application
+  when exporting assets; it uses loaders.gl for GLB encoding.
+- `loadPBREnvironment()` now requires a `loadImage` callback. Pass your application image loader,
+  such as `loadImage: loadImageTexture` from `@loaders.gl/textures`.
+- The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`,
+  `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and
+  `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to
+  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `LuSQLContext`
+  and `LuSQLQuery` remain in the module.
+- Install loaders.gl packages explicitly in applications that use these integrations.
+  Published luma.gl modules no longer install them transitively.

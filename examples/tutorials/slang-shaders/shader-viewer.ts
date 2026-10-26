@@ -46,7 +46,7 @@ export function createShaderViewer(
       <section><label>Generated <select aria-label="Generated shader"></select></label>
         <pre tabindex="0" aria-label="Generated shader code"><code></code></pre></section>
     </div>
-    <footer>Generated code includes the modules used by each pass. Slang renders the sculpture; native shaders add grain.</footer>`;
+    <footer>Generated code includes the imported libraries. Slang and native shaders call each other through public functions.</footer>`;
 
   const selectors = panel.querySelectorAll('select');
   const codeBlocks = panel.querySelectorAll('code');

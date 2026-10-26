@@ -4,8 +4,8 @@
 
 import {Deck, Layer, MapView, type LayerContext} from '@deck.gl/core';
 import {luma, Buffer, Texture, type RenderPass} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {Model} from '@luma.gl/engine';
 import {fromHalfFloat} from '@luma.gl/shadertools';
 import {getTestDevice} from '@luma.gl/test-utils';
@@ -188,6 +188,17 @@ test.each(['webgpu', 'webgl'] as const)(
         .layerManager!.getLayers()
         .find((layer): layer is StarfieldLayer => layer instanceof StarfieldLayer)!;
       const starBuffer = starLayer.state.stars;
+      const neutralStars = await readFrame([
+        composite.clone({stars: {brightness: 8, colorStrength: 0}})
+      ]);
+      const coloredStars = await readFrame([
+        composite.clone({stars: {brightness: 8, colorStrength: 1}})
+      ]);
+      expect(
+        neutralStars.some((value, index) => value !== coloredStars[index]),
+        'spectral tint is adjustable'
+      ).toBe(true);
+      expect(starLayer.state.stars, 'tint updates reuse catalog buffers').toBe(starBuffer);
       await readFrame([composite]);
       expect(starBuffer.destroyed, 'disabled stars release their GPU buffers').toBe(true);
       await readFrame([sun.clone()]);

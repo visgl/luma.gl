@@ -19,7 +19,7 @@ import {
   spectralCaustics,
   SpectralCausticsRenderer,
   type SpectralCausticsProps
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 

@@ -4,8 +4,14 @@
 
 import {expect, it} from 'vitest';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF, type PBREnvironment} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {
+  postProcessGLTF,
+  type GLTFPostprocessed,
+  createScenegraphsFromGLTF,
+  type PBREnvironment
+} from '@luma.gl/gltf';
+
 import {GroupNode, ModelNode} from '@luma.gl/engine';
 import {NullDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 

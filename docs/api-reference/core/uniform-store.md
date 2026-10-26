@@ -4,90 +4,54 @@ import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
 <CoreDocsTabs group="layouts" active="uniform-store" />
 
-A uniform store holds uniform values for a set of different uniform buffers, 
-It can optionally creates managed uniform buffers for those
+`UniformStore` packs typed uniform values into named blocks and optionally owns a GPU buffer
+for each block. The device determines the default layout: WGSL uniform layout on WebGPU,
+std140 on WebGL. [ShaderInputs](/docs/api-reference/engine/shader-inputs) uses this lower-level
+machinery for shader-module props.
 
 ## Usage
 
-## Types
+```ts
+import {UniformStore} from '@luma.gl/core';
 
-The `UniformStore` class is designed so that the `setUniforms` function will be strictly typed.
+const store = new UniformStore<{frame: {time: number}}>(device, {
+  frame: {uniformTypes: {time: 'f32'}, defaultUniforms: {time: 0}}
+});
+const frameUniforms = store.getManagedUniformBuffer('frame');
+store.setUniforms({frame: {time: 1}});
 
-```typescript
-export class UniformStore<TUniformGroups extends Record<string, Record<string, UniformValue>>> {
+// Bind frameUniforms to a compatible shader block, then destroy the store when finished.
+store.destroy();
 ```
+
+## Block definitions
+
+The constructor accepts `(device, blocks)`, keyed by uniform-block name.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `uniformTypes?` | `Record<string, CompositeShaderType>` | Types used to pack each uniform. |
+| `defaultUniforms?` | `Record<string, CompositeUniformValue>` | Initial values. |
+| `layout?` | `'std140' \| 'wgsl-uniform' \| 'wgsl-storage'` | Explicit layout override. |
+| `defaultProps?` | `Record<string, unknown>` | Reserved; not applied as uniform defaults. |
 
 ## Methods
 
-### constructor
+- `setUniforms(values, commandEncoder?): void` merges partial block values and updates existing
+  managed buffers. An encoder orders uploads with later GPU work in the same submission.
+- `getUniformBufferByteLength(name): number` returns the allocation size, including the store's
+  minimum buffer-size policy.
+- `getUniformBufferData(name): Uint8Array` returns packed bytes; its length can be smaller than
+  the allocation size.
+- `getManagedUniformBuffer(name): Buffer` lazily creates a store-owned buffer. Call
+  `setUniforms()` or `updateUniformBuffer()` before consuming it.
+- `createUniformBuffer(name, values?): Buffer` creates an initialized, caller-owned buffer.
+- `updateUniformBuffer(name, commandEncoder?): false | string` updates a dirty managed block
+  and returns its redraw reason, or `false`.
+- `updateUniformBuffers(commandEncoder?): false | string` updates all dirty managed blocks.
+- `destroy(): void` destroys managed buffers. Caller-owned buffers remain the caller's responsibility.
 
-Create a new UniformStore instance
-   * @param device 
-   * @param blocks 
-   * @param props 
+## Related APIs
 
-```typescript
-  constructor(
-    device: Device, 
-    blocks: Record<string, {
-      uniformFormats: Record<string, UniformFormat>;
-      defaultValues?: Record<string, UniformValue>;
-    }>
-  )
-```
-
-### destroy()
-
-Destroy any managed uniform buffers
-
-```typescript
-destroy(): void;
-```
-
-### setUniforms
-
-Set uniforms
-
-```typescript
-setUniforms(uniforms: Partial<TUniformGroups>): void
-```
-
-### getUniformBufferByteLength()
-
-Get the required minimum length of one of the uniform buffers managed by this `UniformStore`.
-
-```typescript
-getUniformBufferByteLength(uniformBufferName: keyof TUniformGroups): number
-```
-
-### getUniformBufferData()
-
-Get formatted binary memory that can be uploaded to an application created uniform buffer
-
-```typescript
-  getUniformBufferData(uniformBufferName: keyof TUniformGroups): Uint8Array
-```
-
-### getManagedUniformBuffer()
-
-Creates one of the managed uniform buffers
-
-```typescript
-  getUniformBuffer(device: Device, uniformBufferName: keyof TUniformGroups): Buffer
-```
-
-### updateUniformBuffer()
-
-Update one uniform buffer. Only updates if values have changed
-
-```typescript
-  updateUniformBuffer(uniformBufferName: keyof TUniformGroups): void
-```
-
-### updateUniformBuffers()
-
-Updates all uniform buffers where values have changed
-
-```typescript
-  updateUniformBuffers(): void
-```
+- [Shader types](/docs/api-reference/core/shader-types)
+- [ShaderBlockLayout](/docs/api-reference/core/shader-block-layout)

@@ -1,0 +1,23 @@
+---
+title: Physics Batch Lab
+description: Compare GPU physics ensembles, submission batching, memory and throughput.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [physics, compute]
+---
+
+import {PhysicsBatchExample} from '@site/src/examples';
+
+<PhysicsBatchExample />
+
+Compare fused ensembles against separate-world command submissions. Choose sparse debris or
+settling piles, then inspect completion latency, throughput, GPU buffer storage and final poses.
+The fused mode uses one solver graph with collision-domain isolation. It has a shared contact
+budget and rollback boundary, and does not retain an extra reset checkpoint.
+
+The diagnostic projection uses CPU pose readback after timing. These are simulation benchmarks,
+not rendering benchmarks. See the [qualification protocol](https://github.com/visgl/luma.gl/blob/master/scripts/physics/batch/README.md).

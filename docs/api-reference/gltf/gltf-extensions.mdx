@@ -122,7 +122,7 @@ Status meanings:
 postprocessing, Draco, `EXT_meshopt_compression`, and `KHR_meshopt_compression` decoding, Basis/KTX2 texture selection,
 conditional WebP selection, and supported 3D Tiles feature/structural metadata. The rendering
 package consumes those results; it does not need independent mesh codecs, accessor decoders, or
-GLB container serialization. `postProcessGLTF()` must still be called explicitly in loaders.gl v4.
+GLB container serialization. Call luma.gl’s [`postProcessGLTF()`](/docs/api-reference/gltf/post-process-gltf) explicitly before rendering.
 
 <MarkdownTable style={{width: '100%'}}>
   <thead>

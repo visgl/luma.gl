@@ -1,0 +1,37 @@
+import {GLTFModelExample} from '@site/src/examples';
+
+# Bump Mapping
+
+Bump mapping derives small normal perturbations from a height texture without moving mesh vertices.
+
+## Example
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/visgl/luma.gl/5021c4893bda0b560c4f207e29c307e3abb47625/modules/gltf/test/data/BumpMaterial.gltf" title="Bump Mapping" embedded showStats={false} />
+
+## Configure the material
+
+The following fields update an existing PBR material; see [Materials guide](/docs/api-guide/engine/materials).
+
+```ts
+material.setProps({
+  pbrMaterial: {
+    bumpMapEnabled: true,
+    bumpFactor: 0.8
+  }
+});
+```
+
+## Parameters and textures
+
+`pbr_bumpSampler` uses a linear red-channel height map, scaled by `bumpFactor`. It composes with normal mapping and has its own UV selection and transform. It changes shading rather than silhouette, geometry, or parallax. The corresponding glTF mapping is experimental; treat it as an evolving interoperability path.
+
+## Model integration
+
+Bind `pbr_bumpSampler` and enable `HAS_BUMPMAP: true` in the compatible model's `defines`. Uniform updates do not add shader features or texture resources. The glTF converter supplies the matching defines and bindings when importing these material inputs.
+
+## Related capabilities
+
+- [Normal Mapping](./normal-mapping.mdx)
+- [Textures and UV Coordinates](/docs/api-guide/engine/features/texture-coordinates)
+
+See [Textures and UV coordinates](/docs/api-guide/engine/features/texture-coordinates) for binding names, map enablement, and color handling.

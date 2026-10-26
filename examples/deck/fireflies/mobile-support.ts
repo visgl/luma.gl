@@ -7,5 +7,5 @@ export default {
   id: 'deck/fireflies',
   mobileMode: 'full',
   mobileProfile: 'standard',
-  requirements: {backends: ['webgpu']}
+  requirements: {backends: ['webgpu', 'webgl2']}
 } satisfies ExampleSupportDefinition;

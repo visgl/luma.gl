@@ -4,6 +4,12 @@
 
 import type {GPUSplatData} from './splat-data';
 
+/** Minimal allocation and ownership metadata, usable on the CPU or GPU. */
+export type SplatResidencyData = Pick<
+  GPUSplatData,
+  'length' | 'byteLength' | 'destroyed' | 'destroy' | 'sourceBatchIndex' | 'rowIndexBase'
+>;
+
 /** Independent limits applied to intact, independently uploaded Gaussian source batches. */
 export type SplatResidencyBudget = {
   /** Maximum allocated bytes retained across resident Gaussian source batches. */
@@ -43,11 +49,11 @@ export type SplatResidencyChunkOptions = {
 };
 
 /** Explicit residency metadata stored directly on each independently retained source chunk. */
-export type SplatResidencyChunk = {
+export type SplatResidencyChunk<TData extends SplatResidencyData = GPUSplatData> = {
   /** Stable caller-supplied tile identity or source batch and global-row identity. */
   id: string;
   /** Original independently prepared Gaussian source batch, never copied or combined. */
-  data: GPUSplatData;
+  data: TData;
   /** Retention priority; larger values are more valuable. */
   priority: number;
   /** Whether automatic and non-forced eviction must preserve this chunk. */
@@ -96,25 +102,29 @@ export type SplatResidencyStats = {
 };
 
 /** Optional integration hooks for updating a borrowing renderer or tile scheduler. */
-export type SplatResidencyCallbacks = {
+export type SplatResidencyCallbacks<TData extends SplatResidencyData = GPUSplatData> = {
   /** Called after one intact source batch enters the residency window. */
-  onAdd?: (chunk: SplatResidencyChunk) => void;
-  /** Called after removal but before manager-owned source GPU buffers are destroyed. */
-  onEvict?: (chunk: SplatResidencyChunk, reason: SplatResidencyEvictionReason) => void;
+  onAdd?: (chunk: SplatResidencyChunk<TData>) => void;
+  /** Called after removal but before manager-owned source data is destroyed. */
+  onEvict?: (chunk: SplatResidencyChunk<TData>, reason: SplatResidencyEvictionReason) => void;
   /** Called with the current exact source-batch list after every residency change. */
-  onResidencyChange?: (batches: readonly GPUSplatData[], stats: SplatResidencyStats) => void;
+  onResidencyChange?: (batches: readonly TData[], stats: SplatResidencyStats) => void;
 };
 
 /** Allocation budgets, default ownership, and optional renderer or scheduler integration. */
-export type SplatResidencyManagerProps = SplatResidencyBudget &
-  SplatResidencyCallbacks & {
-    /** Whether admitted source batches are owned by default. Borrowing is the default. */
-    ownsData?: boolean;
-    /** Optional callback collection, useful when composing renderer integrations. */
-    callbacks?: SplatResidencyCallbacks;
-  };
+export type SplatResidencyManagerProps<TData extends SplatResidencyData = GPUSplatData> =
+  SplatResidencyBudget &
+    SplatResidencyCallbacks<TData> & {
+      /** Whether admitted source batches are owned by default. Borrowing is the default. */
+      ownsData?: boolean;
+      /** Optional callback collection, useful when composing renderer integrations. */
+      callbacks?: SplatResidencyCallbacks<TData>;
+    };
 
-type SplatResidencyTarget = string | GPUSplatData | SplatResidencyChunk;
+type SplatResidencyTarget<TData extends SplatResidencyData = GPUSplatData> =
+  | string
+  | TData
+  | SplatResidencyChunk<TData>;
 
 type SplatResidencyReservation = {
   gpuByteLength: number;
@@ -129,11 +139,14 @@ type SplatResidencyReservation = {
  * eviction, and pinned batches are never automatically removed. No source batch is
  * combined, repacked, or destroyed unless its explicit ownership has been transferred.
  */
-export class SplatResidencyManager {
-  private readonly chunks = new Map<string, SplatResidencyChunk>();
-  private readonly chunksByData = new Map<GPUSplatData, SplatResidencyChunk>();
-  private readonly pendingLoads = new Map<string, Promise<SplatResidencyChunk | undefined>>();
-  private readonly callbacks: SplatResidencyCallbacks;
+export class SplatResidencyManager<TData extends SplatResidencyData = GPUSplatData> {
+  private readonly chunks = new Map<string, SplatResidencyChunk<TData>>();
+  private readonly chunksByData = new Map<TData, SplatResidencyChunk<TData>>();
+  private readonly pendingLoads = new Map<
+    string,
+    Promise<SplatResidencyChunk<TData> | undefined>
+  >();
+  private readonly callbacks: SplatResidencyCallbacks<TData>;
   private readonly ownsData: boolean;
   private maxGpuBytes: number;
   private maxResidentSplats: number;
@@ -150,7 +163,7 @@ export class SplatResidencyManager {
   private isDestroyed = false;
 
   /** Creates an initially empty, borrowing residency window with optional finite budgets. */
-  constructor(props: SplatResidencyManagerProps = {}) {
+  constructor(props: SplatResidencyManagerProps<TData> = {}) {
     this.maxGpuBytes = normalizeSplatResidencyBudget(props.maxGpuBytes);
     this.maxResidentSplats = normalizeSplatResidencyBudget(props.maxResidentSplats);
     this.maxResidentChunks = normalizeSplatResidencyBudget(props.maxResidentChunks);
@@ -169,12 +182,12 @@ export class SplatResidencyManager {
   }
 
   /** Original caller-owned source batches in stable admission order. */
-  get residentBatches(): GPUSplatData[] {
+  get residentBatches(): TData[] {
     return this.getResidentBatches();
   }
 
   /** Explicit source chunk, tile, priority, hierarchy, and ownership metadata. */
-  get residentChunks(): SplatResidencyChunk[] {
+  get residentChunks(): SplatResidencyChunk<TData>[] {
     return this.getResidentChunks();
   }
 
@@ -183,23 +196,23 @@ export class SplatResidencyManager {
     return this.getStats();
   }
 
-  /** Returns the original intact GPU source batches without copying or combining their buffers. */
-  getResidentBatches(): GPUSplatData[] {
+  /** Returns the original intact source batches without copying or combining their data. */
+  getResidentBatches(): TData[] {
     return Array.from(this.chunks.values(), chunk => chunk.data);
   }
 
   /** Returns every admitted source chunk and its directly stored residency metadata. */
-  getResidentChunks(): SplatResidencyChunk[] {
+  getResidentChunks(): SplatResidencyChunk<TData>[] {
     return Array.from(this.chunks.values());
   }
 
   /** Returns one retained chunk using its tile identity or exact source-batch object. */
-  getChunk(target: SplatResidencyTarget): SplatResidencyChunk | undefined {
+  getChunk(target: SplatResidencyTarget<TData>): SplatResidencyChunk<TData> | undefined {
     return this.resolveChunk(target);
   }
 
   /** Whether the exact source batch or source tile identity is currently resident. */
-  has(target: SplatResidencyTarget): boolean {
+  has(target: SplatResidencyTarget<TData>): boolean {
     return this.resolveChunk(target) !== undefined;
   }
 
@@ -209,9 +222,9 @@ export class SplatResidencyManager {
    * Returns `undefined` without changing existing residency when the source batch cannot fit.
    */
   add(
-    data: GPUSplatData,
+    data: TData,
     options: SplatResidencyChunkOptions = {}
-  ): SplatResidencyChunk | undefined {
+  ): SplatResidencyChunk<TData> | undefined {
     if (this.isDestroyed || data.destroyed) {
       throw new Error('Splat residency requires a live manager and source batch');
     }
@@ -237,7 +250,7 @@ export class SplatResidencyManager {
       data.length;
     let prospectiveChunkCount =
       this.chunks.size + this.reservedChunkCount + (existingChunk ? 0 : 1);
-    const evictedChunks: SplatResidencyChunk[] = [];
+    const evictedChunks: SplatResidencyChunk<TData>[] = [];
 
     if (this.exceedsBudget(prospectiveByteLength, prospectiveSplatCount, prospectiveChunkCount)) {
       for (const candidate of this.getEvictionCandidates(incomingPriority, existingChunk)) {
@@ -265,7 +278,7 @@ export class SplatResidencyManager {
       this.removeChunk(candidate, 'budget');
     }
 
-    const chunk: SplatResidencyChunk = {
+    const chunk: SplatResidencyChunk<TData> = {
       id: chunkId,
       data,
       priority: incomingPriority,
@@ -292,9 +305,9 @@ export class SplatResidencyManager {
 
   /** Alias for registering one intact source tile or independently prepared streaming batch. */
   register(
-    data: GPUSplatData,
+    data: TData,
     options: SplatResidencyChunkOptions = {}
-  ): SplatResidencyChunk | undefined {
+  ): SplatResidencyChunk<TData> | undefined {
     return this.add(data, options);
   }
 
@@ -308,9 +321,9 @@ export class SplatResidencyManager {
    */
   load(
     id: string,
-    loadData: () => GPUSplatData | Promise<GPUSplatData>,
+    loadData: () => TData | Promise<TData>,
     options: Omit<SplatResidencyChunkOptions, 'id'> = {}
-  ): Promise<SplatResidencyChunk | undefined> {
+  ): Promise<SplatResidencyChunk<TData> | undefined> {
     if (this.isDestroyed) {
       return Promise.reject(new Error('Splat residency manager has been destroyed'));
     }
@@ -334,7 +347,7 @@ export class SplatResidencyManager {
       return Promise.resolve(undefined);
     }
 
-    let requestedLoad: Promise<SplatResidencyChunk | undefined>;
+    let requestedLoad: Promise<SplatResidencyChunk<TData> | undefined>;
     requestedLoad = Promise.resolve()
       .then(loadData)
       .then(data => {
@@ -367,7 +380,7 @@ export class SplatResidencyManager {
   }
 
   /** Marks one source tile as recently used without changing its source buffers or identity. */
-  touch(target: SplatResidencyTarget): boolean {
+  touch(target: SplatResidencyTarget<TData>): boolean {
     const chunk = this.resolveChunk(target);
     if (!chunk) {
       return false;
@@ -377,7 +390,7 @@ export class SplatResidencyManager {
   }
 
   /** Updates the eviction priority of one source tile without moving or repacking its data. */
-  setPriority(target: SplatResidencyTarget, priority: number): boolean {
+  setPriority(target: SplatResidencyTarget<TData>, priority: number): boolean {
     const chunk = this.resolveChunk(target);
     if (!chunk) {
       return false;
@@ -388,7 +401,7 @@ export class SplatResidencyManager {
   }
 
   /** Protects a retained source tile against automatic and non-forced explicit eviction. */
-  pin(target: SplatResidencyTarget, pinned = true): boolean {
+  pin(target: SplatResidencyTarget<TData>, pinned = true): boolean {
     const chunk = this.resolveChunk(target);
     if (!chunk) {
       return false;
@@ -405,7 +418,7 @@ export class SplatResidencyManager {
   }
 
   /** Removes explicit eviction protection and immediately enforces any reduced budgets. */
-  unpin(target: SplatResidencyTarget): boolean {
+  unpin(target: SplatResidencyTarget<TData>): boolean {
     return this.pin(target, false);
   }
 
@@ -425,7 +438,7 @@ export class SplatResidencyManager {
   }
 
   /** Evicts one unpinned source tile, defaulting to the least valuable and oldest resident. */
-  evict(target?: SplatResidencyTarget): boolean {
+  evict(target?: SplatResidencyTarget<TData>): boolean {
     const chunk = target
       ? this.resolveChunk(target)
       : this.getEvictionCandidates(Number.POSITIVE_INFINITY)[0];
@@ -437,7 +450,7 @@ export class SplatResidencyManager {
   }
 
   /** Explicitly removes one source tile, including chunks protected against automatic eviction. */
-  remove(target: SplatResidencyTarget): boolean {
+  remove(target: SplatResidencyTarget<TData>): boolean {
     const chunk = this.resolveChunk(target);
     if (!chunk) {
       return false;
@@ -505,7 +518,9 @@ export class SplatResidencyManager {
     }
   }
 
-  private resolveChunk(target: SplatResidencyTarget): SplatResidencyChunk | undefined {
+  private resolveChunk(
+    target: SplatResidencyTarget<TData>
+  ): SplatResidencyChunk<TData> | undefined {
     if (typeof target === 'string') {
       return this.chunks.get(target);
     }
@@ -529,7 +544,7 @@ export class SplatResidencyManager {
     let prospectiveSplatCount =
       this.residentSplatCount + this.reservedSplatCount + reservation.splatCount;
     let prospectiveChunkCount = this.chunks.size + this.reservedChunkCount + 1;
-    const evictedChunks: SplatResidencyChunk[] = [];
+    const evictedChunks: SplatResidencyChunk<TData>[] = [];
 
     if (this.exceedsBudget(prospectiveByteLength, prospectiveSplatCount, prospectiveChunkCount)) {
       for (const candidate of this.getEvictionCandidates(options.priority ?? 0)) {
@@ -568,7 +583,10 @@ export class SplatResidencyManager {
     this.reservedChunkCount--;
   }
 
-  private updateChunk(chunk: SplatResidencyChunk, options: SplatResidencyChunkOptions): void {
+  private updateChunk(
+    chunk: SplatResidencyChunk<TData>,
+    options: SplatResidencyChunkOptions
+  ): void {
     if (options.priority !== undefined) {
       chunk.priority = options.priority;
     }
@@ -595,8 +613,8 @@ export class SplatResidencyManager {
 
   private getEvictionCandidates(
     maximumPriority: number,
-    excludedChunk?: SplatResidencyChunk
-  ): SplatResidencyChunk[] {
+    excludedChunk?: SplatResidencyChunk<TData>
+  ): SplatResidencyChunk<TData>[] {
     return Array.from(this.chunks.values())
       .filter(
         chunk => chunk !== excludedChunk && !chunk.pinned && chunk.priority <= maximumPriority
@@ -617,7 +635,10 @@ export class SplatResidencyManager {
     );
   }
 
-  private removeChunk(chunk: SplatResidencyChunk, reason: SplatResidencyEvictionReason): void {
+  private removeChunk(
+    chunk: SplatResidencyChunk<TData>,
+    reason: SplatResidencyEvictionReason
+  ): void {
     if (this.chunks.get(chunk.id) !== chunk) {
       return;
     }
@@ -643,7 +664,7 @@ export class SplatResidencyManager {
   }
 }
 
-function getSplatResidencyChunkId(data: GPUSplatData): string {
+function getSplatResidencyChunkId(data: SplatResidencyData): string {
   return `${data.sourceBatchIndex}:${data.rowIndexBase}`;
 }
 

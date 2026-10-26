@@ -1,0 +1,865 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "luma.gl authored-scene stress fixture: shared meshes and shapes",
+    "copyright": "Copyright (c) vis.gl contributors"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1,
+        4,
+        7,
+        10,
+        13,
+        16,
+        19,
+        22,
+        25
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 1,
+      "translation": [
+        0,
+        -0.3,
+        0
+      ],
+      "scale": [
+        26,
+        0.2,
+        20
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 1",
+      "translation": [
+        -8,
+        0,
+        -6
+      ],
+      "children": [
+        2,
+        3
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 2",
+      "translation": [
+        0,
+        0,
+        -6
+      ],
+      "children": [
+        5,
+        6
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 3",
+      "translation": [
+        8,
+        0,
+        -6
+      ],
+      "children": [
+        8,
+        9
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 4",
+      "translation": [
+        -8,
+        0,
+        0
+      ],
+      "children": [
+        11,
+        12
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 5",
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "children": [
+        14,
+        15
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 6",
+      "translation": [
+        8,
+        0,
+        0
+      ],
+      "children": [
+        17,
+        18
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 7",
+      "translation": [
+        -8,
+        0,
+        6
+      ],
+      "children": [
+        20,
+        21
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 8",
+      "translation": [
+        0,
+        0,
+        6
+      ],
+      "children": [
+        23,
+        24
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Instance 9",
+      "translation": [
+        8,
+        0,
+        6
+      ],
+      "children": [
+        26,
+        27
+      ]
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        0.3,
+        2
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "isKinematic": true
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -2,
+        1,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "data:application/octet-stream;base64,AAAAvwAAAL8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAD8AAAA/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAC/AAAAPwAAAD8AAAC/AAAAPwAAAD8AAAA/AAAAPwAAAL8AAAA/AAAAvwAAAL8AAAC/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAPwAAAL8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAC/AAAAvwAAAL8AAAC/AAAAPwAAAL8AAAC/AAAAPwAAAD8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAPwAAAD8AAAA/AAAAvwAAAD8AAAA/AACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAACAAEAAAADAAIABAAFAAYABAAGAAcACAAKAAkACAALAAoADAANAA4ADAAOAA8AEAASABEAEAATABIAFAAVABYAFAAWABcAAAAAAAAAAEAAAIBAAAAAwAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAwAAAAAAAAAAA",
+      "byteLength": 696
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 288
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 288,
+      "byteLength": 288
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 576,
+      "byteLength": 72
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 648,
+      "byteLength": 12
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 660,
+      "byteLength": 36
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 3,
+      "type": "SCALAR",
+      "min": [
+        0
+      ],
+      "max": [
+        4
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3"
+    }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.1,
+          0.4,
+          0.8,
+          1
+        ],
+        "metallicFactor": 0.3,
+        "roughnessFactor": 0.3
+      }
+    },
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.15,
+          0.17,
+          0.19,
+          1
+        ],
+        "metallicFactor": 0.1,
+        "roughnessFactor": 0.6
+      }
+    },
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.9,
+          0.5,
+          0.1,
+          0.25
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6
+      },
+      "alphaMode": "BLEND",
+      "doubleSided": true
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 1
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 2
+        }
+      ]
+    }
+  ],
+  "extensionsUsed": [
+    "KHR_physics_rigid_bodies",
+    "KHR_implicit_shapes"
+  ],
+  "extensions": {
+    "KHR_implicit_shapes": {
+      "shapes": [
+        {
+          "type": "box",
+          "box": {
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "KHR_physics_rigid_bodies": {
+      "physicsJoints": []
+    }
+  },
+  "animations": [
+    {
+      "name": "Platform motion",
+      "samplers": [
+        {
+          "input": 3,
+          "output": 4,
+          "interpolation": "LINEAR"
+        }
+      ],
+      "channels": [
+        {
+          "sampler": 0,
+          "target": {
+            "node": 2,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 5,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 8,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 11,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 14,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 17,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 20,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 23,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 0,
+          "target": {
+            "node": 26,
+            "path": "translation"
+          }
+        }
+      ]
+    }
+  ]
+}

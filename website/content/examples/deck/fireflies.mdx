@@ -1,9 +1,9 @@
 ---
-title: Riverfront fireflies
+title: Riverfront lights and fireflies
 description: Animated bioluminescence, adjustable bloom and calm-water reflections.
 sidebar_custom_props:
   description: Animated bioluminescence, adjustable bloom and calm-water reflections.
-  backends: [webgpu]
+  backends: [webgpu, webgl2]
   difficulty: advanced
   maturity: experimental
   mobile: full
@@ -14,7 +14,7 @@ sidebar_custom_props:
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
 export const Preview = () => (
-  <iframe title="Riverfront fireflies interactive example"
+  <iframe title="Riverfront lights and fireflies interactive example"
     src={useBaseUrl('/standalone-examples/fireflies/index.html')}
     style={{width: '100%', height: '78vh', minHeight: 640, border: 0, borderRadius: 12}} />
 );

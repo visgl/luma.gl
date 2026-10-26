@@ -122,6 +122,56 @@ it('camera SSR accepts reprojected history and rejects depth, normal, roughness,
     expect(
       await readCenter({currentClipToPreviousClip: new Matrix4().translate([4, 0, 0])})
     ).toBeCloseTo(0.2, 2);
+    // A bounded neighborhood lets history survive clamping while its center sample changes.
+    // Test multi-frame noise suppression without repeatedly rendering an entire city scene.
+    const variations: number[] = [];
+    for (const historyWeight of [0, 0.8]) {
+      let previousValue = 128;
+      let variation = 0;
+      for (const value of [32, 224, 64, 192, 96, 160]) {
+        sourceTexture.writeData(
+          new Uint8Array(
+            Array.from({length: 3}, () => [
+              0,
+              0,
+              0,
+              255,
+              value,
+              value,
+              value,
+              255,
+              255,
+              255,
+              255,
+              255
+            ]).flat()
+          )
+        );
+        historyTexture.writeData(
+          new Uint8Array(
+            Array.from({length: 9}, () => [previousValue, previousValue, previousValue, 255]).flat()
+          )
+        );
+        const currentValue = (await readCenter({historyWeight})) * 255;
+        expect(currentValue).toBeCloseTo(
+          value * (1 - historyWeight) + previousValue * historyWeight,
+          0
+        );
+        variation += Math.abs(currentValue - previousValue);
+        previousValue = Math.round(currentValue);
+      }
+      variations.push(variation);
+    }
+    expect(variations[0]).toBeGreaterThan(500);
+    expect(variations[1]).toBeLessThan(variations[0] * 0.8);
+    sourceTexture.writeData(
+      new Uint8Array(
+        Array.from({length: 3}, () => [0, 0, 0, 255, 51, 51, 51, 255, 255, 255, 255, 255]).flat()
+      )
+    );
+    historyTexture.writeData(
+      new Uint8Array(Array.from({length: 9}, () => [204, 204, 204, 255]).flat())
+    );
     previousNormalTexture.writeData(
       new Uint8Array(Array.from({length: 9}, () => [128, 128, 0, 51]).flat())
     );

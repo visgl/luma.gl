@@ -9,7 +9,7 @@ import {
   type FlatViewState,
   type RectangleSelection,
   RectangleSelectController
-} from '@luma.gl/experimental';
+} from '@luma.gl/engine/experimental/controls';
 
 describe('FlatController', () => {
   test('pans with the content under the pointer and separates hover from click picking', () => {

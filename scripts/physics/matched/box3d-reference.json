@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/erincatto/box3d.git",
+  "commit": "f36d061ba26998c87cb7dc593a4065aaa03fb7eb",
+  "license": "MIT",
+  "configuration": "Release, SIMD enabled, no fast-math; worker count is explicit per run",
+  "positionPrecision": "float32 world positions in both adapters (BOX3D_DOUBLE_PRECISION=OFF)"
+}

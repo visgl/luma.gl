@@ -1,0 +1,27 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {expect, it} from 'vitest';
+import {fillArray} from '@luma.gl/core/webgl/utils/fill-array';
+
+const FILL_ARRAY_TEST_CASES = [
+  {
+    title: 'test array',
+    arguments: {target: new Float32Array(10), source: [1, 2], count: 5},
+    result: [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]
+  }
+];
+
+it('fillArray#import', () => {
+  expect(typeof fillArray, 'fillArray imported OK').toBe('function');
+});
+
+it('fillArray#tests', () => {
+  for (const tc of FILL_ARRAY_TEST_CASES) {
+    const result = fillArray(tc.arguments);
+    expect(result, `fillArray ${tc.title} returned expected result`).toEqual(
+      new Float32Array(tc.result)
+    );
+  }
+});
