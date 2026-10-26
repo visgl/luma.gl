@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {ScenegraphPhysicsSession} from '@luma.gl/graph/gpu-physics';
+import {ScenegraphPhysicsSession} from '@luma.gl/engine/physics';
 import {
   parseGLTFPhysics,
   makeGLTFPhysicsScene,

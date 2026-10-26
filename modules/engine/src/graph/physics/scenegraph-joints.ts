@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ResolvedScenegraphJoint, ScenegraphNode} from '@luma.gl/engine';
-import type {GPURigidBodyJoint} from './rigid-body-joints';
+import type {ResolvedScenegraphJoint, ScenegraphNode} from '../../index';
+import type {GPURigidBodyJoint} from '@luma.gl/graph/gpu-physics';
 
 /** Compile shared scene attachments into backend rows; no glTF dependency or parsing. */
 export function makeRigidBodyJointsFromScenegraph(

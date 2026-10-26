@@ -4,11 +4,8 @@
 
 import {Buffer, type BufferLayout, type Device, type ShaderLayout} from '@luma.gl/core';
 import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {
-  planGeneratedBufferBatches,
-  type GeneratedBufferBatch,
-  type GPUTableModelProps
-} from '@luma.gl/graph/gpu-tables';
+import {planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
+import {type GPUTableModelProps} from '@luma.gl/engine/tables';
 import {expandArrowVector} from '../../../vectors/arrow-vector-utils';
 import {
   getArrowVectorBufferSource,

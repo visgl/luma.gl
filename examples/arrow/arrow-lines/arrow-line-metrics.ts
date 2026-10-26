@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {PathStorageModel, PathTripsStorageModel} from '@luma.gl/graph/experimental/models';
+import {PathStorageModel, PathTripsStorageModel} from '@luma.gl/engine/models';
 import type {ArrowLineControlPanelMetrics} from './control-panel';
 import type {
   ArrowLineRenderer,

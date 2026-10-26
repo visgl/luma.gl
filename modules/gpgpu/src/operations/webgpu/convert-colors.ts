@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import type {OperationHandler} from '../../operation/operation';
 import type {ConvertColorsInputs} from '../convert-colors';
 

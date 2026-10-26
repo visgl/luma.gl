@@ -22,7 +22,7 @@ import {
   PathStorageModel,
   PathTripsStorageModel,
   createPathStorageState
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/engine/models';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 

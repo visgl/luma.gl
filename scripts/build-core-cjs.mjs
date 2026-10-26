@@ -13,7 +13,9 @@ import {transform} from 'esbuild';
 const distributionDirectory = new URL('../modules/core/dist/', import.meta.url);
 await writeCommonJSModules(distributionDirectory);
 await writeCommonJSModules(new URL('../modules/anari/dist/', import.meta.url));
-await writeCommonJSModules(new URL('../modules/graph/dist/experimental/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/gpgpu/dist/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/graph/dist/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/engine/dist/', import.meta.url));
 
 async function writeCommonJSModules(directory) {
   const files = await readdir(directory, {recursive: true});
@@ -112,3 +114,17 @@ for (const entryPoint of ['models', 'simulation']) {
   }
 }
 process.stdout.write('Verified CommonJS renderer and experimental subpath identity.\n');
+
+// Compatibility facades must share execution classes with their gpgpu owner.
+const engineApi = require('../modules/engine/dist/index.cjs');
+const executionApi = require('../modules/gpgpu/dist/index.cjs');
+const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
+for (const name of ['Kernel', 'Computation', 'GPUVectorModel', 'GPUVectorGeometry', 'BufferTransform', 'TextureTransform', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
+  assert.equal(typeof executionApi[name], 'function');
+  assert.equal(engineApi[name], executionApi[name]);
+}
+assert.equal(dataApi.GPUVectorModel, executionApi.GPUVectorModel);
+assert(engineApi.Model.prototype instanceof executionApi.GPUVectorModel);
+process.stdout.write('Verified CommonJS execution primitive identity.\n');
+
+await import('./verify-package-layering.mjs');

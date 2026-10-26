@@ -10,7 +10,7 @@ import {
   type CommandEncoder,
   type ShaderLayout
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import {
   GPUCommandGraph,
   type GPUCommandGraphComputeExecutable

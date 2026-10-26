@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
 import {type Binding, Buffer} from '@luma.gl/core';
-import {Computation, DynamicBuffer} from '@luma.gl/engine';
+import {Computation, DynamicBuffer} from '@luma.gl/gpgpu';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import type {GPUGridIndexBounds, GPUGridIndexSize} from '@luma.gl/graph/gpu-core';
 import {

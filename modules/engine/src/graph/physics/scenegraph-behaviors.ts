@@ -7,8 +7,8 @@ import {
   type ScenegraphNode,
   type Interactivity,
   type InteractivityPhysics
-} from '@luma.gl/engine';
-import type {GPURigidBodyWorld} from './gpu-rigid-body-world';
+} from '../../index';
+import type {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 
 export type ScenegraphPhysicsBehaviorProps = {
   roots: readonly ScenegraphNode[];

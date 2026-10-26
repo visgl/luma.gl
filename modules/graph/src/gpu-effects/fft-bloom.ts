@@ -9,7 +9,7 @@ import {
   type CommandEncoder,
   type Device
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import {
   getGPUFFT2DSupport,
   GPUFFT2D,

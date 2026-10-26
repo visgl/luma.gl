@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import {GPUVectorModel} from '@luma.gl/gpgpu';
 import {assert} from '@luma.gl/core';
 import {validateFlowParticleField, type FlowParticleField} from './flow-particle-field';
 import {
@@ -67,7 +67,7 @@ export class FlowParticleSimulation {
   private readonly textures: Texture[] = [];
   private readonly framebuffers: Framebuffer[] = [];
   private readonly uniforms: Buffer;
-  private readonly model: Model;
+  private readonly model: GPUVectorModel;
   private current = 0;
   private previous = 0;
   private stateDeltaTime = 0;
@@ -118,7 +118,7 @@ export class FlowParticleSimulation {
           })
         );
       }
-      this.model = new Model(device, {
+      this.model = new GPUVectorModel(device, {
         id: identifier,
         source: FLOW_PARTICLE_WGSL,
         vs: FLOW_PARTICLE_VERTEX,

@@ -326,7 +326,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   helpers live in `@luma.gl/gpgpu/gpu-data`, independent of source adapters and rendering models.
 - **Tables and models stay focused** - Batch-preserving tables live in
   `@luma.gl/graph/gpu-tables`; path and polygon models live in
-  `@luma.gl/graph/experimental/models`.
+  `@luma.gl/engine/models`.
 - **Renderers preserve what matters** - `@luma.gl/text` supports streamed text and shared font
   resources. `@luma.gl/splats` retains source batches and stable row identities.
 

@@ -5,7 +5,8 @@
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
-import {GPURigidBodyWorld, ScenegraphPhysicsBehaviors} from '../../src/gpu-physics';
+import {GPURigidBodyWorld} from '../../src/gpu-physics';
+import {ScenegraphPhysicsBehaviors} from '@luma.gl/engine/physics';
 import {GroupNode, Interactivity} from '@luma.gl/engine';
 
 it('emits box sensor transitions without collision response', async context => {

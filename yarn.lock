@@ -5135,6 +5135,8 @@ __metadata:
   resolution: "@luma.gl/engine@workspace:modules/engine"
   dependencies:
     "@luma.gl/anari": "npm:10.0.0-alpha.4"
+    "@luma.gl/gpgpu": "npm:10.0.0-alpha.4"
+    "@luma.gl/graph": "npm:10.0.0-alpha.4"
     "@math.gl/core": "npm:~5.0.0-alpha.20"
     "@math.gl/geometry": "npm:~5.0.0-alpha.20"
     probe.gl: "npm:^5.0.0"
@@ -5185,7 +5187,6 @@ __metadata:
     probe.gl: "npm:^5.0.0"
   peerDependencies:
     "@luma.gl/core": ~10.0.0-alpha.3
-    "@luma.gl/engine": ~10.0.0-alpha.3
     "@luma.gl/shadertools": ~10.0.0-alpha.3
   languageName: unknown
   linkType: soft
@@ -5216,7 +5217,6 @@ __metadata:
     probe.gl: "npm:^5.0.0"
   peerDependencies:
     "@luma.gl/core": ~10.0.0-alpha.4
-    "@luma.gl/engine": ~10.0.0-alpha.4
     "@luma.gl/shadertools": ~10.0.0-alpha.4
     "@math.gl/geospatial": ~5.0.0-alpha.20
   peerDependenciesMeta:

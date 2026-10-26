@@ -10,7 +10,7 @@ import {
   type CommandEncoder,
   type Device
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {

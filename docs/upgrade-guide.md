@@ -1,5 +1,17 @@
 # Upgrade Guide
 
+## Graph and engine dependency direction
+
+Graph and gpgpu no longer depend on engine. Update these rendering integration imports:
+
+| APIs | Previous import | New import |
+| --- | --- | --- |
+| `GPUTableModel`, `GPUTableGeometry` and their props | `@luma.gl/graph/gpu-tables` | `@luma.gl/engine/tables` |
+| Scenegraph physics adapters, sessions, and `makePhysicsScenegraph` | `@luma.gl/graph/gpu-physics` | `@luma.gl/engine/physics` |
+| Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models` |
+
+GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. Execution primitives (`Kernel`, `Computation`, `GPUVectorModel`, `GPUVectorGeometry`, transforms, `ShaderInputs`, and dynamic resources) are now owned by `@luma.gl/gpgpu`; existing engine imports remain compatibility re-exports of the same implementations. Engine `Model` still extends that single `GPUVectorModel`.
+
 ## Experimental package removal
 
 Remove `@luma.gl/experimental` from project dependencies and update imports:
@@ -8,7 +20,7 @@ Remove `@luma.gl/experimental` from project dependencies and update imports:
 | --- | --- |
 | Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari` |
 | Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
-| Path and polygon models | `@luma.gl/graph/experimental/models` |
+| Path and polygon models | `@luma.gl/engine/models` |
 | Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
 
 ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.

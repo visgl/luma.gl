@@ -6,7 +6,7 @@ import type {AnimationProps, ScenegraphNode} from '@luma.gl/engine';
 import {
   ScenegraphPhysicsSession,
   type ScenegraphPhysicsSessionCapture
-} from '@luma.gl/graph/gpu-physics';
+} from '@luma.gl/engine/physics';
 import {
   makeGLTFPhysicsScene,
   parseGLTFPhysics,

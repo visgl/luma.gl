@@ -7,12 +7,8 @@ import {Buffer, type ShaderLayout} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {
-  GPURecordBatch,
-  GPU_TABLE_INDEX_COLUMN_NAME,
-  GPUTable,
-  GPUTableModel
-} from '@luma.gl/graph/gpu-tables';
+import {GPURecordBatch, GPU_TABLE_INDEX_COLUMN_NAME, GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 
 const TABLE_MODEL_SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],

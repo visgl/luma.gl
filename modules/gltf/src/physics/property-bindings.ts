@@ -4,11 +4,8 @@
 
 import {Matrix4} from '@math.gl/core';
 import {decomposePhysicsTransform} from '@luma.gl/engine';
-import {
-  ScenegraphPhysicsProperties,
-  type GPURigidBodyWorld,
-  type PhysicsPropertyTarget
-} from '@luma.gl/graph/gpu-physics';
+import {ScenegraphPhysicsProperties, type PhysicsPropertyTarget} from '@luma.gl/engine/physics';
+import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import type {GLTFPhysicsDescription} from './physics-types';
 
 /** Resolve draft pointers once. All mutation and GPU work lives in the shared physics runtime. */

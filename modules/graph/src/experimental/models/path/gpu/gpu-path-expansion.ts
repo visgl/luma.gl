@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import type {GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
 
 /** Stable resource naming options shared by GPU path expansion helpers. */

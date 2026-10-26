@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import type {GPUCommandGraph, GraphBufferHandle} from '../gpu-core/gpu-command-graph';
 

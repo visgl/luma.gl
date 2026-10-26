@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, SignedDataType} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import type {GPUEvaluationScope} from '../../../operation/gpu-evaluation-scope';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import {getGPUVectorFormatInfo} from '../../gpu-data/gpu-vector-format';
 import type {OperationHandler} from '../../operation/operation';
 import type {CastDataInputs} from '../cast-data';

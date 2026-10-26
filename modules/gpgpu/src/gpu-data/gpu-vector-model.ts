@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-// Compatibility exports: there is one implementation, owned by engine.
+// Compatibility exports: there is one implementation, owned by gpgpu.
 export {
   GPUVectorModel,
   getGPUVectorModelBatches,
   type GPUVectorModelCount,
   type GPUVectorModelProps
-} from '@luma.gl/engine';
+} from '../execution/model/gpu-vector-model';
 
 import type {
   GPUVectorModelBatch as EngineGPUVectorModelBatch,
   GPUVectorModelDrawBatchesOptions as EngineGPUVectorModelDrawBatchesOptions
-} from '@luma.gl/engine';
+} from '../execution/model/gpu-vector-model';
 import type {GPUData} from './gpu-data';
 import type {GPUVector} from './gpu-vector';
 

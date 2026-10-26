@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUPathStorageInputProps} from '@luma.gl/graph/experimental/models';
+
 import {
   Buffer,
   type Binding,
@@ -10,17 +12,21 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
-import {DynamicBuffer, Model, type ModelProps} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/gpgpu';
+import {Model, type ModelProps} from '../../../index';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {type GPUVectorFormat, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {planGeneratedBufferBatches} from '@luma.gl/graph/gpu-tables';
 import {
   createGpuPathExpansionInput,
   createGpuPathGeneratedState,
   createGpuPathRangeState,
   dispatchGpuPathExpansionCompute
-} from './gpu/gpu-path-expansion';
-import {resolvePathStorageInputs, type PathStorageBatchInputs} from './gpu/path-storage-gpu-inputs';
+} from '@luma.gl/graph/experimental/models';
+import {
+  resolvePathStorageInputs,
+  type PathStorageBatchInputs
+} from '@luma.gl/graph/experimental/models';
 import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';
@@ -206,24 +212,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 `;
 
 /** GPU vectors used by the storage-backed path model. */
-export type PathStorageInputProps = Omit<ModelProps, 'instanceCount'> & {
-  /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one GPU row per path. */
-  paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
-  /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
-  colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
-  /** Optional per-path widths, one GPU row per path. */
-  widths?: GPUVector<'float32'>;
-  /** Optional per-path Float32 temporal stream aligned with path vertices. */
-  timestamps?: GPUVector<VertexList<'float32'>>;
-  /** Optional per-path view-space origins, one GPU row per path. */
-  viewOrigins?: GPUVector<'float32x4'>;
-  /** Global source row index assigned to the first prepared path row. */
-  rowIndexBase?: number;
-  /** Constant fallback path color used when `colors` is absent. */
-  color?: [number, number, number, number];
-  /** Constant fallback path width used when `widths` is absent. */
-  width?: number;
-};
+export type PathStorageInputProps = Omit<ModelProps, 'instanceCount'> & GPUPathStorageInputProps;
 
 type PathStorageRenderProps = Omit<
   PathStorageInputProps,

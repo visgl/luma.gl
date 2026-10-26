@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import {GroupNode, decomposePhysicsTransform, type ScenegraphNode} from '@luma.gl/engine';
-import {scaleRigidBodyShape} from './scale-shape';
-import type {GPURigidBodyWorld} from './gpu-rigid-body-world';
+import {GroupNode, decomposePhysicsTransform, type ScenegraphNode} from '../../index';
+import {scaleRigidBodyShape} from '@luma.gl/graph/gpu-physics';
+import type {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 
 export type ScenegraphPhysicsColliderTarget = {
   node: ScenegraphNode;

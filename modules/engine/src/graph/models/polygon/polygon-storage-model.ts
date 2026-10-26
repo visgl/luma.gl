@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device} from '@luma.gl/core';
-import {getIndexPickingModule, indexPicking, supportsIndexPicking} from '@luma.gl/engine';
-import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/graph/gpu-tables';
+import {getIndexPickingModule, indexPicking, supportsIndexPicking} from '../../../index';
+import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/engine/tables';
 import {GPURecordBatch} from '@luma.gl/graph/gpu-tables';
 import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
@@ -14,7 +14,7 @@ import {
   assertPolygonGPUVectorInputs,
   POLYGON_GPU_INPUT_SCHEMA,
   type PolygonBatchProps
-} from './polygon-gpu-inputs';
+} from '@luma.gl/graph/experimental/models';
 import {
   getPolygonPickingParameters,
   mergePolygonShaderModules,

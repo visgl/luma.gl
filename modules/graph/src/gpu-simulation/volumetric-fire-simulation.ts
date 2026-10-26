@@ -4,7 +4,7 @@
 
 import type {CommandEncoder, Device, Sampler, Texture} from '@luma.gl/core';
 import {Buffer, Texture as TextureResource} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,

@@ -31,7 +31,8 @@ import {
 import type {Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
 import {GPUConstant, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPUTable, type GPURecordBatch, type GPUTableModel} from '@luma.gl/graph/gpu-tables';
+import {GPUTable, type GPURecordBatch} from '@luma.gl/graph/gpu-tables';
+import {type GPUTableModel} from '@luma.gl/engine/tables';
 import * as arrow from 'apache-arrow';
 import {
   createPointModel,

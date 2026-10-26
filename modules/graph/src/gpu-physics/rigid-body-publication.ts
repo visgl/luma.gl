@@ -4,7 +4,7 @@
 import {Buffer, type CommandEncoder} from '@luma.gl/core';
 import {Matrix4} from '@math.gl/core';
 import {normalizeRigidBodyRotation} from './rigid-body-properties';
-import {Computation} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/gpgpu';
 import type {
   GPUCommandGraph,
   GPUCommandGraphComputeExecutable
