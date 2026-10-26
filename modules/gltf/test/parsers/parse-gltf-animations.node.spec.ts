@@ -3,8 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
-import {parseGLTFAnimations} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF, type GLTFPostprocessed, parseGLTFAnimations} from '@luma.gl/gltf';
+
 import {describe, expect, test} from 'vitest';
 
 import './parse-gltf-animations.spec';

@@ -42,13 +42,20 @@ export type BrowserFontRenderer = {
     data: ImageData;
     left?: number;
     top?: number;
+    /** Explicit horizontal layout offset when bitmap packing is independent of its bearing. */
+    layoutOffsetX?: number;
   };
 };
 
-type BrowserFontAtlasBuildOptions = {
+/** Options for packing a browser font with an optional custom glyph renderer. */
+export type BrowserFontAtlasBuildOptions = {
+  /** Resolved font and packing settings. */
   settings: ResolvedBrowserFontAtlasSettings;
-  cacheKey: string;
+  /** Shared cache identity. Omit to build an uncached custom atlas. */
+  cacheKey?: string;
+  /** Sampling parameters attached to the atlas. */
   renderSettings: FontAtlasRenderSettings;
+  /** Creates a custom glyph renderer, with access to browser font measurement. */
   createRenderer?: (defaultMeasure: BrowserFontRenderer['measure']) => BrowserFontRenderer;
 };
 
@@ -59,7 +66,7 @@ const DEFAULT_BROWSER_FONT_ATLAS_SETTINGS: ResolvedBrowserFontAtlasSettings = {
   fontSize: 64,
   buffer: 4
 };
-const MAX_CANVAS_WIDTH = 1024;
+export const MAX_CANVAS_WIDTH = 1024;
 const DEFAULT_ASCENT = 0.9;
 const DEFAULT_DESCENT = 0.3;
 const CACHE_LIMIT = 3;
@@ -84,6 +91,9 @@ export function resolveBrowserFontAtlasSettings(
 /** Packs and rasterizes a browser font using a source-specific glyph renderer. */
 export function buildBrowserFontAtlas(options: BrowserFontAtlasBuildOptions): FontAtlas {
   const {settings, cacheKey, renderSettings} = options;
+  if (cacheKey === undefined) {
+    return buildGeneratedFontAtlas(options, new Set(settings.characterSet));
+  }
   const characterSet = getNewCharacters(cacheKey, settings.characterSet);
   const cachedFontAtlas = cache.get(cacheKey);
   if (cachedFontAtlas && characterSet.size === 0) {
@@ -170,7 +180,8 @@ function drawCharacters(
 
   for (const character of characterSet) {
     const frame = mapping[character];
-    const {data, left = 0, top = 0} = renderer.draw(character);
+    const measuredWidth = frame.width;
+    const {data, left = 0, top = 0, layoutOffsetX} = renderer.draw(character);
     const x = frame.x - left;
     const y = frame.y - top;
     const x0 = Math.max(0, Math.round(x));
@@ -178,8 +189,15 @@ function drawCharacters(
     const width = Math.min(data.width, context.canvas.width - x0);
     const height = Math.min(data.height, context.canvas.height - y0);
     context.putImageData(data, x0, y0, 0, 0, width, height);
-    frame.x += x0 - x;
-    frame.y += y0 - y;
+    // deck.gl#10545: retain the entire rasterized halo while preserving advances and baselines.
+    frame.x = x0;
+    frame.y = y0;
+    frame.width = width;
+    frame.height = height;
+    frame.anchorX += width / 2 - left - measuredWidth / 2;
+    frame.anchorY += top;
+    frame.layoutOffsetX = layoutOffsetX ?? (frame.layoutOffsetX ?? 0) + x0 - x - left;
+    frame.layoutOffsetY = (frame.layoutOffsetY ?? 0) + y0 - y - top;
   }
 }
 

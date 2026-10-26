@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "10.0.0-alpha.3",
+  "version": "10.0.0-alpha.4",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -25,6 +25,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./experimental/controls": {
+      "types": "./dist/experimental/controls/index.d.ts",
+      "import": "./dist/experimental/controls/index.js",
+      "require": "./dist/experimental/controls/index.cjs"
+    },
+    "./experimental/materials": {
+      "types": "./dist/experimental/materials/index.d.ts",
+      "import": "./dist/experimental/materials/index.js",
+      "require": "./dist/experimental/materials/index.cjs"
+    },
+    "./experimental/textures": {
+      "types": "./dist/experimental/textures/index.d.ts",
+      "import": "./dist/experimental/textures/index.js",
+      "require": "./dist/experimental/textures/index.cjs"
+    },
+    "./experimental/webxr": {
+      "types": "./dist/experimental/webxr/index.d.ts",
+      "import": "./dist/experimental/webxr/index.js",
+      "require": "./dist/experimental/webxr/index.cjs"
     }
   },
   "files": [
@@ -40,15 +60,16 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.2",
-    "@luma.gl/shadertools": "~10.0.0-alpha.2"
+    "@luma.gl/core": "~10.0.0-alpha.3",
+    "@luma.gl/shadertools": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@math.gl/core": "5.0.0-alpha.13",
-    "@math.gl/geometry": "~5.0.0-alpha.13",
-    "@math.gl/types": "~5.0.0-alpha.13",
-    "@probe.gl/log": "^4.1.1",
-    "@probe.gl/stats": "^4.1.1"
+    "@math.gl/core": "~5.0.0-alpha.19",
+    "@math.gl/geometry": "~5.0.0-alpha.19",
+    "probe.gl": "^5.0.0"
   },
-  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
+  "devDependencies": {
+    "@luma.gl/anari": "10.0.0-alpha.4"
+  }
 }

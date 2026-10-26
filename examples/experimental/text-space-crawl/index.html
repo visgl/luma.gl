@@ -2,8 +2,8 @@
 <title>luma.gl Text Space Crawl Example</title>
 <script type="module">
   import {makeAnimationLoop} from '@luma.gl/engine'
-  import {webgl2Adapter} from '@luma.gl/webgl'
-  import {webgpuAdapter} from '@luma.gl/webgpu'
+  import {webgl2Adapter} from '@luma.gl/core/webgl'
+  import {webgpuAdapter} from '@luma.gl/core/webgpu'
   import AnimationLoopTemplate from './app'
   const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter, webgpuAdapter]})
   animationLoop.start()

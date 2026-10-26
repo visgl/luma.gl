@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {Geometry as MathGeometry, CubeGeometry as MathCubeGeometry} from '@math.gl/geometry';
+import {
+  Geometry as MathGeometry,
+  CubeGeometry as MathCubeGeometry,
+  PrismGeometry,
+  RingGeometry
+} from '@math.gl/geometry';
 import {NullDevice} from '@luma.gl/test-utils';
 import {
   Model,
@@ -229,4 +234,20 @@ test('compatibility spheres preserve longitude texture coordinates', () => {
     expect(positions[vertexIndex * 3 + 1]).toBeCloseTo(Math.cos(latitude));
     expect(positions[vertexIndex * 3 + 2]).toBeCloseTo(Math.sin(longitude) * Math.sin(latitude));
   }
+});
+
+test('new math.gl prism and ring meshes upload through the shared geometry boundary', () => {
+  const device = new NullDevice({});
+  for (const geometry of [new PrismGeometry({sides: 5}), new RingGeometry({sweepAngle: Math.PI})]) {
+    const gpuGeometry = makeGPUGeometry(device, geometry);
+    expect(gpuGeometry.vertexCount).toBe(geometry.indices!.value.length);
+    expect(Object.keys(geometry.attributes)).toEqual(['POSITION', 'NORMAL', 'TEXCOORD_0']);
+    expect(
+      gpuGeometry.bufferLayout.flatMap(
+        layout => layout.attributes?.map(attribute => attribute.attribute) ?? []
+      )
+    ).toContain('positions');
+    gpuGeometry.destroy();
+  }
+  device.destroy();
 });

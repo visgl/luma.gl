@@ -4,7 +4,7 @@
 
 import {Buffer, type Binding} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
 
 export type VectorFieldGraphParameters = {presetIndex: number; time: number};
 

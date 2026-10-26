@@ -18,7 +18,7 @@ import {
   type TextSpaceCrawlColorKind
 } from '../../text-space-crawl-color';
 
-export type TextSpaceCrawlRenderingKind = 'extruded' | 'bitmap' | 'sdf' | 'msdf';
+export type TextSpaceCrawlRenderingKind = 'extruded' | 'bitmap' | 'sdf' | 'msdf' | 'glyphs';
 export type TextSpaceCrawlBrowserFontKind = 'monospace' | 'sans-serif' | 'serif';
 
 const TEXT_RENDERING_QUERY_PARAMETER = 'textRendering';
@@ -152,6 +152,7 @@ export function makeTextSpaceCrawlSettingsSchema(
             persist: 'none',
             options: [
               {label: 'MSDF atlas', value: 'msdf'},
+              {label: 'Server glyph SDF atlas', value: 'glyphs'},
               {label: 'SDF atlas', value: 'sdf'},
               {label: 'Bitmap atlas', value: 'bitmap'},
               {label: 'Extruded typeface', value: 'extruded'}
@@ -199,7 +200,7 @@ export function makeTextSpaceCrawlControlPanelHtml(
     ? ' The selected browser font regenerates this atlas.'
     : '';
   return `\
-  <p>Compares extruded typeface geometry, generated bitmap atlas text, generated SDF atlas text, and prebuilt MSDF atlas text.</p>
+  <p>Compares extruded typeface geometry, generated bitmap atlas text, generated SDF atlas text, prebuilt MSDF atlas text, and server glyph SDF text from OpenFreeMap (network required).</p>
   <p>${renderingDescription}${browserFontDescription}</p>
   `;
 }
@@ -273,15 +274,23 @@ export function getTextSpaceCrawlBrowserFontFamily(
 }
 
 function getAtlasRenderingLabel(renderingKind: Exclude<TextSpaceCrawlRenderingKind, 'extruded'>) {
-  return renderingKind === 'msdf'
-    ? 'Prebuilt MSDF atlas text'
-    : renderingKind === 'sdf'
-      ? 'Generated SDF atlas text'
-      : 'Generated bitmap atlas text';
+  return renderingKind === 'glyphs'
+    ? 'Server glyph SDF text (OpenFreeMap / Noto Sans Regular)'
+    : renderingKind === 'msdf'
+      ? 'Prebuilt MSDF atlas text'
+      : renderingKind === 'sdf'
+        ? 'Generated SDF atlas text'
+        : 'Generated bitmap atlas text';
 }
 
 function isTextSpaceCrawlRenderingKind(value: unknown): value is TextSpaceCrawlRenderingKind {
-  return value === 'extruded' || value === 'bitmap' || value === 'sdf' || value === 'msdf';
+  return (
+    value === 'extruded' ||
+    value === 'bitmap' ||
+    value === 'sdf' ||
+    value === 'msdf' ||
+    value === 'glyphs'
+  );
 }
 
 function isTextSpaceCrawlBrowserFontKind(value: unknown): value is TextSpaceCrawlBrowserFontKind {

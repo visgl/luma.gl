@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-// MAIN API ACCESS POINT
-export type {AttachDeviceProps, CreateDeviceProps} from './adapter/luma';
-export {luma} from './adapter/luma';
+export type {AttachDeviceProps, CreateDeviceProps} from './api/index';
 
-// ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
-export {Adapter} from './adapter/adapter';
+export {luma} from './api/index';
+
+export {Adapter} from './api/index';
 
 export type {
   DeviceProps,
@@ -19,97 +18,119 @@ export type {
   WebGPUFeatureLevel,
   WebGPUDeviceFeatureLevel,
   DeviceLostInfo
-} from './adapter/device';
-export {Device, DeviceFeatures, DeviceLimits, isHTMLInCanvasSupported} from './adapter/device';
+} from './api/index';
 
-export type {CanvasContextProps} from './adapter/canvas-context';
-export {CanvasContext} from './adapter/canvas-context';
-export type {PresentationContextProps} from './adapter/presentation-context';
-export {PresentationContext} from './adapter/presentation-context';
+export {Device, DeviceFeatures, DeviceLimits, isHTMLInCanvasSupported} from './api/index';
 
-// GPU RESOURCES
-export {Resource, type ResourceProps} from './adapter/resources/resource';
+export type {CanvasContextProps} from './api/index';
 
-export {Buffer, type BufferProps, type BufferMapCallback} from './adapter/resources/buffer';
+export {CanvasContext} from './api/index';
 
-export {Texture, type TextureProps} from './adapter/resources/texture';
+export type {PresentationContextProps} from './api/index';
 
-export {TextureView, type TextureViewProps} from './adapter/resources/texture-view';
+export {PresentationContext} from './api/index';
 
-export type {ExternalTextureProps} from './adapter/resources/external-texture';
-export {ExternalTexture} from './adapter/resources/external-texture';
+export {Resource, type ResourceProps} from './api/index';
 
-export type {ShaderProps} from './adapter/resources/shader';
-export {Shader} from './adapter/resources/shader';
+export {Buffer, type BufferProps, type BufferMapCallback} from './api/index';
 
-export type {SamplerProps, SamplerParameters} from './adapter/resources/sampler';
-export {Sampler} from './adapter/resources/sampler';
+export {Texture, type TextureProps} from './api/index';
 
-export type {FramebufferProps} from './adapter/resources/framebuffer';
-export {Framebuffer} from './adapter/resources/framebuffer';
+export {TextureView, type TextureViewProps} from './api/index';
 
-export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
-export {RenderPipeline} from './adapter/resources/render-pipeline';
+export type {ExternalTextureProps} from './api/index';
+
+export {ExternalTexture} from './api/index';
+
+export type {ShaderProps} from './api/index';
+
+export {Shader} from './api/index';
+
+export type {SamplerProps, SamplerParameters} from './api/index';
+
+export {Sampler} from './api/index';
+
+export type {FramebufferProps} from './api/index';
+
+export {Framebuffer} from './api/index';
+
+export type {RenderPipelineProps} from './api/index';
+
+export {RenderPipeline} from './api/index';
+
 export {
   SharedRenderPipeline,
   type SharedRenderPipelineProps
-} from './adapter/resources/shared-render-pipeline';
-export type {PipelineFactoryProps} from './factories/pipeline-factory';
-export {PipelineFactory} from './factories/pipeline-factory';
-export {ShaderFactory} from './factories/shader-factory';
-export {_getDefaultBindGroupFactory} from './factories/bind-group-factory';
+} from './api/index';
+
+export type {PipelineFactoryProps} from './api/index';
+
+export {PipelineFactory} from './api/index';
+
+export {ShaderFactory} from './api/index';
+
+export {_getDefaultBindGroupFactory} from './api/index';
 
 export type {
   RenderPassProps,
   RenderPassDrawOptions,
   RenderPassBindingOptions
-} from './adapter/resources/render-pass';
-export {RenderPass} from './adapter/resources/render-pass';
+} from './api/index';
 
-export type {RenderBundleEncoderProps} from './adapter/resources/render-bundle';
-export {RenderBundle, RenderBundleEncoder} from './adapter/resources/render-bundle';
+export {RenderPass} from './api/index';
 
-export type {ComputePipelineProps} from './adapter/resources/compute-pipeline';
-export {ComputePipeline} from './adapter/resources/compute-pipeline';
+export type {RenderBundleEncoderProps} from './api/index';
 
-export type {ComputePassProps} from './adapter/resources/compute-pass';
-export {ComputePass} from './adapter/resources/compute-pass';
+export {RenderBundle, RenderBundleEncoder} from './api/index';
 
-export type {CommandEncoderProps} from './adapter/resources/command-encoder';
-export {CommandEncoder} from './adapter/resources/command-encoder';
+export type {ComputePipelineProps} from './api/index';
 
-export {CommandBuffer} from './adapter/resources/command-buffer';
+export {ComputePipeline} from './api/index';
 
-export type {VertexArrayProps} from './adapter/resources/vertex-array';
-export {VertexArray} from './adapter/resources/vertex-array';
+export type {ComputePassProps} from './api/index';
 
-export type {TransformFeedbackProps, BufferRange} from './adapter/resources/transform-feedback';
-export {TransformFeedback} from './adapter/resources/transform-feedback';
+export {ComputePass} from './api/index';
 
-export type {QuerySetProps} from './adapter/resources/query-set';
-export {QuerySet} from './adapter/resources/query-set';
+export type {CommandEncoderProps, GPUClockCorrelation, TimestampQuerySnapshot} from './api/index';
 
-export {Fence, type FenceProps} from './adapter/resources/fence';
+export {CommandEncoder} from './api/index';
 
-export type {PipelineLayoutProps} from './adapter/resources/pipeline-layout';
-export {PipelineLayout} from './adapter/resources/pipeline-layout';
+export {CommandBuffer} from './api/index';
 
-// PORTABLE API - UNIFORM BUFFERS
+export type {VertexArrayProps} from './api/index';
+
+export {VertexArray} from './api/index';
+
+export type {TransformFeedbackProps, BufferRange} from './api/index';
+
+export {TransformFeedback} from './api/index';
+
+export type {QuerySetProps} from './api/index';
+
+export {QuerySet} from './api/index';
+
+export {Fence, type FenceProps} from './api/index';
+
+export type {PipelineLayoutProps} from './api/index';
+
+export {PipelineLayout} from './api/index';
+
 export {
   makeShaderBlockLayout,
   type ShaderBlockLayout,
   type ShaderBlockLayoutEntry,
   type ShaderBlockLayoutOptions
-} from './shadertypes/shader-types/shader-block-layout';
-export {ShaderBlockWriter} from './portable/shader-block-writer';
-export {UniformBlock} from './portable/uniform-block';
-export {UniformStore} from './portable/uniform-store';
-// TEXTURE TYPES
+} from './shadertypes/index';
 
-// API TYPES
-export type {CompilerMessage} from './adapter/types/compiler-message';
+export {ShaderBlockWriter} from './api/index';
 
-export type {ExternalImage} from './shadertypes/image-types/image-types';
+export {UniformBlock} from './api/index';
+
+export {UniformStore} from './api/index';
+
+export type {CompilerMessage} from './api/index';
+
+export type {ExternalImage} from './shadertypes/index';
 
 export {
   type CopyElementImageOptions,
@@ -117,9 +138,9 @@ export {
   type CopyImageDataOptions,
   type TextureReadOptions,
   type TextureWriteOptions
-} from './adapter/resources/texture';
+} from './api/index';
 
-export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
+export type {Parameters, PrimitiveTopology, IndexFormat} from './api/index';
 
 export type {
   CullMode,
@@ -136,9 +157,9 @@ export type {
   RenderPipelineParameters,
   PolygonMode,
   ProvokingVertex
-} from './adapter/types/parameters';
+} from './api/index';
 
-export type {ColorAttachment, DepthStencilAttachment} from './adapter/types/attachments';
+export type {ColorAttachment, DepthStencilAttachment} from './api/index';
 
 export type {
   ShaderLayout,
@@ -156,24 +177,25 @@ export type {
   ExternalTextureBindingLayout,
   SamplerBindingLayout,
   StorageTextureBindingLayout
-} from './adapter/types/shader-layout';
-export type {BufferLayout, BufferAttributeLayout} from './adapter/types/buffer-layout';
+} from './api/index';
+
+export type {BufferLayout, BufferAttributeLayout} from './api/index';
+
 export type {
   // Deprecated, todo
   AttributeBinding,
   UniformBinding,
   UniformBlockBinding,
   VaryingBinding
-} from './adapter/types/shader-layout';
+} from './api/index';
 
-export type {UniformValue} from './adapter/types/uniforms';
+export type {UniformValue} from './api/index';
+
 export type {
   CompositeUniformValue,
   CompositeUniformValueArray,
   CompositeUniformValueStruct
-} from './adapter/types/uniforms';
-
-// TYPED ARRAY TYPES
+} from './api/index';
 
 export type {
   NumberArray,
@@ -181,14 +203,13 @@ export type {
   TypedArrayConstructor,
   BigTypedArray,
   BigTypedArrayConstructor
-} from './types';
+} from './api/index';
+
 export {
   getFloat16ArrayConstructor,
   isFloat16ArrayConstructor,
   NativeFloat16ArrayConstructor
-} from './types';
-
-// GPU TYPE UTILS - BASIC DATA TYPES
+} from './api/index';
 
 export {
   type PrimitiveDataType,
@@ -199,14 +220,16 @@ export {
   type SignedDataTypeT,
   type TypedArrayConstructorT,
   type NormalizedTypedArrayConstructorT
-} from './shadertypes/data-types/data-types';
-export {dataTypeDecoder} from './shadertypes/data-types/data-type-decoder';
+} from './shadertypes/index';
+
+export {dataTypeDecoder} from './shadertypes/index';
+
 export {
   getDataTypeByteLength,
   getDataTypeFromTypedArray,
   getTypedArrayConstructor,
   getTypedArrayFromDataType
-} from './shadertypes/data-types/decode-data-types';
+} from './shadertypes/index';
 
 export {
   type AttributeShaderTypeT,
@@ -216,24 +239,21 @@ export {
   type StructShaderType,
   type VariableShaderTypeT,
   type VariableShaderType
-} from './shadertypes/shader-types/shader-types';
+} from './shadertypes/index';
+
 export {
   shaderTypeDecoder,
   getAttributeShaderTypeInfo,
   getVariableShaderTypeInfo,
   type AttributeShaderTypeInfo
-} from './shadertypes/shader-types/shader-type-decoder';
-
-// GPU TYPE UTILS - VERTEX ARRAYs
+} from './shadertypes/index';
 
 export {
   type VertexFormat,
   type VertexFormatDataTypeT
-} from './shadertypes/vertex-types/vertex-formats';
+} from './shadertypes/index';
 
-export {vertexFormatDecoder} from './shadertypes/vertex-types/vertex-format-decoder';
-
-// GPU TYPE UTILS - Texture Formats
+export {vertexFormatDecoder} from './shadertypes/index';
 
 export {
   type TextureFormat,
@@ -244,44 +264,48 @@ export {
   type TextureFormatInfo,
   type TextureFormatCapabilities,
   type TextureMemoryLayout
-} from './shadertypes/texture-types/texture-formats';
-export {type TextureFormatDataTypeT} from './shadertypes/texture-types/texture-format-generics';
+} from './shadertypes/index';
+
+export {type TextureFormatDataTypeT} from './shadertypes/index';
 
 export {
   type TextureFormatDecoder,
   textureFormatDecoder
-} from './shadertypes/texture-types/texture-format-decoder';
+} from './shadertypes/index';
 
-export {getTextureImageView, setTextureImageData} from './shadertypes/texture-types/texture-layout';
-export {type PixelData, readPixel, writePixel} from './shadertypes/texture-types/pixel-utils';
+export {getTextureImageView, setTextureImageData} from './shadertypes/index';
 
-export {isExternalImage, getExternalImageSize} from './shadertypes/image-types/image-types';
+export {type PixelData, readPixel, writePixel} from './shadertypes/index';
 
-// GENERAL EXPORTS - FOR APPLICATIONS
+export {isExternalImage, getExternalImageSize} from './shadertypes/index';
 
-export type {StatsManager} from './utils/stats-manager'; // TODO - should this be moved to probe.gl?
-
-// ADAPTER UTILS - for implementing Device adapters (@luma.gl/webgl and @luma.gl/webgpu)
+export type {StatsManager} from './api/index';
 
 export type {
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions
-} from './adapter/resources/command-encoder';
+} from './api/index';
 
-// INTERNAL UTILS - for use in other luma.gl modules only
-export {log} from './utils/log';
+export {log} from './api/index';
+
 export {
   getShaderLayoutBinding,
   normalizeBindingsByGroup,
   flattenBindingsByGroup
-} from './adapter-utils/bind-groups';
-export {assert, assertDefined} from './utils/assert';
-export {getScratchArray} from './utils/array-utils-flat';
-export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
-export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
-export type {LogicalAttributeMapping} from './adapter-utils/buffer-layout-utils';
+} from './api/index';
+
+export {assert, assertDefined} from './api/index';
+
+export {getScratchArray} from './api/index';
+
+export type {AttributeInfo} from './api/index';
+
+export {getAttributeInfosFromLayouts} from './api/index';
+
+export type {LogicalAttributeMapping} from './api/index';
+
 export {
   getBufferLayoutAttributeNames,
   getBufferLayoutMinAttributeLocation,
@@ -289,10 +313,9 @@ export {
   getMinimumAttributeLocation,
   getShaderAttributeLocationMap,
   resolveLogicalAttributeMappings
-} from './adapter-utils/buffer-layout-utils';
+} from './api/index';
 
-// TEST EXPORTS
 export {
-  getTextureFormatDefinition as _getTextureFormatDefinition,
-  getTextureFormatTable as _getTextureFormatTable
-} from './shadertypes/texture-types/texture-format-table';
+  _getTextureFormatDefinition,
+  _getTextureFormatTable
+} from './shadertypes/index';

@@ -1,0 +1,27 @@
+/* luma.gl
+ * SPDX-License-Identifier: MIT
+ * SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+ */
+@import '../example-infobox.css';
+
+.spatial-infobox summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+.spatial-infobox summary h1 {
+  display: inline-block;
+  margin: 6px 0 10px;
+  font-size: 18px;
+}
+.spatial-infobox summary .eyebrow { display: block; }
+.spatial-infobox summary:focus-visible {
+  outline: 2px solid var(--luma-infobox-accent);
+  outline-offset: 3px;
+}
+.spatial-controls .control-card output {
+  display: inline;
+  color: var(--luma-infobox-accent);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 0 4px;
+}

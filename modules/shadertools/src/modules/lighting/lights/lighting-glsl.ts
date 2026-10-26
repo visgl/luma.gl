@@ -37,6 +37,10 @@ struct UniformLight {
   vec2 coneCos;
 };
 
+struct AreaLightUniform {
+  vec3 color; vec3 position; vec3 halfAxisX; vec3 halfAxisY; vec3 normal; int disk;
+};
+
 layout(std140) uniform lightingUniforms {
   int enabled;
   int directionalLightCount;
@@ -44,6 +48,8 @@ layout(std140) uniform lightingUniforms {
   int spotLightCount;
   vec3 ambientColor;
   UniformLight lights[5];
+  int areaLightCount;
+  AreaLightUniform areaLights[4];
 } lighting;
 
 PointLight lighting_getPointLight(int index) {

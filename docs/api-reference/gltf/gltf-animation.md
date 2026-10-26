@@ -12,7 +12,8 @@ animation mixer, interpolation implementation, or skinning shader.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/gltf';
 import {createScenegraphsFromGLTF, parseGLTFAnimations} from '@luma.gl/gltf';
 
 const asset = await load('/models/character.glb', GLTFLoader);
@@ -30,6 +31,11 @@ channels are converted to shared `AnimationTrack`, `AnimationClip`, and `Animati
 by `GLTFAnimator`. `scenegraphs.animations` retains the parsed source channels;
 `scenegraphs.animator` owns their shared runtime actions; `scenegraphs.skins` owns reusable,
 automatically updated source skin palettes.
+
+`GLTFAnimator` is an import adapter over engine `ScenegraphAnimator`; playback,
+property updates and texture-transform math are shared with programmatic scenes.
+See [Scenegraph controllers](/docs/api-guide/engine/scene-controllers) for the runtime
+architecture, deformation paths and resource ownership.
 
 ## `GLTFAnimator`
 
@@ -168,21 +174,23 @@ integer joint weights retain their intended normalized interpretation at the con
 The existing shared `skin` shader module in `@luma.gl/shadertools` applies joint palettes; its
 current uniform-array capacity is 64 joints.
 
-`createScenegraphsFromGLTF()` automatically builds a source-aware `GLTFSkinController`. Each
-binding maps one authored mesh node to its source skin, animated joints, optional inverse bind
+For native palette construction, ownership, and update order, see
+[Skins and skeletal deformation](/docs/api-guide/engine/scenegraph-skins).
+
+`createScenegraphsFromGLTF()` maps source skins into an engine `SkinController`. Each
+binding maps one resolved mesh node to its animated joints, optional inverse bind
 matrices, reusable mesh-local joint palette, and existing primitive models:
 
 ```ts
 for (const binding of scenegraphs.skins.bindings) {
   console.log({
-    sourceNode: binding.nodeIndex,
-    sourceSkin: binding.skinIndex,
+    node: binding.node.id,
     jointCount: binding.joints.length,
     palette: binding.jointMatrices
   });
 }
 
-const skinBinding = scenegraphs.skins.getBinding(2);
+const skinBinding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(2));
 console.log(skinBinding?.models.length);
 ```
 
@@ -199,12 +207,12 @@ scenegraphs.skins.update();
 ```
 
 The shared
-[experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) consumes the
+[experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) consumes the
 format-independent palette through its surface skin descriptor.
 
 The optional ANARI glTF integration also maps retained source skin bindings to the same generic
 joint-palette helper and updates its palettes after each animation frame. It remains an optional
-`@luma.gl/scene/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning
+`@luma.gl/anari/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning
 shader.
 
 ## Morph targets

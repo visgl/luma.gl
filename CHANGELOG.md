@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-alpha.4
+
+- Align WebGL and WebGPU draw-call semantics and fix viewport, scissor, framebuffer, texture ownership, and buffer readback behavior.
+- Add progressive RAD selection and shared-pass Gaussian splat rendering.
+- Expand GPU table projection with CPU/GPU consumers, routing, domain partitions, and measured execution selection.
+- Delegate CPU geometry to math.gl and update loaders.gl and math.gl alpha dependencies.
+- Add Slang module registry and typed native shader contracts, fullscreen triangle geometry, and shared celestial sky layers.
+- Improve example rendering performance, replace CARTO basemaps with OpenFreeMap, and audit rendering and compute documentation.
+
 ### v10.0.0-alpha.3
 
 ### v10.0.0-alpha.2

@@ -15,7 +15,21 @@ import {
   type IcoSphereGeometryProps,
   type TruncatedConeGeometryProps
 } from '@math.gl/geometry';
+import {
+  TorusGeometry as MathTorusGeometry,
+  type TorusGeometryProps
+} from '@math.gl/geometry/parametric';
 import {Geometry} from './geometry';
+
+export type {TorusGeometryProps};
+
+/** Shared math.gl tessellation, including open partial sweeps around the Y axis. */
+export class TorusGeometry extends Geometry {
+  constructor(props: TorusGeometryProps = {}) {
+    const source = new MathTorusGeometry(props);
+    super({...source, attributes: source.attributes});
+  }
+}
 
 export type {SphereGeometryProps, IcoSphereGeometryProps, TruncatedConeGeometryProps};
 

@@ -4,9 +4,13 @@ import {ShaderModuleDocsTabs} from '@site/src/components/docs/shader-module-docs
 
 <ShaderModuleDocsTabs group="lighting" active="pbr-material" />
 
-Implements Physically Based Shading of a microfacet surface defined by a glTF material.
+Implements luma.gl's shared physically based microfacet surface shading. Materials can be
+configured directly or populated by importers such as the glTF converter.
 
-Lighting is expected to be defined by the `lights` module.
+See [Materials](/docs/api-guide/engine/materials) for individual capabilities, texture semantics,
+and inline examples.
+
+Lighting is expected to be defined by the `lighting` module.
 
 ## Bind Group Convention
 
@@ -38,3 +42,13 @@ The upstream project has since been renamed
 [glTF Sample Viewer](https://github.com/KhronosGroup/glTF-Sample-Viewer), and its current releases
 use the [Apache License 2.0](https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/main/LICENSE.md).
 That later license does not replace the MIT terms attached to the historical version used here.
+
+
+### `pbr_filterColorWithSpotShadows(vertexColor, spotVisibility)`
+
+Like `pbr_filterColor`, with a `vec4` (`vec4f` in WGSL) containing visibility for
+spotlights 0–3 in lighting-module order. Zero fully shadows a light; one leaves it
+unshadowed. Additional spotlights remain unshadowed. Visibility affects only each
+spotlight's direct PBR contribution, before tone mapping and output encoding.
+Environment lighting, emission, and other light types are unaffected. The original
+`pbr_filterColor` entry point remains equivalent to passing all ones.

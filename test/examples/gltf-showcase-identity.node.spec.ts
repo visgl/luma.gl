@@ -11,14 +11,14 @@ describe('glTF module and showcase identity', () => {
     const homepage = readFileSync(path.join(process.cwd(), 'website/src/pages/index.jsx'), 'utf8');
     const featuredExamples = homepage.match(/const\s+FEATURED_EXAMPLES\s*=\s*\[([\s\S]*?)\n\];/);
     const showcase = readFileSync(
-      path.join(process.cwd(), 'website/content/examples/showcase/gltf.mdx'),
+      path.join(process.cwd(), 'website/content/examples/gltf/asset-studio.mdx'),
       'utf8'
     );
 
     expect(featuredExamples).not.toBeNull();
     expect(featuredExamples![1]).toMatch(/title:\s*'glTF Asset Studio'/);
-    expect(featuredExamples![1]).toMatch(/route:\s*'showcase\/gltf'/);
-    expect(featuredExamples![1]).toMatch(/image:\s*'showcase\/gltf\.jpg'/);
+    expect(featuredExamples![1]).toMatch(/route:\s*'gltf\/asset-studio'/);
+    expect(featuredExamples![1]).toMatch(/image:\s*'gltf\/asset-studio\.jpg'/);
     expect(featuredExamples![1]).toMatch(/standards-first glTF/i);
     expect(featuredExamples![1]).toMatch(/backends:\s*\['webgpu',\s*'webgl2'\]/);
     expect(showcase).toMatch(/title:\s*glTF Asset Studio/);
@@ -52,7 +52,7 @@ describe('glTF module and showcase identity', () => {
     expect(tabs).toContain('/docs/api-reference/gltf/gltf-interchange');
   });
 
-  test('documents existing loader-owned capabilities without claiming unsupported extensions', () => {
+  test('documents loading and luma-owned postprocessing without claiming unsupported extensions', () => {
     const overview = readFileSync(
       path.join(process.cwd(), 'docs/api-reference/gltf/README.md'),
       'utf8'
@@ -70,7 +70,11 @@ describe('glTF module and showcase identity', () => {
       'utf8'
     );
 
-    expect(overview).toMatch(/^## What loaders\.gl already provides$/m);
+    expect(overview).toMatch(/^## Loading and postprocessing$/m);
+    expect(overview).toContain(
+      '`@luma.gl/gltf` owns its glTF document types and `postProcessGLTF()`'
+    );
+    expect(overview).toContain('Existing loaders.gl postprocessed');
     for (const capability of [
       'GLTFLoader',
       'postProcessGLTF()',

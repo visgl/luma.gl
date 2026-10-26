@@ -3,10 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';

@@ -66,4 +66,4 @@ CPU animation cost.
 
 - [glTF animation](/docs/api-reference/gltf/gltf-animation)
 - [glTF materials](/docs/api-reference/gltf/gltf-materials)
-- [Animation Studio](/examples/showcase/gltf)
+- [Animation Studio](/examples/gltf/asset-studio)

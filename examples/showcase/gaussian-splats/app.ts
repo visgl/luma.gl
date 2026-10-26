@@ -9,7 +9,7 @@ import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.g
 import {
   GPUCommandGraphInspector,
   type GPUCommandGraphInspectorGraph
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUPagedSplatRenderer,
   GPUSplatGraphRenderer,
@@ -903,7 +903,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     if (this.graphInspector && graphDetails && graphInspectorElement) {
       graphDetails.hidden = false;
-      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement);
+      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
+        inspector: this.graphInspector
+      });
       this.graphInspectorPanels.push(inspectorPanel);
       this.controlDisposers.push(() => {
         inspectorPanel.destroy();

@@ -1,11 +1,11 @@
 ---
-title: "@luma.gl/constants"
+title: "@luma.gl/core/webgl-constants"
 description: Typed WebGL constants and compatibility types used by luma.gl and low-level integrations.
 ---
 
-# @luma.gl/constants
+# @luma.gl/core/webgl-constants
 
-`@luma.gl/constants` publishes the typed `GL` constant table and WebGL parameter types used by
+`@luma.gl/core/webgl-constants` publishes the typed `GL` constant table and WebGL parameter types used by
 luma.gl's WebGL adapter and low-level integrations.
 
 ## When to use it
@@ -17,7 +17,7 @@ API that requires numeric enums.
 ## Quick start
 
 ```ts
-import {GL, type GLBlendFunction} from '@luma.gl/constants';
+import {GL, type GLBlendFunction} from '@luma.gl/core/webgl-constants';
 
 const sourceFactor: GLBlendFunction = GL.SRC_ALPHA;
 gl.blendFunc(sourceFactor, GL.ONE_MINUS_SRC_ALPHA);
@@ -39,6 +39,6 @@ accepts the corresponding numeric value, and they do not replace WebGPU enums.
 
 ## Related modules
 
-- [`@luma.gl/webgl`](/docs/api-reference/webgl)
+- [`@luma.gl/core/webgl`](/docs/api-reference/webgl)
 - [`@luma.gl/core`](/docs/api-reference/core)
 - [WebGPU versus WebGL](/docs/api-guide/background/webgpu-vs-webgl)

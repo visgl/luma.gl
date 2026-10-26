@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import type {Device, RenderPassProps} from '@luma.gl/core';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
+import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/core/webgpu';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';

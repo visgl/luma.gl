@@ -1,0 +1,28 @@
+---
+title: Galactic Vortex
+description: Animate a galaxy with a luma GPU graph and render shared star buffers directly with Three.js.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [rendering, animation, integration, three.js]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const ThreeExample = () => (
+  <iframe
+    title="Galactic Vortex interactive example"
+    src={useBaseUrl('/standalone-examples/three/gpu-graph-galaxy.html')}
+    style={{width: '100%', height: '85vh', minHeight: 640, border: 0, borderRadius: 12}}
+    allow="fullscreen"
+  />
+);
+
+<ThreeExample />
+
+A luma GPU graph animates 196,608 stars in buffers shared directly with upstream Three.js. Explore the animation graph, GPU trace, and source code in the infobox. The warm bulge, spiral arms, and orbital timescale are procedural visualizations, not a physical galaxy simulation.
+
+See the [Three.js integration documentation](/docs/api-reference/three) for support and ownership boundaries.

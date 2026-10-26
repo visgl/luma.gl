@@ -158,13 +158,10 @@ Dispatching a separate kernel for every trivial arithmetic expression can become
 
 The semantic API should therefore remain operation-oriented even if the compiler later combines several nodes physically.
 
-## Roadmap
 
-The next step is scalar broadcast into `GPUElementwise`, allowing expressions such as:
+## Related APIs
 
-```text
-x = x + alpha * p
-r = r - alpha * Ap
-```
-
-After that, the conjugate-gradient solver can be completed as a composition of SpMV, dot products, scalar operations and vector MADDs. Comparisons can then connect residual convergence to existing GPU-conditioned graph execution.
+See [solver integration](/docs/api-reference/experimental/gpu-core/gpu-cg-integration),
+[adaptive SpMV](/docs/api-reference/experimental/gpu-core/gpu-adaptive-spmv-execution), and
+[execution strategies](/docs/api-reference/experimental/gpu-core/gpu-strategy-selection)
+for current composition and strategy contracts.

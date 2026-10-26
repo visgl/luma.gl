@@ -13,7 +13,7 @@ selected by a backend compiler.
 
 The operation IR describes computation semantically while `GPUCommandGraph` describes executable GPU work. One semantic operation may lower into one command node or dozens of nodes, and composite/control-flow operations introduce additional hierarchy.
 
-Jarnevon therefore preserves the relationship instead of discarding it during lowering:
+luma.gl therefore preserves the relationship instead of discarding it during lowering:
 
 ```text
 PCG                         semantic operation

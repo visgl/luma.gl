@@ -10,9 +10,9 @@
     "**/bundle.ts",
     "**/*.spec.ts",
     "examples",
-    "modules/constants",
+    "modules/core/src/webgl-constants",
     "modules/shadertools/src/libs",
-    "modules/webgpu",
+    "modules/core/src/webgpu",
     "modules/test-utils"
   ]
 }
