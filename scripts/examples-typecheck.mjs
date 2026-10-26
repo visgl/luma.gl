@@ -138,6 +138,7 @@ const SHARED_COMPILER_OPTIONS = {
     '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/deck-arrow-layers/src/*')],
     '@deck.gl-community/gpu-layers': [join(repoRoot, 'modules/deck-gpu-layers/src/index.ts')],
     '@deck.gl-community/gpu-layers/*': [join(repoRoot, 'modules/deck-gpu-layers/src/*')],
+    '@luma.gl/gpgpu/_internal/*': [join(repoRoot, 'modules/gpgpu/src/execution/*')],
     '@luma.gl/gpgpu': [join(repoRoot, 'modules/gpgpu/src/index.ts')],
     '@luma.gl/gpgpu/*': [join(repoRoot, 'modules/gpgpu/src/*')],
     '@luma.gl/splats': [join(repoRoot, 'modules/splats/src/index.ts')],
