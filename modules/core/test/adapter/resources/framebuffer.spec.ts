@@ -4,8 +4,9 @@
 
 /* eslint-disable max-len */
 import {expect, it} from 'vitest';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Framebuffer} from '@luma.gl/core';
+import {GL} from '@luma.gl/core/webgl-constants';
 
 const TEST_CASES = [
   {
@@ -185,6 +186,30 @@ it('Framebuffer owns resized and cloned textures while preserving supplied attac
       depthTexture.destroy();
     }
   }
+});
+
+it('WebGLFramebuffer#destroy deletes its GL framebuffer but not a supplied handle', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+
+  const framebuffer = device.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const {handle} = framebuffer;
+  expect(gl.isFramebuffer(handle), 'framebuffer handle is live').toBe(true);
+  framebuffer.destroy();
+  expect(gl.isFramebuffer(handle), 'destroy deletes the framebuffer handle').toBe(false);
+  expect(() => framebuffer.destroy(), 'repeated destroy is a no-op').not.toThrow();
+
+  const suppliedHandle = gl.createFramebuffer();
+  gl.bindFramebuffer(GL.FRAMEBUFFER, suppliedHandle);
+  gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+  const wrapper = device.createFramebuffer({handle: suppliedHandle, width: 1, height: 1});
+  wrapper.destroy();
+  expect(gl.isFramebuffer(suppliedHandle), 'destroy keeps a supplied handle').toBe(true);
+  gl.deleteFramebuffer(suppliedHandle);
 });
 
 it('WebGLFramebuffer create and resize attachments', async () => {
