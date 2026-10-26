@@ -14,10 +14,12 @@ import {
 import type {ScientificFlowTraceResult} from '@luma.gl/experimental';
 import mainSource from './main.ts?raw';
 import fieldsSource from './fields.ts?raw';
+import globeSource from './globe.ts?raw';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 
 export type ObservatorySettings = {
-  field: 'gyre' | 'vortex' | 'jet';
+  field: 'gyre' | 'vortex' | 'jet' | 'weather';
+  rotateGlobe: boolean;
   particleCount: number;
   integrator: 'rk2' | 'rk4' | 'rk45';
   tolerance: number;
@@ -41,7 +43,8 @@ export class ObservatoryControlPanel {
   readonly diagnostics = new GPUGraphDiagnostics({traceTitle: 'Trace'});
   private readonly graphNotices = new Set<HTMLElement>();
   readonly settings: ObservatorySettings = {
-    field: 'gyre',
+    field: 'weather',
+    rotateGlobe: true,
     particleCount: 262144,
     integrator: 'rk4',
     tolerance: 1e-5,
@@ -63,7 +66,12 @@ export class ObservatoryControlPanel {
       settings: this.settings,
       onSettingsChange: next => {
         const before = {...this.settings};
-        if (next.field === 'gyre' || next.field === 'vortex' || next.field === 'jet')
+        if (
+          next.field === 'gyre' ||
+          next.field === 'vortex' ||
+          next.field === 'jet' ||
+          next.field === 'weather'
+        )
           this.settings.field = next.field;
         if (next.integrator === 'rk2' || next.integrator === 'rk4' || next.integrator === 'rk45')
           this.settings.integrator = next.integrator;
@@ -72,6 +80,7 @@ export class ObservatoryControlPanel {
         for (const name of ['particleCount', 'tolerance', 'timeScale', 'exposure'] as const) {
           if (typeof next[name] === 'number') this.settings[name] = next[name];
         }
+        if (typeof next.rotateGlobe === 'boolean') this.settings.rotateGlobe = next.rotateGlobe;
         if (typeof next.paused === 'boolean') this.settings.paused = next.paused;
         this.settingsPanel.setSchemaAndSettings(this.makeSchema(), this.settings);
         if (this.settingsHost)
@@ -120,7 +129,7 @@ export class ObservatoryControlPanel {
               makeHtmlCustomPanel({
                 id: 'observatory-info',
                 title: 'Info',
-                html: `<p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations.</p>
+                html: `<p>The weather globe shows synthetic jet streams, wind bands, drifting storms and polar vortices over Earth imagery. Drag horizontally to rotate and vertically to tilt toward either pole; disable Rotate globe to hold a view. The field evolves in illustrative seconds, not physical weather time. This is a 2D normalized flow projected onto a sphere, not a forecast or a spherical atmospheric solver. Longitude wraps continuously across the antimeridian. Latitude remains bounded.</p><p>Trace an evolving double gyre, a vortex pair, or a meandering jet. These are synthetic fields sampled on a 256 × 256 regular grid, not observations.</p>
               <p>The double gyre has a ten-second cycle with linearly interpolated snapshots every 0.25 seconds. Streaks connect GPU particle states; the clock reports simulated seconds.</p>
               <p>RK2 and RK4 continuously respawn particles. Adaptive RK45 follows one scientific release with stable identities and explicit stopping reasons. Reseed starts a new release; changing the field, particle count, integrator or tolerance also reseeds.</p>
               <p>RK45 tolerance controls estimated local integration error in field units, not total trajectory or interpolation error. Its bounded work can lag behind wall time; Diagnostics shows pending particles and queued time.</p>
@@ -147,7 +156,8 @@ export class ObservatoryControlPanel {
                 onRender: root => {
                   for (const [name, source] of [
                     ['main.ts', mainSource],
-                    ['fields.ts', fieldsSource]
+                    ['fields.ts', fieldsSource],
+                    ['globe.ts', globeSource]
                   ]) {
                     const heading = document.createElement('h3');
                     heading.textContent = name;
@@ -284,11 +294,22 @@ export class ObservatoryControlPanel {
               type: 'select',
               persist: 'none',
               options: [
+                {label: 'Weather globe · synthetic', value: 'weather'},
                 {label: 'Evolving double gyre', value: 'gyre'},
                 {label: 'Vortex pair', value: 'vortex'},
                 {label: 'Meandering jet', value: 'jet'}
               ]
             },
+            ...(this.settings.field === 'weather'
+              ? [
+                  {
+                    name: 'rotateGlobe',
+                    label: 'Rotate globe',
+                    type: 'boolean' as const,
+                    persist: 'none' as const
+                  }
+                ]
+              : []),
             {
               name: 'particleCount',
               label: 'Particles',

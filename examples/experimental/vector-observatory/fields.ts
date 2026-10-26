@@ -13,7 +13,38 @@ export function makeField(name: string, time = 0): ScientificVectorFieldInput {
       const horizontal = column / (size - 1);
       const vertical = row / (size - 1);
       const index = row * size + column;
-      if (name === 'jet') {
+      if (name === 'weather') {
+        // Illustrative normalized flow: evolving zonal winds and drifting storm systems.
+        const longitude = horizontal * Math.PI * 2;
+        const latitude = (vertical - 0.5) * Math.PI;
+        const wave = longitude * 3 - time * 0.12;
+        const jetLatitude = latitude + 0.12 * Math.sin(wave);
+        const envelope = Math.cos(latitude) ** 2;
+        eastward[index] = envelope * (0.035 + 0.055 * Math.sin(jetLatitude * 5));
+        northward[index] = envelope * 0.012 * Math.cos(wave) * Math.sin(latitude * 3);
+        // Angular circulation stays finite at high latitudes: projected speed naturally
+        // shrinks with the circumference, without leaving an artificial empty polar cap.
+        const polarWeight = Math.min(1, Math.max(0, (Math.abs(latitude) - 0.7) / 0.65));
+        const polarEnvelope = polarWeight * polarWeight * (3 - 2 * polarWeight);
+        const hemisphere = latitude >= 0 ? 1 : -1;
+        const polarWave = longitude * 3 - hemisphere * time * 0.18;
+        eastward[index] += hemisphere * polarEnvelope * (0.06 + 0.018 * Math.cos(polarWave));
+        northward[index] += polarEnvelope * Math.cos(latitude) * 0.012 * Math.sin(polarWave);
+        for (const [centerLongitude, centerLatitude, spin] of [
+          [0.22, 0.68, 1],
+          [0.57, 0.3, -1],
+          [0.78, 0.72, 1],
+          [0.4, 0.4, -1]
+        ]) {
+          const center = centerLongitude + 0.025 * Math.sin(time * 0.09 + centerLongitude * 8);
+          const horizontalDistance = ((horizontal - center + 1.5) % 1) - 0.5;
+          const verticalDistance = vertical - centerLatitude - 0.025 * Math.sin(time * 0.11);
+          const strength =
+            spin * 1.7 * Math.exp(-(horizontalDistance ** 2 + verticalDistance ** 2) / 0.006);
+          eastward[index] -= verticalDistance * strength * envelope;
+          northward[index] += horizontalDistance * strength * envelope;
+        }
+      } else if (name === 'jet') {
         const center = 0.5 + 0.16 * Math.sin(horizontal * Math.PI * 4);
         const distance = (vertical - center) * 10;
         eastward[index] = 0.14 / Math.cosh(distance) ** 2;
