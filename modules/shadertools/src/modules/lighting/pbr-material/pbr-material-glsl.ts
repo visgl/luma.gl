@@ -181,6 +181,11 @@ layout(std140) uniform pbrMaterialUniforms {
   mat3 diffuseTransmissionColorUVTransform;
   int multiscatterColorUVSet;
   mat3 multiscatterColorUVTransform;
+  bool lightmapMapEnabled;
+  float lightmapIntensity;
+  int lightmapUVSet;
+  mat3 lightmapUVTransform;
+  float scatterStrengthFactor;
 } pbrMaterial;
 
 // Samplers
@@ -192,6 +197,9 @@ uniform sampler2D pbr_normalSampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
 uniform sampler2D pbr_emissiveSampler;
+#endif
+#ifdef HAS_LIGHTMAP
+uniform sampler2D pbr_lightmapSampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
 uniform sampler2D pbr_metallicRoughnessSampler;
@@ -350,6 +358,12 @@ mat3 getTBN(vec2 uv)
   mat3 tbn = pbr_vTBN;
 #endif
 
+#ifdef DOUBLE_SIDED
+#ifdef HAS_NORMALS
+  // Derivative normals already face the viewer; only flip an authored basis.
+  if (!gl_FrontFacing) tbn = mat3(-tbn[0], -tbn[1], -tbn[2]);
+#endif
+#endif
   return tbn;
 }
 
@@ -1032,7 +1046,8 @@ vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor) {
   return pbrInfo.NdotL * lightColor * (diffuseContrib + specContrib);
 }
 
-vec4 pbr_filterColor(vec4 vertexColor)
+// Visibility for the first four spotlights; environment and other lights are unaffected.
+vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
 {
   vec2 baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   vec2 metallicRoughnessUV = getMaterialUV(
@@ -1042,6 +1057,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
   vec2 normalUV = getMaterialUV(pbrMaterial.normalUVSet, pbrMaterial.normalUVTransform);
   vec2 occlusionUV = getMaterialUV(pbrMaterial.occlusionUVSet, pbrMaterial.occlusionUVTransform);
   vec2 emissiveUV = getMaterialUV(pbrMaterial.emissiveUVSet, pbrMaterial.emissiveUVTransform);
+  vec2 lightmapUV = getMaterialUV(pbrMaterial.lightmapUVSet, pbrMaterial.lightmapUVTransform);
   vec2 specularColorUV = getMaterialUV(
     pbrMaterial.specularColorUVSet,
     pbrMaterial.specularColorUVTransform
@@ -1116,8 +1132,26 @@ vec4 pbr_filterColor(vec4 vertexColor)
 
   float transmission = 0.0;
 
+  vec3 lightmapIrradiance = vec3(0.0);
+#ifdef HAS_LIGHTMAP
+  if (pbrMaterial.lightmapMapEnabled) {
+    lightmapIrradiance = texture(pbr_lightmapSampler, lightmapUV).rgb * pbrMaterial.lightmapIntensity;
+  }
+#endif
+
   if(pbrMaterial.unlit){
     color.rgb = baseColor.rgb;
+#ifdef HAS_LIGHTMAP
+    if (pbrMaterial.lightmapMapEnabled) {
+      color *= lightmapIrradiance / M_PI;
+#ifdef HAS_OCCLUSIONMAP
+      if (pbrMaterial.occlusionMapEnabled) {
+        float ao = texture(pbr_occlusionSampler, occlusionUV).r;
+        color = mix(color, color * ao, pbrMaterial.occlusionStrength);
+      }
+#endif
+    }
+#endif
   }
   else{
     // Metallic and Roughness material properties are packed together
@@ -1232,8 +1266,21 @@ vec4 pbr_filterColor(vec4 vertexColor)
         if (i < lighting.spotLightCount) {
           PBRInfo_setSpotLight(pbrInfo, lighting_getSpotLight(i));
           float attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), pbr_vPosition);
-          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
+          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color * (i < 4 ? clamp(spotVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation);
         }
+      }
+      for (int areaIndex = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        color += areaLTC_evaluate(areaIndex, pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+#else
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateFinalColor(pbrInfo, sampleLight.color);
+          }
+        }
+#endif
       }
 #endif
 
@@ -1242,6 +1289,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
         color += getIBLContribution(pbrInfo, n, reflection);
       }
 #endif
+
+      // The pinned KHR_lightmap draft explicitly defines c_diff = (1 - metallic) * baseColor.
+      color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
 
 #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled) {
@@ -1314,6 +1364,24 @@ vec4 pbr_filterColor(vec4 vertexColor)
       multiscatterColor *= SRGBtoLINEAR(
         texture(pbr_multiscatterColorSampler, multiscatterColorUV)
       ).rgb;
+    }
+#endif
+
+    float originalTransmission = transmission;
+    float scatterReflection = 0.0;
+#ifdef HAS_MATERIAL_SCATTER
+    if (thickness <= 0.0) {
+      float strength = clamp(pbrMaterial.scatterStrengthFactor, 0.0, 1.0);
+#ifdef HAS_DIFFUSETRANSMISSIONMAP
+      if (pbrMaterial.diffuseTransmissionMapEnabled) {
+        strength *= texture(pbr_diffuseTransmissionSampler, diffuseTransmissionUV).a;
+      }
+#endif
+      float anisotropy = pbrMaterial.scatterAnisotropy;
+      scatterReflection = originalTransmission * strength * (1.0 - anisotropy) * 0.5;
+      diffuseTransmission = originalTransmission * strength * (1.0 + anisotropy) * 0.5;
+      diffuseTransmissionColor = multiscatterColor;
+      transmission *= 1.0 - strength;
     }
 #endif
 
@@ -1402,6 +1470,10 @@ vec4 pbr_filterColor(vec4 vertexColor)
     );
     vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - dielectricSpecularF0);
     diffuseColor *= (1.0 - metallic) * (1.0 - transmission) * (1.0 - diffuseTransmission);
+#ifdef HAS_MATERIAL_SCATTER
+    diffuseColor = (baseColor.rgb * (1.0 - metallic) * (1.0 - originalTransmission) +
+      multiscatterColor * scatterReflection) * (vec3(1.0) - dielectricSpecularF0);
+#endif
     vec3 specularColor = mix(dielectricSpecularF0, baseColor.rgb, metallic);
 
     float clearcoatViewFresnel = dielectricSchlick(
@@ -1521,7 +1593,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
         float attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), pbr_vPosition);
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getSpotLight(i).color / attenuation,
+          lighting_getSpotLight(i).color * (i < 4 ? clamp(spotVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation,
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1532,7 +1604,7 @@ vec4 pbr_filterColor(vec4 vertexColor)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getSpotLight(i).color / attenuation,
+          lighting_getSpotLight(i).color * (i < 4 ? clamp(spotVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation,
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -1540,6 +1612,39 @@ vec4 pbr_filterColor(vec4 vertexColor)
         );
       }
     }
+      for (int areaIndex = 0; areaIndex < areaLighting_getLightCount(); areaIndex++) {
+#ifdef USE_AREA_LIGHT_LTC
+        // Unsupported fits retain numerical integration rather than silently dropping material lobes.
+        if (anisotropyStrength <= 0.0001 && dot(sheenColor, sheenColor) <= 0.000001 && diffuseTransmission <= 0.0001) {
+        color += areaLTC_evaluate(areaIndex, pbr_vPosition, pbrInfo.n, pbrInfo.v, pbrInfo.perceptualRoughness, pbrInfo.diffuseColor, pbrInfo.reflectance0, pbrInfo.reflectance90);
+        color += clearcoatFactor * areaLTC_specular(areaLighting_getLight(areaIndex), pbr_vPosition, clearcoatNormal, pbrInfo.v, clearcoatRoughness, vec3(0.04), vec3(1.0));
+        } else {
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+        }
+#else
+        for (int sampleIndex = 0; sampleIndex < areaLighting.sampleCount; sampleIndex++) {
+          PointLight sampleLight = areaLighting_getSample(areaIndex, sampleIndex, pbr_vPosition);
+          if (dot(sampleLight.color, sampleLight.color) > 0.0) {
+            PBRInfo_setPointLight(pbrInfo, sampleLight);
+            color += calculateMaterialLightColor(pbrInfo, sampleLight.color, clearcoatNormal,
+              clearcoatFactor, clearcoatRoughness, sheenColor, sheenRoughness, anisotropyTangent, anisotropyStrength);
+            color += calculateDiffuseTransmissionLight(pbrInfo, sampleLight.color,
+              diffuseTransmissionColor, diffuseTransmission, multiscatterColor, thickness);
+          }
+        }
+
+#endif
+      }
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)
@@ -1566,6 +1671,14 @@ vec4 pbr_filterColor(vec4 vertexColor)
       );
       color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }
+#endif
+
+#ifdef HAS_MATERIAL_SCATTER
+    color += (baseColor.rgb * (1.0 - metallic) * (1.0 - originalTransmission) +
+      multiscatterColor * scatterReflection) * baseLayerEnergy * lightmapIrradiance / M_PI;
+#else
+    color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
+      (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
 #endif
 
  // Apply optional PBR terms for additional (optional) shading
@@ -1627,5 +1740,9 @@ vec4 pbr_filterColor(vec4 vertexColor)
   float alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
 #endif
   return vec4(applySceneColorManagement(color), alpha);
+}
+
+vec4 pbr_filterColor(vec4 vertexColor) {
+  return pbr_filterColorWithSpotShadows(vertexColor, vec4(1.0));
 }
 `;

@@ -71,9 +71,15 @@ export class SlangParser {
 
   constructor(
     source: string,
-    private sourceName: string
+    private sourceName: string,
+    private options: {
+      typeNames?: readonly string[];
+      tokens?: Token[];
+      allowPrototypes?: boolean;
+    } = {}
   ) {
-    this.tokens = tokenizeSlang(source, sourceName);
+    this.tokens = options.tokens || tokenizeSlang(source, sourceName);
+    options.typeNames?.forEach(name => this.typeNames.add(name));
     // Slang permits using structures before their declarations.
     for (let index = 0; index < this.tokens.length - 1; index++) {
       if (this.tokens[index].text === 'struct') {
@@ -188,7 +194,9 @@ export class SlangParser {
           parameters,
           semantic,
           attributes,
-          body: this.parseBlock(),
+          ...(this.options.allowPrototypes && this.peek().text === ';'
+            ? {prototype: true, body: {...this.take(), kind: 'empty' as const}}
+            : {body: this.parseBlock()}),
           location: name
         };
         declarations.push(declaration);

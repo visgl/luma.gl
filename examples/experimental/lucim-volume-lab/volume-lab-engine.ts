@@ -8,14 +8,14 @@ import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraphEncoding,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUVolume,
   GPUVolumeClosing,
   GPUVolumeConnectedComponents,
   GPUVolumeRegionMeasurements,
   GPUVolumeThreshold
-} from '@luma.gl/experimental/lucim';
+} from '@luma.gl/graph/lucim';
 import {VOLUME_LAB_DEFAULT_THRESHOLD, type VolumeLabDataset} from './volume-lab-data';
 
 export type VolumeLabAnalysisStatus = {

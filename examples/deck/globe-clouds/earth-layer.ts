@@ -14,11 +14,17 @@ const earthScene = {
   uniformTypes: {
     viewProjectionMatrix: 'mat4x4<f32>',
     sunDirection: 'vec3<f32>',
+    moonDirection: 'vec3<f32>',
+    moonColor: 'vec3<f32>',
+    moonIntensity: 'f32',
     camera: 'vec3<f32>'
   },
   source: `struct earthSceneUniforms {
     viewProjectionMatrix: mat4x4f,
     sunDirection: vec3f,
+    moonDirection: vec3f,
+    moonColor: vec3f,
+    moonIntensity: f32,
     camera: vec3f,
   };
     @group(3) @binding(auto) var<uniform> earthScene: earthSceneUniforms;
@@ -27,17 +33,29 @@ const earthScene = {
   vs: `layout(std140) uniform earthSceneUniforms {
     mat4 viewProjectionMatrix;
     vec3 sunDirection;
+    vec3 moonDirection;
+    vec3 moonColor;
+    float moonIntensity;
     vec3 camera;
   } earthScene;`,
   fs: `layout(std140) uniform earthSceneUniforms {
     mat4 viewProjectionMatrix;
     vec3 sunDirection;
+    vec3 moonDirection;
+    vec3 moonColor;
+    float moonIntensity;
     vec3 camera;
   } earthScene;
     uniform sampler2D earthTexture;`
 } as const satisfies ShaderModule;
 
-type EarthLayerProps = LayerProps & {texture: Texture; sunDirection: NumberArray3};
+type EarthLayerProps = LayerProps & {
+  texture: Texture;
+  sunDirection: NumberArray3;
+  moonDirection: NumberArray3;
+  moonColor: NumberArray3;
+  moonIntensity: number;
+};
 
 /** Example-owned surface; the cloud layer also works with other GlobeView terrain layers. */
 export class EarthLayer extends Layer<EarthLayerProps> {
@@ -76,6 +94,9 @@ export class EarthLayer extends Layer<EarthLayerProps> {
       earthScene: {
         viewProjectionMatrix: view.viewProjectionMatrix,
         sunDirection: this.props.sunDirection,
+        moonDirection: this.props.moonDirection,
+        moonColor: this.props.moonColor,
+        moonIntensity: this.props.moonIntensity,
         camera: view.camera
       }
     });
@@ -112,7 +133,9 @@ struct EarthVertex {
   let coordinates = vec2f(atan2(normal.x, -normal.y) / 6.28318530718 + 0.5, 0.5 - asin(normal.z) / 3.14159265359);
   let surface = textureSample(earthTexture, earthSampler, coordinates).rgb;
   let sunlight = max(dot(normal, normalize(earthScene.sunDirection)), 0.0);
-  return vec4f(surface * (0.12 + sunlight * 0.88), 1.0);
+  let moonlight = max(dot(normal, normalize(earthScene.moonDirection)), 0.0) * earthScene.moonIntensity;
+  let night = 1.0 - smoothstep(0.0, 0.15, sunlight);
+  return vec4f(surface * (vec3f(0.035 + sunlight * 0.965) + earthScene.moonColor * moonlight * night), 1.0);
 }`;
 const VERTEX_SHADER = /* glsl */ `#version 300 es
 in vec3 positions; out vec3 normal;
@@ -129,5 +152,7 @@ void main() {
   if (dot(direction, earthScene.camera - normal) <= 0.0) discard;
   vec2 coordinates = vec2(atan(direction.x, -direction.y) / 6.28318530718 + 0.5, 0.5 - asin(direction.z) / 3.14159265359);
   float sunlight = max(dot(direction, normalize(earthScene.sunDirection)), 0.0);
-  fragColor = vec4(texture(earthTexture, coordinates).rgb * (0.12 + sunlight * 0.88), 1.0);
+  float moonlight = max(dot(direction, normalize(earthScene.moonDirection)), 0.0) * earthScene.moonIntensity;
+  float night = 1.0 - smoothstep(0.0, 0.15, sunlight);
+  fragColor = vec4(texture(earthTexture, coordinates).rgb * (vec3(0.035 + sunlight * 0.965) + earthScene.moonColor * moonlight * night), 1.0);
 }`;

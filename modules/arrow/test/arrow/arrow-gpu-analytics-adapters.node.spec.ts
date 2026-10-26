@@ -12,8 +12,8 @@ import {
 } from '@luma.gl/arrow';
 import {Buffer, type BufferProps} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
-import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
+import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {describe, expect, test, vi} from 'vitest';
@@ -38,7 +38,7 @@ describe('makeGPUAnalyticsTableFromArrowTable package boundaries', () => {
     expect(packageJson.peerDependencies?.['apache-arrow']).toBe('>=17.0.0');
     expect(packageJson.peerDependenciesMeta?.['apache-arrow']).toBeUndefined();
     expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBeDefined();
-    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBeDefined();
+    expect(packageJson.dependencies?.['@luma.gl/graph']).toBeDefined();
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
     expect(packageJson.peerDependencies?.['@luma.gl/experimental']).toBeUndefined();
   });

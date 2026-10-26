@@ -2,7 +2,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {transpileSlang, transpileSlangWGSL, packSlangUniforms} from '@luma.gl/slang';
+import {
+  transpileSlang,
+  transpileSlangWGSL,
+  packSlangUniforms,
+  type SlangModuleOptions
+} from '@luma.gl/slang';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import reference from './reference.json';
 import {
@@ -20,12 +25,13 @@ async function runCompute(
   source: string,
   expected: readonly number[],
   uniformValues?: typeof UNIFORM_VALUES,
-  native?: {code: string; entryPoint: string}
+  native?: {code: string; entryPoint: string},
+  options: SlangModuleOptions = {}
 ): Promise<void> {
   const device = await getWebGPUTestDevice('core');
   expect(device).not.toBeNull();
   const handle = device!.handle;
-  const result = transpileSlang(source, {target: 'wgsl'});
+  const result = transpileSlang(source, {...options, target: 'wgsl'});
   const module = handle.createShaderModule({code: native?.code ?? result.code});
   expect(
     (await module.getCompilationInfo()).messages.filter(message => message.type === 'error'),
@@ -638,4 +644,23 @@ it('slang#WebGL validates broadcasting and ignores unused comparison sampling', 
     (await module.getCompilationInfo()).messages.filter(message => message.type === 'error'),
     generated.code
   ).toEqual([]);
+});
+
+it('slang#registry libraries match pinned upstream language results and uniform layout', async () => {
+  for (const [source, expected, uniformValues, upstream] of [
+    [LANGUAGE_SHADER, LANGUAGE_VALUES, undefined, reference.fixtures.language],
+    [UNIFORM_SHADER, UNIFORM_RESULTS, UNIFORM_VALUES, reference.fixtures.uniforms]
+  ] as const) {
+    const entryOffset = source.indexOf('[shader(');
+    const library = source.slice(0, entryOffset);
+    const application = 'import shared;\n' + source.slice(entryOffset);
+    const options = {modules: {shared: library}};
+    await runCompute(application, expected, uniformValues, undefined, options);
+    await runCompute(application, expected, uniformValues, upstream, options);
+    if (uniformValues) {
+      expect(
+        transpileSlang(application, {...options, target: 'wgsl'}).reflection.bindings[0].layout
+      ).toEqual(transpileSlang(source, {target: 'wgsl'}).reflection.bindings[0].layout);
+    }
+  }
 });

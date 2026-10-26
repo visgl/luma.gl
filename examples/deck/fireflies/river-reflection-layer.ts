@@ -29,6 +29,8 @@ export class RiverFireflyReflectionLayer extends FireflyLayer {
     return super.getShaders({
       ...shaders,
       source: SOURCE,
+      vs: VERTEX_SHADER,
+      fs: FRAGMENT_SHADER,
       modules: [...shaders.modules, riverMirror, waterMaterial, riverWaterMaterial]
     });
   }
@@ -70,6 +72,20 @@ const riverMirror = {
   fn riverMirror_getPosition(position: vec3f) -> vec3f {
     return vec3f(position.xy, 2.0 * riverMirror.surfaceHeight - position.z);
   }`,
+  vs: `layout(std140) uniform riverMirrorUniforms {
+    mat4 viewProjection;
+    mat4 inverseViewProjection;
+    vec4 surfaceBounds;
+    vec2 textureSize;
+    float surfaceHeight;
+  } riverMirror;`,
+  fs: `layout(std140) uniform riverMirrorUniforms {
+    mat4 viewProjection;
+    mat4 inverseViewProjection;
+    vec4 surfaceBounds;
+    vec2 textureSize;
+    float surfaceHeight;
+  } riverMirror;`,
   uniformTypes: {
     viewProjection: 'mat4x4<f32>',
     inverseViewProjection: 'mat4x4<f32>',
@@ -144,3 +160,39 @@ struct MirrorFragment {
   return output;
 }
 `;
+
+const VERTEX_SHADER = /* glsl */ `#version 300 es
+in vec2 corner; in vec3 position; in vec3 tint; in float opacity; in float featureIndex;
+out vec2 coordinates; out vec3 reflectionTint; out float reflectionOpacity;
+void main() {
+  vec3 reflected = firefly_getPosition(position, featureIndex, firefly.time);
+  reflected.z = 2.0 * riverMirror.surfaceHeight - reflected.z;
+  vec4 commonPosition;
+  vec4 center = project_position_to_clipspace(reflected, vec3(0.0), vec3(0.0), commonPosition);
+  vec2 offset = corner * glowPoint.radiusPixels * 2.0 * project.devicePixelRatio / project.viewportSize;
+  gl_Position = vec4(center.xy + offset * center.w, center.z, center.w);
+  coordinates = corner;
+  reflectionTint = tint;
+  reflectionOpacity = opacity * glowPoint.opacity * firefly_getBrightness(featureIndex, firefly.time);
+}`;
+const FRAGMENT_SHADER = /* glsl */ `#version 300 es
+precision highp float;
+in vec2 coordinates; in vec3 reflectionTint; in float reflectionOpacity; out vec4 fragColor;
+void main() {
+  if (picking.isActive > 0.5) discard;
+  vec2 coordinate = vec2(gl_FragCoord.x, riverMirror.textureSize.y - gl_FragCoord.y) / riverMirror.textureSize;
+  vec2 clipCoordinate = coordinate * vec2(2.0, -2.0) + vec2(-1.0, 1.0);
+  vec4 nearPoint = riverMirror.inverseViewProjection * vec4(clipCoordinate, 0.0, 1.0);
+  vec4 farPoint = riverMirror.inverseViewProjection * vec4(clipCoordinate, 1.0, 1.0);
+  vec3 start = nearPoint.xyz / nearPoint.w;
+  vec3 direction = farPoint.xyz / farPoint.w - start;
+  if (abs(direction.z) < 0.00001) discard;
+  float distance = (riverMirror.surfaceHeight - start.z) / direction.z;
+  if (distance < 0.0 || distance > 1.0) discard;
+  vec3 surface = start + direction * distance;
+  if (any(lessThan(surface.xy, riverMirror.surfaceBounds.xy)) || any(greaterThan(surface.xy, riverMirror.surfaceBounds.zw))) discard;
+  vec4 surfaceClip = riverMirror.viewProjection * vec4(surface, 1.0);
+  gl_FragDepth = clamp(surfaceClip.z / surfaceClip.w - 0.000001, 0.0, 1.0);
+  vec3 normal = riverWater_getNormal(surface, surface, vec3(0.0, 0.0, 1.0), surface.xy);
+  fragColor = vec4(pointGlow_getColor(coordinates + normal.xy * 3.0, reflectionTint) * reflectionOpacity, 1.0);
+}`;

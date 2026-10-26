@@ -28,9 +28,9 @@ Each raster `frame.render()` performs the following work:
 
 The ANARI adapter does not own a second shader or material pipeline. It translates retained
 objects into the format-independent
-[`SceneRenderer`](/docs/api-reference/experimental/scene-renderer),
-[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer), or
-`RayTracingSceneRenderer` descriptors from `@luma.gl/experimental`. The shared forward runtime uses
+[`SceneRenderer`](/docs/api-reference/scene/scene-renderer),
+[`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer), or
+`RayTracingSceneRenderer` descriptors from `@luma.gl/anari`. The shared forward runtime uses
 WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves
 compatible opaque scenes through the same retained object graph and falls back to forward rendering
 for unsupported scene features. The WebGPU ray-tracing path instead uses command-graph compute,
@@ -179,7 +179,8 @@ forward raster boundary adapts that vector to its shader module's outgoing conve
 mutating shared scene lights. Multiple retained ambient lights are also combined consistently
 across forward, deferred, and ray-traced rendering. This closes direct-light and scalar-material
 gaps, but does not add material textures, alpha masking, transmission, image-based lighting, or
-indirect bounces to the ray tracer.
+specular/transmissive bounces to the ray tracer. Opt-in diffuse transport samples cosine-weighted
+secondary rays and reuses this direct-light evaluator at each hit.
 
 #### Graph-stage diagnostics
 
@@ -241,7 +242,7 @@ current renderer.
 | Execution | Direct-light megakernel, hard shadow rays, coalesced graph passes, per-stage node/pass/CPU counters | Wavefront queues, compaction, multi-bounce transport, GPU-stage timings |
 | Sampling | Half-resolution default, adaptive scales, interleaved phases, rotating shadow-light samples | Variance-driven adaptive sampling and reservoir-based many-light reuse |
 | Reconstruction | Motion-aware temporal reprojection, rejection, neighborhood clamp, manual HDR upscale | SVGF-class denoising, stronger edge-aware upscaling, reactive masks |
-| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, indirect bounces |
+| Shading and presentation | Analytic spheres, mesh triangles, scalar metallic/roughness GGX, directional-light parity, target-aware HDR/SDR tone mapping and offscreen output | Full PBR texture parity, alpha/transmission, deformation, specular/transmissive bounces |
 
 ### Cache invalidation
 

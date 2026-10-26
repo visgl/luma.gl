@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- luma-example-support -->
+  <meta name="luma-example-id" content="gltf/physics" />
+  <meta name="luma-example-backends" content="webgpu" />
+  <meta name="luma-example-mobile" content="full" />
+  <meta name="luma-example-mobile-profile" content="standard" />
+  <script type="module" data-luma-example-support-bootstrap>
+    import {installStandaloneExampleSupport} from '../../example-support.ts';
+    const exampleSupport = await installStandaloneExampleSupport();
+    if (!exampleSupport.supported) {
+      document
+        .querySelectorAll('script[type="module"]:not([data-luma-example-support-bootstrap])')
+        .forEach(script => script.remove());
+    }
+  </script>
+  <!-- /luma-example-support -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>glTF Physics Extensions</title>
+  <style>
+    html,body {height:100%;margin:0;background:#f2f2f7;font:14px system-ui;color:#263549}
+    canvas {width:100% !important;height:100% !important;display:block;touch-action:none}
+    #info {position:fixed;inset:16px;z-index:20;pointer-events:none}
+    #startup-error {position:fixed;bottom:16px;left:16px;right:16px;z-index:30;padding:12px;background:#080f1b;color:#f4f6fa;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div id="info"></div>
+  <div id="startup-error" role="alert" hidden></div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

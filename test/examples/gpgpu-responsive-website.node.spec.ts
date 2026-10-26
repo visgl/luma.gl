@@ -41,7 +41,7 @@ describe('responsive GPGPU website examples', () => {
     for (const modulePath of [
       '../../examples/showcase/packet-spraying/app',
       '../../examples/showcase/globe/app',
-      '../../examples/showcase/gltf/app',
+      '../../examples/gltf/asset-studio/app',
       '../../examples/experimental/advanced-effects/app',
       '../../examples/tutorials/hello-triangle/app'
     ]) {

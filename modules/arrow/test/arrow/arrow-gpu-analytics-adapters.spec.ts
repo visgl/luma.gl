@@ -4,14 +4,14 @@
 
 import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUDataFrame,
   column,
   literal,
   type GPUDataFrameQueryParameters
-} from '@luma.gl/experimental/gpu-dataframe';
+} from '@luma.gl/graph/gpu-dataframe';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {expect, it} from 'vitest';

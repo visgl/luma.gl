@@ -60,6 +60,9 @@ export type ShaderModule<
 
   name: string;
 
+  /** Exclusive named shader interface provided by this module. */
+  implements?: string;
+
   /** Language of source when an application-owned transpiler is required. */
   sourceLanguage?: string;
   /** WGSL code, or reusable code in sourceLanguage combined with the application source. */

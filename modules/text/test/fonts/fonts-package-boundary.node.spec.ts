@@ -29,6 +29,10 @@ describe('@luma.gl/text/fonts package boundary', () => {
   test('exports CPU font preparation while preserving root compatibility', () => {
     for (const exportName of [
       'buildBitmapFontAtlas',
+      'buildGlyphFontAtlas',
+      'createGlyphFontRenderer',
+      'GlyphRangeLoader',
+      'parseGlyphRange',
       'buildMapping',
       'buildMsdfFontAtlas',
       'buildSdfFontAtlas',

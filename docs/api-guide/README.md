@@ -31,15 +31,15 @@ mixing, crossfades, and portable morph-target deformation. Scenegraphs are inclu
 [glTF loading, physical materials, skeletal animation, and morph animation](/docs/api-reference/gltf)
 live in the format-specific `@luma.gl/gltf` module.
 
-The experimental [`SceneRenderer`](/docs/api-reference/experimental/scene-renderer) and
-[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) consume
+The experimental [`SceneRenderer`](/docs/api-reference/scene/scene-renderer) and
+[`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer) consume
 format-independent scene descriptions instead of introducing a second glTF renderer. Their
-[physical lighting environments](/docs/api-reference/experimental/pbr-environment) can be prepared
+[physical lighting environments](/docs/api-reference/scene/pbr-environment) can be prepared
 from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
 [Declarative Scene Rendering](/docs/api-guide/engine/anari-rendering). It introduces
-the experimental, private `@luma.gl/scene` workspace, scene objects, committed parameters,
+the experimental `@luma.gl/anari` package, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
 
@@ -48,14 +48,14 @@ and HDR presentation.
 The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.
 It is a portable API, in the sense that the `@luma.gl/core` module provides an abstract API for writing application code
 that works with both WebGPU and/or WebGL depending on which adapter modules are installed
-(`@luma.gl/webgl` and/or `@luma.gl/webgpu`).
+(`@luma.gl/core/webgl` and/or `@luma.gl/core/webgpu`).
 
 Core responsibilities for any GPU library are to enable applications to perform:
 
-- [GPU initialization](/docs/api-guide/gpu/gpu-initialization) - Open a GPU device and query its capabilities 
+- [GPU initialization](/docs/api-guide/gpu/gpu-initialization) - Open a GPU device and query its capabilities
 - [GPU memory management](/docs/api-guide/gpu/gpu-memory) - Create, upload memory to and read from [Buffers](/docs/api-guide/gpu/gpu-buffers), [Textures](/docs/api-guide/gpu/gpu-textures) etc.
 - [GPU command encoding](/docs/api-guide/gpu/gpu-commands) - Decide when to use immediate resource helpers versus explicit `CommandEncoder` recording.
-- [GPU resource management](/docs/api-guide/gpu/gpu-resources) - Create `Shader`, `Renderpipeline`, `RenderPass` etc objects.
+- [GPU resource management](/docs/api-guide/gpu/gpu-resources) - Create `Shader`, `RenderPipeline`, `RenderPass` etc objects.
 - [GPU binding management](/docs/api-guide/gpu/gpu-bindings) - Make attribute buffers, uniforms, textures, samplers available to GPU shaders.
 - [Shader execution / rendering](/docs/api-guide/gpu/gpu-rendering) - Drawing into textures, running compute shaders.
 - [GPU parameter management](/docs/api-guide/gpu/gpu-parameters) - Configuring blending, clipping, depth tests etc.
@@ -72,7 +72,7 @@ The shader API is used to assemble shaders and define shader modules.
 
 Most luma.gl applications will:
 
-1. Use the core API to create a `Device` class to access the GPU (either using WebGPU or WebGL).
+1. Use the core API to create a `Device` instance to access the GPU (either using WebGPU or WebGL).
 2. Upload data to the GPU via methods on the `Device`, using `Buffer` and `Texture` objects.
 3. Use the engine API to create one or more `Model` instances from GLSL or WGSL shader code.
 4. Bind attribute buffers and bindings (textures, uniform buffers or uniforms).

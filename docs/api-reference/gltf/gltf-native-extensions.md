@@ -9,15 +9,16 @@ survived loading. `@luma.gl/gltf` connects authored material variants, GPU insta
 recursive node visibility, typed animation pointers, and required-extension capabilities to the
 existing luma.gl scenegraph and animation runtime.
 
-The implementation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset,
+Source interpretation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset,
 `@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph,
-model, and animation behavior. There is no parallel loader, material system, or renderer.
+model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
 
 ## Load a standards-native scene
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 
 const asset = await load('/models/product.glb', GLTFLoader);
@@ -33,7 +34,7 @@ console.log(scenegraphs.extensionSupport);
 console.log(scenegraphs.animations.map(animation => animation.name));
 ```
 
-`postProcessGLTF()` is explicit: loaders.gl v4 does not support the historical
+`postProcessGLTF()` is an explicit luma.gl operation. The decoder does not support the historical
 `{gltf: {postProcess: true}}` loader option. Use `useByteColors: false` when consuming punctual
 light colors as glTF-authored linear RGB values. Strict extension handling is described below.
 
@@ -388,7 +389,7 @@ function renderFrame(timestampMilliseconds: number): void {
   scenegraphs.animator.setTime(timestampMilliseconds);
 
   for (const binding of scenegraphs.skins.bindings) {
-    console.log(binding.nodeIndex, binding.joints.length, binding.jointMatrices);
+    console.log(binding.node.id, binding.joints.length, binding.jointMatrices);
   }
 
   requestAnimationFrame(renderFrame);
@@ -398,7 +399,7 @@ function renderFrame(timestampMilliseconds: number): void {
 `setTime()` accepts absolute milliseconds; `selectClip()` crossfade duration and
 `animator.update(deltaSeconds)` use seconds. Imported skin palettes are updated automatically once
 after all channels evaluate, using existing mesh-local joint matrices and the canonical shared skin
-shader. `scenegraphs.skins.getBinding(nodeIndex)` exposes a specific reusable skin binding.
+shader. `scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex))` exposes a specific reusable skin binding.
 
 ## Official fixture coverage
 
@@ -427,8 +428,8 @@ The fixture attribution and pinned source revision are recorded in
 | `@luma.gl/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
 | `@luma.gl/engine` | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities. |
 | `@luma.gl/shadertools` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
-| `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission. |
-| `@luma.gl/scene` | Optional thin retained-object orchestration through `@luma.gl/scene/gltf`; no loader or BRDF ownership. |
+| `@luma.gl/anari` | Optional format-independent physical scene rendering and captured-scene transmission. |
+| `@luma.gl/anari` | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership. |
 
 The core ANARI package does not import glTF. Its optional glTF adapter imports the existing glTF
 parsers and engine animation primitives. Camera, punctual-light, and visibility pointer playback

@@ -9,7 +9,7 @@ every device-owned or specialized tree API accepts arbitrary vector topology.
 
 | Family | Contract |
 | --- | --- |
-| `GPUAdaptiveSpMV`, `GPUProgramSpMV` | Independent CSR offsets, columns, values, vector, and output chunks; all four strategies and conditional program lowering |
+| `GPUAdaptiveSpMV`, `GPUGraphSpMV` | Independent CSR offsets, columns, values, vector, and output chunks; all four strategies and conditional program lowering |
 | `GPUCOOToCSR` | One sorted COO domain across independent input/output partitions, including empty rows and split rows |
 | `GPUSort` | Stable global order across chunks, with equal-key ties ordered by original logical position |
 | `GPUSegmentedSort` | Small explicit logical domains can cross storage seams; atomic width-bucket kernels remain |

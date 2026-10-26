@@ -1,0 +1,2155 @@
+{
+  "formatVersion": 1,
+  "profile": {
+    "rigidBodies": "13ffdd2d681736c3fdbac0d53b4f490770c178e4",
+    "implicitShapes": "f817a1b252dcee25fa14174a49bc219310f61ddb",
+    "kind": "unratified pinned proposal; legacy geometry.mesh is a separate opt-in profile"
+  },
+  "features": [
+    {
+      "id": "contract.pinned-profile",
+      "tranche": "G1",
+      "fields": [
+        "extension revisions and prose/schema discrepancies"
+      ],
+      "requiredChecks": [
+        "import"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "imports a pinned, device-independent description"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.mixed-size-discovery",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: sparse broad phase"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "work-budget"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "testPattern": "matches all-pairs discovery for mixed-size sparse bounds"
+          }
+        ],
+        "work-budget": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "testPattern": "matches all-pairs discovery for mixed-size sparse bounds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.persistent-sparse-storage",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: stable pair identity"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "testPattern": "matches the rigid-body oracle with sparse discovery"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "testPattern": "uses sparse storage beyond the reference cap"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.capacity-reporting",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: bounded work without silent truncation"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "testPattern": "reports dense output/traversal overflow"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-broad-phase.spec.ts",
+            "testPattern": "includes oversized and remote bounds"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "testPattern": "retains transient overflow evidence and supports replay with a larger capacity"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-capacity.node.spec.ts",
+            "testPattern": "rejects device capacity before allocating or marking the world attached"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.hardware-baseline",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: reproducible per-step measurement"
+      ],
+      "requiredChecks": [
+        "performance"
+      ],
+      "checks": {
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "broad-phase-only",
+              "fixture": "mixed",
+              "minimumObjectCount": 10000,
+              "hardware": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.sphere",
+      "tranche": "G2",
+      "fields": [
+        "KHR_implicit_shapes.shapes[].sphere"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "honors primitive and authored-material schema defaults"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "resolves sphere impact against an oriented box"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.box",
+      "tranche": "G2",
+      "fields": [
+        "KHR_implicit_shapes.shapes[].box"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "resolves compound ownership, transformed child colliders"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "resolves sphere impact against an oriented box"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.capsule",
+      "tranche": "G2",
+      "fields": [
+        "KHR_implicit_shapes.shapes[].capsule"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "imports tapered primitives, signed gravity"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex.spec.ts",
+            "testPattern": "solves convex hull and tapered primitive contacts"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.cylinder",
+      "tranche": "G2",
+      "fields": [
+        "KHR_implicit_shapes.shapes[].cylinder"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "imports tapered primitives, signed gravity"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex.spec.ts",
+            "testPattern": "solves convex hull and tapered primitive contacts"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.plane",
+      "tranche": "G2",
+      "fields": [
+        "plane.sizeX",
+        "plane.sizeZ",
+        "plane.doubleSided"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "geometry.convex-hull",
+      "tranche": "G2",
+      "fields": [
+        "geometry.convexHull"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex.spec.ts",
+            "testPattern": "solves convex hull and tapered primitive contacts"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.node-reference",
+      "tranche": "G2",
+      "fields": [
+        "geometry.node: referenced node, children, off-scene nodes"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "geometry.initial-deformation",
+      "tranche": "G2",
+      "fields": [
+        "geometry.node: skin and morph weights at import"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "geometry.moving-mesh-pairs",
+      "tranche": "G2",
+      "fields": [
+        "geometry.convexHull=false: moving nonconvex pairs"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "geometry.holes-and-sidedness",
+      "tranche": "G2",
+      "fields": [
+        "nonconvex topology and collision side semantics"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex.spec.ts",
+            "testPattern": "preserves a nonconvex wheel opening"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.transforms",
+      "tranche": "G2",
+      "fields": [
+        "collider hierarchy TRS, nonuniform/reflected supported shapes"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "preserves reflected static boxes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.zero-scale-disable",
+      "tranche": "G2",
+      "fields": [
+        "all-three-zero node scale disables collision"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "dynamics.modes",
+      "tranche": "G3",
+      "fields": [
+        "motion.isKinematic; absent motion is static"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "distinguishes static and kinematic bodies"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "kinematic motion pushes dynamic bodies"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "holds exact kinematic node targets"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.mass-and-com",
+      "tranche": "G3",
+      "fields": [
+        "motion.mass",
+        "motion.centerOfMass",
+        "additive computed mass properties"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "computes additive primitive mass and center"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "uses authored center of mass and rotated principal inertia"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.principal-inertia",
+      "tranche": "G3",
+      "fields": [
+        "motion.inertiaDiagonal",
+        "motion.inertiaOrientation",
+        "zero means infinite mass/inertia"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "imports tapered primitives, signed gravity"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "preserves infinite mass and locked principal axes independently"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "preserves authored spin on infinite-inertia axes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.initial-velocities",
+      "tranche": "G3",
+      "fields": [
+        "motion.linearVelocity",
+        "motion.angularVelocity",
+        "motion.gravityFactor"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "distinguishes static and kinematic bodies"
+          },
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "imports tapered primitives, signed gravity"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.compound-ownership",
+      "tranche": "G3",
+      "fields": [
+        "collider owner motion and independent descendant motions"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "resolves compound ownership, transformed child colliders"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "transfers an offset compound contact into body rotation"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.materials",
+      "tranche": "G3",
+      "fields": [
+        "physicsMaterials.staticFriction",
+        "dynamicFriction",
+        "restitution",
+        "frictionCombine",
+        "restitutionCombine"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "honors primitive and authored-material schema defaults"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "follows material combine precedence"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "distinguishes static friction from sliding friction"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.filtering",
+      "tranche": "G3",
+      "fields": [
+        "collisionSystems",
+        "collideWithSystems",
+        "notCollideWithSystems",
+        "collider.collisionFilter"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "compiles symmetric filters without a 32-system bitmask limit"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "collider exclusions suppress response symmetrically"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.parallel-convergence",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: parallel solver and contact graph"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "performance"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "dynamics.manifold-persistence",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: contact feature matching and warm starting"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-sparse.spec.ts",
+            "testPattern": "matches the rigid-body oracle with sparse discovery"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.sleep-wake",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: coherent sleeping/waking islands"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "holds a rotated box stack and sleeps and wakes the connected stack"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.stacking-and-mass-ratios",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: stress/error/energy envelope"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "performance"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "dynamics.continuous-collision",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded time-of-impact and swept triggers"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "performance"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "dynamics.timestep-convergence",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: fixed-step and solver iteration convergence"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts",
+            "testPattern": "settled stacks converge across timestep and iteration budgets"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.submission-latency",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded GPU queue and timing/memory evidence"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "performance"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "constraints.frames",
+      "tranche": "G4",
+      "fields": [
+        "joint.connectedNode",
+        "joint.joint",
+        "attachment frames",
+        "joint.enableCollision"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "imports composed joints with forward attachment references"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-joints.spec.ts",
+            "testPattern": "retains a rotated hinge anchor"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-joints.spec.ts",
+            "testPattern": "preserves explicit connected-body collision policy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "constraints.linear-limits",
+      "tranche": "G4",
+      "fields": [
+        "limits.linearAxes: 1D/2D/3D",
+        "limits.min",
+        "limits.max"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "imports .*dimensional linear and angular limits"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "holds a loaded"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "enforces nonzero inner and outer radii"
+          }
+        ]
+      }
+    },
+    {
+      "id": "constraints.angular-limits",
+      "tranche": "G4",
+      "fields": [
+        "limits.angularAxes: 1D/2D/3D metrics"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "imports .*dimensional linear and angular limits"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "enforces the .*dimensional angular limit metric"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "resolves a .*dimensional angular limit from a half-turn"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "uses the twist coordinate gradient"
+          }
+        ]
+      }
+    },
+    {
+      "id": "constraints.softness",
+      "tranche": "G4",
+      "fields": [
+        "limits.stiffness",
+        "limits.damping"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "imports .*dimensional linear and angular limits"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "settles a compliant general limit"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "balances a capped torque"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "uses the radial spring metric for a large"
+          }
+        ]
+      }
+    },
+    {
+      "id": "constraints.drives",
+      "tranche": "G4",
+      "fields": [
+        "drives.type",
+        "mode",
+        "axis",
+        "maxForce",
+        "positionTarget",
+        "velocityTarget",
+        "stiffness",
+        "damping"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "imports composed joints"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "qualifies .* drives against an implicit spring reference"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "caps .* drive impulses independently"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "updates live drive targets"
+          }
+        ]
+      }
+    },
+    {
+      "id": "queries.triggers",
+      "tranche": "G5",
+      "fields": [
+        "trigger.geometry",
+        "trigger.nodes",
+        "trigger.collisionFilter"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "testPattern": "imports nested trigger unions"
+          },
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "testPattern": "preserves intermediate branch filters"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies sphere trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies box trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies capsule trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies cylinder trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies plane trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies convex-hull trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "qualifies triangle-mesh trigger geometry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "reports trigger ring loss"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "records swept sensor entry"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "unions compound sensors"
+          }
+        ]
+      }
+    },
+    {
+      "id": "queries.ray-segment",
+      "tranche": "G5",
+      "fields": [
+        "rigid_body/rayCast: nearest filtered hit, fraction, normal and source node"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "qualifies bounded filtered behavior segments"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies rotated box ray"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies sphere query scale"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies extended shape surfaces"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "queries original mesh surfaces"
+          }
+        ]
+      }
+    },
+    {
+      "id": "interaction.impulses",
+      "tranche": "G5",
+      "fields": [
+        "rigid_body/applyImpulse",
+        "rigid_body/applyPointImpulse"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "qualifies behavior point impulses"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "resolves a real GPU ray hit"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts",
+            "testPattern": "applies center impulses without torque"
+          }
+        ]
+      }
+    },
+    {
+      "id": "interaction.trigger-events",
+      "tranche": "G5",
+      "fields": [
+        "event/rigid_body_triggerEntered",
+        "event/rigid_body_triggerExited",
+        "colliderNodeIndex",
+        "motionNodeIndex"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "preserves independent collider identities"
+          },
+          {
+            "file": "modules/engine/test/interactivity/physics.node.spec.ts",
+            "testPattern": "preserves each trigger activation"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts",
+            "testPattern": "reports trigger ring loss"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "delivers GPU trigger transitions"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.animation-precedence",
+      "tranche": "G6",
+      "fields": [
+        "animated node transforms take precedence over physics"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "qualifies imported ancestor ownership"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies animation takeover"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies blended mixer"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "retains animation release ownership"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.object-model",
+      "tranche": "G6",
+      "fields": [
+        "animatable physics/material/joint/shape pointers"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-pointer.node.spec.ts",
+            "testPattern": "qualifies declared motion"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "qualifies imported component pointers"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "rejects a shared joint edit"
+          },
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "testPattern": "binds authored motion and material pointers"
+          },
+          {
+            "file": "modules/gltf/test/physics/mesh-snapshot.node.spec.ts",
+            "testPattern": "snapshots initial and live morphs"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.instances-and-lifecycle",
+      "tranche": "G6",
+      "fields": [
+        "shared assets, required instance semantics, reset and destruction"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "native export reimport"
+          },
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "testPattern": "reimports automatically derived inertia"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies scene lifecycle"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "retains animation release ownership"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "rolls back render binding failure"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.gpu-render-publication",
+      "tranche": "G6",
+      "fields": [
+        "engine quality: pose/bounds publication without mandatory CPU bridge"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "performance"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies hierarchy publication"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "publishes COM-correct matrices"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "publication",
+              "fixture": "pose-bounds",
+              "minimumObjectCount": 10000,
+              "hardware": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qualification.external-assets",
+      "tranche": "G7",
+      "fields": [
+        "pinned external files plus adversarial synthetic fixtures"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "qualification.device-envelope",
+      "tranche": "G7",
+      "fields": [
+        "declared desktop/mobile/browser device and workload envelope"
+      ],
+      "requiredChecks": [
+        "performance"
+      ],
+      "checks": {}
+    },
+    {
+      "id": "solver.coupled-friction-stability",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: coupled tangent response, static friction, moving support and bounded eight-box stack stability"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "solves coupled anisotropic tangential response"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "keeps a body stationary inside the static friction cone"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "carries resting bodies on a kinematic support"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-stability.spec.ts",
+            "testPattern": "bounds eight-box stack drift and penetration"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.bounded-mesh-surface-contacts",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: discrete original-triangle mesh pairs; solid containment and general CCD excluded"
+      ],
+      "requiredChecks": [
+        "behavior",
+        "work-budget"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "supports a falling triangle-mesh body"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "preserves a nonconvex mesh opening"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "exchanges momentum between two moving mesh bodies"
+          }
+        ],
+        "work-budget": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "reports mesh traversal exhaustion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.capacity-replay",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "testPattern": "automatically grows pair capacity and replays to the generous-budget result"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.kinematic-replay",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "testPattern": "replays earlier ticks and kinematic targets after a later capacity failure"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.rotated-box-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies rotated box ray distances against an independent slab reference"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.scaled-sphere-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies sphere query scale and grazing misses analytically"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.ballistic-convergence",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies fixed-step convergence against ballistic motion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.elastic-conservation",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies unequal-mass elastic momentum and energy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.ccd-rebound-reference",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: bounded analytic qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies swept impact position against analytic restitution"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.extended-surface-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: independent primitive and triangle references"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies extended shape surfaces against primitive and triangle references"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.compact-contact-queue",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-compaction.spec.ts",
+            "testPattern": "matches the scan solver and clears/rebuilds contact queues"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.multi-workgroup-contact-queue",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-compaction.spec.ts",
+            "testPattern": "compacts more than one workgroup of contacts"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.closed-form-contact-depths",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts",
+            "testPattern": "qualifies signed contact depths and reversed normals"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.compound-edge-corner-depths",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts",
+            "testPattern": "qualifies sphere/box edge and corner depths"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.sustained-stack-envelope",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration, drift and residual energy"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration, drift and residual energy"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration, drift and residual energy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.mesh-opening-ray-reference",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: nonconvex surface ray queries"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts",
+            "testPattern": "preserves nonconvex mesh openings and two-sided ray distances"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.convex-sat-scale",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies convex penetration"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.tetrahedral-sat",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies tetrahedral"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.rounded-box-casts",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies rounded box"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.static-shape-ccd",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static box across"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static sphere across"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static capsule across"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static cylinder across"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static convex-hull across"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static triangle-mesh across"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies fast sphere rebounds against static plane across"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.mesh-opening-ccd",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "preserves a mesh opening"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.repeated-impact-rollback",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "qualifies repeated CCD"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.mesh-sweep-budget",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts",
+            "testPattern": "rejects a CCD step"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.constant-world-spin",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-rotation-qualification.spec.ts",
+            "testPattern": "qualifies high constant world spin"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.coplanar-mesh-rays",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies coplanar mesh ray edges"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.local-feature-depth",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated capsule features"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated cylinder features"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts",
+            "testPattern": "qualifies local contact depth against elongated triangle-mesh features"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.convex-swept-capacity",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rejects a saturated swept queue"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rejects impact exhaustion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "contacts.local-anchor-persistence",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts",
+            "testPattern": "retains local anchors under common motion with all-pairs"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts",
+            "testPattern": "retains local anchors under common motion with hierarchical-grid"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts",
+            "testPattern": "retains box face keys and impulses across penetration changes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.moving-convex-pairs",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "resolves a moving box pair with conserved momentum and energy"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "preserves free-box rebound trajectories"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "uses the real grazing box face patch"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.convex-shape-sweeps",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating box"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating sphere"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating capsule"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating cylinder"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "qualifies translating convex-hull"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rebounds from a translating kinematic"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.rotating-convex-sweep",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "detects a rotating gate crossing"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.convex-impact-friction",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "applies swept Coulomb friction"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "keeps an offset impact nonclosing"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "does not add offset-impact energy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "geometry.coplanar-contact-continuity",
+      "tranche": "G2",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "slides across a triangulated seam"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "preserves authored boundary"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts",
+            "testPattern": "normalizes tiny triangle face witnesses"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamics.impact-continuity",
+      "tranche": "G3",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "propagates an impact through an initially touching chain"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "resolves simultaneous opposing impacts"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "rechecks a separating initial touch"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "rejects an exhausted simultaneous-impact budget"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "sustains rotating contact exits"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.spatial-swept-pruning",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: named-case qualification"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts",
+            "testPattern": "spatially prunes sparse swept bounds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.awake-island-work",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: awake contact and body work queues"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-compaction.spec.ts",
+            "testPattern": "omits sleeping islands"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-compaction.spec.ts",
+            "testPattern": "matches the scan solver"
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution.gpu-command-checkpoint",
+      "tranche": "G1",
+      "fields": [
+        "engine quality: atomic command rollback without full-state readback"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "testPattern": "reuses GPU command checkpoints"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-recovery.spec.ts",
+            "testPattern": "rejects without advancing the tick"
+          }
+        ]
+      }
+    },
+    {
+      "id": "constraints.live-drive-capture",
+      "tranche": "G4",
+      "fields": [
+        "live drive mutation and captured state restoration"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts",
+            "testPattern": "updates live drive targets"
+          }
+        ]
+      }
+    },
+    {
+      "id": "queries.compound-collider-identity",
+      "tranche": "G5",
+      "fields": [
+        "nested trigger unions and per-collider transition identities"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "testPattern": "imports nested trigger unions"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "preserves independent collider identities"
+          }
+        ]
+      }
+    },
+    {
+      "id": "interaction.gpu-query-continuation",
+      "tranche": "G5",
+      "fields": [
+        "GPU query identity resolution and point impulse continuation"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts",
+            "testPattern": "resolves a real GPU ray hit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.live-physics-properties",
+      "tranche": "G6",
+      "fields": [
+        "configured motion, material and joint setters; authored pointer playback"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
+            "testPattern": "updates mass, inertia and COM"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
+            "testPattern": "changes restitution live"
+          },
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "testPattern": "binds authored motion and material pointers"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.transactional-scene-rebuild",
+      "tranche": "G6",
+      "fields": [
+        "explicit geometry rebuild, independent instances, reset and pending destruction"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "rebuilds geometry transactionally"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "isolates instances sharing a scene"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.animated-child-collider",
+      "tranche": "G6",
+      "fields": [
+        "rigid child collider animation without taking parent motion ownership"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "binds animated child collider"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
+            "testPattern": "moves child collider frames"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.analytic-shape-mutation",
+      "tranche": "G6",
+      "fields": [
+        "analytic dimensions and shared scaled shape pointers; topology changes require rebuild"
+      ],
+      "requiredChecks": [
+        "import",
+        "behavior"
+      ],
+      "checks": {
+        "import": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "testPattern": "routes analytic scale channels"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "testPattern": "animates shared implicit shape pointers"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
+            "testPattern": "updates shared analytic geometry atomically"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts",
+            "testPattern": "scales animated analytic child colliders"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.live-scene-capture",
+      "tranche": "G6",
+      "fields": [
+        "implementation-version live capture with stable object bindings and authored reset state"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "roundtrips live scene state"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "holds borrowed world lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding.publication-no-pose-bridge",
+      "tranche": "G6",
+      "fields": [
+        "COM-correct GPU matrix and authored bounds publication"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-instance.spec.ts",
+            "testPattern": "publishes COM-correct matrices"
+          }
+        ]
+      }
+    }
+  ]
+}

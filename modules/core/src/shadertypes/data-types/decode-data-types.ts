@@ -7,7 +7,7 @@ import {
   isFloat16ArrayConstructor,
   type TypedArray,
   type TypedArrayConstructor
-} from '../../types';
+} from '../../api/types';
 import type {
   DataTypeInfo,
   NormalizedDataType,

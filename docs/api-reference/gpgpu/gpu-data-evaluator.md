@@ -247,3 +247,139 @@ Releases cached GPU resources owned through child `GPUDataEvaluator` instances.
   destroyed or recycled by the evaluator.
 - Synchronous evaluation is intended for already-prepared graphs where backend
   registration and any required CPU values are available up front.
+
+## Experimental explicit-submission POC
+
+### Why this is needed
+
+The portable evaluator is a suitable replacement for backend-specific attribute transforms,
+but its WebGPU handlers currently own submission. Separate attribute outputs and chains of
+different operation types can therefore call `device.submit()` repeatedly during one deck.gl
+update. A host renderer cannot record those operations and its consumers together on an
+explicit command encoder or choose a single submission point.
+
+This is a scheduling and integration gap, not an existing GPU ordering bug: sequential queue
+submissions already preserve producer/consumer order. Nor does every nested arithmetic call
+cause a submission: the evaluator already fuses arithmetic expressions. The useful cases are
+multiple outputs and chains crossing operation boundaries, such as arithmetic followed by a
+non-contiguous swizzle and another arithmetic expression. GPU aggregation is another prospective
+consumer, but reduction support is outside this initial POC.
+
+`GPUEvaluationScope` demonstrates recording those existing row operations without submitting,
+then letting the caller submit once. Tests verify submission count and results; a frame-time
+improvement has not been measured. This draft API is intended to establish the execution and
+resource-lifetime contract before extending every backend handler or integrating deck.gl.
+
+### Example
+
+```ts
+import {GPUDataEvaluator, GPUEvaluationScope, add, multiply, swizzle} from '@luma.gl/gpgpu';
+
+const source = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
+const scaled = multiply(source, 2);
+const reordered = swizzle(scaled, [1, 0]);
+const positions = add(reordered, 1);
+const colors = add(source, 10);
+
+const scope = new GPUEvaluationScope(device);
+try {
+  const positionVector = await scope.evaluate(positions);
+  const colorVector = await scope.evaluate(colors);
+  // No evaluator submission has occurred. Additional commands consuming these
+  // buffers may be appended to scope.commandEncoder before submission.
+  scope.submit();
+} catch (error) {
+  // Evaluation errors already cancel the scope; cancel() also handles errors
+  // in caller-appended commands and is harmless after an earlier cancellation.
+  scope.cancel();
+  throw error;
+}
+```
+
+The existing `evaluator.evaluate(device)` API retains its current behavior. This POC does not
+change its submission policy, fuse additional shaders, or replace the command-graph API.
+
+### Submission and lifetime contract
+
+- A scope is WebGPU-only and owns its encoder. Append commands through `commandEncoder`, but
+  call `scope.submit()` to finish and submit it. Do not finish or submit the encoder separately.
+- Explicit scopes select opted-in WebGPU handlers even for single-row attributes and constants.
+  The ordinary `evaluate(device)` API retains its CPU fast path. GPU-computed constants stay
+  GPU-resident and broadcast from row zero when consumed by later row operations.
+- Await each `scope.evaluate()` before starting another evaluation, submitting, or cancelling.
+  Evaluation finishes CPU encoding; it does not wait for GPU completion.
+- The scope retains participating evaluators and computation resources. Evaluator destruction,
+  readback, and evaluation outside the scope are rejected while the scope is pending. Existing
+  output buffers remain available for binding to later commands on the same encoder.
+- Successful submission releases these evaluator leases. Queue ordering allows subsequent GPU
+  consumers without a CPU wait. Explicit readback still waits for the GPU in the usual way.
+- `cancel()` is harmless after submission or an earlier cancellation. Otherwise it discards
+  commands and invalidates newly materialized evaluator views, allowing a
+  fresh evaluation. Existing materializations are preserved. Assigned output targets and layouts
+  are restored so a cancelled operation can be retried.
+- Evaluation failure cancels the entire scope, including earlier successful evaluations.
+  Submitted and cancelled scopes cannot be reused. Batch submission must not race evaluation.
+- The scope borrows external buffers. The application must keep raw buffers alive and unchanged
+  until submission and must not read pending returned vectors directly. These raw resource
+  operations cannot be intercepted by evaluator leases. CPU input uploads may occur immediately;
+  cancellation discards encoded computation, not queue writes or external application changes.
+
+### Deliberate POC limits
+
+`GPUDataEvaluator`, chunk-preserving `GPUVectorEvaluator`, and opt-in WebGPU row handlers are supported:
+arithmetic, dot, equalAll, fround, interleave, length, select, and swizzle. CPU fallback,
+multi-pass extent, gather, segmentedMap, sequence, color conversion,
+and raw-byte casts are not included. Unsupported handlers fail explicitly rather than internally
+submitting. The existing immediate-submission API remains available for those operations.
+
+Before promoting this API, extend supported handlers,
+measure representative deck.gl frame workloads, and decide whether this execution scope should
+instead lower into the existing GPU command graph. Caller-owned encoders and a coordinated
+submission receipt would also need an explicit lifetime design; a bare `submit: false` flag is
+insufficient.
+
+## Inspection metadata
+
+`GPUDataEvaluator.getInspection()` and `GPUVectorEvaluator.getInspection()` return an
+immutable snapshot of the lazy dependency graph without allocating GPU resources,
+resolving backend handlers, executing work, or reading back data. `outputs` contains
+ordered node references (one per vector chunk); `nodes` describes operation names,
+dependencies, layout, canonical format when representable, and current evaluation state.
+Shared evaluators appear once, even when several chunks reference them. IDs are local
+to each snapshot. Nodes describe execution dependencies after expression fusion, so
+an authored arithmetic chain may appear as one operation. Snapshots contain no buffer
+handles or CPU payloads. Request another snapshot to observe later evaluation state.
+
+```typescript
+const inspection = vectorEvaluator.getInspection();
+for (const node of inspection.nodes) {
+  console.log(node.id, node.operation, node.dependencies, node.format);
+}
+```
+
+## Vector evaluation scopes
+
+`GPUEvaluationScope.evaluate()` accepts both data and vector evaluators. On WebGPU,
+vector chunks are recorded sequentially into the scope's encoder, preserving their
+order and boundaries and reusing shared dependencies. Supported backend handlers
+must explicitly support deferred submission.
+
+```typescript
+const scope = new GPUEvaluationScope(device);
+try {
+  const vector = await scope.evaluate(vectorEvaluator);
+  // Bind vector chunks in further commands on scope.commandEncoder here.
+  scope.submit();
+} finally {
+  scope.cancel(); // Harmless after submission; discards work on failure.
+}
+```
+
+Await each evaluation before starting another or submitting. Pending outputs must
+not be read or consumed outside this encoder until submission. Evaluators and their
+chunks, including cached outputs, remain retained until submission or cancellation.
+Cancellation discards newly cached outputs and preserves previously evaluated ones;
+a failing chunk cancels the whole scope. Borrowed buffers must remain alive and
+unchanged until submission. Ordinary `evaluate()` retains its existing caching and
+parallel chunk evaluation behavior. These APIs belong to `@luma.gl/gpgpu` and do not
+depend on `@luma.gl/graph`.

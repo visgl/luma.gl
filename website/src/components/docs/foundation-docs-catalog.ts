@@ -166,6 +166,8 @@ export const FOUNDATION_DOCS_CATALOG = {
       label: 'Scenegraphs',
       tabs: [
         {id: 'scenegraphs', label: 'Workflow', href: '/docs/api-guide/engine/scenegraph'},
+        {id: 'controllers', label: 'Controllers', href: '/docs/api-guide/engine/scene-controllers'},
+        {id: 'physics', label: 'Physics', href: '/docs/api-guide/engine/scenegraph-physics'},
         {id: 'scenegraph-node', label: 'ScenegraphNode', href: '/docs/api-reference/engine/scenegraph/scenegraph-node'},
         {id: 'group-node', label: 'GroupNode', href: '/docs/api-reference/engine/scenegraph/group-node'},
         {id: 'model-node', label: 'ModelNode', href: '/docs/api-reference/engine/scenegraph/model-node'}

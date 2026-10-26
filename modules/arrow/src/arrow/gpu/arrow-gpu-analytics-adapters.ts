@@ -11,7 +11,7 @@ import {
   type GPUField,
   type GPUTablePackBatchesOptions,
   type GPUTypeMap
-} from '@luma.gl/experimental/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import {
   DataType,
   Dictionary,

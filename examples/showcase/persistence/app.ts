@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumericArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/core/types';
 import {Buffer, UniformStore, Framebuffer, Texture} from '@luma.gl/core';
 import {persistenceEffect} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';

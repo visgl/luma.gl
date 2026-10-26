@@ -15,8 +15,8 @@ adjacency remain GPU-resident beside the scene rather than becoming trace-specif
 the shared scene abstraction.
 
 This domain-specific model is exported from
-[`@luma.gl/experimental/gpu-trace`](/docs/api-reference/experimental/gpu-trace), not from the generic
-`@luma.gl/experimental` root. Command scheduling and flat scene storage remain reusable without
+[`@luma.gl/graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace), not from the generic
+`@luma.gl/graph` root. Command scheduling and flat scene storage remain reusable without
 importing trace schemas.
 
 The motivation is interactive trace exploration at a scale where rebuilding JavaScript span lists
@@ -123,8 +123,8 @@ allocations while keeping logical graph-view lengths at zero.
 ## Usage
 
 ```ts
-import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/gpgpu/gpu-core';
-import {GPUTraceScene} from '@luma.gl/experimental/gpu-trace';
+import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/graph/gpu-core';
+import {GPUTraceScene} from '@luma.gl/graph/gpu-trace';
 
 const trace = new GPUTraceScene(device, {
   spans: canonicalSpanWords,

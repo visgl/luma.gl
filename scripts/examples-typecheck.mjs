@@ -8,8 +8,12 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const examplesRoot = join(repoRoot, 'examples');
 const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
+  'gltf/features',
   'deck/city-scene',
   'api/blending',
+  'gltf/physics',
+  'gltf/authored-scene-stress',
+  'deck/gltf-interactivity',
   'api/multi-canvas',
   'api/render-bundles',
   'api/texture-compressed',
@@ -24,9 +28,16 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'arrow/arrow-polygons',
   'experimental/fluid-foundry',
   'experimental/fp64',
+  'experimental/three',
   'experimental/advanced-effects',
   'experimental/deferred-rendering',
   'experimental/gpu-frustum-culling',
+  'experimental/gpu-sphere-world',
+  'experimental/gpu-rigid-body-world',
+  'experimental/physics-stress',
+  'experimental/physics-batch',
+  'experimental/vector-observatory',
+  'experimental/gpu-pool',
   'experimental/gpu-trace-viewer',
   'deck/sketch-edges',
   'deck/scene-buffers',
@@ -50,8 +61,9 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'experimental/webxr-kaleidoscope',
   'integrations/hello-react',
   'experimental/antialiasing',
+  'gltf/audio',
   'showcase/algebraic-varieties',
-  'showcase/scene',
+  'anari/scenes',
   'showcase/dof',
   'showcase/gaussian-splats',
   'showcase/billion-point-spatial-atlas',
@@ -79,6 +91,13 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
 
 const PACKAGE_FREE_EXAMPLE_WORKSPACES = new Set(['showcase/raster-lab','tutorials/slang-particles']);
 const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
+  'experimental/gpu-rigid-body-world',
+  'experimental/physics-stress',
+  'experimental/physics-batch',
+  'experimental/vector-observatory',
+  'deck/gltf-interactivity',
+  'experimental/gpu-sphere-world',
+  'experimental/gpu-pool',
   'deck/globe-clouds',
   'deck/fireflies',
   'deck/hdr-night-lighting',
@@ -87,7 +106,8 @@ const NATIVE_TYPESCRIPT_CONFIG_WORKSPACES = new Set([
   'deck/city-scene',
   'api/multi-canvas',
   'experimental/fp64',
-  'showcase/scene',
+  'experimental/three',
+  'anari/scenes',
   'showcase/raster-lab',
   'showcase/spectral-wave-lab'
 ]);
@@ -118,8 +138,6 @@ const SHARED_COMPILER_OPTIONS = {
     '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/deck-arrow-layers/src/*')],
     '@deck.gl-community/gpu-layers': [join(repoRoot, 'modules/deck-gpu-layers/src/index.ts')],
     '@deck.gl-community/gpu-layers/*': [join(repoRoot, 'modules/deck-gpu-layers/src/*')],
-    '@luma.gl/experimental': [join(repoRoot, 'modules/experimental/src/index.ts')],
-    '@luma.gl/experimental/*': [join(repoRoot, 'modules/experimental/src/*')],
     '@luma.gl/gpgpu': [join(repoRoot, 'modules/gpgpu/src/index.ts')],
     '@luma.gl/gpgpu/*': [join(repoRoot, 'modules/gpgpu/src/*')],
     '@luma.gl/splats': [join(repoRoot, 'modules/splats/src/index.ts')],

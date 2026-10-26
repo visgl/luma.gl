@@ -6,7 +6,7 @@ import type {SlangSourceMapEntry} from './types';
 import type {SlangDiagnostic} from './diagnostics';
 
 export function markSlangSource(code: string, location: SourceLocation): string {
-  return `// @slang-source:${location.offset}:${location.line}:${location.column}\n${code}`;
+  return `// @slang-source:${location.offset}:${location.line}:${location.column}${location.sourceName ? `:${JSON.stringify(location.sourceName)}` : ''}\n${code}`;
 }
 
 /** Strip internal provenance markers while retaining a mapping for each generated line. */
@@ -16,14 +16,19 @@ export function mapSlangSource(
 ): {code: string; sourceMap: SlangSourceMapEntry[]} {
   const lines: string[] = [];
   const sourceMap: SlangSourceMapEntry[] = [];
-  let original = {offset: 0, line: 1, column: 1};
+  let original = {offset: 0, line: 1, column: 1, sourceName};
   for (const line of code.split('\n')) {
-    const marker = /^\s*\/\/ @slang-source:(\d+):(\d+):(\d+)$/.exec(line);
+    const marker = /^\s*\/\/ @slang-source:(\d+):(\d+):(\d+)(?::(.*))?$/.exec(line);
     if (marker) {
-      original = {offset: Number(marker[1]), line: Number(marker[2]), column: Number(marker[3])};
+      original = {
+        offset: Number(marker[1]),
+        line: Number(marker[2]),
+        column: Number(marker[3]),
+        sourceName: marker[4] ? JSON.parse(marker[4]) : sourceName
+      };
     } else {
       lines.push(line);
-      sourceMap.push({...original, sourceName, generatedLine: lines.length});
+      sourceMap.push({...original, generatedLine: lines.length});
     }
   }
   return {code: lines.join('\n'), sourceMap};
