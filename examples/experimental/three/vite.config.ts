@@ -20,12 +20,20 @@ export default defineConfig(({mode}) => ({
   },
   resolve: {
     alias: Object.fromEntries(
-      ['core', 'effects', 'engine', 'gpgpu', 'three', 'webgl', 'webgpu', 'shadertools'].map(
-        name => [
-          `@luma.gl/${name}`,
-          fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
-        ]
-      )
+      [
+        'core',
+        'effects',
+        'engine',
+        'gpgpu',
+        'three',
+        'webgl',
+        'webgpu',
+        'shadertools',
+        'graph'
+      ].map(name => [
+        `@luma.gl/${name}`,
+        fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
+      ])
     )
   },
   optimizeDeps: {
