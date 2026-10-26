@@ -82,9 +82,25 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### loaders.gl grouped packages
+
+luma.gl now uses loaders.gl 5.0.0-alpha.14. Install `@loaders.gl/tables` in place of
+`@loaders.gl/parquet`, and import Parquet APIs from `@loaders.gl/tables/parquet` or
+its explicit implementation subpaths. Schema, schema utilities, and Node polyfills
+now come from `@loaders.gl/core/schema`, `@loaders.gl/core/schema-utils`, and
+`@loaders.gl/core/polyfills`; install `@loaders.gl/core` for those subpaths.
+
+
+### Audio loading ownership
+
+loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.gl's
+`AudioController`, set `gltf.excludeExtensions: ['KHR_audio_emitter']` in loader
+options. This keeps encoded clip loading under the controller's active-scene and
+resource ownership rules, and preserves luma.gl's support for legacy draft attachments.
+
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-alpha.19. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-alpha.20. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core/types`,
 `@math.gl/polygon` becomes `@math.gl/geometry/polygon`, and CRS, projection, and
 GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to

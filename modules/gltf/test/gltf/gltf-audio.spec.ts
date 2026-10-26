@@ -99,7 +99,9 @@ async function makeScene(
     source.scenes.push({nodes: [2]});
   }
   const gltf = postProcessGLTF(
-    await parse(new TextEncoder().encode(JSON.stringify(source)).buffer, GLTFLoader)
+    await parse(new TextEncoder().encode(JSON.stringify(source)).buffer, GLTFLoader, {
+      gltf: {excludeExtensions: ['KHR_audio_emitter']}
+    })
   );
   return createScenegraphsFromGLTF(new NullDevice({}), gltf);
 }

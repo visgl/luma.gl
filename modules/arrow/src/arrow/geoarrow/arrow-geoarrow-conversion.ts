@@ -4,6 +4,7 @@
 
 import {
   convertGeoArrowColumn,
+  mergeGeoArrowDimensions,
   interleaveGeoArrowCoordinates,
   isGeoArrowValueValid,
   sliceGeoArrowColumn,
@@ -294,17 +295,6 @@ function stripEWKTSRIDPrefixes(column: GeoArrowColumn): GeoArrowColumn {
 
 function stripEWKTSRIDPrefix(wkt: string): string {
   return wkt.replace(/^\s*SRID\s*=\s*\d+\s*;\s*/i, '');
-}
-
-function mergeGeoArrowDimensions(
-  left: GeoArrowDimension,
-  right: GeoArrowDimension
-): GeoArrowDimension {
-  if (left === right) return left;
-  if (left === 'xy') return right;
-  if (right === 'xy') return left;
-  if (left === 'xyzm' || right === 'xyzm') return 'xyzm';
-  return left === 'xym' && right === 'xym' ? 'xym' : 'xyzm';
 }
 
 function assertNoGeometryCollections(column: GeoArrowColumn): void {
