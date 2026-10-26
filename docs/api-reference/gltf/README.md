@@ -95,8 +95,8 @@ The pipeline separates these responsibilities:
 Call luma.gl's `postProcessGLTF()` explicitly after loading. Existing loaders.gl postprocessed
 results remain structurally compatible with luma.gl's scenegraph, material, and animation APIs.
 Runtime animation and geometry consume the resulting accessor `value` and `components`.
-`exportGLTF()` still owns scene-to-glTF descriptor mapping,
-while `GLBWriter` owns the binary container envelope.
+The shared example exporter owns scene-to-glTF descriptor mapping and uses loaders.gl
+`GLBWriter` for the binary container envelope. Neither is shipped by `@luma.gl/gltf`.
 
 The installed loader supports both `EXT_meshopt_compression` and the newer
 `KHR_meshopt_compression` release candidate. Generic browser AVIF decoding still does not imply
@@ -241,13 +241,14 @@ and Animation Studio controls.
 
 ## Source-faithful asset interchange
 
-`exportGLTF()` serializes renderer-independent glTF scene descriptors as embedded JSON or binary
+The shared [example exporter](https://github.com/visgl/luma.gl/blob/master/examples/gltf/gltf-exporter.ts)
+provides `exportGLTF()` as application code. It serializes scene descriptors as embedded JSON or binary
 GLB. Existing hierarchy, skins, inverse bind matrices, morph targets, animation clips, material
 pointers, variants, GPU instancing, cameras, punctual lights, sampler settings, and authored
 physical materials remain available to the output asset.
 
 ```ts
-import {exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
+import {exportGLTF, type GLTFExportScene} from './gltf-exporter';
 
 const scene: GLTFExportScene = {name: 'Exported scene', nodes: [{name: 'Root'}]};
 const document: string = exportGLTF(scene);
@@ -259,9 +260,10 @@ RGBA vertex colors, normalized joint weights, animation pointers, and resource o
 
 ## Package ownership
 
-- `@loaders.gl/gltf` owns container parsing, linked resources, codec decoding, accessor
-  postprocessing, loader-supported extension decoding, and binary GLB container encoding.
-- `@luma.gl/gltf` interprets glTF-specific scene, material, sampler, light, and animation data.
+- `@loaders.gl/gltf` owns container parsing, linked resources, codec decoding,
+  loader-supported extension decoding, and binary GLB container encoding.
+- Applications choose loaders and writers; luma.gl modules have no loaders.gl dependency.
+- `@luma.gl/gltf` owns accessor postprocessing and interprets glTF-specific scene, material, sampler, light, and animation data.
 - `@luma.gl/engine` owns generic scenegraph, animation, and morph-target primitives.
 - `@luma.gl/shadertools` owns the shared PBR, lighting, and skinning shader modules.
 - `@luma.gl/anari/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI

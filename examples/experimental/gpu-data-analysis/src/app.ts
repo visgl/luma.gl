@@ -21,7 +21,7 @@ import {
   type CompiledGPUDataFrameQuery,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
-import {planGPUDataFrameQuery} from '@luma.gl/graph/gpu-sql';
+import {planGPUDataFrameQuery} from './loaders-sql-query';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';

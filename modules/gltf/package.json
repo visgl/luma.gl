@@ -54,9 +54,6 @@
     "@luma.gl/shadertools": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-alpha.12",
-    "@loaders.gl/gltf": "~5.0.0-alpha.12",
-    "@loaders.gl/textures": "~5.0.0-alpha.12",
     "@luma.gl/graph": "10.0.0-alpha.4",
     "@math.gl/core": "5.0.0-alpha.19"
   },

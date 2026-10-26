@@ -65,26 +65,16 @@ export {parseGLTFSkins, type ParseGLTFSkinsProps, resolveGLTFSkinIndex} from './
 export {parseGLTFAnimations} from './parsers/parse-gltf-animations';
 export {type ParseGLTFLightsOptions, parseGLTFLights} from './parsers/parse-gltf-lights';
 export {
-  exportGLTF,
-  type GLTFExportAccessor,
-  type GLTFExportAnimation,
-  type GLTFExportAnimationChannel,
-  type GLTFExportAnimationSampler,
-  type GLTFExportImage,
-  type GLTFExportMesh,
-  type GLTFExportNode,
-  type GLTFExportOptions,
-  type GLTFExportPrimitive,
-  type GLTFExportScene,
-  type GLTFExportSkin
-} from './export/gltf-exporter';
-export {
   type CreateGLTFTextureOptions,
   createGLTFTexture,
   type ParsePBRMaterialOptions,
   parsePBRMaterial
 } from './parsers/parse-pbr-material';
-export {loadPBREnvironment, type PBREnvironment} from './pbr/pbr-environment';
+export {
+  loadPBREnvironment,
+  type PBREnvironment,
+  type PBREnvironmentProps
+} from './pbr/pbr-environment';
 export {type ParsedPBRMaterial} from './pbr/pbr-material';
 export {
   getTextureTransformMatrix,

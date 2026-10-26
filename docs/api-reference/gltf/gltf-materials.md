@@ -263,13 +263,15 @@ legacy byte-style light convention.
 
 ## Image-based lighting
 
-`loadPBREnvironment()` loads an already prepared diffuse cubemap, specular cubemap mip chain, and
-BRDF lookup texture:
+`loadPBREnvironment()` uses an application-supplied `loadImage` callback to load an already
+prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```ts
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
+import {loadImageTexture} from '@loaders.gl/textures';
 
 const environment = loadPBREnvironment(device, {
+  loadImage: loadImageTexture,
   brdfLutUrl: '/environment/brdf-lut.png',
   getTexUrl: (kind, face, level) => `/environment/${kind}/${face}/${level}.png`,
   specularMipLevels: 6

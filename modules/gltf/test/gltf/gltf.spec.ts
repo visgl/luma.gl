@@ -8,6 +8,7 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
+import {loadImageTexture} from '@loaders.gl/textures';
 import {
   postProcessGLTF,
   type GLTFPostprocessed,
@@ -82,12 +83,20 @@ it('gltf#animator', async () => {
 
 it('gltf#environment', async () => {
   const webglDevice = await getWebGLTestDevice();
+  const loadedUrls: string[] = [];
 
   const environment = loadPBREnvironment(webglDevice, {
+    loadImage: url => {
+      loadedUrls.push(url);
+      return loadImageTexture(url);
+    },
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9
   });
+
+  expect(loadedUrls).toHaveLength(61);
+  expect(loadedUrls.every(url => url.startsWith(globalThis.location.origin))).toBe(true);
 
   await Promise.all([
     environment.brdfLutTexture.ready,
