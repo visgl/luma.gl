@@ -1,18 +1,34 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
   },
   "references": [
-    {"path": "../deck-gpu-layers"},
-    {"path": "../arrow"},
-    {"path": "../core"},
-    {"path": "../engine"},
-    {"path": "../experimental"},
-    {"path": "../gpgpu"}
+    {
+      "path": "../deck-gpu-layers"
+    },
+    {
+      "path": "../arrow"
+    },
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../engine"
+    },
+    {
+      "path": "../gpgpu"
+    },
+    {
+      "path": "../graph"
+    }
   ]
 }

@@ -7,10 +7,10 @@
 import {expect, it, vi} from 'vitest';
 import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import {TypedArray} from '@math.gl/types';
+import {TypedArray} from '@math.gl/core/types';
 import {Buffer, Device} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {GL} from '@luma.gl/webgl/constants';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {GL} from '@luma.gl/core/webgl-constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 
@@ -777,4 +777,35 @@ it('Buffer#uint8 index buffer conversion', async () => {
     buffer.destroy();
   }
   void 0;
+});
+
+it('Buffer#readAsync waits for submitted copies without queue-wide completion', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const expected = new Uint32Array([1, 2049, 4294967295, 7]);
+  const source = device.createBuffer({data: expected, usage: Buffer.COPY_SRC | Buffer.COPY_DST});
+  const destination = device.createBuffer({
+    byteLength: 16,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const commandEncoder = device.createCommandEncoder();
+  // A queue-wide completion callback may fail independently of buffer mapping.
+  const completion = vi
+    .spyOn(device.handle.queue, 'onSubmittedWorkDone')
+    .mockRejectedValue(new Error('Queue completion unavailable'));
+  try {
+    commandEncoder.copyBufferToBuffer({
+      sourceBuffer: source,
+      destinationBuffer: destination,
+      size: 16
+    });
+    device.submit(commandEncoder.finish());
+    const bytes = await destination.readAsync();
+    expect(new Uint32Array(bytes.buffer, bytes.byteOffset, 4)).toEqual(expected);
+  } finally {
+    completion.mockRestore();
+    commandEncoder.destroy();
+    source.destroy();
+    destination.destroy();
+  }
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {assert, Buffer, type Device, type RenderPass, Texture} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {
@@ -25,7 +25,8 @@ import {
   getGLTFCrowdGPUAnimationFrames
 } from './gltf-gpu-animation';
 import {generateGLTFLODLevels, getGLTFNodeLODs} from './gltf-lod';
-import {GLTFSkinController} from './gltf-skin';
+import {SkinController} from '@luma.gl/engine';
+import {parseGLTFSkins} from './gltf-skin';
 
 /** Authored or generated screen-space detail selection for independently animated crowd actors. */
 export type GLTFCrowdLODOptions = {
@@ -168,7 +169,7 @@ export class GLTFCrowdActor {
   /** Existing reusable glTF animator backed by one actor-local engine animation mixer. */
   readonly animator: GLTFAnimator;
   /** Existing glTF skin controller producing actor-local mesh-space joint palettes. */
-  readonly skins: GLTFSkinController;
+  readonly skins: SkinController;
 
   private readonly crowd: GLTFAnimatedCrowd;
   private readonly nodesByIndex: Map<number, GroupNode>;
@@ -187,12 +188,14 @@ export class GLTFCrowdActor {
     this.nodesById = hierarchy.nodesById;
     this.isPlaying = options.playing ?? true;
 
-    this.skins = new GLTFSkinController({
-      device: crowd.device,
-      gltf: crowd.gltf,
-      scenes: hierarchy.scenes,
-      gltfNodeIndexToNodeMap: this.nodesByIndex
-    });
+    this.skins = new SkinController(
+      parseGLTFSkins({
+        device: crowd.device,
+        gltf: crowd.gltf,
+        scenes: hierarchy.scenes,
+        gltfNodeIndexToNodeMap: this.nodesByIndex
+      })
+    );
     this.animator = new GLTFAnimator({
       animations: crowd.scenegraphs.animations.map(animation => ({
         name: animation.name,
@@ -769,7 +772,9 @@ export class GLTFAnimatedCrowd {
         }
 
         if (resources.jointMatrices) {
-          const jointPalette = actor.skins.getBinding(group.nodeIndex)?.jointMatrices;
+          const jointPalette = actor.skins.getBinding(
+            actor.getNode(group.nodeIndex)
+          )?.jointMatrices;
           const offset = instanceCount * resources.jointsPerInstance * 16;
           resources.jointMatrices.fill(0, offset, offset + resources.jointsPerInstance * 16);
           if (jointPalette) {
@@ -893,7 +898,9 @@ export class GLTFAnimatedCrowd {
               values.set(nodeMatrix, frameOffset);
             }
 
-            const jointPalette = bakingActor.skins.getBinding(group.nodeIndex)?.jointMatrices;
+            const jointPalette = bakingActor.skins.getBinding(
+              bakingActor.getNode(group.nodeIndex)
+            )?.jointMatrices;
             if (jointPalette) {
               values.set(jointPalette, frameOffset + 16);
             }
@@ -1257,7 +1264,9 @@ function createPrimitiveGroups(
     if (!node || !reachableNodes.has(node)) {
       continue;
     }
-    const skinBinding = scenegraphs.skins.getBinding(nodeIndex);
+    const skinBinding = scenegraphs.skins.getBinding(
+      scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex)
+    );
     const levels = includeLODLevels ? getGLTFNodeLODs(scenegraphs.gltf, nodeIndex) : null;
     const lodNodes = levels || [{level: 0, nodeIndex, node: sourceNode, screenCoverage: 0}];
     for (const level of lodNodes) {

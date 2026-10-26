@@ -2,18 +2,17 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
-import type {TextureFormat} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
-import {expect, it} from 'vitest';
-
 import {
+  type GLTFPostprocessed,
   assertSupportedGLTFExtensions,
   createScenegraphsFromGLTF,
   getGLTFExtensionSupport,
   getGLTFExtensionSupportSummary,
   getRegisteredGLTFExtensions
 } from '@luma.gl/gltf';
+import type {TextureFormat} from '@luma.gl/core';
+import {NullDevice} from '@luma.gl/test-utils';
+import {expect, it} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {
   override isTextureFormatSupported(_format: TextureFormat): boolean {
@@ -186,15 +185,15 @@ it('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summ
     summary,
     'summary is derived from the registry rather than copied into documentation'
   ).toEqual({
-    total: 35,
-    supported: 26,
-    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 6, 'loader-only': 4, none: 5},
+    total: 44,
+    supported: 27,
+    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 7, 'loader-only': 10, none: 7},
     byStandardStatus: {
       ratified: 26,
       'release-candidate': 2,
       'multi-vendor': 2,
       vendor: 1,
-      draft: 2,
+      draft: 11,
       archived: 2,
       unknown: 0
     }

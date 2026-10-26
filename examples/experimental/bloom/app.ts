@@ -11,7 +11,7 @@ import {
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/experimental';
+import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/graph/gpu-effects';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import type {Panel, SettingsSchema, SettingsState} from '@deck.gl-community/panels';
 import {

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
+import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/core/webgpu';
 
 import {AnimationLoop, AnimationLoopTemplate, makeAnimationLoop} from '@luma.gl/engine';
 
@@ -495,4 +495,30 @@ it.skip('engine#AnimationLoop debugGPUTime enables GPU timing without full debug
   animationLoop.destroy();
   device.destroy();
   void 0;
+});
+
+it('engine#AnimationLoop destroys its bound canvas listeners', async () => {
+  const device = await getWebGLTestDevice();
+  const canvas = document.createElement('canvas');
+  const moveMouse = vi.spyOn(AnimationLoop.prototype, '_onMousemove');
+  const leaveMouse = vi.spyOn(AnimationLoop.prototype, '_onMouseleave');
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop._initDevice();
+  animationLoop.canvas = canvas;
+  try {
+    animationLoop._initialize();
+    animationLoop._startEventHandling();
+    canvas.dispatchEvent(new MouseEvent('mousemove'));
+    expect(moveMouse).toHaveBeenCalledTimes(1);
+    animationLoop.destroy();
+    animationLoop.destroy();
+    canvas.dispatchEvent(new MouseEvent('mousemove'));
+    canvas.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(moveMouse).toHaveBeenCalledTimes(1);
+    expect(leaveMouse).not.toHaveBeenCalled();
+  } finally {
+    animationLoop.destroy();
+    moveMouse.mockRestore();
+    leaveMouse.mockRestore();
+  }
 });

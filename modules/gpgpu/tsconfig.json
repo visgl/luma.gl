@@ -10,8 +10,6 @@
   "references": [
     {"path": "../core"},
     {"path": "../engine"},
-    {"path": "../constants"},
-    {"path": "../shadertools"},
-    {"path": "../webgpu"}
+    {"path": "../shadertools"}
   ]
 }

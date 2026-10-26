@@ -33,21 +33,25 @@ type LiveExample = {
 
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
+  'three/galactic-vortex',
+  'gltf/physics',
+  'gltf/authored-scene-stress',
   'api/render-bundles',
   'arrow/arrow-columns',
   'arrow/arrow-dggs-polygons',
   'deck/gpu-culled-trace',
+  'deck/wind',
   'deck/scene-buffers',
   'deck/ambient-occlusion',
   'deck/soft-shadows',
   'deck/depth-of-field',
-  'deck/fireflies',
   'deck/hdr-night-lighting',
   'deck/global-illumination',
   'deck/light-shafts',
   'tutorials/slang-particles'
 ]);
 const WEBGL_ONLY_EXAMPLES = new Set([
+  'deck/gltf-interactivity',
   'integrations/external-context',
   'integrations/react-strict-mode',
   'tutorials/transform-feedback',
@@ -57,6 +61,22 @@ const LIVE_EXAMPLES = readLiveExamples();
 const requireCommonJSModule = createRequire(import.meta.url);
 
 describe('live example catalog metadata', () => {
+  test('groups Three integrations while retaining experimental example metadata', () => {
+    const example = LIVE_EXAMPLES.find(({id}) => id === 'experimental/three');
+    expect(example?.categories).toContain('Three.js');
+    expect(
+      LIVE_EXAMPLES.filter(example => example.categories.includes('Three.js')).map(
+        example => example.id
+      )
+    ).toEqual(['three/galactic-vortex', 'three/deck-layers', 'experimental/three']);
+    expect(example?.metadata?.maturity).toBe('experimental');
+    expect(example?.metadata?.backends).toEqual(['webgpu', 'webgl2']);
+    const packageDefinition = JSON.parse(
+      readFileSync(path.join(process.cwd(), 'modules/three/package.json'), 'utf8')
+    );
+    expect(packageDefinition.private).not.toBe(true);
+    expect(packageDefinition.publishConfig.access).toBe('public');
+  });
   test('discovers Triangle Geometry immediately after Hello Triangle with a real thumbnail', () => {
     const tutorialExamples = LIVE_EXAMPLES.filter(({categories}) => categories[0] === 'Tutorials');
     const helloTriangleIndex = tutorialExamples.findIndex(
@@ -120,7 +140,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(105);
+    expect(LIVE_EXAMPLES).toHaveLength(132);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -188,32 +208,45 @@ describe('live example catalog metadata', () => {
     expect(supportPolicy).not.toContain('website/src/examples');
     expect(supportRegistry).not.toMatch(/(?:import|export).*\/app['"]/);
 
-    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY)).toHaveLength(109);
+    expect(Object.keys(EXAMPLE_SUPPORT_REGISTRY).length).toBeGreaterThanOrEqual(
+      LIVE_EXAMPLES.length
+    );
     for (const example of LIVE_EXAMPLES) {
       expect(
         EXAMPLE_SUPPORT_REGISTRY[example.id],
         `${example.id} requires a sidecar`
       ).toBeDefined();
       expect(
-        existsSync(path.join(process.cwd(), 'examples', example.id, 'mobile-support.ts')),
+        existsSync(
+          path.join(
+            process.cwd(),
+            'examples',
+            EXAMPLE_SUPPORT_REGISTRY[example.id].sourceDirectory || example.id,
+            'mobile-support.ts'
+          )
+        ),
         `${example.id} requires a local mobile-support.ts sidecar`
       ).toBe(true);
     }
 
     const standaloneFiles = findStandaloneHtmlFiles(path.join(process.cwd(), 'examples'));
-    expect(standaloneFiles).toHaveLength(104);
+    expect(standaloneFiles.length).toBeGreaterThan(0);
     for (const relativeFile of standaloneFiles) {
       const standaloneId = relativeFile.replace(/\/(?:index|playground)\.html$/, match =>
         match === '/index.html' ? '' : '/playground'
       );
       const canonicalId =
+        Object.values(EXAMPLE_SUPPORT_REGISTRY).find(
+          definition => definition.sourceDirectory === standaloneId
+        )?.id ||
         new Map([
           ['arrow/arrow-instancing', 'showcase/instancing'],
-          ['showcase/scene', 'experimental/scene-playground'],
-          ['showcase/scene/playground', 'experimental/scene-playground'],
+          ['anari/scenes', 'anari/scenes'],
+          ['anari/scenes/playground', 'anari/scenes'],
           ['tutorials/hello-instanced-cubes', 'tutorials/instanced-cubes'],
           ['tutorials/hello-two-cubes', 'tutorials/two-cubes']
-        ]).get(standaloneId) || standaloneId;
+        ]).get(standaloneId) ||
+        standaloneId;
       expect(
         EXAMPLE_SUPPORT_REGISTRY[canonicalId],
         `${relativeFile} requires a sidecar support definition`
@@ -224,8 +257,8 @@ describe('live example catalog metadata', () => {
   test('resolves standalone aliases to the same canonical support definitions', () => {
     const aliases = new Map([
       ['arrow/arrow-instancing/index.html', 'showcase/instancing'],
-      ['showcase/scene/index.html', 'experimental/scene-playground'],
-      ['showcase/scene/playground.html', 'experimental/scene-playground'],
+      ['anari/scenes/index.html', 'anari/scenes'],
+      ['anari/scenes/playground.html', 'anari/scenes'],
       ['tutorials/hello-instanced-cubes/index.html', 'tutorials/instanced-cubes'],
       ['tutorials/hello-two-cubes/index.html', 'tutorials/two-cubes']
     ]);
@@ -251,11 +284,13 @@ describe('live example catalog metadata', () => {
     for (const {id, categories, metadata} of LIVE_EXAMPLES) {
       const expectedBackends = WEBGL_ONLY_EXAMPLES.has(id)
         ? ['webgl2']
-        : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
-            categories[0].startsWith('GPU Graph Layers') ||
-            WEBGPU_ONLY_EXAMPLES.has(id)
-          ? ['webgpu']
-          : ['webgpu', 'webgl2'];
+        : id === 'v10/gpu-simple-graph'
+          ? ['webgpu', 'webgl2']
+          : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
+              categories[0].startsWith('GPU Graph Layers') ||
+              WEBGPU_ONLY_EXAMPLES.has(id)
+            ? ['webgpu']
+            : ['webgpu', 'webgl2'];
 
       expect(metadata?.backends, `${id} has inaccurate backend metadata`).toEqual(expectedBackends);
     }

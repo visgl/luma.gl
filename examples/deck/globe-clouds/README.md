@@ -1,4 +1,4 @@
-# Globe cloud cover
+# Globe weather
 
 A deck.gl GlobeView scene with an animated, ray-marched spherical cloud shell on WebGPU and WebGL2.
 
@@ -10,7 +10,7 @@ Run `yarn workspace luma.gl-examples-deck-globe-clouds start`. Select WebGPU or 
 
 The example now uses the reusable `SkyLayer` composite with one math.gl observer and
 UTC clock for the sun, moon, catalog stars and cloud illumination. Toggle each sky
-component separately; **Look at sun** and **Look at moon** orbit to an orientation
+component separately; **Sun** and **Moon** orbit to an orientation
 where the requested body is clear of the planet's silhouette. **Center** restores
 the initial cloud view. The UTC hour slider uses 4 October 2026.
 

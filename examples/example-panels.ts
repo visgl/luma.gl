@@ -154,28 +154,35 @@ export function makeExampleContentPanel({
 }
 
 /** Creates a community tabbed panel with the website source viewer appended when available. */
-export function makeExampleTabbedPanel(props: TabbedPanelProps): Panel {
+export function makeExampleTabbedPanel(
+  props: TabbedPanelProps & {sourcePaths?: readonly string[]}
+): Panel {
+  const {sourcePaths, ...tabbedProps} = props;
   const hasSourcePanel = props.panels.some(panel => panel.id === EXAMPLE_SOURCE_PANEL_ID);
   const panels =
     isWebsiteExample() && !hasSourcePanel
-      ? [...props.panels, makeExampleSourcePanel()]
+      ? [...props.panels, makeExampleSourcePanel(sourcePaths)]
       : props.panels;
-  return new TabbedPanel({...props, panels});
+  return new TabbedPanel({...tabbedProps, panels});
 }
 
-function makeExampleSourcePanel(): Panel {
+function makeExampleSourcePanel(sourcePaths?: readonly string[]): Panel {
   return makeExampleContentPanel({
     id: EXAMPLE_SOURCE_PANEL_ID,
     title: 'Source',
-    content: h(ExampleSourcePanelContent, {})
+    content: h(ExampleSourcePanelContent, {sourcePaths})
   });
 }
 
-function ExampleSourcePanelContent() {
+function ExampleSourcePanelContent({
+  sourcePaths: explicitSourcePaths
+}: {
+  sourcePaths?: readonly string[];
+}) {
   const [sourceResult, setSourceResult] = useState<ExampleSourceResult>({});
 
   useEffect(() => {
-    const sourcePaths = getCurrentExampleSourcePaths();
+    const sourcePaths = explicitSourcePaths ?? getCurrentExampleSourcePaths();
     if (sourcePaths.length === 0) {
       setSourceResult({error: 'Unable to determine source code path.'});
       return;
@@ -193,7 +200,7 @@ function ExampleSourcePanelContent() {
       });
 
     return () => abortController.abort();
-  }, []);
+  }, [explicitSourcePaths]);
 
   if (sourceResult.error) {
     return h(

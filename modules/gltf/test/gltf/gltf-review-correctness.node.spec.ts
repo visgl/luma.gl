@@ -4,15 +4,16 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF, type GLTFPostprocessed, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {ModelNode} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test} from 'vitest';
 
 async function loadFixture(name: 'SimpleSkin.gltf' | 'AnimatedMorphCube.glb') {
   const source = await readFile(
-    new URL(`../../../../examples/showcase/scene/public/gltf/${name}`, import.meta.url)
+    new URL(`../../../../examples/anari/scenes/public/gltf/${name}`, import.meta.url)
   );
   return postProcessGLTF(await parse(source, GLTFLoader, {gltf: {loadImages: false}}));
 }
@@ -46,11 +47,13 @@ describe('reviewed glTF deformation edge cases', () => {
     const device = new NullDevice({});
     const scenegraphs = createScenegraphsFromGLTF(device, source);
     try {
-      const originalSkin = scenegraphs.skins.getBinding(0);
-      const duplicateSkin = scenegraphs.skins.getBinding(duplicateNodeIndex);
+      const originalSkin = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(0));
+      const duplicateSkin = scenegraphs.skins.getBinding(
+        scenegraphs.gltfNodeIndexToNodeMap.get(duplicateNodeIndex)
+      );
       expect(originalSkin?.models).toHaveLength(1);
       expect(duplicateSkin?.models).toHaveLength(1);
-      expect(duplicateSkin?.skinIndex).toBe(1);
+      expect(duplicateSkin?.joints).toEqual(originalSkin?.joints.toReversed());
       expect(duplicateSkin?.models[0]).not.toBe(originalSkin?.models[0]);
       expect(duplicateSkin?.jointMatrices).not.toBe(originalSkin?.jointMatrices);
       expect(duplicateSkin?.jointMatrices[12]).not.toBe(originalSkin?.jointMatrices[12]);
@@ -87,7 +90,7 @@ describe('reviewed glTF deformation edge cases', () => {
     const device = new NullDevice({});
     const scenegraphs = createScenegraphsFromGLTF(device, source);
     try {
-      const binding = scenegraphs.skins.getBinding(0);
+      const binding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(0));
       expect(binding?.models).toHaveLength(1);
       expect(binding?.models[0]).toBeInstanceOf(ModelNode);
       expect(binding?.node.children[0].id).toBe(mesh.name || mesh.id);
@@ -141,7 +144,7 @@ describe('reviewed glTF deformation edge cases', () => {
 
       const vertexBuffer = modelNode!.model._gpuGeometry!.attributes['geometry'];
       const previousBytes = new Uint8Array(await vertexBuffer.readAsync());
-      const morphWeights = modelNode!.userData['gltfMorphWeights'] as {
+      const morphWeights = modelNode!.userData['morphWeightTransport'] as {
         values: Float32Array;
         data: unknown;
         packedTargetCount: number;

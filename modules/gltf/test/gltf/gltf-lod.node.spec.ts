@@ -4,13 +4,16 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
 import {
+  type GLTFPostprocessed,
+  postProcessGLTF,
   assertSupportedGLTFExtensions,
   generateGLTFLODLevels,
   getGLTFExtensionSupport,
   getGLTFNodeLODs
 } from '@luma.gl/gltf';
+
 import {describe, expect, test} from 'vitest';
 
 async function loadGLTF(url: URL): Promise<GLTFPostprocessed> {
@@ -68,7 +71,7 @@ describe('authored and automatically generated glTF node levels of detail', () =
 
   test('generates immutable index-only alternatives while preserving skins and animations', async () => {
     const gltf = await loadGLTF(
-      new URL('../../../../examples/showcase/scene/public/gltf/SimpleSkin.gltf', import.meta.url)
+      new URL('../../../../examples/anari/scenes/public/gltf/SimpleSkin.gltf', import.meta.url)
     );
     const originalNodeCount = gltf.nodes.length;
     const originalMeshCount = gltf.meshes.length;

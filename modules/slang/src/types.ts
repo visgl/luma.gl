@@ -4,7 +4,32 @@
 /** The supported textual shader targets. GLSL defaults to WebGL 2 / GLSL ES 3.00. */
 export type SlangTarget = 'glsl' | 'wgsl';
 export type SlangShaderStage = 'vertex' | 'fragment' | 'compute';
-export type SlangTranspileOptions = {
+
+/** Native code implements these Slang declarations; the compiler emits shared types/resources. */
+export type SlangNativeModule = {
+  declarations: string;
+  wgsl?: string;
+  glsl?: string;
+  /** Function prototypes required from explicitly exported Slang helpers. */
+  imports?: string;
+  /** Source declaration name to public target identifier; defaults to the source name. */
+  names?: Readonly<Record<string, string>>;
+};
+/** Exact named modules, loaded by the application. No filesystem or network resolution. */
+export type SlangModuleRegistry = Readonly<Record<string, string | SlangNativeModule>>;
+export type SlangModuleOptions = {
+  modules?: SlangModuleRegistry;
+  /** Source declaration name to stable public shader identifier. Overloads are not exported. */
+  exports?: Readonly<Record<string, string>>;
+};
+/** Source-language type contracts for public target declarations. */
+export type SlangExport = {
+  shaderName: string;
+  kind: 'function' | 'struct' | 'variable';
+  type: string;
+  parameters?: {name: string; type: string; direction: 'in' | 'out' | 'inout'}[];
+};
+export type SlangTranspileOptions = SlangModuleOptions & {
   target: SlangTarget;
   /** Select one source entry point. Omit for a single [shader(...)] entry point. */
   entryPoint?: string;
@@ -60,6 +85,7 @@ export type SlangReflection = {
 export type SlangTranspileResult = {
   code: string;
   sourceMap: SlangSourceMapEntry[];
+  exports?: Record<string, SlangExport>;
   target: SlangTarget;
   /** Actual GLSL version, omitted for WGSL. */
   glslVersion?: '300 es' | '450';
@@ -69,7 +95,7 @@ export type SlangTranspileResult = {
 };
 
 /** Compile multiple entry points into one WGSL translation unit. */
-export type SlangWGSLProgramOptions = {
+export type SlangWGSLProgramOptions = SlangModuleOptions & {
   /** Source function names. Omit to compile every [shader(...)] entry point. */
   entryPoints?: readonly string[];
   /** Omit unused resource declarations, useful with automatic pipeline layout scanners. */
@@ -80,6 +106,7 @@ export type SlangWGSLProgramOptions = {
 export type SlangWGSLProgramResult = {
   code: string;
   sourceMap: SlangSourceMapEntry[];
+  exports?: Record<string, SlangExport>;
   target: 'wgsl';
   /** Per-source-entry metadata, including generated pipeline entry-point names. */
   entryPoints: Record<string, Omit<SlangTranspileResult, 'code' | 'target' | 'sourceMap'>>;

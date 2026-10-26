@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {isBrowser} from '@probe.gl/env';
+import {isBrowser} from 'probe.gl/env';
 import {
   buildBitmapFontAtlas,
   buildSdfFontAtlas,
@@ -98,4 +98,53 @@ it('browser font builders align glyphs to a shared baseline', () => {
     ).toBe(true);
   }
   void 0;
+});
+
+it('SDF glyph frames contain the full distance field without changing layout', () => {
+  if (!isBrowser()) {
+    return;
+  }
+  const characterSet = 'Hgjy_|.';
+  const bitmapAtlas = buildBitmapFontAtlas({fontFamily: 'sans-serif', characterSet});
+  const sdfAtlas = buildSdfFontAtlas({fontFamily: 'sans-serif', characterSet});
+  const canvas = sdfAtlas.pages[0] as HTMLCanvasElement | OffscreenCanvas;
+  const context = canvas.getContext('2d')!;
+  for (const character of characterSet) {
+    const frame = sdfAtlas.mapping[character];
+    const bitmapFrame = bitmapAtlas.mapping[character];
+    const {data, width, height} = context.getImageData(frame.x, frame.y, frame.width, frame.height);
+    let maxEdgeAlpha = 0;
+    for (let row = 0; row < height; row++) {
+      for (let column = 0; column < width; column++) {
+        if (row === 0 || column === 0 || row === height - 1 || column === width - 1) {
+          maxEdgeAlpha = Math.max(maxEdgeAlpha, data[(row * width + column) * 4 + 3]);
+        }
+      }
+    }
+    expect(maxEdgeAlpha, character + ' distance field reaches zero at the frame edges').toBe(0);
+    expect(frame.advance).toBe(bitmapFrame.advance);
+    expect(frame.width).toBe(bitmapFrame.width + 18);
+    expect(frame.layoutOffsetX).toBe(-9);
+    expect(frame.layoutOffsetY).toBe(bitmapFrame.layoutOffsetY! - 9);
+    expect(frame.anchorY).toBe(bitmapFrame.anchorY + 9);
+  }
+});
+
+it('SDF padding preserves larger caller buffers and caps oversized distance fields', () => {
+  if (!isBrowser()) {
+    return;
+  }
+  const bitmapAtlas = buildBitmapFontAtlas({fontFamily: 'sans-serif', characterSet: 'H'});
+  const paddedAtlas = buildSdfFontAtlas({fontFamily: 'sans-serif', characterSet: 'H', buffer: 20});
+  expect(paddedAtlas.mapping.H.width).toBe(bitmapAtlas.mapping.H.width + 40);
+  expect(paddedAtlas.mapping.H.layoutOffsetX).toBe(-20);
+  const largeRadiusAtlas = buildSdfFontAtlas({
+    fontFamily: 'sans-serif',
+    characterSet: 'H',
+    radius: 1400
+  });
+  const frame = largeRadiusAtlas.mapping.H;
+  expect(frame.x + frame.width).toBeLessThanOrEqual(largeRadiusAtlas.width);
+  expect(frame.anchorX).toBeGreaterThan(0);
+  expect(frame.anchorX).toBeLessThan(frame.width);
 });

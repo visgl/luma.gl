@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {
+  GeoArrowBatchView,
+  GeoArrowRowView,
   GeoArrowArray,
   GeoArrowColumn,
   GeoArrowCoordinateLayout,
@@ -12,7 +14,8 @@ import type {
   GeoArrowNumericArray,
   GeoArrowOffsets,
   GeoArrowValidity
-} from '@math.gl/geoarrow';
+} from '@math.gl/geospatial/geoarrow';
+import {getGeoArrowRowView, iterateGeoArrowBatches} from '@math.gl/geospatial/geoarrow';
 import {
   Binary,
   BufferType,
@@ -53,7 +56,7 @@ export type MakeGeoArrowColumnFromArrowVectorOptions = {
 
 /**
  * Adapts Apache Arrow physical buffers to the borrowed descriptor ABI used by
- * `@math.gl/geoarrow`.
+ * `@math.gl/geospatial/geoarrow`.
  */
 export function makeGeoArrowColumnFromArrowVector<T extends ArrowDataType>(
   vector: Vector<T>,
@@ -73,6 +76,23 @@ export function makeGeoArrowColumnFromArrowVector<T extends ArrowDataType>(
     chunks: vector.data.map(data => makeGeoArrowArrayFromArrowData(data)),
     metadata: options.metadata
   };
+}
+
+/** Iterates borrowed batch views while retaining Arrow chunk boundaries and buffers. */
+export function iterateGeoArrowBatchesFromArrowVector<T extends ArrowDataType>(
+  vector: Vector<T>,
+  options: MakeGeoArrowColumnFromArrowVectorOptions = {}
+): IterableIterator<GeoArrowBatchView> {
+  return iterateGeoArrowBatches(makeGeoArrowColumnFromArrowVector(vector, options));
+}
+
+/** Gets a borrowed row view by logical index across Arrow chunks. */
+export function getGeoArrowRowViewFromArrowVector<T extends ArrowDataType>(
+  vector: Vector<T>,
+  rowIndex: number,
+  options: MakeGeoArrowColumnFromArrowVectorOptions = {}
+): GeoArrowRowView {
+  return getGeoArrowRowView(makeGeoArrowColumnFromArrowVector(vector, options), rowIndex);
 }
 
 /** Converts a math.gl GeoArrow descriptor back to an Apache Arrow vector. */
