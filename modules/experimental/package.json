@@ -2,6 +2,7 @@
   "name": "@luma.gl/experimental",
   "description": "luma.gl experimental features",
   "version": "10.0.0-alpha.4",
+  "private": true,
   "license": "MIT",
   "type": "module",
   "publishConfig": {
