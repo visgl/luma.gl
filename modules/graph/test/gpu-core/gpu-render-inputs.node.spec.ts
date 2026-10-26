@@ -42,7 +42,10 @@ it('derives access and binds current resources while preserving attribute and st
   ]);
   expect(inputs.getResourceUses()).toEqual([
     {buffer: view, usage: 'vertex'},
-    {buffer: view, usage: 'storage-read'},
+    {
+      buffer: expect.objectContaining({buffer: source, byteOffset: 20, length: 4, byteStride: 4}),
+      usage: 'storage-read'
+    },
     {texture: textureView, usage: 'sampled'}
   ]);
   const first = device.createBuffer({byteLength: 64});
@@ -123,5 +126,69 @@ it('rejects invalid storage ranges and duplicate shader bindings', () => {
   expect(() =>
     graph.addRenderPass({id: 'unsupported', inputs, compile: () => ({encode: () => {}})})
   ).toThrow(/require WebGPU/);
+  device.destroy();
+});
+
+it('preserves packed vertex offsets in the layout and aligns the buffer binding', () => {
+  const device = new NullDevice({});
+  const graph = new GPUCommandGraphBuilder(device);
+  const source = graph.importBuffer({id: 'packed', byteLength: 16, usage: Buffer.VERTEX});
+  const view = graph.createDataView(source, {
+    format: 'unorm8x2',
+    length: 2,
+    byteOffset: 6,
+    byteStride: 4
+  });
+  const inputs = new GPURenderInputs({attributes: {position: {source: view}}});
+  const layout = inputs.bufferLayout;
+  expect(layout[0].attributes).toEqual([
+    {attribute: 'position', format: 'unorm8x2', byteOffset: 2}
+  ]);
+  layout[0].attributes![0].byteOffset = 0;
+  expect(inputs.bufferLayout[0].attributes![0].byteOffset).toBe(2);
+  const buffer = device.createBuffer({byteLength: 16});
+  const model = {
+    setAttributes: vi.fn(),
+    setBindings: vi.fn(),
+    pipeline: {shaderLayout: {bindings: []}}
+  };
+  inputs.apply(model, {getBuffer: () => buffer, getTextureView: vi.fn()});
+  expect(model.setAttributes).toHaveBeenCalledWith(
+    {position: buffer},
+    {byteOffsets: {position: 4}}
+  );
+  buffer.destroy();
+  device.destroy();
+});
+
+it('declares selected storage ranges so disjoint writes are accepted and overlaps rejected', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const graph = new GPUCommandGraphBuilder(device);
+  const buffer = graph.importBuffer({id: 'ranges', byteLength: 512, usage: Buffer.STORAGE});
+  const first = graph.createDataView(buffer, {format: 'uint32', length: 128});
+  const second = graph.createDataView(buffer, {format: 'uint32', length: 128});
+  const inputs = new GPURenderInputs({
+    storage: {
+      first: {source: first, access: 'read-write', byteOffset: 0, byteLength: 256},
+      second: {source: second, access: 'read-write', byteOffset: 256, byteLength: 256}
+    }
+  });
+  const node = {
+    id: 'ranges',
+    type: 'render' as const,
+    resources: inputs.getResourceUses(),
+    compile: () => ({encode: () => {}})
+  };
+  expect(() => graph.addRenderPass(node)).not.toThrow();
+  const overlapping = new GPURenderInputs({
+    storage: {
+      first: {source: first, access: 'read-write', byteLength: 512},
+      second: {source: second, access: 'read', byteOffset: 256, byteLength: 256}
+    }
+  });
+  expect(() =>
+    graph.addRenderPass({...node, id: 'overlap', resources: overlapping.getResourceUses()})
+  ).toThrow(/overlapping/);
   device.destroy();
 });

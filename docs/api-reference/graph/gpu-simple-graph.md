@@ -328,14 +328,14 @@ be inferred from `attachments`. Graph ownership, usage, aliasing, and texture-vi
 validation apply as usual.
 
 - `attributes`: names match shader attributes. Each source is a fixed-format
-  `GraphDataView`; its format, stride, and offset are preserved. `stepMode` defaults
+  `GraphDataView`; its format, stride, and offset are preserved. Packed field offsets remain in the vertex layout so the buffer binding stays four-byte aligned. `stepMode` defaults
   to `vertex`; use `instance` explicitly for instance data. Supply `inputs.bufferLayout`
   when constructing the model. Separate views can reference interleaved fields of
   one buffer without repacking.
 - `storage`: names match shader storage bindings. Each entry has `source` and
   `access: 'read' | 'read-write'`. Optional `byteOffset` and `byteLength` select a
   range relative to the source view (or buffer). The default covers the view's byte
-  footprint, including stride gaps. This does not synthesize a shader struct layout.
+  footprint, including stride gaps. The selected range is also used for graph resource declarations and storage alias checks. This does not synthesize a shader struct layout.
   Shader access must match the declared access; device-specific alignment constraints
   still apply. Storage render inputs require WebGPU.
 - `textures`: names match sampled texture bindings; sources are graph textures or

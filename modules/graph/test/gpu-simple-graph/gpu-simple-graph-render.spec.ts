@@ -426,3 +426,71 @@ it('binds a graph storage buffer in a WebGPU render pass', async ({skip}) => {
     output.destroy();
   }
 });
+
+it('renders packed attributes with a two-byte field offset on WebGPU', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const output = makeTarget(device);
+  const data = new Uint8Array([
+    99, 99, 0, 0, 99, 99, 255, 0, 99, 99, 0, 255, 99, 99, 0, 255, 99, 99, 255, 0, 99, 99, 255, 255
+  ]);
+  const buffer = device.createBuffer({data, usage: Buffer.VERTEX});
+  const graph = new GPUCommandGraph(device);
+  const source = graph.importBuffer(
+    {id: 'packed', byteLength: data.byteLength, usage: Buffer.VERTEX},
+    buffer
+  );
+  const view = graph.createDataView(source, {
+    format: 'unorm8x2',
+    length: 6,
+    byteOffset: 2,
+    byteStride: 4
+  });
+  const inputs = new GPURenderInputs({attributes: {position: {source: view}}});
+  const target = graph.importTexture(
+    {
+      id: 'packed-output',
+      width: 4,
+      height: 4,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    },
+    output
+  );
+  graph.addRenderPass({
+    id: 'packed-draw',
+    inputs,
+    attachments: {colorAttachments: [graph.createTextureView(target)]},
+    compile: () => {
+      const model = new Model(device, {
+        source: `@vertex fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> { return vec4(position * 2. - 1., 0., 1.); }
+@fragment fn fragmentMain() -> @location(0) vec4<f32> { return vec4(1., 0., 0., 1.); }`,
+        vertexCount: 6,
+        bufferLayout: inputs.bufferLayout,
+        shaderLayout: {
+          attributes: [{name: 'position', location: 0, type: 'vec2<f32>'}],
+          bindings: []
+        },
+        colorAttachmentFormats: ['rgba8unorm']
+      });
+      return {
+        encode: context => {
+          inputs.apply(model, context);
+          model.draw(context.renderPass);
+        },
+        destroy: () => model.destroy()
+      };
+    }
+  });
+  const compiled = graph.compile();
+  try {
+    const encoder = device.createCommandEncoder();
+    compiled.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    expect(await readFirstPixel(output)).toEqual([255, 0, 0, 255]);
+  } finally {
+    compiled.destroy();
+    buffer.destroy();
+    output.destroy();
+  }
+});
