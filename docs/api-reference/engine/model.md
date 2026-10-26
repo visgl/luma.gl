@@ -279,6 +279,9 @@ application writes it. A [`DrawCommandBuffer`](/docs/api-reference/experimental/
 from `@luma.gl/graph` can be passed directly: use `drawCommands.buffer` and
 `drawCommands.getCommandByteOffset(index)`.
 
+A record describes one draw, so `draw()` and `drawBatches()` assert when the model's GPU vectors
+span more than one batch.
+
 WebGL2 has no indirect draws. On WebGL this asserts instead of drawing a stale CPU count. Because
 the count changes on the GPU, call `setNeedsRedraw()` when a new count is published.
 

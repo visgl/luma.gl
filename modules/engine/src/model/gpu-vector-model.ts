@@ -675,6 +675,9 @@ export class GPUVectorModel {
       (this.geometryVectorBindings.batchCount !== 1 ||
         this.attributeVectorBindings.batchCount !== 1)
     ) {
+      // One indirect record cannot carry per-batch counts or offsets. Draw multi-batch vectors
+      // directly, or bind one batch per model when drawing from an indirect record.
+      assert(!this.indirectBuffer || !this._drawsMultipleVectorGroups());
       return this.drawVectorGroups(renderPass);
     }
     if (this._drawBlockedReason && !this._pipelineNeedsUpdate) {
@@ -1007,6 +1010,17 @@ export class GPUVectorModel {
     this.setBatchDrawCount(batches[0]?.rowCount ?? 0, options?.count);
   }
 
+  /** Whether drawing the bound vector groups issues more than one draw call. */
+  private _drawsMultipleVectorGroups(): boolean {
+    const geometryBatchCount = this.geometryVectorBindings.batchCount;
+    const attributeBatchCount = this.attributeVectorBindings.batchCount;
+    return (
+      geometryBatchCount > 0 &&
+      attributeBatchCount > 0 &&
+      (geometryBatchCount > 1 || attributeBatchCount > 1)
+    );
+  }
+
   private drawVectorGroups(renderPass: RenderPass): boolean {
     const drawingVectorBatches = this.drawingVectorBatches;
     const vertexCountSet = this._vertexCountSet;
@@ -1036,6 +1050,9 @@ export class GPUVectorModel {
     {vectors, onBatch}: GPUVectorModelDrawBatchesOptions<Inputs>
   ): boolean {
     const batches = getGPUVectorModelBatches(this.id, vectors);
+    // One indirect record cannot carry per-batch counts or offsets. Draw multi-batch vectors
+    // directly, or bind one batch per model when drawing from an indirect record.
+    assert(!this.indirectBuffer || batches.length <= 1);
     validateGPUVectorModelLayouts(this.id, vectors, this.bufferLayout);
     for (const name of Object.keys(vectors)) {
       // Transient batches replace existing attributes so every binding can be restored afterward.
@@ -1285,6 +1302,9 @@ export class GPUVectorModel {
    *
    * The model never writes the record. Use `writeIndirectDrawRecord()` to fill in the model's
    * geometry words. Pass `null` to return to direct draws.
+   *
+   * A record describes one draw, so `draw()` and `drawBatches()` assert when the model's vectors
+   * span more than one batch.
    */
   setIndirectBuffer(indirectBuffer: Buffer | null, indirectOffset: number = 0): void {
     // Indirect draws are only supported in WebGPU

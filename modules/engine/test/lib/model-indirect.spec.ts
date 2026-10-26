@@ -5,6 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {Kernel, Model} from '@luma.gl/engine';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const PIXEL_COUNT = 4;
@@ -277,6 +278,81 @@ void main() { fragColor = vec4(1.0); }`,
 
   model.destroy();
   buffer.destroy();
+});
+
+/** One instanced point per `positions` row, so each vector chunk is a separate batch. */
+const INSTANCE_POSITIONS_WGSL = /* WGSL */ `
+@vertex fn vertexMain(@location(0) positions: vec2<f32>) -> @builtin(position) vec4<f32> {
+  return vec4<f32>(positions, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+}
+`;
+
+it('Model#setIndirectBuffer rejects draws that span multiple vector batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const {framebuffer, texture} = createTarget(device);
+  const makePositions = (chunkLengths: number[]) =>
+    new GPUVector<'float32x2'>({
+      type: 'data',
+      name: 'positions',
+      format: 'float32x2',
+      data: chunkLengths.map(
+        length =>
+          new GPUData({
+            buffer: device.createBuffer({byteLength: length * 8, usage: Buffer.VERTEX}),
+            format: 'float32x2',
+            length,
+            ownsBuffer: true
+          })
+      ),
+      ownsData: true
+    });
+  const twoBatches = makePositions([2, 3]);
+  const oneBatch = makePositions([4]);
+  const drawRecord = device.createBuffer({
+    byteLength: 16,
+    usage: Buffer.INDIRECT | Buffer.COPY_DST
+  });
+  const model = new Model(device, {
+    id: 'indirect-multi-batch',
+    source: INSTANCE_POSITIONS_WGSL,
+    vertexEntryPoint: 'vertexMain',
+    fragmentEntryPoint: 'fragmentMain',
+    topology: 'point-list',
+    bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}],
+    attributeVectors: {positions: twoBatches},
+    isInstanced: true,
+    vertexCount: 1,
+    indirectBuffer: drawRecord
+  });
+  const renderPass = device.beginRenderPass({framebuffer});
+  try {
+    expect(() => model.draw(renderPass), 'bound multi-batch vectors').toThrow();
+    expect(
+      () => model.drawBatches(renderPass, {vectors: {positions: twoBatches}}),
+      'transient multi-batch vectors'
+    ).toThrow();
+    expect(
+      model.drawBatches(renderPass, {vectors: {positions: oneBatch}}),
+      'a single batch still draws from the record'
+    ).toBe(true);
+
+    model.setIndirectBuffer(null);
+    expect(model.draw(renderPass), 'direct draws still split batches').toBe(true);
+  } finally {
+    renderPass.end();
+    model.destroy();
+    twoBatches.destroy();
+    oneBatch.destroy();
+    drawRecord.destroy();
+    framebuffer.destroy();
+    texture.destroy();
+  }
 });
 
 function createTarget(device: Device): {framebuffer: Framebuffer; texture: Texture} {
