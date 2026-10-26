@@ -6,6 +6,7 @@ import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Buffer, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
+import {WGSLShaderAssembler} from '@luma.gl/shadertools';
 
 const source = /* WGSL*/ `\
 @group(0) @binding(0) var<storage, read_write> data: array<i32>;
@@ -31,6 +32,10 @@ fn secondVertex(@location(1) secondPosition: vec3f) -> @builtin(position) vec4f 
   return vec4f(secondPosition, 1.0);
 }
 `;
+
+it('Computation does not retain a mutable shader assembler in its default props', () => {
+  expect(Computation.defaultProps.shaderAssembler).toBeUndefined();
+});
 
 it('Computation#construct/delete', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
@@ -249,3 +254,23 @@ function isSoftwareBackedDevice(device: Device): boolean {
     device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
   );
 }
+
+it('Computation honors configured default assemblers and explicit overrides', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const original = Computation.defaultProps.shaderAssembler;
+  const configured = new WGSLShaderAssembler();
+  const explicit = new WGSLShaderAssembler();
+  const computations: Computation[] = [];
+  try {
+    Computation.defaultProps.shaderAssembler = configured;
+    const source = '@compute @workgroup_size(1) fn main() {}';
+    computations.push(new Computation(device, {source}));
+    computations.push(new Computation(device, {source, shaderAssembler: explicit}));
+    expect(computations[0].props.shaderAssembler).toBe(configured);
+    expect(computations[1].props.shaderAssembler).toBe(explicit);
+  } finally {
+    Computation.defaultProps.shaderAssembler = original;
+    for (const computation of computations) computation.destroy();
+  }
+});

@@ -51,7 +51,8 @@ export class BufferTransform {
   private outputVectorBindings: GPUVectorModelInputs = {};
   private outputBuffers: Record<string, Buffer | BufferRange> = {};
 
-  static defaultProps: Required<BufferTransformProps> = {
+  static defaultProps: Omit<Required<BufferTransformProps>, 'shaderAssembler'> &
+    Pick<BufferTransformProps, 'shaderAssembler'> = {
     ...GPUVectorModel.defaultProps,
     inputVectors: undefined!,
     outputVectors: undefined!,

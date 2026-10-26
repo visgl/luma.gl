@@ -233,7 +233,12 @@ export class GPUVectorModel {
     }
   }
 
-  static defaultProps: Required<GPUVectorModelProps> = {
+  /**
+   * Default props. `shaderAssembler` is unset unless an application configures one; each model
+   * then resolves the shared assembler for its device's shader language at construction.
+   */
+  static defaultProps: Omit<Required<GPUVectorModelProps>, 'shaderAssembler'> &
+    Pick<GPUVectorModelProps, 'shaderAssembler'> = {
     ...RenderPipeline.defaultProps,
     gpuVectorCount: 'instance',
     geometry: null,
@@ -266,7 +271,7 @@ export class GPUVectorModel {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
+    shaderAssembler: undefined,
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -397,7 +402,8 @@ export class GPUVectorModel {
       ...props,
       shaderAssembler:
         props.shaderAssembler ??
-        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
+        (defaultShaderAssembler &&
+        isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
           ? defaultShaderAssembler
           : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
     };
