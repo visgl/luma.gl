@@ -14,6 +14,7 @@ const distributionDirectory = new URL('../modules/core/dist/', import.meta.url);
 await writeCommonJSModules(distributionDirectory);
 await writeCommonJSModules(new URL('../modules/anari/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/graph/dist/experimental/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/graph/dist/gpu-core/utils/', import.meta.url));
 
 async function writeCommonJSModules(directory) {
   const files = await readdir(directory, {recursive: true});

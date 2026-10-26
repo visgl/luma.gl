@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
 import {GPUReduction} from '@luma.gl/graph/gpu-core';
@@ -203,7 +203,7 @@ export class GPURasterStatistics {
         if (this.input.validity) {
           bindings.push({name: 'sourceValidity', type: 'read-only-storage', group: 0, location: 3});
         }
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: `${this.id}-prepare`,
           source: this.getPreparationShader(calibratedValues, resolvedValidity),
           shaderLayout: {bindings}
@@ -218,10 +218,14 @@ export class GPURasterStatistics {
             if (this.input.validity) {
               resolvedBindings['sourceValidity'] = getViewBinding(this.input.validity, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, dispatchSize[0], dispatchSize[1]);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: dispatchSize[0],
+              y: dispatchSize[1]
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });
@@ -279,7 +283,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
         {buffer: this.mean, usage: 'storage-write'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: `${this.id}-mean`,
           source: /* wgsl */ `
 @group(0) @binding(0) var<storage, read> countValues: array<u32>;
@@ -302,14 +306,14 @@ fn main() {
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings({
+            const kernelBindings = {
               countValues: getViewBinding(this.count, getBuffer),
               sumValues: getViewBinding(this.sum, getBuffer),
               meanValues: getViewBinding(this.mean, getBuffer)
-            });
-            computation.dispatch(computePass, 1);
+            };
+            kernel.dispatch(computePass, {bindings: kernelBindings, x: 1});
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });

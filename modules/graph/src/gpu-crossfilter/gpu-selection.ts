@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuXfilter.
 
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GraphVectorView,
   type GPUCommandGraph,
@@ -320,7 +320,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     id: props.id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source,
         shaderLayout: {
@@ -338,13 +338,13 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
           for (const [name, view] of Object.entries(bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(
-            computePass,
-            Math.ceil(props.primaryInput.length / SELECTION_WORKGROUP_SIZE)
-          );
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: Math.ceil(props.primaryInput.length / SELECTION_WORKGROUP_SIZE)
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

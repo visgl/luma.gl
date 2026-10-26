@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation, Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUDataFrame,
@@ -35,7 +35,6 @@ test('GPUDataFrame filters, reduces, groups, bins, sorts, and joins across bound
       }
     })
   });
-  const dispatch = vi.spyOn(Computation.prototype, 'dispatch');
   const kernelDispatch = vi.spyOn(Kernel.prototype, 'dispatch');
   const left = createScalableFrame(device, 1_025, 100);
   const right = createScalableFrame(device, 3, 500, Uint32Array.from([0, 512, 1_024]));
@@ -96,20 +95,16 @@ test('GPUDataFrame filters, reduces, groups, bins, sorts, and joins across bound
     expect(await readUnsigned(join.rowIndices, 3)).toEqual([100, 612, 1_124]);
     expect(await readUnsigned(join.rightRowIndices, 3)).toEqual([500, 501, 502]);
 
-    const boundedPasses = dispatch.mock.calls.filter(
-      ([, horizontal, vertical, depth]) => horizontal === 2 && vertical === 2 && depth === 2
-    );
     const boundedKernelPasses = kernelDispatch.mock.calls.filter(
       ([, {x, y, z}]) => x === 2 && y === 2 && z === 2
     );
-    expect(boundedPasses.length + boundedKernelPasses.length).toBeGreaterThan(10);
+    expect(boundedKernelPasses.length).toBeGreaterThan(10);
   } finally {
     for (const query of ownedQueries) {
       query.destroy();
     }
     left.destroy();
     right.destroy();
-    dispatch.mockRestore();
     kernelDispatch.mockRestore();
     Object.defineProperty(device, 'limits', {configurable: true, value: originalLimits});
   }

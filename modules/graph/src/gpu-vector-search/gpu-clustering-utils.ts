@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuVS.
 
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GraphVectorView,
   getBoundedDispatchLayout,
@@ -64,7 +64,7 @@ export function addGPUClusteringComputationPass<Parameters>(
     id: props.id,
     resources: props.resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -82,10 +82,15 @@ export function addGPUClusteringComputationPass<Parameters>(
           for (const [name, view] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

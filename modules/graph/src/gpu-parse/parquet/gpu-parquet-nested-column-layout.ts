@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GPUFlagOffsets,
@@ -337,7 +337,7 @@ fn main(
     },
     resources: resources.map(resource => ({buffer: resource.view, usage: resource.usage})),
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source,
         shaderLayout: {
@@ -355,10 +355,15 @@ fn main(
           for (const resource of resources) {
             bindings[resource.name] = getViewBinding(resource.view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

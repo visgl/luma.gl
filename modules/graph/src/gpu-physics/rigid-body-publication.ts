@@ -1,10 +1,16 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
 import {Buffer, type CommandEncoder} from '@luma.gl/core';
 import {Matrix4} from '@math.gl/core';
 import {normalizeRigidBodyRotation} from './rigid-body-properties';
-import {Computation} from '@luma.gl/engine';
+
 import type {
   GPUCommandGraph,
   GPUCommandGraphComputeExecutable
@@ -91,14 +97,17 @@ fn rotate(rotation:vec4f,point:vec3f)->vec3f{return point+2.0*cross(rotation.xyz
       Object.entries(entries).map(([name, entry]) => [name, entry.buffer])
     )
   };
-  let publicationComputation: Computation;
-  const executable = (computation: Computation): GPUCommandGraphComputeExecutable<Parameters> => {
+  let publicationComputation: BoundKernel;
+  const executable = (computation: BoundKernel): GPUCommandGraphComputeExecutable<Parameters> => {
     publicationComputation = computation;
     return {
       encode: ({computePass}) => {
-        computation.dispatch(computePass, Math.ceil(bodies.length / 64));
+        computation.kernel.dispatch(computePass, {
+          bindings: computation.bindings,
+          x: Math.ceil(bodies.length / 64)
+        });
       },
-      destroy: () => computation.destroy()
+      destroy: () => computation.kernel.destroy()
     };
   };
   graph.addComputePass({
@@ -107,15 +116,18 @@ fn rotate(rotation:vec4f,point:vec3f)->vec3f{return point+2.0*cross(rotation.xyz
       buffer: entry.resource,
       usage: index < 3 ? ('storage-read' as const) : ('storage-write' as const)
     })),
-    compile: () => executable(new Computation(graph.device, properties)),
-    compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
+    compile: () => executable(createBoundKernel(graph.device, properties)),
+    compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
   });
   return {
     matrices,
     bounds: worldBounds,
     encode: (encoder: CommandEncoder) => {
       const pass = encoder.beginComputePass();
-      publicationComputation.dispatch(pass, Math.ceil(bodies.length / 64));
+      publicationComputation.kernel.dispatch(pass, {
+        bindings: publicationComputation.bindings,
+        x: Math.ceil(bodies.length / 64)
+      });
       pass.end();
     }
   };

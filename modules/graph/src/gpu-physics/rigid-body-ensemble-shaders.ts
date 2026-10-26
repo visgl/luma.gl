@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import type {
   GPUCommandGraph,
   GraphBufferHandle,
@@ -127,9 +133,13 @@ struct Body {inertia:vec4f,inertiaOrientation:vec4f,motion:vec4f}
       sleepStates: sleepStates.buffer
     }
   };
-  const executable = (computation: Computation): GPUCommandGraphComputeExecutable<Parameters> => ({
-    encode: ({computePass}) => computation.dispatch(computePass, Math.ceil(instances / 64)),
-    destroy: () => computation.destroy()
+  const executable = (computation: BoundKernel): GPUCommandGraphComputeExecutable<Parameters> => ({
+    encode: ({computePass}) =>
+      computation.kernel.dispatch(computePass, {
+        bindings: computation.bindings,
+        x: Math.ceil(instances / 64)
+      }),
+    destroy: () => computation.kernel.destroy()
   });
   graph.addComputePass({
     id: properties.id,
@@ -141,7 +151,7 @@ struct Body {inertia:vec4f,inertiaOrientation:vec4f,motion:vec4f}
       {buffer: bodies.resource, usage: 'storage-read'},
       {buffer: sleepStates.resource, usage: 'storage-read'}
     ],
-    compile: ({device}) => executable(new Computation(device, properties)),
-    compileAsync: async ({device}) => executable(await Computation.createAsync(device, properties))
+    compile: ({device}) => executable(createBoundKernel(device, properties)),
+    compileAsync: async ({device}) => executable(await createBoundKernelAsync(device, properties))
   });
 }

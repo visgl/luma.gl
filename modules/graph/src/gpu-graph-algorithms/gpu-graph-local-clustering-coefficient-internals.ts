@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,
@@ -113,7 +113,7 @@ export function addGPUGraphAlgorithmsLocalClusteringCoefficientToGraphWithDispat
     id: `${state.id}-calculate`,
     resources: Object.values(bindings).map(({view, usage}) => ({buffer: view, usage})),
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${state.id}-calculate`,
         source,
         shaderLayout: {
@@ -131,10 +131,15 @@ export function addGPUGraphAlgorithmsLocalClusteringCoefficientToGraphWithDispat
           for (const [name, binding] of Object.entries(bindings)) {
             shaderBindings[name] = getViewBinding(binding.view, getBuffer);
           }
-          computation.setBindings(shaderBindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = shaderBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

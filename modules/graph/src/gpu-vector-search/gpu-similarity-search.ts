@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuVS.
 
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   createTransientView,
   doGraphDataViewsOverlap,
@@ -1081,7 +1081,7 @@ function addSearchComputationPass<Parameters>(
     id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id,
         source,
         shaderLayout: {
@@ -1102,10 +1102,15 @@ function addSearchComputationPass<Parameters>(
             }
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, layout.x, layout.y, layout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: layout.x,
+            y: layout.y,
+            z: layout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

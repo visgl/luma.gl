@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   getBoundedDispatchLayout,
@@ -175,7 +175,7 @@ function addUnpackPass<Parameters>(
       {buffer: props.outputDeltaHigh, usage: 'storage-write'}
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source,
         shaderLayout: {
@@ -195,10 +195,15 @@ function addUnpackPass<Parameters>(
             outputLow: getViewBinding(props.outputDeltaLow, getBuffer),
             outputHigh: getViewBinding(props.outputDeltaHigh, getBuffer)
           };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

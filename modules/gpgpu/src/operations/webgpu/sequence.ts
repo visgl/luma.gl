@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './common/dispatch';
 
@@ -34,18 +34,23 @@ export const sequence: OperationHandler<{start: number; step: number}> = ({
 }
 `;
 
-  const computation = new Computation(target.device, {
+  const kernel = new Kernel(target.device, {
     source,
     shaderLayout: {
       bindings: [{name: 'result', type: 'storage' as const, group: 0, location: 0}]
     }
   });
 
-  computation.setBindings({result: target});
+  const kernelBindings = {result: target};
   const computePass = target.device.beginComputePass({});
-  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+  kernel.dispatch(computePass, {
+    bindings: kernelBindings,
+    x: dispatchLayout.x,
+    y: dispatchLayout.y,
+    z: dispatchLayout.z
+  });
   computePass.end();
   target.device.submit();
-  computation.destroy();
+  kernel.destroy();
   return {success: true};
 };

@@ -908,3 +908,5 @@ glTF adds live deformation cooking snapshots and explicit native state export. T
 Authored Scene Stress Lab exercises shared assets and repeated lifecycle operations.
 See [scenegraph physics](./api-guide/engine/scenegraph-physics.md) for the supported
 contracts and remaining qualification limits.
+
+- **Compute execution** - Gpgpu WebGPU operations and graph compute passes now execute through Kernel, with bindings supplied per dispatch. Module-based operations assemble their WGSL before kernel creation, and geospatial FP64 passes own their uniform buffers explicitly.

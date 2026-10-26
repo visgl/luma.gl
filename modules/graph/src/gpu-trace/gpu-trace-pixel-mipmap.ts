@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {
   getBoundedDispatchLayout,
@@ -565,7 +565,7 @@ function addPixelComputePass<Parameters>(
         props.dispatch.x * props.dispatch.y * props.dispatch.z * PIXEL_MIPMAP_WORKGROUP_SIZE
     },
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -583,10 +583,15 @@ function addPixelComputePass<Parameters>(
           for (const [name, view] of Object.entries(props.bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatch.x,
+            y: props.dispatch.y,
+            z: props.dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });
@@ -906,7 +911,7 @@ fn considerCandidate(position: u32, pixelStart: f32, requireOverlap: bool, curre
       maximumInvocationCount: dispatch.x * dispatch.y * dispatch.z * PIXEL_MIPMAP_WORKGROUP_SIZE
     },
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${mipmap.id}-representatives`,
         source,
         shaderLayout: {
@@ -924,10 +929,15 @@ fn considerCandidate(position: u32, pixelStart: f32, requireOverlap: bool, curre
           for (const [name, view] of Object.entries(bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatch.x,
+            y: dispatch.y,
+            z: dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

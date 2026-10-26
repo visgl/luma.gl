@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {DrawCommandBufferView} from '@luma.gl/graph/gpu-core';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {GPUScan} from '@luma.gl/graph/gpu-core';
@@ -398,7 +398,7 @@ function addContourComputePass<Parameters>(
         group: 0,
         location: index
       }));
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {bindings: declarations}
@@ -409,10 +409,14 @@ function addContourComputePass<Parameters>(
           for (const binding of props.bindings) {
             resolvedBindings[binding.name] = getViewBinding(binding.view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, props.dispatch[0], props.dispatch[1]);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatch[0],
+            y: props.dispatch[1]
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

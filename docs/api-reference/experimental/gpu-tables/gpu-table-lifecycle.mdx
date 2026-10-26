@@ -250,7 +250,7 @@ Relevant public types:
 
 ### `GPUTableComputation`
 
-`GPUTableComputation` is the WebGPU compute helper for table vectors exposed as
+`GPUTableComputation` delegates to Kernel and accepts assembled WGSL plus explicit resource bindings. Shader assembly and uniform-buffer ownership belong to the caller. It is the WebGPU compute helper for table vectors exposed as
 storage bindings. Supply `GPUVector` objects by binding name:
 
 ```ts

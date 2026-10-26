@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,
@@ -75,7 +75,7 @@ function addDegreePass<Parameters>(
       {buffer: props.output, usage: 'storage-write'}
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -92,15 +92,15 @@ function addDegreePass<Parameters>(
             offsets: getViewBinding(props.offsets, getBuffer),
             output: getViewBinding(props.output, getBuffer)
           };
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatchLayout.x,
+            y: props.dispatchLayout.y,
+            z: props.dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

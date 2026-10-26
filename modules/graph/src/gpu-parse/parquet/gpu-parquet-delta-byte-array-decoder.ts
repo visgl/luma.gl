@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {
   GPUCommandGraph,
   GPUScan,
@@ -316,7 +316,7 @@ function addPass<Parameters>(
     },
     resources: props.bindings.map(binding => ({buffer: binding[1], usage: binding[2]})),
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -334,15 +334,15 @@ function addPass<Parameters>(
           for (const binding of props.bindings) {
             bindings[binding[0]] = getViewBinding(binding[1], getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatchLayout.x,
+            y: props.dispatchLayout.y,
+            z: props.dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

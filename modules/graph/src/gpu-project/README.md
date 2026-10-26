@@ -347,7 +347,7 @@ supported units/parameters, error semantics, and planning limitations.
 const shader = projection.getShader({namespace: 'map'});
 const parameterWords = projection.packParameters();
 // Upload parameterWords to a storage buffer bound under shader.bindingName.
-// Include shader.source in a Model/Computation shader, with shader.modules and shader.defines.
+// Assemble shader.source with shader.modules and shader.defines before creating a Kernel.
 // The generated callable for this example is:
 // projection_map_project(position: vec4u, inputValidity: u32)
 // It returns a struct with .position: vec4f and .valid: u32.
