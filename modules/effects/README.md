@@ -88,7 +88,7 @@ The lens pass exists only when at least one of `starburstIntensity`, `ghostInten
 `haloIntensity` is positive. Dirt-only configurations therefore preserve the base pass count. Reduce
 `quality`, `resolutionScale`, `starburstSpikes`, or `ghostCount` to trade optical detail for
 throughput. For physically based full-kernel diffraction, the separately owned
-`GPUConvolutionBloom` renderer in `@luma.gl/graph/experimental` applies true RGB FFT convolution instead
+`GPUConvolutionBloom` renderer in `@luma.gl/graph/gpu-effects` applies true RGB FFT convolution instead
 of the lower-cost screen-space starburst approximation. It supports independent generated or
 measured red, green, and blue point-spread functions, zero-padded guard bands, exposure-aware
 extraction, and optional lens/temporal composition. At 1920 x 1080 with quarter-resolution

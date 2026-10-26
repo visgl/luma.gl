@@ -43,10 +43,11 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/effects`][effects] for reusable image processing, bloom, and supported screen-space effects.
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
 - [`@luma.gl/graph`][graph] for `GPUCommandGraph`, `GPUGraph`, GPU tables, and graph-based processing.
-- [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for private `GPURecordBatch`/`GPUTable` APIs.
+- [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for `GPURecordBatch`/`GPUTable` APIs.
 - [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
-- [`@luma.gl/graph/experimental`][experimental] for incubating v10 APIs, including experimental WebXR frame, view, and raw camera helpers.
+- [Engine experimental utilities](/docs/api-reference/engine/experimental) for controls, material plugins, textures, and WebXR helpers.
+- [`@luma.gl/graph/experimental`](/docs/api-reference/experimental) for path/polygon models and flow/fluid simulations.
 - [`@luma.gl/gltf`][gltf] for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.
 - [`@luma.gl/core/webgl`][webgl] and [`@luma.gl/core/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
 - [`@luma.gl/core/webgl-constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.

@@ -224,7 +224,7 @@ rendering model or different interaction policy.
 
 Trace-specific classes, constants, helpers, and types are exported only from
 `@luma.gl/graph/gpu-trace`; they are intentionally absent from the root
-`@luma.gl/graph/experimental` namespace.
+`@luma.gl/graph` namespace.
 
 ## Limits and compatibility
 

@@ -284,7 +284,7 @@ This API loads precomputed resources; it does not convert arbitrary HDR images i
 lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF
 lookup from an existing equirectangular texture, use the separate
 [`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) owned by
-`@luma.gl/graph/experimental`.
+`@luma.gl/anari`.
 
 ## Transmission and rendering-path differences
 

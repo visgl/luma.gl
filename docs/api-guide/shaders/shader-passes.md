@@ -326,7 +326,7 @@ The default configuration allocates neither history nor lens artifacts. Screen-s
 costs eight samples per ray, while each ghost costs one sample or three when chromatic aberration
 is enabled.
 
-For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/graph/experimental` provides a
+For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/graph/gpu-effects` provides a
 separate WebGPU implementation. It accepts generated or measured point-spread functions, including
 independent red, green, and blue kernels; packs those channels into one forward and one inverse FFT
 schedule; and uses zero-padded guard bands to prevent opposite-edge wraparound. Optional lens

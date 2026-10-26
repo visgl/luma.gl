@@ -100,7 +100,7 @@ Applications commonly add two first-class libraries above the portability layer:
   shader-pass rendering.
 
 Focused packages such as `@luma.gl/effects`, `@luma.gl/gltf`, and `@luma.gl/gpgpu` build on one or
-more of these layers. Experimental GPU tables and models live under `@luma.gl/graph/experimental`. These
+more of these layers. GPU tables live under `@luma.gl/graph/gpu-tables`; experimental path/polygon models live under `@luma.gl/graph/experimental/models`. These
 packages are not automatically included by the engine. See the [API overview](/docs/api-guide) and
 [module catalog](/docs/api-reference) for the complete package map.
 

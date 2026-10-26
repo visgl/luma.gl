@@ -32,7 +32,7 @@ Each complex value is one packed `float32x2` row: real followed by imaginary. In
 accept either `GraphDataView<'float32x2'>` or `GraphVectorView<'float32x2'>`.
 
 ```ts
-import {GPUFFT1D} from '@luma.gl/graph/experimental/simulation';
+import {GPUFFT1D} from '@luma.gl/graph/gpu-core';
 
 graph.add(new GPUFFT1D({
   id: 'spectrum',
