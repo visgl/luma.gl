@@ -294,7 +294,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
   and animate crowds with shared geometry, GPU sampling, culling, and LOD.
 - **Four new experimental modules** - `@luma.gl/text`, `@luma.gl/splats`, `@luma.gl/anari`, and
-  `@luma.gl/experimental` are now published for direct use. These APIs may
+  `@luma.gl/graph/experimental` are now published for direct use. These APIs may
   evolve outside the 9.4 semver contract.
 
 **A clearer GPU data stack**
@@ -303,7 +303,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   helpers live in `@luma.gl/gpgpu/gpu-data`, independent of source adapters and rendering models.
 - **Tables and models stay focused** - Batch-preserving tables live in
   `@luma.gl/graph/gpu-tables`; path and polygon models live in
-  `@luma.gl/experimental/models`.
+  `@luma.gl/graph/experimental/models`.
 - **Renderers preserve what matters** - `@luma.gl/text` supports streamed text and shared font
   resources. `@luma.gl/splats` retains source batches and stable row identities.
 
@@ -337,7 +337,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 - **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
   rendering.
-- **`@luma.gl/experimental`** - GPU analytics, simulations, rendering techniques, and WebXR
+- **`@luma.gl/graph/experimental`** - GPU analytics, simulations, rendering techniques, and WebXR
   helpers, now published for direct use.
 
 **@luma.gl/engine**
@@ -365,10 +365,10 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 **Experimental rendering and GPU workflows**
 
-- **[Shared physical scene rendering](/docs/api-reference/experimental/scene-renderer)** - `SceneRenderer` renders format-independent physically based surfaces on WebGL and WebGPU with reusable instanced geometry, staged material updates, explicit joint palettes, morph deformation, punctual lights, and caller-provided image-based-lighting textures.
-- **[Deferred physical scene rendering](/docs/api-reference/experimental/deferred-scene-renderer)** - `DeferredSceneRenderer` reuses the same scene descriptors through a four-target HDR G-buffer and lighting resolve that fits the default 32-byte WebGPU CORE limit, automatically falling back to the shared forward renderer for unsupported scenes.
+- **[Shared physical scene rendering](/docs/api-reference/scene/scene-renderer)** - `SceneRenderer` renders format-independent physically based surfaces on WebGL and WebGPU with reusable instanced geometry, staged material updates, explicit joint palettes, morph deformation, punctual lights, and caller-provided image-based-lighting textures.
+- **[Deferred physical scene rendering](/docs/api-reference/scene/deferred-scene-renderer)** - `DeferredSceneRenderer` reuses the same scene descriptors through a four-target HDR G-buffer and lighting resolve that fits the default 32-byte WebGPU CORE limit, automatically falling back to the shared forward renderer for unsupported scenes.
 - **Shared interactive GPU-accelerated ray tracing** - `RayTracingSceneRenderer` composes world-space instance bounds, dirty-only GPU bounding-volume hierarchy construction/refitting, nearest-hit traversal, bounded direct-light shadows, adaptive internal resolution, interleaved frame-budget coverage, stable-identity temporal reprojection, progressive accumulation, and upsampled HDR presentation through WebGPU compute/command graphs. Frame pacing uses ordinary animation intervals, the tracing pass uses five storage buffers, the BVH builder uses eight, mesh triangles remain linearly refined, and command submission stays application-owned.
-- **[Generated physical lighting environments](/docs/api-reference/experimental/pbr-environment)** - `PBREnvironmentGenerator` and `preparePBREnvironment()` integrate equirectangular source textures into GGX-prefiltered specular cubemap mip chains, diffuse irradiance cubemaps, and split-sum BRDF lookup textures on both WebGL and WebGPU.
+- **[Generated physical lighting environments](/docs/api-reference/scene/pbr-environment)** - `PBREnvironmentGenerator` and `preparePBREnvironment()` integrate equirectangular source textures into GGX-prefiltered specular cubemap mip chains, diffuse irradiance cubemaps, and split-sum BRDF lookup textures on both WebGL and WebGPU.
 - **Scene-color transmission and volume attenuation** - The shared forward renderer captures opaque scene color automatically for transmissive surfaces, then applies screen-space refraction, roughness, Fresnel response, index of refraction, thickness, and Beer-Lambert attenuation while preserving physically opaque output.
 - **`HTMLTexture`** - Experimental copied texture binding source copies HTML-in-Canvas DOM subtrees into GPU textures while the browser API is still experimental.
 - **OIT resolve pipelines** - A-buffer and weighted-blended order-independent transparency now
@@ -401,12 +401,12 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Composable deferred lighting** - `deferredLighting` resolves Cook-Torrance opaque lighting from G-buffer material channels, reconstructed depth, one directional light, and a fixed-capacity WebGPU point-light storage buffer. The [Deferred Illumination Lab](/examples/experimental/deferred-rendering) exposes the material channels and animated lights live.
 - **Hybrid shadows** - `ShadowMapRenderer`, the group-2 `shadow` WGSL module, and the contact-shadow shader-pass pipeline add WebGPU cascaded directional, spot, and point-light shadows with PCSS filtering. Visualization City demonstrates the complete ordered stack.
 - **Visualization City** - The [Advanced Effects example](/examples/experimental/advanced-effects) combines the experimental G-buffer, deferred-lighting, and shadow stack with public screen-space effects in one v9.4 showcase.
-- **Spectral caustics** - [`SpectralCausticsRenderer`](/docs/api-reference/experimental/spectral-caustics-renderer) captures a closed convex refractor, traces six wavelength bands with WebGPU compute, additively accumulates an HDR XYZ map, and exposes reusable planar-receiver shading without taking command-submission ownership.
+- **Spectral caustics** - [`SpectralCausticsRenderer`](/docs/api-reference/scene/spectral-caustics-renderer) captures a closed convex refractor, traces six wavelength bands with WebGPU compute, additively accumulates an HDR XYZ map, and exposes reusable planar-receiver shading without taking command-submission ownership.
 - **Clustered deferred lighting** - `ClusteredLightGrid` bins point lights into a configurable 3D screen-space grid and feeds the clustered deferred resolve pipeline.
 - **MLS-MPM fluid simulation** - [`MLSMPMFluidSimulation`](/docs/api-reference/experimental/mls-mpm-fluid-simulation) adds a WebGPU-only two-dimensional weakly compressible fluid solver with deterministic fixed-point grid scatter, double-buffered particle state, caller-owned command encoding, and storage buffers that applications can render without hidden submission or readback.
 - **Volumetric fire simulation** - [`VolumetricFireSimulation`](/docs/api-reference/experimental/volumetric-fire-simulation) records WebGPU-only dense 3D velocity, pressure, obstacle, and combustion work through a GPU command graph, then exposes the live velocity and combustion textures for HDR volume rendering without hidden submission or CPU readback. [Volumetric Fire Forge](/examples/experimental/volumetric-fire-forge) demonstrates the live fields with obstacle-matched geometry, depth-aware emission and extinction, fixed exposure, HDR bloom, deterministic automatic and click-triggered burner flares, and synthesized spatial combustion audio.
 - **Orbit controls** - [`OrbitControls`](/docs/api-reference/engine/orbit-controls) provides reusable pointer-driven orbiting, wheel zoom, camera limits, and automatic rotation from `@luma.gl/engine`.
-- **Accessible comparison splitters** - [`ComparisonSplitter`](/docs/api-reference/experimental/comparison-splitter) adds reusable draggable, keyboard-accessible before-and-after views to experimental examples.
+- **Accessible comparison splitters** - [`ComparisonSplitter`](/docs/api-reference/engine/experimental/comparison-splitter) adds reusable draggable, keyboard-accessible before-and-after views to experimental examples.
 - **WebXR** - Experimental animation-frame, camera-texture, and session helpers integrate immersive WebXR rendering with luma.gl.
 
 **@luma.gl/gpgpu** NEW MODULE
@@ -464,7 +464,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Render-pass draw commands** - `RenderPass` now owns pipeline, binding, vertex-array, direct-draw, indirect-draw, and render-bundle commands. The former `RenderPipeline` draw and binding APIs remain as deprecated compatibility paths.
 - **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.
 - **Stage-specific storage limits** - `device.limits` now reports storage buffer and storage texture availability separately for vertex and fragment stages, so applications can choose storage-backed rendering only where the requested device supports it.
-- **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper is available from `@luma.gl/experimental`.
+- **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper is available from `@luma.gl/graph/experimental`.
 - **GPU data and buffer-layout utilities** - New exported helpers decode GPU data types, select native or emulated Float16 arrays, and resolve logical attributes over shared or composite buffer layouts.
 
 **@luma.gl/webgl**
@@ -751,7 +751,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 | -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
 | **`@luma.gl/core`**        | New API           | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
 | **`@luma.gl/engine`**      | Light API updates | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
-| **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
+| **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/graph/experimental`).                                  |
 | **`@luma.gl/shadertools`** | Light API updates | The shader assembler API and the shader module library.                                                         |
 | **`@luma.gl/webgl`**       | WebGL backend     | Optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s.       |
 | **`@luma.gl/webgpu`**      | WebGPU backend    | Experimental "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.    |
@@ -771,7 +771,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 
 **`@luma.gl/engine`**
 
-- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`, moved from `@luma.gl/experimental`.
+- NEW: Scenegraph classes: `ModelNode`, `GroupNode`, `ScenegraphNode`, moved from `@luma.gl/graph/experimental`.
 - NEW: `ShaderInputs` - Class that manages uniform buffers for a `Model`
 - NEW: `ShaderFactory` - Creates and caches reusable `Shader` resources
 - NEW: `AnimationLoopTemplate` - Helper class for writing cleaner demos and applications in TypeScript.
@@ -779,7 +779,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 
 **`@luma.gl/gltf`**
 
-- New module that exports the glTF classes (moved from `@luma.gl/experimental`).
+- New module that exports the glTF classes (moved from `@luma.gl/graph/experimental`).
 
 **`@luma.gl/shadertools`**
 
@@ -842,7 +842,7 @@ geometry and datum identities across raster and ray rendering.
 
 ### Bounded ray image export
 
-`@luma.gl/experimental` adds `exportRayTracingImage` and
+`@luma.gl/graph/experimental` adds `exportRayTracingImage` and
 `iterateRayTracingImageTiles` for streamed RGBA8 output. Full-image coordinates
 and explicit sampling-frame indices keep seeded ray paths stable across tiles.
 Clipped filter/history halos preserve progressive and denoised image seams;
@@ -887,3 +887,9 @@ Authored Scene Stress Lab exercises shared assets and repeated lifecycle operati
 See [scenegraph physics](./api-guide/engine/scenegraph-physics.md) for the supported
 contracts and remaining qualification limits.
 
+
+### ANARI renderer ownership
+
+`@luma.gl/anari` now owns forward, deferred, ray-tracing, and raymarching renderers, plus their PBR, shadow, transparency, and composition helpers. Import these APIs from `@luma.gl/anari` or the existing `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points. Custom models and simulation utilities now live under `@luma.gl/graph/experimental/*`; the standalone Experimental package is removed.
+
+Engine now exposes incubating controls, material plugins, texture helpers, and WebXR APIs through explicit `@luma.gl/engine/experimental/*` subpaths.

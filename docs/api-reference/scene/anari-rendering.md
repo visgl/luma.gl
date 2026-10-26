@@ -4,7 +4,6 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
@@ -129,7 +128,7 @@ implements that feature. Registered custom renderers define their own support.
 
 Backend availability does not guarantee every device, texture format, imported asset, or
 material extension is supported. The ray runtime exposes
-`getRayTracingSceneCapabilities(device)` from `@luma.gl/experimental` for implementation
+`getRayTracingSceneCapabilities(device)` from `@luma.gl/anari` for implementation
 support; it does not report per-scene capacity or allocations. Frame query support belongs
 to the runtime that last rendered the frame.
 
@@ -250,7 +249,7 @@ frame.setParameter('renderer', renderer).commitParameters();
 ```
 
 `raytrace` requires WebGPU. The ANARI adapter translates committed scene objects into descriptors
-for the shared `RayTracingSceneRenderer` in `@luma.gl/experimental`. Its GPU compute graph derives
+for the shared `RayTracingSceneRenderer` in `@luma.gl/anari`. Its GPU compute graph derives
 world-space object bounds, Morton-sorts active object/instance leaves into an explicit retained
 permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that hierarchy for
 nearest-hit rays and early-exit hard shadows. Transform-only animation gathers updated bounds
@@ -469,13 +468,13 @@ texture-to-buffer copies.
 Like picking, capture uses the runtime that last rendered the frame. Unrendered or
 destroyed frames and frames last rendered by the built-in raster runtime return `null`.
 Channels use scalar alpha-mask intersection semantics. Texture alpha, blending and transmission remain separate work.
-Use [`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) to transfer
+Use [`DepthTextureCopy`](/docs/api-reference/scene/depth-texture-copy) to transfer
 `projectedDepthTexture` into a color-preserving render pass with a depth attachment before
 drawing raster overlays with matching camera and viewport conventions.
 
 ### Selection outlines
 
-Use [`SelectionOutline`](/docs/api-reference/experimental/selection-outline) to draw an
+Use [`SelectionOutline`](/docs/api-reference/scene/selection-outline) to draw an
 inward border over a selected visible placement. Resolve a `pick()` placement ID against
 the current snapshot identity table, rather than reusing an integer ID from an older
 snapshot. The JSON playground performs this lookup each frame while a mark is selected.
@@ -583,7 +582,7 @@ All parameter interfaces, object classes, subtype aliases, object metadata, and 
 `raytrace` accepts `samplingSeed` (uint32, default zero) for deterministic primary and diffuse
 sample rotations. A changed seed resets accumulation; centered picking and hit channels
 are unaffected. Use the same seed and frame count on the same backend for comparisons.
-[`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets)
+[`getRayTracingQualityPreset`](/docs/api-reference/scene/ray-tracing-quality-presets)
 returns explicit interactive/still renderer settings without modifying exposure or seed.
 
 ### Emissive lighting and scalar alpha masks
@@ -593,6 +592,6 @@ both diffuse and PBR transport, including at zero material bounces. It defaults
 to false. Scalar `alphaMode: 'mask'` compares committed opacity against
 `alphaCutoff` for color, secondary/shadow rays, picking and channels. Masked
 emitters are excluded from the sampling table. See the
-[ray quality reference](/docs/api-reference/experimental/ray-tracing-quality-presets#explicit-emissive-lighting-and-scalar-masks)
+[ray quality reference](/docs/api-reference/scene/ray-tracing-quality-presets#explicit-emissive-lighting-and-scalar-masks)
 for sampling semantics and current limitations. `emitterSelection: 'power'` enables
 area/luminance-weighted emitter selection; uniform selection remains the default.

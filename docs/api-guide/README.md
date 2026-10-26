@@ -31,10 +31,10 @@ mixing, crossfades, and portable morph-target deformation. Scenegraphs are inclu
 [glTF loading, physical materials, skeletal animation, and morph animation](/docs/api-reference/gltf)
 live in the format-specific `@luma.gl/gltf` module.
 
-The experimental [`SceneRenderer`](/docs/api-reference/experimental/scene-renderer) and
-[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer) consume
+The experimental [`SceneRenderer`](/docs/api-reference/scene/scene-renderer) and
+[`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer) consume
 format-independent scene descriptions instead of introducing a second glTF renderer. Their
-[physical lighting environments](/docs/api-reference/experimental/pbr-environment) can be prepared
+[physical lighting environments](/docs/api-reference/scene/pbr-environment) can be prepared
 from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see

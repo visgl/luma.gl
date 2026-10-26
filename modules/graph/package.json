@@ -177,6 +177,21 @@
       "types": "./dist/gpu-simple-graph/index.d.ts",
       "import": "./dist/gpu-simple-graph/index.js",
       "require": "./dist/gpu-simple-graph/index.cjs"
+    },
+    "./experimental/simulation": {
+      "types": "./dist/experimental/simulation/index.d.ts",
+      "import": "./dist/experimental/simulation/index.js",
+      "require": "./dist/experimental/simulation/index.cjs"
+    },
+    "./experimental/models": {
+      "types": "./dist/experimental/models/index.d.ts",
+      "import": "./dist/experimental/models/index.js",
+      "require": "./dist/experimental/models/index.cjs"
+    },
+    "./experimental": {
+      "types": "./dist/experimental/index.d.ts",
+      "import": "./dist/experimental/index.js",
+      "require": "./dist/experimental/index.cjs"
     }
   },
   "peerDependencies": {

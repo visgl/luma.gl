@@ -15,7 +15,7 @@ Emissive strength scales a surface’s emitted radiance beyond the core emissive
 
 ## PBRMaterial reference
 
-`PBRMaterial` from `@luma.gl/experimental` is a typed engine `Material` backed by the shared
+`PBRMaterial` from `@luma.gl/graph/experimental` is a typed engine `Material` backed by the shared
 `pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from
 `@luma.gl/shadertools`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with
 `material.setProps({pbrMaterial: {...}})`.
@@ -42,14 +42,14 @@ Texture bindings accept `Texture | null`. `createPBRMaterial()` derives the map-
 
 ### createPBRMaterial
 
-`createPBRMaterial(device, {uniforms, bindings, factory})` from `@luma.gl/experimental` returns
+`createPBRMaterial(device, {uniforms, bindings, factory})` from `@luma.gl/graph/experimental` returns
 a `PBRMaterial`. `uniforms` sets the fields listed above, `bindings` supplies material textures,
 and the optional `factory` shares a compatible binding schema across materials. The helper
 derives map-enabled flags from the supplied bindings; explicit uniform values take precedence.
 
 ### MaterialFactory
 
-`createPBRMaterialFactory(device)` from `@luma.gl/experimental` creates a reusable engine
+`createPBRMaterialFactory(device)` from `@luma.gl/graph/experimental` creates a reusable engine
 `MaterialFactory` configured with the `pbrMaterial` shader module. Pass this factory to
 `createPBRMaterial()` when creating several compatible materials.
 
@@ -69,7 +69,7 @@ See the [materials guide](/docs/api-guide/engine/materials) and
 
 ```ts
 import {Model} from '@luma.gl/engine';
-import {createPBRMaterial, type PBRMaterial} from '@luma.gl/experimental';
+import {createPBRMaterial, type PBRMaterial} from '@luma.gl/anari';
 
 // device is an initialized Device.
 const material: PBRMaterial = createPBRMaterial(device, {

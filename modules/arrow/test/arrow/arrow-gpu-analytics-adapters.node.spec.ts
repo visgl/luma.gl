@@ -35,7 +35,7 @@ describe('makeGPUAnalyticsTableFromArrowTable package boundaries', () => {
     expect(packageJson.peerDependencies?.['apache-arrow']).toBe('>=17.0.0');
     expect(packageJson.peerDependenciesMeta?.['apache-arrow']).toBeUndefined();
     expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBeDefined();
-    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBeDefined();
+    expect(packageJson.dependencies?.['@luma.gl/graph']).toBeDefined();
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
     expect(packageJson.peerDependencies?.['@luma.gl/experimental']).toBeUndefined();
   });

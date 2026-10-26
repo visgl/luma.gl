@@ -283,15 +283,15 @@ const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
 This API loads precomputed resources; it does not convert arbitrary HDR images into prefiltered
 lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF
 lookup from an existing equirectangular texture, use the separate
-[`PBREnvironmentGenerator`](/docs/api-reference/experimental/pbr-environment) owned by
-`@luma.gl/experimental`.
+[`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) owned by
+`@luma.gl/graph/experimental`.
 
 ## Transmission and rendering-path differences
 
 Transmission and volume factors/textures are preserved across rendering paths, but physical
 refraction depends on the renderer:
 
-- The shared [experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) and
+- The shared [experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) and
   retained ANARI path capture the opaque scene and sample it for screen-space refraction with
   thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and
   roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment

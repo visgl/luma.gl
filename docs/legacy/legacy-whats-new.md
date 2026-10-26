@@ -17,7 +17,7 @@ Date: Jul 15, 2021
 - GLSL transpiler now handles `gl_FragColor` in fragment shader when transpiling from ES 1.00 to 3.00
 - New `magnify` effect
 
-**`@luma.gl/experimental`**
+**`@luma.gl/graph/experimental`**
 
 - Support for compressed textures in glTF.
 - Now exports `GLTFMaterialParser`

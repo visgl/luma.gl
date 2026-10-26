@@ -52,6 +52,25 @@ const config = getDocusaurusConfig({
       '@docusaurus/plugin-client-redirects',
       {
         redirects: [
+          {"from":["/docs/api-reference/experimental/a-buffer-renderer"],"to":"/docs/api-reference/scene/a-buffer-renderer"},
+          {"from":["/docs/api-reference/experimental/clustered-lighting"],"to":"/docs/api-reference/scene/clustered-lighting"},
+          {"from":["/docs/api-reference/experimental/deferred-lighting"],"to":"/docs/api-reference/scene/deferred-lighting"},
+          {"from":["/docs/api-reference/experimental/deferred-scene-renderer"],"to":"/docs/api-reference/scene/deferred-scene-renderer"},
+          {"from":["/docs/api-reference/experimental/depth-texture-copy"],"to":"/docs/api-reference/scene/depth-texture-copy"},
+          {"from":["/docs/api-reference/experimental/g-buffer"],"to":"/docs/api-reference/scene/g-buffer"},
+          {"from":["/docs/api-reference/experimental/pbr-environment"],"to":"/docs/api-reference/scene/pbr-environment"},
+          {"from":["/docs/api-reference/experimental/ray-tracing-quality-presets"],"to":"/docs/api-reference/scene/ray-tracing-quality-presets"},
+          {"from":["/docs/api-reference/experimental/scene-renderer"],"to":"/docs/api-reference/scene/scene-renderer"},
+          {"from":["/docs/api-reference/experimental/selection-outline"],"to":"/docs/api-reference/scene/selection-outline"},
+          {"from":["/docs/api-reference/experimental/shadow-map-renderer"],"to":"/docs/api-reference/scene/shadow-map-renderer"},
+          {"from":["/docs/api-reference/experimental/spectral-caustics-renderer"],"to":"/docs/api-reference/scene/spectral-caustics-renderer"},
+          {"from":["/docs/api-reference/experimental/wboit-renderer"],"to":"/docs/api-reference/scene/wboit-renderer"},
+          {"from":["/docs/api-reference/experimental/comparison-splitter"],"to":"/docs/api-reference/engine/experimental/comparison-splitter"},
+          {"from":["/docs/api-reference/experimental/glass-material"],"to":"/docs/api-reference/engine/experimental/glass-material"},
+          {"from":["/docs/api-reference/experimental/reflective-material"],"to":"/docs/api-reference/engine/experimental/reflective-material"},
+          {"from":["/docs/api-reference/experimental/webxr"],"to":"/docs/api-reference/engine/experimental/webxr"},
+          {"from":["/docs/api-reference/experimental/webxr/webxr-camera-texture"],"to":"/docs/api-reference/engine/experimental/webxr/webxr-camera-texture"},
+          {"from":["/docs/api-reference/experimental/webxr/webxr-manager"],"to":"/docs/api-reference/engine/experimental/webxr/webxr-manager"},
           {
             from: ['/docs/api-reference/gpu-graph'],
             to: '/docs/api-reference/graph'

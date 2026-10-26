@@ -123,9 +123,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const benchmark = readRepositoryFile(
       'examples/experimental/gpu-data-analysis/src/gpu-dataframe-benchmark.ts'
     );
-    const experimentalPackage = JSON.parse(
-      readRepositoryFile('modules/experimental/package.json')
-    ) as {
+    const graphPackage = JSON.parse(readRepositoryFile('modules/graph/package.json')) as {
       dependencies?: Record<string, string>;
     };
     const gpuPackage = JSON.parse(readRepositoryFile('modules/gpgpu/package.json')) as {
@@ -143,7 +141,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     expect(benchmark).toContain('MAXIMUM_ROW_COUNT = 1_048_576');
     expect(benchmark).toContain('summarizeGPUDataFrameBenchmarkSamples');
     expect(benchmark).not.toContain('BenchmarkSourceRow[]');
-    expect(experimentalPackage.dependencies?.['apache-arrow']).toBeUndefined();
+    expect(graphPackage.dependencies?.['apache-arrow']).toBeUndefined();
     expect(gpuPackage.dependencies?.['apache-arrow']).toBeUndefined();
   });
 });

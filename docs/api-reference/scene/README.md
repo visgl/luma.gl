@@ -31,11 +31,10 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/anari` provides a private, experimental, independently developed retained rendering API
+`@luma.gl/anari` provides an experimental, independently developed retained rendering API
 built in the spirit of ANARI on top of luma.gl. Applications describe **what** to render as cameras,
 worlds, surfaces, materials, lights, and frames. The implementation decides **how** to compile that
 description into portable WebGPU or WebGL rendering.
@@ -62,17 +61,13 @@ API and supported feature set can change.
 - [ANARI developer guide](/docs/api-guide/engine/anari-rendering): complete setup, scene construction, animation, HDR presentation, debugging, architecture, and limitations.
 - [JSON scene playground](/docs/api-guide/engine/anari-json-scenes#explore-the-json-scene-playground): live deck.gl-style JSON scene editing, reusable object references, animated presets, and retained-scene statistics.
 
-## Private workspace availability
+## Package availability
 
-`@luma.gl/anari` is a private, unpublished luma.gl workspace. Install dependencies from a luma.gl
-checkout:
+`@luma.gl/anari` is published separately from the core engine. It owns forward, deferred, ray-tracing, and raymarching implementations, along with shadow, transparency, and scene composition helpers.
 
 ```bash
-yarn install
+npm install @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/effects @luma.gl/shadertools
 ```
-
-Another workspace inside the same checkout can depend on it through
-`"@luma.gl/anari": "workspace:*"`. It cannot currently be installed from npm. Import `webgl2Adapter` from `@luma.gl/core/webgl` if a WebGL 2 fallback is required.
 
 ## Object model
 
@@ -175,7 +170,7 @@ See [HDR and backend selection](/docs/api-guide/engine/anari-first-scene#hdr-and
 
 ## Experimental JSON playground
 
-The private package includes a JSON scene playground at
+The package includes a JSON scene playground at
 `examples/anari/scenes/playground.html`. Start it with
 `yarn workspace luma.gl-examples-showcase-scene start`, then open `/playground.html` on the
 reported development-server URL. The playground translates deck.gl-inspired `@@type`

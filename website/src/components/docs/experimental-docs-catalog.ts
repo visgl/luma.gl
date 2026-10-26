@@ -128,9 +128,9 @@ export const EXPERIMENTAL_DOCS_TAB_GROUPS: readonly DocsTabGroup<ExperimentalDoc
     id: 'scene-rendering',
     label: 'Scene rendering',
     tabs: [
-      {id: 'scene-renderer', label: 'Scene Renderer', href: '/docs/api-reference/experimental/scene-renderer'},
-      {id: 'deferred-scene-renderer', label: 'Deferred Scenes', href: '/docs/api-reference/experimental/deferred-scene-renderer'},
-      {id: 'pbr-environment', label: 'PBR Environments', href: '/docs/api-reference/experimental/pbr-environment'}
+      {id: 'scene-renderer', label: 'Scene Renderer', href: '/docs/api-reference/scene/scene-renderer'},
+      {id: 'deferred-scene-renderer', label: 'Deferred Scenes', href: '/docs/api-reference/scene/deferred-scene-renderer'},
+      {id: 'pbr-environment', label: 'PBR Environments', href: '/docs/api-reference/scene/pbr-environment'}
     ]
   },
   {
@@ -210,21 +210,21 @@ export const EXPERIMENTAL_DOCS_TAB_GROUPS: readonly DocsTabGroup<ExperimentalDoc
     id: 'lighting-and-shadows',
     label: 'Lighting and shadows',
     tabs: [
-      {id: 'g-buffer', label: 'GBuffer', href: '/docs/api-reference/experimental/g-buffer'},
-      {id: 'deferred-lighting', label: 'Deferred Lighting', href: '/docs/api-reference/experimental/deferred-lighting'},
-      {id: 'clustered-lighting', label: 'Clustered Lighting', href: '/docs/api-reference/experimental/clustered-lighting'},
-      {id: 'shadow-map-renderer', label: 'Shadow Maps', href: '/docs/api-reference/experimental/shadow-map-renderer'}
+      {id: 'g-buffer', label: 'GBuffer', href: '/docs/api-reference/scene/g-buffer'},
+      {id: 'deferred-lighting', label: 'Deferred Lighting', href: '/docs/api-reference/scene/deferred-lighting'},
+      {id: 'clustered-lighting', label: 'Clustered Lighting', href: '/docs/api-reference/scene/clustered-lighting'},
+      {id: 'shadow-map-renderer', label: 'Shadow Maps', href: '/docs/api-reference/scene/shadow-map-renderer'}
     ]
   },
   {
     id: 'materials-and-transparency',
     label: 'Materials and transparency',
     tabs: [
-      {id: 'spectral-caustics-renderer', label: 'Spectral Caustics', href: '/docs/api-reference/experimental/spectral-caustics-renderer'},
-      {id: 'glass-material', label: 'Glass', href: '/docs/api-reference/experimental/glass-material'},
-      {id: 'reflective-material', label: 'Reflective', href: '/docs/api-reference/experimental/reflective-material'},
-      {id: 'a-buffer-renderer', label: 'A-Buffer', href: '/docs/api-reference/experimental/a-buffer-renderer'},
-      {id: 'wboit-renderer', label: 'WBOIT', href: '/docs/api-reference/experimental/wboit-renderer'}
+      {id: 'spectral-caustics-renderer', label: 'Spectral Caustics', href: '/docs/api-reference/scene/spectral-caustics-renderer'},
+      {id: 'glass-material', label: 'Glass', href: '/docs/api-reference/engine/experimental/glass-material'},
+      {id: 'reflective-material', label: 'Reflective', href: '/docs/api-reference/engine/experimental/reflective-material'},
+      {id: 'a-buffer-renderer', label: 'A-Buffer', href: '/docs/api-reference/scene/a-buffer-renderer'},
+      {id: 'wboit-renderer', label: 'WBOIT', href: '/docs/api-reference/scene/wboit-renderer'}
     ]
   },
   {

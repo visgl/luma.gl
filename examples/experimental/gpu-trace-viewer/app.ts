@@ -42,7 +42,7 @@ import {
   type FlatControllerPick,
   type RectangleSelection,
   RectangleSelectController
-} from '@luma.gl/experimental';
+} from '@luma.gl/engine/experimental/controls';
 import {
   GPUTraceAggregation,
   GPUTraceAnomalyScoring,

@@ -15,9 +15,9 @@ export type {
   StructuredVolumeSupport,
   StructuredVolumeVectorSource,
   StructuredVolumeVectorStyle
-} from '@luma.gl/experimental';
+} from './renderers';
 export {
   getStructuredVolumeSupport,
   makeStructuredVolumeUniformData,
   StructuredVolumeRenderer
-} from '@luma.gl/experimental';
+} from './renderers';

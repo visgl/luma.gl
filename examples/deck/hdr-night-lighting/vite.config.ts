@@ -13,7 +13,6 @@ export default defineConfig(({mode}) => ({
     alias: {
       '@deck.gl-community/gpu-layers': `${__dirname}/../../../modules/deck-gpu-layers/src`,
       '@luma.gl/effects': `${__dirname}/../../../modules/effects/src`,
-      '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
       '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
       '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
       '@luma.gl/text': `${__dirname}/../../../modules/text/src`,

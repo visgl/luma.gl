@@ -11,7 +11,7 @@ import {
   makeHtmlCustomPanel,
   renderExamplePanel
 } from '../../example-panels';
-import type {ScientificFlowTraceResult} from '@luma.gl/experimental';
+import type {ScientificFlowTraceResult} from '@luma.gl/graph/experimental/simulation';
 import mainSource from './main.ts?raw';
 import fieldsSource from './fields.ts?raw';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';

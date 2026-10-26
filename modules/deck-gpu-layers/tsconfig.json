@@ -19,9 +19,6 @@
       "path": "../engine"
     },
     {
-      "path": "../experimental"
-    },
-    {
       "path": "../gpgpu"
     },
     {
@@ -29,6 +26,9 @@
     },
     {
       "path": "../graph"
+    },
+    {
+      "path": "../anari"
     }
   ]
 }

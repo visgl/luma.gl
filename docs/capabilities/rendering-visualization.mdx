@@ -79,7 +79,7 @@ Return to the [capabilities overview](/docs/capabilities) for GPU data and compu
 | HDR bloom | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Apply supported floating-point highlight extraction and multiresolution blur. |
 | Photographic lens effects | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Add optional chromatic ghosts, radial halos, aperture starbursts, and compatible lens-dirt masks. |
 | Fused WebGPU bloom | Available | WebGPU | `@luma.gl/effects` | Fuse compatible bloom downsampling and filtering work while retaining a portable render-pass fallback. |
-| Fourier aperture convolution | Experimental | WebGPU | `@luma.gl/experimental` | Convolve compatible highlight fields against a supplied aperture through independent RGB GPU Fourier transforms. |
+| Fourier aperture convolution | Experimental | WebGPU | `@luma.gl/graph/gpu-effects` | Convolve compatible highlight fields against a supplied aperture through independent RGB GPU Fourier transforms. |
 | Color and image filters | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Adjust brightness, contrast, hue, saturation, noise, sepia, and vignette. |
 | Depth-of-field passes | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Apply supported depth-aware focus and image-space blur. |
 | Temporal antialiasing | Available | WebGPU | `@luma.gl/effects` | Reproject compatible camera, color, and depth history with jitter and neighborhood-clamped accumulation. |
@@ -90,14 +90,14 @@ Return to the [capabilities overview](/docs/capabilities) for GPU data and compu
 | Adaptive exposure | Available | WebGPU | `@luma.gl/effects` | Reduce scene luminance on the GPU and update compatible HDR exposure. |
 | Volumetric lighting and fog | Available | WebGPU | `@luma.gl/effects` | Render supported fog, participating media, and clustered light scattering. |
 | Depth-aware outlines | Available | WebGPU | `@luma.gl/effects` | Highlight compatible object boundaries using auxiliary scene attachments. |
-| Deferred G-buffer rendering | Experimental | WebGPU | `@luma.gl/experimental` | Compose supported surface attachments and deferred lighting passes. |
-| Compute-clustered lights | Experimental | WebGPU | `@luma.gl/experimental` | Partition dense point-light workloads into compatible screen-space clusters. |
-| Cascaded directional shadows | Experimental | WebGPU | `@luma.gl/experimental` | Render supported cascaded shadow maps for directional lights. |
-| Spot and point shadows | Experimental | WebGPU | `@luma.gl/experimental` | Render supported spot shadows and six-face omnidirectional point shadows. |
-| Soft and contact shadows | Experimental | WebGPU | `@luma.gl/experimental` | Apply supported blocker search, filtering, and screen-space contact shadows. |
-| Exact order-independent transparency | Experimental | WebGPU | `@luma.gl/experimental` | Use a bounded A-buffer on devices with sufficient fragment storage resources. |
-| Weighted-blended transparency | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental` | Approximate order-independent transparency when required float attachments are blendable. |
-| Spectral optical caustics | Experimental | WebGPU | `@luma.gl/experimental` | Compute supported wavelength-separated lighting through a bounded refractor. |
+| Deferred G-buffer rendering | Experimental | WebGPU | `@luma.gl/anari` | Compose supported surface attachments and deferred lighting passes. |
+| Compute-clustered lights | Experimental | WebGPU | `@luma.gl/anari` | Partition dense point-light workloads into compatible screen-space clusters. |
+| Cascaded directional shadows | Experimental | WebGPU | `@luma.gl/anari` | Render supported cascaded shadow maps for directional lights. |
+| Spot and point shadows | Experimental | WebGPU | `@luma.gl/anari` | Render supported spot shadows and six-face omnidirectional point shadows. |
+| Soft and contact shadows | Experimental | WebGPU | `@luma.gl/anari` | Apply supported blocker search, filtering, and screen-space contact shadows. |
+| Exact order-independent transparency | Experimental | WebGPU | `@luma.gl/anari` | Use a bounded A-buffer on devices with sufficient fragment storage resources. |
+| Weighted-blended transparency | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Approximate order-independent transparency when required float attachments are blendable. |
+| Spectral optical caustics | Experimental | WebGPU | `@luma.gl/anari` | Compute supported wavelength-separated lighting through a bounded refractor. |
 
 Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 [Illumination Lab](/examples/experimental/deferred-rendering),
@@ -127,7 +127,7 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Authored UV transforms | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported texture offset, rotation, and scale semantics. |
 | Authored normals and tangents | Evolving | WebGPU + WebGL2 | `@luma.gl/gltf` | Preserve supported vertex attributes; complete renderer-to-renderer fidelity varies. |
 | Punctual-light parsing | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Parse supported authored directional, point, and spot light definitions. |
-| Generated image-based lighting | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental` | Generate compatible GGX-prefiltered specular maps, diffuse irradiance, and a split-sum BRDF lookup texture. |
+| Generated image-based lighting | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Generate compatible GGX-prefiltered specular maps, diffuse irradiance, and a split-sum BRDF lookup texture. |
 | Shared animation clips | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Play, blend, crossfade, loop, and interpolate compatible imported tracks. |
 | Typed animation pointers | Available | WebGPU + WebGL2 | `@luma.gl/gltf` | Animate supported `KHR_animation_pointer` transforms, morph weights, visibility, materials, UVs, cameras, and lights. |
 | Existing joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse established skin shaders and automatically bind mesh-local glTF joint palettes. |
@@ -159,7 +159,7 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 The ownership boundaries are intentional: `@loaders.gl/gltf` owns containers, asset decoding,
 accessor postprocessing, and GLB encoding; `@luma.gl/gltf` interprets the resulting assets,
 `@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,
-`@luma.gl/experimental` explores higher-level rendering, and `@luma.gl/anari` orchestrates
+`@luma.gl/anari` owns the higher-level scene renderers and orchestrates
 retained scene objects. Reuse each capability at its existing layer rather than creating
 parallel implementations.
 
@@ -195,18 +195,18 @@ Explore the [ANARI Playground](/examples/anari/scenes), or read about
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| WebGPU software ray tracing | Experimental | WebGPU | `@luma.gl/experimental` | Trace supported retained scene geometry through caller-owned GPU command graphs without hardware ray-tracing extensions. |
+| WebGPU software ray tracing | Experimental | WebGPU | `@luma.gl/anari` | Trace supported retained scene geometry through caller-owned GPU command graphs without hardware ray-tracing extensions. |
 | Retained ANARI ray tracing | Experimental | WebGPU | `@luma.gl/anari` | Select the `raytrace` renderer for compatible retained cameras, analytic spheres, meshes, and direct lights. |
-| Morton-sorted scene acceleration | Experimental | WebGPU | `@luma.gl/experimental` | Build GPU Morton-sorted top-level acceleration structures (TLAS) with bounding-volume hierarchies (BVH) over compatible objects and instances. |
-| Transform-aware acceleration refits | Experimental | WebGPU | `@luma.gl/experimental` | Reuse retained leaf permutations and refit compatible scene hierarchies when only instance transforms change. |
-| Triangle-level mesh acceleration | Experimental | WebGPU | `@luma.gl/experimental` | Build and reuse GPU Morton-sorted bottom-level acceleration structures (BLAS) over supported mesh triangles. |
-| Nearest-hit and shadow traversal | Experimental | WebGPU | `@luma.gl/experimental` | Traverse the scene hierarchy for primary intersections and bounded early-exit direct-light shadow rays. |
+| Morton-sorted scene acceleration | Experimental | WebGPU | `@luma.gl/anari` | Build GPU Morton-sorted top-level acceleration structures (TLAS) with bounding-volume hierarchies (BVH) over compatible objects and instances. |
+| Transform-aware acceleration refits | Experimental | WebGPU | `@luma.gl/anari` | Reuse retained leaf permutations and refit compatible scene hierarchies when only instance transforms change. |
+| Triangle-level mesh acceleration | Experimental | WebGPU | `@luma.gl/anari` | Build and reuse GPU Morton-sorted bottom-level acceleration structures (BLAS) over supported mesh triangles. |
+| Nearest-hit and shadow traversal | Experimental | WebGPU | `@luma.gl/anari` | Traverse the scene hierarchy for primary intersections and bounded early-exit direct-light shadow rays. |
 | Progressive ray accumulation | Experimental | WebGPU | `@luma.gl/anari` | Accumulate compatible direct-light samples across unchanged frames; this does not imply multi-bounce transport. |
 | Adaptive ray-tracing resolution | Experimental | WebGPU | `@luma.gl/anari` | Adjust internal resolution, sampled-pixel phases, and rotating shadow work toward an explicit frame budget. |
 | Ray-traced temporal reprojection | Experimental | WebGPU | `@luma.gl/anari` | Reuse compatible retained history and reject invalid camera, depth, normal, or scene changes. |
 | HDR ray-tracing presentation | Experimental | WebGPU | `@luma.gl/anari` | Resolve and upsample supported floating-point ray-traced output to compatible presentation targets. |
-| Advanced acceleration topology | Opportunity | WebGPU | `@luma.gl/experimental` | Extend existing Morton-sorted TLAS/BLAS hierarchies with SAH/Karras topology and richer traversal diagnostics. |
-| Multi-bounce path tracing | Opportunity | WebGPU | `@luma.gl/experimental` | Extend existing direct-light ray tracing with indirect transport, physically based bounces, and denoising. |
+| Advanced acceleration topology | Opportunity | WebGPU | `@luma.gl/anari` | Extend existing Morton-sorted TLAS/BLAS hierarchies with SAH/Karras topology and richer traversal diagnostics. |
+| Multi-bounce path tracing | Opportunity | WebGPU | `@luma.gl/anari` | Extend existing direct-light ray tracing with indirect transport, physically based bounces, and denoising. |
 | Ray-traced animated materials | Opportunity | WebGPU | `@luma.gl/anari` | Extend supported ray tracing toward textured PBR, transmission, skeletal deformation, and animated morph targets. |
 
 Read the [ANARI ray-tracing renderer](/docs/api-reference/scene/anari-rendering) and the
@@ -252,16 +252,16 @@ review the supported contracts in the [`@luma.gl/splats` reference](/docs/api-re
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| Three-dimensional fire and smoke | Experimental | WebGPU | `@luma.gl/experimental` | Evolve three-dimensional fire velocity, pressure, fuel, heat, smoke, and solid obstacles. |
-| Spectral ocean simulation | Experimental | WebGPU | `@luma.gl/experimental` | Generate GPU Fourier-displaced waves, normals, and compression-derived whitecaps. |
-| Two-dimensional MLS-MPM liquids | Experimental | WebGPU | `@luma.gl/experimental` | Simulate supported two-dimensional MLS-MPM particle and grid transfers. |
-| Full three-dimensional particle liquids | Opportunity | WebGPU | `@luma.gl/experimental` | The existing liquid solver is two-dimensional rather than a general three-dimensional fluid system. |
-| Cloth and soft-body simulation | Opportunity | WebGPU | `@luma.gl/experimental` | Deformable-body simulation is not part of the current framework. |
-| WebXR frame integration | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental` | Drive compatible immersive frames from WebXR session scheduling. |
-| Immersive AR and VR | Experimental | WebGPU + WebGL2 | `@luma.gl/experimental` | Render supported per-eye immersive AR and VR views with explicit viewports. |
-| Native WebGPU XR layers | Experimental | WebGPU | `@luma.gl/experimental` | Use projection layers only when the browser, XR session, and adapter support them. |
-| Raw AR camera textures | Experimental | WebGL2 | `@luma.gl/experimental` | Bind compatible raw-camera access through the WebGL immersive path. |
-| Advanced XR spatial features | Opportunity | WebGPU + WebGL2 | `@luma.gl/experimental` | Hit testing, anchors, hand tracking, depth sensing, and WebGPU camera textures remain absent. |
+| Three-dimensional fire and smoke | Experimental | WebGPU | `@luma.gl/graph/gpu-simulation` | Evolve three-dimensional fire velocity, pressure, fuel, heat, smoke, and solid obstacles. |
+| Spectral ocean simulation | Experimental | WebGPU | `@luma.gl/graph/gpu-simulation` | Generate GPU Fourier-displaced waves, normals, and compression-derived whitecaps. |
+| Two-dimensional MLS-MPM liquids | Experimental | WebGPU | `@luma.gl/graph/experimental/simulation` | Simulate supported two-dimensional MLS-MPM particle and grid transfers. |
+| Full three-dimensional particle liquids | Opportunity | WebGPU | `@luma.gl/graph/experimental/simulation` | The existing liquid solver is two-dimensional rather than a general three-dimensional fluid system. |
+| Cloth and soft-body simulation | Opportunity | WebGPU | `@luma.gl/graph/experimental/simulation` | Deformable-body simulation is not part of the current framework. |
+| WebXR frame integration | Experimental | WebGPU + WebGL2 | `@luma.gl/engine/experimental/webxr` | Drive compatible immersive frames from WebXR session scheduling. |
+| Immersive AR and VR | Experimental | WebGPU + WebGL2 | `@luma.gl/engine/experimental/webxr` | Render supported per-eye immersive AR and VR views with explicit viewports. |
+| Native WebGPU XR layers | Experimental | WebGPU | `@luma.gl/anari` | Use projection layers only when the browser, XR session, and adapter support them. |
+| Raw AR camera textures | Experimental | WebGL2 | `@luma.gl/engine/experimental/webxr` | Bind compatible raw-camera access through the WebGL immersive path. |
+| Advanced XR spatial features | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/experimental/webxr` | Hit testing, anchors, hand tracking, depth sensing, and WebGPU camera textures remain absent. |
 
 Try [Volumetric Fire Forge](/examples/experimental/volumetric-fire-forge),
 [Tempest Ocean](/examples/showcase/tempest-ocean), and

@@ -60,7 +60,6 @@
     "@luma.gl/core": "10.0.0-alpha.3",
     "@luma.gl/effects": "10.0.0-alpha.3",
     "@luma.gl/engine": "10.0.0-alpha.3",
-    "@luma.gl/experimental": "10.0.0-alpha.3",
     "@luma.gl/gltf": "10.0.0-alpha.3",
     "@luma.gl/shadertools": "10.0.0-alpha.3"
   },
@@ -70,6 +69,7 @@
     }
   },
   "dependencies": {
+    "@luma.gl/graph": "10.0.0-alpha.4",
     "@math.gl/core": "5.0.0-alpha.19",
     "@math.gl/geometry": "~5.0.0-alpha.19",
     "zod": "^4.4.3"

@@ -10,7 +10,7 @@ import type {
   PointShadowLight,
   ShadowRenderView,
   SpotShadowLight
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import type {Matrix4, NumberArray3} from '@math.gl/core';
 

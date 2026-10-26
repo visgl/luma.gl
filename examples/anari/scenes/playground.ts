@@ -9,7 +9,7 @@ import {
   SelectionOutline,
   getRayTracingQualityPreset,
   getRayTracingSceneCapabilities
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import {ChartLabels} from './chart-labels';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';

@@ -146,7 +146,7 @@ that invalidate scene velocity.
 `ambientLightingTexture` containing the isolated linear ambient contribution. The ambient-only
 path preserves direct lighting and emissive color instead of darkening the entire resolved image.
 Deferred applications can create that texture with
-`createDeferredAmbientLightingCompositeShaderPass()` from `@luma.gl/experimental`.
+`createDeferredAmbientLightingCompositeShaderPass()` from `@luma.gl/graph/experimental`.
 
 ## Indirect Lighting: Ambient Occlusion, SSGI, and SSR
 
@@ -270,7 +270,7 @@ import {
   createTAACompositeShaderPass,
   toneMapping
 } from '@luma.gl/effects';
-import {createClusteredDeferredLightingCompositeShaderPass} from '@luma.gl/experimental';
+import {createClusteredDeferredLightingCompositeShaderPass} from '@luma.gl/anari';
 
 const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [

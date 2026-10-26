@@ -200,7 +200,7 @@ application outcomes to the operations that compose them.
 | Capability | What it enables | Public surface |
 | --- | --- | --- |
 | **Declarative graph** | One schedule for GPU preparation, analysis, indirect drawing, and picking | `GPUCommandGraph` and graph contributors |
-| **Composable primitives** | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback | `GPU*` contributors from `@luma.gl/experimental` |
+| **Composable primitives** | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback | `GPU*` contributors from `@luma.gl/graph/experimental` |
 | **GPU-driven output** | Bounded counts, compacted IDs, and indirect commands without source-data readback | `GPUScan`, `GPUCompaction`, `DrawCommandBuffer` |
 | **Batch-preserving execution** | Ordered `GPUVector` chunks without silently repacking a dataset | `GraphVectorView` and chunk-aware contributors |
 | **Conditional execution** | CPU-known work can be omitted and GPU-known empty work can resolve through indirect dispatch | CPU predicates and GPU indirect conditions |

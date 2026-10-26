@@ -38,7 +38,7 @@ example. Core material features are documented alongside advanced surface and vo
 | Layered and directional response | [Clearcoat](./features/clearcoat.mdx), [sheen](./features/sheen.mdx), [anisotropy](./features/anisotropy.mdx), [iridescence](./features/iridescence.mdx) |
 | Transmission and volumes | [Transmission](./features/transmission.mdx), [thickness and attenuation](./features/volume.mdx), [dispersion](./features/dispersion.mdx) |
 | Translucency and scattering | [Diffuse transmission](./features/diffuse-transmission.mdx), [volume scattering](./features/volume-scattering.mdx), [thin-wall scattering](./features/thin-wall-scattering.mdx) |
-| Texture inputs and lighting | [Coordinates and transforms](./features/texture-coordinates.mdx), [lightmaps](./features/lightmaps.mdx), [environment lighting](/docs/api-reference/experimental/pbr-environment) |
+| Texture inputs and lighting | [Coordinates and transforms](./features/texture-coordinates.mdx), [lightmaps](./features/lightmaps.mdx), [environment lighting](/docs/api-reference/scene/pbr-environment) |
 
 See [glTF material conversion](/docs/api-reference/gltf/gltf-materials) for importer contracts
 and [ANARI materials](/docs/api-reference/scene/anari-materials-and-lights) for retained parameters.

@@ -49,7 +49,7 @@ draws. Its control buffers remain caller-owned, so applications can change polic
 same compiled graph without rebuilding CPU span lists or submitting work implicitly.
 
 Generic hierarchy layout, graph traversal, visibility, scene storage, renderer resource groups,
-and command scheduling remain available from `@luma.gl/experimental`.
+and command scheduling remain available from `@luma.gl/graph/experimental`.
 
 ### Trace picking preserves canonical identity
 

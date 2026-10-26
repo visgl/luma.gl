@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {RayTracingSceneRenderer, type RayTracingScenePrimitive} from '@luma.gl/experimental';
+import {RayTracingSceneRenderer, type RayTracingScenePrimitive} from './renderers';
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import {ANARISceneAdapter} from './anari-scene-adapter';

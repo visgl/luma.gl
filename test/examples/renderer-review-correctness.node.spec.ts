@@ -16,7 +16,7 @@ describe('renderer reference frame submission', () => {
   for (const pageName of RENDERER_REFERENCE_PAGES) {
     test(`${pageName} submits encoded work before destroying borrowed resources`, () => {
       const page = readFileSync(
-        path.join(process.cwd(), 'docs/api-reference/experimental', pageName),
+        path.join(process.cwd(), 'docs/api-reference/scene', pageName),
         'utf8'
       );
       const snippets = [...page.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)].map(

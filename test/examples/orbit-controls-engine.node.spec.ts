@@ -42,9 +42,9 @@ describe('engine-owned orbit camera controls', () => {
     expect(implementationSource).toContain('export type OrbitControlsProps');
   });
 
-  test('retains the previous experimental import as an engine compatibility alias', () => {
+  test('exposes the experimental controls subpath as an engine alias', () => {
     const compatibilitySource = readRepositoryFile(
-      'modules/experimental/src/controls/orbit-controls.ts'
+      'modules/engine/src/experimental/controls/orbit-controls.ts'
     );
 
     expect(compatibilitySource).toContain("export {OrbitControls} from '@luma.gl/engine'");

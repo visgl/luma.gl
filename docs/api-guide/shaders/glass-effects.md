@@ -34,8 +34,8 @@ GLSL shader modules, while transparency renderers remain responsible for composi
 | Focused raster caustics | Projects bounded colored glass-lens contributions onto nearby reflective receivers. | Active switches concentrate moving red and green light onto adjacent links and servers. |
 | Fault-driven distortion | Modulates refraction and narrow internal filaments only on warm fault-tinted glass. | Congested and failed switches acquire subtle animated optical instability. |
 
-[`glassMaterial`](/docs/api-reference/experimental/glass-material) provides the transmissive
-surface model. [`reflectiveMaterial`](/docs/api-reference/experimental/reflective-material)
+[`glassMaterial`](/docs/api-reference/engine/experimental/glass-material) provides the transmissive
+surface model. [`reflectiveMaterial`](/docs/api-reference/engine/experimental/reflective-material)
 provides a lower-cost glossy treatment for links and other non-glass surfaces. Both depend on the
 shared `opticalLighting` shader module.
 
@@ -58,7 +58,7 @@ color from adjacent metallic server surfaces.
 
 ```ts
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {glassMaterial, glassMaterialPlugin} from '@luma.gl/experimental';
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
 
 const shaderInputs = new ShaderInputs({glassMaterial});
 
@@ -157,7 +157,7 @@ RGB channels contain the encoded world normal and whose alpha channel contains f
 The opaque scene depth must remain available as a sampleable depth texture.
 
 ```ts
-import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/experimental';
+import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/engine/experimental/materials';
 
 const shaderInputs = new ShaderInputs({glassMaterial, glassTransmission});
 
@@ -208,11 +208,7 @@ the receiving material, update nearby lens colors from actual scene lights, and 
 RGB contribution to the receiver's fragment color.
 
 ```ts
-import {
-  MAX_OPTICAL_CAUSTIC_LENSES,
-  opticalCaustics,
-  opticalCausticsPlugin
-} from '@luma.gl/experimental';
+import {MAX_OPTICAL_CAUSTIC_LENSES, opticalCaustics, opticalCausticsPlugin} from '@luma.gl/engine/experimental/materials';
 
 const shaderInputs = new ShaderInputs({reflectiveMaterial, opticalCaustics});
 

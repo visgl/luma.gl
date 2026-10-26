@@ -191,7 +191,7 @@ const renderer = anariDevice.newRenderer('deferred', {
 });
 ```
 
-The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
+The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/graph/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
 
 The compact G-buffer runs within the default WebGPU CORE limit of 32 color-attachment bytes per
 sample. Its four targets retain HDR scene color (`rgba16float`), normal and roughness (`rgba8unorm`),
@@ -223,7 +223,7 @@ frame.setParameter('renderer', renderer).commitParameters();
 ```
 
 The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from
-`@luma.gl/experimental`. Its WebGPU compute graph derives world-space bounds for transformed
+`@luma.gl/graph/experimental`. Its WebGPU compute graph derives world-space bounds for transformed
 analytic spheres and mesh instances, Morton-sorts active object/instance leaves into an explicit
 retained permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that
 hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-only animation gathers
@@ -467,7 +467,7 @@ const glass = anariDevice.newMaterial('physicallyBased', {
 
 The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively
 resolved. Renderer parameters can also receive the caller-owned
-[prepared PBR lighting environment](/docs/api-reference/experimental/pbr-environment) for
+[prepared PBR lighting environment](/docs/api-reference/scene/pbr-environment) for
 roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.

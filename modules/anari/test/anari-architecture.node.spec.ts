@@ -1,7 +1,11 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
 import {readdirSync, readFileSync} from 'node:fs';
 import {expect, it} from 'vitest';
 
-const EXPERIMENTAL_RENDERING_SYMBOLS = new Set([
+const ANARI_RENDERING_SYMBOLS = new Set([
   'SceneAlphaMode',
   'SceneCamera',
   'SceneEnvironment',
@@ -23,7 +27,7 @@ const EXPERIMENTAL_RENDERING_SYMBOLS = new Set([
   'supportsDeferredScene'
 ]);
 
-it('ANARI remains a declarative facade over shared rendering implementations', () => {
+it('ANARI owns rendering implementations behind its declarative facade', () => {
   const sourceDirectory = new URL('../src/', import.meta.url);
   const sourceFiles = readdirSync(sourceDirectory).filter(fileName => fileName.endsWith('.ts'));
   const packageManifest = JSON.parse(
@@ -48,7 +52,7 @@ it('ANARI remains a declarative facade over shared rendering implementations', (
     ).toBe(false);
     expect(
       getNamedImports(source, '@luma.gl/engine').filter(symbol =>
-        EXPERIMENTAL_RENDERING_SYMBOLS.has(symbol)
+        ANARI_RENDERING_SYMBOLS.has(symbol)
       ),
       `${fileName} does not import experimental scene rendering APIs from the stable engine`
     ).toEqual([]);
@@ -71,34 +75,28 @@ it('ANARI remains a declarative facade over shared rendering implementations', (
     'material translation uses the canonical shadertools PBR implementation'
   ).toBe(true);
   expect(
-    Boolean(getNamedImports(runtimeSource, '@luma.gl/experimental').includes('SceneRenderer')),
-    'forward rendering belongs to the shared experimental renderer'
+    Boolean(getNamedImports(runtimeSource, './renderers').includes('SceneRenderer')),
+    'forward rendering belongs to the ANARI-owned renderer'
+  ).toBe(true);
+  expect(
+    Boolean(getNamedImports(runtimeSource, './renderers').includes('DeferredSceneRenderer')),
+    'deferred rendering belongs to the ANARI-owned renderer'
   ).toBe(true);
   expect(
     Boolean(
-      getNamedImports(runtimeSource, '@luma.gl/experimental').includes('DeferredSceneRenderer')
+      getNamedImports(rayTracingRuntimeSource, './renderers').includes('RayTracingSceneRenderer')
     ),
-    'deferred rendering belongs to the shared experimental renderer'
+    'ray tracing belongs to the ANARI-owned renderer'
   ).toBe(true);
   expect(
     Boolean(
-      getNamedImports(rayTracingRuntimeSource, '@luma.gl/experimental').includes(
-        'RayTracingSceneRenderer'
-      )
+      getNamedImports(rayTracingRuntimeSource, './renderers').includes('RayTracingScenePrimitive')
     ),
-    'ray tracing belongs to the shared experimental renderer'
+    'analytic ray tracing primitives belong to the ANARI-owned scene contract'
   ).toBe(true);
   expect(
-    Boolean(
-      getNamedImports(rayTracingRuntimeSource, '@luma.gl/experimental').includes(
-        'RayTracingScenePrimitive'
-      )
-    ),
-    'analytic ray tracing primitives belong to the shared experimental scene contract'
-  ).toBe(true);
-  expect(
-    getNamedImports(adapterSource, '@luma.gl/experimental').sort(),
-    'scene descriptor contracts are owned by the same experimental rendering package'
+    getNamedImports(adapterSource, './renderers').sort(),
+    'scene descriptor contracts are owned by the ANARI rendering package'
   ).toEqual(['SceneCamera', 'SceneMaterial', 'SceneRenderOptions', 'SceneSurface']);
 
   const enginePublicSource = readFileSync(
@@ -124,10 +122,10 @@ it('ANARI remains a declarative facade over shared rendering implementations', (
   expect(
     Boolean(
       '@luma.gl/engine' in packageManifest.peerDependencies &&
-        '@luma.gl/experimental' in packageManifest.peerDependencies &&
+        !('@luma.gl/experimental' in packageManifest.peerDependencies) &&
         '@luma.gl/shadertools' in packageManifest.peerDependencies
     ),
-    'shared implementation owners are explicit peer dependencies'
+    'stable implementation owners remain explicit peer dependencies'
   ).toBe(true);
   expect(
     Boolean('./schemas' in packageManifest.exports),
@@ -143,7 +141,12 @@ it('ANARI remains a declarative facade over shared rendering implementations', (
     Boolean(publicSource.includes('./schemas')),
     'core imports do not eagerly load schemas'
   ).toBe(false);
-  void 0;
+  expect(
+    collectTypeScriptSources(sourceDirectory).filter(source =>
+      /['"]@luma\.gl\/experimental(?:\/[^'"]*)?['"]/.test(readFileSync(source, 'utf8'))
+    ),
+    'public ANARI implementations never import the private Experimental package'
+  ).toEqual([]);
 });
 
 function getNamedImports(source: string, moduleName: string): string[] {

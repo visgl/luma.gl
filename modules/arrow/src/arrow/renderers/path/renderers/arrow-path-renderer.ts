@@ -10,7 +10,7 @@ import {
   type PathAttributeModelProps,
   type PathStorageModelProps,
   type PathTripsStorageModelProps
-} from '@luma.gl/experimental/models';
+} from '@luma.gl/graph/experimental/models';
 import {
   makePathAttributeModelProps,
   convertArrowPathToGPUVectors,

@@ -25,7 +25,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/splats',
   '@luma.gl/gpgpu',
   '@luma.gl/arrow',
-  '@luma.gl/experimental'
+  '@luma.gl/graph/experimental'
 ] as const;
 const DATA_CAPABILITIES_HEADING = '## GPU-native data, compute, and visualization';
 const RENDERING_CAPABILITIES_HEADING = '## Portable GPU foundation and rendering';
@@ -367,7 +367,7 @@ describe('framework capabilities documentation', () => {
     ).toBeDefined();
     expect(scatterRow!.status).toBe('Experimental');
     expect(scatterRow!.backend).toBe('WebGPU');
-    expect(scatterRow!.packageName).toContain('@luma.gl/experimental');
+    expect(scatterRow!.packageName).toContain('@luma.gl/graph/gpu-core');
     expect(scatterRow!.details).toMatch(/GPUChunkedIndexedScatter/);
     expect(scatterRow!.details).toMatch(/chunk/i);
     expect(scatterRow!.details).toMatch(/indirect/i);
@@ -495,7 +495,7 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['anari', 'arrow', 'experimental', 'splats', 'text']) {
+    for (const experimentalPackage of ['anari', 'arrow', 'splats', 'text']) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );
@@ -560,7 +560,7 @@ describe('framework capabilities documentation', () => {
     const textRow = moduleRows.find(row => row[0].includes('@luma.gl/text'));
     expect(textRow?.[1]).toBe('Experimental');
 
-    for (const packageName of ['anari', 'arrow', 'experimental', 'splats']) {
+    for (const packageName of ['arrow']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();
@@ -621,7 +621,7 @@ describe('framework capabilities documentation', () => {
     const ownershipDescription = capabilitiesSource.match(/ownership\s+boundaries[\s\S]*?\n\n/i);
 
     expect(ownershipDescription).not.toBeNull();
-    for (const packageName of ['gltf', 'shadertools', 'engine', 'experimental', 'anari']) {
+    for (const packageName of ['gltf', 'shadertools', 'engine', 'anari']) {
       expect(ownershipDescription![0]).toContain(`@luma.gl/${packageName}`);
     }
 

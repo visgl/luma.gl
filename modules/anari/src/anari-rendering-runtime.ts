@@ -8,7 +8,7 @@ import {
   createCameraReprojectionTAACompositeShaderPass
 } from '@luma.gl/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {DeferredSceneRenderer, SceneRenderer, type SceneRenderOptions} from '@luma.gl/experimental';
+import {DeferredSceneRenderer, SceneRenderer, type SceneRenderOptions} from './renderers';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';

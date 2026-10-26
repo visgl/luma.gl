@@ -66,7 +66,7 @@ The advanced-effects path has three separate responsibilities:
 3. The application presents the final texture, or passes it to another explicit workflow such as
    transparency capture and resolve.
 
-On WebGPU, experimental [`GBuffer`](/docs/api-reference/experimental/g-buffer) packages the common
+On WebGPU, experimental [`GBuffer`](/docs/api-reference/scene/g-buffer) packages the common
 surface attachments without owning scene traversal or material shading. Multiple render targets
 (MRT) means one fragment shader writes several color attachments in the same render pass:
 
@@ -90,7 +90,7 @@ import {
   createTAACompositeShaderPass,
   toneMapping
 } from '@luma.gl/effects';
-import {GBuffer} from '@luma.gl/experimental';
+import {GBuffer} from '@luma.gl/anari';
 
 const gBuffer = new GBuffer(device, {width, height});
 
@@ -128,7 +128,7 @@ effects.renderToScreen({
 ```
 
 `GBuffer` is intentionally a target and binding contract, not a scene renderer. Experimental
-[`deferredLighting`](/docs/api-reference/experimental/deferred-lighting) consumes two named material
+[`deferredLighting`](/docs/api-reference/scene/deferred-lighting) consumes two named material
 extras plus depth and normal-roughness, reconstructs view position, and writes a Cook-Torrance
 lighting result into the same ordered color chain:
 
@@ -156,7 +156,7 @@ isolate ambient light should request the physically accurate ambient-only mode i
 
 ```ts
 import {createGTAOCompositeShaderPass} from '@luma.gl/effects';
-import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/experimental';
+import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/anari';
 
 const ambientRenderer = new ShaderPassRenderer(device, {
   shaderPasses: [createDeferredAmbientLightingCompositeShaderPass()]
@@ -263,7 +263,7 @@ into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and li
 Provide `inverseViewProjectionMatrix` and `previousViewProjectionMatrix` to
 `clusteredVolumetricTemporal`, plus `inverseProjectionMatrix` to both the temporal and linear-depth
 history-copy stages. See
-the [`ClusteredLightGrid` usage guide](/docs/api-reference/experimental/clustered-lighting) for the
+the [`ClusteredLightGrid` usage guide](/docs/api-reference/scene/clustered-lighting) for the
 buffer setup and encode sequence.
 
 SSAO, GTAO, screen-space global illumination, reflections, and clustered volumetric lighting
@@ -326,7 +326,7 @@ The default configuration allocates neither history nor lens artifacts. Screen-s
 costs eight samples per ray, while each ghost costs one sample or three when chromatic aberration
 is enabled.
 
-For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/experimental` provides a
+For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/graph/experimental` provides a
 separate WebGPU implementation. It accepts generated or measured point-spread functions, including
 independent red, green, and blue kernels; packs those channels into one forward and one inverse FFT
 schedule; and uses zero-padded guard bands to prevent opposite-edge wraparound. Optional lens
@@ -383,8 +383,8 @@ screen locations.
 
 ### Transparency composition
 
-Opaque geometry should populate the G-buffer first. [`WBOITRenderer`](/docs/api-reference/experimental/wboit-renderer)
-and [`ABufferRenderer`](/docs/api-reference/experimental/a-buffer-renderer) keep transparent geometry
+Opaque geometry should populate the G-buffer first. [`WBOITRenderer`](/docs/api-reference/scene/wboit-renderer)
+and [`ABufferRenderer`](/docs/api-reference/scene/a-buffer-renderer) keep transparent geometry
 capture separate, then expose resolve as ordinary `CompositeShaderPass` steps. Put the chosen
 resolve composite pass into the same ordered `shaderPasses` array so transparency participates in later
 effects without creating a second postprocessing system.

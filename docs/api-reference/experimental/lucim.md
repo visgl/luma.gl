@@ -54,7 +54,7 @@ The application creates and imports every persistent input and output. LuCIM con
 the nodes and any bounded transient scratch:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/experimental';
+import {GPUCommandGraph} from '@luma.gl/graph/experimental/simulation';
 import {
   GPUVolumeConnectedComponents,
   GPUVolumeDilation,

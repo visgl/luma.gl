@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture} from '@luma.gl/core';
-import {DepthTextureCopy} from '@luma.gl/experimental';
+import {DepthTextureCopy} from '@luma.gl/anari';
 import {ANARIDevice} from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it, vi} from 'vitest';

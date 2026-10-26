@@ -170,7 +170,7 @@ luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standar
 
 The debug module has been removed. Debug functionality is now built-in (and dynamically loaded when needed) so there is no longer a need to import a separate debug module.
 
-**`@luma.gl/experimental`**
+**`@luma.gl/graph/experimental`**
 
 - Scene graph exports (`ModelNode`, `GroupNode`, `ScenegraphNode`) has been moved into `@luma.gl/engine`.
 - glTF exports have been moved to `@luma.gl/gltf`.

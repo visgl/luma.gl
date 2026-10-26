@@ -3,7 +3,7 @@
 `ScientificFlowTracer` traces explicitly seeded particles through regular 2D
 vector fields on WebGPU. It adds adaptive embedded Runge–Kutta–Fehlberg 4(5)
 integration and persistent termination states alongside the visualization-oriented
-`ScientificFlowGraph`. Import it from `@luma.gl/experimental`.
+`ScientificFlowGraph`. Import it from `@luma.gl/graph/experimental`.
 
 ```typescript
 const tracer = new ScientificFlowTracer(device, {
@@ -110,7 +110,7 @@ samples, domain exit, lifetime and numerical/tolerance failures. Run the opt-in
 accuracy/cost benchmark with:
 
 ```sh
-LUMA_TEST_BROWSER_BENCHMARKS=true yarn test-headless --no-coverage --silent=false modules/experimental/test/simulation/scientific-flow-benchmark.spec.ts
+LUMA_TEST_BROWSER_BENCHMARKS=true yarn test-headless --no-coverage --silent=false modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts
 ```
 
 The benchmark compares 65,536 identical rotation trajectories over two seconds,

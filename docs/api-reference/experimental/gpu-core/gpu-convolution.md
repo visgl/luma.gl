@@ -31,7 +31,7 @@ passes can also be substantially cheaper than either general strategy.
 ## Usage
 
 ```ts
-import {GPUConvolution} from '@luma.gl/experimental';
+import {GPUConvolution} from '@luma.gl/graph/experimental/simulation';
 
 graph.add(new GPUConvolution({
   id: 'blur',

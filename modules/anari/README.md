@@ -150,7 +150,7 @@ frame.render();
 ```
 
 The ANARI adapter translates committed objects for the shared `RayTracingSceneRenderer` in
-`@luma.gl/experimental`. Its retained WebGPU command graphs build Morton-sorted object/instance
+`@luma.gl/graph/experimental`. Its retained WebGPU command graphs build Morton-sorted object/instance
 TLAS and per-mesh triangle BLAS hierarchies, derive tight transformed mesh bounds from BLAS roots,
 and reuse existing hierarchy topology while instances animate. General-purpose `GPUSort`,
 `GPUSegmentedSort`, `GPUBVH`, and `GPUSegmentedBVH` contributors fuse small work into single

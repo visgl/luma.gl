@@ -29,7 +29,7 @@ GPU transpose pass may cost more than it saves.
 ## Usage
 
 ```ts
-import {GPUTranspose} from '@luma.gl/experimental';
+import {GPUTranspose} from '@luma.gl/graph/experimental/simulation';
 
 graph.add(new GPUTranspose({
   id: 'transpose-points',

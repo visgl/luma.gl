@@ -4,7 +4,7 @@
 
 import {Texture, type Device, type RenderPass} from '@luma.gl/core';
 import {ClipSpace} from '@luma.gl/engine';
-import {PBREnvironmentGenerator} from '@luma.gl/experimental';
+import {PBREnvironmentGenerator} from '@luma.gl/anari';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 
 /** Captures static scene surfaces once; all capture and GGX filtering stay on the GPU. */

@@ -68,7 +68,7 @@ import {
 } from '@luma.gl/graph/gpu-dataframe';
 ```
 
-The root `@luma.gl/experimental` entry point does not export `GPUDataFrame`; applications that do
+The root `@luma.gl/graph/experimental` entry point does not export `GPUDataFrame`; applications that do
 not import `/gpu-dataframe` do not take on the dataframe facade.
 
 ## Upload Arrow data or borrow an existing table
