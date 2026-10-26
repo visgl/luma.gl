@@ -8,6 +8,7 @@ import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
 import geometrySupport from './experimental/gpu-geometry/mobile-support';
 import pointCloudSupport from './experimental/gpu-pointcloud/mobile-support';
 import pointCloudOctreeSupport from './experimental/gpu-pointcloud-octree/mobile-support';
+import windSupport from './deck/wind/mobile-support';
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
 import galacticVortexSupport from './three/galactic-vortex/mobile-support';
@@ -257,6 +258,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-columns': support78,
   'deck/gltf-interactivity': gltfInteractivitySupport,
   'deck/flow-particles': flowParticlesSupport,
+  'deck/wind': windSupport,
   'deck/arrow-path-layer': support79,
   'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,
