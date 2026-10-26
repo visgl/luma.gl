@@ -11,90 +11,114 @@ type DocumentationModule = {
   name: string;
   description: string;
   image: string;
+  reference?: string;
+  status?: string;
 };
 
-const DOCUMENTATION_MODULES: readonly DocumentationModule[] = [
-  {
-    name: 'core',
-    description: 'Portable GPU resources, shader types, and WebGPU and WebGL2 backends.',
-    image: 'tutorials/hello-cube'
-  },
-  {
-    name: 'engine',
-    description: 'Models, geometry, animation, picking, and rendering helpers.',
-    image: 'showcase/instancing'
-  },
-  {
-    name: 'shadertools',
-    description: 'Compose WGSL and GLSL with reusable shader modules and hooks.',
-    image: 'tutorials/shader-modules'
-  },
-  {
-    name: 'effects',
-    description: 'Build post-processing pipelines with composable image and lighting effects.',
-    image: 'showcase/postprocessing'
-  },
-  {
-    name: 'gpgpu',
-    description: 'Connect compute operations, GPU data, and rendering without CPU readback.',
-    image: 'experimental/gpu-parquet-constellation'
-  },
-  {
-    name: 'graph',
-    description: 'Schedule GPU work and compose graph-based processing pipelines.',
-    image: 'experimental/gpu-parquet-constellation'
-  },
-  {
-    name: 'arrow',
-    description: 'Upload Apache Arrow columns and connect tabular data to GPU workflows.',
-    image: 'arrow/arrow-points'
-  },
-  {
-    name: 'scene',
-    description: 'Describe 3D scenes and switch renderers through the ANARI scene API.',
-    image: 'deck/city-scene'
-  },
-  {
-    name: 'gltf',
-    description: 'Load glTF assets, materials, lights, skins, and animations.',
-    image: 'gltf/asset-studio'
-  },
-  {
-    name: 'splats',
-    description: 'Stream, sort, and render Gaussian splat scenes.',
-    image: 'showcase/gaussian-splats'
-  },
-  {
-    name: 'slang',
-    description: 'Compile Slang shaders with reflection and typed shader contracts.',
-    image: 'tutorials/slang-shaders'
-  },
-  {
-    name: 'text',
-    description: 'Render GPU text with font atlases and reusable layout helpers.',
-    image: 'experimental/text-space-crawl'
-  },
-  {
-    name: 'three',
-    description: 'Combine luma.gl GPU workflows with Three.js scenes and renderers.',
-    image: 'experimental/three'
-  },
-  {
-    name: 'experimental',
-    description: 'Explore emerging GPU tables, rendering models, and spatial tools.',
-    image: 'showcase/million-row-crossfilter'
-  }
-];
+type DocumentationModuleGroup = 'primary' | 'smaller' | 'exploratory';
 
-/** Links the documentation introduction to each module's API reference. */
-export function DocumentationModuleCards(): React.JSX.Element {
+const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly DocumentationModule[]> = {
+  primary: [
+    {
+      name: 'core',
+      description: 'Portable GPU resources, shader types, and WebGPU and WebGL2 backends.',
+      image: 'tutorials/hello-cube'
+    },
+    {
+      name: 'graph',
+      description: 'Schedule GPU work and compose graph-based processing pipelines.',
+      image: 'experimental/gpu-parquet-constellation'
+    },
+    {
+      name: 'engine',
+      description: 'Models, geometry, animation, picking, and rendering helpers.',
+      image: 'showcase/instancing'
+    },
+    {
+      name: 'shadertools',
+      description: 'Compose WGSL and GLSL with reusable shader modules and hooks.',
+      image: 'tutorials/shader-modules'
+    }
+  ],
+  smaller: [
+    {
+      name: 'text',
+      description: 'Render GPU text with font atlases and reusable layout helpers.',
+      image: 'experimental/text-space-crawl',
+      status: 'Experimental'
+    },
+    {
+      name: 'gpgpu',
+      description: 'GPU data primitives and immediate compute operations without CPU readback.',
+      image: 'experimental/gpu-data-analysis'
+    },
+    {
+      name: 'effects',
+      description: 'Build post-processing pipelines with composable image and lighting effects.',
+      image: 'showcase/postprocessing'
+    },
+    {
+      name: 'gltf',
+      description: 'Load glTF assets, materials, lights, skins, and animations.',
+      image: 'gltf/asset-studio'
+    },
+    {
+      name: 'arrow',
+      description: 'Upload Apache Arrow columns and connect tabular data to GPU workflows.',
+      image: 'arrow/arrow-points',
+      status: 'Private'
+    },
+    {
+      name: 'splats',
+      description: 'Stream, sort, and render Gaussian splat scenes.',
+      image: 'showcase/gaussian-splats',
+      status: 'Experimental'
+    },
+    {
+      name: 'test-utils',
+      description: 'Set up rendering tests and compare captured images.',
+      image: 'tutorials/hello-triangle'
+    }
+  ],
+  exploratory: [
+    {
+      name: 'anari',
+      description: 'Describe 3D scenes and switch renderers through an ANARI-inspired scene API.',
+      image: 'deck/city-scene',
+      reference: 'scene',
+      status: 'Exploratory'
+    },
+    {
+      name: 'slang',
+      description: 'Compile Slang shaders with reflection and typed shader contracts.',
+      image: 'tutorials/slang-shaders',
+      status: 'Exploratory'
+    },
+    {
+      name: 'three',
+      description: 'Combine luma.gl GPU workflows with Three.js scenes and renderers.',
+      image: 'experimental/three',
+      status: 'Exploratory'
+    }
+  ]
+};
+
+/** Links one package group to its API overviews. */
+export function DocumentationModuleCards({
+  group
+}: {
+  group: DocumentationModuleGroup;
+}): React.JSX.Element {
   const imageDirectory = useBaseUrl('/images/examples/');
 
   return (
-    <ul className={styles.grid} aria-label="luma.gl modules">
-      {DOCUMENTATION_MODULES.map((documentationModule) => (
+    <ul className={styles.grid} aria-label={`${group} packages`}>
+      {DOCUMENTATION_MODULES[group].map(documentationModule => (
         <li className={styles.item} key={documentationModule.name}>
-          <Link className={styles.card} to={`/docs/api-reference/${documentationModule.name}`}>
+          <Link
+            className={styles.card}
+            to={`/docs/api-reference/${documentationModule.reference ?? documentationModule.name}`}
+          >
             <img
               className={styles.image}
               src={`${imageDirectory}${documentationModule.image}.jpg`}
@@ -105,6 +129,9 @@ export function DocumentationModuleCards(): React.JSX.Element {
             />
             <div className={styles.content}>
               <h3 className={styles.name}>@luma.gl/{documentationModule.name}</h3>
+              {documentationModule.status ? (
+                <span className={styles.status}>{documentationModule.status}</span>
+              ) : null}
               <p className={styles.description}>{documentationModule.description}</p>
               <span className={styles.reference}>
                 API reference <span aria-hidden="true">→</span>

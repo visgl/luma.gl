@@ -1,0 +1,36 @@
+---
+title: Packages
+description: Explore the primary, smaller, and exploratory packages in luma.gl.
+---
+
+import {DocumentationModuleCards} from '@site/src/components/docs/module-cards';
+
+# Packages
+
+luma.gl is a collection of composable GPU packages. Start with the primary packages,
+then add the focused tools and integrations your application needs. Each card links
+to the package overview and API reference.
+
+## Primary Packages
+
+The building blocks for GPU resources, execution graphs, rendering, and shader composition.
+WebGPU and WebGL2 backends are included in core through their own entry points.
+
+<DocumentationModuleCards group="primary" />
+
+## Smaller Packages
+
+Focused packages for text, computation, effects, assets, and data integration.
+Availability and API maturity vary by package; check its overview before adopting it.
+
+<DocumentationModuleCards group="smaller" />
+
+## Exploratory modules
+
+Explore scene APIs, shader languages, and rendering integrations under active development.
+These APIs and supported workflows may change.
+
+<DocumentationModuleCards group="exploratory" />
+
+For a first application, follow [Getting Started](/docs/getting-started).
+For conceptual walkthroughs, browse the [API Guide](/docs/api-guide).
