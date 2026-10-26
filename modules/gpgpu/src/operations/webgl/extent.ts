@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Texture} from '@luma.gl/core';
-import {GPUVectorModel} from '@luma.gl/gpgpu';
+import {RenderKernel, getPlatformInfo} from '@luma.gl/gpgpu';
+import {ShaderAssembler} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
@@ -74,9 +75,25 @@ void main() {
 }
   `;
 
-  const reductionModel = new GPUVectorModel(device, {
+  const {vs, fs} = ShaderAssembler.getDefaultShaderAssembler('glsl').assembleGLSLShaderPair({
+    platformInfo: getPlatformInfo(device),
     vs: vertexShader,
     fs: fragmentShader,
+    modules: [
+      getInputModule('sourceValues', sourceValues.type, sourceValues.size, sourceValues.normalized)
+    ],
+    defines: {
+      // The GLSL assembler supports token-valued macros used by the input module.
+      // @ts-expect-error ShaderAssembler's public define type only lists numeric/boolean values.
+      TYPE: 'float',
+      SOURCE_VALUES_LEN: sourceValues.size,
+      CHANNEL_COUNT: output.length
+    }
+  });
+  const bufferLayout = [getInputBufferLayout('sourceValues', sourceValues)];
+  const reductionKernel = new RenderKernel(device, {
+    vertexSource: vs,
+    fragmentSource: fs,
     topology: 'point-list',
     parameters: {
       depthCompare: 'always',
@@ -88,21 +105,18 @@ void main() {
       blendAlphaDstFactor: 'one',
       blendAlphaOperation: 'max'
     },
-    modules: [
-      getInputModule('sourceValues', sourceValues.type, sourceValues.size, sourceValues.normalized)
-    ],
-    defines: {
-      TYPE: 'float',
-      SOURCE_VALUES_LEN: sourceValues.size.toString(),
-      CHANNEL_COUNT: output.length.toString()
-    } as any,
-    attributes: {sourceValues: sourceValues.buffer},
-    bufferLayout: [getInputBufferLayout('sourceValues', sourceValues)],
-    instanceCount: sourceValues.length,
-    vertexCount: output.length,
+    bufferLayout,
     disableWarnings: true
   });
 
+  const vertexArray = device.createVertexArray({
+    shaderLayout: reductionKernel.pipeline.shaderLayout,
+    bufferLayout
+  });
+  // WebGL vertex-array slots are reflected attribute locations, including split vectors.
+  for (const attribute of reductionKernel.pipeline.shaderLayout.attributes) {
+    vertexArray.setBuffer(attribute.location, sourceValues.buffer);
+  }
   const intermediateBuffer = bufferPool.createOrReuse(device, output.byteLength);
 
   try {
@@ -116,7 +130,11 @@ void main() {
       clearStencil: false
     });
     device.statsManager.getStats(GPGPU_OPERATION_STATS).get(TRANSFORM_RUNS).incrementCount();
-    reductionModel.draw(renderPass);
+    reductionKernel.draw(renderPass, {
+      vertexArray,
+      vertexCount: output.length,
+      instanceCount: sourceValues.length
+    });
     renderPass.end();
     const commandEncoder = device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer({
@@ -153,7 +171,8 @@ void main() {
       target
     });
   } finally {
-    reductionModel.destroy();
+    vertexArray.destroy();
+    reductionKernel.destroy();
     bufferPool.recycle(intermediateBuffer);
     framebuffer.destroy();
     resultTexture.destroy();

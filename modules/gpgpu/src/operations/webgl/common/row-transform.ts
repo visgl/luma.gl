@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
-import {BufferTransform} from '@luma.gl/gpgpu';
+import {runTransformKernel} from './transform-kernel';
 import {GLSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
@@ -100,32 +100,31 @@ set_result(result);
 }
   `;
 
-  const transform = new BufferTransform(device, {
+  const transformProps = {
     vs: vertexShader,
     shaderAssembler: GPGPU_SHADER_ASSEMBLER,
-    // @ts-expect-error defines can only be boolean?
     defines,
     modules,
     bufferLayout,
     vertexCount: 1,
     instanceCount: output.length,
     attributes: inputBuffers,
-    feedbackBufferMode: 'interleaved',
     outputs: outputModule.varyings
-  });
+  };
 
   device.statsManager.getStats(GPGPU_OPERATION_STATS).get(TRANSFORM_RUNS).incrementCount();
-  transform.run({
-    inputBuffers: inputBuffers,
-    outputBuffers: {
-      [outputModule.varyings[0]]:
-        output.offset === 0
-          ? outputBuffer
-          : {buffer: outputBuffer, byteOffset: output.offset, byteLength: output.byteLength}
-    }
-  });
-  if (placeholderBuffer) {
-    bufferPool.recycle(placeholderBuffer);
+  try {
+    runTransformKernel(device, transformProps, {
+      inputBuffers: inputBuffers,
+      outputBuffers: {
+        [outputModule.varyings[0]]:
+          output.offset === 0
+            ? outputBuffer
+            : {buffer: outputBuffer, byteOffset: output.offset, byteLength: output.byteLength}
+      }
+    });
+  } finally {
+    if (placeholderBuffer) bufferPool.recycle(placeholderBuffer);
   }
 }
 

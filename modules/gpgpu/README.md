@@ -10,8 +10,10 @@ Execution graphs, graph-based algorithms, and higher-level processing now live i
 
 ## Execution foundation
 
-The root also exports `Kernel`, `Computation`, `GPUVectorModel`, `GPUVectorGeometry`,
-`BufferTransform`, `TextureTransform`, `ShaderInputs`, `DynamicBuffer`, and `DynamicTexture`.
-These implementations depend on core and shadertools, not engine or graph. Engine retains
-compatibility re-exports; constructors and resource ownership are shared across import paths.
+The root also exports `Kernel`, `RenderKernel`, `Computation`, `GPUVectorModel`,
+`GPUVectorGeometry`, and `ShaderInputs`. These implementations depend on core and
+shadertools, not engine or graph. WebGL operations execute through RenderKernel.
+`BufferTransform` and `TextureTransform` belong to `@luma.gl/engine`, and
+`TableTransform` belongs to `@luma.gl/engine/tables`.
+Dynamic resources belong to `@luma.gl/core/dynamic`, with compatibility exports here.
 The `_internal/*` subpaths support engine implementation sharing and are not application APIs.

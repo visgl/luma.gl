@@ -6,11 +6,11 @@ Graph and gpgpu no longer depend on engine. Update these rendering integration i
 
 | APIs | Previous import | New import |
 | --- | --- | --- |
-| `GPUTableModel`, `GPUTableGeometry` and their props | `@luma.gl/graph/gpu-tables` | `@luma.gl/engine/tables` |
+| `GPUTableModel`, `GPUTableGeometry`, `TableTransform` and their associated types | `@luma.gl/graph/gpu-tables` | `@luma.gl/engine/tables` |
 | Scenegraph physics adapters, sessions, and `makePhysicsScenegraph` | `@luma.gl/graph/gpu-physics` | `@luma.gl/engine/physics` |
 | Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models` |
 
-GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. Execution primitives (`Computation`, `GPUVectorModel`, `GPUVectorGeometry`, transforms, and `ShaderInputs`) are now owned by `@luma.gl/gpgpu`; existing engine imports remain compatibility re-exports of the same implementations. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
+GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. Execution primitives (`Computation`, `GPUVectorModel`, `GPUVectorGeometry`, and `ShaderInputs`) are now owned by `@luma.gl/gpgpu`; existing engine imports remain compatibility re-exports of the same implementations. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
 
 ## Experimental package removal
 
@@ -390,3 +390,5 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 ### Kernel imports
 
 `Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/gpgpu`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/gpgpu`.
+
+`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/gpgpu` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.

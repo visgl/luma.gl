@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {TableTransform} from '@luma.gl/graph/gpu-tables';
+import {TableTransform} from '@luma.gl/engine/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';

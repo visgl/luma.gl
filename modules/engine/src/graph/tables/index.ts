@@ -9,3 +9,10 @@ export {
   type GPUTableModelDrawBatchesOptions,
   type GPUTableModelProps
 } from './gpu-table-model';
+
+export {
+  TableTransform,
+  type TableTransformBatchOptions,
+  type TableTransformOutputCopyMap,
+  type TableTransformProps
+} from './gpu-table-transform';
