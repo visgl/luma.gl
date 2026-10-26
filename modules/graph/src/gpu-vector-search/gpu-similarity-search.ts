@@ -5,6 +5,7 @@
 
 import type {Binding} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/engine';
+import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
 import {
   createTransientView,
   doGraphDataViewsOverlap,
@@ -1081,18 +1082,21 @@ function addSearchComputationPass<Parameters>(
     id,
     resources,
     compile: ({device}) => {
-      const kernel = new Kernel(device, {
-        id,
-        source,
-        shaderLayout: {
-          bindings: Object.keys(views).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
+      const kernel = new Kernel(
+        device,
+        assembleComputeKernel(device, {
+          id,
+          source,
+          shaderLayout: {
+            bindings: Object.keys(views).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
+          }
+        })
+      );
       return {
         encode: ({computePass, getBuffer}) => {
           const bindings: Record<string, Binding> = {};
