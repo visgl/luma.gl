@@ -30,33 +30,32 @@ new BrowserTestDriver().run({
 });
 ```
 
-In your script that is run on the browser:
+In the browser script, supply application-owned lifecycle callbacks and a matching golden image:
 
-```typescript
-const {SnapshotTestRunner} = require('@luma.gl/test-utils');
-const {Cube} = require('@luma.gl/engine');
+```ts
+import {SnapshotTestRunner} from '@luma.gl/test-utils';
 
-const TEST_CASES = [
-  {
-    name: 'Render A Cube',
-    // `onRender` receives animation props from the AnimationLoop
-    onRender: ({gl, done}) => {
-      const model = new Cube(gl);
-      model.draw(...);
-      // ready for capture and diffing
-      done();
-    },
-    goldenImage: './test/render/golden-images/cube.png'
-  }
-];
-
-new TestRender({width: 800, height: 600})
-  .add(TEST_CASES)
-  .run({
-    onTestFail: window.browserTestDriver_fail
-  })
+new SnapshotTestRunner({width: 800, height: 600})
+  .add([
+    {
+      name: 'clear-black',
+      goldenImage: './golden-images/clear-black.png',
+      onInitialize: async () => {},
+      onFinalize: () => {},
+      onRender: ({device, done}) => {
+        const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+        renderPass.end();
+        device.submit();
+        done();
+      }
+    }
+  ])
+  .run({onTestFail: window.browserTestDriver_fail})
   .then(window.browserTestDriver_finish);
 ```
+
+This is a legacy browser harness. For new repository coverage, use
+[Vitest and Playwright](/docs/developer-guide/testing).
 
 ## Methods
 

@@ -11,9 +11,20 @@ const HERO_CAPABILITIES = ['WebGPU', 'WebGL2', 'GPU compute', 'HDR rendering'];
 
 const FEATURED_EXAMPLES = [
   {
+    title: 'Slang Orbital Sculpture',
+    route: 'tutorials/slang-shaders',
+    image: 'tutorials/slang-shaders.jpg',
+    description: 'Orbit an animated sculpture authored in one Slang shader, with reusable distance-field and material modules on WebGL 2 and WebGPU.',
+    category: 'Slang',
+    backends: ['webgpu', 'webgl2'],
+    difficulty: 'tutorial',
+    maturity: 'experimental',
+    topics: ['slang', 'shaders', 'modules']
+  },
+  {
     title: 'glTF Asset Studio',
-    route: 'showcase/gltf',
-    image: 'showcase/gltf.jpg',
+    route: 'gltf/asset-studio',
+    image: 'gltf/asset-studio.jpg',
     description:
       'Explore standards-first glTF assets with physical materials, animated characters, morph targets, native extensions, and portable WebGPU/WebGL rendering.',
     category: 'glTF',

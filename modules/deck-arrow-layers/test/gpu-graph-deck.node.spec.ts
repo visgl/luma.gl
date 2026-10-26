@@ -11,8 +11,8 @@ import {
   GPUGraphEdgeLayer,
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
-import * as experimentalModule from '@luma.gl/experimental';
-import * as gpuGraphModule from '@luma.gl/gpgpu/gpu-graph';
+import * as experimentalModule from '@luma.gl/graph/experimental/simulation';
+import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import {describe, expect, test} from 'vitest';
 
 import {createGPUGraphExplorerDeck} from '../../../examples/deck/gpu-graph-explorer/app';
@@ -38,7 +38,7 @@ type ExampleContentsEntry = {
 describe('optional GPU Graph deck.gl integration package isolation', () => {
   test('keeps deck.gl entirely outside graph production imports and dependencies', () => {
     const packageJson = JSON.parse(
-      readFileSync(new URL('../../experimental/package.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../../graph/package.json', import.meta.url), 'utf8')
     ) as {
       dependencies?: Record<string, string>;
       peerDependencies?: Record<string, string>;
@@ -63,12 +63,12 @@ describe('optional GPU Graph deck.gl integration package isolation', () => {
   test('keeps deck.gl and GPU graph dependencies inside the existing private layers package', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8')
-    ) as {private?: boolean; dependencies?: Record<string, string>};
+    ) as {private?: boolean; version?: string; dependencies?: Record<string, string>};
 
     expect(packageJson.private).toBe(true);
-    expect(packageJson.dependencies?.['@deck.gl/core']).toBe('9.3.4');
-    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBe('9.4.0-alpha.4');
-    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBe('9.4.0-alpha.4');
+    expect(packageJson.dependencies?.['@deck.gl/core']).toContain('9.4.0');
+    expect(packageJson.dependencies?.['@luma.gl/graph']).toBe(packageJson.version);
+    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBe(packageJson.version);
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
   });
 
@@ -138,9 +138,9 @@ describe('GPU Graph native deck.gl resident layers', () => {
       new URL('../src/gpu-graph/gpu-graph-effect.ts', import.meta.url),
       'utf8'
     );
-    expect(effectSource).toContain('GPUGraphDegree');
-    expect(effectSource).toContain('GPUGraphLabelPropagation');
-    expect(effectSource).toContain('GPUGraphSpatialForceLayout');
+    expect(effectSource).toContain('GPUGraphAlgorithmsDegree');
+    expect(effectSource).toContain('GPUGraphAlgorithmsLabelPropagation');
+    expect(effectSource).toContain('GPUGraphAlgorithmsSpatialForceLayout');
     expect(effectSource).toContain('addSampledLayoutToGraph');
     expect(effectSource).toContain('this.renderedVertexCount = dataset.vertexCount');
     expect(effectSource).toContain('this.renderedEdgeCount = Math.min');
@@ -408,7 +408,9 @@ describe('optional GPU Graph deck.gl gallery and API guide', () => {
     expect(apiGuide).toContain('## When to use it');
     expect(apiGuide).toContain('<GPUGraphExplorerExample embedded embeddedHeight={680} />');
     expect(apiGuide).toContain('<GPUGraphBenchmark />');
-    expect(apiGuide).toContain('## Approximate distant forces with GPUGraphSpatialForceLayout');
+    expect(apiGuide).toContain(
+      '## Approximate distant forces with GPUGraphAlgorithmsSpatialForceLayout'
+    );
     expect(apiGuide).toContain('### Use GPU Graph from deck.gl without copying graph buffers');
     expect(apiGuide).toContain("separate from the native explorer's custom **8-byte**");
     expect(apiGuide).toContain('The deterministic example fixture is uploaded once');

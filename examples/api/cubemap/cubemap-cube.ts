@@ -5,7 +5,7 @@
 import {Model, type ModelProps, DynamicTexture, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
 import type {Device, Texture} from '@luma.gl/core';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {NumberArray16} from '@math.gl/types';
+import {NumberArray16} from '@math.gl/core/types';
 
 type AppUniforms = {
   modelMatrix: NumberArray16; // mat4x4<f32>

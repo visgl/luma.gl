@@ -3,16 +3,17 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/gltf';
+import {postProcessGLTF, createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {Buffer, Texture} from '@luma.gl/core';
-import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 
 it('glTF crowds draw independent SimpleSkin actors in one real WebGL and WebGPU call', async () => {
   const source = postProcessGLTF(
-    await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
+    await load('/examples/anari/scenes/public/gltf/SimpleSkin.gltf', GLTFLoader, {
       gltf: {loadImages: false}
     })
   );
@@ -437,7 +438,7 @@ it('glTF crowds render generated index-only skin LODs on real WebGL and WebGPU',
 
 it('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', async () => {
   const source = postProcessGLTF(
-    await load('/examples/showcase/scene/public/gltf/SimpleSkin.gltf', GLTFLoader, {
+    await load('/examples/anari/scenes/public/gltf/SimpleSkin.gltf', GLTFLoader, {
       gltf: {loadImages: false}
     })
   );
@@ -561,7 +562,7 @@ it('glTF crowds sample baked skin clips on the GPU in real WebGL and WebGPU', as
 
 it('glTF crowds render independently phased GPU morph targets in real WebGL and WebGPU', async () => {
   const source = postProcessGLTF(
-    await load('/examples/showcase/scene/public/gltf/AnimatedMorphCube.glb', GLTFLoader, {
+    await load('/examples/anari/scenes/public/gltf/AnimatedMorphCube.glb', GLTFLoader, {
       gltf: {loadImages: false}
     })
   );

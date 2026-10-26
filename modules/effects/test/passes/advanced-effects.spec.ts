@@ -521,7 +521,7 @@ it('ambient-only GTAO preserves non-ambient scene lighting on WebGPU', async () 
   void 0;
 });
 
-it('clustered volumetric lighting stays continuous across screen-tile boundaries', async () => {
+it('clustered volumetric lighting preserves tile continuity and opaque sky masks', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -661,6 +661,47 @@ it('clustered volumetric lighting stays continuous across screen-tile boundaries
         readbackBuffer.destroy();
       }
     }
+    for (const clearDepth of [1, 0.9999, 0.5]) {
+      const maskRenderPass = device.beginRenderPass({framebuffer: sceneFramebuffer, clearDepth});
+      maskRenderPass.end();
+      const godRayTexture = renderer.renderToTexture({
+        sourceTexture,
+        bindings: {depthTexture, pointLights, clusterLightCounts, clusterLightIndices},
+        uniforms: {
+          clusteredVolumetricTrace: {
+            projectionMatrix: identityMatrix,
+            inverseProjectionMatrix: identityMatrix,
+            inverseViewMatrix: identityMatrix,
+            density: 0.35,
+            heightFalloff: 0,
+            godRaysOnly: 1,
+            godRayIntensity: 5,
+            godRayPosition: [0.5, 0.5],
+            directionalLightColor: [1, 1, 1],
+            directionalIntensity: 4,
+            anisotropy: 0,
+            pointLightIntensity: 0,
+            maxDistance: 1,
+            sampleCount: 8
+          }
+        }
+      })!;
+      device.submit();
+      const layout = godRayTexture.computeMemoryLayout({width, height});
+      const readback = device.createBuffer({
+        byteLength: layout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      try {
+        godRayTexture.readBuffer({width, height}, readback);
+        const bytes = await readback.readAsync();
+        const red = bytes[(width / 2) * 4]!;
+        if (clearDepth === 1) expect(red, 'cleared sky contributes shafts').toBeGreaterThan(20);
+        else expect(red, 'opaque geometry blocks shafts even near the far plane').toBe(0);
+      } finally {
+        readback.destroy();
+      }
+    }
   } finally {
     renderer.destroy();
     clusterLightIndices.destroy();
@@ -740,6 +781,7 @@ it('advanced effects compose in order with existing effects', async () => {
     createGTAOCompositeShaderPass(),
     createSSGICompositeShaderPass(),
     createSSRCompositeShaderPass(),
+    createSSRCompositeShaderPass({reprojection: 'camera', quality: 'fast'}),
     createClusteredVolumetricLightingCompositeShaderPass(),
     createHDRAutoExposureCompositeShaderPass(),
     bloomCompositeShaderPass,

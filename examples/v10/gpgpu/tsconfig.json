@@ -18,8 +18,8 @@
     "paths": {
       "@luma.gl/arrow": ["../../../modules/arrow/src/index.ts"],
       "@luma.gl/arrow/*": ["../../../modules/arrow/src/*"],
-      "@luma.gl/constants": ["../../../modules/constants/src/index.ts"],
-      "@luma.gl/constants/*": ["../../../modules/constants/src/*"],
+      "@luma.gl/core/webgl-constants": ["../../../modules/core/src/webgl-constants/index.ts"],
+      "@luma.gl/core/webgl-constants/*": ["../../../modules/core/src/webgl-constants/*"],
       "@luma.gl/core": ["../../../modules/core/src/index.ts"],
       "@luma.gl/core/*": ["../../../modules/core/src/*"],
       "@luma.gl/engine": ["../../../modules/engine/src/index.ts"],
@@ -28,10 +28,10 @@
       "@luma.gl/gpgpu/*": ["../../../modules/gpgpu/src/*"],
       "@luma.gl/shadertools": ["../../../modules/shadertools/src/index.ts"],
       "@luma.gl/shadertools/*": ["../../../modules/shadertools/src/*"],
-      "@luma.gl/webgl": ["../../../modules/webgl/src/index.ts"],
-      "@luma.gl/webgl/*": ["../../../modules/webgl/src/*"],
-      "@luma.gl/webgpu": ["../../../modules/webgpu/src/index.ts"],
-      "@luma.gl/webgpu/*": ["../../../modules/webgpu/src/*"],
+      "@luma.gl/core/webgl": ["../../../modules/core/src/webgl/index.ts"],
+      "@luma.gl/core/webgl/*": ["../../../modules/core/src/webgl/*"],
+      "@luma.gl/core/webgpu": ["../../../modules/core/src/webgpu/index.ts"],
+      "@luma.gl/core/webgpu/*": ["../../../modules/core/src/webgpu/*"],
     }
   },
   "include": ["."]

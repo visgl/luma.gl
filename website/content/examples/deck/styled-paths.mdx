@@ -1,0 +1,22 @@
+---
+title: Riverfront routes
+description: Connected paths with pencil and glow styles, configurable caps and joins, and filtered dashes.
+sidebar_custom_props:
+  description: Compare plain, pencil, and luminous routes around a riverfront.
+  backends: [webgpu, webgl2]
+  difficulty: intermediate
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [deck.gl, rendering, geometry, picking]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const StrokePreview = () => (
+  <iframe title="Riverfront routes interactive example"
+    src={useBaseUrl('/standalone-examples/styled-paths/index.html')}
+    style={{width: '100%', height: '78vh', minHeight: 640, border: 0, borderRadius: 12}} />
+);
+
+<StrokePreview />

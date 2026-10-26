@@ -22,6 +22,7 @@ import {
   createTAACompositeShaderPass,
   createVolumetricFogCompositeShaderPass,
   dof,
+  bokehDof,
   denoise,
   dotScreen,
   edgeWork,
@@ -89,7 +90,8 @@ const ADVANCED_SHADER_PASSES = [
   createTAACompositeShaderPass(),
   createMotionBlurCompositeShaderPass(),
   createSSRCompositeShaderPass(),
-  createVolumetricFogCompositeShaderPass()
+  createVolumetricFogCompositeShaderPass(),
+  createVolumetricFogCompositeShaderPass({mode: 'height'})
 ].flatMap(pipeline => pipeline.steps.map(step => step.shaderPass));
 
 const SHADER_PASSES = [
@@ -103,6 +105,7 @@ const SHADER_PASSES = [
   vignette,
   bloom,
   dof,
+  bokehDof,
   gaussianBlur,
   tiltShift,
   triangleBlur,

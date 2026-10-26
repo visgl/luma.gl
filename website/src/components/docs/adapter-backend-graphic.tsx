@@ -3,14 +3,14 @@ import {type ReactNode} from 'react';
 const adapterLanes = [
   {
     adapter: 'webgpuAdapter',
-    adapterPackage: '@luma.gl/webgpu',
+    adapterPackage: '@luma.gl/core/webgpu',
     device: 'WebGPUDevice',
     deviceDetail: 'WebGPU backend',
     variant: 'webgpu'
   },
   {
     adapter: 'webgl2Adapter',
-    adapterPackage: '@luma.gl/webgl',
+    adapterPackage: '@luma.gl/core/webgl',
     device: 'WebGLDevice',
     deviceDetail: 'WebGL 2 backend',
     variant: 'webgl'

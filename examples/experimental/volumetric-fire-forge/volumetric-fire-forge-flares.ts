@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {VolumetricFireEmitter} from '@luma.gl/experimental';
+import type {VolumetricFireEmitter} from '@luma.gl/graph/gpu-simulation';
 
 export const VOLUMETRIC_FIRE_FORGE_FLARE_SEED = 0x464f5247;
 export const VOLUMETRIC_FIRE_FORGE_FLARE_ATTACK_SECONDS = 0.14;

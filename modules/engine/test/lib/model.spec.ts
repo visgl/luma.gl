@@ -814,6 +814,63 @@ it('Model#topology', async () => {
   void 0;
 });
 
+it('Model#setParameters keeps the WebGL pipeline', async () => {
+  const webglDevice = await getWebGLTestDevice();
+  const model = new Model(webglDevice, {
+    id: 'set-parameters-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    vertexCount: 3,
+    parameters: {depthWriteEnabled: true}
+  });
+  const pipeline = model.pipeline;
+  const drawParameters: unknown[] = [];
+  const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    drawParameters.push(options.parameters);
+    return draw(options);
+  };
+
+  model.setParameters({depthWriteEnabled: false});
+  expect(model.draw(renderPass), 'draw succeeded').toBe(true);
+  expect(model.pipeline, 'parameters change keeps the pipeline').toBe(pipeline);
+  expect(drawParameters[0], 'draw applies the new parameters').toEqual({
+    depthWriteEnabled: false
+  });
+
+  model.setParameters({depthWriteEnabled: true});
+  expect(model.draw(renderPass), 'draw succeeded').toBe(true);
+  expect(model.pipeline).toBe(pipeline);
+  expect(drawParameters[1]).toEqual({depthWriteEnabled: true});
+
+  renderPass.destroy();
+  model.destroy();
+});
+
+it('Model#setParameters rebuilds the WebGPU pipeline', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) return;
+
+  const model = new Model(webgpuDevice, {
+    id: 'set-parameters-webgpu-test',
+    source: DUMMY_WGSL,
+    vertexEntryPoint: 'vertexMain',
+    fragmentEntryPoint: 'fragmentMain',
+    vertexCount: 3,
+    parameters: {cullMode: 'none'}
+  });
+  const pipeline = model.pipeline;
+
+  model.setParameters({cullMode: 'back'});
+  expect(model._updatePipeline(), 'parameters change replaces the pipeline').not.toBe(pipeline);
+  expect(model.pipeline.props.parameters, 'new pipeline has the new parameters').toEqual({
+    cullMode: 'back'
+  });
+
+  model.destroy();
+});
+
 /**
  * Wait for a render pipeline to report a link error.
  *

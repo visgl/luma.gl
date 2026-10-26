@@ -285,6 +285,7 @@ copyExternalImage(options: {
   aspect?: 'all' | 'stencil-only' | 'depth-only';
   colorSpace?: 'srgb';
   premultipliedAlpha?: boolean;
+  flipY?: boolean;
 }: {width: number; height: number}
 ```
 
@@ -302,7 +303,20 @@ copyExternalImage(options: {
 | `z?` | `number` | Start copying from depth layer z (default 0) |
 | `aspect?` | `'all' \| 'stencil-only' \| 'depth-only'`; | When copying into depth stencil textures (default 'all') |
 | `colorSpace?` | `'srgb'` | Specific color space of image data |
-| `premultipliedAlpha?` | `boolean` | premultiplied |
+| `premultipliedAlpha?` | `boolean` | Whether to premultiply alpha (default `false`). Does not apply to `ImageBitmap` sources on WebGL; set `premultiplyAlpha` during bitmap creation. |
+| `flipY?` | `boolean` | Whether to flip the image vertically (default `false`). Does not apply to `ImageBitmap` sources on WebGL; set `imageOrientation` during bitmap creation. |
+
+On WebGL, `flipY` and `premultipliedAlpha` do not apply to `ImageBitmap` sources. These settings must be supplied when creating the bitmap with `createImageBitmap()`:
+
+```ts
+const imageBitmap = await createImageBitmap(image, {
+  imageOrientation: 'flipY', // Use 'from-image' to preserve the source orientation.
+  premultiplyAlpha: 'premultiply' // Use 'none' for unpremultiplied alpha.
+});
+texture.copyExternalImage({image: imageBitmap});
+```
+
+An existing `ImageBitmap` does not expose the options used to create it. Passing upload options cannot override its creation-time orientation or alpha conversion on WebGL.
 
 ### `writeData()`
 

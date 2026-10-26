@@ -15,9 +15,9 @@ import {
   type DggsCellEncoding
 } from '@luma.gl/arrow';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {getGeohashBoundary} from '@math.gl/dggs-geohash';
-import {getQuadkeyBoundary} from '@math.gl/dggs-quadkey';
-import {getS2BoundaryFlat, getS2TokenFromIndex} from '@math.gl/dggs-s2';
+import {GeohashDecoder} from '@math.gl/dggs/geohash';
+import {QuadkeyDecoder} from '@math.gl/dggs/quadkey';
+import {getS2BoundaryFlat, getS2TokenFromIndex} from '@math.gl/dggs/s2';
 import {cellToBoundary} from 'a5-js';
 import * as arrow from 'apache-arrow';
 import {cellToBoundary as getH3CellBoundary} from 'h3-js';
@@ -166,14 +166,16 @@ it('arrow#convertDggsCellKeysToGPUPaths extracts DGGS boundary paths on the GPU'
       encoding: 'geohash',
       keys: [packDggsGeohashKey('9q')],
       pointCount: 5,
-      expectedCoordinates: reorderMathGlClosedSquareBoundary(getGeohashBoundary('9q')),
+      expectedCoordinates: reorderMathGlClosedSquareBoundary(GeohashDecoder.cellToBoundary('9q')),
       tolerance: 1e-5
     },
     {
       encoding: 'quadkey',
       keys: [packDggsQuadkeyKey('031310')],
       pointCount: 5,
-      expectedCoordinates: reorderMathGlClosedSquareBoundary(getQuadkeyBoundary('031310')),
+      expectedCoordinates: reorderMathGlClosedSquareBoundary(
+        QuadkeyDecoder.cellToBoundary('031310')
+      ),
       tolerance: 0.1
     },
     {

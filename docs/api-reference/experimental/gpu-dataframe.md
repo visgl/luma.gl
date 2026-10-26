@@ -8,7 +8,7 @@ import {GPUDataAnalysisExample} from '@site/src/examples';
 
 ## Overview
 
-`@luma.gl/experimental/gpu-dataframe` compiles dataframe-style expressions, filters, aggregations, ordering,
+`@luma.gl/graph/gpu-dataframe` compiles dataframe-style expressions, filters, aggregations, ordering,
 and joins into a caller-owned `GPUCommandGraph`. It consumes Arrow-independent `GPUTable` and
 `GPUVector` storage while preserving source chunks and GPU-resident outputs.
 
@@ -21,8 +21,8 @@ implicit downloads.
 ## Quick start
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 
 const graph = new GPUCommandGraph({device, id: 'dataframe-analysis'});
 const frame = new GPUDataFrame({device, graph, table});
@@ -80,5 +80,5 @@ See the [operations reference](./gpu-dataframe-operations) for detailed executio
 - [GPU Core](/docs/api-reference/experimental/gpu-core) supplies scheduling and primitives.
 - [GPU Crossfilter](./gpu-crossfilter) composes linked interactive selections.
 - [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) defines primitive GPU storage,
-  while [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) defines
+  while [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) defines
   record batches and tables.

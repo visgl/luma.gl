@@ -183,20 +183,9 @@ export class NullDevice extends Device {
 
   override getParametersWebGL(parameters: any): any {}
 
-  override withParametersWebGL(parameters: any, func: any): any {
-    const {nocatch = true} = parameters;
-    let value: any;
-    if (nocatch) {
-      // Avoid try catch to minimize stack size impact for safe execution paths
-      return func();
-    }
-    // Wrap in a try-catch to ensure that parameters are restored on exceptions
-    try {
-      value = func();
-    } catch {
-      // ignore
-    }
-    return value;
+  override withParametersWebGL(_parameters: any, func: any): any {
+    // There is no WebGL state to restore; preserve callback return values and exceptions.
+    return func();
   }
 
   override _getDeviceSpecificTextureFormatCapabilities(format: any): any {

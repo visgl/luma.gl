@@ -1,0 +1,25 @@
+---
+title: Vector Observatory
+description: Follow a million GPU particles through scientific vector fields with RK4 advection and luminous HDR trails.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [compute, simulation]
+---
+
+import {VectorObservatoryExample} from '@site/src/examples';
+
+<VectorObservatoryExample />
+
+Explore ocean gyres, a vortex pair, and a meandering jet with up to 1,048,576
+particles. Switch between midpoint and fourth-order Runge–Kutta integration,
+change exposure and simulation speed, pause, or reseed the experiment.
+
+These are reproducible analytic benchmark fields sampled onto a 256² scientific
+grid, not observed ocean data. `ScientificFlowGraph` compiles advection into a GPU
+command graph; storage buffers feed the renderer directly without particle
+readback. HDR trail persistence reveals the flow over time. The displayed FPS
+measures the browser frame loop, not isolated GPU execution time.

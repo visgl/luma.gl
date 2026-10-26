@@ -57,18 +57,18 @@ const EXAMPLE_PANEL_STYLE = `
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] input[type='number'],
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}] [data-setting-row-for] input[type='text'],
 [id^='settings-panel-input-'][role='listbox'] > button[role='option'] {
-  font-size: 15px !important;
+  font-size: 11px !important;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
 button[aria-expanded]:not([aria-haspopup='listbox']) {
   margin-top: 4px !important;
-  padding: 10px 11px !important;
-  border-radius: 8px !important;
+  padding: 8px !important;
+  border-radius: 7px !important;
   background: rgba(70, 104, 159, 0.08) !important;
 }
 [${EXAMPLE_SETTINGS_PANEL_ATTRIBUTE}][${EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE}='accordion']
 button[aria-expanded]:not([aria-haspopup='listbox']) > span:first-child > span:first-child {
-  font-size: 13px !important;
+  font-size: 11px !important;
   letter-spacing: 0.01em;
 }
 `;
@@ -154,28 +154,35 @@ export function makeExampleContentPanel({
 }
 
 /** Creates a community tabbed panel with the website source viewer appended when available. */
-export function makeExampleTabbedPanel(props: TabbedPanelProps): Panel {
+export function makeExampleTabbedPanel(
+  props: TabbedPanelProps & {sourcePaths?: readonly string[]}
+): Panel {
+  const {sourcePaths, ...tabbedProps} = props;
   const hasSourcePanel = props.panels.some(panel => panel.id === EXAMPLE_SOURCE_PANEL_ID);
   const panels =
     isWebsiteExample() && !hasSourcePanel
-      ? [...props.panels, makeExampleSourcePanel()]
+      ? [...props.panels, makeExampleSourcePanel(sourcePaths)]
       : props.panels;
-  return new TabbedPanel({...props, panels});
+  return new TabbedPanel({...tabbedProps, panels});
 }
 
-function makeExampleSourcePanel(): Panel {
+function makeExampleSourcePanel(sourcePaths?: readonly string[]): Panel {
   return makeExampleContentPanel({
     id: EXAMPLE_SOURCE_PANEL_ID,
     title: 'Source',
-    content: h(ExampleSourcePanelContent, {})
+    content: h(ExampleSourcePanelContent, {sourcePaths})
   });
 }
 
-function ExampleSourcePanelContent() {
+function ExampleSourcePanelContent({
+  sourcePaths: explicitSourcePaths
+}: {
+  sourcePaths?: readonly string[];
+}) {
   const [sourceResult, setSourceResult] = useState<ExampleSourceResult>({});
 
   useEffect(() => {
-    const sourcePaths = getCurrentExampleSourcePaths();
+    const sourcePaths = explicitSourcePaths ?? getCurrentExampleSourcePaths();
     if (sourcePaths.length === 0) {
       setSourceResult({error: 'Unable to determine source code path.'});
       return;
@@ -193,7 +200,7 @@ function ExampleSourcePanelContent() {
       });
 
     return () => abortController.abort();
-  }, []);
+  }, [explicitSourcePaths]);
 
   if (sourceResult.error) {
     return h(

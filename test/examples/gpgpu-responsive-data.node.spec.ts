@@ -4,7 +4,7 @@
 
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
-import {compileProjectionPlan, evaluateProjectionPlan} from '@luma.gl/experimental/gpu-project';
+import {compileProjectionPlan, evaluateProjectionPlan} from '@luma.gl/graph/gpu-project';
 import {describe, expect, test} from 'vitest';
 import {
   makeLuSpatialTaxiData,
@@ -111,7 +111,7 @@ describe('responsive GPU data examples', () => {
     const appSource = readFileSync(TAXI_APP_SOURCE_PATH, 'utf8');
     const appUiSource = readFileSync(TAXI_APP_UI_SOURCE_PATH, 'utf8');
 
-    expect(effectSource).toMatch(/from ['"]@luma\.gl\/experimental\/gpu-project['"]/);
+    expect(effectSource).toMatch(/from ['"]@luma\.gl\/graph\/gpu-project['"]/);
     expect(effectSource).toMatch(/new GPUProjection\s*\(/);
     expect(effectSource).toMatch(/compileProjectionPlan\s*\(/);
     expect(effectSource).toMatch(/this\.ownResource\(\s*new GPUProjection\s*\(/);

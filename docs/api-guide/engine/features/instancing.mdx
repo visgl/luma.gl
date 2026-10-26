@@ -1,0 +1,43 @@
+---
+title: Mesh instancing
+description: Instancing draws many placements of shared geometry with one draw per compatible primitive instead of duplicating models.
+---
+
+import {GLTFModelExample} from '@site/src/examples';
+
+# Mesh instancing
+
+Instancing draws many placements of shared geometry with one draw per compatible primitive instead of duplicating models.
+
+The **SimpleInstancing** sample demonstrates this capability. Drag to orbit and scroll to zoom.
+
+<GLTFModelExample modelUrl={new URL('../../../../modules/gltf/test/data/SimpleInstancing.glb', import.meta.url).href} title="SimpleInstancing" embedded showStats={false} />
+
+## API
+
+Engine `Model` supports instanced attributes and an `instanceCount`. The glTF adapter creates those instanced models automatically from authored transforms. `getGLTFNodeInstancing()` exposes resolved matrices and source attributes for inspection or a custom integration.
+
+```ts
+import {createScenegraphsFromGLTF, getGLTFNodeInstancing} from '@luma.gl/gltf';
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf);
+for (const sourceNode of gltf.nodes || []) {
+  const instancing = getGLTFNodeInstancing(gltf, sourceNode);
+  if (instancing) {
+    console.log(instancing.matrices.length, instancing.attributes);
+  }
+}
+```
+
+Authored instances share render state. Independent skeletal animation uses the [animated crowd API](/docs/api-reference/gltf/gltf-animated-crowd) rather than ordinary static instancing.
+
+## glTF support
+
+`EXT_mesh_gpu_instancing` supplies accessor-backed transforms and custom `_NAME` attributes. Each source primitive becomes one instanced model on WebGPU and WebGL. See [native glTF extensions](/docs/api-reference/gltf/gltf-native-extensions).
+
+See [glTF materials and textures](/docs/api-reference/gltf/gltf-materials),
+[glTF animation](/docs/api-reference/gltf/gltf-animation), and the
+[extension support matrix](/docs/api-reference/gltf/gltf-extensions) for adapter details
+and current support limits.
+
+[All engine features](/docs/api-guide/engine/features)

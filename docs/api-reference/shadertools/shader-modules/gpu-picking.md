@@ -1,190 +1,126 @@
-import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
+# GPU picking
 
-# gpuPicking
+GPU picking renders object identities into an offscreen framebuffer, then reads the identity
+under the pointer. A visible render uses that identity to highlight the selected object.
 
-<DocumentationBadges>
-  <DocumentationBadge tone="version">From v9.1</DocumentationBadge>
-</DocumentationBadges>
-
-Provides support for GPU-based picking.
-
-Picking is a key capability for most interactive applications. Consult the API guide learn more about [picking](/docs/api-guide/engine/interactivity). 
-
-GPU picking is based on the conclusion that each pixel on the screen was generated while rendering some "object", which in luma.gl can often be thought of as one row in an a data table being rendered.
-
-## Under the Hood
-
-Depending on the structure of the shader, each object can either correspond to an `instance` or a group of vertexes.
-
-An additional consideration 
-
-li
-
-The `gpuPicking` modules supports:
-- picking of object indexes
-- highlighting of objects
-- pick a specific *instance* in an instanced draw call
-- highlight all fragments of an *instance* based on its picking color
-- pick "group of primitives" with the same picking color in non-instanced draw-calls
-- highlight "group of primitives" with the same picking color in non-instanced draw-calls
-
-Highlighting allows applications to specify a picking color corresponding to an object that need to be highlighted and the highlight color to be used.
-
-## About GPU based picking
-
-GPU based picking has a couple of significant advantage over CPU-based picking:
-- GPU-based picking is a picking technique that can be performed entirely on the GPU, meaning that it is very performant, especially when picking is done every frame.
-
-- can be added to any existing shaders 
-- and is independent of the structure of the input geometry or rendering without requiring any additional picking logic to that shader, beyond calling one function in the vertex shader and one function in the fragment shader.
-
-Note that GPU-based picking does comes with some limitations:
-- Picking occluding objects require re-rendering and discarding the already picked objects.
-- On WebGL-specific: the read back of the picking data from the picking texture can only be done synchronously, causing a GPU pipeline stall, which can defeat some of the performance advantages.
-
-Traditional 3d frameworks often support CPU-based picking. While luma.gl does not include an CPU-based picking algorithms, CPU based picking techniques do have advantages: 
- - They can often provide precise intersection points on objects and they are better at handling picking of multiple objects, especially for objects that are occluded. 
- - However CPU based picking techniques are slower and can require more data on the CPU or they may need to be customized to the structure of the input data.
-
+For new applications, import the picking helpers from `@luma.gl/engine`. The legacy
+`picking` module in `@luma.gl/shadertools` uses an application-supplied color API; see
+[legacy picking](/docs/api-reference/shadertools/shader-modules/picking).
+These instructions describe the current engine API, not every earlier v9 release.
 
 ## Usage
 
-In your vertex shader, your inform the picking module what object we are currently rendering by supplying a picking color, perhaps from an attribute.
+This complete WebGL 2 example uses `colorPicking` with `mode: 'color'`. Given an existing
+WebGL device, it draws one triangle with object index `0`. The model and manager share
+`ShaderInputs`, so picking and highlighting uniforms reach the model.
 
 ```ts
-attribute vec3 aPickingColor;
-main() {
-  picking_setPickingColor(aPickingColor);
-  ...
+import {Model, PickingManager, ShaderInputs, colorPicking} from '@luma.gl/engine';
+
+const shaderInputs = new ShaderInputs({picking: colorPicking});
+shaderInputs.setProps({
+  picking: {indexMode: 'attribute', batchIndex: 0, highlightColor: [0, 1, 1, 1]}
+});
+
+const model = new Model(device, {
+  shaderInputs,
+  vertexCount: 3,
+  vs: `#version 300 es
+    void main() {
+      vec2 positions[3] = vec2[3](
+        vec2(-0.8, -0.8), vec2(0.8, -0.8), vec2(0.0, 0.8)
+      );
+      gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+      picking_setObjectIndex(0);
+    }
+  `,
+  fs: `#version 300 es
+    precision highp float;
+    out vec4 fragmentColor;
+    void main() {
+      fragmentColor = picking_filterColor(vec4(1.0, 0.0, 0.0, 1.0));
+    }
+  `
+});
+
+const pickingManager = new PickingManager(device, {shaderInputs, mode: 'color'});
+
+function drawVisible(): void {
+  const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  model.draw(renderPass);
+  renderPass.end();
+  device.submit();
 }
-```
 
-In your fragment shader, you simply apply (call) the `picking_filterColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
+async function pickObject(mousePosition: [number, number]): Promise<void> {
+  const pickingPass = pickingManager.beginRenderPass();
+  model.draw(pickingPass);
+  pickingPass.end();
+  device.submit();
 
-```ts
-main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+  try {
+    const pickInfo = await pickingManager.updatePickInfo(mousePosition);
+    // objectIndex is 0 over the triangle and null over the background.
+    console.log(pickInfo);
+  } finally {
+    shaderInputs.setProps({picking: {isActive: false}});
+  }
+  drawVisible();
 }
+
+// Call pickObject with canvas-relative CSS pixel coordinates. Serialize calls
+// so that only one picking render/readback is in flight at a time.
+drawVisible();
+
+// When finished:
+// pickingManager.destroy();
+// model.destroy();
 ```
 
-In your fragment shader, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
+For a pointer event, calculate coordinates using the canvas bounding rectangle:
+`[event.clientX - rectangle.left, event.clientY - rectangle.top]`.
+The manager converts CSS pixels to device pixels and handles the backend's vertical
+orientation. Do not multiply by the device pixel ratio or flip Y yourself.
 
-```glsl
-main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
-}
-```
+The [instancing showcase](/examples/showcase/instancing) demonstrates picking and highlighting on
+WebGL and WebGPU. Its [source](https://github.com/visgl/luma.gl/blob/master/examples/showcase/instancing/app.ts)
+also shows how to schedule readback after the animation loop submits the picking pass.
 
-If highlighting is not needed, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader. This will return the normal color or the picking color, as appropriate.
+## Object identity and highlighting
 
-```ts
-main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
-}
-```
+- `picking_setObjectIndex(...)` identifies the object in a GLSL vertex shader. With
+  `indexMode: 'attribute'`, supply your own nonnegative integer identity. With the default
+  `indexMode: 'instance'`, the module uses `gl_InstanceID`.
+- Give all vertices of one object the same identity. Use distinct identities for objects
+  that should be picked separately, and `batchIndex` to distinguish draw batches.
+- Assign the return value of `picking_filterColor(...)` to the final fragment output. It
+  applies both highlighting and picking. `picking_filterPickingColor(...)` alone does not
+  apply highlighting, and discarding its return value does not update the output.
+- `await pickingManager.updatePickInfo(...)` reads the result and updates the shared
+  highlighting uniforms. Draw a visible pass afterward to display the highlight.
+- `clearPickState()` clears highlighting, for example when the pointer leaves the canvas;
+  it is not required before each pick. Draw again to display the cleared state.
 
-If you would like to apply the highlight color to the currently selected element call `picking_filterHighlightColor` before calling `picking_filterPickingColor`. You can also apply other filters on the non-picking color (vertex or highlight color) by placing those instruction between these two function calls.
+For color picking, object indices range from `0` through `16777214` and batch indices from
+`0` through `254`. The module encodes these values into RGBA bytes; arbitrary RGB colors are
+not object identities. Disable blending when writing picking colors and do not modify the
+encoded output afterward, including its alpha channel.
 
-```ts
-main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterHighlightColor(gl_FragColor);
-   ... apply any filters on gl_FragColor ...
- gl_FragColor = picking_filterPickingColor(gl_FragColor);
-}
-```
+## Choosing a backend
 
-## JavaScript Functions
+Use matching shader modules and manager modes:
 
-### getUniforms()
+- `colorPicking` with `mode: 'color'` uses a color attachment and encoded identities.
+- The unified engine `picking` module uses color picking for GLSL/WebGL and integer index
+  picking for WGSL/WebGPU. The instancing showcase uses `mode: 'color'` on WebGL and
+  `mode: 'index'` on WebGPU, with a separate picking model for the WebGPU output layout.
 
-`getUniforms()` takes an object with key/value pairs, returns an object with key/value pairs representing the uniforms that the `gpuPicking` module shaders need.
+WGSL shaders pass the object index explicitly to the fragment filter functions; the GLSL
+example above cannot be copied unchanged into a WGSL shader.
+See [PickingManager](/docs/api-reference/engine/picking-manager) for readback, callbacks,
+backend support, and framebuffer details.
 
-Uniforms for the picking module, which renders picking colors and highlighted item. 
-When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer. 
-When inactive, renders normal colors, with the exception of selected object which is rendered with highlight 
-
-| Setting                                | Description                                                         |
-| -------------------------------------- | ------------------------------------------------------------------- |
-| `isActive`?: boolean | Whether in picking or normal rendering (+highlighting) mode |
-| `isAttribute`: boolean | Set to true when picking an attribute value instead of object index |
-| `useByteColors`?: boolean | Interprets highlight colors as byte-style `0..255` values |
-| `isHighlightActive`?: boolean | Do we have a highlighted item? |
-| `highlightedObjectColor`?: NumberArray | Set to a picking color to visually highlight that item |
-| `highlightColor`?: NumberArray | Color of visual highlight of "selected" item |
-
-- `isActive` - When true, renders picking colors. Set when rendering to off-screen "picking" buffer. When false, renders normal colors, with the exception of selected object which is rendered with highlight 
-- `useByteColors` defaults to byte-compatible highlight color behavior in Phase 1.
-
-{/*
-- `pickingActive`=`false` (_boolean_) - Renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking.
-- `pickingSelectedColor`=`null` (_array|null_) - The picking color of the selected (highlighted) object.
-- `pickingHighlightColor`= `[0, 255, 255, 255]` (_array_) - Color used to highlight the currently selected object.
-- `pickingAttribute`=`false` (_boolean_) - Renders a color that encodes an attribute value. Normally only used with an off-screen framebuffer during picking.
-
-opts can contain following keys:
-
-- `pickingSelectedColorValid` (_boolean_) - When true current instance picking color is ignored, hence no instance is highlighted.
-- `pickingSelectedColor` (_array_) - Picking color of the currently selected instance.
-- `pickingHighlightColor` (_array_)- Color used to highlight the currently selected instance.
-- `pickingActive`=`false` (_boolean_) - When true, renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking. Default value is `false`.
-
-Note that the selected item will be rendered using `pickingHighlightColor`, if blending is enabled for the draw, alpha channel can be used to control the blending result.
-*/}
-
-## Vertex Shader Functions
-
-### picking_setPickingColor()
-
-```ts
-void picking_setPickingColor(vec3 pickingColor)
-```
-
-Sets the color that will be returned by the fragment shader if color based picking is enabled. Typically set from a `pickingColor` uniform or a `pickingColors` attribute (e.g. when using instanced rendering, to identify the actual instance that was picked).
-
-### picking_setPickingAttribute
-
-Sets the attribute value that needs to be picked.
-
-`void picking_setPickingAttribute(float value)`
-`void picking_setPickingAttribute(vec2 value)`
-`void picking_setPickingAttribute(vec3 value)`
-
-## Fragment Shader Functions
-
-### picking_filterColor
-
-```ts
-fn picking_filterColor(color: vec4<f32>) -> vec4<f32>
-vec4 picking_filterColor(vec4 color)
-```
-
-| Picking Enabled | Item Highlighted | Returned color                                                        |
-| --------------- | ---------------- | --------------------------------------------------------------------- |
-| ✅ | – | Returns picking color (representing index of this color) |
-| ❌ | ✅ | Returns the current highlight color (to show this item as "selected") |
-| ❌ | ❌ | returns the original color (unmodified `color` argument) |
-
-### picking_filterPickingColor()
-
-```ts
-vec4 picking_filterPickingColor(vec4 color)
-```
-
-If picking active, returns the current vertex's picking color set by `picking_setPickingColor`, otherwise returns its argument unmodified.
-
-Returns picking highlight color if the pixel belongs to currently selected model, otherwise returns its argument unmodified.
-
-
-### picking_filterPickingColor()
-
-`vec4 picking_filterPickingColor(vec4 color)`
-
-If picking active, returns the current vertex's picking color set by `picking_setPickingColor`, otherwise returns its argument unmodified.
-
-## Remarks
-
-- It is recommended that `picking_filterPickingColor()` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.
+Readback can synchronize CPU and GPU work. Use `shouldPick(mousePosition)` to skip unchanged
+pointer positions in a static scene, and `{force: true}` when the geometry or camera changes
+under a stationary pointer. GPU picking finds the visible object at a pixel; retrieving
+occluded objects requires additional passes or a separate CPU geometry query.

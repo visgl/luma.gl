@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumberArray3} from '@math.gl/types';
+import {NumberArray3} from '@math.gl/core/types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {floatColors} from '../../color/float-colors';
 import {lighting} from '../lights/lighting';

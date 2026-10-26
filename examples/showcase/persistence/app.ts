@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumericArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/core/types';
 import {Buffer, UniformStore, Framebuffer, Texture} from '@luma.gl/core';
 import {persistenceEffect} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -222,7 +222,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformStore.setUniforms({sphere: {colorAndLighting: [0.0, 0.5, 1.0, 0.0]}});
 
     for (let i = 0; i < ELECTRON_COUNT; i++) {
-      electronPosition[i] = electronRotation[i].transformVector(electronPosition[i]);
+      electronPosition[i] = electronRotation[i].transformAsVector(electronPosition[i]);
       const modelMatrix = new Matrix4()
         .translate(electronPosition[i])
         .scale([0.06125, 0.06125, 0.06125]);

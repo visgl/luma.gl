@@ -8,12 +8,6 @@
       "@luma.gl/core/*": [
         "./modules/core/src/*"
       ],
-      "@luma.gl/constants": [
-        "./modules/constants/src/index.ts"
-      ],
-      "@luma.gl/constants/*": [
-        "./modules/constants/src/*"
-      ],
       "@luma.gl/shadertools": [
         "./modules/shadertools/src/index.ts"
       ],
@@ -37,6 +31,36 @@
       ],
       "@luma.gl/experimental/*": [
         "./modules/experimental/src/*"
+      ],
+      "@luma.gl/core/webgl": [
+        "./modules/core/src/webgl/index.ts"
+      ],
+      "@luma.gl/core/webgl/*": [
+        "./modules/core/src/webgl/*"
+      ],
+      "@luma.gl/core/webgpu": [
+        "./modules/core/src/webgpu/index.ts"
+      ],
+      "@luma.gl/core/webgpu/*": [
+        "./modules/core/src/webgpu/*"
+      ],
+      "@luma.gl/core/webgl-constants": [
+        "./modules/core/src/webgl-constants/index.ts"
+      ],
+      "@luma.gl/core/webgl-constants/*": [
+        "./modules/core/src/webgl-constants/*"
+      ],
+      "@luma.gl/core/wgsl": [
+        "./modules/core/src/wgsl.ts"
+      ],
+      "@luma.gl/core/wgsl-binding-scan": [
+        "./modules/core/src/wgsl-binding-scan.ts"
+      ],
+      "@luma.gl/graph": [
+        "./modules/graph/src/index.ts"
+      ],
+      "@luma.gl/graph/*": [
+        "./modules/graph/src/*"
       ]
     }
   },
@@ -44,7 +68,7 @@
     "./modules/shadertools/test/lib/uniform-types.spec.ts",
     "./modules/engine/test/shader-inputs-types.spec.ts",
     "./modules/gpgpu/test/gpu-data/gpu-data-types.node.spec.ts",
-    "./modules/experimental/test/geospatial/geospatial-types.spec.ts"
+    "./modules/graph/test/geospatial/geospatial-types.spec.ts"
   ],
   "exclude": [
     "./modules/**/dist",

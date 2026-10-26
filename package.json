@@ -26,20 +26,21 @@
   "scripts": {
     "bootstrap": "bash ./scripts/bootstrap.sh",
     "start": "open https://luma.gl/docs/getting-started",
-    "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
+    "build": "ocular-clean && yarn build-webgl-constants && ocular-build && node scripts/build-core-cjs.mjs",
     "bundle-size": "node ./scripts/bundle-size.mjs",
     "lint": "ocular-lint",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
     "test": "yarn test-node && yarn test-headless",
-    "test-node": "ocular-test node",
-    "test-node-coverage": "LUMA_TEST_NODE_COVERAGE=true ocular-test node --coverage.enabled --coverage.provider=istanbul --coverage.reporter=lcovonly --coverage.reportsDirectory=coverage-node",
+    "test-node": "yarn build-webgl-constants && ocular-test node",
+    "test-node-coverage": "yarn build-webgl-constants && LUMA_TEST_NODE_COVERAGE=true ocular-test node --coverage.enabled --coverage.provider=istanbul --coverage.reporter=lcovonly --coverage.reportsDirectory=coverage-node",
     "test-browser": "ocular-test browser",
     "test-browser-benchmarks": "LUMA_TEST_BROWSER_BENCHMARKS=true ocular-test headless --no-coverage",
+    "test-presentation": "node scripts/playwright/presentation-canary.mjs",
     "test-headless": "ocular-test headless",
     "test-coverage": "ocular-test headless --coverage",
-    "test-geospatial-package": "node ./scripts/verify-experimental-geospatial-package.mjs",
-    "test-gpu-raster-package": "node ./scripts/verify-experimental-gpu-raster-package.mjs",
+    "test-geospatial-package": "node ./scripts/verify-gpu-graph-geospatial-package.mjs",
+    "test-gpu-raster-package": "node ./scripts/verify-gpu-graph-raster-package.mjs",
     "examples:typecheck": "node ./scripts/examples-typecheck.mjs",
     "examples:synchronize-mobile-support": "node ./scripts/examples/synchronize-mobile-support-metadata.mjs",
     "examples:test-mobile": "node ./scripts/playwright/mobile-example-smoke.mjs",
@@ -51,37 +52,39 @@
     "gltf:reference-evidence": "node ./scripts/gltf-reference/capture-reference-evidence.mjs",
     "gltf:reference-evidence:test": "node --test ./scripts/gltf-reference/*.test.mjs ./scripts/playwright/*.test.mjs",
     "playwright:install": "playwright install chromium webkit",
-    "metrics": "./scripts/metrics.sh && ocular-metrics"
+    "metrics": "./scripts/metrics.sh && ocular-metrics",
+    "build-webgl-constants": "esbuild modules/core/src/webgl-constants/index.ts --bundle --format=cjs --outfile=modules/core/dist/webgl-constants/index.cjs"
   },
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~5.0.0-alpha.5",
-    "@loaders.gl/gltf": "~5.0.0-alpha.5",
-    "@loaders.gl/las": "~5.0.0-alpha.5",
-    "@loaders.gl/parquet": "~5.0.0-alpha.5",
-    "@loaders.gl/polyfills": "~5.0.0-alpha.5",
-    "@math.gl/crs": "5.0.0-alpha.5",
-    "@math.gl/dggs-geohash": "^4.1.0",
-    "@math.gl/dggs-quadkey": "^4.1.0",
-    "@math.gl/dggs-s2": "^4.1.0",
-    "@math.gl/proj4": "~5.0.0-alpha.5",
-    "@probe.gl/bench": "^4.1.1",
-    "@probe.gl/stats": "^4.1.1",
-    "@probe.gl/stats-widget": "^4.1.1",
+    "@loaders.gl/core": "~5.0.0-alpha.12",
+    "@loaders.gl/gltf": "~5.0.0-alpha.12",
+    "@loaders.gl/las": "~5.0.0-alpha.12",
+    "@loaders.gl/parquet": "~5.0.0-alpha.12",
+    "@loaders.gl/polyfills": "~5.0.0-alpha.12",
+    "@loaders.gl/sql": "~5.0.0-alpha.12",
+    "@loaders.gl/textures": "~5.0.0-alpha.12",
+    "@luma.gl/ts-transform-inline-webgl-constants": "workspace:*",
+    "@math.gl/dggs": "~5.0.0-alpha.19",
+    "@math.gl/geospatial": "~5.0.0-alpha.19",
     "@probe.gl/test-utils": "^4.1.1",
     "@types/node": "22.15.2",
     "@vis.gl/dev-tools": "^2.0.0-beta.1",
     "@vis.gl/ts-plugins": "^2.0.0-beta.1",
-    "@vitest/coverage-istanbul": "4.1.0",
+    "@vitest/browser-playwright": "5.0.2",
+    "@vitest/coverage-istanbul": "5.0.2",
     "a5-js": "^0.8.0",
+    "apache-arrow": "^17.0.0",
     "esbuild": "^0.28.1",
     "h3-js": "^4.4.0",
     "playwright": "^1.58.0",
     "pngjs": "^7.0.0",
     "pre-commit": "^1.2.2",
+    "probe.gl": "^5.0.0",
     "texture-compressor": "^1.0.2",
-    "vitest": "^4.0.18",
+    "vite": "^8.0.0",
+    "vitest": "5.0.2",
     "wgsl_reflect": "1.2.3",
     "yaml": "^2.8.1"
   },
@@ -94,18 +97,27 @@
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/shadertools": "workspace:*",
-    "@luma.gl/webgl": "workspace:*",
-    "@loaders.gl/schema-utils@npm:5.0.0-alpha.5": "patch:@loaders.gl/schema-utils@npm%3A5.0.0-alpha.5#~/.yarn/patches/@loaders.gl-schema-utils-npm-5.0.0-alpha.5-b7b149a264.patch"
+    "@loaders.gl/compression": "5.0.0-alpha.12",
+    "@math.gl/web-mercator": "~5.0.0-alpha.19",
+    "@deck.gl/core@npm:9.4.0": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
+    "@math.gl/core@npm:^4.1.0": "5.0.0-alpha.19",
+    "@vitest/browser": "5.0.2",
+    "@vitest/browser-playwright": "5.0.2",
+    "@luma.gl/webgl": "workspace:modules/core",
+    "@math.gl/earth": "~5.0.0-alpha.19",
+    "@loaders.gl/schema-utils/apache-arrow": "^17.0.0",
+    "@loaders.gl/arrow/apache-arrow": "^17.0.0",
+    "compress-utils": "^0.9.0"
   },
   "packageExtensions": {
-    "@loaders.gl/gltf@~5.0.0-alpha.5": {
+    "@loaders.gl/gltf@~5.0.0-alpha.12": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.5"
+        "@loaders.gl/core": "~5.0.0-alpha.12"
       }
     },
-    "@loaders.gl/images@~5.0.0-alpha.5": {
+    "@loaders.gl/images@~5.0.0-alpha.12": {
       "peerDependencies": {
-        "@loaders.gl/core": "~5.0.0-alpha.5"
+        "@loaders.gl/core": "~5.0.0-alpha.12"
       }
     }
   },
@@ -114,7 +126,7 @@
   ],
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@math.gl/types": "^4.1.0",
+    "@math.gl/core": "~5.0.0-alpha.19",
     "@types/offscreencanvas": "^2019.7.3",
     "preact": "^10.17.0"
   },

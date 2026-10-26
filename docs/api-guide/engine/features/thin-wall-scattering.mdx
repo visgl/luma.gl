@@ -1,0 +1,43 @@
+import {GLTFFeatureExample} from '@site/src/examples';
+
+# Thin-Wall Scattering
+
+Thin-wall scattering divides transmitted light between specular transmission and diffuse
+scattering at a surface. luma.gl implements an experimental thin-wall profile in its shared
+PBR shaders on WebGL2 and WebGPU.
+
+## Example
+
+<GLTFFeatureExample feature="scatter" embedded showStats={false} />
+
+This loads the authored Scatter Strength Thin-Walled asset. Model, Info, and Attributions tabs
+provide selection, interpretation, and source credits without rewriting the material.
+
+## Material parameters
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `transmissionFactor` | `0` | Energy available for transmission. |
+| `scatterStrengthFactor` | `0` | Fraction of transmission assigned to diffuse scattering, from zero to one. |
+| `multiscatterColorFactor` | `[0, 0, 0]` | Linear scattering color; set a nonblack color explicitly for native materials. |
+| `scatterAnisotropy` | `0` | Directional preference; use values strictly between minus one and one. |
+
+Enable `USE_MATERIAL_EXTENSIONS: true` and `HAS_MATERIAL_SCATTER: true` on a compatible model.
+The scattering-strength texture reuses the linear alpha channel of `pbr_diffuseTransmissionSampler`;
+its sampling requires `HAS_DIFFUSETRANSMISSIONMAP: true` and `diffuseTransmissionMapEnabled: true`. The scattering-color texture uses the
+existing sRGB `pbr_multiscatterColorSampler` binding. Source conversion sets the associated
+uniforms, texture flags, and defines together.
+
+The scattered energy exits through the forward and backward hemispheres in proportions
+`(1 + g) / 2` and `(1 - g) / 2`, where `g` is the scattering anisotropy. Scattering color is
+independent of base color.
+
+## Limitations
+
+This profile requires zero volume thickness. It does not implement volumetric transport,
+random walks, or spatial diffusion. The glTF converter rejects combinations with unlit,
+specular-glossiness, or diffuse transmission. The draft importer retains `loader-only` status;
+this implementation does not claim full draft conformance or strict required-extension support.
+
+See [transmission](./transmission.mdx), [volume scattering](./volume-scattering.mdx), and
+[glTF scatter conversion](/docs/api-reference/gltf/gltf-materials-scatter).

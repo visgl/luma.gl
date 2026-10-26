@@ -1,0 +1,22 @@
+---
+title: Riverfront weather
+description: Tune rain, snow, drifting fog, clouds, and daylight driven by a shared astronomy clock.
+sidebar_custom_props:
+  description: Explore rain, snow, fog, clouds, sun and moon, and daylight-dependent surface lighting.
+  backends: [webgpu, webgl2]
+  difficulty: intermediate
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [deck.gl, rendering, simulation]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const WeatherPreview = () => (
+  <iframe title="Riverfront weather interactive example"
+    src={useBaseUrl('/standalone-examples/weather/index.html')}
+    style={{width: '100%', height: '78vh', minHeight: 640, border: 0, borderRadius: 12}} />
+);
+
+<WeatherPreview />

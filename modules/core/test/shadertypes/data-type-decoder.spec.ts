@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import type {TypedArrayConstructor} from '@math.gl/types';
+import type {TypedArrayConstructor} from '@math.gl/core/types';
 import {dataTypeDecoder} from '@luma.gl/core';
 
 const ARRAY_TEST_CASES: {typedArray: TypedArrayConstructor}[] = [

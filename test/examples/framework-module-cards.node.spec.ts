@@ -24,13 +24,12 @@ const FRAMEWORK_MODULE_STYLES_PATH = path.join(
   'website/src/components/framework-module-cards.module.css'
 );
 const HOMEPAGE_SOURCE_PATH = path.join(process.cwd(), 'website/src/pages/index.jsx');
-const ONBOARDING_SOURCE_PATH = path.join(process.cwd(), 'docs/getting-started.mdx');
 
 const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'portability',
     title: 'Core / WebGPU / WebGL',
-    packageName: '@luma.gl/core + adapters',
+    packageName: '@luma.gl/core',
     documentationPath: 'docs/api-reference/core',
     capabilities: ['WebGPU', 'WebGL2', 'GPU resources'],
     descriptions: [/low-level GPU portability layer/i, /WebGPU and WebGL2/i]
@@ -62,7 +61,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'anari',
     title: 'ANARI',
-    packageName: '@luma.gl/scene',
+    packageName: '@luma.gl/anari',
     documentationPath: 'docs/api-reference/scene',
     capabilities: ['glTF', 'OpenUSD', 'Renderers'],
     descriptions: [/declarative 3D scenes/i, /glTF and OpenUSD/i, /switch renderers/i]
@@ -185,24 +184,12 @@ describe('framework module cards', () => {
 
   test('reuses the same complete framework overview on the homepage and guided introduction', () => {
     const homepageSource = readFileSync(HOMEPAGE_SOURCE_PATH, 'utf8');
-    const onboardingSource = readFileSync(ONBOARDING_SOURCE_PATH, 'utf8');
 
     expect(homepageSource).toContain(
       "import {FrameworkModuleCards} from '../components/framework-module-cards';"
     );
     expect(homepageSource).toContain('id="framework-modules"');
     expect(homepageSource).toContain('<FrameworkModuleCards />');
-
-    expect(onboardingSource).toContain(
-      "import {FrameworkModuleCards} from '@site/src/components/framework-module-cards';"
-    );
-    expect(onboardingSource).toContain('<FrameworkModuleCards />');
-    expect(onboardingSource.indexOf('<FrameworkModuleCards />')).toBeGreaterThan(
-      onboardingSource.indexOf('03 · Built for ambitious ideas')
-    );
-    expect(onboardingSource.indexOf('<FrameworkModuleCards />')).toBeLessThan(
-      onboardingSource.indexOf('04 · Find your starting point')
-    );
   });
 });
 

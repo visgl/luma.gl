@@ -75,7 +75,7 @@ The graph normally knows:
 
 Therefore average row length is available without touching GPU data.
 
-Detailed statistics such as maximum row length or short-row fraction may be supplied when the matrix producer already knows them. Jarnevon should **not** introduce a CPU readback merely to choose a kernel.
+Detailed statistics such as maximum row length or short-row fraction may be supplied when the matrix producer already knows them. luma.gl should **not** introduce a CPU readback merely to choose a kernel.
 
 ```text
 CSR metadata already known on CPU ──┐

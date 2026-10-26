@@ -8,6 +8,7 @@ import {fp64ify, fp64LowPart, fp64ifyMatrix4} from '../../../modules/math/fp64/f
 import {fp64arithmeticShader} from './fp64-arithmetic-glsl';
 import {fp64arithmeticWGSL} from './fp64-arithmetic-wgsl';
 import {fp64functionShader} from './fp64-functions-glsl';
+import {fp64functionsWGSL} from './fp64-functions-wgsl';
 
 type FP64Props = {};
 type FP64Uniforms = {ONE: number; SPLIT: number};
@@ -45,10 +46,12 @@ export const fp64arithmetic: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings>
 };
 
 /**
- * Full 64 bit math library
+ * Double-single math: full GLSL library and WGSL projection functions.
+ * WGSL vector/matrix helpers return arrays instead of using GLSL out parameters.
  */
 export const fp64: ShaderModule<{}> & FP64Utilities = {
   name: 'fp64',
+  source: fp64functionsWGSL,
   vs: fp64functionShader,
   dependencies: [fp64arithmetic],
 

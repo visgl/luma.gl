@@ -17,7 +17,7 @@ layout(std140) uniform lambertMaterialUniforms {
   uniform float diffuse;
 } material;
 
-vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 normal_worldspace, vec3 color) {
+vec3 lambert_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 normal_worldspace, vec3 color) {
   float lambertian = max(dot(light_direction, normal_worldspace), 0.0);
   return lambertian * material.diffuse * surfaceColor * color;
 }
@@ -40,7 +40,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
     vec3 light_position_worldspace = pointLight.position;
     vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
     float light_attenuation = getPointLightAttenuation(pointLight, distance(light_position_worldspace, position_worldspace));
-    lightColor += lighting_getLightColor(surfaceColor, light_direction, normal_worldspace, pointLight.color / light_attenuation);
+    lightColor += lambert_getLightColor(surfaceColor, light_direction, normal_worldspace, pointLight.color / light_attenuation);
   }
 
   for (int i = 0; i < lighting.spotLightCount; i++) {
@@ -48,12 +48,12 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
     vec3 light_position_worldspace = spotLight.position;
     vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
     float light_attenuation = getSpotLightAttenuation(spotLight, position_worldspace);
-    lightColor += lighting_getLightColor(surfaceColor, light_direction, normal_worldspace, spotLight.color / light_attenuation);
+    lightColor += lambert_getLightColor(surfaceColor, light_direction, normal_worldspace, spotLight.color / light_attenuation);
   }
 
   for (int i = 0; i < lighting.directionalLightCount; i++) {
     DirectionalLight directionalLight = lighting_getDirectionalLight(i);
-    lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, normal_worldspace, directionalLight.color);
+    lightColor += lambert_getLightColor(surfaceColor, -directionalLight.direction, normal_worldspace, directionalLight.color);
   }
 
   return lightColor;

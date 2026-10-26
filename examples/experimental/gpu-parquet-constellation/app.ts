@@ -10,13 +10,13 @@ import {
   type CompiledGPUCommandGraph,
   type GraphBufferHandle,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   addGPUParquetEncodedPageBatchToGraph,
   createGPUParquetEncodedPageBatchInputBuffer,
   planGPUParquetEncodedPageBatch,
   type GPUParquetDecodedPage
-} from '@luma.gl/gpgpu/gpu-parse';
+} from '@luma.gl/graph/gpu-parse';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   PARQUET_CONSTELLATION_COLUMNS,

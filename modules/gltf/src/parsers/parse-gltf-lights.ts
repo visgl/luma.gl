@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import type {GLTFNodePostprocessed, GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFNodePostprocessed, GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {
   normalizeByteColor3,
   type DirectionalLight,
@@ -272,5 +272,5 @@ function getLightPosition(worldMatrix: Matrix4): [number, number, number] {
  * Resolves the world-space forward direction of a glTF light node.
  */
 function getLightDirection(worldMatrix: Matrix4): [number, number, number] {
-  return worldMatrix.transformDirection([0, 0, -1]) as [number, number, number];
+  return worldMatrix.transformAsVector([0, 0, -1]) as [number, number, number];
 }
