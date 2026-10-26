@@ -105,7 +105,7 @@ Presumably, the heavy restrictions in WebGPU are motivated by:
 - additional optimizations during shader compilation
 - reduced run-time validation overhead
 
-In general, an argument can be made that in WebGPU / WGLS, attributes are less important
+In general, an argument can be made that in WebGPU / WGSL, attributes are less important
 since storage buffers are much more flexible, allowing arbitrary memory layouts, random access, and less limitations on number of bindings etc.
 Attributes **may** be faster than storage bindings, but at the moment there is no clear evidence that this is the case.
 

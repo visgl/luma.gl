@@ -14,15 +14,14 @@ import '@luma.gl/core/test';
 import '@luma.gl/test-utils/test';
 
 // WEBGL ADAPTER TESTS
-import '@luma.gl/webgl/test';
+import '../modules/core/test/webgl/index';
 
 // WEBGPU ADAPTER TESTS
-import '@luma.gl/webgpu/test';
+import '../modules/core/test/webgpu/index';
 
 // CROSS-DEVICE TESTS
 import '@luma.gl/engine/test';
 import '@luma.gl/gltf/test';
-import '@luma.gl/experimental/test';
 
 // EXPERIMENTAL
 import '@luma.gl/arrow/test';
@@ -32,4 +31,4 @@ import '@luma.gl/gpgpu/test';
 import '@luma.gl/splats/test';
 import '@luma.gl/text/test';
 // DEPRECATED TESTS
-import '@luma.gl/constants/test';
+import '../modules/core/test/webgl-constants/index';

@@ -1,0 +1,42 @@
+{
+  "name": "@luma.gl/slang",
+  "version": "10.0.0-alpha.4",
+  "description": "Experimental TypeScript Slang to GLSL and WGSL transpiler for luma.gl",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "keywords": [
+    "slang",
+    "glsl",
+    "wgsl",
+    "shader",
+    "transpiler"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./luma": {
+      "types": "./dist/luma.d.ts",
+      "import": "./dist/luma.js",
+      "require": "./dist/luma.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

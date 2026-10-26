@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {isBrowser} from '@probe.gl/env';
-import {CanvasObserver} from '../../src/adapter/canvas-observer';
+import {isBrowser} from 'probe.gl/env';
+import {CanvasObserver} from '../../src/api/adapter/canvas-observer';
 
 type ObserverGlobals = {
   ResizeObserver: typeof globalThis.ResizeObserver;

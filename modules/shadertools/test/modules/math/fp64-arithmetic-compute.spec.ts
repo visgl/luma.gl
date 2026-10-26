@@ -922,6 +922,105 @@ it('fp64 WGSL#integer division and square root preserve subnormal limbs', async 
   void 0;
 });
 
+it('fp64 WGSL#fp64_scale_fp64 matches exact binary scaling under classic and integer arithmetic', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    return;
+  }
+  if (isSoftwareBackedDevice(webgpuDevice)) {
+    return;
+  }
+
+  const scaleCases = makeScaleCases();
+  const inputData = new Uint32Array(scaleCases.length * 4);
+  for (let index = 0; index < scaleCases.length; index++) {
+    const scaleCase = scaleCases[index];
+    inputData[index * 4] = getFloat32Bits(scaleCase.high);
+    inputData[index * 4 + 1] = getFloat32Bits(scaleCase.low);
+    inputData[index * 4 + 2] = scaleCase.exponent >>> 0;
+  }
+  const inputBuffer = webgpuDevice.createBuffer({
+    data: inputData,
+    usage: Buffer.STORAGE | Buffer.COPY_DST
+  });
+
+  // The classic helper uses no floating-point arithmetic, so it also runs on Metal, where
+  // classic arithmetic is otherwise not selected.
+  const arithmeticModes = [
+    {label: 'integer arithmetic', classic: false, defines: {LUMA_FP64_INTEGER_ARITHMETIC: true}},
+    {
+      label: 'classic arithmetic',
+      classic: true,
+      defines: {LUMA_FP64_INTEGER_ARITHMETIC: false, LUMA_FP64_CODE_ELIMINATION_WORKAROUND: true}
+    }
+  ];
+  const resultsByMode: Uint32Array[] = [];
+  try {
+    for (const arithmeticMode of arithmeticModes) {
+      const resultBuffer = webgpuDevice.createBuffer({
+        byteLength: scaleCases.length * 8,
+        usage: Buffer.STORAGE | Buffer.COPY_SRC
+      });
+      const shaderInputs = new ShaderInputs({fp64arithmetic});
+      const computation = new Computation(webgpuDevice, {
+        source: buildWGSLScaleSource(),
+        modules: [fp64arithmetic],
+        defines: arithmeticMode.defines,
+        shaderInputs,
+        // fp64_scale_fp64 does no floating-point arithmetic under either arithmetic, so neither
+        // shader reads the fp64arithmetic uniforms.
+        shaderLayout: {
+          bindings: [
+            {name: 'inputData', type: 'storage', group: 0, location: 1},
+            {name: 'resultData', type: 'storage', group: 0, location: 2}
+          ]
+        }
+      });
+      try {
+        computation.setBindings({inputData: inputBuffer, resultData: resultBuffer});
+        computation.updateShaderInputs();
+        const computePass = webgpuDevice.beginComputePass({});
+        computation.dispatch(computePass, scaleCases.length);
+        computePass.end();
+        webgpuDevice.submit();
+
+        const resultBytes = await resultBuffer.readAsync();
+        const resultBits = new Uint32Array(
+          resultBytes.buffer,
+          resultBytes.byteOffset,
+          resultBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+        ).slice();
+        resultsByMode.push(resultBits);
+        for (let index = 0; index < scaleCases.length; index++) {
+          const scaleCase = scaleCases[index];
+          const expectedBits = getExpectedScaleBits(scaleCase, !arithmeticMode.classic);
+          expect(
+            [
+              canonicalizeZeroBits(resultBits[index * 2]),
+              canonicalizeZeroBits(resultBits[index * 2 + 1])
+            ],
+            `${arithmeticMode.label} ${scaleCase.label}`
+          ).toEqual(expectedBits);
+        }
+      } finally {
+        computation.destroy();
+        resultBuffer.destroy();
+      }
+    }
+  } finally {
+    inputBuffer.destroy();
+  }
+
+  // Both arithmetics must produce the same value for every case.
+  const [integerBits, classicBits] = resultsByMode;
+  for (let index = 0; index < scaleCases.length; index++) {
+    expect(
+      getExactLimbSum(classicBits[index * 2], classicBits[index * 2 + 1]),
+      `classic and integer values agree for ${scaleCases[index].label}`
+    ).toEqual(getExactLimbSum(integerBits[index * 2], integerBits[index * 2 + 1]));
+  }
+});
+
 for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
   it(`fp64 WGSL#${arithmeticOperation.name}`, async () => {
     const webgpuDevice = await getWebGPUTestDevice();
@@ -1549,6 +1648,118 @@ function makeWideExponentPrimitiveCases(count: number): IntegerPrimitiveCase[] {
     });
   }
   return cases;
+}
+
+type ScaleCase = {
+  label: string;
+  high: number;
+  low: number;
+  exponent: number;
+};
+
+function makeScaleCases(): ScaleCase[] {
+  const third = Math.fround(1 / 3);
+  const thirdLow = Math.fround(1 / 3 - third);
+  const large = Math.fround(-123456.789);
+  const largeLow = Math.fround(-123456.789 - large);
+  // A normal high limb whose low limb is subnormal, 3 * 2^-140.
+  const subnormalLow = 3 * 2 ** -140;
+  return [
+    {label: 'normal value, positive scale', high: third, low: thirdLow, exponent: 10},
+    {label: 'normal value, negative scale', high: third, low: thirdLow, exponent: -20},
+    {label: 'negative normal value', high: large, low: largeLow, exponent: 7},
+    {
+      label: 'normal value scaled to subnormal',
+      high: 1.5 * 2 ** -120,
+      low: 2 ** -146,
+      exponent: -10
+    },
+    {label: 'subnormal low part, zero scale', high: 2 ** -100, low: subnormalLow, exponent: 0},
+    {label: 'subnormal low part, positive scale', high: 2 ** -100, low: subnormalLow, exponent: 5},
+    {label: 'subnormal low part to normal', high: 2 ** -100, low: subnormalLow, exponent: 40},
+    {
+      label: 'subnormal low part, exact negative scale',
+      high: 2 ** -100,
+      low: subnormalLow,
+      exponent: -9
+    },
+    {label: 'subnormal low part rounds to even', high: 2 ** -100, low: subnormalLow, exponent: -10},
+    {label: 'negative subnormal low part', high: -(2 ** -100), low: -subnormalLow, exponent: -3},
+    {label: 'positive zero', high: 0, low: 0, exponent: 5},
+    {label: 'negative zero', high: -0, low: 0, exponent: -5},
+    {label: 'largest power of two', high: 2 ** 127, low: 0, exponent: 0},
+    {label: 'power of two to the largest exponent', high: 2 ** 126, low: 0, exponent: 1},
+    {label: 'minimum normal to subnormal', high: 2 ** -126, low: 0, exponent: -1},
+    {label: 'minimum subnormal to the largest exponent', high: 2 ** -149, low: 0, exponent: 276},
+    {label: 'largest exponent to minimum subnormal', high: 2 ** 127, low: 0, exponent: -276},
+    {label: 'largest exponent below minimum subnormal', high: 2 ** 127, low: 0, exponent: -277},
+    {label: 'minimum subnormal halved ties to zero', high: 2 ** -149, low: 0, exponent: -1},
+    {label: 'subnormal halved ties to even', high: 3 * 2 ** -149, low: 0, exponent: -1}
+  ];
+}
+
+function buildWGSLScaleSource(): string {
+  return `\
+@group(0) @binding(1) var<storage, read> inputData: array<vec4u>;
+@group(0) @binding(2) var<storage, read_write> resultData: array<vec2u>;
+
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+  let index = id.x;
+  let input = inputData[index];
+  let value = vec2f(bitcast<f32>(input.x), bitcast<f32>(input.y));
+  let scaled = fp64_scale_fp64(value, bitcast<i32>(input.z));
+  resultData[index] = vec2u(bitcast<u32>(scaled.x), bitcast<u32>(scaled.y));
+}
+`;
+}
+
+// Scales each limb exactly and rounds it to f32. Integer arithmetic then renormalizes the pair
+// with an exact two-sum; classic arithmetic returns the rounded limbs, which have the same value.
+function getExpectedScaleBits(scaleCase: ScaleCase, renormalize: boolean): [number, number] {
+  const scaleLimb = (value: number): ExactBinary => {
+    const exact = decodeFiniteFloat32Bits(getFloat32Bits(value));
+    if (exact.coefficient === 0n) {
+      return exact;
+    }
+    const roundedBits = Number(
+      roundExactBinaryToFormat(
+        {coefficient: exact.coefficient, exponent: exact.exponent + scaleCase.exponent},
+        23,
+        8,
+        127
+      )
+    );
+    return decodeFiniteFloat32Bits(roundedBits);
+  };
+  const scaledHigh = scaleLimb(scaleCase.high);
+  const scaledLow = scaleLimb(scaleCase.low);
+  if (!renormalize) {
+    return [
+      canonicalizeZeroBits(Number(roundExactBinaryToFormat(scaledHigh, 23, 8, 127))),
+      canonicalizeZeroBits(Number(roundExactBinaryToFormat(scaledLow, 23, 8, 127)))
+    ];
+  }
+  const sum = addExactBinary(scaledHigh, scaledLow);
+  const highBits = Number(roundExactBinaryToFormat(sum, 23, 8, 127));
+  const residual = subtractExactBinary(sum, decodeFiniteFloat32Bits(highBits));
+  const lowBits = Number(roundExactBinaryToFormat(residual, 23, 8, 127));
+  return [canonicalizeZeroBits(highBits), canonicalizeZeroBits(lowBits)];
+}
+
+function addExactBinary(inputA: ExactBinary, inputB: ExactBinary): ExactBinary {
+  return subtractExactBinary(inputA, {coefficient: -inputB.coefficient, exponent: inputB.exponent});
+}
+
+function getExactLimbSum(highBits: number, lowBits: number): ExactBinary {
+  const sum = addExactBinary(decodeFiniteFloat32Bits(highBits), decodeFiniteFloat32Bits(lowBits));
+  // Compare values, not representations: shift the coefficient to a common exponent.
+  return {coefficient: sum.coefficient << BigInt(sum.exponent + 149), exponent: -149};
+}
+
+// normalize_fp64 canonicalizes zero to +0, so the sign of a zero limb is not compared.
+function canonicalizeZeroBits(bits: number): number {
+  return (bits & 0x7fffffff) === 0 ? 0 : bits >>> 0;
 }
 
 function getFp64IntegerTestDefines(gpu: string): Record<string, boolean> {

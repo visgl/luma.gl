@@ -4,14 +4,17 @@
 
 import {existsSync, readFileSync} from 'node:fs';
 import {describe, expect, test} from 'vitest';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {
+  type GLTFPostprocessed,
+  assertSupportedGLTFExtensions,
+  getRegisteredGLTFExtensions
+} from '@luma.gl/gltf';
 
-import {assertSupportedGLTFExtensions, getRegisteredGLTFExtensions} from '@luma.gl/gltf';
-import {getGLTFReferenceLedger} from '../../../../examples/showcase/gltf/gltf-reference-ledger';
+import {getGLTFReferenceLedger} from '../../../../examples/gltf/asset-studio/gltf-reference-ledger';
 import {
   getGLTFReferenceCaptureOptions,
   getGLTFReferenceDrawMetrics
-} from '../../../../examples/showcase/gltf/gltf-reference-evidence';
+} from '../../../../examples/gltf/asset-studio/gltf-reference-evidence';
 
 describe('glTF reference ledger', () => {
   test('pins the Khronos assets and viewer revisions', () => {
@@ -30,7 +33,7 @@ describe('glTF reference ledger', () => {
       extension => extension.supported
     );
 
-    expect(supportedEntries).toHaveLength(26);
+    expect(supportedEntries).toHaveLength(27);
     expect(
       supportedEntries
         .filter(extension => !extension.positiveFixture)
@@ -40,7 +43,7 @@ describe('glTF reference ledger', () => {
     for (const extension of supportedEntries) {
       const fixture = extension.positiveFixture!;
       expect(fixture.licenseLocation).toBeTruthy();
-      if (fixture.source === 'khronos-sample-assets') {
+      if (fixture.source !== 'luma.gl') {
         expect(fixture.sourceRevision).toMatch(/^[0-9a-f]{40}$/);
         expect(fixture.assetLocation).toContain(fixture.sourceRevision);
         expect(fixture.licenseLocation).toContain(fixture.sourceRevision);

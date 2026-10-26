@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // NOTE: `@luma.gl/gltf` intentionally keeps this as a local enum subset so it
-// does not need to depend on `@luma.gl/webgl` for a handful of stable WebGL values.
+// does not need to depend on `@luma.gl/core/webgl` for a handful of stable WebGL values.
 // eslint-disable-next-line no-shadow
 export enum GLEnum {
   POINTS = 0x0,

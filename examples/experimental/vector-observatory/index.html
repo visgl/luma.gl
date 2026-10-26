@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <title>Vector Observatory · luma.gl</title>
+  </head>
+  <body>
+    <canvas id="flow" aria-label="GPU particle vector field simulation"></canvas>
+    <div id="observatory-panels"></div>
+    <footer class="observatory-status">
+      <output id="status">Initializing WebGPU…</output>
+      <div class="observatory-legend" aria-label="Particle color scale">
+        <span id="legend-low">LOW VELOCITY</span><i id="legend-ramp"></i><span id="legend-high">HIGH</span>
+      </div>
+    </footer>
+    <div id="error" role="alert" hidden></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

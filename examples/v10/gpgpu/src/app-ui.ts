@@ -7,6 +7,7 @@ import type {RenderedTableElements} from './table-renderer';
 export type GPGPUExpressionElements = {
   form: HTMLFormElement;
   input: HTMLInputElement;
+  preset: HTMLSelectElement;
   runButton: HTMLButtonElement;
   message: HTMLElement;
 };
@@ -28,6 +29,7 @@ export function getExpressionElements(): GPGPUExpressionElements {
   return {
     form: getRequiredElement('expression-form'),
     input: getRequiredElement('expression-input'),
+    preset: getRequiredElement('expression-preset'),
     runButton: getRequiredElement('expression-run'),
     message: getRequiredElement('expression-message')
   };

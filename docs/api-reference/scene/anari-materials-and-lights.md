@@ -4,7 +4,6 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
@@ -110,7 +109,7 @@ type ANARIMaterialParameters = {
 | `anisotropyStrength`, `anisotropyRotation`, `anisotropyDirection` | Directional highlight response. |
 
 When a retained material has nonzero `transmission`, ANARI's shared
-[experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) automatically
+[experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) automatically
 captures opaque scene color and samples it for screen-space refraction. Thickness, attenuation,
 index of refraction, chromatic dispersion, and roughness shape the transmitted result. Opaque
 radiance is captured in linear HDR when supported, then exposed and tone-mapped only after the
@@ -211,11 +210,11 @@ const renderer = anariDevice.newRenderer('default', {
 
 Supply the complete diffuse/specular/BRDF texture set to enable the existing shared environment
 shader. ANARI forwards these resources to the
-[experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer); it does not
+[experimental SceneRenderer](/docs/api-reference/scene/scene-renderer); it does not
 generate cubemaps or implement its own environment shader. Existing prefiltered source textures
 can be loaded with `@luma.gl/gltf`'s `loadPBREnvironment()` helper, or generated from an
 equirectangular source through the shared
-[`PBREnvironmentGenerator`](/docs/api-reference/experimental/pbr-environment).
+[`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment).
 
 ## `ANARILight`
 

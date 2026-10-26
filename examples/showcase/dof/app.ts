@@ -26,7 +26,7 @@ import {
 } from '@luma.gl/engine';
 import {dofCompositeShaderPass} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
+import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 import {

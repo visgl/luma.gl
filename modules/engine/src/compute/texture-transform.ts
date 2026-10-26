@@ -4,21 +4,27 @@
 
 import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
-import {Model, ModelProps} from '../model/model';
+import {
+  GPUVectorModel,
+  type GPUVectorModelProps,
+  type GPUVectorModelInputs
+} from '../model/gpu-vector-model';
 import {uid} from '../utils/uid';
 
 /**
  * Properties for creating a {@link TextureTransform}
  */
-export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
-  fs?: ModelProps['fs']; // override as optional
+export type TextureTransformProps = Omit<GPUVectorModelProps, 'fs'> & {
+  /** Borrowed contiguous vectors mapped to vertex-buffer layout names. */
+  inputVectors?: GPUVectorModelInputs;
+  fs?: GPUVectorModelProps['fs']; // override as optional
   /** @deprecated TODO(donmccurdy): Needed? */
   inject?: Record<string, string>;
   /** @deprecated TODO(donmccurdy): Needed? */
   framebuffer?: Framebuffer;
-  /** @deprecated TODO(donmccurdy): Model already handles this? */
+  /** @deprecated TODO(donmccurdy): GPUVectorModel already handles this? */
   sourceBuffers?: Record<string, Buffer>;
-  /** @deprecated TODO(donmccurdy): Model already handles this? */
+  /** @deprecated TODO(donmccurdy): GPUVectorModel already handles this? */
   sourceTextures?: Record<string, Texture>;
   targetTexture: Texture;
   targetTextureChannels: 1 | 2 | 3 | 4;
@@ -40,7 +46,7 @@ const FS_OUTPUT_VARIABLE = 'transform_output';
  */
 export class TextureTransform {
   readonly device: Device;
-  readonly model: Model;
+  readonly model: GPUVectorModel;
   readonly sampler: Sampler;
 
   currentIndex = 0;
@@ -50,6 +56,7 @@ export class TextureTransform {
 
   constructor(device: Device, props: TextureTransformProps) {
     this.device = device;
+    const {inputVectors, ...modelProps} = props;
 
     // For precise picking of element IDs.
     this.sampler = device.createSampler({
@@ -60,7 +67,7 @@ export class TextureTransform {
       mipmapFilter: 'nearest'
     });
 
-    this.model = new Model(this.device, {
+    this.model = new GPUVectorModel(this.device, {
       id: props.id || uid('texture-transform-model'),
       fs:
         props.fs ||
@@ -70,9 +77,10 @@ export class TextureTransform {
           output: FS_OUTPUT_VARIABLE
         }),
       vertexCount: props.vertexCount, // TODO(donmccurdy): Naming?
-      ...props
+      ...modelProps
     });
 
+    if (inputVectors) this.model.setGPUVectors(inputVectors, {count: 'vertex'});
     this._initialize(props);
     Object.seal(this);
   }
@@ -90,11 +98,16 @@ export class TextureTransform {
     this.destroy();
   }
 
-  run(options?: RenderPassProps): void {
+  run(options?: RenderPassProps & {inputVectors?: GPUVectorModelInputs}): void {
+    const {inputVectors, ...renderPassProps} = options ?? {};
+    if (inputVectors) this.model.setGPUVectors(inputVectors, {count: 'vertex'});
     const {framebuffer} = this.bindings[this.currentIndex];
-    const renderPass = this.device.beginRenderPass({framebuffer, ...options});
-    this.model.draw(renderPass);
-    renderPass.end();
+    const renderPass = this.device.beginRenderPass({framebuffer, ...renderPassProps});
+    try {
+      this.model.draw(renderPass);
+    } finally {
+      renderPass.end();
+    }
     this.device.submit();
   }
 

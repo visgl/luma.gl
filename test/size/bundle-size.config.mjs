@@ -4,25 +4,43 @@
  */
 export const BUNDLE_SIZE_FIXTURES = [
   {
+    name: 'slang',
+    label: '`@luma.gl/slang` compiler (optional)',
+    entry: 'modules/slang/src/index.ts',
+    external: [],
+    // Named imports and native contracts add 2.1 KB gzip; retain a tight regression ceiling.
+    maximum: {minified: 108_000, gzip: 31_000, brotli: 27_500},
+    targetGzip: 25_000
+  },
+  {
+    name: 'slang-luma',
+    label: '`@luma.gl/slang/luma` helpers (optional)',
+    entry: 'modules/slang/src/luma.ts',
+    external: [],
+    maximum: {minified: 5_000, gzip: 1_800, brotli: 1_600},
+    targetGzip: 1_500
+  },
+  {
     name: 'core',
     label: '`@luma.gl/core`',
     entry: 'modules/core/src/index.ts',
     external: [],
-    maximum: {minified: 101_000, gzip: 28_500, brotli: 25_000},
+    // Includes device-creation error reporting (#3147) and probe.gl v5 logging.
+    maximum: {minified: 101_500, gzip: 28_500, brotli: 25_000},
     targetGzip: 24_000
   },
   {
     name: 'webgl',
-    label: '`@luma.gl/webgl` backend',
-    entry: 'modules/webgl/src/index.ts',
+    label: '`@luma.gl/core/webgl` backend',
+    entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
-    maximum: {minified: 140_000, gzip: 39_500, brotli: 34_000},
+    maximum: {minified: 140_250, gzip: 39_500, brotli: 34_000},
     targetGzip: 30_000
   },
   {
     name: 'webgpu',
-    label: '`@luma.gl/webgpu` backend',
-    entry: 'modules/webgpu/src/index.ts',
+    label: '`@luma.gl/core/webgpu` backend',
+    entry: 'modules/core/src/webgpu/index.ts',
     external: ['@luma.gl/core'],
     maximum: {minified: 280_000, gzip: 58_000, brotli: 49_000},
     targetGzip: 22_000
@@ -31,7 +49,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    maximum: {minified: 240_000, gzip: 68_000, brotli: 59_000},
+    maximum: {minified: 241_750, gzip: 68_000, brotli: 59_000},
     targetGzip: 54_000
   },
   {

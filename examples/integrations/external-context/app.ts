@@ -5,8 +5,8 @@ import {Matrix4} from '@math.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import type {WebGLDevice} from '@luma.gl/webgl';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import type {WebGLDevice} from '@luma.gl/core/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const {POSITIONS, COLORS, WGSL_SHADER, VS_GLSL, FS_GLSL} = getShaderSources();
 
@@ -42,7 +42,7 @@ export async function initializeExternalWebGLContext(
 
   const maplibreMap = new maplibregl.Map({
     container,
-    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+    style: 'https://tiles.openfreemap.org/styles/positron',
     center: [-122.43, 37.77],
     pitch: 60,
     zoom: 12.5,

@@ -128,3 +128,11 @@ embeddings.length; // Logical source rows.
 embeddings.valueLength; // Flattened Float32 embedding coordinates.
 embeddings.data; // Original caller-owned GPUData batch chunks.
 ```
+
+## Batch structure validation
+
+`validateGPUVectorBatchStructure(vectors)` is exported from `@luma.gl/gpgpu/gpu-data`.
+Pass a named map or array to verify that every varying vector has the same logical length,
+chunk count, and per-chunk row counts. Chunk lengths must sum to each vector's length.
+Constants and undefined entries do not determine batch structure. Validation preserves
+all source buffers and chunk boundaries.

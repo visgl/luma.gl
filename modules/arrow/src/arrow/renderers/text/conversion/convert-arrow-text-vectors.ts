@@ -8,7 +8,7 @@ import {
   planGeneratedBufferBatches,
   type GeneratedBufferBatch,
   type GPUTableModelProps
-} from '@luma.gl/experimental/gpu-tables';
+} from '@luma.gl/graph/gpu-tables';
 import {expandArrowVector} from '../../../vectors/arrow-vector-utils';
 import {
   getArrowVectorBufferSource,

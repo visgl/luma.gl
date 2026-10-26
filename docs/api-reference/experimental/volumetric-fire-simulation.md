@@ -18,7 +18,7 @@ without copying simulation state through the CPU.
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {VolumetricFireSimulation} from '@luma.gl/experimental';
+import {VolumetricFireSimulation} from '@luma.gl/graph/gpu-simulation';
 
 const dimensions = [64, 96, 64] as const;
 const obstacleTexture = device.createTexture({
@@ -220,7 +220,7 @@ sparse grids in later revisions.
 
 - [GPU Command Graph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
   documents graph ownership, hazard inference, and encoding.
-- [GBuffer](/docs/api-reference/experimental/g-buffer) provides depth, normal, and velocity
+- [GBuffer](/docs/api-reference/scene/g-buffer) provides depth, normal, and velocity
   attachments for depth-aware volume composition.
 - [Shader Passes](/docs/api-guide/shaders/shader-passes) describes composable HDR and temporal
   rendering pipelines that can consume the simulation textures.

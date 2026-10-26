@@ -4,7 +4,6 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
@@ -12,8 +11,8 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {ANARIDevice} from '@luma.gl/scene';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {ANARIDevice} from '@luma.gl/anari';
 
 const graphicsDevice = await luma.createDevice({
   adapters: [webgpuAdapter],
@@ -151,7 +150,7 @@ Returns supported subtypes for an object category:
 
 ```ts
 anariDevice.getObjectSubtypes('geometry');
-// ['triangle', 'sphere', 'cylinder', 'cone', 'quad']
+// ['triangle', 'sphere', 'cylinder', 'cone', 'quad', 'hexPrism', 'torus', 'ring']
 
 anariDevice.getObjectSubtypes('renderer');
 // ['default', 'deferred', 'debugNormals', 'debugDepth', 'raytrace']

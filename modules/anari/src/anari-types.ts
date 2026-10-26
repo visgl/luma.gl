@@ -1,0 +1,359 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import type {Texture} from '@luma.gl/core';
+import type {NumberArray9, TypedArray} from '@math.gl/core';
+import type {
+  ANARIArray,
+  ANARICamera,
+  ANARIGeometry,
+  ANARIGroup,
+  ANARIInstance,
+  ANARILight,
+  ANARIMaterial,
+  ANARIRenderer,
+  ANARISampler,
+  ANARISurface,
+  ANARIWorld
+} from './anari-objects';
+
+/** Caller-owned full-resolution primary-hit GPU snapshot. Submit final GPU use before destroy(). */
+export type ANARIFrameChannels = {
+  /** Texel identifier index + 1 resolves to this retained placement; zero denotes a miss. */
+  identifiers: readonly {surface: ANARISurface; instance?: ANARIInstance; placementId: string}[];
+  identifierTexture: Texture;
+  /** Ray-origin distance in world units, not projected device depth; zero denotes a miss. */
+  distanceTexture: Texture;
+  /** World-space xyz normal with hit validity in alpha. Misses are all zero. */
+  normalTexture: Texture;
+  /** Projected depth in WebGPU zero-to-one range; background is one. */
+  projectedDepthTexture: Texture;
+  destroy(): void;
+};
+
+export type ANARIObjectType =
+  | 'array'
+  | 'camera'
+  | 'frame'
+  | 'geometry'
+  | 'group'
+  | 'instance'
+  | 'light'
+  | 'material'
+  | 'renderer'
+  | 'sampler'
+  | 'surface'
+  | 'world';
+
+export type ANARIGeometrySubtype =
+  | 'triangle'
+  | 'sphere'
+  | 'cylinder'
+  | 'cone'
+  | 'quad'
+  | 'hexPrism'
+  | 'torus'
+  | 'ring';
+export type ANARIMaterialSubtype = 'matte' | 'physicallyBased';
+export type ANARISamplerSubtype = 'image2D';
+export type ANARILightSubtype = 'ambient' | 'directional' | 'point' | 'spot';
+export type ANARICameraSubtype = 'perspective' | 'orthographic';
+export type ANARIRendererSubtype =
+  | 'default'
+  | 'deferred'
+  | 'debugNormals'
+  | 'debugDepth'
+  | 'raytrace'
+  | (string & Record<never, never>);
+
+export type ANARIVector3 = readonly [number, number, number];
+export type ANARIVector4 = readonly [number, number, number, number];
+export type ANARIMatrix4 = readonly number[];
+export type ANARIArrayData = TypedArray | readonly ANARIObjectReference[];
+export type ANARIObjectReference =
+  | ANARIGeometry
+  | ANARIMaterial
+  | ANARISampler
+  | ANARISurface
+  | ANARIGroup
+  | ANARIInstance
+  | ANARILight;
+
+export type ANARISamplerParameters = {
+  image: Texture;
+  transform?: Readonly<NumberArray9>;
+  textureCoordinateSet?: 0 | 1;
+};
+
+export type ANARIArrayParameters = {
+  data: ANARIArrayData;
+  elementType?: string;
+  dimensions?: readonly number[];
+};
+
+/** CPU-side displacement attributes belonging to one retained morph target. */
+export type ANARIMorphTargetParameters = {
+  POSITION?: Float32Array;
+  NORMAL?: Float32Array;
+  TANGENT?: Float32Array;
+};
+
+export type ANARIGeometryParameters = {
+  'vertex.position'?: Float32Array | ANARIArray;
+  'vertex.normal'?: Float32Array | ANARIArray;
+  'vertex.tangent'?: Float32Array | ANARIArray;
+  'vertex.joint'?: Uint8Array | Uint16Array | Uint32Array | ANARIArray;
+  'vertex.weight'?: Float32Array | ANARIArray;
+  'vertex.attribute0'?: Float32Array | ANARIArray;
+  'vertex.attribute1'?: Float32Array | ANARIArray;
+  'vertex.attribute2'?: Float32Array | ANARIArray;
+  'primitive.index'?: Uint16Array | Uint32Array | ANARIArray;
+  morphTargets?: readonly ANARIMorphTargetParameters[];
+  morphWeights?: readonly number[];
+  radius?: number;
+  height?: number;
+  width?: number;
+  segments?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  startAngle?: number;
+  angle?: number;
+  majorRadius?: number;
+  minorRadius?: number;
+  majorSegments?: number;
+  minorSegments?: number;
+  /** Torus sweep in radians; partial sweeps have open ends. */
+  arc?: number;
+};
+
+export type ANARIMaterialParameters = {
+  color?: ANARIVector3 | ANARIVector4;
+  baseColor?: ANARIVector3 | ANARIVector4;
+  emissive?: ANARIVector3;
+  emissiveStrength?: number;
+  metallic?: number;
+  roughness?: number;
+  opacity?: number;
+  alphaMode?: 'opaque' | 'mask' | 'blend';
+  alphaCutoff?: number;
+  doubleSided?: boolean;
+  unlit?: boolean;
+  specularColor?: ANARIVector3;
+  specularIntensity?: number;
+  clearcoat?: number;
+  iridescence?: number;
+  clearcoatRoughness?: number;
+  transmission?: number;
+  diffuseTransmission?: number;
+  diffuseTransmissionColor?: ANARIVector3;
+  dispersion?: number;
+  thickness?: number;
+  attenuationDistance?: number;
+  attenuationColor?: ANARIVector3;
+  /** Experimental multi-scatter albedo from the unratified glTF volume-scatter draft. */
+  multiscatterColor?: ANARIVector3;
+  scatterAnisotropy?: number;
+  indexOfRefraction?: number;
+  sheenColor?: ANARIVector3;
+  sheenRoughness?: number;
+  iridescenceIndexOfRefraction?: number;
+  iridescenceThicknessMinimum?: number;
+  iridescenceThicknessMaximum?: number;
+  anisotropyStrength?: number;
+  anisotropyRotation?: number;
+  anisotropyDirection?: readonly [number, number];
+  normalScale?: number;
+  bumpFactor?: number;
+  occlusionStrength?: number;
+  baseColorTexture?: ANARISampler;
+  normalTexture?: ANARISampler;
+  bumpTexture?: ANARISampler;
+  metallicRoughnessTexture?: ANARISampler;
+  emissiveTexture?: ANARISampler;
+  occlusionTexture?: ANARISampler;
+  specularColorTexture?: ANARISampler;
+  specularIntensityTexture?: ANARISampler;
+  clearcoatTexture?: ANARISampler;
+  clearcoatRoughnessTexture?: ANARISampler;
+  clearcoatNormalTexture?: ANARISampler;
+  transmissionTexture?: ANARISampler;
+  diffuseTransmissionTexture?: ANARISampler;
+  diffuseTransmissionColorTexture?: ANARISampler;
+  thicknessTexture?: ANARISampler;
+  multiscatterColorTexture?: ANARISampler;
+  sheenColorTexture?: ANARISampler;
+  sheenRoughnessTexture?: ANARISampler;
+  iridescenceTexture?: ANARISampler;
+  iridescenceThicknessTexture?: ANARISampler;
+  anisotropyTexture?: ANARISampler;
+};
+
+/** Format-independent joint palette retained by one deformable surface. */
+export type ANARISkinParameters = {
+  jointMatrices: Float32Array | readonly number[];
+};
+
+export type ANARISurfaceParameters = {
+  geometry: ANARIGeometry;
+  material: ANARIMaterial;
+  skin?: ANARISkinParameters;
+};
+
+export type ANARIGroupParameters = {
+  surface?: readonly ANARISurface[] | ANARIArray;
+  surfaces?: readonly ANARISurface[];
+  light?: readonly ANARILight[] | ANARIArray;
+  lights?: readonly ANARILight[];
+};
+
+export type ANARIInstanceParameters = {
+  group: ANARIGroup | readonly ANARIGroup[] | ANARIArray;
+  transform?: ANARIMatrix4;
+};
+
+export type ANARIWorldParameters = {
+  surface?: readonly ANARISurface[] | ANARIArray;
+  surfaces?: readonly ANARISurface[];
+  instance?: readonly ANARIInstance[] | ANARIArray;
+  instances?: readonly ANARIInstance[];
+  light?: readonly ANARILight[] | ANARIArray;
+  lights?: readonly ANARILight[];
+};
+
+export type ANARILightParameters = {
+  color?: ANARIVector3;
+  direction?: ANARIVector3;
+  position?: ANARIVector3;
+  intensity?: number;
+  irradiance?: number;
+  radiance?: number;
+  openingAngle?: number;
+  falloffAngle?: number;
+};
+
+export type ANARICameraParameters = {
+  position?: ANARIVector3;
+  direction?: ANARIVector3;
+  up?: ANARIVector3;
+  aspect?: number;
+  fovy?: number;
+  height?: number;
+  near?: number;
+  far?: number;
+};
+
+export type ANARIRendererParameters = {
+  background?: ANARIVector4;
+  ambientRadiance?: number;
+  environment?: {
+    diffuseTexture?: Texture;
+    specularTexture?: Texture;
+    brdfLUTTexture?: Texture;
+    intensity?: number;
+    rotation?: number;
+  };
+  exposure?: number;
+  /** Tone mapping: 0 none, 1 Reinhard, 2 Khronos PBR Neutral, or 3 ACES. */
+  toneMapMode?: 0 | 1 | 2 | 3;
+  /** Explicit output transfer; omitted values follow the render-target format. */
+  outputColorSpace?: 'linear' | 'srgb';
+  samplesPerPixel?: number;
+  /** Uint32 primary and secondary sampling seed. Changing it resets accumulation. */
+  samplingSeed?: number;
+  /** Maximum retained samples per pixel, from 1 to 256; defaults to 64. */
+  historySampleLimit?: number;
+  /** Presentation-only guided filter radius in internal pixels; defaults to zero. */
+  denoiseRadius?: 0 | 1 | 2;
+  /** Presentation-only primary-hit diagnostics for ray tracing. */
+  debugView?: 'color' | 'normal' | 'cameraDistance' | 'identity' | 'history';
+  /** Defaults to diffuse; pbr enables opaque metallic/roughness secondary reflections. */
+  transportMode?: 'diffuse' | 'pbr';
+  /** Explicit emissive geometry connections for ray lighting. */
+  emitterSampling?: boolean;
+  /** Emitter selection distribution; defaults to uniform. Power uses area × luminance. */
+  emitterSelection?: 'uniform' | 'power';
+  /** Secondary bounce budget, clamped to 0–8; defaults to zero. */
+  maxBounces?: number;
+  progressive?: boolean;
+  shadows?: boolean;
+  resolutionScale?: number;
+  minimumResolutionScale?: number;
+  adaptiveResolution?: boolean;
+  targetFrameTimeMilliseconds?: number;
+  /**
+   * Enables camera-reprojection temporal antialiasing for raster renderers. Defaults to true.
+   */
+  temporalAntialiasing?: boolean;
+  temporalReprojection?: boolean;
+  shadowSamplesPerFrame?: number;
+  bloomIntensity?: number;
+  bloomThreshold?: number;
+  bloomRadius?: number;
+  fogColor?: ANARIVector3;
+  fogDensity?: number;
+};
+
+/** Retained objects and world-space hit information from a submitted ray-traced frame. */
+export type ANARIPickResult = {
+  surface: ANARISurface;
+  instance?: ANARIInstance;
+  placementId: string;
+  position: ANARIVector3;
+  normal: ANARIVector3;
+  /** Distance from the primary ray origin (the near plane for orthographic cameras). */
+  distance: number;
+};
+
+export type ANARIFrameParameters = {
+  world: ANARIWorld;
+  camera: ANARICamera;
+  renderer: ANARIRenderer;
+  size?: readonly [number, number];
+};
+
+/** Synchronous command-graph costs for one retained ray-tracing frame stage. */
+export type ANARIRayTracingGraphStageStatistics = {
+  nodeCount: number;
+  computePassCount: number;
+  coalescedComputeNodeCount: number;
+  cpuEncodeTimeMilliseconds: number;
+};
+
+/** Aggregate command-graph diagnostics plus the stages encoded for one frame. */
+export type ANARIRayTracingGraphStatistics = ANARIRayTracingGraphStageStatistics & {
+  topology?: ANARIRayTracingGraphStageStatistics;
+  acceleration?: ANARIRayTracingGraphStageStatistics;
+  refit?: ANARIRayTracingGraphStageStatistics;
+  trace: ANARIRayTracingGraphStageStatistics;
+};
+
+export type ANARIFrameStatistics = {
+  surfaceCount: number;
+  instanceCount: number;
+  drawCount: number;
+  triangleCount: number;
+  rayTracing?: {
+    internalWidth: number;
+    internalHeight: number;
+    resolutionScale: number;
+    sampledPixelCoverage: number;
+    frameTimeMilliseconds: number;
+    accumulatedSamples: number;
+    /** Logical owned allocations; excludes caller targets and driver/pipeline overhead. */
+    memory?: {
+      sceneBufferBytes: number;
+      historyTextureBytes: number;
+      graphTransientBytes: number;
+      totalBytes: number;
+    };
+
+    graph?: ANARIRayTracingGraphStatistics;
+  };
+};
+
+export type ANARIObjectInfo = {
+  type: ANARIObjectType;
+  subtypes: readonly string[];
+  extensions: readonly string[];
+};

@@ -4,7 +4,7 @@
 
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
-import type {NumberArray3} from '@math.gl/types';
+import type {NumberArray3} from '@math.gl/core/types';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {ShaderModulesInfoHtml} from './app-ui';
 

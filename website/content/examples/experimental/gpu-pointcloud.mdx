@@ -1,0 +1,32 @@
+---
+title: GPU Point Cloud Cleanup Lab
+sidebar_label: GPU Point Cloud Cleanup Lab
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  topics: [compute, rendering, command-graphs]
+---
+
+import {GPUPointCloudExample} from '@site/src/examples';
+
+<GPUPointCloudExample />
+
+Compare the original on the left with GPU-processed data on the right. Use the controls to change
+processing and pause rotation. Both views draw directly from GPU buffers. The panel shows source and filtered point counts,
+reading back only the four-byte filtered total after processing changes.
+
+See the [API and limitations](/docs/api-reference/gpgpu/gpu-pointcloud).
+
+Enable **Size by point count** to increase radius gently with the logarithm of the original voxel
+population: `1 + 0.2 × log2(count)`, capped at 2.5 times the base radius. Disable it to compare
+representatives at a uniform size. The GPU count buffer
+drives sizing directly; changing this option does not rerun sampling or read counts back.
+
+Use **Grid cells per axis** to choose 2–16 cells on each axis. **Show voxel grid on input** overlays the
+matching wireframe on the original input view. Smaller cells preserve more detail. The exact radius
+filter scans dense voxel slots, so increasing the grid from 16 to 32 would multiply its pairwise
+work by 64; larger grids need a more scalable neighbor search.
+
+Drag either view to orbit and scroll or pinch to zoom. The input, processed result, and any voxel
+grid share synchronized orbit controls. The Rotate toggle controls automatic rotation.
