@@ -100,9 +100,9 @@
     "@vitest/browser": "5.0.2",
     "@vitest/browser-playwright": "5.0.2",
     "@luma.gl/webgl": "workspace:modules/core",
-    "@math.gl/core@npm:^4.1.0": "5.0.0-alpha.20",
     "@loaders.gl/core/apache-arrow": "^17.0.0",
-    "@loaders.gl/tables/apache-arrow": "^17.0.0"
+    "@loaders.gl/tables/apache-arrow": "^17.0.0",
+    "@deck.gl/core/@math.gl/core": "5.0.0-alpha.20"
   },
   "pre-commit": [
     "test-fast"

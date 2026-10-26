@@ -357,7 +357,14 @@ module.exports = {
         name: 'deck-community-source-aliases',
         configureWebpack(_configuration, isServer) {
           return {
+            mergeStrategy: {'resolve.modules': 'replace'},
             resolve: {
+              // Resolve dependency-local versions before the shared website's root fallbacks.
+              modules: [
+                'node_modules',
+                path.resolve(__dirname, 'node_modules'),
+                path.resolve(__dirname, '../node_modules')
+              ],
               alias: {
                 'apache-arrow/type$': path.resolve(
                   __dirname,
