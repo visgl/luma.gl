@@ -1,0 +1,422 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+// biome-ignore format: preserve layout
+// / <reference types="@webgpu/types" />
+
+import {
+  Adapter,
+  type DeviceInfo,
+  type DeviceProps,
+  type WebGPUDeviceFeature,
+  log
+} from '../../index';
+import type {WebGPUDevice} from './webgpu-device';
+
+type WebGPUSupportedLimitName = Exclude<keyof GPUSupportedLimits, '__brand'>;
+type RequestedWebGPUFeatureLevel = NonNullable<DeviceProps['featureLevel']>;
+type EffectiveWebGPUFeatureLevel = NonNullable<DeviceInfo['featureLevel']>;
+
+const CORE_FEATURES_AND_LIMITS = 'core-features-and-limits' as GPUFeatureName;
+
+const WEBGPU_SUPPORTED_LIMIT_NAMES: readonly WebGPUSupportedLimitName[] = [
+  'maxTextureDimension1D',
+  'maxTextureDimension2D',
+  'maxTextureDimension3D',
+  'maxTextureArrayLayers',
+  'maxBindGroups',
+  'maxBindGroupsPlusVertexBuffers',
+  'maxBindingsPerBindGroup',
+  'maxDynamicUniformBuffersPerPipelineLayout',
+  'maxDynamicStorageBuffersPerPipelineLayout',
+  'maxSampledTexturesPerShaderStage',
+  'maxSamplersPerShaderStage',
+  'maxStorageBuffersPerShaderStage',
+  'maxStorageBuffersInVertexStage',
+  'maxStorageBuffersInFragmentStage',
+  'maxStorageTexturesPerShaderStage',
+  'maxStorageTexturesInVertexStage',
+  'maxStorageTexturesInFragmentStage',
+  'maxUniformBuffersPerShaderStage',
+  'maxUniformBufferBindingSize',
+  'maxStorageBufferBindingSize',
+  'minUniformBufferOffsetAlignment',
+  'minStorageBufferOffsetAlignment',
+  'maxVertexBuffers',
+  'maxBufferSize',
+  'maxVertexAttributes',
+  'maxVertexBufferArrayStride',
+  'maxInterStageShaderVariables',
+  'maxColorAttachments',
+  'maxColorAttachmentBytesPerSample',
+  'maxComputeWorkgroupStorageSize',
+  'maxComputeInvocationsPerWorkgroup',
+  'maxComputeWorkgroupSizeX',
+  'maxComputeWorkgroupSizeY',
+  'maxComputeWorkgroupSizeZ',
+  'maxComputeWorkgroupsPerDimension',
+  'maxImmediateSize'
+];
+
+/**
+ * Returns every WebGPU limit that luma.gl can request from an adapter.
+ * @param supportedLimits Limits exposed by the selected WebGPU adapter.
+ * @returns Limits to forward through `GPUDeviceDescriptor.requiredLimits`.
+ */
+export function getRequiredWebGPULimits(
+  supportedLimits: GPUSupportedLimits
+): Record<string, number> {
+  const requiredLimits: Record<string, number> = {};
+
+  for (const limitName of WEBGPU_SUPPORTED_LIMIT_NAMES) {
+    const limitValue = supportedLimits[limitName];
+    if (typeof limitValue === 'number') {
+      requiredLimits[limitName] = limitValue;
+    }
+  }
+
+  return requiredLimits;
+}
+
+/**
+ * Returns the limits to request for a feature level.
+ * Only `'max'` and `'compatibility-max'` request adapter-supported limits. `'compatibility'`
+ * and a `'best-available'` request that cannot upgrade to core keep the compatibility default
+ * limits, so a compatibility device behaves the same on every adapter.
+ * @param supportedLimits Limits exposed by the selected WebGPU adapter.
+ * @param featureLevel Requested WebGPU feature level.
+ * @param requiredLimits Explicitly requested limits, which override profile limits.
+ * @returns Limits to forward through `GPUDeviceDescriptor.requiredLimits`.
+ */
+export function getRequestedWebGPULimits(
+  supportedLimits: GPUSupportedLimits,
+  featureLevel: RequestedWebGPUFeatureLevel,
+  requiredLimits: DeviceProps['requiredLimits'] = {}
+): Record<string, number> {
+  const requestsAdapterLimits = featureLevel === 'max' || featureLevel === 'compatibility-max';
+  const adapterLimits = requestsAdapterLimits ? getRequiredWebGPULimits(supportedLimits) : {};
+  return {...adapterLimits, ...requiredLimits};
+}
+
+/**
+ * Returns the requested WebGPU feature level, defaulting to the portable core profile.
+ * @param props Device creation props.
+ * @returns Effective WebGPU feature level to request.
+ */
+export function getWebGPUFeatureLevel(props: DeviceProps): RequestedWebGPUFeatureLevel {
+  return props.featureLevel ?? 'core';
+}
+
+/**
+ * Returns WebGPU adapter options used while selecting an adapter.
+ * @param props Device creation props.
+ * @returns Options to pass to `navigator.gpu.requestAdapter()`.
+ */
+export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAdapterOptions {
+  const featureLevel = getWebGPUFeatureLevel(props);
+  const options: GPURequestAdapterOptions = {
+    featureLevel: isCompatibilityFeatureLevel(featureLevel) ? 'compatibility' : 'core'
+  };
+
+  if (props.powerPreference && props.powerPreference !== 'default') {
+    options.powerPreference = props.powerPreference;
+  }
+
+  if (props.xrCompatible) {
+    options.xrCompatible = true;
+  }
+
+  return options;
+}
+
+/**
+ * Returns adapter features required for the requested WebGPU feature level.
+ * @param supportedFeatures Features exposed by the selected WebGPU adapter.
+ * @param featureLevel Effective WebGPU feature level to request.
+ * @returns Features to forward through `GPUDeviceDescriptor.requiredFeatures`.
+ */
+export function getRequiredWebGPUFeatures(
+  supportedFeatures: GPUSupportedFeatures,
+  featureLevel: RequestedWebGPUFeatureLevel,
+  optionalFeatures: readonly WebGPUDeviceFeature[] = []
+): GPUFeatureName[] {
+  if (featureLevel === 'max') {
+    return Array.from(supportedFeatures) as GPUFeatureName[];
+  }
+
+  if (featureLevel === 'compatibility-max') {
+    // Requesting core-features-and-limits would upgrade the device to core validation
+    return Array.from(supportedFeatures).filter(
+      feature => feature !== CORE_FEATURES_AND_LIMITS
+    ) as GPUFeatureName[];
+  }
+
+  const requiredFeatures: GPUFeatureName[] = [];
+  if (featureLevel === 'best-available' && supportedFeatures.has(CORE_FEATURES_AND_LIMITS)) {
+    // Compatibility adapters expose this opt-in when they can be upgraded to
+    // core. See WebGPU Fundamentals:
+    // https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html
+    requiredFeatures.push(CORE_FEATURES_AND_LIMITS);
+  }
+
+  for (const optionalFeature of optionalFeatures) {
+    const feature = optionalFeature as GPUFeatureName;
+    if (supportedFeatures.has(feature) && !requiredFeatures.includes(feature)) {
+      requiredFeatures.push(feature);
+    }
+  }
+
+  return requiredFeatures;
+}
+
+/**
+ * Returns the feature level exposed by the created WebGPU device.
+ * @param requestedFeatureLevel Feature level requested by luma.gl.
+ * @param deviceFeatures Features exposed by the created WebGPU device.
+ * @returns Effective feature level reported through `device.info`.
+ */
+export function getEffectiveWebGPUFeatureLevel(
+  requestedFeatureLevel: RequestedWebGPUFeatureLevel,
+  deviceFeatures: GPUSupportedFeatures
+): EffectiveWebGPUFeatureLevel {
+  if (!isCompatibilityFeatureLevel(requestedFeatureLevel)) {
+    return requestedFeatureLevel;
+  }
+
+  // Browsers may return a core adapter for a compatibility request
+  return deviceFeatures.has(CORE_FEATURES_AND_LIMITS) ? 'core' : 'compatibility';
+}
+
+/** Returns true for feature levels that request a compatibility adapter. */
+function isCompatibilityFeatureLevel(
+  featureLevel: RequestedWebGPUFeatureLevel
+): featureLevel is 'compatibility' | 'compatibility-max' | 'best-available' {
+  return (
+    featureLevel === 'compatibility' ||
+    featureLevel === 'compatibility-max' ||
+    featureLevel === 'best-available'
+  );
+}
+
+/**
+ * Returns the feature level of an application-created WebGPU device.
+ * @param requestedFeatureLevel Feature level the application says it requested.
+ * @param deviceFeatures Features exposed by the attached WebGPU device.
+ * @returns `'core'` when the device exposes `core-features-and-limits` or the application
+ * asserts `'core'` (browsers without compatibility mode never expose the feature),
+ * otherwise `'compatibility'`. `'max'` is not reported because luma did not request the device.
+ */
+export function getAttachedWebGPUFeatureLevel(
+  requestedFeatureLevel: DeviceProps['featureLevel'],
+  deviceFeatures: GPUSupportedFeatures
+): EffectiveWebGPUFeatureLevel {
+  if (requestedFeatureLevel === 'core') {
+    return 'core';
+  }
+  return getEffectiveWebGPUFeatureLevel('compatibility', deviceFeatures);
+}
+
+export class WebGPUAdapter extends Adapter {
+  /** type of device's created by this adapter */
+  readonly type: WebGPUDevice['type'] = 'webgpu';
+
+  isSupported(): boolean {
+    // Check if WebGPU is available
+    return Boolean(typeof navigator !== 'undefined' && navigator.gpu);
+  }
+
+  isDeviceHandle(handle: unknown): boolean {
+    if (typeof GPUDevice !== 'undefined' && handle instanceof GPUDevice) {
+      return true;
+    }
+
+    // TODO - WebGPU does not yet seem to have a stable in-browser API, so we "sniff" for members instead
+    if ((handle as any)?.queue) {
+      return true;
+    }
+
+    return false;
+  }
+
+  async create(props: DeviceProps): Promise<WebGPUDevice> {
+    return await this._create(props, true);
+  }
+
+  private async _create(
+    props: DeviceProps,
+    allowImmediateLossRetry: boolean
+  ): Promise<WebGPUDevice> {
+    if (typeof navigator === 'undefined' || !navigator.gpu) {
+      throw new Error('WebGPU is not available');
+    }
+
+    const requestedFeatureLevel = getWebGPUFeatureLevel(props);
+    const requestAdapterOptions = getWebGPURequestAdapterOptions(props);
+    let adapter: GPUAdapter | null;
+    try {
+      adapter = await this.requestGPUAdapter(requestAdapterOptions);
+    } catch (error) {
+      throw new Error('WebGPU adapter request failed', {cause: error});
+    }
+
+    if (!adapter) {
+      throw new Error('Failed to request WebGPU adapter');
+    }
+
+    const adapterInfo = await getWebGPUAdapterInfo(adapter);
+    // log.probe(2, 'Adapter available', adapterInfo)();
+
+    const deviceDescriptor: GPUDeviceDescriptor = {};
+
+    const requiredFeatures = getRequiredWebGPUFeatures(
+      adapter.features,
+      requestedFeatureLevel,
+      props.optionalFeatures
+    );
+    if (requiredFeatures.length > 0) {
+      deviceDescriptor.requiredFeatures = requiredFeatures;
+    }
+
+    const requiredLimits = getRequestedWebGPULimits(
+      adapter.limits,
+      requestedFeatureLevel,
+      props.requiredLimits
+    );
+    if (Object.keys(requiredLimits).length > 0) {
+      deviceDescriptor.requiredLimits = requiredLimits;
+    }
+
+    let gpuDevice: GPUDevice;
+    try {
+      gpuDevice = await adapter.requestDevice(deviceDescriptor);
+    } catch (error) {
+      throw new Error('WebGPU device request failed', {cause: error});
+    }
+
+    const immediateLoss = await getImmediateDeviceLoss(gpuDevice);
+    if (immediateLoss) {
+      gpuDevice.destroy();
+      if (allowImmediateLossRetry && immediateLoss.reason !== 'destroyed') {
+        log.warn('WebGPU device was returned already lost; retrying with a fresh adapter')();
+        return await this._create(props, false);
+      }
+      throw new Error(
+        `WebGPU device was returned already lost${immediateLoss.message ? `: ${immediateLoss.message}` : ''}`,
+        {cause: immediateLoss}
+      );
+    }
+
+    // log.probe(1, 'GPUDevice available')();
+
+    const {WebGPUDevice} = await import('./webgpu-device');
+    const featureLevel = getEffectiveWebGPUFeatureLevel(requestedFeatureLevel, gpuDevice.features);
+    const deviceProps = {...props, featureLevel};
+
+    log.groupCollapsed(1, 'WebGPUDevice created')();
+    try {
+      let device: WebGPUDevice;
+      try {
+        device = new WebGPUDevice(deviceProps, gpuDevice, adapter, adapterInfo);
+      } catch (error) {
+        gpuDevice.destroy();
+        throw new Error('WebGPU wrapper initialization failed', {cause: error});
+      }
+
+      const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
+      if (canvasContextProps) {
+        try {
+          device.initializeCanvasContext(canvasContextProps);
+        } catch (error) {
+          device.destroy();
+          throw new Error('WebGPU canvas initialization failed', {cause: error});
+        }
+      }
+      log.probe(
+        1,
+        'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features'
+      )();
+      log.table(1, device.info)();
+      return device;
+    } finally {
+      log.groupEnd(1)();
+    }
+  }
+
+  /**
+   * Wraps an application-created GPUDevice, keeping its requested limits and features.
+   * @note `device.destroy()` leaves the GPUDevice alive. Call `GPUDevice.destroy()` to release it.
+   * @note Returns the existing wrapper if the GPUDevice is already attached or luma-created.
+   */
+  async attach(handle: GPUDevice | WebGPUDevice, props: DeviceProps = {}): Promise<WebGPUDevice> {
+    const {WebGPUDevice} = await import('./webgpu-device');
+    if (handle instanceof WebGPUDevice) {
+      return handle;
+    }
+    if (!this.isDeviceHandle(handle)) {
+      throw new Error('Invalid GPUDevice');
+    }
+    const existingDevice = WebGPUDevice.getDeviceFromHandle(handle);
+    if (existingDevice) {
+      return existingDevice;
+    }
+
+    const immediateLoss = await getImmediateDeviceLoss(handle);
+    if (immediateLoss) {
+      throw new Error('WebGPU device is already lost', {cause: immediateLoss});
+    }
+
+    // Another attach may have completed while the loss check yielded. Construction
+    // below is synchronous, so rechecking here gives every caller the same wrapper.
+    const attachedDevice = WebGPUDevice.getDeviceFromHandle(handle);
+    if (attachedDevice) {
+      return attachedDevice;
+    }
+
+    // GPUDevice has no reference to its GPUAdapter, only to the adapter info
+    const adapterInfo = handle.adapterInfo || ({} as GPUAdapterInfo);
+    const featureLevel = getAttachedWebGPUFeatureLevel(props.featureLevel, handle.features);
+    const deviceProps = {...props, featureLevel, _handle: handle};
+    const device = new WebGPUDevice(deviceProps, handle, null, adapterInfo, false);
+
+    const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
+    if (canvasContextProps) {
+      try {
+        device.initializeCanvasContext(canvasContextProps);
+      } catch (error) {
+        device.destroy();
+        throw new Error('WebGPU canvas initialization failed', {cause: error});
+      }
+    }
+    return device;
+  }
+
+  /** Requests a fresh native adapter for every device creation. */
+  protected requestGPUAdapter(
+    requestAdapterOptions: GPURequestAdapterOptions
+  ): Promise<GPUAdapter | null> {
+    return navigator.gpu.requestAdapter(requestAdapterOptions);
+  }
+}
+
+export const webgpuAdapter = new WebGPUAdapter();
+
+/** Reads adapter metadata without making optional metadata support creation-critical. */
+export async function getWebGPUAdapterInfo(adapter: GPUAdapter): Promise<GPUAdapterInfo> {
+  try {
+    return (
+      adapter.info ||
+      // @ts-ignore Legacy Chromium API.
+      (await adapter.requestAdapterInfo?.()) ||
+      ({} as GPUAdapterInfo)
+    );
+  } catch (error) {
+    log.warn('WebGPU adapter metadata is unavailable', error)();
+    return {} as GPUAdapterInfo;
+  }
+}
+
+/** Detects an already-lost device without delaying normal device creation. */
+async function getImmediateDeviceLoss(device: GPUDevice): Promise<GPUDeviceLostInfo | null> {
+  return await Promise.race([device.lost, Promise.resolve(null)]);
+}

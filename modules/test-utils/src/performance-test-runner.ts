@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Stats, Stat} from '@probe.gl/stats';
+import {Stats, Stat} from 'probe.gl/stats';
 import {TestRunner, TestRunnerProps, TestRunnerTestCase} from './test-runner';
 
 export type PerformanceTestRunnerProps = TestRunnerProps;

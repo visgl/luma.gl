@@ -7,7 +7,7 @@ import type {
   GLTFMeshPostprocessed,
   GLTFNodePostprocessed,
   GLTFPostprocessed
-} from '@loaders.gl/gltf';
+} from '../types/gltf-postprocessed-schema';
 import {assert} from '@luma.gl/core';
 import {simplifyMesh, type MeshSimplificationAttribute} from '@luma.gl/engine';
 

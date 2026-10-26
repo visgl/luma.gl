@@ -4,9 +4,10 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, type GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
-import {ModelNode} from '@luma.gl/engine';
+import {GLTFLoader} from '@loaders.gl/gltf';
 import {
+  type GLTFPostprocessed,
+  postProcessGLTF,
   assertSupportedGLTFExtensions,
   createScenegraphsFromGLTF,
   getGLTFExtensionSupport,
@@ -15,6 +16,8 @@ import {
   parseGLTFAnimations,
   parseGLTFLights
 } from '@luma.gl/gltf';
+import {ModelNode} from '@luma.gl/engine';
+
 import {NullDevice} from '@luma.gl/test-utils';
 import {describe, expect, test} from 'vitest';
 

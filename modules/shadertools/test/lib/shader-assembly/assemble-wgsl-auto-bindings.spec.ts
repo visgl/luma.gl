@@ -35,6 +35,7 @@ const FP64_GENERIC_VALUE_MARKERS = [
 const FP64_RAW_MARKERS = ['fn fp64_decode_bits', 'fn sub_fp64u32_to_fp64'] as const;
 const FP64_DISTANCE_MARKERS = [
   'fn fp64_scale_fp64_integer',
+  'fn fp64_scale_fp64(',
   'fn div_fp64',
   'fn sqrt_fp64'
 ] as const;

@@ -1,8 +1,8 @@
 import {create} from 'zustand';
 
 import {luma, Device, type DeviceProps} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {
   installCpuHotspotProfilerApi,
   updateCpuHotspotProfilerTargets

@@ -12,16 +12,17 @@ export default defineConfig(({mode}) => ({
   resolve: {
     alias: {
       '@deck.gl-community/gpu-layers': `${__dirname}/../../../modules/deck-gpu-layers/src`,
-      '@luma.gl/gpgpu/gpu-core': `${__dirname}/../../../modules/gpgpu/src/gpu-core`,
+      '@luma.gl/graph/gpu-core': `${__dirname}/../../../modules/graph/src/gpu-core`,
       '@luma.gl/gpgpu/gpu-data': `${__dirname}/../../../modules/gpgpu/src/gpu-data`,
       '@luma.gl/effects': `${__dirname}/../../../modules/effects/src`,
-      '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
       '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
+      '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
+      '@luma.gl/anari': `${__dirname}/../../../modules/anari/src`,
       '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
       '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
-      '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,
-      '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`
+      '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,
+      '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
     }
   },
   optimizeDeps: {exclude: ['@deck.gl/core'], noDiscovery: true}

@@ -1,42 +1,31 @@
 # FAQ
 
+## How do I draw to the screen?
 
-## How do I draw to the screen in luma.gl?
+Create a device with a default canvas context, then draw a model into a render pass:
 
-Simply create a `RenderPass` and start rendering.
-
-```typescript
-  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
-  const renderPass = device.beginRenderPass();
-  model.draw(renderPass);
-  renderPass.end();
+```ts
+const renderPass = device.beginRenderPass();
+model.draw(renderPass);
+renderPass.end();
+device.submit();
 ```
 
-`device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to: 
+An `AnimationLoop` submits the device's default encoder after `onRender` returns,
+so omit the explicit submission inside that callback. See the
+[rendering workflow](/docs/api-guide/gpu/gpu-rendering).
 
-```typescript
-  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
-  ...
-```
+## How do I clear or preserve the previous frame?
 
-## How do I clear the screen in luma.gl?
+Pass `clearColor`, `clearDepth`, and `clearStencil` to `beginRenderPass()`.
+Set a clear property to boolean `false` to preserve that attachment.
+The defaults are opaque black, depth `1`, and stencil `0`.
+See [RenderPass options](/docs/api-reference/core/resources/render-pass#renderpassprops).
 
-`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is fully transparent `[0, 0, 0, 0]`. Clearing can also be disabled by setting `loadOp='load'`.
+## Which packages and backend should I use?
 
-```typescript
-  const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
-  model.draw(renderPass);
-  renderPass.end();
-```
-
-Depth and stencil buffers are also cleared to default values:
-
-```typescript
-  const renderPass = device.beginRenderPass({
-    clearColor: [0, 0, 0, 1],
-    depthClearValue: 1,
-    stencilClearValue: 0
-  });
-  renderPass.end();
-  device.submit();
-```
+Start with [Getting started](/docs/getting-started) for a portable triangle.
+Use [Choosing an API layer](/docs/api-guide) to decide between Engine, Core,
+Shadertools, and experimental GPU Core. Check
+[WebGPU versus WebGL 2](/docs/api-guide/background/webgpu-vs-webgl)
+before depending on compute or other backend-specific features.

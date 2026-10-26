@@ -1,0 +1,73 @@
+{
+  "name": "@luma.gl/three",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "10.0.0-alpha.4",
+  "description": "Experimental Three.js rendering and GPU interoperability for luma.gl",
+  "license": "MIT",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./objects": {
+      "types": "./dist/objects.d.ts",
+      "import": "./dist/objects.js",
+      "require": "./dist/objects.cjs"
+    },
+    "./backend": {
+      "types": "./dist/backend.d.ts",
+      "import": "./dist/backend.js",
+      "require": "./dist/backend.cjs"
+    },
+    "./interop": {
+      "types": "./dist/interop.d.ts",
+      "import": "./dist/interop.js",
+      "require": "./dist/interop.cjs"
+    },
+    "./deck": {
+      "types": "./dist/deck.d.ts",
+      "import": "./dist/deck.js",
+      "require": "./dist/deck.cjs"
+    },
+    "./overlay": {
+      "types": "./dist/overlay.d.ts",
+      "import": "./dist/overlay.js",
+      "require": "./dist/overlay.cjs"
+    },
+    "./interleaved": {
+      "types": "./dist/interleaved.d.ts",
+      "import": "./dist/interleaved.js",
+      "require": "./dist/interleaved.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "@luma.gl/core": "10.0.0-alpha.4"
+  },
+  "peerDependencies": {
+    "@deck.gl/core": "9.4.0",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
+    "@types/three": "0.185.0",
+    "three": "0.185.1"
+  },
+  "peerDependenciesMeta": {
+    "@deck.gl/core": {
+      "optional": true
+    }
+  }
+}

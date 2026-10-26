@@ -38,7 +38,7 @@ import {
 } from '../../../../examples/example-support';
 import {getExampleSupportDefinition} from '../../../../examples/example-support-registry';
 import {useExampleSupportDefinition} from '../example-support-context';
-// import {VRDisplay} from '@luma.gl/experimental';
+// import {VRDisplay} from '@luma.gl/graph/experimental/simulation';
 import {
   createDevice,
   createPresentationDevice,

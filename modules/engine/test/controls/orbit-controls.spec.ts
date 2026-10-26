@@ -652,3 +652,35 @@ function makeTestCanvas(): TestCanvas {
       }, 0)
   } as unknown as TestCanvas;
 }
+
+it('OrbitControls uses the configured Command modifier for mouse panning', () => {
+  const canvas = makeTestCanvas();
+  const controls = new OrbitControls(canvas, {
+    target: [1, 2, 3],
+    yaw: 0,
+    pitch: 0,
+    distance: 10,
+    enablePan: true,
+    panModifier: 'meta',
+    panSpeed: 0.01
+  });
+
+  canvas.dispatchTestEvent('pointerdown', {
+    button: 0,
+    pointerId: 3,
+    clientX: 0,
+    clientY: 0
+  });
+  canvas.dispatchTestEvent('pointermove', {
+    pointerId: 3,
+    clientX: 2,
+    clientY: 3,
+    metaKey: true
+  });
+
+  expect(controls.props.target, 'pans the target in camera space').toEqual([0.8, 2.3, 3]);
+  expect(controls.yaw, 'does not rotate while panning').toBe(0);
+
+  controls.destroy();
+  void 0;
+});

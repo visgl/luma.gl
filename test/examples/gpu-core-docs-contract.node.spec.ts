@@ -108,7 +108,16 @@ describe('GPU module documentation contract', () => {
     ).filter(
       filename =>
         filename.endsWith('.md') &&
-        !['README.md', 'concepts.md', 'recipes.md', 'tutorial.md'].includes(filename)
+        ![
+          'README.md',
+          'concepts.md',
+          'recipes.md',
+          'tutorial.md',
+          'webgpu-foundations.md',
+          'execution-techniques.md',
+          'debugging.md',
+          'resources.md'
+        ].includes(filename)
     );
 
     const contractSource = readFileSync(
@@ -238,23 +247,23 @@ describe('GPU module documentation contract', () => {
   test('mentions every exported GPU module operation in its documentation family', () => {
     const contracts = [
       {
-        source: 'modules/gpgpu/src/gpu-core/index.ts',
+        source: 'modules/graph/src/gpu-core/index.ts',
         documentation: 'docs/api-reference/experimental/gpu-core'
       },
       {
-        source: 'modules/experimental/src/gpu-trace/index.ts',
+        source: 'modules/graph/src/gpu-trace/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/experimental/src/gpu-dataframe/index.ts',
+        source: 'modules/graph/src/gpu-dataframe/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/gpgpu/src/gpu-graph/index.ts',
+        source: 'modules/graph/src/gpu-graph-algorithms/index.ts',
         documentation: 'docs/api-reference/experimental'
       },
       {
-        source: 'modules/experimental/src/gpu-raster/index.ts',
+        source: 'modules/graph/src/gpu-raster/index.ts',
         documentation: 'docs/api-reference/experimental/gpu-raster'
       }
     ] as const;

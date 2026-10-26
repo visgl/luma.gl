@@ -9,6 +9,7 @@ import {
   type LuSpatialGeographicPointQueryStats
 } from '@deck.gl-community/gpu-layers/query';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
+import {GPUTracePanelRenderer} from '../../gpu-trace-panel';
 import {
   getTaxiPoint,
   TAXI_CORPUS_POINT_COUNT,
@@ -219,6 +220,10 @@ export function createControlPanel(
       <summary style="cursor:pointer;color:#829bb1;font:700 9px/1.4 ui-monospace,monospace;letter-spacing:.08em">COMMAND GRAPH INSPECTOR</summary>
       <div data-graph-inspector style="margin-top:8px"></div>
     </details>
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer">GPU Trace</summary>
+      <div data-gpu-trace-host style="margin-top:8px"></div>
+    </details>
   </div>`;
   container.appendChild(root);
 
@@ -237,6 +242,10 @@ export function createControlPanel(
   const visibleElement = root.querySelector<HTMLElement>('[data-visible]')!;
   const selectedElement = root.querySelector<HTMLElement>('[data-selected]')!;
   const queryTimeElement = root.querySelector<HTMLElement>('[data-query-time]')!;
+  const tracePanel = new GPUTracePanelRenderer(
+    root.querySelector<HTMLElement>('[data-gpu-trace-host]')!
+  );
+  tracePanel.update(undefined);
   const graphInspectorElement = root.querySelector<HTMLElement>('[data-graph-inspector]')!;
   const graphInspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
     graphLabels: {
@@ -351,6 +360,7 @@ export function createControlPanel(
       document.removeEventListener('pointerdown', onDocumentPointerDown);
       radiusInput.removeEventListener('input', onRadiusInput);
       graphInspectorPanel.destroy();
+      tracePanel.destroy();
       root.remove();
     },
     setBasemapStatus: status => {
@@ -377,6 +387,7 @@ export function createControlPanel(
       sourceStatusElement.textContent = status.message;
     },
     updateStats: stats => {
+      tracePanel.update(stats.trace?.timingReport, stats.trace?.graphId);
       residentElement.textContent = formatCount(stats.residentPointCount);
       visibleElement.textContent = formatCount(stats.visiblePointCount);
       selectedElement.textContent = formatCount(stats.selectedPointCount);

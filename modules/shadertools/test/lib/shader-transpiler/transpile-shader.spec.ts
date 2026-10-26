@@ -6,7 +6,7 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {transpileGLSLShader} from '@luma.gl/shadertools/lib/shader-transpiler/transpile-glsl-shader';
 import {expect, it} from 'vitest';
 
-import {GL} from '@luma.gl/webgl/constants';
+import {GL} from '@luma.gl/core/webgl-constants';
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
 import {minifyShader} from './minify-shader';
 

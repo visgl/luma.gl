@@ -23,7 +23,7 @@ test('browser shard weights reference existing specs', () => {
   }
 });
 
-test('browser sharding preserves every spec and balances measured expensive suites', async () => {
+test.each([3, 6])('browser sharding preserves every spec and balances %i shards', async count => {
   const paths = [
     ...weightedPaths,
     ...Array.from({length: 90}, (_, index) => ({path: `test/default-${index}.spec.ts`, weight: 3}))
@@ -32,8 +32,8 @@ test('browser sharding preserves every spec and balances measured expensive suit
     ({path}) => ({moduleId: resolve(root, path)}) as TestSpecification
   );
   const shards = await Promise.all(
-    [1, 2, 3].map(async index => {
-      const context = {config: {root, shard: {count: 3, index}}} as ConstructorParameters<
+    Array.from({length: count}, (_, index) => index + 1).map(async index => {
+      const context = {config: {root, shard: {count, index}}} as ConstructorParameters<
         typeof BrowserTestSequencer
       >[0];
       const sequencer = new BrowserTestSequencer(context);

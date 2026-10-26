@@ -19,6 +19,68 @@ pipelines, and applies its dynamic draw state to a
   {label: 'Performance', value: 'Reuse models and honor redraw state instead of rebuilding per frame'}
 ]} />
 
+## GPUVectorModel base
+
+`Model` extends `GPUVectorModel`, exported from `@luma.gl/engine`. The
+`@luma.gl/gpgpu/gpu-data` export refers to the same class.
+The base owns the shared rendering state, contiguous vector `setGPUVectors()` API,
+and aligned vector `drawBatches()` API. Vector byte offsets are preserved.
+`GPUVectorModel` supports shader assembly, uniforms, and resource bindings. `Model`
+also adapts `Geometry` and `GPUGeometry` inputs and manages material bindings and uniforms.
+Vector inputs supply formats, strides, and offsets for layout inference. Explicit layouts
+can describe packed groups and override inferred bindings.
+`BufferTransform` and `TextureTransform` use `GPUVectorModel` directly; `TableTransform`
+inherits that implementation through `BufferTransform`.
+
+## GPU vector geometry and attributes
+
+`GPUVectorModel` accepts GPU vectors and constants. `GPUVectorGeometry` groups borrowed
+per-vertex columns, an optional contiguous `uint16` or `uint32` index vector (`uint8` on WebGL), and topology.
+CPU `Geometry` and buffer-based `GPUGeometry` inputs are accepted by `Model`.
+
+```typescript
+import {GPUVectorGeometry, GPUVectorModel} from '@luma.gl/engine';
+
+const model = new GPUVectorModel(device, {
+  ...shaders,
+  isInstanced: true,
+  geometry: new GPUVectorGeometry({
+    attributes: {positions, normals},
+    indices,
+    topology: 'triangle-list'
+  }),
+  attributeVectors: {instancePositions, colors}
+});
+
+model.setGeometryVectors({positions, normals});
+model.setAttributeVectors({instancePositions, colors});
+```
+
+`setGeometry()` applies topology, geometry vectors, and indices together. The granular
+`setGeometryVectors()`, `setIndexVector()`, and `setTopology()` methods update them
+independently. `setAttributeVectors()` replaces supplemental attributes while preserving
+geometry. Supplemental vectors default to instance step mode on instanced models and
+vertex step mode otherwise. Constants broadcast without determining draw counts.
+
+Both vector setters accept an optional second `bufferLayouts` argument. The
+`setGPUAttributes(columns, bufferLayouts)` method applies caller-resolved supplemental
+layouts, including packed buffers and mixed WebGPU vector/constant bindings. WebGL
+constants are converted to shader values; WebGPU constants use model-owned vertex buffers.
+All caller-supplied vectors and buffers remain borrowed.
+
+Geometry vectors must share logical length and chunk boundaries, as must supplemental
+attribute vectors. Non-instanced models require both groups to share their batch structure.
+`draw()` renders matching batches together for non-instanced models. Instanced models draw
+each geometry batch with each instance-stepped attribute batch. Supplemental vertex
+inputs share the geometry batch structure. Buffer layouts and model draw counts are
+restored after batched rendering. Indices remain a single contiguous stream shared by
+geometry batches.
+
+`validateGPUVectorBatchStructure(vectors)`, exported from `@luma.gl/engine` and
+`@luma.gl/gpgpu/gpu-data`, validates row counts, chunk counts, and per-chunk row counts.
+It accepts a named map or array of vectors, ignores constants and undefined entries, and
+neither modifies nor repacks input storage.
+
 ## Usage
 
 ```typescript
@@ -55,7 +117,7 @@ renderPass.end();
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
 | `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| TextureBindingSource>` | Textures, samplers, uniform buffers, dynamic buffers, and texture binding sources such as `DynamicTexture` and `VideoTexture`. |
 | `parameters?` | `RenderPipelineParameters` | Pipeline parameters baked into the model's pipeline. |
-| `geometry?` | `Geometry \| GPUGeometry \| null` | Geometry source for attributes and indices. |
+| `geometry?` | `GPUVectorGeometry \| Geometry \| GPUGeometry \| null` | Geometry source for attributes and indices. |
 | `isInstanced?` | `boolean` | Optional override for instancing. |
 | `instanceCount?` | `number` | Number of instances to draw. |
 | `vertexCount?` | `number` | Number of vertices to draw. For indexed models, this is used as the index count when `indexCount` is not provided, including an explicit value of `0`. |
@@ -159,7 +221,7 @@ bindings, and vertex array on that pass before issuing the draw. Returns
 `false` when required resources, such as unresolved texture binding sources,
 are not ready yet.
 
-### `setGeometry(geometry: Geometry | GPUGeometry | null): void`
+### `setGeometry(geometry: GPUVectorGeometry | Geometry | GPUGeometry | null): void`
 
 Replaces the geometry source.
 
@@ -173,7 +235,10 @@ Replaces the buffer layout and marks the pipeline dirty.
 
 ### `setParameters(parameters: RenderPipelineParameters): void`
 
-Updates pipeline parameters and marks the pipeline dirty when needed.
+Updates pipeline parameters. On WebGPU, where parameters are part of the render
+pipeline, this marks the pipeline dirty when the parameters change. On WebGL the
+model keeps its pipeline and passes its parameters to each draw call, so
+`model.pipeline.props.parameters` keeps the parameters the retained pipeline was created with.
 
 ### `setInstanceCount(instanceCount: number): void`
 

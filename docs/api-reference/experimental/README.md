@@ -13,7 +13,7 @@ import {OITExample} from '@site/src/examples';
 
 ## Overview
 
-`@luma.gl/experimental` publishes usable APIs that are still evolving. These modules let the
+`@luma.gl/experimental` has been removed. Its APIs now live in ANARI, Engine experimental subpaths, and Graph experimental subpaths. These modules let the
 project validate new GPU architecture, analytics, rendering, and simulation contracts before they
 are considered for stable packages.
 
@@ -22,11 +22,7 @@ are considered for stable packages.
   <DocumentationBadge tone="webgpu">WebGPU features available</DocumentationBadge>
 </DocumentationBadges>
 
-Install matching luma.gl package versions:
-
-```bash
-yarn add @luma.gl/gpgpu @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
-```
+Use the matching public package and explicit subpath for each API. Public scene renderers and their lighting, shadow, and transparency helpers now live in `@luma.gl/anari`. Controls, material plugins, texture helpers, and WebXR APIs live under `@luma.gl/engine/experimental/*`. Path/polygon models and simulation code live under `@luma.gl/graph/experimental/models` and `/simulation`.
 
 ## When to use it
 
@@ -49,10 +45,10 @@ stable Engine models and Shadertools passes.
 | Module | Use it for |
 | --- | --- |
 | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
-| [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | Private record batches, tables, schemas, bindings, computations, and generic table planners. |
-| `@luma.gl/experimental/models` | Private path and polygon rendering models, GPU input helpers, and model-specific planners. |
-| [`@luma.gl/gpgpu/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
-| [`@luma.gl/gpgpu/gpu-graph`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
+| [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | GPU record batches, tables, schemas, bindings, computations, and generic table planners. |
+| `@luma.gl/graph/experimental/models` | Experimental path and polygon rendering models, GPU input helpers, and model-specific planners. |
+| [`@luma.gl/graph/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
+| [`@luma.gl/graph/gpu-graph-algorithms`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
 | [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
 | [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
 | [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |
@@ -63,28 +59,31 @@ stable Engine models and Shadertools passes.
 | [GPU Crossfilter](/docs/api-reference/experimental/gpu-crossfilter) | Linked GPU filtering, histograms, aggregates, and rendering masks. |
 | [Geospatial kernels](/docs/api-reference/experimental/geospatial) | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations. |
 
-### Scene rendering and lighting
+### Rendering moved to ANARI
+
+The following APIs are owned by `@luma.gl/anari`.
 
 | Module | Use it for |
 | --- | --- |
-| [SceneRenderer](/docs/api-reference/experimental/scene-renderer) | Retained physically based forward rendering on WebGPU and WebGL 2. |
-| [DeferredSceneRenderer](/docs/api-reference/experimental/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
-| [PBR environments](/docs/api-reference/experimental/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
-| [GBuffer](/docs/api-reference/experimental/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
-| [Deferred lighting](/docs/api-reference/experimental/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
-| [Clustered lighting](/docs/api-reference/experimental/clustered-lighting) | Compute-binned local lights for deferred shading. |
-| [Shadow maps](/docs/api-reference/experimental/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |
+| [SceneRenderer](/docs/api-reference/scene/scene-renderer) | Retained physically based forward rendering on WebGPU and WebGL 2. |
+| [DeferredSceneRenderer](/docs/api-reference/scene/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
+| [PBR environments](/docs/api-reference/scene/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
+| [GBuffer](/docs/api-reference/scene/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
+| [Selection outlines](/docs/api-reference/scene/selection-outline) | Visible placement boundaries from exact integer ID textures. |
+| [Deferred lighting](/docs/api-reference/scene/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
+| [Clustered lighting](/docs/api-reference/scene/clustered-lighting) | Compute-binned local lights for deferred shading. |
+| [Shadow maps](/docs/api-reference/scene/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |
 
 ### Materials and transparency
 
 | Module | Use it for |
 | --- | --- |
-| [A-buffer renderer](/docs/api-reference/experimental/a-buffer-renderer) | Accurate bounded per-pixel fragment storage, sorting, and compositing. |
-| [Weighted blended OIT](/docs/api-reference/experimental/wboit-renderer) | Portable approximate order-independent transparency without sorting. |
-| [Glass material](/docs/api-reference/experimental/glass-material) | Screen-space refraction, Fresnel reflection, dispersion, and absorption. |
-| [Reflective material](/docs/api-reference/experimental/reflective-material) | Lightweight glossy environment reflection. |
-| [Spectral caustics](/docs/api-reference/experimental/spectral-caustics-renderer) | Geometry-derived multi-wavelength planar caustic lighting. |
-| [Comparison splitter](/docs/api-reference/experimental/comparison-splitter) | Accessible before-and-after canvas comparisons. |
+| [A-buffer renderer](/docs/api-reference/scene/a-buffer-renderer) | Accurate bounded per-pixel fragment storage, sorting, and compositing. |
+| [Weighted blended OIT](/docs/api-reference/scene/wboit-renderer) | Portable approximate order-independent transparency without sorting. |
+| [Glass material](/docs/api-reference/engine/experimental/glass-material) | Screen-space refraction, Fresnel reflection, dispersion, and absorption. |
+| [Reflective material](/docs/api-reference/engine/experimental/reflective-material) | Lightweight glossy environment reflection. |
+| [Spectral caustics](/docs/api-reference/scene/spectral-caustics-renderer) | Geometry-derived multi-wavelength planar caustic lighting. |
+| [Comparison splitter](/docs/api-reference/engine/experimental/comparison-splitter) | Accessible before-and-after canvas comparisons. |
 
 ### Simulation and immersive input
 
@@ -93,7 +92,7 @@ stable Engine models and Shadertools passes.
 | [MLS-MPM fluid](/docs/api-reference/experimental/mls-mpm-fluid-simulation) | Fixed-capacity two-dimensional particle/grid fluid simulation. |
 | [Spectral ocean](/docs/api-reference/experimental/spectral-ocean-simulation) | Deterministic FFT-based ocean displacement and foam. |
 | [Volumetric fire](/docs/api-reference/experimental/volumetric-fire-simulation) | GPU-resident volumetric combustion and rendering. |
-| [WebXR](/docs/api-reference/experimental/webxr) | Experimental WebGPU/WebGL session, frame, and camera helpers. |
+| [WebXR](/docs/api-reference/engine/experimental/webxr) | Experimental WebGPU/WebGL session, frame, and camera helpers. |
 
 ## Core concepts
 
@@ -119,3 +118,7 @@ specific rather than universal performance claims.
 - [Engine API](/docs/api-reference/engine)
 - [Shadertools API](/docs/api-reference/shadertools)
 - [Effects API](/docs/api-reference/effects)
+
+[`DepthTextureCopy`](../scene/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
+
+[`getRayTracingQualityPreset`](../scene/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.
