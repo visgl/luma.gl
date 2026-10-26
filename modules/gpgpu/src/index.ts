@@ -115,26 +115,3 @@ export type {
   RenderKernelDrawOptions,
   RenderKernelIndirectDrawOptions
 } from './execution/compute/render-kernel';
-export {
-  GPUVectorModel,
-  getGPUVectorModelBatches,
-  type GPUVectorModelProps,
-  type GPUVectorModelCount,
-  type GPUVectorModelData,
-  type GPUVectorModelInput,
-  type GPUVectorModelInputs,
-  type GPUVectorModelBatch,
-  type GPUVectorModelDrawBatchesOptions
-} from './execution/model/gpu-vector-model';
-export {
-  GPUVectorGeometry,
-  type GPUVectorGeometryProps
-} from './execution/geometry/gpu-vector-geometry';
-export type {
-  GPUVectorModelAttributes,
-  GPUVectorModelConstant
-} from './execution/model/gpu-vector-bindings';
-export {
-  validateGPUVectorBatchStructure,
-  type GPUVectorBatchStructureInput
-} from './execution/utils/gpu-vector-batch-structure';

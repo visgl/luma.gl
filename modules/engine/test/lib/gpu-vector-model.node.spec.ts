@@ -4,14 +4,9 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, type ShaderLayout} from '@luma.gl/core';
-import {GPUVectorModel as EngineGPUVectorModel, Model} from '@luma.gl/engine';
+import {GPUVectorModel, getGPUVectorModelBatches, Model} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
-import {
-  GPUData,
-  GPUVector,
-  GPUVectorModel,
-  getGPUVectorModelBatches
-} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 
 const SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
@@ -204,8 +199,7 @@ function makeVector(
   });
 }
 
-it('Model inherits the single gpgpu GPUVectorModel re-exported through engine', () => {
-  expect(GPUVectorModel).toBe(EngineGPUVectorModel);
+it('Model inherits the engine GPUVectorModel', () => {
   expect(Object.getPrototypeOf(Model.prototype)).toBe(GPUVectorModel.prototype);
   const device = new NullDevice({});
   const model = new Model(device, {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER});

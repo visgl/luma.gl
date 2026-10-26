@@ -11,10 +11,10 @@ import {
   assert
 } from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
-import {GPUVectorModel} from '@luma.gl/gpgpu';
+import {GPUVectorModel} from '../model/gpu-vector-model';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {getGPUVectorModelBatches} from '@luma.gl/gpgpu';
-import type {GPUVectorModelProps, GPUVectorModelInputs} from '@luma.gl/gpgpu';
+import {getGPUVectorModelBatches} from '../model/gpu-vector-model';
+import type {GPUVectorModelProps, GPUVectorModelInputs} from '../model/gpu-vector-model';
 
 const GL_INTERLEAVED_ATTRIBS = 0x8c8c;
 const GL_SEPARATE_ATTRIBS = 0x8c8d;

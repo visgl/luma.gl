@@ -9,7 +9,10 @@ import {
   type CommandEncoder,
   type RenderPass
 } from '@luma.gl/core';
-import {type GPUVectorModelInputs, type GPUVectorModelDrawBatchesOptions} from '@luma.gl/gpgpu';
+import {
+  type GPUVectorModelInputs,
+  type GPUVectorModelDrawBatchesOptions
+} from '../../model/gpu-vector-model';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {Model, type ModelProps} from '../../index';
 import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';

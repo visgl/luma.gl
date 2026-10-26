@@ -119,16 +119,16 @@ process.stdout.write('Verified CommonJS renderer and experimental subpath identi
 const engineApi = require('../modules/engine/dist/index.cjs');
 const executionApi = require('../modules/gpgpu/dist/index.cjs');
 const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
-for (const name of ['Computation', 'GPUVectorModel', 'GPUVectorGeometry', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
+for (const name of ['Computation', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(engineApi[name], executionApi[name]);
 }
-for (const name of ['BufferTransform', 'TextureTransform']) {
+for (const name of ['BufferTransform', 'TextureTransform', 'GPUVectorModel', 'GPUVectorGeometry', 'getGPUVectorModelBatches', 'validateGPUVectorBatchStructure']) {
   assert.equal(typeof engineApi[name], 'function');
   assert.equal(name in executionApi, false);
+  assert.equal(name in dataApi, false);
 }
-assert.equal(dataApi.GPUVectorModel, executionApi.GPUVectorModel);
-assert(engineApi.Model.prototype instanceof executionApi.GPUVectorModel);
+assert(engineApi.Model.prototype instanceof engineApi.GPUVectorModel);
 process.stdout.write('Verified CommonJS execution primitive identity.\n');
 
 await import('./verify-package-layering.mjs');

@@ -21,8 +21,9 @@ pipelines, and applies its dynamic draw state to a
 
 ## GPUVectorModel base
 
-`Model` extends `GPUVectorModel`, exported from `@luma.gl/engine`. The
-`@luma.gl/gpgpu/gpu-data` export refers to the same class.
+`Model` extends `GPUVectorModel`, owned and exported by `@luma.gl/engine`.
+Import GPUVectorModel, GPUVectorGeometry, and their batching helpers from engine;
+gpgpu/gpu-data provides the GPUData and GPUVector inputs.
 The base owns the shared rendering state, contiguous vector `setGPUVectors()` API,
 and aligned vector `drawBatches()` API. Vector byte offsets are preserved.
 `GPUVectorModel` supports shader assembly, uniforms, and resource bindings. `Model`

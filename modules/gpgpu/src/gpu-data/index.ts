@@ -38,14 +38,6 @@ export {
   type GPUVectorFromInterleavedProps
 } from './gpu-vector';
 export {
-  GPUVectorModel,
-  getGPUVectorModelBatches,
-  type GPUVectorModelBatch,
-  type GPUVectorModelCount,
-  type GPUVectorModelDrawBatchesOptions,
-  type GPUVectorModelProps
-} from './gpu-vector-model';
-export {
   getGPUDataBuffersForLayout,
   getGPUDataByteOffsetsForLayout,
   getGPUVectorBuffer,
@@ -76,8 +68,3 @@ export {
 export {getGPUVectorChunks, type GPUVectorChunk} from './gpu-vector-chunks';
 
 export type {GPUVectorLike, GPUVectorInput} from './gpu-vector-like';
-
-export {
-  validateGPUVectorBatchStructure,
-  type GPUVectorBatchStructureInput
-} from '../execution/utils/gpu-vector-batch-structure';

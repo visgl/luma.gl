@@ -4,7 +4,11 @@
 
 import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
-import {GPUVectorModel, type GPUVectorModelProps, type GPUVectorModelInputs} from '@luma.gl/gpgpu';
+import {
+  GPUVectorModel,
+  type GPUVectorModelProps,
+  type GPUVectorModelInputs
+} from '../model/gpu-vector-model';
 import {uid} from '../utils/uid';
 
 /**
