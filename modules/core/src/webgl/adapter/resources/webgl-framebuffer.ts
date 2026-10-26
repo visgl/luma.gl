@@ -49,10 +49,14 @@ export class WEBGLFramebuffer extends Framebuffer {
 
   /** destroys any auto created resources etc. */
   override destroy(): void {
-    super.destroy(); // destroys owned resources etc.
-    if (!this.destroyed && this.handle !== null && !this.props.handle) {
+    if (this.destroyed) {
+      return;
+    }
+    // Delete the handle before super.destroy(), which sets this.destroyed
+    if (this.handle !== null && this.ownsHandle) {
       this.gl.deleteFramebuffer(this.handle);
     }
+    super.destroy(); // destroys owned resources etc.
   }
 
   protected updateAttachments(): void {
