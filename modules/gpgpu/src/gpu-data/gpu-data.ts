@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer} from '@luma.gl/core';
+import {Buffer, assert} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {GPUDataView} from './gpu-data-view';
 import {
@@ -114,33 +114,42 @@ type GPUDataStructFromBufferProps<
 class GPUDataBufferOwner {
   /** GPU buffer containing this chunk's bytes. */
   readonly buffer: Buffer | DynamicBuffer;
-  private ownsDataBuffer: boolean;
+  private bufferOwnership?: {references: number};
 
   /** Creates an owner or borrower for one backing buffer. */
   constructor(buffer: Buffer | DynamicBuffer, ownsBuffer: boolean) {
     this.buffer = buffer;
-    this.ownsDataBuffer = ownsBuffer;
+    this.bufferOwnership = ownsBuffer ? {references: 1} : undefined;
   }
 
   /** Whether this data range is responsible for destroying its backing buffer. */
   get ownsBuffer(): boolean {
-    return this.ownsDataBuffer;
+    return Boolean(this.bufferOwnership);
+  }
+
+  /** Gives a borrowed view an independent lifetime over the same owned buffer. */
+  retainBufferOwnership(target: GPUDataBufferOwner): void {
+    // Only an owner can retain a reference for a borrower of the same buffer.
+    assert(this.buffer === target.buffer && this.bufferOwnership && !target.bufferOwnership);
+    target.bufferOwnership = this.bufferOwnership;
+    this.bufferOwnership.references++;
   }
 
   /** Transfers backing-buffer ownership to another GPUData chunk over the same buffer. */
   transferBufferOwnership(target: GPUDataBufferOwner): void {
-    if (target.buffer !== this.buffer) {
-      throw new Error('GPUData ownership can only be transferred to the same buffer');
-    }
-    target.ownsDataBuffer = this.ownsDataBuffer;
-    this.ownsDataBuffer = false;
+    if (target === this) return;
+    // Ownership moves to a borrower of the same buffer without changing the reference count.
+    assert(target.buffer === this.buffer && !target.bufferOwnership);
+    target.bufferOwnership = this.bufferOwnership;
+    this.bufferOwnership = undefined;
   }
 
   /** Releases the backing buffer when this data range owns it. */
   destroy(): void {
-    if (this.ownsDataBuffer) {
-      this.buffer.destroy();
-      this.ownsDataBuffer = false;
+    const ownership = this.bufferOwnership;
+    if (ownership) {
+      this.bufferOwnership = undefined;
+      if (--ownership.references === 0) this.buffer.destroy();
     }
   }
 }
@@ -363,6 +372,8 @@ interface GPUDataBase<Format extends GPUDataFormat = GPUDataFormat> {
   getChildAt(index: number): GPUDataView | null;
   /** Transfers backing-buffer ownership to another GPUData chunk over the same buffer. */
   transferBufferOwnership(target: GPUDataBase): void;
+  /** Gives a borrowed view an independent lifetime over the same owned buffer. */
+  retainBufferOwnership(target: GPUDataBase): void;
   /** Releases the backing buffer when this data range owns it. */
   destroy(): void;
 }

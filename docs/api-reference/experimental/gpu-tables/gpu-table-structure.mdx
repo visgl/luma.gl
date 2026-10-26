@@ -78,6 +78,9 @@ GPU tables cannot rely on that model:
   requested or transferred.
 - `detachVector()` and `detachBatches()` remove live GPU objects from a table and
   return ownership to the caller instead of destroying them.
+  `detachBatches()` and `packBatches()` give each view of a buffer shared across the
+  resulting batch groups its own ownership reference, so the groups can be destroyed in
+  any order.
 - `packBatches()` allocates replacement packed buffers, swaps the table to those
   new batches, and destroys superseded owned batch storage.
 
