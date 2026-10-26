@@ -247,7 +247,7 @@ export class WEBGLRenderPass extends RenderPass {
 
     const webglTransformFeedback = transformFeedback as WEBGLTransformFeedback | undefined;
     if (webglTransformFeedback) {
-      webglTransformFeedback.begin(pipeline.props.topology);
+      webglTransformFeedback.begin(topology);
     }
 
     pipeline._applyBindings(this.bindings, {disableWarnings: pipeline.props.disableWarnings});

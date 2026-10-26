@@ -113,6 +113,12 @@ export type {
   KernelDispatchIndirectOptions
 } from './execution/compute/kernel';
 export {Kernel} from './execution/compute/kernel';
+export {RenderKernel} from './execution/compute/render-kernel';
+export type {
+  RenderKernelProps,
+  RenderKernelDrawOptions,
+  RenderKernelIndirectDrawOptions
+} from './execution/compute/render-kernel';
 export {
   GPUVectorModel,
   getGPUVectorModelBatches,

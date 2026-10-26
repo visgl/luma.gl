@@ -15,7 +15,7 @@ import {
   type Shader,
   type VertexArray
 } from '@luma.gl/core';
-import {Kernel, RenderKernel} from '@luma.gl/engine';
+import {Kernel, RenderKernel} from '@luma.gl/gpgpu';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const source = /* WGSL */ `
@@ -227,16 +227,20 @@ const fragmentSource = /* WGSL */ `
   return vec4f(1.0);
 }`;
 
-it('RenderKernel rejects non-WebGPU devices', () => {
-  const device = {type: 'webgl'} as Device;
-
-  expect(() => new RenderKernel(device, {vertexSource})).toThrow(
-    'RenderKernel is only supported in WebGPU'
+it('RenderKernel validates backend requirements', () => {
+  expect(() => new RenderKernel({type: 'null'} as Device, {vertexSource})).toThrow(
+    'RenderKernel requires WebGL or WebGPU'
+  );
+  expect(() => new RenderKernel({type: 'webgl'} as Device, {vertexSource})).toThrow(
+    'WebGL RenderKernel requires a fragment shader'
   );
 });
 
-it('RenderKernel records direct and indirect draws and releases resources once', () => {
-  const device = {type: 'webgpu'} as Device;
+it.each([
+  'webgl',
+  'webgpu'
+])('RenderKernel records draws and releases resources once on %s', backend => {
+  const device = {type: backend} as Device;
   const vertexShader = {stage: 'vertex', source: vertexSource} as Shader;
   const fragmentShader = {stage: 'fragment', source: fragmentSource} as Shader;
   const pipeline = {} as RenderPipeline;
@@ -313,13 +317,27 @@ it('RenderKernel records direct and indirect draws and releases resources once',
   expect(setPipeline).toHaveBeenLastCalledWith(pipeline);
   expect(setBindings).toHaveBeenLastCalledWith({uniforms: uniformBuffer});
   expect(setVertexArray).toHaveBeenLastCalledWith(vertexArray);
-  expect(draw).toHaveBeenLastCalledWith({vertexCount: 3, instanceCount: 2});
+  expect(draw).toHaveBeenLastCalledWith({
+    vertexCount: 3,
+    instanceCount: 2,
+    ...(backend === 'webgl' ? {topology: 'triangle-list', parameters: {}, isInstanced: true} : {})
+  });
 
-  kernel.drawIndirect(renderPass, {vertexArray, indirectBuffer});
-  expect(drawIndirect).toHaveBeenLastCalledWith(indirectBuffer, 0);
-
-  kernel.drawIndexedIndirect(renderPass, {vertexArray, indirectBuffer, indirectOffset: 20});
-  expect(drawIndexedIndirect).toHaveBeenLastCalledWith(indirectBuffer, 20);
+  if (backend === 'webgpu') {
+    kernel.drawIndirect(renderPass, {vertexArray, indirectBuffer});
+    expect(drawIndirect).toHaveBeenLastCalledWith(indirectBuffer, 0);
+    kernel.drawIndexedIndirect(renderPass, {vertexArray, indirectBuffer, indirectOffset: 20});
+    expect(drawIndexedIndirect).toHaveBeenLastCalledWith(indirectBuffer, 20);
+  } else {
+    expect(() => kernel.drawIndirect(renderPass, {vertexArray, indirectBuffer})).toThrow(
+      /only supported in WebGPU/
+    );
+    expect(() => kernel.drawIndexedIndirect(renderPass, {vertexArray, indirectBuffer})).toThrow(
+      /only supported in WebGPU/
+    );
+    expect(drawIndirect).not.toHaveBeenCalled();
+    expect(drawIndexedIndirect).not.toHaveBeenCalled();
+  }
 
   kernel.destroy();
   kernel.destroy();

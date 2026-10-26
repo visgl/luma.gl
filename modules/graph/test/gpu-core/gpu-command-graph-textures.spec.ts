@@ -12,7 +12,8 @@ import {
   type Framebuffer,
   type SamplerProps
 } from '@luma.gl/core';
-import {Kernel, Model} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {
   decodeGPUIndexPickInfo,
   decodeGPUIndexPickRegion,

@@ -119,7 +119,7 @@ process.stdout.write('Verified CommonJS renderer and experimental subpath identi
 const engineApi = require('../modules/engine/dist/index.cjs');
 const executionApi = require('../modules/gpgpu/dist/index.cjs');
 const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
-for (const name of ['Kernel', 'Computation', 'GPUVectorModel', 'GPUVectorGeometry', 'BufferTransform', 'TextureTransform', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
+for (const name of ['Computation', 'GPUVectorModel', 'GPUVectorGeometry', 'BufferTransform', 'TextureTransform', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(engineApi[name], executionApi[name]);
 }
@@ -147,3 +147,14 @@ for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert(!(name in coreEsm));
 }
 process.stdout.write('Verified optional dynamic resource identity in ESM and CommonJS.\n');
+
+// Kernel execution helpers are exported only by gpgpu, in both module formats.
+for (const name of ['Kernel', 'RenderKernel']) {
+  assert.equal(typeof executionApi[name], 'function');
+  assert.equal(typeof executionEsm[name], 'function');
+  assert(!(name in engineApi));
+  assert(!(name in engineEsm));
+  assert(!(name in coreApi));
+  assert(!(name in coreEsm));
+}
+process.stdout.write('Verified gpgpu kernel export ownership.\n');

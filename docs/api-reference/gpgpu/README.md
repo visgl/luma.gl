@@ -205,3 +205,7 @@ registering CPU handlers for another device type.
 ## Dynamic resource compatibility
 
 Import `DynamicBuffer` and `DynamicTexture` from `@luma.gl/core/dynamic`. Gpgpu accepts these resources, but core owns their implementation. Existing gpgpu exports remain compatibility aliases.
+
+## Execution kernels
+
+Import `Kernel` and `RenderKernel` from `@luma.gl/gpgpu`. [Kernel](/docs/api-reference/gpgpu/kernel) executes WebGPU compute shaders; [RenderKernel](/docs/api-reference/gpgpu/render-kernel) executes WebGL/WebGPU render shaders. Both consume already assembled source and explicit per-call bindings.

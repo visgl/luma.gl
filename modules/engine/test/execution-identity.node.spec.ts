@@ -9,7 +9,6 @@ import {GPUVectorModel as DataGPUVectorModel} from '@luma.gl/gpgpu/gpu-data';
 
 it('engine compatibility exports share execution constructors with gpgpu', () => {
   for (const name of [
-    'Kernel',
     'Computation',
     'GPUVectorModel',
     'GPUVectorGeometry',
@@ -20,6 +19,10 @@ it('engine compatibility exports share execution constructors with gpgpu', () =>
     'ShaderInputs'
   ] as const) {
     expect(engine[name]).toBe(execution[name]);
+  }
+  for (const name of ['Kernel', 'RenderKernel'] as const) {
+    expect(execution[name]).toBeTypeOf('function');
+    expect(name in engine).toBe(false);
   }
   expect(DataGPUVectorModel).toBe(execution.GPUVectorModel);
   expect(engine.Model.prototype).toBeInstanceOf(execution.GPUVectorModel);
