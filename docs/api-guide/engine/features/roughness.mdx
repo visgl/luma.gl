@@ -1,0 +1,37 @@
+import {GLTFModelExample} from '@site/src/examples';
+
+# Roughness
+
+Roughness controls the spread of microfacet reflections, from sharp polished highlights to broad matte reflections.
+
+## Example
+
+<GLTFModelExample modelUrl="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/723ffc6706725b618b8c14ceb82e3e6904b08a76/Models/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf" title="Roughness" embedded showStats={false} />
+
+## Configure the material
+
+The following fields update an existing PBR material; see [Materials guide](/docs/api-guide/engine/materials).
+
+```ts
+material.setProps({
+  pbrMaterial: {
+    metallicRoughnessValues: [0, 0.6]
+  }
+});
+```
+
+## Parameters and textures
+
+The second component of `metallicRoughnessValues` is roughness, in `[0, 1]`, with a default of `1`. It is multiplied by the green channel of the linear metallic-roughness texture. Low roughness needs a useful light or environment reflection to remain visible. Roughness does not blur geometry or replace normal mapping.
+
+## Model integration
+
+Uniform updates do not add shader features or texture resources. The glTF converter supplies the matching defines and bindings when importing these material inputs.
+
+## Related capabilities
+
+- [Metallic](./metallic.mdx)
+- [Normal Mapping](./normal-mapping.mdx)
+- [Environment Lighting](/docs/api-reference/scene/pbr-environment)
+
+See [Textures and UV coordinates](/docs/api-guide/engine/features/texture-coordinates) for binding names, map enablement, and color handling.

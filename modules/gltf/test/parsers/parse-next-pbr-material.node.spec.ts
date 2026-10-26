@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {
-  exportGLTF,
+  type GLTFPostprocessed,
   getGLTFExtensionSupport,
   getTextureTransformSlotDefinitions
 } from '@luma.gl/gltf';
+
+import {exportGLTF} from '../../../../examples/gltf/gltf-exporter';
+
 import {parseGLTFAnimations} from '@luma.gl/gltf/parsers/parse-gltf-animations';
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -249,7 +251,11 @@ describe('next-generation glTF PBR materials', () => {
     ],
     ['KHR_materials_volume_scatter', 'multiscatterColorFactor', 'multiscatterColorFactor'],
     ['KHR_materials_volume_scatter', 'multiscatterColor', 'multiscatterColorFactor'],
-    ['KHR_materials_volume_scatter', 'scatterAnisotropy', 'scatterAnisotropy']
+    ['KHR_materials_volume_scatter', 'scatterAnisotropy', 'scatterAnisotropy'],
+    ['KHR_materials_scatter', 'scatterStrengthFactor', 'scatterStrengthFactor'],
+    ['KHR_materials_scatter', 'scatterAnisotropy', 'scatterAnisotropy'],
+    ['KHR_materials_scatter', 'multiscatterColorFactor', 'multiscatterColorFactor'],
+    ['KHR_materials_scatter', 'multiscatterColor', 'multiscatterColorFactor']
   ])('resolves animated %s.%s', (extensionName, sourceProperty, canonicalProperty) => {
     const color = sourceProperty.toLowerCase().includes('color');
     const accessors = [

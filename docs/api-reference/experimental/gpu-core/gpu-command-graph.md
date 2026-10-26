@@ -2,7 +2,16 @@ import {GPUCoreDocsTabs} from '@site/src/components/docs/gpu-core-docs-tabs';
 import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-contract';
 import {GPUDataAnalysisExample} from '@site/src/examples';
 
+<span id="gpucommandgraph" />
+
 # GPUCommandGraph
+
+
+Use `GPUCommandGraph` and `CompiledGPUCommandGraph` from `@luma.gl/graph/gpu-graph` for execution scheduling.
+They are also exported by `@luma.gl/graph` and `@luma.gl/graph/gpu-core`.
+Use `GPUGraph` to author semantic operations and `GPUGraphCompiler` to lower them to
+this command graph. Option and result types retain their `GPUCommandGraph` prefixes.
+Graph analytics live separately in `@luma.gl/graph/gpu-graph-algorithms`, using `GPUGraphAlgorithmsData`.
 
 <GPUCoreDocsTabs active="command-graph" />
 
@@ -91,10 +100,10 @@ import.
 
 ## Extension libraries
 
-Small algorithm libraries can implement the structural `GPUProgramPrimitive` interface:
+Small algorithm libraries can implement the structural `GPUGraphPrimitive` interface:
 
 ```ts
-class GPUAlgorithm implements GPUProgramPrimitive {
+class GPUAlgorithm implements GPUGraphPrimitive {
   getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
     const output = createTransientView(
       graph,
@@ -262,7 +271,7 @@ replace both role bindings when encoding later frames:
 
 ```ts
 import {Texture} from '@luma.gl/core';
-import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/graph/gpu-core';
 
 const descriptor = {
   format: 'rgba16float' as const,
@@ -712,6 +721,8 @@ Executable contexts expose `getBuffer()`, `getTexture()`, `getTextureView()`, an
 encodings and rebuilt when an imported texture is replaced. Non-default views over frame-scoped
 ordinary textures are refreshed for each frame ID; external textures never enter either cache.
 
+<span id="compiledgpucommandgraph" />
+
 ## `CompiledGPUCommandGraph`
 
 ### `encode(commandEncoder, options)`
@@ -744,6 +755,23 @@ whether any pairs were captured. After submitting the command buffer, `await
 encoding.readTimings()` explicitly reads per-node and total GPU durations. The read is never
 automatic, and copy nodes remain CPU-timed until the portable command-encoder API exposes
 standalone timestamp writes.
+
+Reports and their nodes retain the existing `cpuEncodeTimeMilliseconds` and
+`gpuTimeMilliseconds` durations and expose span endpoints:
+
+- `cpuEncodeStartTimeMilliseconds` and `cpuEncodeEndTimeMilliseconds` use `performance.now()`
+  (or `Date.now()` as a fallback), and are also available synchronously in `encoding.stats`.
+- `gpuStartTimeMilliseconds` and `gpuEndTimeMilliseconds` use the WebGPU timestamp clock.
+  Subtract a shared GPU origin when building a trace. This clock is not correlated with CPU
+  timestamps or wall time. Endpoints are converted to numbers in milliseconds; durations are
+  computed from the integer nanosecond difference before conversion to preserve precision.
+
+Graph GPU endpoints enclose the measured passes, including gaps between them. The existing
+GPU duration remains the sum of measured node durations, so it can differ from that span.
+Copy nodes and skipped nodes have no GPU endpoints; duration-only backends omit GPU endpoints
+rather than synthesizing positions. CPU endpoints are optional in the types for compatibility
+with externally constructed reports, but graph encoding always supplies them, including for
+skipped nodes. These fields can be exported as JSON span rows without converting bigint values.
 
 ### `capabilities`
 
@@ -785,7 +813,7 @@ routed through the handle. Optional GPU timestamp readback remains explicit and 
 the caller submits the command buffer:
 
 ```ts
-import {GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
 
 const inspector = new GPUCommandGraphInspector({maxSamples: 120});
 const observation = inspector.observeGraph(compiled);
@@ -805,6 +833,13 @@ const snapshot = inspector.getSnapshot();
 observation.detach();
 ```
 
+`readResource(graphId, nodeId, resourceIndex)` explicitly reads a bounded preview from the latest
+recorded encoding, after application submission. It returns tightly packed bytes and, for textures,
+the preview dimensions and format. This reads current allocation contents, not historical per-node
+values, and can submit a diagnostic copy. Unsupported or expired resources reject with an explanation.
+See [Graph Resources](./debugging#graph-resources-inspect-buffers-and-textures) for the panel, limits,
+and required resource usage.
+
 `getSnapshot()` returns an immutable view of every registered graph in registration order. Each
 graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read
 counts, bounded whole-graph CPU and GPU duration summaries, application-defined scalar counter
@@ -822,3 +857,74 @@ stores caller-provided finite, non-negative values; it does not read a buffer or
 device. `clear()` removes all registrations. The lower-level `registerGraph()`, `recordEncoding()`,
 `recordGPUTimings()`, and `recordCounters()` methods remain available for applications that cannot
 route graph activity through an observation handle.
+
+### Reusable GPU Trace panel
+
+The examples provide `GPUTracePanel` in `examples/gpu-trace-panel.ts`. Add its `panel`
+to an example panel collection, then pass it an already collected timing report:
+
+```typescript
+const tracePanel = new GPUTracePanel();
+// Include tracePanel.panel in the application's panel collection.
+tracePanel.update(await encoding.readTimings(), compiled.id);
+```
+
+Call `readTimings()` after submission, or reuse the report returned by
+`observation.recordGPUTimings(encoding)` to avoid an extra read. For a CPU-only preview,
+`tracePanel.update(encoding.stats, compiled.id)` works before GPU readback completes.
+The panel retains only the latest report across unmounts, shows separate CPU and GPU clocks,
+keeps gaps between node spans, and exposes node details on hover and keyboard focus.
+`GPUTracePanelRenderer` provides the same view directly inside an `HTMLElement` with
+`update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and luSpatial Taxi use this panel.
+
+### Estimated combined CPU/GPU timeline
+
+WebGPU timing reports may include `clockCorrelation`, captured at command-buffer submission.
+Add `clockCorrelation.offsetMilliseconds` to a raw GPU endpoint to place it on the CPU
+`performance.now()` timeline. Durations and raw endpoints remain unchanged. This is an estimate,
+not an exact clock synchronization API. `uncertaintyMilliseconds` represents the half-width of
+the submission/completion latency interval; hardware/browser timestamp quantization adds further
+uncertainty. `sampledAtCpuTimeMilliseconds` identifies the CPU time of the completion observation.
+
+Each profiled WebGPU encoder resolves its timestamps into private buffers before later submissions
+can reuse the query slots. The encoder's `captureTimestampQuerySet(querySet)` returns a snapshot
+that remains associated with that encoding, including when read after newer submissions. Abandoned
+encodings reject snapshot reads, and submitted snapshot buffers are released after readback even
+when no caller reads the report. Direct `QuerySet.readResults()` continues to read mutable query-set
+state; use encoder snapshots when submission identity matters.
+
+The device correlator intersects compatible bounds from recent submissions, expires the history
+after one second, and resets on inconsistent intervals. It assumes a stable offset over that short
+window. It does not wait synchronously or submit calibration work. Correlation is omitted when
+valid bounds or GPU endpoints are unavailable; WebGL remains duration-only.
+
+The reusable GPU Trace panel offers **Combined timeline (estimated)** when correlation is available.
+Both lanes then share one origin and scale, and the panel displays alignment uncertainty. Separate
+CPU/GPU timelines remain the default. No extra `ClockSync` graph operation is required.
+
+
+For sampled WebGPU diagnostics, `commandEncoder.withTimeProfilingQuerySet?.(querySet, encode)`
+scopes automatic pass timestamps to a synchronous encoding callback. Supply a fresh timestamp query
+set for each scope and retain it until submission and timing readback complete. The encoder restores
+the caller's profiling query set and slot count afterward, including when encoding throws. This
+WebGPU-only hook avoids enabling a device-wide profiler for every frame; unsupported encoders can
+encode normally and report CPU spans. The Graph Explorer examples use this path for sampled traces.
+
+
+### Describing operations
+
+Compute, render, and copy nodes accept an optional `description` string. Use it to explain
+application intent, for example `description: 'Resolve contact and joint constraints.'`.
+Descriptions are plain text displayed in GPU Graph and GPU Trace tooltips. They are retained
+in compiled preflight reports, encoding statistics, timing reports, and inspector snapshots,
+including when those reports are serialized to JSON. They do not affect scheduling or execution.
+
+Tooltips also show declared resource inputs and outputs, access modes, buffer byte ranges,
+and available view formats, row counts, and texture dimensions. These are static declarations,
+not measured traffic or a readback of buffer contents. Serializable resource summaries are
+retained in preflight reports and traces.
+
+## Buffer and texture management
+
+See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
+views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.

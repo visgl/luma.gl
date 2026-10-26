@@ -52,7 +52,10 @@ export function registerLightingTests(test: typeof it): void {
     const layout = makeShaderBlockLayout(lighting.uniformTypes);
     const writer = new ShaderBlockWriter(layout);
     const layoutKeys = Object.keys(layout.fields);
-    expect(layoutKeys.slice(-4), 'lights array occupies the tail of the uniform block').toEqual([
+    expect(
+      layoutKeys.filter(key => key.startsWith('lights[')).slice(-4),
+      'punctual lights preserve their member order'
+    ).toEqual([
       'lights[4].position',
       'lights[4].direction',
       'lights[4].attenuation',
@@ -92,6 +95,49 @@ export function registerLightingTests(test: typeof it): void {
     ).toBe(1);
 
     void 0;
+  });
+
+  test('shadertools#lighting accepts area and punctual lights in one collection', () => {
+    const uniforms = lighting.getUniforms({
+      useByteColors: false,
+      lights: [
+        {type: 'point', position: [0, 2, 0], color: [1, 0, 0]},
+        {
+          type: 'rect',
+          position: [0, 0, 2],
+          halfAxisX: [1, 0, 0],
+          halfAxisY: [0, 1, 0],
+          normal: [0, 0, -1],
+          color: [0.5, 1, 0],
+          intensity: 12
+        }
+      ]
+    });
+    expect(uniforms.pointLightCount).toBe(1);
+    expect(uniforms.areaLightCount).toBe(1);
+    expect(uniforms.areaLights[0].color).toEqual([6, 12, 0]);
+    expect(uniforms.areaLights[0].disk).toBe(0);
+    expect(uniforms.areaLights).toHaveLength(4);
+    const layout = makeShaderBlockLayout(lighting.uniformTypes);
+    expect(layout.fields['lights[0].color'].offset).toBe(8);
+    expect(layout.fields.areaLightCount.offset).toBeGreaterThan(
+      layout.fields['lights[4].coneCos'].offset
+    );
+    const defaultArea = lighting.getUniforms({
+      lights: [
+        {
+          type: 'rect',
+          position: [0, 0, 1],
+          halfAxisX: [1, 0, 0],
+          halfAxisY: [0, 1, 0],
+          normal: [0, 0, -1]
+        }
+      ]
+    });
+    expect(defaultArea.areaLights[0].color).toEqual([1000, 1000, 1000]);
+    const cleared = lighting.getUniforms({lights: []});
+    expect(cleared.areaLightCount).toBe(0);
+    expect(cleared.enabled).toBe(0);
   });
 
   test('shadertools#lighting default and legacy prop handling', () => {

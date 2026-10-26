@@ -27,36 +27,25 @@ The renderer chooses model creation, shader selection, instance batching, light 
 
 This is particularly useful when an application should expose a stable scene contract to multiple visualization tools, scene importers, or potential rendering backends.
 
-## Use the private workspace
+## Install the package
 
-`@luma.gl/scene` is a private luma.gl workspace and is not published to npm. Install repository
-dependencies from a luma.gl checkout:
+`@luma.gl/anari` is a public package with experimental APIs. Install it with the required luma.gl peers:
 
 ```bash
-yarn install
+yarn add @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/effects @luma.gl/shadertools
 ```
 
-Other in-repository workspaces can depend on the private package through:
-
-```json
-{
-  "dependencies": {
-    "@luma.gl/scene": "workspace:*"
-  }
-}
-```
-
-At least one luma.gl backend is required. Use `@luma.gl/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/webgl` when a WebGL 2 fallback is important.
+At least one luma.gl backend is required. Use `@luma.gl/core/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/core/webgl` when a WebGL 2 fallback is important.
 
 ## Create a graphics device
 
 Start with an ordinary luma.gl `Device` and wrap it in `ANARIDevice`:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const canvas = document.querySelector('canvas');
 
@@ -81,10 +70,10 @@ Adapter order determines preference: this example uses WebGPU when available and
 The following complete scene adds a metallic sphere, floor, directional light, animated point light, camera, renderer, and animation loop. It assumes a page containing `<canvas></canvas>`.
 
 ```ts
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {Matrix4} from '@math.gl/core';
 
 const canvas = document.querySelector('canvas');
@@ -191,7 +180,7 @@ const renderer = anariDevice.newRenderer('deferred', {
 });
 ```
 
-The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
+The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/anari` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
 
 The compact G-buffer runs within the default WebGPU CORE limit of 32 color-attachment bytes per
 sample. Its four targets retain HDR scene color (`rgba16float`), normal and roughness (`rgba8unorm`),
@@ -223,7 +212,7 @@ frame.setParameter('renderer', renderer).commitParameters();
 ```
 
 The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from
-`@luma.gl/experimental`. Its WebGPU compute graph derives world-space bounds for transformed
+`@luma.gl/anari`. Its WebGPU compute graph derives world-space bounds for transformed
 analytic spheres and mesh instances, Morton-sorts active object/instance leaves into an explicit
 retained permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that
 hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-only animation gathers
@@ -268,9 +257,9 @@ while every TLAS or BLAS construction pass stays within the default WebGPU CORE 
 storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a
 Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing.
 Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced
-PBR material extensions, indirect bounces, denoising, and volume objects remain unsupported by
+PBR material extensions, specular/transmissive bounces, denoising, and volume objects remain unsupported by
 this renderer.
-`maxBounces` is reserved for future multi-bounce transport.
+`maxBounces` enables 0–8 secondary diffuse bounces; the default is zero. Emissive surfaces can illuminate matte receivers through these paths.
 
 ## Understand staging and commits
 
@@ -467,7 +456,7 @@ const glass = anariDevice.newMaterial('physicallyBased', {
 
 The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively
 resolved. Renderer parameters can also receive the caller-owned
-[prepared PBR lighting environment](/docs/api-reference/experimental/pbr-environment) for
+[prepared PBR lighting environment](/docs/api-reference/scene/pbr-environment) for
 roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.
@@ -605,8 +594,8 @@ HDR requires all three pieces:
 
 ```ts
 import {luma} from '@luma.gl/core';
-import {webgpuAdapter} from '@luma.gl/webgpu';
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 const supportsHighDynamicRange = window.matchMedia('(dynamic-range: high)').matches;
 
@@ -640,7 +629,7 @@ The user-visible HDR effect depends on the monitor, browser, operating-system di
 The repository showcase uses `AnimationLoopTemplate` to coordinate drawing, resizing, and cleanup:
 
 ```ts
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 import {
   AnimationLoopTemplate,
   makeAnimationLoop,

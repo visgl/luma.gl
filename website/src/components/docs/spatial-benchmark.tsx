@@ -1,11 +1,11 @@
 import React, {type ReactNode, useEffect, useId, useState} from 'react';
 import {Buffer, type Device} from '@luma.gl/core';
-import {type CompiledGPUCommandGraph, GPUCommandGraph, type GraphDataView} from '@luma.gl/gpgpu/gpu-core';
+import {type CompiledGPUCommandGraph, GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {
   GPUGridIndex,
   type GPUGridIndexView,
   GPUPointSpatialQuery
-} from '@luma.gl/experimental/geospatial';
+} from '@luma.gl/graph/geospatial';
 import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';
 

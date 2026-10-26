@@ -37,6 +37,10 @@ struct UniformLight {
   coneCos: vec2<f32>,
 };
 
+struct AreaLightUniform {
+  color: vec3f, position: vec3f, halfAxisX: vec3f, halfAxisY: vec3f, normal: vec3f, disk: i32,
+};
+
 struct lightingUniforms {
   enabled: i32,
   directionalLightCount: i32,
@@ -44,6 +48,8 @@ struct lightingUniforms {
   spotLightCount: i32,
   ambientColor: vec3<f32>,
   lights: array<UniformLight, 5>,
+  areaLightCount: i32,
+  areaLights: array<AreaLightUniform, 4>,
 };
 
 @group(2) @binding(auto) var<uniform> lighting : lightingUniforms;

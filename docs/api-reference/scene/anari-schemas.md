@@ -4,17 +4,16 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/scene/schemas` exposes optional Zod schemas for the experimental retained-scene JSON
+`@luma.gl/anari/schemas` exposes optional Zod schemas for the experimental retained-scene JSON
 format and generates a JSON Schema suitable for Monaco, VS Code, and other schema-aware editors.
-It is separate from the ordinary `@luma.gl/scene` entry point, so applications that only render
+It is separate from the ordinary `@luma.gl/anari` entry point, so applications that only render
 scenes do not load Zod.
 
 :::caution[Experimental scene format]
-These schemas describe the private luma.gl ANARI playground format. They are not an official ANARI
+These schemas describe the luma.gl ANARI playground format. They are not an official ANARI
 serialization standard, and their structure can change with the experimental package.
 :::
 
@@ -45,7 +44,7 @@ import {
   ANARISceneSchema,
   ANARI_SCENE_JSON_SCHEMA,
   type ANARISceneDescription
-} from '@luma.gl/scene/schemas';
+} from '@luma.gl/anari/schemas';
 ```
 
 ## Exported schemas
@@ -147,7 +146,7 @@ strictly increasing.
 ## Validate a scene
 
 ```ts
-import {ANARISceneSchema} from '@luma.gl/scene/schemas';
+import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 
 const result = ANARISceneSchema.safeParse(scene);
 
@@ -186,7 +185,7 @@ Register the generated schema with Monaco's JSON language service:
 
 ```ts
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import {ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/scene/schemas';
+import {ANARI_SCENE_JSON_SCHEMA} from '@luma.gl/anari/schemas';
 
 monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
   validate: true,

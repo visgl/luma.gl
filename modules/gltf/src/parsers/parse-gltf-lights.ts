@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import type {GLTFNodePostprocessed, GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFNodePostprocessed, GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {
   normalizeByteColor3,
   type DirectionalLight,

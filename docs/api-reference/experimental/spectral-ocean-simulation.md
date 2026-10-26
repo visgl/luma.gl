@@ -18,7 +18,7 @@ maps buffers, reads results to the CPU, creates a frame loop, or owns scene geom
 ## Usage
 
 ```ts
-import {SpectralOceanSimulation} from '@luma.gl/experimental';
+import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
 
 const ocean = new SpectralOceanSimulation(device, {
   id: 'offshore-ocean',

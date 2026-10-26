@@ -4,9 +4,14 @@
 
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
-import {runRowComputation} from './common/row-transform';
+import {requiresStorageBinding, runRowComputation} from './common/row-transform';
 
-export const interleave: OperationHandler<GPUDataEvaluator[]> = ({inputs, output, target}) => {
+export const interleave: OperationHandler<GPUDataEvaluator[]> = ({
+  inputs,
+  output,
+  target,
+  scope
+}) => {
   const inputEntries: [string, GPUDataEvaluator][] = inputs.map((input, index) => [
     `x${index}`,
     input
@@ -36,6 +41,7 @@ ${assignments}
 `;
 
   runRowComputation({
+    scope,
     module: {name: 'interleave', source},
     inputs,
     output,
@@ -48,7 +54,9 @@ function validateInterleaveBindings(
   limits: {maxBindingsPerBindGroup: number; maxStorageBuffersPerShaderStage: number},
   inputEntries: [string, GPUDataEvaluator][]
 ): void {
-  const storageInputCount = inputEntries.filter(([, input]) => !input.isConstant).length;
+  const storageInputCount = inputEntries.filter(([, input]) =>
+    requiresStorageBinding(input)
+  ).length;
   const storageBindingCount = storageInputCount + 1;
   if (storageBindingCount > limits.maxStorageBuffersPerShaderStage) {
     throw new Error(
@@ -61,3 +69,5 @@ function validateInterleaveBindings(
     );
   }
 }
+
+interleave.supportsEvaluationScope = true;

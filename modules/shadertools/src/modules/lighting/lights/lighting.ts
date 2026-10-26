@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type AreaLight,
+  type AreaLightUniform,
+  AREA_LIGHT_UNIFORM_TYPE,
+  MAX_AREA_LIGHTS,
+  packAreaLights
+} from '../area-lighting/area-light-types';
 import {log} from '@luma.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lightingUniformsGLSL} from './lighting-glsl';
@@ -13,7 +20,7 @@ import {normalizeByteColor3, resolveUseByteColors} from '../../../lib/color/norm
 const MAX_LIGHTS = 5;
 
 /** Supported light source descriptions accepted by the lighting shader module. */
-export type Light = AmbientLight | PointLight | SpotLight | DirectionalLight;
+export type Light = AmbientLight | PointLight | SpotLight | DirectionalLight | AreaLight;
 
 /** Ambient light contribution shared across the entire scene. */
 export type AmbientLight = {
@@ -77,7 +84,7 @@ export type LightingProps = {
   enabled?: boolean;
   /** When true, light colors are interpreted as byte-style 0-255 values. */
   useByteColors?: boolean;
-  /** Preferred API for supplying mixed ambient, point, spot, and directional lights. */
+  /** Preferred API for supplying mixed ambient, point, spot, directional, rectangle, and disk lights. */
   lights?: Light[];
   /**
    * Legacy ambient-light prop.
@@ -129,6 +136,8 @@ export type LightingUniforms = {
   ambientColor: Readonly<NumberArray3>;
   /** Packed trailing array of non-ambient light structs. */
   lights: ReadonlyArray<LightingLightUniform>;
+  areaLightCount: number;
+  areaLights: readonly AreaLightUniform[];
 };
 
 const LIGHT_UNIFORM_TYPE = {
@@ -161,7 +170,9 @@ export const lighting = {
     pointLightCount: 'i32',
     spotLightCount: 'i32',
     ambientColor: 'vec3<f32>',
-    lights: [LIGHT_UNIFORM_TYPE, MAX_LIGHTS]
+    lights: [LIGHT_UNIFORM_TYPE, MAX_LIGHTS],
+    areaLightCount: 'i32',
+    areaLights: [AREA_LIGHT_UNIFORM_TYPE, MAX_AREA_LIGHTS]
   },
 
   defaultUniforms: createDefaultLightingUniforms(),
@@ -181,6 +192,10 @@ function getUniforms(
   // Copy props so we can modify
   props = props ? {...props} : props;
 
+  const areaLights = (props?.lights || []).filter(
+    (light): light is AreaLight => light.type === 'rect' || light.type === 'disk'
+  );
+
   // TODO legacy
   if (!props) {
     return createDefaultLightingUniforms();
@@ -199,7 +214,7 @@ function getUniforms(
     (directionalLights && directionalLights.length > 0);
 
   // TODO - this may not be the correct decision
-  if (!hasLights) {
+  if (!hasLights && areaLights.length === 0) {
     return {
       ...createDefaultLightingUniforms(),
       enabled: 0
@@ -217,6 +232,9 @@ function getUniforms(
     })
   };
 
+  uniforms.areaLightCount = Math.min(areaLights.length, MAX_AREA_LIGHTS);
+  uniforms.areaLights = packAreaLights(areaLights, resolveUseByteColors(props.useByteColors, true));
+
   if (props.enabled !== undefined) {
     uniforms.enabled = props.enabled ? 1 : 0;
   }
@@ -230,7 +248,7 @@ function getLightSourceUniforms({
   pointLights = [],
   spotLights = [],
   directionalLights = []
-}: LightingProps): Omit<LightingUniforms, 'enabled'> {
+}: LightingProps): Omit<LightingUniforms, 'enabled' | 'areaLightCount' | 'areaLights'> {
   const lights = createDefaultLightUniforms();
 
   let currentLight = 0;
@@ -340,7 +358,9 @@ function createDefaultLightingUniforms(): LightingUniforms {
     pointLightCount: 0,
     spotLightCount: 0,
     ambientColor: [0.1, 0.1, 0.1],
-    lights: createDefaultLightUniforms()
+    lights: createDefaultLightUniforms(),
+    areaLightCount: 0,
+    areaLights: packAreaLights([])
   };
 }
 

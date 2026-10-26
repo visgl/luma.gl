@@ -9,6 +9,10 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 <EngineDocsTabs group="interaction" active="interaction-guide" />
 
+For engine behavior graphs, property adapters, and physics hosts, see
+[Scenegraph interactivity](./scenegraph-interactivity.mdx). This guide covers the browser-input,
+camera, and picking layer that supplies selection to those behaviors.
+
 ## Outcome
 
 Interactive rendering has three distinct steps:

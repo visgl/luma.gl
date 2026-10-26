@@ -15,17 +15,17 @@ const CAPABILITIES_DETAIL_PATHS = [
 const EXAMPLE_CONTENT_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/core',
-  '@luma.gl/webgpu',
-  '@luma.gl/webgl',
+  '@luma.gl/core/webgpu',
+  '@luma.gl/core/webgl',
   '@luma.gl/engine',
   '@luma.gl/shadertools',
   '@luma.gl/effects',
-  '@luma.gl/scene',
+  '@luma.gl/anari',
   '@luma.gl/gltf',
   '@luma.gl/splats',
   '@luma.gl/gpgpu',
   '@luma.gl/arrow',
-  '@luma.gl/experimental'
+  '@luma.gl/graph/experimental'
 ] as const;
 const DATA_CAPABILITIES_HEADING = '## GPU-native data, compute, and visualization';
 const RENDERING_CAPABILITIES_HEADING = '## Portable GPU foundation and rendering';
@@ -177,7 +177,7 @@ describe('framework capabilities documentation', () => {
     for (const {heading, packageName, capabilities, minimumRowCount} of [
       {
         heading: /GPU dataframe analytics/i,
-        packageName: '@luma.gl/experimental/gpu-dataframe',
+        packageName: '@luma.gl/graph/gpu-dataframe',
         minimumRowCount: 7,
         capabilities: [
           /GPUDataFrame/i,
@@ -197,10 +197,10 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU graph analytics and layout/i,
-        packageName: '@luma.gl/gpgpu/gpu-graph',
+        packageName: '@luma.gl/graph/gpu-graph-algorithms',
         minimumRowCount: 5,
         capabilities: [
-          /GPUGraph/i,
+          /GPUGraphAlgorithmsData/i,
           /\bCSR\b|compressed[\s-]+sparse/i,
           /breadth[\s-]+first|\bBFS\b/i,
           /connected[\s-]+components/i,
@@ -212,7 +212,7 @@ describe('framework capabilities documentation', () => {
       },
       {
         heading: /GPU raster and satellite analysis/i,
-        packageName: '@luma.gl/experimental/gpu-raster',
+        packageName: '@luma.gl/graph/gpu-raster',
         minimumRowCount: 7,
         capabilities: [
           /GPURaster/i,
@@ -340,7 +340,7 @@ describe('framework capabilities documentation', () => {
       {
         feature: 'Scene-level skeletal animation',
         status: 'Experimental',
-        packageName: '@luma.gl/scene',
+        packageName: '@luma.gl/anari',
         implementation: /automatic|joint|palette|skin/i
       }
     ]) {
@@ -367,7 +367,7 @@ describe('framework capabilities documentation', () => {
     ).toBeDefined();
     expect(scatterRow!.status).toBe('Experimental');
     expect(scatterRow!.backend).toBe('WebGPU');
-    expect(scatterRow!.packageName).toContain('@luma.gl/experimental');
+    expect(scatterRow!.packageName).toContain('@luma.gl/graph/gpu-core');
     expect(scatterRow!.details).toMatch(/GPUChunkedIndexedScatter/);
     expect(scatterRow!.details).toMatch(/chunk/i);
     expect(scatterRow!.details).toMatch(/indirect/i);
@@ -426,7 +426,7 @@ describe('framework capabilities documentation', () => {
     for (const row of implementedRows) {
       expect(row.status, `${row.feature} lives in a private package`).toBe('Experimental');
       expect(row.backend, `${row.feature} currently requires WebGPU`).toBe('WebGPU');
-      expect(row.packageName).toMatch(/@luma\.gl\/(?:experimental|scene)/);
+      expect(row.packageName).toMatch(/@luma\.gl\/(?:experimental|anari)/);
     }
 
     for (const capability of [
@@ -495,7 +495,7 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['scene', 'arrow', 'experimental', 'splats', 'text']) {
+    for (const experimentalPackage of ['anari', 'arrow', 'splats', 'text']) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );
@@ -550,14 +550,17 @@ describe('framework capabilities documentation', () => {
       ['webgl', 'WebGL', 'WebGPU'],
       ['webgpu', 'WebGPU', 'WebGL']
     ]) {
-      const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
+      const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/core/${packageName}`));
 
       expect(moduleRow, `The API reference must list the ${packageName} adapter`).toBeDefined();
       expect(moduleRow![2]).toContain(`${expectedBackend} API`);
       expect(moduleRow![2]).not.toContain(`${otherBackend} API`);
     }
 
-    for (const packageName of ['scene', 'arrow', 'experimental', 'splats', 'text']) {
+    const textRow = moduleRows.find(row => row[0].includes('@luma.gl/text'));
+    expect(textRow?.[1]).toBe('Experimental');
+
+    for (const packageName of ['arrow']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();
@@ -618,7 +621,7 @@ describe('framework capabilities documentation', () => {
     const ownershipDescription = capabilitiesSource.match(/ownership\s+boundaries[\s\S]*?\n\n/i);
 
     expect(ownershipDescription).not.toBeNull();
-    for (const packageName of ['gltf', 'shadertools', 'engine', 'experimental', 'scene']) {
+    for (const packageName of ['gltf', 'shadertools', 'engine', 'anari']) {
       expect(ownershipDescription![0]).toContain(`@luma.gl/${packageName}`);
     }
 
@@ -736,7 +739,7 @@ describe('framework capabilities documentation', () => {
     );
     const dataframeJoinOpportunities = opportunityRows.filter(
       row =>
-        row.packageName.includes('@luma.gl/experimental/gpu-dataframe') &&
+        row.packageName.includes('@luma.gl/graph/gpu-dataframe') &&
         /join/i.test(`${row.feature} ${row.details}`)
     );
 
@@ -757,27 +760,30 @@ describe('framework capabilities documentation', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as Array<string | {label?: string}>;
-    const gettingStartedIndex = documentationTableOfContents.indexOf('getting-started');
-    const documentationOverview = readFileSync(
-      path.join(DOCUMENTATION_DIRECTORY, 'README.mdx'),
-      'utf8'
-    );
+
     const gettingStartedSource = readFileSync(
       path.join(DOCUMENTATION_DIRECTORY, 'getting-started.mdx'),
       'utf8'
     );
 
-    expect(gettingStartedIndex).toBeGreaterThanOrEqual(0);
-    expect(documentationTableOfContents[gettingStartedIndex + 1]).toMatchObject({
+    expect(documentationTableOfContents[0]).toMatchObject({
       type: 'category',
-      label: 'Capabilities',
-      items: [
-        'capabilities',
-        'capabilities/gpu-data-compute',
-        'capabilities/rendering-visualization'
-      ]
+      label: 'Getting Started',
+      items: expect.arrayContaining([
+        'getting-started',
+        {
+          type: 'category',
+          label: 'Capabilities and compatibility',
+          items: [
+            'capabilities',
+            'capabilities/gpu-data-compute',
+            'capabilities/rendering-visualization',
+            'api-guide/background/webgpu-vs-webgl'
+          ]
+        }
+      ])
     });
-    expect(documentationOverview).toContain('/docs/capabilities');
+
     expect(gettingStartedSource).toContain('/docs/capabilities');
   });
 

@@ -7,20 +7,60 @@ import {BaseSequencer, type TestSpecification} from 'vitest/node';
 
 const DEFAULT_BROWSER_TEST_WEIGHT = 3;
 
-// Coarse weights from SwiftShader CI timings. Most browser files spend about three seconds on
-// page setup and execution; these known outliers need explicit weights so Vitest does not place
-// several of them in the same shard. Update only when CI timings materially change.
-const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
-  'modules/experimental/test/gpu-raster/gpu-raster-tile-halo-parity.spec.ts': 14,
-  'modules/text/test/text-2d/convert-arrow-text-vectors.spec.ts': 14,
-  'modules/arrow-layers/test/gpu-graph-deck.spec.ts': 10,
-  'modules/experimental/test/geospatial/geospatial-projection-distance.spec.ts': 9,
-  'test/examples/gpu-dataframe-analysis.spec.ts': 9,
-  'modules/arrow/test/arrow/arrow-path-model.spec.ts': 9,
-  'modules/experimental/test/gpu-graph/gpu-graph-core-number.spec.ts': 9,
-  'modules/experimental/test/gpu-dataframe/gpu-global-aggregation.spec.ts': 9,
-  'modules/arrow/test/arrow/dggs-gpu-polygons.spec.ts': 8,
-  'modules/experimental/test/gpu-graph/gpu-graph-modularity-optimization.spec.ts': 8
+// Rounded execution times plus three seconds for isolated page/import overhead.
+// Measured on SwiftShader CI run 40005777681 (2026-10-23). Refresh as suites grow.
+export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
+  'modules/anari/test/anari-diffuse.spec.ts': 15,
+  'modules/anari/test/anari-emitter-sampling.spec.ts': 24,
+  'modules/anari/test/anari-picking.spec.ts': 38,
+  'modules/anari/test/anari-reflection-bounces.spec.ts': 15,
+  'modules/anari/test/anari-reflection.spec.ts': 23,
+  'modules/anari/test/anari-ring.spec.ts': 18,
+  'modules/anari/test/anari-sampling.spec.ts': 17,
+  'modules/anari/test/anari-shapes.spec.ts': 18,
+  'modules/anari/test/chart-labels.spec.ts': 19,
+  'modules/anari/test/engine/ray-tracing-image-export.spec.ts': 17,
+  'modules/anari/test/engine/scene-renderer-lighting-parity.spec.ts': 19,
+  'modules/gltf/test/gltf/gltf-area-lights-render.spec.ts': 32,
+  'modules/gltf/test/physics/gltf-physics.spec.ts': 12,
+  'modules/graph/test/gpu-core/gpu-batch-conformance.spec.ts': 14,
+  'modules/graph/test/gpu-core/gpu-dense-batching.spec.ts': 32,
+  'modules/graph/test/gpu-core/gpu-sort.spec.ts': 12,
+  'modules/graph/test/gpu-core/gpu-spatial-batching.spec.ts': 19,
+  'modules/graph/test/gpu-core/gpu-transform-batching.spec.ts': 11,
+  'modules/graph/test/gpu-graph/gpu-graph-modularity-optimization.spec.ts': 12,
+  'modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts': 104,
+  'modules/graph/test/gpu-physics/gpu-sphere-world.spec.ts': 28,
+  'modules/graph/test/gpu-physics/rigid-body-compaction.spec.ts': 22,
+  'modules/graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts': 28,
+  'modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts': 71,
+  'modules/graph/test/gpu-physics/rigid-body-convex.spec.ts': 138,
+  'modules/graph/test/gpu-physics/rigid-body-coverage.spec.ts': 22,
+  'modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts': 119,
+  'modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts': 56,
+  'modules/graph/test/gpu-physics/rigid-body-gameplay.spec.ts': 20,
+  'modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts': 24,
+  'modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts': 42,
+  'modules/graph/test/gpu-physics/rigid-body-joints.spec.ts': 102,
+  'modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts': 76,
+  'modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts': 86,
+  'modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts': 105,
+  'modules/graph/test/gpu-physics/rigid-body-parallel.spec.ts': 18,
+  'modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts': 16,
+  'modules/graph/test/gpu-physics/rigid-body-plane.spec.ts': 20,
+  'modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts': 19,
+  'modules/graph/test/gpu-physics/rigid-body-recovery.spec.ts': 18,
+  'modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts': 36,
+  'modules/graph/test/gpu-physics/rigid-body-rotation-qualification.spec.ts': 11,
+  'modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts': 36,
+  'modules/graph/test/gpu-physics/rigid-body-sparse.spec.ts': 22,
+  'modules/graph/test/gpu-physics/rigid-body-stability.spec.ts': 105,
+  'modules/graph/test/gpu-raster/gpu-raster-tile-halo-parity.spec.ts': 15,
+  'modules/three/test/animated-renderer.spec.ts': 18,
+  'modules/three/test/deck-lantern-renderer.spec.ts': 11,
+  'modules/three/test/geographic-renderer.spec.ts': 12,
+  'modules/three/test/gltf-renderer.spec.ts': 12,
+  'modules/three/test/physical-renderer.spec.ts': 14
 };
 
 type WeightedTestSpecification = {

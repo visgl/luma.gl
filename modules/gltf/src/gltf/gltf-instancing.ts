@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFNodePostprocessed, GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {GLTFNodePostprocessed, GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {Matrix4} from '@math.gl/core';
 
 /** Accessor values authored on an `EXT_mesh_gpu_instancing` node. */

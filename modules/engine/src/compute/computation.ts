@@ -3,7 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  type DeviceFeature,
   type ComputePipelineProps,
   type Shader,
   type Binding,
@@ -22,19 +21,19 @@ import {
 import {
   type ShaderModule,
   type ShaderPlugin,
-  type PlatformInfo,
   mergeShaderPluginModules,
   resolveShaderPlugins,
   ShaderAssembler,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
-import {type TypedArray, isNumericArray} from '@math.gl/types';
+import {type TypedArray, isNumericArray} from '@math.gl/core/types';
 import {ShaderInputs} from '../shader-inputs';
 import {
   mergeShaderModules,
   mergeShaderModuleBindingsIntoLayout,
   shaderModuleHasUniforms
 } from '../utils/shader-module-utils';
+import {getPlatformInfo} from '../utils/get-platform-info';
 import {uid} from '../utils/uid';
 // import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 
@@ -43,6 +42,8 @@ const LOG_DRAW_TIMEOUT = 10000;
 
 export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
   source?: string;
+  /** Input language compiled by the application-registered shader assembler transpiler. */
+  sourceLanguage?: string;
 
   /** Shadertools shader modules added to shader code. */
   modules?: ShaderModule[];
@@ -114,6 +115,7 @@ export class Computation {
     userData: {},
 
     source: '',
+    sourceLanguage: undefined!,
     modules: [],
     defines: {},
     plugins: [],
@@ -212,17 +214,21 @@ export class Computation {
     const {
       source,
       getUniforms,
+      entryPoints = {},
       shaderLayout: assembledShaderLayout
     } = shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
       modules,
       defines,
+      shaderStage: 'compute',
+      computeEntryPoint: this.props.entryPoint,
       scanVertexAttributes: false,
       pluginInjections: resolvedPlugins.injections
     });
 
     this.source = source;
+    this.props.entryPoint = entryPoints.compute || this.props.entryPoint;
     // @ts-ignore
     this._getModuleUniforms = getUniforms;
     const inferredShaderLayout =
@@ -471,17 +477,4 @@ export class Computation {
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();
   }
-}
-
-/** Create a shadertools platform info from the Device */
-export function getPlatformInfo(device: Device): PlatformInfo {
-  return {
-    type: device.type,
-    shaderLanguage: device.info.shadingLanguage,
-    shaderLanguageVersion: device.info.shadingLanguageVersion as 100 | 300,
-    gpu: device.info.gpu,
-    limits: device.limits as unknown as Record<string, number | undefined>,
-    // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
-    features: device.features as unknown as Set<DeviceFeature>
-  };
 }

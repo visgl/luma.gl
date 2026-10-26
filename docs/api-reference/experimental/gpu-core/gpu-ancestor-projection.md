@@ -40,7 +40,7 @@ reachable through arbitrary edges. Projection follows exactly one parent chain p
 representative; it does not select a neighborhood or rewrite the graph.
 
 ```ts
-import {GPUAncestorProjection} from '@luma.gl/gpgpu/gpu-core';
+import {GPUAncestorProjection} from '@luma.gl/graph/gpu-core';
 
 graph.add(new GPUAncestorProjection({
   id: 'visible-parent-projection',

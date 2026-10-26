@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {isBrowser} from '@probe.gl/env';
+import {isBrowser} from 'probe.gl/env';
 import {buildMsdfFontAtlas, getTextKerningOffset, loadMsdfFontAtlas} from '../../src/fonts';
 import {_resolveMsdfFontPageUrl} from '../../src/fonts/build-msdf-font-atlas';
 

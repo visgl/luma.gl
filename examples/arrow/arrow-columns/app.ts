@@ -5,7 +5,7 @@
 import {type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, BackgroundTextureModel} from '@luma.gl/engine';
-import {ABufferRenderer, WBOITRenderer} from '@luma.gl/experimental';
+import {ABufferRenderer, WBOITRenderer} from '@luma.gl/anari';
 import {ArrowColumnRenderer, formatActiveTimeBucket} from './arrow-column-renderer';
 import {ArrowColumnDataSource} from './arrow-column-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';

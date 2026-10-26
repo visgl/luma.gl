@@ -1,0 +1,213 @@
+{
+  "name": "@luma.gl/graph",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "10.0.0-alpha.4",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "keywords": [
+    "webgl",
+    "visualization",
+    "animation",
+    "3d"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "files": [
+    "src",
+    "dist",
+    "dist.min.js",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
+    "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",
+    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
+  },
+  "description": "GPU execution graphs, scheduling, and graph-based processing for luma.gl",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./gpu-core": {
+      "types": "./dist/gpu-core/index.d.ts",
+      "import": "./dist/gpu-core/index.js",
+      "require": "./dist/gpu-core/index.cjs"
+    },
+    "./gpu-parse": {
+      "types": "./dist/gpu-parse/index.d.ts",
+      "import": "./dist/gpu-parse/index.js",
+      "require": "./dist/gpu-parse/index.cjs"
+    },
+    "./gpu-graph-algorithms": {
+      "types": "./dist/gpu-graph-algorithms/index.d.ts",
+      "import": "./dist/gpu-graph-algorithms/index.js",
+      "require": "./dist/gpu-graph-algorithms/index.cjs"
+    },
+    "./gpu-graph": {
+      "types": "./dist/gpu-graph/index.d.ts",
+      "import": "./dist/gpu-graph/index.js",
+      "require": "./dist/gpu-graph/index.cjs"
+    },
+    "./gpu-graph-algorithms/benchmarks": {
+      "types": "./dist/gpu-graph-algorithms/benchmarks.d.ts",
+      "import": "./dist/gpu-graph-algorithms/benchmarks.js",
+      "require": "./dist/gpu-graph-algorithms/benchmarks.cjs"
+    },
+    "./gpu-vector-search": {
+      "types": "./dist/gpu-vector-search/index.d.ts",
+      "import": "./dist/gpu-vector-search/index.js",
+      "require": "./dist/gpu-vector-search/index.cjs"
+    },
+    "./gpu-dggs": {
+      "types": "./dist/gpu-dggs/index.d.ts",
+      "import": "./dist/gpu-dggs/index.js",
+      "require": "./dist/gpu-dggs/index.cjs"
+    },
+    "./gpu-dggs/benchmarks": {
+      "types": "./dist/gpu-dggs/benchmarks.d.ts",
+      "import": "./dist/gpu-dggs/benchmarks.js",
+      "require": "./dist/gpu-dggs/benchmarks.cjs"
+    },
+    "./gpu-h3": {
+      "types": "./dist/gpu-h3/index.d.ts",
+      "import": "./dist/gpu-h3/index.js",
+      "require": "./dist/gpu-h3/index.cjs"
+    },
+    "./gpu-a5": {
+      "types": "./dist/gpu-a5/index.d.ts",
+      "import": "./dist/gpu-a5/index.js",
+      "require": "./dist/gpu-a5/index.cjs"
+    },
+    "./gpu-physics": {
+      "types": "./dist/gpu-physics/index.d.ts",
+      "import": "./dist/gpu-physics/index.js",
+      "require": "./dist/gpu-physics/index.cjs"
+    },
+    "./gpu-timeseries": {
+      "types": "./dist/gpu-timeseries/index.d.ts",
+      "import": "./dist/gpu-timeseries/index.js",
+      "require": "./dist/gpu-timeseries/index.cjs"
+    },
+    "./gpu-geometry": {
+      "types": "./dist/gpu-geometry/index.d.ts",
+      "import": "./dist/gpu-geometry/index.js",
+      "require": "./dist/gpu-geometry/index.cjs"
+    },
+    "./gpu-pointcloud": {
+      "types": "./dist/gpu-pointcloud/index.d.ts",
+      "import": "./dist/gpu-pointcloud/index.js",
+      "require": "./dist/gpu-pointcloud/index.cjs"
+    },
+    "./geospatial": {
+      "types": "./dist/geospatial/index.d.ts",
+      "import": "./dist/geospatial/index.js",
+      "require": "./dist/geospatial/index.cjs"
+    },
+    "./gpu-tables": {
+      "types": "./dist/gpu-tables/index.d.ts",
+      "import": "./dist/gpu-tables/index.js",
+      "require": "./dist/gpu-tables/index.cjs"
+    },
+    "./gpu-raster": {
+      "types": "./dist/gpu-raster/index.d.ts",
+      "import": "./dist/gpu-raster/index.js",
+      "require": "./dist/gpu-raster/index.cjs"
+    },
+    "./lucim": {
+      "types": "./dist/lucim/index.d.ts",
+      "import": "./dist/lucim/index.js",
+      "require": "./dist/lucim/index.cjs"
+    },
+    "./gpu-project": {
+      "types": "./dist/gpu-project/index.d.ts",
+      "import": "./dist/gpu-project/index.js",
+      "require": "./dist/gpu-project/index.cjs"
+    },
+    "./gpu-project/benchmarks": {
+      "types": "./dist/gpu-project/benchmarks.d.ts",
+      "import": "./dist/gpu-project/benchmarks.js",
+      "require": "./dist/gpu-project/benchmarks.cjs"
+    },
+    "./gpu-project/crs": {
+      "types": "./dist/gpu-project/crs.d.ts",
+      "import": "./dist/gpu-project/crs.js",
+      "require": "./dist/gpu-project/crs.cjs"
+    },
+    "./gpu-dataframe": {
+      "types": "./dist/gpu-dataframe/index.d.ts",
+      "import": "./dist/gpu-dataframe/index.js",
+      "require": "./dist/gpu-dataframe/index.cjs"
+    },
+    "./gpu-sql": {
+      "types": "./dist/gpu-sql/index.d.ts",
+      "import": "./dist/gpu-sql/index.js",
+      "require": "./dist/gpu-sql/index.cjs"
+    },
+    "./gpu-crossfilter": {
+      "types": "./dist/gpu-crossfilter/index.d.ts",
+      "import": "./dist/gpu-crossfilter/index.js",
+      "require": "./dist/gpu-crossfilter/index.cjs"
+    },
+    "./gpu-trace": {
+      "types": "./dist/gpu-trace/index.d.ts",
+      "import": "./dist/gpu-trace/index.js",
+      "require": "./dist/gpu-trace/index.cjs"
+    },
+    "./gpu-simulation": {
+      "types": "./dist/gpu-simulation/index.d.ts",
+      "import": "./dist/gpu-simulation/index.js",
+      "require": "./dist/gpu-simulation/index.cjs"
+    },
+    "./gpu-effects": {
+      "types": "./dist/gpu-effects/index.d.ts",
+      "import": "./dist/gpu-effects/index.js",
+      "require": "./dist/gpu-effects/index.cjs"
+    },
+    "./gpu-simple-graph": {
+      "types": "./dist/gpu-simple-graph/index.d.ts",
+      "import": "./dist/gpu-simple-graph/index.js",
+      "require": "./dist/gpu-simple-graph/index.cjs"
+    },
+    "./experimental/simulation": {
+      "types": "./dist/experimental/simulation/index.d.ts",
+      "import": "./dist/experimental/simulation/index.js",
+      "require": "./dist/experimental/simulation/index.cjs"
+    },
+    "./experimental/models": {
+      "types": "./dist/experimental/models/index.d.ts",
+      "import": "./dist/experimental/models/index.js",
+      "require": "./dist/experimental/models/index.cjs"
+    },
+    "./experimental": {
+      "types": "./dist/experimental/index.d.ts",
+      "import": "./dist/experimental/index.js",
+      "require": "./dist/experimental/index.cjs"
+    }
+  },
+  "peerDependencies": {
+    "@luma.gl/core": "~10.0.0-alpha.4",
+    "@luma.gl/engine": "~10.0.0-alpha.4",
+    "@luma.gl/shadertools": "~10.0.0-alpha.4",
+    "@math.gl/geospatial": "~5.0.0-alpha.19"
+  },
+  "peerDependenciesMeta": {
+    "@math.gl/geospatial": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@luma.gl/gpgpu": "10.0.0-alpha.4",
+    "@math.gl/core": "~5.0.0-alpha.19",
+    "probe.gl": "^5.0.0"
+  }
+}

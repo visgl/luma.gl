@@ -2,8 +2,43 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import gltfBillboardSupport from './gltf/features/mobile-support';
+import gltfAudioSupport from './gltf/audio/mobile-support';
+import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
+import geometrySupport from './experimental/gpu-geometry/mobile-support';
+import pointCloudSupport from './experimental/gpu-pointcloud/mobile-support';
+import pointCloudOctreeSupport from './experimental/gpu-pointcloud-octree/mobile-support';
+import windSupport from './deck/wind/mobile-support';
+import flowParticlesSupport from './deck/flow-particles/mobile-support';
+import threeSupport from './experimental/three/mobile-support';
+import galacticVortexSupport from './three/galactic-vortex/mobile-support';
+import threeDeckLayersSupport from './three/deck-layers/mobile-support';
+import gltfPhysicsSupport from './gltf/physics/mobile-support';
+import authoredSceneStressSupport from './gltf/authored-scene-stress/mobile-support';
+import poolSupport from './experimental/gpu-pool/mobile-support';
+import sphereWorldSupport from './experimental/gpu-sphere-world/mobile-support';
+import sphereScaleSupport from './experimental/gpu-sphere-scale/mobile-support';
+import spaceSalvageSupport from './experimental/space-salvage/mobile-support';
+import vectorObservatorySupport from './experimental/vector-observatory/mobile-support';
+import physicsBatchSupport from './experimental/physics-batch/mobile-support';
+import physicsStressSupport from './experimental/physics-stress/mobile-support';
+import rigidBodyWorldSupport from './experimental/gpu-rigid-body-world/mobile-support';
+import sketchSupport from './deck/sketch-edges/mobile-support';
+import globeCloudsSupport from './deck/globe-clouds/mobile-support';
 import weatherSupport from './deck/weather/mobile-support';
+import patternSupport from './deck/pattern-fills/mobile-support';
+import firefliesSupport from './deck/fireflies/mobile-support';
+import hdrNightLightingSupport from './deck/hdr-night-lighting/mobile-support';
+import globalIlluminationSupport from './deck/global-illumination/mobile-support';
+import lightShaftsSupport from './deck/light-shafts/mobile-support';
+import pointGlowSupport from './deck/point-glow/mobile-support';
+import styledPathsSupport from './deck/styled-paths/mobile-support';
+import sceneBuffersSupport from './deck/scene-buffers/mobile-support';
+import ambientOcclusionSupport from './deck/ambient-occlusion/mobile-support';
+import softShadowsSupport from './deck/soft-shadows/mobile-support';
+import depthOfFieldSupport from './deck/depth-of-field/mobile-support';
 import type {ExampleSupportDefinition} from './example-support';
+import citySceneSupport from './deck/city-scene/mobile-support';
 import standaloneSupport0 from './api/texture-compressed/mobile-support';
 import standaloneSupport1 from './integrations/hello-react/mobile-support';
 import standaloneSupport2 from './showcase/algebraic-varieties/mobile-support';
@@ -15,8 +50,8 @@ import support4 from './showcase/packet-spraying/mobile-support';
 import support5 from './showcase/dof/mobile-support';
 import support6 from './experimental/bloom/mobile-support';
 import support7 from './showcase/persistence/mobile-support';
-import support8 from './showcase/gltf/mobile-support';
-import support9 from './experimental/scene-playground/mobile-support';
+import support8 from './gltf/asset-studio/mobile-support';
+import support9 from './anari/scenes/mobile-support';
 import support10 from './showcase/lightstorm-megacity/mobile-support';
 import support11 from './showcase/llm-network/mobile-support';
 import support12 from './experimental/lucim-volume-lab/mobile-support';
@@ -29,9 +64,11 @@ import support18 from './experimental/advanced-effects/mobile-support';
 import support19 from './experimental/deferred-rendering/mobile-support';
 import support20 from './experimental/shadow-map/mobile-support';
 import support21 from './v10/gpgpu/mobile-support';
+import gpuSimpleGraphSupport from './v10/gpu-simple-graph/mobile-support';
 import support22 from './experimental/gpu-frustum-culling/mobile-support';
 import parquetSupport from './experimental/gpu-parquet-constellation/mobile-support';
 import support23 from './experimental/gpu-trace-viewer/mobile-support';
+import timeSeriesSupport from './experimental/gpu-timeseries/mobile-support';
 import support24 from './experimental/gpu-graph-explorer/mobile-support';
 import support25 from './experimental/gpu-trace-scene/mobile-support';
 import support26 from './experimental/gpu-scene-graph/mobile-support';
@@ -66,6 +103,8 @@ import support54 from './tutorials/hello-instancing/mobile-support';
 import support55 from './tutorials/shader-modules/mobile-support';
 import support56 from './tutorials/shader-hooks/mobile-support';
 import support57 from './tutorials/shader-plugins/mobile-support';
+import slangParticlesSupport from './tutorials/slang-particles/mobile-support';
+import slangShadersSupport from './tutorials/slang-shaders/mobile-support';
 import support58 from './tutorials/transform-feedback/mobile-support';
 import support59 from './tutorials/transform/mobile-support';
 import support60 from './experimental/a-buffer/mobile-support';
@@ -99,6 +138,14 @@ import support85 from './showcase/spectral-wave-lab/mobile-support';
  * Metadata-only support registry. Importing this file never imports an example application.
  */
 export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDefinition>> = {
+  'deck/fireflies': firefliesSupport,
+  'deck/hdr-night-lighting': hdrNightLightingSupport,
+  'deck/global-illumination': globalIlluminationSupport,
+  'deck/light-shafts': lightShaftsSupport,
+  'deck/scene-buffers': sceneBuffersSupport,
+  'deck/ambient-occlusion': ambientOcclusionSupport,
+  'deck/soft-shadows': softShadowsSupport,
+  'deck/depth-of-field': depthOfFieldSupport,
   'showcase/gaussian-splat-viewer': support0,
   'showcase/gaussian-splats': support1,
   'showcase/instancing': support2,
@@ -107,8 +154,15 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'showcase/dof': support5,
   'experimental/bloom': support6,
   'showcase/persistence': support7,
-  'showcase/gltf': support8,
-  'experimental/scene-playground': support9,
+  'gltf/asset-studio': support8,
+  'gltf/clearcoat': {...support8, id: 'gltf/clearcoat', sourceDirectory: 'gltf/asset-studio'},
+  'gltf/sheen': {...support8, id: 'gltf/sheen', sourceDirectory: 'gltf/asset-studio'},
+  'gltf/iridescence': {...support8, id: 'gltf/iridescence', sourceDirectory: 'gltf/asset-studio'},
+  'gltf/anisotropy': {...support8, id: 'gltf/anisotropy', sourceDirectory: 'gltf/asset-studio'},
+  'showcase/gltf-audio': gltfAudioSupport,
+  'showcase/gltf-audio-environment': {...gltfAudioSupport, id: 'showcase/gltf-audio-environment'},
+  'showcase/gltf-audio-graph': {...gltfAudioSupport, id: 'showcase/gltf-audio-graph'},
+  'anari/scenes': support9,
   'showcase/lightstorm-megacity': support10,
   'showcase/llm-network': support11,
   'experimental/lucim-volume-lab': support12,
@@ -121,9 +175,14 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/deferred-rendering': support19,
   'experimental/shadow-map': support20,
   'v10/gpgpu': support21,
+  'v10/gpu-simple-graph': gpuSimpleGraphSupport,
   'experimental/gpu-frustum-culling': support22,
   'experimental/gpu-trace-viewer': support23,
   'experimental/gpu-graph-explorer': support24,
+  'experimental/gpu-geometry': geometrySupport,
+  'experimental/gpu-pointcloud': pointCloudSupport,
+  'experimental/gpu-pointcloud-octree': pointCloudOctreeSupport,
+  'experimental/gpu-timeseries': timeSeriesSupport,
   'experimental/gpu-trace-scene': support25,
   'experimental/gpu-scene-graph': support26,
   'showcase/vector-field-lab': support27,
@@ -145,18 +204,37 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'api/video-texture': support43,
   'api/render-bundles': support44,
   'integrations/external-context': support45,
+  'experimental/three': threeSupport,
+  'three/galactic-vortex': galacticVortexSupport,
+  'three/deck-layers': threeDeckLayersSupport,
+  'gltf/physics': gltfPhysicsSupport,
+  'gltf/authored-scene-stress': authoredSceneStressSupport,
+  'experimental/gpu-pool': poolSupport,
+  'experimental/gpu-sphere-world': sphereWorldSupport,
+  'experimental/gpu-sphere-scale': sphereScaleSupport,
+  'experimental/gpu-rigid-body-world': rigidBodyWorldSupport,
+  'experimental/vector-observatory': vectorObservatorySupport,
+  'experimental/physics-batch': physicsBatchSupport,
+  'experimental/physics-stress': physicsStressSupport,
+  'experimental/space-salvage': spaceSalvageSupport,
   'integrations/react-strict-mode': support46,
   'tutorials/hello-triangle': support47,
   'tutorials/hello-triangle-geometry': support48,
   'tutorials/hello-cube': support49,
   'tutorials/lighting': support50,
   'tutorials/hello-gltf': support51,
+  'showcase/gltf-billboard': gltfBillboardSupport,
+  'showcase/gltf-scatter': {...gltfBillboardSupport, id: 'showcase/gltf-scatter'},
+  'showcase/gltf-area-lights': {...gltfBillboardSupport, id: 'showcase/gltf-area-lights'},
+  'showcase/gltf-lightmap': {...gltfBillboardSupport, id: 'showcase/gltf-lightmap'},
   'tutorials/two-cubes': support52,
   'tutorials/instanced-cubes': support53,
   'tutorials/hello-instancing': support54,
   'tutorials/shader-modules': support55,
   'tutorials/shader-hooks': support56,
   'tutorials/shader-plugins': support57,
+  'tutorials/slang-shaders': slangShadersSupport,
+  'tutorials/slang-particles': slangParticlesSupport,
   'tutorials/transform-feedback': support58,
   'tutorials/transform': support59,
   'experimental/a-buffer': support60,
@@ -178,7 +256,11 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'arrow/arrow-particles': support76,
   'arrow/arrow-dggs-polygons': support77,
   'arrow/arrow-columns': support78,
+  'deck/gltf-interactivity': gltfInteractivitySupport,
+  'deck/flow-particles': flowParticlesSupport,
+  'deck/wind': windSupport,
   'deck/arrow-path-layer': support79,
+  'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,
   'deck/arrow-text-layer': support81,
   'deck/luspatial-taxi': support82,
@@ -189,7 +271,12 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'integrations/hello-react': standaloneSupport1,
   'showcase/algebraic-varieties': standaloneSupport2,
   'experimental/gpu-parquet-constellation': parquetSupport,
+  'deck/sketch-edges': sketchSupport,
   'deck/weather': weatherSupport,
+  'deck/globe-clouds': globeCloudsSupport,
+  'deck/pattern-fills': patternSupport,
+  'deck/point-glow': pointGlowSupport,
+  'deck/styled-paths': styledPathsSupport,
   'homepage/instancing': support2
 };
 

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device} from '@luma.gl/core';
-import {SphereGeometry} from '../geometries/sphere-geometry';
+import {SphereGeometry} from '../geometry/geometry-primitives';
 import {
   BaseLightModel,
   buildPointLightInstanceData,
