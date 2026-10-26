@@ -13,7 +13,8 @@ import {
   type PreparedArrowTemporalGPUVector
 } from '@luma.gl/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
-import {type DynamicBuffer, Model, ShaderInputs} from '@luma.gl/engine';
+import {Model, ShaderInputs} from '@luma.gl/engine';
+import {type DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   getGPUVectorBuffer,
   getGPUVectorData,

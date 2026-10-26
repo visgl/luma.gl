@@ -2,4 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export * from '@luma.gl/gpgpu/_internal/dynamic-texture/dynamic-texture';
+// Compatibility export; resource conveniences are owned by core/dynamic.
+export {
+  type DynamicTextureProps,
+  DynamicTexture
+} from '@luma.gl/core/dynamic';

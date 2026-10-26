@@ -15,7 +15,6 @@ import {
   TextureView
 } from '@luma.gl/core';
 import {
-  DynamicTexture,
   Geometry,
   Material,
   MaterialFactory,
@@ -25,6 +24,7 @@ import {
   type MorphTargetAttributes,
   type ScenegraphBounds
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {gpuAnimation, pbrMaterial, skin} from '@luma.gl/shadertools';
 import type {NumericArray} from '@math.gl/core';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';

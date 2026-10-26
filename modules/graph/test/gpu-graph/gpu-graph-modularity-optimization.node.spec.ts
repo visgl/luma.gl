@@ -5,7 +5,7 @@
 import {readFileSync} from 'node:fs';
 
 import {Buffer} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import * as graphRootModule from '@luma.gl/graph';
 import {
   GPUGraphAlgorithmsData,

@@ -9,12 +9,12 @@ import {TableTransform} from '@luma.gl/graph/gpu-tables';
 import {
   AnimationLoopTemplate,
   AnimationProps,
-  DynamicBuffer,
   Model,
   ShaderInputs,
   Swap,
   makeRandomGenerator
 } from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {picking, type ShaderModule} from '@luma.gl/shadertools';
 import * as arrow from 'apache-arrow';
 import {TRANSFORM_INFO_HTML} from './app-ui';

@@ -12,7 +12,8 @@ import {
   type ArrowRecordBatchSource
 } from '@luma.gl/arrow';
 import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
-import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {getGPUVectorBuffer, type GPUData, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURenderable,

@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/core';
 import {getPassthroughFS} from '@luma.gl/shadertools';
 import {GPUVectorModel} from '../model/gpu-vector-model';
-import {DynamicBuffer} from '../dynamic-buffer/dynamic-buffer';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {getGPUVectorModelBatches} from '../model/gpu-vector-model';
 import type {GPUVectorModelProps, GPUVectorModelInputs} from '../model/gpu-vector-model';
 

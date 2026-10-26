@@ -18,7 +18,7 @@ import type {
   TextureFormat,
   TextureView
 } from '@luma.gl/core';
-import type {DynamicBuffer, DynamicTexture} from '@luma.gl/gpgpu';
+import type {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 
 /** Internal identity shared by graph-owned handles without importing the graph implementation. */

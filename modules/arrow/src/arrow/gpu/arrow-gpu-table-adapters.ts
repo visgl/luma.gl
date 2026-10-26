@@ -10,7 +10,7 @@ import {
   type SignedDataType,
   type VertexFormat
 } from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   GPUData,
   GPUVector,

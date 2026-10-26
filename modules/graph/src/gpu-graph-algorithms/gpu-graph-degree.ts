@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 import type {Buffer} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
 import {addGPUGraphAlgorithmsDegreeToGraphWithDispatchLimit} from './gpu-graph-degree-internals';

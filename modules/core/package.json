@@ -55,6 +55,11 @@
       "types": "./dist/webgl-debug/index.d.ts",
       "import": "./dist/webgl-debug/index.js",
       "require": "./dist/webgl-debug/index.cjs"
+    },
+    "./dynamic": {
+      "types": "./dist/dynamic/index.d.ts",
+      "import": "./dist/dynamic/index.js",
+      "require": "./dist/dynamic/index.cjs"
     }
   },
   "files": [

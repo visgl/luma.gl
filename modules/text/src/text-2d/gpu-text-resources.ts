@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {DynamicTexture} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {FontAtlas} from '../fonts/atlas/font-atlas';
 import type {GPUTextData} from './gpu-text-data';
 

@@ -5,7 +5,7 @@
 import type {Device, ExternalTexture, ResourceProps, Sampler, SamplerProps} from '@luma.gl/core';
 import {Texture, assert} from '@luma.gl/core';
 import {uid} from '../utils/uid';
-import type {TextureBindingLayout, TextureBindingSource} from './texture-binding-source';
+import type {TextureBindingLayout, TextureBindingSource} from '@luma.gl/core/dynamic';
 
 /** Properties for a live video binding source. */
 export type VideoTextureProps = Pick<ResourceProps, 'id'> & {

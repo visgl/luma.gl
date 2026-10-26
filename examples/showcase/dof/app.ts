@@ -19,11 +19,11 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   CubeGeometry,
-  DynamicTexture,
   loadImageBitmap,
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {dofCompositeShaderPass} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';

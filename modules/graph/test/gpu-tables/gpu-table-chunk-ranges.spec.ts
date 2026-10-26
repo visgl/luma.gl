@@ -10,7 +10,8 @@ import {
   type Device,
   type ShaderLayout
 } from '@luma.gl/core';
-import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURecordBatch,
