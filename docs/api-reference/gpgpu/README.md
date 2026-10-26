@@ -201,3 +201,7 @@ registering CPU handlers for another device type.
 
 - [GPU Geometry](./gpu-geometry.md): triangle and vertex normals plus adjacency-based mesh smoothing.
 - [GPU Point Cloud](./gpu-pointcloud.md): deterministic voxel sampling and bounded exact radius filtering.
+
+## Dynamic resource compatibility
+
+Import `DynamicBuffer` and `DynamicTexture` from `@luma.gl/core/dynamic`. Gpgpu accepts these resources, but core owns their implementation. Existing gpgpu exports remain compatibility aliases.

@@ -12,10 +12,10 @@ import {
   Model,
   makeRandomGenerator,
   loadImageBitmap,
-  DynamicTexture,
   BackgroundTextureModel,
   ShaderPassRenderer
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 import {PERSISTENCE_INFO_HTML} from './app-ui';
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';

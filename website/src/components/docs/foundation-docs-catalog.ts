@@ -9,6 +9,14 @@ export type {DocumentationTab} from './docs-page-tabs';
  */
 export const FOUNDATION_DOCS_CATALOG = {
   core: {
+    'dynamic-resources': {
+      label: 'Optional resource conveniences',
+      tabs: [
+        {id: 'core-reference', label: 'Core overview', href: '/docs/api-reference/core'},
+        {id: 'dynamic-buffer', label: 'DynamicBuffer', href: '/docs/api-reference/core/dynamic/dynamic-buffer'},
+        {id: 'dynamic-texture', label: 'DynamicTexture', href: '/docs/api-reference/core/dynamic/dynamic-texture'}
+      ]
+    },
     starting: {
       label: 'Core starting points',
       tabs: [
@@ -198,8 +206,8 @@ export const FOUNDATION_DOCS_CATALOG = {
     'dynamic-resources': {
       label: 'Dynamic resources',
       tabs: [
-        {id: 'dynamic-buffer', label: 'DynamicBuffer', href: '/docs/api-reference/engine/dynamic-buffer'},
-        {id: 'dynamic-texture', label: 'DynamicTexture', href: '/docs/api-reference/engine/dynamic-texture'},
+        {id: 'dynamic-buffer', label: 'DynamicBuffer', href: '/docs/api-reference/core/dynamic/dynamic-buffer'},
+        {id: 'dynamic-texture', label: 'DynamicTexture', href: '/docs/api-reference/core/dynamic/dynamic-texture'},
         {id: 'video-texture', label: 'VideoTexture', href: '/docs/api-reference/engine/video-texture'},
         {id: 'load-image-bitmap', label: 'loadImageBitmap', href: '/docs/api-reference/engine/load-image-bitmap'}
       ]

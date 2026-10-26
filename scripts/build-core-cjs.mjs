@@ -128,3 +128,22 @@ assert(engineApi.Model.prototype instanceof executionApi.GPUVectorModel);
 process.stdout.write('Verified CommonJS execution primitive identity.\n');
 
 await import('./verify-package-layering.mjs');
+
+// Optional resource conveniences preserve identity across all compatibility exports.
+const dynamicApi = require('../modules/core/dist/dynamic/index.cjs');
+const [coreEsm, dynamicEsm, engineEsm, executionEsm] = await Promise.all([
+  import('../modules/core/dist/index.js'),
+  import('../modules/core/dist/dynamic/index.js'),
+  import('../modules/engine/dist/index.js'),
+  import('../modules/gpgpu/dist/index.js')
+]);
+for (const name of ['DynamicBuffer', 'DynamicTexture']) {
+  assert.equal(typeof dynamicApi[name], 'function');
+  assert.equal(dynamicApi[name], engineApi[name]);
+  assert.equal(dynamicApi[name], executionApi[name]);
+  assert.equal(dynamicEsm[name], engineEsm[name]);
+  assert.equal(dynamicEsm[name], executionEsm[name]);
+  assert(!(name in coreApi));
+  assert(!(name in coreEsm));
+}
+process.stdout.write('Verified optional dynamic resource identity in ESM and CommonJS.\n');

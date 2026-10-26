@@ -4,7 +4,7 @@
 
 import {type Binding, type ComputePass, Device} from '@luma.gl/core';
 import {Computation, type ComputationProps} from '@luma.gl/gpgpu';
-import {DynamicBuffer} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   isFixedSizeListGPUVectorFormat,
   type GPUData,

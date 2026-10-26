@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
-import type {DynamicTexture, ModelProps} from '@luma.gl/engine';
+import type {ModelProps} from '@luma.gl/engine';
+import type {DynamicTexture} from '@luma.gl/core/dynamic';
 import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
 import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/engine/tables';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';

@@ -8,7 +8,7 @@ import {
   type BufferLayout,
   type VertexFormat
 } from '@luma.gl/core';
-import type {DynamicBuffer} from '@luma.gl/gpgpu';
+import type {DynamicBuffer} from '@luma.gl/core/dynamic';
 
 /** Minimal backing resource required by a {@link GPUDataView}. */
 export type GPUDataViewBuffer = {

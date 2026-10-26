@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type PrimitiveTopology} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUGeometry} from '../../index';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
 

@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type BufferLayout, Device, type RenderPassProps} from '@luma.gl/core';
-import {BufferTransform, DynamicBuffer, type BufferTransformProps} from '@luma.gl/gpgpu';
+import {BufferTransform, type BufferTransformProps} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch} from '../table/gpu-record-batch';

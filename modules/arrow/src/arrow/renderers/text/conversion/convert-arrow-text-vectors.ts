@@ -17,7 +17,7 @@ import {
 } from '../../../gpu/arrow-gpu-table-adapters';
 import {getRequiredArrowGPUVectorDataType} from '../../../gpu/arrow-gpu-data';
 import {isNumericArrowType, type NumericArrowType} from '../../../arrow-utils/arrow-types';
-import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
+import {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';
 import {
   Data,
   DataType,

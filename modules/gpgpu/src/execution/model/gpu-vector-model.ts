@@ -93,12 +93,12 @@ import {
   type DynamicBufferRange,
   isBufferRangeBinding,
   resolveBufferRangeBinding
-} from '../dynamic-buffer/dynamic-buffer';
+} from '@luma.gl/core/dynamic';
 import {
   getTextureBindingLayout,
   isTextureBindingSource,
   type TextureBindingSource
-} from '../dynamic-texture/texture-binding-source';
+} from '@luma.gl/core/dynamic';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;

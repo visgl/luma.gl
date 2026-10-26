@@ -22,7 +22,8 @@ import {
   type TextureFormat,
   textureFormatDecoder
 } from '@luma.gl/core';
-import {DynamicTexture, Model} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {type TextureSource} from '../textures-data';
 
 const TEXTURES_BASE_URL =
