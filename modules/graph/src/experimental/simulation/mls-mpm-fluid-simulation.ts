@@ -8,7 +8,7 @@ import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GPUCommandGraphEncoding
-} from '../../gpu-core';
+} from '../../gpu-core/index';
 import {
   MLS_MPM_FLUID_CLEAR_GRID_BINDINGS,
   MLS_MPM_FLUID_CLEAR_GRID_SHADER,

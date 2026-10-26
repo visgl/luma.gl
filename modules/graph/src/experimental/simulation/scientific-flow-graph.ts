@@ -7,7 +7,7 @@ import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
   type GPUCommandGraphEncoding
-} from '../../gpu-core';
+} from '../../gpu-core/index';
 import {ScientificFlowCompute} from './scientific-flow-compute';
 import {ScientificFlowField, type ScientificVectorFieldInput} from './scientific-flow-field';
 
