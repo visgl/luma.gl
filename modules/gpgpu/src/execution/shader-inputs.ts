@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Binding, CompositeShaderType} from '@luma.gl/core';
+import type {CompositeShaderType} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 // import type {VariableShaderType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {
@@ -11,10 +11,10 @@ import {
   ShaderModuleUniformValue
 } from '@luma.gl/shadertools';
 import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
-import type {TextureBindingSource} from '@luma.gl/core/dynamic';
+import type {ShaderValues, ShaderInputBinding} from '@luma.gl/core/shader-inputs';
 
 /** Shader binding accepted by ShaderInputs, including deferred texture binding sources. */
-export type ShaderInputBinding = Binding | TextureBindingSource;
+export type {ShaderInputBinding} from '@luma.gl/core/shader-inputs';
 
 export type ShaderInputsOptions = {
   disableWarnings?: boolean;
@@ -43,7 +43,8 @@ export class ShaderInputs<
   ShaderPropsT extends Partial<Record<string, Record<string, unknown>>> = Partial<
     Record<string, Record<string, unknown>>
   >
-> {
+> implements ShaderValues
+{
   options: Required<ShaderInputsOptions> = {
     disableWarnings: false
   };

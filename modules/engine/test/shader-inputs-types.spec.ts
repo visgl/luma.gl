@@ -129,3 +129,19 @@ export function verifyCompositeShaderInputTypes(): void {
   // @ts-expect-error bindings must stay top-level props
   shaderInputs.setProps({composite: {light: {lightTexture: {} as Texture}}});
 }
+
+// The read-only consumer contract accepts ShaderInputs and plain providers alike.
+function checkShaderValuesContract(inputs: ShaderInputs) {
+  const values: import('@luma.gl/core/shader-inputs').ShaderValues = inputs;
+  const plain: import('@luma.gl/core/shader-inputs').ShaderValues = {
+    getUniformValues: () => ({block: {nested: {value: 1}, array: [1, 2, 3]}}),
+    getBindingValues: () => ({})
+  };
+  const props: ModelProps = {shaderValues: plain};
+  // @ts-expect-error Providers do not expose shader-module mutation.
+  values.setProps({});
+  // @ts-expect-error Consumers cannot modify the returned binding map.
+  values.getBindingValues().image = undefined;
+  return props;
+}
+void checkShaderValuesContract;

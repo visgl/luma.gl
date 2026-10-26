@@ -320,6 +320,7 @@
         "label": "@luma.gl/core",
         "items": [
           "api-reference/core/README",
+          "api-reference/core/shader-values",
           "api-reference/core/dynamic/dynamic-buffer",
           "api-reference/core/dynamic/dynamic-texture",
           {

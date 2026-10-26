@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
+import type {ShaderValues} from '@luma.gl/core/shader-inputs';
 import type {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderAssembler} from '@luma.gl/shadertools';
@@ -313,3 +314,56 @@ function makeWebGPUDevice(): Device {
 
   return webgpuDevice;
 }
+
+it('Model accepts borrowed ShaderValues independently of module management', () => {
+  const device = makeWebGPUDevice();
+  const firstTexture = device.createTexture({width: 1, height: 1});
+  const secondTexture = device.createTexture({width: 1, height: 1});
+  let scale = 2;
+  let texture = firstTexture;
+  const values: ShaderValues = {
+    getUniformValues: () => ({settings: {scale}}),
+    getBindingValues: () => ({image: texture})
+  };
+  const model = new Model(device, {
+    source: WGSL_SOURCE,
+    vertexCount: 1,
+    modules: [{name: 'settings', uniformTypes: {scale: 'f32'}, defaultUniforms: {scale: 1}}],
+    shaderValues: values
+  });
+  try {
+    const upload = vi.spyOn(model._uniformStore, 'setUniforms');
+    model.updateShaderInputs();
+    expect(upload).toHaveBeenLastCalledWith({settings: {scale: 2}}, undefined);
+    expect(model.bindings.image).toBe(firstTexture);
+    expect(model.getShaderValues()).toBe(values);
+
+    scale = 3;
+    texture = secondTexture;
+    model.updateShaderInputs();
+    expect(upload).toHaveBeenLastCalledWith({settings: {scale: 3}}, undefined);
+    expect(model.bindings.image).toBe(secondTexture);
+    const packed = model._uniformStore.getUniformBufferData('settings');
+    expect(
+      new DataView(packed.buffer, packed.byteOffset, packed.byteLength).getFloat32(0, true)
+    ).toBe(3);
+
+    model.setShaderValues();
+    model.shaderInputs.setProps({settings: {scale: 4}, bindings: {image: firstTexture}});
+    model.updateShaderInputs();
+    expect(model.getShaderValues()).toBe(model.shaderInputs);
+    expect(upload).toHaveBeenLastCalledWith({settings: {scale: 4}}, undefined);
+    expect(model.bindings.image).toBe(firstTexture);
+
+    model.setShaderValues(values);
+    model.updateShaderInputs();
+    expect(model.bindings.image).toBe(secondTexture);
+  } finally {
+    model.destroy();
+    expect(firstTexture.destroyed).toBe(false);
+    expect(secondTexture.destroyed).toBe(false);
+    firstTexture.destroy();
+    secondTexture.destroy();
+    device.destroy();
+  }
+});

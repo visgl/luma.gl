@@ -60,6 +60,11 @@
       "types": "./dist/dynamic/index.d.ts",
       "import": "./dist/dynamic/index.js",
       "require": "./dist/dynamic/index.cjs"
+    },
+    "./shader-inputs": {
+      "types": "./dist/shader-inputs/index.d.ts",
+      "import": "./dist/shader-inputs/index.js",
+      "require": "./dist/shader-inputs/index.cjs"
     }
   },
   "files": [

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ShaderValues} from '@luma.gl/core/shader-inputs';
 import {type TypedArray} from '@math.gl/core/types';
 import {
   type RenderPipelineProps,
@@ -139,6 +140,8 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
 
   /** Shader inputs, used to generate uniform buffers and bindings. */
   shaderInputs?: ShaderInputs;
+  /** Experimental read-only value provider; module definitions still come from modules/shaderInputs. */
+  shaderValues?: ShaderValues;
   /** Shader resource bindings, including dynamic buffers and dynamic textures. */
   bindings?: Record<string, ModelBinding>;
   /** WebGL-only uniforms */
@@ -263,6 +266,7 @@ export class GPUVectorModel {
     vertexCount: 0,
 
     shaderInputs: undefined!,
+    shaderValues: undefined!,
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
@@ -342,6 +346,7 @@ export class GPUVectorModel {
   /** ShaderInputs instance */
   // @ts-expect-error Assigned in function called by constructor
   shaderInputs: ShaderInputs;
+  private _shaderValues?: ShaderValues;
   // @ts-expect-error Assigned in function called by constructor
   _uniformStore: UniformStore;
 
@@ -447,6 +452,7 @@ export class GPUVectorModel {
     }
     // @ts-ignore
     this.setShaderInputs(shaderInputs);
+    this._shaderValues = props.shaderValues;
 
     // Setup shader assembler
     const modules = mergeShaderModules(this.props.modules, shaderInputs.getModules());
@@ -1208,6 +1214,17 @@ export class GPUVectorModel {
     this.setNeedsRedraw('shaderInputs');
   }
 
+  /** Selects a borrowed value provider. Pass undefined to restore the model's ShaderInputs. */
+  setShaderValues(shaderValues?: ShaderValues): void {
+    this._shaderValues = shaderValues;
+    this.setNeedsRedraw('shaderValues');
+  }
+
+  /** Returns the current value provider without requiring shader-module management methods. */
+  getShaderValues(): ShaderValues {
+    return this._shaderValues ?? this.shaderInputs;
+  }
+
   /** Update uniform buffers from the model's shader inputs */
   /**
    * Flushes current shader-input values into managed uniform buffers and
@@ -1217,7 +1234,7 @@ export class GPUVectorModel {
    * subsequent draw commands.
    */
   updateShaderInputs(commandEncoder?: CommandEncoder): void {
-    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues(), commandEncoder);
+    this._uniformStore.setUniforms(this.getShaderValues().getUniformValues(), commandEncoder);
     this.setBindings(this._getShaderInputBindings());
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');
@@ -1225,7 +1242,7 @@ export class GPUVectorModel {
 
   /** Resolves resource bindings supplied by shader inputs. */
   protected _getShaderInputBindings(): Record<string, ModelBinding> {
-    return this.shaderInputs.getBindingValues();
+    return this.getShaderValues().getBindingValues();
   }
 
   /**
