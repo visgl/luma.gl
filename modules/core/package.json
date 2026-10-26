@@ -60,6 +60,11 @@
       "types": "./dist/dynamic/index.d.ts",
       "import": "./dist/dynamic/index.js",
       "require": "./dist/dynamic/index.cjs"
+    },
+    "./render-kernel": {
+      "types": "./dist/render-kernel/index.d.ts",
+      "import": "./dist/render-kernel/index.js",
+      "require": "./dist/render-kernel/index.cjs"
     }
   },
   "files": [

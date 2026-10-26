@@ -147,3 +147,13 @@ for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert(!(name in coreEsm));
 }
 process.stdout.write('Verified optional dynamic resource identity in ESM and CommonJS.\n');
+
+const renderKernelApi = require('../modules/core/dist/render-kernel/index.cjs');
+assert.equal(renderKernelApi.RenderKernel, engineApi.RenderKernel);
+assert(!('RenderKernel' in coreApi));
+const [renderKernelEsm, renderKernelEngineEsm] = await Promise.all([
+  import('../modules/core/dist/render-kernel/index.js'),
+  import('../modules/engine/dist/index.js')
+]);
+assert.equal(renderKernelEsm.RenderKernel, renderKernelEngineEsm.RenderKernel);
+process.stdout.write('Verified optional RenderKernel compatibility identity.\n');
