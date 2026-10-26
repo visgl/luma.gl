@@ -4,16 +4,33 @@
 
 import {Matrix4} from '@math.gl/core';
 import {deformPositions, type ScenegraphNode} from '@luma.gl/engine';
-import type {GLTFScenegraph} from '@loaders.gl/gltf';
+import type {
+  GLTF,
+  GLTFAccessor,
+  GLTFBufferView,
+  GLTFMesh,
+  GLTFSkin
+} from '../types/gltf-json-schema';
+
 import {
   MAX_COLLISION_SNAPSHOT_VERTICES,
   MAX_COLLISION_SNAPSHOT_INDICES
 } from './node-collision-geometry';
 import {readPhysicsRotation, readPhysicsVector} from './physics-transforms';
 
+/** Raw glTF access needed to snapshot collision meshes; compatible with loader scenegraphs. */
+export type GLTFPhysicsMeshSource = {
+  gltf: {json: Pick<GLTF, 'nodes'>};
+  getMesh(index: number): GLTFMesh;
+  getSkin(index: number): GLTFSkin;
+  getAccessor(index: number): GLTFAccessor;
+  getBufferView(index: number): GLTFBufferView;
+  getTypedArrayForBufferView(index: number): Uint8Array;
+};
+
 /** Decode the initial mesh pose for geometry.node, before glTF postprocessing mutates indices. */
 export function makeGLTFPhysicsMeshResolver(
-  scenegraph: GLTFScenegraph,
+  scenegraph: GLTFPhysicsMeshSource,
   liveNodes?: ReadonlyMap<number, ScenegraphNode>
 ) {
   const nodes = scenegraph.gltf.json.nodes ?? [];
@@ -125,7 +142,7 @@ export function makeGLTFPhysicsMeshResolver(
 
 /** Decode strided, normalized and sparse accessors without modifying shared source buffers. */
 function readAccessor(
-  scenegraph: GLTFScenegraph,
+  scenegraph: GLTFPhysicsMeshSource,
   accessorIndex: number,
   expectedType: string
 ): number[] {

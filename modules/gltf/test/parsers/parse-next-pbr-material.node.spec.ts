@@ -4,10 +4,11 @@
 
 import {
   type GLTFPostprocessed,
-  exportGLTF,
   getGLTFExtensionSupport,
   getTextureTransformSlotDefinitions
 } from '@luma.gl/gltf';
+
+import {exportGLTF} from '../../../../examples/gltf/gltf-exporter';
 
 import {parseGLTFAnimations} from '@luma.gl/gltf/parsers/parse-gltf-animations';
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';

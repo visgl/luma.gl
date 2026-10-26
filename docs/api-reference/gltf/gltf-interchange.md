@@ -4,7 +4,10 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 
 <GltfDocsTabs active="interchange" />
 
-`@luma.gl/gltf` owns format-native scene interchange. `exportGLTF()` writes standards-conformant
+Asset export is application code. The shared example helper
+[`examples/gltf/gltf-exporter.ts`](https://github.com/visgl/luma.gl/blob/master/examples/gltf/gltf-exporter.ts)
+provides `exportGLTF()` and its descriptor types; they are not exports of `@luma.gl/gltf`.
+The helper writes standards-conformant
 embedded `.gltf` documents or aligned binary `.glb` assets without depending on an application
 renderer, an ANARI device, or browser-specific GPU resources.
 
@@ -12,10 +15,13 @@ The same descriptors preserve authored node hierarchies, skins, inverse bind mat
 targets, animation clips, material-animation pointers, GPU instancing, variants, cameras,
 punctual-light extensions, and complete physical material records.
 
+Copy the helper into your application and install `@loaders.gl/core` and `@loaders.gl/gltf`
+to enable its GLB writer. luma.gl modules do not depend on loaders.gl.
+
 ## Export a scene
 
 ```ts
-import {exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
+import {exportGLTF, type GLTFExportScene} from './gltf-exporter';
 
 const scene: GLTFExportScene = {
   name: 'Animated character',

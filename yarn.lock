@@ -5296,9 +5296,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
   dependencies:
-    "@loaders.gl/core": "npm:~5.0.0-alpha.12"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.12"
-    "@loaders.gl/textures": "npm:~5.0.0-alpha.12"
     "@luma.gl/graph": "npm:10.0.0-alpha.4"
     "@math.gl/core": "npm:5.0.0-alpha.19"
   peerDependencies:
@@ -5362,8 +5359,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/graph@workspace:modules/graph"
   dependencies:
-    "@loaders.gl/core": "npm:~5.0.0-alpha.12"
-    "@loaders.gl/sql": "npm:~5.0.0-alpha.12"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.4"
     "@math.gl/core": "npm:~5.0.0-alpha.19"
     probe.gl: "npm:^5.0.0"
@@ -16589,6 +16584,7 @@ __metadata:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-alpha.12"
     "@loaders.gl/gltf": "npm:~5.0.0-alpha.12"
+    "@loaders.gl/textures": "npm:~5.0.0-alpha.12"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
@@ -17264,6 +17260,8 @@ __metadata:
     "@loaders.gl/las": "npm:~5.0.0-alpha.12"
     "@loaders.gl/parquet": "npm:~5.0.0-alpha.12"
     "@loaders.gl/polyfills": "npm:~5.0.0-alpha.12"
+    "@loaders.gl/sql": "npm:~5.0.0-alpha.12"
+    "@loaders.gl/textures": "npm:~5.0.0-alpha.12"
     "@luma.gl/ts-transform-inline-webgl-constants": "workspace:*"
     "@math.gl/core": "npm:~5.0.0-alpha.19"
     "@math.gl/dggs": "npm:~5.0.0-alpha.19"

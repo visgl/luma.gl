@@ -283,8 +283,10 @@ resources and adapt their underlying textures without introducing an experimenta
 
 ```ts
 import {loadPBREnvironment} from '@luma.gl/gltf';
+import {loadImageTexture} from '@loaders.gl/textures';
 
 const loadedEnvironment = loadPBREnvironment(device, {
+  loadImage: loadImageTexture,
   brdfLutUrl: '/environments/studio/brdf-lut.png',
   getTexUrl: (name, face, level) => `/environments/studio/${name}-${face}-${level}.png`,
   specularMipLevels: 5

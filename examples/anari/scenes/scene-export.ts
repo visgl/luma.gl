@@ -1,5 +1,4 @@
 import {
-  convertSamplerToGLTF,
   exportGLTF,
   type GLTFExportAccessor,
   type GLTFExportAnimation,
@@ -9,9 +8,9 @@ import {
   type GLTFExportNode,
   type GLTFExportPrimitive,
   type GLTFExportScene,
-  type GLTFExportSkin,
-  getTextureTransformSlotDefinitions
-} from '@luma.gl/gltf';
+  type GLTFExportSkin
+} from '../../gltf/gltf-exporter';
+import {convertSamplerToGLTF, getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 import {
   type ANARIJSONScene,
