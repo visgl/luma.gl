@@ -5,6 +5,8 @@ description: Find the curated and generated API references for every stable and 
 
 # Overview
 
+Explore the [packages](/docs/packages) for a visual overview of primary packages, smaller packages, and exploratory modules.
+
 luma.gl provides published, composable npm modules with stable and experimental APIs, alongside
 private Arrow and deck.gl adapters under active development. Applications can choose the rendering,
 compute, and visualization functionality they need while checking the maturity of each package.

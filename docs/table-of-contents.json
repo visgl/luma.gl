@@ -4,6 +4,7 @@
     "label": "Getting Started",
     "items": [
       "README",
+      "packages",
       "getting-started",
       "tutorials/README",
       "api-guide/README",
