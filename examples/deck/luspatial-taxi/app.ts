@@ -40,7 +40,7 @@ import {
   getTooltip
 } from './app-ui';
 
-const BASEMAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 const INITIAL_ZONE_ID = 161;
 const MAX_RESIDENT_POINT_CAPACITY = 10_000_000;
 
@@ -160,9 +160,17 @@ export function createGPUSpatialTaxiDeck(
   map.on('error', handleBasemapError);
   map.on('load', handleBasemapLoad);
 
+  const deckDeviceProps = getDeckExampleProps({...deviceOptions, deviceType: 'webgpu'});
   deck = new ArrowDeck({
     parent: container,
-    ...getDeckExampleProps({...deviceOptions, deviceType: 'webgpu'}),
+    ...deckDeviceProps,
+    ...(!deviceOptions.device && {
+      deviceProps: {
+        ...deckDeviceProps.deviceProps,
+        debugGPUTime: true,
+        optionalFeatures: ['timestamp-query' as const]
+      }
+    }),
     views: new MapView({id: 'map', repeat: false}),
     viewState,
     controller: {
@@ -193,6 +201,7 @@ export function createGPUSpatialTaxiDeck(
     },
     onLoad: ({deck: loadedDeck, device}) => {
       if (device.type !== 'webgpu') throw new Error('luSpatial taxi explorer requires WebGPU');
+      if (!deviceOptions.device) device._enableDebugGPUTime();
       const canvas = device.getDefaultCanvasContext().canvas;
       if (canvas instanceof HTMLCanvasElement) {
         Object.assign(canvas.style, {

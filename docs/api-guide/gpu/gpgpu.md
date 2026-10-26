@@ -11,7 +11,7 @@ WebGPU command graphs. Start with the highest-level API that expresses the workf
 ## Outcome and prerequisites
 
 This guide helps you choose between the stable `@luma.gl/gpgpu` evaluators, its experimental
-subpaths, Engine compute helpers, and private experimental GPU tables. It assumes familiarity with
+subpaths, Engine compute helpers, and experimental GPU tables. It assumes familiarity with
 buffers and typed arrays; the
 [Core GPU guide](/docs/api-guide/gpu) introduces those concepts.
 
@@ -19,9 +19,9 @@ buffers and typed arrays; the
 
 | Need | Start with |
 | --- | --- |
-| Portable lazy vector expressions on CPU, WebGL 2, or WebGPU | [`@luma.gl/gpgpu`](/docs/api-reference/gpgpu) |
+| Portable lazy vector expressions on CPU, WebGL 2, or WebGPU | [GPU Evaluations with GPUVectorEvaluator](/docs/api-guide/gpu/gpu-evaluations) |
 | Primitive GPU chunks, vectors, and memory formats | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) |
-| Batch-preserving GPU tables and schemas | [`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) |
+| Batch-preserving GPU tables and schemas | [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) |
 | One explicit buffer or texture computation | [Engine compute helpers](/docs/api-guide/engine/transforms) |
 | Several dependent WebGPU operations, indirect work, or transient reuse | [GPU Core](/docs/api-reference/experimental/gpu-core) |
 
@@ -41,7 +41,7 @@ intermediate evaluator results.
 ## Decisions and tradeoffs
 
 - Prefer GPGPU evaluators when portability and expression composition matter most.
-- Prefer `@luma.gl/gpgpu/gpu-core` when WebGPU-only scheduling, GPU-written work counts, or multi-pass resource
+- Prefer `@luma.gl/graph/gpu-core` when WebGPU-only scheduling, GPU-written work counts, or multi-pass resource
   planning matter more than backend portability.
 - Preserve source chunks in GPU vectors and tables instead of silently repacking streaming data.
 - Avoid readback between operations unless the CPU actually needs the result.
@@ -53,6 +53,10 @@ intermediate evaluator results.
 - Choosing a command graph for a single simple operation that has no scheduling problem to solve.
 
 ## Next steps
+
+- [GPU Evaluations](/docs/api-guide/gpu/gpu-evaluations)
+
+- [GPU physics: background and architecture](/docs/api-guide/gpu/gpu-physics)
 
 - [Choosing a GPU data-processing API](/docs/api-guide/gpu/gpu-data-processing)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)

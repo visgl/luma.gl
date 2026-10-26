@@ -1,6 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+import {inspectEvaluators, type GPUEvaluatorInspection} from './gpu-evaluator-inspection';
 import {
   Device,
   Buffer,
@@ -20,9 +21,10 @@ import {
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
 } from '@luma.gl/gpgpu/gpu-data';
-import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
+import type {TypedArray, TypedArrayConstructor} from '@math.gl/core/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
+import type {GPUEvaluationScope} from './gpu-evaluation-scope';
 
 type GPUDataEvaluatorBufferOwnership = 'owned' | 'borrowed';
 
@@ -38,6 +40,8 @@ export type GPUDataEvaluatorTargetBuffer = {
 
 /** Options for materializing one {@link GPUDataEvaluator}. */
 export type GPUDataEvaluatorEvaluateOptions = {
+  /** Execution scope supplied by GPUEvaluationScope.evaluate(). @internal */
+  scope?: GPUEvaluationScope;
   /** Name assigned to the materialized single-chunk `GPUVector`. */
   name?: string;
   /** Memory format for the materialized `GPUVector`. Defaults to the evaluator layout. */
@@ -154,6 +158,7 @@ export class GPUDataEvaluator {
   protected _id?: string;
   /** Whether {@link GPUDataEvaluator.destroy} has been called. */
   protected _destroyed: boolean = false;
+  private _evaluationScope?: GPUEvaluationScope;
 
   /** CPU buffer, either provided by the user or read back from the GPU. */
   protected _value?: TypedArray;
@@ -377,6 +382,11 @@ export class GPUDataEvaluator {
     return Boolean(this._gpuVector);
   }
 
+  /** Returns metadata without evaluating or reading GPU resources. */
+  getInspection(): GPUEvaluatorInspection {
+    return inspectEvaluators([this]);
+  }
+
   /** Optional debug id. */
   get id(): string | undefined {
     return this._id;
@@ -406,6 +416,7 @@ export class GPUDataEvaluator {
     byteOffset = 0,
     byteStride = this.stride
   }: GPUDataEvaluatorTargetBuffer): void {
+    this.assertScopeAccess();
     if (this._destroyed) {
       throw new Error(`GPUDataEvaluator ${this} already destroyed`);
     }
@@ -435,13 +446,51 @@ export class GPUDataEvaluator {
     if (this._destroyed) {
       throw new Error(`GPUDataEvaluator ${this} already destroyed`);
     }
+    this.assertScopeAccess(options.scope);
+    if (options.scope) {
+      options.scope.assertEvaluating(device);
+      if (!this._evaluationScope) {
+        const hadOutput = Boolean(this._gpuVector);
+        const originalLayout = {
+          offset: this._offset,
+          stride: this._stride,
+          byteLength: this._byteLength,
+          ownership: this._bufferOwnership,
+          target: this._targetBuffer
+        };
+        this._evaluationScope = options.scope;
+        options.scope.retain(submitted => {
+          this._evaluationScope = undefined;
+          if (!submitted && !hadOutput && this._gpuVector) {
+            if (this._bufferOwnership === 'owned') {
+              bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));
+            }
+            this._gpuVector = undefined;
+          }
+          if (!submitted && !hadOutput) {
+            this._offset = originalLayout.offset;
+            this._stride = originalLayout.stride;
+            this._byteLength = originalLayout.byteLength;
+            this._bufferOwnership = originalLayout.ownership;
+            this._targetBuffer = originalLayout.target;
+          }
+        });
+      }
+    }
     if (this._gpuVector) {
+      if (options.scope && this.source instanceof GPUDataEvaluator) {
+        // An existing alias borrows its source allocation; retain the owner too.
+        await this.source.evaluate(device, {scope: options.scope});
+      }
+      if (options.scope && this.buffer.device !== device) {
+        throw new Error('Evaluator buffer belongs to a different device');
+      }
       return this._gpuVector;
     }
 
     let buffer: Buffer;
     if (this.source instanceof GPUDataEvaluator) {
-      const sourceGPUVector = await this.source.evaluate(device);
+      const sourceGPUVector = await this.source.evaluate(device, {scope: options.scope});
       this._gpuVector = this.createGPUVectorView({
         ...options,
         buffer: getBufferFromGPUVector(sourceGPUVector)
@@ -453,8 +502,15 @@ export class GPUDataEvaluator {
     if (this._value) {
       buffer.write(this._value);
     } else {
-      const result = await this.source!.execute(device, buffer);
+      let result;
+      try {
+        result = await this.source!.execute(device, buffer, options.scope);
+      } catch (error) {
+        if (options.scope && this._bufferOwnership === 'owned') bufferPool.recycle(buffer);
+        throw error;
+      }
       if (!result.success) {
+        if (options.scope && this._bufferOwnership === 'owned') bufferPool.recycle(buffer);
         throw result.error || new Error(`${this.source} evaluation failed`);
       }
       if (result.value) {
@@ -467,6 +523,8 @@ export class GPUDataEvaluator {
 
   /** Materializes this evaluator synchronously and returns the requested output format. */
   evaluateSync(device: Device, options: GPUDataEvaluatorEvaluateOptions = {}): GPUVector {
+    if (options.scope) throw new Error('Use scope.evaluate() for deferred submission');
+    this.assertScopeAccess();
     if (this._destroyed) {
       throw new Error(`GPUDataEvaluator ${this} already destroyed`);
     }
@@ -544,7 +602,11 @@ export class GPUDataEvaluator {
   private _getEvaluationBuffer(device: Device): Buffer {
     const target = this._targetBuffer;
     if (!target) {
-      return bufferPool.createOrReuse(device, this.byteLength);
+      // CPU uploads include the entire view, including leading/trailing layout padding.
+      return bufferPool.createOrReuse(
+        device,
+        Math.max(this.offset + this.byteLength, this._value?.byteLength ?? 0)
+      );
     }
 
     if (target.buffer.device !== device) {
@@ -577,6 +639,7 @@ export class GPUDataEvaluator {
    * @returns CPU values for the requested row range.
    */
   async readValue(startRow: number = 0, endRow?: number): Promise<TypedArray> {
+    this.assertScopeAccess();
     const {ValueType} = this;
     const {size, offset, stride, length} = this;
     const width = ValueType.BYTES_PER_ELEMENT * size;
@@ -619,6 +682,7 @@ export class GPUDataEvaluator {
 
   /** Loads the complete backing buffer into the CPU value cache for CPU operation handlers. @internal */
   async ensureCPUValue(): Promise<TypedArray> {
+    this.assertScopeAccess();
     const existingValue = this.value;
     if (existingValue) {
       return existingValue;
@@ -638,11 +702,18 @@ export class GPUDataEvaluator {
 
   /** Loads the complete backing buffer from the already-present CPU value cache or throws. @internal */
   ensureCPUValueSync(): TypedArray {
+    this.assertScopeAccess();
     const existingValue = this.value;
     if (existingValue) {
       return existingValue;
     }
     throw new Error(`${this} CPU value is not available for synchronous evaluation`);
+  }
+
+  private assertScopeAccess(scope?: GPUEvaluationScope): void {
+    if (this._evaluationScope && this._evaluationScope !== scope) {
+      throw new Error('Evaluator is retained by an unsubmitted scope');
+    }
   }
 
   /** Returns the debug id, source description, or class name. */
@@ -652,6 +723,7 @@ export class GPUDataEvaluator {
 
   /** Releases cached GPU storage owned by this evaluator and prevents future evaluation. */
   destroy(): void {
+    this.assertScopeAccess();
     if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
         bufferPool.recycle(getBufferFromGPUVector(this._gpuVector));

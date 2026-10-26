@@ -1,25 +1,39 @@
 # Riverfront weather
 
 A portable WebGPU/WebGL2 example with wind-driven rain, drifting snow, and wispy height fog.
-It opens with fog enabled and no precipitation.
+It opens with rain and fog enabled at 09:00 EDT on June 21, 2026 in New York.
+The Time control shares one math.gl astronomy timestamp between SunLayer, MoonLayer,
+StarfieldLayer, clouds, atmosphere, and scene lighting. `getSunLight` supplies direct
+and diffuse light color and intensity, including cloud-cover attenuation. Sun
+and Moon aim the camera above the horizon; if the body has set, the control
+selects a time when it is visible. Center returns to the district view. Dense fog can
+obscure celestial bodies; disable Fog to inspect the sky.
 Run `yarn workspace luma.gl-examples-deck-weather start`; the website route is
 `/examples/deck/weather`.
 
-Choose None, Rain, or Snow, then toggle Fog independently. The fog controls retain their values while disabled. Intensity controls the particle count, wind uses metres
+Choose Rain, Snow, Clouds, or Sunny, then toggle Fog independently. Clouds has no precipitation; Sunny disables clouds. The Clouds checkbox can override the selected preset. The fog controls retain their values while disabled. Intensity controls the particle count, wind uses metres
 per second with direction clockwise from north, and visibility sets the fog extinction.
 Pause freezes the clock exactly; reset returns to the seeded initial particle positions.
-With no precipitation and fog disabled, continuous redraws stop. Fog keeps animating only when enabled and both
+With no precipitation, fog and clouds disabled, and surface accumulation disabled, continuous redraws stop. Fog keeps animating only when enabled and both
 Fog variation and Fog drift are nonzero. Zero variation restores uniform fog; zero drift
-keeps static wisps. Animate pauses both fog and precipitation. Changing a setting or moving the camera still redraws the scene.
+keeps static wisps. Animate pauses clouds, fog, precipitation and surface accumulation. Changing a setting or moving the camera still redraws the scene.
 Camera movement remains available while paused. The scene uses map projection; scroll over the scene to zoom. The visual tests also exercise
 globe projection through the scene API. Both use a local east/north/up metre frame for fog and particle sizing. The clock pauses while the document is hidden. Visible rendering uses elapsed time, so slower frame rates do not slow the weather.
 
 `precipitation` and `heightFog` are reusable shader modules. `WeatherParticleLayer` connects
 those modules to Deck projection and depth. Its particle volume follows the view's ground
 center while particles in the overlap retain their world positions. The vertical band is
-0–450 metres; this example is intended for neighborhood-scale views. A CSS sky color sits
-behind the transparent canvas. Clouds, precipitation splashes, surface accumulation, and
-lighting changes are separate effects and are not simulated here.
+0–450 metres; this example is intended for neighborhood-scale views. `SkyLayer` composes the sky behind the scene with the same reusable atmosphere and cloud
+modules used by the other examples. Precipitation splashes remain a separate effect.
+
+The reusable `surfaceWeather` module darkens wet surfaces, adds patchy puddle highlights and
+places snow on upward-facing ground and roofs. Water is explicitly masked out; this example
+does not calculate shelter under bridges or snow depth. The Accumulate toggle integrates
+rainfall/snowfall and drying/melting using an exact, frame-rate-independent helper. Surface
+state persists across weather changes; wetness, snow cover and puddle sliders allow manual
+inspection. Surface weather can be disabled without losing its stored values. Reset clears
+wetness and snow. The simple Lambert adapter approximates sky highlights; it does not reflect
+buildings. PBR adapters can reuse the same albedo and roughness helpers.
 
 Opaque geometry writes depth before precipitation. A conservative, example-owned 256×384
 `r32float` height map excludes particles below roofs and covered bridges. This field costs
@@ -44,7 +58,7 @@ textures, history, or render passes. The fixed sample count can undersample smal
 along very long rays; this remains a neighborhood-scale approximation. The underlying height profile is constant below
 the base height and decays exponentially above it. The visibility slider uses `3.912 / distance`
 as base extinction, corresponding to 2% transmittance through a homogeneous medium. Height
-falloff makes visibility greater above that base. The model uses a constant fog tint, without
+falloff makes visibility greater above that base. The model uses a daylight-dependent fog tint, without
 light scattering, shadowed fog, or temporal accumulation. Materials must opt into the fog
 module in this example. The same analytic integral also powers the height mode of
 `createVolumetricFogCompositeShaderPass` in `@luma.gl/effects`, demonstrated by Visualization City.

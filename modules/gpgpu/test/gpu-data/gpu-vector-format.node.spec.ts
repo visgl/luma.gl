@@ -16,7 +16,7 @@ import {
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
 } from '@luma.gl/gpgpu/gpu-data';
-import {GPURecordBatch, GPUTable} from '@luma.gl/experimental/gpu-tables';
+import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {NullDevice} from '@luma.gl/test-utils';
 
 it('GPUVector format helpers parse fixed and variable-length formats', () => {

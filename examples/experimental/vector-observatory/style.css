@@ -1,0 +1,16 @@
+/* luma.gl
+ * SPDX-License-Identifier: MIT
+ * SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+ */
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #050c14; }
+#flow { position: absolute; inset: 0; width: 100%; height: 100%; }
+#observatory-panels { position: absolute; inset: 12px; z-index: 2; pointer-events: none; }
+#observatory-panels .luma-example-infobox { pointer-events: auto; }
+.observatory-status { position: absolute; bottom: 12px; left: 20px; right: 20px; display: flex; justify-content: space-between; gap: 12px; pointer-events: none; color: #b4c5ce; font: 11px/1.5 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.observatory-legend { display: flex; align-items: center; gap: 10px; font-size: 9px; letter-spacing: .08em; }
+.observatory-legend i { width: 100px; height: 3px; background: linear-gradient(90deg,#164d9b,#24d8db,#c7e9a0,#ffb365); }
+.observatory-telemetry { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; font-variant-numeric: tabular-nums; }
+.observatory-telemetry dd { margin: 0; text-align: right; }
+.observatory-source { margin: 0; overflow: auto; font: 11px/1.5 monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+#error { position: absolute; inset: 25% 10%; z-index: 3; padding: 24px; background: #162533; color: #ffe0cb; font: 14px/1.8 system-ui, sans-serif; }
+@media (max-width: 600px) { .observatory-status { left: 12px; right: 12px; font-size: 10px; } .observatory-legend { display: none; } }

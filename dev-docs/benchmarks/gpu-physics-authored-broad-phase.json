@@ -1,0 +1,82 @@
+{
+  "formatVersion": 1,
+  "stage": "broad-phase-only",
+  "fixture": "mixed",
+  "objectCount": 10000,
+  "sampleCount": 20,
+  "warmupCount": 3,
+  "featureLevel": "core",
+  "adapter": {
+    "type": "webgpu",
+    "vendor": "apple",
+    "renderer": "",
+    "version": "",
+    "gpu": "apple",
+    "gpuType": "unknown",
+    "gpuBackend": "unknown",
+    "gpuArchitecture": "metal-3",
+    "fallback": false,
+    "featureLevel": "core",
+    "subgroupMinSize": 32,
+    "subgroupMaxSize": 32,
+    "shadingLanguage": "wgsl",
+    "shadingLanguageVersion": 100
+  },
+  "timestampQueries": true,
+  "limits": {
+    "maxStorageBuffersPerShaderStage": 8,
+    "maxStorageBufferBindingSize": 134217728
+  },
+  "budgets": {
+    "maximumPairs": 262144,
+    "maximumCandidateTestsPerQuery": 256
+  },
+  "graphNodes": 43,
+  "allocatedBufferBytes": 2662304,
+  "compileMilliseconds": 20.299999952316284,
+  "perStepMilliseconds": {
+    "cpuEncode": {
+      "median": 0.6000001430511475,
+      "p95": 1.5999999046325684,
+      "maximum": 1.5999999046325684
+    },
+    "completionWithCounterReadback": {
+      "median": 4.699999809265137,
+      "p95": 7.5,
+      "maximum": 7.5
+    },
+    "gpuWork": {
+      "median": 1.3122090000000002,
+      "p95": 2.092441,
+      "maximum": 2.092441
+    },
+    "gpuSpan": {
+      "median": 1.9577081203460693,
+      "p95": 2.9382081031799316,
+      "maximum": 2.9382081031799316
+    }
+  },
+  "diagnostics": {
+    "pairCount": 9999,
+    "droppedPairs": 0,
+    "invalidBounds": 0,
+    "candidateTests": 23273,
+    "occupiedLevelMask": 2098176,
+    "oversizedBounds": 0,
+    "incompleteQueries": 0
+  },
+  "correctness": {
+    "expectedPairCount": 9999,
+    "pairSetMatches": true
+  },
+  "qualified": true,
+  "notes": [
+    "Timings are per broad-phase encoding, not a multi-step batch or full physics frame.",
+    "Completion includes compact counter readback; GPU work and timestamp span are separate.",
+    "Memory is declared buffer capacity, not measured VRAM residency.",
+    "No exclusive GPU ownership is assumed."
+  ],
+  "browserVersion": "151.0.7922.34",
+  "nodeVersion": "22.23.4",
+  "softwareGpuRequested": false
+}

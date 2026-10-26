@@ -17,7 +17,7 @@ incompatibilities.
 Useful inspection commands include:
 
 ```bash
-npm ls @luma.gl/core @luma.gl/engine @luma.gl/shadertools @luma.gl/webgpu @luma.gl/webgl
+npm ls @luma.gl/core @luma.gl/engine @luma.gl/shadertools @luma.gl/core/webgpu @luma.gl/core/webgl
 yarn why @luma.gl/core
 ```
 
@@ -40,7 +40,7 @@ levels merely because the underlying operation is GPU-backed.
 
 Use `@luma.gl/core` when the application needs explicit devices, canvas contexts,
 buffers, textures, samplers, shader layouts, bindings, pipelines, command encoders, or
-render/compute passes. A concrete adapter from `@luma.gl/webgpu` or `@luma.gl/webgl`
+render/compute passes. A concrete adapter from `@luma.gl/core/webgpu` or `@luma.gl/core/webgl`
 must be available.
 
 Core is portable at the luma.gl abstraction boundary, but individual capabilities are

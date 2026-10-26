@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@math.gl/types';
+import type {TypedArray} from '@math.gl/core/types';
 import type {Buffer, VertexArrayProps} from '@luma.gl/core';
 import {VertexArray} from '@luma.gl/core';
 
@@ -30,12 +30,14 @@ export class NullVertexArray extends VertexArray {
    * Stores a buffer in one logical slot for testing purposes.
    * @param location Buffer slot or attribute location.
    * @param attributeBuffer Buffer supplying the test data.
+   * @param byteOffset Byte offset recorded for test inspection.
    */
-  setBuffer(location: number, attributeBuffer: Buffer): void {
+  setBuffer(location: number, attributeBuffer: Buffer, byteOffset: number = 0): void {
     if (location < 0 || location >= this.maxVertexAttributes) {
       throw new Error(`Unknown attribute location ${location}`);
     }
     this.attributes[location] = attributeBuffer;
+    this.attributeByteOffsets[location] = byteOffset;
   }
 
   /** No-op for the null device. */

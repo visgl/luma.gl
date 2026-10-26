@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray4} from '@math.gl/types';
+import type {NumberArray4} from '@math.gl/core/types';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
 /** Default color for auto highlight, a cyan color */

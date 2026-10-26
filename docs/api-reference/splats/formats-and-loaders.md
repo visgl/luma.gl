@@ -117,7 +117,8 @@ Use `?loaders=local&scene=fixture` for the lightweight 1,000-splat parser fixtur
 `source` to select a custom `.ply`, `.splat`, `.ksplat`, `.spz`, or `.rad` file. Full PLY scenes
 are streamed through their original Arrow record batches, and the showcase reports download,
 batch, and splat progress while retaining independently owned GPU buffers. The loader remains an
-application-level dependency; `@luma.gl/splats` continues to own only GPU data and rendering.
+application-level dependency; `@luma.gl/splats` owns source residency, hierarchy selection, GPU data,
+and rendering, while transport and parsing remain external.
 Both the default WebGPU graph and the explicit `&renderer=cpu` comparison retain and evaluate
 camera-dependent higher-order spherical harmonics.
 

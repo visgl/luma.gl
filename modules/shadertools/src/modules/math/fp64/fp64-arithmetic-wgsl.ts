@@ -616,13 +616,23 @@ fn sub_fp64u32_to_fp64(aBits: vec2u, bBits: vec2u) -> vec2f {
 #endif
 
 #ifndef LUMA_FP64_PREDICATE_ONLY
+// Zero bits the compiler cannot prove are zero: the uniform ONE is 1.0 at runtime.
+// Some WGSL backends compile with fast-math flags (e.g. Firefox WebGPU on Windows, where DXC
+// runs without IEEE strictness). There, a float barrier such as \`x + ONE * 0.0\` folds away,
+// and the error terms of the double-single transforms are re-associated and lost. An integer
+// OR is opaque to floating-point simplification, and unlike XOR two nested barriers do not
+// cancel. Each rounding step the transforms rely on gets its own barrier.
+fn fp64_runtime_zero_bits() -> u32 {
+  return bitcast<u32>(fp64arithmetic.ONE) ^ 0x3f800000u;
+}
+
 fn fp64_runtime_zero() -> f32 {
-  return fp64arithmetic.ONE * 0.0;
+  return bitcast<f32>(fp64_runtime_zero_bits());
 }
 
 fn prevent_fp64_optimization(value: f32) -> f32 {
 #ifdef LUMA_FP64_CODE_ELIMINATION_WORKAROUND
-  return value + fp64_runtime_zero();
+  return bitcast<f32>(bitcast<u32>(value) | fp64_runtime_zero_bits());
 #else
   return value;
 #endif
@@ -646,52 +656,31 @@ fn split(a: f32) -> vec2f {
 
 fn split2(a: vec2f) -> vec2f {
   var b = split(a.x);
-  b.y = b.y + a.y;
+  b.y = prevent_fp64_optimization(b.y + a.y);
   return b;
 }
 
 fn quickTwoSum(a: f32, b: f32) -> vec2f {
-#ifdef LUMA_FP64_CODE_ELIMINATION_WORKAROUND
-  let sum = prevent_fp64_optimization((a + b) * fp64arithmetic.ONE);
-  let err = prevent_fp64_optimization(b - (sum - a) * fp64arithmetic.ONE);
-#else
   let sum = prevent_fp64_optimization(a + b);
-  let err = prevent_fp64_optimization(b - (sum - a));
-#endif
+  let err = prevent_fp64_optimization(b - prevent_fp64_optimization(sum - a));
   return vec2f(sum, err);
 }
 
 fn twoSum(a: f32, b: f32) -> vec2f {
   let s = prevent_fp64_optimization(a + b);
-#ifdef LUMA_FP64_CODE_ELIMINATION_WORKAROUND
-  let v = prevent_fp64_optimization((s * fp64arithmetic.ONE - a) * fp64arithmetic.ONE);
-  let err =
-    prevent_fp64_optimization((a - (s - v) * fp64arithmetic.ONE) *
-      fp64arithmetic.ONE *
-      fp64arithmetic.ONE *
-      fp64arithmetic.ONE) +
-    prevent_fp64_optimization(b - v);
-#else
   let v = prevent_fp64_optimization(s - a);
-  let err = prevent_fp64_optimization(a - (s - v)) + prevent_fp64_optimization(b - v);
-#endif
+  let aErr = prevent_fp64_optimization(a - prevent_fp64_optimization(s - v));
+  let bErr = prevent_fp64_optimization(b - v);
+  let err = prevent_fp64_optimization(aErr + bErr);
   return vec2f(s, err);
 }
 
 fn twoSub(a: f32, b: f32) -> vec2f {
   let s = prevent_fp64_optimization(a - b);
-#ifdef LUMA_FP64_CODE_ELIMINATION_WORKAROUND
-  let v = prevent_fp64_optimization((s * fp64arithmetic.ONE - a) * fp64arithmetic.ONE);
-  let err =
-    prevent_fp64_optimization((a - (s - v) * fp64arithmetic.ONE) *
-      fp64arithmetic.ONE *
-      fp64arithmetic.ONE *
-      fp64arithmetic.ONE) -
-    prevent_fp64_optimization(b + v);
-#else
   let v = prevent_fp64_optimization(s - a);
-  let err = prevent_fp64_optimization(a - (s - v)) - prevent_fp64_optimization(b + v);
-#endif
+  let aErr = prevent_fp64_optimization(a - prevent_fp64_optimization(s - v));
+  let bErr = prevent_fp64_optimization(b + v);
+  let err = prevent_fp64_optimization(aErr - bErr);
   return vec2f(s, err);
 }
 
@@ -701,14 +690,10 @@ fn twoSqr(a: f32) -> vec2f {
   let highProduct = prevent_fp64_optimization(aFp64.x * aFp64.x);
   let crossProduct = prevent_fp64_optimization(2.0 * aFp64.x * aFp64.y);
   let lowProduct = prevent_fp64_optimization(aFp64.y * aFp64.y);
-#ifdef LUMA_FP64_CODE_ELIMINATION_WORKAROUND
-  let err =
-    (prevent_fp64_optimization(highProduct - prod) * fp64arithmetic.ONE +
-      crossProduct * fp64arithmetic.ONE * fp64arithmetic.ONE) +
-    lowProduct * fp64arithmetic.ONE * fp64arithmetic.ONE * fp64arithmetic.ONE;
-#else
-  let err = ((prevent_fp64_optimization(highProduct - prod) + crossProduct) + lowProduct);
-#endif
+  let highErr = prevent_fp64_optimization(highProduct - prod);
+  let err = prevent_fp64_optimization(
+    prevent_fp64_optimization(highErr + crossProduct) + lowProduct
+  );
   return vec2f(prod, err);
 }
 
@@ -908,6 +893,32 @@ fn compare_fp64(a: vec2f, b: vec2f) -> i32 {
     return highComparison;
   }
   return fp64_compare_f32_bits(aLowBits, bLowBits);
+}
+
+// Scale by 2^exponent under either arithmetic. The classic path repacks each limb with
+// integer operations and no floating-point arithmetic, so hardware that flushes subnormal
+// results cannot zero a subnormal limb. Its result has the value of the integer path's,
+// which also renormalizes the limbs; that renormalization would flush them here.
+fn fp64_scale_fp64(value: vec2f, exponent: i32) -> vec2f {
+#ifdef LUMA_FP64_INTEGER_ARITHMETIC
+  return fp64_scale_fp64_integer(value, exponent);
+#else
+  let high = fp64_decode_raw_f32_bits(bitcast<u32>(value.x));
+  let low = fp64_decode_raw_f32_bits(bitcast<u32>(value.y));
+  var scaledHigh = value.x;
+  if (!(high.isZero || high.isInf || high.isNan)) {
+    scaledHigh = bitcast<f32>(
+      fp64_make_f32_bits_from_u64(high.sign, vec2u(0u, high.significand), high.baseExponent + exponent)
+    );
+  }
+  var scaledLow = value.y;
+  if (!(low.isZero || low.isInf || low.isNan)) {
+    scaledLow = bitcast<f32>(
+      fp64_make_f32_bits_from_u64(low.sign, vec2u(0u, low.significand), low.baseExponent + exponent)
+    );
+  }
+  return vec2f(scaledHigh, scaledLow);
+#endif
 }
 #endif
 `;

@@ -8,7 +8,7 @@ import {
   type GraphDataView,
   GPUCommandGraph,
   GPUFiniteDifference3D
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import type {VectorFieldPreset} from './vector-field-presets';
 import {
   GPUVectorFieldSampler3D,

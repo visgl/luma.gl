@@ -3,12 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ShaderModule} from '../../../lib/shader-module/shader-module';
+import {valueNoise} from '../../math/value-noise/value-noise';
 
 /** Uniform-free analytic extinction shared by materials and screen-space effects.
  * Lengths and heights are metres; density and falloff are inverse metres.
  */
 export const heightFogFunctions = {
   name: 'heightFogFunctions',
+  dependencies: [valueNoise],
   fs: /* glsl */ `
 float heightFog_getRayTransmittance(float rayLength, float cameraHeight, float fragmentHeight, float density, float baseHeight, float heightFalloff) {
   float startHeight = (cameraHeight - baseHeight) * max(heightFalloff, 0.0);
@@ -28,18 +30,8 @@ float heightFog_getRayTransmittance(float rayLength, float cameraHeight, float f
   }
   return exp(-max(density, 0.0) * rayLength * averageDensity);
 }
-float heightFog_hash(vec2 cell) {
-  vec3 value = fract(vec3(cell.x, cell.y, cell.x) * 0.1031);
-  value += dot(value, value.yzx + 33.33);
-  return fract((value.x + value.y) * value.z);
-}
-float heightFog_noise(vec2 position) {
-  vec2 cell = floor(position);
-  vec2 fraction = fract(position);
-  vec2 blend = fraction * fraction * (3.0 - 2.0 * fraction);
-  return mix(mix(heightFog_hash(cell), heightFog_hash(cell + vec2(1.0, 0.0)), blend.x),
-    mix(heightFog_hash(cell + vec2(0.0, 1.0)), heightFog_hash(cell + vec2(1.0)), blend.x), blend.y);
-}
+float heightFog_hash(vec2 cell) { return valueNoise_hash(cell); }
+float heightFog_noise(vec2 position) { return valueNoise_noise(position); }
 // Integrate drifting density along the ray so wisps occupy space rather than coat surfaces.
 float heightFog_getSpatialTransmittance(vec3 camera, vec3 position, vec3 upDirection,
     float density, float baseHeight, float heightFalloff, float variation, float wispScale,
@@ -89,18 +81,8 @@ fn heightFog_getRayTransmittance(rayLength: f32, cameraHeight: f32, fragmentHeig
   }
   return exp(-max(density, 0.0) * rayLength * averageDensity);
 }
-fn heightFog_hash(cell: vec2f) -> f32 {
-  var value = fract(vec3f(cell.x, cell.y, cell.x) * 0.1031);
-  value += vec3f(dot(value, value.yzx + vec3f(33.33)));
-  return fract((value.x + value.y) * value.z);
-}
-fn heightFog_noise(position: vec2f) -> f32 {
-  let cell = floor(position);
-  let fraction = fract(position);
-  let blend = fraction * fraction * (vec2f(3.0) - 2.0 * fraction);
-  return mix(mix(heightFog_hash(cell), heightFog_hash(cell + vec2f(1.0, 0.0)), blend.x),
-    mix(heightFog_hash(cell + vec2f(0.0, 1.0)), heightFog_hash(cell + vec2f(1.0)), blend.x), blend.y);
-}
+fn heightFog_hash(cell: vec2f) -> f32 { return valueNoise_hash(cell); }
+fn heightFog_noise(position: vec2f) -> f32 { return valueNoise_noise(position); }
 // Integrate drifting density along the ray so wisps occupy space rather than coat surfaces.
 fn heightFog_getSpatialTransmittance(camera: vec3f, position: vec3f, upDirection: vec3f,
     density: f32, baseHeight: f32, heightFalloff: f32, variation: f32, wispScale: f32,

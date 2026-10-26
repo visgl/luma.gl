@@ -8,6 +8,8 @@ import {_resolveLoadFileUrl, AnimationLoopTemplate, OrbitControls} from '@luma.g
 import {parseFont, type Text3DBounds} from '@luma.gl/text/text-3d';
 import {
   buildBitmapFontAtlas,
+  buildGlyphFontAtlas,
+  GlyphRangeLoader,
   buildSdfFontAtlas,
   helvetiker,
   loadMsdfFontAtlas,
@@ -52,7 +54,7 @@ const GENERATED_FONT_SETTINGS = {
   buffer: 6
 } as const;
 
-/** Compares four text rendering techniques with one shared crawl animation. */
+/** Compares text rendering techniques with one shared crawl animation. */
 export default class TextSpaceCrawl extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
 
@@ -80,6 +82,9 @@ export default class TextSpaceCrawl extends AnimationLoopTemplate {
   scrollSpeedWorldUnitsPerSecond = 120;
   baseDepthOffset = -320;
   baseScale: [number, number, number] = [1.08, 1.08, 1];
+  private readonly glyphLoader = new GlyphRangeLoader({
+    url: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf'
+  });
   private rendererLoadVersion = 0;
   private msdfFontAtlasPromise: Promise<FontAtlas> | null = null;
   private isFinalized = false;
@@ -225,6 +230,9 @@ export default class TextSpaceCrawl extends AnimationLoopTemplate {
   private async getFontAtlas(
     renderingKind: Exclude<TextSpaceCrawlRenderingKind, 'extruded'>
   ): Promise<FontAtlas> {
+    if (renderingKind === 'glyphs') {
+      return buildGlyphFontAtlas(this.glyphLoader, 'Noto Sans Regular', CRAWL_CHARACTER_SET);
+    }
     if (renderingKind === 'msdf') {
       this.msdfFontAtlasPromise ||= loadMsdfFontAtlas(getMsdfFontUrl());
       return await this.msdfFontAtlasPromise;

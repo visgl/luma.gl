@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumericArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/core/types';
 
 /**
  * Calculate WebGL 64 bit float

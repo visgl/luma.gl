@@ -5,6 +5,7 @@
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import type {GPUEvaluationScope} from '../../../operation/gpu-evaluation-scope';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
@@ -14,7 +15,13 @@ const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
 const COMPUTATION_RUNS = 'Computation Runs';
 const GPGPU_SHADER_ASSEMBLER = new WGSLShaderAssembler();
 
+/** GPU-resident constants require storage; only constants with CPU values can be inlined. */
+export function requiresStorageBinding(input: GPUDataEvaluator): boolean {
+  return !input.isConstant || !input.value;
+}
+
 export function runRowComputation({
+  scope,
   module,
   elementWise = false,
   expression,
@@ -23,6 +30,7 @@ export function runRowComputation({
   operationType = output.type,
   outputBuffer
 }: {
+  scope?: GPUEvaluationScope;
   module: ShaderModule;
   elementWise?: boolean;
   expression?: (laneIndex: number) => string;
@@ -38,7 +46,7 @@ export function runRowComputation({
   const inputEntries = getInputEntries(inputs);
   const bindings = inputEntries.map(([name, input]) => ({name, input}));
   const storageBindings = bindings
-    .filter(({input}) => !input.isConstant)
+    .filter(({input}) => requiresStorageBinding(input))
     .map((binding, index) => ({...binding, index}));
   const castToType = getWGSLType(operationType);
   const outputType = getWGSLType(output.type);
@@ -95,27 +103,30 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
     }
   });
 
+  if (scope) scope.retain(() => computation.destroy());
+
   const computationBindings: Record<string, Buffer> = Object.fromEntries(
     storageBindings.map(({name, input}) => [name, input.buffer])
   );
   computationBindings['result'] = outputBuffer;
   computation.setBindings(computationBindings);
 
-  const computePass = outputBuffer.device.beginComputePass({});
+  const computePass = scope
+    ? scope.commandEncoder.beginComputePass({})
+    : outputBuffer.device.beginComputePass({});
   outputBuffer.device.statsManager
     .getStats(GPGPU_OPERATION_STATS)
     .get(COMPUTATION_RUNS)
     .incrementCount();
   computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
   computePass.end();
-  outputBuffer.device.submit();
-  computation.destroy();
+  if (!scope) {
+    outputBuffer.device.submit();
+    computation.destroy();
+  }
 }
 
 function getInputBinding(name: string, input: GPUDataEvaluator, index: number): string {
-  if (input.isConstant) {
-    return '';
-  }
   const inputType = getWGSLType(input.type);
   return `@group(0) @binding(${index}) var<storage, read> ${name}: array<${inputType}>;`;
 }
@@ -126,7 +137,7 @@ function getInputAccessor(name: string, input: GPUDataEvaluator, asType: SignedD
   const stride = input.stride / input.ValueType.BYTES_PER_ELEMENT;
   const offset = input.offset / input.ValueType.BYTES_PER_ELEMENT;
 
-  if (input.isConstant) {
+  if (!requiresStorageBinding(input)) {
     return `fn read_${name}(_rowIndex: u32) -> array<${type}, ${input.size}> {
   return array<${type}, ${input.size}>(${getConstantValues(input, castToType)});
 }`;
@@ -134,7 +145,7 @@ function getInputAccessor(name: string, input: GPUDataEvaluator, asType: SignedD
 
   return `fn read_${name}(rowIndex: u32) -> array<${type}, ${input.size}> {
   var value: array<${type}, ${input.size}>;
-  let rowOffset = ${offset}u + rowIndex * ${stride}u;
+  let rowOffset = ${offset}u + ${input.isConstant ? '0u' : 'rowIndex'} * ${stride}u;
 ${Array.from({length: input.size}, (_, elementIndex) =>
   castToType
     ? `  value[${elementIndex}] = ${castToType}(${name}[rowOffset + ${elementIndex}u]);`

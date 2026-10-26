@@ -145,6 +145,29 @@ This affects module-owned WGSL `@binding(auto)` relocation.
 See [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler#hooks-and-injections)
 for hook and standard injection target syntax.
 
+#### `implements` (string, optional)
+
+Declares an exclusive named shader interface, for example
+`{name: 'project32', implements: 'projection'}` or
+`{name: 'project64', implements: 'projection'}`. The interface name describes a
+shared shader contract; it does not verify function signatures or uniform layouts.
+
+Only one distinct module may implement a given interface in an assembly. The
+assembler checks the complete dependency graph, including default modules and
+transitive dependencies, and rejects conflicting providers in either input order.
+Repeated references to the same module object are allowed and deduplicated.
+Modules without `implements` keep their existing behavior.
+
+Choose a provider explicitly by including only that implementation. There is no
+last-module-wins precedence or automatic dependency substitution: `dependencies`
+still requires concrete module objects. If a required dependency implements the
+same interface as another selected module, assembly fails rather than dropping
+the dependency or leaving its dependent incomplete. Remove a conflicting default
+module before adding an alternative provider.
+
+This proof of concept supports one interface name per module. Interface-based
+requirements and provider substitution are future design work.
+
 #### `dependencies` (_Array_) - Shader modules that this module depends on
 
 Dependencies are resolved before the module source is assembled.
@@ -276,3 +299,12 @@ checkShaderModuleDeprecations(
 
 Checks shader source against the module's deprecation definitions and logs
 matching warnings or removals.
+
+### `sourceLanguage` and source-language modules
+
+When `sourceLanguage` names an application-registered transpiler, `source`
+contains reusable code in that language. The assembler combines it with modules'
+dependencies and the application translation unit before compilation. Set the
+same `sourceLanguage` on the application shader. Native shader code and injections
+continue to use the target GLSL/WGSL language. See
+[application-owned transpilers](./shader-assembler#application-owned-transpilers).

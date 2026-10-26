@@ -1,0 +1,22 @@
+---
+title: Riverfront lights and fireflies
+description: Warm lampposts and small fireflies on opposite river banks, with calm-water reflections.
+sidebar_custom_props:
+  description: Compare steady lampposts and animated bioluminescence with water mirrors and HDR bloom.
+  backends: [webgpu, webgl2]
+  difficulty: intermediate
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [deck.gl, rendering, lighting, postprocessing]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const GlowPreview = () => (
+  <iframe title="Riverfront lights and fireflies interactive example"
+    src={useBaseUrl('/standalone-examples/point-glow/index.html')}
+    style={{width: '100%', height: '78vh', minHeight: 640, border: 0, borderRadius: 12}} />
+);
+
+<GlowPreview />

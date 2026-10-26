@@ -15,7 +15,7 @@ import {
   type PickingShouldPickOptions,
   type ResolvedPickingMode
 } from '@luma.gl/engine';
-import {GPUTableModel} from '@luma.gl/experimental/gpu-tables';
+import {GPUTableModel} from '@luma.gl/graph/gpu-tables';
 import type {GPUSplatData} from './splat-data';
 import {SplatRenderer, type SplatDrawRun} from './splat-renderer';
 import {

@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/core';
 import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
 import {CubeGeometry, Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
-import type {VolumetricFireSimulation} from '@luma.gl/experimental';
+import type {VolumetricFireSimulation} from '@luma.gl/graph/gpu-simulation';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {
   VOLUMETRIC_FIRE_FORGE_BOXES,

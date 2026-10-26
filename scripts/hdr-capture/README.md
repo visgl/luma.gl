@@ -66,7 +66,7 @@ node scripts/hdr-capture/capture-all-hdr-examples.mjs
 
 The catalog is intentionally explicit and contains these 11 routes:
 
-- `showcase/gltf`
+- `gltf/asset-studio`
 - `showcase/instancing`
 - `showcase/lightstorm-megacity`
 - `showcase/tempest-ocean`

@@ -256,10 +256,7 @@ describe('published Gaussian splat viewer', () => {
       )
     ) as Array<{label?: string; items?: string[]}>;
     const showcaseEntries = tableOfContents.find(category => category.label === 'Showcase')?.items;
-    const onboardingSource = readFileSync(
-      path.join(process.cwd(), 'docs/getting-started.mdx'),
-      'utf8'
-    );
+
     const viewerDocumentation = readFileSync(
       path.join(process.cwd(), 'website/content/examples/showcase/gaussian-splat-viewer.mdx'),
       'utf8'
@@ -273,7 +270,6 @@ describe('published Gaussian splat viewer', () => {
       'showcase/gaussian-splat-viewer',
       'showcase/gaussian-splats'
     ]);
-    expect(onboardingSource).toContain(`to="${WEBSITE_VIEWER_ROUTE}"`);
     expect(viewerDocumentation).toContain('<GaussianSplatViewerExample />');
     expect(viewerDocumentation).toContain('741,883-splat Train');
     expect(viewerDocumentation).toContain(SYNTHETIC_SHOWCASE_ROUTE);

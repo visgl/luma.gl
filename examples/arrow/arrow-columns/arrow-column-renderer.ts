@@ -23,19 +23,14 @@ import {
   type WBOITShaderModuleProps,
   wboit,
   wboitPlugin
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import {
   getGPUVectorBuffer,
   getGPUVectorData,
   getRequiredGPUVector,
   type GPUVector
 } from '@luma.gl/gpgpu/gpu-data';
-import {
-  GPURenderable,
-  GPURecordBatch,
-  GPUTable,
-  type GPUTypeMap
-} from '@luma.gl/experimental/gpu-tables';
+import {GPURenderable, GPURecordBatch, GPUTable, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,

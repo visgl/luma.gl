@@ -39,8 +39,8 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     documentation: {kind: 'generated', routePrefix: '/docs/api-reference/generated/shadertools'}
   },
   {
-    packageName: '@luma.gl/constants',
-    entryPoint: 'modules/constants/src/index.ts',
+    packageName: '@luma.gl/core/webgl-constants',
+    entryPoint: 'modules/core/src/webgl-constants/index.ts',
     documentation: {kind: 'curated', defaultRoute: '/docs/api-reference/constants'}
   },
   {
@@ -95,13 +95,13 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     }
   },
   {
-    packageName: '@luma.gl/webgl',
-    entryPoint: 'modules/webgl/src/index.ts',
+    packageName: '@luma.gl/core/webgl',
+    entryPoint: 'modules/core/src/webgl/index.ts',
     documentation: {kind: 'curated', defaultRoute: '/docs/api-reference/webgl'}
   },
   {
-    packageName: '@luma.gl/webgpu',
-    entryPoint: 'modules/webgpu/src/index.ts',
+    packageName: '@luma.gl/core/webgpu',
+    entryPoint: 'modules/core/src/webgpu/index.ts',
     documentation: {kind: 'curated', defaultRoute: '/docs/api-reference/webgpu'}
   }
 ];

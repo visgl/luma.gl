@@ -43,3 +43,7 @@ export {
   type TextCodePointSource,
   type TextLayoutOptions
 } from './model-utils/text-layout';
+
+export {parseGlyphRange, type Glyph} from '../fonts/glyph-pbf';
+export {GlyphRangeLoader, type GlyphRangeLoaderOptions} from '../fonts/glyph-range-loader';
+export {buildGlyphFontAtlas, createGlyphFontRenderer} from '../fonts/build-glyph-font-atlas';
