@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {BufferTransform} from '@luma.gl/gpgpu';
+import {runTransformKernel} from './common/transform-kernel';
 import {OperationHandler} from '../../operation/operation';
 import {getOutputModule} from './common/row-transform';
 
@@ -12,7 +12,7 @@ export const sequence: OperationHandler<{start: number; step: number}> = ({
   target
 }) => {
   const outputModule = getOutputModule('result', output.type, output.size);
-  const transform = new BufferTransform(target.device, {
+  const transformProps = {
     vs: `\
 #version 300 es
 
@@ -29,16 +29,11 @@ void main() {
     modules: [outputModule],
     vertexCount: 1,
     instanceCount: output.length,
-    feedbackBufferMode: 'interleaved',
     outputs: outputModule.varyings
-  });
+  };
 
-  try {
-    transform.run({
-      outputBuffers: {[outputModule.varyings[0]]: target}
-    });
-    return {success: true};
-  } finally {
-    transform.destroy();
-  }
+  runTransformKernel(target.device, transformProps, {
+    outputBuffers: {[outputModule.varyings[0]]: target}
+  });
+  return {success: true};
 };

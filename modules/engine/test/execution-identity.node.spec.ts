@@ -12,8 +12,6 @@ it('engine compatibility exports share execution constructors with gpgpu', () =>
     'Computation',
     'GPUVectorModel',
     'GPUVectorGeometry',
-    'BufferTransform',
-    'TextureTransform',
     'DynamicBuffer',
     'DynamicTexture',
     'ShaderInputs'
@@ -26,4 +24,18 @@ it('engine compatibility exports share execution constructors with gpgpu', () =>
   }
   expect(DataGPUVectorModel).toBe(execution.GPUVectorModel);
   expect(engine.Model.prototype).toBeInstanceOf(execution.GPUVectorModel);
+});
+
+it('TableTransform belongs to engine/tables without a graph re-export', async () => {
+  const tables = await import('@luma.gl/engine/tables');
+  const graphTables = await import('@luma.gl/graph/gpu-tables');
+  expect(tables.TableTransform.prototype).toBeInstanceOf(engine.BufferTransform);
+  expect('TableTransform' in graphTables).toBe(false);
+});
+
+it('model-based transform adapters belong to engine', () => {
+  for (const name of ['BufferTransform', 'TextureTransform'] as const) {
+    expect(engine[name]).toBeTypeOf('function');
+    expect(name in execution).toBe(false);
+  }
 });

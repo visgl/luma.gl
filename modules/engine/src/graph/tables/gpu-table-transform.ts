@@ -3,12 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type BufferLayout, Device, type RenderPassProps} from '@luma.gl/core';
-import {BufferTransform, type BufferTransformProps} from '@luma.gl/gpgpu';
+import {BufferTransform, type BufferTransformProps} from '../../compute/buffer-transform';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPURecordBatch} from '../table/gpu-record-batch';
-import {GPUTable} from '../table/gpu-table';
+import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
 
 type TableTransformBufferMap = NonNullable<Parameters<BufferTransform['run']>[0]>['outputBuffers'];

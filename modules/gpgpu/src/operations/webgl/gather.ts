@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {BufferLayout} from '@luma.gl/core';
-import {BufferTransform} from '@luma.gl/gpgpu';
+import {runTransformKernel} from './common/transform-kernel';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
@@ -40,7 +40,7 @@ void main() {
 }
   `;
 
-  const transform = new BufferTransform(device, {
+  const transformProps = {
     vs: vertexShader,
     defines: {
       INDEX_TYPE: idsIndexType,
@@ -58,18 +58,16 @@ void main() {
     bufferLayout: [getIdsBufferLayout(ids)],
     vertexCount: 1,
     instanceCount: output.length,
-    feedbackBufferMode: 'interleaved',
     outputs: outputModule.varyings
-  });
+  };
 
   try {
-    transform.run({
+    runTransformKernel(device, transformProps, {
       inputBuffers: {ids: ids.buffer},
       outputBuffers: {[outputModule.varyings[0]]: target}
     });
     return {success: true};
   } finally {
-    transform.destroy();
     sourceTexture.destroy();
   }
 };

@@ -30,12 +30,7 @@ export {
 } from './table/gpu-table';
 
 export {GPURenderable} from './engine/gpu-renderable';
-export {
-  TableTransform,
-  type TableTransformBatchOptions,
-  type TableTransformOutputCopyMap,
-  type TableTransformProps
-} from './engine/gpu-table-transform';
+
 export {
   GPUTableComputation,
   type GPUTableComputationBatch,

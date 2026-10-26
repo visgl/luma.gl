@@ -76,10 +76,6 @@ export {
 } from './operation/gpu-evaluator-inspection';
 
 // Shared execution and resource primitives
-export type {BufferTransformProps} from './execution/compute/buffer-transform';
-export {BufferTransform} from './execution/compute/buffer-transform';
-export type {TextureTransformProps} from './execution/compute/texture-transform';
-export {TextureTransform} from './execution/compute/texture-transform';
 export {ShaderInputs} from './execution/shader-inputs';
 export type {ShaderInputBinding, ShaderInputsProps} from './execution/shader-inputs';
 export type {

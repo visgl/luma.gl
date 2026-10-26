@@ -460,7 +460,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **GPU data primitives and experimental tables** - Canonical `GPUData` and `GPUVector` runtime classes live in `@luma.gl/gpgpu/gpu-data`, while `GPURecordBatch` and `GPUTable` provide reusable non-Arrow-specific GPU table ownership and batching from `@luma.gl/graph/gpu-tables`.
 - **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
 - **Vertex storage planning** - `GPUTableBufferPlanner` checks vertex-stage storage buffer limits before choosing storage-backed table attributes, allowing core WebGPU devices to fall back to vertex attributes when needed.
-- **Execution helpers** - `TableTransform`, `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` live with the experimental table runtime instead of a source-adapter module.
+- **Execution helpers** - `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` live with the experimental table runtime instead of a source-adapter module.
 - **Physical GPU data structs** - Inline `GPUData` format records describe interleaved rows with `wgsl-storage` or minimally padded WebGPU vertex layouts, while `GPUData.getChild()` and `getChildAt()` expose typed zero-copy field views.
 
 **@luma.gl/text**
@@ -910,3 +910,7 @@ See [scenegraph physics](./api-guide/engine/scenegraph-physics.md) for the suppo
 contracts and remaining qualification limits.
 
 - **Compute execution** - Gpgpu WebGPU operations and graph compute passes now execute through Kernel, with bindings supplied per dispatch. Module-based operations assemble their WGSL before kernel creation, and geospatial FP64 passes own their uniform buffers explicitly.
+
+- **Table transform ownership** - Import `TableTransform` from `@luma.gl/engine/tables`; graph retains the underlying table data APIs. WebGL extent now executes its existing reduction through RenderKernel instead of GPUVectorModel.
+
+- **WebGL operation execution** - Gpgpu row transforms, gather, sequence, segmented-map, and extent use RenderKernel while preserving their existing shaders and operation semantics. BufferTransform and TextureTransform are owned by engine.

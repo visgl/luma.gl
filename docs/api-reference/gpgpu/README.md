@@ -195,7 +195,7 @@ registering CPU handlers for another device type.
 
 ## Related Engine APIs
 
-`@luma.gl/gpgpu` uses engine compute helpers internally, but it does not re-export them. Import [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform), and [`Computation`](/docs/api-reference/engine/compute/computation) from `@luma.gl/engine` when you need direct access to those lower-level classes.
+`@luma.gl/gpgpu` executes WebGL operations through `RenderKernel`, without depending on engine. Import `Kernel`, `RenderKernel`, and `Computation` from `@luma.gl/gpgpu`. The model-based [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) and [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) adapters belong to `@luma.gl/engine`.
 
 ## Geometry and point clouds
 

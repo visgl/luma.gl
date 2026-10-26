@@ -119,9 +119,13 @@ process.stdout.write('Verified CommonJS renderer and experimental subpath identi
 const engineApi = require('../modules/engine/dist/index.cjs');
 const executionApi = require('../modules/gpgpu/dist/index.cjs');
 const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
-for (const name of ['Computation', 'GPUVectorModel', 'GPUVectorGeometry', 'BufferTransform', 'TextureTransform', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
+for (const name of ['Computation', 'GPUVectorModel', 'GPUVectorGeometry', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(engineApi[name], executionApi[name]);
+}
+for (const name of ['BufferTransform', 'TextureTransform']) {
+  assert.equal(typeof engineApi[name], 'function');
+  assert.equal(name in executionApi, false);
 }
 assert.equal(dataApi.GPUVectorModel, executionApi.GPUVectorModel);
 assert(engineApi.Model.prototype instanceof executionApi.GPUVectorModel);
