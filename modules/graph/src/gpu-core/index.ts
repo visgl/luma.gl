@@ -737,3 +737,6 @@ export type {
 
 export {GPUCommandGraphSubmissionPacer} from './gpu-command-graph-submission-pacer';
 export type {GPUCommandGraphSubmissionPacerProps} from './gpu-command-graph-submission-pacer';
+
+export {GPURenderInputs} from './gpu-render-inputs';
+export type {GPURenderInputsProps} from './gpu-render-inputs';

@@ -10,6 +10,7 @@ import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils'
 import {
   GPUCommandGraph,
   GPURenderOperation,
+  GPURenderInputs,
   GPUGraph,
   GPUGraphCompiler
 } from '@luma.gl/graph/gpu-core';
@@ -41,6 +42,7 @@ function makeOperation(output: Texture, destroy: () => void): GPURenderOperation
         output
       );
       const temporaryView = graph.createTextureView(temporary);
+      const inputs = new GPURenderInputs({textures: {image: {source: temporaryView}}});
       return [
         {
           type: 'render',
@@ -54,7 +56,7 @@ function makeOperation(output: Texture, destroy: () => void): GPURenderOperation
         {
           type: 'render',
           id: 'sample',
-          resources: [{texture: temporaryView, usage: 'sampled'}],
+          inputs,
           attachments: {colorAttachments: [graph.createTextureView(target)]},
           compile: ({device}) => {
             const model = new Model(device, {
@@ -86,9 +88,9 @@ void main() { color = texelFetch(image, ivec2(gl_FragCoord.xy), 0); }`,
               }
             });
             return {
-              encode: ({renderPass, getTextureView}) => {
-                model.setBindings({image: getTextureView(temporaryView)});
-                model.draw(renderPass);
+              encode: context => {
+                inputs.apply(model, context);
+                model.draw(context.renderPass);
               },
               destroy: () => {
                 model.destroy();
@@ -258,6 +260,11 @@ for (const [backend, getDevice] of [
             {id: 'colors', byteLength: 12, usage: Buffer.VERTEX},
             colors
           );
+          const inputs = new GPURenderInputs({
+            attributes: {
+              colorValue: {source: resources.createDataView(buffer, {format: 'float32', length: 3})}
+            }
+          });
           const texture = resources.importTexture(
             {id: 'target', format: 'rgba8unorm', width: 4, height: 4, usage: Texture.RENDER},
             output
@@ -266,7 +273,7 @@ for (const [backend, getDevice] of [
             {
               type: 'render',
               id: 'draw',
-              resources: [{buffer, usage: 'vertex'}],
+              inputs,
               attachments: {colorAttachments: [resources.createTextureView(texture)]},
               compile: () => {
                 const model = new Model(device, {
@@ -291,16 +298,16 @@ out vec4 result;
 void main() { result = vec4(color, 0., 0., 1.); }`,
                   vertexCount: 3,
                   colorAttachmentFormats: ['rgba8unorm'],
-                  bufferLayout: [{name: 'colorValue', format: 'float32'}],
+                  bufferLayout: inputs.bufferLayout,
                   shaderLayout: {
                     attributes: [{name: 'colorValue', location: 0, type: 'f32'}],
                     bindings: []
                   }
                 });
                 return {
-                  encode: ({renderPass, getBuffer}) => {
-                    model.setAttributes({colorValue: getBuffer(buffer)});
-                    model.draw(renderPass);
+                  encode: context => {
+                    inputs.apply(model, context);
+                    model.draw(context.renderPass);
                   },
                   destroy: () => model.destroy()
                 };
@@ -332,3 +339,90 @@ void main() { result = vec4(color, 0., 0., 1.); }`,
     }
   });
 }
+
+it('binds a graph storage buffer in a WebGPU render pass', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const output = makeTarget(device);
+  const storageData = new Float32Array(68);
+  storageData.set([1, 0, 0, 1], 64);
+  const values = device.createBuffer({data: storageData, usage: Buffer.STORAGE});
+  const operation = new GPURenderOperation({
+    id: 'storage-render',
+    createNodes: graph => {
+      const source = graph.importBuffer(
+        {id: 'values', byteLength: storageData.byteLength, usage: Buffer.STORAGE},
+        values
+      );
+      const target = graph.importTexture(
+        {
+          id: 'output',
+          width: 4,
+          height: 4,
+          format: 'rgba8unorm',
+          usage: Texture.RENDER | Texture.COPY_SRC
+        },
+        output
+      );
+      const inputs = new GPURenderInputs({
+        storage: {colors: {source, access: 'read', byteOffset: 256, byteLength: 16}}
+      });
+      return [
+        {
+          type: 'render',
+          id: 'storage-draw',
+          inputs,
+          attachments: {colorAttachments: [graph.createTextureView(target)]},
+          compile: () => {
+            const model = new Model(device, {
+              source: `@group(0) @binding(0) var<storage, read> colors: array<vec4<f32>>;
+@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
+  let positions = array<vec2<f32>, 3>(vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+  return vec4(positions[index], 0.0, 1.0);
+}
+@fragment fn fragmentMain() -> @location(0) vec4<f32> { return colors[0]; }`,
+              vertexCount: 3,
+              colorAttachmentFormats: ['rgba8unorm'],
+              shaderLayout: {
+                attributes: [],
+                bindings: [{name: 'colors', type: 'read-only-storage', group: 0, location: 0}]
+              }
+            });
+            return {
+              encode: context => {
+                inputs.apply(model, context);
+                model.draw(context.renderPass);
+              },
+              destroy: () => model.destroy()
+            };
+          }
+        }
+      ];
+    }
+  });
+  try {
+    const program = new GPUGraph();
+    program.add(operation);
+    const compiled = new GPUGraphCompiler(device).compile(program).graph.compile();
+    try {
+      const encoder = device.createCommandEncoder();
+      compiled.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      expect(await readFirstPixel(output)).toEqual([255, 0, 0, 255]);
+    } finally {
+      compiled.destroy();
+    }
+    const simple = new GPUSimpleGraph(device);
+    simple.add(operation);
+    const compiledSimple = simple.compile();
+    try {
+      await compiledSimple.run();
+      expect(await readFirstPixel(output)).toEqual([255, 0, 0, 255]);
+    } finally {
+      compiledSimple.destroy();
+    }
+  } finally {
+    values.destroy();
+    output.destroy();
+  }
+});

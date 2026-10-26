@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPURenderInputs} from './gpu-render-inputs';
+
 import type {GPUVectorLike} from '@luma.gl/graph/gpu-data';
 import {getGPUVectorChunks, type GPUVectorChunk} from '@luma.gl/graph/gpu-data';
 
@@ -685,6 +687,8 @@ export type GPUCommandGraphRenderNode<Parameters> = GPUCommandGraphNodeBase<
 > & {
   /** Node discriminator. */
   type: 'render';
+  /** Declarative shader inputs; their resource accesses are added automatically. */
+  inputs?: GPURenderInputs;
   /** Optional graph-managed render attachments. */
   attachments?: GraphRenderPassAttachments;
   /** Creates reusable node resources and the encode callback. */
