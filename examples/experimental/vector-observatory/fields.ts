@@ -21,7 +21,8 @@ export function makeField(name: string, time = 0): ScientificVectorFieldInput {
         const jetLatitude = latitude + 0.12 * Math.sin(wave);
         const envelope = Math.cos(latitude) ** 2;
         eastward[index] = envelope * (0.035 + 0.055 * Math.sin(jetLatitude * 5));
-        northward[index] = envelope * 0.012 * Math.cos(wave) * Math.sin(latitude * 3);
+        // Cross-equatorial meanders avoid an artificial latitude-zero transport barrier.
+        northward[index] = envelope * 0.012 * Math.cos(wave) * Math.cos(latitude * 2);
         // Angular circulation stays finite at high latitudes: projected speed naturally
         // shrinks with the circumference, without leaving an artificial empty polar cap.
         const polarWeight = Math.min(1, Math.max(0, (Math.abs(latitude) - 0.7) / 0.65));
