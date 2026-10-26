@@ -15,7 +15,11 @@ import type {
   GeoArrowOffsets,
   GeoArrowValidity
 } from '@math.gl/geospatial/geoarrow';
-import {getGeoArrowRowView, iterateGeoArrowBatches} from '@math.gl/geospatial/geoarrow';
+import {
+  getGeoArrowRowView,
+  iterateGeoArrowBatches,
+  mergeGeoArrowDimensions
+} from '@math.gl/geospatial/geoarrow';
 import {
   Binary,
   BufferType,
@@ -512,15 +516,4 @@ function getArrowListNesting(type: ArrowDataType): number {
 
 function isGeoArrowDimension(value: string | undefined): value is GeoArrowDimension {
   return value === 'xy' || value === 'xyz' || value === 'xym' || value === 'xyzm';
-}
-
-function mergeGeoArrowDimensions(
-  left: GeoArrowDimension,
-  right: GeoArrowDimension
-): GeoArrowDimension {
-  if (left === right) return left;
-  if (left === 'xy') return right;
-  if (right === 'xy') return left;
-  if (left === 'xyzm' || right === 'xyzm') return 'xyzm';
-  return left === 'xym' && right === 'xym' ? 'xym' : 'xyzm';
 }

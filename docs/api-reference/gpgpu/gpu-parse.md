@@ -232,7 +232,7 @@ yarn add @loaders.gl/parquet@5.0.0-alpha.4
 Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
 ```ts
-import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
+import {ParquetSourceLoader} from '@loaders.gl/tables/parquet/parquet-source-loader';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   addGPUParquetEncodedPageBatchToGraph,

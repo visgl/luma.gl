@@ -277,7 +277,7 @@ adaptive stage reports unknown composed error because provider sensitivity and p
 are not established. Estimates exclude input/native/output rounding and are never certified bounds.
 
 The optional `@luma.gl/graph/gpu-project/crs` subpath uses public math.gl 5 APIs. Install
-`@math.gl/geospatial` version `~5.0.0-alpha.19` as its optional peer to use:
+`@math.gl/geospatial` version `~5.0.0-alpha.20` as its optional peer to use:
 
 - `planProjectionPipeline({pipeline})`: parse a PROJ string or accept math.gl's AST, then lower
   signed 2D axis swaps, horizontal unit conversions, diagonal affine transforms, and stage inversion.

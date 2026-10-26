@@ -111,7 +111,7 @@ export function makePerformanceOptions(
     position[1] >= bounds[1] &&
     position[0] <= bounds[2] &&
     position[1] <= bounds[3];
-  const providerLabel = '@math.gl/geospatial/projection 5.0.0-alpha.19 TypeScript';
+  const providerLabel = '@math.gl/geospatial/projection 5.0.0-alpha.20 TypeScript';
   return {
     coordinates: makePerformanceCoordinates(bounds, rowCount),
     consumerCount,

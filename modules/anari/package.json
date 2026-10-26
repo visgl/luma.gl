@@ -70,8 +70,8 @@
   },
   "dependencies": {
     "@luma.gl/graph": "10.0.0-alpha.4",
-    "@math.gl/core": "5.0.0-alpha.19",
-    "@math.gl/geometry": "~5.0.0-alpha.19",
+    "@math.gl/core": "5.0.0-alpha.20",
+    "@math.gl/geometry": "~5.0.0-alpha.20",
     "zod": "^4.4.3"
   }
 }

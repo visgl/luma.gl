@@ -316,7 +316,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })();
       canvas.style.opacity = '0.2';
 
-      const gltf = await load(GLTF_AUDIO_PRESETS[this.feature].modelUrl, GLTFLoader);
+      const gltf = await load(GLTF_AUDIO_PRESETS[this.feature].modelUrl, GLTFLoader, {
+        gltf: {excludeExtensions: ['KHR_audio_emitter']}
+      });
       if (this.isFinalized) return;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
