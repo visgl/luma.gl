@@ -2,6 +2,17 @@
 
 ## v9.4
 
+### v9.4.3-beta.1
+
+- feat(splats): add host-pass rendering and retained RAD refinement for community scenes (#3398)
+- fix(engine): keep the WebGL pipeline when Model parameters change (#3436)
+- fix(webgl): initialize viewport and scissor cache from context (#3410)
+- fix(webgpu): stage only the requested range in buffer readback (#3386)
+- fix(webgl): apply stencil operations when only some are set (#3375)
+- fix(webgpu): declare texture view dimension in compatibility mode (#3357)
+- fix(webgpu): honor Buffer byteOffset when initializing from data (#3336)
+- chore(9.4): upgrade loaders.gl to 4.5.2 (#3350)
+
 ### v9.4.2
 
 - fix(engine): honor vertex count for indexed model draws (#3293)
