@@ -21,13 +21,18 @@ export type ScientificFlowGraphProps = {
   seed?: number;
   bounds?: readonly [number, number, number, number];
   coordinates?: 'cartesian' | 'lnglat';
+  /** Repeat longitude across matching first/last grid columns. */
+  periodicLongitude?: boolean;
   integrator?: 'rk2' | 'rk4';
 };
 
 /** Scientific upload -> bilinear sampling -> Runge–Kutta integration -> GPU storage buffer. */
 export class ScientificFlowGraph {
   private currentField: ScientificFlowField;
-  private readonly fieldOptions: Pick<ScientificFlowGraphProps, 'bounds' | 'coordinates'>;
+  private readonly fieldOptions: Pick<
+    ScientificFlowGraphProps,
+    'bounds' | 'coordinates' | 'periodicLongitude'
+  >;
   private nextField: ScientificFlowField;
   readonly simulation: ScientificFlowCompute;
   readonly commandGraph: CompiledGPUCommandGraph<{deltaTime: number; substeps: number}>;
@@ -35,7 +40,11 @@ export class ScientificFlowGraph {
 
   constructor(device: Device, props: ScientificFlowGraphProps) {
     this.device = device;
-    this.fieldOptions = {bounds: props.bounds, coordinates: props.coordinates};
+    this.fieldOptions = {
+      bounds: props.bounds,
+      coordinates: props.coordinates,
+      periodicLongitude: props.periodicLongitude
+    };
     if (Boolean(props.nextInput) !== Boolean(props.timeRange)) {
       throw new Error('nextInput and timeRange must be supplied together');
     }

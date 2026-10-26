@@ -158,3 +158,14 @@ end-to-end cost substantially.
 The RKF45 stages and basic controller are adapted from the MIT-licensed Parcels
 `AdvectionRK45` implementation. The shader retains its copyright and permission
 notice; the complete notice also ships in `simulation/PARCELS-LICENSE.txt`.
+
+
+## Periodic longitude
+
+Set `periodicLongitude: true` for a horizontally periodic field. The first and last
+grid columns must describe the same meridian. Sampling wraps every Runge–Kutta
+stage and accepted particle positions stay in normalized `[0, 1)` longitude,
+without respawning or changing particle identity. Latitude and missing-data
+boundaries retain their usual behavior. Snapshot rotation preserves this option.
+Renderers should unwrap segment displacement and split trails at the atlas seam;
+raw consecutive x coordinates can jump from near one to near zero.

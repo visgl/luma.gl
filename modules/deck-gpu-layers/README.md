@@ -621,3 +621,12 @@ and reused, and changing the timestamp only changes rotation uniforms. Catalog s
 use compact sprites with subtle spectral tint. `colorStrength` defaults to `0.2`;
 set it to `0` for neutral stars or `1` for the original catalog RGB. Picking and
 GPU resource ownership follow the same rules as the individual sky layers.
+
+## Scientific wind advection
+
+`WindSimulationEffect` owns a scientific RK2/RK4 graph and encodes it in Deck's frame encoder.
+`WindParticleLayer` renders the graph's current and previous storage buffers directly, with
+screen-space streaks and particle-slot picking. The rendering layer borrows resources; the
+effect owns and destroys the graph. Both require WebGPU. Keep the effect stable for playback
+changes and replace it for field/count/integrator changes. See
+[Wind Atlas](../../examples/deck/wind/README.md) for usage, units, temporal input, and limitations.

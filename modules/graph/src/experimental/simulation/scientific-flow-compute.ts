@@ -53,7 +53,7 @@ fn advect(initial: vec4<f32>, particleIndex: u32, substep: u32) -> vec4<f32> {
     let valid = velocity(location, endFraction).z > 0.5;
     particle = vec4<f32>(location, select(-1.0, select(0.0, hash(seed + 1664525u) * parameters.simulation.y, particle.w == 0.0), valid), (particle.w + 1.0) % 65536.0);
   } else {
-    particle = vec4<f32>(destination, particle.z + deltaTime, particle.w);
+    particle = vec4<f32>(wrapPosition(destination), particle.z + deltaTime, particle.w);
   }
   return particle;
 }
@@ -167,6 +167,7 @@ export class ScientificFlowCompute {
       field.texture.width !== nextField.texture.width ||
       field.texture.height !== nextField.texture.height ||
       field.field.coordinates !== nextField.field.coordinates ||
+      field.periodicLongitude !== nextField.periodicLongitude ||
       !field.field.bounds.every((value, index) => value === nextField.field.bounds[index]) ||
       (this.timeRange && (timeRange[0] !== this.time || this.remainingTime !== 0))
     ) {
@@ -231,7 +232,7 @@ export class ScientificFlowCompute {
     ].forEach((value, index) => view.setFloat32(index * 4, value, true));
     [
       this.particleCount,
-      this.field.field.coordinates === 'lnglat' ? 1 : 0,
+      (this.field.field.coordinates === 'lnglat' ? 1 : 0) | (this.field.periodicLongitude ? 2 : 0),
       this.seed,
       this.frame
     ].forEach((value, index) => view.setUint32(32 + index * 4, value, true));

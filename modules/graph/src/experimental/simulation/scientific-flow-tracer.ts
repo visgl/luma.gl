@@ -78,7 +78,10 @@ export class ScientificFlowTracer {
   readonly diagnostics: Buffer;
   private currentField: ScientificFlowField;
   private nextField: ScientificFlowField;
-  private readonly fieldOptions: Pick<ScientificFlowFieldProps, 'bounds' | 'coordinates'>;
+  private readonly fieldOptions: Pick<
+    ScientificFlowFieldProps,
+    'bounds' | 'coordinates' | 'periodicLongitude'
+  >;
   private readonly device: Device;
   private readonly uniforms: Buffer;
   private readonly statistics: Buffer;
@@ -102,7 +105,11 @@ export class ScientificFlowTracer {
   constructor(device: Device, props: ScientificFlowTracerProps) {
     assert(device.type === 'webgpu'); // Adaptive scientific tracing requires WebGPU.
     this.device = device;
-    this.fieldOptions = {bounds: props.bounds, coordinates: props.coordinates};
+    this.fieldOptions = {
+      bounds: props.bounds,
+      coordinates: props.coordinates,
+      periodicLongitude: props.periodicLongitude
+    };
     this.particleCount = props.positions.length / 2;
     this.tolerance = props.tolerance;
     this.minimumTimeStep = props.minimumTimeStep ?? 1e-4;
@@ -408,7 +415,8 @@ export class ScientificFlowTracer {
       ].forEach((value, index) => view.setFloat32(index * 4, value, true));
       [
         this.particleCount,
-        this.currentField.field.coordinates === 'lnglat' ? 1 : 0,
+        (this.currentField.field.coordinates === 'lnglat' ? 1 : 0) |
+          (this.currentField.periodicLongitude ? 2 : 0),
         this.maximumAttempts,
         first ? 1 : 0
       ].forEach((value, index) => view.setUint32(32 + index * 4, value, true));

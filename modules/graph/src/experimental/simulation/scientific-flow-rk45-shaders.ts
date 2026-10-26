@@ -32,7 +32,7 @@ export const SCIENTIFIC_FLOW_RK45 = /* wgsl */ `
 struct Parameters {
   domain: vec4<f32>,
   integration: vec4<f32>, // tolerance (physical distance), minimum dt, maximum dt, lifetime
-  counters: vec4<u32>, // particle count, geographic, attempts per dispatch, first dispatch
+  counters: vec4<u32>, // particle count, flags (geographic=1, periodic longitude=2), attempts per dispatch, first dispatch
   temporal: vec4<f32> // start fraction, end fraction, requested duration, unused
 };
 @group(0) @binding(0) var<uniform> parameters: Parameters;
@@ -65,7 +65,7 @@ fn trial(position: vec2<f32>, elapsed: f32, deltaTime: f32) -> Trial {
 }
 fn physicalError(error: vec2<f32>, position: vec2<f32>) -> f32 {
   var scale = parameters.domain.zw;
-  if (parameters.counters.y == 1u) {
+  if ((parameters.counters.y & 1u) != 0u) {
     let latitude = parameters.domain.y + parameters.domain.w * position.y;
     scale *= 111195.08 * vec2<f32>(cos(radians(latitude)), 1.0);
   }
@@ -116,7 +116,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
     }
     state.x = select(state.x + deltaTime, parameters.temporal.z, deltaTime == remaining);
     // Anchor age to this dispatch instead of accumulating one age rounding error per trial.
-    particle = vec4<f32>(particle.xy + candidate.displacement,
+    particle = vec4<f32>(wrapPosition(particle.xy + candidate.displacement),
       startingAge + (state.x - startingElapsed), particle.w);
     state.w = deltaTime;
     // An endpoint clip says nothing about the useful proposal for the next request.

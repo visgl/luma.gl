@@ -27,6 +27,8 @@ export type ScientificFlowFieldProps = {
   /** Required for grids lacking geographic coordinates. */
   bounds?: readonly [number, number, number, number];
   coordinates?: 'lnglat' | 'cartesian';
+  /** Wrap the horizontal coordinate; the first and last grid columns must represent the same meridian. */
+  periodicLongitude?: boolean;
   /** Input row zero must represent the southern/lower edge. */
   input: ScientificVectorFieldInput;
 };
@@ -34,9 +36,11 @@ export type ScientificFlowFieldProps = {
 export class ScientificFlowField {
   readonly texture: Texture;
   readonly maximumCellSpeed: number;
+  readonly periodicLongitude: boolean;
   readonly field: FlowParticleField;
   constructor(device: Device, props: ScientificFlowFieldProps) {
     const {input} = props;
+    this.periodicLongitude = props.periodicLongitude ?? false;
     const [height, width] = input.shape;
     assert(
       Number.isSafeInteger(width) &&

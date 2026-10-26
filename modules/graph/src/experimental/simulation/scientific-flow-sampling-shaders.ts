@@ -4,7 +4,12 @@
 
 /** Shared collocated sampling. Validity: 1 valid, 0 missing, -1 outside domain. */
 export const SCIENTIFIC_FLOW_SAMPLING = /* wgsl */ `
-fn sampleField(field: texture_2d<f32>, position: vec2<f32>) -> vec3<f32> {
+fn wrapPosition(position: vec2<f32>) -> vec2<f32> {
+  if ((parameters.counters.y & 2u) != 0u) {return vec2<f32>(fract(position.x), position.y);}
+  return position;
+}
+fn sampleField(field: texture_2d<f32>, unwrappedPosition: vec2<f32>) -> vec3<f32> {
+  let position = wrapPosition(unwrappedPosition);
   if (any(position < vec2<f32>(0.0)) || any(position > vec2<f32>(1.0))) {
     return vec3<f32>(0.0, 0.0, -1.0);
   }
@@ -30,7 +35,7 @@ fn velocity(position: vec2<f32>, fraction: f32) -> vec3<f32> {
     sampled = vec3<f32>(mix(sampled.xy, following.xy, weight), min(sampled.z, following.z));
   }
   var velocityComponents = sampled.xy;
-  if (parameters.counters.y == 1u) {
+  if ((parameters.counters.y & 1u) != 0u) {
     let latitude = parameters.domain.y + parameters.domain.w * position.y;
     velocityComponents = velocityComponents / (111195.08 * vec2<f32>(cos(radians(latitude)), 1.0));
   }
