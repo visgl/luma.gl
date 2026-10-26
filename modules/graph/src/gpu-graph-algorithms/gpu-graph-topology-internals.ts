@@ -5,7 +5,7 @@
 
 import {addGPUCommandNodes} from '@luma.gl/graph/gpu-core';
 import {type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {
   GPUCommandGraph,
   GraphBufferUse,

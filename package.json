@@ -53,7 +53,8 @@
     "gltf:reference-evidence:test": "node --test ./scripts/gltf-reference/*.test.mjs ./scripts/playwright/*.test.mjs",
     "playwright:install": "playwright install chromium webkit",
     "metrics": "./scripts/metrics.sh && ocular-metrics",
-    "build-webgl-constants": "esbuild modules/core/src/webgl-constants/index.ts --bundle --format=cjs --outfile=modules/core/dist/webgl-constants/index.cjs"
+    "build-webgl-constants": "esbuild modules/core/src/webgl-constants/index.ts --bundle --format=cjs --outfile=modules/core/dist/webgl-constants/index.cjs",
+    "test-package-layering": "node scripts/verify-package-layering.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.28.3",

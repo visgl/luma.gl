@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, Buffer, Texture, type Device, type QuerySet} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,

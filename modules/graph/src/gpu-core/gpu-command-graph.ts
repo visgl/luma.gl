@@ -15,7 +15,7 @@ import type {
   TextureFormat,
   TextureView
 } from '@luma.gl/core';
-import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
+import {DynamicBuffer, DynamicTexture} from '@luma.gl/gpgpu';
 import {
   type GPUData,
   type GPUVectorLike,

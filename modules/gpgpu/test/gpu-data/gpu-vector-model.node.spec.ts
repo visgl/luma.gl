@@ -204,7 +204,7 @@ function makeVector(
   });
 }
 
-it('Model inherits the single engine GPUVectorModel exported through gpgpu', () => {
+it('Model inherits the single gpgpu GPUVectorModel re-exported through engine', () => {
   expect(GPUVectorModel).toBe(EngineGPUVectorModel);
   expect(Object.getPrototypeOf(Model.prototype)).toBe(GPUVectorModel.prototype);
   const device = new NullDevice({});

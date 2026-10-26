@@ -4,14 +4,14 @@
 
 import type {Device, CommandEncoder} from '@luma.gl/core';
 import {Vector3} from '@math.gl/core';
-import type {ScenegraphNode} from '@luma.gl/engine';
-import {GPUCommandGraph} from '../gpu-core/index';
+import type {ScenegraphNode} from '../../index';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPURigidBodyWorld,
   type GPURigidBodyWorldProps,
   type GPURigidBodyCapture
-} from './gpu-rigid-body-world';
-import {rotateRigidBodyVector} from './rigid-body-properties';
+} from '@luma.gl/graph/gpu-physics';
+import {rotateRigidBodyVector} from '@luma.gl/graph/gpu-physics';
 
 export type ScenegraphPhysicsDefinition = {
   world: GPURigidBodyWorldProps;

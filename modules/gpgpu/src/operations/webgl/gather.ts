@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {BufferLayout} from '@luma.gl/core';
-import {BufferTransform} from '@luma.gl/engine';
+import {BufferTransform} from '@luma.gl/gpgpu';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';

@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import type {InteractivityPropertyAdapter} from '@luma.gl/engine';
-import type {GPURigidBodyWorld, GPURigidBodyParameters} from './gpu-rigid-body-world';
-import type {GPURigidBodyGeneralConstraint} from './rigid-body-general-joints';
+import type {InteractivityPropertyAdapter} from '../../index';
+import type {GPURigidBodyWorld, GPURigidBodyParameters} from '@luma.gl/graph/gpu-physics';
+import type {GPURigidBodyGeneralConstraint} from '@luma.gl/graph/gpu-physics';
 
 export type PhysicsPropertyTarget =
   | {

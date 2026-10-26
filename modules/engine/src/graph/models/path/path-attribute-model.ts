@@ -9,7 +9,7 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
-import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/engine/tables';
 import type {GPUTable} from '@luma.gl/graph/gpu-tables';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';

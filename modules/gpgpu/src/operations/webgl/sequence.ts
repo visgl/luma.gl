@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {BufferTransform} from '@luma.gl/engine';
+import {BufferTransform} from '@luma.gl/gpgpu';
 import {OperationHandler} from '../../operation/operation';
 import {getOutputModule} from './common/row-transform';
 

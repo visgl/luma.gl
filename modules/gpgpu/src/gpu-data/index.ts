@@ -77,4 +77,7 @@ export {getGPUVectorChunks, type GPUVectorChunk} from './gpu-vector-chunks';
 
 export type {GPUVectorLike, GPUVectorInput} from './gpu-vector-like';
 
-export {validateGPUVectorBatchStructure, type GPUVectorBatchStructureInput} from '@luma.gl/engine';
+export {
+  validateGPUVectorBatchStructure,
+  type GPUVectorBatchStructureInput
+} from '../execution/utils/gpu-vector-batch-structure';

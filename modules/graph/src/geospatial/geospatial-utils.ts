@@ -5,7 +5,7 @@
 
 import {UniformStore, type Binding, type Buffer, type Device} from '@luma.gl/core';
 import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
-import {Kernel, DynamicBuffer, getPlatformInfo} from '@luma.gl/engine';
+import {Kernel, DynamicBuffer, getPlatformInfo} from '@luma.gl/gpgpu';
 import {
   fp64arithmetic,
   ShaderAssembler,

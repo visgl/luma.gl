@@ -11,16 +11,15 @@ import {
 } from '@luma.gl/core';
 import {
   DynamicBuffer,
-  Model,
-  type ModelProps,
   type GPUVectorModelInputs,
   type GPUVectorModelDrawBatchesOptions
-} from '@luma.gl/engine';
-import type {GPUInputSchema} from './gpu-input-schema';
-import {GPUTableShaderBindings} from './gpu-table-shader-bindings';
-import type {GPURecordBatch} from '../table/gpu-record-batch';
-import {GPU_TABLE_INDEX_COLUMN_NAME} from '../table/gpu-schema';
-import {GPUTable} from '../table/gpu-table';
+} from '@luma.gl/gpgpu';
+import {Model, type ModelProps} from '../../index';
+import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';
+import {GPUTableShaderBindings} from '@luma.gl/graph/gpu-tables';
+import type {GPURecordBatch} from '@luma.gl/graph/gpu-tables';
+import {GPU_TABLE_INDEX_COLUMN_NAME} from '@luma.gl/graph/gpu-tables';
+import {GPUTable} from '@luma.gl/graph/gpu-tables';
 import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */

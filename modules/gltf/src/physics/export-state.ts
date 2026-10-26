@@ -4,7 +4,8 @@
 
 import {Matrix4} from '@math.gl/core';
 import {decomposePhysicsTransform} from '@luma.gl/engine';
-import {ScenegraphPhysicsProperties, type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
+import {ScenegraphPhysicsProperties} from '@luma.gl/engine/physics';
+import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import type {GLTFPhysicsDescription, GLTFPhysicsDocument} from './physics-types';
 import {makeGLTFPhysicsProperties} from './property-bindings';
 

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {getPlatformInfo, type KernelProps} from '@luma.gl/engine';
+import {getPlatformInfo, type KernelProps} from '@luma.gl/gpgpu';
 import {ShaderAssembler, type ShaderModule, type WGSLShaderAssembler} from '@luma.gl/shadertools';
 
 /** Assemble module-based compute source before creating the executable kernel. */

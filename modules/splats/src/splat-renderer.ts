@@ -12,12 +12,8 @@ import {
 } from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {
-  GPURecordBatch,
-  GPUTable,
-  GPUTableModel,
-  type GPUInputSchema
-} from '@luma.gl/graph/gpu-tables';
+import {GPURecordBatch, GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 import {GPUSplatData} from './splat-data';
 import {projectSplatCovarianceToScreen} from './splat-covariance';
 import {acceptsSplatSemantic, type SplatSemanticFilter} from './splat-filter';

@@ -1,11 +1,11 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {CubeGeometry, GroupNode, ScenegraphNode, type Geometry} from '@luma.gl/engine';
+import {CubeGeometry, GroupNode, ScenegraphNode, type Geometry} from '../../index';
 import {Matrix4} from '@math.gl/core';
-import {makeConvexHullGeometry, makeTriangleMeshGeometry} from './rigid-body-mesh';
-import {normalizeRigidBodyRotation, type GPURigidBody} from './rigid-body-properties';
-import type {GPURigidBodyBounds} from './rigid-body-publication';
+import {makeConvexHullGeometry, makeTriangleMeshGeometry} from '@luma.gl/graph/gpu-physics';
+import {normalizeRigidBodyRotation, type GPURigidBody} from '@luma.gl/graph/gpu-physics';
+import type {GPURigidBodyBounds} from '@luma.gl/graph/gpu-physics';
 
 export type PhysicsGeometryNodeProps = ConstructorParameters<typeof ScenegraphNode>[0] & {
   geometry: Geometry;

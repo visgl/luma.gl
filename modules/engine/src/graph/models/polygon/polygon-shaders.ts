@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, ShaderLayout} from '@luma.gl/core';
-import {getIndexPickingModule, indexPicking, ShaderInputs} from '@luma.gl/engine';
+import {ShaderInputs} from '@luma.gl/gpgpu';
+import {getIndexPickingModule, indexPicking} from '../../../index';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
 /** Uniforms that project prepared polygon positions into clip space. */

@@ -24,7 +24,8 @@ import {
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
-import {GPURenderable, GPUTable, GPUTableModel} from '@luma.gl/graph/gpu-tables';
+import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 import {Matrix4} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 

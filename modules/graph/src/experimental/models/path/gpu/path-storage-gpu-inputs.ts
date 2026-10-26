@@ -3,12 +3,29 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding, type Buffer} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/gpgpu';
 import {getGPUVectorFormatInfo, isVertexListGPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector, VertexList} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
-import type {PathStorageInputProps} from '../path-storage-model';
+export type GPUPathStorageInputProps = {
+  /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one GPU row per path. */
+  paths: GPUVector<VertexList<'float32x2' | 'float32x3' | 'float32x4'>>;
+  /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
+  colors?: GPUVector<'unorm8x4' | VertexList<'unorm8x4'>>;
+  /** Optional per-path widths, one GPU row per path. */
+  widths?: GPUVector<'float32'>;
+  /** Optional per-path Float32 temporal stream aligned with path vertices. */
+  timestamps?: GPUVector<VertexList<'float32'>>;
+  /** Optional per-path view-space origins, one GPU row per path. */
+  viewOrigins?: GPUVector<'float32x4'>;
+  /** Global source row index assigned to the first prepared path row. */
+  rowIndexBase?: number;
+  /** Constant fallback path color used when `colors` is absent. */
+  color?: [number, number, number, number];
+  /** Constant fallback path width used when `widths` is absent. */
+  width?: number;
+};
 
 /** Per-source-batch storage bindings and path range metadata. */
 export type PathStorageBatchInputs = {
@@ -44,7 +61,7 @@ export type PathStorageInputs = {
 
 /** Resolves aligned path/style GPUVector batches for storage-backed path expansion. */
 export function resolvePathStorageInputs(
-  props: PathStorageInputProps,
+  props: GPUPathStorageInputProps,
   gpuInputSchema: GPUInputSchema
 ): PathStorageInputs {
   assertPathStorageVectorTypes(props, gpuInputSchema);
@@ -102,7 +119,7 @@ export function resolvePathStorageInputs(
 }
 
 function assertPathStorageVectorTypes(
-  props: PathStorageInputProps,
+  props: GPUPathStorageInputProps,
   gpuInputSchema: GPUInputSchema
 ): void {
   validateGPUInputVectors('PathStorageModel', gpuInputSchema, {
@@ -114,7 +131,7 @@ function assertPathStorageVectorTypes(
   });
 }
 
-function assertPathStorageVectorRowAlignment(props: PathStorageInputProps): void {
+function assertPathStorageVectorRowAlignment(props: GPUPathStorageInputProps): void {
   const rowInputs = [
     ['paths', props.paths],
     ['colors', props.colors],
@@ -198,7 +215,7 @@ function makePathStorageRecordOffsets(valueOffsets: Int32Array, rowCount: number
   return recordOffsets;
 }
 
-function getPathStorageCoordinateComponentCount(paths: PathStorageInputProps['paths']): number {
+function getPathStorageCoordinateComponentCount(paths: GPUPathStorageInputProps['paths']): number {
   const format = paths.format;
   if (!format) {
     throw new Error('PathStorageModel paths require GPUVector.format');
@@ -206,7 +223,9 @@ function getPathStorageCoordinateComponentCount(paths: PathStorageInputProps['pa
   return getGPUVectorFormatInfo(format).components;
 }
 
-function isPathVertexColorGPUVector(colors: NonNullable<PathStorageInputProps['colors']>): boolean {
+function isPathVertexColorGPUVector(
+  colors: NonNullable<GPUPathStorageInputProps['colors']>
+): boolean {
   return colors.format !== undefined && isVertexListGPUVectorFormat(colors.format);
 }
 

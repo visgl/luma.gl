@@ -16,7 +16,8 @@ import * as gpuVectorSearch from '@luma.gl/graph/gpu-vector-search';
 import * as gpuProject from '@luma.gl/graph/gpu-project';
 import * as gpuRaster from '@luma.gl/graph/gpu-raster';
 import * as gpuTables from '@luma.gl/graph/gpu-tables';
-import * as models from '@luma.gl/graph/experimental/models';
+import * as models from '@luma.gl/engine/models';
+import * as gpuModels from '@luma.gl/graph/experimental/models';
 import * as gpuTrace from '@luma.gl/graph/gpu-trace';
 import {describe, expect, test} from 'vitest';
 
@@ -162,7 +163,7 @@ describe('experimental GPU module naming', () => {
     expect(gpuTables.GPUTable).toBeTypeOf('function');
     expect(models.PathStorageModel).toBeTypeOf('function');
     expect(models.PolygonStorageModel).toBeTypeOf('function');
-    expect(models.createGpuPathRangeState).toBeTypeOf('function');
+    expect(gpuModels.createGpuPathRangeState).toBeTypeOf('function');
     expect(gpuRaster.GPURaster).toBeTypeOf('function');
     expect(gpuProject.GPUProjection).toBeTypeOf('function');
     expect(gpuDataframe.GPUDataFrame).toBeTypeOf('function');

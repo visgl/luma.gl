@@ -4,7 +4,7 @@
 
 import {expect, it, vi} from 'vitest';
 import {Matrix4} from '@math.gl/core';
-import {ScenegraphPhysicsMotion} from '@luma.gl/graph/gpu-physics';
+import {ScenegraphPhysicsMotion} from '@luma.gl/engine/physics';
 import {
   parseGLTFPhysics,
   createGLTFPhysicsWorld,

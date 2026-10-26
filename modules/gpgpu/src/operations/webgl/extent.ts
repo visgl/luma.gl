@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Texture} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import {GPUVectorModel} from '@luma.gl/gpgpu';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
@@ -74,7 +74,7 @@ void main() {
 }
   `;
 
-  const reductionModel = new Model(device, {
+  const reductionModel = new GPUVectorModel(device, {
     vs: vertexShader,
     fs: fragmentShader,
     topology: 'point-list',

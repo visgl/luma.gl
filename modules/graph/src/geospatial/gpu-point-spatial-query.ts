@@ -5,7 +5,7 @@
 
 import {type Binding, Buffer} from '@luma.gl/core';
 import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
-import {Kernel, DynamicBuffer} from '@luma.gl/engine';
+import {Kernel, DynamicBuffer} from '@luma.gl/gpgpu';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import type {GPUGridIndexBounds, GPUGridIndexSize} from '@luma.gl/graph/gpu-core';
 import {

@@ -9,10 +9,9 @@ import {GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
 import {
   PolygonAttributeModel,
   createPolygonShaderInputs,
-  POLYGON_GPU_INPUT_SCHEMA,
-  PolygonStorageModel,
-  type PolygonGPUVectors
-} from '@luma.gl/graph/experimental/models';
+  PolygonStorageModel
+} from '@luma.gl/engine/models';
+import {POLYGON_GPU_INPUT_SCHEMA, type PolygonGPUVectors} from '@luma.gl/graph/experimental/models';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import type {ShaderModule} from '@luma.gl/shadertools';
 

@@ -11,7 +11,7 @@ import {
   type BufferAttributeLayout,
   type VertexFormat
 } from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/gpgpu';
 import {
   GPUData,
   GPUDataView,

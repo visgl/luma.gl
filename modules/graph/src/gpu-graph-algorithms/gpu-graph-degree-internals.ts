@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 import {type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {GPUCommandGraph, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,

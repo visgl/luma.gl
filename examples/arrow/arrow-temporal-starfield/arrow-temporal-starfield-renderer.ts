@@ -20,13 +20,8 @@ import {
   getRequiredGPUVector,
   type GPUVector
 } from '@luma.gl/gpgpu/gpu-data';
-import {
-  GPURenderable,
-  GPURecordBatch,
-  GPUTable,
-  GPUTableModel,
-  type GPUTypeMap
-} from '@luma.gl/graph/gpu-tables';
+import {GPURenderable, GPURecordBatch, GPUTable, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 import * as arrow from 'apache-arrow';
 import {
   CURRENT_TIME_RATE_MILLISECONDS_PER_SECOND,

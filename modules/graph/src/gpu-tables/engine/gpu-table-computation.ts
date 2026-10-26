@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding, type ComputePass, Device} from '@luma.gl/core';
-import {Kernel, type KernelProps} from '@luma.gl/engine';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {Kernel, type KernelProps} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/gpgpu';
 import {
   isFixedSizeListGPUVectorFormat,
   type GPUData,

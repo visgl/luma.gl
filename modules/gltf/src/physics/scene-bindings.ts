@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ScenegraphNode} from '@luma.gl/engine';
-import type {ScenegraphPhysicsScene, GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
+import type {ScenegraphPhysicsScene} from '@luma.gl/engine/physics';
+import type {GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
 import {makeGLTFPhysicsDefinition} from './index';
 import {makeGLTFPhysicsProperties} from './property-bindings';
 import type {GLTFPhysicsDescription} from './physics-types';

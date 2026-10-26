@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUCommandGraph, GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';

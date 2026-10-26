@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {GroupNode, type ScenegraphNode} from '@luma.gl/engine';
+import {GroupNode, type ScenegraphNode} from '../../index';
 import {
   ScenegraphPhysicsInstance,
   type ScenegraphPhysicsDefinition,
@@ -16,7 +16,7 @@ import {
   ScenegraphPhysicsBehaviors,
   type ScenegraphPhysicsBehaviorProps
 } from './scenegraph-behaviors';
-import type {GPURigidBodyWorld} from './gpu-rigid-body-world';
+import type {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 
 export type ScenegraphPhysicsScene = {
   roots: readonly ScenegraphNode[];

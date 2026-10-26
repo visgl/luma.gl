@@ -53,7 +53,7 @@ See [GPU table structure and lifecycle](/docs/api-reference/experimental/gpu-tab
 | deck.gl Arrow layers | Experimental | WebGPU + WebGL2 | `@deck.gl-community/arrow-layers` | Connect Arrow-backed paths, polygons, and text to compatible visualization layers. |
 | Text and glyph atlases | Experimental | WebGPU + WebGL2 | `@luma.gl/text` | Render bitmap, SDF, or MSDF glyphs with supported Unicode layout, kerning, and clipping. |
 | Dictionary-compressed labels | Experimental | WebGPU | `@luma.gl/text` | Reuse repeated label values through WebGPU storage-based text strategies. |
-| Animated path visualization | Experimental | WebGPU | `@luma.gl/graph/experimental/models` | Render GPU-resident trips and variable-length paths through storage-backed models. |
+| Animated path visualization | Experimental | WebGPU | `@luma.gl/engine/models` | Render GPU-resident trips and variable-length paths through storage-backed models. |
 
 See [supported Arrow types and representations](/docs/api-reference/arrow).
 
@@ -251,8 +251,8 @@ with the [Satellite Raster Lab](/examples/showcase/raster-lab).
 | GPU-driven timeline picking | Experimental | WebGPU | `@luma.gl/graph/gpu-trace` | Link trace visibility, indirect timeline draws, and GPU-aware picking. |
 | Chunk-aware trace dependencies | Experimental | WebGPU | `@luma.gl/graph/gpu-trace` | Route visible dependency endpoints across supported independent source-span batches. |
 | Bounded dataset residency | Experimental | WebGPU | Application-owned example | Stream large source corpora with an application-managed bounded GPU-resident working set. |
-| Portable path and polygon models | Experimental | WebGPU + WebGL2 | `@luma.gl/graph/experimental/models` | Render table-backed paths and polygons using compatible attribute-driven strategies. |
-| Storage-backed path models | Experimental | WebGPU | `@luma.gl/graph/experimental/models` | Process compatible path, polygon, and trip columns directly through storage buffers. |
+| Portable path and polygon models | Experimental | WebGPU + WebGL2 | `@luma.gl/engine/models` | Render table-backed paths and polygons using compatible attribute-driven strategies. |
+| Storage-backed path models | Experimental | WebGPU | `@luma.gl/engine/models` | Process compatible path, polygon, and trip columns directly through storage buffers. |
 
 Try [Million-Row Crossfilter](/examples/showcase/million-row-crossfilter),
 [Billion-Point Spatial Atlas](/examples/showcase/billion-point-spatial-atlas),

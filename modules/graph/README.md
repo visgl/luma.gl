@@ -39,3 +39,19 @@ GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`. Graph a
 lowers those operations to a `GPUCommandGraph`, which schedules concrete GPU passes
 and resources. `CompiledGPUCommandGraph` encodes the resulting commands. The existing
 compiler remains WebGPU-only; `GPUSimpleGraph` is the separate portable evaluator API.
+
+## Package layering
+
+Engine depends on graph; graph depends on gpgpu; gpgpu depends on core and shadertools.
+Neither graph nor gpgpu imports engine, including in public resource types. Both GPUGraph
+and GPUSimpleGraph use the shared gpgpu execution/resource primitives. GPUGraph remains
+WebGPU-focused; this layering does not add WebGL algorithm fallbacks.
+
+Engine-specific integration is available through `@luma.gl/engine/physics` (scenegraph
+physics), `@luma.gl/engine/tables` (table models and geometry), and
+`@luma.gl/engine/models` (specialized path/polygon rendering). GPU data processing remains
+in graph. Shared effect lowering must use gpgpu primitives instead of importing engine
+models or renderers.
+
+`yarn test-package-layering` checks source, built code, public declarations, and package
+dependencies. It also runs as part of the package build.

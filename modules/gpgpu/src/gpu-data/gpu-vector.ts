@@ -9,7 +9,7 @@ import {
   type BufferLayout,
   type BufferProps
 } from '@luma.gl/core';
-import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
+import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/gpgpu';
 import {GPUData} from './gpu-data';
 import type {GPUVectorLike} from './gpu-vector-like';
 import {getGPUVectorChunks} from './gpu-vector-chunks';
