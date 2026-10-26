@@ -374,3 +374,7 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
   and `LuSQLQuery` remain in the module.
 - Install loaders.gl packages explicitly in applications that use these integrations.
   Published luma.gl modules no longer install them transitively.
+
+### Table compute execution
+
+`GPUTableComputation` now delegates to Kernel instead of inheriting Computation. Its `inputVectors`, `bindings`, `setBindings()`, `dispatch()`, `dispatchBatches()`, and `destroy()` APIs are retained. Construction takes Kernel pipeline options and assembled WGSL source; assemble shader modules and defines with shadertools before construction. Uniform buffers are explicit bindings owned by the caller.

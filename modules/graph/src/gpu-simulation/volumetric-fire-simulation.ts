@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
+
 import type {CommandEncoder, Device, Sampler, Texture} from '@luma.gl/core';
 import {Buffer, Texture as TextureResource} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
@@ -436,14 +438,14 @@ export class VolumetricFireSimulation {
         {buffer: uniforms, usage: 'uniform'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const computation = createBoundKernel(device, {
           id: `${this.id}-advect-velocity`,
           source: VOLUMETRIC_FIRE_VELOCITY_ADVECTION_SHADER,
           shaderLayout: {bindings: VOLUMETRIC_FIRE_VELOCITY_ADVECTION_BINDINGS}
         });
         return {
           encode: ({computePass, getBuffer, getTextureView}) => {
-            computation.setBindings({
+            Object.assign(computation.bindings, {
               velocityInput: getTextureView(velocityInput),
               combustionInput: getTextureView(combustionInput),
               obstacleTexture: getTextureView(obstacleTexture),
@@ -453,7 +455,7 @@ export class VolumetricFireSimulation {
             });
             dispatchVolume(computation, computePass, this.dimensions);
           },
-          destroy: () => computation.destroy()
+          destroy: () => computation.kernel.destroy()
         };
       }
     });
@@ -477,14 +479,14 @@ export class VolumetricFireSimulation {
         {buffer: uniforms, usage: 'uniform'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const computation = createBoundKernel(device, {
           id: `${this.id}-divergence`,
           source: VOLUMETRIC_FIRE_DIVERGENCE_PRESSURE_CLEAR_SHADER,
           shaderLayout: {bindings: VOLUMETRIC_FIRE_DIVERGENCE_PRESSURE_CLEAR_BINDINGS}
         });
         return {
           encode: ({computePass, getBuffer, getTextureView}) => {
-            computation.setBindings({
+            Object.assign(computation.bindings, {
               velocityInput: getTextureView(velocityInput),
               obstacleTexture: getTextureView(obstacleTexture),
               divergenceOutput: getTextureView(divergenceOutput),
@@ -493,7 +495,7 @@ export class VolumetricFireSimulation {
             });
             dispatchVolume(computation, computePass, this.dimensions);
           },
-          destroy: () => computation.destroy()
+          destroy: () => computation.kernel.destroy()
         };
       }
     });
@@ -518,14 +520,14 @@ export class VolumetricFireSimulation {
         {buffer: uniforms, usage: 'uniform'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const computation = createBoundKernel(device, {
           id: `${this.id}-pressure-${iteration + 1}`,
           source: VOLUMETRIC_FIRE_PRESSURE_JACOBI_SHADER,
           shaderLayout: {bindings: VOLUMETRIC_FIRE_PRESSURE_JACOBI_BINDINGS}
         });
         return {
           encode: ({computePass, getBuffer, getTextureView}) => {
-            computation.setBindings({
+            Object.assign(computation.bindings, {
               pressureInput: getTextureView(pressureInput),
               divergenceInput: getTextureView(divergenceInput),
               obstacleTexture: getTextureView(obstacleTexture),
@@ -534,7 +536,7 @@ export class VolumetricFireSimulation {
             });
             dispatchVolume(computation, computePass, this.dimensions);
           },
-          destroy: () => computation.destroy()
+          destroy: () => computation.kernel.destroy()
         };
       }
     });
@@ -558,14 +560,14 @@ export class VolumetricFireSimulation {
         {buffer: uniforms, usage: 'uniform'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const computation = createBoundKernel(device, {
           id: `${this.id}-project-velocity`,
           source: VOLUMETRIC_FIRE_PRESSURE_PROJECTION_SHADER,
           shaderLayout: {bindings: VOLUMETRIC_FIRE_PRESSURE_PROJECTION_BINDINGS}
         });
         return {
           encode: ({computePass, getBuffer, getTextureView}) => {
-            computation.setBindings({
+            Object.assign(computation.bindings, {
               velocityInput: getTextureView(velocityInput),
               pressureInput: getTextureView(pressureInput),
               obstacleTexture: getTextureView(obstacleTexture),
@@ -574,7 +576,7 @@ export class VolumetricFireSimulation {
             });
             dispatchVolume(computation, computePass, this.dimensions);
           },
-          destroy: () => computation.destroy()
+          destroy: () => computation.kernel.destroy()
         };
       }
     });
@@ -598,14 +600,14 @@ export class VolumetricFireSimulation {
         {buffer: uniforms, usage: 'uniform'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const computation = createBoundKernel(device, {
           id: `${this.id}-advect-combustion`,
           source: VOLUMETRIC_FIRE_COMBUSTION_ADVECTION_SHADER,
           shaderLayout: {bindings: VOLUMETRIC_FIRE_COMBUSTION_ADVECTION_BINDINGS}
         });
         return {
           encode: ({computePass, getBuffer, getTextureView}) => {
-            computation.setBindings({
+            Object.assign(computation.bindings, {
               combustionInput: getTextureView(combustionInput),
               velocityInput: getTextureView(velocityInput),
               obstacleTexture: getTextureView(obstacleTexture),
@@ -615,7 +617,7 @@ export class VolumetricFireSimulation {
             });
             dispatchVolume(computation, computePass, this.dimensions);
           },
-          destroy: () => computation.destroy()
+          destroy: () => computation.kernel.destroy()
         };
       }
     });
@@ -767,16 +769,16 @@ function getGraphTextureDescriptor(id: string, texture: Texture) {
 }
 
 function dispatchVolume(
-  computation: Computation,
-  computePass: Parameters<Computation['dispatch']>[0],
+  computation: BoundKernel,
+  computePass: Parameters<BoundKernel['kernel']['dispatch']>[0],
   dimensions: readonly [number, number, number]
 ): void {
-  computation.dispatch(
-    computePass,
-    Math.ceil(dimensions[0] / VOLUMETRIC_FIRE_WORKGROUP_SIZE),
-    Math.ceil(dimensions[1] / VOLUMETRIC_FIRE_WORKGROUP_SIZE),
-    Math.ceil(dimensions[2] / VOLUMETRIC_FIRE_WORKGROUP_SIZE)
-  );
+  computation.kernel.dispatch(computePass, {
+    bindings: computation.bindings,
+    x: Math.ceil(dimensions[0] / VOLUMETRIC_FIRE_WORKGROUP_SIZE),
+    y: Math.ceil(dimensions[1] / VOLUMETRIC_FIRE_WORKGROUP_SIZE),
+    z: Math.ceil(dimensions[2] / VOLUMETRIC_FIRE_WORKGROUP_SIZE)
+  });
 }
 
 function validateVolumetricFireDimensions(

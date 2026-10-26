@@ -10,7 +10,7 @@ import {
   type CommandEncoder,
   type Device
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
@@ -793,7 +793,7 @@ fn main(
     id: props.id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source,
         shaderLayout: {
@@ -811,10 +811,15 @@ fn main(
           for (const [name, view] of Object.entries(bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

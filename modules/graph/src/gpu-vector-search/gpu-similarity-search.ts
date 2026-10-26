@@ -4,7 +4,8 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuVS.
 
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
+import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
 import {
   createTransientView,
   doGraphDataViewsOverlap,
@@ -1081,18 +1082,21 @@ function addSearchComputationPass<Parameters>(
     id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
-        id,
-        source,
-        shaderLayout: {
-          bindings: Object.keys(views).map((name, location) => ({
-            name,
-            type: 'storage' as const,
-            group: 0,
-            location
-          }))
-        }
-      });
+      const kernel = new Kernel(
+        device,
+        assembleComputeKernel(device, {
+          id,
+          source,
+          shaderLayout: {
+            bindings: Object.keys(views).map((name, location) => ({
+              name,
+              type: 'storage' as const,
+              group: 0,
+              location
+            }))
+          }
+        })
+      );
       return {
         encode: ({computePass, getBuffer}) => {
           const bindings: Record<string, Binding> = {};
@@ -1102,10 +1106,15 @@ function addSearchComputationPass<Parameters>(
             }
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, layout.x, layout.y, layout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: layout.x,
+            y: layout.y,
+            z: layout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

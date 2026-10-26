@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/graph/gpu-core';
 import {
@@ -254,7 +254,7 @@ fn main(
     id: `${index.id}-query`,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${index.id}-query`,
         source,
         shaderLayout: {
@@ -272,10 +272,15 @@ fn main(
           for (const [name, view] of Object.entries(bindings)) {
             resolved[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolved);
-          computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
+          const kernelBindings = resolved;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatch.x,
+            y: dispatch.y,
+            z: dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });
@@ -704,7 +709,7 @@ function addTemporalComputePass<Parameters>(
     id: props.id,
     resources: props.resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -722,10 +727,15 @@ function addTemporalComputePass<Parameters>(
           for (const [name, view] of Object.entries(props.bindings)) {
             resolved[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolved);
-          computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+          const kernelBindings = resolved;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatch.x,
+            y: props.dispatch.y,
+            z: props.dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });
@@ -745,7 +755,7 @@ function addTemporalIndirectComputePass<Parameters>(
     id: props.id,
     resources: [...props.resources, {buffer: props.indirect, usage: 'indirect'}],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -763,14 +773,14 @@ function addTemporalIndirectComputePass<Parameters>(
           for (const [name, view] of Object.entries(props.bindings)) {
             resolved[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolved);
-          computation.dispatchIndirect(
-            computePass,
-            getBuffer(props.indirect.buffer),
-            props.indirect.byteOffset
-          );
+          const kernelBindings = resolved;
+          kernel.dispatchIndirect(computePass, {
+            bindings: kernelBindings,
+            indirectBuffer: getBuffer(props.indirect.buffer),
+            indirectOffset: props.indirect.byteOffset
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuGraph.
 
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,
@@ -469,7 +469,7 @@ function addForceLayoutPass<Parameters>(
     id: props.id,
     resources: Object.values(props.bindings).map(({view, usage}) => ({buffer: view, usage})),
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -488,15 +488,15 @@ function addForceLayoutPass<Parameters>(
           for (const [name, binding] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(binding.view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatchLayout.x,
+            y: props.dispatchLayout.y,
+            z: props.dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

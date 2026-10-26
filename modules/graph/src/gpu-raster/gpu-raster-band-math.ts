@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
 import {
@@ -139,7 +139,7 @@ export class GPURasterBandMath {
     }
   }
 
-  /** Adds one bounded two-dimensional compute pass; its computation is owned by the graph. */
+  /** Adds one bounded two-dimensional compute pass; its kernel is owned by the graph. */
   addToGraph<Parameters>(graph: GPUCommandGraph<Parameters>): void {
     const inputViews = [
       this.left.storage.values,
@@ -193,7 +193,7 @@ export class GPURasterBandMath {
             location: this.left.validity ? 5 : 4
           });
         }
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: this.id,
           source: this.getShaderSource(),
           shaderLayout: {bindings}
@@ -212,10 +212,14 @@ export class GPURasterBandMath {
             if (this.right.validity) {
               resolvedBindings['rightValidity'] = getViewBinding(this.right.validity, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, horizontalCount, verticalCount);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: horizontalCount,
+              y: verticalCount
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });

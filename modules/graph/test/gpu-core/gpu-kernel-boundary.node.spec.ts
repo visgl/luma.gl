@@ -18,3 +18,17 @@ test('gpu-core execution stays independent of Computation and shader assembly po
   }
   expect(violations).toEqual([]);
 });
+
+test('graph and gpgpu callers execute without Computation', () => {
+  const violations: string[] = [];
+  for (const root of ['modules/graph/src', 'modules/gpgpu/src']) {
+    for (const file of readdirSync(root, {recursive: true})) {
+      if (typeof file !== 'string' || !file.endsWith('.ts')) continue;
+      const source = readFileSync(resolve(root, file), 'utf8');
+      if (/\b(?:new|extends)\s+Computation\b|import\s*\{[^}]*\bComputation\b/s.test(source)) {
+        violations.push(`${root}/${file}`);
+      }
+    }
+  }
+  expect(violations).toEqual([]);
+});

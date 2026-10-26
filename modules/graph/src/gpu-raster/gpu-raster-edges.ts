@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/engine';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
 import {
@@ -278,7 +278,7 @@ export class GPURasterGradientMagnitude {
           {name: 'outputValues', type: 'storage', group: 0, location: 4},
           {name: 'outputValidity', type: 'storage', group: 0, location: 5}
         ];
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: `${this.id}-magnitude`,
           source: this.getMagnitudeShaderSource(
             horizontalValues,
@@ -298,10 +298,14 @@ export class GPURasterGradientMagnitude {
               outputValues: getViewBinding(this.output, getBuffer),
               outputValidity: getViewBinding(this.outputValidity, getBuffer)
             };
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, dispatchSize[0], dispatchSize[1]);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: dispatchSize[0],
+              y: dispatchSize[1]
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });
