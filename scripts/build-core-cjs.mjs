@@ -115,15 +115,15 @@ for (const entryPoint of ['models', 'simulation']) {
 }
 process.stdout.write('Verified CommonJS renderer and experimental subpath identity.\n');
 
-// Compatibility facades must share execution classes with their gpgpu owner.
+// Dynamic resource facades preserve identity; engine owns shader-module convenience APIs.
 const engineApi = require('../modules/engine/dist/index.cjs');
 const executionApi = require('../modules/gpgpu/dist/index.cjs');
 const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
-for (const name of ['Computation', 'DynamicBuffer', 'DynamicTexture', 'ShaderInputs']) {
+for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(engineApi[name], executionApi[name]);
 }
-for (const name of ['BufferTransform', 'TextureTransform', 'GPUVectorModel', 'GPUVectorGeometry', 'getGPUVectorModelBatches', 'validateGPUVectorBatchStructure']) {
+for (const name of ['Computation', 'ShaderInputs', 'BufferTransform', 'TextureTransform', 'GPUVectorModel', 'GPUVectorGeometry', 'getGPUVectorModelBatches', 'validateGPUVectorBatchStructure']) {
   assert.equal(typeof engineApi[name], 'function');
   assert.equal(name in executionApi, false);
   assert.equal(name in dataApi, false);
@@ -151,6 +151,12 @@ for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert(!(name in coreEsm));
 }
 process.stdout.write('Verified optional dynamic resource identity in ESM and CommonJS.\n');
+
+// Shader-module conveniences remain engine-owned in both module formats.
+for (const name of ['Computation', 'ShaderInputs']) {
+  assert.equal(typeof engineEsm[name], 'function');
+  assert(!(name in executionEsm));
+}
 
 // Kernel execution helpers are exported only by gpgpu, in both module formats.
 for (const name of ['Kernel', 'RenderKernel']) {

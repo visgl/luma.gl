@@ -76,8 +76,6 @@ export {
 } from './operation/gpu-evaluator-inspection';
 
 // Shared execution and resource primitives
-export {ShaderInputs} from './execution/shader-inputs';
-export type {ShaderInputBinding, ShaderInputsProps} from './execution/shader-inputs';
 export type {
   TextureCubeFace,
   TextureImageData,
@@ -100,8 +98,6 @@ export type {
   DynamicBufferRange
 } from './execution/dynamic-buffer/dynamic-buffer';
 export {DynamicBuffer} from './execution/dynamic-buffer/dynamic-buffer';
-export type {ComputationProps} from './execution/compute/computation';
-export {Computation} from './execution/compute/computation';
 export {getPlatformInfo} from './execution/utils/get-platform-info';
 export type {
   KernelProps,

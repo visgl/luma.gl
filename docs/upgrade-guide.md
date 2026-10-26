@@ -10,7 +10,7 @@ Graph and gpgpu no longer depend on engine. Update these rendering integration i
 | Scenegraph physics adapters, sessions, and `makePhysicsScenegraph` | `@luma.gl/graph/gpu-physics` | `@luma.gl/engine/physics` |
 | Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models` |
 
-GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. Execution primitives (`Computation` and `ShaderInputs`) are now owned by `@luma.gl/gpgpu`; existing engine imports remain compatibility re-exports of the same implementations. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
+GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. `Computation` and `ShaderInputs` remain owned by `@luma.gl/engine`; graph and gpgpu operations execute through Kernel and RenderKernel without these shader-module conveniences. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
 
 ## Experimental package removal
 

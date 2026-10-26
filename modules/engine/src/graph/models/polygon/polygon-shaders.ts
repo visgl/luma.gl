@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, ShaderLayout} from '@luma.gl/core';
-import {ShaderInputs} from '@luma.gl/gpgpu';
+import {ShaderInputs} from '../../../shader-inputs';
 import {getIndexPickingModule, indexPicking} from '../../../index';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
