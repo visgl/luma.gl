@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getRayTracingQualityPreset} from '@luma.gl/experimental';
+import {getRayTracingQualityPreset} from '@luma.gl/anari';
 import {ANARIDevice} from '@luma.gl/anari';
 import {NullDevice} from '@luma.gl/test-utils';
 import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';

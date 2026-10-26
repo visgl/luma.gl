@@ -207,7 +207,7 @@ scenegraphs.skins.update();
 ```
 
 The shared
-[experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) consumes the
+[experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) consumes the
 format-independent palette through its surface skin descriptor.
 
 The optional ANARI glTF integration also maps retained source skin bindings to the same generic

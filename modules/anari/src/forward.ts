@@ -11,5 +11,5 @@ export type {
   SceneRenderOptions,
   SceneRenderStatistics,
   SceneSurface
-} from '@luma.gl/experimental';
-export {getSceneAlphaMode, SceneRenderer} from '@luma.gl/experimental';
+} from './renderers';
+export {getSceneAlphaMode, SceneRenderer} from './renderers';

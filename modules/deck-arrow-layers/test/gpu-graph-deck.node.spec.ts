@@ -11,7 +11,7 @@ import {
   GPUGraphEdgeLayer,
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
-import * as experimentalModule from '@luma.gl/experimental';
+import * as experimentalModule from '@luma.gl/graph/experimental/simulation';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import {describe, expect, test} from 'vitest';
 
@@ -38,7 +38,7 @@ type ExampleContentsEntry = {
 describe('optional GPU Graph deck.gl integration package isolation', () => {
   test('keeps deck.gl entirely outside graph production imports and dependencies', () => {
     const packageJson = JSON.parse(
-      readFileSync(new URL('../../experimental/package.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../../graph/package.json', import.meta.url), 'utf8')
     ) as {
       dependencies?: Record<string, string>;
       peerDependencies?: Record<string, string>;
@@ -67,7 +67,7 @@ describe('optional GPU Graph deck.gl integration package isolation', () => {
 
     expect(packageJson.private).toBe(true);
     expect(packageJson.dependencies?.['@deck.gl/core']).toContain('9.4.0');
-    expect(packageJson.dependencies?.['@luma.gl/experimental']).toBe(packageJson.version);
+    expect(packageJson.dependencies?.['@luma.gl/graph']).toBe(packageJson.version);
     expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBe(packageJson.version);
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
   });

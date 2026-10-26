@@ -48,8 +48,9 @@ filters, linked-span focus, visible-ancestor projection, stable compaction, and 
 draws. Its control buffers remain caller-owned, so applications can change policies and encode the
 same compiled graph without rebuilding CPU span lists or submitting work implicitly.
 
-Generic hierarchy layout, graph traversal, visibility, scene storage, renderer resource groups,
-and command scheduling remain available from `@luma.gl/experimental`.
+Generic hierarchy layout, graph traversal, visibility, scene storage, and renderer resource groups
+remain available from `@luma.gl/graph/gpu-core`. Graph authoring and command scheduling are
+available from `@luma.gl/graph`.
 
 ### Trace picking preserves canonical identity
 

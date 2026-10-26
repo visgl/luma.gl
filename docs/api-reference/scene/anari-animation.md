@@ -6,7 +6,7 @@ animation mixer; the ordinary `@luma.gl/anari` entry point does not import a glT
 second animation runtime.
 
 :::caution[Experimental optional adapter]
-`@luma.gl/anari` is a private, experimental workspace package. Import the `/gltf` subpath only
+`@luma.gl/anari` is a public package with experimental APIs. Import the `/gltf` subpath only
 when glTF animation integration is needed and `@luma.gl/gltf` is available.
 :::
 

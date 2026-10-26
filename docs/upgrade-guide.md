@@ -1,5 +1,18 @@
 # Upgrade Guide
 
+## Experimental package removal
+
+Remove `@luma.gl/experimental` from project dependencies and update imports:
+
+| Former APIs | New import |
+| --- | --- |
+| Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari` |
+| Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
+| Path and polygon models | `@luma.gl/graph/experimental/models` |
+| Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
+
+ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
+
 ## GPU graph authoring and command graph names
 
 The application-facing `GPUProgram` is now `GPUGraph`. The former execution-level

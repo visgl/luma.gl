@@ -1,7 +1,9 @@
 {
   "name": "@luma.gl/splats",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "10.0.0-alpha.4",
-  "private": true,
   "description": "Gaussian splat rendering utilities for luma.gl",
   "license": "MIT",
   "type": "module",
@@ -35,7 +37,6 @@
   "dependencies": {
     "@luma.gl/core": "10.0.0-alpha.4",
     "@luma.gl/engine": "10.0.0-alpha.4",
-    "@luma.gl/experimental": "10.0.0-alpha.4",
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
     "@luma.gl/graph": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4"

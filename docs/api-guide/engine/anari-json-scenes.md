@@ -11,7 +11,7 @@ import {AnariGuideDocsTabs} from '@site/src/components/docs/anari-guide-docs-tab
 
 ## Explore the JSON scene playground
 
-The private ANARI showcase includes a deck.gl-style JSON playground for describing complete scenes
+The ANARI showcase includes a deck.gl-style JSON playground for describing complete scenes
 without writing rendering code. Start the showcase from the repository root:
 
 ```bash
@@ -34,7 +34,7 @@ ANARI-specific and are not exported.
 
 :::caution[Experimental playground format]
 The JSON format and its optional schema exports are experimental. They are not part of the ANARI C
-specification and can change with the private `@luma.gl/anari` workspace.
+specification and can change with the experimental `@luma.gl/anari` package.
 :::
 
 ### Validate scenes with Zod and JSON Schema
@@ -173,7 +173,7 @@ vectors, or supply a complete 16-element `matrix`. Rotations use radians and are
 Z order. Instances referencing a `surface` directly share an automatically generated group; use an
 explicit named `group` when multiple surfaces or group-attached lights are required.
 
-Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad`
+Object subtypes match the ANARI package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad`
 geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot`
 lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`,
 `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept

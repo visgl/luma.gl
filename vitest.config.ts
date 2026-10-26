@@ -68,8 +68,8 @@ const nodeOnlyTestPatterns = [
   'modules/splats/test/{splat-rad-hierarchy,splat-browser-coverage}.spec.{ts,js}',
   'modules/test-utils/test/null-device/**/*.spec.{ts,js}',
   'modules/graph/test/geospatial/geospatial-types.spec.{ts,js}',
-  'modules/experimental/test/textures/packed-pixels.spec.{ts,js}',
-  'modules/experimental/test/webxr/webxr-animation-frame-provider.spec.{ts,js}',
+  'modules/engine/test/experimental/textures/packed-pixels.spec.{ts,js}',
+  'modules/engine/test/experimental/webxr/webxr-animation-frame-provider.spec.{ts,js}',
   'modules/shadertools/test/lib/preprocessor/**/*.spec.{ts,js}',
   'modules/shadertools/test/lib/generator/**/*.spec.{ts,js}',
   'modules/shadertools/test/lib/glsl-utils/**/*.spec.{ts,js}',
@@ -134,7 +134,7 @@ const nodeCoveragePatterns = [
 // Benchmarks answer performance questions but do not add stable correctness coverage. Keep them
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
-  'modules/experimental/test/simulation/scientific-flow-benchmark.spec.ts',
+  'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',

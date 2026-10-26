@@ -17,7 +17,7 @@ import {
   PBREnvironmentGenerator,
   ShadowMapRenderer,
   shadow
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import type {SpotLight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {CradleGeometryNode} from './cradle-geometry';

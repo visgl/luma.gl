@@ -100,7 +100,7 @@ Bounds are `[minimumX, minimumY, maximumX, maximumY]` in the source coordinate s
 expressed in destination units: `0.01` requests one centimeter of sampled accuracy when the target
 coordinate system uses meters.
 
-`@math.gl/geospatial/projection` is optional and is not a dependency of `@luma.gl/experimental`. Any function or
+`@math.gl/geospatial/projection` is an optional peer dependency loaded when the projection adapter is requested. Any function or
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 

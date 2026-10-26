@@ -266,9 +266,9 @@
         ]
       },
       "api-guide/shaders/glass-effects",
-      "api-reference/experimental/glass-material",
-      "api-reference/experimental/reflective-material",
-      "api-reference/experimental/pbr-environment"
+      "api-reference/engine/experimental/glass-material",
+      "api-reference/engine/experimental/reflective-material",
+      "api-reference/scene/pbr-environment"
     ]
   },
   {
@@ -460,6 +460,17 @@
               "api-reference/engine/compute/buffer-transform",
               "api-reference/engine/compute/texture-transform"
             ]
+          },
+          {
+            "type": "category",
+            "label": "Experimental utilities",
+            "items": [
+              "api-reference/engine/experimental/README",
+              "api-reference/engine/experimental/comparison-splitter",
+              "api-reference/engine/experimental/webxr/README",
+              "api-reference/engine/experimental/webxr/webxr-camera-texture",
+              "api-reference/engine/experimental/webxr/webxr-manager"
+            ]
           }
         ]
       },
@@ -488,6 +499,36 @@
               "api-reference/scene/anari-schemas",
               "api-reference/scene/anari-api-mapping"
             ]
+          },
+          {
+            "type": "category",
+            "label": "Scene Rendering",
+            "items": [
+              "api-reference/scene/scene-renderer",
+              "api-reference/scene/deferred-scene-renderer",
+              "api-reference/scene/selection-outline",
+              "api-reference/scene/depth-texture-copy",
+              "api-reference/scene/ray-tracing-quality-presets"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Lighting and Shadows",
+            "items": [
+              "api-reference/scene/g-buffer",
+              "api-reference/scene/deferred-lighting",
+              "api-reference/scene/clustered-lighting",
+              "api-reference/scene/shadow-map-renderer"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Materials and Transparency",
+            "items": [
+              "api-reference/scene/spectral-caustics-renderer",
+              "api-reference/scene/a-buffer-renderer",
+              "api-reference/scene/wboit-renderer"
+            ]
           }
         ]
       },
@@ -498,39 +539,8 @@
           "api-reference/experimental/README",
           {
             "type": "category",
-            "label": "Renderer",
+            "label": "Controls and simulation",
             "items": [
-              "api-reference/experimental/comparison-splitter",
-              {
-                "type": "category",
-                "label": "Scene Rendering",
-                "items": [
-                  "api-reference/experimental/scene-renderer",
-                  "api-reference/experimental/deferred-scene-renderer",
-                  "api-reference/experimental/selection-outline",
-                  "api-reference/experimental/depth-texture-copy",
-                  "api-reference/experimental/ray-tracing-quality-presets"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Lighting and Shadows",
-                "items": [
-                  "api-reference/experimental/g-buffer",
-                  "api-reference/experimental/deferred-lighting",
-                  "api-reference/experimental/clustered-lighting",
-                  "api-reference/experimental/shadow-map-renderer"
-                ]
-              },
-              {
-                "type": "category",
-                "label": "Materials and Transparency",
-                "items": [
-                  "api-reference/experimental/spectral-caustics-renderer",
-                  "api-reference/experimental/a-buffer-renderer",
-                  "api-reference/experimental/wboit-renderer"
-                ]
-              },
               {
                 "type": "category",
                 "label": "Simulation",
@@ -541,15 +551,6 @@
                   "api-reference/experimental/volumetric-fire-simulation"
                 ]
               }
-            ]
-          },
-          {
-            "type": "category",
-            "label": "WebXR",
-            "items": [
-              "api-reference/experimental/webxr/README",
-              "api-reference/experimental/webxr/webxr-camera-texture",
-              "api-reference/experimental/webxr/webxr-manager"
             ]
           }
         ]

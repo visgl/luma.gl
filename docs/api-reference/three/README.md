@@ -14,10 +14,9 @@ scenarios; they do not establish general compatibility or production readiness.
 
 :::
 
-`@luma.gl/three` is a private experimental workspace package pinned to Three.js
+`@luma.gl/three` is a public package with experimental APIs pinned to Three.js
 0.185.1. It accepts actual Three.js scenes and upstream TSL materials, and executes
-GPU work through luma.gl. The package is not published and does not promise general
-Three.js compatibility.
+GPU work through luma.gl. The package does not promise general Three.js compatibility.
 
 ```ts
 import {LumaRenderer} from '@luma.gl/three/backend';
@@ -53,7 +52,7 @@ cameras; animation uses one shared clock. The comparison uses a system sans-seri
 The example is listed in the website's Experimental section. Its backend selector
 recreates both sides with WebGPU or WebGL2, using upstream `forceWebGL` for the latter.
 The backend uses upstream `WGSLNodeBuilder` or `GLSLNodeBuilder` and luma resources
-for the selected device. The package remains private.
+for the selected device.
 
 The default scene loads the repository's Khronos Lantern glTF asset using upstream
 `GLTFLoader`. It retains the model's `MeshStandardMaterial` and base-color,
@@ -121,7 +120,7 @@ The root `LumaRenderer` export remains available for existing prototype callers.
 
 All paths are experimental and tested against Three **0.185.1**; the deck entry
 point additionally requires this workspace's patched deck **9.4.0** and luma **10**.
-The package is private. These are tested combinations, not a broad version range.
+These are tested combinations, not a broad version range.
 
 | Application needs | Entry point | Rendering and ownership contract |
 | --- | --- | --- |

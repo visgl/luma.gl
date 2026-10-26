@@ -24,9 +24,8 @@
 </p>
 
 ![Experimental](https://img.shields.io/badge/Status-Experimental-orange.svg?style=flat-square)
-![Private workspace](https://img.shields.io/badge/Availability-Private-red.svg?style=flat-square)
 
-A private, experimental, independently developed retained rendering interface implemented in the
+An experimental, independently developed retained rendering interface implemented in the
 spirit of ANARI on top of luma.gl.
 
 > **Independent ANARI-inspired project:** This is not an official ANARI implementation. It is not
@@ -48,15 +47,13 @@ Renderer implementations are also available through focused facade entry points:
 - `@luma.gl/anari/raytrace`
 - `@luma.gl/anari/raymarch`
 
-These paths keep application imports stable while the private scene package delegates shader and
-model implementation to shared rendering packages.
+These paths expose the renderer implementations owned by ANARI, using shared shader and GPU
+execution infrastructure.
 
-## Private workspace
+## Installation
 
-`@luma.gl/anari` is a private luma.gl workspace and is not published to npm.
-
-From a luma.gl checkout, install repository dependencies with `yarn install`. Other repository
-workspaces can declare a dependency on the package with `"@luma.gl/anari": "workspace:*"`.
+`@luma.gl/anari` is a public package with experimental APIs. Install it with `yarn add @luma.gl/anari`.
+From a luma.gl checkout, install repository dependencies with `yarn install`.
 
 ## Quick start
 
@@ -150,7 +147,7 @@ frame.render();
 ```
 
 The ANARI adapter translates committed objects for the shared `RayTracingSceneRenderer` in
-`@luma.gl/experimental`. Its retained WebGPU command graphs build Morton-sorted object/instance
+`@luma.gl/anari`. Its retained WebGPU command graphs build Morton-sorted object/instance
 TLAS and per-mesh triangle BLAS hierarchies, derive tight transformed mesh bounds from BLAS roots,
 and reuse existing hierarchy topology while instances animate. General-purpose `GPUSort`,
 `GPUSegmentedSort`, `GPUBVH`, and `GPUSegmentedBVH` contributors fuse small work into single
@@ -216,7 +213,7 @@ fallback instead of automatically selecting WebGPU. HDR-capable displays automat
 ### JSON scene playground
 
 Open `/playground.html` on the same development-server URL, or select **JSON LAB** from the
-showcase. The private, experimental playground provides a deck.gl-style JSON editor with
+showcase. The experimental playground provides a deck.gl-style JSON editor with
 `@@type` subtype declarations, named geometries and materials, retained surface references,
 transform instances, animated lights, renderer-independent scene data, frame renderer controls, and
 live HDR-capable rendering.

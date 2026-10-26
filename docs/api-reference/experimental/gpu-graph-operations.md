@@ -147,7 +147,7 @@ separate from the native explorer's custom **8-byte** integer-picking path above
 The reusable graph effect, node and edge layers, and graph integration's deck.gl imports live in
 the existing private `@deck.gl-community/arrow-layers` adapter. The website-only example consumes
 those exported symbols without importing `@deck.gl/core` or adding an example package; neither
-`@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl. The
+`@luma.gl/graph` nor its optional graph entry point depends on or imports deck.gl. The
 example supplies its sampled-layout helper to the private effect as an injected callback, so the
 package never imports example code or claims that the helper is a new production graph operation.
 

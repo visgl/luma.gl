@@ -12,12 +12,7 @@ import {
   TorusGeometry,
   RingGeometry
 } from '@luma.gl/engine';
-import type {
-  SceneCamera,
-  SceneMaterial,
-  SceneRenderOptions,
-  SceneSurface
-} from '@luma.gl/experimental';
+import type {SceneCamera, SceneMaterial, SceneRenderOptions, SceneSurface} from './renderers';
 import {
   type Light,
   type PBRMaterialBindings,

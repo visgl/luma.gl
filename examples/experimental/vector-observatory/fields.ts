@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {ScientificVectorFieldInput} from '@luma.gl/experimental';
+import type {ScientificVectorFieldInput} from '@luma.gl/graph/experimental/simulation';
 
 /** Reproducible analytic benchmarks, not observational ocean or weather data. */
 export function makeField(name: string, time = 0): ScientificVectorFieldInput {

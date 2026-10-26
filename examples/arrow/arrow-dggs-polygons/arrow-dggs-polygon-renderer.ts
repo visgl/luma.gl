@@ -16,7 +16,7 @@ import {
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {GPURenderable} from '@luma.gl/graph/gpu-tables';
-import {type PathStorageModel} from '@luma.gl/experimental/models';
+import {type PathStorageModel} from '@luma.gl/graph/experimental/models';
 import * as arrow from 'apache-arrow';
 import {
   createDggsPolygonPathModel,

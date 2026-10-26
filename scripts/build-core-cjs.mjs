@@ -11,24 +11,27 @@ import {transform} from 'esbuild';
 // Preserve one module graph across core, backend, constants, and optional debug
 // entry points. Separate bundled entry points would duplicate classes and hooks.
 const distributionDirectory = new URL('../modules/core/dist/', import.meta.url);
-const distributionFiles = await readdir(distributionDirectory, {recursive: true});
-await Promise.all(
-  distributionFiles.filter(file => file.endsWith('.js')).map(async file => {
-    const source = await readFile(new URL(file, distributionDirectory), 'utf8');
+await writeCommonJSModules(distributionDirectory);
+await writeCommonJSModules(new URL('../modules/anari/dist/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/graph/dist/experimental/', import.meta.url));
+
+async function writeCommonJSModules(directory) {
+  const files = await readdir(directory, {recursive: true});
+  await Promise.all(files.filter(file => file.endsWith('.js')).map(async file => {
+    const source = await readFile(new URL(file, directory), 'utf8');
     const rewrittenSource = source.replace(
       /((?:from\s+|import\s*(?:\(\s*)?)['"])(\.[^'"]+)\.js(['"])/g,
       '$1$2.cjs$3'
     );
     const {code} = await transform(rewrittenSource, {
       format: 'cjs',
-      // Node needs export-name annotations for dynamic import() of CommonJS files.
       platform: 'node',
       target: 'node16',
-      sourcefile: fileURLToPath(new URL(file, distributionDirectory))
+      sourcefile: fileURLToPath(new URL(file, directory))
     });
-    await writeFile(new URL(file.replace(/\.js$/, '.cjs'), distributionDirectory), code);
-  })
-);
+    await writeFile(new URL(file.replace(/\.js$/, '.cjs'), directory), code);
+  }));
+}
 
 const require = createRequire(import.meta.url);
 const coreApi = require(fileURLToPath(new URL('index.cjs', distributionDirectory)));
@@ -90,3 +93,22 @@ for (const [name, value] of Object.entries(rootGraphApi)) {
 }
 assert.equal('GPUScan' in rootGraphApi, false);
 process.stdout.write('Verified CommonJS GPU Graph package root identity.\n');
+
+// Public renderer facades and experimental aggregates preserve constructor identity.
+const anariDistributionDirectory = new URL('../modules/anari/dist/', import.meta.url);
+const anariApi = require(fileURLToPath(new URL('index.cjs', anariDistributionDirectory)));
+for (const entryPoint of ['forward', 'deferred', 'raytrace', 'raymarch']) {
+  const facade = require(fileURLToPath(new URL(`${entryPoint}.cjs`, anariDistributionDirectory)));
+  for (const [name, value] of Object.entries(facade)) {
+    assert.equal(value, anariApi[name]);
+  }
+}
+const graphExperimentalDirectory = new URL('experimental/', graphDistributionDirectory);
+const graphExperimentalApi = require(fileURLToPath(new URL('index.cjs', graphExperimentalDirectory)));
+for (const entryPoint of ['models', 'simulation']) {
+  const implementation = require(fileURLToPath(new URL(`${entryPoint}/index.cjs`, graphExperimentalDirectory)));
+  for (const [name, value] of Object.entries(implementation)) {
+    assert.equal(value, graphExperimentalApi[name]);
+  }
+}
+process.stdout.write('Verified CommonJS renderer and experimental subpath identity.\n');

@@ -1,6 +1,6 @@
 # GPU Tables
 
-`@luma.gl/gpgpu/gpu-data` provides primitive GPU chunks and vectors, while the private experimental
+`@luma.gl/gpgpu/gpu-data` provides primitive GPU chunks and vectors, while the experimental
 `@luma.gl/graph/gpu-tables` subpath represents row-aligned application data as typed GPU
 columns. A
 `GPUTable` is useful when the same data must feed rendering, transforms, or compute

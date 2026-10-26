@@ -11,7 +11,7 @@ WebGPU command graphs. Start with the highest-level API that expresses the workf
 ## Outcome and prerequisites
 
 This guide helps you choose between the stable `@luma.gl/gpgpu` evaluators, its experimental
-subpaths, Engine compute helpers, and private experimental GPU tables. It assumes familiarity with
+subpaths, Engine compute helpers, and experimental GPU tables. It assumes familiarity with
 buffers and typed arrays; the
 [Core GPU guide](/docs/api-guide/gpu) introduces those concepts.
 

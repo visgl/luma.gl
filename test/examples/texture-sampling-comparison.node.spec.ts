@@ -18,7 +18,7 @@ const RIGHT_COMPARISON_SAMPLER = 'activeRightComparisonSampler';
 describe('interactive texture sampler comparisons', () => {
   test('uses the accessible shared comparison splitter instead of a settings slider', () => {
     expect(EXAMPLE_SOURCE).toMatch(
-      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/experimental['"]/
+      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/engine\/experimental\/controls['"]/
     );
     expect(EXAMPLE_SOURCE).toMatch(/new\s+ComparisonSplitter\s*\(/);
     expect(EXAMPLE_SOURCE).toContain("id: 'texture-sampling-comparison-splitter'");
@@ -127,10 +127,8 @@ describe('interactive texture sampler comparisons', () => {
     ) as {dependencies: Record<string, string>};
     const viteConfig = readFileSync(path.join(EXAMPLE_DIRECTORY, 'vite.config.ts'), 'utf8');
 
-    expect(packageJson.dependencies['@luma.gl/experimental']).toBe(
-      packageJson.dependencies['@luma.gl/engine']
-    );
-    expect(viteConfig).toMatch(/['"]@luma\.gl\/experimental['"]:\s*`/);
+    expect(packageJson.dependencies['@luma.gl/engine']).toBeDefined();
+    expect(viteConfig).toMatch(/['"]@luma\.gl\/engine['"]:\s*`/);
   });
 
   test('documents direct comparison while preserving both advertised backends', () => {

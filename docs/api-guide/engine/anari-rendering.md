@@ -16,7 +16,7 @@ import {AnariGuideDocsTabs} from '@site/src/components/docs/anari-guide-docs-tab
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/anari` is an experimental, private retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
+`@luma.gl/anari` is an experimental retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
 
 This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/anari` API reference](/docs/api-reference/scene).
 
@@ -75,7 +75,7 @@ primary-ray traversal without CPU readback. See the
 for formats, ownership, and coordinate conventions. Ray distance is not projected
 device depth. The experimental `SelectionOutline` overlay consumes exact ID snapshots
 for visible selection boundaries. `projectedDepthTexture` and
-[`DepthTextureCopy`](/docs/api-reference/experimental/depth-texture-copy) support
+[`DepthTextureCopy`](/docs/api-reference/scene/depth-texture-copy) support
 depth-tested raster overlays with matching camera and viewport conventions.
 
 ## Current limitations
@@ -122,7 +122,7 @@ is hidden. **Interactive** enables adaptive resolution and temporal reprojection
 **Still / capture** chooses full resolution, four primary samples per frame, and fixed
 quality. Quality changes retain the inspected camera and selection; the disabled
 **Scene settings** entry reports custom JSON parameters. A moving scene will not converge as a still scene would. For application-owned
-controls, use [`getRayTracingQualityPreset`](/docs/api-reference/experimental/ray-tracing-quality-presets).
+controls, use [`getRayTracingQualityPreset`](/docs/api-reference/scene/ray-tracing-quality-presets).
 
 For a repeatable baseline capture, start the scene example and run:
 
@@ -166,13 +166,13 @@ roughness, and emissive marks reflected in a glossy floor. `transportMode: 'pbr'
 enables the opaque reflective path; `diffuse` remains the default. The same
 `maxBounces` budget and `samplingSeed` control both modes. Use the Transport and
 Bounces controls for comparison, or pass `--materials --transport pbr --bounces 3`
-to the capture harness. See the [quality reference](/docs/api-reference/experimental/ray-tracing-quality-presets)
+to the capture harness. See the [quality reference](/docs/api-reference/scene/ray-tracing-quality-presets)
 for probability weighting, roughness bounds, and remaining material limitations.
 
 ### Bounded ray image export
 
 The lower-level experimental scene renderer exposes
-[`exportRayTracingImage`](/docs/api-reference/experimental/scene-renderer#tiled-ray-image-export)
+[`exportRayTracingImage`](/docs/api-reference/scene/scene-renderer#tiled-ray-image-export)
 for fixed-camera RGBA8 tile export. Tiles share global sample coordinates and
 include clipped spatial/history halos, so guided filtering and progressive
 clamping agree at tile seams. The API keeps readback bounded to one tile,

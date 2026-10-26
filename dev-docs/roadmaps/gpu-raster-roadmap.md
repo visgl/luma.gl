@@ -179,7 +179,7 @@ and a measured kernel-size crossover.
 ### Shared FFT architecture and the proposed LuFFT subpath
 
 `SpectralOceanSimulation` already uses the existing `GPUFFT2D` primitive for three inverse
-transforms per update. The transform is public through `@luma.gl/experimental`, and its current
+transforms per update. The transform is public through `@luma.gl/graph/experimental`, and its current
 constructor, caller-owned buffers, encoder-based `encode` method, and ocean integration must
 remain compatible.
 
@@ -1622,7 +1622,7 @@ The integration should exercise real raster data in the Raster Lab, translate me
 normalized windows without introducing another transport or decoder, propagate cancellation
 across the adapter, and reconcile source-side and GPU-side cache policies so retained CPU
 allocations are not duplicated or hidden. This is a version-gated follow-up, not a new
-`@luma.gl/experimental` runtime dependency or a prerequisite for halo and seam correctness.
+`@luma.gl/graph/experimental` runtime dependency or a prerequisite for halo and seam correctness.
 
 WebGPU and WGSL behavior must follow the current
 [WebGPU specification](https://gpuweb.github.io/gpuweb/) and

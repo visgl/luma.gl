@@ -10,7 +10,7 @@ import {
   ScientificFlowGraph,
   ScientificFlowTracer,
   type ScientificFlowTraceResult
-} from '@luma.gl/experimental';
+} from '@luma.gl/graph/experimental/simulation';
 import {makeField} from './fields';
 import {ObservatoryControlPanel} from './control-panel';
 import './style.css';

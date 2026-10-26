@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ANARIDevice, ANARIFrame, ANARIRendererSubtype} from '@luma.gl/anari';
-import {getRayTracingQualityPreset, type RayTracingQualityPreset} from '@luma.gl/experimental';
+import {getRayTracingQualityPreset, type RayTracingQualityPreset} from '@luma.gl/anari';
 import {ANARIRendererSchema} from '@luma.gl/anari/schemas';
 import type {JSONRendererDeclaration} from './playground-scene';
 

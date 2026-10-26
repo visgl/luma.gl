@@ -16,7 +16,7 @@ the shared scene abstraction.
 
 This domain-specific model is exported from
 [`@luma.gl/graph/gpu-trace`](/docs/api-reference/experimental/gpu-trace), not from the generic
-`@luma.gl/experimental` root. Command scheduling and flat scene storage remain reusable without
+`@luma.gl/graph` root. Command scheduling and flat scene storage remain reusable without
 importing trace schemas.
 
 The motivation is interactive trace exploration at a scale where rebuilding JavaScript span lists

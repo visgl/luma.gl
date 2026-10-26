@@ -15,9 +15,7 @@ splat data, directional spherical harmonics, semantic filtering, GPU picking, hi
 bounded residency, decoded Khronos glTF attributes, covariance projection, depth ordering, and
 render models without depending on Apache Arrow, loaders.gl, glTF packages, or deck.gl.
 
-The module is currently a private, unpublished luma.gl workspace. Install dependencies from the
-repository root and add `"@luma.gl/splats": "workspace:*"` to another workspace package when
-developing against it locally.
+The module is public with experimental APIs. Install it with `yarn add @luma.gl/splats`.
 
 ## Interactive Gaussian splat showcase
 
@@ -43,7 +41,7 @@ WebGPU projects, orders, and draws each progressively added batch through a GPU 
 The graph renderers, GPU ordering, and storage-backed features require WebGPU. RAD hierarchy
 selection and generic residency can run on CPU-only data, including in an application-owned worker.
 Use the prepared SplatRenderer path when WebGL 2 compatibility or caller-provided source ordering
-is required. The package remains an experimental private workspace.
+is required. The package APIs remain experimental.
 
 ## Related modules
 

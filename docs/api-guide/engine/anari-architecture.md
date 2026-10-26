@@ -28,9 +28,9 @@ Each raster `frame.render()` performs the following work:
 
 The ANARI adapter does not own a second shader or material pipeline. It translates retained
 objects into the format-independent
-[`SceneRenderer`](/docs/api-reference/experimental/scene-renderer),
-[`DeferredSceneRenderer`](/docs/api-reference/experimental/deferred-scene-renderer), or
-`RayTracingSceneRenderer` descriptors from `@luma.gl/experimental`. The shared forward runtime uses
+[`SceneRenderer`](/docs/api-reference/scene/scene-renderer),
+[`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer), or
+`RayTracingSceneRenderer` descriptors from `@luma.gl/anari`. The shared forward runtime uses
 WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves
 compatible opaque scenes through the same retained object graph and falls back to forward rendering
 for unsupported scene features. The WebGPU ray-tracing path instead uses command-graph compute,

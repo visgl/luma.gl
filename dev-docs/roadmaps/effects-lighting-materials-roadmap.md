@@ -297,7 +297,7 @@ WebGL2 and WebGPU retain compatible visible results.
 
 ### Tranche 10 — Graduate GPU-driven visibility, LOD, and budgeted draws
 
-**Priority:** P1. **Owners:** existing `@luma.gl/experimental` GPU primitives, engine draw APIs,
+**Priority:** P1. **Owners:** existing `@luma.gl/graph/experimental` GPU primitives, engine draw APIs,
 `@luma.gl/gltf` adapters.
 
 - Reuse existing `GPUScene`, visibility/compaction primitives, and `DrawCommandBuffer` rather than

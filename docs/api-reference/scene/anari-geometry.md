@@ -4,7 +4,6 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 <DocumentationBadges>
   <DocumentationBadge tone="experimental">Experimental</DocumentationBadge>
-  <DocumentationBadge tone="neutral">Private workspace</DocumentationBadge>
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 

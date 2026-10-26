@@ -182,9 +182,9 @@ describe('@deck.gl-community/gpu-layers package boundary', () => {
     expect(packageJson.sideEffects).toBe(false);
     expect(Object.keys(packageJson.dependencies ?? {}).sort()).toEqual([
       '@deck.gl/core',
+      '@luma.gl/anari',
       '@luma.gl/core',
       '@luma.gl/engine',
-      '@luma.gl/experimental',
       '@luma.gl/gpgpu',
       '@luma.gl/graph',
       '@luma.gl/shadertools',

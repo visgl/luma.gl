@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import type {ScientificVectorFieldInput} from '@luma.gl/experimental';
+import type {ScientificVectorFieldInput} from '@luma.gl/graph/experimental/simulation';
 
 export const WIND_BOUNDS = [-180, -75, 180, 75] as const;
 

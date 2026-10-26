@@ -4,7 +4,6 @@ const alias = {
   '@luma.gl/arrow': `${__dirname}/../../../modules/arrow/src`,
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
-  '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,
   '@luma.gl/gltf': `${__dirname}/../../../modules/gltf/src`,
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,

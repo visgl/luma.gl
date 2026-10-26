@@ -13,7 +13,7 @@ import {
 } from '@deck.gl/core';
 import {assert, type Buffer, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import type {ScientificFlowGraph} from '@luma.gl/experimental';
+import type {ScientificFlowGraph} from '@luma.gl/graph/experimental/simulation';
 import {windStreak, SOURCE} from './wind-particle-layer-shaders';
 
 export type WindParticleLayerProps = LayerProps & {

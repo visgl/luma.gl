@@ -23,7 +23,7 @@ import {
   type WBOITShaderModuleProps,
   wboit,
   wboitPlugin
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import {
   getGPUVectorBuffer,
   getGPUVectorData,

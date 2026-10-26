@@ -21,14 +21,14 @@ import {
   createVolumetricFogCompositeShaderPass,
   depthAwareBlurCompositeShaderPass
 } from '@luma.gl/effects';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
 import {
-  ComparisonSplitter,
   createContactShadowCompositeShaderPass,
   GBuffer,
   shadow,
   ShadowMapRenderer,
   type ShadowShaderProps
-} from '@luma.gl/experimental';
+} from '@luma.gl/anari';
 import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {

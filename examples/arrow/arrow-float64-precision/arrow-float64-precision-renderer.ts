@@ -10,7 +10,7 @@ import {
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURenderable} from '@luma.gl/graph/gpu-tables';
-import {PathAttributeModel} from '@luma.gl/experimental/models';
+import {PathAttributeModel} from '@luma.gl/graph/experimental/models';
 import type {ShaderInputs} from '@luma.gl/engine';
 import {
   createFloat64PrecisionShaderInputs,
