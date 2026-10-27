@@ -52,8 +52,14 @@ export class WEBGLFramebuffer extends Framebuffer {
     if (this.destroyed) {
       return;
     }
-    // Delete the handle before super.destroy(), which sets this.destroyed
     if (this.handle !== null && this.ownsHandle) {
+      // Deleting a bound framebuffer implicitly unbinds it; keep the state tracker in sync.
+      if (this.gl.getParameter(GL.DRAW_FRAMEBUFFER_BINDING) === this.handle) {
+        this.gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, null);
+      }
+      if (this.gl.getParameter(GL.READ_FRAMEBUFFER_BINDING) === this.handle) {
+        this.gl.bindFramebuffer(GL.READ_FRAMEBUFFER, null);
+      }
       this.gl.deleteFramebuffer(this.handle);
     }
     super.destroy(); // destroys owned resources etc.
