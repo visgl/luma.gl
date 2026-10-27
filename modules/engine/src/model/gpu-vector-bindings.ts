@@ -12,7 +12,7 @@ import {
   type VertexFormat
 } from '@luma.gl/core';
 import {validateGPUVectorBatchStructure} from '../utils/gpu-vector-batch-structure';
-import {DynamicBuffer} from '../dynamic-buffer/dynamic-buffer';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import type {GPUVectorModelInput} from './gpu-vector-model-batches';
 
 /** One raw typed constant, structurally implemented by GPUConstant. */

@@ -9,11 +9,11 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   ClipSpace,
-  DynamicTexture,
   Geometry,
   Model,
   ShaderPassRenderer
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';

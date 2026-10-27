@@ -7,3 +7,12 @@ GPU data primitives and immediate GPU computations for luma.gl.
 - `/cpu`, `/webgl`, and `/webgpu` expose operation backends.
 
 Execution graphs, graph-based algorithms, and higher-level processing now live in [`@luma.gl/graph`](../graph/README.md).
+
+## Execution foundation
+
+The root also exports `Kernel` and `RenderKernel`. These implementations depend on core and
+shadertools, not engine or graph. WebGL operations execute through RenderKernel.
+`Computation`, `ShaderInputs`, `GPUVectorModel`, `GPUVectorGeometry`, `BufferTransform`, and `TextureTransform` belong to `@luma.gl/engine`, and
+`TableTransform` belongs to `@luma.gl/engine/tables`.
+Dynamic resources belong to `@luma.gl/core/dynamic`, with compatibility exports here.
+The `_internal/*` subpaths support engine implementation sharing and are not application APIs.

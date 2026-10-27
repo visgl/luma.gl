@@ -11,8 +11,10 @@ import {
   type ArrowMeshTable
 } from '@luma.gl/arrow';
 import type {Buffer, ShaderLayout} from '@luma.gl/core';
-import {DynamicBuffer, Model} from '@luma.gl/engine';
-import {GPUTable, GPUTableModel} from '@luma.gl/graph/gpu-tables';
+import {Model} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
+import {GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 

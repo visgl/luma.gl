@@ -18,12 +18,12 @@ import {
   getDynamicBufferFromBinding,
   isBufferRangeBinding,
   resolveBufferRangeBinding
-} from '../dynamic-buffer/dynamic-buffer';
+} from '@luma.gl/core/dynamic';
 import {
   getTextureBindingLayout,
   isTextureBindingSource,
   type TextureBindingSource
-} from '../dynamic-texture/texture-binding-source';
+} from '@luma.gl/core/dynamic';
 import {ShaderInputs} from '../shader-inputs';
 import {shaderModuleHasUniforms} from '../utils/shader-module-utils';
 import {uid} from '../utils/uid';

@@ -48,7 +48,7 @@ import type {
   PathAttributeModelState,
   PathRenderBatchState,
   PathSegmentLayout
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/engine/models';
 import {
   makeArrowPathViewOriginVector,
   type ArrowPathViewOriginType,

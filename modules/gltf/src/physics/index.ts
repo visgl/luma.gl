@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {GPURigidBodyWorld, type GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
 import {
-  GPURigidBodyWorld,
   ScenegraphPhysicsBehaviors,
-  type ScenegraphPhysicsDefinition,
-  type GPURigidBodyWorldProps
-} from '@luma.gl/graph/gpu-physics';
+  type ScenegraphPhysicsDefinition
+} from '@luma.gl/engine/physics';
 import type {GLTFPhysicsDescription} from './physics-types';
 export {makeGLTFPhysicsMeshResolver, type GLTFPhysicsMeshSource} from './mesh-snapshot';
 export {parseGLTFPhysics, GLTF_PHYSICS_DRAFT} from './parse-gltf-physics';

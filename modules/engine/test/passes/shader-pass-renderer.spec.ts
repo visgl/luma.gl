@@ -4,7 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
+import {ShaderPassRenderer, ShaderInputs} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
 import {Buffer, CommandEncoder, Texture, type Device} from '@luma.gl/core';
 import {supportsComputeOptimization} from '../../src/passes/shader-pass-renderer';

@@ -6,7 +6,8 @@ import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {GPURecordBatch, GPUTable, GPUTableGeometry} from '@luma.gl/graph/gpu-tables';
+import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUTableGeometry} from '@luma.gl/engine/tables';
 
 it('GPUTableGeometry exposes one static table batch as geometry', () => {
   const device = new NullDevice({});

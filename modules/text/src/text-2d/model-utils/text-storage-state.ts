@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Buffer} from '@luma.gl/core';
-import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
+import {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';
 import type {FontAtlasRenderSettings} from '../../fonts/atlas/font-atlas';
 import type {GpuExpandedTextStream, GpuTextDictionaryCompressedStream} from './gpu-text-types';
 

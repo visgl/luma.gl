@@ -7,7 +7,6 @@ import {
   AnimationLoopTemplate,
   type AnimationProps,
   CubeGeometry,
-  DynamicTexture,
   loadImageBitmap,
   type Material,
   MaterialFactory,
@@ -16,6 +15,7 @@ import {
   ShaderInputs,
   SphereGeometry
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {
   floatColors,
   lighting,

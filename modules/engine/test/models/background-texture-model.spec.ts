@@ -4,7 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {getTestDevices} from '@luma.gl/test-utils';
-import {BackgroundTextureModel, DynamicTexture} from '@luma.gl/engine';
+import {BackgroundTextureModel} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {Texture} from '@luma.gl/core';
 
 // Ensure setProps updates the texture immediately when texture is ready

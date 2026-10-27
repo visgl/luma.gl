@@ -422,7 +422,7 @@ If you need a matching layout, call `texture.computeMemoryLayout()` for the same
 
 Deprecated convenience API.
 
-Use `readBuffer()` with an explicit destination buffer, or engine [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) when you want convenience readback that allocates temporary buffers for you.
+Use `readBuffer()` with an explicit destination buffer, or engine [`DynamicTexture`](/docs/api-reference/core/dynamic/dynamic-texture) when you want convenience readback that allocates temporary buffers for you.
 
 ### `writeBuffer()`
 

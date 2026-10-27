@@ -10,15 +10,16 @@ import {
   type Device,
   type ShaderLayout
 } from '@luma.gl/core';
-import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
   GPUTableComputation,
-  GPUTableModel,
   type GPUInputSchema
 } from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const TRIPLE_COMPUTE_SHADER = /* wgsl */ `\

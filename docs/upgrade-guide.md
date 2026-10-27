@@ -1,5 +1,17 @@
 # Upgrade Guide
 
+## Graph and engine dependency direction
+
+Graph and gpgpu no longer depend on engine. Update these rendering integration imports:
+
+| APIs | Previous import | New import |
+| --- | --- | --- |
+| `GPUTableModel`, `GPUTableGeometry`, `TableTransform` and their associated types | `@luma.gl/graph/gpu-tables` | `@luma.gl/engine/tables` |
+| Scenegraph physics adapters, sessions, and `makePhysicsScenegraph` | `@luma.gl/graph/gpu-physics` | `@luma.gl/engine/physics` |
+| Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models` |
+
+GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. `Computation` and `ShaderInputs` remain owned by `@luma.gl/engine`; graph and gpgpu operations execute through Kernel and RenderKernel without these shader-module conveniences. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
+
 ## Experimental package removal
 
 Remove `@luma.gl/experimental` from project dependencies and update imports:
@@ -8,7 +20,7 @@ Remove `@luma.gl/experimental` from project dependencies and update imports:
 | --- | --- |
 | Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari` |
 | Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
-| Path and polygon models | `@luma.gl/graph/experimental/models` |
+| Path and polygon models | `@luma.gl/engine/models` |
 | Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
 
 ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
@@ -378,3 +390,13 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 ### Table compute execution
 
 `GPUTableComputation` now delegates to Kernel instead of inheriting Computation. Its `inputVectors`, `bindings`, `setBindings()`, `dispatch()`, `dispatchBatches()`, and `destroy()` APIs are retained. Construction takes Kernel pipeline options and assembled WGSL source; assemble shader modules and defines with shadertools before construction. Uniform buffers are explicit bindings owned by the caller.
+
+### Kernel imports
+
+`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/gpgpu`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/gpgpu`.
+
+`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/gpgpu` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
+
+### GPU vector rendering imports
+
+`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/gpgpu` or `@luma.gl/gpgpu/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant remain in gpgpu/gpu-data. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.

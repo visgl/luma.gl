@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GroupNode} from '@luma.gl/engine';
-import {ScenegraphPhysicsInstance, type ScenegraphPhysicsDefinition} from '../../src/gpu-physics';
+import {ScenegraphPhysicsInstance, type ScenegraphPhysicsDefinition} from '@luma.gl/engine/physics';
 
 it('rebuilds geometry transactionally by scene references and resets only authored physics', async context => {
   const device = await getWebGPUTestDevice();

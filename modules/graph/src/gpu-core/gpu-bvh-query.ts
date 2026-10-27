@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import type {GPUBVHBoundsView} from './gpu-bvh';
 import {

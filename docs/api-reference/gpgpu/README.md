@@ -195,9 +195,17 @@ registering CPU handlers for another device type.
 
 ## Related Engine APIs
 
-`@luma.gl/gpgpu` uses engine compute helpers internally, but it does not re-export them. Import [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform), and [`Computation`](/docs/api-reference/engine/compute/computation) from `@luma.gl/engine` when you need direct access to those lower-level classes.
+`@luma.gl/gpgpu` executes WebGL operations through `RenderKernel`, without depending on engine. Import `Kernel` and `RenderKernel` from `@luma.gl/gpgpu`. Shader-module conveniences `Computation` and `ShaderInputs` belong to `@luma.gl/engine`. The model-based [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) and [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) adapters belong to `@luma.gl/engine`.
 
 ## Geometry and point clouds
 
 - [GPU Geometry](./gpu-geometry.md): triangle and vertex normals plus adjacency-based mesh smoothing.
 - [GPU Point Cloud](./gpu-pointcloud.md): deterministic voxel sampling and bounded exact radius filtering.
+
+## Dynamic resource compatibility
+
+Import `DynamicBuffer` and `DynamicTexture` from `@luma.gl/core/dynamic`. Gpgpu accepts these resources, but core owns their implementation. Existing gpgpu exports remain compatibility aliases.
+
+## Execution kernels
+
+Import `Kernel` and `RenderKernel` from `@luma.gl/gpgpu`. [Kernel](/docs/api-reference/gpgpu/kernel) executes WebGPU compute shaders; [RenderKernel](/docs/api-reference/gpgpu/render-kernel) executes WebGL/WebGPU render shaders. Both consume already assembled source and explicit per-call bindings.

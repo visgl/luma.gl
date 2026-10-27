@@ -5,11 +5,8 @@
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
-import {
-  GPURigidBodyWorld,
-  ScenegraphPhysicsProperties,
-  type GPURigidBodyJoint
-} from '../../src/gpu-physics';
+import {GPURigidBodyWorld, type GPURigidBodyJoint} from '../../src/gpu-physics';
+import {ScenegraphPhysicsProperties} from '@luma.gl/engine/physics';
 
 it.for([
   1, 2, 3

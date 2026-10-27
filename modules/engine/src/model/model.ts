@@ -14,7 +14,7 @@ import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
 import {Material} from '../material/material';
 import {GPUVectorGeometry} from '../geometry/gpu-vector-geometry';
 import {makeGPUVectorGeometryFromGPUGeometry} from '../geometry/gpu-vector-geometry-adapter';
-import {isTextureBindingSource} from '../dynamic-texture/texture-binding-source';
+import {isTextureBindingSource} from '@luma.gl/core/dynamic';
 
 /** Properties for the high-level rendering model. */
 export type ModelProps = Omit<GPUVectorModelProps, 'gpuVectorCount' | 'geometry'> & {

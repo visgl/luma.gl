@@ -4,7 +4,7 @@
 
 import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
 import {Matrix4} from '@math.gl/core';
-import {makeRigidBodyJointsFromScenegraph} from '@luma.gl/graph/gpu-physics';
+import {makeRigidBodyJointsFromScenegraph} from '@luma.gl/engine/physics';
 import {GroupNode, JointController} from '@luma.gl/engine';
 import {readPhysicsRotation, readPhysicsVector} from './physics-transforms';
 import type {GLTFPhysicsDescription} from './physics-types';

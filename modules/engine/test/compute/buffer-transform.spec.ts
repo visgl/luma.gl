@@ -4,7 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {BufferTransform, DynamicBuffer, GPUVectorModel} from '@luma.gl/engine';
+import {BufferTransform, GPUVectorModel} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {Buffer, Device} from '@luma.gl/core';
 

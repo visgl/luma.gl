@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuVS.
 
 import type {Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
 import {
   createTransientView,

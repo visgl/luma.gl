@@ -4,7 +4,7 @@
 
 import {expect, test} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {add, backendRegistry, GPUDataEvaluator} from '@luma.gl/gpgpu';
 import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
 import {GPUData, GPUDataView} from '@luma.gl/gpgpu/gpu-data';

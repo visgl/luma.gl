@@ -13,7 +13,8 @@ import {
   type ShaderLayout,
   type Texture
 } from '@luma.gl/core';
-import {DynamicBuffer, Model, type TextureBindingSource} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {DynamicBuffer, type TextureBindingSource} from '@luma.gl/core/dynamic';
 import {ShaderInputs} from '../../src/shader-inputs';
 import {
   getNullTestDevice,
