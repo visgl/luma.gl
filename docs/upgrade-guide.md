@@ -200,6 +200,9 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
+- Named shader hook injections now throw if their target is not registered. Register the hook
+  for the matching shader stage before injecting into it. WGSL continues to skip unregistered
+  module injections, which may contain GLSL-only code.
 
 **@luma.gl/core/webgpu**
 

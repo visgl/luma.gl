@@ -109,12 +109,20 @@ is already present.
 
 Removes a previously registered default module.
 
-### `addShaderHook(hook: string, opts?: object): void`
+### `addShaderHook(hook: string, options?: ShaderHookOptions): void`
 
 Registers a stage-prefixed hook function that modules can inject into. GLSL
 hook signatures use GLSL syntax, for example
 `vs:OFFSET_POSITION(inout vec4 position)`. WGSL hook signatures use WGSL syntax,
 for example `vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)`.
+`options.header` and `options.footer` are emitted at the start and end of the
+generated hook function.
+
+### `resetShaderHooks(): void`
+
+Removes every hook registered with `addShaderHook()`. Default modules are not
+affected. Use this instead of mutating assembler internals when an application
+needs to re-register its hooks.
 
 ### `GLSLShaderAssembler.assembleGLSLShaderPair(props: AssembleShaderProps)`
 
@@ -169,6 +177,10 @@ fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> 
   return shaderPosition;
 }
 ```
+
+Named hook injections must target a hook registered for the shader stage. WGSL
+ignores module injections for unregistered hooks because module injections may contain
+GLSL-only code.
 
 Standard named injections are also available:
 

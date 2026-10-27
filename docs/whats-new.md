@@ -236,6 +236,7 @@ Target Release Date: Q3, 2026
 - **`CompositeShaderPass`** - The structured multi-pass postprocessing API and effect factories
   use composite-pass naming in place of `ShaderPassPipeline`.
 
+
 **@luma.gl/arrow (Private)**
 
 - **High-dimensional Arrow storage columns** - Existing Arrow table/vector adapters map wide `FixedSizeList` values directly into row-aligned fixed-size-list GPU columns, with optional named validity siblings and preserved parent/child nulls, record batches, and source identity.
