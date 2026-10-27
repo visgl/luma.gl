@@ -246,7 +246,7 @@ it('ShaderAssembler#resetShaderHooks removes registered hooks', () => {
     'void RESET_HOOK'
   );
   expect(() => shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject})).toThrow(
-    'Unknown shader hook vs:RESET_HOOK (registered: none)'
+    'Unknown shader hook vs:RESET_HOOK'
   );
 
   shaderAssembler.addShaderHook('vs:RESET_HOOK(inout vec4 position)');

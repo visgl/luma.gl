@@ -19,7 +19,7 @@ import {
   getShaderHooks,
   validateShaderHookInjections,
   isShaderHookRegistered,
-  type ShaderHookDeclarations
+  type ShaderHook
 } from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
@@ -94,7 +94,7 @@ export type AssembleShaderOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
-  hookFunctions?: ShaderHookDeclarations;
+  hookFunctions?: readonly (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
@@ -128,7 +128,7 @@ type AssembleStageOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Hook functions */
-  hookFunctions?: ShaderHookDeclarations;
+  hookFunctions?: readonly (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
@@ -444,7 +444,7 @@ function assembleShaderGLSL(
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
     defines?: Record<string, boolean | number>;
-    hookFunctions?: ShaderHookDeclarations;
+    hookFunctions?: readonly (ShaderHook | string)[];
     inject?: Record<string, string | ShaderInjection>;
     pluginInjections?: Record<string, ShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;

@@ -4,7 +4,6 @@
 
 import type {ShaderInjection} from './shader-injections';
 
-// A normalized hook function
 /**
  * The shader hook mechanism allows the application to create shaders
  * that can be automatically extended by the shader modules the application
@@ -31,32 +30,15 @@ export type ShaderHook = {
 /** Optional source included before or after every injection in a hook function. */
 export type ShaderHookOptions = Pick<ShaderHook, 'header' | 'footer'>;
 
-/** A parsed shader hook declaration. */
-export type NormalizedShaderHook = {
-  /** Stage-prefixed hook name without its function signature. */
-  hook: string;
-  /** Parsed function signature without the shader stage prefix. */
-  signature: string;
-  /** Code always included at the beginning of a hook function. */
-  header: string;
-  /** Code always included at the end of a hook function. */
-  footer: string;
-};
-
-/** Normalized shader hook declarations grouped by shader stage. */
+/** Shader hook declarations grouped by shader stage. */
 export type ShaderHookRegistry = {
-  /** Normalized shader hooks for vertex shader */
-  vertex: Record<string, NormalizedShaderHook>;
-  /** Normalized shader hooks for fragment shader */
-  fragment: Record<string, NormalizedShaderHook>;
+  vertex: Record<string, Required<ShaderHook>>;
+  fragment: Record<string, Required<ShaderHook>>;
 };
-
-/** Hook declarations accepted by shader assembly. */
-export type ShaderHookDeclarations = readonly (ShaderHook | string)[];
 
 /** Generate hook source code */
 export function getShaderHooks(
-  hookFunctions: Record<string, NormalizedShaderHook>,
+  hookFunctions: Record<string, Required<ShaderHook>>,
   hookInjections: Record<string, ShaderInjection[]>,
   shaderLanguage: 'glsl' | 'wgsl' = 'glsl'
 ): string {
@@ -88,7 +70,9 @@ export function getShaderHooks(
  * Parse string based hook functions and split them per shader stage.
  * A later declaration of the same stage-prefixed hook name replaces an earlier one.
  */
-export function normalizeShaderHooks(hookFunctions: ShaderHookDeclarations): ShaderHookRegistry {
+export function normalizeShaderHooks(
+  hookFunctions: readonly (ShaderHook | string)[]
+): ShaderHookRegistry {
   const result: ShaderHookRegistry = {vertex: {}, fragment: {}};
 
   for (const hookFunction of hookFunctions) {
@@ -115,22 +99,14 @@ export function validateShaderHookInjections(
 ): void {
   const stagePrefix = stage === 'vertex' ? 'vs:' : stage === 'fragment' ? 'fs:' : null;
 
-  for (const hookName of Object.keys(hookInjections)) {
+  for (const hookName in hookInjections) {
     if (stagePrefix && !hookName.startsWith(stagePrefix)) {
       continue;
     }
 
     if (!isShaderHookRegistered(registry, hookName)) {
-      // Unknown shader hook: the injection targets a hook that was never declared with
-      // `ShaderAssembler.addShaderHook()` (or `hookFunctions`). Check the hook name and stage
-      // prefix against the registered hooks listed in the message.
-      const registeredHookNames = [
-        ...Object.keys(registry.vertex),
-        ...Object.keys(registry.fragment)
-      ].sort();
-      throw new Error(
-        `Unknown shader hook ${hookName} (registered: ${registeredHookNames.join(', ') || 'none'})`
-      );
+      // The injection targets a hook that was not declared for this stage.
+      throw new Error(`Unknown shader hook ${hookName}`);
     }
   }
 }
@@ -145,7 +121,7 @@ function addShaderHookToRegistry(
   const shaderStage = hook.slice(0, stageSeparatorIndex);
   const signature = hook.slice(stageSeparatorIndex + 1);
   const name = hook.replace(/\(.+/, '');
-  const normalizedHook: NormalizedShaderHook = {
+  const normalizedHook: Required<ShaderHook> = {
     hook: name,
     signature,
     header: options.header || '',
