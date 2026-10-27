@@ -179,6 +179,23 @@ than relying on vertex or index ordering.
 
 **@luma.gl/gpgpu**
 
+### GPUGroupAggregation sum and mean limits
+
+`GPUGroupAggregation` `sum` and `mean` now reduce graph-owned partials in a fixed order instead
+of using float atomics. The props are unchanged, but the operation has new capacity limits:
+
+- Outputs with more than 16,777,215 groups now throw when the operation adds its command nodes.
+  Count, minimum, and maximum keep their previous limits.
+- Each operation allocates a transient partial-sum array of up to about 4 MB, or `4 × groupCount`
+  bytes above about one million groups. Mean allocates a second array of the same size for
+  partial counts. The graph throws when one array exceeds the device's
+  `maxStorageBufferBindingSize`.
+- Results are bitwise repeatable across runs on the same device, but can differ from earlier
+  releases in the last bits because the addition order changed. Accumulation is still
+  sequential `float32`, so cancellation-heavy inputs can lose small terms.
+
+See [GPUGroupAggregation](./api-reference/experimental/gpu-core/gpu-group-aggregation) for details.
+
 ### GPUFFT2D graph lifecycle
 
 `GPUFFT2D` now takes `{input, output, width, height, batchCount?, direction?}` graph views.

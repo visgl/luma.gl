@@ -169,6 +169,8 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/gpgpu**
 
+- **Deterministic grouped sums** - [`GPUGroupAggregation`](/docs/api-reference/experimental/gpu-core/gpu-group-aggregation) `sum` and `mean`, and the GPU dataframe and crossfilter group-bys built on it, now reduce per-workgroup partials in a fixed order instead of contending on float compare-exchange atomics. Results are bitwise-identical from run to run, and few-group sums no longer slow down as rows per group grow.
+
 - **Additive GPU point-cloud octrees** - `GPUPointCloudOctree` builds sparse tile metadata and source-ID ranges without reordering positions. The new point-cloud octree example shows tile bounds, additive detail levels and command-graph diagnostics.
 
 - **Experimental GPU sphere physics** - `@luma.gl/graph/gpu-physics` adds grid-based bounded contacts, inverse-mass Jacobi solving, solid-sphere angular dynamics, friction, sleeping and live finite-plane/gravity settings. The standalone sphere-world sandbox renders quaternion-driven cue-ball bands and benchmarks up to 10,000 GPU-resident bodies with explicit capacity diagnostics.
