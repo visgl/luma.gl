@@ -15,4 +15,4 @@ shadertools, not engine or graph. WebGL operations execute through RenderKernel.
 `Computation`, `ShaderInputs`, `GPUVectorModel`, `GPUVectorGeometry`, `BufferTransform`, and `TextureTransform` belong to `@luma.gl/engine`, and
 `TableTransform` belongs to `@luma.gl/engine/tables`.
 Dynamic resources belong to `@luma.gl/core/dynamic`, with compatibility exports here.
-The `_internal/*` subpaths support engine implementation sharing and are not application APIs.
+The `_internal/*` subpaths support shared platform information and dynamic-resource compatibility exports; they are not application APIs. Engine owns its prop-comparison, ID-generation, and rendering debug helpers.
