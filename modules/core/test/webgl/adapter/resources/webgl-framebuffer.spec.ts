@@ -54,3 +54,47 @@ it('WEBGLFramebuffer destruction clears only matching tracked framebuffer bindin
     device.destroy();
   }
 });
+
+it('WEBGLFramebuffer destruction does not let popState restore its deleted handle', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const framebuffer = device.createFramebuffer({colorAttachments: ['rgba8unorm']});
+  const otherFramebuffer = device.createFramebuffer({colorAttachments: ['rgba8unorm']});
+  const boundHandles: Array<WebGLFramebuffer | null> = [];
+  const originalBindFramebuffer = gl.bindFramebuffer;
+  gl.bindFramebuffer = ((target: number, handle: WebGLFramebuffer | null) => {
+    boundHandles.push(handle);
+    return originalBindFramebuffer.call(gl, target, handle);
+  }) as typeof gl.bindFramebuffer;
+  try {
+    // Bound before the state frame: destruction saves the handle as the value to restore
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, framebuffer.handle);
+    device.pushState();
+    framebuffer.destroy();
+    device.popState();
+    expect(gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING), 'deleted handle is not restored').toBe(
+      null
+    );
+
+    // Saved by a binding inside the state frame, then deleted while not bound
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, otherFramebuffer.handle);
+    device.pushState();
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    const deletedHandle = otherFramebuffer.handle;
+    otherFramebuffer.destroy();
+    device.popState();
+    expect(gl.getParameter(gl.READ_FRAMEBUFFER_BINDING), 'deleted handle is not restored').toBe(
+      null
+    );
+
+    expect(
+      boundHandles.filter(handle => handle === framebuffer.handle || handle === deletedHandle),
+      'deleted handles are only bound before deletion'
+    ).toEqual([framebuffer.handle, deletedHandle]);
+  } finally {
+    gl.bindFramebuffer = originalBindFramebuffer;
+    framebuffer.destroy();
+    otherFramebuffer.destroy();
+    device.destroy();
+  }
+});

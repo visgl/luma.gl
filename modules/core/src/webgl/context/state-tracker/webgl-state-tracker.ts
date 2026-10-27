@@ -61,6 +61,18 @@ export class WebGLStateTracker {
   }
 
   /**
+   * Replaces a saved parameter value in every state stack frame, so that pop() does not restore
+   * it. Used when the value is a handle that has been deleted.
+   */
+  replaceSavedValue(key: number, value: unknown, replacement: unknown): void {
+    for (const oldValues of this.stateStack) {
+      if (key in oldValues && oldValues[key] === value) {
+        oldValues[key] = replacement;
+      }
+    }
+  }
+
+  /**
    * Initialize WebGL state caching on a context
    * can be called multiple times to enable/disable
    *
