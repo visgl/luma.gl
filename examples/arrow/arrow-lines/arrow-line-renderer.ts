@@ -24,7 +24,7 @@ import {
   PathTripsStorageModel,
   type PathAttributeModelProps,
   type PathStorageInputProps
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/engine/models';
 import * as arrow from 'apache-arrow';
 import {
   createArrowLineShaderInputs,

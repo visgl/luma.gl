@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {
   GPUCommandGraph,
   GraphBufferUsage,
@@ -546,7 +546,7 @@ function addComponentPass<Parameters>(
     id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id,
         source: makeShader(locations),
         shaderLayout: {bindings: declarations}
@@ -557,23 +557,23 @@ function addComponentPass<Parameters>(
           for (const binding of bindings) {
             resolved[binding.name] = getViewBinding(binding.view, getBuffer);
           }
-          computation.setBindings(resolved);
+          const kernelBindings = resolved;
           if (indirectDispatch) {
-            computation.dispatchIndirect(
-              computePass,
-              getBuffer(indirectDispatch.buffer),
-              indirectDispatch.byteOffset
-            );
+            kernel.dispatchIndirect(computePass, {
+              bindings: kernelBindings,
+              indirectBuffer: getBuffer(indirectDispatch.buffer),
+              indirectOffset: indirectDispatch.byteOffset
+            });
           } else if (directDispatch) {
-            computation.dispatch(
-              computePass,
-              directDispatch[0],
-              directDispatch[1],
-              directDispatch[2]
-            );
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: directDispatch[0],
+              y: directDispatch[1],
+              z: directDispatch[2]
+            });
           }
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

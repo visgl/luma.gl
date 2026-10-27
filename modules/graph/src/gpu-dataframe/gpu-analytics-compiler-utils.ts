@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
@@ -236,7 +236,7 @@ export function createGPUAnalyticsResultTable<Source extends GPUTypeMap, Result 
   }
 }
 
-/** Adds one safely bound scalar computation without changing graph ownership or submission. */
+/** Adds one safely bound scalar kernel without changing graph ownership or submission. */
 export function addGPUAnalyticsComputePass(
   graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
   props: {
@@ -252,7 +252,7 @@ export function addGPUAnalyticsComputePass(
     id: props.id,
     resources: [...props.resources],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -270,10 +270,15 @@ export function addGPUAnalyticsComputePass(
           for (const [name, view] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

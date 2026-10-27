@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {createTransientView, getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
 import type {GPURasterBorderMode} from './gpu-raster-neighborhood';
@@ -222,7 +222,7 @@ export class GPURasterMorphology {
         if (this.input.validity) {
           bindings.push({name: 'sourceValidity', type: 'read-only-storage', group: 0, location: 3});
         }
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: this.id,
           source: this.getShaderSource(),
           shaderLayout: {bindings}
@@ -237,10 +237,14 @@ export class GPURasterMorphology {
             if (this.input.validity) {
               resolvedBindings['sourceValidity'] = getViewBinding(this.input.validity, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, dispatchSize[0], dispatchSize[1]);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: dispatchSize[0],
+              y: dispatchSize[1]
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });

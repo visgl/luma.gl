@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';

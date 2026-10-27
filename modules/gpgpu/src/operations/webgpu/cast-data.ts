@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {getGPUVectorFormatInfo} from '../../gpu-data/gpu-vector-format';
 import type {OperationHandler} from '../../operation/operation';
 import type {CastDataInputs} from '../cast-data';
@@ -14,7 +14,7 @@ const COMPUTATION_RUNS = 'Computation Runs';
 /** WebGPU raw-byte numeric conversion for compact and 32-bit fixed-width formats. */
 export const castData: OperationHandler<CastDataInputs> = async ({inputs, output, target}) => {
   const outputWordCount = Math.ceil(output.byteLength / 4);
-  const computation = new Computation(target.device, {
+  const kernel = new Kernel(target.device, {
     source: getCastDataWGSL(inputs, output.length),
     shaderLayout: {
       bindings: [
@@ -23,18 +23,21 @@ export const castData: OperationHandler<CastDataInputs> = async ({inputs, output
       ]
     }
   });
-  computation.setBindings({source: inputs.source.buffer, result: target});
+  const kernelBindings = {source: inputs.source.buffer, result: target};
   if (outputWordCount > 0) {
     const computePass = target.device.beginComputePass({});
     target.device.statsManager
       .getStats(GPGPU_OPERATION_STATS)
       .get(COMPUTATION_RUNS)
       .incrementCount();
-    computation.dispatch(computePass, Math.ceil(outputWordCount / WORKGROUP_SIZE));
+    kernel.dispatch(computePass, {
+      bindings: kernelBindings,
+      x: Math.ceil(outputWordCount / WORKGROUP_SIZE)
+    });
     computePass.end();
     target.device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
   return {success: true};
 };
 

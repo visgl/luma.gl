@@ -3,7 +3,7 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ParquetEncodedPageBatch} from '@loaders.gl/parquet';
+import type {ParquetEncodedPageBatch} from '@loaders.gl/tables/parquet';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {

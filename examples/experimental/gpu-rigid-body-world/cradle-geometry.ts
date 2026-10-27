@@ -6,7 +6,7 @@ import {CubeGeometry, GroupNode, type Geometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {type GPURigidBody} from '@luma.gl/graph/gpu-physics';
 
-import {PhysicsGeometryNode, makePhysicsScenegraph} from '@luma.gl/graph/gpu-physics';
+import {PhysicsGeometryNode, makePhysicsScenegraph} from '@luma.gl/engine/physics';
 
 /** Example convenience constructor; extraction lives in the reusable adapter. */
 export class CradleGeometryNode extends PhysicsGeometryNode {

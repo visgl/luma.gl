@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
 import {
@@ -201,7 +201,7 @@ export class GPURasterThreshold {
             location: this.input.validity ? 3 : 2
           });
         }
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: this.id,
           source: this.getShaderSource(gpuThreshold),
           shaderLayout: {bindings}
@@ -218,10 +218,14 @@ export class GPURasterThreshold {
             if (gpuThreshold) {
               resolvedBindings['thresholdValues'] = getViewBinding(gpuThreshold, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, horizontalCount, verticalCount);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: horizontalCount,
+              y: verticalCount
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });
@@ -394,7 +398,7 @@ export class GPURasterOtsuThreshold {
         if (gpuDomain) {
           bindings.push({name: 'domainValues', type: 'read-only-storage', group: 0, location: 2});
         }
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: this.id,
           source: this.getShaderSource(gpuDomain),
           shaderLayout: {bindings}
@@ -406,10 +410,10 @@ export class GPURasterOtsuThreshold {
               outputThreshold: getViewBinding(this.output, getBuffer)
             };
             if (gpuDomain) resolvedBindings['domainValues'] = getViewBinding(gpuDomain, getBuffer);
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, 1);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {bindings: kernelBindings, x: 1});
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });

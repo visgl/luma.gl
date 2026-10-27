@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {
   GPUCommandGraph,
   GraphBufferUsage,
@@ -372,7 +372,7 @@ function addMeasurementPass<Parameters>(
     id,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id,
         source: makeShader(locations),
         shaderLayout: {bindings: declarations}
@@ -383,10 +383,15 @@ function addMeasurementPass<Parameters>(
           for (const binding of bindings) {
             resolved[binding.name] = getViewBinding(binding.view, getBuffer);
           }
-          computation.setBindings(resolved);
-          computation.dispatch(computePass, dispatch[0], dispatch[1], dispatch[2]);
+          const kernelBindings = resolved;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatch[0],
+            y: dispatch[1],
+            z: dispatch[2]
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

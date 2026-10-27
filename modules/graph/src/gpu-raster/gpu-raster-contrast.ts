@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {
   createTransientView,
@@ -301,7 +301,7 @@ export class GPURasterContrast {
           });
         }
 
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: this.id,
           source: this.getShaderSource(cumulativeHistogram, histogramSummary),
           shaderLayout: {bindings}
@@ -328,10 +328,14 @@ export class GPURasterContrast {
             if (histogramSummary) {
               resolvedBindings['histogramSummary'] = getViewBinding(histogramSummary, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, horizontalCount, verticalCount);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: horizontalCount,
+              y: verticalCount
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });
@@ -349,7 +353,7 @@ export class GPURasterContrast {
         {buffer: histogramSummary, usage: 'storage-write'}
       ],
       compile: ({device}) => {
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: `${this.id}-histogram-summary`,
           source: /* wgsl */ `
 const HISTOGRAM_OFFSET: u32 = ${getViewElementOffset(cumulativeHistogram)}u;
@@ -387,13 +391,13 @@ fn main() {
         });
         return {
           encode: ({computePass, getBuffer}) => {
-            computation.setBindings({
+            const kernelBindings = {
               cumulativeHistogram: getViewBinding(cumulativeHistogram, getBuffer),
               histogramSummary: getViewBinding(histogramSummary, getBuffer)
-            });
-            computation.dispatch(computePass, 1);
+            };
+            kernel.dispatch(computePass, {bindings: kernelBindings, x: 1});
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });

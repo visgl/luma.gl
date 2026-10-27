@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type ComputePass} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {SCIENTIFIC_FLOW_SAMPLING} from './scientific-flow-sampling-shaders';
 import type {ScientificFlowField} from './scientific-flow-field';
 

@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
-import {type Material, MaterialFactory, type TextureBindingSource} from '@luma.gl/engine';
+import {type Material, MaterialFactory} from '@luma.gl/engine';
+import {type TextureBindingSource} from '@luma.gl/core/dynamic';
 import {
   type PBRMaterialBindings,
   type PBRMaterialUniforms,

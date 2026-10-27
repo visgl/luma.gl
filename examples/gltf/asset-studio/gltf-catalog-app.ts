@@ -1266,7 +1266,9 @@ async function loadPreferredGLTF(candidateModelReferences: Required<GLTFModelRef
     const modelUrl = getModelUrl(candidateModelReference);
 
     try {
-      const gltf = await load(modelUrl, GLTFLoader);
+      const gltf = await load(modelUrl, GLTFLoader, {
+        gltf: {excludeExtensions: ['KHR_audio_emitter']}
+      });
       return {
         gltf,
         modelUrl,

@@ -55,7 +55,7 @@
   },
   "dependencies": {
     "@luma.gl/graph": "10.0.0-alpha.4",
-    "@math.gl/core": "5.0.0-alpha.19"
+    "@math.gl/core": "5.0.0-alpha.20"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
   "peerDependenciesMeta": {

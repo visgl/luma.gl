@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding, type ComputePass, Device} from '@luma.gl/core';
-import {Computation, type ComputationProps} from '@luma.gl/engine';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {Kernel, type KernelProps} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   isFixedSizeListGPUVectorFormat,
   type GPUData,
@@ -20,8 +20,8 @@ export type GPUTableComputationBatch = {
 };
 
 /** Props for creating a WebGPU computation backed by GPU table vectors. */
-export type GPUTableComputationProps = Omit<ComputationProps, 'bindings'> & {
-  /** Ordinary non-table bindings forwarded to {@link Computation}. */
+export type GPUTableComputationProps = Omit<KernelProps, 'source'> & {source?: string} & {
+  /** Ordinary non-table bindings forwarded to {@link Kernel}. */
   bindings?: Record<string, Binding>;
   /** GPU vectors converted to storage-buffer bindings by name. */
   inputVectors?: Record<string, GPUVector>;
@@ -33,7 +33,22 @@ export type GPUTableComputationProps = Omit<ComputationProps, 'bindings'> & {
  * Direct vectors bind once during construction. Aggregate multi-buffer vectors
  * can be dispatched batch-by-batch with {@link dispatchBatches}.
  */
-export class GPUTableComputation extends Computation {
+export class GPUTableComputation {
+  readonly kernel: Kernel;
+  readonly bindings: Record<string, Binding>;
+
+  destroy(): void {
+    this.kernel.destroy();
+  }
+
+  setBindings(bindings: Record<string, Binding>): void {
+    Object.assign(this.bindings, bindings);
+  }
+
+  dispatch(computePass: ComputePass, x: number, y?: number, z?: number): void {
+    this.kernel.dispatch(computePass, {bindings: this.bindings, x, y, z});
+  }
+
   /** GPU vectors supplied when the computation was created. */
   readonly inputVectors: Record<string, GPUVector>;
   private readonly baseBindings: Record<string, Binding>;
@@ -49,10 +64,8 @@ export class GPUTableComputation extends Computation {
       ...bindings
     };
 
-    super(device, {
-      ...computationProps,
-      bindings: baseBindings
-    });
+    this.kernel = new Kernel(device, {source: '', ...computationProps});
+    this.bindings = {...baseBindings};
 
     this.inputVectors = {...inputVectors};
     this.baseBindings = baseBindings;
@@ -86,7 +99,7 @@ export class GPUTableComputation extends Computation {
 
       const workgroupCount =
         typeof getWorkgroupCount === 'function' ? getWorkgroupCount(batch) : getWorkgroupCount;
-      super.dispatch(computePass, workgroupCount, y, z);
+      this.dispatch(computePass, workgroupCount, y, z);
     }
 
     this.setBindings(this.baseBindings);

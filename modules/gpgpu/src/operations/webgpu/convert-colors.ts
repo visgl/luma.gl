@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {OperationHandler} from '../../operation/operation';
 import type {ConvertColorsInputs} from '../convert-colors';
 
@@ -16,7 +16,7 @@ export const convertColors: OperationHandler<ConvertColorsInputs> = async ({
   target
 }) => {
   const {source, inputFormat} = inputs;
-  const computation = new Computation(target.device, {
+  const kernel = new Kernel(target.device, {
     source: getConvertColorsWGSL(inputFormat, source.offset, source.stride, output.length),
     shaderLayout: {
       bindings: [
@@ -26,17 +26,20 @@ export const convertColors: OperationHandler<ConvertColorsInputs> = async ({
     }
   });
 
-  computation.setBindings({
+  const kernelBindings = {
     source: source.buffer,
     result: target
-  });
+  };
 
   const computePass = target.device.beginComputePass({});
   target.device.statsManager.getStats(GPGPU_OPERATION_STATS).get(COMPUTATION_RUNS).incrementCount();
-  computation.dispatch(computePass, Math.ceil(output.length / WORKGROUP_SIZE));
+  kernel.dispatch(computePass, {
+    bindings: kernelBindings,
+    x: Math.ceil(output.length / WORKGROUP_SIZE)
+  });
   computePass.end();
   target.device.submit();
-  computation.destroy();
+  kernel.destroy();
   return {success: true};
 };
 

@@ -5,13 +5,8 @@
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {
-  AnimationLoopTemplate,
-  Model,
-  CubeGeometry,
-  loadImageBitmap,
-  DynamicTexture
-} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, CubeGeometry, loadImageBitmap} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {Matrix4} from '@math.gl/core';
 import {HELLO_CUBE_INFO_HTML} from './app-ui';
 

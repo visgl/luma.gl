@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './common/dispatch';
@@ -46,7 +46,7 @@ ${getSegmentedMapFunction(segments.length)}
 }
 `;
 
-  const computation = new Computation(target.device, {
+  const kernel = new Kernel(target.device, {
     source,
     shaderLayout: {
       bindings: [
@@ -65,13 +65,18 @@ ${getSegmentedMapFunction(segments.length)}
     bindings.map(({name, input}) => [name, input.buffer])
   );
   computationBindings['result'] = target;
-  computation.setBindings(computationBindings);
+  const kernelBindings = computationBindings;
 
   const computePass = target.device.beginComputePass({});
-  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+  kernel.dispatch(computePass, {
+    bindings: kernelBindings,
+    x: dispatchLayout.x,
+    y: dispatchLayout.y,
+    z: dispatchLayout.z
+  });
   computePass.end();
   target.device.submit();
-  computation.destroy();
+  kernel.destroy();
   return {success: true};
 };
 

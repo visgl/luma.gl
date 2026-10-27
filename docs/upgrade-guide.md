@@ -1,5 +1,17 @@
 # Upgrade Guide
 
+## Graph and engine dependency direction
+
+Graph and gpgpu no longer depend on engine. Update these rendering integration imports:
+
+| APIs | Previous import | New import |
+| --- | --- | --- |
+| `GPUTableModel`, `GPUTableGeometry`, `TableTransform` and their associated types | `@luma.gl/graph/gpu-tables` | `@luma.gl/engine/tables` |
+| Scenegraph physics adapters, sessions, and `makePhysicsScenegraph` | `@luma.gl/graph/gpu-physics` | `@luma.gl/engine/physics` |
+| Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models` |
+
+GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. `Computation` and `ShaderInputs` remain owned by `@luma.gl/engine`; graph and gpgpu operations execute through Kernel and RenderKernel without these shader-module conveniences. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
+
 ## Experimental package removal
 
 Remove `@luma.gl/experimental` from project dependencies and update imports:
@@ -8,7 +20,7 @@ Remove `@luma.gl/experimental` from project dependencies and update imports:
 | --- | --- |
 | Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari` |
 | Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
-| Path and polygon models | `@luma.gl/graph/experimental/models` |
+| Path and polygon models | `@luma.gl/engine/models` |
 | Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
 
 ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
@@ -82,9 +94,25 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+### loaders.gl grouped packages
+
+luma.gl now uses loaders.gl 5.0.0-alpha.14. Install `@loaders.gl/tables` in place of
+`@loaders.gl/parquet`, and import Parquet APIs from `@loaders.gl/tables/parquet` or
+its explicit implementation subpaths. Schema, schema utilities, and Node polyfills
+now come from `@loaders.gl/core/schema`, `@loaders.gl/core/schema-utils`, and
+`@loaders.gl/core/polyfills`; install `@loaders.gl/core` for those subpaths.
+
+
+### Audio loading ownership
+
+loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.gl's
+`AudioController`, set `gltf.excludeExtensions: ['KHR_audio_emitter']` in loader
+options. This keeps encoded clip loading under the controller's active-scene and
+resource ownership rules, and preserves luma.gl's support for legacy draft attachments.
+
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-alpha.19. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-alpha.20. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core/types`,
 `@math.gl/polygon` becomes `@math.gl/geometry/polygon`, and CRS, projection, and
 GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
@@ -172,6 +200,9 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
+- Named shader hook injections now throw if their target is not registered. Register the hook
+  for the matching shader stage before injecting into it. WGSL continues to skip unregistered
+  module injections, which may contain GLSL-only code.
 
 **@luma.gl/core/webgpu**
 
@@ -358,3 +389,17 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
   and `LuSQLQuery` remain in the module.
 - Install loaders.gl packages explicitly in applications that use these integrations.
   Published luma.gl modules no longer install them transitively.
+
+### Table compute execution
+
+`GPUTableComputation` now delegates to Kernel instead of inheriting Computation. Its `inputVectors`, `bindings`, `setBindings()`, `dispatch()`, `dispatchBatches()`, and `destroy()` APIs are retained. Construction takes Kernel pipeline options and assembled WGSL source; assemble shader modules and defines with shadertools before construction. Uniform buffers are explicit bindings owned by the caller.
+
+### Kernel imports
+
+`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/gpgpu`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/gpgpu`.
+
+`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/gpgpu` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
+
+### GPU vector rendering imports
+
+`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/gpgpu` or `@luma.gl/gpgpu/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant remain in gpgpu/gpu-data. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.

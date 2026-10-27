@@ -26,11 +26,8 @@ import {
   type GLTFPhysicsDescription
 } from '@luma.gl/gltf/physics';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {
-  ScenegraphPhysicsMotion,
-  type GPURigidBodyWorld,
-  type ScenegraphPhysicsPublication
-} from '@luma.gl/graph/gpu-physics';
+import {ScenegraphPhysicsMotion, type ScenegraphPhysicsPublication} from '@luma.gl/engine/physics';
+import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import type {ScenegraphNode} from '@luma.gl/engine';
 import {INFO_HTML, showError, showSampleDescription, createPhysicsPanels} from './app-ui';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';

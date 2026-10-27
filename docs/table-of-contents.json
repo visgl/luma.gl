@@ -4,6 +4,7 @@
     "label": "Getting Started",
     "items": [
       "README",
+      "packages",
       "getting-started",
       "tutorials/README",
       "api-guide/README",
@@ -319,6 +320,8 @@
         "label": "@luma.gl/core",
         "items": [
           "api-reference/core/README",
+          "api-reference/core/dynamic/dynamic-buffer",
+          "api-reference/core/dynamic/dynamic-texture",
           {
             "type": "category",
             "label": "Device and adapters",
@@ -456,8 +459,8 @@
               "api-reference/engine/passes/shader-pass-renderer",
               "api-reference/engine/compute/swap",
               "api-reference/engine/compute/computation",
-              "api-reference/engine/compute/kernel",
               "api-reference/engine/compute/buffer-transform",
+              "api-reference/engine/tables/table-transform",
               "api-reference/engine/compute/texture-transform"
             ]
           },
@@ -574,6 +577,8 @@
         "label": "@luma.gl/gpgpu",
         "items": [
           "api-reference/gpgpu/README",
+          "api-reference/gpgpu/kernel",
+          "api-reference/gpgpu/render-kernel",
           {
             "type": "category",
             "label": "GPU Evaluations",

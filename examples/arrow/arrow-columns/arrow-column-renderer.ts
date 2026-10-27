@@ -15,7 +15,8 @@ import {
   type RenderPass,
   type RenderPipelineParameters
 } from '@luma.gl/core';
-import {Model, ShaderInputs, type DynamicBuffer} from '@luma.gl/engine';
+import {Model, ShaderInputs} from '@luma.gl/engine';
+import {type DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   aBuffer,
   aBufferPlugin,

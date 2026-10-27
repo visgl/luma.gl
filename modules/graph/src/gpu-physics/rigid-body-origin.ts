@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
 
 /** Translate persistent world-space points; local anchors and directions are unchanged. */
 export function shiftRigidBodyBuffers(
@@ -24,7 +25,7 @@ export function shiftRigidBodyBuffers(
     {name: 'contact-events', count: eventCapacity, stride: 4, offset: 3, contacts: false}
   ];
   // CCD previous poses and rollback snapshots are overwritten before their next use.
-  const computations: Computation[] = [];
+  const computations: BoundKernel[] = [];
   const settings = device.createBuffer({
     data: new Float32Array([...shift, 0]),
     usage: Buffer.UNIFORM | Buffer.COPY_DST
@@ -39,7 +40,7 @@ export function shiftRigidBodyBuffers(
         Math.ceil(plan.count / 64),
         device.limits.maxComputeWorkgroupsPerDimension
       );
-      const computation = new Computation(device, {
+      const computation = createBoundKernel(device, {
         source: /* wgsl */ `
 @group(0) @binding(0) var<storage,read_write> values:array<vec4f>;
 @group(0) @binding(1) var<uniform> shift:vec4f;
@@ -58,12 +59,16 @@ export function shiftRigidBodyBuffers(
         bindings: {values: buffer, shift: settings}
       });
       computations.push(computation);
-      computation.dispatch(pass, horizontal, Math.ceil(plan.count / (horizontal * 64)));
+      computation.kernel.dispatch(pass, {
+        bindings: computation.bindings,
+        x: horizontal,
+        y: Math.ceil(plan.count / (horizontal * 64))
+      });
     }
     pass.end();
     device.submit(encoder.finish());
   } finally {
-    for (const computation of computations) computation.destroy();
+    for (const computation of computations) computation.kernel.destroy();
     settings.destroy();
   }
 }

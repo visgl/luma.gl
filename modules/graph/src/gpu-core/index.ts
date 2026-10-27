@@ -651,3 +651,5 @@ export type {
 } from './gpu-incremental-execution';
 
 export type {GPUResourcePreview} from './gpu-resource-preview';
+
+export type {GPUIndexPickInfo} from './gpu-index-picking-target';

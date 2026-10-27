@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {GPUCommandGraph, GraphDataView, GraphResourceUse} from '@luma.gl/graph/gpu-core';
 import {getViewBinding, getViewElementOffset} from '@luma.gl/graph/gpu-core';
 import {
@@ -518,7 +518,7 @@ function addRasterTransferPass<Parameters, Format extends GPURasterScalarFormat>
       if (transfer.source.validity) {
         bindings.push({name: 'sourceValidity', type: 'read-only-storage', group: 0, location: 3});
       }
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: transfer.id,
         source: makeTransferShader(transfer),
         shaderLayout: {bindings}
@@ -536,10 +536,10 @@ function addRasterTransferPass<Parameters, Format extends GPURasterScalarFormat>
               getBuffer
             );
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatch[0], dispatch[1]);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {bindings: kernelBindings, x: dispatch[0], y: dispatch[1]});
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

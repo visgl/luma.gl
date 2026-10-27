@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {
   GPUCommandGraph,
   GPU_LZ_BYTE_BATCH_JOB_WORDS,
@@ -165,7 +165,7 @@ function addDecodePass<Parameters>(
       {buffer: decoder.props.output, usage: 'storage-write'}
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: decoder.id,
         source,
         shaderLayout: {
@@ -183,10 +183,15 @@ function addDecodePass<Parameters>(
             jobs: getViewBinding(decoder.props.jobs, getBuffer),
             outputWords: getViewBinding(decoder.props.output, getBuffer)
           };
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatch.x,
+            y: dispatch.y,
+            z: dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

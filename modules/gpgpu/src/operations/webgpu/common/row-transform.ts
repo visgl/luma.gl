@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, SignedDataType} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel, getPlatformInfo} from '@luma.gl/gpgpu';
 import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
 import type {GPUEvaluationScope} from '../../../operation/gpu-evaluation-scope';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
@@ -40,7 +40,7 @@ export function runRowComputation({
   outputBuffer: Buffer;
 }): void {
   if (!module.source) {
-    throw new Error(`WebGPU computation ${module.name} requires WGSL source`);
+    throw new Error(`WebGPU kernel ${module.name} requires WGSL source`);
   }
 
   const inputEntries = getInputEntries(inputs);
@@ -86,10 +86,15 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
 }
 `;
 
-  const computation = new Computation(outputBuffer.device, {
+  const assembled = GPGPU_SHADER_ASSEMBLER.assembleWGSLShader({
+    platformInfo: getPlatformInfo(outputBuffer.device),
     source,
     modules: module.dependencies,
-    shaderAssembler: GPGPU_SHADER_ASSEMBLER,
+    shaderStage: 'compute',
+    scanVertexAttributes: false
+  });
+  const kernel = new Kernel(outputBuffer.device, {
+    source: assembled.source,
     shaderLayout: {
       bindings: [
         ...storageBindings.map(({name}, index) => ({
@@ -103,13 +108,12 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
     }
   });
 
-  if (scope) scope.retain(() => computation.destroy());
+  if (scope) scope.retain(() => kernel.destroy());
 
   const computationBindings: Record<string, Buffer> = Object.fromEntries(
     storageBindings.map(({name, input}) => [name, input.buffer])
   );
   computationBindings['result'] = outputBuffer;
-  computation.setBindings(computationBindings);
 
   const computePass = scope
     ? scope.commandEncoder.beginComputePass({})
@@ -118,11 +122,11 @@ ${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
     .getStats(GPGPU_OPERATION_STATS)
     .get(COMPUTATION_RUNS)
     .incrementCount();
-  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+  kernel.dispatch(computePass, {bindings: computationBindings, ...dispatchLayout});
   computePass.end();
   if (!scope) {
     outputBuffer.device.submit();
-    computation.destroy();
+    kernel.destroy();
   }
 }
 

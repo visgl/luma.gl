@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer, type BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import type {
   GPUCommandGraph,
   GraphBufferHandle,
@@ -268,12 +274,15 @@ fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
       bindings: Object.fromEntries(selected.map(binding => [binding.name, binding.buffer]))
     };
     const executable = (
-      computation: Computation
+      computation: BoundKernel
     ): GPUCommandGraphComputeExecutable<Parameters> => ({
       encode: ({computePass}) => {
-        computation.dispatch(computePass, Math.max(1, Math.ceil(count / 64)));
+        computation.kernel.dispatch(computePass, {
+          bindings: computation.bindings,
+          x: Math.max(1, Math.ceil(count / 64))
+        });
       },
-      destroy: () => computation.destroy()
+      destroy: () => computation.kernel.destroy()
     });
     graph.addComputePass({
       id: properties.id,
@@ -286,8 +295,8 @@ fn emitTrigger(group:vec4u,pair:vec2u,phase:u32,swept:u32){
               ? ('storage-read' as const)
               : ('storage-read-write' as const)
       })),
-      compile: () => executable(new Computation(graph.device, properties)),
-      compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
+      compile: () => executable(createBoundKernel(graph.device, properties)),
+      compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
     });
   };
   addStage(

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {dggs} from '@luma.gl/shadertools';
 import {GPUCommandGraph, type GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
@@ -146,7 +146,7 @@ function addDGGSCellProjectionToGraph<Parameters>(
       ...(props.validity ? [{buffer: props.validity, usage: 'storage-write'} as const] : [])
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source,
         shaderLayout: {
@@ -164,10 +164,15 @@ function addDGGSCellProjectionToGraph<Parameters>(
           for (const [name, view] of Object.entries(views)) {
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = bindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

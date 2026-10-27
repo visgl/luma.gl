@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {BufferTransform} from '@luma.gl/engine';
+import {runTransformKernel} from './common/transform-kernel';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {createTableTexture, getSourceValuesTextureModule} from './common/random-access-transform';
@@ -19,7 +19,7 @@ export const segmentedMap: OperationHandler<{
   const textureDataType = getTextureDataType(segments.type);
   const segmentsTexture = createTableTexture(segments, textureDataType, device);
 
-  const transform = new BufferTransform(device, {
+  const transformProps = {
     vs: `\
 #version 300 es
 
@@ -42,17 +42,15 @@ void main() {
     bindings: {source_values_texture: segmentsTexture},
     vertexCount: 1,
     instanceCount: output.length,
-    feedbackBufferMode: 'interleaved',
     outputs: outputModule.varyings
-  });
+  };
 
   try {
-    transform.run({
+    runTransformKernel(device, transformProps, {
       outputBuffers: {[outputModule.varyings[0]]: target}
     });
     return {success: true};
   } finally {
-    transform.destroy();
     segmentsTexture.destroy();
   }
 };

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
@@ -184,7 +184,7 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
 }
 `;
 
-  const computation = new Computation(outputBuffer.device, {
+  const kernel = new Kernel(outputBuffer.device, {
     source,
     shaderLayout: {
       bindings: [
@@ -205,13 +205,18 @@ var<workgroup> sharedMax: array<${wgslType}, ${RANDOM_ACCESS_WORKGROUP_SIZE}>;
   if (!input.isConstant) {
     bindings['sourceValues'] = input.buffer;
   }
-  computation.setBindings(bindings);
+  const kernelBindings = bindings;
 
   const computePass = outputBuffer.device.beginComputePass({});
-  computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+  kernel.dispatch(computePass, {
+    bindings: kernelBindings,
+    x: dispatchLayout.x,
+    y: dispatchLayout.y,
+    z: dispatchLayout.z
+  });
   computePass.end();
   outputBuffer.device.submit();
-  computation.destroy();
+  kernel.destroy();
 }
 
 function getExtentPassFunction(

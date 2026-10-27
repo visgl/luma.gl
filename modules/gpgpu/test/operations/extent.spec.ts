@@ -28,6 +28,10 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
         expected: {value: [2, 13], type: 'uint32', size: 2}
       },
       {
+        eval: extent(GPUDataEvaluator.fromArray([5, 4, 3, 2, 1, -5, 6, -3, 8, -1], {size: 5})),
+        expected: {value: [-5, 5, 4, 6, -3, 3, 2, 8, -1, 1], type: 'float32', size: 2}
+      },
+      {
         eval: extent(GPUDataEvaluator.fromConstant([6, -2])),
         expected: {value: [6, 6, -2, -2], type: 'float32', size: 2}
       }

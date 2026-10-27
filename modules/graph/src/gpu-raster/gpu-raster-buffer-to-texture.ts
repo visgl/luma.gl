@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {
   GPUCommandGraph,
   GraphDataView,
@@ -178,7 +178,7 @@ export class GPURasterBufferToTexture<
         if (this.outputValidity) {
           bindings.push({name: 'outputValidity', type: 'storage', group: 0, location: 3});
         }
-        const computation = new Computation(device, {
+        const kernel = new Kernel(device, {
           id: this.id,
           source: this.getShaderSource(),
           shaderLayout: {bindings}
@@ -195,10 +195,14 @@ export class GPURasterBufferToTexture<
             if (this.outputValidity) {
               resolvedBindings['outputValidity'] = getViewBinding(this.outputValidity, getBuffer);
             }
-            computation.setBindings(resolvedBindings);
-            computation.dispatch(computePass, horizontalCount, verticalCount);
+            const kernelBindings = resolvedBindings;
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: horizontalCount,
+              y: verticalCount
+            });
           },
-          destroy: () => computation.destroy()
+          destroy: () => kernel.destroy()
         };
       }
     });

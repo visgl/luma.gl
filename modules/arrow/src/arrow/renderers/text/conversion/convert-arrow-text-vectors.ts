@@ -4,11 +4,8 @@
 
 import {Buffer, type BufferLayout, type Device, type ShaderLayout} from '@luma.gl/core';
 import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {
-  planGeneratedBufferBatches,
-  type GeneratedBufferBatch,
-  type GPUTableModelProps
-} from '@luma.gl/graph/gpu-tables';
+import {planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
+import {type GPUTableModelProps} from '@luma.gl/engine/tables';
 import {expandArrowVector} from '../../../vectors/arrow-vector-utils';
 import {
   getArrowVectorBufferSource,
@@ -20,7 +17,7 @@ import {
 } from '../../../gpu/arrow-gpu-table-adapters';
 import {getRequiredArrowGPUVectorDataType} from '../../../gpu/arrow-gpu-data';
 import {isNumericArrowType, type NumericArrowType} from '../../../arrow-utils/arrow-types';
-import {DynamicBuffer, DynamicTexture} from '@luma.gl/engine';
+import {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';
 import {
   Data,
   DataType,

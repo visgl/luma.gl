@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {GPUCommandGraph} from '@luma.gl/graph';
-import {ScenegraphPhysicsMotion} from '@luma.gl/graph/gpu-physics';
+import {ScenegraphPhysicsMotion} from '@luma.gl/engine/physics';
 import {GLTFAnimator} from '../../src/gltf/gltf-animator';
 import {
   createGLTFPhysicsWorld,

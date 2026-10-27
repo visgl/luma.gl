@@ -4,7 +4,9 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
 import {type Binding, Buffer} from '@luma.gl/core';
-import {Computation, DynamicBuffer} from '@luma.gl/engine';
+import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
+import {Kernel} from '@luma.gl/gpgpu';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import type {GPUGridIndexBounds, GPUGridIndexSize} from '@luma.gl/graph/gpu-core';
 import {
@@ -542,29 +544,36 @@ fn testRow(rowIndex: u32) {
         : [])
     ],
     compile: ({device}) => {
-      const computation = new Computation(device, {
-        id: `${query.id}-refine`,
-        source,
-        modules: query.kind === 'radius' ? [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE] : [],
-        defines: query.kind === 'radius' ? {LUMA_FP64_INTEGER_ARITHMETIC: true} : {},
-        shaderLayout: {
-          bindings: Object.keys(bindings).map((name, location) =>
-            name === 'queryState'
-              ? {name, type: 'uniform' as const, group: 0, location}
-              : {name, type: 'storage' as const, group: 0, location}
-          )
-        }
-      });
+      const kernel = new Kernel(
+        device,
+        assembleComputeKernel(device, {
+          id: `${query.id}-refine`,
+          source,
+          modules: query.kind === 'radius' ? [GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE] : [],
+          defines: query.kind === 'radius' ? {LUMA_FP64_INTEGER_ARITHMETIC: true} : {},
+          shaderLayout: {
+            bindings: Object.keys(bindings).map((name, location) =>
+              name === 'queryState'
+                ? {name, type: 'uniform' as const, group: 0, location}
+                : {name, type: 'storage' as const, group: 0, location}
+            )
+          }
+        })
+      );
       return {
         encode: ({computePass, getBuffer}) => {
           const resolvedBindings: Record<string, Binding> = {};
           for (const [name, view] of Object.entries(bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatchIndirect(computePass, getBuffer(queryState), queryState.byteOffset);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatchIndirect(computePass, {
+            bindings: kernelBindings,
+            indirectBuffer: getBuffer(queryState),
+            indirectOffset: queryState.byteOffset
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });
@@ -988,7 +997,7 @@ function addComputationPass<Parameters>(
     workload: {operation: props.operation},
     resources: props.resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -1006,19 +1015,19 @@ function addComputationPass<Parameters>(
           for (const [name, view] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
+          const kernelBindings = bindings;
           if (typeof props.dispatchCount === 'number') {
-            computation.dispatch(computePass, props.dispatchCount);
+            kernel.dispatch(computePass, {bindings: kernelBindings, x: props.dispatchCount});
           } else {
-            computation.dispatch(
-              computePass,
-              props.dispatchCount.x,
-              props.dispatchCount.y,
-              props.dispatchCount.z
-            );
+            kernel.dispatch(computePass, {
+              bindings: kernelBindings,
+              x: props.dispatchCount.x,
+              y: props.dispatchCount.y,
+              z: props.dispatchCount.z
+            });
           }
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

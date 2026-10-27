@@ -76,7 +76,7 @@ for (const method of ['gnom', 'ortho'] as const) {
             {positions: new Float64Array(0)},
             {positions: Float64Array.from(coordinates.slice(32).flat())}
           ],
-          provider: '@math.gl/geospatial/projection 5.0.0-alpha.19 spherical visualization',
+          provider: '@math.gl/geospatial/projection 5.0.0-alpha.20 spherical visualization',
           maximumError,
           warmupIterations: 0,
           measuredIterations: 1

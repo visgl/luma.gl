@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {GPUGallopingSearch} from '@luma.gl/graph/gpu-core';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {
@@ -226,7 +226,7 @@ const ERROR_OFFSET: u32 = ${getViewElementOffset(query.validationErrors)}u;
       maximumInvocationCount: 1
     },
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${query.id}-clear-validation`,
         source,
         shaderLayout: {
@@ -235,10 +235,10 @@ const ERROR_OFFSET: u32 = ${getViewElementOffset(query.validationErrors)}u;
       });
       return {
         encode: ({computePass, getBuffer}) => {
-          computation.setBindings({errors: getViewBinding(query.validationErrors, getBuffer)});
-          computation.dispatch(computePass, 1);
+          const kernelBindings = {errors: getViewBinding(query.validationErrors, getBuffer)};
+          kernel.dispatch(computePass, {bindings: kernelBindings, x: 1});
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });
@@ -386,7 +386,7 @@ function addPreparationComputationPass<Parameters>(
         dispatchLayout.x * dispatchLayout.y * dispatchLayout.z * MIPMAP_BOUNDARY_WORKGROUP_SIZE
     },
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${query.id}-prepare`,
         source,
         shaderLayout: {
@@ -404,10 +404,15 @@ function addPreparationComputationPass<Parameters>(
           for (const [name, view] of Object.entries(bindings)) {
             resolvedBindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolvedBindings);
-          computation.dispatch(computePass, dispatchLayout.x, dispatchLayout.y, dispatchLayout.z);
+          const kernelBindings = resolvedBindings;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatchLayout.x,
+            y: dispatchLayout.y,
+            z: dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

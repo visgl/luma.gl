@@ -455,7 +455,7 @@ the application.
 
 ## Optional math.gl CRS planner
 
-Install `@math.gl/geospatial` version `~5.0.0-alpha.19` and import the CPU planner from
+Install `@math.gl/geospatial` version `~5.0.0-alpha.20` and import the CPU planner from
 `@luma.gl/graph/gpu-project/crs`. This optional peer is not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
@@ -1054,7 +1054,7 @@ the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` ma
 ```typescript
 const report = await runProjectionTableBenchmark(device, {
   transform, // a prepared ProjectionTableTransform; preparation is outside this runner
-  provider: '@math.gl/geospatial/projection 5.0.0-alpha.19 TypeScript',
+  provider: '@math.gl/geospatial/projection 5.0.0-alpha.20 TypeScript',
   batches: [{positions: new Float64Array([-122.4, 37.8])}],
   maximumError: 0.001, // destination units, including output encoding/rounding
   warmupIterations: 2,

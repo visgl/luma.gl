@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
+
 import {
   Buffer,
   Texture,
@@ -9,7 +11,7 @@ import {
   type CommandEncoder,
   type Device
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import {
   getGPUFFT2DSupport,
   GPUFFT2D,
@@ -149,9 +151,9 @@ type GPUConvolutionBloomResources = {
   spatialChannels: Buffer;
   spectralChannels: Buffer;
   historyTextures?: [Texture, Texture];
-  extract: Computation;
-  multiply: Computation;
-  composite: Computation;
+  extract: BoundKernel;
+  multiply: BoundKernel;
+  composite: BoundKernel;
 };
 
 /**
@@ -277,7 +279,7 @@ export class GPUConvolutionBloom {
       this.kernelNeedsTransform = false;
     }
 
-    this.resources.extract.setBindings({
+    Object.assign(this.resources.extract.bindings, {
       parameters: this.resources.parameters,
       sourceTexture: options.sourceTexture.view,
       exposureTexture: (options.exposureTexture || options.sourceTexture).view,
@@ -296,7 +298,7 @@ export class GPUConvolutionBloom {
       buffers: {input: this.resources.spatialChannels, output: this.resources.spectralChannels}
     });
 
-    this.resources.multiply.setBindings({
+    Object.assign(this.resources.multiply.bindings, {
       sourceSpectrum: this.resources.spectralChannels,
       kernelSpectrum: this.resources.kernelSpectrum,
       filteredChannels: this.resources.spatialChannels
@@ -330,7 +332,7 @@ export class GPUConvolutionBloom {
       compositeBindings['historyOutput'] =
         this.resources.historyTextures[1 - this.historyIndex].view;
     }
-    this.resources.composite.setBindings(compositeBindings);
+    Object.assign(this.resources.composite.bindings, compositeBindings);
     dispatchConvolutionComputation(
       commandEncoder,
       this.resources.composite,
@@ -549,7 +551,7 @@ function createGPUConvolutionBloomResources(
 ): GPUConvolutionBloomResources {
   const transforms: CompiledGPUCommandGraph[] = [];
   const buffers: Buffer[] = [];
-  const computations: Computation[] = [];
+  const computations: BoundKernel[] = [];
   const textures: Texture[] = [];
   const makeStorageBuffer = (name: string, data?: Float32Array): Buffer => {
     const buffer = device.createBuffer({
@@ -722,7 +724,7 @@ function createGPUConvolutionBloomResources(
     };
   } catch (error) {
     for (const computation of computations) {
-      computation.destroy();
+      computation.kernel.destroy();
     }
     for (const buffer of buffers) {
       buffer.destroy();
@@ -740,20 +742,24 @@ function makeConvolutionComputation(
   id: string,
   source: string,
   bindings: BindingDeclaration[]
-): Computation {
-  return new Computation(device, {id, source, shaderLayout: {bindings}});
+): BoundKernel {
+  return createBoundKernel(device, {id, source, shaderLayout: {bindings}});
 }
 
 function dispatchConvolutionComputation(
   commandEncoder: CommandEncoder,
-  computation: Computation,
+  computation: BoundKernel,
   id: string,
   workgroupCountX: number,
   workgroupCountY: number
 ): void {
-  computation.predraw(commandEncoder);
   const computePass = commandEncoder.beginComputePass({id});
-  computation.dispatch(computePass, workgroupCountX, workgroupCountY, 1);
+  computation.kernel.dispatch(computePass, {
+    bindings: computation.bindings,
+    x: workgroupCountX,
+    y: workgroupCountY,
+    z: 1
+  });
   computePass.end();
 }
 
@@ -880,9 +886,9 @@ function validateGPUConvolutionBloomTextures(
 }
 
 function destroyGPUConvolutionBloomResources(resources: GPUConvolutionBloomResources): void {
-  resources.extract.destroy();
-  resources.multiply.destroy();
-  resources.composite.destroy();
+  resources.extract.kernel.destroy();
+  resources.multiply.kernel.destroy();
+  resources.composite.kernel.destroy();
   resources.transform.forward.destroy();
   resources.transform.inverse.destroy();
   resources.parameters.destroy();

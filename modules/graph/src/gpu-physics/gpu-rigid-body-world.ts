@@ -3,6 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
+  type BoundKernel,
+  type BoundKernelProps,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
+import {
   Buffer,
   type Binding,
   type BindingDeclaration,
@@ -10,7 +17,7 @@ import {
   type CommandEncoder,
   type ShaderLayout
 } from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import {
   GPUCommandGraph,
   type GPUCommandGraphComputeExecutable
@@ -215,8 +222,8 @@ export class GPURigidBodyWorld {
   private triggerRead: Promise<GPURigidBodyTriggerBatch> | null = null;
   private eventCursor = 0;
   private eventRead: Promise<GPURigidBodyContactBatch> | null = null;
-  private queryComputation: Computation | null = null;
-  private queryReduction: Computation | null = null;
+  private queryComputation: BoundKernel | null = null;
+  private queryReduction: BoundKernel | null = null;
   private querySettings: Buffer | null = null;
   private querySelection: Buffer | null = null;
   private queryOutput: Buffer | null = null;
@@ -235,8 +242,8 @@ export class GPURigidBodyWorld {
   private parallelState: Buffer | null = null;
   private parallelDispatch: Buffer | null = null;
   private device: Device | null = null;
-  private control: Computation | null = null;
-  private invalidation: Computation | null = null;
+  private control: BoundKernel | null = null;
+  private invalidation: BoundKernel | null = null;
   private controlSettings: Buffer | null = null;
   private destroyed = false;
   private colliderShapeScales = new Map<number, number[]>();
@@ -1432,29 +1439,46 @@ export class GPURigidBodyWorld {
           }
         }));
         const executable = (
-          computations: Computation[]
+          computations: BoundKernel[]
         ): GPUCommandGraphComputeExecutable<Parameters> => ({
           encode: ({computePass, getBuffer}) => {
             const resolved: Record<string, Binding> = {};
             for (const binding of activeBindings)
               resolved[binding.name] = getBuffer(binding.resource);
             for (const [index, computation] of computations.entries())
-              computation.setBindings(
+              Object.assign(
+                computation.bindings,
                 Object.fromEntries(
                   Object.entries(resolved).filter(([name]) =>
                     parallelBindings[stages[index]].includes(name)
                   )
                 )
               );
-            const dispatchPairs = (computation: Computation) => {
+            const dispatchPairs = (computation: BoundKernel) => {
               if (indirectPairs)
-                computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 16);
-              else computation.dispatch(computePass, Math.ceil(this.maximumPairs / 64));
+                computation.kernel.dispatchIndirect(computePass, {
+                  bindings: computation.bindings,
+                  indirectBuffer: getBuffer(dispatchBinding!.resource),
+                  indirectOffset: 16
+                });
+              else
+                computation.kernel.dispatch(computePass, {
+                  bindings: computation.bindings,
+                  x: Math.ceil(this.maximumPairs / 64)
+                });
             };
-            const dispatchBodies = (computation: Computation) => {
+            const dispatchBodies = (computation: BoundKernel) => {
               if (indirectPairs)
-                computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 32);
-              else computation.dispatch(computePass, Math.ceil(this.count / 64));
+                computation.kernel.dispatchIndirect(computePass, {
+                  bindings: computation.bindings,
+                  indirectBuffer: getBuffer(dispatchBinding!.resource),
+                  indirectOffset: 32
+                });
+              else
+                computation.kernel.dispatch(computePass, {
+                  bindings: computation.bindings,
+                  x: Math.ceil(this.count / 64)
+                });
             };
             dispatchPairs(computations[0]);
             dispatchBodies(computations[2]);
@@ -1464,7 +1488,7 @@ export class GPURigidBodyWorld {
             }
           },
           destroy: () => {
-            for (const computation of computations) computation.destroy();
+            for (const computation of computations) computation.kernel.destroy();
           }
         });
         // Iterations share one semantic graph node; dispatch boundaries synchronize pair and body owners.
@@ -1485,71 +1509,76 @@ export class GPURigidBodyWorld {
             }))
           ],
           compile: ({device}) =>
-            executable(properties.map(properties => new Computation(device, properties))),
+            executable(properties.map(properties => createBoundKernel(device, properties))),
           compileAsync: async ({device}) =>
             executable(
               await Promise.all(
-                properties.map(properties => Computation.createAsync(device, properties))
+                properties.map(properties => createBoundKernelAsync(device, properties))
               )
             )
         });
         continue;
       }
       const createExecutable = (
-        computation: Computation
+        computation: BoundKernel
       ): GPUCommandGraphComputeExecutable<Parameters> => ({
         encode: ({computePass, getBuffer}) => {
           const resolved: Record<string, Binding> = {};
           for (const binding of activeBindings)
             resolved[binding.name] = getBuffer(binding.resource);
-          computation.setBindings(resolved);
+          Object.assign(computation.bindings, resolved);
           if (scheduledDispatch) {
-            computation.dispatchIndirect(
-              computePass,
-              getBuffer(schedulerBinding!.resource),
-              entryPoint === 'bounds' ? 32 : 16
-            );
+            computation.kernel.dispatchIndirect(computePass, {
+              bindings: computation.bindings,
+              indirectBuffer: getBuffer(schedulerBinding!.resource),
+              indirectOffset: entryPoint === 'bounds' ? 32 : 16
+            });
           } else if (indirectPairs) {
-            computation.dispatchIndirect(computePass, getBuffer(dispatchBinding!.resource), 0);
+            computation.kernel.dispatchIndirect(computePass, {
+              bindings: computation.bindings,
+              indirectBuffer: getBuffer(dispatchBinding!.resource),
+              indirectOffset: 0
+            });
           } else if (entryPoint === 'meshCollide') {
             const targetBinding = bindings.find(binding => binding.name === 'targets')!;
-            computation.dispatchIndirect(
-              computePass,
-              getBuffer(targetBinding.resource),
-              this.count * 32
-            );
+            computation.kernel.dispatchIndirect(computePass, {
+              bindings: computation.bindings,
+              indirectBuffer: getBuffer(targetBinding.resource),
+              indirectOffset: this.count * 32
+            });
           } else {
-            computation.dispatch(
-              computePass,
-              entryPoint === 'ensembleDispatch'
-                ? 1
-                : entryPoint.startsWith('ensemble')
-                  ? Math.ceil(this.count / this.props.ensembleBodiesPerInstance! / 64)
-                  : this.ensembleBuffer && ['prepare', 'parallelCompact'].includes(entryPoint)
+            computation.kernel.dispatch(computePass, {
+              bindings: computation.bindings,
+              x:
+                entryPoint === 'ensembleDispatch'
+                  ? 1
+                  : entryPoint.startsWith('ensemble')
                     ? Math.ceil(this.count / this.props.ensembleBodiesPerInstance! / 64)
-                    : ['parallelLink', 'parallelUnion', 'parallelCompact'].includes(entryPoint)
-                      ? Math.ceil(this.maximumPairs / 64)
-                      : entryPoint === 'parallelActive'
-                        ? Math.ceil(Math.max(this.maximumPairs, this.count) / 64)
-                        : [
-                              'parallelDispatchCount',
-                              'parallelActiveCount',
-                              'parallelResetCounters'
-                            ].includes(entryPoint)
-                          ? 1
-                          : entryPoint.startsWith('parallel')
-                            ? Math.ceil(this.count / 64)
-                            : entryPoint === 'collide'
-                              ? Math.ceil(this.maximumPairs / 64)
-                              : entryPoint === 'bounds'
-                                ? Math.ceil(this.colliderStorageCount / 64)
-                                : entryPoint === 'integrate'
-                                  ? Math.ceil(this.count / 64)
-                                  : 1
-            );
+                    : this.ensembleBuffer && ['prepare', 'parallelCompact'].includes(entryPoint)
+                      ? Math.ceil(this.count / this.props.ensembleBodiesPerInstance! / 64)
+                      : ['parallelLink', 'parallelUnion', 'parallelCompact'].includes(entryPoint)
+                        ? Math.ceil(this.maximumPairs / 64)
+                        : entryPoint === 'parallelActive'
+                          ? Math.ceil(Math.max(this.maximumPairs, this.count) / 64)
+                          : [
+                                'parallelDispatchCount',
+                                'parallelActiveCount',
+                                'parallelResetCounters'
+                              ].includes(entryPoint)
+                            ? 1
+                            : entryPoint.startsWith('parallel')
+                              ? Math.ceil(this.count / 64)
+                              : entryPoint === 'collide'
+                                ? Math.ceil(this.maximumPairs / 64)
+                                : entryPoint === 'bounds'
+                                  ? Math.ceil(this.colliderStorageCount / 64)
+                                  : entryPoint === 'integrate'
+                                    ? Math.ceil(this.count / 64)
+                                    : 1
+            });
           }
         },
-        destroy: () => computation.destroy()
+        destroy: () => computation.kernel.destroy()
       });
       const computationProps = {
         id: `${this.id}-${entryPoint}`,
@@ -1582,9 +1611,9 @@ export class GPURigidBodyWorld {
               ]
             : [])
         ],
-        compile: ({device}) => createExecutable(new Computation(device, computationProps)),
+        compile: ({device}) => createExecutable(createBoundKernel(device, computationProps)),
         compileAsync: async ({device}) =>
-          createExecutable(await Computation.createAsync(device, computationProps))
+          createExecutable(await createBoundKernelAsync(device, computationProps))
       });
     }
     continuous?.finish();
@@ -1691,17 +1720,18 @@ export class GPURigidBodyWorld {
         }
       };
       const executable = (
-        computation: Computation
+        computation: BoundKernel
       ): GPUCommandGraphComputeExecutable<Parameters> => ({
         encode: ({computePass, getBuffer}) => {
-          computation.setBindings(
+          Object.assign(
+            computation.bindings,
             Object.fromEntries(
               eventBindings.map(binding => [binding.name, getBuffer(binding.resource)])
             )
           );
-          computation.dispatch(computePass, 1);
+          computation.kernel.dispatch(computePass, {bindings: computation.bindings, x: 1});
         },
-        destroy: () => computation.destroy()
+        destroy: () => computation.kernel.destroy()
       });
       graph.addComputePass({
         id: properties.id,
@@ -1712,9 +1742,8 @@ export class GPURigidBodyWorld {
             ? ('storage-read' as const)
             : ('storage-read-write' as const)
         })),
-        compile: () => executable(new Computation(graph.device, properties)),
-        compileAsync: async () =>
-          executable(await Computation.createAsync(graph.device, properties))
+        compile: () => executable(createBoundKernel(graph.device, properties)),
+        compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
       });
     }
     if (this.props.enableQueries) {
@@ -1743,9 +1772,9 @@ export class GPURigidBodyWorld {
           querySelection: this.querySelection,
           queryOutput: this.queryOutput
         }
-      } satisfies ConstructorParameters<typeof Computation>[1];
-      this.queryComputation = new Computation(graph.device, queryProperties);
-      this.queryReduction = new Computation(graph.device, {
+      } satisfies BoundKernelProps;
+      this.queryComputation = createBoundKernel(graph.device, queryProperties);
+      this.queryReduction = createBoundKernel(graph.device, {
         ...queryProperties,
         entryPoint: 'reduceQueries',
         shaderLayout: {
@@ -1825,8 +1854,8 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         ),
         command: this.controlSettings
       }
-    } satisfies ConstructorParameters<typeof Computation>[1];
-    this.control = new Computation(graph.device, {
+    } satisfies BoundKernelProps;
+    this.control = createBoundKernel(graph.device, {
       ...controlProperties,
       shaderLayout: {
         bindings: controlProperties.shaderLayout.bindings.filter(
@@ -1844,7 +1873,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       'manifolds',
       ...(this.props.joints?.length ? ['targets'] : [])
     ];
-    this.invalidation = new Computation(graph.device, {
+    this.invalidation = createBoundKernel(graph.device, {
       ...controlProperties,
       id: `${this.id}-invalidate`,
       entryPoint: 'invalidate',
@@ -1861,13 +1890,17 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     });
   }
 
-  private invalidateState(pass: Parameters<Computation['dispatch']>[0]): void {
+  private invalidateState(pass: Parameters<BoundKernel['kernel']['dispatch']>[0]): void {
     // Controls may wake any island; reclassify enabled instances on the next GPU step.
     this.ensembleBuffer?.write(new Uint32Array([1]), 4);
     const workgroups = Math.ceil(
       Math.max(this.count, this.maximumPairs, this.props.joints?.length ?? 0) / 64
     );
-    this.invalidation!.dispatch(pass, Math.min(65535, workgroups), Math.ceil(workgroups / 65535));
+    this.invalidation!.kernel.dispatch(pass, {
+      bindings: this.invalidation!.bindings,
+      x: Math.min(65535, workgroups),
+      y: Math.ceil(workgroups / 65535)
+    });
   }
 
   /** Double-precision global origin. GPU poses, controls, queries and event points are local. */
@@ -1932,7 +1965,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.controlSettings.write(new Uint8Array(data));
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
-    this.control.dispatch(pass, 1);
+    this.control.kernel.dispatch(pass, {bindings: this.control.bindings, x: 1});
     this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
@@ -2297,7 +2330,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.controlSettings.write(new Uint8Array(data));
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
-    this.control.dispatch(pass, 1);
+    this.control.kernel.dispatch(pass, {bindings: this.control.bindings, x: 1});
     this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
@@ -2326,7 +2359,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.controlSettings.write(new Uint8Array(data));
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
-    this.control.dispatch(pass, 1);
+    this.control.kernel.dispatch(pass, {bindings: this.control.bindings, x: 1});
     this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
@@ -2360,7 +2393,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.controlSettings.write(new Uint8Array(data));
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
-    this.control.dispatch(pass, 1);
+    this.control.kernel.dispatch(pass, {bindings: this.control.bindings, x: 1});
     this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
@@ -2437,7 +2470,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.controlSettings.write(new Uint8Array(data));
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginComputePass();
-    this.control.dispatch(pass, 1);
+    this.control.kernel.dispatch(pass, {bindings: this.control.bindings, x: 1});
     this.invalidateState(pass);
     pass.end();
     this.device.submit(encoder.finish());
@@ -2551,8 +2584,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       this.querySelection.write(selection);
       const encoder = this.device.createCommandEncoder();
       const pass = encoder.beginComputePass();
-      this.queryComputation.dispatch(pass, Math.ceil(this.colliderStorageCount / 64));
-      this.queryReduction!.dispatch(pass, 1);
+      this.queryComputation.kernel.dispatch(pass, {
+        bindings: this.queryComputation.bindings,
+        x: Math.ceil(this.colliderStorageCount / 64)
+      });
+      this.queryReduction!.kernel.dispatch(pass, {bindings: this.queryReduction!.bindings, x: 1});
       pass.end();
       this.device.submit(encoder.finish());
       const bytes = await this.queryOutput.readAsync(0, 16 + maximumHits * 48);
@@ -2943,10 +2979,10 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.ensembleReset?.destroy();
     for (const checkpoint of this.gpuCheckpoints) checkpoint.destroy();
     this.destroyed = true;
-    this.control?.destroy();
-    this.invalidation?.destroy();
-    this.queryComputation?.destroy();
-    this.queryReduction?.destroy();
+    this.control?.kernel.destroy();
+    this.invalidation?.kernel.destroy();
+    this.queryComputation?.kernel.destroy();
+    this.queryReduction?.kernel.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers.length = 0;
   }

@@ -4,7 +4,8 @@
 
 import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {Computation, DynamicBuffer} from '@luma.gl/engine';
+import {Computation} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUVector, getGPUVectorBuffer} from '@luma.gl/gpgpu/gpu-data';
 import {dggs, type ShaderModule} from '@luma.gl/shadertools';
 import * as arrow from 'apache-arrow';

@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture, type Binding, type RenderPassProps} from '@luma.gl/core';
-import type {PickInfo} from '@luma.gl/engine';
-import {Kernel} from '@luma.gl/engine';
+export type GPUIndexPickInfo = {batchIndex: number | null; objectIndex: number | null};
+import {Kernel} from '@luma.gl/gpgpu';
 import {
   GPUCommandGraph,
   type GraphBufferHandle,
@@ -63,7 +63,7 @@ export type GPUIndexPickingRegionProps = {
 /** Decoded capacity-bounded result from {@link GPUIndexPickingTarget.addRegionPass}. */
 export type GPUIndexPickingRegionResult = {
   /** Stored picks. Duplicate covered pixels are intentionally preserved. */
-  picks: PickInfo[];
+  picks: GPUIndexPickInfo[];
   /** Total number of non-background pixels, including values beyond result capacity. */
   count: number;
   /** Whether `count` exceeded the number of stored pairs. */
@@ -383,7 +383,7 @@ ${
  *
  * The clear sentinel `[-1, -1]` maps to null object and batch indices.
  */
-export function decodeGPUIndexPickInfo(data: ArrayBuffer | ArrayBufferView): PickInfo {
+export function decodeGPUIndexPickInfo(data: ArrayBuffer | ArrayBufferView): GPUIndexPickInfo {
   const byteOffset = ArrayBuffer.isView(data) ? data.byteOffset : 0;
   const byteLength = ArrayBuffer.isView(data) ? data.byteLength : data.byteLength;
   const buffer = ArrayBuffer.isView(data) ? data.buffer : data;
@@ -416,7 +416,7 @@ export function decodeGPUIndexPickRegion(
     count,
     Math.floor((byteLength / Uint32Array.BYTES_PER_ELEMENT - 2) / 2)
   );
-  const picks: PickInfo[] = [];
+  const picks: GPUIndexPickInfo[] = [];
   for (let index = 0; index < storedCount; index++) {
     const pairByteOffset = (2 + index * 2) * Uint32Array.BYTES_PER_ELEMENT;
     const batchIndex = view.getInt32(pairByteOffset + Int32Array.BYTES_PER_ELEMENT, true);

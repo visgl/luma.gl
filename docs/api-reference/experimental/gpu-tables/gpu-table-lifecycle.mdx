@@ -195,62 +195,11 @@ indexed tables until packing can rebase those local indices correctly.
 
 ### `TableTransform`
 
-`TableTransform` is the WebGL transform-feedback counterpart. It consumes a
-generic `GPUTable`, merges the table attribute layouts into the underlying
-`BufferTransform`, accepts already-created `GPUVector` inputs, and can run one
-preserved GPU batch at a time. Use `makeGPUTableFromArrowTable()` before construction
-when the source data starts as an Arrow table:
-
-```ts
-const transform = new TableTransform(device, {
-  vs,
-  varyings,
-  shaderLayout,
-  table: makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout}),
-  tableCount: 'vertex'
-});
-
-transform.dispatchBatches({
-  outputBuffers: (batch, batchIndex) => makeOutputBuffers(batch, batchIndex)
-});
-```
-
-For a compute-like update path, pass `inputVectors` plus
-`copyOutputToInputVectors`. `outputs` is inferred from the copy map when it is
-omitted:
-
-```ts
-const transform = new TableTransform(device, {
-  vs,
-  shaderLayout,
-  inputVectors: {
-    particlePositions,
-    particleVelocities
-  },
-  copyOutputToInputVectors: {
-    nextParticlePositions: 'particlePositions',
-    nextParticleVelocities: 'particleVelocities'
-  }
-});
-```
-
-Transform feedback writes a dense output stream, so automatic copy-back targets
-tightly packed, directly bindable GPUVectors. It can not scatter-copy into
-padded or interleaved rows.
-
-Use `TableTransform` only for attribute-backed WebGL transform feedback. It is
-not a storage-buffer compute abstraction.
-
-Relevant public types:
-
-| Type | Meaning |
-| --- | --- |
-| `TableTransformProps` | Construction props, including `table`, `inputVectors`, `copyOutputToInputVectors`, and `tableCount`. |
-| `TableTransformBatchOptions` | `dispatchBatches()` options, including fixed or per-batch `outputBuffers`. |
+[TableTransform](/docs/api-reference/engine/tables/table-transform) is the WebGL transform-feedback adapter in `@luma.gl/engine/tables`. It consumes graph tables and primitive GPU vectors without changing their ownership or batch structure. Import it from engine; graph does not re-export it.
 
 ### `GPUTableComputation`
 
-`GPUTableComputation` is the WebGPU compute helper for table vectors exposed as
+`GPUTableComputation` delegates to Kernel and accepts assembled WGSL plus explicit resource bindings. Shader assembly and uniform-buffer ownership belong to the caller. It is the WebGPU compute helper for table vectors exposed as
 storage bindings. Supply `GPUVector` objects by binding name:
 
 ```ts

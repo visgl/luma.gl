@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from '@luma.gl/graph/gpu-core';
 import {
@@ -516,7 +516,7 @@ function addComparisonComputePass<Parameters>(
     id: props.id,
     resources: props.resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: props.id,
         source: props.source,
         shaderLayout: {
@@ -534,10 +534,15 @@ function addComparisonComputePass<Parameters>(
           for (const [name, view] of Object.entries(props.bindings)) {
             resolved[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolved);
-          computation.dispatch(computePass, props.dispatch.x, props.dispatch.y, props.dispatch.z);
+          const kernelBindings = resolved;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatch.x,
+            y: props.dispatch.y,
+            z: props.dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

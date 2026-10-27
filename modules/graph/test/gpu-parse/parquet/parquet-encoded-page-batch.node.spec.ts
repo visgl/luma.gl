@@ -3,14 +3,14 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ParquetEncodedPageBatch} from '@loaders.gl/parquet';
+import type {ParquetEncodedPageBatch} from '@loaders.gl/tables/parquet';
 import {parse} from '@loaders.gl/core';
-import {ParquetJSWriter, ParquetLoader} from '@loaders.gl/parquet';
-import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
+import {ParquetJSWriter, ParquetLoader} from '@loaders.gl/tables/parquet';
+import {ParquetSourceLoader} from '@loaders.gl/tables/parquet/parquet-source-loader';
 import {planGPUParquetEncodedPageBatch} from '@luma.gl/graph/gpu-parse';
 
-it('loaders.gl alpha.12 V1 and V2 pages produce mixed GPU batch plans', async () => {
-  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-alpha.12');
+it('loaders.gl alpha.14 V1 and V2 pages produce mixed GPU batch plans', async () => {
+  expect(ParquetJSWriter.version, 'uses the requested loaders.gl release').toBe('5.0.0-alpha.14');
 
   for (const useDataPageV2 of [false, true]) {
     const batch = await makeEncodedPageBatch(useDataPageV2);

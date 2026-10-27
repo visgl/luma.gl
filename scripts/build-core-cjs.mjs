@@ -13,7 +13,9 @@ import {transform} from 'esbuild';
 const distributionDirectory = new URL('../modules/core/dist/', import.meta.url);
 await writeCommonJSModules(distributionDirectory);
 await writeCommonJSModules(new URL('../modules/anari/dist/', import.meta.url));
-await writeCommonJSModules(new URL('../modules/graph/dist/experimental/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/gpgpu/dist/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/graph/dist/', import.meta.url));
+await writeCommonJSModules(new URL('../modules/engine/dist/', import.meta.url));
 
 async function writeCommonJSModules(directory) {
   const files = await readdir(directory, {recursive: true});
@@ -112,3 +114,57 @@ for (const entryPoint of ['models', 'simulation']) {
   }
 }
 process.stdout.write('Verified CommonJS renderer and experimental subpath identity.\n');
+
+// Dynamic resource facades preserve identity; engine owns shader-module convenience APIs.
+const engineApi = require('../modules/engine/dist/index.cjs');
+const executionApi = require('../modules/gpgpu/dist/index.cjs');
+const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
+for (const name of ['DynamicBuffer', 'DynamicTexture']) {
+  assert.equal(typeof executionApi[name], 'function');
+  assert.equal(engineApi[name], executionApi[name]);
+}
+for (const name of ['Computation', 'ShaderInputs', 'BufferTransform', 'TextureTransform', 'GPUVectorModel', 'GPUVectorGeometry', 'getGPUVectorModelBatches', 'validateGPUVectorBatchStructure']) {
+  assert.equal(typeof engineApi[name], 'function');
+  assert.equal(name in executionApi, false);
+  assert.equal(name in dataApi, false);
+}
+assert(engineApi.Model.prototype instanceof engineApi.GPUVectorModel);
+process.stdout.write('Verified CommonJS execution primitive identity.\n');
+
+await import('./verify-package-layering.mjs');
+
+// Optional resource conveniences preserve identity across all compatibility exports.
+const dynamicApi = require('../modules/core/dist/dynamic/index.cjs');
+const [coreEsm, dynamicEsm, engineEsm, executionEsm] = await Promise.all([
+  import('../modules/core/dist/index.js'),
+  import('../modules/core/dist/dynamic/index.js'),
+  import('../modules/engine/dist/index.js'),
+  import('../modules/gpgpu/dist/index.js')
+]);
+for (const name of ['DynamicBuffer', 'DynamicTexture']) {
+  assert.equal(typeof dynamicApi[name], 'function');
+  assert.equal(dynamicApi[name], engineApi[name]);
+  assert.equal(dynamicApi[name], executionApi[name]);
+  assert.equal(dynamicEsm[name], engineEsm[name]);
+  assert.equal(dynamicEsm[name], executionEsm[name]);
+  assert(!(name in coreApi));
+  assert(!(name in coreEsm));
+}
+process.stdout.write('Verified optional dynamic resource identity in ESM and CommonJS.\n');
+
+// Shader-module conveniences remain engine-owned in both module formats.
+for (const name of ['Computation', 'ShaderInputs']) {
+  assert.equal(typeof engineEsm[name], 'function');
+  assert(!(name in executionEsm));
+}
+
+// Kernel execution helpers are exported only by gpgpu, in both module formats.
+for (const name of ['Kernel', 'RenderKernel']) {
+  assert.equal(typeof executionApi[name], 'function');
+  assert.equal(typeof executionEsm[name], 'function');
+  assert(!(name in engineApi));
+  assert(!(name in engineEsm));
+  assert(!(name in coreApi));
+  assert(!(name in coreEsm));
+}
+process.stdout.write('Verified gpgpu kernel export ownership.\n');

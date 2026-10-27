@@ -4,7 +4,7 @@
 
 import {Device, type CommandEncoder, Texture} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {ClipSpace, ClipSpaceProps} from './clip-space';
 
 const backgroundModule = {

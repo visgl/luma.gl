@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import '@loaders.gl/polyfills';
+import '@loaders.gl/core/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/gltf';
 import {loadImageTexture} from '@loaders.gl/textures';
@@ -16,7 +16,7 @@ import {
   loadPBREnvironment
 } from '@luma.gl/gltf';
 
-import {DynamicTexture} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 
 it('gltf#loading', async () => {
   const webglDevice = await getWebGLTestDevice();

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import type {DrawCommandBufferView} from '@luma.gl/graph/gpu-core';
 import {GPUAncestorProjection} from '@luma.gl/graph/gpu-core';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';
@@ -434,7 +434,7 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
     id: `${interaction.id}-policy`,
     resources,
     compile: ({device}) => {
-      const computation = new Computation(device, {
+      const kernel = new Kernel(device, {
         id: `${interaction.id}-policy`,
         source,
         shaderLayout: {
@@ -452,10 +452,15 @@ fn main(@builtin(global_invocation_id) globalId: vec3<u32>) {
           for (const [name, view] of Object.entries(bindings)) {
             resolved[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(resolved);
-          computation.dispatch(computePass, dispatch.x, dispatch.y, dispatch.z);
+          const kernelBindings = resolved;
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: dispatch.x,
+            y: dispatch.y,
+            z: dispatch.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => kernel.destroy()
       };
     }
   });

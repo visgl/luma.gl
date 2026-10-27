@@ -45,6 +45,11 @@
       "types": "./dist/gpu-data/index.d.ts",
       "import": "./dist/gpu-data/index.js",
       "require": "./dist/gpu-data/index.cjs"
+    },
+    "./_internal/*": {
+      "types": "./dist/execution/*.d.ts",
+      "import": "./dist/execution/*.js",
+      "require": "./dist/execution/*.cjs"
     }
   },
   "files": [
@@ -61,11 +66,10 @@
   },
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.3",
-    "@luma.gl/engine": "~10.0.0-alpha.3",
     "@luma.gl/shadertools": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@math.gl/core": "~5.0.0-alpha.19",
+    "@math.gl/core": "~5.0.0-alpha.20",
     "probe.gl": "^5.0.0"
   }
 }

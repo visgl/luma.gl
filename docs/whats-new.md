@@ -97,8 +97,8 @@ Target Release Date: Q3, 2026
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
-- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.19 grouped
-  packages and loaders.gl 5.0.0-alpha.12. Arrow adapters expose
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-alpha.20 grouped
+  packages and loaders.gl 5.0.0-alpha.14. Arrow adapters expose
   `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
   for native GeoArrow chunks and rows without copying coordinate buffers. Views
   borrow source storage; keep it alive and do not mutate or detach it while in use.
@@ -236,6 +236,7 @@ Target Release Date: Q3, 2026
 - **`CompositeShaderPass`** - The structured multi-pass postprocessing API and effect factories
   use composite-pass naming in place of `ShaderPassPipeline`.
 
+
 **@luma.gl/arrow (Private)**
 
 - **High-dimensional Arrow storage columns** - Existing Arrow table/vector adapters map wide `FixedSizeList` values directly into row-aligned fixed-size-list GPU columns, with optional named validity siblings and preserved parent/child nulls, record batches, and source identity.
@@ -326,7 +327,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   helpers live in `@luma.gl/gpgpu/gpu-data`, independent of source adapters and rendering models.
 - **Tables and models stay focused** - Batch-preserving tables live in
   `@luma.gl/graph/gpu-tables`; path and polygon models live in
-  `@luma.gl/graph/experimental/models`.
+  `@luma.gl/engine/models`.
 - **Renderers preserve what matters** - `@luma.gl/text` supports streamed text and shared font
   resources. `@luma.gl/splats` retains source batches and stable row identities.
 
@@ -460,7 +461,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **GPU data primitives and experimental tables** - Canonical `GPUData` and `GPUVector` runtime classes live in `@luma.gl/gpgpu/gpu-data`, while `GPURecordBatch` and `GPUTable` provide reusable non-Arrow-specific GPU table ownership and batching from `@luma.gl/graph/gpu-tables`.
 - **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
 - **Vertex storage planning** - `GPUTableBufferPlanner` checks vertex-stage storage buffer limits before choosing storage-backed table attributes, allowing core WebGPU devices to fall back to vertex attributes when needed.
-- **Execution helpers** - `TableTransform`, `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` live with the experimental table runtime instead of a source-adapter module.
+- **Execution helpers** - `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` live with the experimental table runtime instead of a source-adapter module.
 - **Physical GPU data structs** - Inline `GPUData` format records describe interleaved rows with `wgsl-storage` or minimally padded WebGPU vertex layouts, while `GPUData.getChild()` and `getChildAt()` expose typed zero-copy field views.
 
 **@luma.gl/text**
@@ -495,7 +496,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 **@luma.gl/engine**
 
-- **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
+- **[`DynamicBuffer`](/docs/api-reference/core/dynamic/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
 - **[`VideoTexture`](/docs/api-reference/engine/video-texture)** - Stable live video binding source for caller-owned `HTMLVideoElement` and `VideoFrame` inputs. Portable shaders use copied textures on WebGL and WebGPU, while WGSL `texture_external` can opt into native WebGPU external-video sampling.
 - **`Animator`** - New generic `Animator` and `AnimationClipController` classes manage timeline-driven animation updates. `GLTFAnimator` now builds on the shared controller.
 - **Custom animation-frame providers** - `AnimationLoop` can consume a caller-provided animation-frame source and forward its frame payload, enabling integrations such as WebXR without changing the normal browser loop.
@@ -569,7 +570,7 @@ Release Date: March 31, 2026
 **@luma.gl/engine**
 
 - New **`Material`** and **`MaterialFactory`** classes provide reusable material-owned group-3 bindings for `Scenegraph` models.
-- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture).
+- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/core/dynamic/dynamic-texture).
 - **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
 - **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
 - **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
@@ -710,7 +711,7 @@ Enhanced WebGPU support.
 
 - `makeAnimationLoopTemplate`
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
-- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture)
+- [`DynamicTexture`](/docs/api-reference/core/dynamic/dynamic-texture)
   - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.
@@ -908,3 +909,11 @@ glTF adds live deformation cooking snapshots and explicit native state export. T
 Authored Scene Stress Lab exercises shared assets and repeated lifecycle operations.
 See [scenegraph physics](./api-guide/engine/scenegraph-physics.md) for the supported
 contracts and remaining qualification limits.
+
+- **Compute execution** - Gpgpu WebGPU operations and graph compute passes now execute through Kernel, with bindings supplied per dispatch. Module-based operations assemble their WGSL before kernel creation, and geospatial FP64 passes own their uniform buffers explicitly.
+
+- **Table transform ownership** - Import `TableTransform` from `@luma.gl/engine/tables`; graph retains the underlying table data APIs. WebGL extent now executes its existing reduction through RenderKernel instead of GPUVectorModel.
+
+- **WebGL operation execution** - Gpgpu row transforms, gather, sequence, segmented-map, and extent use RenderKernel while preserving their existing shaders and operation semantics. BufferTransform and TextureTransform are owned by engine.
+
+- **Vector rendering ownership** - GPUVectorModel, GPUVectorGeometry, and their binding and batching helpers live in engine. Gpgpu and graph no longer depend on these rendering APIs.

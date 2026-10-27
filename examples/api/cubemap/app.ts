@@ -6,9 +6,9 @@ import {
   AnimationLoopTemplate,
   AnimationProps,
   loadImageBitmap,
-  DynamicTexture,
   ShaderInputs
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {Matrix4, radians} from '@math.gl/core';
 
 import {CUBEMAP_INFO_HTML} from './app-ui';

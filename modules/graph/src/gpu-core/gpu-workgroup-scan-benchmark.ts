@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {type CompiledGPUCommandGraph, GPUCommandGraph} from './gpu-command-graph';
 
 const WORKGROUP_SIZE = 256;

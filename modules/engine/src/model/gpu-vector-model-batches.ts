@@ -8,7 +8,7 @@ import {
   type BufferLayout,
   type VertexFormat
 } from '@luma.gl/core';
-import type {DynamicBuffer} from '../dynamic-buffer/dynamic-buffer';
+import type {DynamicBuffer} from '@luma.gl/core/dynamic';
 
 /** Controls which draw count follows each physical vector batch row count. */
 export type GPUVectorModelCount = 'instance' | 'vertex' | 'none';

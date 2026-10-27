@@ -183,18 +183,6 @@ export {SwapFramebuffers} from './compute/swap';
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
 export {getPlatformInfo} from './utils/get-platform-info';
-export type {
-  KernelProps,
-  KernelDispatchOptions,
-  KernelDispatchIndirectOptions
-} from './compute/kernel';
-export {Kernel} from './compute/kernel';
-export type {
-  RenderKernelProps,
-  RenderKernelDrawOptions,
-  RenderKernelIndirectDrawOptions
-} from './compute/render-kernel';
-export {RenderKernel} from './compute/render-kernel';
 
 export type {
   PickInfo,
@@ -282,7 +270,7 @@ export {
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
 export {legacyColorPicking} from './modules/picking/legacy-color-picking';
 
-import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+import {DynamicTexture, type DynamicTextureProps} from '@luma.gl/core/dynamic';
 /** @deprecated use DynamicTexture */
 export const AsyncTexture = DynamicTexture;
 /** @deprecated use DynamicTextureProps */

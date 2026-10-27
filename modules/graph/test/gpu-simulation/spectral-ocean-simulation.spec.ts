@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation, Kernel} from '@luma.gl/engine';
+import {Kernel} from '@luma.gl/gpgpu';
 import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -233,8 +233,6 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
   const activeBufferCount = getResourceCount(device, 'Buffers');
   const allocatedBuffers: Buffer[] = [];
   const originalCreateBuffer = device.createBuffer;
-  const originalComputationDestroy = Computation.prototype.destroy;
-  let computationDestroyCount = 0;
   const originalKernelDestroy = Kernel.prototype.destroy;
   let kernelDestroyCount = 0;
 
@@ -253,10 +251,6 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
     kernelDestroyCount++;
     originalKernelDestroy.call(this);
   };
-  Computation.prototype.destroy = function (): void {
-    computationDestroyCount++;
-    originalComputationDestroy.call(this);
-  };
 
   try {
     expect(
@@ -265,7 +259,6 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
     ).toThrow(/injected SpectralOceanSimulation allocation failure/);
   } finally {
     device.createBuffer = originalCreateBuffer;
-    Computation.prototype.destroy = originalComputationDestroy;
     Kernel.prototype.destroy = originalKernelDestroy;
   }
 
@@ -277,8 +270,7 @@ it('SpectralOceanSimulation construction unwinds partial allocations', async () 
     Boolean(allocatedBuffers.every(buffer => buffer.destroyed)),
     'every buffer allocated before the failure is destroyed'
   ).toBe(true);
-  expect(computationDestroyCount, 'both simulation computations are unwound').toBe(2);
-  expect(kernelDestroyCount, 'the FFT kernel is unwound').toBe(1);
+  expect(kernelDestroyCount, 'both simulation kernels and the FFT kernel are unwound').toBe(3);
   expect(
     getResourceCount(device, 'Buffers'),
     'active buffer accounting returns to its baseline'
