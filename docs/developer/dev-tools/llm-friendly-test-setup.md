@@ -50,7 +50,10 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   This preserves real input and GPU integration coverage without increasing test timeouts.
 - Browser coverage uses weighted sharding so known slow GPU specs are spread across six
   CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
-  instrumented browser pages to every pull request.
+  instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
+  `test/utils/browser-test-sequencer.ts` from a successful SwiftShader run when expensive suites
+  are added or changed. Use rounded suite execution seconds plus three seconds of isolated-page
+  overhead, and replay the complete discovered suite set to check all six shard totals.
 - CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage
   anchors with Istanbul coverage from the six browser shards. The complete Node suite still runs
   separately without instrumentation so coverage remapping does not slow the build job.
