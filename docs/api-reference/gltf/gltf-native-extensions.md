@@ -9,7 +9,7 @@ survived loading. `@luma.gl/gltf` connects authored material variants, GPU insta
 recursive node visibility, typed animation pointers, and required-extension capabilities to the
 existing luma.gl scenegraph and animation runtime.
 
-Source interpretation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset,
+Source interpretation remains format-owned: `@loaders.gl/scene/gltf` reads and postprocesses the asset,
 `@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph,
 model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
 
@@ -17,7 +17,7 @@ model, animation, and scene-controller behavior. The optional glTF parsers produ
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 
@@ -424,7 +424,7 @@ The fixture attribution and pinned source revision are recorded in
 
 | Package | Responsibility |
 | --- | --- |
-| `@loaders.gl/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
+| `@loaders.gl/scene/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
 | `@luma.gl/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
 | `@luma.gl/engine` | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities. |
 | `@luma.gl/shadertools` | Canonical PBR material uniforms, physical shading, and reusable skinning. |

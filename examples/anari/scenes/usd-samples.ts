@@ -1,5 +1,5 @@
 import {load, parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 import {makeANARIJSONSceneFromGLTF} from './gltf-to-anari';
 import {type ANARIJSONScene, preloadANARIJSONTextures} from './playground-scene';

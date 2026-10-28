@@ -132,7 +132,7 @@ during streaming, and idle redraw suppression keep large scenes easier to inspec
 - `@loaders.gl/splats` parses Gaussian splat file formats and produces application-level data.
 - `@loaders.gl/tiles` and `@loaders.gl/3d-tiles` own tileset traversal, content transport,
   transforms, request scheduling, and caching.
-- `@loaders.gl/gltf` owns glTF parsing, extension decoding, and feature metadata.
+- `@loaders.gl/scene/gltf` owns glTF parsing, extension decoding, and feature metadata.
 - `@luma.gl/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
 - `@luma.gl/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
 - Applications or deck.gl layers own viewport integration, file selection, and interactive UI.

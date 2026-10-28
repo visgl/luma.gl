@@ -20,7 +20,7 @@ The **ABeautifulGame** sample demonstrates this capability. Drag to orbit and sc
 ```ts
 import {createScenegraphsFromGLTF, getGLTFExtensionSupport} from '@luma.gl/gltf';
 
-// gltf is decoded and postprocessed by @loaders.gl/gltf.
+// gltf is decoded and postprocessed by @loaders.gl/scene/gltf.
 for (const capability of getGLTFExtensionSupport(gltf).values()) {
   console.log(capability.extensionName, capability.supportLevel);
 }

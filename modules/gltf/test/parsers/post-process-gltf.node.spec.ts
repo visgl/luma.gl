@@ -8,7 +8,7 @@ import {Buffer} from 'node:buffer';
 import './post-process-gltf-half-float.spec';
 import './post-process-gltf-images.spec';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader, type GLTFWithBuffers as LoaderGLTFWithBuffers} from '@loaders.gl/gltf';
+import {GLTFLoader, type GLTFWithBuffers as LoaderGLTFWithBuffers} from '@loaders.gl/scene/gltf';
 import {
   createScenegraphsFromGLTF,
   postProcessGLTF,

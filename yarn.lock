@@ -4576,52 +4576,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/arrow-geometry@npm:5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/arrow-geometry@npm:5.0.0-alpha.14"
-  dependencies:
-    "@math.gl/geometry": "npm:5.0.0-alpha.20"
-    "@math.gl/geospatial": "npm:5.0.0-alpha.20"
-    apache-arrow: "npm:>= 17.0.0"
-  peerDependencies:
-    "@loaders.gl/core": ~5.0.0-alpha.0
-  checksum: 10c0/57576427196ba85f1f1cf6ed3e44595f3cf95f1c7b502ec4b26b47eacc6c8bfc136c234dce772bb32ea8c949452005836a72aeeeb5545a8a979405c1810e5106
-  languageName: node
-  linkType: hard
-
-"@loaders.gl/compression@npm:5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/compression@npm:5.0.0-alpha.14"
-  dependencies:
-    compress-utils: "npm:^0.10.1"
-  peerDependencies:
-    "@loaders.gl/core": ~5.0.0-alpha.0
-    brotli: ^1.3.2
-    fzstd: 0.1.1
-    hysnappy: ^1.1.1
-    lz4js: ^0.2.0
-    pako: ^2.1.0
-    snappyjs: ^0.6.1
-    zstd-codec: ^0.1
-  peerDependenciesMeta:
-    brotli:
-      optional: true
-    fzstd:
-      optional: true
-    hysnappy:
-      optional: true
-    lz4js:
-      optional: true
-    pako:
-      optional: true
-    snappyjs:
-      optional: true
-    zstd-codec:
-      optional: true
-  checksum: 10c0/3c9771cf44ae0a948762a0f2443f164b730c8cd07654b2627c588b8ec59c704ffe1e10f6e7fb4aa0b92fb645df54488b5ff135366336239a5d339c31e6671ae0
-  languageName: node
-  linkType: hard
-
 "@loaders.gl/compression@npm:5.0.0-beta.1":
   version: 5.0.0-beta.1
   resolution: "@loaders.gl/compression@npm:5.0.0-beta.1"
@@ -4737,18 +4691,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/draco@npm:5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/draco@npm:5.0.0-alpha.14"
+"@loaders.gl/draco@npm:5.0.0-beta.1":
+  version: 5.0.0-beta.1
+  resolution: "@loaders.gl/draco@npm:5.0.0-beta.1"
   dependencies:
-    "@loaders.gl/tables": "npm:5.0.0-alpha.14"
     draco3d: "npm:1.5.7"
   peerDependencies:
     "@loaders.gl/core": ~5.0.0-alpha.0
   dependenciesMeta:
     draco3d:
       optional: true
-  checksum: 10c0/9f6c5907769521ca7b736ade0306bb023113971da7a54bb3dd8e286f7b659449b74584071dde9975b2689b0b2eba2253b3c7ac06f2140c2b4f8a5df9b84c0675
+  checksum: 10c0/6dd264b64a4f247a71ad3232d541cc237441e5478ff5fefd2158ca33eba5d90fbc12d4fc95d3a04fe3b32b2dc31184b8a611b54503b0ab5740d3016112f4b59a
   languageName: node
   linkType: hard
 
@@ -4786,22 +4739,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/gltf@npm:~5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/gltf@npm:5.0.0-alpha.14"
-  dependencies:
-    "@loaders.gl/draco": "npm:5.0.0-alpha.14"
-    "@loaders.gl/images": "npm:5.0.0-alpha.14"
-    "@loaders.gl/textures": "npm:5.0.0-alpha.14"
-    "@math.gl/core": "npm:5.0.0-alpha.20"
-    "@math.gl/geometry": "npm:5.0.0-alpha.20"
-    zod: "npm:^4.1.12"
-  peerDependencies:
-    "@loaders.gl/core": ~5.0.0-alpha.0
-  checksum: 10c0/27d85e6724a2bb2c1b8de50d751e537d58dc86dd8a3665a541912534c0ac00f0a04cbfda939b651abb78f438eb65239faf6beca870d557a2ee37022192193e70
-  languageName: node
-  linkType: hard
-
 "@loaders.gl/images@npm:4.4.5":
   version: 4.4.5
   resolution: "@loaders.gl/images@npm:4.4.5"
@@ -4824,15 +4761,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/images@npm:5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/images@npm:5.0.0-alpha.14"
-  peerDependencies:
-    "@loaders.gl/core": ~5.0.0-alpha.0
-  checksum: 10c0/a186061532c9e5bdbcbfbf98bc0f1e29770921f834d5cf4a9cc150c5b711be4ed77a016371929906cd7ef7f137456d5b116ff898b32787e66fca6244b705c0f2
-  languageName: node
-  linkType: hard
-
 "@loaders.gl/images@npm:5.0.0-beta.1, @loaders.gl/images@npm:~5.0.0-beta.1":
   version: 5.0.0-beta.1
   resolution: "@loaders.gl/images@npm:5.0.0-beta.1"
@@ -4850,24 +4778,6 @@ __metadata:
   peerDependencies:
     "@loaders.gl/core": ~4.5.0
   checksum: 10c0/cd3741a5147efc092bc53979bed0285cea88c2a8cea80eb5adae06d1466f4882392e1f0fc237e7614576ad13cd65da1f6e29e1d4affc860309eaa7351ae92bda
-  languageName: node
-  linkType: hard
-
-"@loaders.gl/las@npm:~5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/las@npm:5.0.0-alpha.14"
-  dependencies:
-    "@math.gl/geospatial": "npm:5.0.0-alpha.20"
-    copc: "npm:0.0.8"
-    laz-perf: "npm:^0.0.7"
-  peerDependencies:
-    "@loaders.gl/core": ~5.0.0-alpha.0
-  dependenciesMeta:
-    copc:
-      optional: true
-    laz-perf:
-      optional: true
-  checksum: 10c0/c6641850065c7a8db523c3bd1bedf7ed9ab9ac76ff78aed0e23b267cf1b1545ea92823a3cea9fa770a2487225e4551f5cd77ba454a6fd6ec06caabef96d090ed
   languageName: node
   linkType: hard
 
@@ -4904,6 +4814,41 @@ __metadata:
     "@probe.gl/log": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
   checksum: 10c0/3eb14fbe32d1ca6cc673f7d502015b68f68d53e3a09284163520dc5640cdadb9b6e3a8ffe8561e8e944bc0daf1c56240082a398bd0068cddf1eb5424e5be38fc
+  languageName: node
+  linkType: hard
+
+"@loaders.gl/pointclouds@npm:~5.0.0-beta.1":
+  version: 5.0.0-beta.1
+  resolution: "@loaders.gl/pointclouds@npm:5.0.0-beta.1"
+  dependencies:
+    "@math.gl/geospatial": "npm:5.0.0-beta.1"
+    apache-arrow: "npm:>= 17.0.0"
+    copc: "npm:0.0.8"
+    laz-perf: "npm:^0.0.7"
+  peerDependencies:
+    "@loaders.gl/core": ~5.0.0-alpha.0
+  dependenciesMeta:
+    copc:
+      optional: true
+    laz-perf:
+      optional: true
+  checksum: 10c0/2dd9d3e4034448c050970ae4e001a4c32eef4d4653711c8ee6dabc980474c0377fdb13bfd4902bcfe4d41df79ad1d094b0f7d56047c2b1178ed9caaa620236e2
+  languageName: node
+  linkType: hard
+
+"@loaders.gl/scene@npm:~5.0.0-beta.1":
+  version: 5.0.0-beta.1
+  resolution: "@loaders.gl/scene@npm:5.0.0-beta.1"
+  dependencies:
+    "@loaders.gl/draco": "npm:5.0.0-beta.1"
+    "@loaders.gl/images": "npm:5.0.0-beta.1"
+    "@loaders.gl/textures": "npm:5.0.0-beta.1"
+    "@math.gl/core": "npm:5.0.0-beta.1"
+    "@math.gl/geometry": "npm:5.0.0-beta.1"
+    zod: "npm:^4.1.12"
+  peerDependencies:
+    "@loaders.gl/core": ~5.0.0-alpha.0
+  checksum: 10c0/5bcfa0e4f3e4c1bec57b83dd3d20fe0f37cb18df1ef7c1ecfcaba012e00f58504a1c7d794127bdbce1a9b852503cca2fcd2a2655fa8e95f38e915b2155f79e6e
   languageName: node
   linkType: hard
 
@@ -5000,31 +4945,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/tables@npm:5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/tables@npm:5.0.0-alpha.14"
-  dependencies:
-    "@loaders.gl/arrow-geometry": "npm:5.0.0-alpha.14"
-    "@loaders.gl/compression": "npm:5.0.0-alpha.14"
-    "@math.gl/geospatial": "npm:5.0.0-alpha.20"
-    apache-arrow: "npm:>= 17.0.0"
-    bson: "npm:4.2.0"
-    parquet-wasm: "npm:0.7.2"
-    probe.gl: "npm:^5.0.0"
-    xlsx: "npm:^0.18.5"
-  peerDependencies:
-    "@loaders.gl/core": ~5.0.0-alpha.0
-  dependenciesMeta:
-    bson:
-      optional: true
-    parquet-wasm:
-      optional: true
-    xlsx:
-      optional: true
-  checksum: 10c0/f2f43a9e264b109f0b7855c0d331334d097186b5e3e6bc65998d76e2c06f01506fe3be1a48f572bc19e7ca1ab67344122201e22e92b98aa0df68d3f81b16b449
-  languageName: node
-  linkType: hard
-
 "@loaders.gl/tables@npm:~5.0.0-beta.1":
   version: 5.0.0-beta.1
   resolution: "@loaders.gl/tables@npm:5.0.0-beta.1"
@@ -5086,24 +5006,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/textures@npm:5.0.0-alpha.14":
-  version: 5.0.0-alpha.14
-  resolution: "@loaders.gl/textures@npm:5.0.0-alpha.14"
-  dependencies:
-    "@loaders.gl/images": "npm:5.0.0-alpha.14"
-    "@math.gl/core": "npm:5.0.0-alpha.20"
-    zod: "npm:^4.1.12"
-  peerDependencies:
-    "@loaders.gl/core": ~5.0.0-alpha.0
-    texture-compressor: ^1.0.2
-  peerDependenciesMeta:
-    texture-compressor:
-      optional: true
-  checksum: 10c0/869f35b6fd549e5986882e74751d67e9c7c511347686359d389942168f2ff431f2108a08b32b93eb350c0205e9aca125e1e34abc4d0215103dd05518b4570d7a
-  languageName: node
-  linkType: hard
-
-"@loaders.gl/textures@npm:~5.0.0-beta.1":
+"@loaders.gl/textures@npm:5.0.0-beta.1, @loaders.gl/textures@npm:~5.0.0-beta.1":
   version: 5.0.0-beta.1
   resolution: "@loaders.gl/textures@npm:5.0.0-beta.1"
   dependencies:
@@ -5533,13 +5436,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/core@npm:5.0.0-alpha.20":
-  version: 5.0.0-alpha.20
-  resolution: "@math.gl/core@npm:5.0.0-alpha.20"
-  checksum: 10c0/16990133de34b703d510e5cdc54fcdae33be74c63e3f5f7812be2e943ecefd1c469cd93a31549ab01a93bc68122552e6bcb428c479eb61551d664949f5a1c859
-  languageName: node
-  linkType: hard
-
 "@math.gl/core@npm:5.0.0-beta.1, @math.gl/core@npm:~5.0.0-beta.1":
   version: 5.0.0-beta.1
   resolution: "@math.gl/core@npm:5.0.0-beta.1"
@@ -5569,33 +5465,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/geometry@npm:5.0.0-alpha.20":
-  version: 5.0.0-alpha.20
-  resolution: "@math.gl/geometry@npm:5.0.0-alpha.20"
-  dependencies:
-    "@math.gl/core": "npm:5.0.0-alpha.20"
-  checksum: 10c0/b51dce3a223b24a20404b927d395243f29629a62f76bc8833546eca77d407d123a43709635cd8ec985dc0df77096f230819c495d5ea8b43bdc998c7d0a202e94
-  languageName: node
-  linkType: hard
-
 "@math.gl/geometry@npm:5.0.0-beta.1, @math.gl/geometry@npm:~5.0.0-beta.1":
   version: 5.0.0-beta.1
   resolution: "@math.gl/geometry@npm:5.0.0-beta.1"
   dependencies:
     "@math.gl/core": "npm:5.0.0-beta.1"
   checksum: 10c0/f8e0421e7839853f6765ce5016d27473890b0b2be23b3b2d9b45e211d3942e5fbb7495d700b8ffce8b797b69b3af6bc8054fd21cd187dabcb8dff2c4ece2dba4
-  languageName: node
-  linkType: hard
-
-"@math.gl/geospatial@npm:5.0.0-alpha.20":
-  version: 5.0.0-alpha.20
-  resolution: "@math.gl/geospatial@npm:5.0.0-alpha.20"
-  dependencies:
-    "@math.gl/core": "npm:5.0.0-alpha.20"
-    "@math.gl/geometry": "npm:5.0.0-alpha.20"
-    "@math.gl/web-mercator": "npm:5.0.0-alpha.20"
-    polygon-clipping: "npm:0.15.7"
-  checksum: 10c0/69d32bafda6dbee45e2528fb5376d798058c419c4dee9cce7c07b069bbc38a7009db7a2fab4b87efb2b753fe705fd130913fc2a61562409cf58c0ccb58014cfe
   languageName: node
   linkType: hard
 
@@ -5632,15 +5507,6 @@ __metadata:
   version: 4.1.0
   resolution: "@math.gl/types@npm:4.1.0"
   checksum: 10c0/3c4dfa5ac5c9e2cef24d31f56b89c1dde785a5d70fd1a7030386346cb7dd4fa2cce5ba983b89842c1971492e30870dd22a078d64893f9c66887e38367bf992fa
-  languageName: node
-  linkType: hard
-
-"@math.gl/web-mercator@npm:5.0.0-alpha.20":
-  version: 5.0.0-alpha.20
-  resolution: "@math.gl/web-mercator@npm:5.0.0-alpha.20"
-  dependencies:
-    "@math.gl/core": "npm:5.0.0-alpha.20"
-  checksum: 10c0/6b5f8ee0562e2ae299ca71bbc7bf9cba759d195f63e0b65cc9c5f7bef465a86d06e3c0948e827fa93bc8c28e5771bd2b1bddca52e1212ee71ab91ede42684c73
   languageName: node
   linkType: hard
 
@@ -15289,7 +15155,7 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
@@ -15514,7 +15380,7 @@ __metadata:
     "@deck.gl/layers": "npm:9.4.0"
     "@deck.gl/mesh-layers": "npm:9.4.0"
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
@@ -16204,7 +16070,7 @@ __metadata:
   resolution: "luma.gl-examples-gltf-audio@workspace:examples/gltf/audio"
   dependencies:
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
@@ -16220,7 +16086,7 @@ __metadata:
   resolution: "luma.gl-examples-gltf-features@workspace:examples/gltf/features"
   dependencies:
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
@@ -16237,7 +16103,7 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
@@ -16257,7 +16123,7 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@loaders.gl/textures": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
@@ -16299,7 +16165,7 @@ __metadata:
   resolution: "luma.gl-examples-hello-gltf@workspace:examples/tutorials/hello-gltf"
   dependencies:
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
     "@luma.gl/gltf": "npm:10.0.0-alpha.4"
@@ -16416,7 +16282,7 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/effects": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
@@ -16486,7 +16352,7 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/las": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/pointclouds": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/effects": "npm:10.0.0-alpha.4"
     "@luma.gl/engine": "npm:10.0.0-alpha.4"
@@ -16627,7 +16493,7 @@ __metadata:
   resolution: "luma.gl-examples-showcase-scene@workspace:examples/anari/scenes"
   dependencies:
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/anari": "workspace:*"
     "@luma.gl/core": "npm:10.0.0-alpha.4"
     "@luma.gl/effects": "npm:10.0.0-alpha.4"
@@ -16930,8 +16796,8 @@ __metadata:
     "@babel/preset-env": "npm:^7.28.3"
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
-    "@loaders.gl/gltf": "npm:~5.0.0-alpha.14"
-    "@loaders.gl/las": "npm:~5.0.0-alpha.14"
+    "@loaders.gl/pointclouds": "npm:~5.0.0-beta.1"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@loaders.gl/sql": "npm:~5.0.0-beta.1"
     "@loaders.gl/tables": "npm:~5.0.0-beta.1"
     "@loaders.gl/textures": "npm:~5.0.0-beta.1"

@@ -4,7 +4,7 @@
 
 export const INFO_HTML = `\
 <p>
-  Minimal glTF loading example using <code>@loaders.gl/gltf</code> and
+  Minimal glTF loading example using <code>@loaders.gl/scene/gltf</code> and
   <code>@luma.gl/gltf</code>.
 </p>
 <p>Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>

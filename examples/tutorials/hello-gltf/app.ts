@@ -5,7 +5,7 @@
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Color, Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';

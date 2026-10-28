@@ -96,12 +96,16 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ### loaders.gl grouped packages
 
-luma.gl now uses loaders.gl 5.0.0-beta.1 where published; glTF and LAS remain on
-5.0.0-alpha.14. Install `@loaders.gl/tables` in place of
+luma.gl now uses loaders.gl 5.0.0-beta.1. Install `@loaders.gl/tables` in place of
 `@loaders.gl/parquet`, and import Parquet APIs from `@loaders.gl/tables/parquet` or
 its explicit implementation subpaths. Schema, schema utilities, and Node polyfills
 now come from `@loaders.gl/core/schema`, `@loaders.gl/core/schema-utils`, and
 `@loaders.gl/core/polyfills`; install `@loaders.gl/core` for those subpaths.
+
+The beta also groups glTF under `@loaders.gl/scene/gltf` and LAS under
+`@loaders.gl/pointclouds/las`. Replace the standalone `@loaders.gl/gltf` and
+`@loaders.gl/las` dependencies with `@loaders.gl/scene` and `@loaders.gl/pointclouds`,
+respectively. Install package roots, then import from the format subpaths.
 
 
 ### Audio loading ownership
