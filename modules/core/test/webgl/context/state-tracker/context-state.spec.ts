@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import type {TypedArray} from '@math.gl/core/types';
+import type {TypedArray} from '@math.gl/core';
 import type {GLParameters} from '@luma.gl/core/webgl-constants';
 import {GL} from '@luma.gl/core/webgl-constants';
 

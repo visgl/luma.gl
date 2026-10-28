@@ -1,6 +1,6 @@
 // Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 
-import type {NumberArray16} from '@math.gl/core/types';
+import type {NumberArray16} from '@math.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {Texture} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, ShaderInputs, makeRandomGenerator} from '@luma.gl/engine';

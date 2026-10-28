@@ -54,7 +54,7 @@
     "@luma.gl/core": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@math.gl/core": "~5.0.0-alpha.20"
+    "@math.gl/core": "~5.0.0-beta.1"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

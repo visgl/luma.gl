@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {fromHalfFloat} from '@luma.gl/shadertools';
-import type {TypedArray} from '@math.gl/core/types';
+import type {TypedArray} from '@math.gl/core';
 import type {OperationHandler} from '../../operation/operation';
 import type {ConvertColorsInputs} from '../convert-colors';
 

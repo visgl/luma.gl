@@ -15,9 +15,9 @@ import {
   type DggsCellEncoding
 } from '@luma.gl/arrow';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {GeohashDecoder} from '@math.gl/dggs/geohash';
-import {QuadkeyDecoder} from '@math.gl/dggs/quadkey';
-import {getS2BoundaryFlat, getS2TokenFromIndex} from '@math.gl/dggs/s2';
+import {GeohashDecoder} from '@math.gl/dggs';
+import {QuadkeyDecoder} from '@math.gl/dggs';
+import {getS2BoundaryFlat, getS2TokenFromIndex} from '@math.gl/dggs';
 import {cellToBoundary} from 'a5-js';
 import * as arrow from 'apache-arrow';
 import {cellToBoundary as getH3CellBoundary} from 'h3-js';

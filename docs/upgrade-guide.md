@@ -96,7 +96,8 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ### loaders.gl grouped packages
 
-luma.gl now uses loaders.gl 5.0.0-alpha.14. Install `@loaders.gl/tables` in place of
+luma.gl now uses loaders.gl 5.0.0-beta.1 where published; glTF and LAS remain on
+5.0.0-alpha.14. Install `@loaders.gl/tables` in place of
 `@loaders.gl/parquet`, and import Parquet APIs from `@loaders.gl/tables/parquet` or
 its explicit implementation subpaths. Schema, schema utilities, and Node polyfills
 now come from `@loaders.gl/core/schema`, `@loaders.gl/core/schema-utils`, and
@@ -112,11 +113,17 @@ resource ownership rules, and preserves luma.gl's support for legacy draft attac
 
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-alpha.20. Replace standalone math.gl dependencies
-with their grouped package roots: `@math.gl/types` becomes `@math.gl/core/types`,
-`@math.gl/polygon` becomes `@math.gl/geometry/polygon`, and CRS, projection, and
+luma.gl now uses math.gl 5.0.0-beta.1. Replace standalone math.gl dependencies
+with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
+`@math.gl/polygon` becomes `@math.gl/geometry`, and CRS, projection, and
 GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
 `@math.gl/earth/sun`. Install the package root when using these subpaths.
+
+The beta also removes alpha subpaths: import array types and `mat4`/`vec2`/`vec3`/`vec4`
+from `@math.gl/core`, parametric geometry and polygon helpers from `@math.gl/geometry`,
+DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from
+`@math.gl/geospatial/geoarrow`. TypeScript projects using `Float16Array` must include
+`ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
 
 
 ### Scene controllers move to engine
