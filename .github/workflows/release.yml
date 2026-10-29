@@ -73,17 +73,17 @@ jobs:
         run: yarn test-node
 
   browser_tests:
-    name: Headless tests (${{ matrix.shard }}/3)
+    name: Headless tests (${{ matrix.shard }}/6)
     runs-on: ubuntu-22.04
     needs: check_branch
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     if: ${{ github.repository_owner == 'visgl' && needs.check_branch.outputs.should_build == 'true' }}
 
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6]
 
     steps:
       - name: Checkout code
@@ -139,7 +139,7 @@ jobs:
           du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
       - name: Run headless tests
-        run: yarn test-headless --shard=${{ matrix.shard }}/3
+        run: yarn test-headless --shard=${{ matrix.shard }}/6
 
   release:
     name: Post GitHub release and publish to NPM
