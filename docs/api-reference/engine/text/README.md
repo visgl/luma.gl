@@ -42,7 +42,7 @@ rasterized padding while layout advances and baselines remain unchanged.
 
 Both builders cache identical inputs and incrementally add newly requested characters.
 
-`@luma.gl/arrow` owns Arrow source data, source mapping, upload, and Arrow UTF-8/dictionary preparation. It converts Arrow vectors into `GPUVector` objects or prepared GPU state, then constructs renderer models that only know about GPU-resident resources.
+`@luma.gl/engine/arrow` owns Arrow source data, source mapping, upload, and Arrow UTF-8/dictionary preparation. It converts Arrow vectors into `GPUVector` objects or prepared GPU state, then constructs renderer models that only know about GPU-resident resources.
 
 `ArrowTextRenderer` accepts `Utf8`, `Utf8View`, `Dictionary<Utf8>`, and
 `Dictionary<Utf8View>` label vectors. `Utf8View` is detected at runtime and normalized before GPU
@@ -120,7 +120,7 @@ relicense downloaded glyph data as MIT.
 | Responsibility | Public APIs |
 | --- | --- |
 | CPU font preparation in `@luma.gl/engine/text-fonts` | `FontAtlas`, atlas builders/loaders, mapping, kerning, and measurement |
-| Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `makeGPUTextDataFromArrowStream()`, `ArrowTextRenderer` |
+| Arrow conversion in `@luma.gl/engine/arrow` | `makeGPUTextDataFromArrow()`, `makeGPUTextDataFromArrowStream()`, `ArrowTextRenderer` |
 | Stable rendering in `@luma.gl/engine/text` | `GPUTextResources`, `GPUTextData`, `TextRenderer` |
 | Benchmark internals | `@luma.gl/engine/text-experimental` specialized models and forced strategies |
 

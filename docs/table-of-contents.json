@@ -959,7 +959,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/arrow",
+        "label": "Arrow adapters",
         "items": [
           "api-reference/arrow/README",
           "api-reference/arrow/arrow-representations",

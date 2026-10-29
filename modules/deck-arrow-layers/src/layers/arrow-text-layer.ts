@@ -14,10 +14,10 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowTextRenderer,
-  type ArrowColorType,
   type ArrowTextRendererDataBatchUpdate,
   type ArrowTextRendererProps
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {type ArrowColorType} from '@luma.gl/gpgpu/arrow';
 import {
   Buffer,
   type BufferLayout,

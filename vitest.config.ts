@@ -10,8 +10,8 @@ const optionalTextureCompressorShim = fileURLToPath(
 const excludePatterns = [
   '**/*.disabled.*',
   'modules/**/wip/**',
-  'modules/arrow/test/arrow/arrow-column-info.spec.ts',
-  'modules/arrow/test/arrow/get-arrow-data.spec.ts',
+  'modules/gpgpu/test/arrow/arrow-column-info.spec.ts',
+  'modules/gpgpu/test/arrow/get-arrow-data.spec.ts',
   'modules/core/test/shadertypes/shader-types.spec.ts',
   'modules/engine/test/shader-inputs-types.spec.ts',
   'modules/engine/test/geometry/gpu-geometry.spec.ts',
@@ -57,7 +57,7 @@ const nodeOnlyTestPatterns = [
   'modules/core/test/webgl/adapter/webgl-adapter.spec.{ts,js}',
   'modules/core/test/webgl/context/state-tracker/deep-array-equal.spec.{ts,js}',
   'modules/core/test/webgl/utils/**/*.spec.{ts,js}',
-  'modules/arrow/test/arrow/{arrow-column-info,arrow-shader-layout,arrow-input-schema,arrow-splats,arrow-matrix-gpu-vector,arrow-geometry,arrow-model,arrow-paths,arrow-polygon-renderer,arrow-polygon,plain-gpu-table,analyze-arrow-table,arrow-variable-length-attribute-gpu-vector,get-arrow-data,arrow-fixed-size-list}.spec.{ts,js}',
+  'modules/{gpgpu,graph,engine}/test/arrow/{arrow-column-info,arrow-shader-layout,arrow-input-schema,arrow-splats,arrow-matrix-gpu-vector,arrow-geometry,arrow-model,arrow-paths,arrow-polygon-renderer,arrow-polygon,plain-gpu-table,analyze-arrow-table,arrow-variable-length-attribute-gpu-vector,get-arrow-data,arrow-fixed-size-list}.spec.{ts,js}',
   'modules/geoarrow/test/geoarrow/geoarrow-interleaving.spec.{ts,js}',
   'modules/engine/test/gltf/gltf/{lights,gltf-extension-support,gltf-animator}.spec.{ts,js}',
   'modules/engine/test/gltf/parsers/{parse-gltf-animations,parse-pbr-material,parse-pbr-compressed-texture}.spec.{ts,js}',
@@ -90,7 +90,7 @@ const nodeIncludePatterns = [
 // These plain specs are imported by an existing .node.spec wrapper or register the same shared
 // suite as one. Exclude the plain entry point so the shared module graph registers each suite once.
 const nodeWrapperSourcePatterns = [
-  'modules/arrow/test/arrow/{arrow-polygon,arrow-polygon-renderer,arrow-splats}.spec.{ts,js}',
+  'modules/{gpgpu,graph,engine}/test/arrow/{arrow-polygon,arrow-polygon-renderer,arrow-splats}.spec.{ts,js}',
   'modules/core/test/adapter/helpers/parse-shader-compiler-log.spec.{ts,js}',
   'modules/core/test/adapter-utils/format-compiler-log.spec.{ts,js}',
   'modules/core/test/shadertypes/data-type-utils.spec.{ts,js}',
@@ -119,8 +119,8 @@ const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
   'modules/engine/test/gltf/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
-  'modules/arrow/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
-  'modules/arrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
+  'modules/{gpgpu,graph,engine}/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
+  'modules/graph/test/arrow/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/engine/test/splats/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/graph/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
   'modules/gpgpu/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',

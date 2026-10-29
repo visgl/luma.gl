@@ -4,16 +4,18 @@
 
 import {
   expandArrowVector,
-  makeGPUTableFromArrowTable,
   makeArrowFixedSizeListVector,
   makeArrowMatrix4x4Vector,
-  makeGPUVectorFromArrow,
+  makeGPUVectorFromArrow
+} from '@luma.gl/gpgpu/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
+import {
   makeGPUGeometryFromArrow,
   createArrowPickingManager,
   runArrowPickingPass,
   type ArrowTableGeometry,
   type ArrowMeshTable
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
 import type {CommandEncoder, Device} from '@luma.gl/core';
 import type {AnimationProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {CubeGeometry, type PickingManager} from '@luma.gl/engine';

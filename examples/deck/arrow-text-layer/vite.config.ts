@@ -4,7 +4,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@deck.gl-community/arrow-layers': __dirname + '/../../../modules/deck-arrow-layers/src',
-      '@luma.gl/arrow': __dirname + '/../../../modules/arrow/src',
+      '@luma.gl/gpgpu/_internal/arrow': __dirname + '/../../../modules/gpgpu/src/arrow/internal.ts',
+      '@luma.gl/graph/_internal/arrow': __dirname + '/../../../modules/graph/src/arrow/internal.ts',
+      '@luma.gl/gpgpu/arrow': __dirname + '/../../../modules/gpgpu/src/arrow',
+      '@luma.gl/graph/arrow': __dirname + '/../../../modules/graph/src/arrow',
+      '@luma.gl/engine/arrow': __dirname + '/../../../modules/engine/src/arrow',
       '@luma.gl/core': __dirname + '/../../../modules/core/src',
       '@luma.gl/engine/models': __dirname + '/../../../modules/engine/src/graph/models',
       '@luma.gl/engine/physics': __dirname + '/../../../modules/engine/src/graph/physics',

@@ -319,4 +319,4 @@ does not acquire an automatic inverse.
   projection catalog, and optional math.gl adapters.
 - `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.
-- Arrow upload, conversion, and readback remain in `@luma.gl/arrow`.
+- Arrow upload, conversion, and readback remain in `@luma.gl/graph/arrow`.

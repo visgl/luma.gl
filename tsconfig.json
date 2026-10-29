@@ -39,9 +39,11 @@
     // END TYPE CHECK SETTINGS
 
     "paths": {
-      "@luma.gl/arrow": ["./modules/arrow/src/index.ts"],
-      "@luma.gl/arrow/*": ["./modules/arrow/src/*"],
-      "@luma.gl/arrow/test/*": ["./modules/arrow/test/*"],
+      "@luma.gl/gpgpu/arrow": ["./modules/gpgpu/src/arrow/index.ts"],
+      "@luma.gl/gpgpu/_internal/arrow": ["./modules/gpgpu/src/arrow/internal.ts"],
+      "@luma.gl/graph/arrow": ["./modules/graph/src/arrow/index.ts"],
+      "@luma.gl/graph/_internal/arrow": ["./modules/graph/src/arrow/internal.ts"],
+      "@luma.gl/engine/arrow": ["./modules/engine/src/arrow/index.ts"],
       "@deck.gl-community/arrow-layers": ["./modules/deck-arrow-layers/src/index.ts"],
       "@deck.gl-community/arrow-layers/*": ["./modules/deck-arrow-layers/src/*"],
       "@deck.gl-community/arrow-layers/test/*": ["./modules/deck-arrow-layers/test/*"],

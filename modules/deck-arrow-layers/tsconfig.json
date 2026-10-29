@@ -16,9 +16,6 @@
       "path": "../deck-gpu-layers"
     },
     {
-      "path": "../arrow"
-    },
-    {
       "path": "../core"
     },
     {

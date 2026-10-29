@@ -192,15 +192,29 @@
       "types": "./dist/experimental/index.d.ts",
       "import": "./dist/experimental/index.js",
       "require": "./dist/experimental/index.cjs"
+    },
+    "./arrow": {
+      "types": "./dist/arrow/index.d.ts",
+      "import": "./dist/arrow/index.js",
+      "require": "./dist/arrow/index.cjs"
+    },
+    "./_internal/arrow": {
+      "types": "./dist/arrow/internal.d.ts",
+      "import": "./dist/arrow/internal.js",
+      "require": "./dist/arrow/internal.cjs"
     }
   },
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.5",
     "@luma.gl/shaders": "~10.0.0-alpha.5",
-    "@math.gl/geospatial": "~5.0.0-beta.1"
+    "@math.gl/geospatial": "~5.0.0-beta.1",
+    "apache-arrow": ">=17.0.0"
   },
   "peerDependenciesMeta": {
     "@math.gl/geospatial": {
+      "optional": true
+    },
+    "apache-arrow": {
       "optional": true
     }
   },

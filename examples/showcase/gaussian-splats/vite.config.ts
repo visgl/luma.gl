@@ -5,7 +5,11 @@ const workspaceRoot = resolve(__dirname, '../../..');
 const localLoadersRoot = process.env.VITE_LOADERS_GL_ROOT;
 
 const alias = {
-  '@luma.gl/arrow': `${workspaceRoot}/modules/arrow/src`,
+  '@luma.gl/gpgpu/_internal/arrow': `${workspaceRoot}/modules/gpgpu/src/arrow/internal.ts`,
+  '@luma.gl/graph/_internal/arrow': `${workspaceRoot}/modules/graph/src/arrow/internal.ts`,
+  '@luma.gl/gpgpu/arrow': `${workspaceRoot}/modules/gpgpu/src/arrow`,
+  '@luma.gl/graph/arrow': `${workspaceRoot}/modules/graph/src/arrow`,
+  '@luma.gl/engine/arrow': `${workspaceRoot}/modules/engine/src/arrow`,
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
   '@luma.gl/engine/models': `${__dirname}/../../../modules/engine/src/graph/models`,
   '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,
@@ -34,7 +38,7 @@ export default defineConfig({
       configureServer(server) {
         server.watcher.add([
           resolve(workspaceRoot, 'modules/engine/src/splats'),
-          resolve(workspaceRoot, 'modules/arrow/src')
+          resolve(workspaceRoot, 'modules/engine/src/arrow')
         ]);
         if (localLoadersRoot) {
           server.watcher.add([

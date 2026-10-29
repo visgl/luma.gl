@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 import type {Device, RenderPass, ShaderLayout} from '@luma.gl/core';
 import type {FilterShaderPluginProps, ShaderModule} from '@luma.gl/shaders';
 import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';

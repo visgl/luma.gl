@@ -15,7 +15,7 @@ import {
   decodeArrowUtf8CodePoints,
   populateUtf8TextIndices,
   type ArrowUtf8Dictionary
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
 import type {CharacterMapping, FontAtlas, TextKerning} from '../../../src/text/index';
 import {createTextKerning} from '../../../src/text/fonts/atlas/text-utils';
 

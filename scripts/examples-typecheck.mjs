@@ -132,8 +132,11 @@ const SHARED_COMPILER_OPTIONS = {
   moduleResolution: 'bundler',
   jsx: 'react-jsx',
   paths: {
-    '@luma.gl/arrow': [join(repoRoot, 'modules/arrow/src/index.ts')],
-    '@luma.gl/arrow/*': [join(repoRoot, 'modules/arrow/src/*')],
+    '@luma.gl/gpgpu/_internal/arrow': [join(repoRoot, 'modules/gpgpu/dist/arrow/internal.d.ts')],
+    '@luma.gl/graph/_internal/arrow': [join(repoRoot, 'modules/graph/dist/arrow/internal.d.ts')],
+    '@luma.gl/gpgpu/arrow': [join(repoRoot, 'modules/gpgpu/dist/arrow/index.d.ts')],
+    '@luma.gl/graph/arrow': [join(repoRoot, 'modules/graph/dist/arrow/index.d.ts')],
+    '@luma.gl/engine/arrow': [join(repoRoot, 'modules/engine/dist/arrow/index.d.ts')],
     '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/deck-arrow-layers/src/index.ts')],
     '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/deck-arrow-layers/src/*')],
     '@deck.gl-community/gpu-layers': [join(repoRoot, 'modules/deck-gpu-layers/src/index.ts')],

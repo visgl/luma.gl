@@ -5,7 +5,7 @@
 import {
   makeArrowTableFromGPUAnalyticsTable,
   makeGPUAnalyticsTableFromArrowTable
-} from '@luma.gl/arrow';
+} from '@luma.gl/graph/arrow';
 import {planGPUDataFrameQuery} from '../../../../examples/experimental/gpu-data-analysis/src/loaders-sql-query';
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';

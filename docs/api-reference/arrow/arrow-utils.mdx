@@ -11,7 +11,7 @@ import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
 </DocumentationBadges>
 
 This page documents the general-purpose Arrow inspection helpers exported by
-`@luma.gl/arrow`.
+`@luma.gl/gpgpu/arrow`.
 
 These helpers operate on Apache Arrow tables, record batches, vectors, and data
 chunks before or alongside GPU upload. For shader-facing upload and binding
@@ -36,7 +36,7 @@ Accepted inputs:
 Example:
 
 ```ts
-import {getArrowPaths} from '@luma.gl/arrow';
+import {getArrowPaths} from '@luma.gl/gpgpu/arrow';
 
 const paths = getArrowPaths(table);
 // ['positions', 'properties.color']
@@ -59,7 +59,7 @@ Behavior:
 Example:
 
 ```ts
-import {getArrowDataByPath} from '@luma.gl/arrow';
+import {getArrowDataByPath} from '@luma.gl/gpgpu/arrow';
 
 const colorData = getArrowDataByPath(table, 'properties.color');
 ```
@@ -81,7 +81,7 @@ Behavior:
 Example:
 
 ```ts
-import {getArrowVectorByPath} from '@luma.gl/arrow';
+import {getArrowVectorByPath} from '@luma.gl/gpgpu/arrow';
 
 const colorVector = getArrowVectorByPath(table, 'properties.color');
 ```
@@ -103,7 +103,7 @@ non-list data:
 Example:
 
 ```ts
-import {getArrowListNestingLevel} from '@luma.gl/arrow';
+import {getArrowListNestingLevel} from '@luma.gl/gpgpu/arrow';
 
 const nestingLevel = getArrowListNestingLevel(pathData);
 ```

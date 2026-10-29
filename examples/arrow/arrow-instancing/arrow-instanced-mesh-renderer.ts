@@ -5,11 +5,11 @@
 import {
   createArrowPickingManager,
   getArrowPickingModule,
-  makeArrowFixedSizeListVector,
-  makeGPUTableFromArrowTable,
   runArrowPickingPass,
   supportsArrowIndexPicking
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {Device, type CommandEncoder, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {ModelProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {

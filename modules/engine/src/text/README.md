@@ -14,11 +14,8 @@ Experimental 2D text utilities for luma.gl. CPU-side font preparation is isolate
 
 ```ts
 import * as arrow from 'apache-arrow';
-import {
-  makeGPUTextDataFromArrow,
-  convertArrowTextToAttribute,
-  makeArrowFixedSizeListVector
-} from '@luma.gl/arrow';
+import {makeGPUTextDataFromArrow, convertArrowTextToAttribute} from '@luma.gl/engine/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
 import {
   GPUTextResources,
   TextRenderer
@@ -71,7 +68,7 @@ for (const batch of nextData) {
 resources.destroy();
 ```
 
-`@luma.gl/arrow` owns Arrow column mapping and conversion. Each returned `GPUTextData` owns one
+`@luma.gl/graph/arrow` owns Arrow column mapping and conversion. Each returned `GPUTextData` owns one
 batch's uploaded and generated GPU resources while borrowing the shared `GPUTextResources` atlas.
 `TextRenderer` and its internal render/picking models borrow both.
 

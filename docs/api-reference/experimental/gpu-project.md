@@ -356,7 +356,7 @@ backend selection and CPU/GPU precision conversion are always application decisi
 The adapter rejects indexed tables, missing/constant selected columns, nonpacked layouts, native
 null bitmaps and wrong-device/non-storage buffers. A batch declaring null rows requires an explicit
 validity column; convert null bitmaps in a source adapter. Arrow ingestion/readback remains in
-`@luma.gl/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
+`@luma.gl/graph/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
 `@luma.gl/graph/gpu-project` entry point for already compiled binary64-input programs.
 
 ## Explicit longitude normalization

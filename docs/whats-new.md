@@ -200,8 +200,9 @@ Target Release Date: Q3, 2026
 
 **New Modules**
 
-- **`@luma.gl/arrow` (currently private)** - Arrow adapters and renderers are being prepared for
-  publication as a standalone module.
+- **Optional Arrow adapters** - `@luma.gl/gpgpu/arrow`, `@luma.gl/graph/arrow`, and
+  `@luma.gl/engine/arrow` provide conversions and rendering adapters from the published
+  packages. Apache Arrow remains an optional peer; generic roots remain Arrow-free.
 
 **@luma.gl/core**
 
@@ -225,7 +226,7 @@ Target Release Date: Q3, 2026
 - **Batch-preserving GPU rendering** - `GPUVectorModel` renders chunked vectors without
   concatenating their source batches.
 - **Fixed-size-list GPU columns** - First-class `fixed-size-list<float32,768>` formats describe arbitrary fixed-width storage rows without inventing unsupported vertex formats; vectors retain logical table-row counts, flattened element counts, preserved batches, and caller-owned storage.
-- **GPU vector similarity and clustering** - The optional [`@luma.gl/graph/gpu-vector-search`](/docs/api-reference/gpgpu/gpu-vector-search) backend searches ordinary fixed-size-list GPU table columns with exact squared-Euclidean, cosine, and inner-product rankings; GPU-resident linked-selection masks; deterministic bounded top-K output; GPU k-means; and explicitly approximate IVF-flat search. Existing `@luma.gl/arrow` table adapters upload Arrow embedding columns, while source IDs, validity, batch boundaries, ownership, and rendering remain caller-controlled.
+- **GPU vector similarity and clustering** - The optional [`@luma.gl/graph/gpu-vector-search`](/docs/api-reference/gpgpu/gpu-vector-search) backend searches ordinary fixed-size-list GPU table columns with exact squared-Euclidean, cosine, and inner-product rankings; GPU-resident linked-selection masks; deterministic bounded top-K output; GPU k-means; and explicitly approximate IVF-flat search. Existing `@luma.gl/graph/arrow` table adapters upload Arrow embedding columns, while source IDs, validity, batch boundaries, ownership, and rendering remain caller-controlled.
 - **GPU command graphs** - Experimental WebGPU command graphs compile explicit buffer hazards, fixed capacities, node resources, and transient-buffer reuse while leaving encoding and submission under application control.
 - **Parallel command-graph preparation** - `await GPUCommandGraph.compileAsync()` starts independent
   compute and render pipeline compilations together, resolves only when graph-owned pipelines are
@@ -278,7 +279,7 @@ Target Release Date: Q3, 2026
   use composite-pass naming in place of `ShaderPassPipeline`.
 
 
-**@luma.gl/arrow (Private)**
+**Optional Arrow conversion subpaths**
 
 - **High-dimensional Arrow storage columns** - Existing Arrow table/vector adapters map wide `FixedSizeList` values directly into row-aligned fixed-size-list GPU columns, with optional named validity siblings and preserved parent/child nulls, record batches, and source identity.
 - **Arrow polygon and GeoArrow rendering** - `ArrowPolygonRenderer` converts nested Arrow polygon
@@ -306,7 +307,7 @@ Target Release Date: Q3, 2026
 **Arrow-backed text integration**
 
 - **Incremental text streaming** - Arrow chunks produce independent `GPUTextData` objects that append to a stable `TextRenderer` model without rebuilding earlier batches; `GPUTextResources` lets batches and renderers share one uploaded atlas texture.
-- **Arrow text conversion helpers** - `@luma.gl/arrow` exports `makeGPUTextDataFromArrow()` for automatic strategy selection, plus `ArrowTextRenderer`, source mapping, and low-level conversion helpers for specialized workflows.
+- **Arrow text conversion helpers** - `@luma.gl/engine/arrow` exports `makeGPUTextDataFromArrow()` for automatic strategy selection, plus `ArrowTextRenderer`, source mapping, and low-level conversion helpers for specialized workflows.
 - **View-aware Arrow text clipping** - Arrow 2D text accepts optional `FixedSizeList<Float32>[4]` clip rectangles. `ArrowTextLayer` interprets them as world-space anchor offsets, projects them through the active deck viewport, and supports visible-region alignment and pixel cutoffs; omitting `clipRects` retains a constant no-clipping fallback instead of allocating per-row data.
 - **GPU-selected text** - `GPUTextSelection` filters row-indexed compact glyph records from GPU row flags, preserves original row identity, and writes the selected glyph count directly into an indirect draw command.
 

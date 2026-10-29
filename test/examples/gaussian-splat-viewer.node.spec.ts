@@ -1303,7 +1303,7 @@ describe('published Gaussian splat viewer', () => {
 
     const receivedPages: GPUSplatData[] = [];
     const device = new NullDevice({});
-    const arrow = await import('@luma.gl/arrow');
+    const arrow = await import('@luma.gl/engine/arrow');
     for await (const page of arrow.makeGPUSplatDataFromArrowStream(
       device,
       loadLocalGaussianSplatArrowSources(configuration!)

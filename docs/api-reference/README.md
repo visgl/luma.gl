@@ -8,7 +8,7 @@ description: Find the curated and generated API references for every stable and 
 Explore the [packages](/docs/packages) for a visual overview of primary packages, smaller packages, and exploratory modules.
 
 luma.gl provides published, composable npm modules with stable and experimental APIs, alongside
-private Arrow and deck.gl adapters under active development. Applications can choose the rendering,
+optional Arrow adapters and private deck.gl adapters under active development. Applications can choose the rendering,
 compute, and visualization functionality they need while checking the maturity of each package.
 
 Use the API reference when you want the class-by-class reference pages for a specific module. If you are looking for conceptual guides or an introduction to how the pieces fit together, start in the [API Guide](/docs/api-guide) and then come back here for the detailed type and method docs.
@@ -27,7 +27,9 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/engine/effects`][engine/effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
 | [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation and GPU data primitives. |
 | [`@luma.gl/graph`][graph] | Experimental (v10) | GPU execution graphs, programs, and graph-based processing through explicit subpaths. |
-| [`@luma.gl/arrow`][arrow] | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
+| [`@luma.gl/gpgpu/arrow`][arrow] | Optional / Experimental | Primitive Arrow conversion, GPU vector upload and readback. |
+| [`@luma.gl/graph/arrow`][arrow] | Optional / Experimental | Arrow GPU table conversion, analytics and geospatial preparation. |
+| [`@luma.gl/engine/arrow`][arrow] | Optional / Experimental | Arrow geometry, rendering, text and splat adapters. |
 | [`@luma.gl/engine/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/engine/splats`][splats] | Experimental | Gaussian splat rendering and caller-owned prepared GPU splat data. |
 | [`@luma.gl/engine/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
@@ -46,7 +48,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
 - [`@luma.gl/graph`][graph] for `GPUCommandGraph`, `GPUGraph`, GPU tables, and graph-based processing.
 - [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for `GPURecordBatch`/`GPUTable` APIs.
-- [`@luma.gl/engine/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
+- [`@luma.gl/engine/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/engine/arrow`][arrow] for Arrow text conversion.
 - [`@luma.gl/engine/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [Engine experimental utilities](/docs/api-reference/engine/experimental) for controls, material plugins, textures, and WebXR helpers.
 - [`@luma.gl/graph/experimental`](/docs/api-reference/experimental) for path/polygon models and flow/fluid simulations.

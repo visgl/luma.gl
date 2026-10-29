@@ -53,7 +53,7 @@ The tileset traversal and layer already exist; follow
 ## Apache Arrow conversion
 
 ```ts
-import {makeGPUSplatDataFromArrow, makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
+import {makeGPUSplatDataFromArrow, makeGPUSplatDataFromArrowStream} from '@luma.gl/engine/arrow';
 import {SplatRenderer} from '@luma.gl/engine/splats';
 
 const batches = makeGPUSplatDataFromArrow(device, arrowTable);
@@ -133,7 +133,7 @@ during streaming, and idle redraw suppression keep large scenes easier to inspec
 - `@loaders.gl/tiles` and `@loaders.gl/3d-tiles` own tileset traversal, content transport,
   transforms, request scheduling, and caching.
 - `@loaders.gl/scene/gltf` owns glTF parsing, extension decoding, and feature metadata.
-- `@luma.gl/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
+- `@luma.gl/engine/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
 - `@luma.gl/engine/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
 - Applications or deck.gl layers own viewport integration, file selection, and interactive UI.
 

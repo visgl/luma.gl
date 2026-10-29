@@ -45,7 +45,7 @@ Arrow FixedSizeList<Float32>[768]
 `GPUData` owns or borrows one underlying buffer, `GPUVector` preserves its ordered chunks, and
 `GPUTable` preserves source batches and column ownership. `GraphEmbeddingMatrix` is only a
 non-owning, graph-specific description of those existing rows; it neither uploads values nor adds
-another lifetime to destroy. This keeps Apache Arrow in `@luma.gl/arrow`, generic storage in
+another lifetime to destroy. This keeps Apache Arrow in `@luma.gl/graph/arrow`, generic storage in
 `@luma.gl/gpgpu/gpu-data` and `@luma.gl/graph/gpu-tables`, and similarity algorithms in this optional subpath.
 
 ### Stable identifiers, logical rows, and validity serve different purposes
@@ -269,11 +269,11 @@ into one deterministic global top-K without materializing a complete query-by-da
 
 ## Ingest Apache Arrow embedding columns
 
-Apache Arrow conversion belongs to `@luma.gl/arrow`, not the generic table runtime or experimental
+Apache Arrow conversion belongs to `@luma.gl/graph/arrow`, not the generic table runtime or experimental
 similarity package:
 
 ```ts
-import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 
 const datasetTable = makeGPUTableFromArrowTable(device, embeddingTable, {
   shaderLayout: {
@@ -305,7 +305,7 @@ GPU validity sibling when importing it into luVS. Nullable embedding data withou
 validity column is rejected instead of admitting zero-filled null rows as candidate vectors.
 
 ```ts
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
 
 const embeddingVector = makeGPUVectorFromArrow(device, arrowEmbeddingColumn, {
   name: 'embedding',

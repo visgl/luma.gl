@@ -581,7 +581,7 @@ contracts, and every candidate abstraction has at least two independent consumer
 Extract the table-independent scheduling core beneath engine in `@luma.gl/gpgpu`, keep primitive
 GPU data, graph structures, algorithms, and reusable workflows there, and layer engine resource
 adapters plus private table/model integrations above it. Keep Arrow conversion and readback adapters
-in `@luma.gl/arrow`. Audit `DrawCommandBuffer` and split its core from rendering integration if that
+in `@luma.gl/graph/arrow`. Audit `DrawCommandBuffer` and split its core from rendering integration if that
 is required to avoid a gpgpu dependency on engine. These APIs are new and experimental, so
 graduation is a direct move: update
 repository consumers atomically and do not retain compatibility exports, duplicate public paths,
@@ -612,7 +612,7 @@ compatibility export preserves the former path.
 
 Keep primitive GPU data, graph structures, optional algorithms, and reusable workflow builders in
 `@luma.gl/gpgpu`; keep higher-level tables and rendering models in private experimental subpaths;
-and retain Arrow conversion, upload, and readback helpers in `@luma.gl/arrow`. Split
+and retain Arrow conversion, upload, and readback helpers in `@luma.gl/graph/arrow`. Split
 `DrawCommandBuffer` rendering integration if necessary to preserve that direction.
 
 **Exit evidence:** Package-level tests and dependency checks enforce the intended arrows, public

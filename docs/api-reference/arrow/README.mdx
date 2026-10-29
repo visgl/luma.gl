@@ -11,7 +11,30 @@ import {ArrowGeoArrowExample, ArrowRenderingDocsExample} from '@site/src/example
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
-Apache Arrow utilities for luma.gl.
+Apache Arrow conversion is available through optional subpaths of the published luma.gl packages.
+Install `apache-arrow` alongside the packages whose adapters you use. The generic package roots
+remain usable without Apache Arrow. `graph/arrow` also uses the existing optional
+`@math.gl/geospatial` peer for GeoArrow conversion.
+
+```bash
+yarn add @luma.gl/gpgpu @luma.gl/graph @luma.gl/engine apache-arrow @math.gl/geospatial
+```
+
+| Import | Responsibilities |
+| --- | --- |
+| `@luma.gl/gpgpu/arrow` | Primitive Arrow inspection, colors, matrix and temporal conversion, GPU data/vector upload, and vector readback. |
+| `@luma.gl/graph/arrow` | Record batches, GPU tables, analytical table ingestion/readback, input schemas, GeoArrow adaptation, and DGGS preparation. |
+| `@luma.gl/engine/arrow` | Geometry and picking adapters, path/polygon/text preparation and rendering facades, and Gaussian splat conversion. |
+
+```ts
+import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
+import {makeGPUGeometryFromArrow} from '@luma.gl/engine/arrow';
+```
+
+The standalone private Arrow workspace package has been removed. These entries retain the existing
+conversion and renderer behavior; they do not introduce a new graph execution model. Application
+renderers can consume converted GPU vectors and geometries without depending on Arrow themselves.
 
 <ArrowGeoArrowExample embedded showStats={false} />
 
@@ -42,7 +65,7 @@ and temporal conversion helpers.
 
 ## GPU Table Interop
 
-`@luma.gl/arrow` adapts Apache Arrow objects into primitive
+The optional Arrow adapters convert Apache Arrow objects into primitive
 [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) objects and higher-level
 [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) objects:
 
@@ -73,5 +96,15 @@ and temporal conversion helpers.
 The resulting table schema is `GPUSchema`, and each vector has a
 `GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or
 `vertex-list<float32x3>`. Arrow `DataType` metadata may still be retained by
-adapter/readback paths, but neither `@luma.gl/gpgpu` nor `@luma.gl/graph` depends on
-`apache-arrow`.
+adapter/readback paths. Apache Arrow is an optional peer of the three owning packages and is
+loaded only by their Arrow entries. `@luma.gl/gpgpu/arrow` does not import graph or engine;
+`@luma.gl/graph/arrow` does not import engine.
+
+## Ownership and streaming
+
+The move preserves source chunks, record batches, nullability, and source-row metadata. Upload
+helpers retain their existing ownership rules: converted data owns its uploaded buffers, borrowed
+chunks remain borrowed, and destroying aggregate vectors must not destroy borrowed data. Streaming
+adapters append independent batches; packing or merging remains an explicit caller decision.
+Readback remains asynchronous and explicit. `GPUVector.format` describes stored GPU bytes;
+Arrow type metadata supports conversion and readback rather than replacing the GPU format.

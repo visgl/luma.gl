@@ -14,7 +14,7 @@ passes, ownership, reasons, and lossy-conversion warnings before any GPU resourc
 is allocated.
 
 ```ts
-import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/arrow';
+import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/gpgpu/arrow';
 
 const plan = planArrowGPUConversion(device, sourceVector, {
   semantic: 'color',
@@ -106,7 +106,7 @@ generic in TypeScript; Arrow's runtime `FixedSizeList` type cannot otherwise
 encode the numeric width in its compile-time type.
 
 ```ts
-import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 
 const table = makeGPUTableFromArrowTable(device, arrowTable, {
   shaderLayout: {
@@ -285,7 +285,7 @@ which inputs are internal. It deliberately does not mention Arrow `DataType`
 objects, source column paths, temporal origins, tessellation, text dictionaries,
 or fallback-vector generation.
 
-`ArrowInputSchema` belongs to `@luma.gl/arrow`. It combines an Arrow-free
+`ArrowInputSchema` belongs to `@luma.gl/graph/arrow`. It combines an Arrow-free
 `gpuInputSchema` with adapter-owned `resolveSourceVectors`,
 `convertToGPUVectors`, and `getGPUInputVectors` functions. The
 `prepareArrowInput()` helper runs that pipeline and calls

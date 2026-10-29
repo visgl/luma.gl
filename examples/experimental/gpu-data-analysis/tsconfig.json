@@ -10,8 +10,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@luma.gl/arrow": ["../../../modules/arrow/src/index.ts"],
-      "@luma.gl/arrow/*": ["../../../modules/arrow/src/*"],
+      "@luma.gl/gpgpu/arrow": ["../../../modules/gpgpu/src/arrow/index.ts"],
+      "@luma.gl/graph/arrow": ["../../../modules/graph/src/arrow/index.ts"],
+      "@luma.gl/engine/arrow": ["../../../modules/engine/src/arrow/index.ts"],
       "@luma.gl/core": ["../../../modules/core/src/index.ts"],
       "@luma.gl/core/*": ["../../../modules/core/src/*"],
       "@luma.gl/engine": ["../../../modules/engine/src/index.ts"],
