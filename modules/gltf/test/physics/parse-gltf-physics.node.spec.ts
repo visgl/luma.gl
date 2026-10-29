@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 import {getRegisteredGLTFExtensions} from '../../src';
 import {parseGLTFPhysics, createGLTFPhysicsWorld, GLTF_PHYSICS_DRAFT} from '../../src/physics';

@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/gltf';
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
 import {GroupNode} from '@luma.gl/engine';
 

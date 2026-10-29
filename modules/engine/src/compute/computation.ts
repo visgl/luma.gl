@@ -26,7 +26,8 @@ import {
   ShaderAssembler,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
-import {type TypedArray, isNumericArray} from '@math.gl/core/types';
+import type {TypedArray} from '@math.gl/core';
+import {isUniformValue} from '../model/split-uniforms-and-bindings';
 import {ShaderInputs} from '../shader-inputs';
 import {
   mergeShaderModules,
@@ -354,9 +355,7 @@ export class Computation {
     // TODO better way to extract bindings
     const keys = Object.keys(uniforms).filter(k => {
       const uniform = uniforms[k];
-      return (
-        !isNumericArray(uniform) && typeof uniform !== 'number' && typeof uniform !== 'boolean'
-      );
+      return !isUniformValue(uniform);
     });
     const bindings: Record<string, Binding> = {};
     for (const k of keys) {

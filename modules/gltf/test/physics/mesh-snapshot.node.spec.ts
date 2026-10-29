@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {GLTFScenegraph} from '@loaders.gl/gltf';
+import {GLTFScenegraph} from '@loaders.gl/scene/gltf';
 import {GroupNode} from '@luma.gl/engine';
 import {
   collectNodeCollisionGeometry,

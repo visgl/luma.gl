@@ -9,7 +9,7 @@ from `@luma.gl/gltf`.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 
 const source = await load('/model.glb', GLTFLoader);
@@ -76,7 +76,7 @@ primitives work, including implicit-zero and sparse index accessors. Generated i
 
 ## Migration from loaders.gl
 
-Replace imports of `postProcessGLTF` and `GLTF*Postprocessed` types from `@loaders.gl/gltf` with
+Replace imports of `postProcessGLTF` and `GLTF*Postprocessed` types from `@loaders.gl/scene/gltf` with
 imports from `@luma.gl/gltf`. Pass the `GLTFLoader` result directly to the luma.gl function.
 For loader-side traversal, writing, or conversion, keep the indexed document and use loaders.gl’s
 accessor helpers or `GLTFIterator` instead of creating a resolved rendering document.

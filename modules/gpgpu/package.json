@@ -69,7 +69,7 @@
     "@luma.gl/shadertools": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@math.gl/core": "~5.0.0-alpha.20",
+    "@math.gl/core": "~5.0.0-beta.1",
     "probe.gl": "^5.0.0"
   }
 }

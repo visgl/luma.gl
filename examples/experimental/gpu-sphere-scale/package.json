@@ -14,7 +14,7 @@
     "@luma.gl/engine": "10.0.0-alpha.4",
     "@luma.gl/gpgpu": "10.0.0-alpha.4",
     "@luma.gl/shadertools": "10.0.0-alpha.4",
-    "@math.gl/core": "5.0.0-alpha.20",
+    "@math.gl/core": "5.0.0-beta.1",
     "preact": "^10.17.0",
     "three": "0.185.1"
   },

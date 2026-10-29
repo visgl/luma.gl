@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumberArray4, NumberArray6} from '@math.gl/core/types';
+import {NumberArray4, NumberArray6} from '@math.gl/core';
 import {TextureFormatDepthStencil} from '../../../shadertypes/texture-types/texture-formats';
 
 export type CompareFunction =

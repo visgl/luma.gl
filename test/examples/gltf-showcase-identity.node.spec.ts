@@ -96,7 +96,7 @@ describe('glTF module and showcase identity', () => {
     expect(extensionSupport).toMatch(/<SupportRow name="EXT_mesh_features" support="\*️⃣">/);
     expect(extensionSupport).toMatch(/<SupportRow name="EXT_structural_metadata" support="\*️⃣">/);
     expect(capabilities).toMatch(
-      /Meshopt compression[^\n]*@loaders\.gl\/gltf[^\n]*EXT_meshopt_compression[^\n]*KHR_meshopt_compression/
+      /Meshopt compression[^\n]*@loaders\.gl\/scene\/gltf[^\n]*EXT_meshopt_compression[^\n]*KHR_meshopt_compression/
     );
 
     for (const documentation of [overview, extensionSupport, packageOverview]) {

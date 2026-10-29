@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {GLBWriter} from '@loaders.gl/gltf';
+import {GLBWriter} from '@loaders.gl/scene/gltf';
 
 type GLTFExportTypedArray =
   | Int8Array

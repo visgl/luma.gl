@@ -176,8 +176,8 @@ const vitestConfig = getVitestConfig({
     // Disabling discovery keeps Vite from restarting a CI shard when it first encounters zod.
     optimizeDeps: {
       exclude: ['@deck.gl/core', '@deck.gl/layers'],
-      // Stock layers remain in the source graph; only their CommonJS triangulator is bundled.
-      include: ['@deck.gl/layers > earcut'],
+      // Keep source packages visible while bundling their CommonJS dependencies.
+      include: ['@deck.gl/layers > earcut', '@math.gl/dggs > open-location-code'],
       noDiscovery: true
     }
   },

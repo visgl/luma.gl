@@ -4,14 +4,17 @@
 
 import type {Binding, CompositeShaderType, UniformValue} from '@luma.gl/core';
 import type {ShaderModuleUniformValue} from '@luma.gl/shadertools';
-import {isNumericArray} from '@math.gl/core/types';
 import type {TextureBindingSource} from '@luma.gl/core/dynamic';
 
 /** Shader input value routed through the binding map. */
 type ShaderInputBinding = Binding | TextureBindingSource;
 
 export function isUniformValue(value: unknown): value is UniformValue {
-  return isNumericArray(value) || typeof value === 'number' || typeof value === 'boolean';
+  // math.gl beta.1 exposes its numeric-array guards as types only.
+  const isNumericArray = Array.isArray(value)
+    ? value.length === 0 || typeof value[0] === 'number'
+    : ArrayBuffer.isView(value) && !(value instanceof DataView);
+  return isNumericArray || typeof value === 'number' || typeof value === 'boolean';
 }
 
 type UniformsAndBindings = {

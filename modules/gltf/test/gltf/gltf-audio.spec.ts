@@ -6,7 +6,7 @@ import {AudioController} from '@luma.gl/engine';
 import {parseGLTFAudio, postProcessGLTF, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {describe, expect, test, vi} from 'vitest';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
 import {Matrix4} from '@math.gl/core';
 

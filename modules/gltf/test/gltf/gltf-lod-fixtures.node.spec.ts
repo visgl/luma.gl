@@ -4,7 +4,7 @@
 
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {type GLTFPostprocessed, postProcessGLTF, createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import type {RenderPass} from '@luma.gl/core';
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray3, NumberArray4} from '@math.gl/core/types';
+import type {NumberArray3, NumberArray4} from '@math.gl/core';
 
 /**
  * Resolves whether semantic colors should be interpreted as byte-style `0..255` values.

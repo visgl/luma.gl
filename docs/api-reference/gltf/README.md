@@ -22,7 +22,7 @@ characters, morph deformation, native animation pointers, and source-faithful `.
 interchange across WebGPU and WebGL. It turns postprocessed glTF assets into ordinary luma.gl
 scenegraphs and exports generic scene descriptors without depending on a particular renderer.
 
-File loading, decompression, and glTF postprocessing belong to `@loaders.gl/gltf`; animation
+File loading, decompression, and glTF postprocessing belong to `@loaders.gl/scene/gltf`; animation
 primitives, geometry, and shader modules remain in their existing luma.gl packages.
 
 <GLTFExample embedded showStats={false} />
@@ -30,7 +30,7 @@ primitives, geometry, and shader modules remain in their existing luma.gl packag
 ## Installation
 
 ```bash
-npm install @luma.gl/gltf @loaders.gl/core @loaders.gl/gltf
+npm install @luma.gl/gltf @loaders.gl/core @loaders.gl/scene
 ```
 
 A rendering application also needs a configured `Device` from `@luma.gl/core`, backed by
@@ -40,7 +40,7 @@ A rendering application also needs a configured `Device` from `@luma.gl/core`, b
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);
@@ -260,7 +260,7 @@ RGBA vertex colors, normalized joint weights, animation pointers, and resource o
 
 ## Package ownership
 
-- `@loaders.gl/gltf` owns container parsing, linked resources, codec decoding,
+- `@loaders.gl/scene/gltf` owns container parsing, linked resources, codec decoding,
   loader-supported extension decoding, and binary GLB container encoding.
 - Applications choose loaders and writers; luma.gl modules have no loaders.gl dependency.
 - `@luma.gl/gltf` owns accessor postprocessing and interprets glTF-specific scene, material, sampler, light, and animation data.

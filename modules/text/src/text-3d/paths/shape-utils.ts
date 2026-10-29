@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js ShapeUtils (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {earcut} from '@math.gl/geometry/polygon';
+import {earcut} from '@math.gl/geometry';
 import {Vector2} from '@math.gl/core';
 
 /** Utilities for working with polygonal shapes. */

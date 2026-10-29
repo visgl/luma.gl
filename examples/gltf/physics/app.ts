@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, GLTFScenegraph} from '@loaders.gl/gltf';
+import {GLTFLoader, GLTFScenegraph} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Light, LightingProps} from '@luma.gl/shadertools';

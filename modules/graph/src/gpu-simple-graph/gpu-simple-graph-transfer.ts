@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, Buffer, type Device, type SignedDataType} from '@luma.gl/core';
-import type {TypedArray} from '@math.gl/core/types';
+import type {TypedArray} from '@math.gl/core';
 import {
   GPUDataEvaluator,
   GPUVectorEvaluator,

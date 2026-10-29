@@ -2,10 +2,10 @@ diff --git a/dist/index.cjs b/dist/index.cjs
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
 @@ -1,3 +1,7 @@
-+var mathVec4 = require("@math.gl/core/vec4");
-+var mathVec3 = require("@math.gl/core/vec3");
-+var mathVec2 = require("@math.gl/core/vec2");
-+var mathMat4 = require("@math.gl/core/mat4");
++var mathVec4 = require("@math.gl/core").vec4;
++var mathVec3 = require("@math.gl/core").vec3;
++var mathVec2 = require("@math.gl/core").vec2;
++var mathMat4 = require("@math.gl/core").mat4;
  var __defProp = Object.defineProperty;
  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
  var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -450,7 +450,7 @@ diff --git a/dist/viewports/orthographic-viewport.js b/dist/viewports/orthograph
  import Viewport from "../viewports/viewport.js";
 -import { Matrix4, clamp, vec2 } from '@math.gl/core';
 +import { Matrix4, clamp } from '@math.gl/core';
-+import * as vec2 from '@math.gl/core/vec2';
++import {vec2} from '@math.gl/core';
  import { pixelsToWorld } from '@math.gl/web-mercator';
  const viewMatrix = new Matrix4().lookAt({ eye: [0, 0, 1] });
  function getProjectionMatrix({ width, height, near, far, padding }) {
@@ -463,8 +463,8 @@ diff --git a/dist/viewports/globe-viewport.js b/dist/viewports/globe-viewport.js
  // Copyright (c) vis.gl contributors
 -import { Matrix4, vec3, vec4 } from '@math.gl/core';
 +import { Matrix4 } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
-+import * as vec4 from '@math.gl/core/vec4';
++import {vec3} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import { altitudeToFovy, fovyToAltitude, MAX_LATITUDE } from '@math.gl/web-mercator';
  import Viewport from "./viewport.js";
  import { PROJECTION_MODE } from "../lib/constants.js";
@@ -477,7 +477,7 @@ diff --git a/dist/viewports/globe-utils.js b/dist/viewports/globe-utils.js
  // Copyright (c) vis.gl contributors
 -import { clamp, vec3, Quaternion } from '@math.gl/core';
 +import { clamp, Quaternion } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
++import {vec3} from '@math.gl/core';
  import TransitionInterpolator from "../transitions/transition-interpolator.js";
  import { zoomAdjust } from "./globe-viewport.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
@@ -490,7 +490,7 @@ diff --git a/dist/viewports/viewport.js b/dist/viewports/viewport.js
  import { createMat4, getCameraPosition, getFrustumPlanes } from "../utils/math-utils.js";
 -import { Matrix4, Vector3, equals, clamp, mat4 } from '@math.gl/core';
 +import { Matrix4, Vector3, equals, clamp } from '@math.gl/core';
-+import * as mat4 from '@math.gl/core/mat4';
++import {mat4} from '@math.gl/core';
  import { getDistanceScales, getMeterZoom, lngLatToWorld, worldToLngLat, worldToPixels, pixelsToWorld } from '@math.gl/web-mercator';
  import { PROJECTION_MODE } from "../lib/constants.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
@@ -503,7 +503,7 @@ diff --git a/dist/viewports/web-mercator-viewport.js b/dist/viewports/web-mercat
  import { pixelsToWorld, getViewMatrix, addMetersToLngLat, unitsPerMeter, getProjectionParameters, altitudeToFovy, fovyToAltitude, fitBounds, getBounds } from '@math.gl/web-mercator';
 -import { Matrix4, clamp, vec2 } from '@math.gl/core';
 +import { Matrix4, clamp } from '@math.gl/core';
-+import * as vec2 from '@math.gl/core/vec2';
++import {vec2} from '@math.gl/core';
  /**
   * Manages transformations to/from WGS84 coordinates using the Web Mercator Projection.
   */
@@ -707,8 +707,8 @@ diff --git a/dist/shaderlib/project/viewport-uniforms.js b/dist/shaderlib/projec
  // Copyright (c) vis.gl contributors
  /* eslint-disable complexity, camelcase */
 -import { mat4, vec4 } from '@math.gl/core';
-+import * as mat4 from '@math.gl/core/mat4';
-+import * as vec4 from '@math.gl/core/vec4';
++import {mat4} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import { PROJECTION_MODE } from "../../lib/constants.js";
  import memoize from "../../utils/memoize.js";
  // To quickly set a vector to zero
@@ -720,8 +720,8 @@ diff --git a/dist/shaderlib/project/project-functions.js b/dist/shaderlib/projec
  import { getOffsetOrigin } from "./viewport-uniforms.js";
  import WebMercatorViewport from "../../viewports/web-mercator-viewport.js";
 -import { vec3, vec4 } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
-+import * as vec4 from '@math.gl/core/vec4';
++import {vec3} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import { addMetersToLngLat } from '@math.gl/web-mercator';
  const DEFAULT_COORDINATE_ORIGIN = [0, 0, 0];
  // In project.glsl, offset modes calculate z differently from LNG_LAT mode.
@@ -748,10 +748,10 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
 --- a/dist.webgl-only/index.cjs
 +++ b/dist.webgl-only/index.cjs
 @@ -1,3 +1,7 @@
-+var mathVec4 = require("@math.gl/core/vec4");
-+var mathVec3 = require("@math.gl/core/vec3");
-+var mathVec2 = require("@math.gl/core/vec2");
-+var mathMat4 = require("@math.gl/core/mat4");
++var mathVec4 = require("@math.gl/core").vec4;
++var mathVec3 = require("@math.gl/core").vec3;
++var mathVec2 = require("@math.gl/core").vec2;
++var mathMat4 = require("@math.gl/core").mat4;
  var __defProp = Object.defineProperty;
  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
  var __getOwnPropNames = Object.getOwnPropertyNames;
@@ -1180,7 +1180,7 @@ diff --git a/dist.webgl-only/viewports/orthographic-viewport.js b/dist.webgl-onl
  import Viewport from "../viewports/viewport.js";
 -import { Matrix4, clamp, vec2 } from '@math.gl/core';
 +import { Matrix4, clamp } from '@math.gl/core';
-+import * as vec2 from '@math.gl/core/vec2';
++import {vec2} from '@math.gl/core';
  import { pixelsToWorld } from '@math.gl/web-mercator';
  const viewMatrix = new Matrix4().lookAt({ eye: [0, 0, 1] });
  function getProjectionMatrix({ width, height, near, far, padding }) {
@@ -1193,8 +1193,8 @@ diff --git a/dist.webgl-only/viewports/globe-viewport.js b/dist.webgl-only/viewp
  // Copyright (c) vis.gl contributors
 -import { Matrix4, vec3, vec4 } from '@math.gl/core';
 +import { Matrix4 } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
-+import * as vec4 from '@math.gl/core/vec4';
++import {vec3} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import { altitudeToFovy, fovyToAltitude, MAX_LATITUDE } from '@math.gl/web-mercator';
  import Viewport from "./viewport.js";
  import { PROJECTION_MODE } from "../lib/constants.js";
@@ -1207,7 +1207,7 @@ diff --git a/dist.webgl-only/viewports/globe-utils.js b/dist.webgl-only/viewport
  // Copyright (c) vis.gl contributors
 -import { clamp, vec3, Quaternion } from '@math.gl/core';
 +import { clamp, Quaternion } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
++import {vec3} from '@math.gl/core';
  import TransitionInterpolator from "../transitions/transition-interpolator.js";
  import { zoomAdjust } from "./globe-viewport.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
@@ -1220,7 +1220,7 @@ diff --git a/dist.webgl-only/viewports/viewport.js b/dist.webgl-only/viewports/v
  import { createMat4, getCameraPosition, getFrustumPlanes } from "../utils/math-utils.js";
 -import { Matrix4, Vector3, equals, clamp, mat4 } from '@math.gl/core';
 +import { Matrix4, Vector3, equals, clamp } from '@math.gl/core';
-+import * as mat4 from '@math.gl/core/mat4';
++import {mat4} from '@math.gl/core';
  import { getDistanceScales, getMeterZoom, lngLatToWorld, worldToLngLat, worldToPixels, pixelsToWorld } from '@math.gl/web-mercator';
  import { PROJECTION_MODE } from "../lib/constants.js";
  const DEGREES_TO_RADIANS = Math.PI / 180;
@@ -1233,7 +1233,7 @@ diff --git a/dist.webgl-only/viewports/web-mercator-viewport.js b/dist.webgl-onl
  import { pixelsToWorld, getViewMatrix, addMetersToLngLat, unitsPerMeter, getProjectionParameters, altitudeToFovy, fovyToAltitude, fitBounds, getBounds } from '@math.gl/web-mercator';
 -import { Matrix4, clamp, vec2 } from '@math.gl/core';
 +import { Matrix4, clamp } from '@math.gl/core';
-+import * as vec2 from '@math.gl/core/vec2';
++import {vec2} from '@math.gl/core';
  /**
   * Manages transformations to/from WGS84 coordinates using the Web Mercator Projection.
   */
@@ -1437,8 +1437,8 @@ diff --git a/dist.webgl-only/shaderlib/project/viewport-uniforms.js b/dist.webgl
  // Copyright (c) vis.gl contributors
  /* eslint-disable complexity, camelcase */
 -import { mat4, vec4 } from '@math.gl/core';
-+import * as mat4 from '@math.gl/core/mat4';
-+import * as vec4 from '@math.gl/core/vec4';
++import {mat4} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import { PROJECTION_MODE } from "../../lib/constants.js";
  import memoize from "../../utils/memoize.js";
  // To quickly set a vector to zero
@@ -1450,8 +1450,8 @@ diff --git a/dist.webgl-only/shaderlib/project/project-functions.js b/dist.webgl
  import { getOffsetOrigin } from "./viewport-uniforms.js";
  import WebMercatorViewport from "../../viewports/web-mercator-viewport.js";
 -import { vec3, vec4 } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
-+import * as vec4 from '@math.gl/core/vec4';
++import {vec3} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import { addMetersToLngLat } from '@math.gl/web-mercator';
  const DEFAULT_COORDINATE_ORIGIN = [0, 0, 0];
  // In project.glsl, offset modes calculate z differently from LNG_LAT mode.
@@ -1464,8 +1464,8 @@ diff --git a/src/viewports/globe-viewport.ts b/src/viewports/globe-viewport.ts
  
 -import {Matrix4, vec3, vec4} from '@math.gl/core';
 +import { Matrix4 } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
-+import * as vec4 from '@math.gl/core/vec4';
++import {vec3} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import {altitudeToFovy, fovyToAltitude, MAX_LATITUDE} from '@math.gl/web-mercator';
  import Viewport from './viewport';
  import {PROJECTION_MODE} from '../lib/constants';
@@ -1478,7 +1478,7 @@ diff --git a/src/viewports/web-mercator-viewport.ts b/src/viewports/web-mercator
  
 -import {Matrix4, clamp, vec2} from '@math.gl/core';
 +import { Matrix4, clamp } from '@math.gl/core';
-+import * as vec2 from '@math.gl/core/vec2';
++import {vec2} from '@math.gl/core';
  
  export type WebMercatorViewportOptions = {
    /** Name of the viewport */
@@ -1491,7 +1491,7 @@ diff --git a/src/viewports/globe-utils.ts b/src/viewports/globe-utils.ts
  
 -import {clamp, vec3, Quaternion} from '@math.gl/core';
 +import { clamp, Quaternion } from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
++import {vec3} from '@math.gl/core';
  import TransitionInterpolator from '../transitions/transition-interpolator';
  import {zoomAdjust} from './globe-viewport';
  
@@ -1504,7 +1504,7 @@ diff --git a/src/viewports/viewport.ts b/src/viewports/viewport.ts
  
 -import {Matrix4, Vector3, equals, clamp, mat4} from '@math.gl/core';
 +import { Matrix4, Vector3, equals, clamp } from '@math.gl/core';
-+import * as mat4 from '@math.gl/core/mat4';
++import {mat4} from '@math.gl/core';
  
  import {
    getDistanceScales,
@@ -1540,7 +1540,7 @@ diff --git a/src/viewports/orthographic-viewport.ts b/src/viewports/orthographic
  
 -import {Matrix4, clamp, vec2} from '@math.gl/core';
 +import { Matrix4, clamp } from '@math.gl/core';
-+import * as vec2 from '@math.gl/core/vec2';
++import {vec2} from '@math.gl/core';
  import {pixelsToWorld} from '@math.gl/web-mercator';
  
  import type {Padding} from './viewport';
@@ -1744,8 +1744,8 @@ diff --git a/src/shaderlib/project/project-functions.ts b/src/shaderlib/project/
  import WebMercatorViewport from '../../viewports/web-mercator-viewport';
  
 -import {vec3, vec4} from '@math.gl/core';
-+import * as vec3 from '@math.gl/core/vec3';
-+import * as vec4 from '@math.gl/core/vec4';
++import {vec3} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  import {addMetersToLngLat} from '@math.gl/web-mercator';
  
  import type {CoordinateSystem} from '../../lib/constants';
@@ -1777,8 +1777,8 @@ diff --git a/src/shaderlib/project/viewport-uniforms.ts b/src/shaderlib/project/
  
 -import {mat4, Matrix4Like, vec4} from '@math.gl/core';
 +import { Matrix4Like } from '@math.gl/core';
-+import * as mat4 from '@math.gl/core/mat4';
-+import * as vec4 from '@math.gl/core/vec4';
++import {mat4} from '@math.gl/core';
++import {vec4} from '@math.gl/core';
  
  import {PROJECTION_MODE} from '../../lib/constants';
  

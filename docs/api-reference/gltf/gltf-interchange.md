@@ -15,7 +15,7 @@ The same descriptors preserve authored node hierarchies, skins, inverse bind mat
 targets, animation clips, material-animation pointers, GPU instancing, variants, cameras,
 punctual-light extensions, and complete physical material records.
 
-Copy the helper into your application and install `@loaders.gl/core` and `@loaders.gl/gltf`
+Copy the helper into your application and install `@loaders.gl/core` and `@loaders.gl/scene`
 to enable its GLB writer. luma.gl modules do not depend on loaders.gl.
 
 ## Export a scene

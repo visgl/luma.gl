@@ -13,7 +13,7 @@ native animation pointers, and source-faithful rendering on WebGPU and WebGL.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);
@@ -33,7 +33,7 @@ mipmaps, independent UV transforms and `TEXCOORD_1`, authored punctual lights, n
 material/texture animation pointers, skin attributes, and animated morph targets.
 Asset export lives in the shared `examples/gltf/gltf-exporter.ts` application helper.
 
-`@loaders.gl/gltf` owns `.gltf` / `.glb` parsing, linked buffers and images, Draco and
+`@loaders.gl/scene/gltf` owns `.gltf` / `.glb` parsing, linked buffers and images, Draco and
 `EXT_meshopt_compression` and `KHR_meshopt_compression` decoding, Basis/KTX2 and supported WebP
 texture selection, feature/structural metadata decoding, and GLB
 container encoding. Applications own those loader dependencies; `@luma.gl/gltf` has none.

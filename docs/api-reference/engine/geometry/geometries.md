@@ -81,7 +81,7 @@ const geometry = new SphereGeometry({radius: 2});
 
 ### `TorusGeometry`
 
-`TorusGeometry` wraps the shared `@math.gl/geometry/parametric` tessellator with
+`TorusGeometry` wraps the shared `@math.gl/geometry` tessellator with
 luma.gl's CPU `Geometry` container. It preserves indexed `POSITION`, `NORMAL`,
 and `TEXCOORD_0` semantics and caller-provided attribute overrides.
 

@@ -35,7 +35,7 @@ import type {
   objects and returns shared mixer/playback controls.
 
 None of these functions reads a `.gltf` or `.glb` file. Load/postprocess the asset with
-`@loaders.gl/gltf`; decode source animation channels through `@luma.gl/gltf`.
+`@loaders.gl/scene/gltf`; decode source animation channels through `@luma.gl/gltf`.
 
 ## Bind a retained animated scene
 

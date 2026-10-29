@@ -77,7 +77,7 @@ primitives stay in `@luma.gl/engine`, while the portable skinning implementation
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {Matrix4} from '@math.gl/core';
