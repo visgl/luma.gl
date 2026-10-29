@@ -15,7 +15,7 @@ import {
   makeRandomGenerator
 } from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {picking, type ShaderModule} from '@luma.gl/shadertools';
+import {picking, type ShaderModule} from '@luma.gl/shaders';
 import * as arrow from 'apache-arrow';
 import {TRANSFORM_INFO_HTML} from './app-ui';
 

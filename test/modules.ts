@@ -5,8 +5,8 @@
 import {luma} from '@luma.gl/core';
 luma.log.set('debug', true);
 
-// Shadertools is a GLSL textual processing library, no actual WebGL dependencies
-import '@luma.gl/shadertools/test';
+// Shaders is a GLSL textual processing library, no actual WebGL dependencies
+import '@luma.gl/shaders/test';
 import '@luma.gl/engine/test/effects';
 
 // DEVICE INDEPENDENT TESTS

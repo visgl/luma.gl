@@ -57,19 +57,19 @@ Return to the [capabilities overview](/docs/capabilities) for GPU data and compu
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| WGSL shader assembly | Available | WebGPU | `@luma.gl/shadertools` | Compose supported WebGPU shader source and typed application bindings. |
-| GLSL shader assembly | Available | WebGL2 | `@luma.gl/shadertools` | Compose supported WebGL vertex and fragment shaders. |
-| Typed shader modules | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse shader modules with explicit source, dependencies, and uniform types. |
-| Shader hooks and injections | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Extend supported applications through composable shader hooks and source injections. |
-| Shader plugins | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Order reusable shader plugins and validate supported varying relationships. |
-| Uniform and binding reflection | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Coordinate application uniforms, supported bindings, and shader layouts. |
-| Color and picking modules | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse compatible color transforms, clipping, filtering, and picking logic. |
-| Lighting and PBR shaders | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Compose supported Lambert, Phong, physically based shading, and image-based lighting. |
-| Joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Skin compatible glTF and retained-scene geometry using shared WGSL and GLSL joint-palette modules. |
-| Geometric specular antialiasing | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Stabilize supported base and clearcoat highlights through derivative-based geometric filtering. |
-| Split-float high precision | Evolving | WebGPU + WebGL2 | `@luma.gl/shadertools` | Emulate selected higher-precision arithmetic without claiming native WGSL 64-bit floats. |
-| GLSL fp64 transcendentals | Available | WebGL2 | `@luma.gl/shadertools` | Use the supported GLSL high-precision transcendental library. |
-| 64-bit cell identifiers | Evolving | WebGPU | `@luma.gl/shadertools` | Represent supported geospatial cell identifiers as paired unsigned words. |
+| WGSL shader assembly | Available | WebGPU | `@luma.gl/shaders` | Compose supported WebGPU shader source and typed application bindings. |
+| GLSL shader assembly | Available | WebGL2 | `@luma.gl/shaders` | Compose supported WebGL vertex and fragment shaders. |
+| Typed shader modules | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Reuse shader modules with explicit source, dependencies, and uniform types. |
+| Shader hooks and injections | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Extend supported applications through composable shader hooks and source injections. |
+| Shader plugins | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Order reusable shader plugins and validate supported varying relationships. |
+| Uniform and binding reflection | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Coordinate application uniforms, supported bindings, and shader layouts. |
+| Color and picking modules | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Reuse compatible color transforms, clipping, filtering, and picking logic. |
+| Lighting and PBR shaders | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Compose supported Lambert, Phong, physically based shading, and image-based lighting. |
+| Joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Skin compatible glTF and retained-scene geometry using shared WGSL and GLSL joint-palette modules. |
+| Geometric specular antialiasing | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Stabilize supported base and clearcoat highlights through derivative-based geometric filtering. |
+| Split-float high precision | Evolving | WebGPU + WebGL2 | `@luma.gl/shaders` | Emulate selected higher-precision arithmetic without claiming native WGSL 64-bit floats. |
+| GLSL fp64 transcendentals | Available | WebGL2 | `@luma.gl/shaders` | Use the supported GLSL high-precision transcendental library. |
+| 64-bit cell identifiers | Evolving | WebGPU | `@luma.gl/shaders` | Represent supported geospatial cell identifiers as paired unsigned words. |
 
 ### Lighting, visual effects, and transparency
 
@@ -130,7 +130,7 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Generated image-based lighting | Experimental | WebGPU + WebGL2 | `@luma.gl/anari` | Generate compatible GGX-prefiltered specular maps, diffuse irradiance, and a split-sum BRDF lookup texture. |
 | Shared animation clips | Available | WebGPU + WebGL2 | `@luma.gl/engine` | Play, blend, crossfade, loop, and interpolate compatible imported tracks. |
 | Typed animation pointers | Available | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Animate supported `KHR_animation_pointer` transforms, morph weights, visibility, materials, UVs, cameras, and lights. |
-| Existing joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shadertools` | Reuse established skin shaders and automatically bind mesh-local glTF joint palettes. |
+| Existing joint-driven skinning | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Reuse established skin shaders and automatically bind mesh-local glTF joint palettes. |
 | Morph-target animation | Available | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Animate POSITION, NORMAL, and TANGENT morph targets through shared glTF, engine, and retained-scene paths. |
 | Independently animated GPU crowds | Available | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | `createGLTFAnimatedCrowd()` batches independently animated actors into one instanced draw per compatible source primitive. |
 | Actor-specific crowd playback | Available | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Give each actor an independent clip, phase, speed, crossfade, and root transform while reusing shared source geometry. |
@@ -143,13 +143,13 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 | Global animated-crowd vertex budgets | Available | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Limit submitted index references across all visible actor primitives, deterministically demote farther characters first, and report unsatisfied limits without hiding actors. |
 | Portable compressed-texture negotiation | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Negotiate actual Basis/KTX2, AVIF, and WebP decoder and device capabilities without claiming unavailable fallback formats. |
 | Legacy specular-glossiness conversion | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Convert authored `KHR_materials_pbrSpecularGlossiness` materials into a supported physically based rendering path. |
-| Reference-grade material conformance | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` and `@luma.gl/shadertools` | Compare authored material combinations, furnace behavior, environment filtering, and color management against reproducible reference images. |
+| Reference-grade material conformance | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` and `@luma.gl/shaders` | Compare authored material combinations, furnace behavior, environment filtering, and color management against reproducible reference images. |
 | Standalone physical transmission | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` and `@luma.gl/engine` | Extend compatible standalone glTF rendering with scene-color capture, roughness-aware refraction, and documented floating-point fallbacks. |
 | Authored image-based and photometric lights | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Reuse existing environment and lighting resources for compatible authored `EXT_lights_image_based` and `EXT_lights_ies` assets. |
-| High-capacity skeletal palettes | Opportunity | WebGPU + WebGL2 | `@luma.gl/shadertools` and `@luma.gl/engine` | Extend ordinary mesh skinning beyond the current 64-joint uniform palette with explicit storage-buffer and texture fallbacks. |
-| GPU-resident morph-target deformation | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine` and `@luma.gl/shadertools` | Keep authored morph bases, deltas, and actor-specific weights on the GPU instead of rewriting shared vertex data on the CPU. |
+| High-capacity skeletal palettes | Opportunity | WebGPU + WebGL2 | `@luma.gl/shaders` and `@luma.gl/engine` | Extend ordinary mesh skinning beyond the current 64-joint uniform palette with explicit storage-buffer and texture fallbacks. |
+| GPU-resident morph-target deformation | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine` and `@luma.gl/shaders` | Keep authored morph bases, deltas, and actor-specific weights on the GPU instead of rewriting shared vertex data on the CPU. |
 | Layered and additive animation | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine` | Extend the existing shared animation mixer with additive blending, target masks, events, retargeting, and optional reusable state graphs. |
-| GPU-sampled crowd clips | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` and `@luma.gl/shadertools` | Sample compatible per-actor clip, phase, blend, and joint data through GPU buffers or floating-point animation textures. |
+| GPU-sampled crowd clips | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` and `@luma.gl/shaders` | Sample compatible per-actor clip, phase, blend, and joint data through GPU buffers or floating-point animation textures. |
 | Per-instance morph and material state | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Preserve independent actor morph weights and compatible material parameters while retaining shared instanced source geometry. |
 | Screen-prioritized crowd LOD | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` and `@luma.gl/engine` | Integrate authored vendor LOD, generated mesh simplification, screen coverage, hysteresis, and explicit global submitted-index budgets. |
 | Progressive node and material LOD | Opportunity | WebGPU + WebGL2 | `@luma.gl/engine/gltf` | Stream compatible authored node and material levels with explicit cancellation, lazy GPU allocation, and bounded residency. |
@@ -158,7 +158,7 @@ Try [Lightstorm Megacity](/examples/showcase/lightstorm-megacity),
 
 The ownership boundaries are intentional: `@loaders.gl/scene/gltf` owns containers, asset decoding,
 accessor postprocessing, and GLB encoding; `@luma.gl/engine/gltf` interprets the resulting assets,
-`@luma.gl/shadertools` owns shared shading, `@luma.gl/engine` owns generic animation,
+`@luma.gl/shaders` owns shared shading, `@luma.gl/engine` owns generic animation,
 `@luma.gl/anari` owns the higher-level scene renderers and orchestrates
 retained scene objects. Reuse each capability at its existing layer rather than creating
 parallel implementations.

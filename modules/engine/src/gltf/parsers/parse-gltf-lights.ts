@@ -10,7 +10,7 @@ import {
   type Light,
   type PointLight,
   type SpotLight
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 
 export type ParseGLTFLightsOptions = {
   /** Restricts authored lights to nodes belonging to the selected scene hierarchy. */

@@ -17,7 +17,7 @@ import {
   pbrScene,
   skin,
   createAreaLightLTCTextures
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {Matrix4, Vector3} from '@math.gl/core';
 import {
   INFO_HTML,

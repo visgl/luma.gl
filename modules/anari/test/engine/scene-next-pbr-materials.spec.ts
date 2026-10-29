@@ -5,7 +5,7 @@
 import {Buffer, type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {ClipSpace, Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
-import {pbrMaterial, pbrScene, type ShaderModule} from '@luma.gl/shadertools';
+import {pbrMaterial, pbrScene, type ShaderModule} from '@luma.gl/shaders';
 import {PBREnvironmentGenerator} from '@luma.gl/anari';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';

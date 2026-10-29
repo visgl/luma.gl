@@ -8,7 +8,7 @@ import type {
   CompositeShaderPass,
   CompositeShaderPassStep,
   ShaderPassRenderTarget
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import type {BloomProps, BloomUniforms} from './bloom';
 import {createBloomComputePyramid} from './bloom-compute-pyramid';
 import {

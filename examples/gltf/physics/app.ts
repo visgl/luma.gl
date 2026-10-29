@@ -15,7 +15,7 @@ import {load} from '@loaders.gl/core';
 import {GLTFLoader, GLTFScenegraph} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
-import {Light, LightingProps} from '@luma.gl/shadertools';
+import {Light, LightingProps} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core';
 import {
   createGLTFPhysicsWorld,

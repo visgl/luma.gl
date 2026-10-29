@@ -1,6 +1,6 @@
 import {Device, getRandomNumberGenerator,glsl} from '@luma.gl/core';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry} from '@luma.gl/engine';
-import {dirlight} from '@luma.gl/shadertools';
+import {dirlight} from '@luma.gl/shaders';
 import {Model, ModelProps} from '@luma.gl/engine';
 import {clear, withParameters} from '@luma.gl/core/webgl';
 import {GL} from '@luma.gl/core/webgl-constants';

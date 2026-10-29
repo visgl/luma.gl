@@ -289,14 +289,14 @@ describe('GPGPU example catalog navigation', () => {
         '/docs/api-guide/shaders/gpu-floating-point-precision'
       ],
       [
-        'api-reference/shadertools/shader-modules/fp64.md',
+        'api-reference/shaders/shader-modules/fp64.md',
         'fp64',
-        '/docs/api-reference/shadertools/shader-modules/fp64'
+        '/docs/api-reference/shaders/shader-modules/fp64'
       ],
       [
-        'api-reference/shadertools/shader-modules/fp64-arithmetic.md',
+        'api-reference/shaders/shader-modules/fp64-arithmetic.md',
         'fp64-arithmetic',
-        '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'
+        '/docs/api-reference/shaders/shader-modules/fp64-arithmetic'
       ]
     ] as const;
     const generalPurposeGPUTabs = readFileSync(

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, CompositeShaderType, UniformValue} from '@luma.gl/core';
-import type {ShaderModuleUniformValue} from '@luma.gl/shadertools';
+import type {ShaderModuleUniformValue} from '@luma.gl/shaders';
 import type {TextureBindingSource} from '@luma.gl/core/dynamic';
 
 /** Shader input value routed through the binding map. */

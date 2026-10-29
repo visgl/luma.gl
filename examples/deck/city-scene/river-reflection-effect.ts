@@ -11,7 +11,7 @@ import type {
 } from '@deck.gl/core';
 import type {Device, Framebuffer, Texture} from '@luma.gl/core';
 import {BackgroundTextureModel, ShaderPassRenderer} from '@luma.gl/engine';
-import type {CompositeShaderPass} from '@luma.gl/shadertools';
+import type {CompositeShaderPass} from '@luma.gl/shaders';
 import {
   createSSRCompositeShaderPass,
   SSR_QUALITY_PRESETS,

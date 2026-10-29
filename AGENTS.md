@@ -110,7 +110,7 @@
 - Graph-based algorithms and table processing use explicit `@luma.gl/graph/*` subpaths.
 - `@luma.gl/gpgpu` retains GPU data primitives and immediate operations and must not depend on `@luma.gl/graph`.
 
-- Package dependency direction is `engine → graph → gpgpu → core/shadertools`. Graph and gpgpu must not import engine, including through public types or relative source paths.
+- Package dependency direction is `engine → graph → gpgpu → core/shaders`. Graph and gpgpu must not import engine, including through public types or relative source paths.
 - Engine owns BufferTransform and TextureTransform; engine/tables owns TableTransform. Gpgpu operations execute through RenderKernel without these adapters.
 - Engine owns GPUVectorModel, GPUVectorGeometry, and their vector binding and batching helpers. Engine also owns Computation, ShaderInputs, and their shader-module and uniform/binding helpers. Gpgpu owns immediate execution primitives. `@luma.gl/core/dynamic` owns DynamicBuffer, DynamicTexture, and their supporting resource types; core must not depend on gpgpu, graph, or engine. Engine may provide compatibility exports but must not duplicate these implementations.
 - Shared graph effect execution must use gpgpu primitives, not engine rendering models. Run `yarn test-package-layering` after building to verify this boundary.

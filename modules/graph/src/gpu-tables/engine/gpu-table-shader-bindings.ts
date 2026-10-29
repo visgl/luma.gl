@@ -13,7 +13,7 @@ import {
   type TypedArray
 } from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {
   getGPUInputAttributeNames,
   validateGPUInputVectors,

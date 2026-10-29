@@ -18,7 +18,7 @@ export type {
 import {Matrix3} from '@math.gl/core';
 import type {Device, ExternalImage, SamplerProps, TextureFormat} from '@luma.gl/core';
 import {assert, log, Texture, textureFormatDecoder} from '@luma.gl/core';
-import {type PBRMaterialBindings} from '@luma.gl/shadertools';
+import {type PBRMaterialBindings} from '@luma.gl/shaders';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {

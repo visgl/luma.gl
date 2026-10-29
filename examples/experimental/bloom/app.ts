@@ -12,7 +12,7 @@ import {
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/graph/gpu-effects';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import type {Panel, SettingsSchema, SettingsState} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -109,7 +109,7 @@ const DEFAULT_SETTINGS: BloomSettings = {
 };
 
 import {BLOOM_BACKGROUND_HTML} from './app-ui';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 const {sceneShaderModule, SCENE_WGSL, SCENE_FRAGMENT_SHADER} = getShaderSources();
 

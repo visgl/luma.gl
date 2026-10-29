@@ -37,18 +37,14 @@ import {
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 
-import type {
-  ShaderBindingDebugRow,
-  ShaderModule,
-  ShaderPlugin,
-  GLSLShaderAssembler,
-  WGSLShaderAssembler
-} from '@luma.gl/shadertools';
+import type {ShaderBindingDebugRow, ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 import {
   mergeShaderPluginModules,
   resolveShaderPlugins,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler,
   ShaderAssembler
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
@@ -130,9 +126,9 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
   vs?: string | null;
   fs?: string | null;
 
-  /** Shadertools shader modules added to shader code. */
+  /** Shader modules added to shader code. */
   modules?: ShaderModule<any, any, any>[];
-  /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
+  /** Shader boolean or numeric preprocessor defines that configure shader code. */
   defines?: Record<string, boolean | number>;
   /** Reusable shader assembly plugins resolved for the active GLSL or WGSL backend. */
   plugins?: ShaderPlugin[];
@@ -195,7 +191,7 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
  *
  * Features:
  * - Reuses and lazily recompiles {@link RenderPipeline | pipelines} as needed.
- * - Integrates with `@luma.gl/shadertools` to assemble GLSL or WGSL from shader modules.
+ * - Integrates with `@luma.gl/shaders` to assemble GLSL or WGSL from shader modules.
  * - Manages geometry attributes and buffer bindings.
  * - Accepts textures, samplers and uniform buffers as bindings, including texture binding sources.
  * - Provides detailed debug logging and optional shader source inspection.
@@ -266,7 +262,7 @@ export class GPUVectorModel {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
+    shaderAssembler: undefined!,
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -397,9 +393,12 @@ export class GPUVectorModel {
       ...props,
       shaderAssembler:
         props.shaderAssembler ??
-        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
+        (defaultShaderAssembler &&
+        isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
           ? defaultShaderAssembler
-          : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
+          : device.info.shadingLanguage === 'wgsl'
+            ? new WGSLShaderAssembler()
+            : new GLSLShaderAssembler())
     };
     this._vertexCountSet = vertexCountSet;
     props = this.props;

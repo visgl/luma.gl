@@ -42,7 +42,7 @@ export type KernelDispatchIndirectOptions = {
 /**
  * Lightweight executable WebGPU compute program.
  *
- * `Kernel` deliberately does not assemble shadertools modules or own ShaderInputs/uniform state.
+ * `Kernel` deliberately does not assemble shaders modules or own ShaderInputs/uniform state.
  * Higher-level APIs may assemble WGSL before constructing a kernel. Bindings are supplied per
  * dispatch so a kernel remains reusable and does not retain mutable resource binding state.
  */

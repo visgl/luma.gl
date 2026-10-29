@@ -311,7 +311,7 @@ does not acquire an automatic inverse.
 
 ## Package boundaries
 
-- `@luma.gl/shadertools` owns reusable arithmetic and, after API review, generally useful WGSL
+- `@luma.gl/shaders` owns reusable arithmetic and, after API review, generally useful WGSL
   operation modules.
 - `@luma.gl/gpgpu` owns primitive GPU data formats and the graph-safe execution machinery after
   graduation.

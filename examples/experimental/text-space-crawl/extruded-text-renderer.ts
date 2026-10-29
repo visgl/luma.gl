@@ -4,7 +4,7 @@
 
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {TextGeometry, type TextGeometryOptions} from '@luma.gl/engine/text-3d';
 import {
   IDENTITY_MATRIX,

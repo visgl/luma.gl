@@ -7,7 +7,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
-Retained ANARI materials translate directly into the canonical `@luma.gl/shadertools` PBR
+Retained ANARI materials translate directly into the canonical `@luma.gl/shaders` PBR
 uniforms and texture bindings. ANARI does not own a separate BRDF or shader implementation.
 Lights reuse the shared ambient, directional, point, and spot lighting descriptions.
 

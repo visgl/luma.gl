@@ -12,7 +12,7 @@ import {indexPicking, ShaderInputs} from '@luma.gl/engine';
 import {getGPUVectorBuffer, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPUTableModel} from '@luma.gl/engine/tables';
 import {type GPUInputSchema, type GPUTable} from '@luma.gl/graph/gpu-tables';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {
   FS_GLSL,
   PICKING_FS_GLSL,

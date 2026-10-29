@@ -24,7 +24,7 @@ value and TypeScript type with source links.
 ## When to use it
 
 Use Engine for most rendered applications. Drop to [Core](/docs/api-reference/core) when you
-need exact resource or command control. Use [Shadertools](/docs/api-reference/shadertools) to
+need exact resource or command control. Use [Shaders](/docs/api-reference/shaders) to
 make shader behavior reusable. Add GPU Core only when work becomes a scheduled GPU dataflow;
 a single `Model` does not need a graph.
 
@@ -89,5 +89,5 @@ animation, picking and highlighting, scenes, and shader passes.
 <FoundationAdjacency current="engine" />
 
 - Use [Core](/docs/api-reference/core) for direct resource and command control.
-- Use [Shadertools](/docs/api-reference/shadertools) for modules, hooks, and plugins.
+- Use [Shaders](/docs/api-reference/shaders) for modules, hooks, and plugins.
 - Use [GPU Core](/docs/api-reference/experimental/gpu-core) for scheduled multi-stage GPU work.

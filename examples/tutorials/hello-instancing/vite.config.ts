@@ -12,7 +12,7 @@ const alias = {
   '@luma.gl/engine/effects': `${__dirname}/../../../modules/engine/src/effects`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/webgl-legacy': `${__dirname}/../../../modules/engine/src/gltf`,
-  '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
+  '@luma.gl/shaders': `${__dirname}/../../../modules/shaders/src`,
   '@luma.gl/core/test-utils': `${__dirname}/../../../modules/core/src/test-utils`,
   '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl-constants`,
   '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`

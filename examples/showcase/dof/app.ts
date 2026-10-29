@@ -25,7 +25,7 @@ import {
 } from '@luma.gl/engine';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {dofCompositeShaderPass} from '@luma.gl/engine/effects';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
 import {Matrix4, radians} from '@math.gl/core';

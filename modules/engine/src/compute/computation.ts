@@ -25,7 +25,7 @@ import {
   resolveShaderPlugins,
   ShaderAssembler,
   WGSLShaderAssembler
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import type {TypedArray} from '@math.gl/core';
 import {isUniformValue} from '../model/split-uniforms-and-bindings';
 import {ShaderInputs} from '../shader-inputs';
@@ -46,9 +46,9 @@ export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
   /** Input language compiled by the application-registered shader assembler transpiler. */
   sourceLanguage?: string;
 
-  /** Shadertools shader modules added to shader code. */
+  /** Shader modules added to shader code. */
   modules?: ShaderModule[];
-  /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
+  /** Shader boolean or numeric preprocessor defines that configure shader code. */
   defines?: Record<string, boolean | number>;
   /** Reusable shader assembly plugins resolved for WGSL compute assembly. */
   plugins?: ShaderPlugin[];
@@ -75,7 +75,7 @@ export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
  * A model
  * - automatically reuses pipelines (programs) when possible
  * - automatically rebuilds pipelines if necessary to accommodate changed settings
- * shadertools integration
+ * shaders integration
  * - accepts modules and performs shader transpilation
  */
 export class Computation {
@@ -126,7 +126,7 @@ export class Computation {
 
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('wgsl'),
+    shaderAssembler: undefined!,
 
     debugShaders: undefined!
   };
@@ -169,7 +169,14 @@ export class Computation {
       throw new Error('Computation is only supported in WebGPU');
     }
 
-    this.props = {...Computation.defaultProps, ...props};
+    this.props = {
+      ...Computation.defaultProps,
+      ...props,
+      shaderAssembler:
+        props.shaderAssembler ??
+        Computation.defaultProps.shaderAssembler ??
+        new WGSLShaderAssembler()
+    };
     props = this.props;
     this.id = props.id || uid('model');
     this.device = device;

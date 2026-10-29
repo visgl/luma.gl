@@ -5,7 +5,7 @@
 import type {Sampler, Texture} from '@luma.gl/core';
 import {SHADOW_GLSL} from './shadow-glsl';
 import type {NumberArray3, NumberArray4, NumberArray16} from '@math.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import type {
   DirectionalShadowLight,
   PointShadowLight,

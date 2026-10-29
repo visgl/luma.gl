@@ -31,12 +31,12 @@ const SHADER_MODULE_DOCS_TABS: Record<ShaderModuleDocsTabGroupId, ShaderModuleDo
       label: 'Precision Guide',
       href: '/docs/api-guide/shaders/gpu-floating-point-precision'
     },
-    {id: 'fp32', label: 'fp32', href: '/docs/api-reference/shadertools/shader-modules/fp32'},
-    {id: 'fp64', label: 'fp64', href: '/docs/api-reference/shadertools/shader-modules/fp64'},
+    {id: 'fp32', label: 'fp32', href: '/docs/api-reference/shaders/shader-modules/fp32'},
+    {id: 'fp64', label: 'fp64', href: '/docs/api-reference/shaders/shader-modules/fp64'},
     {
       id: 'fp64-arithmetic',
       label: 'fp64arithmetic',
-      href: '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'
+      href: '/docs/api-reference/shaders/shader-modules/fp64-arithmetic'
     },
     {
       id: 'fp64-example',
@@ -45,27 +45,27 @@ const SHADER_MODULE_DOCS_TABS: Record<ShaderModuleDocsTabGroupId, ShaderModuleDo
     }
   ],
   lighting: [
-    {id: 'lighting', label: 'lighting', href: '/docs/api-reference/shadertools/shader-modules/lighting'},
-    {id: 'dirlight', label: 'dirlight', href: '/docs/api-reference/shadertools/shader-modules/dirlight'},
+    {id: 'lighting', label: 'lighting', href: '/docs/api-reference/shaders/shader-modules/lighting'},
+    {id: 'dirlight', label: 'dirlight', href: '/docs/api-reference/shaders/shader-modules/dirlight'},
     {
       id: 'lambert-material',
       label: 'lambertMaterial',
-      href: '/docs/api-reference/shadertools/shader-modules/lambert-material'
+      href: '/docs/api-reference/shaders/shader-modules/lambert-material'
     },
     {
       id: 'gouraud-material',
       label: 'gouraudMaterial',
-      href: '/docs/api-reference/shadertools/shader-modules/gouraud-material'
+      href: '/docs/api-reference/shaders/shader-modules/gouraud-material'
     },
     {
       id: 'phong-material',
       label: 'phongMaterial',
-      href: '/docs/api-reference/shadertools/shader-modules/phong-material'
+      href: '/docs/api-reference/shaders/shader-modules/phong-material'
     },
     {
       id: 'pbr-material',
       label: 'pbrMaterial',
-      href: '/docs/api-reference/shadertools/shader-modules/pbr-material'
+      href: '/docs/api-reference/shaders/shader-modules/pbr-material'
     }
   ]
 };

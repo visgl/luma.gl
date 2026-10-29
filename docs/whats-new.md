@@ -1,5 +1,20 @@
 # What's New
 
+## Shader package
+
+Shader composition and modules are now published as `@luma.gl/shaders`. Update imports to the
+new package name; the standalone shadertools package is removed. See the
+[shader API reference](./api-reference/shaders/README.md) and
+[upgrade guide](./upgrade-guide.md#shader-package-rename).
+
+## Explicit shader assembler ownership
+
+Models and computations own their default GLSL/WGSL assembler state. Applications can share
+hooks, modules, and transpilers by passing a configured assembler explicitly. Gpgpu and graph
+execution no longer consult the legacy global defaults. See the
+[assembler reference](./api-reference/shaders/shader-assembler.md) and
+[upgrade guide](./upgrade-guide.md#explicit-shader-assembler-ownership).
+
 ## Effects engine subpath
 
 Reusable post-processing and screen-space effects are available from the optional
@@ -137,7 +152,7 @@ Target Release Date: Q3, 2026
 - **Draft glTF billboards** - `BillboardController` provides opt-in full-axis camera-facing transforms, depth-relative scale and ordered overlay draw metadata without changing authored transforms.
 - **glTF spatial audio** - Opt-in `AudioController` plays draft `KHR_audio_emitter` assets through Web Audio, with camera-relative positional sound and a [Boom Box example](/examples/showcase/gltf-audio).
 
-- **WGSL fp64 projection math** - The `fp64` shader module now provides double-single transcendental functions and returned-array vector/matrix helpers for geographic projection on WebGPU. See the [supported functions and precision limits](/docs/api-reference/shadertools/shader-modules/fp64#wgsl-projection-functions).
+- **WGSL fp64 projection math** - The `fp64` shader module now provides double-single transcendental functions and returned-array vector/matrix helpers for geographic projection on WebGPU. See the [supported functions and precision limits](/docs/api-reference/shaders/shader-modules/fp64#wgsl-projection-functions).
 
 - **Shared glyph loading** - `@luma.gl/engine/text-fonts` decodes glyph PBF ranges, deduplicates and caches font-stack requests, and builds renderer-independent SDF atlases from server glyph metrics.
 
@@ -252,7 +267,7 @@ Target Release Date: Q3, 2026
   tangent deformation to the GPU.
 - **Meshopt decoding** - glTF loading adopts the loaders.gl v5 `KHR_meshopt_compression` decoder.
 
-**@luma.gl/shadertools**
+**@luma.gl/shaders**
 
 - **Atmospheric scattering** - The shared GLSL/WGSL `atmosphere` module provides a Rayleigh/Mie sky and metre-space aerial perspective. `AtmosphereLayer` connects the same shader to deck.gl perspective views in [Riverfront soft shadows](/examples/deck/soft-shadows).
 - **Cloud sunlight extinction** - `clouds_getTransmittance` samples the existing animated cloud density to attenuate direct sunlight on buildings and ground, without separate cloud shadow resources.
@@ -552,12 +567,12 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 **@luma.gl/shadertools**
 
-- **[`colors`, `floatColors`, and `storageColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - Semantic color normalization now has a `colors` helper namespace, the legacy `floatColors` alias remains available, and WebGPU shaders can read packed RGBA storage rows through `storageColors`.
-- **[`dggs`](/docs/api-reference/shadertools/shader-modules/dggs)** - New WGSL helpers decode compact Uint64 DGGS cell keys for storage-buffer and boundary-extraction workflows.
+- **[`colors`, `floatColors`, and `storageColors`](/docs/api-reference/shaders/shader-modules/float-colors)** - Semantic color normalization now has a `colors` helper namespace, the legacy `floatColors` alias remains available, and WebGPU shaders can read packed RGBA storage rows through `storageColors`.
+- **[`dggs`](/docs/api-reference/shaders/shader-modules/dggs)** - New WGSL helpers decode compact Uint64 DGGS cell keys for storage-buffer and boundary-extraction workflows.
 - **Apple/Metal-safe fp64 arithmetic** - WGSL double-single arithmetic automatically uses integer-controlled `twoSum`, `twoProd`, and renormalization on Apple WebGPU adapters, avoiding Metal compiler reassociation while retaining the existing `vec2f` API. The `LUMA_FP64_INTEGER_ARITHMETIC` shader define can force or disable the mode.
 - **WGSL double-precision arithmetic** - The `fp64arithmetic` shader module can subtract packed IEEE 754 double-precision values directly in WGSL and convert the result to `f32`.
 - **Portable tangent approximation** - The shared `fp32` shader module now provides `tan_fp32()` in GLSL and WGSL.
-- **[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin)** - Reusable shader assembly plugins group modules, defines, named injections, caller-owned vertex inputs, and generated cross-stage varyings.
+- **[`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin)** - Reusable shader assembly plugins group modules, defines, named injections, caller-owned vertex inputs, and generated cross-stage varyings.
 - **WGSL hooks and injections** - `ShaderAssembler` now applies registered hook functions and standard named injections such as `vs:#main-start` and `fs:#main-end` while assembling unified WGSL shaders.
 - **WGSL shader conditionals** - Shadertools preprocessing accepts simple boolean and numeric `#if` expressions, and assembled WGSL exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS` so inactive resource branches are removed before `@binding(auto)` assignment.
 - **`ShaderPassPipeline`** - New shader-pass pipeline type for structured multi-pass postprocessing.
@@ -625,14 +640,14 @@ Release Date: March 31, 2026
 
 **@luma.gl/shadertools**
 
-- **[`floatColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - New shader module with shared semantic color normalization and premultiplied alpha helpers.
+- **[`floatColors`](/docs/api-reference/shaders/shader-modules/float-colors)** - New shader module with shared semantic color normalization and premultiplied alpha helpers.
 - **Opt-in float semantic colors** - Byte-based semantic color APIs in `lighting`, shared `floatColors`, legacy `picking`, and glTF light parsing accept `useByteColors: false` for float and HDR-style color values while preserving current defaults.
-- **[`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)** shader module supports a new light type `SpotLight`.
-- **[`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material)** A new shader module adds a diffuse-only matte material model, completing the material catalog
+- **[`lighting`](/docs/api-reference/shaders/shader-modules/lighting)** shader module supports a new light type `SpotLight`.
+- **[`lambertMaterial`](/docs/api-reference/shaders/shader-modules/lambert-material)** A new shader module adds a diffuse-only matte material model, completing the material catalog
 - **Unlit Materials** All material shader modules now support `unlit` prop, allowing applications to disable lighting for materials that are already lit (e.g. photogrammetry).
-- `Composite uniformTypes` `uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](/docs/api-reference/shadertools/shader-module).
+- `Composite uniformTypes` `uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](/docs/api-reference/shaders/shader-module).
 - `WebGPU Shader modules` - ShaderModules now have WGSL variants.
-- `Shader module auto bindings` WGSL shader module now support `@binding(auto)` which eliminates binding conflicts. See [WGSL Support](/docs/api-reference/shadertools/wgsl-support).
+- `Shader module auto bindings` WGSL shader module now support `@binding(auto)` which eliminates binding conflicts. See [WGSL Support](/docs/api-reference/shaders/wgsl-support).
 
 **@luma.gl/effects**
 
@@ -744,7 +759,7 @@ Enhanced WebGPU support.
 
 **@luma.gl/shadertools**
 
-- [`ShaderModule](/docs/api-reference/shadertools/shader-module)`
+- [`ShaderModule](/docs/api-reference/shaders/shader-module)`
   - New improvements to type safety, in particular for uniforms and bindings.
   - New simplified API, no longer required to instantiate modules into `ShaderModuleInstances`.
 - `getShaderModuleUniforms(module: ShaderModule, ...)` New function

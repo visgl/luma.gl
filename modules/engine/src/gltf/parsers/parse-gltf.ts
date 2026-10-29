@@ -20,7 +20,7 @@ import {
   type ModelProps,
   type MorphTargetAttributes
 } from '@luma.gl/engine';
-import {pbrMaterial, SKIN_MAX_JOINTS} from '@luma.gl/shadertools';
+import {pbrMaterial, SKIN_MAX_JOINTS} from '@luma.gl/shaders';
 import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
 import {type GLTFGPUInstancing, getGLTFNodeInstancing} from '../gltf/gltf-instancing';
 import {

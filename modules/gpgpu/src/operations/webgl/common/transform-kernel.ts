@@ -12,12 +12,7 @@ import {
   type TransformFeedback,
   type VertexArray
 } from '@luma.gl/core';
-import {
-  getPassthroughFS,
-  ShaderAssembler,
-  type GLSLShaderAssembler,
-  type ShaderModule
-} from '@luma.gl/shadertools';
+import {getPassthroughFS, GLSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
 import {RenderKernel} from '../../../execution/compute/render-kernel';
 import {getPlatformInfo} from '../../../execution/utils/get-platform-info';
 
@@ -43,7 +38,7 @@ export function runTransformKernel(
     outputBuffers: Record<string, Buffer | BufferRange>;
   }
 ): void {
-  const assembler = props.shaderAssembler ?? ShaderAssembler.getDefaultShaderAssembler('glsl');
+  const assembler = props.shaderAssembler ?? new GLSLShaderAssembler();
   const {vs, fs} = assembler.assembleGLSLShaderPair({
     platformInfo: getPlatformInfo(device),
     vs: props.vs,

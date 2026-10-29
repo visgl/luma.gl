@@ -8,11 +8,11 @@
       "@luma.gl/core/*": [
         "./modules/core/src/*"
       ],
-      "@luma.gl/shadertools": [
-        "./modules/shadertools/src/index.ts"
+      "@luma.gl/shaders": [
+        "./modules/shaders/src/index.ts"
       ],
-      "@luma.gl/shadertools/*": [
-        "./modules/shadertools/src/*"
+      "@luma.gl/shaders/*": [
+        "./modules/shaders/src/*"
       ],
       "@luma.gl/engine": [
         "./modules/engine/src/index.ts"
@@ -66,7 +66,7 @@
     }
   },
   "include": [
-    "./modules/shadertools/test/lib/uniform-types.spec.ts",
+    "./modules/shaders/test/lib/uniform-types.spec.ts",
     "./modules/engine/test/shader-inputs-types.spec.ts",
     "./modules/gpgpu/test/gpu-data/gpu-data-types.node.spec.ts",
     "./modules/graph/test/geospatial/geospatial-types.spec.ts"

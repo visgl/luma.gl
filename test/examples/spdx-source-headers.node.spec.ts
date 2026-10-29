@@ -46,8 +46,8 @@ const TEMPORARY_MIXED_LICENSE_EXCEPTIONS = new Set([
 const THIRD_PARTY_SOURCE_EXCEPTIONS = new Set(['modules/core/src/webgl-debug/spector-types.ts']);
 
 const PBR_SHADER_SOURCE_FILES = [
-  'modules/shadertools/src/modules/lighting/pbr-material/pbr-material-glsl.ts',
-  'modules/shadertools/src/modules/lighting/pbr-material/pbr-material-wgsl.ts'
+  'modules/shaders/src/modules/lighting/pbr-material/pbr-material-glsl.ts',
+  'modules/shaders/src/modules/lighting/pbr-material/pbr-material-wgsl.ts'
 ];
 
 function listRepositorySourceFiles(): string[] {

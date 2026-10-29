@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {ShaderAssembler} from '@luma.gl/shaders';
 import {describe, expect, it, vi} from 'vitest';
 
 const testState = vi.hoisted(() => {

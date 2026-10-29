@@ -5,16 +5,12 @@
 import type {Binding, Device} from '@luma.gl/core';
 import {type Material, MaterialFactory} from '@luma.gl/engine';
 import {type TextureBindingSource} from '@luma.gl/core/dynamic';
-import {
-  type PBRMaterialBindings,
-  type PBRMaterialUniforms,
-  pbrMaterial
-} from '@luma.gl/shadertools';
+import {type PBRMaterialBindings, type PBRMaterialUniforms, pbrMaterial} from '@luma.gl/shaders';
 
 /** Concrete or deferred texture resources accepted by the shared PBR material factory. */
 export type PBRMaterialResources = Record<string, Binding | TextureBindingSource>;
 
-/** Typed material instance backed by the canonical shadertools PBR module. */
+/** Typed material instance backed by the canonical shaders PBR module. */
 export type PBRMaterial = Material<{pbrMaterial: PBRMaterialUniforms}, PBRMaterialResources>;
 
 /** Options used to create a reusable physically based material. */

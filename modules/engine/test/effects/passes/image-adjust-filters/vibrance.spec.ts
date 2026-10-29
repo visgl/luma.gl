@@ -1,5 +1,5 @@
 import {vibrance} from '@luma.gl/engine/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
+import {getShaderModuleUniforms} from '@luma.gl/shaders';
 import {expect, it} from 'vitest';
 
 it('vibrance#build/uniform', () => {

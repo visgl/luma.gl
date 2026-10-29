@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {fromHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat} from '@luma.gl/shaders';
 import type {TypedArray} from '@math.gl/core';
 import type {OperationHandler} from '../../operation/operation';
 import type {ConvertColorsInputs} from '../convert-colors';

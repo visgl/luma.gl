@@ -31,9 +31,9 @@ A hook has three parts:
 3. A module or plugin injects ordered source into that hook.
 
 ```typescript
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shaders';
 
-const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+const shaderAssembler = new GLSLShaderAssembler();
 shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 ```
 
@@ -54,7 +54,7 @@ shader-facing vertex inputs, and named injections, with `glsl` and `wgsl`
 variants where the shader syntax differs.
 
 ```typescript
-import type {ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderPlugin} from '@luma.gl/shaders';
 
 const tintPlugin: ShaderPlugin = {
   name: 'tint-plugin',
@@ -108,8 +108,8 @@ const model = new Model(device, {
   modules when the behavior is optional.
 
 For exact hook, injection, and plugin fields, see
-[`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler) and
-[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin). For runnable
+[`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler) and
+[`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin). For runnable
 examples, see [Shader Hooks](/docs/tutorials/shader-hooks) and
 [Shader Plugins](/docs/tutorials/shader-plugins). The
 [Arrow ShaderPlugin Filtering example](/examples/arrow/arrow-filtering) shows a

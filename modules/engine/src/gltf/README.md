@@ -39,7 +39,7 @@ texture selection, feature/structural metadata decoding, and GLB
 container encoding. Applications own those loader dependencies; `@luma.gl/engine/gltf` has none.
 `postProcessGLTF()` and its types are owned by luma.gl. Automatic `EXT_texture_avif` source selection will arrive with the next
 loaders.gl v5 alpha release. Generic animation, scenegraph, and morph primitives remain in
-`@luma.gl/engine`; shared PBR, lighting, and skinning shaders remain in `@luma.gl/shadertools`.
+`@luma.gl/engine`; shared PBR, lighting, and skinning shaders remain in `@luma.gl/shaders`.
 
 - [glTF API overview](https://luma.gl/docs/api-reference/gltf)
 - [Materials, textures, and lighting](https://luma.gl/docs/api-reference/gltf/gltf-materials)

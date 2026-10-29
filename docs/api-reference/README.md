@@ -22,7 +22,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/core/webgpu`][webgpu] | Core subpath | `Device` adapter implemented using the WebGPU API. Enables creation of WebGPU resources. |
 | [`@luma.gl/engine`][engine] | Recommended | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
 | [`@luma.gl/anari`][anari] | Experimental | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR. |
-| [`@luma.gl/shadertools`][shadertools] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
+| [`@luma.gl/shaders`][shaders] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
 | [`@luma.gl/slang`][slang] | Experimental (v10) | Optional TypeScript transpilation of a documented Slang shader subset to GLSL and WGSL. |
 | [`@luma.gl/engine/effects`][engine/effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
 | [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation and GPU data primitives. |
@@ -40,7 +40,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/engine`][engine] for `Model`, `AnimationLoop`, scenegraph helpers, and compute-oriented utilities.
 - [`@luma.gl/anari`][anari] for experimental ANARI-inspired declarative scenes, retained rendering, and instancing.
 - [`@luma.gl/core`][core] for `Device`, buffers, textures, shaders, render passes, and `RenderPipeline`.
-- [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
+- [`@luma.gl/shaders`][shaders] for shader modules and shader assembly.
 - [`@luma.gl/slang`][slang] for experimental Slang shader authoring on WebGL 2 and WebGPU, available from v10.
 - [`@luma.gl/engine/effects`][engine/effects] for reusable image processing, bloom, and supported screen-space effects.
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
@@ -58,7 +58,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 [webgpu]: /docs/api-reference/webgpu
 [core]: /docs/api-reference/core
 [anari]: /docs/api-reference/scene
-[shadertools]: /docs/api-reference/shadertools
+[shaders]: /docs/api-reference/shaders
 [slang]: /docs/api-reference/slang
 [engine/effects]: /docs/api-guide/shaders/shader-passes
 [gpgpu]: /docs/api-reference/gpgpu

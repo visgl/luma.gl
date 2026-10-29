@@ -15,8 +15,8 @@ const excludePatterns = [
   'modules/core/test/shadertypes/shader-types.spec.ts',
   'modules/engine/test/shader-inputs-types.spec.ts',
   'modules/engine/test/geometry/gpu-geometry.spec.ts',
-  'modules/shadertools/test/lib/uniform-types.spec.ts',
-  'modules/shadertools/test/modules/lighting/dirlight.spec.ts',
+  'modules/shaders/test/lib/uniform-types.spec.ts',
+  'modules/shaders/test/modules/lighting/dirlight.spec.ts',
   'modules/core/test/webgl/adapter/helpers/get-shader-layout.spec.ts',
   'test/browser.ts',
   'test/index.ts',
@@ -71,16 +71,16 @@ const nodeOnlyTestPatterns = [
   'modules/graph/test/geospatial/geospatial-types.spec.{ts,js}',
   'modules/engine/test/experimental/textures/packed-pixels.spec.{ts,js}',
   'modules/engine/test/experimental/webxr/webxr-animation-frame-provider.spec.{ts,js}',
-  'modules/shadertools/test/lib/preprocessor/**/*.spec.{ts,js}',
-  'modules/shadertools/test/lib/generator/**/*.spec.{ts,js}',
-  'modules/shadertools/test/lib/glsl-utils/**/*.spec.{ts,js}',
-  'modules/shadertools/test/lib/shader-assembly/assemble-wgsl-auto-bindings.spec.{ts,js}',
-  'modules/shadertools/test/lib/shader-module/{shader-module-dependencies,shader-module}.spec.{ts,js}',
-  'modules/shadertools/test/lib/{uniform-types,shader-plugin,shader-assembler}.spec.{ts,js}',
-  'modules/shadertools/test/modules/lighting/{lambert-material,lights,gouraud-material,water-material,phong-material,dirlight,pbr-scene}.spec.{ts,js}',
-  'modules/shadertools/test/modules/math/{fp16-utils,fp64-utils}.spec.{ts,js}',
-  'modules/shadertools/test/modules/utils/random.spec.{ts,js}',
-  'modules/shadertools/test/modules/modules.spec.{ts,js}'
+  'modules/shaders/test/lib/preprocessor/**/*.spec.{ts,js}',
+  'modules/shaders/test/lib/generator/**/*.spec.{ts,js}',
+  'modules/shaders/test/lib/glsl-utils/**/*.spec.{ts,js}',
+  'modules/shaders/test/lib/shader-assembly/assemble-wgsl-auto-bindings.spec.{ts,js}',
+  'modules/shaders/test/lib/shader-module/{shader-module-dependencies,shader-module}.spec.{ts,js}',
+  'modules/shaders/test/lib/{uniform-types,shader-plugin,shader-assembler}.spec.{ts,js}',
+  'modules/shaders/test/modules/lighting/{lambert-material,lights,gouraud-material,water-material,phong-material,dirlight,pbr-scene}.spec.{ts,js}',
+  'modules/shaders/test/modules/math/{fp16-utils,fp64-utils}.spec.{ts,js}',
+  'modules/shaders/test/modules/utils/random.spec.{ts,js}',
+  'modules/shaders/test/modules/modules.spec.{ts,js}'
 ];
 const nodeIncludePatterns = [
   'modules/**/*.node.spec.{ts,js}',
@@ -101,10 +101,10 @@ const nodeWrapperSourcePatterns = [
   'modules/engine/test/gltf/gltf/gltf-animator.spec.{ts,js}',
   'modules/engine/test/gltf/parsers/parse-gltf-animations.spec.{ts,js}',
   'modules/engine/test/gltf/webgl-to-webgpu/convert-webgl-sampler.spec.{ts,js}',
-  'modules/shadertools/test/lib/generator/{captialize,generate-shader}.spec.{ts,js}',
-  'modules/shadertools/test/lib/glsl-utils/shader-utils.spec.{ts,js}',
-  'modules/shadertools/test/lib/preprocessor/preprocessor.spec.{ts,js}',
-  'modules/shadertools/test/modules/lighting/{gouraud-material,lambert-material,lights,phong-material}.spec.{ts,js}',
+  'modules/shaders/test/lib/generator/{captialize,generate-shader}.spec.{ts,js}',
+  'modules/shaders/test/lib/glsl-utils/shader-utils.spec.{ts,js}',
+  'modules/shaders/test/lib/preprocessor/preprocessor.spec.{ts,js}',
+  'modules/shaders/test/modules/lighting/{gouraud-material,lambert-material,lights,phong-material}.spec.{ts,js}',
   'modules/engine/test/splats/{splat-browser-coverage,splat-rad-hierarchy}.spec.{ts,js}',
   'modules/graph/test/gpu-tables/gpu-table-model.spec.{ts,js}',
   'modules/core/test/webgl/adapter/helpers/{parse-shader-compiler-log,webgl-topology-utils}.spec.{ts,js}'
@@ -185,12 +185,13 @@ const vitestConfig = getVitestConfig({
     args: launchArguments
   },
   overrides: {
-    // Keep deck.gl in Vite's source graph so it shares this repository's luma.gl runtime.
-    ssr: {noExternal: ['@deck.gl/core', '@deck.gl/layers']},
+    // Keep Deck and its published 9.x shader dependency in Vite's graph so their core
+    // imports resolve to the same workspace runtime. This does not alias the old shader package.
+    ssr: {noExternal: ['@deck.gl/core', '@deck.gl/layers', '@luma.gl/shadertools']},
     // loaders.gl's optional writer peer must remain importable without installing its 33 MB CLI.
     // Disabling discovery keeps Vite from restarting a CI shard when it first encounters zod.
     optimizeDeps: {
-      exclude: ['@deck.gl/core', '@deck.gl/layers'],
+      exclude: ['@deck.gl/core', '@deck.gl/layers', '@luma.gl/shadertools'],
       // Keep source packages visible while bundling their CommonJS dependencies.
       include: ['@deck.gl/layers > earcut', '@math.gl/dggs > open-location-code'],
       noDiscovery: true

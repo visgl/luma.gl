@@ -8,7 +8,7 @@ import {
   PBRMaterialBindings,
   PBRMaterialUniforms,
   PBRProjectionProps
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 
 type ParsedPBRMaterialUniforms = Partial<PBRProjectionProps & PBRMaterialUniforms> & {
   clearcoatRoughnessMapEnabled?: boolean;

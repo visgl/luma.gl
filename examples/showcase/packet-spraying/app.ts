@@ -66,7 +66,7 @@ import {
   wboit,
   wboitPlugin
 } from '@luma.gl/anari';
-import type {ShaderModule, CompositeShaderPass, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, CompositeShaderPass, ShaderPlugin} from '@luma.gl/shaders';
 import {Matrix4, radians} from '@math.gl/core';
 import {type Panel, type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {

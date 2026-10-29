@@ -1027,26 +1027,26 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/shadertools",
+        "label": "@luma.gl/shaders",
         "items": [
           {
             "type": "category",
             "label": "Core APIs",
             "items": [
-              "api-reference/shadertools/README",
-              "api-reference/shadertools/shader-module",
-              "api-reference/shadertools/shader-pass",
-              "api-reference/shadertools/shader-plugin",
-              "api-reference/shadertools/shader-assembler",
-              "api-reference/shadertools/shader-info"
+              "api-reference/shaders/README",
+              "api-reference/shaders/shader-module",
+              "api-reference/shaders/shader-pass",
+              "api-reference/shaders/shader-plugin",
+              "api-reference/shaders/shader-assembler",
+              "api-reference/shaders/shader-info"
             ]
           },
           {
             "type": "category",
             "label": "Conventions and portability",
             "items": [
-              "api-reference/shadertools/shader-conventions",
-              "api-reference/shadertools/wgsl-support"
+              "api-reference/shaders/shader-conventions",
+              "api-reference/shaders/wgsl-support"
             ]
           },
           {
@@ -1057,38 +1057,38 @@
                 "type": "category",
                 "label": "Precision and utility",
                 "items": [
-                  "api-reference/shadertools/shader-modules/float-colors",
-                  "api-reference/shadertools/shader-modules/fp32",
-                  "api-reference/shadertools/shader-modules/fp64",
-                  "api-reference/shadertools/shader-modules/fp64-arithmetic",
-                  "api-reference/shadertools/shader-modules/random",
-                  "api-reference/shadertools/shader-modules/pattern-fill",
-                  "api-reference/shadertools/shader-modules/sketch-stroke",
-                  "api-reference/shadertools/shader-modules/point-glow"
+                  "api-reference/shaders/shader-modules/float-colors",
+                  "api-reference/shaders/shader-modules/fp32",
+                  "api-reference/shaders/shader-modules/fp64",
+                  "api-reference/shaders/shader-modules/fp64-arithmetic",
+                  "api-reference/shaders/shader-modules/random",
+                  "api-reference/shaders/shader-modules/pattern-fill",
+                  "api-reference/shaders/shader-modules/sketch-stroke",
+                  "api-reference/shaders/shader-modules/point-glow"
                 ]
               },
               {
                 "type": "category",
                 "label": "Lighting and materials",
                 "items": [
-                  "api-reference/shadertools/shader-modules/dirlight",
-                  "api-reference/shadertools/shader-modules/lambert-material",
-                  "api-reference/shadertools/shader-modules/lighting",
-                  "api-reference/shadertools/shader-modules/pbr-material",
-                  "api-reference/shadertools/shader-modules/phong-material",
-                  "api-reference/shadertools/shader-modules/gouraud-material"
+                  "api-reference/shaders/shader-modules/dirlight",
+                  "api-reference/shaders/shader-modules/lambert-material",
+                  "api-reference/shaders/shader-modules/lighting",
+                  "api-reference/shaders/shader-modules/pbr-material",
+                  "api-reference/shaders/shader-modules/phong-material",
+                  "api-reference/shaders/shader-modules/gouraud-material"
                 ]
               },
               {
                 "type": "category",
                 "label": "Projection and interaction",
                 "items": [
-                  "api-reference/shadertools/shader-modules/dggs",
-                  "api-reference/shadertools/shader-modules/gpu-picking",
-                  "api-reference/shadertools/shader-modules/picking",
-                  "api-reference/shadertools/shader-modules/path-dash",
-                  "api-reference/shadertools/shader-modules/project",
-                  "api-reference/shadertools/shader-modules/skin"
+                  "api-reference/shaders/shader-modules/dggs",
+                  "api-reference/shaders/shader-modules/gpu-picking",
+                  "api-reference/shaders/shader-modules/picking",
+                  "api-reference/shaders/shader-modules/path-dash",
+                  "api-reference/shaders/shader-modules/project",
+                  "api-reference/shaders/shader-modules/skin"
                 ]
               }
             ]
@@ -1101,79 +1101,79 @@
                 "type": "category",
                 "label": "Color and Tone",
                 "items": [
-                  "api-reference/shadertools/shader-passes/image-processing",
-                  "api-reference/shadertools/shader-passes/brightness-contrast",
-                  "api-reference/shadertools/shader-passes/hue-saturation",
-                  "api-reference/shadertools/shader-passes/sepia",
-                  "api-reference/shadertools/shader-passes/vibrance",
-                  "api-reference/shadertools/shader-passes/tone-mapping",
-                  "api-reference/shadertools/shader-passes/hdr-auto-exposure"
+                  "api-reference/shaders/shader-passes/image-processing",
+                  "api-reference/shaders/shader-passes/brightness-contrast",
+                  "api-reference/shaders/shader-passes/hue-saturation",
+                  "api-reference/shaders/shader-passes/sepia",
+                  "api-reference/shaders/shader-passes/vibrance",
+                  "api-reference/shaders/shader-passes/tone-mapping",
+                  "api-reference/shaders/shader-passes/hdr-auto-exposure"
                 ]
               },
               {
                 "type": "category",
                 "label": "Blur, Bloom and Focus",
                 "items": [
-                  "api-reference/shadertools/shader-passes/bloom",
-                  "api-reference/shadertools/shader-passes/gaussian-blur",
-                  "api-reference/shadertools/shader-passes/triangle-blur",
-                  "api-reference/shadertools/shader-passes/tilt-shift",
-                  "api-reference/shadertools/shader-passes/zoom-blur",
-                  "api-reference/shadertools/shader-passes/depth-of-field",
-                  "api-reference/shadertools/shader-passes/depth-aware-blur"
+                  "api-reference/shaders/shader-passes/bloom",
+                  "api-reference/shaders/shader-passes/gaussian-blur",
+                  "api-reference/shaders/shader-passes/triangle-blur",
+                  "api-reference/shaders/shader-passes/tilt-shift",
+                  "api-reference/shaders/shader-passes/zoom-blur",
+                  "api-reference/shaders/shader-passes/depth-of-field",
+                  "api-reference/shaders/shader-passes/depth-aware-blur"
                 ]
               },
               {
                 "type": "category",
                 "label": "Temporal and Antialiasing",
                 "items": [
-                  "api-reference/shadertools/shader-passes/persistence",
-                  "api-reference/shadertools/shader-passes/fxaa",
-                  "api-reference/shadertools/shader-passes/temporal-antialiasing",
-                  "api-reference/shadertools/shader-passes/camera-reprojection-antialiasing",
-                  "api-reference/shadertools/shader-passes/motion-blur"
+                  "api-reference/shaders/shader-passes/persistence",
+                  "api-reference/shaders/shader-passes/fxaa",
+                  "api-reference/shaders/shader-passes/temporal-antialiasing",
+                  "api-reference/shaders/shader-passes/camera-reprojection-antialiasing",
+                  "api-reference/shaders/shader-passes/motion-blur"
                 ]
               },
               {
                 "type": "category",
                 "label": "Lighting and Visibility",
                 "items": [
-                  "api-reference/shadertools/shader-passes/ssao",
-                  "api-reference/shadertools/shader-passes/gtao",
-                  "api-reference/shadertools/shader-passes/screen-space-global-illumination",
-                  "api-reference/shadertools/shader-passes/screen-space-reflections",
-                  "api-reference/shadertools/shader-passes/outlines",
-                  "api-reference/shadertools/shader-passes/volumetric-fog",
-                  "api-reference/shadertools/shader-passes/clustered-volumetric-lighting"
+                  "api-reference/shaders/shader-passes/ssao",
+                  "api-reference/shaders/shader-passes/gtao",
+                  "api-reference/shaders/shader-passes/screen-space-global-illumination",
+                  "api-reference/shaders/shader-passes/screen-space-reflections",
+                  "api-reference/shaders/shader-passes/outlines",
+                  "api-reference/shaders/shader-passes/volumetric-fog",
+                  "api-reference/shaders/shader-passes/clustered-volumetric-lighting"
                 ]
               },
               {
                 "type": "category",
                 "label": "Stylization",
                 "items": [
-                  "api-reference/shadertools/shader-passes/color-halftone",
-                  "api-reference/shadertools/shader-passes/dot-screen",
-                  "api-reference/shadertools/shader-passes/edge-work",
-                  "api-reference/shadertools/shader-passes/hexagonal-pixelate"
+                  "api-reference/shaders/shader-passes/color-halftone",
+                  "api-reference/shaders/shader-passes/dot-screen",
+                  "api-reference/shaders/shader-passes/edge-work",
+                  "api-reference/shaders/shader-passes/hexagonal-pixelate"
                 ]
               },
               {
                 "type": "category",
                 "label": "Detail and finishing",
                 "items": [
-                  "api-reference/shadertools/shader-passes/ink",
-                  "api-reference/shadertools/shader-passes/noise",
-                  "api-reference/shadertools/shader-passes/vignette",
-                  "api-reference/shadertools/shader-passes/denoise"
+                  "api-reference/shaders/shader-passes/ink",
+                  "api-reference/shaders/shader-passes/noise",
+                  "api-reference/shaders/shader-passes/vignette",
+                  "api-reference/shaders/shader-passes/denoise"
                 ]
               },
               {
                 "type": "category",
                 "label": "Warp and Lens",
                 "items": [
-                  "api-reference/shadertools/shader-passes/bulge-pinch",
-                  "api-reference/shadertools/shader-passes/magnify",
-                  "api-reference/shadertools/shader-passes/swirl"
+                  "api-reference/shaders/shader-passes/bulge-pinch",
+                  "api-reference/shaders/shader-passes/magnify",
+                  "api-reference/shaders/shader-passes/swirl"
                 ]
               }
             ]

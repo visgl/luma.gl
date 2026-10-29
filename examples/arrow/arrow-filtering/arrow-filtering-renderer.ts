@@ -4,8 +4,8 @@
 
 import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
 import type {Device, RenderPass, ShaderLayout} from '@luma.gl/core';
-import type {FilterShaderPluginProps, ShaderModule} from '@luma.gl/shadertools';
-import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import type {FilterShaderPluginProps, ShaderModule} from '@luma.gl/shaders';
+import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import {GPUTableModel} from '@luma.gl/engine/tables';
 import {type GPUTable} from '@luma.gl/graph/gpu-tables';
 import type {ArrowFilteringTable} from './arrow-filtering-data';

@@ -80,7 +80,7 @@ remain separate work.
 
 ### Tranche 0 — Establish a reference asset, image, and feature ledger
 
-**Priority:** P0. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/shadertools`, shared test infrastructure.
+**Priority:** P0. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/shaders`, shared test infrastructure.
 
 **Status:** In progress. [PR #3087](https://github.com/visgl/luma.gl/pull/3087) landed the executable
 ledger: it derives extension coverage from the runtime registry, pins the Khronos Sample Assets and
@@ -182,7 +182,7 @@ space, mips, and ownership.
 
 ### Tranche 3 — Make reference-grade PBR consistent across rendering paths
 
-**Priority:** P0. **Owners:** `@luma.gl/shadertools`, `@luma.gl/engine`, `@luma.gl/engine/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/shaders`, `@luma.gl/engine`, `@luma.gl/engine/gltf`.
 
 - Share a single feature-specialized PBR contract across standalone glTF, experimental scene
   rendering, and retained scenes instead of maintaining divergent approximations.
@@ -202,7 +202,7 @@ not labeled physically complete.
 
 ### Tranche 4 — Raise ordinary skinning beyond the 64-joint ceiling
 
-**Priority:** P0. **Owners:** `@luma.gl/shadertools`, `@luma.gl/engine`, `@luma.gl/engine/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/shaders`, `@luma.gl/engine`, `@luma.gl/engine/gltf`.
 
 - Reuse the existing WebGPU storage-buffer and WebGL2 floating-point texture palette patterns
   already exercised by animated crowds.
@@ -218,7 +218,7 @@ runtime is introduced.
 
 ### Tranche 5 — Move morph deformation and per-instance weights onto the GPU
 
-**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shadertools`, `@luma.gl/engine/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shaders`, `@luma.gl/engine/gltf`.
 
 - Keep immutable POSITION/NORMAL/TANGENT bases and deltas resident on the GPU.
 - Support a portable vertex-shader path plus an optional WebGPU compute deformation path for
@@ -234,7 +234,7 @@ WebGPU and WebGL2; no per-frame CPU geometry upload occurs on the accelerated pa
 
 ### Tranche 6 — Sample character clips on the GPU
 
-**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shadertools`, `@luma.gl/engine/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shaders`, `@luma.gl/engine/gltf`.
 
 - Introduce optional reusable animation/joint atlases with per-actor clip, time, phase, playback
   speed, interpolation, and blend parameters.
@@ -266,7 +266,7 @@ retargeting map.
 
 ### Tranche 8 — Import authored environments and photometric lights
 
-**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/shadertools`, retained scene adapters.
+**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/shaders`, retained scene adapters.
 
 - Map `EXT_lights_image_based` into the existing environment/IBL resources instead of introducing a
   parallel environment representation.

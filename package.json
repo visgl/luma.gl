@@ -97,7 +97,7 @@
     "cheerio": "1.0.0-rc.9",
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
-    "@luma.gl/shadertools": "workspace:*",
+    "@luma.gl/shaders": "workspace:*",
     "@deck.gl/core@npm:9.4.0": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@vitest/browser": "5.0.2",
     "@vitest/browser-playwright": "5.0.2",

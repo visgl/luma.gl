@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {packSlangUniforms, type SlangTypeLayout} from '@luma.gl/slang';
 import {AnimationLoopTemplate, type AnimationProps, Model} from '@luma.gl/engine';
-import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import {createSlangTranspiler} from './slang-transpiler';
 import {createShaderViewer} from './shader-viewer';
 import {filmGrain} from './film-grain';

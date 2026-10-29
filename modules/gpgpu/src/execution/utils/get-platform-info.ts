@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device, DeviceFeature} from '@luma.gl/core';
-import type {PlatformInfo} from '@luma.gl/shadertools';
+import type {PlatformInfo} from '@luma.gl/shaders';
 
-/** Create a shadertools platform info from the Device */
+/** Create a shaders platform info from the Device */
 export function getPlatformInfo(device: Device): PlatformInfo {
   return {
     type: device.type,

@@ -13,7 +13,7 @@ import {
   ModelNode,
   OrbitControls
 } from '@luma.gl/engine';
-import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
+import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shaders';
 import {
   createGLTFAnimatedCrowd,
   createScenegraphsFromGLTF,

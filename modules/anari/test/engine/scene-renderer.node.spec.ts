@@ -29,7 +29,7 @@ import {
   pbrMaterial,
   pbrScene,
   WGSLShaderAssembler
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {getNullTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';

@@ -4,7 +4,7 @@
 
 import type {Binding} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/gpgpu';
-import {dggs} from '@luma.gl/shadertools';
+import {dggs} from '@luma.gl/shaders';
 import {GPUCommandGraph, type GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   getViewBinding,

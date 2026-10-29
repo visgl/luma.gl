@@ -20,7 +20,7 @@ import {
   SpectralCausticsRenderer,
   type SpectralCausticsProps
 } from '@luma.gl/anari';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 
 const NEAR_PLANE = 0.1;

@@ -7,7 +7,7 @@ import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/cor
 import {Computation} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUVector, getGPUVectorBuffer} from '@luma.gl/gpgpu/gpu-data';
-import {dggs, type ShaderModule} from '@luma.gl/shadertools';
+import {dggs, type ShaderModule} from '@luma.gl/shaders';
 import * as arrow from 'apache-arrow';
 import {CELL_GEOMETRY_POINT_COUNT, COLUMN_GEOMETRY_WORKGROUP_SIZE} from './column-renderer-shaders';
 

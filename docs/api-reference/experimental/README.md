@@ -27,14 +27,14 @@ Use the matching public package and explicit subpath for each API. Public scene 
 ## When to use it
 
 Use an experimental module when its current contract fits your application and you can absorb
-changes between releases. Prefer Core, Engine, Shadertools, or another stable package when they
+changes between releases. Prefer Core, Engine, Shaders, or another stable package when they
 already provide the required capability.
 
 ## Live example
 
 This explicitly activated example compares A-buffer, weighted-blended, and ordinary alpha
 blending on the same scene. It demonstrates how an experimental renderer can still compose with
-stable Engine models and Shadertools passes.
+stable Engine models and Shaders passes.
 
 <OITExample embedded showStats={false} />
 
@@ -116,7 +116,7 @@ specific rather than universal performance claims.
 - [Choosing a luma.gl API layer](/docs/api-guide)
 - [Core API](/docs/api-reference/core)
 - [Engine API](/docs/api-reference/engine)
-- [Shadertools API](/docs/api-reference/shadertools)
+- [Shaders API](/docs/api-reference/shaders)
 - [Effects API](/docs/api-reference/effects)
 
 [`DepthTextureCopy`](../scene/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.

@@ -45,8 +45,8 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'shaders',
     title: 'Shader Tools',
-    packageName: '@luma.gl/shadertools',
-    documentationPath: 'docs/api-reference/shadertools',
+    packageName: '@luma.gl/shaders',
+    documentationPath: 'docs/api-reference/shaders',
     capabilities: ['WGSL', 'GLSL', 'Shader modules'],
     descriptions: [/portable shaders/i, /reusable module library/i]
   },
@@ -54,7 +54,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
     id: 'effects',
     title: 'Effects',
     packageName: '@luma.gl/engine/effects',
-    documentationPath: 'docs/api-reference/shadertools/shader-passes/image-processing',
+    documentationPath: 'docs/api-reference/shaders/shader-passes/image-processing',
     capabilities: ['Bloom', 'Tone mapping', 'Shader passes'],
     descriptions: [/reusable shader effects/i, /post-processing/i]
   },

@@ -27,8 +27,8 @@ export const GPGPU_DOCS_TAB_GROUPS: DocumentationTabGroup<GPGPUDocsTabId>[] = [
     label: 'GPU floating-point precision',
     tabs: [
       {id: 'precision-guide', label: 'Precision guide', href: '/docs/api-guide/shaders/gpu-floating-point-precision'},
-      {id: 'fp64', label: 'fp64', href: '/docs/api-reference/shadertools/shader-modules/fp64'},
-      {id: 'fp64-arithmetic', label: 'fp64 arithmetic', href: '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'}
+      {id: 'fp64', label: 'fp64', href: '/docs/api-reference/shaders/shader-modules/fp64'},
+      {id: 'fp64-arithmetic', label: 'fp64 arithmetic', href: '/docs/api-reference/shaders/shader-modules/fp64-arithmetic'}
     ]
   }
 ];

@@ -12,7 +12,7 @@ This page contains release notes for older luma.gl releases (up through v8.5). F
 
 Date: Jul 15, 2021
 
-**`@luma.gl/shadertools`**
+**`@luma.gl/shaders`**
 
 - GLSL transpiler now handles `gl_FragColor` in fragment shader when transpiling from ES 1.00 to 3.00
 - New `magnify` effect
@@ -59,7 +59,7 @@ Handling of platforms that do not support vertex array objects has been signific
 
 #### GLSL 3.0 to 1.0 transpilation
 
-`assembleShaders` now optionally attempts to transpile shaders from GLSL 3.0 to 1.0, potentially simplifying shader management in systems where both WebGL 1 and 2 are used. Refer to [the documentation](https://tsherif.github.io/luma.gl /docs/api-reference/shadertools/shader-assembler#transpilation) for more information.
+`assembleShaders` now optionally attempts to transpile shaders from GLSL 3.0 to 1.0, potentially simplifying shader management in systems where both WebGL 1 and 2 are used. Refer to [the documentation](https://tsherif.github.io/luma.gl /docs/api-reference/shaders/shader-assembler#transpilation) for more information.
 
 ## Version 8.0
 
@@ -90,7 +90,7 @@ luma.gl v8.0 also brings with it a major simplification of the API and streamlin
 - Low-level
   - **constants**: WebGL 1 and 2 enums.
   - **gltools**: Tools for polyfilling, instrumenting and tracking state for WebGL contexts.
-  - **shadertools**: Tools for creating and composing re-usable GLSL shader modules.
+  - **shaders**: Tools for creating and composing re-usable GLSL shader modules.
 - Mid-level
   - **webgl**: WebGL 1 and 2 wrapper classes.
 - High-level
@@ -156,7 +156,7 @@ the shader injection system now supports:
 - Automatic injection by shader modules into hook functions or pre-defined shader hooks
 
 The combination of these features allows the behavior of the same shader code to be modified depending on included shader modules or other
-requirements of the application. See [assembleShaders]( /docs/api-reference/shadertools/shader-assembler) documentation for more details.
+requirements of the application. See [assembleShaders]( /docs/api-reference/shaders/shader-assembler) documentation for more details.
 
 #### Animation Support
 
@@ -348,7 +348,7 @@ A selection of open source 3D loaders have been ported to a new submodule `loade
 
 #### Transform Class now supports Shader Modules
 
-The `Transform` class now accepts shader module parameters (such as `modules`, `dependencies` and `inject`, see [assembleShaders]( /docs/api-reference/shadertools/shader-assembler)), enabling the use of shader modules in transform feedback operations.
+The `Transform` class now accepts shader module parameters (such as `modules`, `dependencies` and `inject`, see [assembleShaders]( /docs/api-reference/shaders/shader-assembler)), enabling the use of shader modules in transform feedback operations.
 
 #### Documentation Search
 
@@ -539,9 +539,9 @@ In this version, a new WebGL state management is implemented to help address one
 - luma.gl can track certain WebGL context state changes so the app could easily set and reset WebGL states for certain operations.
 - luma.gl also has a host-side WebGL state caching system that records certain WebGL states so that expansive queries into the GPU or underlying OpenGL driver won't be necessary.
 
-#### shadertools - A New Shader Module System
+#### shaders - A New Shader Module System
 
-- The new, optional, shadertools module with the `assembleShaders` function system allows shader code to be broken into composable pieces.
+- The new, optional, shaders module with the `assembleShaders` function system allows shader code to be broken into composable pieces.
 
 - A new `ShaderCache` class is provided to ensure that identical shaders are only compiled once and no unnecessary examination and/or checks are done on already compiled WebGL shader and program objects, which significantly accelerates app start up under some occasions.
 

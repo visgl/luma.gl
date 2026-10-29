@@ -4,7 +4,7 @@
 
 import {BufferLayout} from '@luma.gl/core';
 import {runTransformKernel} from './common/transform-kernel';
-import {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderModule} from '@luma.gl/shaders';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {

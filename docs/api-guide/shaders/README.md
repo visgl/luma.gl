@@ -1,8 +1,8 @@
-import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+import {ShadersDocsTabs} from '@site/src/components/docs/shaders-docs-tabs';
 
 # Overview
 
-<ShadertoolsDocsTabs group="starting" active="shadertools-guide" />
+<ShadersDocsTabs group="starting" active="shaders-guide" />
 
 luma.gl applications must provide the shader source code that will ultimately
 run on the GPU. Such code must be provided as WGSL and/or GLSL depending on
@@ -11,11 +11,11 @@ inputs, and run it through the engine APIs.
 
 | Question | Guide page | Main reference pages |
 | --- | --- | --- |
-| How does luma.gl combine application source with reusable shader code? | [Shader Assembly](/docs/api-guide/shaders/shader-assembly) | [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler), [`ShaderModule`](/docs/api-reference/shadertools/shader-module), [`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin) |
-| How do I let optional features customize a base shader without copying it? | [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders) | [`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin), [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler) |
-| How do I keep one rendering feature available on WebGPU and WebGL 2? | [Writing Portable Shaders](/docs/api-guide/shaders/writing-portable-shaders) | [`Model`](/docs/api-reference/engine/model), [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support) |
-| How do I preserve more than `f32` precision across WebGPU and WebGL 2? | [GPU Floating-Point Precision Techniques](/docs/api-guide/shaders/gpu-floating-point-precision) | [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64), [`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic) |
-| How do I run image effects or other fullscreen texture stages? | [Shader Passes](/docs/api-guide/shaders/shader-passes) | [`ShaderPass`](/docs/api-reference/shadertools/shader-pass), [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) |
+| How does luma.gl combine application source with reusable shader code? | [Shader Assembly](/docs/api-guide/shaders/shader-assembly) | [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler), [`ShaderModule`](/docs/api-reference/shaders/shader-module), [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) |
+| How do I let optional features customize a base shader without copying it? | [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders) | [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin), [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler) |
+| How do I keep one rendering feature available on WebGPU and WebGL 2? | [Writing Portable Shaders](/docs/api-guide/shaders/writing-portable-shaders) | [`Model`](/docs/api-reference/engine/model), [`WGSL Support`](/docs/api-reference/shaders/wgsl-support) |
+| How do I preserve more than `f32` precision across WebGPU and WebGL 2? | [GPU Floating-Point Precision Techniques](/docs/api-guide/shaders/gpu-floating-point-precision) | [`fp64`](/docs/api-reference/shaders/shader-modules/fp64), [`fp64arithmetic`](/docs/api-reference/shaders/shader-modules/fp64-arithmetic) |
+| How do I run image effects or other fullscreen texture stages? | [Shader Passes](/docs/api-guide/shaders/shader-passes) | [`ShaderPass`](/docs/api-reference/shaders/shader-pass), [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) |
 
 Related reference topics:
 

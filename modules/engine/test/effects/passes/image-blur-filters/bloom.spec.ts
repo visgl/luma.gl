@@ -9,7 +9,7 @@ import {
   bloomCompositeShaderPass,
   createBloomCompositeShaderPass
 } from '@luma.gl/engine/effects';
-import {fromHalfFloat, getShaderModuleUniforms, toHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat, getShaderModuleUniforms, toHalfFloat} from '@luma.gl/shaders';
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 

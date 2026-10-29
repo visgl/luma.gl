@@ -33,20 +33,12 @@ export default defineConfig(({mode}) => ({
         new URL('../../../modules/engine/src/graph/tables', import.meta.url)
       ),
       ...Object.fromEntries(
-        [
-          'core',
-          'effects',
-          'engine',
-          'gpgpu',
-          'three',
-          'webgl',
-          'webgpu',
-          'shadertools',
-          'graph'
-        ].map(name => [
-          `@luma.gl/${name}`,
-          fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
-        ])
+        ['core', 'effects', 'engine', 'gpgpu', 'three', 'webgl', 'webgpu', 'shaders', 'graph'].map(
+          name => [
+            `@luma.gl/${name}`,
+            fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
+          ]
+        )
       )
     }
   },
@@ -65,7 +57,7 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/engine/effects',
       '@luma.gl/engine',
       '@luma.gl/graph/gpu-core',
-      '@luma.gl/shadertools',
+      '@luma.gl/shaders',
       '@luma.gl/three/interop',
       'three/webgpu',
       'three/tsl',

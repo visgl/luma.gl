@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 export const MAX_BLOOM_LENS_GHOSTS = 6;
 export const MAX_BLOOM_LENS_SPIKES = 8;
