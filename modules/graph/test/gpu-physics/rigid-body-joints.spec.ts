@@ -341,13 +341,17 @@ it('replays position drives and joint toggles from a warm checkpoint', async con
   const definition = new GPUCommandGraph(device);
   world.addToGraph(definition);
   const graph = await definition.compileAsync();
-  const advance = async () => {
-    const encoder = device.createCommandEncoder();
-    graph.encode(encoder, {parameters: undefined});
-    device.submit(encoder.finish());
+  const advance = async (steps = 1) => {
+    for (let start = 0; start < steps; start += 20) {
+      const encoder = device.createCommandEncoder();
+      for (let step = start; step < Math.min(steps, start + 20); step++)
+        graph.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+    }
   };
   try {
-    for (let tick = 0; tick < 240; tick++) await advance();
+    // No commands or assertions intervene during settling; retain all 240 simulation steps.
+    await advance(240);
     const settled = (await world.readState())[1];
     expect(2 * Math.atan2(settled.orientation[2], settled.orientation[3])).toBeCloseTo(0.6, 2);
     const journal = new GPURigidBodyCommandJournal(world);
@@ -358,7 +362,7 @@ it('replays position drives and joint toggles from a warm checkpoint', async con
     journal.apply(1, {type: 'joint-enabled', joint: 0, enabled: true});
     await advance();
     const expected = await world.readState();
-    await replayRigidBodyCommands(world, journal.export(), 2, advance);
+    await replayRigidBodyCommands(world, journal.export(), 2, () => advance());
     expect(await world.readState()).toEqual(expected);
     expect(() => journal.apply(0, {type: 'joint-enabled', joint: 0, enabled: false})).toThrow();
   } finally {
