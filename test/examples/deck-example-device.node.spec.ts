@@ -42,7 +42,7 @@ vi.mock('@deck.gl/core', () => ({
 import {ArrowDeck} from '../../examples/deck/arrow-deck';
 
 describe('ArrowDeck device initialization', () => {
-  it('scopes the legacy shader assembler shim to LayerManager construction', () => {
+  it('scopes the legacy shader assembler shim to initialization and always restores on load', () => {
     const strictGetDefaultShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
     let userCallbackDevice: typeof testState.device | null = null;
 
@@ -67,7 +67,7 @@ describe('ArrowDeck device initialization', () => {
     testState.device = {info: {shadingLanguage: 'glsl'}};
     testState.consumeLegacyCall = false;
     const unconsumedDeck = new ArrowDeck({});
-    expect(ShaderAssembler.getDefaultShaderAssembler).not.toBe(strictGetDefaultShaderAssembler);
+    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
 
     unconsumedDeck.finalize();
     expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);

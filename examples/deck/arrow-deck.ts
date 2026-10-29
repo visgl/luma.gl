@@ -41,6 +41,10 @@ export class ArrowDeck<ViewsT extends View | View[]> extends Deck<ViewsT> {
         restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
       },
       onLoad: () => {
+        // Deck may own an assembler from a separately installed shader package.
+        // End the compatibility scope even when that assembler never calls our factory.
+        restoreShaderAssembler?.();
+        restoreShaderAssembler = null;
         didLoad = true;
         runOnLoad?.();
       },
