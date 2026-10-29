@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "10.0.0-alpha.4",
+  "version": "10.0.0-alpha.5",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -79,14 +79,14 @@
     "@luma.gl/shadertools": "~10.0.0-alpha.3"
   },
   "dependencies": {
-    "@luma.gl/gpgpu": "10.0.0-alpha.4",
-    "@luma.gl/graph": "10.0.0-alpha.4",
+    "@luma.gl/gpgpu": "10.0.0-alpha.5",
+    "@luma.gl/graph": "10.0.0-alpha.5",
     "@math.gl/core": "~5.0.0-beta.1",
     "@math.gl/geometry": "~5.0.0-beta.1",
     "probe.gl": "^5.0.0"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
   "devDependencies": {
-    "@luma.gl/anari": "10.0.0-alpha.4"
+    "@luma.gl/anari": "10.0.0-alpha.5"
   }
 }

@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "10.0.0-alpha.4",
+  "version": "10.0.0-alpha.5",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -195,8 +195,8 @@
     }
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.4",
-    "@luma.gl/shadertools": "~10.0.0-alpha.4",
+    "@luma.gl/core": "~10.0.0-alpha.5",
+    "@luma.gl/shadertools": "~10.0.0-alpha.5",
     "@math.gl/geospatial": "~5.0.0-beta.1"
   },
   "peerDependenciesMeta": {
@@ -205,7 +205,7 @@
     }
   },
   "dependencies": {
-    "@luma.gl/gpgpu": "10.0.0-alpha.4",
+    "@luma.gl/gpgpu": "10.0.0-alpha.5",
     "@math.gl/core": "~5.0.0-beta.1",
     "probe.gl": "^5.0.0"
   }
