@@ -256,3 +256,6 @@ model.shaderInputs.setProps({
 LTC supports diffuse, isotropic GGX and clearcoat. Disk emitters use an inscribed 32-gon. Sheen, anisotropy and diffuse transmission use the numerical fallback. The LUT textures are caller-owned and required only for models compiled with the LTC define; they use portable RGBA16F with manual bilinear interpolation. The legacy `areaLighting` props remain available as an alternate source; avoid supplying the same light through both collections.
 
 Area lights are not evaluated by Lambert, Phong or Gouraud. Neither LTC nor the numerical fallback provides shadows or indirect illumination.
+
+For the LTC paper citation, fitted-table provenance and retained license notice, see
+[Attributions and Credits](/docs/credits#area-lighting-ltc).
