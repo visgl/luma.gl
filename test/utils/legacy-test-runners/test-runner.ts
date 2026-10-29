@@ -6,7 +6,7 @@
 /* eslint-disable */
 
 import {AnimationProps} from '@luma.gl/engine';
-import {getWebGLTestDevice} from '../../../modules/core/src/test-utils/create-test-device';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {createTestDevice} from '../../../modules/core/src/test-utils/deprecated/sync-test-device';
 
 // TODO - Replace with new AnimationLoop from `@luma.gl/engine`
