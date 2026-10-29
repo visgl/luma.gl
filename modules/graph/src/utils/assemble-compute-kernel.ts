@@ -4,7 +4,8 @@
 
 import type {Device} from '@luma.gl/core';
 import {getPlatformInfo, type KernelProps} from '@luma.gl/gpgpu';
-import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
+import {type ShaderModule} from '@luma.gl/shaders';
 
 /** Assemble module-based compute source before creating the executable kernel. */
 export function assembleComputeKernel(

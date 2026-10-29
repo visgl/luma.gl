@@ -12,7 +12,8 @@ import {
   type TransformFeedback,
   type VertexArray
 } from '@luma.gl/core';
-import {getPassthroughFS, GLSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
+import {getPassthroughFS, type ShaderModule} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {RenderKernel} from '../../../execution/compute/render-kernel';
 import {getPlatformInfo} from '../../../execution/utils/get-platform-info';
 

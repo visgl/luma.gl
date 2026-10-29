@@ -4,7 +4,8 @@
 
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {runTransformKernel} from './transform-kernel';
-import {GLSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
+import {type ShaderModule} from '@luma.gl/shaders';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
 import {

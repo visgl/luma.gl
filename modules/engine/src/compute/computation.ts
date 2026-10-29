@@ -23,9 +23,9 @@ import {
   type ShaderPlugin,
   mergeShaderPluginModules,
   resolveShaderPlugins,
-  ShaderAssembler,
-  WGSLShaderAssembler
+  ShaderAssembler
 } from '@luma.gl/shaders';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 import type {TypedArray} from '@math.gl/core';
 import {isUniformValue} from '../model/split-uniforms-and-bindings';
 import {ShaderInputs} from '../shader-inputs';

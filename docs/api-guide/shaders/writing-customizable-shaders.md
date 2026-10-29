@@ -31,7 +31,7 @@ A hook has three parts:
 3. A module or plugin injects ordered source into that hook.
 
 ```typescript
-import {GLSLShaderAssembler} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 
 const shaderAssembler = new GLSLShaderAssembler();
 shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');

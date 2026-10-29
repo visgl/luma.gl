@@ -36,6 +36,11 @@
       "types": "./dist/wgsl.d.ts",
       "import": "./dist/wgsl.js",
       "require": "./dist/wgsl.cjs"
+    },
+    "./glsl": {
+      "types": "./dist/glsl.d.ts",
+      "import": "./dist/glsl.js",
+      "require": "./dist/glsl.cjs"
     }
   },
   "files": [

@@ -21,6 +21,15 @@ not create a device or compile shaders itself.
 The generated Shaders API index at `/docs/api-reference/generated/shaders` contains every
 public descriptor, helper, built-in module, and type with source links.
 
+## Language entry points
+
+Use `@luma.gl/shaders/glsl` for `GLSLShaderAssembler` and GLSL assembly helpers, or
+`@luma.gl/shaders/wgsl` for `WGSLShaderAssembler`, WGSL assembly, interface scanning and binding
+diagnostics. The language entries share the abstract `ShaderAssembler` contract and common module
+logic, while keeping the other assembly backend out of application bundles. Root exports retain
+constructor identity. See [ShaderAssembler](./shader-assembler) for explicit ownership and the
+deprecated root factory.
+
 ## When to use it
 
 Use Shaders when shader behavior must be shared, configured, or composed. Use plain WGSL

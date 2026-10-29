@@ -36,13 +36,23 @@ Registering hooks on an assembler does not automatically configure other models.
 configured instance through `shaderAssembler` to each model or computation that should use it.
 :::
 
+## Language entry points
+
+Import `GLSLShaderAssembler` from `@luma.gl/shaders/glsl` and `WGSLShaderAssembler` from
+`@luma.gl/shaders/wgsl`. The shared `ShaderAssembler` contract can be imported as a type from
+the root or either language entry. Each language entry loads its own assembler and assembly backend;
+shared modules, hooks, uniforms and transpiler contracts retain their existing behavior.
+The WGSL entry also retains `scanWGSLInterface` and exports WGSL binding diagnostics.
+
+Root assembler exports remain available and share constructor identity with the subpaths, including
+for CommonJS. The deprecated `ShaderAssembler.getDefaultShaderAssembler(...)` factory is initialized
+only by the root runtime facade. New code should construct and pass a language-specific assembler.
+
 ## Usage
 
 ```typescript
-import {
-  GLSLShaderAssembler,
-  WGSLShaderAssembler
-} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
 const glslShaderAssembler = new GLSLShaderAssembler();
 glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
@@ -233,9 +243,7 @@ can register an adapter. These imports belong to the application:
 
 ```typescript
 import {transpileSlang, transpileSlangWGSL} from '@luma.gl/slang';
-import {
-  type ShaderTranspiler
-} from '@luma.gl/shaders';
+import {type ShaderTranspiler} from '@luma.gl/shaders';
 
 const slangTranspiler: ShaderTranspiler = {
   name: 'slang',

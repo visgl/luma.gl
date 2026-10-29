@@ -38,13 +38,9 @@ import {
 } from '@luma.gl/core';
 
 import type {ShaderBindingDebugRow, ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
-import {
-  mergeShaderPluginModules,
-  resolveShaderPlugins,
-  GLSLShaderAssembler,
-  WGSLShaderAssembler,
-  ShaderAssembler
-} from '@luma.gl/shaders';
+import {mergeShaderPluginModules, resolveShaderPlugins, ShaderAssembler} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';

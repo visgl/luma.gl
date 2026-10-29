@@ -4,7 +4,7 @@
 
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import {GLSLShaderAssembler} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {ShaderHooksInfoHtml} from './app-ui';
 
 // Base vertex and fragment shader code

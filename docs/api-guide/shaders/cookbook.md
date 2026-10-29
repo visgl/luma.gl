@@ -44,7 +44,7 @@ const exposure = {
 ## Add a hook
 
 ```ts
-import {WGSLShaderAssembler} from '@luma.gl/shaders';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
 const assembler = new WGSLShaderAssembler();
 assembler.addShaderHook(
