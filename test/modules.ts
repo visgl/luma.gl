@@ -29,6 +29,6 @@ import '@deck.gl-community/arrow-layers/test';
 import '@deck.gl-community/gpu-layers/test';
 import '@luma.gl/gpgpu/test';
 import '@luma.gl/engine/test/splats';
-import '@luma.gl/text/test';
+import '@luma.gl/engine/test/text';
 // DEPRECATED TESTS
 import '../modules/core/test/webgl-constants/index';

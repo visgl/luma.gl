@@ -20,8 +20,8 @@
       "@luma.gl/gpgpu/*": ["../../../modules/gpgpu/src/*"],
       "@luma.gl/shadertools": ["../../../modules/shadertools/src/index.ts"],
       "@luma.gl/shadertools/*": ["../../../modules/shadertools/src/*"],
-      "@luma.gl/text": ["../../../modules/text/src/index.ts"],
-      "@luma.gl/text/*": ["../../../modules/text/src/*"],
+      "@luma.gl/engine/text": ["../../../modules/engine/src/text/index.ts"],
+      "@luma.gl/engine/text-experimental": ["../../../modules/engine/src/text/experimental.ts"],
       "@luma.gl/core/webgpu": ["../../../modules/core/src/webgpu/index.ts"],
       "@luma.gl/core/webgpu/*": ["../../../modules/core/src/webgpu/*"]
     }

@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {GPUTextData, GPUTextResources, GPUTextStrategy} from '@luma.gl/text';
-import {createGPUTextData, supportsGpuTextExpansion} from '@luma.gl/text/experimental';
+import type {GPUTextData, GPUTextResources, GPUTextStrategy} from '@luma.gl/engine/text';
+import {createGPUTextData, supportsGpuTextExpansion} from '@luma.gl/engine/text-experimental';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import * as arrow from 'apache-arrow';
 import {supportsVertexStorageBuffers} from '../../arrow-renderer-utils';

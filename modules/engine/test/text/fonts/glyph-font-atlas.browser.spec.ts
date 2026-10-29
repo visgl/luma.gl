@@ -6,14 +6,14 @@ import {expect, test, vi} from 'vitest';
 import {isBrowser} from 'probe.gl/env';
 import {ClipSpace} from '@luma.gl/engine';
 import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {GPUTextResources} from '../../src/text-2d/gpu-text-resources';
+import {GPUTextResources} from '../../../src/text/text-2d/gpu-text-resources';
 import {
   GlyphRangeLoader,
   buildGlyphFontAtlas,
   createGlyphFontRenderer,
   parseGlyphRange,
   measureFontAtlasText
-} from '../../src/fonts';
+} from '../../../src/text/fonts';
 import {makeGlyphRange, makeGlyphResponse} from './glyph-range-fixture';
 
 test('GPU glyph atlas interpolates coverage between adjacent texels', async () => {

@@ -28,7 +28,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation and GPU data primitives. |
 | [`@luma.gl/graph`][graph] | Experimental (v10) | GPU execution graphs, programs, and graph-based processing through explicit subpaths. |
 | [`@luma.gl/arrow`][arrow] | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
-| [`@luma.gl/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
+| [`@luma.gl/engine/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/engine/splats`][splats] | Experimental | Gaussian splat rendering and caller-owned prepared GPU splat data. |
 | [`@luma.gl/engine/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
 | [`@luma.gl/core/test-utils`][test-utils] | Optional | Test devices, null backend, and resource assertions. |
@@ -46,7 +46,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
 - [`@luma.gl/graph`][graph] for `GPUCommandGraph`, `GPUGraph`, GPU tables, and graph-based processing.
 - [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for `GPURecordBatch`/`GPUTable` APIs.
-- [`@luma.gl/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
+- [`@luma.gl/engine/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/arrow`][arrow] for Arrow conversion.
 - [`@luma.gl/engine/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [Engine experimental utilities](/docs/api-reference/engine/experimental) for controls, material plugins, textures, and WebXR helpers.
 - [`@luma.gl/graph/experimental`](/docs/api-reference/experimental) for path/polygon models and flow/fluid simulations.
@@ -66,7 +66,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 [gpu-data]: /docs/api-reference/gpgpu/gpu-data
 [gpu-tables]: /docs/api-reference/experimental/gpu-tables
 [arrow]: /docs/api-reference/arrow
-[text]: /docs/api-reference/text
+[text]: /docs/api-reference/engine/text
 [splats]: /docs/api-reference/splats
 [experimental]: /docs/api-reference/experimental
 [gltf]: /docs/api-reference/gltf

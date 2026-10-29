@@ -29,12 +29,12 @@ import {
   GPUTextResources,
   TextRenderer,
   type GPUTextData
-} from '@luma.gl/text';
+} from '@luma.gl/engine/text';
 import {
   TextAttributeModel,
   TextDictionaryModel,
   TextStorageModel
-} from '@luma.gl/text/experimental';
+} from '@luma.gl/engine/text-experimental';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 

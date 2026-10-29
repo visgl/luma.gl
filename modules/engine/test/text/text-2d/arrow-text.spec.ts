@@ -16,8 +16,8 @@ import {
   populateUtf8TextIndices,
   type ArrowUtf8Dictionary
 } from '@luma.gl/arrow';
-import type {CharacterMapping, FontAtlas, TextKerning} from '../../src/index';
-import {createTextKerning} from '../../src/fonts/atlas/text-utils';
+import type {CharacterMapping, FontAtlas, TextKerning} from '../../../src/text/index';
+import {createTextKerning} from '../../../src/text/fonts/atlas/text-utils';
 
 type TextDatum = {
   rowIndex: number;

@@ -26,12 +26,12 @@ import {
   type TypedArray
 } from '@luma.gl/core';
 import {ShaderInputs, type Model} from '@luma.gl/engine';
-import type {GPUTextData} from '@luma.gl/text';
+import type {GPUTextData} from '@luma.gl/engine/text';
 import {
   makeTextGlyphAlphaGlsl,
   supportsGpuTextExpansion,
   type TextGlyphAlphaShaderSettings
-} from '@luma.gl/text/experimental';
+} from '@luma.gl/engine/text-experimental';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPURecordBatchSourceInfo} from '@luma.gl/graph/gpu-tables';
 import {Vector} from 'apache-arrow';

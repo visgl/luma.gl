@@ -4,16 +4,16 @@
 
 import {expect, it} from 'vitest';
 import {Vector2} from '@math.gl/core';
-import {CurvePath} from '../../src/text-3d/paths/curve-path';
+import {CurvePath} from '../../../src/text/text-3d/paths/curve-path';
 import {
   CubicBezierCurve,
   LineCurve,
   QuadraticBezierCurve,
   SplineCurve
-} from '../../src/text-3d/paths/curves';
-import {Path} from '../../src/text-3d/paths/path';
-import {ShapePath} from '../../src/text-3d/paths/shape-path';
-import {ShapeUtils} from '../../src/text-3d/paths/shape-utils';
+} from '../../../src/text/text-3d/paths/curves';
+import {Path} from '../../../src/text/text-3d/paths/path';
+import {ShapePath} from '../../../src/text/text-3d/paths/shape-path';
+import {ShapeUtils} from '../../../src/text/text-3d/paths/shape-utils';
 
 const unitSquare = [
   new Vector2(0, 0),

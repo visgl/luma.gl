@@ -15,7 +15,7 @@ import {
   TextAttributeModel,
   TextDictionaryModel,
   TextStorageModel
-} from '@luma.gl/text/experimental';
+} from '@luma.gl/engine/text-experimental';
 import type {ArrowTextRendererActiveModel} from './arrow-text-renderer';
 import {
   TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,

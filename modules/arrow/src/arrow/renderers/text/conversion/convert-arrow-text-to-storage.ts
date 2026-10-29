@@ -9,7 +9,7 @@ import {
   supportsGpuUtf8TextExpansion,
   type TextStorageModelProps,
   type TextStorageState
-} from '@luma.gl/text/experimental';
+} from '@luma.gl/engine/text-experimental';
 import {
   createArrowTextStorageState,
   createTextStorageStateFromGPUVectors,

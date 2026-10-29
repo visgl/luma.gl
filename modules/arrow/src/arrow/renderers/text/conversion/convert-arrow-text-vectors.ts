@@ -37,7 +37,7 @@ import {
   makeVector,
   util
 } from 'apache-arrow';
-import {type FontAtlas, type GPUTextResources, type TextGlyphLayout} from '@luma.gl/text';
+import {type FontAtlas, type GPUTextResources, type TextGlyphLayout} from '@luma.gl/engine/text';
 import {
   buildTextGpuGlyphDefinitions,
   createTextDefaultFragmentShaderUniforms,
@@ -74,7 +74,7 @@ import {
   type TextStorageInputProps,
   type TextStorageRenderBatchState,
   type TextStorageState
-} from '@luma.gl/text/experimental';
+} from '@luma.gl/engine/text-experimental';
 import {
   buildArrowGlyphLayout,
   buildGpuTextDictionaryCompressedStream,

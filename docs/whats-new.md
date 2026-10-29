@@ -1,5 +1,12 @@
 # What's New
 
+## Text engine subpaths
+
+Text rendering, font atlas builders, and 3D text geometry now live in the optional flat
+`@luma.gl/engine/text`, `@luma.gl/engine/text-fonts`, `@luma.gl/engine/text-3d`, and
+`@luma.gl/engine/text-experimental` subpaths. The standalone text package is removed.
+See the [text API reference](./api-reference/engine/text/README.md).
+
 ## glTF engine subpaths
 
 Import the glTF runtime from `@luma.gl/engine/gltf` and physics integration from the flat
@@ -125,9 +132,9 @@ Target Release Date: Q3, 2026
 
 - **WGSL fp64 projection math** - The `fp64` shader module now provides double-single transcendental functions and returned-array vector/matrix helpers for geographic projection on WebGPU. See the [supported functions and precision limits](/docs/api-reference/shadertools/shader-modules/fp64#wgsl-projection-functions).
 
-- **Shared glyph loading** - `@luma.gl/text/fonts` decodes glyph PBF ranges, deduplicates and caches font-stack requests, and builds renderer-independent SDF atlases from server glyph metrics.
+- **Shared glyph loading** - `@luma.gl/engine/text-fonts` decodes glyph PBF ranges, deduplicates and caches font-stack requests, and builds renderer-independent SDF atlases from server glyph metrics.
 
-- **Public package** - `@luma.gl/text` is included in npm releases, including its CPU font atlas builders under `@luma.gl/text/fonts`.
+- **Published entry point** - `@luma.gl/engine/text` is included in engine npm releases, including its CPU font atlas builders under `@luma.gl/engine/text-fonts`.
 
 - **Opaque reflective ray transport** - Opt-in bounded GGX metallic/roughness secondary paths
   add colored and glossy reflections. Chart Materials demonstrates a retained roughness sweep
@@ -329,7 +336,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   geospatial, and trace APIs keep intermediate results resident and reusable.
 - **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
   and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-- **Three new experimental libraries** - `@luma.gl/text`, `@luma.gl/splats`, and
+- **Three new experimental libraries** - `@luma.gl/engine/text`, `@luma.gl/splats`, and
   `@luma.gl/anari` are now published for direct use. These APIs may
   evolve outside the 9.4 semver contract.
 
@@ -340,7 +347,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Tables and models stay focused** - Batch-preserving tables live in
   `@luma.gl/graph/gpu-tables`; path and polygon models live in
   `@luma.gl/engine/models`.
-- **Renderers preserve what matters** - `@luma.gl/text` supports streamed text and shared font
+- **Renderers preserve what matters** - `@luma.gl/engine/text` supports streamed text and shared font
   resources. `@luma.gl/splats` retains source batches and stable row identities.
 
 **More room to build**
@@ -369,7 +376,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 **New Modules**
 
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
-- **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
+- **`@luma.gl/engine/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
 - **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 - **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
   rendering.
@@ -476,12 +483,12 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Execution helpers** - `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` live with the experimental table runtime instead of a source-adapter module.
 - **Physical GPU data structs** - Inline `GPUData` format records describe interleaved rows with `wgsl-storage` or minimally padded WebGPU vertex layouts, while `GPUData.getChild()` and `getChildAt()` expose typed zero-copy field views.
 
-**@luma.gl/text**
+**@luma.gl/engine/text**
 
 - **GPU-only 2D text facade** - `TextRenderer` renders caller-owned `GPUTextData` while selecting attribute, WebGPU storage, or dictionary strategies automatically.
-- **Experimental text strategies** - Specialized model classes and low-level shader/compute contracts remain available from `@luma.gl/text/experimental` for benchmarking.
+- **Experimental text strategies** - Specialized model classes and low-level shader/compute contracts remain available from `@luma.gl/engine/text-experimental` for benchmarking.
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
-- **Dependency-isolated font preparation** - `@luma.gl/text/fonts` builds bitmap and SDF browser fonts, builds or loads prebuilt BMFont JSON MSDF atlases, measures atlas-backed text, and exposes bundled Helvetiker data without importing luma.gl, loaders.gl, or GPU modules. Existing `@luma.gl/text` font imports remain supported.
+- **Dependency-isolated font preparation** - `@luma.gl/engine/text-fonts` builds bitmap and SDF browser fonts, builds or loads prebuilt BMFont JSON MSDF atlases, measures atlas-backed text, and exposes bundled Helvetiker data without importing luma.gl, loaders.gl, or GPU modules. Existing `@luma.gl/engine/text` font imports remain supported.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 
 **@luma.gl/splats** NEW MODULE

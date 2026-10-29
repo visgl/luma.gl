@@ -414,7 +414,9 @@
               "api-reference/engine/animation-loop",
               "api-reference/engine/animation-loop-template",
               "api-reference/engine/clip-space",
-              "api-reference/engine/background-texture-model"
+              "api-reference/engine/background-texture-model",
+              "api-reference/engine/text/README",
+              "api-reference/engine/text-3d"
             ]
           },
           {
@@ -965,13 +967,6 @@
           "api-reference/arrow/supported-arrow-types",
           "api-reference/arrow/deck-target-api",
           "api-reference/arrow/arrow-utils"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "@luma.gl/text",
-        "items": [
-          "api-reference/text/README"
         ]
       },
       {

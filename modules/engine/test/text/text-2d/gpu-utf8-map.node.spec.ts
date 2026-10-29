@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {
   getGpuUtf8MapShaderBindings,
   getGpuUtf8MapShaderSource
-} from '../../src/text-2d/experimental';
+} from '../../../src/text/text-2d/experimental';
 
 it('getGpuUtf8MapShaderBindings reserves generic read-only storage inputs', () => {
   const bindings = getGpuUtf8MapShaderBindings({

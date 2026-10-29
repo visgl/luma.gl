@@ -18,7 +18,12 @@ import {type ModelProps} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {GPUVector, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {GPUTextResources, TextRenderer, type FontAtlas, type GPUTextData} from '@luma.gl/text';
+import {
+  GPUTextResources,
+  TextRenderer,
+  type FontAtlas,
+  type GPUTextData
+} from '@luma.gl/engine/text';
 import {canConvertColors} from '../../../arrow-colors';
 import {
   TextAttributeModel,
@@ -28,7 +33,7 @@ import {
   getFontAtlasShaderProps,
   getTextRendererModel,
   supportsGpuTextExpansion
-} from '@luma.gl/text/experimental';
+} from '@luma.gl/engine/text-experimental';
 import {
   type ArrowTextSourceVectors,
   type ArrowUtf8TextVector,

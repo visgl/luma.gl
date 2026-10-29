@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {buildMapping, nextPowOfTwo} from '../../src/index';
+import {buildMapping, nextPowOfTwo} from '../../../src/text/index';
 
 it('text-2d mapping helpers preserve deck-compatible packing behavior', () => {
   const {mapping, xOffset, yOffsetMin, yOffsetMax, canvasHeight} = buildMapping({

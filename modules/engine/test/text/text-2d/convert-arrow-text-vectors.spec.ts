@@ -25,13 +25,13 @@ import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
-import {type CharacterMapping, type FontAtlas} from '../../src/index';
+import {type CharacterMapping, type FontAtlas} from '../../../src/text/index';
 import {
   TextAttributeModel,
   TextDictionaryModel,
   TextRowIndexedStorageModel,
   TextStorageModel
-} from '../../src/text-2d/experimental';
+} from '../../../src/text/text-2d/experimental';
 
 const CHARACTER_MAPPING: CharacterMapping = {
   A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},

@@ -9,7 +9,7 @@ import {
   buildBrowserFontAtlas,
   resolveBrowserFontAtlasSettings,
   setFontAtlasCacheLimit
-} from '../../src/fonts';
+} from '../../../src/text/fonts';
 
 it('custom atlases without a cache key keep renderer-specific glyph metrics', () => {
   if (!isBrowser()) {

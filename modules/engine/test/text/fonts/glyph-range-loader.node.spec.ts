@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test, vi} from 'vitest';
-import {GlyphRangeLoader, parseGlyphRange, createGlyphFontRenderer} from '../../src/fonts';
+import {GlyphRangeLoader, parseGlyphRange, createGlyphFontRenderer} from '../../../src/text/fonts';
 import {makeGlyphRange, makeGlyphResponse} from './glyph-range-fixture';
 
 test('decodes metrics, negative bearings and bitmap bytes without a DOM', () => {

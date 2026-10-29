@@ -24,3 +24,15 @@ with engine scenegraphs and graph physics. These APIs are not re-exported by the
 Import splat data, renderers, picking, residency, and hierarchy helpers from `@luma.gl/engine/splats`.
 This optional subpath is not re-exported by the engine root. Graph-backed renderers remain here
 for now; extraction of reusable graph operations is a separate migration.
+
+## Text
+
+Text APIs are available through optional flat subpaths:
+
+- `@luma.gl/engine/text`: `TextRenderer`, GPU text data, and text layout utilities.
+- `@luma.gl/engine/text-fonts`: CPU font atlas builders, glyph loading, and bundled typeface data.
+- `@luma.gl/engine/text-3d`: extruded text geometry and glyph atlas helpers.
+- `@luma.gl/engine/text-experimental`: specialized text models and benchmark strategies.
+
+These APIs are not re-exported from the engine root. See the
+[text API reference](../../docs/api-reference/engine/text/README.md).
