@@ -6,6 +6,12 @@ Import the glTF runtime from `@luma.gl/engine/gltf` and physics integration from
 `@luma.gl/engine/gltf-physics` entry. The standalone glTF package is removed; engine root imports
 do not load these optional subpaths. See the [upgrade guide](./upgrade-guide.md#gltf-imports).
 
+## Gaussian splats in engine
+
+Gaussian splat data, rendering, picking, residency, and hierarchy helpers now live in
+`@luma.gl/engine/splats`. The standalone splats package is removed. This first migration preserves
+existing execution behavior; reusable graph operation extraction is a separate step.
+
 ## Experimental API ownership and graph-based fluids
 
 The standalone `@luma.gl/experimental` package is removed. Scene renderers and their PBR, shadow, transparency, and composition helpers now belong to `@luma.gl/anari`. Independent utilities are exposed through `@luma.gl/engine/experimental/{controls,materials,textures,webxr}`. Graph owns path/polygon models under `/experimental/models` and flow/fluid simulations under `/experimental/simulation`.
@@ -323,7 +329,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   geospatial, and trace APIs keep intermediate results resident and reusable.
 - **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
   and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-- **Three new experimental libraries** - `@luma.gl/text`, `@luma.gl/engine/splats`, and
+- **Three new experimental libraries** - `@luma.gl/text`, `@luma.gl/splats`, and
   `@luma.gl/anari` are now published for direct use. These APIs may
   evolve outside the 9.4 semver contract.
 
@@ -335,7 +341,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   `@luma.gl/graph/gpu-tables`; path and polygon models live in
   `@luma.gl/engine/models`.
 - **Renderers preserve what matters** - `@luma.gl/text` supports streamed text and shared font
-  resources. `@luma.gl/engine/splats` retains source batches and stable row identities.
+  resources. `@luma.gl/splats` retains source batches and stable row identities.
 
 **More room to build**
 
@@ -364,7 +370,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 - **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
-- **`@luma.gl/engine/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
+- **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 - **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
   rendering.
 - **`@luma.gl/graph/experimental`** - Path/polygon models and flow/fluid simulations through explicit experimental subpaths.
@@ -478,7 +484,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Dependency-isolated font preparation** - `@luma.gl/text/fonts` builds bitmap and SDF browser fonts, builds or loads prebuilt BMFont JSON MSDF atlases, measures atlas-backed text, and exposes bundled Helvetiker data without importing luma.gl, loaders.gl, or GPU modules. Existing `@luma.gl/text` font imports remain supported.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 
-**@luma.gl/engine/splats** NEW MODULE
+**@luma.gl/splats** NEW MODULE
 
 - **Gaussian splat rendering** - `SplatRenderer` draws caller-owned prepared GPU splat batches through reusable luma.gl rendering models on WebGPU and WebGL2.
 - **HDR Gaussian colors** - Float32 color columns preserve spherical-harmonic DC radiance above the display range without premature clamping or quantization.
