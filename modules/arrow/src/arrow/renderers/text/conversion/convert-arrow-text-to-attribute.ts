@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-table-adapters';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-vector-adapters';
 import type {Device} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {TextAttributeModelProps} from '@luma.gl/engine/text-experimental';

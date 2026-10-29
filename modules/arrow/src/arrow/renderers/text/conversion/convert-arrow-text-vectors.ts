@@ -11,10 +11,8 @@ import {
   getArrowVectorBufferSource,
   makeArrowFixedSizeListVector
 } from '../../../vectors/arrow-fixed-size-list';
-import {
-  makeGPUTableFromArrowTable,
-  makeGPUVectorFromArrow
-} from '../../../gpu/arrow-gpu-table-adapters';
+import {makeGPUTableFromArrowTable} from '../../../gpu/arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from '../../../gpu/arrow-gpu-vector-adapters';
 import {getRequiredArrowGPUVectorDataType} from '../../../gpu/arrow-gpu-data';
 import {isNumericArrowType, type NumericArrowType} from '../../../arrow-utils/arrow-types';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';

@@ -248,9 +248,17 @@ export {
   convertArrowRecordBatchToGPURecordBatch,
   convertArrowRecordBatchesToGPURecordBatches,
   convertArrowTableToGPUTable,
+  planArrowTableGPUConversion,
+  type ArrowRecordBatchConversionSource,
+  type ArrowGPUTableConversionColumn,
+  type ArrowGPUTableConversionPlan,
+  type ArrowGPUTableConversionSchema,
+  type PreparedArrowGPURecordBatch,
+  type PreparedArrowGPUTable
+} from './arrow/gpu/arrow-gpu-table-conversion';
+export {
   convertArrowToGPUVector,
   planArrowGPUConversion,
-  planArrowTableGPUConversion,
   type ArrowGPUConversionBackend,
   type ArrowGPUConversionCost,
   type ArrowGPUConversionOptions,
@@ -259,28 +267,24 @@ export {
   type ArrowGPUConversionSemantic,
   type ArrowGPUConversionSource,
   type ArrowGPUConversionStrategy,
-  type ArrowRecordBatchConversionSource,
-  type ArrowGPUTableConversionColumn,
-  type ArrowGPUTableConversionPlan,
-  type ArrowGPUTableConversionSchema,
-  type PreparedArrowGPUVector,
-  type PreparedArrowGPURecordBatch,
-  type PreparedArrowGPUTable
-} from './arrow/gpu/arrow-gpu-conversion';
+  type PreparedArrowGPUVector
+} from './arrow/gpu/arrow-gpu-vector-conversion';
 export {
   getRequiredArrowGPUVectorDataType,
   getGPUVectorFormatFromArrowDataType,
   makeGPUDataFromArrowData,
-  makeGPURecordBatchFromArrowRecordBatch,
-  makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
-  type ArrowGPUValidityColumn,
-  type GPURecordBatchFromArrowRecordBatchProps,
-  type GPUTableFromArrowTableProps,
   type GPUVectorFromArrowProps,
   type GPUVectorFormatForArrowType
+} from './arrow/gpu/arrow-gpu-vector-adapters';
+export {
+  makeGPURecordBatchFromArrowRecordBatch,
+  makeGPUTableFromArrowTable,
+  type ArrowGPUValidityColumn,
+  type GPURecordBatchFromArrowRecordBatchProps,
+  type GPUTableFromArrowTableProps
 } from './arrow/gpu/arrow-gpu-table-adapters';
 export {
   clearArrowPickingState,

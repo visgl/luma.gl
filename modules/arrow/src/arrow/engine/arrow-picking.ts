@@ -16,7 +16,7 @@ import {
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {GPURecordBatchSourceInfo, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {BufferType, Data, Uint32, Vector} from 'apache-arrow';
-import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-vector-adapters';
 
 /** Arrow row identity resolved from a picking pass. */
 export type ArrowPickingInfo = {

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {createArrowComputeKernel} from '../gpu/arrow-compute-kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
@@ -21,7 +21,7 @@ import {
   Vector,
   makeData
 } from 'apache-arrow';
-import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-vector-adapters';
 import {getRequiredArrowGPUVectorDataType} from '../gpu/arrow-gpu-data';
 
 /** Supported Arrow temporal logical kinds. */
@@ -779,23 +779,23 @@ function dispatchArrowTemporalConversion(
     preparedTemporalValues: Binding;
   }
 ): void {
-  const computation = new Computation(device, {
+  const kernelBindings = {
+    sourceTemporalValues: props.sourceTemporalValues,
+    temporalConversionConfig: props.temporalConversionConfig,
+    preparedTemporalValues: props.preparedTemporalValues
+  };
+  const kernel = createArrowComputeKernel(device, {
     id: `${props.id}-temporal-conversion-${props.chunkIndex}`,
     source: getArrowTemporalConversionSource(temporalInfo.bitWidth),
-    shaderLayout: TEMPORAL_CONVERSION_SHADER_LAYOUT,
-    bindings: {
-      sourceTemporalValues: props.sourceTemporalValues,
-      temporalConversionConfig: props.temporalConversionConfig,
-      preparedTemporalValues: props.preparedTemporalValues
-    }
+    shaderLayout: TEMPORAL_CONVERSION_SHADER_LAYOUT
   });
   if (props.scalarCount > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(props.scalarCount / 64));
+    kernel.dispatch(computePass, {x: Math.ceil(props.scalarCount / 64), bindings: kernelBindings});
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
 }
 
 function getArrowTemporalConversionSource(bitWidth: 32 | 64): string {

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {createArrowComputeKernel} from '../gpu/arrow-compute-kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {dggs} from '@luma.gl/shadertools';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
@@ -18,7 +18,7 @@ import {
   Utf8,
   Vector
 } from 'apache-arrow';
-import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow} from '../gpu/arrow-gpu-vector-adapters';
 import {getArrowUtf8DataBufferSource} from '../gpu/arrow-gpu-data';
 
 type DggsCellPathCoordinateType = List<FixedSizeList<Float32>>;
@@ -419,7 +419,12 @@ function dispatchDggsCellPathExtractionCompute(
     cellCount: number;
   }
 ): void {
-  const computation = new Computation(device, {
+  const kernelBindings = {
+    dggsCellKeys: props.keys,
+    dggsCellExtractionConfig: props.extractionConfig,
+    dggsCellPathValues: props.pathValues
+  };
+  const kernel = createArrowComputeKernel(device, {
     id: `${props.resourceIdentifier}-extract`,
     source: getDggsCellPathExtractionSource(props.encoding, props.coordinateFormat),
     modules: [dggs],
@@ -429,20 +434,15 @@ function dispatchDggsCellPathExtractionCompute(
         {name: 'dggsCellExtractionConfig', type: 'read-only-storage', group: 0, location: 1},
         {name: 'dggsCellPathValues', type: 'storage', group: 0, location: 2}
       ]
-    },
-    bindings: {
-      dggsCellKeys: props.keys,
-      dggsCellExtractionConfig: props.extractionConfig,
-      dggsCellPathValues: props.pathValues
     }
   });
   if (props.cellCount > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(props.cellCount / 64));
+    kernel.dispatch(computePass, {x: Math.ceil(props.cellCount / 64), bindings: kernelBindings});
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
 }
 
 function dispatchDggsCellKeyParsingCompute(
@@ -457,7 +457,13 @@ function dispatchDggsCellKeyParsingCompute(
     stringCount: number;
   }
 ): void {
-  const computation = new Computation(device, {
+  const kernelBindings = {
+    dggsStringBytes: props.stringBytes,
+    dggsStringOffsets: props.stringOffsets,
+    dggsStringParsingConfig: props.stringConfig,
+    dggsParsedKeys: props.keys
+  };
+  const kernel = createArrowComputeKernel(device, {
     id: `${props.resourceIdentifier}-parse`,
     source: getDggsCellKeyParsingSource(props.encoding),
     modules: [dggs],
@@ -468,21 +474,15 @@ function dispatchDggsCellKeyParsingCompute(
         {name: 'dggsStringParsingConfig', type: 'read-only-storage', group: 0, location: 2},
         {name: 'dggsParsedKeys', type: 'storage', group: 0, location: 3}
       ]
-    },
-    bindings: {
-      dggsStringBytes: props.stringBytes,
-      dggsStringOffsets: props.stringOffsets,
-      dggsStringParsingConfig: props.stringConfig,
-      dggsParsedKeys: props.keys
     }
   });
   if (props.stringCount > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(props.stringCount / 64));
+    kernel.dispatch(computePass, {x: Math.ceil(props.stringCount / 64), bindings: kernelBindings});
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
 }
 
 function getDggsCellPathExtractionSource(

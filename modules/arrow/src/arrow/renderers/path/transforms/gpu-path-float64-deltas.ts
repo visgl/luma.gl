@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {createArrowComputeKernel} from '../../../gpu/arrow-compute-kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUData, GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
@@ -206,25 +206,25 @@ function dispatchGpuPathFloat64DeltaCompute(
     pathDeltaValues: Binding;
   }
 ): void {
-  const computation = new Computation(device, {
+  const kernelBindings = {
+    sourcePathValues: props.sourcePathValues,
+    sourcePathValueOffsets: props.sourcePathValueOffsets,
+    pathDeltaConfig: props.pathDeltaConfig,
+    pathDeltaValues: props.pathDeltaValues
+  };
+  const kernel = createArrowComputeKernel(device, {
     id: `${options.id || 'arrow-path-storage-model'}-path-delta-compute-${props.chunkIndex}`,
     source: GPU_PATH_FLOAT64_DELTA_COMPUTE_SOURCE,
     modules: [fp64arithmetic as ShaderModule],
-    shaderLayout: GPU_PATH_FLOAT64_DELTA_SHADER_LAYOUT,
-    bindings: {
-      sourcePathValues: props.sourcePathValues,
-      sourcePathValueOffsets: props.sourcePathValueOffsets,
-      pathDeltaConfig: props.pathDeltaConfig,
-      pathDeltaValues: props.pathDeltaValues
-    }
+    shaderLayout: GPU_PATH_FLOAT64_DELTA_SHADER_LAYOUT
   });
   if (props.rowCount > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(props.rowCount / 64));
+    kernel.dispatch(computePass, {x: Math.ceil(props.rowCount / 64), bindings: kernelBindings});
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
 }
 
 function getArrowPathCoordinateComponentCount(type: DataType): number {

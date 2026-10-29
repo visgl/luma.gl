@@ -23,11 +23,11 @@ import {
   makeData,
   makeVector
 } from 'apache-arrow';
+import {makeGPUTableFromArrowTable} from '../../../gpu/arrow-gpu-table-adapters';
 import {
-  makeGPUTableFromArrowTable,
   makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
-} from '../../../gpu/arrow-gpu-table-adapters';
+} from '../../../gpu/arrow-gpu-vector-adapters';
 import {expandArrowVector} from '../../../vectors/arrow-vector-utils';
 import {
   getArrowDataBufferSource,

@@ -24,7 +24,7 @@ import {
   type Uint32,
   type Utf8
 } from 'apache-arrow';
-import {makeGPUDataFromArrowData} from './arrow-gpu-table-adapters';
+import {makeGPUDataFromArrowData} from './arrow-gpu-vector-adapters';
 
 /** Supported WebGPU-native scalar and categorical index storage formats. */
 type GPUAnalyticsVectorFormat = 'float32' | 'sint32' | 'uint32';

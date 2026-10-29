@@ -16,3 +16,13 @@ module while validating final prepared vectors against a tables-owned
 `GPUInputSchema`.
 
 See [luma.gl](https://luma.gl/docs/api-reference/arrow) for documentation.
+
+## Conversion implementation boundaries
+
+Primitive GPU data/vector adapters and conversion planning are implemented separately from
+graph record-batch/table adapters. The primitive dependency closure uses core, gpgpu, and
+shadertools without engine or graph, including its public TypeScript types.
+
+GPU matrix, temporal, DGGS, and path preparation uses gpgpu `Kernel` execution with an explicitly
+owned WGSL assembler. Rendering integration remains in the existing Arrow renderer adapters.
+The `@luma.gl/arrow` export names and conversion behavior are unchanged by this internal split.

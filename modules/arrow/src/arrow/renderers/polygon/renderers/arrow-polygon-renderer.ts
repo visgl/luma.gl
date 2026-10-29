@@ -15,8 +15,8 @@ import {
 import {type PolygonBatchProps} from '@luma.gl/graph/experimental/models';
 import {DataType, RecordBatch, Table, Uint8, Vector} from 'apache-arrow';
 import {canConvertColors} from '../../../arrow-colors';
-import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-conversion';
-import {readArrowGPUVectorAsync} from '../../../gpu/arrow-gpu-table-adapters';
+import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-vector-conversion';
+import {readArrowGPUVectorAsync} from '../../../gpu/arrow-gpu-vector-adapters';
 import {
   clearArrowPickingState,
   createArrowPickingManager,
