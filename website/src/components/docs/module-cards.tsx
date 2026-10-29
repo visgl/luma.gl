@@ -75,8 +75,9 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       status: 'Experimental'
     },
     {
-      name: 'test-utils',
-      description: 'Set up rendering tests and compare captured images.',
+      name: 'core/test-utils',
+      reference: 'test-utils',
+      description: 'Create test devices and inspect resource ownership with the null backend.',
       image: 'tutorials/hello-triangle'
     }
   ],
