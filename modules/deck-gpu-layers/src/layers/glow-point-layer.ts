@@ -100,6 +100,7 @@ export class GlowPointLayer extends Layer<GlowPointLayerProps> {
     });
     try {
       const model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

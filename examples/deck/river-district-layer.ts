@@ -64,6 +64,7 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
     const surfaceExposure = this.context.device.createBuffer({data: weights});
     try {
       const model = new Model(this.context.device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

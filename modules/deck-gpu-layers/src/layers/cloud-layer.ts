@@ -36,6 +36,7 @@ export class CloudLayer extends Layer<CloudLayerProps> {
   override initializeState({device}: LayerContext): void {
     this.setState({
       model: new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

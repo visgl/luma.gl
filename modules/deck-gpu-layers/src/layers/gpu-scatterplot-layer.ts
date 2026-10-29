@@ -139,6 +139,7 @@ export class GPUScatterplotLayer extends Layer<GPUScatterplotLayerProps> {
       data: new Uint8Array([0, 0, 0, 255])
     });
     const model = new GPUVectorModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_SCATTERPLOT_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',

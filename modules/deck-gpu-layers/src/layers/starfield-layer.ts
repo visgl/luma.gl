@@ -94,6 +94,7 @@ export class StarfieldLayer extends Layer<StarfieldLayerProps> {
     const stars = this.makeStarBuffer(device, data);
     try {
       const model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

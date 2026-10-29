@@ -66,6 +66,7 @@ export class ShadowDistrictLayer extends Layer<ShadowDistrictLayerProps> {
     this.setState({vertices});
     try {
       const model = new Model(this.context.device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

@@ -23,6 +23,7 @@ export class AtmosphereLayer extends Layer<AtmosphereLayerProps> {
   override initializeState({device}: LayerContext): void {
     this.setState({
       model: new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: SKY_VERTEX_SHADER,

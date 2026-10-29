@@ -55,6 +55,7 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
 
   override initializeState({device}: LayerContext): void {
     const model = new Model(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({
         source: SOURCE,
         vs: VERTEX_SHADER,

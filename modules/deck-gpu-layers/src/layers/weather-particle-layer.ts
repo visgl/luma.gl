@@ -91,6 +91,7 @@ export class WeatherParticleLayer extends Layer<WeatherParticleLayerProps> {
         data: new Float32Array([0])
       });
       const model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

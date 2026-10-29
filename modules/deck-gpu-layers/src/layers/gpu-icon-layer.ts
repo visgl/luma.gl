@@ -145,6 +145,7 @@ export class GPUIconLayer extends Layer<GPUIconLayerProps> {
       );
     });
     const model = new GPUVectorModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_ICON_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',

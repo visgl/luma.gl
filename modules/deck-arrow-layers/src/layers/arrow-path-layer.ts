@@ -798,6 +798,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
     try {
       if (model === 'storage') {
         renderModel = ArrowPathRenderer.createModel(this.context.device, {
+          shaderAssembler: this.context.shaderAssembler,
           ...prepared,
           model: 'storage',
           id: `${props.id}-batch-${batchIndex}`,
@@ -816,6 +817,7 @@ export class ArrowPathLayer extends Layer<ArrowPathLayerProps> {
         });
       } else {
         renderModel = ArrowPathRenderer.createModel(this.context.device, {
+          shaderAssembler: this.context.shaderAssembler,
           ...prepared,
           model: 'attribute',
           id: `${props.id}-batch-${batchIndex}`,
