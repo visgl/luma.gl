@@ -45,8 +45,7 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
 - `nodeOnlyTestPatterns` routes audited CPU-only legacy specs away from browser-page isolation.
 - Device-only tests import `@luma.gl/test-utils/device` to avoid loading legacy animation/test
   runners and eagerly creating an unused WebGL context in each isolated browser file.
-- Browser test files remain isolated because GPU devices, presentation contexts, and queued GPU
-  work are not safe to share between files. Files run serially within each browser project,
+- Browser files run serially within each browser project,
   both locally and in CI: native keyboard/pointer tests need foreground focus, and concurrent
   shader compilation and readback compete for the same GPU. CI still parallelizes across shards.
   CI selects complementary `general`, `compute`, and `physics` groups. General tests, including
@@ -59,11 +58,15 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
   instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
   `test/utils/browser-test-sequencer.ts` from a successful general-browser run when expensive suites
-  are added or changed. Use rounded suite execution seconds plus three seconds of isolated-page
-  overhead, and replay the complete discovered suite set to check all shard totals.
+  are added or changed. Use rounded wall times between completed files to include isolated-page
+  and import overhead, and replay the complete discovered suite set to check all shard totals.
 - CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage
   anchors with Istanbul coverage from all five browser workers. The complete Node suite still runs
   separately without instrumentation so coverage remapping does not slow the build job.
+- A pinned Yarn patch makes Istanbul browser coverage transport incremental: the first capture
+  includes every loaded source, including zero-hit records; later captures send changed counters.
+  Regression tests verify exact statement, function, and branch totals and reset behavior. Source
+  instrumentation, the complete all-files denominator, and the Node coverage provider are unchanged.
 - The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
 
 ## Playwright behavior
