@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Texture, type Device, type Framebuffer, type TextureFormatColor} from '@luma.gl/core';
-import {bloom, createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {bloom, createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {
   AnimationLoopTemplate,
   type AnimationProps,

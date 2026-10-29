@@ -20,7 +20,7 @@ import {
   createHDRAutoExposureCompositeShaderPass,
   createSSGICompositeShaderPass,
   createSSRCompositeShaderPass
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {
   ClusteredLightGrid,
   createDeferredAmbientLightingCompositeShaderPass,

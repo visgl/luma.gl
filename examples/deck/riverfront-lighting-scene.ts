@@ -19,7 +19,7 @@ import {
   createSSGICompositeShaderPass,
   createClusteredVolumetricLightingCompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import type {ShaderPass, LightingProps, PointLight} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {getRiverfrontSkyLighting} from './riverfront-sky-lighting';

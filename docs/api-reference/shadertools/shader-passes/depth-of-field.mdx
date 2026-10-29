@@ -22,7 +22,7 @@ horizontal and vertical lens blur.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {dofCompositeShaderPass} from '@luma.gl/effects';
+import {dofCompositeShaderPass} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [dofCompositeShaderPass]
@@ -75,7 +75,7 @@ highlights produced by separable blur. The same depth binding and public paramet
 The maximum blur diameter is 20 source pixels. Zero aperture preserves sharp detail.
 
 ```typescript
-import {bokehDof} from '@luma.gl/effects';
+import {bokehDof} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [bokehDof],

@@ -562,7 +562,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/effects",
+        "label": "@luma.gl/engine/effects",
         "items": [
           "api-reference/effects/README"
         ]

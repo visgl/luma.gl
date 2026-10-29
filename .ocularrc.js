@@ -18,6 +18,7 @@ const config = {
   aliases: {
     '@luma.gl/core/test-utils': join(packageRoot, 'modules/core/src/test-utils'),
 
+    '@luma.gl/engine/effects': join(packageRoot, 'modules/engine/src/effects'),
     '@luma.gl/engine/text-fonts': join(packageRoot, 'modules/engine/src/text/fonts'),
     '@luma.gl/engine/text-3d': join(packageRoot, 'modules/engine/src/text/text-3d'),
     '@luma.gl/engine/text-experimental': join(packageRoot, 'modules/engine/src/text/experimental.ts'),

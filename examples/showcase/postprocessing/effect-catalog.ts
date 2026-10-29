@@ -25,7 +25,7 @@ import {
   vibrance,
   vignette,
   zoomBlur
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import type {ShaderPass} from '@luma.gl/shadertools';
 
 export type EffectCategory =

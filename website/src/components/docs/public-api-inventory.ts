@@ -11,7 +11,7 @@ export type CuratedPackageDocumentation = {
 
 export type PublicPackageDocumentation = {
   packageName: `@luma.gl/${string}`;
-  entryPoint: `modules/${string}/src/index.ts`;
+  entryPoint: `modules/${string}/src/${string}`;
   documentation: GeneratedPackageDocumentation | CuratedPackageDocumentation;
 };
 
@@ -44,8 +44,8 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     documentation: {kind: 'curated', defaultRoute: '/docs/api-reference/constants'}
   },
   {
-    packageName: '@luma.gl/effects',
-    entryPoint: 'modules/effects/src/index.ts',
+    packageName: '@luma.gl/engine/effects',
+    entryPoint: 'modules/engine/src/effects/index.ts',
     documentation: {
       kind: 'curated',
       defaultRoute: '/docs/api-reference/effects',

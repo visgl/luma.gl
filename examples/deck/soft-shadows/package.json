@@ -14,7 +14,6 @@
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
     "@luma.gl/anari": "10.0.0-alpha.5",
     "@luma.gl/core": "10.0.0-alpha.5",
-    "@luma.gl/effects": "10.0.0-alpha.5",
     "@luma.gl/engine": "10.0.0-alpha.5",
     "@luma.gl/graph": "10.0.0-alpha.5",
     "@luma.gl/shadertools": "10.0.0-alpha.5",

@@ -20,7 +20,7 @@ toward the center and provides an adjustable photographic finishing effect.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {bloom, vignette} from '@luma.gl/effects';
+import {bloom, vignette} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {shaderPasses: [bloom, vignette]});
 

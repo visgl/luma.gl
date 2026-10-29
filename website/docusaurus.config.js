@@ -361,6 +361,7 @@ module.exports = {
           _configuration.resolve.alias = {
             '@luma.gl/core/test-utils': path.resolve(__dirname, '../modules/core/src/test-utils'),
             '@luma.gl/gpgpu/_internal': path.resolve(__dirname, '../modules/gpgpu/src/execution'),
+            '@luma.gl/engine/effects': path.resolve(__dirname, '../modules/engine/src/effects'),
             '@luma.gl/engine/text-fonts': path.resolve(__dirname, '../modules/engine/src/text/fonts'),
             '@luma.gl/engine/text-3d': path.resolve(__dirname, '../modules/engine/src/text/text-3d'),
             '@luma.gl/engine/text-experimental': path.resolve(__dirname, '../modules/engine/src/text/experimental.ts'),

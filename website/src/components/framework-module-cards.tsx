@@ -46,7 +46,7 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
   {
     id: 'effects',
     title: 'Effects',
-    packageName: '@luma.gl/effects',
+    packageName: '@luma.gl/engine/effects',
     label: 'Composable effects',
     description:
       'Compose reusable shader effects into complete post-processing, lighting, and image-processing pipelines.',

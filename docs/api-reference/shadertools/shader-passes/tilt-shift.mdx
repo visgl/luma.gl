@@ -20,7 +20,7 @@ Keep a chosen image-space line sharp while progressively blurring the surroundin
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {tiltShift} from '@luma.gl/effects';
+import {tiltShift} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {shaderPasses: [tiltShift]});
 

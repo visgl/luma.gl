@@ -20,7 +20,7 @@ horizontal and vertical passes to produce an inexpensive, visibly soft image tre
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {triangleBlur} from '@luma.gl/effects';
+import {triangleBlur} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {shaderPasses: [triangleBlur]});
 

@@ -19,7 +19,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/core/webgl',
   '@luma.gl/engine',
   '@luma.gl/shadertools',
-  '@luma.gl/effects',
+  '@luma.gl/engine/effects',
   '@luma.gl/anari',
   '@luma.gl/engine/gltf',
   '@luma.gl/engine/splats',
@@ -527,7 +527,7 @@ describe('framework capabilities documentation', () => {
     expect(startHereSection, 'The API reference must include a Start Here section').toBeDefined();
 
     for (const [packageName, documentationPath] of [
-      ['effects', '/docs/api-guide/shaders/shader-passes'],
+      ['engine/effects', '/docs/api-guide/shaders/shader-passes'],
       ['gpgpu', '/docs/api-reference/gpgpu']
     ]) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));

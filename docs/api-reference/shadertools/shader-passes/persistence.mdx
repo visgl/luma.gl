@@ -23,7 +23,7 @@ can control reset behavior and ping-pong resources.
 ```typescript
 import type {Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {persistenceEffect} from '@luma.gl/effects';
+import {persistenceEffect} from '@luma.gl/engine/effects';
 
 const accumulationRenderers = [
   new ShaderPassRenderer(device, {shaderPasses: [persistenceEffect]}),

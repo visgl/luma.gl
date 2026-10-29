@@ -17,7 +17,7 @@ This is a constant-color atmosphere approximation, without shadowing or directio
 `heightFog_getRayTransmittance(rayLength, cameraHeight, fragmentHeight, density, baseHeight, heightFalloff)`
 function accepts scalar metre-space ray length and heights, allowing callers to choose an up
 axis and supply their own uniform layout. The `heightFog` material module depends on it, as does
-`@luma.gl/effects`' analytic height-fog pass. The two paths therefore share the density integral.
+`@luma.gl/engine/effects`' analytic height-fog pass. The two paths therefore share the density integral.
 
 
 For drifting wisps, set `variation` from 0 to 1, `wispScale` in metres, `velocity`

@@ -18,7 +18,7 @@ import {
   ShaderPassRenderer,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {MLSMPMFluidSimulation, type MLSMPMParticle} from '@luma.gl/graph/experimental/simulation';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {FLUID_FOUNDRY_INFO_HTML} from './app-ui';

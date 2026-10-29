@@ -3,7 +3,7 @@ import {PostprocessingExample} from '@site/src/examples';
 # Shader Pass Catalog
 
 Explore reusable image-processing filters, cinematic lens effects, temporal reconstruction, and
-scene-aware WebGPU pipelines from `@luma.gl/effects`. Every effect below has its own implementation
+scene-aware WebGPU pipelines from `@luma.gl/engine/effects`. Every effect below has its own implementation
 guide, parameter reference, composition notes, and, where an existing showcase is available, a
 live interactive example.
 
@@ -29,7 +29,7 @@ share one ordered [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shade
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping, vignette} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping, vignette} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   colorFormat: 'rgba16float',

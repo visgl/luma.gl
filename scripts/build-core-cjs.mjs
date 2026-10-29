@@ -212,3 +212,18 @@ assert(textExperimentalApi.TextStorageModel.prototype instanceof engineApi.Model
 assert(!('TextRenderer' in engineApi));
 assert(!('TextGeometry' in engineApi));
 process.stdout.write('Verified optional text subpaths and engine constructor identity.\n');
+
+// Effects are optional definitions sharing shader-pass identity with both module formats.
+const effectsApi = require('@luma.gl/engine/effects');
+const effectsEsm = await import('../modules/engine/dist/effects/index.js');
+for (const name of ['bloom', 'toneMapping', 'createGTAOCompositeShaderPass']) {
+  assert.equal(typeof effectsApi[name], name.startsWith('create') ? 'function' : 'object');
+  assert.equal(typeof effectsEsm[name], name.startsWith('create') ? 'function' : 'object');
+  assert.equal(name in engineApi, false);
+  assert.equal(name in engineEsm, false);
+}
+const bloomImplementation = require('../modules/engine/dist/effects/passes/postprocessing/image-blur-filters/bloom.cjs');
+const bloomImplementationEsm = await import('../modules/engine/dist/effects/passes/postprocessing/image-blur-filters/bloom.js');
+assert.equal(effectsApi.bloom, bloomImplementation.bloom);
+assert.equal(effectsEsm.bloom, bloomImplementationEsm.bloom);
+process.stdout.write('Verified optional effects subpath and shader-pass identity.\n');

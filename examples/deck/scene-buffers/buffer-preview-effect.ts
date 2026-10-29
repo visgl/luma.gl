@@ -8,7 +8,7 @@ import {
   createOutlineCompositeShaderPass,
   selectionOutline,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {ShaderPassEffect, type SceneBufferEffect} from '@deck.gl-community/gpu-layers';
 import type {ShaderPass} from '@luma.gl/shadertools';
 

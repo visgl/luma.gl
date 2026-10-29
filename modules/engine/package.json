@@ -95,6 +95,11 @@
       "types": "./dist/text/experimental.d.ts",
       "import": "./dist/text/experimental.js",
       "require": "./dist/text/experimental.cjs"
+    },
+    "./effects": {
+      "types": "./dist/effects/index.d.ts",
+      "import": "./dist/effects/index.js",
+      "require": "./dist/effects/index.cjs"
     }
   },
   "files": [
