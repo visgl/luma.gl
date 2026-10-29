@@ -7,7 +7,7 @@ import {createGPUScalar} from '../../src/gpu-core/gpu-scalar';
 import {alignGraphVectorViews} from '../../src/gpu-core/graph-vector-view-utils';
 import {expect, test, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {GPUData, GPUVector, type GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUGraph,

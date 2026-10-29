@@ -4,7 +4,7 @@
 
 import {expect, test} from 'vitest';
 import {Matrix4} from '@math.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {
   AreaLightController,
   BillboardController,

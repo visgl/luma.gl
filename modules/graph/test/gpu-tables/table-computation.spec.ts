@@ -7,7 +7,7 @@ import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPUTableComputation} from '@luma.gl/graph/gpu-tables';
 import type {ComputeShaderLayout, Device} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 const COMPUTE_SHADER = /* wgsl */ `\

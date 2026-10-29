@@ -5,7 +5,7 @@ import {
 } from '../../examples/anari/scenes/playground-renderer';
 import {expect, it} from 'vitest';
 import {ANARIDevice, ANARIGroup} from '@luma.gl/anari';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {PLAYGROUND_PRESETS} from '../../examples/anari/scenes/playground-presets';
 import {createANARIJSONScene} from '../../examples/anari/scenes/playground-scene';
 

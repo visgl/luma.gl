@@ -5,7 +5,7 @@
 import type {ComputePipelineProps} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/gpgpu';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, test} from 'vitest';
 
 test('GPUCommandGraph#compileAsync starts graph-owned pipelines in parallel', async () => {

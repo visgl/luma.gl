@@ -17,7 +17,7 @@ import {
   isVertexListGPUVectorFormat
 } from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 
 it('GPUVector format helpers parse fixed and variable-length formats', () => {
   const fixedInfo = getGPUVectorFormatInfo('float32x3');

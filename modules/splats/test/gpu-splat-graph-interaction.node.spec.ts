@@ -11,7 +11,7 @@ import {
   type SplatPickingInfo,
   type SplatSource
 } from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {WgslReflect} from 'wgsl_reflect';
 import {
   GPUSplatGraphMixedRenderer,

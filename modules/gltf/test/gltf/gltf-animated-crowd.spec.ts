@@ -7,7 +7,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF, createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import {Buffer, Texture} from '@luma.gl/core';
 
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 

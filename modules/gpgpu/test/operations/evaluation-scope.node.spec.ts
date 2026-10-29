@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUDataEvaluator, interleave} from '@luma.gl/gpgpu';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {interleave as interleaveWebGPU} from '../../src/operations/webgpu/interleave';
 
 for (const limit of ['maxStorageBuffersPerShaderStage', 'maxBindingsPerBindGroup'] as const) {

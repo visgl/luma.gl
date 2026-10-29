@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {dggs} from '@luma.gl/shadertools';
 
 const H3_INDEX = 0x085283473fffffffn;

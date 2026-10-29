@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {runProjectionTableBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
 import {makeSourceBatches, makeTableTransform} from './projection-table-fixtures';
 

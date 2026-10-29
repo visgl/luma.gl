@@ -4,7 +4,7 @@
 
 import {expect, it, vi} from 'vitest';
 import {GPUDataEvaluator, GPUVectorEvaluator} from '@luma.gl/gpgpu';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {
   GPUSimpleGraph,
   GPUSimpleGraphValue,

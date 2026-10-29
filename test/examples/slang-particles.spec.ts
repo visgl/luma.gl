@@ -4,7 +4,7 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import SlangParticlesExample from '../../examples/tutorials/slang-particles/app';
 import {
   makeParticles,

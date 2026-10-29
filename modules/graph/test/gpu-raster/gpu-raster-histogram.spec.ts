@@ -10,7 +10,7 @@ import {
   type GPURasterBufferBand,
   type GPURasterScalarFormat
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPURasterHistogram excludes finite raw nodata and preserves offset-aligned source masks', async () => {
   const device = await getWebGPUTestDevice();

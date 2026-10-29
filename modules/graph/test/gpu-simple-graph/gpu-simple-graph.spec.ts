@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {GPUDataEvaluator, add, multiply} from '@luma.gl/gpgpu';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {

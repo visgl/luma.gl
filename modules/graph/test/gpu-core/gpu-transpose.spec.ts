@@ -10,7 +10,7 @@ import {
   runGPUTransposeBenchmark,
   type GPUTransposeFormat
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPUTranspose transposes square, rectangular, and partial tiles', async () => {
   const device = await getWebGPUTestDevice();

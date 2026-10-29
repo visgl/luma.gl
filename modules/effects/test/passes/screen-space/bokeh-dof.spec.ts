@@ -5,7 +5,7 @@ import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {bokehDof} from '@luma.gl/effects';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice} from '@luma.gl/test-utils/device';
 
 for (const backend of ['webgpu', 'webgl'] as const) {
   it(`bokeh DOF preserves HDR radiance and zero-aperture detail on ${backend}`, async context => {

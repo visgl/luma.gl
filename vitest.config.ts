@@ -1,6 +1,7 @@
 import {fileURLToPath} from 'node:url';
 import {getVitestConfig} from '@vis.gl/dev-tools';
 import {BrowserTestSequencer} from './test/utils/browser-test-sequencer';
+import {getBrowserTestGroup, PHYSICS_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
 
 const optionalTextureCompressorShim = fileURLToPath(
   new URL('./test/utils/texture-compressor-shim.ts', import.meta.url)
@@ -149,18 +150,29 @@ const browserBenchmarkTestPatterns = [
   'modules/graph/test/gpu-project/projection-program-benchmark.spec.ts'
 ];
 const runBrowserBenchmarks = process.env.LUMA_TEST_BROWSER_BENCHMARKS === 'true';
+const browserTestGroup = getBrowserTestGroup(process.env.LUMA_TEST_BROWSER_GROUP);
+const browserIncludePatterns = browserTestGroup === 'physics'
+  ? PHYSICS_TEST_PATTERNS
+  : browserTestGroup === 'compute'
+    ? COMPUTE_TEST_PATTERNS
+    : ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'];
+const reuseComputeContext = browserTestGroup === 'compute' || browserTestGroup === 'physics';
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
   'modules/**/*.node.spec.{ts,js}',
   'test/**/*.node.spec.{ts,js}',
   ...browserBenchmarkTestPatterns,
   ...nodeOnlyTestPatterns,
-  ...excludePatterns
+  ...excludePatterns,
+  ...(browserTestGroup === 'general' ? COMPUTE_TEST_PATTERNS : []),
+  ...(browserTestGroup === 'compute' ? PHYSICS_TEST_PATTERNS : [])
 ];
 const launchArguments = [
   '--enable-unsafe-webgpu',
   '--ignore-gpu-blocklist',
-  ...(process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [])
+  ...(process.env.CI && process.platform === 'linux'
+    ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+    : [])
 ];
 
 const vitestConfig = getVitestConfig({
@@ -201,15 +213,16 @@ const vitestConfig = getVitestConfig({
       test: {
         color: 'green',
         environment: 'node',
-        // GPU devices and presentation resources are intentionally isolated between test files.
-        isolate: true,
+        // Only audited compute groups reuse devices/modules; UI and lifecycle tests stay isolated.
+        isolate: !reuseComputeContext,
+        restoreMocks: reuseComputeContext,
         // Native input needs foreground focus; concurrent pages also contend for one GPU.
         // Match CI locally instead of scaling GPU/UI concurrency with the CPU core count.
         fileParallelism: false,
         setupFiles: ['./test/utils/browser-process-shim.mjs'],
         include: runBrowserBenchmarks
           ? browserBenchmarkTestPatterns
-          : ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
+          : browserIncludePatterns,
         exclude: runBrowserBenchmarks ? excludePatterns : browserExcludePatterns
       }
     },
@@ -217,15 +230,16 @@ const vitestConfig = getVitestConfig({
       test: {
         color: 'cyan',
         environment: 'node',
-        // GPU devices and presentation resources are intentionally isolated between test files.
-        isolate: true,
+        // Only audited compute groups reuse devices/modules; UI and lifecycle tests stay isolated.
+        isolate: !reuseComputeContext,
+        restoreMocks: reuseComputeContext,
         // Native input needs foreground focus; concurrent pages also contend for one GPU.
         // Match CI locally instead of scaling GPU/UI concurrency with the CPU core count.
         fileParallelism: false,
         setupFiles: ['./test/utils/browser-process-shim.mjs'],
         include: runBrowserBenchmarks
           ? browserBenchmarkTestPatterns
-          : ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
+          : browserIncludePatterns,
         exclude: runBrowserBenchmarks ? excludePatterns : browserExcludePatterns
       }
     }

@@ -13,7 +13,7 @@ import {
   GPULoopOperation,
   composite
 } from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 
 describe('GPUSimpleGraph prototype', () => {
   it('resolves authored metadata without inspecting each dependency tree', () => {

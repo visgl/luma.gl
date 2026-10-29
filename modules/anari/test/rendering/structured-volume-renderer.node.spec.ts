@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
-import {getTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {
   getStructuredVolumeSupport,
   makeStructuredVolumeUniformData,

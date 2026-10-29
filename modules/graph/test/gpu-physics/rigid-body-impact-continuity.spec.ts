@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {
   GPURigidBodyWorld,
@@ -10,7 +10,7 @@ import {
   type GPURigidBodyWorldProps
 } from '../../src/gpu-physics';
 
-async function run(properties: GPURigidBodyWorldProps) {
+async function run(properties: GPURigidBodyWorldProps, captureRollbackState = false) {
   const device = await getWebGPUTestDevice();
   if (!device) return null;
   const world = new GPURigidBodyWorld({
@@ -26,16 +26,20 @@ async function run(properties: GPURigidBodyWorldProps) {
   world.addToGraph(definition);
   const graph = await definition.compileAsync();
   try {
-    const initial = await world.captureState();
+    // Full-world snapshots are only inspected by rollback assertions.
+    const initial = captureRollbackState ? await world.captureState() : null;
     const encoder = device.createCommandEncoder();
     graph.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
+    const state = await world.readState();
+    const work = await world.readContinuousWork();
+    const diagnostics = await world.readSimulationDiagnostics();
     return {
-      state: await world.readState(),
-      work: await world.readContinuousWork(),
-      diagnostics: await world.readSimulationDiagnostics(),
+      state,
+      work,
+      diagnostics,
       initial,
-      final: await world.captureState()
+      final: captureRollbackState ? await world.captureState() : null
     };
   } finally {
     graph.destroy();
@@ -139,10 +143,13 @@ it.for([0, 1, 2])(
 it('rejects an exhausted simultaneous-impact budget without publishing a partial chain', {
   timeout: 120000
 }, async context => {
-  const result = await run({
-    continuous: {mode: 'convex', bodies: [0, 1, 2], maximumImpacts: 1},
-    bodies: [sphere(-2, 240), sphere(0), sphere(1)]
-  });
+  const result = await run(
+    {
+      continuous: {mode: 'convex', bodies: [0, 1, 2], maximumImpacts: 1},
+      bodies: [sphere(-2, 240), sphere(0), sphere(1)]
+    },
+    true
+  );
   if (!result) return context.skip('WebGPU unavailable');
   expect(result.diagnostics.complete).toBe(false);
   for (const name of [
@@ -152,8 +159,8 @@ it('rejects an exhausted simultaneous-impact budget without publishing a partial
     'angular-velocities',
     'manifolds'
   ]) {
-    const before = result.initial.buffers.find(buffer => buffer.name === name);
-    const after = result.final.buffers.find(buffer => buffer.name === name);
+    const before = result.initial!.buffers.find(buffer => buffer.name === name);
+    const after = result.final!.buffers.find(buffer => buffer.name === name);
     expect(before, name).toBeDefined();
     expect(after!.data, name).toEqual(before!.data);
   }

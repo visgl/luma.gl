@@ -3,7 +3,7 @@
 
 import {getRayTracingQualityPreset} from '@luma.gl/anari';
 import {ANARIDevice} from '@luma.gl/anari';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';
 import {applyPlaygroundQualityPreset} from '../../../examples/anari/scenes/playground-renderer';
 import {getChartLabelPositions} from '../../../examples/anari/scenes/chart-labels';

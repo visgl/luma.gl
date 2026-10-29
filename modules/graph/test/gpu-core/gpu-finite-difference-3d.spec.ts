@@ -9,7 +9,7 @@ import {
   GPUFiniteDifference3D,
   type GPUFiniteDifference3DOperator
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const RESOLUTION = 5;
 const SPACING = 0.4;

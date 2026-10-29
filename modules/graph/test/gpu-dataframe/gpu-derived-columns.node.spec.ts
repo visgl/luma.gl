@@ -18,7 +18,7 @@ import {
   type GPUField,
   type GPURecordBatchSourceInfo
 } from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, expectTypeOf, test, vi} from 'vitest';
 
 type DerivedSourceColumns = {fare: 'float32'; category: 'uint32'; distance: 'sint32'};

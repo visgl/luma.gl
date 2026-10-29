@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {isUniformValue} from '../../src/api/adapter-utils/is-uniform-value';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 
 it('isUniformValue', async () => {

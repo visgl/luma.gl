@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getNullTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {
+  getNullTestDevice,
+  getWebGLTestDevice,
+  getWebGPUTestDevice
+} from '@luma.gl/test-utils/device';
 import {Buffer, Texture, type TextureFormat} from '@luma.gl/core';
 import {DynamicTexture} from '../../src/index';
 

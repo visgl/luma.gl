@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, _getDefaultBindGroupFactory} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const RENDER_SOURCE = /* WGSL */ `
 struct ColorUniforms {

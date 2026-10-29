@@ -21,7 +21,7 @@ import {
   getTestDevices,
   getWebGLTestDevice,
   getWebGPUTestDevice
-} from '@luma.gl/test-utils';
+} from '@luma.gl/test-utils/device';
 
 const EPSILON = 1e-6;
 const {abs} = Math;

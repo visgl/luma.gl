@@ -11,7 +11,7 @@ import {
   type GPUGridIndexSize,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 import {GPUPointSpatialQuery, type GPUPointSpatialQueryKind} from '../../src/geospatial';
 

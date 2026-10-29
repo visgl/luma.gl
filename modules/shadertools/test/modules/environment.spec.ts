@@ -4,7 +4,7 @@
 
 import {expect, test} from 'vitest';
 import {atmosphere, clouds, surfaceWeather} from '@luma.gl/shadertools';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice} from '@luma.gl/test-utils/device';
 import {makeShaderModuleRenderer} from './render-shader-module';
 
 for (const backend of ['webgpu', 'webgl'] as const) {

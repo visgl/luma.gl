@@ -6,7 +6,7 @@ import {expect, test} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {pathDash, type PathDashProps} from '@luma.gl/shadertools';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice} from '@luma.gl/test-utils/device';
 
 const SOURCE = /* wgsl */ `
 @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {

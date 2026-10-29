@@ -7,7 +7,7 @@ import {ClipSpace, Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
 import {pbrMaterial, pbrScene, type ShaderModule} from '@luma.gl/shadertools';
 import {PBREnvironmentGenerator} from '@luma.gl/anari';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 

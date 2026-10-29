@@ -9,7 +9,7 @@ import {
   PrismGeometry,
   RingGeometry
 } from '@math.gl/geometry';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {
   Model,
   Geometry,

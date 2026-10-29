@@ -1,6 +1,6 @@
 import {ANARIDevice} from '@luma.gl/anari';
 import type {Device} from '@luma.gl/core';
-import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 

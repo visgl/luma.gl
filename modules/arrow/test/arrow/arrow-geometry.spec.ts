@@ -9,7 +9,7 @@ import {
   makeGPUGeometryFromArrow,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 it('ArrowTableGeometry creates interleaved GPU geometry from a Mesh Arrow table', () => {

@@ -15,7 +15,7 @@ import {
   type GPUGraphAlgorithmsModularityOptimizationProps
 } from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 
 type ScalarFormat = 'uint32' | 'float32';

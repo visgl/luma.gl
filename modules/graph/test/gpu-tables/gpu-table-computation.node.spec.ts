@@ -4,7 +4,7 @@
 
 import {GPUTableComputation} from '@luma.gl/graph/gpu-tables';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, test} from 'vitest';
 
 test('GPUTableComputation binds fixed-size-list rows without trailing physical padding', async () => {

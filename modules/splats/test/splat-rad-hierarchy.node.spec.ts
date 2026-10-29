@@ -4,7 +4,7 @@
 
 import {expect, it, vi} from 'vitest';
 import {makeGPUSplatData, SplatResidencyManager, type GPUSplatData} from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {GPUPagedSplatRenderer} from '../src/gpu-paged-splat-renderer';
 import {isSplatHierarchyNodeVisible, type SplatHierarchyView} from '../src/splat-hierarchy';
 import {

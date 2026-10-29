@@ -9,7 +9,7 @@ import {
   GPUFiniteDifference2D,
   type GPUFiniteDifference2DOperator
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const WIDTH = 9;
 const HEIGHT = 7;

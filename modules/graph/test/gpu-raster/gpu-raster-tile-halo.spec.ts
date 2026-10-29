@@ -20,7 +20,7 @@ import {
   type GPURasterTileSource,
   type GPURasterTileSourceMetadata
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 
 type RasterSamples = Float32Array | Uint32Array | Int32Array;

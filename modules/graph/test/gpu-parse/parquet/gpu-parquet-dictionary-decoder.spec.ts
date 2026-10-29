@@ -9,7 +9,7 @@ import {
   parseParquetRleBitPackedRunPlan
 } from '@luma.gl/graph/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPUParquetRleDictionaryDecoder expands composed fixed-width dictionary values', async () => {
   const device = await getWebGPUTestDevice();

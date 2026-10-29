@@ -21,7 +21,7 @@ import {
 } from '@luma.gl/arrow';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, arrow.Int32>;

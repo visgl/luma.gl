@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import {Buffer, Texture} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 import {prepareArrowPointInput} from '../../../../examples/arrow/arrow-points/arrow-point-renderer';
 import {

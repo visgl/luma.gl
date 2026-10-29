@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
 import type {GLTFPostprocessed} from '@luma.gl/gltf';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {parseGLTF} from '@luma.gl/gltf/parsers/parse-gltf';
 const device = new NullDevice({});
 function makeCompressedImage() {

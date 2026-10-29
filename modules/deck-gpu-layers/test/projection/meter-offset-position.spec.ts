@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {COORDINATE_SYSTEM, WebMercatorViewport, _GlobeViewport, project32} from '@deck.gl/core';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice} from '@luma.gl/test-utils/device';
 import {getMeterOffsetPosition} from '../../src/projection/meter-offset-position';
 import type {ShaderModule} from '@luma.gl/shadertools';
 

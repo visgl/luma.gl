@@ -8,7 +8,7 @@ import {postProcessGLTF, createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
 
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 

@@ -168,3 +168,11 @@ for (const name of ['Kernel', 'RenderKernel']) {
   assert(!(name in coreEsm));
 }
 process.stdout.write('Verified gpgpu kernel export ownership.\n');
+
+// The lightweight browser entry shares existing CommonJS device singleton implementations.
+const testUtilities = require('@luma.gl/test-utils');
+const deviceTestUtilities = require('@luma.gl/test-utils/device');
+for (const name of ['getWebGPUTestDevice', 'NullDevice', 'nullAdapter']) {
+  assert.equal(deviceTestUtilities[name], testUtilities[name]);
+}
+process.stdout.write('Verified device helper CommonJS identities.\n');

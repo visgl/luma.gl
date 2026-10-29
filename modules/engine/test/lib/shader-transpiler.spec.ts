@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Model, Computation} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('shader transpiler#Model creates a WebGPU render pipeline with generated entry-point names', async () => {
   const device = await getWebGPUTestDevice('core');

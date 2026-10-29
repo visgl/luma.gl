@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {Swap, SwapFramebuffers} from '../../src/compute/swap';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
 
 // TODO - these tests could run on NullDevice
 

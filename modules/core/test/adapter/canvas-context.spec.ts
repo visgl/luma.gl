@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import type {CanvasContextProps, PresentationContextProps} from '@luma.gl/core';
 import {CanvasContext, PresentationContext, Framebuffer} from '@luma.gl/core';
 import {isBrowser} from 'probe.gl/env';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils/device';
 
 /** Mock CanvasContext */
 class TestCanvasContext extends CanvasContext {

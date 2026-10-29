@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {ArrowPolygonRenderer, prepareArrowPolygonInput, resolveArrowPickInfo} from '@luma.gl/arrow';
 import {Buffer} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 type PolygonArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;

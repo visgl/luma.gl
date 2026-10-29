@@ -21,7 +21,7 @@ import {
   getWebGLTestDevice,
   getWebGPUTestDevice,
   getTestDevices
-} from '@luma.gl/test-utils';
+} from '@luma.gl/test-utils/device';
 import {skin} from '@luma.gl/shadertools';
 import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
 

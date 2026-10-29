@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 
 it('GPUSplatGraphRenderer rejects devices without WebGPU command graphs', () => {
   const device = new NullDevice({});

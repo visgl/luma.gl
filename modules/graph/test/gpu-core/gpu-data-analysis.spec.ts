@@ -15,7 +15,7 @@ import {
   type GPUGroupAggregationOperation,
   type GPUReductionOperation
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {getGPUGroupAggregationDispatchLayout} from '../../src/gpu-core/gpu-group-aggregation';
 

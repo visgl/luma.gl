@@ -13,7 +13,7 @@ import {
   convertArrowMatrixToGPUVector,
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 it('convertArrowMatrixToGPUVector keeps canonical Float32 matrices GPU-ready', async () => {

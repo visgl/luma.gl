@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils/device';
 import {BackgroundTextureModel} from '@luma.gl/engine';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {Texture} from '@luma.gl/core';

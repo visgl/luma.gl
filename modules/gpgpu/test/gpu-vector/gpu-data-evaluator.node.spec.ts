@@ -5,7 +5,7 @@
 import {Buffer, NativeFloat16ArrayConstructor, type Device} from '@luma.gl/core';
 import {GPUDataEvaluator} from '@luma.gl/gpgpu';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {expect, test, vi} from 'vitest';
 
 test('GPUDataEvaluator.fromArray preserves Float64Array view bounds', () => {

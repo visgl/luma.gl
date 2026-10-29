@@ -10,7 +10,7 @@ import {
   AnimationTrack,
   AnimationMixer
 } from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {ScenegraphPhysicsSession, type ScenegraphPhysicsScene} from '@luma.gl/engine/physics';
 
 class BoundsNode extends ScenegraphNode {

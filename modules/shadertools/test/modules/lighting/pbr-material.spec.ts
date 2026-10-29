@@ -14,7 +14,7 @@ import {
   pbrScene,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 
 const FLOAT32_EPSILON = 1e-6;

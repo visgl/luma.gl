@@ -7,7 +7,7 @@ import {Buffer, type Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {CubeGeometry, Model, ShaderPassRenderer} from '@luma.gl/engine';
 import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4, radians} from '@math.gl/core';
 import LightstormMegacityAnimationLoopTemplate from '../../examples/showcase/lightstorm-megacity/app';
 import {

@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler, type ShaderAssembler} from '@luma.gl/shadertools';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 
 const WGSL_SOURCE = /* wgsl */ `\
 @vertex

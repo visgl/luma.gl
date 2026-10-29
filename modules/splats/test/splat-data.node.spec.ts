@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 
 it('GPUSplatData preserves optional semantic and spherical-harmonic GPU storage', async () => {
   const device = new NullDevice({});

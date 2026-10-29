@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test, vi} from 'vitest';
 import VirtualGeometryCanyonAnimationLoopTemplate, {
   type VirtualGeometryCanyonExampleProps

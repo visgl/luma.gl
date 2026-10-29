@@ -10,7 +10,7 @@ import {type GLTFPostprocessed, postProcessGLTF, createGLTFAnimatedCrowd} from '
 import {Texture} from '@luma.gl/core';
 import {AnimationAction} from '@luma.gl/engine';
 
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test, vi} from 'vitest';
 

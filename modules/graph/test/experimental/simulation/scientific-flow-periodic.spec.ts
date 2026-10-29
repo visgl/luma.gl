@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
 import {ScientificFlowGraph, ScientificFlowTracer} from '@luma.gl/graph/experimental/simulation';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice} from '@luma.gl/test-utils/device';
 
 function makeUniformField(speed: number) {
   return {
