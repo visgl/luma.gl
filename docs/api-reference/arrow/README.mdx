@@ -61,7 +61,7 @@ and temporal conversion helpers.
   `@luma.gl/graph/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution →
   Arrow output workflow without adding Apache Arrow to generic table or SQL packages.
 - `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for
-  [`@luma.gl/splats`](/docs/api-reference/splats), decoding GraphDECO encodings without
+  [`@luma.gl/engine/splats`](/docs/api-reference/splats), decoding GraphDECO encodings without
   clamping or quantizing spherical-harmonic DC radiance.
 - `makeGPUSplatDataFromArrowStream()` progressively prepares Gaussian splat batches without
   concatenating Arrow tables or rebuilding previously uploaded GPU buffers. Both Gaussian

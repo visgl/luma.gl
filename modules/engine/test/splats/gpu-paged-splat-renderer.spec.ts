@@ -5,13 +5,13 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
+import {makeGPUSplatData, type SplatSource} from '@luma.gl/engine/splats';
 import {getTestDevices, NullDevice} from '@luma.gl/core/test-utils';
-import {GPUPagedSplatRenderer} from '../src/gpu-paged-splat-renderer';
+import {GPUPagedSplatRenderer} from '../../src/splats/gpu-paged-splat-renderer';
 import {
   GPU_PAGED_SPLAT_RENDER_SHADER,
   GPU_PAGED_SPLAT_RENDER_SHADER_LAYOUT
-} from '../src/gpu-paged-splat-shaders';
+} from '../../src/splats/gpu-paged-splat-shaders';
 import './gpu-paged-splat-renderer.node.spec';
 
 it.each([

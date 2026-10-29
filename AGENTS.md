@@ -114,3 +114,6 @@
 - Engine owns BufferTransform and TextureTransform; engine/tables owns TableTransform. Gpgpu operations execute through RenderKernel without these adapters.
 - Engine owns GPUVectorModel, GPUVectorGeometry, and their vector binding and batching helpers. Engine also owns Computation, ShaderInputs, and their shader-module and uniform/binding helpers. Gpgpu owns immediate execution primitives. `@luma.gl/core/dynamic` owns DynamicBuffer, DynamicTexture, and their supporting resource types; core must not depend on gpgpu, graph, or engine. Engine may provide compatibility exports but must not duplicate these implementations.
 - Shared graph effect execution must use gpgpu primitives, not engine rendering models. Run `yarn test-package-layering` after building to verify this boundary.
+
+- Engine's `/splats` entry owns splat data, rendering, picking, residency, and existing graph-backed
+  renderer orchestration. Reusable splat graph operations will be extracted separately.

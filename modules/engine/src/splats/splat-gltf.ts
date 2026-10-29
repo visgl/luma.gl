@@ -228,7 +228,7 @@ export function makeGPUSplatDataFromGLTF(
  *
  * Already-decoded primitives never invoke the decoder, including sources that retain their
  * compression extension as metadata. Compression libraries, workers, and network access remain
- * entirely outside @luma.gl/splats.
+ * entirely outside @luma.gl/engine/splats.
  */
 export async function loadGPUSplatDataFromGLTF(
   device: Device,

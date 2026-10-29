@@ -4,7 +4,10 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {GPU_SPLAT_PROJECTION_SHADER, GPU_SPLAT_RENDER_SHADER} from '../src/gpu-splat-graph-shaders';
+import {
+  GPU_SPLAT_PROJECTION_SHADER,
+  GPU_SPLAT_RENDER_SHADER
+} from '../../src/splats/gpu-splat-graph-shaders';
 
 it('GPU Gaussian projection and globally sorted rendering compile on WebGPU', async () => {
   const device = await getWebGPUTestDevice();

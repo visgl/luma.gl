@@ -14,7 +14,7 @@ import {
   makeGPUSplatData,
   type GPUSplatData,
   type SplatHierarchyView
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   default as GaussianSplatsAnimationLoopTemplate,

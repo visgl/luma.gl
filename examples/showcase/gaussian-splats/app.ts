@@ -19,7 +19,7 @@ import {
   type SplatHierarchyView,
   type SplatRendererProps,
   type SplatSortMode
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {Matrix4} from '@math.gl/core';
 import {h, render} from 'preact';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';

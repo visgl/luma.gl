@@ -1,4 +1,4 @@
-# @luma.gl/splats
+# @luma.gl/engine/splats
 
 Experimental Gaussian splat rendering utilities for luma.gl, without dependencies on Apache Arrow,
 loaders.gl, or deck.gl.
@@ -38,6 +38,6 @@ worker treats decoded pages as resident.
 Use optional `expectedSplatCount` and `expectedBatchCount` hints to reserve graph capacity.
 Renderers borrow source batches, preserve HDR colors, and must be destroyed before their data.
 
-This package is public with experimental APIs. Install it with `yarn add @luma.gl/splats`.
+This package is public with experimental APIs. Install it with `yarn add @luma.gl/engine`.
 
 See [luma.gl](https://luma.gl/docs/api-reference/splats) for documentation.

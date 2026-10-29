@@ -8,7 +8,7 @@ import {
   makeGPUSplatData,
   SplatResidencyManager,
   type GPUSplatData
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   SplatHierarchyManager,
@@ -18,7 +18,7 @@ import {
   type SplatHierarchyLoadContext,
   type SplatHierarchyNode,
   type SplatHierarchyView
-} from '../src/splat-hierarchy';
+} from '../../src/splats/splat-hierarchy';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 

@@ -18,3 +18,9 @@ entry points keep scenegraph and rendering integration above graph algorithms.
 Import glTF document types, postprocessing, scene creation, animation, and PBR adapters from
 `@luma.gl/engine/gltf`. The optional `@luma.gl/engine/gltf-physics` entry integrates glTF physics
 with engine scenegraphs and graph physics. These APIs are not re-exported by the engine root.
+
+## Gaussian splats
+
+Import splat data, renderers, picking, residency, and hierarchy helpers from `@luma.gl/engine/splats`.
+This optional subpath is not re-exported by the engine root. Graph-backed renderers remain here
+for now; extraction of reusable graph operations is a separate migration.

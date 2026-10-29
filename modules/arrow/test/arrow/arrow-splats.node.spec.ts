@@ -11,7 +11,7 @@ import {
   type GPUSplatArrowSource,
   type GPUSplatArrowTableLike
 } from '@luma.gl/arrow';
-import type {GPUSplatData} from '@luma.gl/splats';
+import type {GPUSplatData} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 

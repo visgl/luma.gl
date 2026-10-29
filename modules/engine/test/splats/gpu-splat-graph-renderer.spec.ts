@@ -9,7 +9,7 @@ import {
   GPUSplatGraphRenderer,
   makeGPUSplatData,
   type SplatSource
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {getTestDevices} from '@luma.gl/core/test-utils';
 
 it('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draws preserved WebGPU batches', async () => {

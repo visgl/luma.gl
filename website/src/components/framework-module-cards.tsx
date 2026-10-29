@@ -66,7 +66,7 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
   {
     id: 'splats',
     title: 'Splats',
-    packageName: '@luma.gl/splats',
+    packageName: '@luma.gl/engine/splats',
     label: 'Captured scenes',
     description:
       'Stream and render Gaussian splats with depth ordering, high-dynamic-range color, and reusable GPU data.',

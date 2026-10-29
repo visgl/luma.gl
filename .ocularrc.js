@@ -20,6 +20,7 @@ const config = {
 
     '@luma.gl/engine/gltf-physics': join(packageRoot, 'modules/engine/src/gltf/physics'),
     '@luma.gl/engine/gltf': join(packageRoot, 'modules/engine/src/gltf'),
+    '@luma.gl/engine/splats': join(packageRoot, 'modules/engine/src/splats'),
     // Match the gpgpu export map instead of appending _internal to the package directory.
     '@luma.gl/gpgpu/_internal': join(packageRoot, 'modules/gpgpu/src/execution'),
 

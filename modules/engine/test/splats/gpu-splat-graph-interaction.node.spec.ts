@@ -10,7 +10,7 @@ import {
   makeGPUSplatData,
   type SplatPickingInfo,
   type SplatSource
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
@@ -18,11 +18,11 @@ import {
   GPUSplatGraphPicker,
   GPU_SPLAT_GRAPH_PICKING_SHADER,
   resolveGPUSplatGraphPickInfo
-} from '../src/gpu-splat-graph-interaction';
+} from '../../src/splats/gpu-splat-graph-interaction';
 import {
   GPU_SPLAT_GRAPH_UNIFORM_BYTE_LENGTH,
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH
-} from '../src/gpu-splat-graph-shaders';
+} from '../../src/splats/gpu-splat-graph-shaders';
 
 it('graph-native Gaussian picking preserves projected, uniform, and integer identity layouts', () => {
   const reflection = new WgslReflect(GPU_SPLAT_GRAPH_PICKING_SHADER);

@@ -66,7 +66,7 @@ const nodeOnlyTestPatterns = [
   'modules/gpgpu/test/operations/arithmetic-operation.spec.{ts,js}',
   'modules/graph/test/gpu-core/{gpu-scalar,gpu-matvec,gpu-matmul,gpu-elementwise,gpu-coo-to-csr}.spec.{ts,js}',
   'modules/gpgpu/test/utils/{expression,webgpu-dispatch}.spec.{ts,js}',
-  'modules/splats/test/{splat-rad-hierarchy,splat-browser-coverage}.spec.{ts,js}',
+  'modules/engine/test/splats/{splat-rad-hierarchy,splat-browser-coverage}.spec.{ts,js}',
   'modules/core/test/test-utils/null-device/**/*.spec.{ts,js}',
   'modules/graph/test/geospatial/geospatial-types.spec.{ts,js}',
   'modules/engine/test/experimental/textures/packed-pixels.spec.{ts,js}',
@@ -105,7 +105,7 @@ const nodeWrapperSourcePatterns = [
   'modules/shadertools/test/lib/glsl-utils/shader-utils.spec.{ts,js}',
   'modules/shadertools/test/lib/preprocessor/preprocessor.spec.{ts,js}',
   'modules/shadertools/test/modules/lighting/{gouraud-material,lambert-material,lights,phong-material}.spec.{ts,js}',
-  'modules/splats/test/{splat-browser-coverage,splat-rad-hierarchy}.spec.{ts,js}',
+  'modules/engine/test/splats/{splat-browser-coverage,splat-rad-hierarchy}.spec.{ts,js}',
   'modules/graph/test/gpu-tables/gpu-table-model.spec.{ts,js}',
   'modules/core/test/webgl/adapter/helpers/{parse-shader-compiler-log,webgl-topology-utils}.spec.{ts,js}'
 ];
@@ -121,7 +121,7 @@ const nodeCoverageNativePatterns = [
   'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
   'modules/arrow/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
   'modules/arrow/test/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
-  'modules/splats/test/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
+  'modules/engine/test/splats/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/graph/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
   'modules/gpgpu/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
   'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',

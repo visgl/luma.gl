@@ -10,7 +10,7 @@ import {
   SplatRenderer,
   type SplatPickingInfo,
   type SplatSource
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {getTestDevices} from '@luma.gl/core/test-utils';
 
 it('SplatPicker reads actual Gaussian source identities from WebGPU and WebGL picking targets', async () => {

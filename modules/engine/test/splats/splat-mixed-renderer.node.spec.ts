@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
+import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('SplatRenderer composites opaque meshes, sorted splats, and transparent mesh overlays', () => {

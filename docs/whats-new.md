@@ -275,7 +275,7 @@ Target Release Date: Q3, 2026
 - **View-aware Arrow text clipping** - Arrow 2D text accepts optional `FixedSizeList<Float32>[4]` clip rectangles. `ArrowTextLayer` interprets them as world-space anchor offsets, projects them through the active deck viewport, and supports visible-region alignment and pixel cutoffs; omitting `clipRects` retains a constant no-clipping fallback instead of allocating per-row data.
 - **GPU-selected text** - `GPUTextSelection` filters row-indexed compact glyph records from GPU row flags, preserves original row identity, and writes the selected glyph count directly into an indirect draw command.
 
-**@luma.gl/splats**
+**@luma.gl/engine/splats**
 
 - **Stable RAD camera retargeting** - `SplatRADHierarchyManager` preserves resolved visible rows while reprioritizing retained branches for a changed camera, traverses offscreen ancestors needed for visible descendants, and keeps bounded traversal, page demand, and active-row capacity coherent across rapid camera updates.
 - **Progressive RAD selection** - `selectView()` selects a fresh complete cut; `refineView()` publishes coherent intermediate replacements while reprioritizing retained detail. Generic CPU-only residency and hierarchy data support worker selection with bounded page demand.
@@ -323,7 +323,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   geospatial, and trace APIs keep intermediate results resident and reusable.
 - **Captured and animated worlds** - Stream large Gaussian splat scenes, mix splats with meshes,
   and animate crowds with shared geometry, GPU sampling, culling, and LOD.
-- **Three new experimental libraries** - `@luma.gl/text`, `@luma.gl/splats`, and
+- **Three new experimental libraries** - `@luma.gl/text`, `@luma.gl/engine/splats`, and
   `@luma.gl/anari` are now published for direct use. These APIs may
   evolve outside the 9.4 semver contract.
 
@@ -335,7 +335,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
   `@luma.gl/graph/gpu-tables`; path and polygon models live in
   `@luma.gl/engine/models`.
 - **Renderers preserve what matters** - `@luma.gl/text` supports streamed text and shared font
-  resources. `@luma.gl/splats` retains source batches and stable row identities.
+  resources. `@luma.gl/engine/splats` retains source batches and stable row identities.
 
 **More room to build**
 
@@ -364,7 +364,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 - **`@luma.gl/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
-- **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
+- **`@luma.gl/engine/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 - **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
   rendering.
 - **`@luma.gl/graph/experimental`** - Path/polygon models and flow/fluid simulations through explicit experimental subpaths.
@@ -478,7 +478,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Dependency-isolated font preparation** - `@luma.gl/text/fonts` builds bitmap and SDF browser fonts, builds or loads prebuilt BMFont JSON MSDF atlases, measures atlas-backed text, and exposes bundled Helvetiker data without importing luma.gl, loaders.gl, or GPU modules. Existing `@luma.gl/text` font imports remain supported.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 
-**@luma.gl/splats** NEW MODULE
+**@luma.gl/engine/splats** NEW MODULE
 
 - **Gaussian splat rendering** - `SplatRenderer` draws caller-owned prepared GPU splat batches through reusable luma.gl rendering models on WebGPU and WebGL2.
 - **HDR Gaussian colors** - Float32 color columns preserve spherical-harmonic DC radiance above the display range without premature clamping or quantization.
