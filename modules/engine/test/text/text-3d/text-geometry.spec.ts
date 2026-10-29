@@ -9,7 +9,7 @@ import {
   layoutText3DGlyphRows,
   parseFont,
   TextGeometry
-} from '../../src/text-3d/index';
+} from '../../../src/text/text-3d/index';
 import {simpleFont} from './data/simple-font';
 import {Vector3} from '@math.gl/core';
 

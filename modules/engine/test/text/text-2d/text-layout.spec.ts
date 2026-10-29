@@ -8,14 +8,14 @@ import {
   measureFontAtlasText,
   type FontAtlas,
   type TextCodePointSource
-} from '../../src/index';
+} from '../../../src/text/index';
 import {
   buildTextGpuDictionaryCompressedStream,
   buildTextGpuExpandedStream,
   buildTextGpuGlyphDefinitions,
   type TextDictionaryCodePointSource
-} from '../../src/text-2d/experimental';
-import {createTextKerning} from '../../src/fonts/atlas/text-utils';
+} from '../../../src/text/text-2d/experimental';
+import {createTextKerning} from '../../../src/text/fonts/atlas/text-utils';
 
 const FONT_ATLAS: FontAtlas = {
   baselineOffset: 1,

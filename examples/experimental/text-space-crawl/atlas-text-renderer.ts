@@ -9,9 +9,9 @@ import {
 } from '@luma.gl/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {measureFontAtlasText, type FontAtlas, type TextGlyphLayout} from '@luma.gl/text';
-import type {TextAttributeModel} from '@luma.gl/text/experimental';
-import type {Text3DBounds} from '@luma.gl/text/text-3d';
+import {measureFontAtlasText, type FontAtlas, type TextGlyphLayout} from '@luma.gl/engine/text';
+import type {TextAttributeModel} from '@luma.gl/engine/text-experimental';
+import type {Text3DBounds} from '@luma.gl/engine/text-3d';
 import * as arrow from 'apache-arrow';
 import {
   IDENTITY_MATRIX,

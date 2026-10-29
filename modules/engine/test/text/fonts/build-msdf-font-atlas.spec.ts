@@ -4,8 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {isBrowser} from 'probe.gl/env';
-import {buildMsdfFontAtlas, getTextKerningOffset, loadMsdfFontAtlas} from '../../src/fonts';
-import {_resolveMsdfFontPageUrl} from '../../src/fonts/build-msdf-font-atlas';
+import {buildMsdfFontAtlas, getTextKerningOffset, loadMsdfFontAtlas} from '../../../src/text/fonts';
+import {_resolveMsdfFontPageUrl} from '../../../src/text/fonts/build-msdf-font-atlas';
 
 it('fonts subpath buildMsdfFontAtlas preserves BMFont page, offset, and kerning metadata', () => {
   if (!isBrowser()) {

@@ -15,19 +15,19 @@ import {
   Utf8,
   Vector
 } from 'apache-arrow';
-import type {FontAtlas, TextCodePointSource, TextGlyphLayout} from '@luma.gl/text';
+import type {FontAtlas, TextCodePointSource, TextGlyphLayout} from '@luma.gl/engine/text';
 import type {
   GpuTextDictionaryCompressedStream,
   GpuTextDictionaryUtf8Input,
   GpuExpandedTextStream,
   GpuUtf8TextInput,
   TextDictionaryCodePointSource
-} from '@luma.gl/text/experimental';
-import {buildTextGlyphLayout} from '@luma.gl/text';
+} from '@luma.gl/engine/text-experimental';
+import {buildTextGlyphLayout} from '@luma.gl/engine/text';
 import {
   buildTextGpuDictionaryCompressedStream,
   buildTextGpuExpandedStream
-} from '@luma.gl/text/experimental';
+} from '@luma.gl/engine/text-experimental';
 
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 const ARROW_UTF8_VIEW_TYPE_ID = 24;

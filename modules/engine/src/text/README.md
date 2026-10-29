@@ -1,15 +1,14 @@
-# @luma.gl/text
+# @luma.gl/engine/text
 
 Experimental 2D text utilities for luma.gl. CPU-side font preparation is isolated in the
-`@luma.gl/text/fonts` subpath, while rendering APIs remain on the package root. The package
-contains:
+`@luma.gl/engine/text-fonts` subpath, while rendering APIs live on `@luma.gl/engine/text`. These subpaths contain:
 
 - `FontAtlas`, the normalized glyph metrics, image pages, and sampling settings used by
   atlas-backed text.
 - `buildBitmapFontAtlas()` and `buildSdfFontAtlas()`, explicit browser-font atlas builders.
 - `GPUTextData`, caller-owned prepared text resources with representation-independent statistics.
 - `TextRenderer`, a stable facade that borrows `GPUTextData` and selects an internal model.
-- An `@luma.gl/text/experimental` entry point for forced strategies and low-level benchmarks.
+- An `@luma.gl/engine/text-experimental` entry point for forced strategies and low-level benchmarks.
 
 ## Usage
 
@@ -23,8 +22,8 @@ import {
 import {
   GPUTextResources,
   TextRenderer
-} from '@luma.gl/text';
-import {buildSdfFontAtlas} from '@luma.gl/text/fonts';
+} from '@luma.gl/engine/text';
+import {buildSdfFontAtlas} from '@luma.gl/engine/text-fonts';
 
 const sourceVectors = {
   positions: makeArrowFixedSizeListVector(
@@ -78,7 +77,7 @@ batch's uploaded and generated GPU resources while borrowing the shared `GPUText
 
 Automatic strategy selection uses attributes for WebGL, per-character colors, and fallback;
 dictionary storage for supported WebGPU dictionary input; and storage for other supported WebGPU
-text. Row-indexed storage is available only through `@luma.gl/text/experimental` until benchmark
+text. Row-indexed storage is available only through `@luma.gl/engine/text-experimental` until benchmark
 data supports an automatic-selection heuristic.
 
 `GPUTextData.stats` reports the selected strategy, row and glyph counts, preserved source and
@@ -86,9 +85,9 @@ render batch counts, preparation time, retained bytes, and transient compute-inp
 exposing implementation buffers.
 
 Atlas-backed text consumes the common `FontAtlas` format. Import CPU-side atlas preparation from
-`@luma.gl/text/fonts`: build generated browser-font atlases with `buildBitmapFontAtlas()` or
+`@luma.gl/engine/text-fonts`: build generated browser-font atlases with `buildBitmapFontAtlas()` or
 `buildSdfFontAtlas()`, and build or load BMFont JSON MSDF atlases with `buildMsdfFontAtlas()` or
-`loadMsdfFontAtlas()`. These APIs remain re-exported from `@luma.gl/text` for compatibility.
+`loadMsdfFontAtlas()`. These APIs remain re-exported from `@luma.gl/engine/text` for compatibility.
 
 Text input vector support:
 

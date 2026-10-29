@@ -9,7 +9,7 @@ import {
   buildSdfFontAtlas,
   type BitmapFontAtlasSettings,
   type FontAtlas
-} from '../../src/fonts';
+} from '../../../src/text/fonts';
 
 function createFontAtlasSettings(
   fontFamily: string,

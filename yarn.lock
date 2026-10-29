@@ -2721,7 +2721,6 @@ __metadata:
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
     "@math.gl/earth": "npm:5.0.0-beta.1"
   languageName: unknown
@@ -5075,7 +5074,6 @@ __metadata:
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
     "@math.gl/geospatial": "npm:~5.0.0-beta.1"
     apache-arrow: "npm:^17.0.0"
@@ -5119,6 +5117,7 @@ __metadata:
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
+    "@mapbox/tiny-sdf": "npm:^2.0.7"
     "@math.gl/core": "npm:~5.0.0-beta.1"
     "@math.gl/geometry": "npm:~5.0.0-beta.1"
     probe.gl: "npm:^5.0.0"
@@ -5203,21 +5202,6 @@ __metadata:
 "@luma.gl/slang@workspace:*, @luma.gl/slang@workspace:modules/slang":
   version: 0.0.0-use.local
   resolution: "@luma.gl/slang@workspace:modules/slang"
-  languageName: unknown
-  linkType: soft
-
-"@luma.gl/text@npm:10.0.0-alpha.5, @luma.gl/text@workspace:modules/text":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/text@workspace:modules/text"
-  dependencies:
-    "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
-    "@luma.gl/graph": "npm:10.0.0-alpha.5"
-    "@mapbox/tiny-sdf": "npm:^2.0.7"
-    "@math.gl/core": "npm:5.0.0-beta.1"
-    "@math.gl/geometry": "npm:~5.0.0-beta.1"
-  peerDependencies:
-    "@luma.gl/engine": ~10.0.0-alpha.3
   languageName: unknown
   linkType: soft
 
@@ -15098,7 +15082,6 @@ __metadata:
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
@@ -15226,7 +15209,6 @@ __metadata:
     "@luma.gl/core": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
@@ -15371,7 +15353,6 @@ __metadata:
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
@@ -15675,7 +15656,6 @@ __metadata:
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
@@ -15862,7 +15842,6 @@ __metadata:
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -16540,7 +16519,6 @@ __metadata:
     "@luma.gl/core": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
-    "@luma.gl/text": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^6.0.3"

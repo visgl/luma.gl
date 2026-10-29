@@ -7,7 +7,7 @@ import type {ArrowTextRenderer} from '@luma.gl/arrow';
 import {Buffer, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {DrawCommandBuffer} from '@luma.gl/graph/gpu-core';
-import type {TextStorageModel} from '@luma.gl/text/experimental';
+import type {TextStorageModel} from '@luma.gl/engine/text-experimental';
 
 export type GPUCulledTextDraw = {
   selectedGlyphRecords: Buffer;

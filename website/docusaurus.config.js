@@ -52,6 +52,7 @@ const config = getDocusaurusConfig({
       '@docusaurus/plugin-client-redirects',
       {
         redirects: [
+          {from: ['/docs/api-reference/text'], to: '/docs/api-reference/engine/text'},
           {"from":["/docs/api-reference/experimental/a-buffer-renderer"],"to":"/docs/api-reference/scene/a-buffer-renderer"},
           {"from":["/docs/api-reference/experimental/clustered-lighting"],"to":"/docs/api-reference/scene/clustered-lighting"},
           {"from":["/docs/api-reference/experimental/deferred-lighting"],"to":"/docs/api-reference/scene/deferred-lighting"},
@@ -360,6 +361,10 @@ module.exports = {
           _configuration.resolve.alias = {
             '@luma.gl/core/test-utils': path.resolve(__dirname, '../modules/core/src/test-utils'),
             '@luma.gl/gpgpu/_internal': path.resolve(__dirname, '../modules/gpgpu/src/execution'),
+            '@luma.gl/engine/text-fonts': path.resolve(__dirname, '../modules/engine/src/text/fonts'),
+            '@luma.gl/engine/text-3d': path.resolve(__dirname, '../modules/engine/src/text/text-3d'),
+            '@luma.gl/engine/text-experimental': path.resolve(__dirname, '../modules/engine/src/text/experimental.ts'),
+            '@luma.gl/engine/text': path.resolve(__dirname, '../modules/engine/src/text'),
             '@luma.gl/engine/gltf-physics': path.resolve(__dirname, '../modules/engine/src/gltf/physics'),
             '@luma.gl/engine/gltf': path.resolve(__dirname, '../modules/engine/src/gltf'),
             '@luma.gl/engine/splats': path.resolve(__dirname, '../modules/engine/src/splats'),

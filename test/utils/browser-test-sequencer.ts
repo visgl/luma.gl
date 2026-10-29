@@ -109,7 +109,7 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/engine/test/splats/gpu-splat-graph-interaction.spec.ts': 4,
   'modules/engine/test/splats/gpu-splat-progressive-renderer.spec.ts': 4,
   'modules/engine/test/splats/splat-renderer.spec.ts': 4,
-  'modules/text/test/text-2d/convert-arrow-text-vectors.spec.ts': 11,
+  'modules/engine/test/text/text-2d/convert-arrow-text-vectors.spec.ts': 11,
   'modules/three/test/animated-renderer.spec.ts': 23,
   'modules/three/test/deck-lantern-renderer.spec.ts': 13,
   'modules/three/test/deck-picking-renderer.spec.ts': 6,

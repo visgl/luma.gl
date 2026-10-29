@@ -197,3 +197,18 @@ assert.equal(typeof splatApi.SplatRenderer, 'function');
 assert.equal(typeof splatApi.GPUSplatData, 'function');
 assert.equal(typeof splatEsm.SplatRenderer, 'function');
 assert(!('SplatRenderer' in engineApi));
+
+// Optional text subpaths share engine constructors without widening the root API.
+const textApi = require('@luma.gl/engine/text');
+const textFontsApi = require('@luma.gl/engine/text-fonts');
+const textGeometryApi = require('@luma.gl/engine/text-3d');
+const textExperimentalApi = require('@luma.gl/engine/text-experimental');
+const textEsm = await import('../modules/engine/dist/text/index.js');
+assert.equal(typeof textApi.TextRenderer, 'function');
+assert.equal(typeof textEsm.TextRenderer, 'function');
+assert.equal(textApi.buildSdfFontAtlas, textFontsApi.buildSdfFontAtlas);
+assert(textGeometryApi.TextGeometry.prototype instanceof engineApi.Geometry);
+assert(textExperimentalApi.TextStorageModel.prototype instanceof engineApi.Model);
+assert(!('TextRenderer' in engineApi));
+assert(!('TextGeometry' in engineApi));
+process.stdout.write('Verified optional text subpaths and engine constructor identity.\n');

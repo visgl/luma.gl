@@ -75,6 +75,26 @@
       "types": "./dist/splats/index.d.ts",
       "import": "./dist/splats/index.js",
       "require": "./dist/splats/index.cjs"
+    },
+    "./text": {
+      "types": "./dist/text/index.d.ts",
+      "import": "./dist/text/index.js",
+      "require": "./dist/text/index.cjs"
+    },
+    "./text-fonts": {
+      "types": "./dist/text/fonts/index.d.ts",
+      "import": "./dist/text/fonts/index.js",
+      "require": "./dist/text/fonts/index.cjs"
+    },
+    "./text-3d": {
+      "types": "./dist/text/text-3d/index.d.ts",
+      "import": "./dist/text/text-3d/index.js",
+      "require": "./dist/text/text-3d/index.cjs"
+    },
+    "./text-experimental": {
+      "types": "./dist/text/experimental.d.ts",
+      "import": "./dist/text/experimental.js",
+      "require": "./dist/text/experimental.cjs"
     }
   },
   "files": [
@@ -96,6 +116,7 @@
   "dependencies": {
     "@luma.gl/gpgpu": "10.0.0-alpha.5",
     "@luma.gl/graph": "10.0.0-alpha.5",
+    "@mapbox/tiny-sdf": "^2.0.7",
     "@math.gl/core": "~5.0.0-beta.1",
     "@math.gl/geometry": "~5.0.0-beta.1",
     "probe.gl": "^5.0.0"

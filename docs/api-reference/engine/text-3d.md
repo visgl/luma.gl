@@ -1,9 +1,9 @@
-# @luma.gl/text/text-3d
+# @luma.gl/engine/text-3d
 
-3D text geometry helpers are exposed from the dedicated `@luma.gl/text/text-3d` entry point.
+3D text geometry helpers are exposed from the dedicated `@luma.gl/engine/text-3d` entry point.
 
 ```ts
-import {TextGeometry, parseFont} from '@luma.gl/text/text-3d'
+import {TextGeometry, parseFont} from '@luma.gl/engine/text-3d'
 import helvetiker from './fonts/helvetiker_regular.typeface.json'
 
 const font = parseFont(helvetiker)

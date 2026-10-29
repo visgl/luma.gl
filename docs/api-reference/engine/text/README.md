@@ -1,6 +1,11 @@
-# @luma.gl/text
+# @luma.gl/engine/text
 
-`@luma.gl/text` provides an intent-level facade for experimental GPU-only 2D text rendering.
+Install `@luma.gl/engine` to use these optional subpaths. Text APIs are not exported from the
+engine root. Use `@luma.gl/engine/text-fonts` for font preparation,
+[`@luma.gl/engine/text-3d`](../text-3d.md) for extruded geometry, and
+`@luma.gl/engine/text-experimental` for low-level models.
+
+`@luma.gl/engine/text` provides an intent-level facade for experimental GPU-only 2D text rendering.
 
 ## Font Atlases
 
@@ -18,11 +23,11 @@ import {
   loadMsdfFontAtlas,
   measureFontAtlasText,
   type FontAtlas
-} from '@luma.gl/text/fonts';
+} from '@luma.gl/engine/text-fonts';
 ```
 
-The subpath has no luma.gl, loaders.gl, or GPU module imports. Existing imports from
-`@luma.gl/text` remain supported.
+The font preparation subpath has no GPU runtime or loaders.gl imports. Existing imports from
+`@luma.gl/engine/text` remain supported.
 
 - `buildBitmapFontAtlas()` measures and rasterizes a browser font into a bitmap atlas.
 - `buildSdfFontAtlas()` uses the same measurement and packing path, but rasterizes glyphs as signed
@@ -51,7 +56,7 @@ with Apache Arrow 17 runtimes. Binary and `BinaryView` columns are not text inpu
 include a three-pixel border; width, height, left/top bearings and advances use 24 pixels per em.
 
 ```ts
-import {GlyphRangeLoader, buildGlyphFontAtlas} from '@luma.gl/text/fonts';
+import {GlyphRangeLoader, buildGlyphFontAtlas} from '@luma.gl/engine/text-fonts';
 
 const glyphs = new GlyphRangeLoader({
   url: 'https://fonts.example.com/{fontstack}/{range}.pbf',
@@ -114,10 +119,10 @@ relicense downloaded glyph data as MIT.
 
 | Responsibility | Public APIs |
 | --- | --- |
-| CPU font preparation in `@luma.gl/text/fonts` | `FontAtlas`, atlas builders/loaders, mapping, kerning, and measurement |
+| CPU font preparation in `@luma.gl/engine/text-fonts` | `FontAtlas`, atlas builders/loaders, mapping, kerning, and measurement |
 | Arrow conversion in `@luma.gl/arrow` | `makeGPUTextDataFromArrow()`, `makeGPUTextDataFromArrowStream()`, `ArrowTextRenderer` |
-| Stable rendering in `@luma.gl/text` | `GPUTextResources`, `GPUTextData`, `TextRenderer` |
-| Benchmark internals | `@luma.gl/text/experimental` specialized models and forced strategies |
+| Stable rendering in `@luma.gl/engine/text` | `GPUTextResources`, `GPUTextData`, `TextRenderer` |
+| Benchmark internals | `@luma.gl/engine/text-experimental` specialized models and forced strategies |
 
 `FontAtlas` contains CPU-side pages and metrics. `GPUTextResources` owns their device-specific
 texture upload and can be shared by any number of prepared batches and renderers. Each
@@ -156,7 +161,7 @@ and owns shared resources internally and incrementally uploads and appends each 
 | Supported WebGPU dictionary input | Dictionary storage |
 | Other supported WebGPU text | Storage |
 
-Row-indexed storage remains force-selectable from `@luma.gl/text/experimental` for benchmarks but
+Row-indexed storage remains force-selectable from `@luma.gl/engine/text-experimental` for benchmarks but
 is not selected automatically.
 
 `GPUTextData.stats` exposes strategy, row and glyph counts, source and render batch counts,
@@ -169,7 +174,7 @@ The automatic strategy uses the attribute path for WebGL and per-character color
 
 The attribute path supports row colors and per-character color lists. It expands text rows into generated glyph vertex attributes and renders through a GPU table.
 
-Atlas-backed text requires a normalized `fontAtlas`. Use `@luma.gl/text/fonts` to build browser-font
+Atlas-backed text requires a normalized `fontAtlas`. Use `@luma.gl/engine/text-fonts` to build browser-font
 atlases explicitly with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`, or load BMFont JSON MSDF
 atlases with `buildMsdfFontAtlas()` or `loadMsdfFontAtlas()` before constructing a text renderer or
 model.
@@ -206,19 +211,19 @@ first, then every data batch, and finally the shared resources. This split permi
 renderers and streams to share one atlas upload without hidden caches or ambiguous ownership.
 
 Direct specialized model construction is intentionally unstable. Import the models and forced
-strategy preparation contracts from `@luma.gl/text/experimental` only in benchmarks and
+strategy preparation contracts from `@luma.gl/engine/text-experimental` only in benchmarks and
 diagnostic tools.
 
 ## Custom browser font atlases
 
-`@luma.gl/text/fonts` exports `buildBrowserFontAtlas`, `resolveBrowserFontAtlasSettings`,
+`@luma.gl/engine/text-fonts` exports `buildBrowserFontAtlas`, `resolveBrowserFontAtlasSettings`,
 and the `BrowserFontRenderer` type for integrations that supply their own glyph images.
 The renderer measures glyphs and font-wide metrics and returns `ImageData` for each glyph.
 Omitting `cacheKey` builds an independent atlas; callers that opt into shared caching must
 provide a key that uniquely identifies the renderer and all rasterization settings.
 
 ```ts
-import {buildBrowserFontAtlas, resolveBrowserFontAtlasSettings} from '@luma.gl/text/fonts';
+import {buildBrowserFontAtlas, resolveBrowserFontAtlasSettings} from '@luma.gl/engine/text-fonts';
 
 const atlas = buildBrowserFontAtlas({
   settings: resolveBrowserFontAtlasSettings({characterSet: 'Hello'}),

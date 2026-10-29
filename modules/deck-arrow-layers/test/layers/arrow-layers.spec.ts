@@ -24,7 +24,7 @@ import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
-import {buildBitmapFontAtlas} from '@luma.gl/text';
+import {buildBitmapFontAtlas} from '@luma.gl/engine/text';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {

@@ -6,23 +6,23 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import esbuild from 'esbuild';
 import {describe, expect, test} from 'vitest';
-import * as fontsModule from '../../src/fonts/index';
-import * as textModule from '../../src/index';
+import * as fontsModule from '../../../src/text/fonts/index';
+import * as textModule from '../../../src/text/index';
 
-describe('@luma.gl/text/fonts package boundary', () => {
+describe('@luma.gl/engine/text-fonts package boundary', () => {
   test('publishes the existing side-effect-free ESM, CommonJS, and types subpath', () => {
     const packageJson = JSON.parse(
-      readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')
     ) as {
       sideEffects?: boolean;
       exports?: Record<string, Record<string, string>>;
     };
 
     expect(packageJson.sideEffects).toBe(false);
-    expect(packageJson.exports?.['./fonts']).toEqual({
-      types: './dist/fonts/index.d.ts',
-      import: './dist/fonts/index.js',
-      require: './dist/fonts/index.cjs'
+    expect(packageJson.exports?.['./text-fonts']).toEqual({
+      types: './dist/text/fonts/index.d.ts',
+      import: './dist/text/fonts/index.js',
+      require: './dist/text/fonts/index.cjs'
     });
   });
 
@@ -60,7 +60,7 @@ describe('@luma.gl/text/fonts package boundary', () => {
 
   test('bundles without luma.gl, loaders.gl, or GPU implementation modules', async () => {
     const buildResult = await esbuild.build({
-      entryPoints: [resolve('modules/text/src/fonts/index.ts')],
+      entryPoints: [resolve('modules/engine/src/text/fonts/index.ts')],
       bundle: true,
       format: 'esm',
       logLevel: 'silent',
@@ -73,7 +73,8 @@ describe('@luma.gl/text/fonts package boundary', () => {
     const forbiddenInputs = bundledInputs.filter(
       input =>
         /node_modules\/@(?:luma|loaders)\.gl\//.test(input) ||
-        /modules\/(?:core|engine|experimental|gpgpu)\//.test(input)
+        (/modules\/(?:core|engine|experimental|gpgpu)\//.test(input) &&
+          !input.startsWith('modules/engine/src/text/fonts/'))
     );
     const bundledPackages = bundledInputs
       .filter(input => input.includes('node_modules/'))

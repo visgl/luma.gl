@@ -495,7 +495,7 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['anari', 'arrow', 'engine/splats', 'text']) {
+    for (const experimentalPackage of ['anari', 'arrow', 'engine/splats', 'engine/text']) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );
@@ -557,7 +557,7 @@ describe('framework capabilities documentation', () => {
       expect(moduleRow![2]).not.toContain(`${otherBackend} API`);
     }
 
-    const textRow = moduleRows.find(row => row[0].includes('@luma.gl/text'));
+    const textRow = moduleRows.find(row => row[0].includes('@luma.gl/engine/text'));
     expect(textRow?.[1]).toBe('Experimental');
 
     for (const packageName of ['arrow']) {
