@@ -21,7 +21,7 @@ let cellKey = dggs_u64_from_little_endian_words(cellKeys[cellIndex]);
 ```
 
 The module exposes Uint64 word helpers plus encoding-specific boundary and
-coordinate helpers used by `@luma.gl/gpgpu/arrow` DGGS preparation. Application code
+coordinate helpers used by `@luma.gl/graph/arrow` DGGS preparation. Application code
 usually reaches it through `prepareDggsCellKeyGPUVector()` and
 `prepareDggsCellPathGPUVector()` rather than calling every WGSL helper directly.
 

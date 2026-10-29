@@ -13,11 +13,11 @@ import {ArrowGeoArrowExample, ArrowRenderingDocsExample} from '@site/src/example
 
 Apache Arrow conversion is available through optional subpaths of the published luma.gl packages.
 Install `apache-arrow` alongside the packages whose adapters you use. The generic package roots
-remain usable without Apache Arrow. `graph/arrow` also uses the existing optional
-`@math.gl/geospatial` peer for GeoArrow conversion.
+remain usable without Apache Arrow. The graph package installs its required
+`@math.gl/geospatial` dependency for GeoArrow conversion automatically.
 
 ```bash
-yarn add @luma.gl/gpgpu @luma.gl/graph @luma.gl/engine apache-arrow @math.gl/geospatial
+yarn add @luma.gl/gpgpu @luma.gl/graph @luma.gl/engine apache-arrow
 ```
 
 | Import | Responsibilities |

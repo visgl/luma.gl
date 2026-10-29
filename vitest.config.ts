@@ -120,7 +120,7 @@ const nodeCoverageNativePatterns = [
   'modules/engine/test/gltf/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
   'modules/{gpgpu,graph,engine}/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
-  'modules/graph/test/arrow/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
+  'modules/engine/test/arrow/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/engine/test/splats/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/graph/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
   'modules/gpgpu/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',

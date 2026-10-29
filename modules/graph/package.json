@@ -207,13 +207,9 @@
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.5",
     "@luma.gl/shaders": "~10.0.0-alpha.5",
-    "@math.gl/geospatial": "~5.0.0-beta.1",
     "apache-arrow": ">=17.0.0"
   },
   "peerDependenciesMeta": {
-    "@math.gl/geospatial": {
-      "optional": true
-    },
     "apache-arrow": {
       "optional": true
     }
@@ -221,6 +217,7 @@
   "dependencies": {
     "@luma.gl/gpgpu": "10.0.0-alpha.5",
     "@math.gl/core": "~5.0.0-beta.1",
+    "@math.gl/geospatial": "~5.0.0-beta.1",
     "probe.gl": "^5.0.0"
   }
 }

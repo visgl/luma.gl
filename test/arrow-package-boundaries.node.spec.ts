@@ -24,6 +24,12 @@ describe('optional Arrow conversion entries', () => {
     }
   });
 
+  it('installs the GeoArrow runtime required by table and rendering adapter entries', () => {
+    const manifest = JSON.parse(readFileSync('modules/graph/package.json', 'utf8'));
+    expect(manifest.dependencies['@math.gl/geospatial']).toBeDefined();
+    expect(manifest.peerDependenciesMeta['@math.gl/geospatial']).toBeUndefined();
+  });
+
   it('keeps generic package roots usable without Apache Arrow', async () => {
     const result = await build({
       entryPoints: owners.map(owner => `modules/${owner}/src/index.ts`),

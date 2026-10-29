@@ -114,7 +114,7 @@ views with a `column` descriptor, retain null rows, and allocate no coordinate b
 Keep the source storage alive and do not mutate or detach it while views are in use.
 These APIs require native GeoArrow geometry; decode WKB/WKT before requesting views.
 
-`@luma.gl/gpgpu/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from
+`@luma.gl/graph/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from
 `@math.gl/geospatial/geoarrow`. `makeGeoArrowColumnFromArrowVector()` borrows the source buffers, while
 interleaving, WKB/WKT decoding, dense-union normalization, and polygon tessellation delegate to
 math.gl. Renderer-specific color expansion and GPU resource creation remain in luma.gl.
