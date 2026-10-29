@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GLTFExtensionStandardStatus, GLTFExtensionSupportLevel} from '@luma.gl/gltf';
+import type {GLTFExtensionStandardStatus, GLTFExtensionSupportLevel} from '@luma.gl/engine/gltf';
 
 import {
   getGLTFReferenceLedger,

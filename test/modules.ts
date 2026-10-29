@@ -21,7 +21,7 @@ import '../modules/core/test/webgpu/index';
 
 // CROSS-DEVICE TESTS
 import '@luma.gl/engine/test';
-import '@luma.gl/gltf/test';
+import '@luma.gl/engine/test/gltf';
 
 // EXPERIMENTAL
 import '@luma.gl/arrow/test';

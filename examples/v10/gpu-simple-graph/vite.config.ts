@@ -11,7 +11,7 @@ const alias = {
   '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,
   '@luma.gl/engine/tables': `${__dirname}/../../../modules/engine/src/graph/tables`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
-  '@luma.gl/gltf': `${__dirname}/../../../modules/gltf/src`,
+  '@luma.gl/engine/gltf': `${__dirname}/../../../modules/engine/src/gltf`,
   '@luma.gl/gpgpu/_internal': `${__dirname}/../../../modules/gpgpu/src/execution`,
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,

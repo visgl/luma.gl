@@ -27,7 +27,7 @@ describe('glTF module and showcase identity', () => {
 
   test('describes glTF as an animated physical-asset and interchange module', () => {
     const packageMetadata = JSON.parse(
-      readFileSync(path.join(process.cwd(), 'modules/gltf/package.json'), 'utf8')
+      readFileSync(path.join(process.cwd(), 'modules/engine/package.json'), 'utf8')
     );
     const moduleDocumentation = readFileSync(
       path.join(process.cwd(), 'docs/api-reference/gltf/README.md'),
@@ -42,10 +42,8 @@ describe('glTF module and showcase identity', () => {
       'utf8'
     );
 
-    expect(packageMetadata.description).toMatch(/physical materials[\s\S]*animation/i);
-    expect(packageMetadata.keywords).toEqual(
-      expect.arrayContaining(['gltf', 'glb', 'webgpu', 'pbr', 'animation'])
-    );
+    expect(packageMetadata.exports['./gltf'].import).toBe('./dist/gltf/index.js');
+    expect(packageMetadata.exports['./gltf-physics'].import).toBe('./dist/gltf/physics/index.js');
     expect(moduleDocumentation).toMatch(/standards-first asset runtime/i);
     expect(interchangeDocumentation).toContain('KHR_animation_pointer');
     expect(interchangeDocumentation).toContain('EXT_mesh_gpu_instancing');
@@ -62,7 +60,7 @@ describe('glTF module and showcase identity', () => {
       'utf8'
     );
     const packageOverview = readFileSync(
-      path.join(process.cwd(), 'modules/gltf/README.md'),
+      path.join(process.cwd(), 'modules/engine/src/gltf/README.md'),
       'utf8'
     );
     const capabilities = readFileSync(
@@ -72,7 +70,7 @@ describe('glTF module and showcase identity', () => {
 
     expect(overview).toMatch(/^## Loading and postprocessing$/m);
     expect(overview).toContain(
-      '`@luma.gl/gltf` owns its glTF document types and `postProcessGLTF()`'
+      '`@luma.gl/engine/gltf` owns its glTF document types and `postProcessGLTF()`'
     );
     expect(overview).toContain('Existing loaders.gl postprocessed');
     for (const capability of [

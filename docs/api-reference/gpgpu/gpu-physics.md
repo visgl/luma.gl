@@ -106,9 +106,9 @@ attachment; construct a replacement world.
 The Sphere World, Pool, Rigid Body Lab and Space Salvage examples use procedural scenes.
 Space Salvage exercises public collision events and queries for towing, docking and
 impact feedback. The glTF
-Physics example tests authored semantics through the separate `@luma.gl/gltf/physics`
+Physics example tests authored semantics through the separate `@luma.gl/engine/gltf-physics`
 adapter. Its supported draft profile and render integration limitations are documented
-in the [adapter reference](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md).
+in the [adapter reference](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/gltf/physics/README.md).
 
 [Qualification tooling](https://github.com/visgl/luma.gl/blob/master/scripts/physics/README.md)
 separates schema/import evidence, numerical behavior, capacity and performance.

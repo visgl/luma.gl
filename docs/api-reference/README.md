@@ -30,7 +30,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/arrow`][arrow] | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
 | [`@luma.gl/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/splats`][splats] | Experimental | Gaussian splat rendering and caller-owned prepared GPU splat data. |
-| [`@luma.gl/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
+| [`@luma.gl/engine/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
 | [`@luma.gl/test-utils`][test-utils] | Optional | Test setups, in particular support for rendering and comparing images. |
 
 Select at least one adapter from the core backend subpaths when creating a device.
@@ -50,7 +50,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/splats`][splats] for experimental Gaussian splat rendering and caller-owned prepared GPU data.
 - [Engine experimental utilities](/docs/api-reference/engine/experimental) for controls, material plugins, textures, and WebXR helpers.
 - [`@luma.gl/graph/experimental`](/docs/api-reference/experimental) for path/polygon models and flow/fluid simulations.
-- [`@luma.gl/gltf`][gltf] for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.
+- [`@luma.gl/engine/gltf`][gltf] for standards-first glTF assets, physical materials, character animation, native extensions, and source-faithful `.gltf`/`.glb` interchange.
 - [`@luma.gl/core/webgl`][webgl] and [`@luma.gl/core/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
 - [`@luma.gl/core/webgl-constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.
 

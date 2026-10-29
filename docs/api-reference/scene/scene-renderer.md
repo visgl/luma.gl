@@ -279,10 +279,10 @@ split-sum BRDF lookup texture on WebGL or WebGPU.
 
 Applications that already use the glTF environment loader can await its `DynamicTexture`
 resources and adapt their underlying textures without introducing an experimental dependency into
-`@luma.gl/gltf`:
+`@luma.gl/engine/gltf`:
 
 ```ts
-import {loadPBREnvironment} from '@luma.gl/gltf';
+import {loadPBREnvironment} from '@luma.gl/engine/gltf';
 import {loadImageTexture} from '@loaders.gl/textures';
 
 const loadedEnvironment = loadPBREnvironment(device, {
@@ -447,7 +447,7 @@ Releases all renderer-owned frame resources.
 - [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material) documents canonical
   physically based shader uniforms and bindings.
 - [`GBuffer`](/docs/api-reference/scene/g-buffer) documents the deferred attachment model.
-- [`@luma.gl/gltf`](/docs/api-reference/gltf) owns glTF parsing, material interpretation,
+- [`@luma.gl/engine/gltf`](/docs/api-reference/gltf) owns glTF parsing, material interpretation,
   environment-image loading, and animation decoding.
 
 ## Tiled ray image export

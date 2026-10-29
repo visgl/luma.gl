@@ -56,8 +56,8 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     }
   },
   {
-    packageName: '@luma.gl/gltf',
-    entryPoint: 'modules/gltf/src/index.ts',
+    packageName: '@luma.gl/engine/gltf',
+    entryPoint: 'modules/engine/src/gltf/index.ts',
     documentation: {
       kind: 'curated',
       defaultRoute: '/docs/api-reference/gltf',

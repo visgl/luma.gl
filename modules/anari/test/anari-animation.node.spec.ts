@@ -7,7 +7,11 @@ import {
   makeANARIAnimationScene
 } from '@luma.gl/anari/gltf';
 import {GroupNode} from '@luma.gl/engine';
-import type {GLTFAnimation, GLTFMaterialAnimationProperty, GLTFScenegraphs} from '@luma.gl/gltf';
+import type {
+  GLTFAnimation,
+  GLTFMaterialAnimationProperty,
+  GLTFScenegraphs
+} from '@luma.gl/engine/gltf';
 import {NullDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
@@ -22,9 +26,9 @@ it('ANARI keeps optional glTF integration isolated from its root entry point', a
   );
 
   expect(
-    packageContents.peerDependenciesMeta['@luma.gl/gltf'].optional,
-    'the glTF integration dependency remains optional'
-  ).toBe(true);
+    packageContents.peerDependencies['@luma.gl/engine'],
+    'glTF uses the existing engine dependency through an isolated subpath'
+  ).toBeDefined();
   expect(
     packageContents.exports['./gltf'],
     'the isolated adapter declares TypeScript, ESM, and CommonJS entry points'

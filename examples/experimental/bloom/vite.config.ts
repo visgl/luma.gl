@@ -8,7 +8,7 @@ const alias = {
   '@luma.gl/engine/tables': `${__dirname}/../../../modules/engine/src/graph/tables`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
-  '@luma.gl/gltf': `${__dirname}/../../../modules/gltf/src`,
+  '@luma.gl/engine/gltf': `${__dirname}/../../../modules/engine/src/gltf`,
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl-constants`,
   '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,

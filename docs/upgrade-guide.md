@@ -132,7 +132,7 @@ DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from
 
 ### Scene controllers move to engine
 
-The glTF-prefixed skin, material-variant, billboard, area-light, audio, and interactivity runtime APIs have been removed from `@luma.gl/gltf`. Import `SkinController`, `MaterialVariants`, `BillboardController`, `AreaLightController`, `AudioController`, and `Interactivity` from `@luma.gl/engine` instead. Audio graph and environment helpers also belong to engine.
+The glTF-prefixed skin, material-variant, billboard, area-light, audio, and interactivity runtime APIs have been removed from `@luma.gl/engine/gltf`. Import `SkinController`, `MaterialVariants`, `BillboardController`, `AreaLightController`, `AudioController`, and `Interactivity` from `@luma.gl/engine` instead. Audio graph and environment helpers also belong to engine.
 
 Use `parseGLTFSkins()`, `parseGLTFMaterialVariants()`, `parseGLTFBillboards()`, `parseGLTFAreaLights()`, or `parseGLTFAudio()` to map imported data into engine construction props. `createScenegraphsFromGLTF()` already returns engine skin and variant controllers.
 
@@ -388,7 +388,7 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 
 ## Module loader dependencies
 
-- `exportGLTF` and its `GLTFExport*` descriptor types moved from `@luma.gl/gltf` to
+- `exportGLTF` and its `GLTFExport*` descriptor types moved from `@luma.gl/engine/gltf` to
   the shared `examples/gltf/gltf-exporter.ts` application helper. Copy it into your application
   when exporting assets; it uses loaders.gl for GLB encoding.
 - `loadPBREnvironment()` now requires a `loadImage` callback. Pass your application image loader,
@@ -414,3 +414,10 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 ### GPU vector rendering imports
 
 `GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/gpgpu` or `@luma.gl/gpgpu/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant remain in gpgpu/gpu-data. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.
+
+### glTF imports
+
+The `@luma.gl/gltf` package has been removed. Import its API from `@luma.gl/engine/gltf`,
+and replace `@luma.gl/gltf/physics` with `@luma.gl/engine/gltf-physics`. These are explicit
+subpaths: importing the engine root does not import the glTF runtime. No compatibility package
+is retained. Install `@luma.gl/engine` instead of `@luma.gl/gltf`.

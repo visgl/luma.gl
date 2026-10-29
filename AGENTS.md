@@ -57,7 +57,7 @@
 - It is preferred to use `import * as arrow from 'apache-arrow'` in tests, examples, and docs.
 
 ## Geometry attribute naming
-- Built-in engine geometries and `@luma.gl/gltf` geometry use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
+- Built-in engine geometries and `@luma.gl/engine/gltf` geometry use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 - `Geometry.attributes` preserves source keys. Do not camelCase or alias those keys in the CPU geometry container.
 - `bufferLayout`, `GPUGeometry`, and `Model` bindings are shader-facing metadata. Convert source semantics only at adapter and model boundaries.
 - Explicit `bufferLayout` is caller-owned and must not be normalized by `Geometry`.

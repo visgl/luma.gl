@@ -60,6 +60,16 @@
       "types": "./dist/graph/models/index.d.ts",
       "import": "./dist/graph/models/index.js",
       "require": "./dist/graph/models/index.cjs"
+    },
+    "./gltf": {
+      "types": "./dist/gltf/index.d.ts",
+      "import": "./dist/gltf/index.js",
+      "require": "./dist/gltf/index.cjs"
+    },
+    "./gltf-physics": {
+      "types": "./dist/gltf/physics/index.d.ts",
+      "import": "./dist/gltf/physics/index.js",
+      "require": "./dist/gltf/physics/index.cjs"
     }
   },
   "files": [

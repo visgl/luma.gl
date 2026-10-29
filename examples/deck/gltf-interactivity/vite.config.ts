@@ -7,7 +7,7 @@ export default defineConfig(({mode}) => ({
       : './',
   resolve: {
     alias: {
-      '@luma.gl/gltf': `${__dirname}/../../../modules/gltf/src`,
+      '@luma.gl/engine/gltf': `${__dirname}/../../../modules/engine/src/gltf`,
       '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
       '@luma.gl/engine/models': `${__dirname}/../../../modules/engine/src/graph/models`,
       '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,

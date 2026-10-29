@@ -176,3 +176,12 @@ for (const name of ['getWebGPUTestDevice', 'NullDevice', 'nullAdapter']) {
   assert.equal(deviceTestUtilities[name], testUtilities[name]);
 }
 process.stdout.write('Verified device helper CommonJS identities.\n');
+
+// glTF subpaths reuse engine scenegraph constructors in both module formats.
+const gltfApi = require('@luma.gl/engine/gltf');
+const gltfPhysicsApi = require('@luma.gl/engine/gltf-physics');
+const gltfEsm = await import('../modules/engine/dist/gltf/index.js');
+assert.equal(typeof gltfApi.createScenegraphsFromGLTF, 'function');
+assert.equal(typeof gltfEsm.createScenegraphsFromGLTF, 'function');
+assert.equal(typeof gltfPhysicsApi.parseGLTFPhysics, 'function');
+assert(!('createScenegraphsFromGLTF' in engineApi));

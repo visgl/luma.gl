@@ -5,7 +5,7 @@
 import {loadImageTexture} from '@loaders.gl/textures';
 import {RenderPass, log} from '@luma.gl/core';
 import {type AnimationLoopMode, AnimationProps, ClipSpace} from '@luma.gl/engine';
-import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/gltf';
+import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/engine/gltf';
 import {type LightingProps} from '@luma.gl/shadertools';
 import {
   ColumnPanel,

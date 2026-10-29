@@ -173,7 +173,7 @@ Target Release Date: Q3, 2026
 
 - **Experimental GPU sphere physics** - `@luma.gl/graph/gpu-physics` adds grid-based bounded contacts, inverse-mass Jacobi solving, solid-sphere angular dynamics, friction, sleeping and live finite-plane/gravity settings. The standalone sphere-world sandbox renders quaternion-driven cue-ball bands and benchmarks up to 10,000 GPU-resident bodies with explicit capacity diagnostics.
 - **Oriented GPU rigid bodies** - A bounded sphere/box world adds rotated inertia, clipped contact manifolds, friction and island sleeping, with stack and large-count sphere examples.
-- **glTF physics draft import** - Optional `@luma.gl/gltf/physics` parses a pinned rigid-body/implicit-shape subset with capability reports, compound sphere/box ownership, authored mass/inertia, kinematic targets, collision filters and material policies. GPU scene synchronization and behavior bindings remain separate follow-ups.
+- **glTF physics draft import** - Optional `@luma.gl/engine/gltf-physics` parses a pinned rigid-body/implicit-shape subset with capability reports, compound sphere/box ownership, authored mass/inertia, kinematic targets, collision filters and material policies. GPU scene synchronization and behavior bindings remain separate follow-ups.
 - **Persistent physics contacts and calibration** - Opt-in cached sphere/surface impulses, accumulated friction constraints, discarded simulation-time reporting and provenance-aware SI calibration fitting add reproducible numerical evidence.
 - **Bounded continuous sphere physics** - Optional small-world sphere/rectangle sweeps, persistent contact and pocket-trigger events, explicit impact/candidate budgets, static box surfaces and analytic material fixtures extend the physics module. Pool uses GPU pocket capture and event-driven clacks/trails, adds beveled jaws, hold-to-charge shooting with Escape cancellation, and automatic re-racking.
 - **Space Salvage and rigid-body collision APIs** - A top-down WebGPU salvage game exercises an opt-in GPU contact-event ring, exact sphere/box raycasts and sphere-overlap queries. Events retain begin/end and thresholded impact samples across steps with explicit loss reporting; asynchronous queries expose selection, nearest hits and overlap truncation.
@@ -219,7 +219,7 @@ Target Release Date: Q3, 2026
 - **Pinch-roll orbit controls** - Two-pointer gestures can roll the camera while preserving the
   existing pan, orbit, and zoom interactions.
 
-**@luma.gl/gltf**
+**@luma.gl/engine/gltf**
 
 - **Larger and richer animated meshes** - Skinning supports larger joint palettes and up to eight
   influences per vertex, while ordinary morph-weight animation uploads position, normal, and
@@ -369,7 +369,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **glTF-compatible interpolation** - Shared samplers evaluate `STEP`, `LINEAR`, and `CUBICSPLINE` tracks, including normalized quaternion interpolation, without depending on glTF-specific scene classes.
 - **[Portable morph-target deformation](/docs/api-reference/engine/animation/morph-targets)** - `applyMorphTargets()` and `updateMorphTargetBuffers()` blend position, normal, and tangent targets into existing interleaved GPU buffers while preserving immutable source geometry and tangent handedness.
 
-**@luma.gl/gltf**
+**@luma.gl/engine/gltf**
 
 - **[Source-faithful physical materials](/docs/api-reference/gltf/gltf-materials)** - One canonical texture-slot registry preserves all 17 supported PBR map slots, extension factors, UV sets, `KHR_texture_transform`, source color spaces, alpha masking, and double-sided materials.
 - **Authored samplers and mipmaps** - glTF and postprocessed loaders.gl sampler representations retain their wrapping, filtering, and mipmap settings; shared texture creation generates requested mip chains on both WebGL and WebGPU.
@@ -537,7 +537,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **`ShaderPassPipeline`** - New shader-pass pipeline type for structured multi-pass postprocessing.
 - **`waterMaterial`** - New water material shader module with GLSL and WGSL shaders.
 
-**@luma.gl/gltf**
+**@luma.gl/engine/gltf**
 
 - **Animation controllers** - `GLTFAnimator` uses the shared engine `Animator` while retaining its existing `animations`, `animate()`, `setTime()`, and `getAnimations()` compatibility surface.
 - **Attribute identification** - PBR material setup recognizes both source glTF semantics and their shader-facing aliases.
@@ -584,7 +584,7 @@ Release Date: March 31, 2026
 
 - **RenderPipeline optimization** - Compatible WebGL render pipelines now share linked `WebGLProgram`s, reducing pipeline creation overhead while preserving per-pipeline defaults.
 
-**@luma.gl/gltf**
+**@luma.gl/engine/gltf**
 
 - **WebGPU support** - glTF models can now be rendered in WebGPU.
 - **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
@@ -594,8 +594,8 @@ Release Date: March 31, 2026
 - **PBR material extensions** - the stock `pbrMaterial` shader now implements `KHR_materials_specular`, `KHR_materials_ior`, `KHR_materials_transmission`, `KHR_materials_volume`, `KHR_materials_clearcoat`, `KHR_materials_sheen`, `KHR_materials_iridescence`, and `KHR_materials_anisotropy`, using the parsed glTF extension uniforms and textures.
 - **Emissive materials** - the stock PBR shader now applies `KHR_materials_emissive_strength`, and core `emissiveFactor` values are preserved even when no emissive texture is present.
 - **`KHR_animation_pointer`** - `createScenegraphsFromGLTF()` and `GLTFAnimator` now animate supported node TRS targets, selected material factors, and animated `KHR_texture_transform` offset/rotation/scale targets on stock PBR material texture slots. Structural targets such as animated `texCoord`, morph weights, cameras, and material mode switches remain unsupported.
-- **Extension support docs** - the [`glTF Extension Support`](/docs/api-reference/gltf/gltf-extensions) table now documents the current built-in vs parsed-only extension coverage for `@luma.gl/gltf`.
-- **Extension support metadata** - `createScenegraphsFromGLTF()` now exposes an `extensionSupport` map so applications can inspect which extensions a model uses and whether `@luma.gl/gltf` supports them.
+- **Extension support docs** - the [`glTF Extension Support`](/docs/api-reference/gltf/gltf-extensions) table now documents the current built-in vs parsed-only extension coverage for `@luma.gl/engine/gltf`.
+- **Extension support metadata** - `createScenegraphsFromGLTF()` now exposes an `extensionSupport` map so applications can inspect which extensions a model uses and whether `@luma.gl/engine/gltf` supports them.
 
 **@luma.gl/shadertools**
 
@@ -774,7 +774,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 | -------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
 | **`@luma.gl/core`**        | New API           | The new portable luma.gl GPU API. Applications can run on both WebGPU and WebGL2 devices.                       |
 | **`@luma.gl/engine`**      | Light API updates | Classic luma.gl engine classes ()`Model`, `AnimationLoop` etc), which work portably on both WebGPU and WebGL 2. |
-| **`@luma.gl/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
+| **`@luma.gl/engine/gltf`**        | Renamed module    | New module that exports the glTF classes (moved from `@luma.gl/experimental`).                                  |
 | **`@luma.gl/shadertools`** | Light API updates | The shader assembler API and the shader module library.                                                         |
 | **`@luma.gl/webgl`**       | WebGL backend     | Optional "GPU backend module". Importing this module enables the application to create WebGL 2 `Device`s.       |
 | **`@luma.gl/webgpu`**      | WebGPU backend    | Experimental "GPU backend module". Importing this module enables the application to create WebGPU `Device`s.    |
@@ -800,7 +800,7 @@ On the upside this means that all features requiring WebGL 2 are now available a
 - NEW: `AnimationLoopTemplate` - Helper class for writing cleaner demos and applications in TypeScript.
 - New `Computation` - Class that manages a `ComputePipeline` similar to `Model` and `Transform`.
 
-**`@luma.gl/gltf`**
+**`@luma.gl/engine/gltf`**
 
 - New module that exports the glTF classes (moved from `@luma.gl/experimental`).
 
