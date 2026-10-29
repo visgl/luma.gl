@@ -12,6 +12,7 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/engine/models': `${__dirname}/../../../modules/engine/src/graph/models`,
       '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,
       '@luma.gl/engine/tables': `${__dirname}/../../../modules/engine/src/graph/tables`,
+      '@luma.gl/engine/gltf-physics': `${__dirname}/../../../modules/engine/src/gltf/physics`,
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
       '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
       '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,
