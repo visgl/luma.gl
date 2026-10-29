@@ -16,6 +16,9 @@ const config = {
   },
 
   aliases: {
+    // Match the gpgpu export map instead of appending _internal to the package directory.
+    '@luma.gl/gpgpu/_internal': join(packageRoot, 'modules/gpgpu/src/execution'),
+
     // DEV MODULES
     'dev-modules': devModules,
 
