@@ -12,7 +12,7 @@ This page contains release notes for older luma.gl releases (up through v8.5). F
 
 Date: Jul 15, 2021
 
-**`@luma.gl/shaders`**
+**`@luma.gl/shadertools`**
 
 - GLSL transpiler now handles `gl_FragColor` in fragment shader when transpiling from ES 1.00 to 3.00
 - New `magnify` effect

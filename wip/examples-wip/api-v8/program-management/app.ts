@@ -1,6 +1,6 @@
 
 import {getRandomNumberGenerator, glsl} from '@luma.gl/core';
-import {dirlight as dirlightBase} from '@luma.gl/shaders';
+import {dirlight as dirlightBase} from '@luma.gl/shadertools';
 import {PipelineFactory} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
