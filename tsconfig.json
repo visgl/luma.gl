@@ -48,6 +48,8 @@
       "@deck.gl-community/gpu-layers": ["./modules/deck-gpu-layers/src/index.ts"],
       "@deck.gl-community/gpu-layers/*": ["./modules/deck-gpu-layers/src/*"],
       "@deck.gl-community/gpu-layers/test/*": ["./modules/deck-gpu-layers/test/*"],
+      "@luma.gl/core/test-utils": ["./modules/core/src/test-utils/index.ts"],
+      "@luma.gl/core/test-utils/*": ["./modules/core/src/test-utils/*"],
       "@luma.gl/core": ["./modules/core/src/index.ts"],
       "@luma.gl/core/webgl": ["./modules/core/src/webgl/index.ts"],
       "@luma.gl/core/webgl/*": ["./modules/core/src/webgl/*"],
@@ -94,9 +96,6 @@
       "@luma.gl/three/*": ["./modules/three/src/*"],
       "@luma.gl/text/*": ["./modules/text/src/*"],
       "@luma.gl/text/test/*": ["./modules/text/test/*"],
-      "@luma.gl/test-utils": ["./modules/test-utils/src/index.ts"],
-      "@luma.gl/test-utils/*": ["./modules/test-utils/src/*"],
-      "@luma.gl/test-utils/test/*": ["./modules/test-utils/test/*"],
       "dev-modules/*": ["./dev-modules/*"],
       "test/*": ["./test/*"]
     },

@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   assembleGLSLShaderPair,
   colors,

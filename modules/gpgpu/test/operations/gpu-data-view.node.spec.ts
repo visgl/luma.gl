@@ -8,7 +8,7 @@ import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {add, backendRegistry, GPUDataEvaluator} from '@luma.gl/gpgpu';
 import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
 import {GPUData, GPUDataView} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 backendRegistry.add('null', cpuBackend);
 

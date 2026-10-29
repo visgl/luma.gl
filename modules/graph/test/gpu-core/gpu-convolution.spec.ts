@@ -11,7 +11,7 @@ import {
   type GPUConvolutionBoundary,
   type GPUConvolutionStrategy
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUConvolution direct path matches CPU convolution for zero and wrap boundaries', async () => {
   const device = await getWebGPUTestDevice();

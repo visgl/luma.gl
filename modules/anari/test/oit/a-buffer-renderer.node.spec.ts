@@ -13,7 +13,7 @@ import {
   getABufferSlicePlan,
   getABufferSupport
 } from '@luma.gl/anari';
-import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('aBuffer plugin exposes the WGSL module only', () => {
   expect(aBufferPlugin.name, 'plugin has stable name').toBe('aBuffer');

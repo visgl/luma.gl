@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {
   GPUSphereWorld,

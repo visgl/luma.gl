@@ -12,7 +12,7 @@ import type {
   GLTFMaterialAnimationProperty,
   GLTFScenegraphs
 } from '@luma.gl/engine/gltf';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {

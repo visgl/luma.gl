@@ -12,7 +12,7 @@ import {
   GPURasterThreshold,
   type GPURasterBufferBand
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPURaster contrast and threshold controls change actual GPU histogram bins and scalar statistics', async () => {
   const device = await getWebGPUTestDevice();

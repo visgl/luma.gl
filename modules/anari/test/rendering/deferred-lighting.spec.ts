@@ -12,7 +12,7 @@ import {
   makeDeferredPointLightBufferData,
   MAX_DEFERRED_POINT_LIGHTS
 } from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('deferred lighting packs fixed-size point-light records', () => {
   const data = makeDeferredPointLightBufferData(

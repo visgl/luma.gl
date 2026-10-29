@@ -12,7 +12,7 @@ import {exportGLTF} from '../../../../../examples/gltf/gltf-exporter';
 
 import {parseGLTFAnimations} from '@luma.gl/engine/gltf/parsers/parse-gltf-animations';
 import {parsePBRMaterial} from '@luma.gl/engine/gltf/parsers/parse-pbr-material';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 
 const device = new NullDevice({});

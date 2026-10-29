@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUA5CellProjection} from '@luma.gl/graph/gpu-a5';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const A5_CELLS = [
   0x0200000000000000n,

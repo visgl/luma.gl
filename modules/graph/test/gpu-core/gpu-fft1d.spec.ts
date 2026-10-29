@@ -11,7 +11,7 @@ import {
   runGPUFFT1DBenchmark,
   type GPUFFT1DStrategy
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUFFT1D matches a CPU DFT for independent packed batches', async () => {
   const device = await getWebGPUTestDevice();

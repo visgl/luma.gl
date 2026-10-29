@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, Device, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const WIDTH = 4;
 const HEIGHT = 4;

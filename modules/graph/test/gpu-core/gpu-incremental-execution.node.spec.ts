@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {GPUIncrementalExecution, type GPUIncrementalBatch} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, test, vi} from 'vitest';
 
 function createFixture() {

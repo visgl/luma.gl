@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {lambertMaterial} from '@luma.gl/shadertools';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 import {makeShaderModuleRenderer} from '../render-shader-module';
 
 for (const backend of ['webgpu', 'webgl'] as const) {

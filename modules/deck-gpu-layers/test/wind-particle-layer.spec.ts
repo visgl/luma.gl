@@ -4,7 +4,7 @@
 import {COORDINATE_SYSTEM, Deck, OrthographicView} from '@deck.gl/core';
 import {luma, Texture, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {WindParticleLayer, WindSimulationEffect} from '../src';
 

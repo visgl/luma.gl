@@ -9,7 +9,7 @@ import {
   getPresentationWebGLTestDevice,
   getWebGLTestDevice,
   getWebGPUTestDevice
-} from '@luma.gl/test-utils/device';
+} from '@luma.gl/core/test-utils';
 
 it('WebGLPresentationContext delegates framebuffer sizing and present()', async () => {
   const device = await getPresentationWebGLTestDevice();

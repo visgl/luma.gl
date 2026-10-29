@@ -6,7 +6,7 @@ import {
   getWebGLTestDevice,
   getTestDevices,
   getWebGPUTestDevice
-} from '@luma.gl/test-utils/device';
+} from '@luma.gl/core/test-utils';
 
 import {
   TypedArray,

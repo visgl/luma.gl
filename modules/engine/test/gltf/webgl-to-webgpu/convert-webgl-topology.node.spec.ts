@@ -8,7 +8,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF, createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 import {ModelNode} from '@luma.gl/engine';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 
 import {GLEnum} from '../../../src/gltf/webgl-to-webgpu/gltf-webgl-constants';

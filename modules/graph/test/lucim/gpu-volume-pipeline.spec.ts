@@ -10,7 +10,7 @@ import {
   GPUVolumeRegionMeasurements,
   GPUVolumeThreshold
 } from '@luma.gl/graph/lucim';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 it('LuCIM composes threshold, morphology, 3D components, and region bounds without readback', async () => {

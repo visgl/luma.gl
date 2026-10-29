@@ -12,7 +12,7 @@ import {
   type GPURasterScalarFormat,
   type GPURasterThresholdOperation
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPURasterThreshold evaluates inclusive and exclusive above, below, and range policies', async () => {
   const device = await getWebGPUTestDevice();

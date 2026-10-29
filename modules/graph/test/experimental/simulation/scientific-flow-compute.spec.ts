@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
 import {ScientificFlowGraph} from '@luma.gl/graph/experimental/simulation';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 
 for (const integrator of ['rk2', 'rk4'] as const) {
   it(`ScientificFlowGraph ${integrator} integrates an analytic rotation on WebGPU`, async context => {

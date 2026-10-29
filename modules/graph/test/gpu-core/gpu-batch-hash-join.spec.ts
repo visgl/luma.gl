@@ -10,7 +10,7 @@ import {
   GPUHashIndex,
   GraphVectorView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUBatchHashJoin preserves uneven and empty batch boundaries', async () => {
   const device = await getWebGPUTestDevice();

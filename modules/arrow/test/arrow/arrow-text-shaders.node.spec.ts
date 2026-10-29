@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {getArrowTextRenderModules} from '@luma.gl/arrow';
 import {WGSLShaderAssembler, type PlatformInfo} from '@luma.gl/shadertools';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   configureArrowTextShaderAssembler,
   TEXT_DICTIONARY_STORAGE_WGSL_SHADER,

@@ -16,7 +16,7 @@ import {
   type SplatPickingInfo,
   type SplatSource
 } from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('Gaussian semantic filters preserve class selections and stable streamed source identity', () => {
   const device = new NullDevice({});

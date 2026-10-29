@@ -84,8 +84,8 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     }
   },
   {
-    packageName: '@luma.gl/test-utils',
-    entryPoint: 'modules/test-utils/src/index.ts',
+    packageName: '@luma.gl/core/test-utils',
+    entryPoint: 'modules/core/src/test-utils/index.ts',
     documentation: {
       kind: 'curated',
       defaultRoute: '/docs/api-reference/test-utils',

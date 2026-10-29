@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import type {WebGPUTexture} from '@luma.gl/core/webgpu';
 
 it('WebGPU compatibility devices bind cube textures as cube views', async () => {

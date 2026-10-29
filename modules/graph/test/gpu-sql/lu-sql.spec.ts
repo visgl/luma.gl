@@ -20,7 +20,7 @@ import {
 } from '@luma.gl/graph/gpu-dataframe';
 import {LuSQLContext} from '@luma.gl/graph/gpu-sql';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {expect, it} from 'vitest';
 

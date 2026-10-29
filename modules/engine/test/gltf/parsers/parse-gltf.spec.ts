@@ -13,7 +13,7 @@ import {
 } from '@luma.gl/engine/gltf';
 
 import {GroupNode, ModelNode} from '@luma.gl/engine';
-import {NullDevice, getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {NullDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
 import {parseGLTF} from '@luma.gl/engine/gltf/parsers/parse-gltf';
 

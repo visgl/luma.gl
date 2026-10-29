@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/engine/gltf';
 import type {RenderPass} from '@luma.gl/core';
 
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 async function loadLODFixture(

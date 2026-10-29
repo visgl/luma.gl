@@ -11,7 +11,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {Matrix4} from '@math.gl/core';
 
 import type {GLTFAudioExtension} from '../../../src/gltf/gltf/gltf-audio';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 function makeWave(): Uint8Array {
   const bytes = new Uint8Array(44 + 4800 * 2);

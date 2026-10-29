@@ -9,7 +9,7 @@ import {
   SplatResidencyManager,
   type GPUSplatData
 } from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   SplatHierarchyManager,
   getSplatHierarchyFoveatedPriority,

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 import {ShadowMapRenderer, type ShadowCamera} from '../../src/shadows/shadow-map-renderer';
 import {

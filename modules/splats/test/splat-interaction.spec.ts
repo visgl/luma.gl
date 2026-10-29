@@ -11,7 +11,7 @@ import {
   type SplatPickingInfo,
   type SplatSource
 } from '@luma.gl/splats';
-import {getTestDevices} from '@luma.gl/test-utils/device';
+import {getTestDevices} from '@luma.gl/core/test-utils';
 
 it('SplatPicker reads actual Gaussian source identities from WebGPU and WebGL picking targets', async () => {
   const devices = await getTestDevices(['webgpu', 'webgl']);

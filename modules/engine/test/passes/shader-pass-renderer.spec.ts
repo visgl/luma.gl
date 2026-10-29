@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {ShaderPassRenderer, ShaderInputs} from '@luma.gl/engine';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';

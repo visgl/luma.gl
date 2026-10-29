@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getTestDevices} from '@luma.gl/test-utils/device';
+import {getTestDevices} from '@luma.gl/core/test-utils';
 
 const BAD_SHADER_SOURCE = `\
 #define BAD_SHADERS

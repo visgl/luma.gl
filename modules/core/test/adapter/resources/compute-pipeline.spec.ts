@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice, getWebGPUTestDevices} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice, getWebGPUTestDevices} from '@luma.gl/core/test-utils';
 import {
   luma,
   ComputePipeline,

@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPULZ4RawDecompressor, parseLZ4RawDecompressionPlan} from '@luma.gl/graph/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPULZ4RawDecompressor resolves overlapping matches', async () => {
   const device = await getWebGPUTestDevice();

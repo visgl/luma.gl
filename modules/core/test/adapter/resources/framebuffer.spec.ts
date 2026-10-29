@@ -4,7 +4,7 @@
 
 /* eslint-disable max-len */
 import {expect, it} from 'vitest';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/core/webgl-constants';
 

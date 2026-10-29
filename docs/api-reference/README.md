@@ -31,7 +31,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/splats`][splats] | Experimental | Gaussian splat rendering and caller-owned prepared GPU splat data. |
 | [`@luma.gl/engine/gltf`][gltf] | Optional | Standards-first glTF assets, physical materials, character animation, and lossless interchange. |
-| [`@luma.gl/test-utils`][test-utils] | Optional | Test setups, in particular support for rendering and comparing images. |
+| [`@luma.gl/core/test-utils`][test-utils] | Optional | Test devices, null backend, and resource assertions. |
 
 Select at least one adapter from the core backend subpaths when creating a device.
 

@@ -6,7 +6,7 @@ import {expect, it, vi} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
-import {getTestDevices, NullDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, NullDevice} from '@luma.gl/core/test-utils';
 import {GPUPagedSplatRenderer} from '../src/gpu-paged-splat-renderer';
 import {
   GPU_PAGED_SPLAT_RENDER_SHADER,

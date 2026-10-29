@@ -30,7 +30,7 @@ import {
   pbrScene,
   WGSLShaderAssembler
 } from '@luma.gl/shadertools';
-import {getNullTestDevice} from '@luma.gl/test-utils/device';
+import {getNullTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';

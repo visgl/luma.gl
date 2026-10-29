@@ -4,7 +4,7 @@
 
 import {Buffer, Texture} from '@luma.gl/core';
 import {GPUGraph, GPUGraphCompiler} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test, vi} from 'vitest';
 
 test('program texture subresources and rebound imports compose in one submission', async () => {

@@ -5,7 +5,7 @@
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, GPUCompaction, GPUVisibilityWorkflow} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import {getGPUCompactionCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-compaction';
 import {

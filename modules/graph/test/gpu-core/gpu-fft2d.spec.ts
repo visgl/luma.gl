@@ -10,7 +10,7 @@ import {
   GraphVectorView,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it.each([
   {width: 4, height: 8, batchCount: 1, chunked: false},

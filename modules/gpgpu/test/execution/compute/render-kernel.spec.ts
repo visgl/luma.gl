@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {RenderKernel} from '@luma.gl/gpgpu';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 
 it('RenderKernel executes instanced WebGL transform feedback with per-draw topology and uniforms', async context => {
   const device = await getTestDevice('webgl');

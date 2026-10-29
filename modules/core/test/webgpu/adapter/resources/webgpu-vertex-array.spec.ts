@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, type ShaderLayout, type BufferLayout} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('WebGPUVertexArray rebinds split vertex layouts with repeated buffers and binding offsets', async () => {
   const webgpuDevice = await getWebGPUTestDevice();

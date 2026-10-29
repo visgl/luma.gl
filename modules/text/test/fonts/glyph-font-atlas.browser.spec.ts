@@ -5,7 +5,7 @@
 import {expect, test, vi} from 'vitest';
 import {isBrowser} from 'probe.gl/env';
 import {ClipSpace} from '@luma.gl/engine';
-import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {GPUTextResources} from '../../src/text-2d/gpu-text-resources';
 import {
   GlyphRangeLoader,

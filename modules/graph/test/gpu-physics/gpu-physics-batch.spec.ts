@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUPhysicsBatch, type GPURigidBodyWorldProps} from '../../src/gpu-physics';
 
 const fixture: GPURigidBodyWorldProps = {

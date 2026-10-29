@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
-import {nullAdapter} from '@luma.gl/test-utils/device';
+import {nullAdapter} from '@luma.gl/core/test-utils';
 import {luma, type Adapter} from '@luma.gl/core';
 
 it('luma#attachDevice', async () => {

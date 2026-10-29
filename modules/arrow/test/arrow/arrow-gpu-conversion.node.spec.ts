@@ -16,7 +16,7 @@ import {
 } from '@luma.gl/arrow';
 import {backendRegistry} from '@luma.gl/gpgpu';
 import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
-import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 
 backendRegistry.add('null', cpuBackend);

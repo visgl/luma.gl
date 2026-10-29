@@ -12,7 +12,7 @@ import {
   pbrMaterial,
   skin
 } from '@luma.gl/shadertools';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, test} from 'vitest';
 import {createScenegraphsFromGLTF} from '../../../src/gltf/gltf/create-scenegraph-from-gltf';

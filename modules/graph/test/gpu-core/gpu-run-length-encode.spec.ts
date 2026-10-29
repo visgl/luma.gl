@@ -6,7 +6,7 @@ import {describe, expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {GPURunLengthEncode} from '../../src/gpu-core/gpu-run-length-encode';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 describe('GPURunLengthEncode', () => {
   it('validates output capacity', async () => {

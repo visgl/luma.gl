@@ -10,7 +10,7 @@ import {
   type GPUSegmentedSortProps,
   type GPUSortSegment
 } from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import {getGPUSegmentedSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
 

@@ -11,7 +11,7 @@ import {
 import type {ShaderLayout} from '@luma.gl/core';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 
 it('GPUTable creates GPU vectors from shader-compatible Arrow table columns', () => {

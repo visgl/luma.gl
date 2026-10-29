@@ -11,7 +11,7 @@ import '@luma.gl/effects/test';
 
 // DEVICE INDEPENDENT TESTS
 import '@luma.gl/core/test';
-import '@luma.gl/test-utils/test';
+import '../modules/core/test/test-utils';
 
 // WEBGL ADAPTER TESTS
 import '../modules/core/test/webgl/index';

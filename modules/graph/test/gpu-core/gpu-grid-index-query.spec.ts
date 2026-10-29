@@ -12,7 +12,7 @@ import {
   type GPUGridIndexQueryKind,
   type GPUGridIndexSize
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const POSITIONS_2D = Float32Array.from([
   0.25, 0.25, 0.75, 0.75, 1.25, 0.25, 0.25, 1.25, 1.25, 1.25, 1.75, 1.75

@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/gpgpu';
 import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('SpectralOceanSimulation produces finite evolving displacements and unit normals', async () => {
   const device = await getWebGPUTestDevice();

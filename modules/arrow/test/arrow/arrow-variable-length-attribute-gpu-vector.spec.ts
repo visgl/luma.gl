@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from '@luma.gl/arrow';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 
 type ScalarNestedAttributeType = arrow.List<arrow.Int16>;

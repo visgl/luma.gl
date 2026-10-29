@@ -43,7 +43,7 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
 - Node test files run in worker threads and reuse the worker's module graph. Tests that replace
   globals or mutate module-level state must restore that state in an `afterEach` or `afterAll` hook.
 - `nodeOnlyTestPatterns` routes audited CPU-only legacy specs away from browser-page isolation.
-- Device-only tests import `@luma.gl/test-utils/device` to avoid loading legacy animation/test
+- Device-only tests import `@luma.gl/core/test-utils` to avoid loading legacy animation/test
   runners and eagerly creating an unused WebGL context in each isolated browser file.
 - Browser files run serially within each browser project,
   both locally and in CI: native keyboard/pointer tests need foreground focus, and concurrent

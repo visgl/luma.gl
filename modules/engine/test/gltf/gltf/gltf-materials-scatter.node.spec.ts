@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {resolveTextureTransformSlot} from '../../../src/gltf/pbr/texture-transform';
 import {parsePBRMaterial} from '../../../src/gltf/parsers/parse-pbr-material';
 import {

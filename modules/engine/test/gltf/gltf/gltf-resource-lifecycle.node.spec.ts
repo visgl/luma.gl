@@ -14,7 +14,7 @@ import {
 import type {Buffer, Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
 
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 
 async function loadLifecycleFixture(

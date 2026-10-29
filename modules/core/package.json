@@ -60,6 +60,16 @@
       "types": "./dist/dynamic/index.d.ts",
       "import": "./dist/dynamic/index.js",
       "require": "./dist/dynamic/index.cjs"
+    },
+    "./test-utils": {
+      "types": "./dist/test-utils/index.d.ts",
+      "import": "./dist/test-utils/index.js",
+      "require": "./dist/test-utils/index.cjs"
+    },
+    "./test-utils/legacy": {
+      "types": "./dist/test-utils/legacy.d.ts",
+      "import": "./dist/test-utils/legacy.js",
+      "require": "./dist/test-utils/legacy.cjs"
     }
   },
   "files": [
@@ -77,7 +87,13 @@
     "./dist/webgl-debug/spector.js",
     "./dist/webgl-debug/index.cjs",
     "./dist/webgl-debug/webgl-developer-tools.cjs",
-    "./dist/webgl-debug/spector.cjs"
+    "./dist/webgl-debug/spector.cjs",
+    "./src/test-utils/register-devices.ts",
+    "./dist/test-utils/register-devices.js",
+    "./dist/test-utils/register-devices.cjs",
+    "./src/test-utils/deprecated/sync-test-device.ts",
+    "./dist/test-utils/deprecated/sync-test-device.js",
+    "./dist/test-utils/deprecated/sync-test-device.cjs"
   ],
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",

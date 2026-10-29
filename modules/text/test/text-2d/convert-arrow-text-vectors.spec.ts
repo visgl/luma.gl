@@ -23,7 +23,7 @@ import {
 } from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {Device, ShaderLayout} from '@luma.gl/core';
-import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {type CharacterMapping, type FontAtlas} from '../../src/index';
 import {

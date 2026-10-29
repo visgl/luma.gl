@@ -4,7 +4,7 @@
 
 import {expect, test, vi} from 'vitest';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUTimeSeries, GPUTimeSeriesEnvelope} from '@luma.gl/graph/gpu-timeseries';
 import {createFixture} from './test-utils';
 

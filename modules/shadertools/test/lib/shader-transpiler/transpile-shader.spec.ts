@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {transpileGLSLShader} from '@luma.gl/shadertools/lib/shader-transpiler/transpile-glsl-shader';
 import {expect, it} from 'vitest';
 

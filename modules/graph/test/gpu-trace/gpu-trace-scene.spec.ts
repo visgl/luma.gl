@@ -27,7 +27,7 @@ import {
   GPUTraceTemporalIndexBuilder,
   GPUTraceTimeBuckets
 } from '@luma.gl/graph/gpu-trace';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const BUFFER_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 

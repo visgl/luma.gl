@@ -12,7 +12,7 @@ import {
   GraphVectorView,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUBatchHashIndex preserves nullable batches, earliest duplicates, and source offsets', async () => {
   const device = await getWebGPUTestDevice();
