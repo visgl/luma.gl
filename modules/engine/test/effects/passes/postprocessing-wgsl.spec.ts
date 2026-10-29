@@ -41,9 +41,9 @@ import {
   vignette,
   zoomBlur
 } from '../../../src/effects/index';
-import {WGSLShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
-import {getFragmentShaderForRenderPass} from '../../../engine/src/passes/get-fragment-shader';
-import {textureTransform} from '../../../engine/src/passes/texture-transform-module';
+import {WGSLShaderAssembler} from '../../../../shadertools/src/lib/shader-assembler';
+import {getFragmentShaderForRenderPass} from '../../../src/passes/get-fragment-shader';
+import {textureTransform} from '../../../src/passes/texture-transform-module';
 
 const CLIP_SPACE_VERTEX_SHADER_WGSL = /* wgsl */ `\
 struct VertexInputs {

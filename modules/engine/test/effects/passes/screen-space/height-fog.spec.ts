@@ -13,7 +13,7 @@ import {
 import {heightFog, getShaderModuleUniformLayoutValidationResult} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {getTestDevice} from '@luma.gl/core/test-utils';
-import {makeShaderModuleRenderer} from '../../../../shadertools/test/modules/render-shader-module';
+import {makeShaderModuleRenderer} from '../../../../../shadertools/test/modules/render-shader-module';
 
 it('height fog preserves the existing fog graph and matches both uniform layouts', () => {
   expect(createVolumetricFogCompositeShaderPass().renderTargets?.fogHistory.lifetime).toBe(
