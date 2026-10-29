@@ -10,10 +10,10 @@ import {
 import {getArrowVectorByteLength} from '../../../vectors/arrow-vector-utils';
 import {
   makeGPURecordBatchFromArrowRecordBatch,
-  makeGPUTableFromArrowTable,
-  readArrowGPUVectorAsync
+  makeGPUTableFromArrowTable
 } from '../../../gpu/arrow-gpu-table-adapters';
-import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-conversion';
+import {readArrowGPUVectorAsync} from '../../../gpu/arrow-gpu-vector-adapters';
+import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-vector-conversion';
 import {type ModelProps} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
 import {GPUVector, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {createArrowComputeKernel} from '../../../gpu/arrow-compute-kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {Bool, BufferType, Data, DataType, FixedSizeList, Float32, List, Vector} from 'apache-arrow';
@@ -15,7 +15,7 @@ import {
 import {
   makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
-} from '../../../gpu/arrow-gpu-table-adapters';
+} from '../../../gpu/arrow-gpu-vector-adapters';
 import {isVariableLengthAttributeArrowType} from '../../../arrow-utils/arrow-types';
 
 type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
@@ -456,25 +456,28 @@ function dispatchClosedPathClassificationCompute(
   chunkState: CloseArrowPathChunkState,
   state: ClosedPathClassificationState
 ): void {
-  const computation = new Computation(device, {
+  const kernelBindings = {
+    pathValues: getPathValuesBinding(chunkState),
+    pathRanges: state.pathRangesBuffer,
+    closedFlags: state.closedFlagsBuffer,
+    pathClosureConfig: state.pathClosureConfigBuffer.buffer,
+    needsInjection: state.needsInjectionBuffer
+  };
+  const kernel = createArrowComputeKernel(device, {
     id: `${props.id || 'closed-arrow-paths'}-classify`,
     source: CLOSED_PATH_CLASSIFY_SOURCE,
-    shaderLayout: CLOSED_PATH_CLASSIFY_SHADER_LAYOUT,
-    bindings: {
-      pathValues: getPathValuesBinding(chunkState),
-      pathRanges: state.pathRangesBuffer,
-      closedFlags: state.closedFlagsBuffer,
-      pathClosureConfig: state.pathClosureConfigBuffer.buffer,
-      needsInjection: state.needsInjectionBuffer
-    }
+    shaderLayout: CLOSED_PATH_CLASSIFY_SHADER_LAYOUT
   });
   if (chunkState.pathData.length > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(chunkState.pathData.length / 64));
+    kernel.dispatch(computePass, {
+      x: Math.ceil(chunkState.pathData.length / 64),
+      bindings: kernelBindings
+    });
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
 }
 
 async function readInjectionFlags(buffer: Buffer, rowCount: number): Promise<Uint32Array> {
@@ -534,24 +537,27 @@ function dispatchClosedPathScatterCompute(
   chunkState: CloseArrowPathChunkState,
   state: ClosedPathScatterState
 ): void {
-  const computation = new Computation(device, {
+  const kernelBindings = {
+    pathValues: getPathValuesBinding(chunkState),
+    pathScatterRanges: state.pathScatterRangesBuffer,
+    pathScatterConfig: state.pathScatterConfigBuffer.buffer,
+    outputPathValues: state.outputPathValuesBuffer.buffer
+  };
+  const kernel = createArrowComputeKernel(device, {
     id: `${props.id || 'closed-arrow-paths'}-scatter`,
     source: CLOSED_PATH_SCATTER_SOURCE,
-    shaderLayout: CLOSED_PATH_SCATTER_SHADER_LAYOUT,
-    bindings: {
-      pathValues: getPathValuesBinding(chunkState),
-      pathScatterRanges: state.pathScatterRangesBuffer,
-      pathScatterConfig: state.pathScatterConfigBuffer.buffer,
-      outputPathValues: state.outputPathValuesBuffer.buffer
-    }
+    shaderLayout: CLOSED_PATH_SCATTER_SHADER_LAYOUT
   });
   if (chunkState.pathData.length > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(chunkState.pathData.length / 64));
+    kernel.dispatch(computePass, {
+      x: Math.ceil(chunkState.pathData.length / 64),
+      bindings: kernelBindings
+    });
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
 }
 
 function getPathValuesBinding(chunkState: CloseArrowPathChunkState): Binding {

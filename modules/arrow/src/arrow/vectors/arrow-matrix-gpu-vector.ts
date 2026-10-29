@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+import {createArrowComputeKernel} from '../gpu/arrow-compute-kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
@@ -195,24 +195,24 @@ function dispatchArrowMatrixConversion(
     preparedMatrixValues: Binding;
   }
 ): void {
-  const computation = new Computation(device, {
+  const kernelBindings = {
+    sourceMatrixValues: props.sourceMatrixValues,
+    matrixConversionConfig: props.matrixConversionConfig,
+    preparedMatrixValues: props.preparedMatrixValues
+  };
+  const kernel = createArrowComputeKernel(device, {
     id: `${props.id}-matrix-conversion-${props.chunkIndex}`,
     source: getArrowMatrixConversionSource(sourceInfo),
     ...(sourceInfo.valueType === 'float64' ? {modules: [fp64arithmetic as ShaderModule]} : {}),
-    shaderLayout: MATRIX_CONVERSION_SHADER_LAYOUT,
-    bindings: {
-      sourceMatrixValues: props.sourceMatrixValues,
-      matrixConversionConfig: props.matrixConversionConfig,
-      preparedMatrixValues: props.preparedMatrixValues
-    }
+    shaderLayout: MATRIX_CONVERSION_SHADER_LAYOUT
   });
   if (props.scalarCount > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(props.scalarCount / 64));
+    kernel.dispatch(computePass, {x: Math.ceil(props.scalarCount / 64), bindings: kernelBindings});
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  kernel.destroy();
 }
 
 function getArrowMatrixConversionSource(sourceInfo: ArrowMatrixVectorInfo): string {

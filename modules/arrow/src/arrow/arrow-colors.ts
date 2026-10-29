@@ -11,7 +11,7 @@ import {
 } from '@luma.gl/gpgpu';
 import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/gpgpu/gpu-data';
 import {DataType, Field, FixedSizeList, Float16, Float32, Uint8, Vector} from 'apache-arrow';
-import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from './gpu/arrow-gpu-table-adapters';
+import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from './gpu/arrow-gpu-vector-adapters';
 import type {GPUDataReadbackMetadata} from './gpu/arrow-gpu-data';
 
 export type ArrowColorType = FixedSizeList<Uint8> | FixedSizeList<Float16> | FixedSizeList<Float32>;
