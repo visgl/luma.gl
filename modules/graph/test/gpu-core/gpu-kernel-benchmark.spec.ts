@@ -9,7 +9,7 @@ import {
   GPUCommandGraph,
   summarizeGPUWorkgroupScanBenchmarkSamples as summarizeSamples
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, test} from 'vitest';
 
 const DISPATCH_COUNT = 64;

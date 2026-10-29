@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {createWebMercatorProjection} from '@luma.gl/graph/gpu-project';
 import {runGPUProjectionBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('runGPUProjectionBenchmark compares CPU baselines and synchronized WebGPU paths', async () => {
   const device = await getWebGPUTestDevice();

@@ -11,7 +11,7 @@ import {
   GPU_SCENE_INVALID_REFERENCE,
   GPU_SCENE_RECORD_BYTE_LENGTH
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const REQUIRED_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 

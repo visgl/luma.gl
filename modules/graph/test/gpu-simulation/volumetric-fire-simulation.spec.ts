@@ -11,7 +11,7 @@ import {
   type VolumetricFireSimulationStepOptions
 } from '@luma.gl/graph/gpu-simulation';
 import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const PASSIVE_STEP_OPTIONS = {
   buoyancy: 0,

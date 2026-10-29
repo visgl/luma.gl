@@ -5,7 +5,7 @@ import {expect, it} from 'vitest';
 
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {GPUConstant, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';

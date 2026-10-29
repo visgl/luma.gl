@@ -11,7 +11,7 @@ import {
   type GPUGraphAlgorithmsAdjacency
 } from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it, vi} from 'vitest';
 import {
   addGPUGraphAlgorithmsForceLayoutToGraphWithDispatchLimit,

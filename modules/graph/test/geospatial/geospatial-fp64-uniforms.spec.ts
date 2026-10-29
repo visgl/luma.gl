@@ -4,7 +4,7 @@
 
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 import {addGeospatialPass} from '../../src/geospatial/geospatial-utils';
 

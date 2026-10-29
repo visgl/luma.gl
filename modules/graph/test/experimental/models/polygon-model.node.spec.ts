@@ -12,7 +12,7 @@ import {
   PolygonStorageModel
 } from '@luma.gl/engine/models';
 import {POLYGON_GPU_INPUT_SCHEMA, type PolygonGPUVectors} from '@luma.gl/graph/experimental/models';
-import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import type {ShaderModule} from '@luma.gl/shadertools';
 
 it('filled polygon models declare generated row-preserving GPU inputs', () => {

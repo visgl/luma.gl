@@ -13,7 +13,7 @@ import {
   type GPUGraphAlgorithmsLocalClusteringCoefficientProps
 } from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 import {getGPUGraphAlgorithmsLocalClusteringCoefficientDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-local-clustering-coefficient-internals';
 

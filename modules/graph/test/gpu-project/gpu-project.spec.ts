@@ -15,7 +15,7 @@ import {
   PROJECTION_PATCH_WORD_LENGTH
 } from '@luma.gl/graph/gpu-project';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 type Coordinates = readonly [number, number];
 

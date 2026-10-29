@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {GPUParquetNestedColumnLayout} from '@luma.gl/graph/gpu-parse';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPUParquetNestedColumnLayout preserves page chunks and materializes two depths', async () => {
   const device = await getWebGPUTestDevice('core');

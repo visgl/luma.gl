@@ -10,7 +10,7 @@ import {
   GPUConditionalOperation,
   type GraphTextureView
 } from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {expect, test} from 'vitest';
 
 function createDevice() {

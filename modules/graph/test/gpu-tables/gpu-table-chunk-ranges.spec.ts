@@ -20,7 +20,7 @@ import {
   type GPUInputSchema
 } from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const TRIPLE_COMPUTE_SHADER = /* wgsl */ `\
 @group(0) @binding(0) var<storage, read_write> values : array<i32>;

@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device, type Shader} from '@luma.gl/core';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils/device';
 
 const DEVICE_TYPES = ['webgl', 'webgpu'] as const;
 const EMPTY_SHADER_LAYOUT = {attributes: [], bindings: []};

@@ -5,7 +5,7 @@
 import {Buffer, Texture} from '@luma.gl/core';
 import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/graph/gpu-effects';
 import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 
 it('GPUConvolutionBloom convolves RGB highlights with caller-supplied optical kernels', async () => {

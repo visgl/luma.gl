@@ -5,7 +5,7 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {makeVisualizationFixture} from './projection-visualization-fixtures';

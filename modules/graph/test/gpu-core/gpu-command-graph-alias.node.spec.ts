@@ -12,7 +12,7 @@ import {
   type GraphImportedBuffer
 } from '@luma.gl/graph/gpu-core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test, vi} from 'vitest';
 
 type GraphAliasFixture = {

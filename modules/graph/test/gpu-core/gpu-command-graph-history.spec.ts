@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {Kernel} from '@luma.gl/gpgpu';
 import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const HISTORY_TEXTURE_USAGE = Texture.SAMPLE | Texture.STORAGE | Texture.COPY_SRC;
 

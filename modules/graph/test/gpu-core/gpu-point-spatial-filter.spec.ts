@@ -14,7 +14,7 @@ import {
   type GPUPointSpatialFilterKind,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPUPointSpatialFilter gives indexed and unindexed 2D visibility the same exact result', async () => {
   const device = await getWebGPUTestDevice();

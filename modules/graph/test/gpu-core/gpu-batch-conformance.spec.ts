@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {GPUReduction, GPUHistogram, GPUGroupAggregation, GPUScan} from '@luma.gl/graph/gpu-core';
 import {GPUVectorScalarMADD} from '../../src/gpu-core/gpu-elementwise-scalar';
 import {GPUDotProductScalar} from '../../src/gpu-core/gpu-dot-product-scalar';

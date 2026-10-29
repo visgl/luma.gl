@@ -4,7 +4,7 @@
 
 import {readdirSync, readFileSync} from 'node:fs';
 import {expect, test, vi} from 'vitest';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {
   GPUCommandGraph,
   GPUGraph,

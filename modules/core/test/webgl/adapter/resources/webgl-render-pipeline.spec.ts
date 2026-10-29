@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 
 import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/core/webgl-constants';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
 import {WEBGLRenderPass} from '@luma.gl/core/webgl';
 
 const VS_THREE_UBOS = /* glsl */ `\

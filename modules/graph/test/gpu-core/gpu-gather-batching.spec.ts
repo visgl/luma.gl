@@ -13,7 +13,7 @@ import {
   type GraphDataView,
   type GraphVectorView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {BATCH_PARTITIONS} from './batch-conformance-utils';
 
 const SENTINEL = 0xdeadbeef;

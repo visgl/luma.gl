@@ -8,7 +8,7 @@ import {
   type ScientificVectorFieldInput,
   type ScientificFlowTraceResult
 } from '@luma.gl/graph/experimental/simulation';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice} from '@luma.gl/test-utils/device';
 
 function uniform(speed = 0): ScientificVectorFieldInput {
   return {

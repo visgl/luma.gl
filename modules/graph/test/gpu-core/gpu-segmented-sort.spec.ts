@@ -13,7 +13,7 @@ import {
   type GPUSortDirection,
   type GPUSortSegment
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it, vi} from 'vitest';
 import {getGPUSegmentedSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-sort';
 

@@ -10,7 +10,7 @@ import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUGraphAlgorithmsData} from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 
 type GraphScalarFormat = 'uint32' | 'float32' | 'sint32';

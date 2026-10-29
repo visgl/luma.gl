@@ -4,7 +4,7 @@
 
 import {Texture, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, GPUTextureHistory, type GraphTextureHandle} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test, vi} from 'vitest';
 
 const TEXTURE_USAGE = Texture.SAMPLE | Texture.STORAGE | Texture.COPY_DST | Texture.RENDER;

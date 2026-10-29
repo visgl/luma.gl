@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {GPUByteRangeGather} from '@luma.gl/graph/gpu-core';
 import {BatchConformanceFixture} from './batch-conformance-utils';
 

@@ -5,7 +5,7 @@ import {expect, it} from 'vitest';
 
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph, GPUSegmentedLayout} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPUSegmentedLayout materializes generic value and segment offsets', async () => {
   const device = await getWebGPUTestDevice('core');

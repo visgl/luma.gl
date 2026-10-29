@@ -15,7 +15,7 @@ import {
 } from '@luma.gl/graph/gpu-dataframe';
 import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 

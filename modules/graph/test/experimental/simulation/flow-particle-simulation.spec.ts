@@ -8,7 +8,7 @@ import {
   FlowParticleSimulation,
   isFlowParticleSimulationSupported
 } from '@luma.gl/graph/experimental/simulation';
-import {getTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice} from '@luma.gl/test-utils/device';
 
 for (const backend of ['webgl', 'webgpu'] as const) {
   it(`FlowParticleSimulation integrates metres/second and reuses state on ${backend}`, async context => {

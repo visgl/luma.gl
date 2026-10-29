@@ -11,7 +11,7 @@ import {
   type CompiledGPUCommandGraph,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPUBVHQuery traverses 2D bounds and clears reusable result masks', async () => {
   const device = await getWebGPUTestDevice();

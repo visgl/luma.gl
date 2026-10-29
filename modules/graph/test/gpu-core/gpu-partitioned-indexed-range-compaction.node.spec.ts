@@ -9,7 +9,7 @@ import {
   GPUPartitionedIndexedRangeCompaction,
   GraphVectorView
 } from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test, vi} from 'vitest';
 
 describe('GPUPartitionedIndexedRangeCompaction graph construction', () => {

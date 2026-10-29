@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUParquetPlainBooleanDecoder} from '@luma.gl/graph/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('GPUParquetPlainBooleanDecoder expands booleans across word boundaries', async () => {
   const device = await getWebGPUTestDevice();

@@ -13,7 +13,7 @@ import {
   type QuerySet
 } from '@luma.gl/core';
 import {GPUCommandGraph, GPUCommandGraphEncoding} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test, vi} from 'vitest';
 
 type ComputePassFixture = {

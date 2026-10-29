@@ -20,7 +20,7 @@ import {
   type GPURasterScalarFormat,
   type GPURasterStructuringElement
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 type MorphologyFixture = {
   width: number;

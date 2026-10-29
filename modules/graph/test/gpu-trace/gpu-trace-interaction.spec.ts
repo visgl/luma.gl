@@ -16,7 +16,7 @@ import {
   GPUTraceScene,
   type GPUTraceInteractionProps
 } from '@luma.gl/graph/gpu-trace';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 

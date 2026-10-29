@@ -19,7 +19,7 @@ import {
   getViewElementOffset
 } from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {
   getBoundedDispatchLayout,
   getBoundedInvocationIndexSource

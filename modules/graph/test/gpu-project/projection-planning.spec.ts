@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {planProjection, type ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
 import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';

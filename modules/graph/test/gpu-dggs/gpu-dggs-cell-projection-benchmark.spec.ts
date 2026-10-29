@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs/benchmarks';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 
 const H3_CELLS = [0x089283082803ffffn, 0x089754e64993ffffn];

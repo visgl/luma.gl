@@ -13,7 +13,7 @@ import {
   type CompiledGPUCommandGraph,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {getGPUSceneResourceGroupDispatchLayout} from '../../src/gpu-core/gpu-scene-resource-groups';
 
 const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
