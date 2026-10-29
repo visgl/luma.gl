@@ -12,7 +12,7 @@ import {
 } from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
 import {scanWGSLInterface} from './shader-assembly/wgsl-interface-scan';
-import type {ShaderLayout} from '@luma.gl/core';
+import type {ShaderLayout} from '../types';
 import type {ShaderTranspilerEntryPoints} from './shader-transpiler/shader-transpiler';
 
 /** Stateful assembler for unified WGSL shaders. */

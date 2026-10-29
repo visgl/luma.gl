@@ -20,7 +20,7 @@ export type ParsedPBRMaterial = {
   /** Shader defines inferred from geometry and material features. */
   readonly defines: Record<string, boolean>;
   /** Texture and sampler bindings for the PBR shader module. */
-  readonly bindings: Partial<PBRMaterialBindings & IBLBindings>;
+  readonly bindings: Partial<PBRMaterialBindings<Texture> & IBLBindings<Texture>>;
   /** Uniform values for the projection and PBR shader modules. */
   readonly uniforms: ParsedPBRMaterialUniforms;
   /** Render pipeline parameters derived from the glTF material. */

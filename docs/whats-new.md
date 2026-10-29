@@ -1,5 +1,12 @@
 # What's New
 
+## Standalone shader tools
+
+Shaders no longer depends on core. Resource-free layouts, type decoders, uniform block layouts
+and sampler options live in `@luma.gl/shaders/types`; WGSL scanners live in
+`@luma.gl/shaders/wgsl`. Core retains its existing exports through these implementations.
+Area-light LTC texture allocation lives in engine. Assemblers use explicit instance ownership.
+
 ## Shader package
 
 Shader composition and modules are now published as `@luma.gl/shaders`. Update imports to the

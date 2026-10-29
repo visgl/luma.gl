@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 // MATH TYPES
-export {TypedArray, NumberArray, NumericArray} from '@math.gl/core';
+export type {TypedArray, NumberArray, NumericArray} from '@math.gl/core';
 
 // export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
 
@@ -34,3 +34,15 @@ export type UniformFormat =
   | 'mat4x2<f32>'
   | 'mat4x3<f32>'
   | 'mat4x4<f32>';
+
+export * from './types/primitive-data-types';
+export * from './types/shader-types';
+export * from './types/shader-type-decoder';
+export * from './types/shader-block-layout';
+export * from './types/shader-layout';
+export * from './types/texture-formats';
+export * from './types/sampler-props';
+export {alignTo} from './types/align-to';
+
+/** Resource values remain opaque until an execution adapter binds them. */
+export type ShaderBinding = unknown;

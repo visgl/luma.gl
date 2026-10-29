@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {shaderTypeDecoder} from '@luma.gl/core';
+import {shaderTypeDecoder} from '../../types';
 import type {ResolvedShaderPluginVarying} from '../shader-plugin';
 import {getGLSLAttributeType} from './shader-plugin-vertex-inputs';
 

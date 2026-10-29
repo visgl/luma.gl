@@ -4,7 +4,7 @@
 
 import type {ShaderInjection} from './shader-assembly/shader-injections';
 import type {ShaderModule} from './shader-module/shader-module';
-import {shaderTypeDecoder, type AttributeShaderType} from '@luma.gl/core';
+import {shaderTypeDecoder, type AttributeShaderType} from '../types';
 
 /** Named shader anchor or hook target accepted by ShaderPlugin injections. */
 export type ShaderPluginInjectionTarget =

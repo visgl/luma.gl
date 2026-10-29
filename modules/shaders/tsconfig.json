@@ -12,10 +12,5 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "references": [
-    // TODO: shaders is almost independent of API, is it worth breaking the dependency?
-    {
-      "path": "../core"
-    }
-  ]
+  "references": []
 }

@@ -5,13 +5,8 @@
 import type {GLTFPostprocessed} from '@luma.gl/engine/gltf';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
-import {
-  type AreaLight,
-  pbrScene,
-  createAreaLightLTCTextures,
-  pbrMaterial,
-  skin
-} from '@luma.gl/shaders';
+import {createAreaLightLTCTextures} from '@luma.gl/engine';
+import {type AreaLight, pbrScene, pbrMaterial, skin} from '@luma.gl/shaders';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, test} from 'vitest';

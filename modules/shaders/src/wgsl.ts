@@ -19,3 +19,5 @@ export {
   getShaderBindingDebugRowsFromWGSL,
   type ShaderBindingDebugRow
 } from './lib/shader-assembly/wgsl-binding-debug';
+
+export * from './lib/shader-assembly/wgsl-binding-scan';

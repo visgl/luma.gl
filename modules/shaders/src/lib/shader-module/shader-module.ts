@@ -12,11 +12,7 @@ import {
 import type {ShaderModuleUniformValue, UniformTypes, UniformValue} from '../utils/uniform-types';
 import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
-// To avoid dependency on core module, do not import `Binding` type.
-// The ShaderModule is not concerned with the type of `Binding`,
-// it is the repsonsibility of `splitUniformsAndBindings` in
-// ShaderInputs to type the result of `getUniforms()`
-type Binding = unknown; // import type {Binding} from '@luma.gl/core';
+import type {ShaderBinding as Binding} from '../../types';
 
 export type UniformInfo = {
   format?: UniformFormat;

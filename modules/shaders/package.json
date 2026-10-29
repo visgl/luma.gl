@@ -41,6 +41,11 @@
       "types": "./dist/glsl.d.ts",
       "import": "./dist/glsl.js",
       "require": "./dist/glsl.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "require": "./dist/types.cjs"
     }
   },
   "files": [
@@ -54,9 +59,6 @@
     "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
     "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
-  },
-  "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.3"
   },
   "dependencies": {
     "@math.gl/core": "~5.0.0-beta.1"

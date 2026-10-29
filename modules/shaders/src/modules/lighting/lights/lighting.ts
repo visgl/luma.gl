@@ -9,7 +9,6 @@ import {
   MAX_AREA_LIGHTS,
   packAreaLights
 } from '../area-lighting/area-light-types';
-import {log} from '@luma.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lightingUniformsGLSL} from './lighting-glsl';
 import {lightingUniformsWGSL} from './lighting-wgsl';
@@ -303,7 +302,8 @@ function getLightSourceUniforms({
   }
 
   if (pointLights.length + spotLights.length + directionalLights.length > MAX_LIGHTS) {
-    log.warn(`MAX_LIGHTS exceeded, truncating to ${MAX_LIGHTS}`)();
+    // biome-ignore lint/suspicious/noConsole: preserve the standalone module warning without a core logger.
+    console.warn(`MAX_LIGHTS exceeded, truncating to ${MAX_LIGHTS}`);
   }
 
   return {

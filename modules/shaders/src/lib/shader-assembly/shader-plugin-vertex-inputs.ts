@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {shaderTypeDecoder, type AttributeShaderType} from '@luma.gl/core';
+import {shaderTypeDecoder, type AttributeShaderType} from '../../types';
 
 export type ShaderPluginVertexInputAssembly = {
   source: string;

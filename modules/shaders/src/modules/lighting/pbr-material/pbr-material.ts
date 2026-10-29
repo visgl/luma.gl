@@ -4,7 +4,6 @@
 
 /* eslint-disable camelcase */
 
-import type {Texture} from '@luma.gl/core';
 import type {
   Matrix3,
   NumberArray2,
@@ -27,32 +26,32 @@ import {pbrProjection} from './pbr-projection';
 import {pbrScene} from './pbr-scene';
 
 /** Non-uniform block bindings for pbr module */
-export type PBRMaterialBindings = {
+export type PBRMaterialBindings<TextureT = unknown> = {
   // Samplers
-  pbr_baseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
-  pbr_normalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
-  pbr_emissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
-  pbr_lightmapSampler?: Texture | null; // #ifdef HAS_LIGHTMAP
-  pbr_metallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
-  pbr_occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
+  pbr_baseColorSampler?: TextureT | null; // #ifdef HAS_BASECOLORMAP
+  pbr_normalSampler?: TextureT | null; // #ifdef HAS_NORMALMAP
+  pbr_emissiveSampler?: TextureT | null; // #ifdef HAS_EMISSIVEMAP
+  pbr_lightmapSampler?: TextureT | null; // #ifdef HAS_LIGHTMAP
+  pbr_metallicRoughnessSampler?: TextureT | null; // #ifdef HAS_METALROUGHNESSMAP
+  pbr_occlusionSampler?: TextureT | null; // #ifdef HAS_OCCLUSIONMAP
 
-  pbr_specularColorSampler?: Texture | null; // #ifdef HAS_SPECULARCOLORMAP
-  pbr_specularIntensitySampler?: Texture | null; // #ifdef HAS_SPECULARINTENSITYMAP
-  pbr_transmissionSampler?: Texture | null; // #ifdef HAS_TRANSMISSIONMAP
-  pbr_thicknessSampler?: Texture | null; // #ifdef HAS_THICKNESSMAP
+  pbr_specularColorSampler?: TextureT | null; // #ifdef HAS_SPECULARCOLORMAP
+  pbr_specularIntensitySampler?: TextureT | null; // #ifdef HAS_SPECULARINTENSITYMAP
+  pbr_transmissionSampler?: TextureT | null; // #ifdef HAS_TRANSMISSIONMAP
+  pbr_thicknessSampler?: TextureT | null; // #ifdef HAS_THICKNESSMAP
 
-  pbr_clearcoatSampler?: Texture | null; // #ifdef HAS_CLEARCOATMAP
-  pbr_clearcoatRoughnessSampler?: Texture | null; // #ifdef HAS_CLEARCOATROUGHNESSMAP
-  pbr_clearcoatNormalSampler?: Texture | null; // #ifdef HAS_CLEARCOATNORMALMAP
-  pbr_sheenColorSampler?: Texture | null; // #ifdef HAS_SHEENCOLORMAP
-  pbr_sheenRoughnessSampler?: Texture | null; // #ifdef HAS_SHEENROUGHNESSMAP
-  pbr_iridescenceSampler?: Texture | null; // #ifdef HAS_IRIDESCENCEMAP
-  pbr_iridescenceThicknessSampler?: Texture | null; // #ifdef HAS_IRIDESCENCETHICKNESSMAP
-  pbr_anisotropySampler?: Texture | null; // #ifdef HAS_ANISOTROPYMAP
-  pbr_bumpSampler?: Texture | null; // #ifdef HAS_BUMPMAP
-  pbr_diffuseTransmissionSampler?: Texture | null; // #ifdef HAS_DIFFUSETRANSMISSIONMAP
-  pbr_diffuseTransmissionColorSampler?: Texture | null; // #ifdef HAS_DIFFUSETRANSMISSIONCOLORMAP
-  pbr_multiscatterColorSampler?: Texture | null; // #ifdef HAS_MULTISCATTERCOLORMAP
+  pbr_clearcoatSampler?: TextureT | null; // #ifdef HAS_CLEARCOATMAP
+  pbr_clearcoatRoughnessSampler?: TextureT | null; // #ifdef HAS_CLEARCOATROUGHNESSMAP
+  pbr_clearcoatNormalSampler?: TextureT | null; // #ifdef HAS_CLEARCOATNORMALMAP
+  pbr_sheenColorSampler?: TextureT | null; // #ifdef HAS_SHEENCOLORMAP
+  pbr_sheenRoughnessSampler?: TextureT | null; // #ifdef HAS_SHEENROUGHNESSMAP
+  pbr_iridescenceSampler?: TextureT | null; // #ifdef HAS_IRIDESCENCEMAP
+  pbr_iridescenceThicknessSampler?: TextureT | null; // #ifdef HAS_IRIDESCENCETHICKNESSMAP
+  pbr_anisotropySampler?: TextureT | null; // #ifdef HAS_ANISOTROPYMAP
+  pbr_bumpSampler?: TextureT | null; // #ifdef HAS_BUMPMAP
+  pbr_diffuseTransmissionSampler?: TextureT | null; // #ifdef HAS_DIFFUSETRANSMISSIONMAP
+  pbr_diffuseTransmissionColorSampler?: TextureT | null; // #ifdef HAS_DIFFUSETRANSMISSIONCOLORMAP
+  pbr_multiscatterColorSampler?: TextureT | null; // #ifdef HAS_MULTISCATTERCOLORMAP
 };
 
 export type PBRMaterialUniforms = {
@@ -190,7 +189,8 @@ export type PBRMaterialUniforms = {
   multiscatterColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
 };
 
-export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
+export type PBRMaterialProps<TextureT = unknown> = PBRMaterialBindings<TextureT> &
+  PBRMaterialUniforms;
 
 /**
  * An implementation of PBR (Physically-Based Rendering).

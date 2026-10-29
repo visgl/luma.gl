@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Texture} from '@luma.gl/core';
 import type {NumberArray2, NumberArray16} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
@@ -17,8 +16,8 @@ export const PBR_TONE_MAP_MODE = {
 
 export type PBRToneMapMode = (typeof PBR_TONE_MAP_MODE)[keyof typeof PBR_TONE_MAP_MODE];
 
-export type PBRSceneBindings = {
-  pbr_transmissionFramebufferSampler?: Texture | null;
+export type PBRSceneBindings<TextureT = unknown> = {
+  pbr_transmissionFramebufferSampler?: TextureT | null;
 };
 
 export type PBRSceneUniforms = {
@@ -34,7 +33,7 @@ export type PBRSceneUniforms = {
   projectionMatrix?: NumberArray16;
 };
 
-export type PBRSceneProps = PBRSceneBindings & PBRSceneUniforms;
+export type PBRSceneProps<TextureT = unknown> = PBRSceneBindings<TextureT> & PBRSceneUniforms;
 
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 

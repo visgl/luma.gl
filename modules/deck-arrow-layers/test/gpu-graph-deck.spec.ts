@@ -385,7 +385,6 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     .spyOn(canvasContext, 'getCurrentFramebuffer')
     .mockReturnValue(framebuffer);
   let deck: ReturnType<typeof createGPUGraphExplorerDeck> | undefined;
-  const originalShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
   try {
     deck = createGPUGraphExplorerDeck(container, {
       device,
@@ -396,10 +395,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     });
     deck.setProps({_animate: false});
     await waitForDeckEffect(deck);
-    expect(
-      ShaderAssembler.getDefaultShaderAssembler,
-      'the real application restores luma.gl shader-assembler isolation before Deck is ready'
-    ).toBe(originalShaderAssembler);
+    expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
 
     const effect = deck.props.effects?.[0];
     expect(
@@ -811,10 +807,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     container.remove();
   }
 
-  expect(
-    ShaderAssembler.getDefaultShaderAssembler,
-    'finalizing the real Deck application never leaves a global shader-assembler override'
-  ).toBe(originalShaderAssembler);
+  expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
 
   void 0;
 });

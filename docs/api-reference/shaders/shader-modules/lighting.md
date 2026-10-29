@@ -231,7 +231,8 @@ Returns the attenuation factor for a spot light, including cone falloff.
 ### `AreaLight` and LTC PBR shading
 
 ```ts
-import {createAreaLightLTCTextures, type Light} from '@luma.gl/shaders';
+import {createAreaLightLTCTextures} from '@luma.gl/engine';
+import {type Light} from '@luma.gl/shaders';
 
 const lights: Light[] = [{
   type: 'rect',

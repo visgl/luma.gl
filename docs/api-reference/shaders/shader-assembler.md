@@ -45,8 +45,7 @@ shared modules, hooks, uniforms and transpiler contracts retain their existing b
 The WGSL entry also retains `scanWGSLInterface` and exports WGSL binding diagnostics.
 
 Root assembler exports remain available and share constructor identity with the subpaths, including
-for CommonJS. The deprecated `ShaderAssembler.getDefaultShaderAssembler(...)` factory is initialized
-only by the root runtime facade. New code should construct and pass a language-specific assembler.
+for CommonJS. Construct and pass a language-specific assembler; there is no global default factory.
 
 ## Usage
 
@@ -96,16 +95,6 @@ Common assembly props:
 | `vertexEntryPoint?: string` | WGSL vertex entry point selected by the render pipeline. Defaults to `vertexMain`. |
 | `fragmentEntryPoint?: string` | WGSL fragment entry point selected by the render pipeline. Defaults to `fragmentMain`. |
 | `prologue?: boolean` | GLSL only: whether to emit the luma.gl shader prologue. |
-
-## Static Methods
-
-### `getDefaultShaderAssembler('glsl'): GLSLShaderAssembler`
-
-### `getDefaultShaderAssembler('wgsl'): WGSLShaderAssembler`
-
-Deprecated compatibility API. The language argument remains required. New code should
-construct a `GLSLShaderAssembler` or `WGSLShaderAssembler` and pass it explicitly.
-Engine, gpgpu and graph no longer read these shared defaults.
 
 ## Methods
 

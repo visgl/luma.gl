@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {build} from 'esbuild';
+import {relative, resolve} from 'node:path';
 import {expect, it} from 'vitest';
 import {
   ShaderAssembler,
@@ -18,8 +19,6 @@ it('shares assembler constructors and the abstract contract across root and lang
   expect(WGSLShaderAssembler).toBe(RootWGSLShaderAssembler);
   expect(new GLSLShaderAssembler()).toBeInstanceOf(ShaderAssembler);
   expect(new WGSLShaderAssembler()).toBeInstanceOf(ShaderAssembler);
-  expect(ShaderAssembler.getDefaultShaderAssembler('glsl')).toBeInstanceOf(GLSLShaderAssembler);
-  expect(ShaderAssembler.getDefaultShaderAssembler('wgsl')).toBeInstanceOf(WGSLShaderAssembler);
 });
 
 it('assembles native sources through the language entries and preserves the WGSL scanner', () => {
@@ -75,3 +74,38 @@ for (const language of ['glsl', 'wgsl']) {
     expect(retained.some(filename => /lib\/shader-assembler\.ts$/.test(filename))).toBe(false);
   });
 }
+
+it('bundles all public shader entries without core or execution packages', async () => {
+  for (const entry of ['', '/types', '/glsl', '/wgsl']) {
+    const result = await build({
+      stdin: {
+        contents: `export * from '@luma.gl/shaders${entry}';`,
+        resolveDir: process.cwd()
+      },
+      bundle: true,
+      write: false,
+      metafile: true,
+      format: 'esm',
+      platform: 'browser',
+      logLevel: 'silent',
+      plugins: [
+        {
+          name: 'reject-execution-dependencies',
+          setup(builder) {
+            builder.onResolve(
+              {filter: /^@luma\.gl\/(core|engine|gpgpu|graph)(\/|$)/},
+              arguments_ => {
+                throw new Error(`Shader entry imports ${arguments_.path}`);
+              }
+            );
+          }
+        }
+      ]
+    });
+    expect(
+      Object.keys(result.metafile.inputs).filter(filename =>
+        /^modules\/(core|engine|gpgpu|graph)\//.test(relative(process.cwd(), resolve(filename)))
+      )
+    ).toEqual([]);
+  }
+});

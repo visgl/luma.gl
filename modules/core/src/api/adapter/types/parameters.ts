@@ -4,16 +4,8 @@
 
 import {NumberArray4, NumberArray6} from '@math.gl/core';
 import {TextureFormatDepthStencil} from '../../../shadertypes/texture-types/texture-formats';
-
-export type CompareFunction =
-  | 'never'
-  | 'less'
-  | 'equal'
-  | 'less-equal'
-  | 'greater'
-  | 'not-equal'
-  | 'greater-equal'
-  | 'always';
+export type {CompareFunction} from '@luma.gl/shaders/types';
+import type {CompareFunction} from '@luma.gl/shaders/types';
 
 // Primitive state
 

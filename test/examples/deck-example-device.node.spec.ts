@@ -6,33 +6,20 @@ import {ShaderAssembler} from '@luma.gl/shaders';
 import {describe, expect, it, vi} from 'vitest';
 
 const testState = vi.hoisted(() => {
-  // Node workers reuse modules; reload ArrowDeck after installing this file's Deck mock.
   vi.resetModules();
-  return {
-    device: {info: {shadingLanguage: 'wgsl'}},
-    consumeLegacyCall: true,
-    assemblerDuringInitialization: null as ShaderAssembler | null,
-    finalizeCallCount: 0
-  };
+  return {device: {info: {shadingLanguage: 'wgsl'}}, finalizeCallCount: 0};
 });
 
 vi.mock('@deck.gl/core', () => ({
   Deck: class {
     device = testState.device;
-
     constructor(properties: {
       onDeviceInitialized: (device: typeof testState.device) => void;
-      onLoad: () => void;
+      onLoad?: () => void;
     }) {
       properties.onDeviceInitialized(this.device);
-      if (testState.consumeLegacyCall) {
-        const getDefaultShaderAssembler =
-          ShaderAssembler.getDefaultShaderAssembler as () => ShaderAssembler;
-        testState.assemblerDuringInitialization = getDefaultShaderAssembler.call(ShaderAssembler);
-      }
-      properties.onLoad();
+      properties.onLoad?.();
     }
-
     finalize(): void {
       testState.finalizeCallCount++;
     }
@@ -42,35 +29,23 @@ vi.mock('@deck.gl/core', () => ({
 import {ArrowDeck} from '../../examples/deck/arrow-deck';
 
 describe('ArrowDeck device initialization', () => {
-  it('scopes the legacy shader assembler shim to initialization and always restores on load', () => {
-    const strictGetDefaultShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
-    let userCallbackDevice: typeof testState.device | null = null;
-
-    new ArrowDeck({
-      onDeviceInitialized: device => {
-        userCallbackDevice = device;
-        expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
-      }
-    });
-
-    expect(userCallbackDevice).toBe(testState.device);
-    expect(testState.assemblerDuringInitialization).toBe(
-      strictGetDefaultShaderAssembler.call(ShaderAssembler, 'wgsl')
-    );
-    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
-    expect(() =>
-      (ShaderAssembler.getDefaultShaderAssembler as unknown as () => ShaderAssembler).call(
-        ShaderAssembler
-      )
-    ).toThrow();
-
-    testState.device = {info: {shadingLanguage: 'glsl'}};
-    testState.consumeLegacyCall = false;
-    const unconsumedDeck = new ArrowDeck({});
-    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
-
-    unconsumedDeck.finalize();
-    expect(ShaderAssembler.getDefaultShaderAssembler).toBe(strictGetDefaultShaderAssembler);
+  it('provides an initialization callback when the caller omits it', () => {
+    const deck = new ArrowDeck({});
+    deck.finalize();
+    testState.finalizeCallCount = 0;
+  });
+  it('forwards initialization and finalizes once without a global assembler shim', async () => {
+    const onDeviceInitialized = vi.fn();
+    const onLoad = vi.fn();
+    const onFinalize = vi.fn();
+    const deck = new ArrowDeck({onDeviceInitialized, onLoad, onFinalize});
+    await Promise.resolve();
+    expect(onDeviceInitialized).toHaveBeenCalledWith(testState.device);
+    expect(onLoad).toHaveBeenCalledWith({deck, device: testState.device});
+    expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
+    deck.finalize();
+    deck.finalize();
+    expect(onFinalize).toHaveBeenCalledTimes(1);
     expect(testState.finalizeCallCount).toBe(1);
   });
 });

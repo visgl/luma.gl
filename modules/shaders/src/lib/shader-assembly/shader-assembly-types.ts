@@ -6,7 +6,7 @@ import {type PlatformInfo} from './platform-info';
 import {type ShaderModule} from '../shader-module/shader-module';
 import {type ShaderHook} from './shader-hooks';
 import {type ShaderInjection} from './shader-injections';
-import {type AttributeShaderType} from '@luma.gl/core';
+import {type AttributeShaderType} from '../../types';
 import {type ResolvedShaderPluginVarying} from '../shader-plugin';
 
 export type ShaderAssemblyLog = {

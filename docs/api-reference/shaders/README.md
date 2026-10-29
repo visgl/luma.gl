@@ -27,8 +27,7 @@ Use `@luma.gl/shaders/glsl` for `GLSLShaderAssembler` and GLSL assembly helpers,
 `@luma.gl/shaders/wgsl` for `WGSLShaderAssembler`, WGSL assembly, interface scanning and binding
 diagnostics. The language entries share the abstract `ShaderAssembler` contract and common module
 logic, while keeping the other assembly backend out of application bundles. Root exports retain
-constructor identity. See [ShaderAssembler](./shader-assembler) for explicit ownership and the
-deprecated root factory.
+constructor identity. See [ShaderAssembler](./shader-assembler) for explicit assembler ownership.
 
 ## When to use it
 
@@ -102,3 +101,17 @@ from the teaching path; use them after choosing the relevant descriptor family.
 - Use [Engine](/docs/api-reference/engine) to bind module props and draw a `Model`.
 - Use [Core](/docs/api-reference/core) for the resources and pipelines that compile assembled source.
 - Shader modules can also be consumed by GPU Core render and compute nodes.
+
+## Standalone shader contracts
+
+`@luma.gl/shaders` has no dependency on core or a GPU device. Import shader value types,
+`ShaderLayout`, `TextureFormat`, sampler options, `getVariableShaderTypeInfo`, and
+`makeShaderBlockLayout` from `@luma.gl/shaders/types`. WGSL interface and binding scanners
+are available from `@luma.gl/shaders/wgsl`. Core re-exports its existing contracts and scanner
+entry points from these implementations, preserving constructor and function identity.
+
+Shader modules describe resource bindings without owning GPU resources. PBR material, scene
+and IBL props accept a resource type parameter, for example `PBRMaterialProps<Texture>` when
+using core textures. Core validates and binds concrete Buffer, Texture and Sampler resources.
+Device-backed area-light lookup allocation is `createAreaLightLTCTextures` from
+`@luma.gl/engine`; the shader definitions remain in shaders.
