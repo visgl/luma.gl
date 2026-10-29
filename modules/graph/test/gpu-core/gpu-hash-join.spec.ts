@@ -10,7 +10,7 @@ import {
   GPUHashJoin,
   GPU_HASH_INDEX_EMPTY_KEY
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUHashJoin stably publishes sparse row pairs', async () => {
   const device = await getWebGPUTestDevice();

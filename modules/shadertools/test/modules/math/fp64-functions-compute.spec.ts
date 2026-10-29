@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation, ShaderInputs} from '@luma.gl/engine';
 import {fp64, fp64arithmetic, fp64ify, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const MODES: {name: string; defines: Record<string, boolean>}[] = [
   {

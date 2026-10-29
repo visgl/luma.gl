@@ -7,7 +7,7 @@ import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {GPUScatter} from '../../src/gpu-core/gpu-scatter';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUScatter scatters fixed-width float rows and ignores invalid destinations', async () => {
   const device = await getWebGPUTestDevice();

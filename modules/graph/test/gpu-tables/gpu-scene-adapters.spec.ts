@@ -15,7 +15,7 @@ import {
   type GraphDataView,
   type GPUSceneRecord
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPURecordBatch,

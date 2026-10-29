@@ -14,7 +14,7 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 test('device-only helpers do not load engine, graph, or eager legacy devices', async () => {
   const result = await build({
     absWorkingDir: root,
-    entryPoints: ['modules/test-utils/src/device.ts'],
+    entryPoints: ['modules/core/src/test-utils/index.ts'],
     bundle: true,
     platform: 'browser',
     format: 'esm',
@@ -25,7 +25,7 @@ test('device-only helpers do not load engine, graph, or eager legacy devices', a
   const heavyweightInputs = Object.keys(result.metafile.inputs).filter(
     path =>
       /^modules\/(engine|graph)\//.test(path) ||
-      path.startsWith('modules/test-utils/src/deprecated/')
+      path.startsWith('modules/core/src/test-utils/deprecated/')
   );
   expect(heavyweightInputs).toEqual([]);
 });
@@ -57,4 +57,18 @@ test('browser group selection fails closed on unknown values', () => {
   expect(getBrowserTestGroup('all')).toBe('all');
   for (const group of BROWSER_TEST_GROUPS) expect(getBrowserTestGroup(group)).toBe(group);
   expect(() => getBrowserTestGroup('unknown')).toThrow();
+});
+
+test('bare test-utils imports preserve adapter registration', async () => {
+  const result = await build({
+    absWorkingDir: root,
+    stdin: {contents: "import '@luma.gl/core/test-utils';", resolveDir: root},
+    bundle: true,
+    platform: 'browser',
+    format: 'esm',
+    write: false,
+    logLevel: 'silent'
+  });
+  expect(result.outputFiles[0].text).toContain('registerAdapters');
+  expect(result.warnings.filter(warning => warning.id === 'ignored-bare-import')).toEqual([]);
 });

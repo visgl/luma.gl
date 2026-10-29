@@ -5,7 +5,7 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import SlangShadersExample from '../../examples/tutorials/slang-shaders/app';
 
 it.each([

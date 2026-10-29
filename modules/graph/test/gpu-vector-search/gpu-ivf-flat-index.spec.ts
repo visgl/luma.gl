@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {importGPUEmbeddingVector} from '../../src/gpu-vector-search/embedding-matrix';
 import {GPUIVFFlatIndex} from '../../src/gpu-vector-search/gpu-ivf-flat-index';
 import type {GraphEmbeddingMatrix} from '../../src/gpu-vector-search/types';

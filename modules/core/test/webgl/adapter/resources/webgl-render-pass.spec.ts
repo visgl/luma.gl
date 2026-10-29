@@ -4,7 +4,7 @@
 
 import {GL} from '@luma.gl/core/webgl-constants';
 import {WEBGLRenderPass} from '@luma.gl/core/webgl';
-import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 it('WEBGLRenderPass#drawBuffers for framebuffer attachments', async () => {

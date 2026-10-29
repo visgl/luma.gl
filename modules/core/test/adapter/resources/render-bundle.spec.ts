@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
-import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 function getResourceCount(device: Device, resourceType: string): number {
   return device.statsManager.getStats('Resource Counts').get(`${resourceType} Active`).count;

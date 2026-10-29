@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {TextureTransform, GPUVectorModel} from '@luma.gl/engine';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {Device, Texture} from '@luma.gl/core';

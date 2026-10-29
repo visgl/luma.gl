@@ -4,7 +4,7 @@
 
 import {Buffer} from '@luma.gl/core';
 import {createGLTFTexture} from '@luma.gl/engine/gltf';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 it('gltf#createGLTFTexture generates authored mipmaps on WebGL and WebGPU', async () => {

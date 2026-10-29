@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/engine/gltf';
 import {ModelNode} from '@luma.gl/engine';
 
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 
 async function loadFixture(name: 'SimpleSkin.gltf' | 'AnimatedMorphCube.glb') {

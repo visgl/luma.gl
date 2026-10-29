@@ -10,7 +10,7 @@ import {ANARIDevice, type ANARIGeometry, ANARIGroup, type ANARIInstance} from '@
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {ModelNode} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
 import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';

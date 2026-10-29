@@ -12,7 +12,7 @@ import {
   type GPUSplatArrowTableLike
 } from '@luma.gl/arrow';
 import type {GPUSplatData} from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 
 const SPHERICAL_HARMONIC_DC = 0.28209479177387814;

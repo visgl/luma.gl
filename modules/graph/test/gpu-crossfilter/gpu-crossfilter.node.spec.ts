@@ -14,7 +14,7 @@ import {
   type GPUCrossfilterScalarFormat
 } from '@luma.gl/graph/gpu-crossfilter';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 const LUX_FILTER_RUNTIME_EXPORTS = ['GPUCrossfilter', 'GPUCrossfilterSelection'] as const;

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, test, vi} from 'vitest';
 import {GPUGraphDiagnostics} from '../../examples/gpu-graph-diagnostics';
 

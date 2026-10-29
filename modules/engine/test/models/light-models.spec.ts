@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Matrix4} from '@math.gl/core';
-import {getTestDevices, getWebGLTestDevice} from '../../../test-utils/src';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {
   DirectionalLightModel,
   PointLightModel,

@@ -15,7 +15,7 @@ import {
   type GPUField,
   type GPURecordBatchSourceInfo
 } from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 describe('@luma.gl/graph/gpu-dataframe package boundary', () => {

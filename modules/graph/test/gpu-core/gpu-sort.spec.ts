@@ -14,7 +14,7 @@ import {
   type GPUSortDirection
 } from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 import {getGPUSortCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-sort';
 

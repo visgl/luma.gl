@@ -3,19 +3,19 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {_refreshLostCachedTestDevice} from '../../src/create-test-device';
+import {_refreshLostCachedTestDevice} from '../../../src/test-utils/create-test-device';
 
 test('NullAdapter imports from the ESM package entry without circular init errors', async () => {
   // Import the local entry file directly to avoid workspace alias resolution mixing src/dist modules.
   // This regression is about entry-module initialization, not package alias behavior.
-  const testUtilsModule = await import('../../src/index');
+  const testUtilsModule = await import('../../../src/test-utils/index');
 
   expect(testUtilsModule.nullAdapter.type).toBe('null');
   expect(testUtilsModule.NullDevice.name).toBe('NullDevice');
 }, 15000);
 
 test('NullDevice#destroy marks the device lost', async () => {
-  const {NullDevice} = await import('../../src/index');
+  const {NullDevice} = await import('../../../src/test-utils/index');
   const device = new NullDevice({});
 
   expect(device.isLost).toBe(false);
@@ -54,7 +54,7 @@ test('refreshLostCachedTestDevice recreates a lost cached device', async () => {
 });
 
 test('NullDevice#withParametersWebGL preserves callback results and exceptions', async () => {
-  const {NullDevice} = await import('../../src/index');
+  const {NullDevice} = await import('../../../src/test-utils/index');
   const device = new NullDevice({});
   const result = {};
   const callbackError = new Error('Callback failed');

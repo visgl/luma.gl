@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {stringifyTypedArray} from './context-state.spec';
 
 import {setGLParameters, getGLParameters, resetGLParameters} from '@luma.gl/core/webgl';

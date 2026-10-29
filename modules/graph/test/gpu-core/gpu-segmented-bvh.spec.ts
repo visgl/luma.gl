@@ -12,7 +12,7 @@ import {
   type GPUBVHSegment,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 import {getGPUSegmentedBVHCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-segmented-bvh';
 

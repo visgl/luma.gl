@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
 import {Matrix4} from '@math.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld, type GPURigidBody, type GPURigidBodyState} from '../../src/gpu-physics';
 

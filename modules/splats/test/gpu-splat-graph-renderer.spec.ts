@@ -10,7 +10,7 @@ import {
   makeGPUSplatData,
   type SplatSource
 } from '@luma.gl/splats';
-import {getTestDevices} from '@luma.gl/test-utils/device';
+import {getTestDevices} from '@luma.gl/core/test-utils';
 
 it('GPUSplatGraphRenderer projects, culls, globally sorts, and indirectly draws preserved WebGPU batches', async () => {
   const devices = await getTestDevices(['webgpu']);

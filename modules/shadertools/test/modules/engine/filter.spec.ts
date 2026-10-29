@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {filterShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('filterShaderPlugin#WebGL2 model binds, updates, and draws', async () => {
   const device = await getWebGLTestDevice();

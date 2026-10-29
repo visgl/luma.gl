@@ -10,7 +10,7 @@ import {
   GPUHashIndexQuery,
   GPU_HASH_INDEX_EMPTY_KEY
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUHashIndex builds and queries deterministic first-row values', async () => {
   const device = await getWebGPUTestDevice();

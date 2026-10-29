@@ -16,7 +16,7 @@ import {
   type GLTFPostprocessed,
   type GLTFWithBuffers
 } from '@luma.gl/engine/gltf';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
 function makeTriangle(): GLTFWithBuffers {

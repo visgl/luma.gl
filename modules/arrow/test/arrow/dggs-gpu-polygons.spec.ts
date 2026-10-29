@@ -14,7 +14,7 @@ import {
   readArrowGPUVectorAsync,
   type DggsCellEncoding
 } from '@luma.gl/arrow';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GeohashDecoder} from '@math.gl/dggs';
 import {QuadkeyDecoder} from '@math.gl/dggs';
 import {getS2BoundaryFlat, getS2TokenFromIndex} from '@math.gl/dggs';

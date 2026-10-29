@@ -4,7 +4,7 @@
 
 import {parsePBRMaterial} from '@luma.gl/engine/gltf/parsers/parse-pbr-material';
 import {pbrMaterial} from '@luma.gl/shadertools';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 
 describe('reference glTF physical material decoding', () => {

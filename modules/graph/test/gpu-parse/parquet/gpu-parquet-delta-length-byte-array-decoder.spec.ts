@@ -9,7 +9,7 @@ import {
   parseParquetDeltaLengthByteArrayPlan
 } from '@luma.gl/graph/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const ENCODED = Uint8Array.from([
   128, 1, 4, 3, 6, 3, 3, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 97, 116, 100, 111, 103,

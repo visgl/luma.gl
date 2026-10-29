@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {ClipSpace, type ClipSpaceProps} from '@luma.gl/engine';
-import {getTestDevices} from '@luma.gl/test-utils/device';
+import {getTestDevices} from '@luma.gl/core/test-utils';
 
 const FRAGMENT_SHADER = /* glsl */ `\
 #version 300 es

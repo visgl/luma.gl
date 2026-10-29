@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUData, GPUVector, type FixedSizeList, type GPUDataView} from '@luma.gl/gpgpu/gpu-data';
 import {expectTypeOf, test} from 'vitest';
 

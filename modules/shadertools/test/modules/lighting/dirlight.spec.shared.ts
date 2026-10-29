@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {checkType} from '@luma.gl/test-utils/device';
+import {checkType} from '@luma.gl/core/test-utils';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {expect, it} from 'vitest';
 

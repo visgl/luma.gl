@@ -13,7 +13,7 @@ import {
   SPLAT_STORAGE_WGSL_SHADER,
   type SplatSource
 } from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('Gaussian spherical harmonics retain GraphDECO basis order through degree three', () => {
   expect(

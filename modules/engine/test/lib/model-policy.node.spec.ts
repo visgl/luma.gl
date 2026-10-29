@@ -5,7 +5,7 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer, assert, type ShaderLayout} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   Geometry,
   GPUGeometry,

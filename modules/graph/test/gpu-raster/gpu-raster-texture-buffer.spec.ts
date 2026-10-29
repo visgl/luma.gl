@@ -16,7 +16,7 @@ import {
   GPURasterTextureToBuffer,
   type GPURasterScalarFormat
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPURaster gathers odd-width float textures with nodata, masks, offsets, and calibration', async () => {
   const device = await getWebGPUTestDevice();

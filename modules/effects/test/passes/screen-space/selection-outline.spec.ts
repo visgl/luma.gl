@@ -4,7 +4,7 @@
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {selectionOutline, type SelectionOutlineProps} from '@luma.gl/effects';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test} from 'vitest';
 
 for (const backend of ['webgl', 'webgpu'] as const) {

@@ -14,7 +14,7 @@ import {
   type GPURasterMetadata,
   type GPURasterRegionMeasurementOutputs
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 type OutputRecord<Format extends 'float32' | 'uint32'> = {

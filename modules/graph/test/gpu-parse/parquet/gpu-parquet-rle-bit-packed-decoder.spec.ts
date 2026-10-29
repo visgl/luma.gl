@@ -9,7 +9,7 @@ import {
   parseParquetRleBitPackedRunPlan
 } from '@luma.gl/graph/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUParquetRleBitPackedDecoder expands mixed RLE and bit-packed runs', async () => {
   const device = await getWebGPUTestDevice();

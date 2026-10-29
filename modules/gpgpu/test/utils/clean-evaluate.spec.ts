@@ -11,7 +11,7 @@ import {
   GPUDataEvaluator,
   GPUVectorEvaluator
 } from '@luma.gl/gpgpu';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 import '../operations/fixtures';
 
 test(`GPGPU#cleanEvaluate`, async t => {

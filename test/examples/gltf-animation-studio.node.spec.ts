@@ -8,7 +8,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {createGLTFAnimatedCrowd, createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../examples/anari/scenes/gltf-to-anari';
 import {

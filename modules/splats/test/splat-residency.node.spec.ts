@@ -12,7 +12,7 @@ import {
   type SplatResidencyEvictionReason,
   type SplatSource
 } from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('SplatResidencyManager manages CPU-only allocation metadata without GPU fields', () => {
   const firstData = makeCPUResidencyData(2, 32, 7, 100);

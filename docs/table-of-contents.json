@@ -1187,7 +1187,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/test-utils",
+        "label": "@luma.gl/core/test-utils",
         "items": [
           "api-reference/test-utils/README",
           "api-reference/test-utils/snapshot-test-runner"

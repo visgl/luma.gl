@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, assert, type ShaderLayout} from '@luma.gl/core';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPUVectorGeometry, GPUVectorModel} from '../../src';
 

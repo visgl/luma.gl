@@ -19,7 +19,7 @@ import {
   wboitPlugin,
   wboitResolve
 } from '@luma.gl/anari';
-import {getTestDevice, getTestDevices} from '@luma.gl/test-utils/device';
+import {getTestDevice, getTestDevices} from '@luma.gl/core/test-utils';
 
 it('wboit module exposes portable capture helpers', () => {
   expect(wboitPlugin.name, 'plugin has stable name').toBe('wboit');

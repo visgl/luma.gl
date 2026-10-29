@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {GPUTableBufferPlanner, type GPUTableColumnDescriptor} from '@luma.gl/graph/gpu-tables';
 import type {Device} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('GPUTableBufferPlanner builds shared-geometry allocation groups deterministically', () => {
   const plan = GPUTableBufferPlanner.getAllocationPlan({

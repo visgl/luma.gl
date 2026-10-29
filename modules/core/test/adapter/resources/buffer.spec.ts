@@ -5,7 +5,7 @@
 /* eslint-disable no-continue */
 
 import {expect, it, vi} from 'vitest';
-import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
 import {TypedArray} from '@math.gl/core';
 import {Buffer, Device} from '@luma.gl/core';

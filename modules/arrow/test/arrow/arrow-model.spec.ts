@@ -15,7 +15,7 @@ import {Model} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 
 const SHADER_LAYOUT: ShaderLayout = {

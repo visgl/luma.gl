@@ -5,7 +5,7 @@
 import {expect, it, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   makeSourceBatches,
   makeTableTransform,

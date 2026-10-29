@@ -22,7 +22,7 @@ import {
   GPUReadbackRing,
   INDEX_PICKING_READBACK_BYTE_LENGTH
 } from '@luma.gl/graph/gpu-core';
-import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 /** Metadata-only external texture used to test graph contracts without importing browser video. */
 class TestExternalTexture extends ExternalTexture {

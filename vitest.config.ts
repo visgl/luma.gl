@@ -67,7 +67,7 @@ const nodeOnlyTestPatterns = [
   'modules/graph/test/gpu-core/{gpu-scalar,gpu-matvec,gpu-matmul,gpu-elementwise,gpu-coo-to-csr}.spec.{ts,js}',
   'modules/gpgpu/test/utils/{expression,webgpu-dispatch}.spec.{ts,js}',
   'modules/splats/test/{splat-rad-hierarchy,splat-browser-coverage}.spec.{ts,js}',
-  'modules/test-utils/test/null-device/**/*.spec.{ts,js}',
+  'modules/core/test/test-utils/null-device/**/*.spec.{ts,js}',
   'modules/graph/test/geospatial/geospatial-types.spec.{ts,js}',
   'modules/engine/test/experimental/textures/packed-pixels.spec.{ts,js}',
   'modules/engine/test/experimental/webxr/webxr-animation-frame-provider.spec.{ts,js}',

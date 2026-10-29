@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUSnappyDecompressor, parseSnappyDecompressionPlan} from '@luma.gl/graph/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUSnappyDecompressor resolves raw Snappy backreferences', async () => {
   const device = await getWebGPUTestDevice();

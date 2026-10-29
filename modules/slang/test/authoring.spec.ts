@@ -8,7 +8,7 @@ import {
   packSlangUniforms,
   type SlangModuleOptions
 } from '@luma.gl/slang';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import reference from './reference.json';
 import {
   OUTPUT_RENDER_SHADER,

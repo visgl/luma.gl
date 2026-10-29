@@ -6,7 +6,7 @@ import {TypedArray, equals} from '@math.gl/core';
 import {GPUDataEvaluator, backendRegistry} from '@luma.gl/gpgpu';
 import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
 import {Stat} from 'probe.gl/stats';
-import {getTestDevice as _getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice as _getTestDevice} from '@luma.gl/core/test-utils';
 
 backendRegistry.add('null', cpuBackend);
 

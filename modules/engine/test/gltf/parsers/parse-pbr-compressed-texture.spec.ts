@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import type {TextureFormat} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   createCompressedTexture,
   type CompressedImageDataArray,

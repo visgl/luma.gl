@@ -1,5 +1,5 @@
 import {parsePBRMaterial} from '@luma.gl/engine/gltf';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 it('glTF PBR parser preserves authored postprocessed sampler parameters', () => {

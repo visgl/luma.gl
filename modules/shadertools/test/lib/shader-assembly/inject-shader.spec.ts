@@ -5,7 +5,7 @@
 /* eslint-disable camelcase, no-console, no-undef */
 import {expect, it} from 'vitest';
 import {Device} from '@luma.gl/core';
-import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {assembleGLSLShaderPair, PlatformInfo} from '@luma.gl/shadertools';
 import {
   injectShader,

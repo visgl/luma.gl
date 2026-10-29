@@ -5,7 +5,7 @@ import {expect, it} from 'vitest';
 
 import type {BufferLayout} from '@luma.gl/core';
 import {GPUDataView, makeGPUDataViewFromAttribute} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('GPUDataView validates and derives packed and strided ranges', () => {
   const device = new NullDevice({});

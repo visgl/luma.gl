@@ -8,7 +8,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {ANARIDevice, ANARIGroup, type ANARIInstance, type ANARISurface} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';
 import {createANARIJSONScene} from '../../../examples/anari/scenes/playground-scene';

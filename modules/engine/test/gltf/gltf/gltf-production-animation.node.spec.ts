@@ -16,7 +16,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
 import {GroupNode} from '@luma.gl/engine';
 
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 async function loadSimpleSkin() {

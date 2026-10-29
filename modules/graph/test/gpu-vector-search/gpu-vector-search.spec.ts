@@ -17,7 +17,7 @@ import {
   type GraphVectorView
 } from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector, type FixedSizeList} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {
   importGPUEmbeddingTable,

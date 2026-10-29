@@ -6,7 +6,7 @@ import {expect, test} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {fromHalfFloat, pointGlow, type PointGlowProps} from '@luma.gl/shadertools';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 
 const SOURCE = /* wgsl */ `
 @vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {

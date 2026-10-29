@@ -10,7 +10,7 @@ import {
   GPUGraphScalarLiteral,
   GPUGraphVectorMADD
 } from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 
 describe('GPUGraphCompiler command lowering', () => {

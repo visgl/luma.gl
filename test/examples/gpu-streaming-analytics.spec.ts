@@ -5,7 +5,7 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData} from '@luma.gl/gpgpu/gpu-data';
 import type {GPUIncrementalBatch} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   StreamingAnalytics,
   type StreamingAnalyticsBatch

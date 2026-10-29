@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {DeviceFeature, isHTMLInCanvasSupported} from '@luma.gl/core';
 
 const DEVICE_LIMITS = {

@@ -5,12 +5,12 @@
 import {expect, test, vi} from 'vitest';
 
 test('null test devices remain compatible with pipeline factories after a module reset', async () => {
-  const original = await import('../src/create-test-device');
+  const original = await import('../../src/test-utils/create-test-device');
   await original.getNullTestDevice();
   // Mocking specs reset modules in a reused Node worker. A global device from the previous
   // module graph creates pipelines whose base class differs from the reloaded factory's class.
   vi.resetModules();
-  const reloaded = await import('../src/create-test-device');
+  const reloaded = await import('../../src/test-utils/create-test-device');
   const {PipelineFactory} = await import('@luma.gl/core');
   const device = await reloaded.getNullTestDevice();
   expect(await reloaded.getNullTestDevice()).toBe(device);

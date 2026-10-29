@@ -3,7 +3,7 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NullDevice} from '@luma.gl/test-utils/device';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   GPUData,
   getBufferLayoutFromGPUDataStructFormat,

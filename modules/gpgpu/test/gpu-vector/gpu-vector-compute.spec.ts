@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {add, fround, GPUDataEvaluator, GPUVectorEvaluator, interleave} from '@luma.gl/gpgpu';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {getTestDevice} from '@luma.gl/test-utils/device';
+import {getTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test} from 'vitest';
 import '../operations/fixtures';
 

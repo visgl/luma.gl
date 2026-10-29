@@ -16,7 +16,7 @@ import {
   type VertexArray
 } from '@luma.gl/core';
 import {Kernel, RenderKernel} from '@luma.gl/gpgpu';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const source = /* WGSL */ `
 @group(0) @binding(0) var<storage, read_write> data: array<i32>;

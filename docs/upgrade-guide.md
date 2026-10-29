@@ -421,3 +421,10 @@ The `@luma.gl/gltf` package has been removed. Import its API from `@luma.gl/engi
 and replace `@luma.gl/gltf/physics` with `@luma.gl/engine/gltf-physics`. These are explicit
 subpaths: importing the engine root does not import the glTF runtime. No compatibility package
 is retained. Install `@luma.gl/engine` instead of `@luma.gl/gltf`.
+
+### Test utility imports
+
+The `@luma.gl/test-utils` package is removed. Replace its root and `/device` imports with
+`@luma.gl/core/test-utils`. The legacy `SnapshotTestRunner`, `PerformanceTestRunner`, and
+runner test-case types are removed from the public package. Use Vitest and Playwright instead.
+Deprecated synchronous device helpers remain in `@luma.gl/core/test-utils-legacy`.
