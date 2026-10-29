@@ -4,7 +4,8 @@
 
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Kernel, getPlatformInfo} from '@luma.gl/gpgpu';
-import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
+import {type ShaderModule} from '@luma.gl/shaders';
 import type {GPUEvaluationScope} from '../../../operation/gpu-evaluation-scope';
 import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
 import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';

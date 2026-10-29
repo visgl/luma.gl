@@ -7,7 +7,8 @@ import {UniformStore, type Binding, type Buffer, type Device} from '@luma.gl/cor
 import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
 import {Kernel, getPlatformInfo} from '@luma.gl/gpgpu';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {fp64arithmetic, WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   GPUCommandGraph,

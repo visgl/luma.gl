@@ -23,6 +23,8 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/engine`][engine] | Recommended | A set of WebGPU/WebGL independent core 3D engine style classes built on top of `@luma.gl/core`. |
 | [`@luma.gl/anari`][anari] | Experimental | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR. |
 | [`@luma.gl/shaders`][shaders] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
+| [`@luma.gl/shaders/glsl`][shaders] | Optional | GLSL assembler and assembly helpers. |
+| [`@luma.gl/shaders/wgsl`][shaders] | Optional | WGSL assembler, assembly helpers and interface scanning. |
 | [`@luma.gl/slang`][slang] | Experimental (v10) | Optional TypeScript transpilation of a documented Slang shader subset to GLSL and WGSL. |
 | [`@luma.gl/engine/effects`][engine/effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
 | [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation and GPU data primitives. |

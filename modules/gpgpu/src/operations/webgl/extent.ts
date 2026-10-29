@@ -4,7 +4,7 @@
 
 import {Texture} from '@luma.gl/core';
 import {RenderKernel, getPlatformInfo} from '@luma.gl/gpgpu';
-import {GLSLShaderAssembler} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';

@@ -12,6 +12,7 @@ import {transform} from 'esbuild';
 // entry points. Separate bundled entry points would duplicate classes and hooks.
 const distributionDirectory = new URL('../modules/core/dist/', import.meta.url);
 await writeCommonJSModules(distributionDirectory);
+await writeCommonJSModules(new URL('../modules/shaders/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/anari/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/gpgpu/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/graph/dist/', import.meta.url));
@@ -227,3 +228,13 @@ const bloomImplementationEsm = await import('../modules/engine/dist/effects/pass
 assert.equal(effectsApi.bloom, bloomImplementation.bloom);
 assert.equal(effectsEsm.bloom, bloomImplementationEsm.bloom);
 process.stdout.write('Verified optional effects subpath and shader-pass identity.\n');
+
+// Language entry points must share assembler constructors with the package root.
+const shadersApi = require('../modules/shaders/dist/index.cjs');
+const glslShadersApi = require('../modules/shaders/dist/glsl.cjs');
+const wgslShadersApi = require('../modules/shaders/dist/wgsl.cjs');
+assert.equal(shadersApi.GLSLShaderAssembler, glslShadersApi.GLSLShaderAssembler);
+assert.equal(shadersApi.WGSLShaderAssembler, wgslShadersApi.WGSLShaderAssembler);
+assert(new glslShadersApi.GLSLShaderAssembler() instanceof shadersApi.ShaderAssembler);
+assert(new wgslShadersApi.WGSLShaderAssembler() instanceof shadersApi.ShaderAssembler);
+process.stdout.write('Verified shader assembler subpath identities.\n');

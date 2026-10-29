@@ -270,6 +270,8 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/shaders**
 
+- **Language-specific shader assembly** - `@luma.gl/shaders/glsl` and `@luma.gl/shaders/wgsl` expose concrete assemblers and assembly helpers, sharing the abstract `ShaderAssembler` contract. The root exports remain available; explicit language entries avoid loading the other assembly backend.
+
 - **Atmospheric scattering** - The shared GLSL/WGSL `atmosphere` module provides a Rayleigh/Mie sky and metre-space aerial perspective. `AtmosphereLayer` connects the same shader to deck.gl perspective views in [Riverfront soft shadows](/examples/deck/soft-shadows).
 - **Cloud sunlight extinction** - `clouds_getTransmittance` samples the existing animated cloud density to attenuate direct sunlight on buildings and ground, without separate cloud shadow resources.
 - **Surface weather** - The portable `surfaceWeather` material helpers and frame-rate-independent `integrateSurfaceWeather` function provide wetness, puddle highlights and slope-aware snow cover in [Riverfront weather](/examples/deck/weather).
