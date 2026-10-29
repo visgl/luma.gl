@@ -6,7 +6,7 @@ import {
   getArrowPickingModule,
   supportsArrowIndexPicking,
   type ArrowTableGeometry
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {indexPicking, ShaderInputs} from '@luma.gl/engine';
 import {getGPUVectorBuffer, type GPUVector} from '@luma.gl/gpgpu/gpu-data';

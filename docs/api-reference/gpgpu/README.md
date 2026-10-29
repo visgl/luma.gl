@@ -75,7 +75,7 @@ normalized formats such as `unorm8x4`, and variable-length formats such as
 
 [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) adds record
 batches, schemas, table bindings, computations, and planners above these primitives.
-[`@luma.gl/arrow`](/docs/api-reference/arrow) converts Apache Arrow inputs to the shared GPU data
+[`@luma.gl/graph/arrow`](/docs/api-reference/arrow) converts Apache Arrow inputs to the shared GPU data
 objects; the GPU data types do not depend on Apache Arrow.
 
 ## Installing

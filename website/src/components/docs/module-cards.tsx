@@ -64,10 +64,11 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       image: 'gltf/asset-studio'
     },
     {
-      name: 'arrow',
-      description: 'Upload Apache Arrow columns and connect tabular data to GPU workflows.',
+      name: 'gpgpu/arrow',
+      reference: 'arrow',
+      description: 'Convert Arrow vectors, tables and rendering data through optional /arrow subpaths.',
       image: 'arrow/arrow-points',
-      status: 'Private'
+      status: 'Experimental'
     },
     {
       name: 'engine/splats',

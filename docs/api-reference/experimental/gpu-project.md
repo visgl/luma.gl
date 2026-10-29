@@ -100,7 +100,7 @@ Bounds are `[minimumX, minimumY, maximumX, maximumY]` in the source coordinate s
 expressed in destination units: `0.01` requests one centimeter of sampled accuracy when the target
 coordinate system uses meters.
 
-`@math.gl/geospatial/projection` is an optional peer dependency loaded when the projection adapter is requested. Any function or
+`@math.gl/geospatial/projection` is provided by the graph package dependency and loaded only when the projection adapter is requested. Any function or
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
@@ -356,7 +356,7 @@ backend selection and CPU/GPU precision conversion are always application decisi
 The adapter rejects indexed tables, missing/constant selected columns, nonpacked layouts, native
 null bitmaps and wrong-device/non-storage buffers. A batch declaring null rows requires an explicit
 validity column; convert null bitmaps in a source adapter. Arrow ingestion/readback remains in
-`@luma.gl/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
+`@luma.gl/graph/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
 `@luma.gl/graph/gpu-project` entry point for already compiled binary64-input programs.
 
 ## Explicit longitude normalization

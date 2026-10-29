@@ -114,7 +114,7 @@ views with a `column` descriptor, retain null rows, and allocate no coordinate b
 Keep the source storage alive and do not mutate or detach it while views are in use.
 These APIs require native GeoArrow geometry; decode WKB/WKT before requesting views.
 
-`@luma.gl/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from
+`@luma.gl/graph/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from
 `@math.gl/geospatial/geoarrow`. `makeGeoArrowColumnFromArrowVector()` borrows the source buffers, while
 interleaving, WKB/WKT decoding, dense-union normalization, and polygon tessellation delegate to
 math.gl. Renderer-specific color expansion and GPU resource creation remain in luma.gl.
@@ -222,7 +222,7 @@ Use `getArrowBufferLayout()` with an Arrow table when Arrow column names match
 shader attribute names:
 
 ```ts
-import {getArrowBufferLayout} from '@luma.gl/arrow';
+import {getArrowBufferLayout} from '@luma.gl/gpgpu/arrow';
 
 const bufferLayout = getArrowBufferLayout(shaderLayout, {
   arrowTable: table,
@@ -286,7 +286,7 @@ source Arrow representation:
 
 ## Matrix Columns
 
-`@luma.gl/arrow` provides explicit matrix vector helpers for the WGSL floating
+`@luma.gl/gpgpu/arrow` provides explicit matrix vector helpers for the WGSL floating
 point matrix shapes used by GPU table workflows:
 
 | Helper | Logical shape |
@@ -303,7 +303,7 @@ The generic `makeArrowMatrixVector(shape, values, options)` form is available
 when the shape is selected dynamically.
 
 ```ts
-import {makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+import {makeArrowMatrix4x4Vector} from '@luma.gl/gpgpu/arrow';
 
 const instanceModelMatrix = makeArrowMatrix4x4Vector(matrixValues, {
   order: 'column-major',
@@ -511,7 +511,7 @@ Those Float32 rows can be absolute path coordinates or origin-relative delta
 coordinates produced from Float64 path conversion.
 
 ```ts
-import {closeArrowPaths} from '@luma.gl/arrow';
+import {closeArrowPaths} from '@luma.gl/engine/arrow';
 
 const normalizedPaths = await closeArrowPaths(device, {
   paths,
@@ -609,11 +609,7 @@ support mesh and point-cloud tables that use glTF-style column names such as
 `POSITION`, `NORMAL`, `COLOR_0`, and `TEXCOORD_0`.
 
 ```ts
-import {
-  ArrowTableGeometry,
-  makeGPUGeometryFromArrow,
-  type ArrowMeshTable
-} from '@luma.gl/arrow';
+import {ArrowTableGeometry, makeGPUGeometryFromArrow, type ArrowMeshTable} from '@luma.gl/engine/arrow';
 import {Model} from '@luma.gl/engine';
 
 const geometry = new ArrowTableGeometry(device, {
@@ -670,7 +666,7 @@ batch once, keep the resulting immutable `GPURecordBatch`, and add it to the
 retained `GPUTable`:
 
 ```ts
-import {makeGPURecordBatchFromArrowRecordBatch, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPURecordBatchFromArrowRecordBatch, makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 
 const gpuTable = makeGPUTableFromArrowTable(device, new arrow.Table([firstRecordBatch]), {
   shaderLayout

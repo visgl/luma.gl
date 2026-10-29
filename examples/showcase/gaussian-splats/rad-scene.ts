@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUSplatDataFromArrow, type GPUSplatArrowSource} from '@luma.gl/arrow';
+import {makeGPUSplatDataFromArrow, type GPUSplatArrowSource} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {
   SplatRADHierarchyManager,

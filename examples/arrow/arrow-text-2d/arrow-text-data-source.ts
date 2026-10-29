@@ -17,7 +17,7 @@ import {
   type ArrowTextRendererInput,
   type ArrowTextRendererProps,
   type ArrowTextRendererSetPropsResult
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
 import {
   AnimationLoopTemplate,
   type AnimationProps,

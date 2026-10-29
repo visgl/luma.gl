@@ -8,10 +8,9 @@ import {
   makeArrowFixedSizeListVector,
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
-  loadArrowRecordBatches,
-  type ArrowRecordBatchSource,
   type PreparedArrowTemporalGPUVector
-} from '@luma.gl/arrow';
+} from '@luma.gl/gpgpu/arrow';
+import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '@luma.gl/engine/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {type DynamicBuffer} from '@luma.gl/core/dynamic';

@@ -50,6 +50,16 @@
       "types": "./dist/execution/*.d.ts",
       "import": "./dist/execution/*.js",
       "require": "./dist/execution/*.cjs"
+    },
+    "./arrow": {
+      "types": "./dist/arrow/index.d.ts",
+      "import": "./dist/arrow/index.js",
+      "require": "./dist/arrow/index.cjs"
+    },
+    "./_internal/arrow": {
+      "types": "./dist/arrow/internal.d.ts",
+      "import": "./dist/arrow/internal.js",
+      "require": "./dist/arrow/internal.cjs"
     }
   },
   "files": [
@@ -66,10 +76,16 @@
   },
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.3",
-    "@luma.gl/shaders": "~10.0.0-alpha.3"
+    "@luma.gl/shaders": "~10.0.0-alpha.3",
+    "apache-arrow": ">=17.0.0"
   },
   "dependencies": {
     "@math.gl/core": "~5.0.0-beta.1",
     "probe.gl": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "apache-arrow": {
+      "optional": true
+    }
   }
 }

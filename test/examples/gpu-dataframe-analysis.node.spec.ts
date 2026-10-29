@@ -69,7 +69,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
   test('documents real Arrow ingestion, owned GPU work, supported joins, and accurate limitations', () => {
     const documentation = readGPUDataFrameDocumentation();
 
-    expect(documentation).toContain("from '@luma.gl/arrow'");
+    expect(documentation).toContain("from '@luma.gl/graph/arrow'");
     expect(documentation).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(documentation).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(documentation).toContain('GPUCommandGraph');
@@ -130,7 +130,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
       dependencies?: Record<string, string>;
     };
 
-    expect(benchmark).toContain("from '@luma.gl/arrow'");
+    expect(benchmark).toContain("from '@luma.gl/graph/arrow'");
     expect(benchmark).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(benchmark).toContain("from 'apache-arrow'");
     expect(benchmark).toContain('makeGPUAnalyticsTableFromArrowTable');

@@ -69,7 +69,7 @@
 - `@luma.gl/graph/gpu-tables` owns higher-level `GPURecordBatch`, `GPUTable`, `GPUSchema`, table bindings, computations, and generic planners.
 - `@luma.gl/engine/models` owns specialized path and polygon rendering models. GPU path expansion and input preparation remain in `@luma.gl/graph/experimental/models`.
 - `@luma.gl/engine/tables` owns TableTransform, table rendering models, and geometry adapters; `@luma.gl/engine/physics` owns scenegraph physics integration.
-- `@luma.gl/gpgpu` and `@luma.gl/graph/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/arrow`.
+- `@luma.gl/gpgpu` and `@luma.gl/graph/experimental` should not depend on `apache-arrow`. Arrow conversion, upload, and readback helpers belong in `@luma.gl/graph/arrow`.
 - `GPUVector.format` is the canonical type metadata. Arrow `dataType` is adapter/readback compatibility metadata, not the primary GPU type.
 - Keep memory layout and shader value types separate. `GPUVectorFormat` describes stored bytes such as `float32x3`, `unorm8x4`, and `vertex-list<float32x3>`; `ShaderLayout` describes shader-facing values such as `vec3<f32>` and `vec4<f32>`.
 - Use compatibility checks at adapter and model boundaries instead of encoding shader semantics into vector formats.

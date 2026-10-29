@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUBatchHashIndex,

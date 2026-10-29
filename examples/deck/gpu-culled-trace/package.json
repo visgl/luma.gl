@@ -11,9 +11,9 @@
   "dependencies": {
     "@deck.gl-community/arrow-layers": "workspace:*",
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
-    "@luma.gl/arrow": "10.0.0-alpha.5",
     "@luma.gl/core": "10.0.0-alpha.5",
     "@luma.gl/engine": "10.0.0-alpha.5",
+    "@luma.gl/gpgpu": "10.0.0-alpha.5",
     "@luma.gl/graph": "10.0.0-alpha.5",
     "@luma.gl/shaders": "10.0.0-alpha.5",
     "apache-arrow": "^17.0.0"

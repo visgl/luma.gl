@@ -7,7 +7,7 @@ import {
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
-} from '@luma.gl/arrow';
+} from '@luma.gl/gpgpu/arrow';
 import {
   type Buffer,
   type CommandEncoder,

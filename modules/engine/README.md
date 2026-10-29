@@ -43,3 +43,9 @@ Import reusable post-processing and screen-space shader passes from `@luma.gl/en
 This optional subpath preserves the existing effects API and is not re-exported from the engine
 root. Shaders owns shader-pass contracts; graph owns execution and accepts these pass
 definitions without importing engine. See the [effects reference](../../docs/api-reference/effects/README.md).
+
+## Optional Arrow adapters
+
+`@luma.gl/engine/arrow` provides geometry, path/polygon/text rendering adapters and splat conversion.
+Install the optional `apache-arrow` peer to use this entry. Generic package roots do not load Arrow.
+See the [Arrow adapter reference](../../docs/api-reference/arrow/README.mdx) for ownership, streaming and package boundaries.

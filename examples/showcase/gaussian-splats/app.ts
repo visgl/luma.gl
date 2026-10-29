@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
-import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
+import {makeGPUSplatDataFromArrowStream} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {

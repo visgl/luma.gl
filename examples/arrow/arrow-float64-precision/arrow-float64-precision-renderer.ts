@@ -6,7 +6,7 @@ import {
   ArrowPathRenderer,
   convertArrowPathToGPUVectors,
   type PreparedArrowPathGPUVectors
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURenderable} from '@luma.gl/graph/gpu-tables';

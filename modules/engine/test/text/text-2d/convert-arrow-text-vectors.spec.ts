@@ -12,15 +12,16 @@ import {
   convertArrowTextToDictionaryModelProps,
   convertArrowTextToStorageModelProps,
   convertArrowTextToStorageState,
-  makeArrowFixedSizeListVector,
-  makeGPURecordBatchFromArrowRecordBatch,
-  makeGPUTableFromArrowTable,
-  makeGPUVectorFromArrow,
   packTextStorageClipRects,
   type ArrowUtf8Dictionary,
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
+import {
+  makeGPURecordBatchFromArrowRecordBatch,
+  makeGPUTableFromArrowTable
+} from '@luma.gl/graph/arrow';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';

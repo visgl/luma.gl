@@ -5,12 +5,11 @@
 import {
   getArrowFixedSizeListValues,
   isArrowFixedSizeListVector,
-  loadArrowRecordBatches,
   makeArrowFixedSizeListVector,
-  makeGPUVectorFromArrow,
-  makeGPURecordBatchFromArrowRecordBatch,
-  type ArrowRecordBatchSource
-} from '@luma.gl/arrow';
+  makeGPUVectorFromArrow
+} from '@luma.gl/gpgpu/arrow';
+import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '@luma.gl/engine/arrow';
+import {makeGPURecordBatchFromArrowRecordBatch} from '@luma.gl/graph/arrow';
 import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {TableTransform} from '@luma.gl/engine/tables';

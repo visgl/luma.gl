@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {TableTransform} from '@luma.gl/engine/tables';
 import type {ShaderLayout} from '@luma.gl/core';

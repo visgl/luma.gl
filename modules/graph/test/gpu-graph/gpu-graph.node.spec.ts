@@ -74,11 +74,7 @@ describe('@luma.gl/graph/gpu-graph-algorithms package boundary', () => {
       require: './dist/gpu-graph-algorithms/index.cjs',
       types: './dist/gpu-graph-algorithms/index.d.ts'
     });
-    for (const dependencies of [
-      packageJson.dependencies,
-      packageJson.peerDependencies,
-      packageJson.optionalDependencies
-    ]) {
+    for (const dependencies of [packageJson.dependencies, packageJson.optionalDependencies]) {
       expect(dependencies?.['apache-arrow']).toBeUndefined();
     }
     for (const sourceFile of ['index.ts', 'gpu-graph.ts']) {

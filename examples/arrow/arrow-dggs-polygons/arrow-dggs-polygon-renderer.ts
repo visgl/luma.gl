@@ -13,7 +13,7 @@ import {
   type DggsCellEncoding,
   type PreparedDggsCellKeyGPUVector,
   type PreparedDggsCellPathGPUVector
-} from '@luma.gl/arrow';
+} from '@luma.gl/graph/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {GPURenderable} from '@luma.gl/graph/gpu-tables';
 import {type PathStorageModel} from '@luma.gl/engine/models';

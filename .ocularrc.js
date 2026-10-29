@@ -16,6 +16,11 @@ const config = {
   },
 
   aliases: {
+    '@luma.gl/gpgpu/_internal/arrow': join(packageRoot, 'modules/gpgpu/src/arrow/internal.ts'),
+    '@luma.gl/graph/_internal/arrow': join(packageRoot, 'modules/graph/src/arrow/internal.ts'),
+    '@luma.gl/gpgpu/arrow': join(packageRoot, 'modules/gpgpu/src/arrow/index.ts'),
+    '@luma.gl/graph/arrow': join(packageRoot, 'modules/graph/src/arrow/index.ts'),
+    '@luma.gl/engine/arrow': join(packageRoot, 'modules/engine/src/arrow/index.ts'),
     '@luma.gl/core/test-utils': join(packageRoot, 'modules/core/src/test-utils'),
 
     '@luma.gl/engine/effects': join(packageRoot, 'modules/engine/src/effects'),

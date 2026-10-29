@@ -4,7 +4,7 @@ import {expect, it} from 'vitest';
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';

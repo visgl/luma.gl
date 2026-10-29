@@ -117,7 +117,11 @@ function buildGeneratedFontAtlas(
     canvas = createAtlasCanvas(MAX_CANVAS_WIDTH);
     canvas.width = MAX_CANVAS_WIDTH;
   }
-  const context = canvas.getContext('2d', {willReadFrequently: true});
+  // Arrow's DOM declarations widen the union overload; this request still selects 2D.
+  const context = canvas.getContext('2d', {willReadFrequently: true}) as
+    | CanvasRenderingContext2D
+    | OffscreenCanvasRenderingContext2D
+    | null;
   if (!context) {
     throw new Error('Font atlas builders require a 2D canvas context');
   }

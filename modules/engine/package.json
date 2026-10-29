@@ -100,6 +100,11 @@
       "types": "./dist/effects/index.d.ts",
       "import": "./dist/effects/index.js",
       "require": "./dist/effects/index.cjs"
+    },
+    "./arrow": {
+      "types": "./dist/arrow/index.d.ts",
+      "import": "./dist/arrow/index.js",
+      "require": "./dist/arrow/index.cjs"
     }
   },
   "files": [
@@ -116,7 +121,8 @@
   },
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.3",
-    "@luma.gl/shaders": "~10.0.0-alpha.3"
+    "@luma.gl/shaders": "~10.0.0-alpha.3",
+    "apache-arrow": ">=17.0.0"
   },
   "dependencies": {
     "@luma.gl/gpgpu": "10.0.0-alpha.5",
@@ -129,5 +135,10 @@
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
   "devDependencies": {
     "@luma.gl/anari": "10.0.0-alpha.5"
+  },
+  "peerDependenciesMeta": {
+    "apache-arrow": {
+      "optional": true
+    }
   }
 }

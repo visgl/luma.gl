@@ -7,7 +7,8 @@
   Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
-import {makeGPUTableFromArrowTable, makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
+import {makeArrowMatrix4x4Vector} from '@luma.gl/gpgpu/arrow';
 import type {
   NumberArray,
   ShaderLayout,

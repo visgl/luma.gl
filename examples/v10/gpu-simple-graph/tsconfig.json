@@ -16,8 +16,9 @@
     "resolveJsonModule": true,
     "isolatedModules": false,
     "paths": {
-      "@luma.gl/arrow": ["../../../modules/arrow/src/index.ts"],
-      "@luma.gl/arrow/*": ["../../../modules/arrow/src/*"],
+      "@luma.gl/gpgpu/arrow": ["../../../modules/gpgpu/src/arrow/index.ts"],
+      "@luma.gl/graph/arrow": ["../../../modules/graph/src/arrow/index.ts"],
+      "@luma.gl/engine/arrow": ["../../../modules/engine/src/arrow/index.ts"],
       "@luma.gl/core/webgl-constants": ["../../../modules/core/src/webgl-constants/index.ts"],
       "@luma.gl/core/webgl-constants/*": ["../../../modules/core/src/webgl-constants/*"],
       "@luma.gl/core": ["../../../modules/core/src/index.ts"],

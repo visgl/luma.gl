@@ -40,7 +40,7 @@ describe('@luma.gl/graph/gpu-dataframe package boundary', () => {
     expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBeDefined();
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
     expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
-    expect(packageJson.peerDependencies?.['apache-arrow']).toBeUndefined();
+    expect(packageJson.peerDependencies?.['apache-arrow']).toBe('>=17.0.0');
   });
 
   test('keeps dataframe runtime exports out of the graph root entry point', () => {

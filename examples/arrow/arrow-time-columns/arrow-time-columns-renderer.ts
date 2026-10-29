@@ -6,7 +6,7 @@ import {
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
-} from '@luma.gl/arrow';
+} from '@luma.gl/gpgpu/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {type DynamicBuffer} from '@luma.gl/core/dynamic';

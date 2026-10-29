@@ -21,7 +21,7 @@ and preparation helpers, see
 `GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, `GPUTable`, and `GPUSchema`
 are GPU-side representations for typed table columns and batches. Arrow vectors,
 record batches, and tables are common construction inputs through
-`@luma.gl/arrow`; the generic GPU objects do not retain references to those
+`@luma.gl/graph/arrow`; the generic GPU objects do not retain references to those
 sources after extracting the buffer data and metadata they need.
 
 The object model is batch-preserving by default:

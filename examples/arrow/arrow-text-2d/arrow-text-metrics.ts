@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  getArrowVectorByteLength,
-  type ArrowTextRenderer,
-  type ArrowTextRendererInput
-} from '@luma.gl/arrow';
+import {getArrowVectorByteLength} from '@luma.gl/gpgpu/arrow';
+import {type ArrowTextRenderer, type ArrowTextRendererInput} from '@luma.gl/engine/arrow';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import type {ArrowText2DControlPanelMetrics} from './control-panel';
 

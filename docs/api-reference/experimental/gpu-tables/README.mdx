@@ -28,7 +28,7 @@ transforms, and compute. It builds on the primitive objects in
 - Use [`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table) for data ownership and
   [`GPUTableShaderBindings`](/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings)
   for backend-specific shader resources.
-- Use `@luma.gl/arrow` adapters when source data is Apache Arrow.
+- Use `@luma.gl/graph/arrow` adapters when source data is Apache Arrow.
 
 ## API Reference
 
@@ -53,7 +53,7 @@ utilities. `GPUTableModel` renders preserved table batches through one model pip
 `GPUTableGeometry` exposes a packed static table as ordinary GPU geometry. Specialized path and
 polygon models live separately in `@luma.gl/engine/models`.
 
-Arrow-specific construction and analysis helpers live in `@luma.gl/arrow`.
+Arrow-specific construction and analysis helpers live in `@luma.gl/graph/arrow`.
 Applications that ingest Apache Arrow data should use those adapters to build
 the generic GPU table objects exposed here.
 

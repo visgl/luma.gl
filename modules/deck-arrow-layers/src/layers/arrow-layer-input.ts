@@ -6,10 +6,9 @@ import {
   canConvertColors,
   convertArrowToGPUVector,
   getArrowPaths,
-  getArrowRecordBatchAsyncIterator,
-  readArrowGPUVectorAsync,
-  type ArrowRecordBatchSource
-} from '@luma.gl/arrow';
+  readArrowGPUVectorAsync
+} from '@luma.gl/gpgpu/arrow';
+import {getArrowRecordBatchAsyncIterator, type ArrowRecordBatchSource} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {RecordBatch, Table, type DataType, type Vector} from 'apache-arrow';

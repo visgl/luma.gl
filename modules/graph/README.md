@@ -55,3 +55,9 @@ models or renderers.
 
 `yarn test-package-layering` checks source, built code, public declarations, and package
 dependencies. It also runs as part of the package build.
+
+## Optional Arrow adapters
+
+`@luma.gl/graph/arrow` provides table conversion, analytics, GeoArrow and DGGS preparation.
+Install the optional `apache-arrow` peer to use this entry. Generic package roots do not load Arrow.
+See the [Arrow adapter reference](../../docs/api-reference/arrow/README.mdx) for ownership, streaming and package boundaries.

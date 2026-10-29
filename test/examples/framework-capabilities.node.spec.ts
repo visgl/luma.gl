@@ -24,7 +24,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/engine/gltf',
   '@luma.gl/engine/splats',
   '@luma.gl/gpgpu',
-  '@luma.gl/arrow',
+  '@luma.gl/graph/arrow',
   '@luma.gl/graph/experimental'
 ] as const;
 const DATA_CAPABILITIES_HEADING = '## GPU-native data, compute, and visualization';
@@ -265,7 +265,7 @@ describe('framework capabilities documentation', () => {
     const arrowRows = readDetailedCapabilityRows(readCapabilitiesSource()).filter(
       row =>
         /Apache Arrow, geometry, and text/i.test(row.heading) &&
-        row.packageName.includes('@luma.gl/arrow')
+        row.packageName.includes('@luma.gl/graph/arrow')
     );
     const analyticsRows = arrowRows.filter(row =>
       /analytics|renderer[\s-]+independent/i.test(`${row.feature} ${row.details}`)
@@ -495,7 +495,14 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['anari', 'arrow', 'engine/splats', 'engine/text']) {
+    for (const experimentalPackage of [
+      'anari',
+      'gpgpu/arrow',
+      'graph/arrow',
+      'engine/arrow',
+      'engine/splats',
+      'engine/text'
+    ]) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );
@@ -560,14 +567,14 @@ describe('framework capabilities documentation', () => {
     const textRow = moduleRows.find(row => row[0].includes('@luma.gl/engine/text'));
     expect(textRow?.[1]).toBe('Experimental');
 
-    for (const packageName of ['arrow']) {
+    for (const packageName of ['gpgpu/arrow', 'graph/arrow', 'engine/arrow']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();
       expect(
         moduleRow![1],
         `@luma.gl/${packageName} must disclose its actual availability`
-      ).toMatch(/experimental[\s/]+private/i);
+      ).toMatch(/optional[\s/]+experimental/i);
     }
   });
 
@@ -639,7 +646,7 @@ describe('framework capabilities documentation', () => {
       /anisotrop(?:y|ic)/i,
       /transmission[^\n]*captured\s+scene\s+color/i,
       /standalone\s+glTF\s+rendering\s+fallback[^\n]*approximate/i,
-      /@luma\.gl\/arrow[\s\S]{0,80}private/i
+      /@luma\.gl\/graph\/arrow/i
     ]) {
       expect(capabilitiesSource, `The shared asset overview must explain ${capability}`).toMatch(
         capability

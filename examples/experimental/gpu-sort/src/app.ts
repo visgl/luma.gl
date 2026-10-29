@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
 import {Buffer, luma, type Device} from '@luma.gl/core';
 import {
   GPUBatchSort,

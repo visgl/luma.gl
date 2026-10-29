@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer, luma, type Device} from '@luma.gl/core';
 import {mountStreamingPanel} from './streaming-panel';
