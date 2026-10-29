@@ -42,7 +42,7 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
   ],
   smaller: [
     {
-      name: 'text',
+      name: 'engine/text',
       description: 'Render GPU text with font atlases and reusable layout helpers.',
       image: 'experimental/text-space-crawl',
       status: 'Experimental'
