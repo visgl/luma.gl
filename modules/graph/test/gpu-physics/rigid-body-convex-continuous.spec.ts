@@ -11,7 +11,7 @@ import {
   type GPURigidBodyWorldProps
 } from '../../src/gpu-physics';
 
-async function run(properties: GPURigidBodyWorldProps, steps = 1) {
+async function run(properties: GPURigidBodyWorldProps, steps = 1, captureRollbackState = false) {
   const device = await getWebGPUTestDevice();
   if (!device) return null;
   const world = new GPURigidBodyWorld({timeStep: 1 / 60, ...properties});
@@ -19,16 +19,20 @@ async function run(properties: GPURigidBodyWorldProps, steps = 1) {
   world.addToGraph(definition);
   const graph = await definition.compileAsync();
   try {
-    const initial = await world.captureState();
+    // Full-world snapshots are only inspected by rollback assertions.
+    const initial = captureRollbackState ? await world.captureState() : null;
     const encoder = device.createCommandEncoder();
     for (let step = 0; step < steps; step++) graph.encode(encoder, {parameters: undefined});
     device.submit(encoder.finish());
+    const state = await world.readState();
+    const work = await world.readContinuousWork();
+    const diagnostics = await world.readSimulationDiagnostics();
     return {
-      work: await world.readContinuousWork(),
-      state: await world.readState(),
-      diagnostics: await world.readSimulationDiagnostics(),
+      state,
+      work,
+      diagnostics,
       initial,
-      final: await world.captureState()
+      final: captureRollbackState || !diagnostics.complete ? await world.captureState() : null
     };
   } finally {
     graph.destroy();
@@ -113,32 +117,36 @@ it('rebounds from a translating kinematic convex obstacle in its moving frame', 
 });
 
 it('rejects a saturated swept queue without publishing any body state', async context => {
-  const result = await run({
-    gravity: [0, 0, 0],
-    failurePolicy: 'rollback',
-    continuous: {mode: 'convex', bodies: [0], maximumCandidates: 1},
-    bodies: [
-      {
-        position: [-2, 0, 0],
-        velocity: [240, 0, 0],
-        shape: {type: 'box', halfExtents: [0.2, 0.2, 0.2]}
-      },
-      ...[0, 1].map(horizontal => ({
-        mode: 'static' as const,
-        position: [horizontal, 0, 0] as const,
-        shape: {type: 'box' as const, halfExtents: [0.03, 1, 1] as const}
-      }))
-    ]
-  });
+  const result = await run(
+    {
+      gravity: [0, 0, 0],
+      failurePolicy: 'rollback',
+      continuous: {mode: 'convex', bodies: [0], maximumCandidates: 1},
+      bodies: [
+        {
+          position: [-2, 0, 0],
+          velocity: [240, 0, 0],
+          shape: {type: 'box', halfExtents: [0.2, 0.2, 0.2]}
+        },
+        ...[0, 1].map(horizontal => ({
+          mode: 'static' as const,
+          position: [horizontal, 0, 0] as const,
+          shape: {type: 'box' as const, halfExtents: [0.03, 1, 1] as const}
+        }))
+      ]
+    },
+    1,
+    true
+  );
   if (!result) return context.skip('WebGPU unavailable');
   expect(result.diagnostics.complete).toBe(false);
   expect(result.diagnostics.incompleteContinuousBodies).toBeGreaterThan(0);
-  for (const initial of result.initial.buffers.filter(buffer =>
+  for (const initial of result.initial!.buffers.filter(buffer =>
     ['positions', 'orientations', 'velocities', 'angular-velocities', 'manifolds'].includes(
       buffer.name
     )
   ))
-    expect(result.final.buffers.find(buffer => buffer.name === initial.name)!.data).toEqual(
+    expect(result.final!.buffers.find(buffer => buffer.name === initial.name)!.data).toEqual(
       initial.data
     );
 });
@@ -225,12 +233,12 @@ it('detects a rotating gate crossing a stationary sphere between samples', async
       result.work,
       Array.from(
         new Float32Array(
-          result.final.buffers.find(buffer => buffer.name === 'continuous-work')!.data.buffer
+          result.final!.buffers.find(buffer => buffer.name === 'continuous-work')!.data.buffer
         )
       ),
       Array.from(
         new Uint32Array(
-          result.final.buffers.find(buffer => buffer.name === 'continuous-work')!.data.buffer
+          result.final!.buffers.find(buffer => buffer.name === 'continuous-work')!.data.buffer
         )
       )
     );

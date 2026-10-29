@@ -49,16 +49,17 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   both locally and in CI: native keyboard/pointer tests need foreground focus, and concurrent
   shader compilation and readback compete for the same GPU. CI still parallelizes across shards.
   CI selects complementary `general`, `compute`, and `physics` groups. General tests, including
-  graph explorer document/pointer checks, keep full file isolation on three Linux workers. Audited
+  graph explorer document/pointer checks, keep full file isolation on two Linux workers. Audited
   compute and physics groups restore mocks between tests and reuse their device/module context
-  serially on one Linux and one Apple Silicon worker respectively. Tests that mutate globals or
+  serially on one Linux and two Apple Silicon workers respectively. Tests that mutate globals or
   exercise browser/device lifecycle belong in the isolated general group. Local commands default
   to all files with isolation enabled. No assertions, simulation steps, or timeouts are reduced.
-- Browser coverage uses weighted sharding so known slow GPU specs are spread across the three
+- Browser coverage uses weighted sharding so known slow GPU specs are spread across the two
   isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
   instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
   `test/utils/browser-test-sequencer.ts` from a successful general-browser run when expensive suites
-  are added or changed. Use rounded wall times between completed files to include isolated-page
+  are added or changed. Refresh `NATIVE_PHYSICS_TEST_WEIGHTS` from native physics runs.
+  Use rounded wall times between completed files to include isolated-page
   and import overhead, and replay the complete discovered suite set to check all shard totals.
 - CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage
   anchors with Istanbul coverage from all five browser workers. The complete Node suite still runs

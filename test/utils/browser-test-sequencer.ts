@@ -7,9 +7,9 @@ import {BaseSequencer, type TestSpecification} from 'vitest/node';
 
 const DEFAULT_BROWSER_TEST_WEIGHT = 3;
 
-// General-suite wall times include page/import overhead, measured on run 40803098621
+// General-suite wall times include page/import overhead, measured on run 40804836290
 // (2026-10-29). Compute/physics retain SwiftShader timings from run 40502376058
-// for default all-suite sharding; CI runs each in its own reusable context.
+// for default all-suite sharding; CI runs them in reusable contexts.
 export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/anari/test/anari-diffuse.spec.ts': 19,
   'modules/anari/test/anari-emitter-sampling.spec.ts': 22,
@@ -137,6 +137,46 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'test/examples/volumetric-fire-forge.spec.ts': 4
 };
 
+// Native Apple Silicon physics wall times from run 40804836290 (2026-10-29).
+// Keep these separate from SwiftShader weights used by default all-suite sharding.
+export const NATIVE_PHYSICS_TEST_WEIGHTS: Readonly<Record<string, number>> = {
+  'modules/graph/test/gpu-physics/authored-trigger-qualification.spec.ts': 3,
+  'modules/graph/test/gpu-physics/gpu-physics-batch.spec.ts': 2,
+  'modules/graph/test/gpu-physics/gpu-physics-ensemble.spec.ts': 51,
+  'modules/graph/test/gpu-physics/gpu-rigid-body-world.spec.ts': 26,
+  'modules/graph/test/gpu-physics/gpu-sphere-world.spec.ts': 19,
+  'modules/graph/test/gpu-physics/rigid-body-broad-phase.spec.ts': 2,
+  'modules/graph/test/gpu-physics/rigid-body-compaction.spec.ts': 6,
+  'modules/graph/test/gpu-physics/rigid-body-contact-geometry.spec.ts': 5,
+  'modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts': 14,
+  'modules/graph/test/gpu-physics/rigid-body-convex.spec.ts': 26,
+  'modules/graph/test/gpu-physics/rigid-body-coverage.spec.ts': 3,
+  'modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts': 102,
+  'modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts': 6,
+  'modules/graph/test/gpu-physics/rigid-body-gameplay.spec.ts': 3,
+  'modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts': 7,
+  'modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts': 2,
+  'modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts': 24,
+  'modules/graph/test/gpu-physics/rigid-body-joints.spec.ts': 17,
+  'modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts': 90,
+  'modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts': 28,
+  'modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts': 2,
+  'modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts': 95,
+  'modules/graph/test/gpu-physics/rigid-body-parallel.spec.ts': 8,
+  'modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts': 1,
+  'modules/graph/test/gpu-physics/rigid-body-plane.spec.ts': 2,
+  'modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts': 2,
+  'modules/graph/test/gpu-physics/rigid-body-recovery.spec.ts': 5,
+  'modules/graph/test/gpu-physics/rigid-body-reliability.spec.ts': 7,
+  'modules/graph/test/gpu-physics/rigid-body-rotation-qualification.spec.ts': 4,
+  'modules/graph/test/gpu-physics/rigid-body-seam-continuity.spec.ts': 7,
+  'modules/graph/test/gpu-physics/rigid-body-sparse.spec.ts': 5,
+  'modules/graph/test/gpu-physics/rigid-body-stability.spec.ts': 39,
+  'modules/graph/test/gpu-physics/scenegraph-behaviors.spec.ts': 3,
+  'modules/graph/test/gpu-physics/scenegraph-instance.spec.ts': 1,
+  'modules/graph/test/gpu-physics/scenegraph-session.spec.ts': 2
+};
+
 type WeightedTestSpecification = {
   path: string;
   specification: TestSpecification;
@@ -157,6 +197,10 @@ export class BrowserTestSequencer extends BaseSequencer {
       return specifications;
     }
 
+    const weights =
+      process.env.LUMA_TEST_BROWSER_GROUP === 'physics'
+        ? NATIVE_PHYSICS_TEST_WEIGHTS
+        : SLOW_BROWSER_TEST_WEIGHTS;
     const weightedSpecifications = specifications
       .map(specification => {
         const testPath = relative(this.ctx.config.root, specification.moduleId).replaceAll(
@@ -166,7 +210,7 @@ export class BrowserTestSequencer extends BaseSequencer {
         return {
           path: testPath,
           specification,
-          weight: SLOW_BROWSER_TEST_WEIGHTS[testPath] ?? DEFAULT_BROWSER_TEST_WEIGHT
+          weight: weights[testPath] ?? DEFAULT_BROWSER_TEST_WEIGHT
         } satisfies WeightedTestSpecification;
       })
       .sort((left, right) => right.weight - left.weight || left.path.localeCompare(right.path));
