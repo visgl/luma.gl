@@ -172,7 +172,7 @@ process.stdout.write('Verified gpgpu kernel export ownership.\n');
 // The lightweight browser entry shares existing CommonJS device singleton implementations.
 const testUtilities = require('../modules/core/dist/test-utils/index.cjs');
 const deviceTestUtilities = require('@luma.gl/core/test-utils');
-const legacyTestUtilities = require('@luma.gl/core/test-utils/legacy');
+const legacyTestUtilities = require('@luma.gl/core/test-utils-legacy');
 assert.equal(typeof legacyTestUtilities.createTestDevice, 'function');
 assert(!('createTestDevice' in testUtilities));
 assert(!('SnapshotTestRunner' in testUtilities));

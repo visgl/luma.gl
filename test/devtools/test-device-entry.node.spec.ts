@@ -58,3 +58,17 @@ test('browser group selection fails closed on unknown values', () => {
   for (const group of BROWSER_TEST_GROUPS) expect(getBrowserTestGroup(group)).toBe(group);
   expect(() => getBrowserTestGroup('unknown')).toThrow();
 });
+
+test('bare test-utils imports preserve adapter registration', async () => {
+  const result = await build({
+    absWorkingDir: root,
+    stdin: {contents: "import '@luma.gl/core/test-utils';", resolveDir: root},
+    bundle: true,
+    platform: 'browser',
+    format: 'esm',
+    write: false,
+    logLevel: 'silent'
+  });
+  expect(result.outputFiles[0].text).toContain('registerAdapters');
+  expect(result.warnings.filter(warning => warning.id === 'ignored-bare-import')).toEqual([]);
+});

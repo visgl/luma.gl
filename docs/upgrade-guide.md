@@ -427,4 +427,4 @@ is retained. Install `@luma.gl/engine` instead of `@luma.gl/gltf`.
 The `@luma.gl/test-utils` package is removed. Replace its root and `/device` imports with
 `@luma.gl/core/test-utils`. The legacy `SnapshotTestRunner`, `PerformanceTestRunner`, and
 runner test-case types are removed from the public package. Use Vitest and Playwright instead.
-Deprecated synchronous device helpers remain in `@luma.gl/core/test-utils/legacy`.
+Deprecated synchronous device helpers remain in `@luma.gl/core/test-utils-legacy`.

@@ -66,10 +66,10 @@
       "import": "./dist/test-utils/index.js",
       "require": "./dist/test-utils/index.cjs"
     },
-    "./test-utils/legacy": {
-      "types": "./dist/test-utils/legacy.d.ts",
-      "import": "./dist/test-utils/legacy.js",
-      "require": "./dist/test-utils/legacy.cjs"
+    "./test-utils-legacy": {
+      "types": "./dist/test-utils-legacy.d.ts",
+      "import": "./dist/test-utils-legacy.js",
+      "require": "./dist/test-utils-legacy.cjs"
     }
   },
   "files": [
@@ -93,7 +93,13 @@
     "./dist/test-utils/register-devices.cjs",
     "./src/test-utils/deprecated/sync-test-device.ts",
     "./dist/test-utils/deprecated/sync-test-device.js",
-    "./dist/test-utils/deprecated/sync-test-device.cjs"
+    "./dist/test-utils/deprecated/sync-test-device.cjs",
+    "./src/test-utils/index.ts",
+    "./dist/test-utils/index.js",
+    "./dist/test-utils/index.cjs",
+    "./src/test-utils-legacy.ts",
+    "./dist/test-utils-legacy.js",
+    "./dist/test-utils-legacy.cjs"
   ],
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",

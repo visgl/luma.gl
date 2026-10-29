@@ -3,4 +3,4 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** @deprecated Use asynchronous device helpers from @luma.gl/core/test-utils. */
-export {createTestDevice, webglDevice} from './deprecated/sync-test-device';
+export {createTestDevice, webglDevice} from './test-utils/deprecated/sync-test-device';

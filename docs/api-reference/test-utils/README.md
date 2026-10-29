@@ -38,7 +38,7 @@ See [Testing](/docs/developer-guide/testing) and
 The `@luma.gl/test-utils` package has been removed. Replace both its root and `/device` imports
 with `@luma.gl/core/test-utils`.
 The deprecated synchronous `createTestDevice` and `webglDevice` exports remain available from
-`@luma.gl/core/test-utils/legacy`. Prefer asynchronous device helpers.
+`@luma.gl/core/test-utils-legacy`. Prefer asynchronous device helpers.
 
 The legacy `SnapshotTestRunner` and `PerformanceTestRunner` are no longer public APIs.
 There is no `@luma.gl/engine/test-utils` entry: device helpers need only core, and the historical
