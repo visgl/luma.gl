@@ -9,6 +9,11 @@ on:
   pull_request:
     paths:
       - '.github/workflows/physics-endurance.yml'
+      - '.nvmrc'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'test/utils/browser-process-shim.mjs'
+      - 'modules/graph/test/gpu-physics/physics-test-utils.ts'
       - 'test/utils/browser-test-groups.ts'
       - 'vitest.config.ts'
       - 'modules/graph/test/gpu-physics/rigid-body-stack-*.ts'

@@ -28,6 +28,15 @@ test('nightly physics is scheduled, manually runnable, and fails on test failure
   );
   expect(workflow.on.schedule).toEqual([{cron: '17 7 * * *'}]);
   expect(workflow.on).toHaveProperty('workflow_dispatch');
+  expect(workflow.on.pull_request.paths).toEqual(
+    expect.arrayContaining([
+      '.nvmrc',
+      'package.json',
+      'yarn.lock',
+      'test/utils/browser-process-shim.mjs',
+      'modules/graph/test/gpu-physics/physics-test-utils.ts'
+    ])
+  );
   const step = workflow.jobs.endurance.steps.find(
     (entry: {name?: string}) => entry.name === 'Run full endurance matrix'
   );
