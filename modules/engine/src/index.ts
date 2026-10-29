@@ -346,3 +346,5 @@ export {
 export {makeAdapterAnimationBinding} from './animation/property-animation-binding';
 
 export {deformPositions} from './animation/deform-positions';
+
+export {createAreaLightLTCTextures} from './lighting/ltc-textures';

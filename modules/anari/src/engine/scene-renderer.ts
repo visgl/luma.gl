@@ -51,7 +51,7 @@ export type SceneMaterial = {
   /** Canonical shaders PBR uniforms, including extension factors and UV transforms. */
   uniforms?: PBRMaterialUniforms;
   /** Canonical group-3 PBR texture bindings. */
-  bindings?: Partial<PBRMaterialBindings>;
+  bindings?: Partial<PBRMaterialBindings<Texture>>;
   /** Opaque, alpha-masked, or alpha-blended pipeline behavior. */
   alphaMode?: SceneAlphaMode;
   /** Disables back-face culling when enabled. */

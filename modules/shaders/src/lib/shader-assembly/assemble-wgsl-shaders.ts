@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type ShaderBindingDebugRow, getShaderBindingDebugRowsFromWGSL} from './wgsl-binding-debug';
-import {type ShaderLayout} from '@luma.gl/core';
+import {type ShaderLayout} from '../../types';
 import {scanWGSLInterface} from './wgsl-interface-scan';
 import {
   type AssembleWGSLShaderOptions,

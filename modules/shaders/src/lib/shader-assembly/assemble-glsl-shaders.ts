@@ -23,7 +23,7 @@ import {
   getShaderHooks
 } from './shader-hooks';
 import {type ShaderInjection, injectShader} from './shader-injections';
-import {type AttributeShaderType} from '@luma.gl/core';
+import {type AttributeShaderType} from '../../types';
 import {type ResolvedShaderPluginVarying} from '../shader-plugin';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';

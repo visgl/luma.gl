@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Texture} from '@luma.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
-export type IBLBindings = {
-  pbr_diffuseEnvSampler?: Texture | null;
-  pbr_specularEnvSampler?: Texture | null;
-  pbr_brdfLUT?: Texture | null;
+export type IBLBindings<TextureT = unknown> = {
+  pbr_diffuseEnvSampler?: TextureT | null;
+  pbr_specularEnvSampler?: TextureT | null;
+  pbr_brdfLUT?: TextureT | null;
 };
 
 export const iblWGSL = /* wgsl */ `\

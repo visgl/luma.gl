@@ -238,3 +238,14 @@ assert.equal(shadersApi.WGSLShaderAssembler, wgslShadersApi.WGSLShaderAssembler)
 assert(new glslShadersApi.GLSLShaderAssembler() instanceof shadersApi.ShaderAssembler);
 assert(new wgslShadersApi.WGSLShaderAssembler() instanceof shadersApi.ShaderAssembler);
 process.stdout.write('Verified shader assembler subpath identities.\n');
+
+// Core re-exports resource-free shader contracts without duplicating their state.
+const shaderContracts = require('@luma.gl/shaders/types');
+const shaderScanners = require('@luma.gl/shaders/wgsl');
+const coreScanners = require('@luma.gl/core/wgsl');
+for (const name of ['shaderTypeDecoder', 'makeShaderBlockLayout', 'getVariableShaderTypeInfo']) {
+  assert.equal(coreApi[name], shaderContracts[name]);
+}
+assert.equal(coreScanners.scanWGSLInterface, shaderScanners.scanWGSLInterface);
+assert(!('getDefaultShaderAssembler' in shadersApi.ShaderAssembler));
+process.stdout.write('Verified standalone shader contracts and core CommonJS identity.\n');

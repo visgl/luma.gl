@@ -13,8 +13,7 @@ Models and computations create owned language-specific assemblers by default. Re
 hooks, default modules, or transpilers on `ShaderAssembler.getDefaultShaderAssembler()` no longer
 automatically configures engine, gpgpu, or graph execution. Construct a `GLSLShaderAssembler` or
 `WGSLShaderAssembler`, configure it, and pass it through the `shaderAssembler` prop. Share that
-instance explicitly between consumers when desired. The static factory remains deprecated for
-compatibility, and explicit class-default assemblers remain supported for existing integrations.
+instance explicitly between consumers when desired. The static default factory is removed. Explicit class-default assemblers remain supported for existing integrations.
 
 ## Effects imports
 
@@ -277,9 +276,8 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 - `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
   `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
   `new WGSLShaderAssembler()` for WGSL.
-- `ShaderAssembler.getDefaultShaderAssembler()` is deprecated. Construct a GLSL or WGSL
-  assembler and pass it explicitly. Remaining compatibility calls still require an explicit
-  `'glsl'` or `'wgsl'` argument.
+- `ShaderAssembler.getDefaultShaderAssembler()` is removed. Construct a GLSL or WGSL
+  assembler and pass it explicitly.
 - `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and
   `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing
   `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or

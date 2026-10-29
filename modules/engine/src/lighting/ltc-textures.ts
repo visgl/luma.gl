@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {toHalfFloat} from '../../math/fp16/fp16-utils';
+import {toHalfFloat} from '@luma.gl/shaders';
 import type {Device} from '@luma.gl/core';
 import {LTC_MATRIX_DATA, LTC_AMPLITUDE_DATA} from './ltc-data';
 

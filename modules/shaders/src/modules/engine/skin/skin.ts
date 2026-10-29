@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Binding} from '@luma.gl/core';
+import type {ShaderBinding as Binding} from '../../../types';
 import {Matrix4} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';

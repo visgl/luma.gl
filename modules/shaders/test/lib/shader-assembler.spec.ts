@@ -6,7 +6,6 @@ import {expect, it} from 'vitest';
 import {
   GLSLShaderAssembler,
   ShaderAssembler,
-  WGSLShaderAssembler,
   type PlatformInfo,
   picking,
   dirlight
@@ -37,7 +36,7 @@ void main(void) {
 }
 `;
 
-const wgslPlatformInfo: PlatformInfo = {
+const _wgslPlatformInfo: PlatformInfo = {
   type: 'webgpu',
   gpu: 'test-gpu',
   shaderLanguage: 'wgsl',
@@ -45,7 +44,7 @@ const wgslPlatformInfo: PlatformInfo = {
   features: new Set()
 };
 
-const wgslSource = /* wgsl */ `\
+const _wgslSource = /* wgsl */ `\
 @vertex
 fn vertexMain() -> @builtin(position) vec4<f32> {
   return vec4<f32>(0.0, 0.0, 0.0, 1.0);
@@ -318,119 +317,11 @@ it('ShaderAssembler#defaultModules', () => {
   void 0;
 });
 
-it('ShaderAssembler#getDefaultShaderAssembler isolates shader language state', () => {
-  const glslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
-  const wgslShaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
-
-  expect(
-    Boolean(glslShaderAssembler instanceof GLSLShaderAssembler),
-    'GLSL selects the GLSL assembler'
-  ).toBe(true);
-  expect(
-    Boolean(wgslShaderAssembler instanceof WGSLShaderAssembler),
-    'WGSL selects the WGSL assembler'
-  ).toBe(true);
-  expect(glslShaderAssembler.shaderLanguage, 'the GLSL default identifies its language').toBe(
-    'glsl'
-  );
-  expect(wgslShaderAssembler.shaderLanguage, 'the WGSL default identifies its language').toBe(
-    'wgsl'
-  );
-  expect(
-    ShaderAssembler.getDefaultShaderAssembler('glsl'),
-    'explicit GLSL requests reuse the GLSL assembler'
-  ).toBe(glslShaderAssembler);
-  expect(
-    ShaderAssembler.getDefaultShaderAssembler('wgsl'),
-    'explicit WGSL requests reuse the WGSL assembler'
-  ).toBe(wgslShaderAssembler);
-  expect(glslShaderAssembler, 'shader languages never share an assembler').not.toBe(
-    wgslShaderAssembler
-  );
-  expect(
-    typeof glslShaderAssembler.assembleGLSLShaderPair,
-    'GLSL assemblers expose GLSL assembly'
-  ).toBe('function');
-  expect(
-    Boolean('assembleWGSLShader' in glslShaderAssembler),
-    'GLSL assemblers do not expose WGSL assembly'
-  ).toBe(false);
-  expect(
-    typeof wgslShaderAssembler.assembleWGSLShader,
-    'WGSL assemblers expose WGSL assembly'
-  ).toBe('function');
-  expect(
-    Boolean('assembleGLSLShaderPair' in wgslShaderAssembler),
-    'WGSL assemblers do not expose GLSL assembly'
-  ).toBe(false);
-  expect(
-    () => Reflect.apply(ShaderAssembler.getDefaultShaderAssembler, ShaderAssembler, []),
-    'a shader language must be supplied explicitly'
-  ).toThrow();
-  expect(
-    () => Reflect.apply(ShaderAssembler.getDefaultShaderAssembler, ShaderAssembler, ['spirv']),
-    'unsupported shader languages are rejected'
-  ).toThrow();
-
-  const isolatedGLSLShaderAssembler = new GLSLShaderAssembler();
-  const isolatedWGSLShaderAssembler = new WGSLShaderAssembler();
-  const initialGLSLDefaultSource = glslShaderAssembler.assembleGLSLShaderPair({
-    platformInfo,
-    vs,
-    fs
-  }).vs;
-  const initialWGSLDefaultSource = wgslShaderAssembler.assembleWGSLShader({
-    platformInfo: wgslPlatformInfo,
-    source: wgslSource
-  }).source;
-  isolatedGLSLShaderAssembler.addShaderHook('vs:LUMAGL_isolatedHook(inout vec4 value)');
-  isolatedWGSLShaderAssembler.addShaderHook(
-    'vs:LUMAGL_isolatedHook(value: ptr<function, vec4<f32>>)'
-  );
-
-  const assembledGLSLSource = isolatedGLSLShaderAssembler.assembleGLSLShaderPair({
-    platformInfo,
-    vs,
-    fs
-  }).vs;
-  const assembledWGSLSource = isolatedWGSLShaderAssembler.assembleWGSLShader({
-    platformInfo: wgslPlatformInfo,
-    source: wgslSource
-  }).source;
-  const retainedGLSLDefaultSource = glslShaderAssembler.assembleGLSLShaderPair({
-    platformInfo,
-    vs,
-    fs
-  }).vs;
-  const retainedWGSLDefaultSource = wgslShaderAssembler.assembleWGSLShader({
-    platformInfo: wgslPlatformInfo,
-    source: wgslSource
-  }).source;
-
-  expect(
-    Boolean(assembledGLSLSource.includes('void LUMAGL_isolatedHook(inout vec4 value)')),
-    'GLSL assemblers retain their own GLSL hook signatures'
-  ).toBe(true);
-  expect(
-    Boolean(
-      assembledWGSLSource.includes('fn LUMAGL_isolatedHook(value: ptr<function, vec4<f32>>)')
-    ),
-    'WGSL assemblers retain their own WGSL hook signatures'
-  ).toBe(true);
-  expect(retainedGLSLDefaultSource, 'isolated hooks never mutate the GLSL default').toBe(
-    initialGLSLDefaultSource
-  );
-  expect(retainedWGSLDefaultSource, 'isolated hooks never mutate the WGSL default').toBe(
-    initialWGSLDefaultSource
-  );
-  expect(
-    Boolean(retainedGLSLDefaultSource.includes('LUMAGL_isolatedHook')),
-    'isolated hooks are absent from shared GLSL source'
-  ).toBe(false);
-  expect(
-    Boolean(retainedWGSLDefaultSource.includes('LUMAGL_isolatedHook')),
-    'isolated hooks are absent from shared WGSL source'
-  ).toBe(false);
-
-  void 0;
+it('ShaderAssembler has explicit instance ownership without a global default factory', () => {
+  expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
+  const first = new GLSLShaderAssembler();
+  const second = new GLSLShaderAssembler();
+  first.addDefaultModule({name: 'first-only'});
+  expect(first._getModuleList().map(module => module.name)).toEqual(['first-only']);
+  expect(second._getModuleList()).toEqual([]);
 });

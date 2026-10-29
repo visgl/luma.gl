@@ -10,14 +10,8 @@ import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
-import {
-  Light,
-  LightingProps,
-  pbrMaterial,
-  pbrScene,
-  skin,
-  createAreaLightLTCTextures
-} from '@luma.gl/shaders';
+import {createAreaLightLTCTextures} from '@luma.gl/engine';
+import {Light, LightingProps, pbrMaterial, pbrScene, skin} from '@luma.gl/shaders';
 import {Matrix4, Vector3} from '@math.gl/core';
 import {
   INFO_HTML,

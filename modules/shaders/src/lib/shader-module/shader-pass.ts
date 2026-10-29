@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Binding, SamplerProps, TextureFormat} from '@luma.gl/core';
+import type {ShaderBinding as Binding, SamplerProps, TextureFormat} from '../../types';
 import type {PickBindings, PickUniforms, ShaderModule} from './shader-module';
 import type {UniformValue} from '../utils/uniform-types';
 

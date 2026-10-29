@@ -18,7 +18,7 @@ import type {
   NumberArray16
 } from '@math.gl/core';
 
-import type {CompositeShaderType} from '@luma.gl/core';
+import type {CompositeShaderType} from '../../types';
 
 /*
  * Allowed types to be used for uniform values

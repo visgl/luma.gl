@@ -4,7 +4,6 @@
 
 import {Deck, type DeckProps, type View} from '@deck.gl/core';
 import type {Device} from '@luma.gl/core';
-import {installLegacyDeckShaderAssemblerCompatibility} from './deck-example-device';
 
 /** Construction options for the minimal Deck extensions exercised by the Arrow examples. */
 export type ArrowDeckProps<ViewsT extends View | View[]> = {
@@ -31,20 +30,11 @@ export class ArrowDeck<ViewsT extends View | View[]> extends Deck<ViewsT> {
   }: ArrowDeckProps<ViewsT>) {
     let runOnLoad: (() => void) | null = null;
     let runBeforeRender: NonNullable<DeckProps<ViewsT>['onBeforeRender']> | null = null;
-    let restoreShaderAssembler: (() => void) | null = null;
     let didLoad = false;
     super({
       ...deckProps,
-      onDeviceInitialized: initializedDevice => {
-        restoreShaderAssembler?.();
-        onDeviceInitialized?.(initializedDevice);
-        restoreShaderAssembler = installLegacyDeckShaderAssemblerCompatibility(initializedDevice);
-      },
+      onDeviceInitialized: initializedDevice => onDeviceInitialized?.(initializedDevice),
       onLoad: () => {
-        // Deck may own an assembler from a separately installed shader package.
-        // End the compatibility scope even when that assembler never calls our factory.
-        restoreShaderAssembler?.();
-        restoreShaderAssembler = null;
         didLoad = true;
         runOnLoad?.();
       },
@@ -57,8 +47,6 @@ export class ArrowDeck<ViewsT extends View | View[]> extends Deck<ViewsT> {
     };
     runBeforeRender = context => onBeforeRender?.({...context, deck: this});
     this.finalizeCallback = () => {
-      restoreShaderAssembler?.();
-      restoreShaderAssembler = null;
       onFinalize?.();
     };
     if (didLoad) queueMicrotask(runOnLoad);
