@@ -194,3 +194,32 @@ it('WEBGLRenderPass does not overwrite a canvas resized after a deferred resize 
   renderPass.end();
   device.destroy();
 });
+
+it('WEBGLRenderPass applies a repeated resize request made after an external canvas resize', async () => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+
+  canvas.width = 100;
+  canvas.height = 50;
+  canvasContext.setDrawingBufferSize(100, 50);
+  new WEBGLRenderPass(device, {}).end();
+
+  // The application requests a size, another library resizes the canvas, and the application
+  // repeats its request before the deferred resize is flushed.
+  canvasContext.setDrawingBufferSize(300, 150);
+  canvas.width = 640;
+  canvas.height = 480;
+  canvasContext.setDrawingBufferSize(300, 150);
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  expect(canvas.width, 'canvas width follows the latest request').toBe(300);
+  expect(canvas.height, 'canvas height follows the latest request').toBe(150);
+  expect(canvasContext.getDrawingBufferSize(), 'drawing buffer follows the latest request').toEqual(
+    [300, 150]
+  );
+
+  renderPass.end();
+  device.destroy();
+});

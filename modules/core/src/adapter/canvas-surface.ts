@@ -252,6 +252,10 @@ export abstract class CanvasSurface {
     width = Math.floor(width);
     height = Math.floor(height);
     if (this.drawingBufferWidth === width && this.drawingBufferHeight === height) {
+      if (this._needsDrawingBufferResize) {
+        // A repeated request is still the latest one: it wins over canvas resizes made before it.
+        this._canvasSizeAtResizeRequest = [this.canvas.width, this.canvas.height];
+      }
       return;
     }
     this.drawingBufferWidth = width;
