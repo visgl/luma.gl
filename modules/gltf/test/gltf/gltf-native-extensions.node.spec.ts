@@ -18,7 +18,7 @@ import {
 } from '@luma.gl/gltf';
 import {ModelNode} from '@luma.gl/engine';
 
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test} from 'vitest';
 
 async function loadNativeExtensionFixture(name: string): Promise<GLTFPostprocessed> {

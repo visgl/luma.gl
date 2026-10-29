@@ -8,7 +8,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF, createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import type {RenderPass} from '@luma.gl/core';
 
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test, vi} from 'vitest';
 

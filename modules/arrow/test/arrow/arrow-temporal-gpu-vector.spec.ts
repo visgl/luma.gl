@@ -11,7 +11,7 @@ import {
   TEMPORAL_ORIGIN_POLICY_METADATA_KEY,
   TEMPORAL_UNIT_METADATA_KEY
 } from '@luma.gl/arrow';
-import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 it('convertArrowTemporalToGPUVector emits relative scalar timestamps with persisted origin', async () => {

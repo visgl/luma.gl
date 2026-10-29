@@ -11,7 +11,7 @@ import {
   type SplatPickingInfo,
   type SplatSource
 } from '@luma.gl/splats';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils/device';
 import {GPUSplatGraphMixedRenderer, GPUSplatGraphPicker} from '../src/gpu-splat-graph-interaction';
 
 it('GPUSplatGraphPicker reads original streamed identities from one real WebGPU indirect draw', async () => {

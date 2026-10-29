@@ -11,7 +11,7 @@ import {
   WGSLShaderAssembler,
   type PlatformInfo
 } from '@luma.gl/shadertools';
-import {getWebGLTestDevice, getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 

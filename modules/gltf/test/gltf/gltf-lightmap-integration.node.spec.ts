@@ -6,7 +6,7 @@ import {expect, test, vi} from 'vitest';
 import type {GLTFPostprocessed} from '@luma.gl/gltf';
 import {ModelNode, type GroupNode} from '@luma.gl/engine';
 import {log} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {createScenegraphsFromGLTF} from '../../src/gltf/create-scenegraph-from-gltf';
 
 function makeDocument(instanced = false): GLTFPostprocessed {

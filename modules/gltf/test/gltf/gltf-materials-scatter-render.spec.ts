@@ -5,7 +5,7 @@ import type {GLTFPostprocessed} from '@luma.gl/gltf';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
 import {pbrMaterial, skin} from '@luma.gl/shadertools';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, test} from 'vitest';
 import {createScenegraphsFromGLTF} from '../../src/gltf/create-scenegraph-from-gltf';

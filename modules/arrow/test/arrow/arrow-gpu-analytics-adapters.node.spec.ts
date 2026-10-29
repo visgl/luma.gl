@@ -11,7 +11,7 @@ import {
 import {Buffer, type BufferProps} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 import {describe, expect, test, vi} from 'vitest';
 

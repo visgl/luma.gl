@@ -11,7 +11,7 @@ import {
   getRegisteredGLTFExtensions
 } from '@luma.gl/gltf';
 import type {TextureFormat} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {

@@ -7,7 +7,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 import {bloom, bloomCompositeShaderPass, createBloomCompositeShaderPass} from '@luma.gl/effects';
 import {fromHalfFloat, getShaderModuleUniforms, toHalfFloat} from '@luma.gl/shadertools';
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 it('bloom#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(bloom, {}, {});

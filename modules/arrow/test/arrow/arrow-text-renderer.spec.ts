@@ -35,7 +35,7 @@ import {
   TextDictionaryModel,
   TextStorageModel
 } from '@luma.gl/text/experimental';
-import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 const CHARACTER_SET = ' AB';

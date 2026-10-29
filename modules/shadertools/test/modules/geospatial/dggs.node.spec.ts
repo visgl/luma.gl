@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {checkType} from '@luma.gl/test-utils';
+import {checkType} from '@luma.gl/test-utils/device';
 import {dggs} from '@luma.gl/shadertools';
 import type {ShaderModule} from '@luma.gl/shadertools';
 

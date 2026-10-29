@@ -8,7 +8,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {type GLTFPostprocessed, postProcessGLTF, createGLTFAnimatedCrowd} from '@luma.gl/gltf';
 import type {RenderPass} from '@luma.gl/core';
 
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test, vi} from 'vitest';
 
 async function loadLODFixture(

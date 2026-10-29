@@ -10,7 +10,7 @@ import {
   getSlangShaderLayout,
   getSlangUniformBufferLayouts
 } from '@luma.gl/slang/luma';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {UNIFORM_SHADER, UNIFORM_VALUES, UNIFORM_RESULTS} from './fixtures';
 
 it('slang#luma compute executes with reflected layouts and packed nested uniforms', async () => {

@@ -4,7 +4,7 @@
 
 import {expect, test} from 'vitest';
 import {WGSLShaderAssembler, pbrMaterial, type PlatformInfo} from '@luma.gl/shadertools';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 
 const platform: PlatformInfo = {
   type: 'webgpu',

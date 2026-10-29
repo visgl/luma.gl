@@ -8,7 +8,7 @@ import {
   type RayTracingSceneRenderOptions,
   type SceneSurface
 } from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {updateRayTracingAdaptiveBudget} from '../../src/engine/ray-tracing-scene-renderer';

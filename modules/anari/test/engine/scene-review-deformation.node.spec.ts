@@ -4,7 +4,7 @@
 
 import {Geometry} from '@luma.gl/engine';
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+import {getNullTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 

@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {makeGPUSplatData, SplatRenderer, type SplatSource} from '@luma.gl/splats';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils/device';
 
 // Keep renderer ownership, sorting, tone mapping, and SH fallback covered on software-only CI.
 import './splat-renderer.node.spec';

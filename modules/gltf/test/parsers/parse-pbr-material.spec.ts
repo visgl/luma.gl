@@ -4,7 +4,7 @@
 
 import {log, type TextureFormat} from '@luma.gl/core';
 import {parsePBRMaterial} from '@luma.gl/gltf/parsers/parse-pbr-material';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {

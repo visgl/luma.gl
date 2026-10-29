@@ -5,7 +5,7 @@
 import {Buffer, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {DeferredSceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 

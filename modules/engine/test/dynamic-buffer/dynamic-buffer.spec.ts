@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils/device';
 import {DynamicBuffer} from '../../src';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;

@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {ssrCameraTemporal, ssrCameraDepthHistoryCopy} from '@luma.gl/effects';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 
 it('camera SSR accepts reprojected history and rejects depth, normal, roughness, and offscreen mismatches', async context => {

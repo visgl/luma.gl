@@ -8,7 +8,7 @@ import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {postProcessGLTF} from '@luma.gl/gltf';
 import {ModelNode} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {expect, test, vi} from 'vitest';
 import GLTFViewer from '../../examples/tutorials/hello-gltf/app';
 

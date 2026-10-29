@@ -23,7 +23,7 @@ import {
   PathTripsStorageModel,
   createPathStorageState
 } from '@luma.gl/engine/models';
-import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;

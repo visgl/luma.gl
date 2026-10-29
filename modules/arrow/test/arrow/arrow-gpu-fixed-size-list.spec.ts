@@ -16,7 +16,7 @@ import {
 import type {ShaderLayout} from '@luma.gl/core';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice, NullDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 import {expectTypeOf} from 'vitest';
 

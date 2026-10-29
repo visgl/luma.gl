@@ -5,7 +5,7 @@
 import {expect, it, vi} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
 import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {GPUPagedSplatRenderer} from '../src/gpu-paged-splat-renderer';
 import {
   GPU_PAGED_SPLAT_FEATURE_SHADER,

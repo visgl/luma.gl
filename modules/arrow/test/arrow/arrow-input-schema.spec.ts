@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {makeGPUVectorFromArrow, prepareArrowInput, type ArrowInputSchema} from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {type GPUInputVectors} from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import * as arrow from 'apache-arrow';
 
 type SourceVectors = {

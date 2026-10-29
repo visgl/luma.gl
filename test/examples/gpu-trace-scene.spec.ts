@@ -4,7 +4,7 @@
 
 import {describe, expect, test} from 'vitest';
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import GPUTraceSceneAnimationLoopTemplate from '../../examples/experimental/gpu-trace-scene/app';
 import {TRACE_DURATION_FILTER_MAXIMUM} from '../../examples/experimental/gpu-trace-viewer/trace-data';
 

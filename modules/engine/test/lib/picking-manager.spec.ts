@@ -12,7 +12,7 @@ import {
   resolvePickingMode,
   supportsIndexPicking
 } from '../../src/modules/picking/picking-manager';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+import {getNullTestDevice} from '@luma.gl/test-utils/device';
 
 it('PickingManager#resolvePickingMode', () => {
   expect(resolvePickingMode('webgl'), 'color is the default mode').toBe('color');

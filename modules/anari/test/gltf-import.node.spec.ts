@@ -6,7 +6,7 @@ import {ANARIDevice} from '@luma.gl/anari';
 import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {getTextureTransformSlotDefinitions, parseGLTFLights} from '@luma.gl/gltf';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';

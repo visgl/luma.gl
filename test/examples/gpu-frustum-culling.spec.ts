@@ -4,7 +4,7 @@
 
 import {describe, expect, test} from 'vitest';
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils/device';
 import GPUFrustumCullingAnimationLoopTemplate from '../../examples/experimental/gpu-frustum-culling/app';
 
 describe('GPU frustum culling', () => {

@@ -43,19 +43,26 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
 - Node test files run in worker threads and reuse the worker's module graph. Tests that replace
   globals or mutate module-level state must restore that state in an `afterEach` or `afterAll` hook.
 - `nodeOnlyTestPatterns` routes audited CPU-only legacy specs away from browser-page isolation.
+- Device-only tests import `@luma.gl/test-utils/device` to avoid loading legacy animation/test
+  runners and eagerly creating an unused WebGL context in each isolated browser file.
 - Browser test files remain isolated because GPU devices, presentation contexts, and queued GPU
   work are not safe to share between files. Files run serially within each browser project,
   both locally and in CI: native keyboard/pointer tests need foreground focus, and concurrent
   shader compilation and readback compete for the same GPU. CI still parallelizes across shards.
-  This preserves real input and GPU integration coverage without increasing test timeouts.
-- Browser coverage uses weighted sharding so known slow GPU specs are spread across six
-  CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
+  CI selects complementary `general`, `compute`, and `physics` groups. General tests, including
+  graph explorer document/pointer checks, keep full file isolation on three Linux workers. Audited
+  compute and physics groups restore mocks between tests and reuse their device/module context
+  serially on one Linux and one Apple Silicon worker respectively. Tests that mutate globals or
+  exercise browser/device lifecycle belong in the isolated general group. Local commands default
+  to all files with isolation enabled. No assertions, simulation steps, or timeouts are reduced.
+- Browser coverage uses weighted sharding so known slow GPU specs are spread across the three
+  isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
   instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
-  `test/utils/browser-test-sequencer.ts` from a successful SwiftShader run when expensive suites
+  `test/utils/browser-test-sequencer.ts` from a successful general-browser run when expensive suites
   are added or changed. Use rounded suite execution seconds plus three seconds of isolated-page
-  overhead, and replay the complete discovered suite set to check all six shard totals.
+  overhead, and replay the complete discovered suite set to check all shard totals.
 - CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage
-  anchors with Istanbul coverage from the six browser shards. The complete Node suite still runs
+  anchors with Istanbul coverage from all five browser workers. The complete Node suite still runs
   separately without instrumentation so coverage remapping does not slow the build job.
 - The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
 

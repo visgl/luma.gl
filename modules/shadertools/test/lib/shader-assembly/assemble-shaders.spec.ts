@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Device} from '@luma.gl/core';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
 import {
   assembleGLSLShaderPair,
   GLSLShaderAssembler,

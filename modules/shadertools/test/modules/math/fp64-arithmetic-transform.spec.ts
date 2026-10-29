@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {it} from 'vitest';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils/device';
 import {
   getTransformPlatformInfo,
   runArithmeticCases,

@@ -12,7 +12,7 @@ import {
   supportsDeferredScene
 } from '@luma.gl/anari';
 import {pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+import {getNullTestDevice} from '@luma.gl/test-utils/device';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
