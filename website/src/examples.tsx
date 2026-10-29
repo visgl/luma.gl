@@ -17,7 +17,7 @@ import {
 } from './react-luma';
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import type {GLTFScenegraphs} from '@luma.gl/gltf';
+import type {GLTFScenegraphs} from '@luma.gl/engine/gltf';
 import {getGLTFModelOptions, selectGLTFModelOption, type GLTFModelSource} from './components/gltf-model-options';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';

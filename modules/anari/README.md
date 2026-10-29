@@ -254,7 +254,7 @@ bindings, transforms, retained instances, and supported lights into editable ANA
 models receive a normalized studio presentation with animated cyan and amber point lights, glossy
 materials, HDR emissive accents, and bloom.
 
-The showcase glTF importer uses `@loaders.gl/scene/gltf` and the canonical `@luma.gl/gltf` helpers,
+The showcase glTF importer uses `@loaders.gl/scene/gltf` and the canonical `@luma.gl/engine/gltf` helpers,
 preserving indexed meshes, RGB/RGBA vertex colors, `TEXCOORD_0`/`TEXCOORD_1`, authored tangent and
 skin attributes, punctual lights, all 21 supported core/PBR-extension image maps, and source
 material factors. Per-slot sampler addressing/filtering/mipmap settings, sRGB versus linear color

@@ -68,7 +68,7 @@ describe('scene rendering package architecture', () => {
 
   test('keeps glTF model construction independent of experimental rendering', () => {
     const gltfPackage = JSON.parse(
-      readFileSync(new URL('../../../gltf/package.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../../../engine/package.json', import.meta.url), 'utf8')
     ) as {
       dependencies?: Record<string, string>;
       optionalDependencies?: Record<string, string>;
@@ -83,7 +83,7 @@ describe('scene rendering package architecture', () => {
 
     for (const sourcePath of ['gltf/create-gltf-model.ts', 'parsers/parse-gltf.ts']) {
       const source = readFileSync(
-        new URL(`../../../gltf/src/${sourcePath}`, import.meta.url),
+        new URL(`../../../engine/src/gltf/${sourcePath}`, import.meta.url),
         'utf8'
       );
       expect(source).not.toContain('@luma.gl/experimental');

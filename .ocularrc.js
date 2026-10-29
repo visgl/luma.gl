@@ -16,6 +16,8 @@ const config = {
   },
 
   aliases: {
+    '@luma.gl/engine/gltf-physics': join(packageRoot, 'modules/engine/src/gltf/physics'),
+    '@luma.gl/engine/gltf': join(packageRoot, 'modules/engine/src/gltf'),
     // Match the gpgpu export map instead of appending _internal to the package directory.
     '@luma.gl/gpgpu/_internal': join(packageRoot, 'modules/gpgpu/src/execution'),
 

@@ -6,7 +6,7 @@ import type {
   GLTFNodePostprocessed,
   GLTFPostprocessed,
   GLTFTexturePostprocessed
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 import type {ANARIAnimationNodeDescription, ANARIVector3} from '@luma.gl/anari';
 import {makeANARIAnimationClipsFromGLTF} from '@luma.gl/anari/gltf';
 import {
@@ -18,7 +18,7 @@ import {
   resolveGLTFSkinIndex,
   resolveTextureCoordinateSet,
   resolveTextureTransform
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 import {Matrix4} from '@math.gl/core';
 import type {
   ANARIJSONScene,

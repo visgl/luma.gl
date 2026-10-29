@@ -11,7 +11,7 @@ runs on both WebGPU and WebGL and produces a `PreparedPBREnvironment` accepted d
 [`SceneRenderer`](/docs/api-reference/scene/scene-renderer).
 
 Environment preparation lives in `@luma.gl/anari`. Canonical PBR shading remains in
-`@luma.gl/shadertools`; `@luma.gl/gltf` continues to own its separate loader for already prepared
+`@luma.gl/shadertools`; `@luma.gl/engine/gltf` continues to own its separate loader for already prepared
 environment images and does not depend on the experimental package.
 
 ## Generate an environment
@@ -178,10 +178,10 @@ three generated textures but never destroys the source texture or the generator.
 ## Prepared glTF environments
 
 If cubemap faces and a BRDF lookup texture have already been generated offline, the existing
-`@luma.gl/gltf` `loadPBREnvironment()` helper can load those images instead:
+`@luma.gl/engine/gltf` `loadPBREnvironment()` helper can load those images instead:
 
 ```ts
-import {loadPBREnvironment} from '@luma.gl/gltf';
+import {loadPBREnvironment} from '@luma.gl/engine/gltf';
 import {loadImageTexture} from '@loaders.gl/textures';
 
 const loadedEnvironment = loadPBREnvironment(device, {

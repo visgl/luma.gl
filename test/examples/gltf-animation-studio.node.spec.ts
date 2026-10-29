@@ -5,9 +5,9 @@
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
-import {createGLTFAnimatedCrowd, createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createGLTFAnimatedCrowd, createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 import {NullDevice} from '@luma.gl/test-utils/device';
 import {describe, expect, test} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../examples/anari/scenes/gltf-to-anari';

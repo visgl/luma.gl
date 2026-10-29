@@ -9,7 +9,7 @@ import {
   type GLTFCrowdActor,
   type GLTFScenegraphs,
   setGLTFMorphWeights
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 /** An authored facial-expression or morph-target control. */
 export type GLTFStudioMorphTarget = {

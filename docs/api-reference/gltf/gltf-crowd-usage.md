@@ -69,7 +69,7 @@ existing `GLTFAnimator`, format-independent `AnimationMixer`, and source skin co
 actor nodes contain no renderable `Model` objects and allocate no duplicate geometry, textures,
 or materials.
 
-`@luma.gl/gltf` owns glTF-specific crowd orchestration. Generic animation and scenegraph
+`@luma.gl/engine/gltf` owns glTF-specific crowd orchestration. Generic animation and scenegraph
 primitives stay in `@luma.gl/engine`, while the portable skinning implementation stays in
 `@luma.gl/shadertools`. WebGPU and WebGL use the same public crowd and actor APIs.
 
@@ -78,8 +78,8 @@ primitives stay in `@luma.gl/engine`, while the portable skinning implementation
 ```ts
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
-import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+import {createGLTFAnimatedCrowd} from '@luma.gl/engine/gltf';
 import {Matrix4} from '@math.gl/core';
 
 const asset = await load('/models/character.glb', GLTFLoader);

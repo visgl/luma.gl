@@ -988,7 +988,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/gltf",
+        "label": "@luma.gl/engine/gltf",
         "items": [
           "api-reference/gltf/README",
           "api-reference/gltf/post-process-gltf",

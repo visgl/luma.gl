@@ -21,7 +21,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/shadertools',
   '@luma.gl/effects',
   '@luma.gl/anari',
-  '@luma.gl/gltf',
+  '@luma.gl/engine/gltf',
   '@luma.gl/splats',
   '@luma.gl/gpgpu',
   '@luma.gl/arrow',
@@ -304,37 +304,37 @@ describe('framework capabilities documentation', () => {
       {
         feature: 'Authored PBR texture slots',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /\b21\b[\s\S]{0,50}texture\s+slots/i
       },
       {
         feature: 'Native material variants',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /KHR_materials_variants/
       },
       {
         feature: 'Typed animation pointers',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /KHR_animation_pointer[\s\S]{0,150}cameras?[\s\S]{0,40}lights?/i
       },
       {
         feature: 'Imported GPU instancing',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /EXT_mesh_gpu_instancing/
       },
       {
         feature: 'Imported node visibility',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /KHR_node_visibility/
       },
       {
         feature: 'Independently animated GPU crowds',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /createGLTFAnimatedCrowd[\s\S]{0,120}actor/i
       },
       {
@@ -621,7 +621,7 @@ describe('framework capabilities documentation', () => {
     const ownershipDescription = capabilitiesSource.match(/ownership\s+boundaries[\s\S]*?\n\n/i);
 
     expect(ownershipDescription).not.toBeNull();
-    for (const packageName of ['gltf', 'shadertools', 'engine', 'anari']) {
+    for (const packageName of ['engine/gltf', 'shadertools', 'engine', 'anari']) {
       expect(ownershipDescription![0]).toContain(`@luma.gl/${packageName}`);
     }
 

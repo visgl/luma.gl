@@ -29,7 +29,7 @@ The engine API provides higher-level classes like `Model`, `AnimationLoop`, `Buf
 [shared animation system](/docs/api-guide/engine/animation) adds keyframe tracks, clips, weighted
 mixing, crossfades, and portable morph-target deformation. Scenegraphs are included, while
 [glTF loading, physical materials, skeletal animation, and morph animation](/docs/api-reference/gltf)
-live in the format-specific `@luma.gl/gltf` module.
+live in the format-specific `@luma.gl/engine/gltf` module.
 
 The experimental [`SceneRenderer`](/docs/api-reference/scene/scene-renderer) and
 [`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer) consume

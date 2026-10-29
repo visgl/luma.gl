@@ -5,16 +5,16 @@
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {ModelNode} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 import {NullDevice} from '@luma.gl/test-utils/device';
 import {expect, test, vi} from 'vitest';
 import GLTFViewer from '../../examples/tutorials/hello-gltf/app';
 
 test('glTF viewer teardown releases the registered scenegraphs and notifies controls once', async () => {
   const source = await readFile(
-    new URL('../../modules/gltf/test/data/SimpleInstancing.glb', import.meta.url)
+    new URL('../../modules/engine/test/gltf/data/SimpleInstancing.glb', import.meta.url)
   );
   const gltf = postProcessGLTF(await parse(source, GLTFLoader, {gltf: {loadImages: false}}));
   const device = new NullDevice({});

@@ -268,5 +268,5 @@ GPU physics library.
 - [GPGPU programming](/docs/api-guide/gpu/gpgpu)
 - [GPU command graphs](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
 - [Physics implementation and limitations](https://github.com/visgl/luma.gl/blob/master/modules/graph/src/gpu-physics/README.md)
-- [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md)
+- [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/gltf/physics/README.md)
 - [Physics roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)

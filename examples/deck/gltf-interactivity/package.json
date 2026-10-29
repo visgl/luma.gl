@@ -16,8 +16,7 @@
     "@loaders.gl/core": "~5.0.0-beta.1",
     "@loaders.gl/scene": "~5.0.0-beta.1",
     "@luma.gl/core": "10.0.0-alpha.5",
-    "@luma.gl/engine": "10.0.0-alpha.5",
-    "@luma.gl/gltf": "10.0.0-alpha.5"
+    "@luma.gl/engine": "10.0.0-alpha.5"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

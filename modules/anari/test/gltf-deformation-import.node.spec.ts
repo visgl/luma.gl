@@ -5,11 +5,11 @@
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {ANARIDevice, type ANARIGeometry, ANARIGroup, type ANARIInstance} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {ModelNode} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 import {NullDevice} from '@luma.gl/test-utils/device';
 import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';

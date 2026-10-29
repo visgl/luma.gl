@@ -13,7 +13,6 @@
     "@loaders.gl/scene": "~5.0.0-beta.1",
     "@luma.gl/core": "10.0.0-alpha.5",
     "@luma.gl/engine": "10.0.0-alpha.5",
-    "@luma.gl/gltf": "10.0.0-alpha.5",
     "@luma.gl/gpgpu": "10.0.0-alpha.5",
     "@luma.gl/graph": "10.0.0-alpha.5",
     "@luma.gl/shadertools": "10.0.0-alpha.5",

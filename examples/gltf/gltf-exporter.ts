@@ -181,7 +181,7 @@ class GLTFExportWriter {
     const document: GLTFJSONRecord = {
       asset: {
         version: '2.0',
-        generator: this.scene.generator || '@luma.gl/gltf'
+        generator: this.scene.generator || '@luma.gl/engine/gltf'
       },
       scene: this.scene.scene ?? 0
     };

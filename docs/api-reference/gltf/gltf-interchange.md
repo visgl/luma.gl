@@ -6,7 +6,7 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 
 Asset export is application code. The shared example helper
 [`examples/gltf/gltf-exporter.ts`](https://github.com/visgl/luma.gl/blob/master/examples/gltf/gltf-exporter.ts)
-provides `exportGLTF()` and its descriptor types; they are not exports of `@luma.gl/gltf`.
+provides `exportGLTF()` and its descriptor types; they are not exports of `@luma.gl/engine/gltf`.
 The helper writes standards-conformant
 embedded `.gltf` documents or aligned binary `.glb` assets without depending on an application
 renderer, an ANARI device, or browser-specific GPU resources.

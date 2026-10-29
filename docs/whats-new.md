@@ -1,5 +1,11 @@
 # What's New
 
+## glTF engine subpaths
+
+Import the glTF runtime from `@luma.gl/engine/gltf` and physics integration from the flat
+`@luma.gl/engine/gltf-physics` entry. The standalone glTF package is removed; engine root imports
+do not load these optional subpaths. See the [upgrade guide](./upgrade-guide.md#gltf-imports).
+
 ## Experimental API ownership and graph-based fluids
 
 The standalone `@luma.gl/experimental` package is removed. Scene renderers and their PBR, shadow, transparency, and composition helpers now belong to `@luma.gl/anari`. Independent utilities are exposed through `@luma.gl/engine/experimental/{controls,materials,textures,webxr}`. Graph owns path/polygon models under `/experimental/models` and flow/fluid simulations under `/experimental/simulation`.
@@ -173,7 +179,7 @@ Target Release Date: Q3, 2026
 
 - **Experimental GPU sphere physics** - `@luma.gl/graph/gpu-physics` adds grid-based bounded contacts, inverse-mass Jacobi solving, solid-sphere angular dynamics, friction, sleeping and live finite-plane/gravity settings. The standalone sphere-world sandbox renders quaternion-driven cue-ball bands and benchmarks up to 10,000 GPU-resident bodies with explicit capacity diagnostics.
 - **Oriented GPU rigid bodies** - A bounded sphere/box world adds rotated inertia, clipped contact manifolds, friction and island sleeping, with stack and large-count sphere examples.
-- **glTF physics draft import** - Optional `@luma.gl/gltf/physics` parses a pinned rigid-body/implicit-shape subset with capability reports, compound sphere/box ownership, authored mass/inertia, kinematic targets, collision filters and material policies. GPU scene synchronization and behavior bindings remain separate follow-ups.
+- **glTF physics draft import** - Optional `@luma.gl/engine/gltf-physics` parses a pinned rigid-body/implicit-shape subset with capability reports, compound sphere/box ownership, authored mass/inertia, kinematic targets, collision filters and material policies. GPU scene synchronization and behavior bindings remain separate follow-ups.
 - **Persistent physics contacts and calibration** - Opt-in cached sphere/surface impulses, accumulated friction constraints, discarded simulation-time reporting and provenance-aware SI calibration fitting add reproducible numerical evidence.
 - **Bounded continuous sphere physics** - Optional small-world sphere/rectangle sweeps, persistent contact and pocket-trigger events, explicit impact/candidate budgets, static box surfaces and analytic material fixtures extend the physics module. Pool uses GPU pocket capture and event-driven clacks/trails, adds beveled jaws, hold-to-charge shooting with Escape cancellation, and automatic re-racking.
 - **Space Salvage and rigid-body collision APIs** - A top-down WebGPU salvage game exercises an opt-in GPU contact-event ring, exact sphere/box raycasts and sphere-overlap queries. Events retain begin/end and thresholded impact samples across steps with explicit loss reporting; asynchronous queries expose selection, nearest hits and overlap truncation.
@@ -219,7 +225,7 @@ Target Release Date: Q3, 2026
 - **Pinch-roll orbit controls** - Two-pointer gestures can roll the camera while preserving the
   existing pan, orbit, and zoom interactions.
 
-**@luma.gl/gltf**
+**@luma.gl/engine/gltf**
 
 - **Larger and richer animated meshes** - Skinning supports larger joint palettes and up to eight
   influences per vertex, while ordinary morph-weight animation uploads position, normal, and

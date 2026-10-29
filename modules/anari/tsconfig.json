@@ -23,9 +23,6 @@
       "path": "../engine"
     },
     {
-      "path": "../gltf"
-    },
-    {
       "path": "../shadertools"
     },
     {

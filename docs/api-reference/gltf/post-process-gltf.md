@@ -3,14 +3,14 @@
 `postProcessGLTF(source: GLTFWithBuffers): GLTFPostprocessed` synchronously prepares decoded
 glTF data for rendering. It resolves numeric references, supplies rendering defaults and IDs,
 and materializes accessor values. Import the function and resolved `GLTF*Postprocessed` types
-from `@luma.gl/gltf`.
+from `@luma.gl/engine/gltf`.
 
 ## Usage
 
 ```ts
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 
 const source = await load('/model.glb', GLTFLoader);
 const resolved = postProcessGLTF(source);
@@ -77,6 +77,6 @@ primitives work, including implicit-zero and sparse index accessors. Generated i
 ## Migration from loaders.gl
 
 Replace imports of `postProcessGLTF` and `GLTF*Postprocessed` types from `@loaders.gl/scene/gltf` with
-imports from `@luma.gl/gltf`. Pass the `GLTFLoader` result directly to the luma.gl function.
+imports from `@luma.gl/engine/gltf`. Pass the `GLTFLoader` result directly to the luma.gl function.
 For loader-side traversal, writing, or conversion, keep the indexed document and use loaders.gl’s
 accessor helpers or `GLTFIterator` instead of creating a resolved rendering document.

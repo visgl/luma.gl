@@ -174,7 +174,7 @@ Addressing and filtering belong to the underlying luma.gl `Texture`. The retaine
 adds a column-major 3×3 transform and selects `0` or `1`, corresponding to geometry
 `'vertex.attribute1'` / `TEXCOORD_0` or `'vertex.attribute2'` / `TEXCOORD_1`.
 
-The showcase glTF importer reuses `@luma.gl/gltf` helpers to retain authored wrap modes,
+The showcase glTF importer reuses `@luma.gl/engine/gltf` helpers to retain authored wrap modes,
 nearest/linear filters, mipmapping, slot-specific UV transforms, and source color-space choices.
 
 ### Dynamic material updates
@@ -212,7 +212,7 @@ Supply the complete diffuse/specular/BRDF texture set to enable the existing sha
 shader. ANARI forwards these resources to the
 [experimental SceneRenderer](/docs/api-reference/scene/scene-renderer); it does not
 generate cubemaps or implement its own environment shader. Existing prefiltered source textures
-can be loaded with `@luma.gl/gltf`'s `loadPBREnvironment()` helper, or generated from an
+can be loaded with `@luma.gl/engine/gltf`'s `loadPBREnvironment()` helper, or generated from an
 equirectangular source through the shared
 [`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment).
 

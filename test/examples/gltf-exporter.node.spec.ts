@@ -4,7 +4,7 @@
 
 import {parse} from '@loaders.gl/core';
 import {GLBWriter, GLTFLoader} from '@loaders.gl/scene/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {exportGLTF, type GLTFExportScene} from '../../examples/gltf/gltf-exporter';
 
 import {describe, expect, test, vi} from 'vitest';

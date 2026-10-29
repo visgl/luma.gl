@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {GLTFScenegraph} from '@loaders.gl/scene/gltf';
-import {parseGLTFPhysics} from '../../modules/gltf/src/physics';
+import {parseGLTFPhysics} from '../../modules/engine/src/gltf/physics';
 import {makeLegacyMeshPositionResolver} from '../../examples/gltf/physics/legacy-mesh-positions';
 
 function makeMeshScenegraph(): GLTFScenegraph {

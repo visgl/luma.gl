@@ -112,12 +112,12 @@ it('ANARI owns rendering implementations behind its declarative facade', () => {
     'the stable engine does not publicly own experimental scene or PBR rendering APIs'
   ).toBe(false);
 
-  const gltfSourceDirectory = new URL('../../gltf/src/', sourceDirectory);
+  const gltfSourceDirectory = new URL('../../engine/src/gltf/', sourceDirectory);
   expect(
     collectTypeScriptSources(gltfSourceDirectory).filter(source =>
       /['"]@luma\.gl\/experimental(?:\/[^'"]*)?['"]/.test(readFileSync(source, 'utf8'))
     ),
-    'the standalone glTF package does not depend on experimental rendering'
+    'the glTF engine subpath does not depend on experimental rendering'
   ).toEqual([]);
   expect(
     Boolean(
