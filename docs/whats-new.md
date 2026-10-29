@@ -6,6 +6,12 @@ Import the glTF runtime from `@luma.gl/engine/gltf` and physics integration from
 `@luma.gl/engine/gltf-physics` entry. The standalone glTF package is removed; engine root imports
 do not load these optional subpaths. See the [upgrade guide](./upgrade-guide.md#gltf-imports).
 
+## Gaussian splats in engine
+
+Gaussian splat data, rendering, picking, residency, and hierarchy helpers now live in
+`@luma.gl/engine/splats`. The standalone splats package is removed. This first migration preserves
+existing execution behavior; reusable graph operation extraction is a separate step.
+
 ## Experimental API ownership and graph-based fluids
 
 The standalone `@luma.gl/experimental` package is removed. Scene renderers and their PBR, shadow, transparency, and composition helpers now belong to `@luma.gl/anari`. Independent utilities are exposed through `@luma.gl/engine/experimental/{controls,materials,textures,webxr}`. Graph owns path/polygon models under `/experimental/models` and flow/fluid simulations under `/experimental/simulation`.
@@ -275,7 +281,7 @@ Target Release Date: Q3, 2026
 - **View-aware Arrow text clipping** - Arrow 2D text accepts optional `FixedSizeList<Float32>[4]` clip rectangles. `ArrowTextLayer` interprets them as world-space anchor offsets, projects them through the active deck viewport, and supports visible-region alignment and pixel cutoffs; omitting `clipRects` retains a constant no-clipping fallback instead of allocating per-row data.
 - **GPU-selected text** - `GPUTextSelection` filters row-indexed compact glyph records from GPU row flags, preserves original row identity, and writes the selected glyph count directly into an indirect draw command.
 
-**@luma.gl/splats**
+**@luma.gl/engine/splats**
 
 - **Stable RAD camera retargeting** - `SplatRADHierarchyManager` preserves resolved visible rows while reprioritizing retained branches for a changed camera, traverses offscreen ancestors needed for visible descendants, and keeps bounded traversal, page demand, and active-row capacity coherent across rapid camera updates.
 - **Progressive RAD selection** - `selectView()` selects a fresh complete cut; `refineView()` publishes coherent intermediate replacements while reprioritizing retained detail. Generic CPU-only residency and hierarchy data support worker selection with bounded page demand.

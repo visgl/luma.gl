@@ -3,10 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
-import {makeGPUSplatData, SplatResidencyManager, type GPUSplatData} from '@luma.gl/splats';
+import {makeGPUSplatData, SplatResidencyManager, type GPUSplatData} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUPagedSplatRenderer} from '../src/gpu-paged-splat-renderer';
-import {isSplatHierarchyNodeVisible, type SplatHierarchyView} from '../src/splat-hierarchy';
+import {GPUPagedSplatRenderer} from '../../src/splats/gpu-paged-splat-renderer';
+import {
+  isSplatHierarchyNodeVisible,
+  type SplatHierarchyView
+} from '../../src/splats/splat-hierarchy';
 import {
   getSplatRADPageBounds,
   SplatRADHierarchyManager,
@@ -14,7 +17,7 @@ import {
   type SplatRADHierarchyFrontierEntry,
   type SplatRADHierarchyPage,
   type SplatRADHierarchyRequest
-} from '../src/splat-rad-hierarchy';
+} from '../../src/splats/splat-rad-hierarchy';
 
 const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 

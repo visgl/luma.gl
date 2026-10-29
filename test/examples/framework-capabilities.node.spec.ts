@@ -22,7 +22,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/effects',
   '@luma.gl/anari',
   '@luma.gl/engine/gltf',
-  '@luma.gl/splats',
+  '@luma.gl/engine/splats',
   '@luma.gl/gpgpu',
   '@luma.gl/arrow',
   '@luma.gl/graph/experimental'
@@ -395,7 +395,7 @@ describe('framework capabilities documentation', () => {
       expect(splatRow, `${feature} is implemented and must not be labeled a gap`).toBeDefined();
       expect(splatRow!.status).toBe('Experimental');
       expect(splatRow!.backend).toBe('WebGPU + WebGL2');
-      expect(splatRow!.packageName).toContain('@luma.gl/splats');
+      expect(splatRow!.packageName).toContain('@luma.gl/engine/splats');
       expect(splatRow!.details).toMatch(implementation);
     }
 
@@ -495,7 +495,7 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['anari', 'arrow', 'splats', 'text']) {
+    for (const experimentalPackage of ['anari', 'arrow', 'engine/splats', 'text']) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );

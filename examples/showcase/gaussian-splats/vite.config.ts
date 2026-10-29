@@ -12,7 +12,7 @@ const alias = {
   '@luma.gl/engine/tables': `${__dirname}/../../../modules/engine/src/graph/tables`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
-  '@luma.gl/splats': `${__dirname}/../../../modules/splats/src`,
+  '@luma.gl/engine/splats': `${__dirname}/../../../modules/engine/src/splats`,
   '@luma.gl/gpgpu/_internal': `${__dirname}/../../../modules/gpgpu/src/execution`,
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
@@ -28,7 +28,7 @@ export default defineConfig({
       name: 'gaussian-splats-watch-workspace-source',
       configureServer(server) {
         server.watcher.add([
-          resolve(workspaceRoot, 'modules/splats/src'),
+          resolve(workspaceRoot, 'modules/engine/src/splats'),
           resolve(workspaceRoot, 'modules/arrow/src')
         ]);
         if (localLoadersRoot) {

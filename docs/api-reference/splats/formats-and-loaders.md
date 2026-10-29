@@ -15,7 +15,7 @@ Decoded glTF primitives declaring `KHR_gaussian_splatting` can be prepared direc
 a loaders.gl or glTF dependency to the rendering package:
 
 ```ts
-import {loadGPUSplatDataFromGLTF, makeGPUSplatDataFromGLTF} from '@luma.gl/splats';
+import {loadGPUSplatDataFromGLTF, makeGPUSplatDataFromGLTF} from '@luma.gl/engine/splats';
 
 const prepared = makeGPUSplatDataFromGLTF(device, decodedPrimitive, {
   sourceBatchIndex: tile.sourceBatchIndex,
@@ -54,7 +54,7 @@ The tileset traversal and layer already exist; follow
 
 ```ts
 import {makeGPUSplatDataFromArrow, makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
-import {SplatRenderer} from '@luma.gl/splats';
+import {SplatRenderer} from '@luma.gl/engine/splats';
 
 const batches = makeGPUSplatDataFromArrow(device, arrowTable);
 const renderer = new SplatRenderer(device, {data: batches});
@@ -117,7 +117,7 @@ Use `?loaders=local&scene=fixture` for the lightweight 1,000-splat parser fixtur
 `source` to select a custom `.ply`, `.splat`, `.ksplat`, `.spz`, or `.rad` file. Full PLY scenes
 are streamed through their original Arrow record batches, and the showcase reports download,
 batch, and splat progress while retaining independently owned GPU buffers. The loader remains an
-application-level dependency; `@luma.gl/splats` owns source residency, hierarchy selection, GPU data,
+application-level dependency; `@luma.gl/engine/splats` owns source residency, hierarchy selection, GPU data,
 and rendering, while transport and parsing remain external.
 Both the default WebGPU graph and the explicit `&renderer=cpu` comparison retain and evaluate
 camera-dependent higher-order spherical harmonics.
@@ -134,7 +134,7 @@ during streaming, and idle redraw suppression keep large scenes easier to inspec
   transforms, request scheduling, and caching.
 - `@loaders.gl/scene/gltf` owns glTF parsing, extension decoding, and feature metadata.
 - `@luma.gl/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
-- `@luma.gl/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
+- `@luma.gl/engine/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
 - Applications or deck.gl layers own viewport integration, file selection, and interactive UI.
 
 This separation keeps the renderer reusable from standalone luma.gl applications and deck.gl

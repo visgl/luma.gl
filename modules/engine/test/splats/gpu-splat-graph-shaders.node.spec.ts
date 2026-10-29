@@ -15,7 +15,7 @@ import {
   GPU_SPLAT_PROJECTED_RECORD_BYTE_LENGTH,
   GPU_SPLAT_RENDER_SHADER,
   GPU_SPLAT_RENDER_SHADER_LAYOUT
-} from '../src/gpu-splat-graph-shaders';
+} from '../../src/splats/gpu-splat-graph-shaders';
 
 it('GPU Gaussian shaders preserve the shared projected-record and uniform layouts', () => {
   const projection = new WgslReflect(GPU_SPLAT_PROJECTION_SHADER);

@@ -428,3 +428,9 @@ The `@luma.gl/test-utils` package is removed. Replace its root and `/device` imp
 `@luma.gl/core/test-utils`. The legacy `SnapshotTestRunner`, `PerformanceTestRunner`, and
 runner test-case types are removed from the public package. Use Vitest and Playwright instead.
 Deprecated synchronous device helpers remain in `@luma.gl/core/test-utils-legacy`.
+
+### Gaussian splat imports
+
+The `@luma.gl/splats` package is removed. Replace its imports with `@luma.gl/engine/splats`
+and install `@luma.gl/engine`. The engine root does not re-export these APIs. This move preserves
+existing splat data, renderers, picking, residency, hierarchy, and graph-backed execution behavior.

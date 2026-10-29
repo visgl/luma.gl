@@ -4,9 +4,9 @@
 
 import {expect, it, vi} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
-import {makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
+import {makeGPUSplatData, type SplatSource} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUPagedSplatRenderer} from '../src/gpu-paged-splat-renderer';
+import {GPUPagedSplatRenderer} from '../../src/splats/gpu-paged-splat-renderer';
 import {
   GPU_PAGED_SPLAT_FEATURE_SHADER,
   GPU_PAGED_SPLAT_FEATURE_SHADER_LAYOUT,
@@ -14,7 +14,7 @@ import {
   GPU_PAGED_SPLAT_PROJECTION_SHADER_LAYOUT,
   GPU_PAGED_SPLAT_RENDER_SHADER,
   GPU_PAGED_SPLAT_RENDER_SHADER_LAYOUT
-} from '../src/gpu-paged-splat-shaders';
+} from '../../src/splats/gpu-paged-splat-shaders';
 
 it('paged Gaussian GPU shaders preserve sparse source rows within baseline storage limits', () => {
   const projection = new WgslReflect(GPU_PAGED_SPLAT_PROJECTION_SHADER);

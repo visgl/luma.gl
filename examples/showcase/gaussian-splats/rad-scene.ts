@@ -10,7 +10,7 @@ import {
   type SplatRADHierarchyFrontierEntry,
   type SplatRADHierarchyPage,
   type SplatRADHierarchyStats
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {
   type LocalGaussianSplatRADPage,
   type LocalGaussianSplatRADPageDemand,

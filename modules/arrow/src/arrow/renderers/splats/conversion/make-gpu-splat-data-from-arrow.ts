@@ -10,7 +10,7 @@ import {
   type GPUSplatData,
   type SplatSource,
   type SplatSphericalHarmonicsDegree
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {
   DataType,
   type Data,

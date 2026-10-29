@@ -16,7 +16,7 @@ const alias = {
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
   '@luma.gl/core/test-utils': `${__dirname}/../../../modules/core/src/test-utils`,
-  '@luma.gl/splats': `${__dirname}/../../../modules/splats/src`,
+  '@luma.gl/engine/splats': `${__dirname}/../../../modules/engine/src/splats`,
   '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
   '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl-constants`,
   '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,

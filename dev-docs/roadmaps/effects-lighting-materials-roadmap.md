@@ -45,7 +45,7 @@ Current `master` already provides:
   with one instanced draw per compatible source primitive.
 - Source-faithful glTF/GLB export, including arbitrary preserved extension records and pointer
   animation channels.
-- An existing `@luma.gl/splats` adapter for the `KHR_gaussian_splatting` release candidate,
+- An existing `@luma.gl/engine/splats` adapter for the `KHR_gaussian_splatting` release candidate,
   spherical-harmonic data, feature identities, and optional caller-owned SPZ decoding.
 
 However, ordinary skinning still has a **64-joint uniform-palette limit**; ordinary morph animation
@@ -71,7 +71,7 @@ remain separate work.
   scattering is a useful approximation, not a random-walk or full subsurface-transport claim.
 - Decoding data, constructing GPU resources, executing shaders, exporting an extension, and
   progressively streaming it are distinct capabilities. Describe and document them separately.
-- `@luma.gl/splats` already owns Gaussian decoding/rendering. The outstanding glTF gap is optional
+- `@luma.gl/engine/splats` already owns Gaussian decoding/rendering. The outstanding glTF gap is optional
   scene routing and extension discovery, not implementing another splat adapter.
 - Generated LOD vertex budgets count **submitted index references**, not unique vertices, exact
   shader invocations, GPU bytes, or an authorization to silently cull actors.
@@ -316,10 +316,10 @@ behavior.
 
 ### Tranche 11 — Route existing Gaussian splats through glTF scenes
 
-**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, existing `@luma.gl/splats` optional integration.
+**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, existing `@luma.gl/engine/splats` optional integration.
 
 - Add a loader/runtime extension hook that recognizes `KHR_gaussian_splatting` and delegates to
-  the **already shipped** `@luma.gl/splats` accessor and SPZ integration.
+  the **already shipped** `@luma.gl/engine/splats` accessor and SPZ integration.
 - Compose ordinary PBR meshes, authored splat primitives, cameras, semantic feature IDs, and
   transparent ordering in one compatible scene without forcing a hard `gltf -> splats` dependency.
 - Report release-candidate support only when the optional bridge exists and any decoder required

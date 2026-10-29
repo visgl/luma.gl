@@ -69,7 +69,8 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       status: 'Private'
     },
     {
-      name: 'splats',
+      name: 'engine/splats',
+      reference: 'splats',
       description: 'Stream, sort, and render Gaussian splat scenes.',
       image: 'showcase/gaussian-splats',
       status: 'Experimental'

@@ -141,8 +141,8 @@ const SHARED_COMPILER_OPTIONS = {
     '@luma.gl/gpgpu/_internal/*': [join(repoRoot, 'modules/gpgpu/dist/execution/*')],
     '@luma.gl/gpgpu': [join(repoRoot, 'modules/gpgpu/dist/index.d.ts')],
     '@luma.gl/gpgpu/*': [join(repoRoot, 'modules/gpgpu/dist/*')],
-    '@luma.gl/splats': [join(repoRoot, 'modules/splats/src/index.ts')],
-    '@luma.gl/splats/*': [join(repoRoot, 'modules/splats/src/*')],
+    '@luma.gl/engine/splats': [join(repoRoot, 'modules/engine/src/splats/index.ts')],
+    '@luma.gl/engine/splats/*': [join(repoRoot, 'modules/engine/src/splats/*')],
   }
 };
 

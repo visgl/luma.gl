@@ -189,3 +189,11 @@ assert.equal(typeof gltfApi.createScenegraphsFromGLTF, 'function');
 assert.equal(typeof gltfEsm.createScenegraphsFromGLTF, 'function');
 assert.equal(typeof gltfPhysicsApi.parseGLTFPhysics, 'function');
 assert(!('createScenegraphsFromGLTF' in engineApi));
+
+// Splat support is an explicit engine subpath sharing the existing model hierarchy.
+const splatApi = require('@luma.gl/engine/splats');
+const splatEsm = await import('../modules/engine/dist/splats/index.js');
+assert.equal(typeof splatApi.SplatRenderer, 'function');
+assert.equal(typeof splatApi.GPUSplatData, 'function');
+assert.equal(typeof splatEsm.SplatRenderer, 'function');
+assert(!('SplatRenderer' in engineApi));

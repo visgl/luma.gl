@@ -976,7 +976,7 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/splats (Experimental)",
+        "label": "@luma.gl/engine/splats (Experimental)",
         "items": [
           "api-reference/splats/README",
           "api-reference/splats/renderers",

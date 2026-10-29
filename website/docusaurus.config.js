@@ -362,6 +362,7 @@ module.exports = {
             '@luma.gl/gpgpu/_internal': path.resolve(__dirname, '../modules/gpgpu/src/execution'),
             '@luma.gl/engine/gltf-physics': path.resolve(__dirname, '../modules/engine/src/gltf/physics'),
             '@luma.gl/engine/gltf': path.resolve(__dirname, '../modules/engine/src/gltf'),
+            '@luma.gl/engine/splats': path.resolve(__dirname, '../modules/engine/src/splats'),
             '@luma.gl/engine/models': path.resolve(__dirname, '../modules/engine/src/graph/models'),
             '@luma.gl/engine/physics': path.resolve(__dirname, '../modules/engine/src/graph/physics'),
             '@luma.gl/engine/tables': path.resolve(__dirname, '../modules/engine/src/graph/tables'),

@@ -1,7 +1,7 @@
 # Gaussian splat implementation roadmap
 
 This maintainer roadmap tracks completed and planned Gaussian-splat work. The user-facing
-[`@luma.gl/splats` documentation](../../docs/api-reference/splats/README.md) describes current
+[`@luma.gl/engine/splats` documentation](../../docs/api-reference/splats/README.md) describes current
 behavior and supported contracts.
 
 The completed tranches establish portable rendering, interaction, bounded out-of-core scenes, and

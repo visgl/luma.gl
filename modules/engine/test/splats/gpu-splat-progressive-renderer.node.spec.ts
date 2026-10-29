@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
+import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('GPUSplatGraphRenderer reserves progressive hints lazily while borrowing original batches', () => {

@@ -70,6 +70,11 @@
       "types": "./dist/gltf/physics/index.d.ts",
       "import": "./dist/gltf/physics/index.js",
       "require": "./dist/gltf/physics/index.cjs"
+    },
+    "./splats": {
+      "types": "./dist/splats/index.d.ts",
+      "import": "./dist/splats/index.js",
+      "require": "./dist/splats/index.cjs"
     }
   },
   "files": [

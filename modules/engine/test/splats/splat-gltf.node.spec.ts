@@ -9,7 +9,7 @@ import {
   makeGPUSplatDataFromGLTF,
   makeSplatSourceFromGLTF,
   type GLTFSplatPrimitive
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('glTF Gaussian primitives preserve source identities and convert Khronos attributes', () => {

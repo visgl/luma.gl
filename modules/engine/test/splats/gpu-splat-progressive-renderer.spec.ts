@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import type {Device} from '@luma.gl/core';
-import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/splats';
+import {GPUSplatGraphRenderer, makeGPUSplatData, type SplatSource} from '@luma.gl/engine/splats';
 import {getTestDevices} from '@luma.gl/core/test-utils';
 
 it('GPUSplatGraphRenderer progressively sorts preserved batches with one precompiled graph', async () => {

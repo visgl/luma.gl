@@ -69,7 +69,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'splats',
     title: 'Splats',
-    packageName: '@luma.gl/splats',
+    packageName: '@luma.gl/engine/splats',
     documentationPath: 'docs/api-reference/splats',
     capabilities: ['Streaming', 'Gaussian splats', 'HDR'],
     descriptions: [/stream and render Gaussian splats/i, /high-dynamic-range color/i]

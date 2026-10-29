@@ -14,7 +14,7 @@ import {
   SplatRenderer,
   type SplatSortReference,
   type SplatSource
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {NullDevice} from '@luma.gl/core/test-utils';
 
 it('makeGPUSplatData retains typed Gaussian columns and stable source metadata', async () => {
