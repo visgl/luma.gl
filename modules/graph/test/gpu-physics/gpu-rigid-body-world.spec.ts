@@ -4,6 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {waitForSubmittedPhysicsWork} from './physics-test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {
   GPURigidBodyWorld,
@@ -28,7 +29,7 @@ async function makeWorld(bodies: GPURigidBody[], options: Partial<GPURigidBodyWo
         for (let index = start; index < Math.min(count, start + 20); index++)
           graph.encode(encoder, {parameters: undefined});
         device.submit(encoder.finish());
-        await world.readState();
+        await waitForSubmittedPhysicsWork(device);
       }
       return world.readState();
     },

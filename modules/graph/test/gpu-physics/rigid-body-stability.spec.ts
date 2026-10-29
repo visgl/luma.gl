@@ -4,6 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {waitForSubmittedPhysicsWork} from './physics-test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld, type GPURigidBodyWorldProps} from '../../src/gpu-physics';
 
@@ -20,7 +21,7 @@ async function runWorld(properties: GPURigidBodyWorldProps, steps: number) {
       for (let step = start; step < Math.min(start + 20, steps); step++)
         graph.encode(encoder, {parameters: undefined});
       device.submit(encoder.finish());
-      await world.readSimulationDiagnostics();
+      await waitForSubmittedPhysicsWork(device);
     }
     const diagnostics = await world.readSimulationDiagnostics();
     expect(diagnostics).toMatchObject({steps, complete: true, incompleteSteps: 0});
