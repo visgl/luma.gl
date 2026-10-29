@@ -167,3 +167,30 @@ it('WEBGLRenderPass resizes the default framebuffer after an external canvas res
   renderPass.end();
   device.destroy();
 });
+
+it('WEBGLRenderPass does not overwrite a canvas resized after a deferred resize request', async () => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+
+  // The canvas owner resizes the canvas and the drawing buffer is synced to it...
+  canvas.width = 300;
+  canvas.height = 150;
+  canvasContext.setDrawingBufferSize(300, 150);
+
+  // ...then the owner resizes the canvas again before the deferred resize is flushed.
+  canvas.width = 640;
+  canvas.height = 480;
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  expect(canvas.width, 'canvas width keeps the owner size').toBe(640);
+  expect(canvas.height, 'canvas height keeps the owner size').toBe(480);
+  expect(canvasContext.getDrawingBufferSize(), 'drawing buffer follows the canvas').toEqual([
+    640, 480
+  ]);
+  expect(canvasContext.getCurrentFramebuffer().width, 'framebuffer follows the canvas').toBe(640);
+
+  renderPass.end();
+  device.destroy();
+});
