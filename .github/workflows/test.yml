@@ -124,13 +124,13 @@ jobs:
           done
 
   browser_coverage:
-    name: Browser coverage (${{ matrix.shard }}/6)
-    runs-on: ubuntu-22.04
+    name: Browser coverage (${{ matrix.shard }}/3)
+    runs-on: macos-15
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3]
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -173,17 +173,21 @@ jobs:
         id: playwright-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: ~/.cache/ms-playwright
+          path: ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
 
       - name: Install Playwright Chromium
         run: yarn exec playwright install chromium
 
+      - name: Verify WebGL and WebGPU presentation
+        timeout-minutes: 2
+        run: yarn test-presentation
+
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"
           df -h .
-          du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
+          du -sh . "${HOME}/.yarn" "${HOME}/Library/Caches/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
       - name: Run headless tests and generate coverage
         env:

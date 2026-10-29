@@ -160,7 +160,9 @@ const browserExcludePatterns = [
 const launchArguments = [
   '--enable-unsafe-webgpu',
   '--ignore-gpu-blocklist',
-  ...(process.env.CI ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [])
+  ...(process.env.CI && process.platform === 'linux'
+    ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+    : [])
 ];
 
 const vitestConfig = getVitestConfig({
