@@ -49,12 +49,12 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   both locally and in CI: native keyboard/pointer tests need foreground focus, and concurrent
   shader compilation and readback compete for the same GPU. CI still parallelizes across shards.
   CI selects complementary `general`, `compute`, and `physics` groups. General tests, including
-  graph explorer document/pointer checks, keep full file isolation on two Linux workers. Audited
+  graph explorer document/pointer checks, keep full file isolation on three Linux workers. Audited
   compute and physics groups restore mocks between tests and reuse their device/module context
-  serially on one Linux and two Apple Silicon workers respectively. Tests that mutate globals or
+  serially on one Linux and one Apple Silicon worker respectively. Tests that mutate globals or
   exercise browser/device lifecycle belong in the isolated general group. Local commands default
-  to all files with isolation enabled. No assertions, simulation steps, or timeouts are reduced.
-- Browser coverage uses weighted sharding so known slow GPU specs are spread across the two
+  to all files with isolation enabled, including the full endurance matrix.
+- Browser coverage uses weighted sharding so known slow GPU specs are spread across the three
   isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
   instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
   `test/utils/browser-test-sequencer.ts` from a successful general-browser run when expensive suites
@@ -69,6 +69,28 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   Regression tests verify exact statement, function, and branch totals and reset behavior. Source
   instrumentation, the complete all-files denominator, and the Node coverage provider are unchanged.
 - The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
+
+## Nightly physics endurance
+
+PR physics coverage retains one-second stack regressions for all three scenarios (eight boxes,
+10:1 heavy-on-light, and offset center of mass), both solvers, and both 120/240 Hz time steps.
+The same diagnostics, penetration, drift, sleep-state, and residual-energy assertions run, with
+64 solver iterations. Sustained six-second behavior is checked separately by the complete original
+12-case matrix in `physics-endurance.yml`, nightly at 07:17 UTC, and through manual dispatch.
+Nightly also retains both 600-tick stack-settling cases and the 600-tick rotating-contact arena
+case, for 15 cases across five files. PRs retain the same assertions at 120 and 60 ticks respectively.
+The full matrix also runs on PRs that change its definitions or scheduling, so the nightly path
+is validated before those changes merge. Ordinary implementation PRs run the focused regressions.
+
+Run `yarn test-physics-endurance` to execute the full matrix locally without coverage overhead.
+It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless` and
+release sharding continue to include the full-duration specs. No endurance assertion, simulation
+step, solver, or time-step combination is removed from the full suite.
+
+The nightly job requires WebGPU/WebGL presentation before testing and saves JUnit results and
+console output for 14 days, including failures. It uses native Apple Silicon and avoids Istanbul
+instrumentation. PR code coverage still includes every source file; compare merged LCOV artifacts
+when changing the split, since a short run is not a substitute for proving unchanged code coverage.
 
 ## Playwright behavior
 

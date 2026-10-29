@@ -1,7 +1,7 @@
 import {fileURLToPath} from 'node:url';
 import {getVitestConfig} from '@vis.gl/dev-tools';
 import {BrowserTestSequencer} from './test/utils/browser-test-sequencer';
-import {getBrowserTestGroup, PHYSICS_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
+import {getBrowserTestGroup, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
 
 const optionalTextureCompressorShim = fileURLToPath(
   new URL('./test/utils/texture-compressor-shim.ts', import.meta.url)
@@ -151,12 +151,14 @@ const browserBenchmarkTestPatterns = [
 ];
 const runBrowserBenchmarks = process.env.LUMA_TEST_BROWSER_BENCHMARKS === 'true';
 const browserTestGroup = getBrowserTestGroup(process.env.LUMA_TEST_BROWSER_GROUP);
-const browserIncludePatterns = browserTestGroup === 'physics'
+const browserIncludePatterns = browserTestGroup === 'physics-endurance'
+  ? PHYSICS_ENDURANCE_TEST_PATTERNS
+  : browserTestGroup === 'physics'
   ? PHYSICS_TEST_PATTERNS
   : browserTestGroup === 'compute'
     ? COMPUTE_TEST_PATTERNS
     : ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'];
-const reuseComputeContext = browserTestGroup === 'compute' || browserTestGroup === 'physics';
+const reuseComputeContext = ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
   'modules/**/*.node.spec.{ts,js}',
@@ -165,7 +167,8 @@ const browserExcludePatterns = [
   ...nodeOnlyTestPatterns,
   ...excludePatterns,
   ...(browserTestGroup === 'general' ? COMPUTE_TEST_PATTERNS : []),
-  ...(browserTestGroup === 'compute' ? PHYSICS_TEST_PATTERNS : [])
+  ...(browserTestGroup === 'compute' ? PHYSICS_TEST_PATTERNS : []),
+  ...(browserTestGroup === 'physics' ? PHYSICS_ENDURANCE_TEST_PATTERNS : [])
 ];
 const launchArguments = [
   '--enable-unsafe-webgpu',
