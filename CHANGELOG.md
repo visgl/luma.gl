@@ -2,6 +2,14 @@
 
 ## v10.0
 
+### v10.0.0-alpha.5
+
+- Consolidate WebGL and WebGPU adapters into core and introduce public graph, ANARI, and Three.js integration packages.
+- Establish GPUGraph authoring and execution APIs, GPU data processing, scientific advection, and GPU physics ensembles.
+- Expand engine rendering, table and vector models, scenegraph integration, glTF postprocessing, materials, and Gaussian splats.
+- Add GPU geometry, point-cloud, time-series, graph inspection, and tracing capabilities with updated examples and documentation.
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.1 and improve CI shard balance and test execution.
+
 ### v10.0.0-alpha.4
 
 - Align WebGL and WebGPU draw-call semantics and fix viewport, scissor, framebuffer, texture ownership, and buffer readback behavior.
