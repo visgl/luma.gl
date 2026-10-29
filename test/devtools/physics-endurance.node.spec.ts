@@ -9,9 +9,9 @@ import {parse} from 'yaml';
 import {getBrowserTestGroup, PHYSICS_ENDURANCE_TEST_PATTERNS} from '../utils/browser-test-groups';
 import {STACK_QUALIFICATION_SCENARIOS} from '../../modules/graph/test/gpu-physics/rigid-body-stack-scenarios';
 
-test('nightly physics selects every full stack qualification entry', () => {
+test('nightly physics selects all full endurance entries', () => {
   expect(getBrowserTestGroup('physics-endurance')).toBe('physics-endurance');
-  expect(PHYSICS_ENDURANCE_TEST_PATTERNS).toHaveLength(3);
+  expect(PHYSICS_ENDURANCE_TEST_PATTERNS).toHaveLength(5);
   for (const filename of PHYSICS_ENDURANCE_TEST_PATTERNS) {
     expect(existsSync(fileURLToPath(new URL(`../../${filename}`, import.meta.url)))).toBe(true);
   }

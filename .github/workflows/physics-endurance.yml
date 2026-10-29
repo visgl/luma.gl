@@ -12,6 +12,8 @@ on:
       - 'test/utils/browser-test-groups.ts'
       - 'vitest.config.ts'
       - 'modules/graph/test/gpu-physics/rigid-body-stack-*.ts'
+      - 'modules/graph/test/gpu-physics/rigid-body-stability*.ts'
+      - 'modules/graph/test/gpu-physics/rigid-body-rotating-contact*.ts'
       - 'modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts'
       - 'modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts'
       - 'modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts'
@@ -68,7 +70,7 @@ jobs:
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
           const report = readFileSync('test-results/physics-endurance.xml', 'utf8');
-          assert.match(report, /<testsuites\b[^>]*\btests="12"/);
+          assert.match(report, /<testsuites\b[^>]*\btests="15"/);
           assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
           NODE
       - name: Upload endurance results

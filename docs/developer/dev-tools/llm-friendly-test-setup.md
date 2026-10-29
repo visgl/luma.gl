@@ -77,11 +77,13 @@ PR physics coverage retains one-second stack regressions for all three scenarios
 The same diagnostics, penetration, drift, sleep-state, and residual-energy assertions run, with
 64 solver iterations. Sustained six-second behavior is checked separately by the complete original
 12-case matrix in `physics-endurance.yml`, nightly at 07:17 UTC, and through manual dispatch.
+Nightly also retains both 600-tick stack-settling cases and the 600-tick rotating-contact arena
+case, for 15 cases across five files. PRs retain the same assertions at 120 and 60 ticks respectively.
 The full matrix also runs on PRs that change its definitions or scheduling, so the nightly path
 is validated before those changes merge. Ordinary implementation PRs run the focused regressions.
 
 Run `yarn test-physics-endurance` to execute the full matrix locally without coverage overhead.
-It selects only the three full-duration specs. Default `yarn test` / `yarn test-headless` and
+It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless` and
 release sharding continue to include the full-duration specs. No endurance assertion, simulation
 step, solver, or time-step combination is removed from the full suite.
 
