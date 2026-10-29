@@ -14,7 +14,7 @@ import {
   TruncatedConeGeometry,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {
   spectralCaustics,
   SpectralCausticsRenderer,

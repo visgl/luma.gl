@@ -24,7 +24,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/anari`][anari] | Experimental | ANARI-inspired retained scene objects, instanced rendering, lights, materials, and HDR. |
 | [`@luma.gl/shadertools`][shadertools] | Recommended | Reusable shader modules, portable shader assembly, and application-defined shader hooks. |
 | [`@luma.gl/slang`][slang] | Experimental (v10) | Optional TypeScript transpilation of a documented Slang shader subset to GLSL and WGSL. |
-| [`@luma.gl/effects`][effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
+| [`@luma.gl/engine/effects`][engine/effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
 | [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation and GPU data primitives. |
 | [`@luma.gl/graph`][graph] | Experimental (v10) | GPU execution graphs, programs, and graph-based processing through explicit subpaths. |
 | [`@luma.gl/arrow`][arrow] | Experimental / Private | Apache Arrow adapters for GPU layouts and GPU table objects from Arrow data. |
@@ -42,7 +42,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/core`][core] for `Device`, buffers, textures, shaders, render passes, and `RenderPipeline`.
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
 - [`@luma.gl/slang`][slang] for experimental Slang shader authoring on WebGL 2 and WebGPU, available from v10.
-- [`@luma.gl/effects`][effects] for reusable image processing, bloom, and supported screen-space effects.
+- [`@luma.gl/engine/effects`][engine/effects] for reusable image processing, bloom, and supported screen-space effects.
 - [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
 - [`@luma.gl/graph`][graph] for `GPUCommandGraph`, `GPUGraph`, GPU tables, and graph-based processing.
 - [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for `GPURecordBatch`/`GPUTable` APIs.
@@ -60,7 +60,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 [anari]: /docs/api-reference/scene
 [shadertools]: /docs/api-reference/shadertools
 [slang]: /docs/api-reference/slang
-[effects]: /docs/api-guide/shaders/shader-passes
+[engine/effects]: /docs/api-guide/shaders/shader-passes
 [gpgpu]: /docs/api-reference/gpgpu
 [graph]: /docs/api-reference/graph
 [gpu-data]: /docs/api-reference/gpgpu/gpu-data

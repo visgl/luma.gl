@@ -21,7 +21,7 @@ rendered imagery.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {noise, sepia} from '@luma.gl/effects';
+import {noise, sepia} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {shaderPasses: [sepia, noise]});
 

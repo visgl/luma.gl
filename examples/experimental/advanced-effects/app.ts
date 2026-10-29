@@ -20,7 +20,7 @@ import {
   createTAACompositeShaderPass,
   createVolumetricFogCompositeShaderPass,
   depthAwareBlurCompositeShaderPass
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
 import {
   createContactShadowCompositeShaderPass,

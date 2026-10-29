@@ -1,0 +1,241 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {expect, it} from 'vitest';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {WgslReflect} from 'wgsl_reflect';
+import {
+  bloom,
+  brightnessContrast,
+  bulgePinch,
+  colorHalftone,
+  createCameraReprojectionTAACompositeShaderPass,
+  createClusteredVolumetricLightingCompositeShaderPass,
+  createGTAOCompositeShaderPass,
+  createHDRAutoExposureCompositeShaderPass,
+  createMotionBlurCompositeShaderPass,
+  createOutlineCompositeShaderPass,
+  createSSAOCompositeShaderPass,
+  createSSGICompositeShaderPass,
+  createSSRCompositeShaderPass,
+  createTAACompositeShaderPass,
+  createVolumetricFogCompositeShaderPass,
+  dof,
+  bokehDof,
+  denoise,
+  dotScreen,
+  edgeWork,
+  fxaa,
+  gaussianBlur,
+  hexagonalPixelate,
+  hueSaturation,
+  ink,
+  magnify,
+  noise,
+  sepia,
+  swirl,
+  tiltShift,
+  triangleBlur,
+  vibrance,
+  vignette,
+  zoomBlur
+} from '../../../src/effects/index';
+import {WGSLShaderAssembler} from '../../../../shadertools/src/lib/shader-assembler';
+import {getFragmentShaderForRenderPass} from '../../../src/passes/get-fragment-shader';
+import {textureTransform} from '../../../src/passes/texture-transform-module';
+
+const CLIP_SPACE_VERTEX_SHADER_WGSL = /* wgsl */ `\
+struct VertexInputs {
+  @location(0) clipSpacePositions: vec2<f32>,
+  @location(1) texCoords: vec2<f32>,
+  @location(2) coordinates: vec2<f32>
+}
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) position : vec2<f32>,
+  @location(1) coordinate : vec2<f32>,
+  @location(2) uv : vec2<f32>
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  outputs.Position = vec4(inputs.clipSpacePositions, 0., 1.);
+  outputs.position = inputs.clipSpacePositions;
+  outputs.coordinate = inputs.coordinates;
+  outputs.uv = inputs.texCoords;
+  return outputs;
+}
+`;
+
+const PLATFORM_INFO = {
+  type: 'webgpu' as const,
+  shaderLanguage: 'wgsl' as const,
+  shaderLanguageVersion: 300 as const,
+  gpu: 'test',
+  features: new Set<string>()
+};
+
+const ADVANCED_SHADER_PASSES = [
+  createSSAOCompositeShaderPass({normalSource: 'normal-texture'}),
+  createGTAOCompositeShaderPass(),
+  createGTAOCompositeShaderPass({composition: 'ambient-only'}),
+  createHDRAutoExposureCompositeShaderPass(),
+  createSSGICompositeShaderPass(),
+  createClusteredVolumetricLightingCompositeShaderPass(),
+  createOutlineCompositeShaderPass({normalSource: 'normal-texture'}),
+  createCameraReprojectionTAACompositeShaderPass(),
+  createTAACompositeShaderPass(),
+  createMotionBlurCompositeShaderPass(),
+  createSSRCompositeShaderPass(),
+  createVolumetricFogCompositeShaderPass(),
+  createVolumetricFogCompositeShaderPass({mode: 'height'})
+].flatMap(pipeline => pipeline.steps.map(step => step.shaderPass));
+
+const SHADER_PASSES = [
+  fxaa,
+  brightnessContrast,
+  denoise,
+  hueSaturation,
+  noise,
+  sepia,
+  vibrance,
+  vignette,
+  bloom,
+  dof,
+  bokehDof,
+  gaussianBlur,
+  tiltShift,
+  triangleBlur,
+  zoomBlur,
+  colorHalftone,
+  dotScreen,
+  edgeWork,
+  hexagonalPixelate,
+  ink,
+  magnify,
+  bulgePinch,
+  swirl,
+  ...ADVANCED_SHADER_PASSES
+];
+
+const WGSL_COMPILATION_TIMEOUT_MS = 2000;
+
+async function getOptionalWebGPUDevice() {
+  if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
+    return null;
+  }
+
+  return getWebGPUTestDevice();
+}
+
+function getSubPassAction(subPass: Record<string, unknown>): 'filter' | 'sample' {
+  return (
+    (subPass.action as 'filter' | 'sample') ||
+    (subPass.filter ? 'filter' : undefined) ||
+    (subPass.sampler ? 'sample' : undefined) ||
+    'filter'
+  );
+}
+
+function getTargetFunctionName(shaderPassName: string, action: 'filter' | 'sample'): string {
+  return action === 'filter'
+    ? `${shaderPassName}_filterColor_ext`
+    : `${shaderPassName}_sampleColor`;
+}
+
+function formatCompilationErrors(compilationMessages: {type: string; message: string}[]): string {
+  return compilationMessages
+    .filter(compilationMessage => compilationMessage.type === 'error')
+    .map(compilationMessage => compilationMessage.message)
+    .join('\n');
+}
+
+async function getCompilationInfoWithTimeout(shader: {
+  getCompilationInfo: () => Promise<
+    {type: string; message: string}[] | readonly {type: string; message: string}[]
+  >;
+}): Promise<readonly {type: string; message: string}[]> {
+  return await Promise.race([
+    shader.getCompilationInfo(),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Timed out waiting ${WGSL_COMPILATION_TIMEOUT_MS}ms for WebGPU shader compilation info`
+            )
+          ),
+        WGSL_COMPILATION_TIMEOUT_MS
+      )
+    )
+  ]);
+}
+
+it('postprocessing WGSL#assemble/compile', async () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  const webgpuDevice = await getOptionalWebGPUDevice();
+
+  if (!webgpuDevice) {
+    void 0;
+  }
+
+  for (const shaderPass of SHADER_PASSES) {
+    for (const subPass of shaderPass.passes || []) {
+      const action = getSubPassAction(subPass as Record<string, unknown>);
+      const fragmentSource = getFragmentShaderForRenderPass({
+        shaderPass,
+        action,
+        shadingLanguage: 'wgsl'
+      });
+      const assembledSource = shaderAssembler.assembleWGSLShader({
+        platformInfo: PLATFORM_INFO,
+        source: `${CLIP_SPACE_VERTEX_SHADER_WGSL}\n${fragmentSource}`,
+        modules: [textureTransform, shaderPass]
+      }).source;
+      const targetFunctionName = getTargetFunctionName(shaderPass.name, action);
+
+      expect(
+        Boolean(assembledSource.includes(`fn ${targetFunctionName}(`)),
+        `${shaderPass.name} ${action} assembles ${targetFunctionName}`
+      ).toBe(true);
+
+      let parsedSuccessfully = false;
+      try {
+        const reflectedShader = new WgslReflect(assembledSource);
+        parsedSuccessfully = Boolean(reflectedShader);
+        expect(Boolean(`${shaderPass.name} ${action} parses as WGSL`), '').toBe(true);
+      } catch (error) {
+        expect(false, `${shaderPass.name} ${action} WGSL parse failed: ${String(error)}`).toBe(
+          true
+        );
+      }
+
+      if (parsedSuccessfully && webgpuDevice) {
+        const shader = webgpuDevice.createShader({
+          id: `${shaderPass.name}-${action}`,
+          source: assembledSource
+        });
+        try {
+          const compilationMessages = await getCompilationInfoWithTimeout(shader);
+          const compilationErrors = formatCompilationErrors(compilationMessages);
+          expect(
+            compilationErrors,
+            `${shaderPass.name} ${action} compiles as WebGPU WGSL${compilationErrors ? `\n${compilationErrors}` : ''}`
+          ).toBe('');
+        } catch (error) {
+          expect(
+            false,
+            `${shaderPass.name} ${action} WebGPU compilation check failed: ${String(error)}`
+          ).toBe(true);
+        } finally {
+          shader.destroy();
+        }
+      }
+    }
+  }
+
+  void 0;
+});

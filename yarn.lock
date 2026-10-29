@@ -5059,7 +5059,6 @@ __metadata:
     zod: "npm:^4.4.3"
   peerDependencies:
     "@luma.gl/core": ~10.0.0-alpha.5
-    "@luma.gl/effects": ~10.0.0-alpha.5
     "@luma.gl/engine": ~10.0.0-alpha.5
     "@luma.gl/shadertools": ~10.0.0-alpha.5
   languageName: unknown
@@ -5097,16 +5096,6 @@ __metadata:
     "@types/offscreencanvas": "npm:^2019.7.3"
     "@webgpu/types": "npm:^0.1.69"
     probe.gl: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"@luma.gl/effects@npm:10.0.0-alpha.5, @luma.gl/effects@workspace:modules/effects":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/effects@workspace:modules/effects"
-  dependencies:
-    "@math.gl/core": "npm:~5.0.0-beta.1"
-  peerDependencies:
-    "@luma.gl/shadertools": ~10.0.0-alpha.3
   languageName: unknown
   linkType: soft
 
@@ -14844,7 +14833,6 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     typescript: "npm:^6.0.3"
@@ -15157,7 +15145,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
@@ -15222,7 +15209,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "workspace:*"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -15240,7 +15226,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
@@ -15258,7 +15243,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
@@ -15294,7 +15278,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
@@ -15313,7 +15296,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -15366,7 +15348,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
@@ -15385,7 +15366,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
@@ -15434,7 +15414,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:~5.0.0-beta.1"
@@ -15453,7 +15432,6 @@ __metadata:
     "@deck.gl-community/gpu-layers": "npm:10.0.0-alpha.5"
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     playwright: "npm:^1.58.0"
@@ -15487,7 +15465,6 @@ __metadata:
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
@@ -15573,7 +15550,6 @@ __metadata:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -15588,7 +15564,6 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
@@ -15604,7 +15579,6 @@ __metadata:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -15618,7 +15592,6 @@ __metadata:
   resolution: "luma.gl-examples-experimental-fluid-foundry@workspace:examples/experimental/fluid-foundry"
   dependencies:
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
@@ -15946,7 +15919,6 @@ __metadata:
   dependencies:
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
@@ -15978,7 +15950,6 @@ __metadata:
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
@@ -16212,7 +16183,6 @@ __metadata:
   resolution: "luma.gl-examples-persistence@workspace:examples/showcase/persistence"
   dependencies:
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -16229,7 +16199,6 @@ __metadata:
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
     "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -16298,7 +16267,6 @@ __metadata:
     "@loaders.gl/core": "npm:~5.0.0-beta.1"
     "@loaders.gl/pointclouds": "npm:~5.0.0-beta.1"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
@@ -16365,7 +16333,6 @@ __metadata:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
@@ -16408,7 +16375,6 @@ __metadata:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -16439,7 +16405,6 @@ __metadata:
     "@loaders.gl/scene": "npm:~5.0.0-beta.1"
     "@luma.gl/anari": "workspace:*"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
     "@math.gl/core": "npm:5.0.0-beta.1"
@@ -16471,7 +16436,6 @@ __metadata:
   resolution: "luma.gl-examples-showcase-tempest-ocean@workspace:examples/showcase/tempest-ocean"
   dependencies:
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
     "@luma.gl/shadertools": "npm:10.0.0-alpha.5"
@@ -16487,7 +16451,6 @@ __metadata:
   dependencies:
     "@luma.gl/anari": "npm:10.0.0-alpha.5"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"
@@ -16594,7 +16557,6 @@ __metadata:
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
     "@deck.gl/layers": "npm:9.4.0"
     "@luma.gl/core": "npm:10.0.0-alpha.5"
-    "@luma.gl/effects": "npm:10.0.0-alpha.5"
     "@luma.gl/engine": "npm:10.0.0-alpha.5"
     "@luma.gl/gpgpu": "npm:10.0.0-alpha.5"
     "@luma.gl/graph": "npm:10.0.0-alpha.5"

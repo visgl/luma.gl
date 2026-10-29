@@ -99,9 +99,9 @@ Applications commonly add two first-class libraries above the portability layer:
   `@luma.gl/shadertools` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and
   shader-pass rendering.
 
-Focused packages such as `@luma.gl/effects`, `@luma.gl/engine/gltf`, and `@luma.gl/gpgpu` build on one or
+Focused packages and subpaths such as `@luma.gl/engine/effects`, `@luma.gl/engine/gltf`, and `@luma.gl/gpgpu` build on one or
 more of these layers. GPU tables live under `@luma.gl/graph/gpu-tables`; experimental path/polygon models live under `@luma.gl/engine/models`. These
-packages are not automatically included by the engine. See the [API overview](/docs/api-guide) and
+APIs are not automatically included by the engine root. See the [API overview](/docs/api-guide) and
 [module catalog](/docs/api-reference) for the complete package map.
 
 ### Shader Source Bundling

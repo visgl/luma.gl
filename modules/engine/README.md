@@ -36,3 +36,10 @@ Text APIs are available through optional flat subpaths:
 
 These APIs are not re-exported from the engine root. See the
 [text API reference](../../docs/api-reference/engine/text/README.md).
+
+## Effects
+
+Import reusable post-processing and screen-space shader passes from `@luma.gl/engine/effects`.
+This optional subpath preserves the existing effects API and is not re-exported from the engine
+root. Shadertools owns shader-pass contracts; graph owns execution and accepts these pass
+definitions without importing engine. See the [effects reference](../../docs/api-reference/effects/README.md).

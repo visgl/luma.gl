@@ -28,11 +28,11 @@ const excludePatterns = [
 // them in Node preserves the assertions while avoiding one isolated browser page per file.
 const nodeOnlyTestPatterns = [
   'test/devtools/**/*.spec.{ts,js}',
-  'modules/effects/test/passes/image-adjust-filters/**/*.spec.{ts,js}',
-  'modules/effects/test/passes/image-blur-filters/{gaussianblur,zoomblur,tiltshift,triangleblur}.spec.{ts,js}',
-  'modules/effects/test/passes/image-warp-filters/**/*.spec.{ts,js}',
-  'modules/effects/test/passes/image-fun-filters/**/*.spec.{ts,js}',
-  'modules/effects/test/passes/screen-space/dof.spec.{ts,js}',
+  'modules/engine/test/effects/passes/image-adjust-filters/**/*.spec.{ts,js}',
+  'modules/engine/test/effects/passes/image-blur-filters/{gaussianblur,zoomblur,tiltshift,triangleblur}.spec.{ts,js}',
+  'modules/engine/test/effects/passes/image-warp-filters/**/*.spec.{ts,js}',
+  'modules/engine/test/effects/passes/image-fun-filters/**/*.spec.{ts,js}',
+  'modules/engine/test/effects/passes/screen-space/dof.spec.{ts,js}',
   'modules/core/test/shadertypes/**/*.spec.{ts,js}',
   'modules/core/test/adapter-utils/{buffer-layout-utils,format-compiler-log,get-attribute-from-layout}.spec.{ts,js}',
   'modules/core/test/adapter/helpers/parse-shader-compiler-log.spec.{ts,js}',

@@ -1,5 +1,12 @@
 # What's New
 
+## Effects engine subpath
+
+Reusable post-processing and screen-space effects are available from the optional
+`@luma.gl/engine/effects` entry. The standalone effects package is removed; engine root imports
+do not load effects. Shader-pass definitions and execution behavior are unchanged, and graph
+remains independent of engine. See the [effects reference](./api-reference/effects/README.md).
+
 ## Text engine subpaths
 
 Text rendering, font atlas builders, and 3D text geometry now live in the optional flat

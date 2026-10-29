@@ -89,7 +89,7 @@ import {
   createSSRCompositeShaderPass,
   createTAACompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {GBuffer} from '@luma.gl/anari';
 
 const gBuffer = new GBuffer(device, {width, height});
@@ -155,7 +155,7 @@ GTAO defaults to its backward-compatible full-color composite. Deferred applicat
 isolate ambient light should request the physically accurate ambient-only mode instead:
 
 ```ts
-import {createGTAOCompositeShaderPass} from '@luma.gl/effects';
+import {createGTAOCompositeShaderPass} from '@luma.gl/engine/effects';
 import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/anari';
 
 const ambientRenderer = new ShaderPassRenderer(device, {

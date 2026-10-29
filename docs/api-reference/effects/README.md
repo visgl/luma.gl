@@ -1,12 +1,16 @@
 ---
-title: "@luma.gl/effects"
+title: "@luma.gl/engine/effects"
 description: Composable post-processing, screen-space lighting, temporal effects, and shader-pass pipelines.
 ---
 
-# @luma.gl/effects
+# @luma.gl/engine/effects
 
-`@luma.gl/effects` provides shader passes and multi-pass pipelines for image adjustment, blur,
+`@luma.gl/engine/effects` provides shader passes and multi-pass pipelines for image adjustment, blur,
 bloom, antialiasing, depth-aware lighting, temporal reconstruction, atmosphere, and stylization.
+
+Install `@luma.gl/engine` to use this optional subpath. Effects are not re-exported from the
+engine root. Shader-pass contracts remain in shadertools; graph executes caller-supplied
+pass definitions without depending on engine.
 
 ## When to use it
 
@@ -17,7 +21,7 @@ object's material shader rather than a post-processing stage.
 ## Quick start
 
 ```ts
-import {brightnessContrast, toneMapping} from '@luma.gl/effects';
+import {brightnessContrast, toneMapping} from '@luma.gl/engine/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
@@ -73,7 +77,7 @@ The mask and source must use the same UV orientation. Render the mask against op
 depth when the outline should respect occlusion.
 
 ```ts
-import {selectionOutline} from '@luma.gl/effects';
+import {selectionOutline} from '@luma.gl/engine/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {shaderPasses: [selectionOutline]});

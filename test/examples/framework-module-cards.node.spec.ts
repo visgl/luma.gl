@@ -53,7 +53,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'effects',
     title: 'Effects',
-    packageName: '@luma.gl/effects',
+    packageName: '@luma.gl/engine/effects',
     documentationPath: 'docs/api-reference/shadertools/shader-passes/image-processing',
     capabilities: ['Bloom', 'Tone mapping', 'Shader passes'],
     descriptions: [/reusable shader effects/i, /post-processing/i]

@@ -10,7 +10,7 @@ import {
   createSSAOCompositeShaderPass,
   createOutlineCompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {getDeckExampleProps, type DeckExampleDeviceOptions} from '../deck-example-device';
 import {RIVERFRONT_VIEW_LIMITS} from '../riverfront-view';
 import {CITY_ORIGIN, makeCityFeatures, makeCityMesh} from '../river-district-data';

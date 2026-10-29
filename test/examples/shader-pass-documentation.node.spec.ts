@@ -269,7 +269,7 @@ describe('shader-pass reference documentation', () => {
 
   test('gives every public effect a complete reference, a real export, and a matching live example', () => {
     const effectsExportsSource = readFileSync(
-      path.join(process.cwd(), 'modules/effects/src/index.ts'),
+      path.join(process.cwd(), 'modules/engine/src/effects/index.ts'),
       'utf8'
     );
     const websiteExamplesSource = readFileSync(

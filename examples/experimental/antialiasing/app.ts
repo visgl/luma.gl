@@ -4,7 +4,7 @@
 
 import type {Framebuffer, Sampler, SamplerProps, Texture, TextureView} from '@luma.gl/core';
 import {Texture as TextureResource, UniformStore} from '@luma.gl/core';
-import {fxaa} from '@luma.gl/effects';
+import {fxaa} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,

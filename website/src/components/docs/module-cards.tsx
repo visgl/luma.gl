@@ -53,7 +53,8 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       image: 'experimental/gpu-data-analysis'
     },
     {
-      name: 'effects',
+      name: 'engine/effects',
+      reference: 'effects',
       description: 'Build post-processing pipelines with composable image and lighting effects.',
       image: 'showcase/postprocessing'
     },

@@ -14,6 +14,7 @@ export default defineConfig({
       '@luma.gl/engine/text-experimental':
         __dirname + '/../../../modules/engine/src/text/experimental.ts',
       '@luma.gl/engine/text': __dirname + '/../../../modules/engine/src/text',
+      '@luma.gl/engine/effects': __dirname + '/../../../modules/engine/src/effects',
       '@luma.gl/engine': __dirname + '/../../../modules/engine/src',
       '@luma.gl/shadertools': __dirname + '/../../../modules/shadertools/src',
       '@luma.gl/gpgpu/_internal': __dirname + '/../../../modules/gpgpu/src/execution',

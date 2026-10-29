@@ -1,5 +1,12 @@
 # Upgrade Guide
 
+## Effects imports
+
+The `@luma.gl/effects` package has been removed. Install `@luma.gl/engine` and replace
+`@luma.gl/effects` imports with `@luma.gl/engine/effects`. Exported effect names and behavior
+are unchanged. Effects remain an explicit subpath and are not re-exported from the engine root.
+No compatibility package is retained.
+
 ## Graph and engine dependency direction
 
 Graph and gpgpu no longer depend on engine. Update these rendering integration imports:

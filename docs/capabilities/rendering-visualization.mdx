@@ -75,21 +75,21 @@ Return to the [capabilities overview](/docs/capabilities) for GPU data and compu
 
 | Feature | Status | Backend | Package | Details |
 | --- | --- | --- | --- | --- |
-| Ordered image-effect pipelines | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Chain compatible shader passes and explicitly named intermediate targets. |
-| HDR bloom | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Apply supported floating-point highlight extraction and multiresolution blur. |
-| Photographic lens effects | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Add optional chromatic ghosts, radial halos, aperture starbursts, and compatible lens-dirt masks. |
-| Fused WebGPU bloom | Available | WebGPU | `@luma.gl/effects` | Fuse compatible bloom downsampling and filtering work while retaining a portable render-pass fallback. |
+| Ordered image-effect pipelines | Available | WebGPU + WebGL2 | `@luma.gl/engine/effects` | Chain compatible shader passes and explicitly named intermediate targets. |
+| HDR bloom | Available | WebGPU + WebGL2 | `@luma.gl/engine/effects` | Apply supported floating-point highlight extraction and multiresolution blur. |
+| Photographic lens effects | Available | WebGPU + WebGL2 | `@luma.gl/engine/effects` | Add optional chromatic ghosts, radial halos, aperture starbursts, and compatible lens-dirt masks. |
+| Fused WebGPU bloom | Available | WebGPU | `@luma.gl/engine/effects` | Fuse compatible bloom downsampling and filtering work while retaining a portable render-pass fallback. |
 | Fourier aperture convolution | Experimental | WebGPU | `@luma.gl/graph/gpu-effects` | Convolve compatible highlight fields against a supplied aperture through independent RGB GPU Fourier transforms. |
-| Color and image filters | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Adjust brightness, contrast, hue, saturation, noise, sepia, and vignette. |
-| Depth-of-field passes | Available | WebGPU + WebGL2 | `@luma.gl/effects` | Apply supported depth-aware focus and image-space blur. |
-| Temporal antialiasing | Available | WebGPU | `@luma.gl/effects` | Reproject compatible camera, color, and depth history with jitter and neighborhood-clamped accumulation. |
-| Motion blur | Available | WebGPU | `@luma.gl/effects` | Use compatible velocity and frame data for image-space motion blur. |
-| Screen-space ambient occlusion | Available | WebGPU | `@luma.gl/effects` | Compute supported SSAO and GTAO visibility from scene attachments. |
-| Screen-space reflections | Available | WebGPU | `@luma.gl/effects` | Trace and stabilize supported SSR reflections using depth and frame history. |
-| Screen-space indirect lighting | Available | WebGPU | `@luma.gl/effects` | Approximate supported diffuse bounce lighting with temporally filtered SSGI. |
-| Adaptive exposure | Available | WebGPU | `@luma.gl/effects` | Reduce scene luminance on the GPU and update compatible HDR exposure. |
-| Volumetric lighting and fog | Available | WebGPU | `@luma.gl/effects` | Render supported fog, participating media, and clustered light scattering. |
-| Depth-aware outlines | Available | WebGPU | `@luma.gl/effects` | Highlight compatible object boundaries using auxiliary scene attachments. |
+| Color and image filters | Available | WebGPU + WebGL2 | `@luma.gl/engine/effects` | Adjust brightness, contrast, hue, saturation, noise, sepia, and vignette. |
+| Depth-of-field passes | Available | WebGPU + WebGL2 | `@luma.gl/engine/effects` | Apply supported depth-aware focus and image-space blur. |
+| Temporal antialiasing | Available | WebGPU | `@luma.gl/engine/effects` | Reproject compatible camera, color, and depth history with jitter and neighborhood-clamped accumulation. |
+| Motion blur | Available | WebGPU | `@luma.gl/engine/effects` | Use compatible velocity and frame data for image-space motion blur. |
+| Screen-space ambient occlusion | Available | WebGPU | `@luma.gl/engine/effects` | Compute supported SSAO and GTAO visibility from scene attachments. |
+| Screen-space reflections | Available | WebGPU | `@luma.gl/engine/effects` | Trace and stabilize supported SSR reflections using depth and frame history. |
+| Screen-space indirect lighting | Available | WebGPU | `@luma.gl/engine/effects` | Approximate supported diffuse bounce lighting with temporally filtered SSGI. |
+| Adaptive exposure | Available | WebGPU | `@luma.gl/engine/effects` | Reduce scene luminance on the GPU and update compatible HDR exposure. |
+| Volumetric lighting and fog | Available | WebGPU | `@luma.gl/engine/effects` | Render supported fog, participating media, and clustered light scattering. |
+| Depth-aware outlines | Available | WebGPU | `@luma.gl/engine/effects` | Highlight compatible object boundaries using auxiliary scene attachments. |
 | Deferred G-buffer rendering | Experimental | WebGPU | `@luma.gl/anari` | Compose supported surface attachments and deferred lighting passes. |
 | Compute-clustered lights | Experimental | WebGPU | `@luma.gl/anari` | Partition dense point-light workloads into compatible screen-space clusters. |
 | Cascaded directional shadows | Experimental | WebGPU | `@luma.gl/anari` | Render supported cascaded shadow maps for directional lights. |

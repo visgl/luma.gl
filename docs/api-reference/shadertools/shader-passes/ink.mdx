@@ -21,7 +21,7 @@ object-identification buffer.
 
 ```typescript
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {brightnessContrast, ink} from '@luma.gl/effects';
+import {brightnessContrast, ink} from '@luma.gl/engine/effects';
 
 const renderer = new ShaderPassRenderer(device, {
   shaderPasses: [brightnessContrast, ink]

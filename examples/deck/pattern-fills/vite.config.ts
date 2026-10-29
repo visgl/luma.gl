@@ -20,6 +20,7 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/engine/text-3d': `${__dirname}/../../../modules/engine/src/text/text-3d`,
       '@luma.gl/engine/text-experimental': `${__dirname}/../../../modules/engine/src/text/experimental.ts`,
       '@luma.gl/engine/text': `${__dirname}/../../../modules/engine/src/text`,
+      '@luma.gl/engine/effects': `${__dirname}/../../../modules/engine/src/effects`,
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
       '@luma.gl/gpgpu/_internal': `${__dirname}/../../../modules/gpgpu/src/execution`,
       '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,

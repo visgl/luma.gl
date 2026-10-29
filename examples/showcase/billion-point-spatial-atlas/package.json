@@ -16,7 +16,6 @@
     "@loaders.gl/core": "~5.0.0-beta.1",
     "@loaders.gl/pointclouds": "~5.0.0-beta.1",
     "@luma.gl/core": "10.0.0-alpha.5",
-    "@luma.gl/effects": "10.0.0-alpha.5",
     "@luma.gl/engine": "10.0.0-alpha.5",
     "@luma.gl/graph": "10.0.0-alpha.5",
     "@luma.gl/shadertools": "10.0.0-alpha.5"
