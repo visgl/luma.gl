@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderPlugin} from '@luma.gl/shaders';
 
 export const FillPattern = {
   none: 0,

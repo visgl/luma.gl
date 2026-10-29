@@ -9,7 +9,7 @@ import {
   heightFogFunctions,
   type HeightFogUniforms,
   type ShaderPass
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 
 /** Reconstructs positions in the same metre-space coordinate frame as the camera. */
 export type HeightFogPassUniforms = HeightFogUniforms & {

@@ -15,7 +15,7 @@ import {
 import {readArrowGPUVectorAsync} from '../../../gpu/arrow-gpu-vector-adapters';
 import {convertArrowToGPUVector} from '../../../gpu/arrow-gpu-vector-conversion';
 import {type ModelProps} from '@luma.gl/engine';
-import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import {GPUVector, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {

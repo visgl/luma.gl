@@ -22,7 +22,7 @@ import {
   indexPicking,
   type PickingManager
 } from '@luma.gl/engine';
-import {dirlight, ShaderModule} from '@luma.gl/shadertools';
+import {dirlight, ShaderModule} from '@luma.gl/shaders';
 import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
 import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';

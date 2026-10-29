@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import {getPlatformInfo, Kernel, type KernelProps} from '@luma.gl/gpgpu';
-import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
 
 const ARROW_SHADER_ASSEMBLER = new WGSLShaderAssembler();
 

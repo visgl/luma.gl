@@ -15,7 +15,7 @@ import {
   Model,
   ShaderInputs
 } from '../../src';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 const VERTEX_SHADER =
   '#version 300 es\nin vec3 positions;\nvoid main() {gl_Position = vec4(positions, 1.0);}';

@@ -11,6 +11,6 @@ const SHADER_GUIDE_GROUPS = {
 } as const;
 
 export function ShaderLevelDocsTabs({active, group = 'authoring'}: {active: ShaderLevelDocsTabId; group?: ShaderLevelDocsTabGroupId}): ReactNode {
-  const tabGroup = FOUNDATION_DOCS_CATALOG.shadertools[SHADER_GUIDE_GROUPS[group]];
+  const tabGroup = FOUNDATION_DOCS_CATALOG.shaders[SHADER_GUIDE_GROUPS[group]];
   return <DocsPageTabs active={active} group={tabGroup} />;
 }

@@ -25,7 +25,7 @@ import {
   type ScenegraphBounds
 } from '@luma.gl/engine';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
-import {gpuAnimation, pbrMaterial, skin} from '@luma.gl/shadertools';
+import {gpuAnimation, pbrMaterial, skin} from '@luma.gl/shaders';
 import type {NumericArray} from '@math.gl/core';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import type {GLTFCrowdGPUAnimationLayout} from './gltf-gpu-animation';

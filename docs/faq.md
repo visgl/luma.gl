@@ -26,6 +26,6 @@ See [RenderPass options](/docs/api-reference/core/resources/render-pass#renderpa
 
 Start with [Getting started](/docs/getting-started) for a portable triangle.
 Use [Choosing an API layer](/docs/api-guide) to decide between Engine, Core,
-Shadertools, and experimental GPU Core. Check
+Shaders, and experimental GPU Core. Check
 [WebGPU versus WebGL 2](/docs/api-guide/background/webgpu-vs-webgl)
 before depending on compute or other backend-specific features.

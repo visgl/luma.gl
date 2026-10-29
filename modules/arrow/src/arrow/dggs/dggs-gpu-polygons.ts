@@ -5,7 +5,7 @@
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {createArrowComputeKernel} from '../gpu/arrow-compute-kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {dggs} from '@luma.gl/shadertools';
+import {dggs} from '@luma.gl/shaders';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 import {
   Data,

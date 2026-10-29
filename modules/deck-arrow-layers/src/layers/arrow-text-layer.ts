@@ -601,6 +601,7 @@ export class ArrowTextLayer extends Layer<ArrowTextLayerProps> {
             ? DECK_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT
             : DECK_TEXT_STORAGE_SHADER_LAYOUT,
         modelProps: {
+          shaderAssembler: this.context.shaderAssembler,
           ...effectiveProps.modelProps,
           ...this.getShaders(
             this.context.device.type === 'webgpu'

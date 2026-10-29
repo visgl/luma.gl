@@ -42,7 +42,7 @@ compiler remains WebGPU-only; `GPUSimpleGraph` is the separate portable evaluato
 
 ## Package layering
 
-Engine depends on graph; graph depends on gpgpu; gpgpu depends on core and shadertools.
+Engine depends on graph; graph depends on gpgpu; gpgpu depends on core and shaders.
 Neither graph nor gpgpu imports engine, including in public resource types. Both GPUGraph
 and GPUSimpleGraph use the shared gpgpu execution/resource primitives. GPUGraph remains
 WebGPU-focused; this layering does not add WebGL algorithm fallbacks.

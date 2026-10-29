@@ -5,7 +5,7 @@ Reusable deck.gl layers for geographic rendering that consume caller-owned GPU b
 ## Water surfaces
 
 `WaterSurfaceLayer` shades flat, triangulated water polygons on WebGPU and WebGL2 using the shared
-`@luma.gl/shadertools` water material. Supply packed `float32x3` positions in local east/north/up
+`@luma.gl/shaders` water material. Supply packed `float32x3` positions in local east/north/up
 meters, `vertexCount`, and Deck's `coordinateOrigin`. The layer borrows the position buffer and owns
 only its render model; the application must release the buffer after removing/finalizing the layer.
 
@@ -218,7 +218,7 @@ same geometry. Draw opaque fill layers first to hide rear edges. The layer owns 
 quad buffer, and borrows `segments`; the application destroys that buffer after finalizing Deck.
 It does not extract mesh boundaries, join paths, or drape lines over terrain. The
 [Sketch buildings example](../../examples/deck/sketch-edges) demonstrates the controls, picking,
-and hidden-edge rendering. The underlying `sketchStroke` shader in `@luma.gl/shadertools`
+and hidden-edge rendering. The underlying `sketchStroke` shader in `@luma.gl/shaders`
 can also be used by non-Deck renderers.
 ## Auxiliary scene buffers
 

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer, SignedDataType} from '@luma.gl/core';
-import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat, toHalfFloat} from '@luma.gl/shaders';
 import {getGPUVectorFormatInfo} from '../../gpu-data/gpu-vector-format';
 import type {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import type {OperationHandler} from '../../operation/operation';

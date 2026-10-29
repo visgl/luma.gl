@@ -18,7 +18,7 @@ import {
   type PBRMaterialBindings,
   type PBRMaterialUniforms,
   pbrMaterial
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {Matrix4, type NumberArray9} from '@math.gl/core';
 import {unpackIndexedGeometry} from '@math.gl/geometry';
 import {

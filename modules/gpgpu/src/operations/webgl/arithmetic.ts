@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {fp32} from '@luma.gl/shadertools';
+import {fp32} from '@luma.gl/shaders';
 import {OperationHandler} from '../../operation/operation';
 import {compileExpression} from '../../utils/expression';
 import {ARITHMETIC_OPERATIONS, type ArithmeticOperationInputs} from '../arithmetic-expression';

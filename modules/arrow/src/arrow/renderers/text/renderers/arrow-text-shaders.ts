@@ -4,7 +4,7 @@
 
 import type {ShaderLayout} from '@luma.gl/core';
 import {picking, ShaderInputs} from '@luma.gl/engine';
-import {ShaderAssembler, type ShaderModule} from '@luma.gl/shadertools';
+import {ShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
 import {
   makeTextGlyphAlphaGlsl,
   makeTextGlyphAlphaWgsl,

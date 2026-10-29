@@ -1,6 +1,6 @@
 ---
 title: Choosing a luma.gl API layer
-description: Choose between Shadertools, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
+description: Choose between Shaders, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
 ---
 
 import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
@@ -16,7 +16,7 @@ layer that expresses the work clearly, then move down only when the application 
 | --- | --- |
 | Render geometry, manage redraws, animate, or pick objects | **Engine** |
 | Create and control buffers, textures, passes, pipelines, and submission | **Core** |
-| Compose reusable WGSL/GLSL behavior | **Shadertools** |
+| Compose reusable WGSL/GLSL behavior | **Shaders** |
 | Schedule several dependent WebGPU operations with indirect work or transient storage | **GPU Core** |
 
 Start with [How luma.gl fits together](/docs/api-guide/luma-layers) for one small rendered
@@ -60,7 +60,7 @@ Core responsibilities for any GPU library are to enable applications to perform:
 - [Shader execution / rendering](/docs/api-guide/gpu/gpu-rendering) - Drawing into textures, running compute shaders.
 - [GPU parameter management](/docs/api-guide/gpu/gpu-parameters) - Configuring blending, clipping, depth tests etc.
 
-## Shadertools
+## Shaders
 
 The Shader API lets the application use a library of existing shader modules to create new custom shaders.
 It is also possible for developers to create new reusable shader modules.

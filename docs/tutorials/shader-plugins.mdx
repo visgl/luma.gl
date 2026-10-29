@@ -29,7 +29,7 @@ lifecycle.
 Each backend-specific plugin variant injects the pattern implementation into `fs:#decl`. The base fragment shader calls that implementation without knowing how the GLSL or WGSL source differs.
 
 ```typescript
-import type {ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderPlugin} from '@luma.gl/shaders';
 
 const fillPatternPlugin: ShaderPlugin = {
   name: 'fill-pattern-plugin',
@@ -139,7 +139,7 @@ CLIP_COLOR(&color);
 The hook signatures are registered for the active shader language:
 
 ```ts
-import {GLSLShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shaders';
 
 const shaderAssembler = new GLSLShaderAssembler();
 

@@ -12,7 +12,7 @@ const alias = {
   '@luma.gl/engine/text': `${__dirname}/../../../modules/engine/src/text`,
   '@luma.gl/engine/effects': `${__dirname}/../../../modules/engine/src/effects`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
-  '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
+  '@luma.gl/shaders': `${__dirname}/../../../modules/shaders/src`,
   '@luma.gl/gpgpu/_internal': `${__dirname}/../../../modules/gpgpu/src/execution`,
   '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,

@@ -41,7 +41,7 @@ import {
   vignette,
   zoomBlur
 } from '../../../src/effects/index';
-import {WGSLShaderAssembler} from '../../../../shadertools/src/lib/shader-assembler';
+import {WGSLShaderAssembler} from '../../../../shaders/src/lib/shader-assembler';
 import {getFragmentShaderForRenderPass} from '../../../src/passes/get-fragment-shader';
 import {textureTransform} from '../../../src/passes/texture-transform-module';
 

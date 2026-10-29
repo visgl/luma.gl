@@ -13,7 +13,7 @@ import {
   type PointLightModelProps,
   type SpotLightModelProps
 } from '@luma.gl/engine';
-import type {Light} from '@luma.gl/shadertools';
+import type {Light} from '@luma.gl/shaders';
 
 const VIEW_MATRIX = new Matrix4().lookAt({eye: [0, 0, 5]});
 const PROJECTION_MATRIX = new Matrix4().perspective({

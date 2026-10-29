@@ -66,7 +66,7 @@
   },
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.3",
-    "@luma.gl/shadertools": "~10.0.0-alpha.3"
+    "@luma.gl/shaders": "~10.0.0-alpha.3"
   },
   "dependencies": {
     "@math.gl/core": "~5.0.0-beta.1",

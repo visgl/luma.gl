@@ -91,12 +91,12 @@ integrations, and higher-level luma.gl modules add to the final application bund
 
 Applications commonly add two first-class libraries above the portability layer:
 
-- [`@luma.gl/shadertools`](/docs/api-reference/shadertools) assembles reusable WGSL and GLSL shader
+- [`@luma.gl/shaders`](/docs/api-reference/shaders) assembles reusable WGSL and GLSL shader
   modules, plugins, and passes. It does not compile shaders or call WebGPU or WebGL itself, so it can
   be used with either the core API or the engine. See the
   [Shader API guide](/docs/api-guide/shaders).
 - [`@luma.gl/engine`](/docs/api-reference/engine) builds on `@luma.gl/core` and
-  `@luma.gl/shadertools` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and
+  `@luma.gl/shaders` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and
   shader-pass rendering.
 
 Focused packages and subpaths such as `@luma.gl/engine/effects`, `@luma.gl/engine/gltf`, and `@luma.gl/gpgpu` build on one or
@@ -119,7 +119,7 @@ A portable `ShaderModule` commonly references all three strings from one object,
 selects the active fields after creating a device. Tree-shaking can remove a wholly unused shader
 module, but generally cannot remove the inactive properties of a module object that remains
 reachable. Importing only one backend therefore removes the other backend implementation, but does
-not guarantee that the unused shader dialect is removed from portable engine or shadertools code.
+not guarantee that the unused shader dialect is removed from portable engine or shaders code.
 Shader `defines` are evaluated during shader assembly, after the JavaScript has loaded, and do not
 reduce transfer size. JavaScript minifiers also do not normally minify the contents of shader
 strings.
@@ -149,12 +149,12 @@ reference, but it is not representative of an application that imports a few nam
 
 | Full public-entry fixture | Reference minified | Reference gzip | Reference Brotli |
 | --- | ---: | ---: | ---: |
-| `@luma.gl/shadertools`, excluding core | 321.9 KB | 73.4 KB | 58.8 KB |
-| `@luma.gl/engine`, excluding core and shadertools | 163.6 KB | 45.4 KB | 38.4 KB |
-| core + shadertools + engine | 582.9 KB | 145.9 KB | 121.1 KB |
+| `@luma.gl/shaders`, excluding core | 321.9 KB | 73.4 KB | 58.8 KB |
+| `@luma.gl/engine`, excluding core and shaders | 163.6 KB | 45.4 KB | 38.4 KB |
+| core + shaders + engine | 582.9 KB | 145.9 KB | 121.1 KB |
 
 The first two rows externalize the named peer packages so that shared code is not counted twice.
-The combined row adds the separately compressed core, shadertools, and engine fixtures; it is a
+The combined row adds the separately compressed core, shaders, and engine fixtures; it is a
 stable comparison point, not a required chunking strategy.
 
 Named-import fixtures demonstrate how tree-shaking changes the result:

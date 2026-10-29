@@ -22,8 +22,8 @@ import {
   getWebGPUTestDevice,
   getTestDevices
 } from '@luma.gl/core/test-utils';
-import {skin} from '@luma.gl/shadertools';
-import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
+import {skin} from '@luma.gl/shaders';
+import {pbrProjection} from '../../../shaders/src/modules/lighting/pbr-material/pbr-projection';
 
 const stats = luma.stats.get('GPU Resource Counts');
 
@@ -1146,7 +1146,7 @@ function isSoftwareBackedDevice(device: Device): boolean {
 }
 
 /*
-import {dirlight, picking} from '@luma.gl/shadertools';
+import {dirlight, picking} from '@luma.gl/shaders';
 
 const VS_300 = glsl`#version 300 es
 

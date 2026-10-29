@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer, TextureView} from '@luma.gl/core';
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 
 export type ABufferShaderModuleProps = {
   /** Whether the current draw should append fragments into the A-buffer. */

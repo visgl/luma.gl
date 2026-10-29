@@ -1,8 +1,8 @@
-import {ShadertoolsDocsTabs} from '@site/src/components/docs/shadertools-docs-tabs';
+import {ShadersDocsTabs} from '@site/src/components/docs/shaders-docs-tabs';
 
-# Shadertools cookbook
+# Shaders cookbook
 
-<ShadertoolsDocsTabs group="starting" active="shadertools-cookbook" />
+<ShadersDocsTabs group="starting" active="shaders-cookbook" />
 
 These snippets show the smallest useful descriptor or assembly action. Add both WGSL and GLSL
 source when the feature must run on both backends.
@@ -44,13 +44,15 @@ const exposure = {
 ## Add a hook
 
 ```ts
-const assembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+import {WGSLShaderAssembler} from '@luma.gl/shaders';
+
+const assembler = new WGSLShaderAssembler();
 assembler.addShaderHook(
   'fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)'
 );
 ```
 
-The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated hook is a no-op.
+Pass this assembler to the model through its `shaderAssembler` prop. The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated hook is a no-op.
 
 ## Inject source
 
@@ -109,4 +111,4 @@ Execute it with Engine’s `ShaderPassRenderer`. Each subpass is a draw and may 
 - [Shader programming guide](./)
 - [Shader assembly](./shader-assembly)
 - [Writing customizable shaders](./writing-customizable-shaders)
-- [`ShaderModule`](/docs/api-reference/shadertools/shader-module)
+- [`ShaderModule`](/docs/api-reference/shaders/shader-module)

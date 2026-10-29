@@ -384,7 +384,7 @@ owns compiler registration and uses reflection for layouts, bindings and uniform
 `omitUnusedResources` so native interface scanners see only the resources for each pipeline.
 
 The experimental compiler has no runtime dependencies. It is an optional import and does not
-increase core/engine/shadertools bundles. Bundle-size tests guard the compiler (about 30 KB gzip)
+increase core/engine/shaders bundles. Bundle-size tests guard the compiler (about 30 KB gzip)
 and separate luma helpers (about 1.4 KB gzip).
 
 ## Development

@@ -464,21 +464,24 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     const useStorageModel = props.model === 'storage';
     return {
       model: useStorageModel ? 'storage' : 'attribute',
-      modelProps: this.getShaders(
-        this.context.device.type === 'webgpu'
-          ? useStorageModel
-            ? {
-                modules: [deckArrowViewport, picking],
-                source: DECK_POLYGON_STORAGE_WGSL,
-                shaderLayout: DECK_POLYGON_STORAGE_SHADER_LAYOUT
-              }
-            : {
-                modules: [deckArrowViewport, picking],
-                source: DECK_POLYGON_WGSL,
-                vs: DECK_POLYGON_VS
-              }
-          : {modules: [project32, picking], vs: DECK_POLYGON_VS, fs: DECK_POLYGON_FS}
-      )
+      modelProps: {
+        shaderAssembler: this.context.shaderAssembler,
+        ...this.getShaders(
+          this.context.device.type === 'webgpu'
+            ? useStorageModel
+              ? {
+                  modules: [deckArrowViewport, picking],
+                  source: DECK_POLYGON_STORAGE_WGSL,
+                  shaderLayout: DECK_POLYGON_STORAGE_SHADER_LAYOUT
+                }
+              : {
+                  modules: [deckArrowViewport, picking],
+                  source: DECK_POLYGON_WGSL,
+                  vs: DECK_POLYGON_VS
+                }
+            : {modules: [project32, picking], vs: DECK_POLYGON_VS, fs: DECK_POLYGON_FS}
+        )
+      }
     };
   }
 

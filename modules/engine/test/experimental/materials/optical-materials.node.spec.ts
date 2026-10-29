@@ -28,7 +28,7 @@ import {
   getShaderModuleUniformLayoutValidationResult,
   GLSLShaderAssembler,
   WGSLShaderAssembler
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {WgslReflect} from 'wgsl_reflect';
 
 const PLATFORM_INFO = {

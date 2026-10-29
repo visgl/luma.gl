@@ -5,7 +5,7 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 <GltfDocsTabs active="materials" />
 
 `@luma.gl/engine/gltf` translates source glTF material and lighting data into the existing
-`@luma.gl/shadertools` PBR modules. The same format-owned helpers are reused by retained-scene
+`@luma.gl/shaders` PBR modules. The same format-owned helpers are reused by retained-scene
 importers, so sampler, UV, color-space, and extension interpretation stay in one place.
 
 For shading behavior and feature examples, see [Materials](/docs/api-guide/engine/materials).

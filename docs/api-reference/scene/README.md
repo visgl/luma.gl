@@ -66,7 +66,7 @@ API and supported feature set can change.
 `@luma.gl/anari` is published separately from the core engine. It owns forward, deferred, ray-tracing, and raymarching implementations, along with shadow, transparency, and scene composition helpers.
 
 ```bash
-npm install @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/shadertools
+npm install @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/shaders
 ```
 
 ## Object model

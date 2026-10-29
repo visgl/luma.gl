@@ -11,7 +11,7 @@ runs on both WebGPU and WebGL and produces a `PreparedPBREnvironment` accepted d
 [`SceneRenderer`](/docs/api-reference/scene/scene-renderer).
 
 Environment preparation lives in `@luma.gl/anari`. Canonical PBR shading remains in
-`@luma.gl/shadertools`; `@luma.gl/engine/gltf` continues to own its separate loader for already prepared
+`@luma.gl/shaders`; `@luma.gl/engine/gltf` continues to own its separate loader for already prepared
 environment images and does not depend on the experimental package.
 
 ## Generate an environment

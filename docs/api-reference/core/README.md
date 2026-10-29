@@ -95,7 +95,7 @@ upload, render, compute, readback, resize, and recovery from validation or devic
 <FoundationAdjacency current="core" />
 
 - Move up to [Engine](/docs/api-reference/engine) for managed models and redraw state.
-- Move down to [Shadertools](/docs/api-reference/shadertools) to author reusable shader behavior.
+- Move down to [Shaders](/docs/api-reference/shaders) to author reusable shader behavior.
 - Add [GPU Core](/docs/api-reference/experimental/gpu-core) for multi-operation scheduling.
 
 ## Optional dynamic resources

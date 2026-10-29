@@ -242,6 +242,15 @@ diff --git a/dist/index.cjs b/dist/index.cjs
  
  // dist/transitions/cpu-interpolation-transition.js
  var import_core18 = require("@math.gl/core");
+@@ -12593,7 +12616,7 @@ var Layer = class extends component_default {
+     for (const extension of this.props.extensions) {
+       shaders = mergeShaders(shaders, extension.getShaders.call(this, extension));
+     }
+-    return shaders;
++    return {...shaders, shaderAssembler: this.context.shaderAssembler};
+   }
+   /** Controls if updateState should be called. By default returns true if any prop has changed */
+   shouldUpdateState(params) {
 @@ -13611,9 +13634,9 @@
        1
      ]);
@@ -637,6 +646,15 @@ diff --git a/dist/lib/layer.js b/dist/lib/layer.js
  import AttributeManager from "./attribute/attribute-manager.js";
  import UniformTransitionManager from "./uniform-transition-manager.js";
  import { diffProps, validateProps } from "../lifecycle/props.js";
+@@ -329,7 +329,7 @@ class Layer extends Component {
+         for (const extension of this.props.extensions) {
+             shaders = mergeShaders(shaders, extension.getShaders.call(this, extension));
+         }
+-        return shaders;
++        return {...shaders, shaderAssembler: this.context.shaderAssembler};
+     }
+     /** Controls if updateState should be called. By default returns true if any prop has changed */
+     shouldUpdateState(params) {
 diff --git a/dist/transitions/gpu-interpolation-transition.js b/dist/transitions/gpu-interpolation-transition.js
 --- a/dist/transitions/gpu-interpolation-transition.js
 +++ b/dist/transitions/gpu-interpolation-transition.js
@@ -972,6 +990,15 @@ diff --git a/dist.webgl-only/index.cjs b/dist.webgl-only/index.cjs
  
  // dist/transitions/cpu-interpolation-transition.js
  var import_core18 = require("@math.gl/core");
+@@ -11887,7 +11911,7 @@ var Layer = class extends component_default {
+     for (const extension of this.props.extensions) {
+       shaders = mergeShaders(shaders, extension.getShaders.call(this, extension));
+     }
+-    return shaders;
++    return {...shaders, shaderAssembler: this.context.shaderAssembler};
+   }
+   /** Controls if updateState should be called. By default returns true if any prop has changed */
+   shouldUpdateState(params) {
 @@ -12873,9 +12897,9 @@
        1
      ]);
@@ -1367,6 +1394,15 @@ diff --git a/dist.webgl-only/lib/layer.js b/dist.webgl-only/lib/layer.js
  import AttributeManager from "./attribute/attribute-manager.js";
  import UniformTransitionManager from "./uniform-transition-manager.js";
  import { diffProps, validateProps } from "../lifecycle/props.js";
+@@ -329,7 +329,7 @@ class Layer extends Component {
+         for (const extension of this.props.extensions) {
+             shaders = mergeShaders(shaders, extension.getShaders.call(this, extension));
+         }
+-        return shaders;
++        return {...shaders, shaderAssembler: this.context.shaderAssembler};
+     }
+     /** Controls if updateState should be called. By default returns true if any prop has changed */
+     shouldUpdateState(params) {
 diff --git a/dist.webgl-only/transitions/gpu-interpolation-transition.js b/dist.webgl-only/transitions/gpu-interpolation-transition.js
 --- a/dist.webgl-only/transitions/gpu-interpolation-transition.js
 +++ b/dist.webgl-only/transitions/gpu-interpolation-transition.js
@@ -1651,6 +1687,15 @@ diff --git a/src/lib/layer.ts b/src/lib/layer.ts
  import AttributeManager from './attribute/attribute-manager';
  import UniformTransitionManager from './uniform-transition-manager';
  import {diffProps, validateProps} from '../lifecycle/props';
+@@ -474,7 +474,7 @@ export default abstract class Layer<PropsT extends {} = {}> extends Component<
+     for (const extension of this.props.extensions) {
+       shaders = mergeShaders(shaders, extension.getShaders.call(this, extension));
+     }
+-    return shaders;
++    return {...shaders, shaderAssembler: this.context.shaderAssembler};
+   }
+ 
+   /** Controls if updateState should be called. By default returns true if any prop has changed */
 diff --git a/src/lib/deck.ts b/src/lib/deck.ts
 --- a/src/lib/deck.ts
 +++ b/src/lib/deck.ts

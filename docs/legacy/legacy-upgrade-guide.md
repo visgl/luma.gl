@@ -25,10 +25,10 @@ The module structure has been significantly changed for v8.0 with the intention 
 | New Module   | Purpose                                                                     | Components from v7                                                                                           |
 | ------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | constants    | WebGL enum values                                                           | Same as before                                                                                               |
-| shadertools  | Tools for manipulating and composing shader text                            | shadertools and effects (formerly glfx)                                                                      |
+| shaders  | Tools for manipulating and composing shader text                            | shaders and effects (formerly glfx)                                                                      |
 | gltools      | Creation, tooling and polyfilling for the WebGL context                     | webgl2-polyfill and webgl-state-tracker                                                                      |
 | webgl        | Wrapper classes for WebGL                                                   | Same as before                                                                                               |
-| core         | Single module re-exporting key parts of engine, webgl, gltools, shadertools | Changes described below                                                                                      |
+| core         | Single module re-exporting key parts of engine, webgl, gltools, shaders | Changes described below                                                                                      |
 | engine       | High-level drawing APIs                                                     | core/model, engine/animation-loop, core/resource-management, addons/animation, core/geometry, core/transform |
 | debug        | Debug tooling for the other modules                                         | Same as before                                                                                               |
 | test-utils   | Test tooling for the other modules                                          | Same as before                                                                                               |
@@ -49,8 +49,8 @@ new Texture2D({
 
 - `createGLContext` will no longer attempt to create a headlessgl context under node.js. One can either create headless context externally and use `instrumentGLContext` to prepare it for use with luma.gl or use `createHeadlessContext` from `@luma.gl/test-utils` to create a headlessgl context.
 - `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
-- `createShaderHook` and `createModuleInjection` have been removed. Use `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && the shader module [inject field](/docs/api-reference/shadertools/shader-module#defining-injections) instead.
-- `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` been removed. Use the shader module [inject field](/docs/api-reference/shadertools/shader-module#defining-injections) instead.
+- `createShaderHook` and `createModuleInjection` have been removed. Use `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && the shader module [inject field](/docs/api-reference/shaders/shader-module#defining-injections) instead.
+- `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` been removed. Use the shader module [inject field](/docs/api-reference/shaders/shader-module#defining-injections) instead.
 - `getParameter` and `setParameter` have been removed. Use `getParameters` and `setParameters` instead.
 - The following are no longer exported by @luma.gl/core, but can still be imported from the modules indicated:
 

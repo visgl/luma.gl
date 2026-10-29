@@ -68,6 +68,7 @@ export class WindParticleLayer extends Layer<WindParticleLayerProps> {
     });
     try {
       const model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           modules: [project32, picking, windStreak]

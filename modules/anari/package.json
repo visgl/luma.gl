@@ -59,7 +59,7 @@
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.5",
     "@luma.gl/engine": "~10.0.0-alpha.5",
-    "@luma.gl/shadertools": "~10.0.0-alpha.5"
+    "@luma.gl/shaders": "~10.0.0-alpha.5"
   },
   "dependencies": {
     "@luma.gl/graph": "10.0.0-alpha.5",

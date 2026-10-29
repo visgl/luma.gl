@@ -12,7 +12,7 @@ geometry ownership, scene state, and command-graph scheduling to higher-level AP
 not need those conveniences. A graph primitive that already owns its WGSL source generally needs
 only to compile a pipeline, bind resources, and dispatch or draw.
 
-Using `Computation` for that job couples low-level GPU algorithms to shadertools modules,
+Using `Computation` for that job couples low-level GPU algorithms to shaders modules,
 `ShaderInputs`, `UniformStore`, mutable binding state, and other engine policy. The kernel classes
 separate the minimal execution mechanism from those higher-level concerns.
 
@@ -82,7 +82,7 @@ It also supports non-indexed and indexed indirect draws on WebGPU. Import both c
 
 The kernel layer deliberately does not own:
 
-- shadertools module/plugin assembly
+- shaders module/plugin assembly
 - `ShaderInputs` or uniform stores
 - geometry or application data
 - animation or scenegraph state

@@ -29,7 +29,7 @@ import {
   ShadowMapRenderer,
   type ShadowShaderProps
 } from '@luma.gl/anari';
-import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {
   type Panel,

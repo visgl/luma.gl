@@ -15,7 +15,7 @@ features**. Existing mixed-feature viewers retain explicit draft labels inside t
 the section name describes their primary purpose, not certification of every displayed feature.
 
 Use existing owners: `@luma.gl/engine/gltf` for glTF interpretation/controllers, `@luma.gl/engine` for reusable
-scene behavior, `@luma.gl/shadertools` for shader math, and existing scene/rendering infrastructure for
+scene behavior, `@luma.gl/shaders` for shader math, and existing scene/rendering infrastructure for
 lighting and transport. Avoid a parallel scenegraph, audio context owner, or material system.
 
 Before implementing a tranche:

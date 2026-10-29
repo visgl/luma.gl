@@ -142,6 +142,7 @@ export class GPULineLayer extends Layer<GPULineLayerProps> {
       data: new Float32Array([1])
     });
     const model = new GPUVectorModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_LINE_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',

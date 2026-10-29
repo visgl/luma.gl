@@ -20,7 +20,7 @@
       "path": "../engine"
     },
     {
-      "path": "../shadertools"
+      "path": "../shaders"
     },
     {
       "path": "../graph"

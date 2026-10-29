@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass} from '@luma.gl/shaders';
 
 const source = /* wgsl */ `\
 struct sepiaUniforms {

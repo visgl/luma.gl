@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TextureFormatColor} from '@luma.gl/core';
-import type {CompositeShaderPassComputeOptimization} from '@luma.gl/shadertools';
+import type {CompositeShaderPassComputeOptimization} from '@luma.gl/shaders';
 
 const BLOOM_COMPUTE_WORKGROUP_SIZE = 16;
 

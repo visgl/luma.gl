@@ -11,7 +11,7 @@ import {
   type SkinControllerProps,
   createSkinJointPaletteResource
 } from '@luma.gl/engine';
-import {SKIN_MAX_JOINTS} from '@luma.gl/shadertools';
+import {SKIN_MAX_JOINTS} from '@luma.gl/shaders';
 
 /** Inputs already produced by the canonical glTF scenegraph parser. */
 export type ParseGLTFSkinsProps = {

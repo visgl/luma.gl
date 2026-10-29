@@ -26,7 +26,7 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
       '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
       '@luma.gl/anari': `${__dirname}/../../../modules/anari/src`,
-      '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
+      '@luma.gl/shaders': `${__dirname}/../../../modules/shaders/src`,
       '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,
       '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
     }

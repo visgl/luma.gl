@@ -38,7 +38,7 @@ two shader implementations.
 
 ## WGSL Binding Rule
 
-WGSL used through shadertools should usually declare named resources with
+WGSL used through shaders should usually declare named resources with
 `@binding(auto)`:
 
 ```wgsl
@@ -58,7 +58,7 @@ model.setBindings({
 
 The assembler assigns concrete WGSL binding numbers before WebGPU reflects and
 compiles the shader. Raw low-level WebGPU shader creation that bypasses
-shadertools still needs ordinary numeric WGSL bindings.
+shaders still needs ordinary numeric WGSL bindings.
 
 ## Portable Modules And Plugins
 
@@ -81,7 +81,7 @@ assignment, so inactive resource declarations do not consume binding slots.
 - Use shader plugins when a reusable behavior needs different GLSL and WGSL
   source but one application-facing attachment point.
 
-For exact WGSL rules, see [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support).
+For exact WGSL rules, see [`WGSL Support`](/docs/api-reference/shaders/wgsl-support).
 For render model props, see [`Model`](/docs/api-reference/engine/model). For a
 working dual-backend example, see the
 [Shader Plugins tutorial](/docs/tutorials/shader-plugins).

@@ -71,7 +71,7 @@ or materials.
 
 `@luma.gl/engine/gltf` owns glTF-specific crowd orchestration. Generic animation and scenegraph
 primitives stay in `@luma.gl/engine`, while the portable skinning implementation stays in
-`@luma.gl/shadertools`. WebGPU and WebGL use the same public crowd and actor APIs.
+`@luma.gl/shaders`. WebGPU and WebGL use the same public crowd and actor APIs.
 
 ## Create and render a crowd
 

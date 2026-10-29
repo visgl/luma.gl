@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import {type Material, Model, type ModelProps} from '@luma.gl/engine';
-import {pbrMaterial, pbrScene, skin} from '@luma.gl/shadertools';
+import {pbrMaterial, pbrScene, skin} from '@luma.gl/shaders';
 
 /** WGSL mesh entry points composed with canonical PBR shader modules by {@link createPBRModel}. */
 export const PBR_MODEL_WGSL_SHADER = /* wgsl */ `

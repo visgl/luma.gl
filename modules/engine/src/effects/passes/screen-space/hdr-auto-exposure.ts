@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
 /** Construction options for GPU-resident HDR luminance metering and adaptation. */
 export type HDRAutoExposureCompositeShaderPassOptions = {

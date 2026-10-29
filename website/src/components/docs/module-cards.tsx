@@ -35,7 +35,7 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       image: 'showcase/instancing'
     },
     {
-      name: 'shadertools',
+      name: 'shaders',
       description: 'Compose WGSL and GLSL with reusable shader modules and hooks.',
       image: 'tutorials/shader-modules'
     }

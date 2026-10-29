@@ -174,6 +174,7 @@ export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
     ];
     const diskResolution = normalizeDiskResolution(this.props.diskResolution);
     const model = new GPUVectorModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_COLUMN_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',

@@ -427,7 +427,7 @@ The fixture attribution and pinned source revision are recorded in
 | `@loaders.gl/scene/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
 | `@luma.gl/engine/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
 | `@luma.gl/engine` | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities. |
-| `@luma.gl/shadertools` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
+| `@luma.gl/shaders` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
 | `@luma.gl/anari` | Optional format-independent physical scene rendering and captured-scene transmission. |
 | `@luma.gl/anari` | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership. |
 

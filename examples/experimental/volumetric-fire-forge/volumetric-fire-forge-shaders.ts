@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Sampler, Texture} from '@luma.gl/core';
-import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 
 export type ForgeSceneUniforms = {

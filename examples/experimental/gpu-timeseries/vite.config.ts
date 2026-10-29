@@ -19,7 +19,7 @@ export default defineConfig({
         new URL('../../../modules/engine/src/graph/tables', import.meta.url)
       ),
       ...Object.fromEntries(
-        ['core', 'engine', 'gpgpu', 'shadertools'].map(name => [
+        ['core', 'engine', 'gpgpu', 'shaders'].map(name => [
           `@luma.gl/${name}`,
           fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
         ])

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {fromHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat} from '@luma.gl/shaders';
 
 const HIGH_DYNAMIC_RANGE_BYTES_PER_PIXEL = 8;
 const STANDARD_DYNAMIC_RANGE_BYTES_PER_PIXEL = 4;

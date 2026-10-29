@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {brightnessContrast} from '@luma.gl/engine/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
+import {getShaderModuleUniforms} from '@luma.gl/shaders';
 import {expect, it} from 'vitest';
 
 it('brightnessContrast#build/uniform', () => {

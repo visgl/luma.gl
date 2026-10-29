@@ -18,7 +18,7 @@ import {
   type FireflyProps,
   type PointGlowProps,
   type ShaderModule
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 
 import {motionBuffer} from './motion-buffer';
 
@@ -100,6 +100,7 @@ export class GlowPointLayer extends Layer<GlowPointLayerProps> {
     });
     try {
       const model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

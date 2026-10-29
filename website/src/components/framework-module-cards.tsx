@@ -36,12 +36,12 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
   {
     id: 'shaders',
     title: 'Shader Tools',
-    packageName: '@luma.gl/shadertools',
+    packageName: '@luma.gl/shaders',
     label: 'Shader programming',
     description:
       'Write, assemble, and share portable shaders with a reusable module library for both WGSL and GLSL.',
     capabilities: ['WGSL', 'GLSL', 'Shader modules'],
-    documentationPath: 'docs/api-reference/shadertools'
+    documentationPath: 'docs/api-reference/shaders'
   },
   {
     id: 'effects',
@@ -51,7 +51,7 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
     description:
       'Compose reusable shader effects into complete post-processing, lighting, and image-processing pipelines.',
     capabilities: ['Bloom', 'Tone mapping', 'Shader passes'],
-    documentationPath: 'docs/api-reference/shadertools/shader-passes/image-processing'
+    documentationPath: 'docs/api-reference/shaders/shader-passes/image-processing'
   },
   {
     id: 'anari',

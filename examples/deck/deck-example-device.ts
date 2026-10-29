@@ -7,7 +7,7 @@ import {
   ShaderAssembler,
   type GLSLShaderAssembler,
   type WGSLShaderAssembler
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 

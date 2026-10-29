@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';
-import {getPassthroughFS} from '@luma.gl/shadertools';
+import {getPassthroughFS} from '@luma.gl/shaders';
 import {
   GPUVectorModel,
   type GPUVectorModelProps,

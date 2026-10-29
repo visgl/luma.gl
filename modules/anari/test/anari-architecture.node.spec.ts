@@ -69,10 +69,8 @@ it('ANARI owns rendering implementations behind its declarative facade', () => {
   );
   const publicSource = readFileSync(new URL('index.ts', sourceDirectory), 'utf8');
   expect(
-    Boolean(
-      adapterSource.includes('pbrMaterial') && adapterSource.includes("'@luma.gl/shadertools'")
-    ),
-    'material translation uses the canonical shadertools PBR implementation'
+    Boolean(adapterSource.includes('pbrMaterial') && adapterSource.includes("'@luma.gl/shaders'")),
+    'material translation uses the canonical shaders PBR implementation'
   ).toBe(true);
   expect(
     Boolean(getNamedImports(runtimeSource, './renderers').includes('SceneRenderer')),
@@ -123,7 +121,7 @@ it('ANARI owns rendering implementations behind its declarative facade', () => {
     Boolean(
       '@luma.gl/engine' in packageManifest.peerDependencies &&
         !('@luma.gl/experimental' in packageManifest.peerDependencies) &&
-        '@luma.gl/shadertools' in packageManifest.peerDependencies
+        '@luma.gl/shaders' in packageManifest.peerDependencies
     ),
     'stable implementation owners remain explicit peer dependencies'
   ).toBe(true);

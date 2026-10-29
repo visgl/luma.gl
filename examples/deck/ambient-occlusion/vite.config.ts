@@ -22,7 +22,7 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/engine/text': `${__dirname}/../../../modules/engine/src/text`,
       '@luma.gl/engine/effects': `${__dirname}/../../../modules/engine/src/effects`,
       '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
-      '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
+      '@luma.gl/shaders': `${__dirname}/../../../modules/shaders/src`,
       '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,
       '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
     }

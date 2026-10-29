@@ -18,8 +18,8 @@ type EffectDocumentation = {
   backend: 'portable' | 'webgpu' | 'mixed';
 };
 
-const DOCS_DIRECTORY = path.join(process.cwd(), 'docs/api-reference/shadertools/shader-passes');
-const SHADER_PASS_DOCUMENT_PREFIX = 'api-reference/shadertools/shader-passes/';
+const DOCS_DIRECTORY = path.join(process.cwd(), 'docs/api-reference/shaders/shader-passes');
+const SHADER_PASS_DOCUMENT_PREFIX = 'api-reference/shaders/shader-passes/';
 
 const EFFECT_DOCUMENTATION = {
   'brightness-contrast': {

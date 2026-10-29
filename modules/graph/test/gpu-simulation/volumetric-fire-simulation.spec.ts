@@ -10,7 +10,7 @@ import {
   VolumetricFireSimulation,
   type VolumetricFireSimulationStepOptions
 } from '@luma.gl/graph/gpu-simulation';
-import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat, toHalfFloat} from '@luma.gl/shaders';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const PASSIVE_STEP_OPTIONS = {

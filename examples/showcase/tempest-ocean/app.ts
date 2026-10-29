@@ -14,7 +14,7 @@ import {
 } from '@luma.gl/engine';
 import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {Matrix4, radians} from '@math.gl/core';
 import {
   getTempestOceanSunDirection,

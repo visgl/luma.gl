@@ -171,7 +171,7 @@ matrix and strict extension diagnostics.
 
 Parsed geometry preserves the glTF `JOINTS_0` and `WEIGHTS_0` attributes. Authored normalized
 integer joint weights retain their intended normalized interpretation at the consumer boundary.
-The existing shared `skin` shader module in `@luma.gl/shadertools` applies joint palettes; its
+The existing shared `skin` shader module in `@luma.gl/shaders` applies joint palettes; its
 current uniform-array capacity is 64 joints.
 
 For native palette construction, ownership, and update order, see

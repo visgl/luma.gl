@@ -34,9 +34,9 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     documentation: {kind: 'generated', routePrefix: '/docs/api-reference/generated/engine'}
   },
   {
-    packageName: '@luma.gl/shadertools',
-    entryPoint: 'modules/shadertools/src/index.ts',
-    documentation: {kind: 'generated', routePrefix: '/docs/api-reference/generated/shadertools'}
+    packageName: '@luma.gl/shaders',
+    entryPoint: 'modules/shaders/src/index.ts',
+    documentation: {kind: 'generated', routePrefix: '/docs/api-reference/generated/shaders'}
   },
   {
     packageName: '@luma.gl/core/webgl-constants',
@@ -50,7 +50,7 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
       kind: 'curated',
       defaultRoute: '/docs/api-reference/effects',
       routesBySourcePrefix: {
-        'passes/postprocessing': '/docs/api-reference/shadertools/shader-passes/image-processing',
+        'passes/postprocessing': '/docs/api-reference/shaders/shader-passes/image-processing',
         'passes/screen-space': '/docs/api-reference/effects'
       }
     }

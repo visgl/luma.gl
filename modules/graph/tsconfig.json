@@ -19,7 +19,7 @@
       "path": "../gpgpu"
     },
     {
-      "path": "../shadertools"
+      "path": "../shaders"
     }
   ]
 }

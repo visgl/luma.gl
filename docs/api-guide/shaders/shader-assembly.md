@@ -12,7 +12,7 @@ Shader assembly is textual composition around application-owned shader source.
 The application still owns entry points, i.e. the shader **main** functions,
 attributes, varyings, and the main control flow.
 
-`@luma.gl/shadertools` adds reusable source and extension code before `Model`,
+`@luma.gl/shaders` adds reusable source and extension code before `Model`,
 `Computation`, or a lower-level pipeline compiles the final shader.
 
 ## Assembly Pieces
@@ -21,12 +21,12 @@ attributes, varyings, and the main control flow.
 | --- | --- | --- | --- |
 | Application shader source | The shader entry points and primary flow. | The WGSL `source` string or GLSL `vs`/`fs` strings supplied by the application. | [`Model`](/docs/api-reference/engine/model) |
 | `ShaderInputs` | Module props, uniforms, and bindings after assembly. | Updating typed module props and explicit resource bindings after source assembly. | [`ShaderInputs`](/docs/api-reference/engine/shader-inputs) |
-| `ShaderModule` | Reusable WGSL/GLSL source, uniform descriptors, bindings, dependencies, and optional injections. | Importing a static shader library such as picking, lighting, projection, or a helper library. | [`ShaderModule`](/docs/api-reference/shadertools/shader-module) |
-| `ShaderPlugin` | Reusable modules, defines, shader-facing vertex inputs, and named injections resolved for one shader language. | Attaching a dynamic, optional shader extension to a `Model` or `Computation`. | [`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin) |
-| Shader dependency | Module ordering. | Bringing required modules in before a module that calls them. | [`ShaderModule.dependencies`](/docs/api-reference/shadertools/shader-module#fields) |
-| Define | Conditional source selection. | Backend or feature switches evaluated before assembly. | [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support) |
-| Shader hook | A named callback emitted by the assembler and called by base shader source. | A deliberate extension point such as `OFFSET_POSITION` or `FILTER_COLOR`. | [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler#hooks-and-injections) |
-| Injection | Ordered source inserted at a named hook or standard anchor. | Adding declarations or small flow changes without copying the base shader. | [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler#hooks-and-injections) |
+| `ShaderModule` | Reusable WGSL/GLSL source, uniform descriptors, bindings, dependencies, and optional injections. | Importing a static shader library such as picking, lighting, projection, or a helper library. | [`ShaderModule`](/docs/api-reference/shaders/shader-module) |
+| `ShaderPlugin` | Reusable modules, defines, shader-facing vertex inputs, and named injections resolved for one shader language. | Attaching a dynamic, optional shader extension to a `Model` or `Computation`. | [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) |
+| Shader dependency | Module ordering. | Bringing required modules in before a module that calls them. | [`ShaderModule.dependencies`](/docs/api-reference/shaders/shader-module#fields) |
+| Define | Conditional source selection. | Backend or feature switches evaluated before assembly. | [`WGSL Support`](/docs/api-reference/shaders/wgsl-support) |
+| Shader hook | A named callback emitted by the assembler and called by base shader source. | A deliberate extension point such as `OFFSET_POSITION` or `FILTER_COLOR`. | [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler#hooks-and-injections) |
+| Injection | Ordered source inserted at a named hook or standard anchor. | Adding declarations or small flow changes without copying the base shader. | [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler#hooks-and-injections) |
 
 ## Assembly Flow
 
@@ -75,7 +75,7 @@ extension point. Use standard anchors for smaller structural additions.
 For the authoring choices behind these extension points, continue with
 [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders).
 For exact descriptor fields and examples, use the
-[`ShaderModule`](/docs/api-reference/shadertools/shader-module),
-[`ShaderPlugin`](/docs/api-reference/shadertools/shader-plugin), and
-[`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler) reference
+[`ShaderModule`](/docs/api-reference/shaders/shader-module),
+[`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin), and
+[`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler) reference
 pages.

@@ -29,7 +29,7 @@ import {
   pbrScene,
   type SkinProps,
   skin
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import {
   createPBRMaterial,
@@ -48,7 +48,7 @@ export type SceneMaterial = {
   id: string;
   /** Optional adapter-owned material version; uniform changes never rebuild the pipeline. */
   version?: number;
-  /** Canonical shadertools PBR uniforms, including extension factors and UV transforms. */
+  /** Canonical shaders PBR uniforms, including extension factors and UV transforms. */
   uniforms?: PBRMaterialUniforms;
   /** Canonical group-3 PBR texture bindings. */
   bindings?: Partial<PBRMaterialBindings>;

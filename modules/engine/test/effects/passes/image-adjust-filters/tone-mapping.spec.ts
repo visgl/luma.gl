@@ -9,7 +9,7 @@ import {
   GLSLShaderAssembler,
   WGSLShaderAssembler,
   type PlatformInfo
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {WgslReflect} from 'wgsl_reflect';
 
 const WEBGL_PLATFORM_INFO: PlatformInfo = {

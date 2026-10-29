@@ -259,6 +259,7 @@ export class GPUPathLayer extends Layer<GPUPathLayerProps> {
       ? undefined
       : normalizeColor(this.props.getColor ?? [0, 0, 0, 255]);
     const model = new PathStorageModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_PATH_SHADER}),
       id: `${this.id}-model`,
       shaderLayout: GPU_PATH_SHADER_LAYOUT,

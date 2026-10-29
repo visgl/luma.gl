@@ -18,7 +18,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/core/webgpu',
   '@luma.gl/core/webgl',
   '@luma.gl/engine',
-  '@luma.gl/shadertools',
+  '@luma.gl/shaders',
   '@luma.gl/engine/effects',
   '@luma.gl/anari',
   '@luma.gl/engine/gltf',
@@ -621,7 +621,7 @@ describe('framework capabilities documentation', () => {
     const ownershipDescription = capabilitiesSource.match(/ownership\s+boundaries[\s\S]*?\n\n/i);
 
     expect(ownershipDescription).not.toBeNull();
-    for (const packageName of ['engine/gltf', 'shadertools', 'engine', 'anari']) {
+    for (const packageName of ['engine/gltf', 'shaders', 'engine', 'anari']) {
       expect(ownershipDescription![0]).toContain(`@luma.gl/${packageName}`);
     }
 

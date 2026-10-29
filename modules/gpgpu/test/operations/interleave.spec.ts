@@ -6,7 +6,7 @@ import {test, expect, describe, beforeEach} from 'vitest';
 import type {Device} from '@luma.gl/core';
 import {Computation, Model} from '@luma.gl/engine';
 import {cleanEvaluate, interleave, GPUDataEvaluator, Operation} from '@luma.gl/gpgpu';
-import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import {
   getRunStats,
   getTestDevice,

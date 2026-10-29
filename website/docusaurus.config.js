@@ -166,6 +166,12 @@ const config = getDocusaurusConfig({
           }
         ],
         createRedirects(existingPath) {
+          if (existingPath.startsWith('/docs/api-reference/shaders')) {
+            return [existingPath.replace('/docs/api-reference/shaders', '/docs/api-reference/shadertools')];
+          }
+          if (existingPath.startsWith('/docs/api-reference/generated/shaders')) {
+            return [existingPath.replace('/docs/api-reference/generated/shaders', '/docs/api-reference/generated/shadertools')];
+          }
           // docs/examples/tutorials/*/api-reference <= /docs/tutorials
           if (existingPath.includes('/docs/examples/tutorials/')) {
             return [existingPath.replace('/docs/examples/tutorials/', '/docs/tutorials/')];
@@ -330,11 +336,11 @@ module.exports = {
     [
       'docusaurus-plugin-typedoc',
       {
-        id: 'shadertools-api-reference',
-        name: '@luma.gl/shadertools generated API',
-        entryPoints: ['../modules/shadertools/src/index.ts'],
-        tsconfig: '../modules/shadertools/tsconfig.json',
-        out: '../docs/api-reference/generated/shadertools',
+        id: 'shaders-api-reference',
+        name: '@luma.gl/shaders generated API',
+        entryPoints: ['../modules/shaders/src/index.ts'],
+        tsconfig: '../modules/shaders/tsconfig.json',
+        out: '../docs/api-reference/generated/shaders',
         docsPath: '../docs',
         readme: 'none',
         excludeInternal: true,

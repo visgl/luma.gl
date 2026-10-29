@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parsePBRMaterial} from '@luma.gl/engine/gltf/parsers/parse-pbr-material';
-import {pbrMaterial} from '@luma.gl/shadertools';
+import {pbrMaterial} from '@luma.gl/shaders';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 

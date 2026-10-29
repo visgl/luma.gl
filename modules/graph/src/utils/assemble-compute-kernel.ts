@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import {getPlatformInfo, type KernelProps} from '@luma.gl/gpgpu';
-import {ShaderAssembler, type ShaderModule, type WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {WGSLShaderAssembler, type ShaderModule} from '@luma.gl/shaders';
 
 /** Assemble module-based compute source before creating the executable kernel. */
 export function assembleComputeKernel(
@@ -15,12 +15,7 @@ export function assembleComputeKernel(
     shaderAssembler?: WGSLShaderAssembler;
   }
 ): KernelProps {
-  const {
-    modules,
-    defines,
-    shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl'),
-    ...kernelProps
-  } = props;
+  const {modules, defines, shaderAssembler = new WGSLShaderAssembler(), ...kernelProps} = props;
   const assembled = shaderAssembler.assembleWGSLShader({
     platformInfo: getPlatformInfo(device),
     source: props.source,

@@ -212,6 +212,7 @@ export class LuSpatialPointLayer extends Layer<LuSpatialPointLayerProps> {
         usage: Buffer.UNIFORM | Buffer.COPY_DST
       });
       model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({modules: [project32, picking], source: LUSPATIAL_POINT_SHADER}),
         id: `${this.id}-model`,
         topology: 'triangle-list',

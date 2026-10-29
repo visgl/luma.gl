@@ -187,6 +187,7 @@ export class GPUArcLayer extends Layer<GPUArcLayerProps> {
       device.createBuffer({data: new Float32Array([1])})
     ];
     const model = new GPUVectorModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_ARC_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',

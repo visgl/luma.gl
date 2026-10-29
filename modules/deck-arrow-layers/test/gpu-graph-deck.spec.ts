@@ -9,7 +9,7 @@ import {
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
 import {Buffer} from '@luma.gl/core';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {ShaderAssembler} from '@luma.gl/shaders';
 import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';

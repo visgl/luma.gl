@@ -178,10 +178,10 @@ const device = await luma.createDevice({
 - `@luma.gl/engine` adds models, animation loops, geometry, and higher-level rendering
   tools.
 - `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide the WebGPU and WebGL2 backends.
-- `@luma.gl/shadertools` assembles reusable shader modules, hooks, and effects.
+- `@luma.gl/shaders` assembles reusable shader modules, hooks, and effects.
 
 ```bash
-yarn add @luma.gl/core @luma.gl/engine @luma.gl/shadertools
+yarn add @luma.gl/core @luma.gl/engine @luma.gl/shaders
 ```
 
 Explore the [module catalog](/docs/api-reference) to choose the packages that match

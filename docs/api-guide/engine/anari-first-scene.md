@@ -32,7 +32,7 @@ This is particularly useful when an application should expose a stable scene con
 `@luma.gl/anari` is a public package with experimental APIs. Install it with the required luma.gl peers:
 
 ```bash
-yarn add @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/shadertools
+yarn add @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/shaders
 ```
 
 At least one luma.gl backend is required. Use `@luma.gl/core/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/core/webgl` when a WebGL 2 fallback is important.

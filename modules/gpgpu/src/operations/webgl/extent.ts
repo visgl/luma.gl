@@ -4,7 +4,7 @@
 
 import {Texture} from '@luma.gl/core';
 import {RenderKernel, getPlatformInfo} from '@luma.gl/gpgpu';
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shaders';
 import {OperationHandler} from '../../operation/operation';
 import {GPUDataEvaluator} from '../../operation/gpu-data-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
@@ -75,7 +75,7 @@ void main() {
 }
   `;
 
-  const {vs, fs} = ShaderAssembler.getDefaultShaderAssembler('glsl').assembleGLSLShaderPair({
+  const {vs, fs} = new GLSLShaderAssembler().assembleGLSLShaderPair({
     platformInfo: getPlatformInfo(device),
     vs: vertexShader,
     fs: fragmentShader,

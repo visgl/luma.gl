@@ -37,4 +37,4 @@ Backend entry points are also available as `@luma.gl/core/webgl` and
 Source is organized into `src/api` (portable Device API), `src/shadertypes` (shader types and layouts), `src/webgl`, `src/webgpu`,
 and `src/webgl-constants`. Backend implementations import the portable API
 internally, so it does not depend on either backend. WGSL interface scanning
-lives in the portable API and is shared with shadertools.
+lives in the portable API and is shared with shaders.

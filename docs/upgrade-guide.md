@@ -1,5 +1,21 @@
 # Upgrade Guide
 
+## Shader package rename
+
+Install `@luma.gl/shaders` instead of `@luma.gl/shadertools` and update imports, including
+`@luma.gl/shadertools/wgsl` to `@luma.gl/shaders/wgsl`. The old package and source tree are removed;
+no compatibility module or old-name exports are retained. Shader module and assembler symbols
+keep their existing names.
+
+## Explicit shader assembler ownership
+
+Models and computations create owned language-specific assemblers by default. Registering
+hooks, default modules, or transpilers on `ShaderAssembler.getDefaultShaderAssembler()` no longer
+automatically configures engine, gpgpu, or graph execution. Construct a `GLSLShaderAssembler` or
+`WGSLShaderAssembler`, configure it, and pass it through the `shaderAssembler` prop. Share that
+instance explicitly between consumers when desired. The static factory remains deprecated for
+compatibility, and explicit class-default assemblers remain supported for existing integrations.
+
 ## Effects imports
 
 The `@luma.gl/effects` package has been removed. Install `@luma.gl/engine` and replace
@@ -212,7 +228,7 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
   allocating and indexing them. Prefer `planGPULZByteDescriptors()` to convert the unchanged
   four-word parser spans into GPU descriptors.
 
-**@luma.gl/shadertools**
+**@luma.gl/shaders**
 
 - `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
@@ -261,9 +277,9 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 - `ShaderAssembler` is now abstract and can no longer be constructed directly. Replace
   `new ShaderAssembler()` with `new GLSLShaderAssembler()` for GLSL or
   `new WGSLShaderAssembler()` for WGSL.
-- `ShaderAssembler.getDefaultShaderAssembler()` now requires an explicit shader language.
-  Replace calls without an argument with `ShaderAssembler.getDefaultShaderAssembler('glsl')`
-  or `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
+- `ShaderAssembler.getDefaultShaderAssembler()` is deprecated. Construct a GLSL or WGSL
+  assembler and pass it explicitly. Remaining compatibility calls still require an explicit
+  `'glsl'` or `'wgsl'` argument.
 - `assembleGLSLShaderPair()` is available only on `GLSLShaderAssembler`, and
   `assembleWGSLShader()` is available only on `WGSLShaderAssembler`. Narrow existing
   `ShaderAssembler` references with `instanceof GLSLShaderAssembler` or
