@@ -35,7 +35,7 @@ export default defineConfig({
           server.watcher.add([
             resolve(localLoadersRoot, 'modules/core/src'),
             resolve(localLoadersRoot, 'modules/ply/src'),
-            resolve(localLoadersRoot, 'modules/engine/src/splats')
+            resolve(localLoadersRoot, 'modules/splats/src')
           ]);
         }
       }

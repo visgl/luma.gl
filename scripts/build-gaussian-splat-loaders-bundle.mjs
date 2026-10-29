@@ -52,12 +52,12 @@ const entrypoint = [
   `export {load} from ${JSON.stringify(join(loadersRoot, 'modules/core/src/lib/api/load'))};`,
   `export {loadInBatches} from ${JSON.stringify(join(loadersRoot, 'modules/core/src/lib/api/load-in-batches'))};`,
   `export {PLYLoaderWithParser as PLYLoader} from ${JSON.stringify(join(loadersRoot, 'modules/ply/src/ply-loader-with-parser'))};`,
-  `export {SPLATLoaderWithParser as SPLATLoader} from ${JSON.stringify(join(loadersRoot, 'modules/engine/src/splats/splat-loader'))};`,
-  `export {KSPLATLoaderWithParser as KSPLATLoader} from ${JSON.stringify(join(loadersRoot, 'modules/engine/src/splats/ksplat-loader'))};`,
-  `export {SPZLoaderWithParser as SPZLoader} from ${JSON.stringify(join(loadersRoot, 'modules/engine/src/splats/spz-loader'))};`,
-  `export {RADLoaderWithParser as RADLoader} from ${JSON.stringify(join(loadersRoot, 'modules/engine/src/splats/rad-loader'))};`,
-  `export {RADSourceLoader} from ${JSON.stringify(join(loadersRoot, 'modules/engine/src/splats/rad-source-loader'))};`,
-  `export {parseRADChunk} from ${JSON.stringify(join(loadersRoot, 'modules/engine/src/splats/rad-loader'))};`,
+  `export {SPLATLoaderWithParser as SPLATLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/splat-loader'))};`,
+  `export {KSPLATLoaderWithParser as KSPLATLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/ksplat-loader'))};`,
+  `export {SPZLoaderWithParser as SPZLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/spz-loader'))};`,
+  `export {RADLoaderWithParser as RADLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/rad-loader'))};`,
+  `export {RADSourceLoader} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/rad-source-loader'))};`,
+  `export {parseRADChunk} from ${JSON.stringify(join(loadersRoot, 'modules/splats/src/rad-loader'))};`,
   'export {tableFromIPC, tableToIPC} from "apache-arrow";'
 ].join('\n');
 
