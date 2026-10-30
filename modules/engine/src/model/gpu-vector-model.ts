@@ -595,7 +595,7 @@ export class GPUVectorModel {
           this.shaderFactory.release(this.pipeline.fs);
         }
       }
-      this.vertexArray.destroy();
+      this.vertexArray?.destroy();
       this.geometryVectorBindings.destroy();
       this.attributeVectorBindings.destroy();
       this._uniformStore.destroy();
