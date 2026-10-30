@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-gltf-audio",
-  "version": "10.0.0-alpha.5",
+  "version": "10.0.0-alpha.6",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -10,9 +10,9 @@
   "dependencies": {
     "@loaders.gl/core": "~5.0.0-beta.1",
     "@loaders.gl/scene": "~5.0.0-beta.1",
-    "@luma.gl/core": "10.0.0-alpha.5",
-    "@luma.gl/engine": "10.0.0-alpha.5",
-    "@luma.gl/shaders": "10.0.0-alpha.5",
+    "@luma.gl/core": "10.0.0-alpha.6",
+    "@luma.gl/engine": "10.0.0-alpha.6",
+    "@luma.gl/shaders": "10.0.0-alpha.6",
     "@math.gl/core": "5.0.0-beta.1"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-deck-point-glow",
-  "version": "10.0.0-alpha.5",
+  "version": "10.0.0-alpha.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,11 +10,11 @@
     "test:visual": "node ../riverfront-lighting-visual.mjs fireflies --example=point-glow && node ../riverfront-lighting-visual.mjs fireflies --example=point-glow --backend=webgl"
   },
   "dependencies": {
-    "@deck.gl-community/gpu-layers": "10.0.0-alpha.5",
+    "@deck.gl-community/gpu-layers": "10.0.0-alpha.6",
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
-    "@luma.gl/core": "10.0.0-alpha.5",
-    "@luma.gl/engine": "10.0.0-alpha.5",
-    "@luma.gl/shaders": "10.0.0-alpha.5",
+    "@luma.gl/core": "10.0.0-alpha.6",
+    "@luma.gl/engine": "10.0.0-alpha.6",
+    "@luma.gl/shaders": "10.0.0-alpha.6",
     "@math.gl/core": "~5.0.0-beta.1",
     "@math.gl/earth": "5.0.0-beta.1"
   },
