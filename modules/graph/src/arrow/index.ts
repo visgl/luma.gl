@@ -3,6 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export {
+  convertArrowColumnToGPUVector,
+  type ArrowColumnGPUVectorOptions,
+  type PreparedArrowColumnGPUVector
+} from './gpu/arrow-column-gpu-vector';
+export {
   prepareArrowInput,
   type ArrowInputResolveProps,
   type ArrowInputSchema,
