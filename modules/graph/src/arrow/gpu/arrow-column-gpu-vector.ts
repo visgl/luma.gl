@@ -44,7 +44,7 @@ export function convertArrowColumnToGPUVector(
 ): PreparedArrowColumnGPUVector {
   const {name = 'arrow-column', format, color, preserveNulls} = options;
   const width = format === 'float32' ? 1 : Number(/x([234])$/.exec(format)?.[1]);
-  if (!width || (!format.startsWith('float32') && format !== 'unorm8x4')) {
+  if (!width || (color ? format !== 'unorm8x4' : !format.startsWith('float32'))) {
     throw new Error(`Unsupported Arrow output format: ${format}`);
   }
   const list = DataType.isFixedSizeList(vector.type);

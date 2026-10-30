@@ -79,3 +79,16 @@ test('Arrow color conversion pads alpha and scales float components', () => {
   result.destroy();
   device.destroy();
 });
+
+test('Arrow column conversion requires a format matching its semantic', () => {
+  const device = new NullDevice({});
+  const source = arrow.vectorFromArray([1], new arrow.Float32());
+  expect(() =>
+    convertArrowColumnToGPUVector(device, source, {
+      format: 'unorm8x4',
+      color: false,
+      preserveNulls: false
+    })
+  ).toThrow('format');
+  device.destroy();
+});
