@@ -540,8 +540,9 @@ export class GPUVectorModel {
       }
     } catch (error) {
       // Failed construction never returns a model for the caller to destroy.
+      // Subclass fields may not exist yet, so bypass virtual teardown.
       try {
-        this.destroy();
+        GPUVectorModel.prototype.destroy.call(this);
       } finally {
         throw error;
       }
@@ -1480,7 +1481,13 @@ export class GPUVectorModel {
   _updatePipeline(): RenderPipeline {
     const update = this._preparePipelineUpdate();
     if (update) {
-      this.pipeline = this.pipelineFactory.createRenderPipeline(update.props);
+      try {
+        this.pipeline = this.pipelineFactory.createRenderPipeline(update.props);
+      } catch (error) {
+        this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
+        this._pipelineNeedsUpdate = 'pipeline creation failed';
+        throw error;
+      }
       this._finishPipelineUpdate(update);
     }
     return this.pipeline;
@@ -1520,22 +1527,29 @@ export class GPUVectorModel {
     }
     this._pipelineNeedsUpdate = false;
 
-    const vertexShader = this.shaderFactory.createShader({
-      id: `${this.id}-vertex`,
-      stage: 'vertex',
-      source: this.source || this.vs,
-      debugShaders: this.props.debugShaders
-    });
+    let vertexShader: Shader | null = null;
     let fragmentShader: Shader | null = null;
-    if (this.source) {
-      fragmentShader = vertexShader;
-    } else if (this.fs) {
-      fragmentShader = this.shaderFactory.createShader({
-        id: `${this.id}-fragment`,
-        stage: 'fragment',
-        source: this.fs,
+    try {
+      vertexShader = this.shaderFactory.createShader({
+        id: `${this.id}-vertex`,
+        stage: 'vertex',
+        source: this.source || this.vs,
         debugShaders: this.props.debugShaders
       });
+      if (this.source) {
+        fragmentShader = vertexShader;
+      } else if (this.fs) {
+        fragmentShader = this.shaderFactory.createShader({
+          id: `${this.id}-fragment`,
+          stage: 'fragment',
+          source: this.fs,
+          debugShaders: this.props.debugShaders
+        });
+      }
+    } catch (error) {
+      this._releasePipelineShaders(vertexShader, fragmentShader);
+      this._pipelineNeedsUpdate = 'shader creation failed';
+      throw error;
     }
     return {
       props: {
