@@ -69,5 +69,9 @@
     "@deck.gl/core": {
       "optional": true
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
   }
 }
