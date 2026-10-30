@@ -53,7 +53,10 @@ export function convertArrowColumnToGPUVector(
   if (!DataType.isInt(type) && !DataType.isFloat(type)) {
     throw new Error('Arrow input must contain numeric values');
   }
-  if ((!color && sourceWidth > width) || (color && ![3, 4].includes(sourceWidth))) {
+  if (
+    (!color && !options.transform && sourceWidth > width) ||
+    (color && ![3, 4].includes(sourceWidth))
+  ) {
     throw new Error('Arrow input width does not match the requested output format');
   }
   const parts: GPUVector[] = [];
@@ -110,12 +113,15 @@ export function convertArrowColumnToGPUVector(
           source.every(component => component !== null && component !== undefined);
         const transformed =
           options.transform && rowValid ? options.transform(source.map(Number)) : source;
+        if (transformed.length > width) {
+          throw new Error('Arrow transformed width does not match the requested output format');
+        }
         for (let component = 0; component < width; component++) {
           const input = component < transformed.length ? transformed[component] : color ? 255 : 0;
           rowValid &&= input !== null && input !== undefined;
           let number = Number(input ?? 0);
           // Floating point colors use [0, 1]; integer colors use [0, 255].
-          if (color && DataType.isFloat(type) && component < sourceWidth) number *= 255;
+          if (color && DataType.isFloat(type) && component < transformed.length) number *= 255;
           const offset = row * width + component;
           values[offset] = color ? Math.round(Math.max(0, Math.min(255, number))) : number;
           if (low) low[offset] = number - values[offset];

@@ -92,3 +92,48 @@ test('Arrow column conversion requires a format matching its semantic', () => {
   ).toThrow('format');
   device.destroy();
 });
+
+test('Arrow transforms can reduce row width and reject oversized outputs', () => {
+  const device = new NullDevice({});
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const source = arrow.vectorFromArray(
+    [[1, 2, 3]],
+    new arrow.FixedSizeList(3, new arrow.Field('value', new arrow.Float32(), false))
+  );
+  const result = convertArrowColumnToGPUVector(device, source, {
+    format: 'float32x2',
+    color: false,
+    preserveNulls: false,
+    transform: value => value.slice(0, 2)
+  });
+  const bytes = createBuffer.mock.calls[0][0].data as Uint8Array;
+  expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 2))).toEqual([1, 2]);
+  result.destroy();
+  expect(() =>
+    convertArrowColumnToGPUVector(device, source, {
+      format: 'float32x2',
+      color: false,
+      preserveNulls: false,
+      transform: value => value
+    })
+  ).toThrow('width');
+  device.destroy();
+});
+
+test('Arrow color transforms scale returned alpha but preserve padded opacity', () => {
+  const device = new NullDevice({});
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const source = arrow.vectorFromArray(
+    [[1, 0.5, 0]],
+    new arrow.FixedSizeList(3, new arrow.Field('value', new arrow.Float32(), false))
+  );
+  const result = convertArrowColumnToGPUVector(device, source, {
+    format: 'unorm8x4',
+    color: true,
+    preserveNulls: false,
+    transform: value => [...value, 0.5]
+  });
+  expect(Array.from(createBuffer.mock.calls[0][0].data as Uint8Array)).toEqual([255, 128, 0, 128]);
+  result.destroy();
+  device.destroy();
+});
