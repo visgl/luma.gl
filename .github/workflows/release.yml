@@ -197,4 +197,7 @@ jobs:
 
       # ocular-publish creates the GitHub Release before publishing the tagged packages to npm.
       - name: Post GitHub release and publish to NPM
+        env:
+          # Sigstore otherwise times out after five seconds and may retry a completed Rekor write.
+          npm_config_timeout: '120000'
         run: npx ocular-publish from-git
