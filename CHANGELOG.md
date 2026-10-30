@@ -2,6 +2,14 @@
 
 ## v10.0
 
+### v10.0.0-alpha.6
+
+- Consolidate glTF, splats, text, and effects APIs into engine subpaths and move test devices to core/test-utils.
+- Rename shadertools to shaders, split GLSL and WGSL assembler entry points, and remove global assembler defaults.
+- Make shaders independent of core with explicit shader assembler ownership.
+- Move optional Arrow adapters into gpgpu, graph, and engine subpaths.
+- Add attribution and research citations and improve physics endurance test scheduling.
+
 ### v10.0.0-alpha.5
 
 - Consolidate WebGL and WebGPU adapters into core and introduce public graph, ANARI, and Three.js integration packages.
