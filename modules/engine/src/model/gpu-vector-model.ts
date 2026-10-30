@@ -595,6 +595,7 @@ export class GPUVectorModel {
           this.shaderFactory.release(this.pipeline.fs);
         }
       }
+      this.vertexArray?.destroy();
       this.geometryVectorBindings.destroy();
       this.attributeVectorBindings.destroy();
       this._uniformStore.destroy();
@@ -1124,10 +1125,12 @@ export class GPUVectorModel {
 
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
+    const previousVertexArray = this.vertexArray;
     this.vertexArray = this.device.createVertexArray({
       shaderLayout: this.pipeline.shaderLayout,
       bufferLayout: this.pipeline.bufferLayout
     });
+    previousVertexArray.destroy();
     this._dynamicAttributeBufferSources = {};
     this.applyVectorAttributes();
     if (this.indexBuffer) this.vertexArray.setIndexBuffer(this.indexBuffer);
