@@ -830,3 +830,50 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
     expect(source.indexOf('secondMarker')).toBeGreaterThan(source.indexOf('firstMarker'));
   }
 });
+
+it('ShaderPlugin#mixed main anchors preserve numeric order on both backends', () => {
+  for (const language of ['glsl', 'wgsl'] as const) {
+    for (const stage of ['vs', 'fs'] as const) {
+      for (const anchor of ['#main-start', '#main-end'] as const) {
+        const target = `${stage}:${anchor}` as const;
+        const declaration = language === 'wgsl' ? 'let' : 'float';
+        const resolved = resolveShaderPlugins(
+          [
+            {
+              name: 'ordered-main',
+              injections: [{target, injection: `${declaration} pluginOrdered = 1.0;`, order: 10}]
+            }
+          ],
+          language
+        );
+        const inject = {[target]: {injection: `${declaration} legacyOrdered = 2.0;`, order: -10}};
+        const source =
+          language === 'wgsl'
+            ? new WGSLShaderAssembler().assembleWGSLShader({
+                platformInfo: WGSL_PLATFORM_INFO,
+                source: WGSL_SOURCE,
+                pluginInjections: resolved.injections,
+                inject
+              }).source
+            : (() => {
+                const shaders = new GLSLShaderAssembler().assembleGLSLShaderPair({
+                  platformInfo: GLSL_PLATFORM_INFO,
+                  vs: '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
+                  fs: '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }',
+                  pluginInjections: resolved.injections,
+                  inject
+                });
+                return shaders[stage];
+              })();
+        expect(
+          source.indexOf('legacyOrdered'),
+          `${language} ${target} retains legacy injection`
+        ).toBeGreaterThan(-1);
+        expect(
+          source.indexOf('pluginOrdered'),
+          `${language} ${target} sorts by numeric order`
+        ).toBeGreaterThan(source.indexOf('legacyOrdered'));
+      }
+    }
+  }
+});
