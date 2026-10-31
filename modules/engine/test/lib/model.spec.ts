@@ -1142,28 +1142,32 @@ it('Model#plugins and legacy declarations compile together on both backends', as
     const model = await Model.createAsync(device, {
       id: 'mixed-plugin-declarations',
       vs: DUMMY_VS,
-      fs: DUMMY_FS.replace('vec4(1.0)', 'vec4(LEGACY_MARKER)'),
+      fs: DUMMY_FS.replace('vec4(1.0)', 'vec4(legacyValue())'),
       source: DUMMY_WGSL.replace(
         'vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0)',
-        'vec4<f32>(LEGACY_MARKER)'
+        'vec4<f32>(legacyValue())'
       ),
       plugins: [
         {
           name: 'declaration-provider',
-          glsl: {injections: [{target: 'fs:#decl', injection: 'const float PLUGIN_MARKER = 1.0;'}]},
-          wgsl: {injections: [{target: 'fs:#decl', injection: 'const PLUGIN_MARKER: f32 = 1.0;'}]}
+          glsl: {
+            injections: [{target: 'fs:#decl', injection: 'float pluginValue() { return 1.0; }'}]
+          },
+          wgsl: {
+            injections: [{target: 'fs:#decl', injection: 'fn pluginValue() -> f32 { return 1.0; }'}]
+          }
         }
       ],
       inject: {
         'fs:#decl': wgsl
-          ? 'const LEGACY_MARKER: f32 = PLUGIN_MARKER;'
-          : 'const float LEGACY_MARKER = PLUGIN_MARKER;'
+          ? 'fn legacyValue() -> f32 { return pluginValue(); }'
+          : 'float legacyValue() { return pluginValue(); }'
       }
     });
     try {
       const source = wgsl ? model.source : model.fs;
-      expect(source).toContain('PLUGIN_MARKER');
-      expect(source).toContain('LEGACY_MARKER');
+      expect(source).toContain('pluginValue');
+      expect(source).toContain('legacyValue');
     } finally {
       model.destroy();
     }
