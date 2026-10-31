@@ -50,8 +50,9 @@ WebGPU-focused; this layering does not add WebGL algorithm fallbacks.
 Engine-specific integration is available through `@luma.gl/engine/physics` (scenegraph
 physics), `@luma.gl/engine/tables` (table models and geometry), and
 `@luma.gl/engine/models` (specialized path/polygon rendering). GPU data processing remains
-in graph. Shared effect lowering must use gpgpu primitives instead of importing engine
-models or renderers.
+in graph. Shared effect lowering in graph must use gpgpu primitives instead of importing engine
+models or renderers. The optional `@luma.gl/engine/shader-pipeline` adapter owns
+shader-pass lowering that uses engine models and computations.
 
 `yarn test-package-layering` checks source, built code, public declarations, and package
 dependencies. It also runs as part of the package build.

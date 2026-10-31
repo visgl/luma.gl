@@ -49,3 +49,11 @@ definitions without importing engine. See the [effects reference](../../docs/api
 `@luma.gl/engine/arrow` provides geometry, path/polygon/text rendering adapters and splat conversion.
 Install the optional `apache-arrow` peer to use this entry. Generic package roots do not load Arrow.
 See the [Arrow adapter reference](../../docs/api-reference/arrow/README.mdx) for ownership, streaming and package boundaries.
+
+## Graph shader pipelines
+
+Import `GPUShaderPipeline` and `registerShaderPipelineOperations` from
+`@luma.gl/engine/shader-pipeline` to lower stateless WebGPU shader-pass chains into
+individual graph render and compute nodes. Engine owns the adapter, models, and
+computations; graph owns scheduling and resource management. See the
+[graph shader pipeline guide](../../docs/api-reference/experimental/gpu-core/gpu-graph.md#shader-pipelines).

@@ -142,6 +142,7 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Graph shader pipelines** - `GPUShaderPipeline` from `@luma.gl/engine/shader-pipeline` lowers reusable shader-pass definitions from an authored `GPUGraph` into individually tracked render and compute nodes in a shared `GPUCommandGraph`.
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 

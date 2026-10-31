@@ -105,6 +105,11 @@
       "types": "./dist/arrow/index.d.ts",
       "import": "./dist/arrow/index.js",
       "require": "./dist/arrow/index.cjs"
+    },
+    "./shader-pipeline": {
+      "types": "./dist/shader-pipeline/index.d.ts",
+      "import": "./dist/shader-pipeline/index.js",
+      "require": "./dist/shader-pipeline/index.cjs"
     }
   },
   "files": [
