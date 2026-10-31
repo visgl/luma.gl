@@ -648,16 +648,6 @@ struct VertexOutput {
   output.position = vec4<f32>(0.0);
   return output;
 }`;
-  expect(
-    () =>
-      assembler.assembleWGSLShader({
-        platformInfo: WGSL_PLATFORM_INFO,
-        source: `${namedVertexOutput}
-@fragment fn fragmentMain() -> @location(0) vec4<f32> { return vec4<f32>(1.0); }`,
-        pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
-      }),
-    'a missing fragment input struct is rejected'
-  ).toThrow(/exactly one named WGSL fragment input struct; found 0/);
 
   expect(
     () =>
@@ -897,4 +887,76 @@ it('ShaderPlugin#injection-only plugins contribute no module', () => {
     injection: 'fn helper() {}',
     order: 0
   });
+});
+
+it('ShaderPlugin#typed modules and numeric specialization', () => {
+  const module: ShaderModule<{threshold: number}, {threshold: number}, {}> = {
+    name: 'typed-plugin-module',
+    uniformTypes: {threshold: 'f32'},
+    getUniforms: (props, previous) => ({threshold: props.threshold ?? previous?.threshold ?? 0})
+  };
+  const plugin: ShaderPlugin = {name: 'numeric-plugin', module, defines: {CHANNELS: 3}};
+  const resolved = resolveShaderPlugins([plugin], 'wgsl');
+  expect(resolved.modules).toEqual([module]);
+  expect(resolved.defines).toEqual({CHANNELS: 3});
+  const wgsl = new WGSLShaderAssembler().assembleWGSLShader({
+    platformInfo: WGSL_PLATFORM_INFO,
+    source:
+      '@vertex fn vertexMain() -> @builtin(position) vec4<f32> {\n#if CHANNELS == 3\nreturn vec4<f32>(3.0);\n#else\nreturn vec4<f32>(0.0);\n#endif\n}',
+    defines: resolved.defines
+  });
+  expect(wgsl.source).toContain('vec4<f32>(3.0)');
+  expect(wgsl.source).not.toContain('vec4<f32>(0.0)');
+  const glsl = new GLSLShaderAssembler().assembleGLSLShaderPair({
+    platformInfo: {...WGSL_PLATFORM_INFO, type: 'webgl'},
+    vs: '#version 300 es\nvoid main() { gl_Position = vec4(float(CHANNELS)); }',
+    fs: '#version 300 es\nprecision highp float; out vec4 color; void main() { color = vec4(1.0); }',
+    defines: resolved.defines
+  });
+  expect(glsl.vs).toContain('#define CHANNELS 3');
+});
+
+it.each([
+  '',
+  '@builtin(position) position: vec4<f32>',
+  '@location(2) color: vec4<f32>, @builtin(front_facing) front: bool,'
+])('ShaderPlugin#WGSL varying extends direct fragment inputs (%s)', parameters => {
+  const source = `
+struct VertexOutput { @builtin(position) position: vec4<f32>, @location(2) color: vec4<f32>, };
+@vertex fn vertexMain() -> VertexOutput {
+  return VertexOutput(vec4<f32>(0.0), vec4<f32>(1.0));
+}
+@fragment fn fragmentMain(${parameters}) -> @location(0) vec4<f32> {
+  return vec4<f32>(filterWeight);
+}`;
+  const result = new WGSLShaderAssembler().assembleWGSLShader({
+    platformInfo: WGSL_PLATFORM_INFO,
+    source,
+    pluginVaryings: {filterWeight: {type: 'f32', interpolation: 'smooth'}}
+  });
+  expect(result.source).toContain('@location(0) _luma_filterWeight: f32');
+  expect(result.source).toContain('filterWeight = _luma_filterWeight;');
+  expect(result.source).toContain('@location(0) filterWeight: f32');
+  expect(result.source).toContain('vec4<f32>(filterWeight)');
+});
+
+it.each([
+  ['CHANNELS == 3', true],
+  ['CHANNELS != 3', false],
+  ['CHANNELS < 4', true],
+  ['CHANNELS > 4', false],
+  ['CHANNELS <= 3', true],
+  ['CHANNELS >= 4', false],
+  ['3 == CHANNELS', true],
+  ['CHANNELS == LIMIT', true],
+  ['MISSING == 0', true],
+  ['-1 < CHANNELS', true]
+] as const)('ShaderPlugin#numeric condition %s', (condition, enabled) => {
+  const result = new WGSLShaderAssembler().assembleWGSLShader({
+    platformInfo: WGSL_PLATFORM_INFO,
+    source: `#if ${condition}\nconst selected = 1;\n#else\nconst selected = 0;\n#endif`,
+    defines: resolveShaderPlugins([{name: 'channels', defines: {CHANNELS: 3, LIMIT: 3}}], 'wgsl')
+      .defines
+  });
+  expect(result.source).toContain(`const selected = ${enabled ? 1 : 0};`);
 });

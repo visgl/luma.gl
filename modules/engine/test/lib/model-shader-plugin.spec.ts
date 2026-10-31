@@ -66,3 +66,51 @@ for (const backend of ['webgl', 'webgpu'] as const) {
     }
   });
 }
+
+it.each([
+  false,
+  true
+])('Model#plugin varyings compile with direct fragment inputs (integer=%s)', async integer => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  device.handle.pushErrorScope('validation');
+  const model = await Model.createAsync(device, {
+    id: 'direct-fragment-plugin-varyings',
+    source: `
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+  @location(0) color: vec4<f32>,
+};
+@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> VertexOutput {
+  return VertexOutput(vec4<f32>(f32(index), 0.0, 0.0, 1.0), vec4<f32>(1.0));
+}
+@fragment fn fragmentMain(@location(0) color: vec4<f32>, @builtin(front_facing) front: bool) -> @location(0) vec4<f32> {
+  return color * f32(pluginValue);
+}`,
+    plugins: [
+      {
+        name: 'direct-fragment-varying',
+        defines: {PLUGIN_VALUE: 1},
+        varyings: {pluginValue: {type: integer ? 'u32' : 'f32'}},
+        injections: [
+          {
+            target: 'vs:#main-start',
+            wgsl: `
+#if PLUGIN_VALUE == 1
+pluginValue = ${integer ? 'u32' : 'f32'}(1);
+#else
+pluginValue = ${integer ? 'u32' : 'f32'}(0);
+#endif
+`
+          }
+        ]
+      }
+    ]
+  });
+  try {
+    expect(model.source).toContain('@location(1)');
+    expect(await device.handle.popErrorScope()).toBeNull();
+  } finally {
+    model.destroy();
+  }
+});

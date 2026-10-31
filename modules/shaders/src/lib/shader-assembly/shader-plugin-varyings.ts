@@ -56,19 +56,23 @@ export function assembleShaderPluginVaryingsWGSL(
   let fragmentFunction = getWGSLFunctionRange(transformedSource, fragmentEntryPoint, 'fragment');
   const fragmentInput = getWGSLFragmentStructInput(transformedSource, fragmentFunction);
   const vertexOutputStruct = getWGSLStructRange(transformedSource, vertexOutputType);
-  const fragmentInputStruct = getWGSLStructRange(transformedSource, fragmentInput.type);
+  const fragmentInputStruct = fragmentInput
+    ? getWGSLStructRange(transformedSource, fragmentInput.type)
+    : null;
 
   const interfaceNames = new Set([
     ...getWGSLDeclaredNames(vertexFunction.parameters),
     ...getWGSLDeclaredNames(vertexOutputStruct.body),
     ...getWGSLDeclaredNames(fragmentFunction.parameters),
-    ...getWGSLDeclaredNames(fragmentInputStruct.body)
+    ...getWGSLDeclaredNames(fragmentInputStruct?.body || '')
   ]);
   const usedLocations = new Set([
     ...getWGSLLocations(vertexOutputStruct.body),
-    ...getWGSLLocations(fragmentInputStruct.body)
+    ...getWGSLLocations(fragmentInputStruct?.body || ''),
+    ...getWGSLLocations(fragmentFunction.parameters)
   ]);
   const fields: string[] = [];
+  const fragmentParameters: string[] = [];
   const declarations: string[] = [];
   const vertexInitialization: string[] = [];
   const fragmentInitialization: string[] = [];
@@ -85,7 +89,20 @@ export function assembleShaderPluginVaryingsWGSL(
     fields.push(`  @location(${location})${interpolation} ${name}: ${varying.type},`);
     declarations.push(`var<private> ${name}: ${varying.type};`);
     vertexInitialization.push(`${name} = ${getWGSLZeroValue(varying.type)};`);
-    fragmentInitialization.push(`${name} = ${fragmentInput.name}.${name};`);
+    if (fragmentInput) {
+      fragmentInitialization.push(`${name} = ${fragmentInput.name}.${name};`);
+    } else {
+      const parameterName = `_luma_${name}`;
+      if (interfaceNames.has(parameterName)) {
+        throw new Error(
+          `ShaderPlugin varying "${name}" conflicts with a generated fragment parameter`
+        );
+      }
+      fragmentParameters.push(
+        `@location(${location})${interpolation} ${parameterName}: ${varying.type}`
+      );
+      fragmentInitialization.push(`${name} = ${parameterName};`);
+    }
   }
 
   assertWGSLStructConstructorsAreLocal(
@@ -108,7 +125,7 @@ export function assembleShaderPluginVaryingsWGSL(
   );
 
   const structNames =
-    vertexOutputType === fragmentInput.type
+    !fragmentInput || vertexOutputType === fragmentInput.type
       ? [vertexOutputType]
       : [vertexOutputType, fragmentInput.type];
   const structInsertions = structNames
@@ -122,9 +139,16 @@ export function assembleShaderPluginVaryingsWGSL(
   }
 
   fragmentFunction = getWGSLFunctionRange(transformedSource, fragmentEntryPoint, 'fragment');
-  const fragmentInputPattern = new RegExp(`\\b${escapeRegExp(fragmentInput.name)}\\s*:`);
-  if (!fragmentInputPattern.test(fragmentFunction.parameters)) {
-    throw new Error(`Unable to preserve WGSL fragment input "${fragmentInput.name}"`);
+  if (fragmentParameters.length) {
+    const parameters = fragmentFunction.parameters.trim().replace(/,\s*$/, '');
+    const separator = parameters ? ',\n  ' : '\n  ';
+    transformedSource =
+      transformedSource.slice(0, fragmentFunction.openParenthesis + 1) +
+      parameters +
+      separator +
+      fragmentParameters.join(',\n  ') +
+      '\n' +
+      transformedSource.slice(fragmentFunction.closeParenthesis);
   }
 
   return {
@@ -189,7 +213,7 @@ function getWGSLNamedReturnType(source: string, functionRange: WGSLFunctionRange
 function getWGSLFragmentStructInput(
   source: string,
   functionRange: WGSLFunctionRange
-): {name: string; type: string} {
+): {name: string; type: string} | null {
   const candidates: {name: string; type: string}[] = [];
   for (const parameter of splitTopLevel(functionRange.parameters, ',')) {
     const match =
@@ -200,12 +224,12 @@ function getWGSLFragmentStructInput(
       candidates.push({name: match[1], type: match[2]});
     }
   }
-  if (candidates.length !== 1) {
+  if (candidates.length > 1) {
     throw new Error(
       `ShaderPlugin varyings require exactly one named WGSL fragment input struct; found ${candidates.length}`
     );
   }
-  return candidates[0];
+  return candidates[0] || null;
 }
 
 function getWGSLStructRange(source: string, structName: string): WGSLStructRange {

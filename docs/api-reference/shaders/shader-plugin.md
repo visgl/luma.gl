@@ -43,8 +43,8 @@ import type {ShaderInjection, ShaderModule} from '@luma.gl/shaders';
 
 export type ShaderPlugin = {
   name: string;
-  module?: ShaderModule;
-  defines?: Record<string, boolean>;
+  module?: ShaderModule<any, any, any>;
+  defines?: Record<string, boolean | number>;
   injections?: ShaderPluginInjection[];
   vertexInputs?: Record<string, AttributeShaderType>;
   varyings?: Record<string, ShaderPluginVarying>;
@@ -66,7 +66,7 @@ export type ShaderPluginInjection = {
 
 export type ResolvedShaderPlugins = {
   modules: ShaderModule[];
-  defines: Record<string, boolean>;
+  defines: Record<string, boolean | number>;
   injections: Record<string, ShaderInjection[]>;
   vertexInputs: Record<string, AttributeShaderType>;
   varyings: Record<string, {
@@ -76,9 +76,15 @@ export type ResolvedShaderPlugins = {
 };
 ```
 
+Numeric defines support channel counts and other preprocessor specializations, alongside
+boolean feature flags. WGSL preprocessor conditions support simple numeric comparisons
+(`==`, `!=`, `<`, `<=`, `>`, `>=`) between defines and numeric literals. This does
+not add token substitution or general arithmetic expressions. Define precedence
+matches normal shader assembly.
+
 ## Primary module
 
-A plugin optionally supplies one `module`. That module owns its uniform and binding
+A plugin optionally supplies one `module`, including a concretely typed `ShaderModule<Props, Uniforms, Bindings>` without a cast. That module owns its uniform and binding
 contract; supporting shader code belongs in `module.dependencies`. For example,
 `glassTransmissionPlugin.module` depends on `glassMaterial`, which depends on
 `opticalLighting`. The assembler and `ShaderInputs` resolve that dependency graph.
@@ -172,9 +178,10 @@ vector types default to `smooth`; integer types default to `flat` and reject
 For GLSL, the assembler generates matching vertex `out` and fragment `in`
 declarations, then zero-initializes the vertex value before other main-start
 injections. For WGSL, the selected vertex entry point must return a named
-stage-I/O struct and the selected fragment entry point must consume exactly one
-named stage-I/O struct. The assembler appends matching fields at the first
-locations unused by both structs, initializes same-named private variables,
+stage-I/O struct. Fragment inputs may use a named struct, individual parameters,
+or no parameters. The assembler extends the fragment struct when present, or
+adds individual parameters otherwise. It allocates matching locations unused by
+either stage, including existing direct parameters, and initializes same-named private variables,
 copies them to every vertex return, and initializes them from the fragment
 input before fragment injections. Direct WGSL vertex outputs and ambiguous
 fragment struct inputs are rejected with an assembly error.

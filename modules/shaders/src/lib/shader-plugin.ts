@@ -51,9 +51,9 @@ export type ShaderPlugin = {
   /** Stable plugin identifier. */
   name: string;
   /** Primary shader module. Supporting modules belong in its dependencies; omit for injection-only plugins. */
-  module?: ShaderModule;
-  /** Boolean preprocessor defines added to shader assembly. */
-  defines?: Record<string, boolean>;
+  module?: ShaderModule<any, any, any>;
+  /** Boolean or numeric preprocessor defines added to shader assembly. */
+  defines?: Record<string, boolean | number>;
   /** Named code injections added to shader assembly. */
   injections?: ShaderPluginInjection[];
   /** Shader-facing vertex inputs added by this plugin. Buffer ownership remains with the caller. */
@@ -66,8 +66,8 @@ export type ShaderPlugin = {
 export type ResolvedShaderPlugins = {
   /** Resolved shader modules in plugin declaration order. */
   modules: ShaderModule[];
-  /** Resolved boolean preprocessor defines. */
-  defines: Record<string, boolean>;
+  /** Resolved boolean or numeric preprocessor defines. */
+  defines: Record<string, boolean | number>;
   /** Resolved named code injections grouped by target. */
   injections: Record<string, ShaderInjection[]>;
   /** Resolved shader-facing vertex inputs in plugin declaration order. */
