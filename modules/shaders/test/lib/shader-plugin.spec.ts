@@ -49,7 +49,7 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 it('ShaderPlugin#shares its interface and selects injection sources by language', () => {
   const plugin: ShaderPlugin = {
     name: 'portable-plugin',
-    modules: [SHARED_MODULE],
+    module: SHARED_MODULE,
     defines: {ENABLED: true},
     vertexInputs: {filterValue: 'f32'},
     varyings: {color: {type: 'vec4<f32>'}, category: {type: 'u32'}},
@@ -884,4 +884,17 @@ it('ShaderPlugin#mixed main anchors preserve numeric order on both backends', ()
       }
     }
   }
+});
+
+it('ShaderPlugin#injection-only plugins contribute no module', () => {
+  const resolved = resolveShaderPlugins(
+    [{name: 'source-only', injections: [{target: 'fs:#decl', wgsl: 'fn helper() {}'}]}],
+    'wgsl'
+  );
+  expect(resolved.modules).toEqual([]);
+  expect(resolved.injections['fs:#decl'][0]).toEqual({
+    pluginName: 'source-only',
+    injection: 'fn helper() {}',
+    order: 0
+  });
 });

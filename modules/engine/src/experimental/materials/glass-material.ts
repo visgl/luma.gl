@@ -603,5 +603,5 @@ export const glassMaterial = {
 /** Installs the portable glass material and its shared optical-lighting dependency. */
 export const glassMaterialPlugin = {
   name: 'glassMaterial',
-  modules: [glassMaterial as ShaderModule]
+  module: glassMaterial as ShaderModule
 } as const satisfies ShaderPlugin;

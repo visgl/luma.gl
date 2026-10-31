@@ -49,7 +49,7 @@ the base shader call the hook unconditionally.
 
 ## Plugin Pattern
 
-A plugin is the reusable attachment unit. It can contribute modules, defines,
+A plugin is the reusable attachment unit. It can contribute a primary shader module, defines,
 shader-facing vertex inputs, and named injections. Each injection supplies `glsl`
 and `wgsl` source for the same target and order.
 

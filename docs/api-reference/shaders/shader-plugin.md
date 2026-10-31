@@ -9,7 +9,7 @@ import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 attached to [`Model`](/docs/api-reference/engine/model) and
 [`Computation`](/docs/api-reference/engine/compute/computation). Prefer plugins
 as the application-facing optional composition layer when a behavior needs
-modules, defines, shader-facing vertex inputs, named injections, portable
+a primary shader module, defines, shader-facing vertex inputs, named injections, portable
 cross-stage varyings, or backend-specific shader source.
 
 For the authoring model, see
@@ -19,7 +19,7 @@ For the authoring model, see
   {label: 'Languages', value: 'One portable interface with GLSL/WGSL source per injection'},
   {label: 'Dependencies', value: 'Composes ShaderModules selected by the plugin'},
   {label: 'Hooks and injections', value: 'Targets named vertex and fragment extension points'},
-  {label: 'Props and bindings', value: 'Declares vertex inputs, varyings, modules, and defines'},
+  {label: 'Props and bindings', value: 'Declares vertex inputs, varyings, a primary module, and defines'},
   {label: 'Assembly output', value: 'Resolved modules, defines, injections, inputs, and varyings'},
   {label: 'Cost', value: 'Resolve when configuration changes, not for every draw'}
 ]} />
@@ -43,7 +43,7 @@ import type {ShaderInjection, ShaderModule} from '@luma.gl/shaders';
 
 export type ShaderPlugin = {
   name: string;
-  modules?: ShaderModule[];
+  module?: ShaderModule;
   defines?: Record<string, boolean>;
   injections?: ShaderPluginInjection[];
   vertexInputs?: Record<string, AttributeShaderType>;
@@ -76,11 +76,35 @@ export type ResolvedShaderPlugins = {
 };
 ```
 
+## Primary module
+
+A plugin optionally supplies one `module`. That module owns its uniform and binding
+contract; supporting shader code belongs in `module.dependencies`. For example,
+`glassTransmissionPlugin.module` depends on `glassMaterial`, which depends on
+`opticalLighting`. The assembler and `ShaderInputs` resolve that dependency graph.
+Filter and clip each supply their existing module; injection-only plugins omit it.
+
+```ts
+const filterPlugin: ShaderPlugin = {
+  name: 'filter',
+  module: filterShaderModule,
+  vertexInputs: {filterValues: 'f32'},
+  injections: [/* host hook injections */]
+};
+```
+
+Uniform updates remain keyed by **module name**, not plugin name. Dependencies keep
+independent uniform and binding namespaces; declaring a primary module does not
+forward its props to dependencies. Configure each module explicitly through
+`model.shaderInputs.setProps(...)`. Multiple independent features can be supplied
+as multiple plugins. `Model.modules`, `Computation.modules`, and the resolved
+assembly module list remain arrays.
+
 ## Resolution
 
 | Field | Resolution |
 | --- | --- |
-| `modules`, `defines`, `vertexInputs`, and `varyings` | Shared across shader languages. Later plugins override same-named define keys. |
+| `module`, `defines`, `vertexInputs`, and `varyings` | Shared across shader languages. Later plugins override same-named define keys. |
 | Injection `glsl` / `wgsl` | Select the source matching the assembly language. An omitted source skips that injection; an empty string remains an explicit injection. |
 | `vertexInputs` | Render-shader inputs merged by input name. Repeated names must use the same shader type; conflicting types throw. Buffer ownership remains with the caller. |
 | `varyings` | Cross-stage values merged by name. Repeated names must use the same type and interpolation. Floating-point values default to `smooth`; integer values default to and require `flat`. |

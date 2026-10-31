@@ -100,7 +100,7 @@ fn clip_isInBounds(coordinates: vec2<f32>) -> bool {
 /** Coordinate-system-neutral instance and geometry clipping. */
 export const clipShaderPlugin: ShaderPlugin = {
   name: 'clip',
-  modules: [clipShaderModule],
+  module: clipShaderModule,
   varyings: {
     clipCoordinates: {type: 'vec2<f32>', interpolation: 'smooth'}
   },

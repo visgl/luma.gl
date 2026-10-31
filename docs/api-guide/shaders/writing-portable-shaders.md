@@ -63,8 +63,8 @@ shaders still needs ordinary numeric WGSL bindings.
 ## Portable Modules And Plugins
 
 A portable `ShaderModule` may provide `source` for WGSL, `vs` and `fs` for GLSL,
-or all three. A portable `ShaderPlugin` can keep backend-neutral modules and
-defines at the top level while placing language-specific injection source in each injection’s
+or all three. A portable `ShaderPlugin` can declare one backend-neutral primary `module` and
+shared defines while placing language-specific injection source in each injection’s
 `glsl` and `wgsl` fields. If a plugin declares `vertexInputs`, keep those shader-facing
 names and types aligned with the caller-owned buffer layout and attribute data.
 

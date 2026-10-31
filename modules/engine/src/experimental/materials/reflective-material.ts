@@ -210,5 +210,5 @@ export const reflectiveMaterial = {
 /** Installs portable reflective surface shading and shared optical-lighting helpers. */
 export const reflectiveMaterialPlugin = {
   name: 'reflectiveMaterial',
-  modules: [reflectiveMaterial as ShaderModule]
+  module: reflectiveMaterial as ShaderModule
 } as const satisfies ShaderPlugin;

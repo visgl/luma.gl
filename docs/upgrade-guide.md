@@ -468,14 +468,14 @@ existing splat data, renderers, picking, residency, hierarchy, and graph-backed 
 ## Shader plugin injections
 
 `ShaderPluginVariant` and plugin-level `glsl` / `wgsl` objects have been removed.
-Move modules, defines, vertex inputs, and varyings to the plugin root. Shader modules
+Move the primary module, defines, vertex inputs, and varyings to the plugin root. Shader modules
 carry their own GLSL/WGSL implementations. Move injection source to `glsl` / `wgsl`
 fields on each injection, replacing its previous `injection` field:
 
 ```ts
 const plugin: ShaderPlugin = {
   name: 'tint',
-  modules: [tintModule],
+  module: tintModule,
   injections: [
     {
       target: 'fs:FILTER_COLOR',
@@ -495,3 +495,28 @@ lower-level assembler `ShaderInjection` objects still use `injection`.
 If a plugin previously changed modules, defines, or its interface by language,
 construct the appropriate descriptor explicitly before passing it to the model or
 computation; there is no longer an implicit language-variant merge.
+
+## Shader plugin primary module
+
+`ShaderPlugin.modules` is replaced by the optional `ShaderPlugin.module`:
+
+```ts
+// Before
+const plugin = {name: 'filter', modules: [filterShaderModule]};
+// After
+const plugin: ShaderPlugin = {name: 'filter', module: filterShaderModule};
+```
+
+Injection-only plugins need no module. If a plugin previously supplied multiple
+modules, use one primary module with `dependencies`, or split independent features
+into multiple plugins:
+
+```ts
+const combinedModule = {name: 'combined', dependencies: [firstModule, secondModule]};
+const plugin: ShaderPlugin = {name: 'combined', module: combinedModule};
+```
+
+Dependencies retain their existing uniform/binding namespaces. Continue configuring
+them by module name through `ShaderInputs`; the primary module does not automatically
+forward props to dependencies. The `modules` arrays accepted by models, computations,
+and assemblers, as well as `ResolvedShaderPlugins.modules`, are unchanged.
