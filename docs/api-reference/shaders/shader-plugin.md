@@ -277,3 +277,20 @@ plugin names. Register the hook on an application-owned assembler or pass
 override matching stage-prefixed names without changing subsequent assemblies.
 For WGSL mutable arguments, use pointers such as
 `fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)` and write through `*color`.
+
+## Composition diagnostics
+
+`mergeShaderPluginModules(modules, pluginModules, {onConflict})` optionally
+reports distinct module descriptors sharing a name. The callback receives
+`(name, selected, ignored)`. Repeated references to one descriptor are compatible;
+separately created descriptors are reported even if structurally equivalent.
+Omitting the callback preserves existing behavior. Explicit modules retain
+precedence and plugin modules use first-seen name selection.
+
+Plugin contributions are collected in plugin declaration order, selecting each
+injection's source for the active language. Hook injections execute in
+ascending `order`; equal-order plugin injections retain declaration order.
+
+Legacy application injections append to plugin injections at the same target
+instead of replacing them. Module injections follow application injections;
+explicit `order` values take precedence over collection order.
