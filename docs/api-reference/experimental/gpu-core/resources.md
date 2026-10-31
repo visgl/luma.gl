@@ -183,3 +183,12 @@ transient textures, while imported resources remain borrowed.
 
 See [SimpleGraph shared render operations](../../graph/gpu-simple-graph.md#shared-render-operations)
 for the portable execution contract and an example.
+
+### Declarative render bindings
+
+Render nodes may declare `inputs: new GPURenderInputs(...)` to map typed graph data
+views to attributes, buffer ranges to storage bindings, and texture views to sampled
+bindings. The node derives dependency accesses from that same plan. Physical resources
+are resolved during encoding, preserving imported-resource replacement and transient
+allocation. See [declarative render inputs](/docs/api-reference/graph/gpu-simple-graph#declarative-render-inputs)
+for the shared SimpleGraph/GPUGraph API and ownership rules.
