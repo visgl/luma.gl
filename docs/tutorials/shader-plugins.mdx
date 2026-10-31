@@ -26,29 +26,14 @@ data may declare the shader-facing name and type through `vertexInputs`; the
 model or table still owns the matching `bufferLayout`, buffer, and update
 lifecycle.
 
-Each backend-specific plugin variant injects the pattern implementation into `fs:#decl`. The base fragment shader calls that implementation without knowing how the GLSL or WGSL source differs.
+One injection selects the GLSL or WGSL pattern implementation for `fs:#decl`. The base fragment shader calls that implementation without knowing how the GLSL or WGSL source differs.
 
 ```typescript
 import type {ShaderPlugin} from '@luma.gl/shaders';
 
 const fillPatternPlugin: ShaderPlugin = {
   name: 'fill-pattern-plugin',
-  glsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: GLSL_FILL_PATTERN_SOURCE
-      }
-    ]
-  },
-  wgsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: WGSL_FILL_PATTERN_SOURCE
-      }
-    ]
-  }
+  injections: [{target: 'fs:#decl', glsl: GLSL_FILL_PATTERN_SOURCE, wgsl: WGSL_FILL_PATTERN_SOURCE}]
 };
 ```
 
@@ -186,7 +171,7 @@ should normally attach plugins rather than coordinate hook injection directly.
 
 The runnable example includes all nine pattern variants: `none`, `hash0`, `hash45`, `hash90`, `hash135`, `checker0`, `checker45`, `dotgrid`, and `dotgrid45`.
 
-Use shared plugin fields when a contribution is backend-neutral. Use `glsl` or `wgsl` blocks when the shader language needs different code, defines, or modules.
+Keep modules, defines, and shader interfaces at the plugin root. Each injection selects its `glsl` or `wgsl` source without merging a second plugin descriptor.
 
 For a plugin that declares an Arrow-backed scalar input and updates only
 `ShaderInputs` as its range changes, see

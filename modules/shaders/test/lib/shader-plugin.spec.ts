@@ -9,11 +9,11 @@ import {
   GLSLShaderAssembler,
   WGSLShaderAssembler,
   type PlatformInfo,
-  type ShaderModule
+  type ShaderModule,
+  type ShaderPlugin
 } from '@luma.gl/shaders';
 
 const SHARED_MODULE: ShaderModule = {name: 'shared-plugin-module'};
-const WGSL_MODULE: ShaderModule = {name: 'wgsl-plugin-module'};
 const EXPLICIT_MODULE: ShaderModule = {name: 'explicit-module'};
 const DUPLICATE_PLUGIN_MODULE: ShaderModule = {name: 'explicit-module'};
 
@@ -46,69 +46,65 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 }
 `;
 
-it('ShaderPlugin#resolve shared and backend contributions', () => {
+it('ShaderPlugin#shares its interface and selects injection sources by language', () => {
+  const plugin: ShaderPlugin = {
+    name: 'portable-plugin',
+    modules: [SHARED_MODULE],
+    defines: {ENABLED: true},
+    vertexInputs: {filterValue: 'f32'},
+    varyings: {color: {type: 'vec4<f32>'}, category: {type: 'u32'}},
+    injections: [
+      {target: 'fs:#decl', glsl: 'void portable() {}', wgsl: 'fn portable() {}', order: 10},
+      {target: 'fs:#decl', wgsl: 'fn wgslOnly() {}'},
+      {target: 'fs:#decl', glsl: ''}
+    ]
+  };
+  const before = JSON.stringify(plugin);
+  for (const language of ['glsl', 'wgsl'] as const) {
+    const resolved = resolveShaderPlugins([plugin], language);
+    expect(resolved.modules).toEqual([SHARED_MODULE]);
+    expect(resolved.defines).toEqual({ENABLED: true});
+    expect(resolved.vertexInputs).toEqual({filterValue: 'f32'});
+    expect(resolved.varyings).toEqual({
+      color: {type: 'vec4<f32>', interpolation: 'smooth'},
+      category: {type: 'u32', interpolation: 'flat'}
+    });
+    expect(resolved.injections['fs:#decl']).toEqual(
+      language === 'glsl'
+        ? [
+            {injection: 'void portable() {}', order: 10},
+            {injection: '', order: 0}
+          ]
+        : [
+            {injection: 'fn portable() {}', order: 10},
+            {injection: 'fn wgslOnly() {}', order: 0}
+          ]
+    );
+  }
+  expect(JSON.stringify(plugin)).toBe(before);
+});
+
+it('ShaderPlugin#preserves contribution order across plugins', () => {
   const resolved = resolveShaderPlugins(
     [
       {
-        name: 'backend-aware-plugin',
-        modules: [SHARED_MODULE],
-        defines: {
-          COMMON: true,
-          OVERRIDDEN: false
-        },
-        injections: [{target: 'fs:#decl', injection: 'fn sharedPlugin() {}'}],
-        vertexInputs: {sharedValue: 'f32'},
-        varyings: {
-          sharedColor: {type: 'vec4<f32>'},
-          category: {type: 'u32'}
-        },
-        wgsl: {
-          modules: [WGSL_MODULE],
-          defines: {
-            OVERRIDDEN: true,
-            WGSL_ONLY: true
-          },
-          injections: [
-            {
-              target: 'fs:#decl',
-              injection: 'fn wgslPlugin() {}',
-              order: 10
-            }
-          ],
-          vertexInputs: {sharedValue: 'f32', backendValue: 'vec2<f32>'},
-          varyings: {sharedColor: {type: 'vec4<f32>', interpolation: 'smooth'}}
-        }
+        name: 'first',
+        defines: {ENABLED: false},
+        injections: [{target: 'fs:#decl', wgsl: 'first', order: 2}]
+      },
+      {
+        name: 'second',
+        defines: {ENABLED: true},
+        injections: [{target: 'fs:#decl', wgsl: 'second', order: 2}]
       }
     ],
     'wgsl'
   );
-
-  expect(
-    resolved.modules.map(module => module.name),
-    'shared and WGSL modules are combined'
-  ).toEqual(['shared-plugin-module', 'wgsl-plugin-module']);
-  expect(resolved.defines, 'backend define overrides shared plugin define').toEqual({
-    COMMON: true,
-    OVERRIDDEN: true,
-    WGSL_ONLY: true
-  });
-  expect(
-    resolved.injections['fs:#decl'].map(injection => injection.injection),
-    'shared and backend injections retain order'
-  ).toEqual(['fn sharedPlugin() {}', 'fn wgslPlugin() {}']);
-  expect(resolved.injections['fs:#decl'][1].order, 'explicit order is preserved').toBe(10);
-  expect(
-    resolved.vertexInputs,
-    'identical declarations merge once and preserve declaration order'
-  ).toEqual({sharedValue: 'f32', backendValue: 'vec2<f32>'});
-  expect(
-    resolved.varyings,
-    'varyings are normalized, deduplicated, and retain declaration order'
-  ).toEqual({
-    sharedColor: {type: 'vec4<f32>', interpolation: 'smooth'},
-    category: {type: 'u32', interpolation: 'flat'}
-  });
-  void 0;
+  expect(resolved.defines).toEqual({ENABLED: true});
+  expect(resolved.injections['fs:#decl'].map(entry => entry.injection)).toEqual([
+    'first',
+    'second'
+  ]);
 });
 
 it('ShaderPlugin#rejects invalid and conflicting vertex inputs', () => {
@@ -208,7 +204,9 @@ it('ShaderPlugin#rejects raw replacement targets', () => {
         [
           {
             name: 'invalid-target',
-            injections: [{target: 'fragmentColor = vec4(1.0);' as any, injection: 'ignored'}]
+            injections: [
+              {target: 'fragmentColor = vec4(1.0);' as any, glsl: 'ignored', wgsl: 'ignored'}
+            ]
           }
         ],
         'glsl'
@@ -236,12 +234,10 @@ it('ShaderPlugin#WGSL main injections land in stage bodies', () => {
     [
       {
         name: 'wgsl-main-plugin-injections',
-        wgsl: {
-          injections: [
-            {target: 'vs:#main-start', injection: 'let pluginVertexStart = 1u;'},
-            {target: 'fs:#main-end', injection: 'let pluginFragmentEnd = 2u;'}
-          ]
-        }
+        injections: [
+          {target: 'vs:#main-start', wgsl: 'let pluginVertexStart = 1u;'},
+          {target: 'fs:#main-end', wgsl: 'let pluginFragmentEnd = 2u;'}
+        ]
       }
     ],
     'wgsl'
@@ -276,14 +272,9 @@ it('ShaderPlugin#WGSL fragment declarations enter unified shader source', () => 
     [
       {
         name: 'wgsl-plugin-fragment-declaration',
-        wgsl: {
-          injections: [
-            {
-              target: 'fs:#decl',
-              injection: 'fn pluginGetColor() -> vec4<f32> { return vec4<f32>(1.0); }'
-            }
-          ]
-        }
+        injections: [
+          {target: 'fs:#decl', wgsl: 'fn pluginGetColor() -> vec4<f32> { return vec4<f32>(1.0); }'}
+        ]
       }
     ],
     'wgsl'

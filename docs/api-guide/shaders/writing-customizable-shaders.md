@@ -50,30 +50,21 @@ the base shader call the hook unconditionally.
 ## Plugin Pattern
 
 A plugin is the reusable attachment unit. It can contribute modules, defines,
-shader-facing vertex inputs, and named injections, with `glsl` and `wgsl`
-variants where the shader syntax differs.
+shader-facing vertex inputs, and named injections. Each injection supplies `glsl`
+and `wgsl` source for the same target and order.
 
 ```typescript
 import type {ShaderPlugin} from '@luma.gl/shaders';
 
 const tintPlugin: ShaderPlugin = {
   name: 'tint-plugin',
-  glsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }'
-      }
-    ]
-  },
-  wgsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
-      }
-    ]
-  }
+  injections: [
+    {
+      target: 'fs:#decl',
+      glsl: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }',
+      wgsl: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
+    }
+  ]
 };
 ```
 

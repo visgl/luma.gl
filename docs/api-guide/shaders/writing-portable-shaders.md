@@ -30,7 +30,7 @@ the same logical contract:
 | Varyings | Values passed from vertex to fragment stage. |
 | Module props | `ShaderModule.uniformTypes`, `defaultUniforms`, and `getUniforms()` output. |
 | Bindings | Resource names passed from JavaScript, even when WGSL and GLSL syntax differs. |
-| Plugins | Shared plugin behavior and shader-facing vertex input names, with `glsl` and `wgsl` variants only where syntax differs. |
+| Plugins | Shared plugin behavior and shader-facing vertex input names, with `glsl` and `wgsl` source on each injection. |
 
 Do not make the shader language difference leak into application props unless
 the feature is genuinely backend-specific. Prefer one JavaScript prop model and
@@ -64,8 +64,8 @@ shaders still needs ordinary numeric WGSL bindings.
 
 A portable `ShaderModule` may provide `source` for WGSL, `vs` and `fs` for GLSL,
 or all three. A portable `ShaderPlugin` can keep backend-neutral modules and
-defines at the top level while placing language-specific injection source under
-`glsl` and `wgsl`. If a plugin declares `vertexInputs`, keep those shader-facing
+defines at the top level while placing language-specific injection source in each injection’s
+`glsl` and `wgsl` fields. If a plugin declares `vertexInputs`, keep those shader-facing
 names and types aligned with the caller-owned buffer layout and attribute data.
 
 Use defines for real source variants, not as a substitute for two clear shader
