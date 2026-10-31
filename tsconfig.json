@@ -63,6 +63,7 @@
       "@luma.gl/core/wgsl-binding-scan": ["./modules/core/src/wgsl-binding-scan.ts"],
       "@luma.gl/core/*": ["./modules/core/src/*"],
       "@luma.gl/core/test/*": ["./modules/core/test/*"],
+      "@luma.gl/engine/shader-pipeline": ["./modules/engine/src/shader-pipeline/index.ts"],
       "@luma.gl/engine/effects": ["./modules/engine/src/effects/index.ts"],
       "@luma.gl/engine/physics": ["./modules/engine/src/graph/physics/index.ts"],
       "@luma.gl/engine/tables": ["./modules/engine/src/graph/tables/index.ts"],
