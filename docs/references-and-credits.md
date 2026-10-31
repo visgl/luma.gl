@@ -10,6 +10,9 @@ inspiration, standards compatibility, and separately installed dependencies.
 The package notices contain redistribution terms; the acknowledgments here also
 recognize contributions that go beyond license requirements.
 
+For feature-specific literature and detailed scientific citations, see
+[Attributions and credits](./credits.md).
+
 ## Origins and community
 
 luma.gl began as an ES6 port of **Nicolas Garcia Belmonte's PhiloGL**, developed at

@@ -1,5 +1,4 @@
 [
-  "references-and-credits",
   {
     "type": "category",
     "label": "Getting Started",
@@ -29,7 +28,8 @@
           "tutorials/whats-next",
           "faq",
           "glossary",
-          "credits"
+          "credits",
+          "references-and-credits"
         ]
       },
       {
