@@ -36,7 +36,7 @@ export class WGSLShaderAssembler extends ShaderAssembler {
     entryPoints: ShaderTranspilerEntryPoints;
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
-    const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
+    const hookFunctions = [...this._hookFunctions, ...(props.hookFunctions || [])];
     const translated = this._transpileShader(
       props,
       modules,

@@ -72,12 +72,12 @@ it('ShaderPlugin#shares its interface and selects injection sources by language'
     expect(resolved.injections['fs:#decl']).toEqual(
       language === 'glsl'
         ? [
-            {injection: 'void portable() {}', order: 10},
-            {injection: '', order: 0}
+            {pluginName: 'portable-plugin', injection: 'void portable() {}', order: 10},
+            {pluginName: 'portable-plugin', injection: '', order: 0}
           ]
         : [
-            {injection: 'fn portable() {}', order: 10},
-            {injection: 'fn wgslOnly() {}', order: 0}
+            {pluginName: 'portable-plugin', injection: 'fn portable() {}', order: 10},
+            {pluginName: 'portable-plugin', injection: 'fn wgslOnly() {}', order: 0}
           ]
     );
   }
@@ -686,4 +686,70 @@ struct OtherInput { @location(0) other: f32, };
     'application WGSL stage I/O cannot shadow plugin varyings'
   ).toThrow(/conflicts with existing WGSL stage I\/O/);
   void 0;
+});
+
+it('ShaderPlugin#unknown hooks identify the contributing plugin', () => {
+  const resolved = resolveShaderPlugins(
+    [
+      {
+        name: 'missing-color',
+        injections: [{target: 'fs:MISSING_COLOR', wgsl: ''}]
+      }
+    ],
+    'wgsl'
+  );
+  expect(() =>
+    new WGSLShaderAssembler().assembleWGSLShader({
+      platformInfo: WGSL_PLATFORM_INFO,
+      source: WGSL_SOURCE,
+      pluginInjections: resolved.injections
+    })
+  ).toThrow('Unknown shader hook fs:MISSING_COLOR (plugins: missing-color)');
+});
+
+it('ShaderPlugin#assembly-local hooks do not leak between calls', () => {
+  const assembler = new WGSLShaderAssembler();
+  const resolved = resolveShaderPlugins(
+    [
+      {
+        name: 'local-color',
+        injections: [{target: 'fs:LOCAL_COLOR', wgsl: '*color *= 0.5;'}]
+      }
+    ],
+    'wgsl'
+  );
+  const props = {
+    platformInfo: WGSL_PLATFORM_INFO,
+    source: WGSL_SOURCE,
+    pluginInjections: resolved.injections
+  };
+  expect(
+    assembler.assembleWGSLShader({
+      ...props,
+      hookFunctions: ['fs:LOCAL_COLOR(color: ptr<function, vec4<f32>>)']
+    }).source
+  ).toContain('*color *= 0.5;');
+  expect(() => assembler.assembleWGSLShader(props)).toThrow('Unknown shader hook fs:LOCAL_COLOR');
+});
+
+it('ShaderPlugin#GLSL local hooks override registered hooks without mutation', () => {
+  const assembler = new GLSLShaderAssembler();
+  assembler.addShaderHook('vs:LOCAL_POSITION(inout vec4 position)', {header: 'position.x += 1.0;'});
+  const props = {
+    platformInfo: GLSL_PLATFORM_INFO,
+    vs: '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
+    fs: '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }'
+  };
+  const local = assembler.assembleGLSLShaderPair({
+    ...props,
+    hookFunctions: [
+      {
+        hook: 'vs:LOCAL_POSITION(inout vec4 position)',
+        header: 'position.x += 2.0;'
+      }
+    ]
+  });
+  expect(local.vs).toContain('position.x += 2.0;');
+  expect(local.vs).not.toContain('position.x += 1.0;');
+  expect(assembler.assembleGLSLShaderPair(props).vs).toContain('position.x += 1.0;');
 });

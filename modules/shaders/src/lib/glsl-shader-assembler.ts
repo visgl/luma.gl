@@ -23,7 +23,7 @@ export class GLSLShaderAssembler extends ShaderAssembler {
     modules: ShaderModule[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
-    const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
+    const hookFunctions = [...this._hookFunctions, ...(props.hookFunctions || [])];
     const vertex = this._transpileShader(props, modules, props.vs, 'vertex');
     const fragment = this._transpileShader(props, modules, props.fs, 'fragment');
     const assembled = assembleGLSLShaderPair({
