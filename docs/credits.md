@@ -9,7 +9,9 @@ luma.gl combines original vis.gl work with adapted graphics implementations, pub
 research, and example datasets. We thank the [contributors](https://github.com/visgl/luma.gl/graphs/contributors)
 and upstream authors who make this work possible.
 
-This page collects major implementation credits and scientific references. Full license
+This page collects major implementation credits and scientific references. See the
+[References and credits guide](./references-and-credits.md) for package notice indexes,
+additional project history, and distribution provenance. Full license
 terms remain in the [repository license](https://github.com/visgl/luma.gl/blob/master/LICENSE),
 source headers, adjacent notices, and the licenses of installed dependencies. A research
 citation credits an algorithm; it does not imply that its authors supplied luma.gl's code.

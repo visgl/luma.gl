@@ -1,0 +1,181 @@
+{
+  "publicPackages": [
+    "anari",
+    "core",
+    "engine",
+    "gpgpu",
+    "graph",
+    "shaders",
+    "slang",
+    "three"
+  ],
+  "sources": [
+    {
+      "files": [
+        "modules/core/src/webgpu/adapter/helpers/generate-mipmaps-webgpu.ts"
+      ],
+      "markers": [
+        "Gregg Tavares",
+        "webgpu-utils"
+      ],
+      "notices": [
+        "modules/core/licenses/webgpu-utils.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/shaders/src/modules/lighting/pbr-material/pbr-material-glsl.ts",
+        "modules/shaders/src/modules/lighting/pbr-material/pbr-material-wgsl.ts"
+      ],
+      "markers": [
+        "2016-2017 Mohamad Moneimne and Contributors"
+      ],
+      "notices": [
+        "modules/shaders/licenses/pbr.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/shaders/src/modules/math/fp16/fp16-utils.ts"
+      ],
+      "markers": [
+        "three.js authors",
+        "THREE.js"
+      ],
+      "notices": [
+        "modules/shaders/licenses/three.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/engine/src/splats/splat-rad-hierarchy.ts",
+        "modules/engine/src/splats/gpu-paged-splat-shaders.ts"
+      ],
+      "markers": [
+        "Spark",
+        "WORLD LABS TECHNOLOGIES"
+      ],
+      "notices": [
+        "modules/engine/licenses/spark.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/engine/src/text/fonts/helvetiker.ts"
+      ],
+      "markers": [
+        "three.js authors",
+        "MAGENTA Ltd."
+      ],
+      "notices": [
+        "modules/engine/licenses/three.txt",
+        "modules/engine/licenses/magenta-font.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/engine/src/effects/passes/postprocessing/fxaa/fxaa.ts"
+      ],
+      "markers": [
+        "2014-2015, NVIDIA CORPORATION",
+        "cesium.js"
+      ],
+      "notices": [
+        "modules/engine/licenses/nvidia-fxaa.txt",
+        "modules/engine/licenses/cesium.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/core/src/webgl-debug/spector-types.ts"
+      ],
+      "markers": [
+        "BabylonJS/Spector.js"
+      ],
+      "notices": [
+        "modules/core/licenses/spector.txt"
+      ]
+    },
+    {
+      "files": [
+        "examples/api/texture-3d/app.ts"
+      ],
+      "markers": [
+        "PicoGL.js"
+      ],
+      "notices": [
+        "examples/licenses/picogl.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/engine/src/gltf/types/gltf-json-schema.ts",
+        "modules/engine/src/gltf/types/gltf-postprocessed-schema.ts"
+      ],
+      "markers": [
+        "2018 Benjamin Wasty",
+        "bwasty/gltf-loader-ts"
+      ],
+      "notices": [
+        "modules/engine/licenses/gltf-loader-ts.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/engine/src/lighting/ltc-data.ts"
+      ],
+      "markers": [
+        "LicenseRef-LTC",
+        "Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt",
+        "31e5e96b54f98f33098f8503003119ba2231a1c6"
+      ],
+      "notices": [
+        "modules/engine/src/lighting/LTC-LICENSE.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/brightnesscontrast.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/denoise.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/huesaturation.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/noise.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/sepia.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/vibrance.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/vignette.ts"
+      ],
+      "markers": [
+        "2011 by Evan Wallace",
+        "glfx.js"
+      ],
+      "notices": [
+        "modules/engine/licenses/glfx.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/graph/src/experimental/simulation/scientific-flow-rk45-shaders.ts"
+      ],
+      "markers": [
+        "Parcels team",
+        "8584c09a4189ed29a49aa980b9830a2379e42c65"
+      ],
+      "notices": [
+        "modules/graph/src/experimental/simulation/PARCELS-LICENSE.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/engine/src/text/fonts/glyph-pbf.ts",
+        "modules/engine/src/text/fonts/glyph-range-loader.ts",
+        "modules/engine/src/text/fonts/build-glyph-font-atlas.ts"
+      ],
+      "markers": [
+        "deck.gl-community"
+      ],
+      "notices": [
+        "modules/engine/licenses/deck-community.txt"
+      ]
+    }
+  ],
+  "auditedBaseCommit": "3f83f06f0"
+}

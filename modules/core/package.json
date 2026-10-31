@@ -76,7 +76,10 @@
     "src",
     "dist",
     "dist.min.js",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "THIRD-PARTY-NOTICES.md",
+    "licenses"
   ],
   "sideEffects": [
     "./src/webgl-debug/index.ts",

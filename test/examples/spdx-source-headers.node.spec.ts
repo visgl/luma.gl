@@ -37,9 +37,7 @@ const SPDX_FILE_COPYRIGHT_TEXT_PATTERN = /^\s*(?:\/\/|\/\*+|\*)\s*SPDX-FileCopyr
 
 // Embedded third-party material needs its actual owners and license expressions reviewed before
 // these existing headers can be normalized without incorrectly assigning ownership to vis.gl.
-const TEMPORARY_MIXED_LICENSE_EXCEPTIONS = new Set([
-  'modules/engine/src/effects/passes/postprocessing/fxaa/fxaa.ts'
-]);
+const TEMPORARY_MIXED_LICENSE_EXCEPTIONS = new Set<string>();
 
 // This declaration file was copied from Spector.js and must retain its independently reviewed
 // upstream ownership instead of receiving a speculative vis.gl copyright claim.
