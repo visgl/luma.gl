@@ -653,3 +653,5 @@ export type {
 export type {GPUResourcePreview} from './gpu-resource-preview';
 
 export type {GPUIndexPickInfo} from './gpu-index-picking-target';
+export {GPURenderOperation} from './gpu-render-operation';
+export type {GPURenderOperationResources} from './gpu-render-operation';
