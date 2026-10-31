@@ -53,8 +53,9 @@ graph.addValue('scaled', chunks);
 Use `new GPUSimpleGraphValueOperation({id, value})` when composing with operation arrays
 or shared composite groups. `compiled.outputs` and `addEvaluator()` remain compatibility
 interfaces for existing evaluator users; new consumers use the GPUVectors returned by `run()`.
-No GPGPU exports are removed or deprecated in this first phase. Dynamic input rebinding,
-full GPUCommandGraph lowering, and migration of legacy table-viewer readback adapters remain follow-ups.
+No GPGPU exports are removed or deprecated in this first phase. Replacing evaluator input
+layouts, full GPUGraph lowering of evaluator recipes, and migration of legacy table-viewer
+readback adapters remain follow-ups.
 
 ## Upload and copy
 
@@ -80,8 +81,9 @@ compiled.destroy();
 Upload inputs use the existing array layout rules: optional `type`, `size`, `normalized`,
 and byte `offset`/`stride`. Typed arrays are borrowed until materialization;
 plain arrays are converted during compilation. Compilation allocates no GPU storage.
-Repeated runs use cached results; editing the input array does not update a materialized
-upload. Build a new graph for new data. Uploads can issue immediate queue writes even
+Repeated runs use cached results. After editing a borrowed typed array, call
+`compiled.invalidate([inputId])` before the next run. Plain arrays are copied at compilation;
+rebuild for changes to those arrays or to the input layout. Uploads can issue immediate queue writes even
 inside a scope; cancellation does not undo those writes.
 
 Copy inputs name an earlier operation's output. Copies preserve stored bytes and chunk
@@ -215,3 +217,67 @@ Before the first synchronous evaluator run, eagerly register its backend, for ex
 `await backendRegistry.add('webgl', import('@luma.gl/gpgpu/operations/webgl'))` using
 `backendRegistry` from `@luma.gl/gpgpu`. Synchronous execution cannot wait for lazy
 backend imports. Render-only graphs do not need evaluator backend registration.
+
+## Input invalidation
+
+Publish an input with `addValue('positions', GPUSimpleGraphValue.upload(typedArray))`
+or `GPUSimpleGraphValue.fromGPUData(chunk)`, then reference that value from your
+expressions. After changing the original typed array or writing to the borrowed GPU
+buffer, call `compiled.invalidate(['positions'])`. The next run recomputes only the
+reachable dependent results. Unrelated cached outputs keep their existing buffers.
+External semantic vector bindings are addressable by their GPUGraph input IDs too.
+
+Invalidation accepts named leaf inputs owned by the compilation, including chunked
+inputs. Compilation rejects duplicate input names across uploads and semantic bindings. It rejects unknown names, intermediate expressions, and borrowed legacy
+evaluators without changing their caches. Calls are forbidden during a run or while
+an evaluation scope is pending. Input lengths, formats, chunk boundaries, and layouts
+remain fixed; rebuild the graph to change them. Empty invalidation lists do nothing.
+
+`outputTargets` keep their borrowed buffer identity and layout across invalidation.
+Internal cached allocations may be recycled, so consumers must finish using previous
+results before invalidating them and obtain fresh result views from the next run.
+No readback or data comparison is performed to detect changes automatically.
+
+## Per-run render bindings and parameters
+
+Render inputs use the same `buffers`, `textures`, and `parameters` fields as full
+graph encoding. Resource replacement is per invocation and addressed by logical
+resource ID; omitted bindings revert to their imported defaults. The shared graph
+validates device, capacity, usage, texture layout, and physical aliasing. These
+bindings affect render passes, not evaluator input vectors or `outputTargets`.
+
+```typescript
+const graph = new GPUSimpleGraph<{weightsChanged: boolean}>(device);
+const operation = new GPURenderOperation<{weightsChanged: boolean}>({
+  id: 'aggregate',
+  createNodes: resources => {
+    // Import buffers/textures and construct ordinary render nodes here.
+    // A node may use the existing CPU condition contract:
+    // condition: {id: 'weights-dirty', source: 'cpu',
+    //   evaluate: parameters => parameters.weightsChanged}
+    return createAggregationRenderNodes(resources);
+  }
+});
+graph.add(operation);
+const compiled = graph.compile();
+await compiled.run({
+  parameters: {weightsChanged: true},
+  buffers: {weights: weightBuffer},
+  textures: {bins: binTexture}
+});
+```
+
+Typed parameters are required when the graph declares a non-void parameter type.
+A `GPURenderOperation` without an explicit parameter type is parameter-independent
+(`unknown`) and can be mixed with parameterized passes in either graph API.
+`add()` checks render-operation parameter types through inferred arrays and shared
+`composite()` / `GPUCompositeOperation` groups. Keep the inferred group type rather
+than widening it to the general `GPUOperation` interface, which erases that information.
+WebGL `runSync(options)` accepts the same bindings and parameters. Conditions are
+explicit: rebinding a resource does not automatically mark a channel dirty. A skipped
+producer must leave valid data for any consumer that still runs. Use imported storage
+for persistent channel results; transient allocation lifetimes do not promise that
+skipped-pass results survive reuse by other passes.
+
+The same parameterized `GPURenderOperation` can be added to a compatible full WebGPU
+graph. No deck.gl migration is part of this API change.

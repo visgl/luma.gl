@@ -14,6 +14,7 @@ import type {GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
 
 import {
   GPURenderOperation,
+  type GPUCommandGraphEncodeOptions,
   GPUCompositeOperation,
   GPUGraphScalarLiteral,
   GPUGraphScalarOperation,
@@ -61,7 +62,10 @@ export type GPUSimpleGraphCompileOptions = {
 };
 
 /** Run options; scopes defer submission until the caller submits or cancels. */
-export type GPUSimpleGraphRunOptions = {scope?: GPUEvaluationScope};
+export type GPUSimpleGraphRunOptions<Parameters = void> = {
+  scope?: GPUEvaluationScope;
+} & Pick<GPUCommandGraphEncodeOptions<Parameters>, 'buffers' | 'textures'> &
+  ([Parameters] extends [void] ? {parameters?: Parameters} : {parameters: Parameters});
 
 /**
  * Prototype graph-shaped interface to the existing lazy GPGPU evaluator.
@@ -69,19 +73,19 @@ export type GPUSimpleGraphRunOptions = {scope?: GPUEvaluationScope};
  * Operations, backend selection, fusion, caching, and storage ownership remain with
  * the evaluators. Explicit evaluator inputs are borrowed; semantic lowering owns its adapters.
  */
-export class GPUSimpleGraph {
+export class GPUSimpleGraph<Parameters = void> {
   readonly device: Device;
   readonly id: string;
   private readonly leafOperations: SimpleOperation[] = [];
   private readonly evaluatorIds = new Set<string>();
   private readonly programOperations: GPUGraphOperation[] = [];
   private compiled = false;
-  private readonly renderOperations: GPURenderOperation[] = [];
+  private readonly renderOperations: GPURenderOperation<Parameters>[] = [];
 
   /** Execution capabilities; evaluators retain control of backend submission. */
   readonly capabilities: Readonly<{
     callerControlledSubmission: boolean;
-    dynamicBindings: false;
+    dynamicBindings: true;
     /** Graph-managed transient render textures; evaluator storage retains its existing pool. */
     transientAllocation: true;
   }>;
@@ -91,16 +95,25 @@ export class GPUSimpleGraph {
     this.id = props.id ?? 'simple-graph';
     this.capabilities = Object.freeze({
       callerControlledSubmission: device.type === 'webgpu',
-      dynamicBindings: false,
+      dynamicBindings: true,
       transientAllocation: true
     });
   }
 
   /** Accepts evaluator operations, semantic composites, and recursively nested arrays. */
-  add(operation: GPUOperationLike): this {
+  add<Operation extends GPUOperationLike>(
+    operation: Operation &
+      (true extends HasIncompatibleRenderParameters<NoInfer<Operation>, Parameters>
+        ? never
+        : unknown)
+  ): this {
+    return this.addOperations(operation);
+  }
+
+  private addOperations(operation: GPUOperationLike): this {
     // Compilation freezes the builder, as it does for GPUCommandGraph.
     assert(!this.compiled);
-    const pending: (SimpleOperation | GPURenderOperation)[] = [];
+    const pending: (SimpleOperation | GPURenderOperation<Parameters>)[] = [];
     let hasRenderOperation = this.renderOperations.length > 0;
     const pendingEvaluatorIds = new Set<string>();
     const operations: GPUGraphOperation[] = [];
@@ -167,7 +180,7 @@ export class GPUSimpleGraph {
     identifier: string,
     value: Value
   ): Value {
-    this.add(new GPUSimpleGraphValueOperation({id: identifier, value}));
+    this.addOperations(new GPUSimpleGraphValueOperation({id: identifier, value}));
     return value;
   }
 
@@ -176,13 +189,13 @@ export class GPUSimpleGraph {
     identifier: string,
     evaluator: Evaluator
   ): Evaluator {
-    this.add(new GPUSimpleGraphOperation({id: identifier, evaluator}));
+    this.addOperations(new GPUSimpleGraphOperation({id: identifier, evaluator}));
     return evaluator;
   }
 
   /** Appends shared render passes after the evaluator phase. Use the same operation in GPUGraph. */
-  addRenderOperation(operation: GPURenderOperation): this {
-    return this.add(operation);
+  addRenderOperation(operation: GPURenderOperation<Parameters>): this {
+    return this.addOperations(operation);
   }
 
   get operationTree(): readonly GPUOperationTree[] {
@@ -190,12 +203,12 @@ export class GPUSimpleGraph {
   }
 
   /** Captures selected roots and an inspectable dependency plan without executing work. */
-  compile(options: GPUSimpleGraphCompileOptions = {}): CompiledGPUSimpleGraph {
+  compile(options: GPUSimpleGraphCompileOptions = {}): CompiledGPUSimpleGraph<Parameters> {
     // A graph is compiled once, including when compilation fails.
     assert(!this.compiled);
     this.compiled = true;
     const lowering = new SimpleGraphLowering(options.bindings ?? {});
-    let renderGraph: CompiledGPUCommandGraph | undefined;
+    let renderGraph: CompiledGPUCommandGraph<Parameters> | undefined;
     try {
       for (const operation of this.leafOperations) lowering.lower(operation);
       const evaluators = lowering.outputs;
@@ -277,7 +290,9 @@ export class GPUSimpleGraph {
         }
       }
       if (this.renderOperations.length) {
-        const renderBuilder = new GPUCommandGraphBuilder(this.device, {id: `${this.id}-render`});
+        const renderBuilder = new GPUCommandGraphBuilder<Parameters>(this.device, {
+          id: `${this.id}-render`
+        });
         for (const operation of this.renderOperations) renderBuilder.add(operation);
         renderGraph = renderBuilder.compile();
       }
@@ -288,7 +303,8 @@ export class GPUSimpleGraph {
         this.operationTree,
         lowering.owned,
         Object.fromEntries(roots.map(({id, evaluator}) => [id, getIdentifier(evaluator)])),
-        renderGraph
+        renderGraph,
+        lowering.inputs
       );
     } catch (error) {
       renderGraph?.destroy();
@@ -299,7 +315,7 @@ export class GPUSimpleGraph {
 }
 
 /** Snapshot of named evaluator outputs and their reachable dependency plan. */
-export class CompiledGPUSimpleGraph {
+export class CompiledGPUSimpleGraph<Parameters = void> {
   readonly nodes: readonly GPUSimpleGraphNode[];
   readonly outputs: Readonly<Record<string, GPUSimpleGraphEvaluator>>;
   /** Maps every selected output ID, including aliases, to its dependency inspection node. */
@@ -319,7 +335,8 @@ export class CompiledGPUSimpleGraph {
     private readonly ownedEvaluators: ReadonlySet<GPUSimpleGraphEvaluator> = new Set(),
     outputNodes: Readonly<Record<string, string>> = {},
     /** Shared render executor, including buffer/texture inspection and ownership. */
-    readonly renderGraph?: CompiledGPUCommandGraph
+    readonly renderGraph?: CompiledGPUCommandGraph<Parameters>,
+    private readonly inputs: ReadonlyMap<string, GPUSimpleGraphEvaluator> = new Map()
   ) {
     this.device = device;
     this.nodes = Object.freeze(
@@ -335,6 +352,40 @@ export class CompiledGPUSimpleGraph {
     );
   }
 
+  /** Invalidates changed named inputs and their reachable consumers, preserving other channels. */
+  invalidate(inputIds: readonly string[]): void {
+    assert(!this.running && !this.destroyed && !this.pendingScope);
+    const changed = new Set<GPUSimpleGraphEvaluator>();
+    for (const identifier of inputIds) {
+      const input = this.inputs.get(identifier);
+      // Only graph-owned, named leaf inputs can be invalidated through this API.
+      assert(input && this.ownedEvaluators.has(input));
+      changed.add(input);
+      if (input instanceof GPUVectorEvaluator) {
+        for (const chunk of input.gpuDataEvaluators) changed.add(chunk);
+      }
+    }
+    const affected = new Map<GPUSimpleGraphEvaluator, boolean>();
+    const visit = (evaluator: GPUSimpleGraphEvaluator): boolean => {
+      const existing = affected.get(evaluator);
+      if (existing !== undefined) return existing;
+      // Visit every dependency, even if an earlier dependency is already dirty.
+      const dependencies = getDependencies(evaluator).map(visit);
+      const dirty = changed.has(evaluator) || dependencies.some(Boolean);
+      affected.set(evaluator, dirty);
+      return dirty;
+    };
+    for (const input of changed) visit(input);
+    for (const {evaluator} of this.executionPlan) visit(evaluator);
+    // Validate the whole change before clearing anything; borrowed evaluator caches stay untouched.
+    for (const [evaluator, dirty] of affected) {
+      if (dirty) assert(this.ownedEvaluators.has(evaluator));
+    }
+    for (const [evaluator, dirty] of affected) {
+      if (dirty) evaluator.invalidate();
+    }
+  }
+
   /** Releases semantic evaluator results, preserving borrowed inputs and wrappers. */
   destroy(): void {
     // Results must no longer be in use; borrowed evaluators and input buffers remain caller-owned.
@@ -346,8 +397,10 @@ export class CompiledGPUSimpleGraph {
   }
 
   /** Executes supported synchronous evaluators and render passes on WebGL, without readback. */
-  runSync(): Record<string, GPUVector> {
-    assert(this.device.type === 'webgl');
+  runSync(this: CompiledGPUSimpleGraph<void>): Record<string, GPUVector>;
+  runSync(options: GPUSimpleGraphRunOptions<Parameters>): Record<string, GPUVector>;
+  runSync(options?: GPUSimpleGraphRunOptions<Parameters>): Record<string, GPUVector> {
+    assert(this.device.type === 'webgl' && !options?.scope);
     assert(!this.running && !this.destroyed && !this.pendingScope);
     this.running = true;
     try {
@@ -363,18 +416,24 @@ export class CompiledGPUSimpleGraph {
         evaluate(evaluator);
         results[id] = evaluator.gpuVector;
       }
-      this.encodeRenderPasses();
+      this.encodeRenderPasses(options);
       return results;
     } finally {
       this.running = false;
     }
   }
 
-  private encodeRenderPasses(scope?: GPUEvaluationScope): void {
+  private encodeRenderPasses(options?: GPUSimpleGraphRunOptions<Parameters>): void {
+    const scope = options?.scope;
     if (!this.renderGraph) return;
     const commandEncoder = scope?.commandEncoder ?? this.device.createCommandEncoder();
     try {
-      this.renderGraph.encode(commandEncoder, {parameters: undefined});
+      this.renderGraph.encode(commandEncoder, {
+        buffers: options?.buffers,
+        textures: options?.textures,
+        // The public overload requires parameters unless Parameters is void.
+        parameters: options?.parameters as Parameters
+      });
       if (!scope) this.device.submit(commandEncoder.finish());
     } finally {
       if (!scope) commandEncoder.destroy();
@@ -382,7 +441,10 @@ export class CompiledGPUSimpleGraph {
   }
 
   /** Materializes selected outputs without CPU readback. Semantic results live until destroy(). */
-  async run({scope}: GPUSimpleGraphRunOptions = {}): Promise<Record<string, GPUVector>> {
+  run(this: CompiledGPUSimpleGraph<void>): Promise<Record<string, GPUVector>>;
+  run(options: GPUSimpleGraphRunOptions<Parameters>): Promise<Record<string, GPUVector>>;
+  async run(options?: GPUSimpleGraphRunOptions<Parameters>): Promise<Record<string, GPUVector>> {
+    const scope = options?.scope;
     // The underlying evaluators do not support concurrent evaluation of shared outputs.
     assert(!this.running && !this.destroyed && !this.pendingScope);
     if (scope) {
@@ -412,7 +474,7 @@ export class CompiledGPUSimpleGraph {
         else await evaluateDependencies(evaluator);
         results.push([id, evaluator.gpuVector]);
       }
-      this.encodeRenderPasses(scope);
+      this.encodeRenderPasses(options);
       return Object.fromEntries(results);
     } catch (error) {
       scope?.cancel();
@@ -428,3 +490,16 @@ function getDependencies(evaluator: GPUSimpleGraphEvaluator): readonly GPUSimple
   if (evaluator.source instanceof GPUDataEvaluator) return [evaluator.source];
   return evaluator.source?.dependencies ?? [];
 }
+
+/** Preserve render parameter requirements without expanding the recursive GPUOperationLike type. */
+type HasIncompatibleRenderParameters<Operation, Parameters> = GPUOperationLike extends Operation
+  ? false
+  : Operation extends GPURenderOperation<infer RequiredParameters>
+    ? [Parameters] extends [RequiredParameters]
+      ? false
+      : true
+    : Operation extends GPUCompositeOperation<infer Child>
+      ? HasIncompatibleRenderParameters<Child, Parameters>
+      : Operation extends readonly (infer Child)[]
+        ? HasIncompatibleRenderParameters<Child, Parameters>
+        : false;
