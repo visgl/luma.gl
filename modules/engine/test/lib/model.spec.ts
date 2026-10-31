@@ -1135,6 +1135,41 @@ it('Model#plugins assemble backend contributions', async () => {
   void 0;
 });
 
+it('Model#plugins and legacy declarations compile together on both backends', async () => {
+  for (const device of [await getWebGLTestDevice(), await getWebGPUTestDevice()]) {
+    if (!device) continue;
+    const wgsl = device.type === 'webgpu';
+    const model = await Model.createAsync(device, {
+      id: 'mixed-plugin-declarations',
+      vs: DUMMY_VS,
+      fs: DUMMY_FS.replace('vec4(1.0)', 'vec4(LEGACY_MARKER)'),
+      source: DUMMY_WGSL.replace(
+        'vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0)',
+        'vec4<f32>(LEGACY_MARKER)'
+      ),
+      plugins: [
+        {
+          name: 'declaration-provider',
+          glsl: {injections: [{target: 'fs:#decl', injection: 'const float PLUGIN_MARKER = 1.0;'}]},
+          wgsl: {injections: [{target: 'fs:#decl', injection: 'const PLUGIN_MARKER: f32 = 1.0;'}]}
+        }
+      ],
+      inject: {
+        'fs:#decl': wgsl
+          ? 'const LEGACY_MARKER: f32 = PLUGIN_MARKER;'
+          : 'const float LEGACY_MARKER = PLUGIN_MARKER;'
+      }
+    });
+    try {
+      const source = wgsl ? model.source : model.fs;
+      expect(source).toContain('PLUGIN_MARKER');
+      expect(source).toContain('LEGACY_MARKER');
+    } finally {
+      model.destroy();
+    }
+  }
+});
+
 function isSoftwareBackedDevice(device: Device): boolean {
   return (
     device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
