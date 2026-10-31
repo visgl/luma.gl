@@ -82,26 +82,17 @@ export const filterShaderPlugin: ShaderPlugin = {
   vertexInputs: {
     filterValues: 'f32'
   },
-  glsl: {
-    injections: [
-      {
-        target: 'vs:FILTER_POSITION',
-        injection: `\
+  injections: [
+    {
+      target: 'vs:FILTER_POSITION',
+      glsl: `\
 if (!filter_isVisible(filterValues)) {
   position = vec4(2.0, 2.0, 2.0, 1.0);
-}`
-      }
-    ]
-  },
-  wgsl: {
-    injections: [
-      {
-        target: 'vs:FILTER_POSITION',
-        injection: `\
+}`,
+      wgsl: `\
 if (!filter_isVisible(filterValues)) {
   *position = vec4<f32>(2.0, 2.0, 2.0, 1.0);
 }`
-      }
-    ]
-  }
+    }
+  ]
 };

@@ -25,8 +25,7 @@ export type {
   ShaderPluginInjection,
   ShaderPluginInjectionTarget,
   ShaderPluginVarying,
-  ShaderPluginVaryingInterpolation,
-  ShaderPluginVariant
+  ShaderPluginVaryingInterpolation
 } from './lib/shader-plugin';
 export type {
   ShaderPass,

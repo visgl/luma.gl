@@ -1,5 +1,12 @@
 # What's New
 
+## Streamlined shader plugins
+
+`ShaderPlugin` declares one portable interface. Each injection carries its own `glsl` and
+`wgsl` source alongside a shared target and order, removing nested plugin variants. See the
+[plugin reference](./api-reference/shaders/shader-plugin.md) and
+[migration guide](./upgrade-guide.md#shader-plugin-injections).
+
 ## Standalone shader tools
 
 Shaders no longer depends on core. Resource-free layouts, type decoders, uniform block layouts

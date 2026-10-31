@@ -464,3 +464,34 @@ Deprecated synchronous device helpers remain in `@luma.gl/core/test-utils-legacy
 The `@luma.gl/splats` package is removed. Replace its imports with `@luma.gl/engine/splats`
 and install `@luma.gl/engine`. The engine root does not re-export these APIs. This move preserves
 existing splat data, renderers, picking, residency, hierarchy, and graph-backed execution behavior.
+
+## Shader plugin injections
+
+`ShaderPluginVariant` and plugin-level `glsl` / `wgsl` objects have been removed.
+Move modules, defines, vertex inputs, and varyings to the plugin root. Shader modules
+carry their own GLSL/WGSL implementations. Move injection source to `glsl` / `wgsl`
+fields on each injection, replacing its previous `injection` field:
+
+```ts
+const plugin: ShaderPlugin = {
+  name: 'tint',
+  modules: [tintModule],
+  injections: [
+    {
+      target: 'fs:FILTER_COLOR',
+      glsl: 'color *= tint.color;',
+      wgsl: '*color *= tint.color;'
+    }
+  ]
+};
+```
+
+Keep the target and order once when they match between languages. If they differ,
+use separate entries containing only the relevant language's source. Omitted source
+skips the injection for that language. For an old shared source string, set both
+language fields explicitly. This change only affects `ShaderPlugin` descriptors;
+lower-level assembler `ShaderInjection` objects still use `injection`.
+
+If a plugin previously changed modules, defines, or its interface by language,
+construct the appropriate descriptor explicitly before passing it to the model or
+computation; there is no longer an implicit language-variant merge.

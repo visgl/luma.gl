@@ -34,7 +34,7 @@ attributes, varyings, and the main control flow.
 | --- | --- |
 | 1. Author base source | Write unified WGSL for WebGPU, GLSL stage strings for WebGL 2, or both. |
 | 2. Attach modules and plugins | Pass `modules` and `plugins` to `Model` or `Computation`, or call `ShaderAssembler` directly. |
-| 3. Resolve composition | Plugin variants are selected for the active shader language, modules are deduplicated by name, and module dependencies are ordered before their consumers. |
+| 3. Resolve composition | Plugin injection sources are selected for the active shader language, modules are deduplicated by name, and module dependencies are ordered before their consumers. |
 | 4. Apply defines | Platform, module, plugin, and application defines select active source before final assembly. |
 | 5. Assemble source | Module source is prepended, hooks are emitted, and ordered injections are applied. |
 | 6. Relocate WGSL bindings | Assembled WGSL rewrites `@binding(auto)` declarations to concrete binding numbers. |

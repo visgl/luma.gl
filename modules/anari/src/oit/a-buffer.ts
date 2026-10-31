@@ -195,7 +195,5 @@ export const aBuffer = {
  */
 export const aBufferPlugin = {
   name: 'aBuffer',
-  wgsl: {
-    modules: [aBuffer as ShaderModule]
-  }
+  modules: [aBuffer as ShaderModule]
 } as const satisfies ShaderPlugin;

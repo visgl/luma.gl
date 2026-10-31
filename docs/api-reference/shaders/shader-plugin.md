@@ -16,7 +16,7 @@ For the authoring model, see
 [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders).
 
 <DocumentationContract title="ShaderPlugin" rows={[
-  {label: 'Languages', value: 'Shared contributions plus optional WGSL and GLSL variants'},
+  {label: 'Languages', value: 'One portable interface with GLSL/WGSL source per injection'},
   {label: 'Dependencies', value: 'Composes ShaderModules selected by the plugin'},
   {label: 'Hooks and injections', value: 'Targets named vertex and fragment extension points'},
   {label: 'Props and bindings', value: 'Declares vertex inputs, varyings, modules, and defines'},
@@ -48,16 +48,6 @@ export type ShaderPlugin = {
   injections?: ShaderPluginInjection[];
   vertexInputs?: Record<string, AttributeShaderType>;
   varyings?: Record<string, ShaderPluginVarying>;
-  glsl?: ShaderPluginVariant;
-  wgsl?: ShaderPluginVariant;
-};
-
-export type ShaderPluginVariant = {
-  modules?: ShaderModule[];
-  defines?: Record<string, boolean>;
-  injections?: ShaderPluginInjection[];
-  vertexInputs?: Record<string, AttributeShaderType>;
-  varyings?: Record<string, ShaderPluginVarying>;
 };
 
 export type ShaderPluginVaryingInterpolation = 'smooth' | 'flat';
@@ -69,7 +59,8 @@ export type ShaderPluginVarying = {
 
 export type ShaderPluginInjection = {
   target: ShaderPluginInjectionTarget;
-  injection: string;
+  glsl?: string;
+  wgsl?: string;
   order?: number;
 };
 
@@ -89,10 +80,8 @@ export type ResolvedShaderPlugins = {
 
 | Field | Resolution |
 | --- | --- |
-| Top-level `modules`, `defines`, `injections`, `vertexInputs`, and `varyings` | Shared across shader languages. |
-| `glsl` | Added for GLSL assembly. |
-| `wgsl` | Added for WGSL assembly. |
-| Backend define keys | Override same-named shared define keys. |
+| `modules`, `defines`, `vertexInputs`, and `varyings` | Shared across shader languages. Later plugins override same-named define keys. |
+| Injection `glsl` / `wgsl` | Select the source matching the assembly language. An omitted source skips that injection; an empty string remains an explicit injection. |
 | `vertexInputs` | Render-shader inputs merged by input name. Repeated names must use the same shader type; conflicting types throw. Buffer ownership remains with the caller. |
 | `varyings` | Cross-stage values merged by name. Repeated names must use the same type and interpolation. Floating-point values default to `smooth`; integer values default to and require `flat`. |
 | Injection entries | Preserve author order within the same `order` value. |
@@ -267,22 +256,13 @@ model, buffers, shaders, or pipeline.
 ```ts
 const tintPlugin: ShaderPlugin = {
   name: 'tint-plugin',
-  glsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }'
-      }
-    ]
-  },
-  wgsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
-      }
-    ]
-  }
+  injections: [
+    {
+      target: 'fs:#decl',
+      glsl: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }',
+      wgsl: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
+    }
+  ]
 };
 ```
 
