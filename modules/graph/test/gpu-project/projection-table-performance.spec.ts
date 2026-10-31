@@ -67,7 +67,7 @@ for (const fixture of performanceFixtures) {
         const report = await runProjectionTableBenchmark(device, {
           transform: new ProjectionTableTransform(prepared),
           batches,
-          provider: '@math.gl/geospatial/projection 5.0.0-beta.1 TypeScript',
+          provider: '@math.gl/geospatial/projection 5.0.0-beta.2 TypeScript',
           maximumError: 0.001,
           warmupIterations: measured ? 2 : 0,
           measuredIterations: measured ? 5 : 1

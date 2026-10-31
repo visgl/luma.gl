@@ -37,7 +37,7 @@ for (const method of ['lambert-1sp', 'lambert-2sp', 'albers'] as const) {
         // covered separately: the native geographic footprint is larger than the fitted rectangle.
         const coordinates = makePerformanceCoordinates(domain.bounds, rowCount).slice(0, -2);
         coordinates.push([NaN, 0]);
-        const providerLabel = '@math.gl/geospatial/projection 5.0.0-beta.1 TypeScript';
+        const providerLabel = '@math.gl/geospatial/projection 5.0.0-beta.2 TypeScript';
         const report = await runProjectionProgramBenchmark(device, {
           coordinates,
           oracleLabel: providerLabel,

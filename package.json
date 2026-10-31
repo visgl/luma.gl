@@ -60,15 +60,15 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "~5.0.0-beta.1",
+    "@loaders.gl/core": "~5.0.0-beta.2",
+    "@loaders.gl/images": "~5.0.0-beta.2",
     "@loaders.gl/pointclouds": "~5.0.0-beta.1",
-    "@loaders.gl/scene": "~5.0.0-beta.1",
-    "@loaders.gl/sql": "~5.0.0-beta.1",
-    "@loaders.gl/tables": "~5.0.0-beta.1",
-    "@loaders.gl/textures": "~5.0.0-beta.1",
+    "@loaders.gl/scene": "~5.0.0-beta.2",
+    "@loaders.gl/sql": "~5.0.0-beta.2",
+    "@loaders.gl/tables": "~5.0.0-beta.2",
     "@luma.gl/ts-transform-inline-webgl-constants": "workspace:*",
-    "@math.gl/dggs": "~5.0.0-beta.1",
-    "@math.gl/geospatial": "~5.0.0-beta.1",
+    "@math.gl/dggs": "~5.0.0-beta.2",
+    "@math.gl/geospatial": "~5.0.0-beta.2",
     "@probe.gl/test-utils": "^4.1.1",
     "@types/node": "22.15.2",
     "@vis.gl/dev-tools": "^2.0.0-beta.1",
@@ -104,14 +104,14 @@
     "@luma.gl/webgl": "workspace:modules/core",
     "@loaders.gl/core/apache-arrow": "^17.0.0",
     "@loaders.gl/tables/apache-arrow": "^17.0.0",
-    "@deck.gl/core/@math.gl/core": "5.0.0-beta.1"
+    "@deck.gl/core/@math.gl/core": "5.0.0-beta.2"
   },
   "pre-commit": [
     "test-fast"
   ],
   "dependencies": {
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
-    "@math.gl/core": "~5.0.0-beta.1",
+    "@math.gl/core": "~5.0.0-beta.2",
     "@types/offscreencanvas": "^2019.7.3",
     "preact": "^10.17.0"
   },

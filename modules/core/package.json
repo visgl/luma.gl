@@ -108,7 +108,7 @@
   },
   "dependencies": {
     "@luma.gl/shaders": "10.0.0-alpha.6",
-    "@math.gl/core": "~5.0.0-beta.1",
+    "@math.gl/core": "~5.0.0-beta.2",
     "@types/offscreencanvas": "^2019.7.3",
     "@webgpu/types": "^0.1.69",
     "probe.gl": "^5.0.0"

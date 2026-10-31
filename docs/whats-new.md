@@ -145,8 +145,9 @@ Target Release Date: Q3, 2026
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
-- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.1 grouped
-  packages and loaders.gl 5.0.0-beta.1 grouped packages. Arrow adapters expose
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.2 grouped
+  packages and loaders.gl 5.0.0-beta.2 grouped packages. The LAS example retains
+  `@loaders.gl/pointclouds` beta.1 until beta.2 is published. Arrow adapters expose
   `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
   for native GeoArrow chunks and rows without copying coordinate buffers. Views
   borrow source storage; keep it alive and do not mutate or detach it while in use.
