@@ -17,8 +17,8 @@
     "@luma.gl/engine": "10.0.0-alpha.6",
     "@luma.gl/graph": "10.0.0-alpha.6",
     "@luma.gl/shaders": "10.0.0-alpha.6",
-    "@math.gl/core": "~5.0.0-beta.1",
-    "@math.gl/earth": "~5.0.0-beta.1",
+    "@math.gl/core": "~5.0.0-beta.2",
+    "@math.gl/earth": "~5.0.0-beta.2",
     "suncalc": "2.1.0"
   },
   "devDependencies": {

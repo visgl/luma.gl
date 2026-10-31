@@ -118,7 +118,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ### loaders.gl grouped packages
 
-luma.gl now uses loaders.gl 5.0.0-beta.1. Install `@loaders.gl/tables` in place of
+luma.gl now uses loaders.gl 5.0.0-beta.2. Install `@loaders.gl/tables` in place of
 `@loaders.gl/parquet`, and import Parquet APIs from `@loaders.gl/tables/parquet` or
 its explicit implementation subpaths. Schema, schema utilities, and Node polyfills
 now come from `@loaders.gl/core/schema`, `@loaders.gl/core/schema-utils`, and
@@ -130,6 +130,15 @@ The beta also groups glTF under `@loaders.gl/scene/gltf` and LAS under
 respectively. Install package roots, then import from the format subpaths.
 
 
+### loaders.gl beta.2 imports
+
+Replace `@loaders.gl/textures` dependencies and imports with `@loaders.gl/images`.
+Legacy texture helpers and decoder configuration use explicit entries such as
+`@loaders.gl/images/load-image`, `@loaders.gl/images/basis-module-loader`, and
+`@loaders.gl/images/crunch-module-loader`. Loader, writer, and source entries are
+now flat: for example, replace `@loaders.gl/tables/parquet/parquet-source-loader`
+with `@loaders.gl/tables/parquet-source-loader`.
+
 ### Audio loading ownership
 
 loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.gl's
@@ -139,7 +148,7 @@ resource ownership rules, and preserves luma.gl's support for legacy draft attac
 
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.1. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.2. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
 `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS, projection, and
 GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
@@ -413,7 +422,7 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
   the shared `examples/gltf/gltf-exporter.ts` application helper. Copy it into your application
   when exporting assets; it uses loaders.gl for GLB encoding.
 - `loadPBREnvironment()` now requires a `loadImage` callback. Pass your application image loader,
-  such as `loadImage: loadImageTexture` from `@loaders.gl/textures`.
+  such as `loadImage: loadImageTexture` from `@loaders.gl/images/load-image`.
 - The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`,
   `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and
   `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to

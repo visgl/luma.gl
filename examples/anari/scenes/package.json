@@ -9,13 +9,13 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "~5.0.0-beta.1",
-    "@loaders.gl/scene": "~5.0.0-beta.1",
+    "@loaders.gl/core": "~5.0.0-beta.2",
+    "@loaders.gl/scene": "~5.0.0-beta.2",
     "@luma.gl/anari": "workspace:*",
     "@luma.gl/core": "10.0.0-alpha.6",
     "@luma.gl/engine": "10.0.0-alpha.6",
     "@luma.gl/shaders": "10.0.0-alpha.6",
-    "@math.gl/core": "5.0.0-beta.1",
+    "@math.gl/core": "5.0.0-beta.2",
     "jsonc-parser": "3.2.0",
     "monaco-editor": "^0.53.0"
   },

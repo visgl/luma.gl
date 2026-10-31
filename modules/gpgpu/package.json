@@ -80,7 +80,7 @@
     "apache-arrow": ">=17.0.0"
   },
   "dependencies": {
-    "@math.gl/core": "~5.0.0-beta.1",
+    "@math.gl/core": "~5.0.0-beta.2",
     "probe.gl": "^5.0.0"
   },
   "peerDependenciesMeta": {

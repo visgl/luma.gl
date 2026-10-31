@@ -32,7 +32,7 @@ for (const fixture of performanceFixtures) {
         });
         expect(report.comparison).toBe('equal-error-budget');
         expect(report.consumerCount).toBe(consumerCount);
-        expect(report.cpuProvider).toBe('@math.gl/geospatial/projection 5.0.0-beta.1 TypeScript');
+        expect(report.cpuProvider).toBe('@math.gl/geospatial/projection 5.0.0-beta.2 TypeScript');
         expect(report.cpuPaths).toHaveLength(12);
         for (const path of report.cpuPaths) {
           expect(path.validRows).toBe(rowCount + 9);
