@@ -71,6 +71,9 @@ The optional Arrow adapters convert Apache Arrow objects into primitive
 
 - `makeGPUDataFromArrowData()` uploads one Arrow `Data` chunk into a `GPUData`.
 - `makeGPUVectorFromArrow()` uploads one Arrow `Vector` into a `GPUVector`.
+- `convertArrowColumnToGPUVector()` converts numeric and color columns for rendering, optionally
+  applying a row transform and returning validity and residual-low vectors. Its result owns the
+  uploaded buffers; call `destroy()` when finished.
 - `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
 - `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record
   batch boundaries.
