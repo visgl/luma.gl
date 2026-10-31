@@ -115,5 +115,5 @@ export const wboit = {
 /** Shader plugin that installs the portable weighted blended OIT shader module. */
 export const wboitPlugin = {
   name: 'wboit',
-  modules: [wboit as ShaderModule]
+  module: wboit as ShaderModule
 } as const satisfies ShaderPlugin;

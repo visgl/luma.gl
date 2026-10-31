@@ -1019,5 +1019,5 @@ export const glassTransmission = {
 /** Installs the optional rasterized transmission extension and its glass-material dependency. */
 export const glassTransmissionPlugin = {
   name: 'glassTransmission',
-  modules: [glassTransmission as ShaderModule]
+  module: glassTransmission as ShaderModule
 } as const satisfies ShaderPlugin;

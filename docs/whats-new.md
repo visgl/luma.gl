@@ -1,5 +1,13 @@
 # What's New
 
+## Shader plugin primary modules
+
+ShaderPlugin now contributes one optional `module`, with supporting modules expressed
+through its dependencies. Material, filter, and clip plugins use this simpler shape;
+injection-only plugins remain supported. See the
+[plugin reference](./api-reference/shaders/shader-plugin.md#primary-module) and
+[migration guide](./upgrade-guide.md#shader-plugin-primary-module).
+
 ## Streamlined shader plugins
 
 `ShaderPlugin` declares one portable interface. Each injection carries its own `glsl` and

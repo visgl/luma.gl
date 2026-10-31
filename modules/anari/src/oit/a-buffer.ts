@@ -195,5 +195,5 @@ export const aBuffer = {
  */
 export const aBufferPlugin = {
   name: 'aBuffer',
-  modules: [aBuffer as ShaderModule]
+  module: aBuffer as ShaderModule
 } as const satisfies ShaderPlugin;

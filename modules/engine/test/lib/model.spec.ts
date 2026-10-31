@@ -1096,7 +1096,7 @@ it('Model#plugins assemble backend contributions', async () => {
     plugins: [
       {
         name: 'glsl-model-plugin',
-        modules: [pluginModule],
+        module: pluginModule,
         injections: [{target: 'fs:#decl', glsl: 'float pluginMarker = 1.0;'}]
       }
     ]

@@ -200,12 +200,10 @@ it('Computation#plugins assemble WGSL contributions', async () => {
       plugins: [
         {
           name: 'compute-plugin',
-          modules: [
-            {
-              name: 'compute-plugin-module',
-              source: 'const COMPUTE_PLUGIN_MARKER: i32 = 1;'
-            }
-          ]
+          module: {
+            name: 'compute-plugin-module',
+            source: 'const COMPUTE_PLUGIN_MARKER: i32 = 1;'
+          }
         }
       ]
     });

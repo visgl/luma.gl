@@ -50,8 +50,8 @@ export type ResolvedShaderPluginVarying = {
 export type ShaderPlugin = {
   /** Stable plugin identifier. */
   name: string;
-  /** Shader modules added to shader assembly. */
-  modules?: ShaderModule[];
+  /** Primary shader module. Supporting modules belong in its dependencies; omit for injection-only plugins. */
+  module?: ShaderModule;
   /** Boolean preprocessor defines added to shader assembly. */
   defines?: Record<string, boolean>;
   /** Named code injections added to shader assembly. */
@@ -143,8 +143,8 @@ function appendShaderPlugin(
   plugin: ShaderPlugin,
   shaderLanguage: 'glsl' | 'wgsl'
 ): void {
-  if (plugin.modules?.length) {
-    resolved.modules.push(...plugin.modules);
+  if (plugin.module) {
+    resolved.modules.push(plugin.module);
   }
   if (plugin.defines) {
     Object.assign(resolved.defines, plugin.defines);

@@ -84,7 +84,7 @@ Pass only direct dependencies. The assembler orders and de-duplicates the transi
 ```ts
 const tintPlugin: ShaderPlugin = {
   name: 'tint-plugin',
-  modules: [tint],
+  module: tint,
   injections: [{target: 'fs:#main-end', glsl: 'color *= tint.color;', wgsl: 'color *= tint.color;'}]
 };
 ```

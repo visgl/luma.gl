@@ -78,7 +78,7 @@ fn filter_isVisible(value: f32) -> bool {
 /** Scalar inclusive-range filtering for shaders that expose the `FILTER_POSITION` vertex hook. */
 export const filterShaderPlugin: ShaderPlugin = {
   name: 'filter',
-  modules: [filterShaderModule],
+  module: filterShaderModule,
   vertexInputs: {
     filterValues: 'f32'
   },
