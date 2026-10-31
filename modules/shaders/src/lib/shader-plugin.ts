@@ -172,6 +172,7 @@ function appendShaderPlugin(
     }
     const injections = resolved.injections[injection.target];
     injections.push({
+      pluginName: plugin.name,
       injection: source,
       order: injection.order ?? 0
     });

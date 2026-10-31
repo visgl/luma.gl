@@ -268,3 +268,12 @@ const tintPlugin: ShaderPlugin = {
 
 For runnable examples, see [Shader Plugins](/docs/tutorials/shader-plugins) and
 [Arrow ShaderPlugin Filtering](/examples/arrow/arrow-filtering).
+
+## Hook diagnostics and ownership
+
+Unknown named injection targets report the stage-prefixed hook and contributing
+plugin names. Register the hook on an application-owned assembler or pass
+`hookFunctions` to an assembly call. Per-call hooks follow registered hooks and
+override matching stage-prefixed names without changing subsequent assemblies.
+For WGSL mutable arguments, use pointers such as
+`fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)` and write through `*color`.

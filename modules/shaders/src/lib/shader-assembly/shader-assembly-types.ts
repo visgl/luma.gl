@@ -44,7 +44,7 @@ export type AssembleShaderOptions = {
   defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
-  /** Hook functions */
+  /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
   hookFunctions?: readonly (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
@@ -78,7 +78,7 @@ export type AssembleStageOptions = {
   defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
-  /** Hook functions */
+  /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
   hookFunctions?: readonly (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;

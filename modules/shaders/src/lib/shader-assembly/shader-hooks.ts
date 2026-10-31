@@ -106,7 +106,12 @@ export function validateShaderHookInjections(
 
     if (!isShaderHookRegistered(registry, hookName)) {
       // The injection targets a hook that was not declared for this stage.
-      throw new Error(`Unknown shader hook ${hookName}`);
+      const pluginNames = [
+        ...new Set(hookInjections[hookName].map(injection => injection.pluginName).filter(Boolean))
+      ];
+      throw new Error(
+        `Unknown shader hook ${hookName}${pluginNames.length ? ` (plugins: ${pluginNames.join(', ')})` : ''}`
+      );
     }
   }
 }
