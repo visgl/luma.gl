@@ -1,4 +1,4 @@
-# Third-party notices: @luma.gl/shadertools
+# Third-party notices: @luma.gl/shaders
 
 Shader composition by vis.gl contributors; historical Khronos PBR shaders, three.js half-float conversion, and Uber geospatial shader contributions.
 
@@ -30,18 +30,3 @@ Adaptation: src/modules/math/fp16/fp16-utils.ts adapts half-float conversion to 
 
 Full terms: [three](./licenses/three.txt).
 
-## Linearly Transformed Cosines fit data
-
-Copyright (c) 2017, Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt.
-
-Source: [selfshadow/ltc_code fit/results/ltc.js](https://github.com/selfshadow/ltc_code/blob/31e5e96b54f98f33098f8503003119ba2231a1c6/fit/results/ltc.js),
-pinned to commit `31e5e96b54f98f33098f8503003119ba2231a1c6`.
-The GGX fit tables are embedded in `src/modules/lighting/area-lighting/ltc-data.ts`
-as TypeScript arrays for area-light shading.
-
-Required paper reference: **Real-Time Polygonal-Light Shading with Linearly
-Transformed Cosines**, Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt,
-ACM Transactions on Graphics (Proceedings of ACM SIGGRAPH 2016), 35(4), 2016.
-[Project page](https://eheitzresearch.wordpress.com/415-2/).
-
-Full terms: [LicenseRef-LTC and paper citation](./src/modules/lighting/area-lighting/LTC-LICENSE.txt).

@@ -109,7 +109,7 @@ describe('Attribution guardrails', () => {
 
   test('rejects removed upstream ownership', () => {
     const fixtureRoot = makeAttributionFixture();
-    const filename = path.join(fixtureRoot, 'modules/gltf/src/types/gltf-json-schema.ts');
+    const filename = path.join(fixtureRoot, 'modules/engine/src/gltf/types/gltf-json-schema.ts');
     writeFileSync(
       filename,
       readFileSync(filename, 'utf8').replace('2018 Benjamin Wasty', 'upstream')
@@ -136,7 +136,7 @@ describe('Attribution guardrails', () => {
     const fixtureRoot = makeAttributionFixture();
     const filename = path.join(
       fixtureRoot,
-      'modules/effects/src/passes/postprocessing/image-adjust-filters/brightnesscontrast.ts'
+      'modules/engine/src/effects/passes/postprocessing/image-adjust-filters/brightnesscontrast.ts'
     );
     writeFileSync(
       filename,

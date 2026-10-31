@@ -1,15 +1,13 @@
 {
   "publicPackages": [
+    "anari",
     "core",
-    "effects",
     "engine",
-    "gltf",
     "gpgpu",
     "graph",
-    "shadertools",
+    "shaders",
     "slang",
-    "test-utils",
-    "text"
+    "three"
   ],
   "sources": [
     {
@@ -26,65 +24,65 @@
     },
     {
       "files": [
-        "modules/shadertools/src/modules/lighting/pbr-material/pbr-material-glsl.ts",
-        "modules/shadertools/src/modules/lighting/pbr-material/pbr-material-wgsl.ts"
+        "modules/shaders/src/modules/lighting/pbr-material/pbr-material-glsl.ts",
+        "modules/shaders/src/modules/lighting/pbr-material/pbr-material-wgsl.ts"
       ],
       "markers": [
         "2016-2017 Mohamad Moneimne and Contributors"
       ],
       "notices": [
-        "modules/shadertools/licenses/pbr.txt"
+        "modules/shaders/licenses/pbr.txt"
       ]
     },
     {
       "files": [
-        "modules/shadertools/src/modules/math/fp16/fp16-utils.ts"
+        "modules/shaders/src/modules/math/fp16/fp16-utils.ts"
       ],
       "markers": [
         "three.js authors",
         "THREE.js"
       ],
       "notices": [
-        "modules/shadertools/licenses/three.txt"
+        "modules/shaders/licenses/three.txt"
       ]
     },
     {
       "files": [
-        "modules/splats/src/splat-rad-hierarchy.ts",
-        "modules/splats/src/gpu-paged-splat-shaders.ts"
+        "modules/engine/src/splats/splat-rad-hierarchy.ts",
+        "modules/engine/src/splats/gpu-paged-splat-shaders.ts"
       ],
       "markers": [
         "Spark",
         "WORLD LABS TECHNOLOGIES"
       ],
       "notices": [
-        "modules/splats/licenses/spark.txt"
+        "modules/engine/licenses/spark.txt"
       ]
     },
     {
       "files": [
-        "modules/text/src/fonts/helvetiker.ts"
+        "modules/engine/src/text/fonts/helvetiker.ts"
       ],
       "markers": [
         "three.js authors",
         "MAGENTA Ltd."
       ],
       "notices": [
-        "modules/text/licenses/three.txt",
-        "modules/text/licenses/magenta-font.txt"
+        "modules/engine/licenses/three.txt",
+        "modules/engine/licenses/magenta-font.txt"
       ]
     },
     {
       "files": [
-        "modules/effects/src/passes/postprocessing/fxaa/fxaa.ts"
+        "modules/engine/src/effects/passes/postprocessing/fxaa/fxaa.ts"
       ],
       "markers": [
         "2014-2015, NVIDIA CORPORATION",
         "cesium.js"
       ],
       "notices": [
-        "modules/effects/licenses/nvidia-fxaa.txt",
-        "modules/effects/licenses/cesium.txt"
+        "modules/engine/licenses/nvidia-fxaa.txt",
+        "modules/engine/licenses/cesium.txt"
       ]
     },
     {
@@ -111,20 +109,20 @@
     },
     {
       "files": [
-        "modules/gltf/src/types/gltf-json-schema.ts",
-        "modules/gltf/src/types/gltf-postprocessed-schema.ts"
+        "modules/engine/src/gltf/types/gltf-json-schema.ts",
+        "modules/engine/src/gltf/types/gltf-postprocessed-schema.ts"
       ],
       "markers": [
         "2018 Benjamin Wasty",
         "bwasty/gltf-loader-ts"
       ],
       "notices": [
-        "modules/gltf/licenses/gltf-loader-ts.txt"
+        "modules/engine/licenses/gltf-loader-ts.txt"
       ]
     },
     {
       "files": [
-        "modules/shadertools/src/modules/lighting/area-lighting/ltc-data.ts"
+        "modules/engine/src/lighting/ltc-data.ts"
       ],
       "markers": [
         "LicenseRef-LTC",
@@ -132,27 +130,39 @@
         "31e5e96b54f98f33098f8503003119ba2231a1c6"
       ],
       "notices": [
-        "modules/shadertools/src/modules/lighting/area-lighting/LTC-LICENSE.txt"
+        "modules/engine/src/lighting/LTC-LICENSE.txt"
       ]
     },
     {
       "files": [
-        "modules/effects/src/passes/postprocessing/image-adjust-filters/brightnesscontrast.ts",
-        "modules/effects/src/passes/postprocessing/image-adjust-filters/denoise.ts",
-        "modules/effects/src/passes/postprocessing/image-adjust-filters/huesaturation.ts",
-        "modules/effects/src/passes/postprocessing/image-adjust-filters/noise.ts",
-        "modules/effects/src/passes/postprocessing/image-adjust-filters/sepia.ts",
-        "modules/effects/src/passes/postprocessing/image-adjust-filters/vibrance.ts",
-        "modules/effects/src/passes/postprocessing/image-adjust-filters/vignette.ts"
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/brightnesscontrast.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/denoise.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/huesaturation.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/noise.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/sepia.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/vibrance.ts",
+        "modules/engine/src/effects/passes/postprocessing/image-adjust-filters/vignette.ts"
       ],
       "markers": [
         "2011 by Evan Wallace",
         "glfx.js"
       ],
       "notices": [
-        "modules/effects/licenses/glfx.txt"
+        "modules/engine/licenses/glfx.txt"
+      ]
+    },
+    {
+      "files": [
+        "modules/graph/src/experimental/simulation/scientific-flow-rk45-shaders.ts"
+      ],
+      "markers": [
+        "Parcels team",
+        "8584c09a4189ed29a49aa980b9830a2379e42c65"
+      ],
+      "notices": [
+        "modules/graph/src/experimental/simulation/PARCELS-LICENSE.txt"
       ]
     }
   ],
-  "auditedBaseCommit": "5021c4893"
+  "auditedBaseCommit": "3f83f06f0"
 }

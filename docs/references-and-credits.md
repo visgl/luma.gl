@@ -37,24 +37,17 @@ The website also distributes [standalone example notices](/standalone-examples/T
 | Package | Contributions and foundations |
 | --- | --- |
 | [core](https://github.com/visgl/luma.gl/blob/master/modules/core/THIRD-PARTY-NOTICES.md) | Portable API and backends; Gregg Tavares’s webgpu-utils mipmaps, Mikola Lysenko’s regl polyfill lineage, wwwtyro’s compiler parser, and Spector.js declarations. |
-| [engine](https://github.com/visgl/luma.gl/blob/master/modules/engine/THIRD-PARTY-NOTICES.md) | PhiloGL heritage; math.gl supplies CPU primitive generation and numerical foundations. |
-| [shadertools](https://github.com/visgl/luma.gl/blob/master/modules/shadertools/THIRD-PARTY-NOTICES.md) | Historical Khronos PBR shaders; three.js half-float conversion; Uber geospatial shaders; Heitz, Dupuy, Hill, and Neubelt's LTC area-light fit data. |
-| [effects](https://github.com/visgl/luma.gl/blob/master/modules/effects/THIRD-PARTY-NOTICES.md) | Evan Wallace's glfx.js filters; three.js postprocessing heritage; NVIDIA FXAA via Cesium. |
-| [text](https://github.com/visgl/luma.gl/blob/master/modules/text/THIRD-PARTY-NOTICES.md) | three.js font, path, shape, and extrusion utilities; deck.gl text atlas utilities; MAGENTA's font data. |
-| [splats](https://github.com/visgl/luma.gl/blob/master/modules/splats/THIRD-PARTY-NOTICES.md) | World Labs' Spark RAD opacity and support behavior; Gaussian-splat research. |
-| [gltf](https://github.com/visgl/luma.gl/blob/master/modules/gltf/THIRD-PARTY-NOTICES.md) | Benjamin Wasty’s gltf-loader-ts schema types, Khronos specifications, sample assets, and interoperability fixtures. |
+| [engine](https://github.com/visgl/luma.gl/blob/master/modules/engine/THIRD-PARTY-NOTICES.md) | PhiloGL heritage; glTF schemas, effects, text, splats, and area-light fit data. |
+| [shaders](https://github.com/visgl/luma.gl/blob/master/modules/shaders/THIRD-PARTY-NOTICES.md) | Historical Khronos PBR shaders and three.js half-float conversion. |
 | [gpgpu](https://github.com/visgl/luma.gl/blob/master/modules/gpgpu/THIRD-PARTY-NOTICES.md) | GPU data containers, low-level operations, and execution utilities. |
-| [experimental](https://github.com/visgl/luma.gl/blob/master/modules/experimental/THIRD-PARTY-NOTICES.md) | Experimental rendering, materials, models, and scientific flow simulation. |
-| [arrow](https://github.com/visgl/luma.gl/blob/master/modules/arrow/THIRD-PARTY-NOTICES.md) | Apache Arrow and GeoArrow formats, libraries, and community. |
 | [slang](https://github.com/visgl/luma.gl/blob/master/modules/slang/THIRD-PARTY-NOTICES.md) | Slang language and compiler community; optional compiler integration. |
-| [test-utils](https://github.com/visgl/luma.gl/blob/master/modules/test-utils/THIRD-PARTY-NOTICES.md) | Shared vis.gl testing infrastructure and browser tooling. |
 | [deck-arrow-layers](https://github.com/visgl/luma.gl/blob/master/modules/deck-arrow-layers/THIRD-PARTY-NOTICES.md) | deck.gl rendering and Arrow interoperability. |
 | [deck-gpu-layers](https://github.com/visgl/luma.gl/blob/master/modules/deck-gpu-layers/THIRD-PARTY-NOTICES.md) | deck.gl rendering and GPU data interoperability. |
-| [graph](https://github.com/visgl/luma.gl/blob/master/modules/graph/THIRD-PARTY-NOTICES.md) | GPU composition, RAPIDS-inspired analysis, physics, and projection operations. |
+| [graph](https://github.com/visgl/luma.gl/blob/master/modules/graph/THIRD-PARTY-NOTICES.md) | GPU composition, RAPIDS-inspired analysis, physics, projection operations, and Parcels-derived RKF45 advection. |
 | [anari](https://github.com/visgl/luma.gl/blob/master/modules/anari/THIRD-PARTY-NOTICES.md) | Independent exploration of the Khronos ANARI object model. |
 | [three](https://github.com/visgl/luma.gl/blob/master/modules/three/THIRD-PARTY-NOTICES.md) | Interoperability with separately installed three.js. |
 
-The private ANARI workspace explores the **Khronos ANARI** object model. Standards
+The ANARI workspace explores the **Khronos ANARI** object model. Standards
 inspiration and format support do not imply certification, affiliation, or
 endorsement. Package boundaries can change: primitive generation has moved to
 math.gl; its TDL and PhiloGL history remains part of luma.gl's lineage.
@@ -101,7 +94,7 @@ explain important ideas used by the rendering and compute features:
 - **Brian Karis**, [Real Shading in Unreal Engine 4](https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf);
   **Brent Burley**, [Physically-Based Shading at Disney](https://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_notes_v3.pdf);
   and **Christophe Schlick**, *An Inexpensive BRDF Model for Physically-based Rendering*.
-  See the [PBR material reference](./api-reference/shadertools/shader-modules/pbr-material.md)
+  See the [PBR material reference](./api-reference/shaders/shader-modules/pbr-material.md)
   for their relationship to the shader.
 - **Eric Heitz, Jonathan Dupuy, Stephen Hill, and David Neubelt**,
   [Real-Time Polygonal-Light Shading with Linearly Transformed Cosines](https://eheitzresearch.wordpress.com/415-2/),
@@ -162,7 +155,7 @@ examples, screenshots, converted assets, or generated font atlases.
 | USD mini vehicles | Kenney; USD conversion and assembly by Robin-Yann Storm. |
 | USD teapots | Chris Rydalch at SideFX; Fancy Teapot by James Ray Cook, Jurita Burger, and Rico Cilliers at PolyHaven. |
 | Open Chess Set | Moeen Sayed and Mujtaba Sayed; SideFX, Chris Rydalch, Jonathan Stone, and Pablo Delgado; Academy Software Foundation CC BY 4.0. [Full USD credits and terms](https://github.com/visgl/luma.gl/blob/master/examples/anari/scenes/public/usd/ASSET-LICENSE.md). |
-| glTF interoperability fixtures | Khronos Sample Assets, Marco Hutter's Simple Skin, and Babylon.js; [pinned sources, transformations, and terms](https://github.com/visgl/luma.gl/blob/master/modules/gltf/test/data/README.md). |
+| glTF interoperability fixtures | Khronos Sample Assets, Marco Hutter's Simple Skin, and Babylon.js; [pinned sources, transformations, and terms](https://github.com/visgl/luma.gl/blob/master/modules/engine/test/gltf/data/README.md). |
 | Text Space Crawl font atlas | Oswald font contributors and Viktor Chlumský's msdfgen; [font source, OFL, and generation tools](https://github.com/visgl/luma.gl/blob/master/examples/experimental/text-space-crawl/public/fonts/README.md). |
 | 3D texture and depth-of-field examples | Tarek Sherif's [PicoGL.js](https://github.com/tsherif/picogl.js) examples, ported to luma.gl; see the [example notice index](https://github.com/visgl/luma.gl/blob/master/examples/THIRD-PARTY-NOTICES.md). |
 | Transform feedback tutorial | [WebGL 2 Samples](https://github.com/WebGLSamples/WebGL2Samples), linked from the tutorial. |

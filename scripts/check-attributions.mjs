@@ -107,7 +107,8 @@ assert(readText('website/docusaurus.config.js').includes('docs/references-and-cr
 
 // Standalone website distributions need full terms even when bundlers remove comments.
 const distributionSources = ['LICENSE', 'examples/THIRD-PARTY-NOTICES.md',
-  'modules/shadertools/src/modules/lighting/area-lighting/LTC-LICENSE.txt',
+  'modules/engine/src/lighting/LTC-LICENSE.txt',
+  'modules/graph/src/experimental/simulation/PARCELS-LICENSE.txt',
   'website/static/images/examples/gltf/ATTRIBUTION.md',
   'examples/licenses/picogl.txt',
   'examples/anari/scenes/public/gltf/ASSET-LICENSE.md',

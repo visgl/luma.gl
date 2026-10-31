@@ -70,7 +70,7 @@ The [project credits guide](../docs/references-and-credits.md) also recognizes
 research, educational examples, tooling, and implementation foundations.
 Applicable package notices must accompany bundles of luma.gl code.
 
-===== modules/shadertools/src/modules/lighting/area-lighting/LTC-LICENSE.txt =====
+===== modules/engine/src/lighting/LTC-LICENSE.txt =====
 
 Copyright (c) 2017, Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt.
 All rights reserved.
@@ -103,6 +103,28 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+===== modules/graph/src/experimental/simulation/PARCELS-LICENSE.txt =====
+
+The MIT License (MIT)
+
+Copyright (c) 2025, Parcels team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ===== website/static/images/examples/gltf/ATTRIBUTION.md =====
 
@@ -326,17 +348,6 @@ Independently developed retained scene API inspired by Khronos ANARI. This priva
 
 See the [repository license](./LICENSE) and [References and credits](https://luma.gl/docs/references-and-credits). Separately installed dependencies retain their own licenses. No additional embedded third-party source is identified in this inventory.
 
-===== modules/arrow/THIRD-PARTY-NOTICES.md =====
-
-# Third-party notices: @luma.gl/arrow
-
-Apache Arrow and GeoArrow provide format and interoperability foundations. The separately installed apache-arrow dependency retains its Apache-2.0 license.
-
-The [repository license](./LICENSE) retains historical project notices.
-See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
-This workspace is private; these notices also accompany local distributions.
-Separately installed dependencies retain their own licenses.
-
 ===== modules/core/THIRD-PARTY-NOTICES.md =====
 
 # Third-party notices: @luma.gl/core
@@ -516,9 +527,36 @@ See [References and credits](https://luma.gl/docs/references-and-credits) for pe
 This workspace is private; these notices also accompany local distributions.
 Separately installed dependencies retain their own licenses.
 
-===== modules/effects/THIRD-PARTY-NOTICES.md =====
+===== modules/engine/THIRD-PARTY-NOTICES.md =====
 
-# Third-party notices: @luma.gl/effects
+# Third-party notices: @luma.gl/engine
+
+PhiloGL heritage; primitive generation is supplied by the separately installed math.gl geometry package. Historical Google TDL primitive contributions remain acknowledged in the public credits guide, rather than being described as source shipped by this package.
+
+The [repository license](./LICENSE) retains historical project notices.
+See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
+Separately installed dependencies retain their own licenses; this is not a transitive dependency inventory.
+
+## PhiloGL
+
+Nicolas Garcia Belmonte; Sencha Labs.
+
+Source: [PhiloGL](https://github.com/senchalabs/philogl).
+
+Revision: historical import revision unknown unless explicitly identified below. Upstream license copies supplement retained source and repository notices.
+
+Adaptation: Historical ES6 port and subsequent engine evolution. The root LICENSE retains the 2013 Sencha notice; upstream also names the author in its 2011 notice. This is project lineage, not a claim that every engine file is copied.
+
+Full terms: [philogl](./licenses/philogl.txt).
+## Arrow interoperability
+
+Apache Arrow and GeoArrow provide format and interoperability foundations. The separately installed apache-arrow dependency retains its Apache-2.0 license.
+
+The [repository license](./LICENSE) retains historical project notices.
+See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
+These notices accompany the engine package.
+Separately installed dependencies retain their own licenses.
+## Effects
 
 Classic image filters derive from Evan Wallace’s glfx.js; LICENSE also retains three.js postprocessing attribution. FXAA comes through NVIDIA and Cesium.
 
@@ -558,7 +596,7 @@ Source: [FXAA via Cesium](https://github.com/CesiumGS/cesium/tree/1.40).
 
 Revision: historical import revision unknown unless explicitly identified below. Upstream license copies supplement retained source and repository notices.
 
-Adaptation: src/passes/postprocessing/fxaa/fxaa.ts records sampling, alpha, and luminance modifications. Cesium 1.40 is a license reference, not an asserted import version. NVIDIA FXAA 3.11 BSD and Cesium Apache-2.0 terms are retained separately.
+Adaptation: src/effects/passes/postprocessing/fxaa/fxaa.ts records sampling, alpha, and luminance modifications. Cesium 1.40 is a license reference, not an asserted import version. NVIDIA FXAA 3.11 BSD and Cesium Apache-2.0 terms are retained separately.
 
 Full terms: [cesium](./licenses/cesium.txt).
 
@@ -573,8 +611,111 @@ Revision: historical import revision unknown unless explicitly identified below.
 Adaptation: See FXAA via Cesium. The full NVIDIA notice is extracted from the retained source comment.
 
 Full terms: [nvidia-fxaa](./licenses/nvidia-fxaa.txt).
+## glTF
 
-===== modules/effects/licenses/cesium.txt =====
+glTF interpretation follows Khronos specifications. Fixture provenance, licenses, revisions, and transformations are documented at modules/engine/test/gltf/data/README.md in the repository; test fixtures are not shipped by this package.
+
+The [repository license](./LICENSE) retains historical project notices.
+See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
+Separately installed dependencies retain their own licenses; this is not a transitive dependency inventory.
+
+
+
+## gltf-loader-ts schema types
+
+Copyright (c) 2018 Benjamin Wasty.
+
+Source: [gltf-loader-ts](https://github.com/bwasty/gltf-loader-ts). Historical import revision unknown; the source was previously maintained through loaders.gl and moved into luma.gl.
+
+Affected files: src/gltf/types/gltf-json-schema.ts and src/gltf/types/gltf-postprocessed-schema.ts. Types are adapted for luma.gl’s glTF extensions, parser output, and strict TypeScript APIs.
+
+Full terms: [MIT license](./licenses/gltf-loader-ts.txt).
+## Splats
+
+Gaussian-splat rendering with Spark RAD opacity/support behavior adapted from World Labs.
+
+The [repository license](./LICENSE) retains historical project notices.
+See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
+These notices accompany the engine package.
+Separately installed dependencies retain their own licenses.
+
+## Spark
+
+Copyright © 2025 WORLD LABS TECHNOLOGIES, INC..
+
+Source: [Spark](https://github.com/sparkjsdev/spark/blob/main/src/shaders/splatVertex.glsl).
+
+Revision: historical import revision unknown unless identified below.
+
+Adaptation: src/splats/splat-rad-hierarchy.ts and src/splats/gpu-paged-splat-shaders.ts adapt RAD opacity/support behavior for luma.gl paging and shaders.
+
+Full terms: [spark](./licenses/spark.txt).
+## Text
+
+Text paths, extrusion, and font loading adapted from three.js; browser atlas utilities adapted from deck.gl. Font data has its own retained terms.
+
+The [repository license](./LICENSE) retains historical project notices.
+See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
+These notices accompany the published text package and local distributions.
+Separately installed dependencies retain their own licenses.
+
+## three.js text utilities
+
+three.js authors.
+
+Source: [three.js text utilities](https://github.com/mrdoob/three.js).
+
+Revision: historical import revision unknown unless identified below.
+
+Adaptation: src/text/text-3d paths, curves, shapes, FontLoader, TextGeometry, and ExtrudeGeometry adapted to TypeScript and luma.gl geometry; src/text/fonts/typeface-font-data.ts and helvetiker.ts retain three.js data lineage.
+
+Full terms: [three](./licenses/three.txt).
+
+## deck.gl text atlas
+
+Vis.gl contributors.
+
+Source: [deck.gl text atlas](https://github.com/visgl/deck.gl).
+
+Revision: historical import revision unknown unless identified below.
+
+Adaptation: src/text/fonts/atlas/browser-font-atlas.ts and text-utils.ts adapt browser font atlas and text utilities.
+
+Full terms: [deck](./licenses/deck.txt).
+
+## Helvetiker / MgOpen
+
+Copyright (c) 2004 by MAGENTA Ltd. All Rights Reserved..
+
+Source: [Helvetiker / MgOpen](https://github.com/mrdoob/three.js/blob/master/examples/fonts/helvetiker_regular.typeface.json).
+
+Revision: historical import revision unknown unless identified below.
+
+Adaptation: src/text/fonts/helvetiker.ts packages font data as TypeScript. Metadata identifies version 1.00, 2004 initial release. The embedded original font terms are reproduced separately from the code license.
+
+Full terms: [magenta-font](./licenses/magenta-font.txt).
+
+## Linearly Transformed Cosines fit data
+
+Copyright (c) 2017, Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt.
+
+Source: [selfshadow/ltc_code fit/results/ltc.js](https://github.com/selfshadow/ltc_code/blob/31e5e96b54f98f33098f8503003119ba2231a1c6/fit/results/ltc.js),
+pinned to commit `31e5e96b54f98f33098f8503003119ba2231a1c6`.
+The GGX fit tables are embedded in `src/lighting/ltc-data.ts`
+as TypeScript arrays for area-light shading.
+
+Required paper reference: **Real-Time Polygonal-Light Shading with Linearly
+Transformed Cosines**, Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt,
+ACM Transactions on Graphics (Proceedings of ACM SIGGRAPH 2016), 35(4), 2016.
+[Project page](https://eheitzresearch.wordpress.com/415-2/).
+
+Full terms: [LicenseRef-LTC and paper citation](./src/lighting/LTC-LICENSE.txt).
+
+## deck.gl-community glyph utilities
+
+The vis.gl community’s glyph range utilities were adapted for engine font loading and atlas construction. The deck.gl MIT notice is included at [deck](./licenses/deck.txt).
+
+===== modules/engine/licenses/cesium.txt =====
 
 Copyright 2011-2017 Cesium Contributors
 
@@ -784,7 +925,29 @@ Patent 9153063
 
 Skipping Heuristics and Fusing (Pat. Pend.)
 
-===== modules/effects/licenses/glfx.txt =====
+===== modules/engine/licenses/deck.txt =====
+
+Copyright Vis.gl contributors.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+===== modules/engine/licenses/glfx.txt =====
 
 Copyright (C) 2011 by Evan Wallace
 
@@ -806,7 +969,47 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-===== modules/effects/licenses/nvidia-fxaa.txt =====
+===== modules/engine/licenses/gltf-loader-ts.txt =====
+
+MIT License
+
+Copyright (c) 2018 Benjamin Wasty
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+===== modules/engine/licenses/magenta-font.txt =====
+
+Copyright (c) 2004 by MAGENTA Ltd. All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of the fonts accompanying this license ("Fonts") and associated documentation files (the "Font Software"), to reproduce and distribute the Font Software, including without limitation the rights to use, copy, merge, publish, distribute, and/or sell copies of the Font Software, and to permit persons to whom the Font Software is furnished to do so, subject to the following conditions:
+
+The above copyright and this permission notice shall be included in all copies of one or more of the Font Software typefaces.
+
+The Font Software may be modified, altered, or added to, and in particular the designs of glyphs or characters in the Fonts may be modified and additional glyphs or characters may be added to the Fonts, only if the fonts are renamed to names not containing the word "MgOpen", or if the modifications are accepted for inclusion in the Font Software itself by the each appointed Administrator.
+
+This License becomes null and void to the extent applicable to Fonts or Font Software that has been modified and is distributed under the "MgOpen" name.
+
+The Font Software may be sold as part of a larger software package but no copy of one or more of the Font Software typefaces may be sold by itself.
+
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL MAGENTA OR PERSONS OR BODIES IN CHARGE OF ADMINISTRATION AND MAINTENANCE OF THE FONT SOFTWARE BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
+
+===== modules/engine/licenses/nvidia-fxaa.txt =====
 
 Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
 
@@ -834,52 +1037,6 @@ OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-===== modules/effects/licenses/three.txt =====
-
-The MIT License
-
-Copyright © 2010-2026 three.js authors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-===== modules/engine/THIRD-PARTY-NOTICES.md =====
-
-# Third-party notices: @luma.gl/engine
-
-PhiloGL heritage; primitive generation is supplied by the separately installed math.gl geometry package. Historical Google TDL primitive contributions remain acknowledged in the public credits guide, rather than being described as source shipped by this package.
-
-The [repository license](./LICENSE) retains historical project notices.
-See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
-Separately installed dependencies retain their own licenses; this is not a transitive dependency inventory.
-
-## PhiloGL
-
-Nicolas Garcia Belmonte; Sencha Labs.
-
-Source: [PhiloGL](https://github.com/senchalabs/philogl).
-
-Revision: historical import revision unknown unless explicitly identified below. Upstream license copies supplement retained source and repository notices.
-
-Adaptation: Historical ES6 port and subsequent engine evolution. The root LICENSE retains the 2013 Sencha notice; upstream also names the author in its 2011 notice. This is project lineage, not a claim that every engine file is copied.
-
-Full terms: [philogl](./licenses/philogl.txt).
-
 ===== modules/engine/licenses/philogl.txt =====
 
 Copyright (c) 2011 Sencha Labs - Author: Nicolas Garcia Belmonte (http://philogb.github.com/)
@@ -902,47 +1059,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
-===== modules/experimental/THIRD-PARTY-NOTICES.md =====
+===== modules/engine/licenses/spark.txt =====
 
-# Third-party notices: @luma.gl/experimental
+The MIT License
 
-Experimental rendering, materials, simulation, and model helpers by vis.gl contributors.
-RAPIDS-inspired analysis operations have moved to the graph package and are credited
-in its notice index. Scientific flow examples implement GPU field sampling and advection;
-their numerical models and approximations are described in the feature documentation.
-
-The [repository license](./LICENSE) retains historical project notices.
-See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
-This workspace is private; these notices also accompany local distributions.
-Separately installed dependencies retain their own licenses.
-
-===== modules/gltf/THIRD-PARTY-NOTICES.md =====
-
-# Third-party notices: @luma.gl/gltf
-
-glTF interpretation follows Khronos specifications. Fixture provenance, licenses, revisions, and transformations are documented at modules/gltf/test/data/README.md in the repository; test fixtures are not shipped by this package.
-
-The [repository license](./LICENSE) retains historical project notices.
-See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
-Separately installed dependencies retain their own licenses; this is not a transitive dependency inventory.
-
-
-
-## gltf-loader-ts schema types
-
-Copyright (c) 2018 Benjamin Wasty.
-
-Source: [gltf-loader-ts](https://github.com/bwasty/gltf-loader-ts). Historical import revision unknown; the source was previously maintained through loaders.gl and moved into luma.gl.
-
-Affected files: src/types/gltf-json-schema.ts and src/types/gltf-postprocessed-schema.ts. Types are adapted for luma.gl’s glTF extensions, parser output, and strict TypeScript APIs.
-
-Full terms: [MIT license](./licenses/gltf-loader-ts.txt).
-
-===== modules/gltf/licenses/gltf-loader-ts.txt =====
-
-MIT License
-
-Copyright (c) 2018 Benjamin Wasty
+Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -951,16 +1072,40 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+===== modules/engine/licenses/three.txt =====
+
+The MIT License
+
+Copyright © 2010-2026 three.js authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 ===== modules/gpgpu/THIRD-PARTY-NOTICES.md =====
 
@@ -994,9 +1139,13 @@ The sixth-order Krüger matrices in `projection-transverse-mercator.ts` are
 identified there as published coefficients, rather than copied PROJ program code.
 [PROJ projection documentation](https://proj.org/en/stable/operations/projections/index.html).
 
-===== modules/shadertools/THIRD-PARTY-NOTICES.md =====
+## Parcels adaptive advection
 
-# Third-party notices: @luma.gl/shadertools
+Copyright (c) 2025, Parcels team. RKF45 stages and controller in `src/experimental/simulation/scientific-flow-rk45-shaders.ts` adapt [Parcels AdvectionRK45](https://github.com/OceanParcels/parcels/blob/8584c09a4189ed29a49aa980b9830a2379e42c65/src/parcels/kernels/_advection.py), at commit `8584c09a4189ed29a49aa980b9830a2379e42c65`. Full terms: [Parcels MIT license](./src/experimental/simulation/PARCELS-LICENSE.txt).
+
+===== modules/shaders/THIRD-PARTY-NOTICES.md =====
+
+# Third-party notices: @luma.gl/shaders
 
 Shader composition by vis.gl contributors; historical Khronos PBR shaders, three.js half-float conversion, and Uber geospatial shader contributions.
 
@@ -1028,23 +1177,7 @@ Adaptation: src/modules/math/fp16/fp16-utils.ts adapts half-float conversion to 
 
 Full terms: [three](./licenses/three.txt).
 
-## Linearly Transformed Cosines fit data
-
-Copyright (c) 2017, Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt.
-
-Source: [selfshadow/ltc_code fit/results/ltc.js](https://github.com/selfshadow/ltc_code/blob/31e5e96b54f98f33098f8503003119ba2231a1c6/fit/results/ltc.js),
-pinned to commit `31e5e96b54f98f33098f8503003119ba2231a1c6`.
-The GGX fit tables are embedded in `src/modules/lighting/area-lighting/ltc-data.ts`
-as TypeScript arrays for area-light shading.
-
-Required paper reference: **Real-Time Polygonal-Light Shading with Linearly
-Transformed Cosines**, Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt,
-ACM Transactions on Graphics (Proceedings of ACM SIGGRAPH 2016), 35(4), 2016.
-[Project page](https://eheitzresearch.wordpress.com/415-2/).
-
-Full terms: [LicenseRef-LTC and paper citation](./src/modules/lighting/area-lighting/LTC-LICENSE.txt).
-
-===== modules/shadertools/licenses/pbr.txt =====
+===== modules/shaders/licenses/pbr.txt =====
 
 The MIT License
 
@@ -1105,7 +1238,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-===== modules/shadertools/licenses/three.txt =====
+===== modules/shaders/licenses/three.txt =====
 
 The MIT License
 
@@ -1140,174 +1273,6 @@ See [References and credits](https://luma.gl/docs/references-and-credits) for pe
 Separately installed dependencies retain their own licenses; this is not a transitive dependency inventory.
 
 No additional embedded third-party source is identified in the current inventory. New adaptations must add full notices here.
-
-===== modules/splats/THIRD-PARTY-NOTICES.md =====
-
-# Third-party notices: @luma.gl/splats
-
-Gaussian-splat rendering with Spark RAD opacity/support behavior adapted from World Labs.
-
-The [repository license](./LICENSE) retains historical project notices.
-See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
-This workspace is private; these notices also accompany local distributions.
-Separately installed dependencies retain their own licenses.
-
-## Spark
-
-Copyright © 2025 WORLD LABS TECHNOLOGIES, INC..
-
-Source: [Spark](https://github.com/sparkjsdev/spark/blob/main/src/shaders/splatVertex.glsl).
-
-Revision: historical import revision unknown unless identified below.
-
-Adaptation: src/splat-rad-hierarchy.ts and src/gpu-paged-splat-shaders.ts adapt RAD opacity/support behavior for luma.gl paging and shaders.
-
-Full terms: [spark](./licenses/spark.txt).
-
-===== modules/splats/licenses/spark.txt =====
-
-The MIT License
-
-Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-===== modules/test-utils/THIRD-PARTY-NOTICES.md =====
-
-# Third-party notices: @luma.gl/test-utils
-
-Original shared vis.gl test helpers built on separately installed browser, test, and diagnostics tooling.
-
-The [repository license](./LICENSE) retains historical project notices.
-See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
-Separately installed dependencies retain their own licenses; this is not a transitive dependency inventory.
-
-No additional embedded third-party source is identified in the current inventory. New adaptations must add full notices here.
-
-===== modules/text/THIRD-PARTY-NOTICES.md =====
-
-# Third-party notices: @luma.gl/text
-
-Text paths, extrusion, and font loading adapted from three.js; browser atlas utilities adapted from deck.gl. Font data has its own retained terms.
-
-The [repository license](./LICENSE) retains historical project notices.
-See [References and credits](https://luma.gl/docs/references-and-credits) for people, research, standards, and assets.
-These notices accompany the published text package and local distributions.
-Separately installed dependencies retain their own licenses.
-
-## three.js text utilities
-
-three.js authors.
-
-Source: [three.js text utilities](https://github.com/mrdoob/three.js).
-
-Revision: historical import revision unknown unless identified below.
-
-Adaptation: src/text-3d paths, curves, shapes, FontLoader, TextGeometry, and ExtrudeGeometry adapted to TypeScript and luma.gl geometry; src/fonts/typeface-font-data.ts and helvetiker.ts retain three.js data lineage.
-
-Full terms: [three](./licenses/three.txt).
-
-## deck.gl text atlas
-
-Vis.gl contributors.
-
-Source: [deck.gl text atlas](https://github.com/visgl/deck.gl).
-
-Revision: historical import revision unknown unless identified below.
-
-Adaptation: src/fonts/atlas/browser-font-atlas.ts and text-utils.ts adapt browser font atlas and text utilities.
-
-Full terms: [deck](./licenses/deck.txt).
-
-## Helvetiker / MgOpen
-
-Copyright (c) 2004 by MAGENTA Ltd. All Rights Reserved..
-
-Source: [Helvetiker / MgOpen](https://github.com/mrdoob/three.js/blob/master/examples/fonts/helvetiker_regular.typeface.json).
-
-Revision: historical import revision unknown unless identified below.
-
-Adaptation: src/fonts/helvetiker.ts packages font data as TypeScript. Metadata identifies version 1.00, 2004 initial release. The embedded original font terms are reproduced separately from the code license.
-
-Full terms: [magenta-font](./licenses/magenta-font.txt).
-
-===== modules/text/licenses/deck.txt =====
-
-Copyright Vis.gl contributors.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-===== modules/text/licenses/magenta-font.txt =====
-
-Copyright (c) 2004 by MAGENTA Ltd. All Rights Reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of the fonts accompanying this license ("Fonts") and associated documentation files (the "Font Software"), to reproduce and distribute the Font Software, including without limitation the rights to use, copy, merge, publish, distribute, and/or sell copies of the Font Software, and to permit persons to whom the Font Software is furnished to do so, subject to the following conditions:
-
-The above copyright and this permission notice shall be included in all copies of one or more of the Font Software typefaces.
-
-The Font Software may be modified, altered, or added to, and in particular the designs of glyphs or characters in the Fonts may be modified and additional glyphs or characters may be added to the Fonts, only if the fonts are renamed to names not containing the word "MgOpen", or if the modifications are accepted for inclusion in the Font Software itself by the each appointed Administrator.
-
-This License becomes null and void to the extent applicable to Fonts or Font Software that has been modified and is distributed under the "MgOpen" name.
-
-The Font Software may be sold as part of a larger software package but no copy of one or more of the Font Software typefaces may be sold by itself.
-
-THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL MAGENTA OR PERSONS OR BODIES IN CHARGE OF ADMINISTRATION AND MAINTENANCE OF THE FONT SOFTWARE BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
-
-===== modules/text/licenses/three.txt =====
-
-The MIT License
-
-Copyright © 2010-2026 three.js authors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 
 ===== modules/three/THIRD-PARTY-NOTICES.md =====
 
