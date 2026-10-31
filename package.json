@@ -62,7 +62,7 @@
     "@babel/preset-env": "^7.28.3",
     "@loaders.gl/core": "~5.0.0-beta.2",
     "@loaders.gl/images": "~5.0.0-beta.2",
-    "@loaders.gl/pointclouds": "~5.0.0-beta.1",
+    "@loaders.gl/pointclouds": "~5.0.0-beta.2",
     "@loaders.gl/scene": "~5.0.0-beta.2",
     "@loaders.gl/sql": "~5.0.0-beta.2",
     "@loaders.gl/tables": "~5.0.0-beta.2",
