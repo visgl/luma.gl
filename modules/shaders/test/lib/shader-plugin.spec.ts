@@ -753,3 +753,80 @@ it('ShaderPlugin#GLSL local hooks override registered hooks without mutation', (
   expect(local.vs).not.toContain('position.x += 1.0;');
   expect(assembler.assembleGLSLShaderPair(props).vs).toContain('position.x += 1.0;');
 });
+
+it('ShaderPlugin#module conflict diagnostics preserve selection and descriptor identity', () => {
+  const first: ShaderModule = {name: 'filter'};
+  const second: ShaderModule = {name: 'filter', vs: 'float alternate;'};
+  const conflicts: string[] = [];
+  const modules = mergeShaderPluginModules([first], [first, second], {
+    onConflict: (name, selected, ignored) => {
+      conflicts.push(name);
+      expect(selected).toBe(first);
+      expect(ignored).toBe(second);
+    }
+  });
+  expect(modules).toEqual([first]);
+  expect(conflicts).toEqual(['filter']);
+  expect(mergeShaderPluginModules([first], [second])).toEqual([first]);
+});
+
+it('ShaderPlugin#equal-order plugin injections retain declaration order on both backends', () => {
+  for (const language of ['glsl', 'wgsl'] as const) {
+    const resolved = resolveShaderPlugins(
+      [
+        {
+          name: 'first',
+          injections: [
+            {
+              target: 'fs:FILTER_COLOR',
+              injection: language === 'wgsl' ? 'let firstMarker = 1.0;' : 'float firstMarker = 1.0;'
+            }
+          ]
+        },
+        {
+          name: 'second',
+          injections: [
+            {
+              target: 'fs:FILTER_COLOR',
+              injection:
+                language === 'wgsl' ? 'let secondMarker = 1.0;' : 'float secondMarker = 1.0;'
+            }
+          ]
+        }
+      ],
+      language
+    );
+    const source =
+      language === 'wgsl'
+        ? (() => {
+            const assembler = new WGSLShaderAssembler();
+            assembler.addShaderHook('fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)');
+            return assembler.assembleWGSLShader({
+              platformInfo: WGSL_PLATFORM_INFO,
+              source: WGSL_SOURCE,
+              inject: {
+                'fs:FILTER_COLOR':
+                  language === 'wgsl' ? 'let legacyMarker = 1.0;' : 'float legacyMarker = 1.0;'
+              },
+              pluginInjections: resolved.injections
+            }).source;
+          })()
+        : (() => {
+            const assembler = new GLSLShaderAssembler();
+            assembler.addShaderHook('fs:FILTER_COLOR(inout vec4 color)');
+            return assembler.assembleGLSLShaderPair({
+              platformInfo: GLSL_PLATFORM_INFO,
+              vs: '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
+              fs: '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }',
+              inject: {
+                'fs:FILTER_COLOR':
+                  language === 'wgsl' ? 'let legacyMarker = 1.0;' : 'float legacyMarker = 1.0;'
+              },
+              pluginInjections: resolved.injections
+            }).fs;
+          })();
+    expect(source.indexOf('firstMarker')).toBeGreaterThan(-1);
+    expect(source.indexOf('legacyMarker')).toBeGreaterThan(source.indexOf('secondMarker'));
+    expect(source.indexOf('secondMarker')).toBeGreaterThan(source.indexOf('firstMarker'));
+  }
+});
