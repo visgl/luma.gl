@@ -162,6 +162,19 @@
       "notices": [
         "modules/graph/src/experimental/simulation/PARCELS-LICENSE.txt"
       ]
+    },
+    {
+      "files": [
+        "modules/engine/src/text/fonts/glyph-pbf.ts",
+        "modules/engine/src/text/fonts/glyph-range-loader.ts",
+        "modules/engine/src/text/fonts/build-glyph-font-atlas.ts"
+      ],
+      "markers": [
+        "deck.gl-community"
+      ],
+      "notices": [
+        "modules/engine/licenses/deck-community.txt"
+      ]
     }
   ],
   "auditedBaseCommit": "3f83f06f0"

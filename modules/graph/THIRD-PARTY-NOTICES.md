@@ -16,4 +16,4 @@ identified there as published coefficients, rather than copied PROJ program code
 
 ## Parcels adaptive advection
 
-Copyright (c) 2025, Parcels team. RKF45 stages and controller in `src/experimental/simulation/scientific-flow-rk45-shaders.ts` adapt [Parcels AdvectionRK45](https://github.com/OceanParcels/parcels/blob/8584c09a4189ed29a49aa980b9830a2379e42c65/src/parcels/kernels/_advection.py), at commit `8584c09a4189ed29a49aa980b9830a2379e42c65`. Full terms: [Parcels MIT license](./src/experimental/simulation/PARCELS-LICENSE.txt).
+Copyright (c) 2025, Parcels team. RKF45 stages and controller in `src/experimental/simulation/scientific-flow-rk45-shaders.ts` adapt [Parcels AdvectionRK45](https://github.com/Parcels-code/Parcels/blob/8584c09a4189ed29a49aa980b9830a2379e42c65/src/parcels/kernels/_advection.py), at commit `8584c09a4189ed29a49aa980b9830a2379e42c65`. Full terms: [Parcels MIT license](./src/experimental/simulation/PARCELS-LICENSE.txt).

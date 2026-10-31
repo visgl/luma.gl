@@ -182,4 +182,4 @@ Full terms: [LicenseRef-LTC and paper citation](./src/lighting/LTC-LICENSE.txt).
 
 ## deck.gl-community glyph utilities
 
-The vis.gl community’s glyph range utilities were adapted for engine font loading and atlas construction. The deck.gl MIT notice is included at [deck](./licenses/deck.txt).
+Copyright (c) 2020 vis.gl a Series of LF Projects, LLC. Glyph range utilities from [deck.gl-community](https://github.com/visgl/deck.gl-community) were adapted for engine font loading and atlas construction. Historical import revision unknown. Full terms: [deck.gl-community MIT license](./licenses/deck-community.txt).
