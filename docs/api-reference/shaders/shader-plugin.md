@@ -287,8 +287,8 @@ separately created descriptors are reported even if structurally equivalent.
 Omitting the callback preserves existing behavior. Explicit modules retain
 precedence and plugin modules use first-seen name selection.
 
-Plugin contributions are collected in plugin declaration order, with shared
-contributions before the selected language variant. Hook injections execute in
+Plugin contributions are collected in plugin declaration order, selecting each
+injection's source for the active language. Hook injections execute in
 ascending `order`; equal-order plugin injections retain declaration order.
 
 Legacy application injections append to plugin injections at the same target
