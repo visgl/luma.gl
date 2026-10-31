@@ -779,7 +779,8 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
           injections: [
             {
               target: 'fs:FILTER_COLOR',
-              injection: language === 'wgsl' ? 'let firstMarker = 1.0;' : 'float firstMarker = 1.0;'
+              glsl: language === 'wgsl' ? 'let firstMarker = 1.0;' : 'float firstMarker = 1.0;',
+              wgsl: language === 'wgsl' ? 'let firstMarker = 1.0;' : 'float firstMarker = 1.0;'
             }
           ]
         },
@@ -788,8 +789,8 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
           injections: [
             {
               target: 'fs:FILTER_COLOR',
-              injection:
-                language === 'wgsl' ? 'let secondMarker = 1.0;' : 'float secondMarker = 1.0;'
+              glsl: language === 'wgsl' ? 'let secondMarker = 1.0;' : 'float secondMarker = 1.0;',
+              wgsl: language === 'wgsl' ? 'let secondMarker = 1.0;' : 'float secondMarker = 1.0;'
             }
           ]
         }
@@ -841,7 +842,14 @@ it('ShaderPlugin#mixed main anchors preserve numeric order on both backends', ()
           [
             {
               name: 'ordered-main',
-              injections: [{target, injection: `${declaration} pluginOrdered = 1.0;`, order: 10}]
+              injections: [
+                {
+                  target,
+                  order: 10,
+                  glsl: `${declaration} pluginOrdered = 1.0;`,
+                  wgsl: `${declaration} pluginOrdered = 1.0;`
+                }
+              ]
             }
           ],
           language
