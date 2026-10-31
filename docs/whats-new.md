@@ -131,7 +131,8 @@ behavior. Mesh deformation and full-profile qualification remain separate work.
 ShaderPlugins accept concretely typed ShaderModules and numeric preprocessor defines.
 WGSL plugin varyings now support fragment entry points with individual parameters or
 no parameters, as well as named input structs. Existing direct input locations are
-reserved when allocating plugin varyings.
+reserved when allocating plugin varyings. GLSL plugin inputs and varyings are declared
+before module helpers, allowing helpers to access them directly.
 
 ### SimpleGraph value authoring
 

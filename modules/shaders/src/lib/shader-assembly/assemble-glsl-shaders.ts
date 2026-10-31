@@ -193,24 +193,15 @@ ${getApplicationDefines(allDefines)}
       mainInjections[key] = [...(mainInjections[key] || []), injection];
     }
   }
+  // Module helpers may access plugin inputs and varyings. GLSL requires these
+  // interface declarations before the helpers, unlike ordinary #decl injections.
   if (stage === 'vertex') {
     const declarations = getShaderPluginVertexInputDeclarationsGLSL(coreSource, pluginVertexInputs);
-    if (declarations) {
-      declInjections['vs:#decl'] = declInjections['vs:#decl'] || [];
-      declInjections['vs:#decl'].push({
-        injection: declarations,
-        order: Number.MIN_SAFE_INTEGER
-      });
-    }
+    if (declarations) assembledSource += `${declarations}\n`;
   }
   const pluginVaryingAssembly = assembleShaderPluginVaryingsGLSL(coreSource, stage, pluginVaryings);
   if (pluginVaryingAssembly.declarations) {
-    const declarationTarget = stage === 'vertex' ? 'vs:#decl' : 'fs:#decl';
-    declInjections[declarationTarget] = declInjections[declarationTarget] || [];
-    declInjections[declarationTarget].push({
-      injection: pluginVaryingAssembly.declarations,
-      order: Number.MIN_SAFE_INTEGER
-    });
+    assembledSource += `${pluginVaryingAssembly.declarations}\n`;
   }
   if (pluginVaryingAssembly.initialization) {
     mainInjections['vs:#main-start'] = mainInjections['vs:#main-start'] || [];

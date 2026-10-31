@@ -165,6 +165,8 @@ resources remain `ShaderModule` bindings managed through `ShaderInputs`.
 
 ## Varyings
 
+GLSL plugin input and varying declarations precede shader module source, so module helpers can read inputs and read or write varyings without redeclaring them. Ordinary `#decl` injections retain their existing ordering.
+
 `varyings` declares values that plugin hook source writes during the vertex
 stage and reads during the fragment stage. The assembler owns the generated
 shader interface only. It does not own the source coordinates, attributes,

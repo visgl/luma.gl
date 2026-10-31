@@ -5,6 +5,7 @@
 import {shaderTypeDecoder} from '../../types';
 import type {ResolvedShaderPluginVarying} from '../shader-plugin';
 import {getGLSLAttributeType} from './shader-plugin-vertex-inputs';
+import {maskWGSLComments} from './wgsl-binding-scan';
 
 export type ShaderPluginVaryingAssembly = {
   source: string;
@@ -140,12 +141,16 @@ export function assembleShaderPluginVaryingsWGSL(
 
   fragmentFunction = getWGSLFunctionRange(transformedSource, fragmentEntryPoint, 'fragment');
   if (fragmentParameters.length) {
-    const parameters = fragmentFunction.parameters.trim().replace(/,\s*$/, '');
-    const separator = parameters ? ',\n  ' : '\n  ';
+    let parameters = fragmentFunction.parameters;
+    const parameterTokens = maskWGSLComments(parameters).trimEnd();
+    if (parameterTokens.trim() && !parameterTokens.endsWith(',')) {
+      const insertionIndex = parameterTokens.length;
+      parameters = `${parameters.slice(0, insertionIndex)},${parameters.slice(insertionIndex)}`;
+    }
     transformedSource =
       transformedSource.slice(0, fragmentFunction.openParenthesis + 1) +
       parameters +
-      separator +
+      '\n  ' +
       fragmentParameters.join(',\n  ') +
       '\n' +
       transformedSource.slice(fragmentFunction.closeParenthesis);
