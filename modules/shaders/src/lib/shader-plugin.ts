@@ -106,18 +106,32 @@ export function resolveShaderPlugins(
   return resolved;
 }
 
-/** Preserve explicit module inputs while appending plugin modules by first-seen name. */
+/**
+ * Preserve explicit module inputs while appending plugin modules by first-seen name.
+ * Optional diagnostics report distinct descriptors sharing a name, without changing selection.
+ * Descriptor identity is checked; equivalent independently-created descriptors also report a conflict.
+ */
 export function mergeShaderPluginModules(
   modules: readonly ShaderModule[] = [],
-  pluginModules: readonly ShaderModule[] = []
+  pluginModules: readonly ShaderModule[] = [],
+  options: {onConflict?: (name: string, selected: ShaderModule, ignored: ShaderModule) => void} = {}
 ): ShaderModule[] {
   const mergedModules: ShaderModule[] = [...modules];
-  const seenModuleNames = new Set(mergedModules.map(module => module.name));
+  const selectedModules = new Map<string, ShaderModule>();
+  for (const module of mergedModules) {
+    const selected = selectedModules.get(module.name);
+    if (selected && selected !== module) options.onConflict?.(module.name, selected, module);
+    if (!selected) selectedModules.set(module.name, module);
+  }
 
   for (const pluginModule of pluginModules) {
-    if (!seenModuleNames.has(pluginModule.name)) {
+    const selected = selectedModules.get(pluginModule.name);
+    if (selected && selected !== pluginModule) {
+      options.onConflict?.(pluginModule.name, selected, pluginModule);
+    }
+    if (!selected) {
       mergedModules.push(pluginModule);
-      seenModuleNames.add(pluginModule.name);
+      selectedModules.set(pluginModule.name, pluginModule);
     }
   }
 

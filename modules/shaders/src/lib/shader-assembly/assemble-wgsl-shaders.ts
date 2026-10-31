@@ -177,16 +177,16 @@ export function assembleShaderWGSL(
       const name = match[3];
       if (hash) {
         if (name === 'decl') {
-          declInjections[key] = [injection];
+          declInjections[key] = [...(declInjections[key] || []), injection];
         } else {
-          mainInjections[key] = [injection];
+          mainInjections[key] = [...(mainInjections[key] || []), injection];
         }
       } else {
-        hookInjections[key] = [injection];
+        hookInjections[key] = [...(hookInjections[key] || []), injection];
       }
     } else {
       // Regex injection
-      mainInjections[key] = [injection];
+      mainInjections[key] = [...(mainInjections[key] || []), injection];
     }
   }
   appendGeneratedVertexInputInjections(
