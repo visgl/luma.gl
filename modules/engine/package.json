@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "10.0.0-alpha.6",
+  "version": "10.0.0-alpha.7",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -125,7 +125,7 @@
     "apache-arrow": ">=17.0.0"
   },
   "dependencies": {
-    "@luma.gl/graph": "10.0.0-alpha.6",
+    "@luma.gl/graph": "10.0.0-alpha.7",
     "@mapbox/tiny-sdf": "^2.0.7",
     "@math.gl/core": "~5.0.0-beta.2",
     "@math.gl/geometry": "~5.0.0-beta.2",
@@ -133,7 +133,7 @@
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
   "devDependencies": {
-    "@luma.gl/anari": "10.0.0-alpha.6"
+    "@luma.gl/anari": "10.0.0-alpha.7"
   },
   "peerDependenciesMeta": {
     "apache-arrow": {

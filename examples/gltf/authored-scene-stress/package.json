@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-authored-scene-stress",
-  "version": "10.0.0-alpha.6",
+  "version": "10.0.0-alpha.7",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -11,10 +11,10 @@
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
     "@loaders.gl/core": "~5.0.0-beta.2",
     "@loaders.gl/scene": "~5.0.0-beta.2",
-    "@luma.gl/core": "10.0.0-alpha.6",
-    "@luma.gl/engine": "10.0.0-alpha.6",
-    "@luma.gl/graph": "10.0.0-alpha.6",
-    "@luma.gl/shaders": "10.0.0-alpha.6",
+    "@luma.gl/core": "10.0.0-alpha.7",
+    "@luma.gl/engine": "10.0.0-alpha.7",
+    "@luma.gl/graph": "10.0.0-alpha.7",
+    "@luma.gl/shaders": "10.0.0-alpha.7",
     "@math.gl/core": "5.0.0-beta.2",
     "preact": "^10.17.0"
   },

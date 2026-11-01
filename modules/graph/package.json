@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "10.0.0-alpha.6",
+  "version": "10.0.0-alpha.7",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -230,8 +230,8 @@
     }
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.6",
-    "@luma.gl/shaders": "~10.0.0-alpha.6",
+    "@luma.gl/core": "~10.0.0-alpha.7",
+    "@luma.gl/shaders": "~10.0.0-alpha.7",
     "apache-arrow": ">=17.0.0"
   },
   "peerDependenciesMeta": {
