@@ -25,6 +25,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./shadertypes": {
+      "types": "./dist/shadertypes/index.d.ts",
+      "import": "./dist/shadertypes/index.js",
+      "require": "./dist/shadertypes/index.cjs"
     }
   },
   "files": [

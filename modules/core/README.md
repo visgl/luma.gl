@@ -16,3 +16,6 @@ luma.gl is the GPU engine that powers applications and frameworks like
 # Installation, Running Examples etc
 
 For details, please refer to the extensive [online website](https://luma.gl).
+
+Shader types, formats, and layout utilities are also available from
+`@luma.gl/core/shadertypes`.
