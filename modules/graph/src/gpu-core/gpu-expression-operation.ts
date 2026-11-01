@@ -5,6 +5,7 @@
 import {parse, type Expression} from '@math.gl/expressions';
 import {getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import type {GPUGraphVectorFormat} from './gpu-graph-value';
+import type {GPUOperationContract} from './gpu-operation-contract';
 import type {GPUOperation} from './gpu-operation';
 
 /** Parsed math.gl syntax tree. Only the documented numeric GPU subset is accepted. */
@@ -19,6 +20,17 @@ export type GPUExpressionOperationProps = {
 
 /** A named, backend-independent numeric expression. Parsing and validation happen at compilation. */
 export class GPUExpressionOperation implements GPUOperation {
+  get contract(): GPUOperationContract {
+    return {
+      values: [
+        ...getGPUExpressionReferences(parseGPUExpression(this.expression)).map(value => ({
+          value,
+          access: 'read' as const
+        })),
+        {value: this.output, access: 'write'}
+      ]
+    };
+  }
   readonly type = 'expression';
   readonly id: string;
   readonly output: string;

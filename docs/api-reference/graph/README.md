@@ -51,3 +51,8 @@ without input data, then bind GPUVectors and scalar values on each run.
 The [expression syntax reference](./gpu-expression-operation.md#syntax-at-a-glance) covers
 math functions, casts, component selection, row construction, dot products, lengths, equality,
 and conditional value selection, with typing rules and examples.
+
+## Operation contracts
+
+[GPUOperation contracts](./gpu-operation.md) describe logical reads, writes, and output shapes.
+Custom full-graph lowerings can participate in reusable output planning alongside built-in operations.

@@ -7,7 +7,7 @@ import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUGraph} from './gpu-graph';
 import type {CompiledGPUCommandGraph} from './gpu-command-graph';
 import {GPUGraphCompiler} from './gpu-graph-compiler';
-import type {GPUOperationLoweringRegistry} from './gpu-graph-lowering';
+import type {GPUOperationLowering} from './gpu-graph-lowering';
 import {GPUExpressionOperation} from './gpu-expression-operation';
 import {
   GPUExpressionProgram,
@@ -28,19 +28,23 @@ export class CompiledGPUGraph {
     readonly device: Device,
     source: GPUGraph,
     options: GPUGraphCompileOptions = {},
-    lowerings?: GPUOperationLoweringRegistry
+    lowerings?: readonly GPUOperationLowering[]
   ) {
     if (device.type !== 'webgpu') throw new Error('GPUGraph execution requires WebGPU');
     if (source.textures.length)
       throw new Error('Reusable expression programs do not yet support texture declarations');
     this.program = new GPUExpressionProgram(source, options);
-    this.compiler = new GPUGraphCompiler(device, lowerings?.clone());
+    this.compiler = new GPUGraphCompiler(device, [
+      ...(lowerings ?? options.lowerings ?? []),
+      {
+        type: 'expression',
+        lower: (operation: GPUExpressionOperation, context) =>
+          this.kernels.get(operation)!.lower(context)
+      }
+    ]);
     try {
       for (const plan of this.program.expressions)
         this.kernels.set(plan.operation, new GPUExpressionKernel(device, this.program, plan));
-      this.compiler.lowerings.register<GPUExpressionOperation>('expression', (operation, context) =>
-        this.kernels.get(operation)!.lower(context)
-      );
     } catch (error) {
       this.destroy();
       throw error;

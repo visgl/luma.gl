@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUOperationContract} from './gpu-operation-contract';
 import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
 import type {GPUGraphScalar} from './gpu-graph-value';
 import type {
@@ -12,6 +13,15 @@ import type {
 
 /** Backend-independent scalar arithmetic/comparison in a GPUGraph. */
 export class GPUGraphScalarOperation implements GPUOperation {
+  get contract(): GPUOperationContract {
+    return {
+      values: [
+        {value: this.left, access: 'read'},
+        ...(this.right ? [{value: this.right, access: 'read' as const}] : []),
+        {value: this.output, access: 'write'}
+      ]
+    };
+  }
   readonly id: string;
   readonly type = 'scalar-operation';
   readonly operation: GPUScalarOperation;
