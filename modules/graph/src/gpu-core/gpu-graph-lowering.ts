@@ -62,6 +62,12 @@ export class GPUOperationLoweringRegistry<Parameters = void> {
     this.lowerers.set(operationType, lowerer as GPUOperationLowerer<Parameters>);
     return this;
   }
+  /** Copies registrations for an independent compiled program. @internal */
+  clone(): GPUOperationLoweringRegistry<Parameters> {
+    const registry = new GPUOperationLoweringRegistry<Parameters>();
+    for (const [name, lowerer] of this.lowerers) registry.register(name, lowerer);
+    return registry;
+  }
   get(operationType: string): GPUOperationLowerer<Parameters> | undefined {
     return this.lowerers.get(operationType);
   }

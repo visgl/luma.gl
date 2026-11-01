@@ -653,3 +653,12 @@ export type {
 export type {GPUResourcePreview} from './gpu-resource-preview';
 
 export type {GPUIndexPickInfo} from './gpu-index-picking-target';
+
+export {GPUExpressionOperation} from './gpu-expression-operation';
+export type {GPUExpressionOperationProps, GPUExpressionAST} from './gpu-expression-operation';
+export {CompiledGPUGraph} from './compiled-gpu-graph';
+export type {
+  GPUGraphCompileOptions,
+  GPUGraphRunBindings,
+  GPUGraphRunOptions
+} from './gpu-expression-plan';

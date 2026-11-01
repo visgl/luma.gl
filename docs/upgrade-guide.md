@@ -534,3 +534,11 @@ The v10 graph package now owns the former gpgpu APIs. The gpgpu package is remov
 | `@luma.gl/gpgpu/arrow` | `@luma.gl/graph/arrow` |
 
 Replace the package dependency with `@luma.gl/graph`. Apache Arrow remains an optional peer used only by the Arrow entry.
+
+### Logical graph vector lengths
+
+`GPUGraphVector.length` is now optional: `undefined` declares a vector whose length is supplied
+at execution. Code inspecting logical declarations must handle that case. Existing fixed-length
+`graph.vector(name, format, length, props)` declarations and `GPUGraphCompiler.compile(program,
+bindings)` continue to work. Dynamic declarations use `graph.compile(device).run(bindings)`.
+Concrete `GPUVector.length` remains a number.

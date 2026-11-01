@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {GPUGraph} from '../gpu-core/gpu-graph';
+import {GPUExpressionOperation} from '../gpu-core/gpu-expression-operation';
+import type {GPUGraphCompileOptions} from '../gpu-core/gpu-expression-plan';
+import type {GPUGraphScalarFormat, GPUGraphVectorFormat} from '../gpu-core/gpu-graph-value';
+import {CompiledGPUSimpleExpressionGraph} from './compiled-gpu-expression-graph';
 import {assert, type Device} from '@luma.gl/core';
 import {GPUDataEvaluator, type GPUDataEvaluatorTargetBuffer} from './operation/gpu-data-evaluator';
 import {GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
@@ -65,7 +70,8 @@ export type GPUSimpleGraphRunOptions = {scope?: GPUEvaluationScope};
  * the evaluators. Explicit evaluator inputs are borrowed; semantic lowering owns its adapters.
  */
 export class GPUSimpleGraph {
-  readonly device: Device;
+  private readonly declarations = new GPUGraph();
+  readonly device?: Device;
   readonly id: string;
   private readonly leafOperations: SimpleOperation[] = [];
   private readonly evaluatorIds = new Set<string>();
@@ -75,24 +81,46 @@ export class GPUSimpleGraph {
   /** Execution capabilities; evaluators retain control of backend submission. */
   readonly capabilities: Readonly<{
     callerControlledSubmission: boolean;
-    dynamicBindings: false;
+    dynamicBindings: boolean;
     transientAllocation: false;
   }>;
 
-  constructor(device: Device, props: {id?: string} = {}) {
+  constructor(deviceOrProps?: Device | {id?: string}, props: {id?: string} = {}) {
+    const device = deviceOrProps && 'type' in deviceOrProps ? deviceOrProps : undefined;
     this.device = device;
-    this.id = props.id ?? 'simple-graph';
+    this.id = (device ? props.id : deviceOrProps?.id) ?? 'simple-graph';
     this.capabilities = Object.freeze({
-      callerControlledSubmission: device.type === 'webgpu',
-      dynamicBindings: false,
+      callerControlledSubmission: device?.type === 'webgpu',
+      dynamicBindings: !device,
       transientAllocation: false
     });
+  }
+
+  scalar<T extends GPUGraphScalarFormat>(id: string, format: T) {
+    assert(!this.compiled);
+    return this.declarations.scalar(id, format);
+  }
+
+  vector<T extends GPUGraphVectorFormat>(
+    id: string,
+    format: T,
+    lengthOrProps?:
+      | number
+      | {length?: number; external?: boolean; chunkLengths?: readonly number[]},
+    props: {external?: boolean; chunkLengths?: readonly number[]} = {}
+  ) {
+    assert(!this.compiled);
+    return this.declarations.vector(id, format, lengthOrProps, props);
   }
 
   /** Accepts evaluator operations, semantic composites, and recursively nested arrays. */
   add(operation: GPUOperationLike): this {
     // Compilation freezes the builder, as it does for GPUCommandGraph.
     assert(!this.compiled);
+    if (!this.device || operation instanceof GPUExpressionOperation) {
+      this.declarations.add(operation);
+      return this;
+    }
     const pending: SimpleOperation[] = [];
     const pendingEvaluatorIds = new Set<string>();
     const operations: GPUGraphOperation[] = [];
@@ -165,11 +193,30 @@ export class GPUSimpleGraph {
   }
 
   get operationTree(): readonly GPUOperationTree[] {
-    return Object.freeze(this.programOperations.map(getGPUOperationTree));
+    return Object.freeze(
+      [...this.programOperations, ...this.declarations.operations].map(getGPUOperationTree)
+    );
   }
 
   /** Captures selected roots and an inspectable dependency plan without executing work. */
-  compile(options: GPUSimpleGraphCompileOptions = {}): CompiledGPUSimpleGraph {
+  compile(device: Device, options?: GPUGraphCompileOptions): CompiledGPUSimpleExpressionGraph;
+  compile(options?: GPUSimpleGraphCompileOptions): CompiledGPUSimpleGraph;
+  compile(
+    deviceOrOptions: Device | GPUSimpleGraphCompileOptions = {},
+    expressionOptions: GPUGraphCompileOptions = {}
+  ): CompiledGPUSimpleGraph | CompiledGPUSimpleExpressionGraph {
+    if ('type' in deviceOrOptions) {
+      assert(!this.compiled && this.leafOperations.length === 0);
+      this.compiled = true;
+      return new CompiledGPUSimpleExpressionGraph(
+        deviceOrOptions,
+        this.declarations,
+        expressionOptions
+      );
+    }
+    // Legacy evaluator graphs bind their device in the constructor.
+    assert(this.device && this.declarations.operations.length === 0);
+    const options = deviceOrOptions;
     // A graph is compiled once, including when compilation fails.
     assert(!this.compiled);
     this.compiled = true;

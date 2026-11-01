@@ -1,5 +1,13 @@
 # What's New
 
+### Reusable graph expressions
+
+`GPUExpressionOperation` accepts math.gl expression strings or parsed ASTs. `GPUGraph` and
+`GPUSimpleGraph` share scalar/vector declarations and execution-time input bindings for the
+initial float32 arithmetic subset. Vector dimensions can change between executions; existing
+evaluator APIs remain unchanged. See the [expression reference](./api-reference/graph/gpu-expression-operation.md).
+
+
 ## Shader plugin primary modules
 
 ShaderPlugin now contributes one optional `module`, with supporting modules expressed

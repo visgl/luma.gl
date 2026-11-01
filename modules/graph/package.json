@@ -241,6 +241,7 @@
   },
   "dependencies": {
     "@math.gl/core": "~5.0.0-beta.2",
+    "@math.gl/expressions": "5.0.0-alpha.18",
     "@math.gl/geospatial": "~5.0.0-beta.2",
     "probe.gl": "^5.0.0"
   }

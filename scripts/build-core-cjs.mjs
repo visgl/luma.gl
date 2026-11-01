@@ -79,6 +79,8 @@ process.stdout.write('Verified CommonJS GPU graph constructor identity.\n');
 // re-exporting the optional algorithms from gpu-core.
 const rootGraphExportNames = [
   ...Object.keys(graphApi),
+  'GPUExpressionOperation',
+  'CompiledGPUGraph',
   'GPUCommandGraphAutotuner',
   'getGPUCommandGraphAdapterIdentity',
   'GPUCommandGraphExecutionBudgetController',
@@ -90,6 +92,15 @@ for (const name of rootGraphExportNames) {
 }
 assert.equal('GPUScan' in rootGraphApi, false);
 process.stdout.write('Verified CommonJS GPU Graph package root identity.\n');
+const graphEsm = await import(new URL('index.js', graphDistributionDirectory));
+const gpuCoreEsm = await import(new URL('gpu-core/index.js', graphDistributionDirectory));
+for (const name of ['GPUExpressionOperation', 'CompiledGPUGraph']) {
+  assert.equal(typeof rootGraphApi[name], 'function');
+  assert.equal(rootGraphApi[name], gpuCoreApi[name]);
+  assert.equal(graphEsm[name], gpuCoreEsm[name]);
+}
+process.stdout.write('Verified expression operation exports in ESM and CommonJS.\n');
+
 
 // Public renderer facades and experimental aggregates preserve constructor identity.
 const anariDistributionDirectory = new URL('../modules/anari/dist/', import.meta.url);
