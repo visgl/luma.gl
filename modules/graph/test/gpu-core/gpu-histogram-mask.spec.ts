@@ -10,7 +10,7 @@ import {
   type GPUHistogramMask,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 type ScalarFormat = 'uint32' | 'sint32' | 'float32';

@@ -10,7 +10,7 @@ import {
   type VertexFormat,
   vertexFormatDecoder
 } from '@luma.gl/core';
-import {GPUVector, getGPUVectorData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, getGPUVectorData} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUTableGeometry} from '@luma.gl/engine/tables';
 import {Binary, DataType, Float, Int, Precision, Table, Vector} from 'apache-arrow';

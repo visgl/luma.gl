@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type ShaderLayout} from '@luma.gl/core';
 import {GPUVectorModel, getGPUVectorModelBatches, Model} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 
 const SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],

@@ -10,7 +10,7 @@ import {planGPUDataFrameQuery} from '../../../../examples/experimental/gpu-data-
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {
   CompiledGPUDataFrameAggregation as CompiledLuDataFrameAggregation,
   CompiledGPUDataFrameGlobalSort as CompiledLuDataFrameGlobalSort,

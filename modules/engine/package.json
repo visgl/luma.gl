@@ -125,7 +125,6 @@
     "apache-arrow": ">=17.0.0"
   },
   "dependencies": {
-    "@luma.gl/gpgpu": "10.0.0-alpha.6",
     "@luma.gl/graph": "10.0.0-alpha.6",
     "@mapbox/tiny-sdf": "^2.0.7",
     "@math.gl/core": "~5.0.0-beta.2",

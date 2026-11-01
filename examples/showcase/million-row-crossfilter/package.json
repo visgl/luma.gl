@@ -12,7 +12,6 @@
   "dependencies": {
     "@luma.gl/core": "10.0.0-alpha.6",
     "@luma.gl/engine": "10.0.0-alpha.6",
-    "@luma.gl/gpgpu": "10.0.0-alpha.6",
     "@luma.gl/graph": "10.0.0-alpha.6"
   },
   "devDependencies": {

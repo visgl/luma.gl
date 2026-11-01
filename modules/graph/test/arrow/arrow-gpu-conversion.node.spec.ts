@@ -15,9 +15,9 @@ import {
   makeGPUVectorFromArrow,
   planArrowGPUConversion,
   readArrowGPUVectorAsync
-} from '@luma.gl/gpgpu/arrow';
-import {backendRegistry} from '@luma.gl/gpgpu';
-import * as cpuBackend from '@luma.gl/gpgpu/operations/cpu';
+} from '@luma.gl/graph/arrow';
+import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 

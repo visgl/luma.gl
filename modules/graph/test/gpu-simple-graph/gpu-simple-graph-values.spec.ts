@@ -5,8 +5,8 @@
 import {evaluateSimpleGraphExpression} from '../../../../examples/v10/gpgpu/src/simple-graph-expression';
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {GPUDataEvaluator} from '@luma.gl/gpgpu';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUDataEvaluator} from '@luma.gl/graph/gpu-simple-graph';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   GPUSimpleGraph,

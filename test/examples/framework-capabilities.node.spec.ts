@@ -23,7 +23,7 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/anari',
   '@luma.gl/engine/gltf',
   '@luma.gl/engine/splats',
-  '@luma.gl/gpgpu',
+  '@luma.gl/graph/gpu-simple-graph',
   '@luma.gl/graph/arrow',
   '@luma.gl/graph/experimental'
 ] as const;
@@ -497,7 +497,7 @@ describe('framework capabilities documentation', () => {
 
     for (const experimentalPackage of [
       'anari',
-      'gpgpu/arrow',
+      'graph/arrow',
       'graph/arrow',
       'engine/arrow',
       'engine/splats',
@@ -535,7 +535,7 @@ describe('framework capabilities documentation', () => {
 
     for (const [packageName, documentationPath] of [
       ['engine/effects', '/docs/api-guide/shaders/shader-passes'],
-      ['gpgpu', '/docs/api-reference/gpgpu']
+      ['graph/gpu-simple-graph', '/docs/api-reference/graph/gpu-evaluation']
     ]) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
@@ -567,7 +567,7 @@ describe('framework capabilities documentation', () => {
     const textRow = moduleRows.find(row => row[0].includes('@luma.gl/engine/text'));
     expect(textRow?.[1]).toBe('Experimental');
 
-    for (const packageName of ['gpgpu/arrow', 'graph/arrow', 'engine/arrow']) {
+    for (const packageName of ['graph/arrow', 'graph/arrow', 'engine/arrow']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();

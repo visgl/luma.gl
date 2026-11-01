@@ -1833,3 +1833,43 @@ diff --git a/dist/lib/layer.d.ts b/dist/lib/layer.d.ts
 @@ -8,1 +8,1 @@
 -import type { Model } from '@luma.gl/engine';
 +import type { GPUVectorModel as Model } from '@luma.gl/engine';
+diff --git a/src/lib/attribute/attribute-buffer-groups.ts b/src/lib/attribute/attribute-buffer-groups.ts
+--- a/src/lib/attribute/attribute-buffer-groups.ts
++++ b/src/lib/attribute/attribute-buffer-groups.ts
+@@ -11,6 +11,6 @@
+   cleanEvaluateSync,
+   GPUDataEvaluator,
+   interleave as interleaveTables
+-} from '@luma.gl/gpgpu';
+-import {interleave as webgpuInterleave} from '@luma.gl/gpgpu/webgpu';
++} from '@luma.gl/graph/gpu-simple-graph';
++import {interleave as webgpuInterleave} from '@luma.gl/graph/gpu-simple-graph/webgpu';
+ import type {BufferAttributeLayout, BufferLayout, Device} from '@luma.gl/core';
+diff --git a/dist/lib/attribute/attribute-buffer-groups.js b/dist/lib/attribute/attribute-buffer-groups.js
+--- a/dist/lib/attribute/attribute-buffer-groups.js
++++ b/dist/lib/attribute/attribute-buffer-groups.js
+@@ -2,8 +2,8 @@
+ // SPDX-License-Identifier: MIT
+ // Copyright (c) vis.gl contributors
+ import { getStride } from "./gl-utils.js";
+-import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/gpgpu';
+-import { interleave as webgpuInterleave } from '@luma.gl/gpgpu/webgpu';
++import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/graph/gpu-simple-graph';
++import { interleave as webgpuInterleave } from '@luma.gl/graph/gpu-simple-graph/webgpu';
+ /**
+  * Packs explicitly grouped CPU-backed attributes into additional WebGPU vertex buffers.
+  *
+diff --git a/dist.webgl-only/lib/attribute/attribute-buffer-groups.js b/dist.webgl-only/lib/attribute/attribute-buffer-groups.js
+--- a/dist.webgl-only/lib/attribute/attribute-buffer-groups.js
++++ b/dist.webgl-only/lib/attribute/attribute-buffer-groups.js
+@@ -2,8 +2,8 @@
+ // SPDX-License-Identifier: MIT
+ // Copyright (c) vis.gl contributors
+ import { getStride } from "./gl-utils.js";
+-import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/gpgpu';
+-import { interleave as webgpuInterleave } from '@luma.gl/gpgpu/webgpu';
++import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/graph/gpu-simple-graph';
++import { interleave as webgpuInterleave } from '@luma.gl/graph/gpu-simple-graph/webgpu';
+ /**
+  * Packs explicitly grouped CPU-backed attributes into additional WebGPU vertex buffers.
+  *

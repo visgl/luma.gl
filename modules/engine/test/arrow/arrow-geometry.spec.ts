@@ -8,7 +8,7 @@ import {
   makeGPUGeometryFromArrow,
   type ArrowMeshTable
 } from '@luma.gl/engine/arrow';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 

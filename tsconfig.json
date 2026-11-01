@@ -39,8 +39,6 @@
     // END TYPE CHECK SETTINGS
 
     "paths": {
-      "@luma.gl/gpgpu/arrow": ["./modules/gpgpu/src/arrow/index.ts"],
-      "@luma.gl/gpgpu/_internal/arrow": ["./modules/gpgpu/src/arrow/internal.ts"],
       "@luma.gl/graph/arrow": ["./modules/graph/src/arrow/index.ts"],
       "@luma.gl/graph/_internal/arrow": ["./modules/graph/src/arrow/internal.ts"],
       "@luma.gl/engine/arrow": ["./modules/engine/src/arrow/index.ts"],
@@ -81,10 +79,11 @@
       "@luma.gl/graph": ["./modules/graph/src/index.ts"],
       "@luma.gl/graph/test/*": ["./modules/graph/test/*"],
       "@luma.gl/graph/*": ["./modules/graph/src/*"],
-      "@luma.gl/gpgpu/_internal/*": ["./modules/gpgpu/src/execution/*"],
-      "@luma.gl/gpgpu": ["./modules/gpgpu/src/index.ts"],
-      "@luma.gl/gpgpu/*": ["./modules/gpgpu/src/*"],
-      "@luma.gl/gpgpu/test/*": ["./modules/gpgpu/test/*"],
+      "@luma.gl/graph/_internal/*": ["./modules/graph/src/execution/*"],
+      "@luma.gl/graph/gpu-simple-graph": ["./modules/graph/src/gpu-simple-graph/index.ts"],
+      "@luma.gl/graph/gpu-simple-graph/webgl": ["./modules/graph/src/gpu-simple-graph/operations/webgl/index.ts"],
+      "@luma.gl/graph/gpu-simple-graph/webgpu": ["./modules/graph/src/gpu-simple-graph/operations/webgpu/index.ts"],
+      "@luma.gl/graph/gpu-simple-graph/cpu": ["./modules/graph/src/gpu-simple-graph/operations/cpu/index.ts"],
       "@luma.gl/anari": ["./modules/anari/src/index.ts"],
       "@luma.gl/anari/*": ["./modules/anari/src/*"],
       "@luma.gl/slang": ["./modules/slang/src/index.ts"],

@@ -115,7 +115,7 @@ finish. Overlapping writes to shared targets are the caller's responsibility.
 ## Scoped execution on WebGPU
 
 ```typescript
-import {GPUEvaluationScope} from '@luma.gl/gpgpu';
+import {GPUEvaluationScope} from '@luma.gl/graph/gpu-simple-graph';
 
 const scope = new GPUEvaluationScope(device);
 try {

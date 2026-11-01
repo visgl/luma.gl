@@ -4,7 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {type GPUTable, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {GPUBatchHashIndex} from '@luma.gl/graph/gpu-core';
 import {

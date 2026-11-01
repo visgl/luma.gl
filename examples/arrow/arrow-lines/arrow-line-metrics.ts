@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUVector} from '@luma.gl/graph/gpu-data';
 import {PathStorageModel, PathTripsStorageModel} from '@luma.gl/engine/models';
 import type {ArrowLineControlPanelMetrics} from './control-panel';
 import type {

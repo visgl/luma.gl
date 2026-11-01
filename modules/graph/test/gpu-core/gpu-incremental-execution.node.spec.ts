@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPUIncrementalExecution, type GPUIncrementalBatch} from '@luma.gl/graph/gpu-core';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, test, vi} from 'vitest';

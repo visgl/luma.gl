@@ -4,7 +4,7 @@
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
-import {fp64ify, fp64LowPart, fp64ifyMatrix4} from '../../../modules/math/fp64/fp64-utils';
+import {fp64ify, fp64LowPart, fp64ifyMatrix4} from './fp64-utils';
 import {fp64arithmeticShader} from './fp64-arithmetic-glsl';
 import {fp64arithmeticWGSL} from './fp64-arithmetic-wgsl';
 import {fp64functionShader} from './fp64-functions-glsl';

@@ -44,7 +44,7 @@ stable Engine models and Shaders passes.
 
 | Module | Use it for |
 | --- | --- |
-| [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
+| [`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
 | [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | GPU record batches, tables, schemas, bindings, computations, and generic table planners. |
 | `@luma.gl/engine/models` | Experimental path and polygon rendering models. GPU input preparation remains in `@luma.gl/graph/experimental/models`. |
 | [`@luma.gl/graph/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |

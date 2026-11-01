@@ -8,7 +8,7 @@
 */
 
 import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
-import {makeArrowMatrix4x4Vector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowMatrix4x4Vector} from '@luma.gl/graph/arrow';
 import type {
   NumberArray,
   ShaderLayout,

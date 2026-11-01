@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {TextureTransform, GPUVectorModel} from '@luma.gl/engine';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {Device, Texture} from '@luma.gl/core';
 
 /** Creates a minimal, no-op transform. */

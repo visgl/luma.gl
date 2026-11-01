@@ -121,3 +121,40 @@ export {
   type GPUCommandGraphInspectorSnapshot,
   GPUCommandGraphInspector
 } from './gpu-core/gpu-command-graph-inspector';
+
+// Shared execution and resource primitives
+export type {
+  TextureCubeFace,
+  TextureImageData,
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from './execution/dynamic-texture/texture-data';
+export type {DynamicTextureProps} from './execution/dynamic-texture/dynamic-texture';
+export {DynamicTexture} from './execution/dynamic-texture/dynamic-texture';
+export type {
+  TextureBindingLayout,
+  TextureBindingSource
+} from './execution/dynamic-texture/texture-binding-source';
+export type {
+  BufferBindingSource,
+  DynamicBufferProps,
+  DynamicBufferRange
+} from './execution/dynamic-buffer/dynamic-buffer';
+export {DynamicBuffer} from './execution/dynamic-buffer/dynamic-buffer';
+export {getPlatformInfo} from './execution/utils/get-platform-info';
+export type {
+  KernelProps,
+  KernelDispatchOptions,
+  KernelDispatchIndirectOptions
+} from './execution/compute/kernel';
+export {Kernel} from './execution/compute/kernel';
+export {RenderKernel} from './execution/compute/render-kernel';
+export type {
+  RenderKernelProps,
+  RenderKernelDrawOptions,
+  RenderKernelIndirectDrawOptions
+} from './execution/compute/render-kernel';

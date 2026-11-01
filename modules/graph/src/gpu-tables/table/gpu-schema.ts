@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 
 /** Reserved GPU table column used as an indexed draw buffer instead of a shader input. */
 export const GPU_TABLE_INDEX_COLUMN_NAME = 'indices';

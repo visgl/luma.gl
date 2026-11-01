@@ -13,7 +13,7 @@ import {
   type GPUGraphAlgorithmsSingleSourceShortestPathDirection,
   type GPUGraphAlgorithmsSingleSourceShortestPathProps
 } from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 import {getGPUGraphAlgorithmsSingleSourceShortestPathDispatchLayout} from '../../src/gpu-graph-algorithms/gpu-graph-single-source-shortest-path-internals';

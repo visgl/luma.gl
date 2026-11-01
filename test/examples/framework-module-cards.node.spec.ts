@@ -77,8 +77,8 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'gpgpu',
     title: 'GPGPU',
-    packageName: '@luma.gl/gpgpu',
-    documentationPath: 'docs/api-reference/gpgpu',
+    packageName: '@luma.gl/graph/gpu-simple-graph',
+    documentationPath: 'docs/api-reference/graph/gpu-evaluation',
     capabilities: ['GPU graphs', 'Compute modules', 'Zero readback'],
     descriptions: [/compute modules and rendering/i, /GPU-native pipeline/i]
   }

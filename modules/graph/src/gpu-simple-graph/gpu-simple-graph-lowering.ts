@@ -3,15 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert} from '@luma.gl/core';
-import {
-  GPUDataEvaluator,
-  GPUVectorEvaluator,
-  add,
-  subtract,
-  multiply,
-  divide,
-  sqrt
-} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator} from './operation/gpu-data-evaluator';
+import {GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
+import {add, subtract, multiply, divide, sqrt} from './operations/arithmetic';
 import {
   GPUGraphScalarLiteral,
   GPUGraphScalarOperation,

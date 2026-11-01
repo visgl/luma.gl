@@ -10,7 +10,7 @@ import {
   type GPUData,
   type GPUVector,
   type GPUVectorFormat
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 import type {GPUCommandGraph, GraphDataView} from '@luma.gl/graph/gpu-core';
 import type {GraphEmbeddingMatrix, GraphEmbeddingMatrixChunk} from './types';
 

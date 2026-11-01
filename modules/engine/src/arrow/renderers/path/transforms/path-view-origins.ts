@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import {Data, FixedSizeList, Float32, Vector} from 'apache-arrow';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 
 /** Arrow Float32 vec4 view-origin column aligned with source path rows. */
 export type ArrowPathViewOriginType = FixedSizeList<Float32>;

@@ -4,16 +4,16 @@
 
 import {type CommandEncoder, type Device, type ShaderLayout} from '@luma.gl/core';
 import {getArrowPickingModules, makeArrowRecordBatchSourceInfo} from '../../../arrow-picking';
-import {getArrowVectorByteLength} from '@luma.gl/gpgpu/arrow';
+import {getArrowVectorByteLength} from '@luma.gl/graph/arrow';
 import {
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable
 } from '@luma.gl/graph/arrow';
-import {readArrowGPUVectorAsync} from '@luma.gl/gpgpu/arrow';
-import {convertArrowToGPUVector} from '@luma.gl/gpgpu/arrow';
+import {readArrowGPUVectorAsync} from '@luma.gl/graph/arrow';
+import {convertArrowToGPUVector} from '@luma.gl/graph/arrow';
 import {type ModelProps} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
-import {GPUVector, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, getRequiredGPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {
   GPUTextResources,
@@ -21,7 +21,7 @@ import {
   type FontAtlas,
   type GPUTextData
 } from '@luma.gl/engine/text';
-import {canConvertColors} from '@luma.gl/gpgpu/arrow';
+import {canConvertColors} from '@luma.gl/graph/arrow';
 import {
   TextAttributeModel,
   TextDictionaryModel,

@@ -24,7 +24,7 @@ For the required and optional `GPUVector` inputs accepted by a model, see
 
 ```ts
 import type {VertexFormat} from '@luma.gl/core';
-import type {FixedSizeList, GPUVectorFormat, VertexList} from '@luma.gl/gpgpu/gpu-data';
+import type {FixedSizeList, GPUVectorFormat, VertexList} from '@luma.gl/graph/gpu-data';
 
 export type GPUTypeMap = Record<string, GPUVectorFormat>;
 
@@ -100,7 +100,7 @@ path.
 
 Compatibility between `GPUField.format` and shader values is checked separately
 with
-[`isGPUVectorFormatCompatibleWithShaderType()`](/docs/api-reference/gpgpu/gpu-vector-format).
+[`isGPUVectorFormatCompatibleWithShaderType()`](/docs/api-reference/graph/gpu-vector-format).
 
 ### Reserved `indices` Column
 
@@ -129,8 +129,8 @@ dictionary information.
 `GPUSchema` has no behavior that needs identity, inheritance, or lifecycle
 management. The objects that need lifecycle management are GPU resource owners:
 
-- [`GPUData`](/docs/api-reference/gpgpu/gpu-data) owns or borrows one buffer.
-- [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) owns or borrows ordered
+- [`GPUData`](/docs/api-reference/graph/gpu-data) owns or borrows one buffer.
+- [`GPUVector`](/docs/api-reference/graph/gpu-vector) owns or borrows ordered
   `GPUData` chunks.
 - [`GPURecordBatch`](/docs/api-reference/experimental/gpu-tables/gpu-record-batch) owns one
   batch-local `GPUData` chunk per selected column.

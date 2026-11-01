@@ -22,9 +22,6 @@
       "path": "../engine"
     },
     {
-      "path": "../gpgpu"
-    },
-    {
       "path": "../graph"
     }
   ]

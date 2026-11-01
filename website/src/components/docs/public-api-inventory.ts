@@ -70,16 +70,16 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     }
   },
   {
-    packageName: '@luma.gl/gpgpu',
-    entryPoint: 'modules/gpgpu/src/index.ts',
+    packageName: '@luma.gl/graph/gpu-simple-graph',
+    entryPoint: 'modules/graph/src/gpu-simple-graph/index.ts',
     documentation: {
       kind: 'curated',
-      defaultRoute: '/docs/api-reference/gpgpu',
+      defaultRoute: '/docs/api-reference/graph/gpu-evaluation',
       routesBySourcePrefix: {
-        'operation/gpu-data-evaluator': '/docs/api-reference/gpgpu/gpu-data-evaluator',
-        operations: '/docs/api-reference/gpgpu/operations',
-        'operation/operation': '/docs/api-reference/gpgpu/custom-operation',
-        'utils/clean-evaluate': '/docs/api-reference/gpgpu/clean-evaluate'
+        'operation/gpu-data-evaluator': '/docs/api-reference/graph/gpu-data-evaluator',
+        operations: '/docs/api-reference/graph/operations',
+        'operation/operation': '/docs/api-reference/graph/custom-operation',
+        'utils/clean-evaluate': '/docs/api-reference/graph/clean-evaluate'
       }
     }
   },

@@ -15,7 +15,7 @@ Experimental 2D text utilities for luma.gl. CPU-side font preparation is isolate
 ```ts
 import * as arrow from 'apache-arrow';
 import {makeGPUTextDataFromArrow, convertArrowTextToAttribute} from '@luma.gl/engine/arrow';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {
   GPUTextResources,
   TextRenderer

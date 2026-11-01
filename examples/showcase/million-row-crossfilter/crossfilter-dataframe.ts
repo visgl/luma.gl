@@ -4,7 +4,7 @@
 
 import type {GPUCommandGraph, GraphDataView} from '@luma.gl/graph/gpu-core';
 import {GPUGroupAggregation} from '@luma.gl/graph/gpu-core';
-import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, type GPUData} from '@luma.gl/graph/gpu-data';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import {CROSS_FILTER_CATEGORY_NAMES} from './crossfilter-data';

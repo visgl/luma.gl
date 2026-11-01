@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device} from '@luma.gl/core';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField} from '@luma.gl/graph/gpu-tables';
 import {RecordBatch, Table} from 'apache-arrow';
-import {getArrowFieldByPath} from '@luma.gl/gpgpu/_internal/arrow';
-import {getArrowVectorByPath} from '@luma.gl/gpgpu/arrow';
-import {getArrowTemporalVectorInfo, TEMPORAL_ORIGIN_METADATA_KEY} from '@luma.gl/gpgpu/arrow';
+import {getArrowFieldByPath} from '@luma.gl/graph/_internal/arrow';
+import {getArrowVectorByPath} from '@luma.gl/graph/arrow';
+import {getArrowTemporalVectorInfo, TEMPORAL_ORIGIN_METADATA_KEY} from '@luma.gl/graph/arrow';
 import {
   ArrowGPUConversionCost,
   ArrowGPUConversionOptions,
@@ -16,7 +16,7 @@ import {
   PreparedArrowGPUVector,
   planArrowGPUConversion,
   convertArrowToGPUVector
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 
 /** One named source-to-target mapping in an Arrow table conversion schema. */
 export type ArrowGPUTableConversionColumn = ArrowGPUConversionOptions & {

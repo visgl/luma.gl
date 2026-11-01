@@ -4,14 +4,14 @@
 
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {
   DrawCommandBuffer,
   GPUCommandGraph,
   GPUVisibilityWorkflow,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 import {getGPUVisibilityWorkflowCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-visibility-workflow';

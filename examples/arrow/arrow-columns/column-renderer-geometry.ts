@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {GPUVector, getGPUVectorBuffer} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, getGPUVectorBuffer} from '@luma.gl/graph/gpu-data';
 import {dggs, type ShaderModule} from '@luma.gl/shaders';
 import * as arrow from 'apache-arrow';
 import {CELL_GEOMETRY_POINT_COUNT, COLUMN_GEOMETRY_WORKGROUP_SIZE} from './column-renderer-shaders';

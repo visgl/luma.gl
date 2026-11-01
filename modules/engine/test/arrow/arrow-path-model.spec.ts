@@ -16,9 +16,9 @@ import {
   makeArrowFixedSizeListVector,
   makeGPUVectorFromArrow,
   readArrowGPUVectorAsync
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 import type {Device, RenderPass, ShaderLayout} from '@luma.gl/core';
-import {type GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   PathAttributeModel,
   PathStorageModel,
