@@ -39,7 +39,7 @@ import type {SplatSortMode} from './splat-sort';
 /** Camera, styling, borrowed data, and canvas clearing for graph-native Gaussian rendering. */
 export type GPUSplatGraphRendererProps = Omit<
   SplatRendererProps,
-  'depthCompare' | 'depthWriteEnabled'
+  'depthCompare' | 'depthWriteEnabled' | 'depthConvention'
 > & {
   /** Color used when the graph opens its single default-framebuffer render pass. */
   clearColor?: [number, number, number, number];

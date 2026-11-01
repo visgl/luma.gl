@@ -25,7 +25,7 @@ export type SplatSortReference = {
   batchRowIndex: number;
   /** Stable global source-row index. */
   rowIndex: number;
-  /** Positive back-to-front camera depth. */
+  /** Back-to-front sort depth; reverse-Z renderers negate projected depth. */
   depth: number;
   /** Screen tile identity used by tile-local sorting. */
   tileIndex: number;
