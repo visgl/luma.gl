@@ -27,6 +27,59 @@ function makeOperation(contract: GPUOperationContract): GPUOperation {
   return {id: 'custom', type: 'custom', contract};
 }
 
+test('loop summaries preserve initial scalar reads and internal initialization', () => {
+  const device = new NullDevice({});
+  try {
+    for (const initializeInside of [false, true]) {
+      const graph = new GPUGraph();
+      const state = graph.scalar('state', 'float32');
+      const output = graph.scalar('output', 'float32');
+      if (!initializeInside)
+        graph.add(new GPUGraphScalarOperation({operation: 'copy', left: state, output}));
+      graph.add(
+        new GPULoopOperation({
+          maximumIterations: 2,
+          body: [
+            ...(initializeInside ? [new GPUGraphScalarLiteral({output: state, value: 7})] : []),
+            new GPUGraphScalarOperation({
+              operation: 'add',
+              left: state,
+              right: state,
+              output: state
+            })
+          ]
+        })
+      );
+      const program = new GPUExpressionProgram(graph, {outputs: ['state']});
+      const invocation = program.prepare(device, initializeInside ? {} : {state: 7});
+      invocation.destroy();
+      if (!initializeInside) expect(() => program.prepare(device, {})).toThrow('binding state');
+    }
+  } finally {
+    device.destroy();
+  }
+});
+
+test('lowering snapshots retain prototype methods', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const lower = vi.fn();
+  class CustomLowering implements GPUOperationLowering {
+    readonly type = 'custom';
+    lower() {
+      lower();
+    }
+  }
+  try {
+    const graph = new GPUGraph();
+    graph.add(makeOperation({values: []}));
+    new GPUGraphCompiler(device, [new CustomLowering()]).compile(graph);
+    expect(lower).toHaveBeenCalledOnce();
+  } finally {
+    device.destroy();
+  }
+});
+
 test('expressions reject self references after a contract writer', () => {
   const graph = new GPUGraph();
   graph.vector('output', 'float32');

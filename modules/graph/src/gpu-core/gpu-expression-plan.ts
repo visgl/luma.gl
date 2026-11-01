@@ -397,16 +397,25 @@ function getPlanningContract(
     (operation.type === 'composite' ||
       (operation instanceof GPULoopOperation && !operation.predicate))
   ) {
+    const reads = new Set<string>();
+    const writes = new Set<string>();
+    for (const child of operation.operations) {
+      const uses = (getPlanningContract(child, scalars)?.values ?? []).filter(use =>
+        scalars.some(scalar => scalar.id === getGPUOperationValueName(use.value))
+      );
+      // Reads within one operation precede its writes, regardless of descriptor ordering.
+      for (const use of uses) {
+        const name = getGPUOperationValueName(use.value);
+        if (use.access !== 'write' && !writes.has(name)) reads.add(name);
+      }
+      for (const use of uses)
+        if (use.access !== 'read') writes.add(getGPUOperationValueName(use.value));
+    }
     return {
-      values: operation.operations.flatMap(child =>
-        (getPlanningContract(child, scalars)?.values ?? [])
-          .filter(
-            use =>
-              use.access !== 'read' &&
-              scalars.some(scalar => scalar.id === getGPUOperationValueName(use.value))
-          )
-          .map(use => ({value: use.value, access: 'write' as const}))
-      )
+      values: [...new Set([...reads, ...writes])].map(value => ({
+        value,
+        access: reads.has(value) ? (writes.has(value) ? 'read-write' : 'read') : 'write'
+      }))
     };
   }
   return isGPUOperation(operation) ? operation.contract : undefined;
