@@ -7,7 +7,6 @@ import {Kernel} from '../execution/compute/kernel';
 import {GPUDataEvaluator} from './operation/gpu-data-evaluator';
 import {Operation, type OperationHandlerResult} from './operation/operation';
 import type {GPUEvaluationScope} from './operation/gpu-evaluation-scope';
-import {runRowTransform} from './operations/webgl/common/row-transform';
 import type {GPUExpressionFormat} from '../gpu-core/gpu-expression-operation';
 import {
   GPU_EXPRESSION_SHADER_TYPES,
@@ -49,6 +48,7 @@ export class GPUExpressionCastOperation extends Operation<{input: GPUDataEvaluat
     await input.evaluate(device, {scope});
     const sourceFormat = input.type as GPUExpressionFormat;
     if (device.type === 'webgl') {
+      const {runRowTransform} = await import('./operations/webgl/common/row-transform');
       runRowTransform({
         module: {name: 'expressionCast', vs: GPU_EXPRESSION_CAST_GLSL},
         inputs: {sourceValue: input},
