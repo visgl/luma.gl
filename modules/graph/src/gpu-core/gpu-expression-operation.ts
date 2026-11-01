@@ -64,6 +64,8 @@ export type GPUExpression =
   | {kind: 'reference'; name: string}
   | {kind: 'literal'; value: number}
   | {kind: 'negate'; argument: GPUExpression}
+  | {kind: 'swizzle'; argument: GPUExpression; components: number[]}
+  | {kind: 'construct'; width: number; arguments: GPUExpression[]}
   | {kind: 'cast'; format: GPUExpressionFormat; argument: GPUExpression}
   | {kind: 'call'; name: GPUExpressionFunction; arguments: GPUExpression[]}
   | {kind: 'binary'; operator: '+' | '-' | '*' | '/'; left: GPUExpression; right: GPUExpression};
@@ -82,10 +84,27 @@ export function parseGPUExpression(expression: string | GPUExpressionAST): GPUEx
       case 'UnaryExpression':
         if (node.operator === '-') return {kind: 'negate', argument: visit(node.argument)};
         break;
+      case 'MemberExpression': {
+        const property = node.property as Expression;
+        if (node.computed || property.type !== 'Identifier')
+          throw new Error('Computed component access is unsupported');
+        if (!/^[xyzw]{1,4}$/.test(property.name))
+          throw new Error(`Invalid swizzle .${property.name}: expected 1–4 xyzw components`);
+        return {
+          kind: 'swizzle',
+          argument: visit(node.object),
+          components: [...property.name].map(component => 'xyzw'.indexOf(component))
+        };
+      }
       case 'CallExpression': {
         const callee = node.callee as Expression;
         if (callee.type !== 'Identifier') break;
         const name = callee.name;
+        if (/^vec[234]$/.test(name)) {
+          if (node.arguments.length < 1 || node.arguments.length > 4)
+            throw new Error(`${name}: expected 1–4 arguments, received ${node.arguments.length}`);
+          return {kind: 'construct', width: Number(name[3]), arguments: node.arguments.map(visit)};
+        }
         if (isGPUExpressionFormat(name)) {
           if (node.arguments.length !== 1) throw new Error(`Invalid argument count for ${name}`);
           return {kind: 'cast', format: name, argument: visit(node.arguments[0])};
@@ -122,10 +141,12 @@ export function getGPUExpressionReferences(expression: GPUExpression): readonly 
       case 'reference':
         references.add(value.name);
         break;
+      case 'swizzle':
       case 'cast':
       case 'negate':
         visit(value.argument);
         break;
+      case 'construct':
       case 'call':
         value.arguments.forEach(visit);
         break;
@@ -156,6 +177,35 @@ export function getGPUExpressionFormat(
       const format = formats.get(expression.name);
       if (!format) throw new Error(`Undeclared numeric input ${expression.name}`);
       return format;
+    }
+    case 'swizzle': {
+      const input = getGPUExpressionRowInfo(getGPUExpressionFormat(expression.argument, formats));
+      const required = Math.max(...expression.components) + 1;
+      if (required > input.components) {
+        const selector = expression.components.map(component => 'xyzw'[component]).join('');
+        const inputName =
+          expression.argument.kind === 'reference' ? expression.argument.name : 'input';
+        throw new Error(
+          `.${selector} needs ${required} components; ${inputName} has ${input.components}`
+        );
+      }
+      return makeGPUExpressionRowFormat(input.componentType, expression.components.length);
+    }
+    case 'construct': {
+      const argumentsInfo = expression.arguments.map(argument =>
+        getGPUExpressionRowInfo(getGPUExpressionFormat(argument, formats))
+      );
+      const componentType = argumentsInfo[0].componentType;
+      if (argumentsInfo.some(argument => argument.componentType !== componentType))
+        throw new Error(
+          `vec${expression.width}: mixed component types (${argumentsInfo.map(argument => argument.componentType).join(', ')})`
+        );
+      const components = argumentsInfo.reduce((count, argument) => count + argument.components, 0);
+      if (!(argumentsInfo.length === 1 && components === 1) && components !== expression.width)
+        throw new Error(
+          `vec${expression.width}(...) needs ${expression.width} components; received ${components}`
+        );
+      return makeGPUExpressionRowFormat(componentType, expression.width);
     }
     case 'cast':
       return makeGPUExpressionRowFormat(

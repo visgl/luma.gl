@@ -92,44 +92,49 @@ export class GPUExpressionProgram {
     }
     const available = new Set([...declarations.keys()].filter(name => !producers.has(name)));
     this.expressions = expressions.map(operation => {
-      const output = declarations.get(operation.output);
-      if (!output || !isGPUExpressionRowFormat(output.format))
-        throw new Error(
-          `Expression output ${operation.output} must declare a 32-bit numeric row of width 1–4`
-        );
-      const expression = parseGPUExpression(operation.expression);
-      const references = getGPUExpressionReferences(expression);
-      const formats = new Map<string, GPUExpressionRowFormat>();
-      for (const name of references) {
-        const declaration = declarations.get(name);
-        if (!declaration || !isGPUExpressionRowFormat(declaration.format))
+      try {
+        const output = declarations.get(operation.output);
+        if (!output || !isGPUExpressionRowFormat(output.format))
           throw new Error(
-            `Expression input ${name} must declare a 32-bit numeric row of width 1–4`
+            `Expression output ${operation.output} must declare a 32-bit numeric row of width 1–4`
           );
-        formats.set(name, declaration.format);
-        if (!available.has(name))
-          throw new Error(`Expression ${operation.id} reads ${name} before it is produced`);
-      }
-      if (
-        this.scalars.some(scalar => scalar.id === output.id) &&
-        references.some(name => this.vectors.some(vector => vector.id === name))
-      )
-        throw new Error(`Vector expression cannot write scalar ${operation.output}`);
-      if (
-        this.vectors.some(vector => vector.id === operation.output) &&
-        !references.some(name => this.vectors.some(vector => vector.id === name))
-      )
-        throw new Error(
-          `Vector expression ${operation.output} requires a vector input to determine its shape`
+        const expression = parseGPUExpression(operation.expression);
+        const references = getGPUExpressionReferences(expression);
+        const formats = new Map<string, GPUExpressionRowFormat>();
+        for (const name of references) {
+          const declaration = declarations.get(name);
+          if (!declaration || !isGPUExpressionRowFormat(declaration.format))
+            throw new Error(
+              `Expression input ${name} must declare a 32-bit numeric row of width 1–4`
+            );
+          formats.set(name, declaration.format);
+          if (!available.has(name)) throw new Error(`Reads ${name} before it is produced`);
+        }
+        if (
+          this.scalars.some(scalar => scalar.id === output.id) &&
+          references.some(name => this.vectors.some(vector => vector.id === name))
+        )
+          throw new Error(`Vector expression cannot write scalar ${operation.output}`);
+        if (
+          this.vectors.some(vector => vector.id === operation.output) &&
+          !references.some(name => this.vectors.some(vector => vector.id === name))
+        )
+          throw new Error(
+            `Vector expression ${operation.output} requires a vector input to determine its shape`
+          );
+        const format = getGPUExpressionFormat(expression, formats);
+        if (output.format !== format)
+          throw new Error('Expression result type must match its output declaration');
+        available.add(operation.output);
+        const gpuScalarInputs = references.filter(name =>
+          precedingScalarProducers.get(operation)!.has(name)
         );
-      const format = getGPUExpressionFormat(expression, formats);
-      if (output.format !== format)
-        throw new Error('Expression result type must match its output declaration');
-      available.add(operation.output);
-      const gpuScalarInputs = references.filter(name =>
-        precedingScalarProducers.get(operation)!.has(name)
-      );
-      return {operation, expression, format, formats, references, gpuScalarInputs};
+        return {operation, expression, format, formats, references, gpuScalarInputs};
+      } catch (error) {
+        if (error instanceof Error)
+          throw new Error(`${operation.id}: ${error.message}`, {cause: error});
+        throw error;
+      }
     });
     this.outputs = [...(options.outputs ?? expressions.map(operation => operation.output))];
     for (const name of this.outputs) {

@@ -44,9 +44,29 @@ export class GPUExpressionKernel {
     const arenaUsed = this.scalarNames.length > 0 || this.outputIsScalar;
     const metadata = (index: number): string => `metadata[${Math.floor(index / 4)}][${index % 4}]`;
     const emit = (expression: GPUExpression, laneIndex: number): string => {
+      // Single-component subexpressions broadcast even when they contain a selector.
+      if (
+        getGPUExpressionRowInfo(getGPUExpressionFormat(expression, plan.formats)).components === 1
+      )
+        laneIndex = 0;
       switch (expression.kind) {
         case 'literal':
           return `f32(${Object.is(expression.value, -0) ? '-0.0' : expression.value.toExponential()})`;
+        case 'swizzle':
+          return emit(expression.argument, expression.components[laneIndex]);
+        case 'construct': {
+          const lanes = expression.arguments.flatMap(argument =>
+            Array.from(
+              {
+                length: getGPUExpressionRowInfo(getGPUExpressionFormat(argument, plan.formats))
+                  .components
+              },
+              (_, component) => ({argument, component})
+            )
+          );
+          const lane = lanes[lanes.length === 1 ? 0 : laneIndex];
+          return emit(lane.argument, lane.component);
+        }
         case 'negate':
           return `(-${emit(expression.argument, laneIndex)})`;
         case 'cast':

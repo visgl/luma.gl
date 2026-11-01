@@ -52,7 +52,7 @@ const operation = new GPUExpressionOperation({
 Supported expressions contain declared identifiers, finite numeric literals, parentheses,
 unary negation, binary `+`, `-`, `*`, `/`, and the function calls described below. Operators act elementwise; scalars broadcast to
 vector rows. Vector outputs require at least one vector input. Scalar expressions produce a
-one-row output vector with the declared numeric format. Arbitrary functions, member access, indexing, comparisons, conditionals,
+one-row output vector with the declared numeric format. Arbitrary functions, general property access, indexing, comparisons, conditionals,
 and other JavaScript syntax are not part of this initial GPU subset. Parsing successfully
 in math.gl does not imply support by the GPU compiler.
 
@@ -97,8 +97,48 @@ Storage stays packed: `float32x3` occupies 12 bytes per row on both backends, wi
 `vec3` padding. Inputs and caller-provided output targets must have the matching packed row
 stride and a four-byte-aligned offset. Existing chunk boundaries and ownership rules apply.
 
-Component access, swizzles, constructors, `dot`, `length`, predicates, and selection are not
-part of this tranche. Existing evaluator operations and their APIs remain unchanged.
+`dot`, `length`, predicates, and selection remain outside the expression subset.
+Existing evaluator operations and their APIs remain unchanged.
+
+## Component access and row construction
+
+Static `.xyzw` selectors choose one to four components per row. `positions.x` returns one
+component, `positions.zyx` reorders a three-component row, and `positions.xx` repeats its first
+component. Selectors can be nested and applied to subexpressions. A selector must fit the
+input width; `.w` on a three-component row fails at compilation. Computed indexing, `.rgba`
+aliases, and arbitrary properties are not supported.
+
+`vec2(...)`, `vec3(...)`, and `vec4(...)` concatenate argument components in order. A single
+one-component argument replicates to the requested width. Otherwise the total component
+count must exactly match the constructor width; there is no implicit padding or truncation.
+
+```typescript
+graph.vector('positions', 'float32x3');
+graph.vector('homogeneous', 'float32x4');
+graph.vector('reordered', 'float32x3');
+graph.add(new GPUExpressionOperation({
+  output: 'homogeneous',
+  expression: 'vec4(positions, 1)'
+}));
+graph.add(new GPUExpressionOperation({
+  output: 'reordered',
+  expression: 'homogeneous.zyx'
+}));
+```
+
+Constructors infer their component type from their arguments and require matching types.
+For example, `vec3(ids.xy, uint32(1))` preserves exact uint32 values. Numeric literals are
+float32, so `vec3(ids.xy, 1)` requires an explicit cast when `ids` is uint32. Existing
+width-preserving casts apply to constructed rows and selections.
+
+One-component selections broadcast in arithmetic: `positions + positions.y` adds each row's
+second component to every component in that row. Scalar-only constructors can be used inside
+expressions, such as `positions + vec3(scale)`. A vector output still needs a vector input to
+determine its runtime row count. Chunk-boundary and ownership rules are unchanged; returned
+outputs are materialized results, even when a selector can use a borrowed intermediate view.
+
+Compilation reports the operation ID with concise width/type diagnostics, for example
+`reorder: .w needs 4 components; positions has 3`.
 
 ## Math functions and numeric casts
 
