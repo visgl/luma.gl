@@ -414,7 +414,7 @@ chunks through `.data` or canonical logical descriptors through `.chunks`.
 
 ## GPU Graph package
 
-Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/graph/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/graph/gpu-simple-graph`.
+Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/graph/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives live in `@luma.gl/graph/gpu-data`; immediate operations live in `@luma.gl/graph/gpu-simple-graph`.
 
 ## Module loader dependencies
 
@@ -437,13 +437,13 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 
 ### Kernel imports
 
-`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/graph/gpu-simple-graph`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/graph/gpu-simple-graph`.
+`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/graph`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/graph`.
 
-`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/graph/gpu-simple-graph` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
+`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/graph` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
 
 ### GPU vector rendering imports
 
-`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/graph/gpu-simple-graph` or `@luma.gl/graph/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant remain in gpgpu/gpu-data. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.
+`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/graph/gpu-simple-graph` or `@luma.gl/graph/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant live in `@luma.gl/graph/gpu-data`. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.
 
 ### glTF imports
 

@@ -1,6 +1,6 @@
 # RenderKernel
 
-Import `RenderKernel` alongside `Kernel` from `@luma.gl/graph/gpu-simple-graph`. Neither class is exported by engine or core.
+Import `RenderKernel` alongside `Kernel` from `@luma.gl/graph`. Neither class is exported by engine or core.
 
 RenderKernel owns compiled shaders and a cached render pipeline. It accepts already assembled GLSL on WebGL or WGSL on WebGPU. Shader assembly, uniforms, geometry ownership, and graph scheduling stay with the caller.
 

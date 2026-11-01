@@ -81,7 +81,7 @@ objects; the GPU data types do not depend on Apache Arrow.
 ## Installing
 
 ```bash
-npm install @luma.gl/graph/gpu-simple-graph
+npm install @luma.gl/graph
 ```
 
 ## Usage
@@ -195,7 +195,7 @@ registering CPU handlers for another device type.
 
 ## Related Engine APIs
 
-`@luma.gl/graph/gpu-simple-graph` executes WebGL operations through `RenderKernel`, without depending on engine. Import `Kernel` and `RenderKernel` from `@luma.gl/graph`. Shader-module conveniences `Computation` and `ShaderInputs` belong to `@luma.gl/engine`. The model-based [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) and [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) adapters belong to `@luma.gl/engine`.
+`@luma.gl/graph` executes WebGL operations through `RenderKernel`, without depending on engine. Import `Kernel` and `RenderKernel` from `@luma.gl/graph`. Shader-module conveniences `Computation` and `ShaderInputs` belong to `@luma.gl/engine`. The model-based [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) and [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) adapters belong to `@luma.gl/engine`.
 
 ## Geometry and point clouds
 

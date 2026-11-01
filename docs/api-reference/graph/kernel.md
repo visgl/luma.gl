@@ -76,7 +76,7 @@ kernel.draw(renderPass, {
 });
 ```
 
-It also supports non-indexed and indexed indirect draws on WebGPU. Import both classes from `@luma.gl/graph/gpu-simple-graph`; engine does not re-export them.
+It also supports non-indexed and indexed indirect draws on WebGPU. Import both classes from `@luma.gl/graph`; engine does not re-export them.
 
 ## What kernels do not do
 

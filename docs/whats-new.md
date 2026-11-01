@@ -146,7 +146,7 @@ reuses the evaluator snapshots. Existing GPGPU operations and ordinary execution
 composition, with a dedicated SimpleGraph example. GPGPU data and vector evaluators now
 expose read-only `getInspection()` snapshots. WebGPU evaluation scopes also accept
 chunk-preserving vector evaluators, with one explicit submission and cancellation rollback.
-Ordinary evaluator execution remains unchanged; `@luma.gl/graph/gpu-simple-graph` remains independent of graph.
+Ordinary evaluator execution remains unchanged; the evaluator implementation remains separate from the full graph compiler.
 
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
@@ -964,7 +964,7 @@ finite-shape pair matrix records response coverage separately from numerical qua
 
 ## Dedicated GPU Graph package
 
-`@luma.gl/graph` exposes `GPUGraph` at its root and graph-based processing through focused subpaths. GPU tables, dataframe/SQL, raster, spatial processing, trace analytics, volume operations, simulations, and graph algorithms now share one package. GPU data primitives and immediate operations remain in `@luma.gl/graph/gpu-simple-graph`.
+`@luma.gl/graph` exposes `GPUGraph` at its root and graph-based processing through focused subpaths. GPU tables, dataframe/SQL, raster, spatial processing, trace analytics, volume operations, simulations, and graph algorithms now share one package. GPU data primitives live in `@luma.gl/graph/gpu-data`; immediate operations live in `@luma.gl/graph/gpu-simple-graph`.
 
 ### Authored GPU physics sessions
 

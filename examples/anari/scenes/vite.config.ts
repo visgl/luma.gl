@@ -21,6 +21,8 @@ const alias = {
   '@luma.gl/graph/gpu-simple-graph/webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
   '@luma.gl/graph/gpu-simple-graph/webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
   '@luma.gl/graph/gpu-simple-graph': `${__dirname}/../../../modules/graph/src/gpu-simple-graph`,
+  '@luma.gl/graph/_internal/arrow': `${__dirname}/../../../modules/graph/src/arrow/internal.ts`,
+  '@luma.gl/graph/arrow': `${__dirname}/../../../modules/graph/src/arrow`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
   '@luma.gl/core/webgl-constants': `${__dirname}/../../../modules/core/src/webgl-constants`,
   '@luma.gl/core/webgl': `${__dirname}/../../../modules/core/src/webgl`,

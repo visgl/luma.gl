@@ -147,4 +147,4 @@ Destroys the current backing buffer and clears debug data.
 
 ## Import paths
 
-The canonical import is `@luma.gl/core/dynamic`. This optional entry point is not re-exported from `@luma.gl/core`. Existing exports from `@luma.gl/engine` and `@luma.gl/graph/gpu-simple-graph` remain available and refer to the same class.
+The canonical import is `@luma.gl/core/dynamic`. This optional entry point is not re-exported from `@luma.gl/core`. Existing exports from `@luma.gl/engine` and `@luma.gl/graph` remain available and refer to the same class.

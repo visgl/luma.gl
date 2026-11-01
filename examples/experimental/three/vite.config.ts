@@ -20,6 +20,16 @@ export default defineConfig(({mode}) => ({
   },
   resolve: {
     alias: {
+      '@luma.gl/graph/gpu-simple-graph/cpu': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/cpu', import.meta.url)
+      ),
+      '@luma.gl/graph/gpu-simple-graph/webgl': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgl', import.meta.url)
+      ),
+      '@luma.gl/graph/gpu-simple-graph/webgpu': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgpu', import.meta.url)
+      ),
+
       '@luma.gl/graph/_internal': fileURLToPath(
         new URL('../../../modules/graph/src/execution', import.meta.url)
       ),
