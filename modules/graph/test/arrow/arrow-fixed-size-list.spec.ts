@@ -482,9 +482,10 @@ it('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async () => 
   const firstChunkResult = await readArrowGPUDataAsync(gpuVector.data[0]);
 
   expect(gpuVector.data.length, 'keeps one GPUData object per UTF-8 source chunk').toBe(2);
-  expect(gpuVector.data[0].readbackMetadata?.kind, 'retains compact UTF-8 readback metadata').toBe(
-    'utf8'
-  );
+  expect(
+    (gpuVector.data[0].readbackMetadata as {kind?: string} | undefined)?.kind,
+    'retains compact UTF-8 readback metadata'
+  ).toBe('utf8');
   expect(
     Array.from(vectorResult.toArray()),
     'reads UTF-8 rows back across chunk boundaries'

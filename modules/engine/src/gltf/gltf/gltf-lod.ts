@@ -72,7 +72,9 @@ export function getGLTFNodeLODs(
     uniqueNodeIndices.add(nodeIndex);
   }
 
-  const authoredCoverage = sourceNode.extras?.['MSFT_screencoverage'];
+  const authoredCoverage = (sourceNode.extras as Record<string, unknown> | undefined)?.[
+    'MSFT_screencoverage'
+  ];
   const screenCoverage = resolveScreenCoverage(
     nodeIndices.length,
     Array.isArray(authoredCoverage) ? authoredCoverage : undefined
@@ -160,7 +162,11 @@ export function generateGLTFLODLevels(
         mesh: simplifiedMesh,
         children: undefined,
         extensions: undefined,
-        extras: {geometricError: simplifiedMesh.extras?.['geometricError']}
+        extras: {
+          geometricError: (simplifiedMesh.extras as Record<string, unknown> | undefined)?.[
+            'geometricError'
+          ]
+        }
       });
     }
 
@@ -171,7 +177,7 @@ export function generateGLTFLODLevels(
         [LOD_EXTENSION_NAME]: {ids: alternativeNodeIndices}
       };
       sourceNode.extras = {
-        ...sourceNode.extras,
+        ...(sourceNode.extras as Record<string, unknown>),
         MSFT_screencoverage: resolveScreenCoverage(
           alternativeNodeIndices.length + 1,
           options.screenCoverage
@@ -300,7 +306,7 @@ function simplifyGLTFMesh(
     id: `${sourceMesh.id}-lod-${suffix}`,
     name: `${sourceMesh.name || sourceMesh.id} LOD ${suffix}`,
     primitives,
-    extras: {...sourceMesh.extras, geometricError}
+    extras: {...(sourceMesh.extras as Record<string, unknown>), geometricError}
   };
 }
 

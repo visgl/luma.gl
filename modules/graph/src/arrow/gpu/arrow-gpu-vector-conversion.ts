@@ -880,7 +880,7 @@ async function convertArrowNumericVectorOnGPU(
           ...(sourceData.readbackMetadata
             ? {
                 readbackMetadata: updateNumericReadbackMetadata(
-                  sourceData.readbackMetadata,
+                  sourceData.readbackMetadata as Record<string, unknown>,
                   converted.byteLength
                 )
               }

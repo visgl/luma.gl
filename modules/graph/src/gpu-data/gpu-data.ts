@@ -17,7 +17,7 @@ import {
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
 
 /** Optional caller-owned metadata retained on a GPU data range. */
-export type GPUDataReadbackMetadata = any;
+export type GPUDataReadbackMetadata = unknown;
 
 /**
  * Private scalar specialization marker. Unlike `null` or `undefined`, a unique symbol remains

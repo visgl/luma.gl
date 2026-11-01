@@ -63,7 +63,10 @@ it('makeGPUDataFromArrowData uploads UTF-8 Arrow Data chunks with readback metad
   expect(gpuData.format, 'declares UTF-8 byte-list storage format').toBe('value-list<uint8>');
   expect(gpuData.valueLength, 'keeps flattened UTF-8 byte value length').toBe(5);
   expect(Array.from(gpuData.valueOffsets ?? []), 'keeps generic row offsets').toEqual([0, 1, 5]);
-  expect(gpuData.readbackMetadata?.kind, 'keeps UTF-8 readback metadata').toBe('utf8');
+  expect(
+    (gpuData.readbackMetadata as {kind?: string} | undefined)?.kind,
+    'keeps UTF-8 readback metadata'
+  ).toBe('utf8');
   expect(Array.from(result.valueOffsets as Int32Array), 'round-trips UTF-8 value offsets').toEqual([
     0, 1, 5
   ]);
@@ -114,9 +117,10 @@ it('makeGPUDataFromArrowData uploads variable-length attribute Arrow Data chunks
 
   expect(gpuData.length, 'keeps nested list row count').toBe(2);
   expect(gpuData.valueLength, 'keeps flattened nested element count').toBe(3);
-  expect(gpuData.readbackMetadata?.kind, 'keeps variable-length readback metadata').toBe(
-    'variable-length-attribute'
-  );
+  expect(
+    (gpuData.readbackMetadata as {kind?: string} | undefined)?.kind,
+    'keeps variable-length readback metadata'
+  ).toBe('variable-length-attribute');
   expect(Array.from(result.valueOffsets as Int32Array), 'round-trips nested list offsets').toEqual([
     0, 2, 3
   ]);
