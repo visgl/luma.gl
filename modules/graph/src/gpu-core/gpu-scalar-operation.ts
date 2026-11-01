@@ -4,7 +4,7 @@
 
 import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import type {Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
 import type {GPUCommandGraph} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUComputeCommandNode} from './gpu-command-node';
 import {

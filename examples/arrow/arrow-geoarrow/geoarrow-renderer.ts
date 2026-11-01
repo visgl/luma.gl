@@ -5,7 +5,7 @@
 import * as arrow from 'apache-arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import {ArrowPolygonRenderer} from '@luma.gl/engine/arrow';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {ArrowPointRenderer} from '../arrow-points/arrow-point-renderer';
 import {
   ArrowLineRenderer,

@@ -3,13 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable
 } from '@luma.gl/graph/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';

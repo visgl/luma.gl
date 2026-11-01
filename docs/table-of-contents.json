@@ -577,30 +577,30 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/gpgpu",
+        "label": "@luma.gl/graph/gpu-simple-graph",
         "items": [
-          "api-reference/gpgpu/README",
-          "api-reference/gpgpu/kernel",
-          "api-reference/gpgpu/render-kernel",
+          "api-reference/graph/gpu-evaluation",
+          "api-reference/graph/kernel",
+          "api-reference/graph/render-kernel",
           {
             "type": "category",
             "label": "GPU Evaluations",
             "items": [
-              "api-reference/gpgpu/gpu-data-evaluator",
-              "api-reference/gpgpu/operations",
-              "api-reference/gpgpu/clean-evaluate",
-              "api-reference/gpgpu/custom-operation"
+              "api-reference/graph/gpu-data-evaluator",
+              "api-reference/graph/operations",
+              "api-reference/graph/clean-evaluate",
+              "api-reference/graph/custom-operation"
             ]
           },
           {
             "type": "category",
             "label": "GPU Data",
             "items": [
-              "api-reference/gpgpu/gpu-constant",
-              "api-reference/gpgpu/gpu-vector",
-              "api-reference/gpgpu/gpu-data",
-              "api-reference/gpgpu/gpu-data-view",
-              "api-reference/gpgpu/gpu-vector-format"
+              "api-reference/graph/gpu-constant",
+              "api-reference/graph/gpu-vector",
+              "api-reference/graph/gpu-data",
+              "api-reference/graph/gpu-data-view",
+              "api-reference/graph/gpu-vector-format"
             ]
           }
         ]
@@ -611,6 +611,7 @@
         "items": [
           "api-reference/graph/README",
           "api-reference/graph/gpu-simple-graph",
+          "api-reference/graph/gpu-expression-operation",
           {
             "type": "category",
             "label": "GPU Graph",
@@ -801,24 +802,24 @@
             "type": "category",
             "label": "GPU Parse",
             "items": [
-              "api-reference/gpgpu/gpu-parse"
+              "api-reference/graph/gpu-parse"
             ]
           },
           {
             "type": "category",
             "label": "GPU Physics",
             "items": [
-              "api-reference/gpgpu/gpu-physics",
-              "api-reference/gpgpu/gpu-physics-collision-coverage",
-              "api-reference/gpgpu/gpu-sphere-world",
-              "api-reference/gpgpu/gpu-rigid-body-world"
+              "api-reference/graph/gpu-physics",
+              "api-reference/graph/gpu-physics-collision-coverage",
+              "api-reference/graph/gpu-sphere-world",
+              "api-reference/graph/gpu-rigid-body-world"
             ]
           },
           {
             "type": "category",
             "label": "GPU Vector Search",
             "items": [
-              "api-reference/gpgpu/gpu-vector-search"
+              "api-reference/graph/gpu-vector-search"
             ]
           },
           {
@@ -832,14 +833,14 @@
             "type": "category",
             "label": "GPU Geometry",
             "items": [
-              "api-reference/gpgpu/gpu-geometry"
+              "api-reference/graph/gpu-geometry"
             ]
           },
           {
             "type": "category",
             "label": "GPU Point Cloud",
             "items": [
-              "api-reference/gpgpu/gpu-pointcloud"
+              "api-reference/graph/gpu-pointcloud"
             ]
           },
           {

@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUTableGeometry} from '@luma.gl/engine/tables';
 

@@ -126,7 +126,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const graphPackage = JSON.parse(readRepositoryFile('modules/graph/package.json')) as {
       dependencies?: Record<string, string>;
     };
-    const gpuPackage = JSON.parse(readRepositoryFile('modules/gpgpu/package.json')) as {
+    const gpuPackage = JSON.parse(readRepositoryFile('modules/graph/package.json')) as {
       dependencies?: Record<string, string>;
     };
 

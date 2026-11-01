@@ -4,8 +4,8 @@
 
 import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import type {Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
-import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {Kernel} from '../execution/compute/kernel';
+import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {type GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {getGraphVectorData} from './graph-vector-view-utils';

@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer, assert, type ShaderLayout} from '@luma.gl/core';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUVectorGeometry, GPUVectorModel} from '../../src';
 
 const SHADER_LAYOUT: ShaderLayout = {

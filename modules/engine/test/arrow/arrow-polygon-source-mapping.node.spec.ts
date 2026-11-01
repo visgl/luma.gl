@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {resolveArrowPolygonSourceVectors} from '@luma.gl/engine/arrow';
 import * as arrow from 'apache-arrow';
 

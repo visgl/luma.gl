@@ -313,7 +313,7 @@ does not acquire an automatic inverse.
 
 - `@luma.gl/shaders` owns reusable arithmetic and, after API review, generally useful WGSL
   operation modules.
-- `@luma.gl/gpgpu` owns primitive GPU data formats and the graph-safe execution machinery after
+- `@luma.gl/graph/gpu-simple-graph` owns primitive GPU data formats and the graph-safe execution machinery after
   graduation.
 - `@luma.gl/graph/gpu-project` owns the evolving program, planners, adaptive compiler,
   projection catalog, and optional math.gl adapters.

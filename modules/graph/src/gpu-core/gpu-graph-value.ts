@@ -29,24 +29,26 @@ export class GPUGraphScalar<T extends GPUGraphScalarFormat = GPUGraphScalarForma
  *
  * A vector describes logical shape/type only. It is not a WebGPU Buffer or GraphDataView. Backend
  * compilers decide allocation, packing and binding. `external` vectors represent program I/O whose
- * concrete storage is supplied to compilation; transient vectors are compiler-owned scratch/state.
+ * concrete storage is supplied to the legacy compiler; transient vectors are compiler-owned scratch/state.
+ * Reusable programs bind storage at execution. An omitted length is resolved from those bindings.
  */
 export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorFormat> {
   readonly id: string;
   readonly format: T;
-  readonly length: number;
+  /** Optional fixed-length constraint; undefined means execution-sized. */
+  readonly length?: number;
   readonly external: boolean;
   /** Optional physical partition lengths; omitted external topology is supplied by its binding. */
   readonly chunkLengths?: readonly number[];
   constructor(props: {
     id: string;
     format: T;
-    length: number;
+    length?: number;
     external?: boolean;
     chunkLengths?: readonly number[];
   }) {
     if (!props.id) throw new Error('GPUGraphVector id is required');
-    if (!Number.isSafeInteger(props.length) || props.length < 0) {
+    if (props.length !== undefined && (!Number.isSafeInteger(props.length) || props.length < 0)) {
       throw new Error(`${props.id} vector length must be a non-negative safe integer`);
     }
     this.id = props.id;
@@ -56,7 +58,8 @@ export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorForma
     if (props.chunkLengths) {
       if (
         props.chunkLengths.some(length => !Number.isSafeInteger(length) || length < 0) ||
-        props.chunkLengths.reduce((sum, length) => sum + length, 0) !== props.length
+        (props.length !== undefined &&
+          props.chunkLengths.reduce((sum, length) => sum + length, 0) !== props.length)
       ) {
         throw new Error(`${props.id} chunk lengths must partition its logical length`);
       }

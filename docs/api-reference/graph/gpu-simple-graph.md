@@ -5,6 +5,14 @@ operations on WebGL and WebGPU. The existing operations, expression fusion, and
 materialization logic remain the implementation. Evaluator objects are a compatibility
 interface; upload, copy, execution, and output storage can be expressed through the graph.
 
+## Reusable declaration-based expressions
+
+Use `.scalar()` and `.vector()` to declare inputs and outputs, add a
+[`GPUExpressionOperation`](./gpu-expression-operation.md), and call `compile(device)`.
+Supply actual inputs with `compiled.run(bindings)`. Vector lengths can change between runs.
+The expression reference documents the shared interface with `GPUGraph`, supported syntax,
+and caller-owned output results. The evaluator-based APIs below remain available unchanged.
+
 ## Author expressions with graph values
 
 New code can use graph values instead of constructing or managing evaluators:
@@ -115,7 +123,7 @@ finish. Overlapping writes to shared targets are the caller's responsibility.
 ## Scoped execution on WebGPU
 
 ```typescript
-import {GPUEvaluationScope} from '@luma.gl/gpgpu';
+import {GPUEvaluationScope} from '@luma.gl/graph/gpu-simple-graph';
 
 const scope = new GPUEvaluationScope(device);
 try {

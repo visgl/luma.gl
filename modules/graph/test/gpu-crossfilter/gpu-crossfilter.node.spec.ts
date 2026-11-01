@@ -13,7 +13,7 @@ import {
   GPUCrossfilterSelection,
   type GPUCrossfilterScalarFormat
 } from '@luma.gl/graph/gpu-crossfilter';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 

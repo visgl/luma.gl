@@ -9,7 +9,7 @@ import {
 } from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {indexPicking, ShaderInputs} from '@luma.gl/engine';
-import {getGPUVectorBuffer, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorBuffer, type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUTableModel} from '@luma.gl/engine/tables';
 import {type GPUInputSchema, type GPUTable} from '@luma.gl/graph/gpu-tables';
 import type {ShaderModule} from '@luma.gl/shaders';

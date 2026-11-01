@@ -3,7 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, it, vi} from 'vitest';
-import {GPUDataEvaluator, GPUVectorEvaluator, add, multiply, sqrt} from '@luma.gl/gpgpu';
+import {
+  GPUDataEvaluator,
+  GPUVectorEvaluator,
+  add,
+  multiply,
+  sqrt
+} from '@luma.gl/graph/gpu-simple-graph';
 import {GPUSimpleGraph, GPUSimpleGraphOperation} from '@luma.gl/graph/gpu-simple-graph';
 import {
   GPUGraph,

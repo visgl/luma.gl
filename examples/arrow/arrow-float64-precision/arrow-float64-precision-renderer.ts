@@ -8,7 +8,7 @@ import {
   type PreparedArrowPathGPUVectors
 } from '@luma.gl/engine/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURenderable} from '@luma.gl/graph/gpu-tables';
 import {PathAttributeModel} from '@luma.gl/engine/models';
 import type {ShaderInputs} from '@luma.gl/engine';

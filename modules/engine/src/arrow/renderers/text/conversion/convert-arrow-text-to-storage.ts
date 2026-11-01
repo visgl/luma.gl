@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import {DataType} from 'apache-arrow';
 import {
   supportsGpuUtf8TextExpansion,

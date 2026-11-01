@@ -1,5 +1,15 @@
 # What's New
 
+### Reusable graph expressions
+
+`GPUExpressionOperation` accepts math.gl expression strings or parsed ASTs. `GPUGraph` and
+`GPUSimpleGraph` share scalar/vector declarations and execution-time input bindings for the
+float32 arithmetic and math-function subset, with explicit `float32`, `sint32`, and `uint32`
+casts. Float-to-integer casts offer per-operation `integerRounding`: truncation by default,
+or nearest with ties away from zero. Vector dimensions can change between executions;
+existing evaluator APIs remain unchanged. See the [expression reference](./api-reference/graph/gpu-expression-operation.md).
+
+
 ## Shader plugin primary modules
 
 ShaderPlugin now contributes one optional `module`, with supporting modules expressed
@@ -84,7 +94,7 @@ lists, clears touched spatial buckets, and journals changed body/contact/allocat
 state for shared rollback. `readWorkStatistics()` exposes active work and snapshot
 payload sizes without adding readback to simulation encoding. Physics Batch Lab
 adds sleeping and wake-storm workloads and a separate CPU/GPU stage profile.
-See [ensemble scheduling and limits](api-reference/gpgpu/gpu-physics.md#fused-independent-ensembles).
+See [ensemble scheduling and limits](api-reference/graph/gpu-physics.md#fused-independent-ensembles).
 
 ## Adaptive scientific particle tracing
 
@@ -154,7 +164,7 @@ reuses the evaluator snapshots. Existing GPGPU operations and ordinary execution
 composition, with a dedicated SimpleGraph example. GPGPU data and vector evaluators now
 expose read-only `getInspection()` snapshots. WebGPU evaluation scopes also accept
 chunk-preserving vector evaluators, with one explicit submission and cancellation rollback.
-Ordinary evaluator execution remains unchanged; `@luma.gl/gpgpu` remains independent of graph.
+Ordinary evaluator execution remains unchanged; the evaluator implementation remains separate from the full graph compiler.
 
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
@@ -199,7 +209,7 @@ Target Release Date: Q3, 2026
   limits, and logical owned GPU allocation statistics are available in the renderer and scene playground.
 
 - **GPU-native columnar parsing and indexing** - Composable Parquet parsing, chunk-preserving nested
-  column layouts, and H3 and A5 cell projection add new optional `@luma.gl/gpgpu` workflows.
+  column layouts, and H3 and A5 cell projection add new optional `@luma.gl/graph/gpu-simple-graph` workflows.
 - **Table-driven planning** - Experimental dataframes can plan queries from loaders.gl SQL
   expressions and feed batch-preserving GPU evaluation and rendering.
 - **Projection engine alignment** - GPU Project can explicitly prepare math.gl engine factories,
@@ -230,7 +240,7 @@ Target Release Date: Q3, 2026
 
 **New Modules**
 
-- **Optional Arrow adapters** - `@luma.gl/gpgpu/arrow`, `@luma.gl/graph/arrow`, and
+- **Optional Arrow adapters** - `@luma.gl/graph/arrow`, `@luma.gl/graph/arrow`, and
   `@luma.gl/engine/arrow` provide conversions and rendering adapters from the published
   packages. Apache Arrow remains an optional peer; generic roots remain Arrow-free.
 
@@ -239,7 +249,7 @@ Target Release Date: Q3, 2026
 - **Targeted WebGPU limits** - `DeviceProps.requiredLimits` requests specific WebGPU device limits, such as `maxStorageBuffersPerShaderStage`, without taking every adapter limit and feature through `featureLevel: 'max'`. A development GPU then enforces the limits the application targets.
 - **Vertex buffer byte offsets** - `VertexArray.setBuffer()` accepts an optional `byteOffset`, so vertex data can start inside a shared buffer without changing the buffer layout or render pipeline.
 
-**@luma.gl/gpgpu**
+**@luma.gl/graph/gpu-simple-graph**
 
 - **Additive GPU point-cloud octrees** - `GPUPointCloudOctree` builds sparse tile metadata and source-ID ranges without reordering positions. The new point-cloud octree example shows tile bounds, additive detail levels and command-graph diagnostics.
 
@@ -256,7 +266,7 @@ Target Release Date: Q3, 2026
 - **Batch-preserving GPU rendering** - `GPUVectorModel` renders chunked vectors without
   concatenating their source batches.
 - **Fixed-size-list GPU columns** - First-class `fixed-size-list<float32,768>` formats describe arbitrary fixed-width storage rows without inventing unsupported vertex formats; vectors retain logical table-row counts, flattened element counts, preserved batches, and caller-owned storage.
-- **GPU vector similarity and clustering** - The optional [`@luma.gl/graph/gpu-vector-search`](/docs/api-reference/gpgpu/gpu-vector-search) backend searches ordinary fixed-size-list GPU table columns with exact squared-Euclidean, cosine, and inner-product rankings; GPU-resident linked-selection masks; deterministic bounded top-K output; GPU k-means; and explicitly approximate IVF-flat search. Existing `@luma.gl/graph/arrow` table adapters upload Arrow embedding columns, while source IDs, validity, batch boundaries, ownership, and rendering remain caller-controlled.
+- **GPU vector similarity and clustering** - The optional [`@luma.gl/graph/gpu-vector-search`](/docs/api-reference/graph/gpu-vector-search) backend searches ordinary fixed-size-list GPU table columns with exact squared-Euclidean, cosine, and inner-product rankings; GPU-resident linked-selection masks; deterministic bounded top-K output; GPU k-means; and explicitly approximate IVF-flat search. Existing `@luma.gl/graph/arrow` table adapters upload Arrow embedding columns, while source IDs, validity, batch boundaries, ownership, and rendering remain caller-controlled.
 - **GPU command graphs** - Experimental WebGPU command graphs compile explicit buffer hazards, fixed capacities, node resources, and transient-buffer reuse while leaving encoding and submission under application control.
 - **Parallel command-graph preparation** - `await GPUCommandGraph.compileAsync()` starts independent
   compute and render pipeline compilations together, resolves only when graph-owned pipelines are
@@ -322,13 +332,13 @@ Target Release Date: Q3, 2026
   downstream rendering, while the [GPU-Culled deck Trace](/examples/deck/gpu-culled-trace) shares
   one GPU selection result between blocks, Arrow labels, and picking.
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
-- **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/gpgpu/gpu-data` and `@luma.gl/graph/gpu-tables` objects and preserve chunked UTF-8 GPU vector input for text workflows.
+- **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/graph/gpu-data` and `@luma.gl/graph/gpu-tables` objects and preserve chunked UTF-8 GPU vector input for text workflows.
 - **Variable-length Arrow attribute lists** - `GPUVector` can retain chunked nested list columns whose elements contain one to four numeric components, covering scalar streams plus tuple-style data such as XY, XYZ, and XYZM coordinates for path-rendering workflows.
 - **Closed Arrow path normalization** - `closeArrowPaths()` appends explicit closing vertices only for closed Float32 absolute or origin-relative delta path rows whose endpoints differ beyond an epsilon, using WebGPU compute when available with equivalent CPU fallback semantics.
 - **`ArrowPathRenderer` attribute mode** - The Arrow path facade converts prepared Float32 XY, XYZ, and XYZM paths into packed per-segment inputs for `PathAttributeModel`, and supports Float64 source paths through CPU-prepared Float32 deltas plus CPU-updated view origins.
 - **`ArrowPathRenderer` storage modes** - WebGPU storage conversion expands nested prepared Float32 XY, XYZ, and XYZM rows into compact indexed segment records, keeps per-path color, width, and optional view-origin rows as storage bindings, can convert Float64 source paths into Float32 deltas with one `fp64arithmetic` compute pass, and feeds `PathStorageModel` or `PathTripsStorageModel`.
 - **Mesh Arrow geometry** - `ArrowTableGeometry` and `makeGPUGeometryFromArrow()` support loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
-- **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities layer over reusable primitives from `@luma.gl/gpgpu/gpu-data` and tables from `@luma.gl/graph/gpu-tables`.
+- **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities layer over reusable primitives from `@luma.gl/graph/gpu-data` and tables from `@luma.gl/graph/gpu-tables`.
 - **[Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types) and [GPU Table Lifecycle](/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
 - **[Apache Arrow GPU examples](/examples/arrow/arrow-points)** - Examples cover points, nested lines and temporal paths, text and dictionary text, dates and durations, matrices, particles, and global grid identifiers.
 - **[Points Example](/examples/arrow/arrow-points)** - A ScatterplotLayer-style renderer consumes Arrow point vectors or DenseUnion point rows, supports M-coordinate or timestamp animation, and reports hover identity as full-table row index, batch, and batch-local row.
@@ -398,7 +408,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 **A clearer GPU data stack**
 
 - **Primitive GPU data has a dedicated home** - `GPUData`, `GPUVector`, views, formats, and layout
-  helpers live in `@luma.gl/gpgpu/gpu-data`, independent of source adapters and rendering models.
+  helpers live in `@luma.gl/graph/gpu-data`, independent of source adapters and rendering models.
 - **Tables and models stay focused** - Batch-preserving tables live in
   `@luma.gl/graph/gpu-tables`; path and polygon models live in
   `@luma.gl/engine/models`.
@@ -430,7 +440,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 
 **New Modules**
 
-- **`@luma.gl/gpgpu`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
+- **`@luma.gl/graph/gpu-simple-graph`** - New module for lazy `GPUDataEvaluator` operations and chunk-preserving `GPUVectorEvaluator` transforms with CPU/WebGL/WebGPU backends.
 - **`@luma.gl/engine/text`** - GPU-oriented 2D and 3D text rendering and atlas construction.
 - **`@luma.gl/splats`** - Experimental Gaussian splat rendering with caller-owned GPU data and preserved streaming batches.
 - **`@luma.gl/anari`** - Experimental forward, deferred, glTF, ray-marching, and ray-tracing scene
@@ -506,7 +516,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **Accessible comparison splitters** - [`ComparisonSplitter`](/docs/api-reference/engine/experimental/comparison-splitter) adds reusable draggable, keyboard-accessible before-and-after views to experimental examples.
 - **WebXR** - Experimental animation-frame, camera-texture, and session helpers integrate immersive WebXR rendering with luma.gl.
 
-**@luma.gl/gpgpu** NEW MODULE
+**@luma.gl/graph/gpu-simple-graph** NEW MODULE
 
 - **`GPUDataEvaluator`** lazy GPUData operations and **`GPUVectorEvaluator`** chunk-preserving GPUVector transforms with CPU/WebGL/WebGPU backends.
 - **Interleaved GPGPU inputs** - Borrowed `GPUDataView` values expose fixed-width strided attributes over shared buffers, allowing existing lazy operations to read interleaved data while continuing to produce packed outputs.
@@ -532,7 +542,7 @@ analysis, text, splats, physical scenes, simulation, and immersive rendering.
 - **[Lines Example](/examples/arrow/arrow-lines)** - New showcase expands nested Arrow XYZM line rows and DenseUnion LineString rows into styled GPU segment instances with attribute-backed and storage-backed models, then adds an `ArrowPathTripsStorageModel` mode that prepares aligned `List<Timestamp>` rows into relative Float32 milliseconds for storage-backed trail filtering.
 - **[GeoArrow Example](/examples/arrow/arrow-geoarrow)** - New mixed-geometry showcase routes one GeoArrow-style DenseUnion column through Arrow point, line, and polygon renderers.
 - **Composite GPU inputs** - `GPUInputSchema.attributeNames` maps one logical table column to several shader attributes, allowing a shared matrix buffer to feed portable vertex attributes or a WebGPU storage binding without repacking. Ordinary inputs retain the singular `attributeName`.
-- **GPU data primitives and experimental tables** - Canonical `GPUData` and `GPUVector` runtime classes live in `@luma.gl/gpgpu/gpu-data`, while `GPURecordBatch` and `GPUTable` provide reusable non-Arrow-specific GPU table ownership and batching from `@luma.gl/graph/gpu-tables`.
+- **GPU data primitives and experimental tables** - Canonical `GPUData` and `GPUVector` runtime classes live in `@luma.gl/graph/gpu-data`, while `GPURecordBatch` and `GPUTable` provide reusable non-Arrow-specific GPU table ownership and batching from `@luma.gl/graph/gpu-tables`.
 - **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
 - **Vertex storage planning** - `GPUTableBufferPlanner` checks vertex-stage storage buffer limits before choosing storage-backed table attributes, allowing core WebGPU devices to fall back to vertex attributes when needed.
 - **Execution helpers** - `GPUTableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` live with the experimental table runtime instead of a source-adapter module.
@@ -960,7 +970,7 @@ Experimental rigid-body worlds add opt-in GPU rollback for incomplete or nonfini
 steps, explicit capacity-growth reconstruction, a bounded sphere/static CCD envelope,
 parallel geometry queries and sphere casts, and persistent compound spherical sensors.
 Space Salvage uses simulation-step docking events; Rigid Body Lab includes a thin-wall
-CCD scenario. See the [rigid-body reference](/docs/api-reference/gpgpu/gpu-rigid-body-world)
+CCD scenario. See the [rigid-body reference](/docs/api-reference/graph/gpu-rigid-body-world)
 for supported envelopes and remaining qualification work.
 
 ### GPU physics mechanisms and debugging
@@ -972,7 +982,7 @@ finite-shape pair matrix records response coverage separately from numerical qua
 
 ## Dedicated GPU Graph package
 
-`@luma.gl/graph` exposes `GPUGraph` at its root and graph-based processing through focused subpaths. GPU tables, dataframe/SQL, raster, spatial processing, trace analytics, volume operations, simulations, and graph algorithms now share one package. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
+`@luma.gl/graph` exposes `GPUGraph` at its root and graph-based processing through focused subpaths. GPU tables, dataframe/SQL, raster, spatial processing, trace analytics, volume operations, simulations, and graph algorithms now share one package. GPU data primitives live in `@luma.gl/graph/gpu-data`; immediate operations live in `@luma.gl/graph/gpu-simple-graph`.
 
 ### Authored GPU physics sessions
 
@@ -991,3 +1001,11 @@ contracts and remaining qualification limits.
 - **WebGL operation execution** - Gpgpu row transforms, gather, sequence, segmented-map, and extent use RenderKernel while preserving their existing shaders and operation semantics. BufferTransform and TextureTransform are owned by engine.
 
 - **Vector rendering ownership** - GPUVectorModel, GPUVectorGeometry, and their binding and batching helpers live in engine. Gpgpu and graph no longer depend on these rendering APIs.
+
+
+### Graph expression functions and numeric casts
+
+`GPUExpressionOperation` accepts `abs`, `sqrt`, `pow`, `sin`, `cos`, `tan`, `exp`, and
+`log` calls, plus explicit `float32`, `sint32`, and `uint32` value conversions. Both
+graph implementations accept typed 32-bit numeric inputs and outputs. Existing evaluator
+APIs and physical-format conversion behavior are unchanged.

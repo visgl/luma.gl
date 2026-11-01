@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
 import {prepareArrowInput, type ArrowInputSchema} from '@luma.gl/graph/arrow';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {type GPUInputVectors} from '@luma.gl/graph/gpu-tables';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';

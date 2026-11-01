@@ -19,7 +19,7 @@ import {
   inferGeoArrowDimensionFromArrowType,
   makeGeoArrowColumnFromArrowVector
 } from './arrow-geoarrow-adapter';
-import {type ArrowColorType} from '@luma.gl/gpgpu/arrow';
+import {type ArrowColorType} from '@luma.gl/graph/arrow';
 
 export type ArrowPolygonCoordinateType = FixedSizeList<Float32> | FixedSizeList<Float64>;
 export type ArrowSeparatedPolygonCoordinateType = Struct;

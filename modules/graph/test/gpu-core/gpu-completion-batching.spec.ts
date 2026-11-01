@@ -16,7 +16,7 @@ import {
   GPUGallopingSearch
 } from '@luma.gl/graph/gpu-core';
 import {GPUAdaptiveSpMV} from '../../src/gpu-core/gpu-adaptive-spmv';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {
   GPUGraph,
   GPUGraphCSRMatrix,

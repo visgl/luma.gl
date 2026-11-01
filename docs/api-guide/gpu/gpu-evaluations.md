@@ -14,7 +14,7 @@ Use it to compose supported operations and materialize the result when it is nee
 Given an existing `GPUVector` named `vector` and a luma.gl `device`:
 
 ```ts
-import {GPUDataEvaluator, GPUVectorEvaluator, add, cleanEvaluate} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, GPUVectorEvaluator, add, cleanEvaluate} from '@luma.gl/graph/gpu-simple-graph';
 
 const offset = GPUDataEvaluator.fromConstant(0.5);
 const adjusted = GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(data =>
@@ -49,7 +49,7 @@ for the broader choice of APIs.
 
 Evaluators borrow source GPU data. Destroying an evaluator does not destroy borrowed input
 chunks or buffers. Automatically allocated operation outputs are owned by their evaluators;
-follow the [evaluator ownership rules](/docs/api-reference/gpgpu/gpu-data-evaluator)
+follow the [evaluator ownership rules](/docs/api-reference/graph/gpu-data-evaluator)
 when retaining outputs or supplying target buffers.
 
 Keep results on the GPU between operations. Read them back only when the CPU needs their values.
@@ -63,6 +63,6 @@ resource planning.
 
 ## Related APIs
 
-- [GPUVectorEvaluator reference](/docs/api-reference/gpgpu/gpu-data-evaluator#gpuvectorevaluator)
-- [Operation catalog](/docs/api-reference/gpgpu/operations)
-- [cleanEvaluate](/docs/api-reference/gpgpu/clean-evaluate)
+- [GPUVectorEvaluator reference](/docs/api-reference/graph/gpu-data-evaluator#gpuvectorevaluator)
+- [Operation catalog](/docs/api-reference/graph/operations)
+- [cleanEvaluate](/docs/api-reference/graph/clean-evaluate)

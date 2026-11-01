@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import type {GPUIncrementalBatch} from '@luma.gl/graph/gpu-core';
 import {StreamingAnalytics, type StreamingAnalyticsBatch} from './streaming-analytics';
 

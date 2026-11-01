@@ -6,8 +6,8 @@ import type {TextureFormat} from '@luma.gl/core';
 import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph';
 import {GPUGraphTextureView, type GPUGraphTexture} from './gpu-graph-value';
 
-import {type Device} from '@luma.gl/core';
-import type {GPUVectorInput} from '@luma.gl/gpgpu/gpu-data';
+import {Buffer, type Device} from '@luma.gl/core';
+import type {GPUVectorInput} from '@luma.gl/graph/gpu-data';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import {
   addGPUCommandNodes,
@@ -53,6 +53,7 @@ import {validateGPUGraph, type GPUGraphValidationReport} from './gpu-graph-valid
 import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
 import type {GPUGraph} from './gpu-graph';
 export type GPUGraphBindings = {
+  scalars?: Readonly<Record<string, number>>;
   vectors?: Readonly<Record<string, GPUVectorInput>>;
   textures?: Readonly<Record<string, GraphImportedTexture>>;
 };
@@ -90,8 +91,9 @@ type LoweringState = {
 export class GPUGraphCompiler<Parameters = void> {
   readonly device: Device;
   readonly capabilities: GPUGraphBackendCapabilities;
-  readonly lowerings = new GPUOperationLoweringRegistry<Parameters>();
-  constructor(device: Device) {
+  readonly lowerings: GPUOperationLoweringRegistry<Parameters>;
+  constructor(device: Device, lowerings?: GPUOperationLoweringRegistry<Parameters>) {
+    this.lowerings = lowerings ?? new GPUOperationLoweringRegistry<Parameters>();
     this.device = device;
     this.capabilities = Object.freeze({
       backend: 'webgpu',
@@ -99,7 +101,7 @@ export class GPUGraphCompiler<Parameters = void> {
       nativeLoops: false,
       childGraphs: false
     });
-    this.registerCoreLowerings();
+    if (!lowerings) this.registerCoreLowerings();
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
     const validation = validateGPUGraph(program, bindings);
@@ -116,8 +118,40 @@ export class GPUGraphCompiler<Parameters = void> {
     const scalars = new Map<string, GPUScalar>();
     for (const scalar of program.scalars)
       scalars.set(scalar.id, createGPUScalar(graph, scalar.id, scalar.format));
+    for (const [name, value] of Object.entries(bindings.scalars ?? {})) {
+      const scalar = scalars.get(name);
+      if (!scalar) throw new Error(`Undeclared scalar binding ${name}`);
+      const view = scalar.view;
+      graph.addCopyPass({
+        id: `${name}-binding`,
+        resources: [{buffer: view, usage: 'copy-destination'}],
+        compile: ({device}) => {
+          const data =
+            scalar.format === 'float32'
+              ? new Float32Array([value])
+              : scalar.format === 'uint32'
+                ? new Uint32Array([value])
+                : new Int32Array([value]);
+          const buffer = device.createBuffer({data, usage: Buffer.COPY_SRC});
+          return {
+            encode: ({commandEncoder, getBuffer}) =>
+              commandEncoder.copyBufferToBuffer({
+                sourceBuffer: buffer,
+                destinationBuffer: getBuffer(view),
+                destinationOffset: view.byteOffset,
+                size: 4
+              }),
+            destroy: () => buffer.destroy()
+          };
+        }
+      });
+    }
     const vectors = new Map<string, GraphVectorView>();
     for (const vector of program.vectors) {
+      if (vector.length === undefined)
+        throw new Error(
+          `${vector.id}: bind dynamic dimensions through program.compile(device).run(bindings)`
+        );
       let resolved: GraphVectorView;
       if (vector.external) {
         const binding = bindings.vectors![vector.id];
@@ -531,7 +565,7 @@ export class GPUGraphCompiler<Parameters = void> {
     state: LoweringState
   ): GraphVectorView<T> {
     const r = state.vectors.get(v.id);
-    if (!r || r.format !== v.format || r.length !== v.length)
+    if (!r || r.format !== v.format || (v.length !== undefined && r.length !== v.length))
       throw new Error(`GPUGraph vector "${v.id}" is not part of compilation`);
     return r as GraphVectorView<T>;
   }

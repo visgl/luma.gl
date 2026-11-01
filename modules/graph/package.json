@@ -202,6 +202,31 @@
       "types": "./dist/arrow/internal.d.ts",
       "import": "./dist/arrow/internal.js",
       "require": "./dist/arrow/internal.cjs"
+    },
+    "./gpu-data": {
+      "types": "./dist/gpu-data/index.d.ts",
+      "import": "./dist/gpu-data/index.js",
+      "require": "./dist/gpu-data/index.cjs"
+    },
+    "./_internal/*": {
+      "types": "./dist/execution/*.d.ts",
+      "import": "./dist/execution/*.js",
+      "require": "./dist/execution/*.cjs"
+    },
+    "./gpu-simple-graph/cpu": {
+      "types": "./dist/gpu-simple-graph/operations/cpu/index.d.ts",
+      "import": "./dist/gpu-simple-graph/operations/cpu/index.js",
+      "require": "./dist/gpu-simple-graph/operations/cpu/index.cjs"
+    },
+    "./gpu-simple-graph/webgl": {
+      "types": "./dist/gpu-simple-graph/operations/webgl/index.d.ts",
+      "import": "./dist/gpu-simple-graph/operations/webgl/index.js",
+      "require": "./dist/gpu-simple-graph/operations/webgl/index.cjs"
+    },
+    "./gpu-simple-graph/webgpu": {
+      "types": "./dist/gpu-simple-graph/operations/webgpu/index.d.ts",
+      "import": "./dist/gpu-simple-graph/operations/webgpu/index.js",
+      "require": "./dist/gpu-simple-graph/operations/webgpu/index.cjs"
     }
   },
   "peerDependencies": {
@@ -215,8 +240,8 @@
     }
   },
   "dependencies": {
-    "@luma.gl/gpgpu": "10.0.0-alpha.6",
     "@math.gl/core": "~5.0.0-beta.2",
+    "@math.gl/expressions": "5.0.0-alpha.18",
     "@math.gl/geospatial": "~5.0.0-beta.2",
     "probe.gl": "^5.0.0"
   }

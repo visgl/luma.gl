@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
@@ -24,7 +24,7 @@ import {
   type Uint32,
   type Utf8
 } from 'apache-arrow';
-import {makeGPUDataFromArrowData} from '@luma.gl/gpgpu/arrow';
+import {makeGPUDataFromArrowData} from '@luma.gl/graph/arrow';
 
 /** Supported WebGPU-native scalar and categorical index storage formats. */
 type GPUAnalyticsVectorFormat = 'float32' | 'sint32' | 'uint32';

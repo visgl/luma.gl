@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphBufferHandle} from './gpu-command-graph';
 import {createGPUComputeCommandNode, type GPUCommandNode} from './gpu-command-node';
 import {

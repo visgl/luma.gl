@@ -5,7 +5,7 @@
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {decodeGPUIndexPickInfo, INDEX_PICKING_READBACK_BYTE_LENGTH} from '@luma.gl/graph/gpu-core';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 import GPUGraphExplorerAnimationLoopTemplate from '../../../../examples/experimental/gpu-graph-explorer/app';

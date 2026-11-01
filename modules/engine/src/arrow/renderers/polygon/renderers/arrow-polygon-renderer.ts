@@ -14,16 +14,16 @@ import {
 } from '@luma.gl/engine/models';
 import {type PolygonBatchProps} from '@luma.gl/graph/experimental/models';
 import {DataType, RecordBatch, Table, Uint8, Vector} from 'apache-arrow';
-import {canConvertColors} from '@luma.gl/gpgpu/arrow';
-import {convertArrowToGPUVector} from '@luma.gl/gpgpu/arrow';
-import {readArrowGPUVectorAsync} from '@luma.gl/gpgpu/arrow';
+import {canConvertColors} from '@luma.gl/graph/arrow';
+import {convertArrowToGPUVector} from '@luma.gl/graph/arrow';
+import {readArrowGPUVectorAsync} from '@luma.gl/graph/arrow';
 import {
   clearArrowPickingState,
   createArrowPickingManager,
   resolveArrowPickInfo,
   runArrowPickingPass
 } from '../../../arrow-picking';
-import {getArrowVectorByteLength} from '@luma.gl/gpgpu/arrow';
+import {getArrowVectorByteLength} from '@luma.gl/graph/arrow';
 import {
   convertArrowPolygonToGPUVectorsAsync,
   type ArrowPolygonColorType,

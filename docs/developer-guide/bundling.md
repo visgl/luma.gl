@@ -99,7 +99,7 @@ Applications commonly add two first-class libraries above the portability layer:
   `@luma.gl/shaders` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and
   shader-pass rendering.
 
-Focused packages and subpaths such as `@luma.gl/engine/effects`, `@luma.gl/engine/gltf`, and `@luma.gl/gpgpu` build on one or
+Focused packages and subpaths such as `@luma.gl/engine/effects`, `@luma.gl/engine/gltf`, and `@luma.gl/graph/gpu-simple-graph` build on one or
 more of these layers. GPU tables live under `@luma.gl/graph/gpu-tables`; experimental path/polygon models live under `@luma.gl/engine/models`. These
 APIs are not automatically included by the engine root. See the [API overview](/docs/api-guide) and
 [module catalog](/docs/api-reference) for the complete package map.
@@ -206,7 +206,7 @@ can retain a much larger dependency graph.
 `type: 'best-available'` selects among loaded adapters at runtime; it is not a build-time signal that
 lets a bundler remove a backend. luma.gl does contain literal dynamic imports in several places:
 the WebGL and WebGPU adapters import their concrete device implementations when `create()` runs,
-and `@luma.gl/gpgpu` imports the operation backend that matches the first asynchronously evaluated
+and `@luma.gl/graph/gpu-simple-graph` imports the operation backend that matches the first asynchronously evaluated
 device.
 
 A literal `import()` is a possible code-splitting boundary, not automatic code removal. With ESM

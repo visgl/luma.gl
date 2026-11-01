@@ -29,7 +29,7 @@ The root exposes scheduling, compilation, encoding, inspection, and autotuning. 
 | `gpu-simulation`, `gpu-effects` | Graph-based ocean/fire simulations and FFT bloom |
 | `gpu-trace` | Trace analytics |
 
-GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`. Engine renderers and application adapters consume these graph APIs from their own packages.
+GPU data primitives live in `@luma.gl/graph/gpu-data`; evaluator expressions and immediate operations live in `@luma.gl/graph/gpu-simple-graph`. Engine renderers and application adapters consume these graph APIs from their own packages.
 
 See the [execution guide](/docs/api-reference/experimental/gpu-core/concepts), [scheduler reference](/docs/api-reference/experimental/gpu-core/gpu-command-graph), and [migration guide](/docs/upgrade-guide).
 
@@ -42,3 +42,9 @@ views, imported and transient ownership, hazard tracking, history, resizing, and
 lowers those operations to a `GPUCommandGraph`, which schedules concrete GPU passes
 and resources. `CompiledGPUCommandGraph` encodes the resulting commands. The existing
 compiler remains WebGPU-only; `GPUSimpleGraph` is the separate portable evaluator API.
+
+## Reusable expressions
+
+[`GPUExpressionOperation`](./gpu-expression-operation.md) supplies the same named arithmetic
+expression operation to `GPUGraph` and `GPUSimpleGraph`. Declare scalars and vectors, compile
+without input data, then bind GPUVectors and scalar values on each run.

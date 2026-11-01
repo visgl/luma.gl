@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {CompiledGPUGraph} from './compiled-gpu-graph';
+import type {GPUGraphCompileOptions} from './gpu-expression-plan';
+import type {Device} from '@luma.gl/core';
+
 import type {TextureFormat} from '@luma.gl/core';
 import type {GraphTextureViewProps} from './gpu-command-graph';
 
@@ -46,11 +50,17 @@ export class GPUGraph {
   vector<T extends GPUGraphVectorFormat>(
     id: string,
     format: T,
-    length: number,
+    lengthOrProps?:
+      | number
+      | {length?: number; external?: boolean; chunkLengths?: readonly number[]},
     props: {external?: boolean; chunkLengths?: readonly number[]} = {}
   ): GPUGraphVector<T> {
     this.assertValueId(id);
-    const vector = new GPUGraphVector({id, format, length, ...props});
+    const declaration =
+      typeof lengthOrProps === 'number'
+        ? {length: lengthOrProps, ...props}
+        : (lengthOrProps ?? props);
+    const vector = new GPUGraphVector({id, format, ...declaration});
     this.programVectors.set(id, vector);
     return vector;
   }
@@ -71,6 +81,9 @@ export class GPUGraph {
       throw new Error(`Undeclared program texture "${texture.id}"`);
     }
     return new GPUGraphTextureView(texture, props);
+  }
+  compile(device: Device, options: GPUGraphCompileOptions = {}): CompiledGPUGraph {
+    return new CompiledGPUGraph(device, this, options);
   }
   get textures(): readonly GPUGraphTexture[] {
     return Object.freeze([...this.programTextures.values()]);
