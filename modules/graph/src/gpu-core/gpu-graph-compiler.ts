@@ -108,7 +108,11 @@ export class GPUGraphCompiler<Parameters = void> {
         throw new Error(`Duplicate or empty lowering type: ${lowering.type}`);
       types.add(lowering.type);
     }
-    this.lowerings = Object.freeze(combined.map(({type, lower}) => Object.freeze({type, lower})));
+    this.lowerings = Object.freeze(
+      combined.map(lowering =>
+        Object.freeze({type: lowering.type, lower: lowering.lower.bind(lowering)})
+      )
+    );
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
     const validation = validateGPUGraph(program, bindings);

@@ -142,7 +142,8 @@ There is no registration step or shared global state. The compiler snapshots and
 array and each descriptor. Later changes to the source array or descriptors do not affect it.
 Duplicate type names, including collisions with built-in operations, are rejected. To change
 implementations, construct a new compiler with a new set. Lowering callbacks should avoid
-capturing mutable configuration; freezing descriptors cannot freeze their closures.
+capturing mutable configuration. Method callbacks retain their receiver; freezing the set
+and callback identities does not freeze callback-owned closures or class instance state.
 
 Custom lowerings are a full-GPUGraph extension. SimpleGraph continues to accept its existing
 expression subset and reports an error if passed custom lowerings.

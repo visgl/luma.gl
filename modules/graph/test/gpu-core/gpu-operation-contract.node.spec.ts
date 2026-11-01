@@ -60,14 +60,15 @@ test('loop summaries preserve initial scalar reads and internal initialization',
   }
 });
 
-test('lowering snapshots retain prototype methods', () => {
+test('lowering snapshots retain prototype methods and their receiver', () => {
   const device = new NullDevice({});
   Object.defineProperty(device, 'type', {value: 'webgpu'});
   const lower = vi.fn();
   class CustomLowering implements GPUOperationLowering {
     readonly type = 'custom';
+    readonly value = 7;
     lower() {
-      lower();
+      lower(this.value);
     }
   }
   try {
@@ -75,6 +76,7 @@ test('lowering snapshots retain prototype methods', () => {
     graph.add(makeOperation({values: []}));
     new GPUGraphCompiler(device, [new CustomLowering()]).compile(graph);
     expect(lower).toHaveBeenCalledOnce();
+    expect(lower).toHaveBeenCalledWith(7);
   } finally {
     device.destroy();
   }
