@@ -260,7 +260,7 @@ function getPreparedPathGpuByteLength(
 
 function getGpuVectorByteLength(vector: GPUVector<any>): number {
   return vector.data.reduce((byteLength, data) => {
-    const variableLengthByteLength = data.readbackMetadata?.valueByteLength;
+    const variableLengthByteLength = data.valueByteLength;
     return (
       byteLength +
       (variableLengthByteLength !== undefined
