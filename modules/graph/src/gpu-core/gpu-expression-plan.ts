@@ -108,8 +108,7 @@ export class GPUExpressionProgram {
               `Expression input ${name} must declare a 32-bit numeric row of width 1–4`
             );
           formats.set(name, declaration.format);
-          if (!available.has(name))
-            throw new Error(`Expression ${operation.id} reads ${name} before it is produced`);
+          if (!available.has(name)) throw new Error(`Reads ${name} before it is produced`);
         }
         if (
           this.scalars.some(scalar => scalar.id === output.id) &&
