@@ -29,11 +29,64 @@ export {
   type TextDictionaryRenderProps,
   type TextDictionaryState
 } from './models/text-dictionary-model';
-export * from './model-utils/gpu-text-expansion';
-export * from './model-utils/gpu-text-types';
-export * from './model-utils/gpu-utf8-map';
-export * from './model-utils/text-fragment-shaders';
-export * from './model-utils/text-fragment-uniforms';
+export {
+  supportsGpuTextExpansion,
+  supportsGpuUtf8TextExpansion,
+  createTextStorageGlyphMetrics,
+  createTextStorageGlyphPages,
+  createTextStorageGlyphKernings,
+  createTextStorageGlyphLookup,
+  createGpuExpandedCompactInput,
+  createGpuUtf8ExpandedInput,
+  createGpuUtf8ExpandedInputFromBuffers,
+  createGpuTextDictionaryUtf8ExpandedInput,
+  createGpuTextDictionaryUtf8ExpansionConfig,
+  createGpuExpandedGeneratedState,
+  dispatchGpuExpandedTextCompute,
+  dispatchGpuUtf8ExpandedTextCompute,
+  dispatchGpuTextDictionaryUtf8ExpandedCompute,
+  type TextStorageGlyphMetricState,
+  type TextStorageGlyphPageState,
+  type TextStorageGlyphKerningState,
+  type TextStorageGlyphLookupState,
+  type GpuExpandedCompactInputState,
+  type GpuUtf8ExpandedInputState,
+  type GpuTextDictionaryUtf8ExpandedInputState,
+  type GpuTextDictionaryUtf8ExpansionConfigState,
+  type GpuExpandedGeneratedState,
+  type GpuTextExpansionResourceOptions,
+  type GpuTextAlignmentExpansionOptions,
+  GPU_TEXT_EXPANSION_STORAGE_BUFFER_COUNT,
+  GPU_UTF8_TEXT_EXPANSION_STORAGE_BUFFER_COUNT
+} from './model-utils/gpu-text-expansion';
+export {
+  type TextGlyphLayout,
+  type GpuExpandedTextStream,
+  type GpuUtf8TextInput,
+  type GpuTextDictionaryUtf8Input,
+  type GpuTextDictionaryCompressedStream
+} from './model-utils/gpu-text-types';
+export {
+  getGpuUtf8MapShaderBindings,
+  getGpuUtf8MapShaderSource,
+  type GpuUtf8MapBindingNames,
+  type GpuUtf8MapBindingOptions,
+  type GpuUtf8MapShaderSourceOptions,
+  DEFAULT_GPU_UTF8_MAP_BINDING_NAMES
+} from './model-utils/gpu-utf8-map';
+export {
+  makeTextGlyphAlphaGlsl,
+  makeTextGlyphAlphaWgsl,
+  type TextGlyphAlphaShaderRenderMode,
+  type TextGlyphAlphaShaderSettings,
+  type TextGlyphAlphaShaderProps
+} from './model-utils/text-fragment-shaders';
+export {
+  getFontAtlasShaderProps,
+  createTextDefaultFragmentShaderUniforms,
+  updateTextDefaultFragmentShaderUniforms,
+  type FontAtlasShaderProps
+} from './model-utils/text-fragment-uniforms';
 export {
   buildTextGpuDictionaryCompressedStream,
   buildTextGpuExpandedStream,
@@ -41,9 +94,52 @@ export {
   type TextDictionaryCodePointSource,
   type TextGpuGlyphDefinitions
 } from './model-utils/text-layout';
-export * from './model-utils/text-model-props';
-export * from './model-utils/text-shaders';
-export * from './model-utils/text-storage-state';
+export {
+  assertTextAttributeGPUVectorInputs,
+  assertTextStorageGPUVectorInputs,
+  assertTextDictionaryGPUVectorInputs,
+  TEXT_ATTRIBUTE_GPU_INPUT_SCHEMA,
+  TEXT_STORAGE_GPU_INPUT_SCHEMA,
+  TEXT_DICTIONARY_GPU_INPUT_SCHEMA,
+  type TextInputProps,
+  type TextAttributeInputProps,
+  type TextStorageInputProps,
+  type TextDictionaryInputProps
+} from './model-utils/text-model-props';
+export {
+  GLYPH_OFFSETS_COLUMN,
+  GLYPH_FRAMES_COLUMN,
+  GLYPH_PAGES_COLUMN,
+  GLYPH_INDICES_COLUMN,
+  GLYPH_ROW_INDICES_COLUMN,
+  GLYPH_CLIP_RECTS_COLUMN,
+  EXPANDED_GLYPH_VERTEX_DATA,
+  COMPACT_GLYPH_VERTEX_DATA,
+  COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+  ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+  EXPANDED_GLYPH_VERTEX_BYTE_STRIDE,
+  CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE,
+  INVALID_DICTIONARY_INDEX,
+  DEFAULT_TEXT_SHADER_LAYOUT,
+  DEFAULT_CLIPPED_TEXT_SHADER_LAYOUT,
+  DEFAULT_TEXT_STORAGE_INDEXED_SHADER_LAYOUT,
+  DEFAULT_TEXT_ROW_INDEXED_STORAGE_SHADER_LAYOUT,
+  DEFAULT_TEXT_DICTIONARY_STORAGE_SHADER_LAYOUT,
+  DEFAULT_TEXT_VS,
+  DEFAULT_CLIPPED_TEXT_VS,
+  DEFAULT_TEXT_FS,
+  DEFAULT_TEXT_STORAGE_INDEXED_SOURCE,
+  DEFAULT_TEXT_ROW_INDEXED_STORAGE_SOURCE,
+  DEFAULT_TEXT_DICTIONARY_STORAGE_SOURCE
+} from './model-utils/text-shaders';
+export {
+  getFirstTextStorageBatch,
+  getFirstTextStorageRenderBatch,
+  getTextStorageRowGlyphStartsBuffer,
+  getFirstTextDictionaryBatch,
+  getFirstTextDictionaryRenderBatch,
+  type TextStorageBuffer
+} from './model-utils/text-storage-state';
 export {getTextRendererModel} from './text-renderer';
 export {
   DictionaryTextRenderer,
