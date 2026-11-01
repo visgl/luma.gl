@@ -133,8 +133,9 @@ for (const backend of ['webgl-simple', 'webgpu-simple', 'webgpu-full'] as const)
             if (backend !== 'webgl-simple') expect(submit).toHaveBeenCalledTimes(1);
             try {
               const actual = await readVector(result.output);
+              // Transcendental accuracy varies across native GPU and SwiftShader backends.
               actual.forEach((value, index) =>
-                expect(value).toBeCloseTo(expected(chunks.flat()[index]), 4)
+                expect(value).toBeCloseTo(expected(chunks.flat()[index]), 3)
               );
               expect(result.output.data.map(chunk => chunk.length)).toEqual(
                 chunks.map(chunk => chunk.length)
