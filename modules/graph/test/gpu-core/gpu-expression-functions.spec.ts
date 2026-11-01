@@ -56,6 +56,31 @@ async function readVector(vector: GPUVector): Promise<number[]> {
 for (const backend of ['webgl-simple', 'webgpu-simple', 'webgpu-full'] as const) {
   const getDevice = backend === 'webgl-simple' ? getWebGLTestDevice : getWebGPUTestDevice;
   const makeGraph = () => (backend === 'webgpu-full' ? new GPUGraph() : new GPUSimpleGraph());
+  test(`${backend} rounds scalar inputs and intermediate math to float32`, async () => {
+    const device = await getDevice();
+    if (!device) return;
+    for (const expression of [
+      'pow(input, 100000000)',
+      'pow(1.00000001, 100000000)',
+      'uint32(pow(input, 100000000))'
+    ]) {
+      const graph = makeGraph();
+      graph.scalar('input', 'float32');
+      graph.scalar('output', expression.startsWith('uint32') ? 'uint32' : 'float32');
+      graph.add(new GPUExpressionOperation({output: 'output', expression}));
+      const compiled = graph.compile(device);
+      try {
+        const result = await compiled.run({input: 1.00000001});
+        try {
+          expect(await readVector(result.output)).toEqual([1]);
+        } finally {
+          result.output.destroy();
+        }
+      } finally {
+        compiled.destroy();
+      }
+    }
+  });
   test(`${backend} evaluates all math functions with chunks and reusable bindings`, async () => {
     const device = await getDevice();
     if (!device) return;

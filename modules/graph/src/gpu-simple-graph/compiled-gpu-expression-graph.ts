@@ -3,22 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, assert, type Device} from '@luma.gl/core';
+import {GPUDataEvaluator, GPUEvaluationScope} from '@luma.gl/graph/gpu-simple-graph';
 import {
-  GPUDataEvaluator,
-  GPUEvaluationScope,
-  add,
-  subtract,
-  multiply,
-  divide,
-  abs,
-  sqrt,
-  pow,
-  sin,
-  cos,
-  tan,
-  exp,
-  log
-} from '@luma.gl/graph/gpu-simple-graph';
+  ArithmeticOperation,
+  type ArithmeticOp,
+  type ArithmeticArgument
+} from './operations/arithmetic-operation';
 import {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from '../gpu-core/gpu-graph';
 import {GPUExpressionOperation, type GPUExpression} from '../gpu-core/gpu-expression-operation';
@@ -70,8 +60,9 @@ export class CompiledGPUSimpleExpressionGraph {
           if (!chunk.length) continue;
           // Existing evaluator formatters append .0 to integer literals. Bind exponential
           // integers as typed data so large finite values never become invalid shader tokens.
-          const lowerNumber = (value: number): GPUDataEvaluator | number =>
-            Number.isInteger(value) && String(value).includes('e')
+          const lowerNumber = (inputValue: number): GPUDataEvaluator | number => {
+            const value = Math.fround(inputValue);
+            return Number.isInteger(value) && String(value).includes('e')
               ? retain(
                   new GPUDataEvaluator({
                     type: 'float32',
@@ -83,6 +74,9 @@ export class CompiledGPUSimpleExpressionGraph {
                   })
                 )
               : value;
+          };
+          const arithmetic = (operation: ArithmeticOp, ...arguments_: ArithmeticArgument[]) =>
+            retain(new GPUExpressionArithmeticOperation(operation, arguments_).output);
           const lower = (expression: GPUExpression): GPUDataEvaluator | number => {
             switch (expression.kind) {
               case 'literal':
@@ -122,7 +116,7 @@ export class CompiledGPUSimpleExpressionGraph {
                 );
               }
               case 'negate':
-                return retain(multiply(lower(expression.argument), -1));
+                return arithmetic('multiply', lower(expression.argument), -1);
               case 'cast': {
                 const value = lower(expression.argument);
                 const input =
@@ -143,46 +137,22 @@ export class CompiledGPUSimpleExpressionGraph {
               case 'call': {
                 const first = lower(expression.arguments[0]);
                 if (expression.name === 'pow')
-                  return retain(pow(first, lower(expression.arguments[1])));
-                return retain({abs, sqrt, sin, cos, tan, exp, log}[expression.name](first));
+                  return arithmetic('pow', first, lower(expression.arguments[1]));
+                return arithmetic(expression.name, first);
               }
               case 'binary': {
-                const operation = {'+': add, '-': subtract, '*': multiply, '/': divide}[
-                  expression.operator
-                ];
-                return retain(operation(lower(expression.left), lower(expression.right)));
+                const operation = (
+                  {'+': 'add', '-': 'subtract', '*': 'multiply', '/': 'divide'} as const
+                )[expression.operator];
+                return arithmetic(operation, lower(expression.left), lower(expression.right));
               }
             }
           };
           // Force a deferred output even for an identity or literal expression.
-          const evaluator = retain(multiply(lower(plan.expression), 1));
+          const evaluator = arithmetic('multiply', lower(plan.expression), 1);
           if (evaluator.length !== chunk.length)
             throw new Error('Scalar-only expressions require a scalar output');
           const targetBuffer = chunk.buffer instanceof Buffer ? chunk.buffer : chunk.buffer.buffer;
-          // The legacy CPU arithmetic handler writes at byte zero. Keep that evaluator unchanged
-          // and copy its scalar result into the requested subrange on WebGL.
-          if (
-            this.device.type === 'webgl' &&
-            chunk.byteOffset !== 0 &&
-            evaluator.length === 1 &&
-            plan.references.every(name => typeof invocation!.values.get(name) === 'number')
-          ) {
-            await evaluator.evaluate(this.device);
-            const encoder = this.device.createCommandEncoder();
-            try {
-              encoder.copyBufferToBuffer({
-                sourceBuffer: evaluator.buffer,
-                sourceOffset: evaluator.offset,
-                destinationBuffer: targetBuffer,
-                destinationOffset: chunk.byteOffset,
-                size: 4
-              });
-              this.device.submit(encoder.finish());
-            } finally {
-              encoder.destroy();
-            }
-            continue;
-          }
           evaluator.setTargetBuffer({
             buffer: targetBuffer,
             byteOffset: chunk.byteOffset,
@@ -208,5 +178,12 @@ export class CompiledGPUSimpleExpressionGraph {
     // A running program owns evaluator resources until execution finishes.
     assert(!this.running);
     this.destroyed = true;
+  }
+}
+
+/** Keep graph scalar arithmetic on the GPU with the same float32 boundaries as vectors. */
+class GPUExpressionArithmeticOperation extends ArithmeticOperation {
+  protected override shouldExecuteOnCPU(): boolean {
+    return false;
   }
 }
