@@ -19,6 +19,8 @@ import type {GPUGraph} from '../gpu-core/gpu-graph';
 import {
   GPUExpressionOperation,
   getGPUExpressionRowInfo,
+  getGPUExpressionFormat,
+  makeGPUExpressionRowFormat,
   type GPUExpression
 } from '../gpu-core/gpu-expression-operation';
 import {
@@ -29,6 +31,7 @@ import {
 } from '../gpu-core/gpu-expression-plan';
 
 import {GPUExpressionCastOperation} from './gpu-expression-cast-operation';
+import {GPUExpressionRowOperation} from './gpu-expression-row-operation';
 
 /** Reusable expression program implemented through the unchanged evaluator API. */
 export class CompiledGPUSimpleExpressionGraph {
@@ -212,10 +215,42 @@ export class CompiledGPUSimpleExpressionGraph {
                 );
               }
               case 'call': {
+                if (['dot', 'length', 'equalAll', 'select'].includes(expression.name)) {
+                  const argumentsList = expression.arguments.map(argument =>
+                    asEvaluator(lower(argument))
+                  );
+                  const format = getGPUExpressionFormat(expression, plan.formats);
+                  if (expression.name === 'select') {
+                    const condition = retain(
+                      new GPUExpressionRowOperation(
+                        'expression-mask',
+                        {condition: argumentsList[0]},
+                        makeGPUExpressionRowFormat('uint32', argumentsList[0].size)
+                      ).output
+                    );
+                    return retain(
+                      new GPUExpressionRowOperation(
+                        'select',
+                        {
+                          condition,
+                          whenTrue: argumentsList[1],
+                          whenFalse: argumentsList[2]
+                        },
+                        format
+                      ).output
+                    );
+                  }
+                  const name = expression.name as 'dot' | 'length' | 'equalAll';
+                  const inputs: Record<string, GPUDataEvaluator> =
+                    name === 'length'
+                      ? {x: argumentsList[0]}
+                      : {x: argumentsList[0], y: argumentsList[1]};
+                  return retain(new GPUExpressionRowOperation(name, inputs, format).output);
+                }
                 const first = lower(expression.arguments[0]);
                 if (expression.name === 'pow')
                   return arithmetic('pow', first, lower(expression.arguments[1]));
-                return arithmetic(expression.name, first);
+                return arithmetic(expression.name as ArithmeticOp, first);
               }
               case 'binary': {
                 const operation = (

@@ -15,6 +15,9 @@ casts. Float-to-integer casts offer per-operation `integerRounding`: truncation 
 or nearest with ties away from zero. Vector dimensions can change between executions;
 existing evaluator APIs remain unchanged. See the [expression reference](./api-reference/graph/gpu-expression-operation.md).
 
+GPU expressions now support row-local `dot`, `length`, `equalAll`, and
+`select(condition, whenTrue, whenFalse)` on WebGL SimpleGraph and both WebGPU graph paths.
+See the [expression syntax reference](./api-reference/graph/gpu-expression-operation.md).
 
 ## Shader plugin primary modules
 

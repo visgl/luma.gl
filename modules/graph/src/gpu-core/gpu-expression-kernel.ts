@@ -77,8 +77,29 @@ export class GPUExpressionKernel {
             expression.format,
             plan.operation.integerRounding
           );
-        case 'call':
+        case 'call': {
+          const [first, second, third] = expression.arguments;
+          if (expression.name === 'select') {
+            const conditionType = getGPUExpressionRowInfo(
+              getGPUExpressionFormat(first, plan.formats)
+            ).componentType;
+            return `select(${emit(third, laneIndex)}, ${emit(second, laneIndex)}, ${emit(first, laneIndex)} != ${GPU_EXPRESSION_SHADER_TYPES[conditionType]}(0))`;
+          }
+          if (['dot', 'length', 'equalAll'].includes(expression.name)) {
+            const components = getGPUExpressionRowInfo(
+              getGPUExpressionFormat(first, plan.formats)
+            ).components;
+            const terms = Array.from({length: components}, (_, component) => {
+              const left = emit(first, component);
+              const right = emit(expression.name === 'length' ? first : second, component);
+              return `(${left} ${expression.name === 'equalAll' ? '==' : '*'} ${right})`;
+            });
+            if (expression.name === 'equalAll') return `select(0u, 1u, ${terms.join(' && ')})`;
+            const sum = terms.reduce((total, term) => `(${total} + ${term})`, '0.0');
+            return expression.name === 'length' ? `sqrt(${sum})` : sum;
+          }
           return `${expression.name}(${expression.arguments.map(argument => emit(argument, laneIndex)).join(', ')})`;
+        }
         case 'binary':
           return `(${emit(expression.left, laneIndex)} ${expression.operator} ${emit(expression.right, laneIndex)})`;
         case 'reference': {
