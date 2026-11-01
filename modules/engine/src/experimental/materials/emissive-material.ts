@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 import {opticalLighting} from './optical-lighting';
 
 /** Runtime properties for luminous surfaces rendered into an HDR scene. */
@@ -116,5 +116,5 @@ export const emissiveMaterial = {
 /** Installs portable emissive shading and shared optical-lighting helpers. */
 export const emissiveMaterialPlugin = {
   name: 'emissiveMaterial',
-  modules: [emissiveMaterial as ShaderModule]
+  module: emissiveMaterial as ShaderModule
 } as const satisfies ShaderPlugin;

@@ -17,16 +17,10 @@
       "path": "../core"
     },
     {
-      "path": "../effects"
-    },
-    {
       "path": "../engine"
     },
     {
-      "path": "../gltf"
-    },
-    {
-      "path": "../shadertools"
+      "path": "../shaders"
     },
     {
       "path": "../graph"

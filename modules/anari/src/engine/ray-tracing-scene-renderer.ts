@@ -15,7 +15,7 @@ import {
   textureFormatDecoder
 } from '@luma.gl/core';
 import {Computation, type Geometry, Model} from '@luma.gl/engine';
-import {type Light, PBR_TONE_MAP_MODE} from '@luma.gl/shadertools';
+import {type Light, PBR_TONE_MAP_MODE} from '@luma.gl/shaders';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import {GPUBVH} from '@luma.gl/graph/gpu-core';
 import {

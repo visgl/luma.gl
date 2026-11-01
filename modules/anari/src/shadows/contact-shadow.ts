@@ -4,7 +4,7 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 
 const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1];

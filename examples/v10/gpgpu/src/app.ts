@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {luma, type Device} from '@luma.gl/core';
-import {cleanEvaluate, GPUDataEvaluator} from '@luma.gl/gpgpu';
+import {cleanEvaluate, GPUDataEvaluator} from '@luma.gl/graph/gpu-simple-graph';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {makeShowcaseData} from './arrow-data';

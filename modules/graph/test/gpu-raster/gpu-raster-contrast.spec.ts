@@ -11,7 +11,7 @@ import {
   type GPURasterBufferBand,
   type GPURasterScalarFormat
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPURasterContrast preserves calibrated domains, validity, and offset-aligned GPU ranges', async () => {
   const device = await getWebGPUTestDevice();

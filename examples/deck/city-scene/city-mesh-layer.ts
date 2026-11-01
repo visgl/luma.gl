@@ -34,6 +34,7 @@ export class CityMeshLayer extends Layer<CityMeshLayerProps> {
     const vertices = this.context.device.createBuffer({data: mesh});
     try {
       const model = new Model(this.context.device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

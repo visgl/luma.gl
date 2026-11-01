@@ -167,8 +167,8 @@ describe('documentation system contracts', () => {
       'developer-guide/README.md',
       'api-reference/core/README.md',
       'api-reference/engine/README.md',
-      'api-reference/shadertools/README.md',
-      'api-reference/gpgpu/README.md',
+      'api-reference/shaders/README.md',
+      'api-reference/graph/gpu-evaluation.md',
       'api-reference/experimental/gpu-tables/README.mdx',
       'api-reference/gltf/README.md',
       'api-reference/test-utils/README.md'

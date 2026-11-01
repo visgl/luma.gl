@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {fromHalfFloat, toHalfFloat} from '@luma.gl/shadertools';
+import {fromHalfFloat, toHalfFloat} from '@luma.gl/shaders';
 import {makeHDRScreenshotCapture} from '../../website/src/react-luma/utils/hdr-screenshot-capture';
 
 describe('generic HDR screenshot capture', () => {

@@ -37,7 +37,7 @@ export type {
   GPUGraphLoweredNode,
   GPUGraphLoweringReport
 } from '../gpu-core/gpu-graph-compiler';
-export {GPUOperationLoweringRegistry} from '../gpu-core/gpu-graph-lowering';
+export type {GPUOperationLowering} from '../gpu-core/gpu-graph-lowering';
 export type {
   GPUOperationLowerer,
   GPUOperationLoweringContext,
@@ -51,3 +51,11 @@ export type {
   GPUGraphValidationIssue,
   GPUGraphValidationReport
 } from '../gpu-core/gpu-graph-validation';
+
+export type {
+  GPUOperationContract,
+  GPUOperationValueReference,
+  GPUOperationValueUse,
+  GPUOperationVectorShape
+} from '../gpu-core/gpu-operation-contract';
+export type {GPUOperation} from '../gpu-core/gpu-operation';

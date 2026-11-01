@@ -5,15 +5,12 @@
 
 import {UniformStore, type Binding, type Buffer, type Device} from '@luma.gl/core';
 import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
-import {Kernel, getPlatformInfo} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
+import {getPlatformInfo} from '../execution/utils/get-platform-info';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {
-  fp64arithmetic,
-  ShaderAssembler,
-  type ShaderModule,
-  type WGSLShaderAssembler
-} from '@luma.gl/shadertools';
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   GPUCommandGraph,
   type GraphVectorView,
@@ -455,7 +452,7 @@ export function addGeospatialPass<Parameters>(
       // Classic arithmetic reads the fp64arithmetic uniforms. The entry point uses them
       // statically, so the automatic pipeline layout always includes the uniform binding.
       const source = classic ? addFP64UniformUse(props.source) : props.source;
-      const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+      const shaderAssembler = new WGSLShaderAssembler();
       const kernel = new Kernel(
         device,
         assembleComputeKernel(device, {

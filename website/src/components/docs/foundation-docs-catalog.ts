@@ -229,13 +229,13 @@ export const FOUNDATION_DOCS_CATALOG = {
       ]
     }
   },
-  shadertools: {
+  shaders: {
     starting: {
-      label: 'Shadertools starting points',
+      label: 'Shaders starting points',
       tabs: [
-        {id: 'shadertools-reference', label: 'Overview', href: '/docs/api-reference/shadertools'},
-        {id: 'shadertools-guide', label: 'Programming guide', href: '/docs/api-guide/shaders'},
-        {id: 'shadertools-cookbook', label: 'Cookbook', href: '/docs/api-guide/shaders/cookbook'}
+        {id: 'shaders-reference', label: 'Overview', href: '/docs/api-reference/shaders'},
+        {id: 'shaders-guide', label: 'Programming guide', href: '/docs/api-guide/shaders'},
+        {id: 'shaders-cookbook', label: 'Cookbook', href: '/docs/api-guide/shaders/cookbook'}
       ]
     },
     'guide-authoring': {
@@ -258,19 +258,19 @@ export const FOUNDATION_DOCS_CATALOG = {
     authoring: {
       label: 'Module authoring',
       tabs: [
-        {id: 'shader-module', label: 'ShaderModule', href: '/docs/api-reference/shadertools/shader-module'},
-        {id: 'shader-plugin', label: 'ShaderPlugin', href: '/docs/api-reference/shadertools/shader-plugin'},
-        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shadertools/shader-assembler'},
-        {id: 'shader-conventions', label: 'Conventions', href: '/docs/api-reference/shadertools/shader-conventions'}
+        {id: 'shader-module', label: 'ShaderModule', href: '/docs/api-reference/shaders/shader-module'},
+        {id: 'shader-plugin', label: 'ShaderPlugin', href: '/docs/api-reference/shaders/shader-plugin'},
+        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shaders/shader-assembler'},
+        {id: 'shader-conventions', label: 'Conventions', href: '/docs/api-reference/shaders/shader-conventions'}
       ]
     },
     execution: {
       label: 'Assembly and execution',
       tabs: [
-        {id: 'shader-pass', label: 'ShaderPass', href: '/docs/api-reference/shadertools/shader-pass'},
-        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shadertools/shader-assembler'},
-        {id: 'shader-info', label: 'Shader parsing', href: '/docs/api-reference/shadertools/shader-info'},
-        {id: 'wgsl-support', label: 'WGSL', href: '/docs/api-reference/shadertools/wgsl-support'}
+        {id: 'shader-pass', label: 'ShaderPass', href: '/docs/api-reference/shaders/shader-pass'},
+        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shaders/shader-assembler'},
+        {id: 'shader-info', label: 'Shader parsing', href: '/docs/api-reference/shaders/shader-info'},
+        {id: 'wgsl-support', label: 'WGSL', href: '/docs/api-reference/shaders/wgsl-support'}
       ]
     }
   }
@@ -280,11 +280,11 @@ export type CoreDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.core;
 export type CoreDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.core)[CoreDocsTabGroupId]['tabs'][number]['id'];
 export type EngineDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.engine;
 export type EngineDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.engine)[EngineDocsTabGroupId]['tabs'][number]['id'];
-export type ShadertoolsDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.shadertools;
-export type ShadertoolsDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.shadertools)[ShadertoolsDocsTabGroupId]['tabs'][number]['id'];
+export type ShadersDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.shaders;
+export type ShadersDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.shaders)[ShadersDocsTabGroupId]['tabs'][number]['id'];
 
 export const FOUNDATION_ADJACENCIES = [
-  {id: 'shadertools', label: 'Shadertools', href: '/docs/api-reference/shadertools'},
+  {id: 'shaders', label: 'Shaders', href: '/docs/api-reference/shaders'},
   {id: 'engine', label: 'Engine', href: '/docs/api-reference/engine'},
   {id: 'core', label: 'Core', href: '/docs/api-reference/core'},
   {id: 'gpu-core', label: 'GPU Core', href: '/docs/api-reference/experimental/gpu-core'}

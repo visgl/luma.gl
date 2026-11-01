@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ComputePipelineProps} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test} from 'vitest';
 
 test('GPUCommandGraph#compileAsync starts graph-owned pipelines in parallel', async () => {

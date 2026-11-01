@@ -9,8 +9,8 @@ import {
   type SceneRenderOptions,
   type SceneSurface
 } from '@luma.gl/anari';
-import {pbrMaterial, pbrScene, skin, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+import {pbrMaterial, pbrScene, skin, WGSLShaderAssembler} from '@luma.gl/shaders';
+import {getNullTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {PBR_MODEL_WGSL_SHADER} from '../../src/engine/pbr-model';

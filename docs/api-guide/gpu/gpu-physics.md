@@ -18,7 +18,7 @@ for a pinned glTF physics proposal profile is the first qualification milestone,
 claim about current coverage.
 
 This page explains the architecture rather than prescribing an application API. See the
-[API reference](/docs/api-reference/gpgpu/gpu-physics)
+[API reference](/docs/api-reference/graph/gpu-physics)
 for API details and limitations, and the
 [roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)
 for implementation status and qualification gates.
@@ -197,7 +197,7 @@ The rigid world retains lifetime failure counters on the GPU, so infrequent samp
 does not hide an incomplete step. Its simulation still advances when work is incomplete;
 recovery requires corrected settings and replay from known valid state. Allocation
 preflight catches device-limit violations before state allocation, but cannot predict
-all driver memory failures. See [capacity and diagnostics](/docs/api-reference/gpgpu/gpu-rigid-body-world#capacity-and-diagnostics).
+all driver memory failures. See [capacity and diagnostics](/docs/api-reference/graph/gpu-rigid-body-world#capacity-and-diagnostics).
 
 ### Synchronization and portability constrain the design
 
@@ -268,5 +268,5 @@ GPU physics library.
 - [GPGPU programming](/docs/api-guide/gpu/gpgpu)
 - [GPU command graphs](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
 - [Physics implementation and limitations](https://github.com/visgl/luma.gl/blob/master/modules/graph/src/gpu-physics/README.md)
-- [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md)
+- [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/gltf/physics/README.md)
 - [Physics roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)

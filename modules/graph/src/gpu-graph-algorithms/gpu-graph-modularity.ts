@@ -5,7 +5,7 @@
 
 import type {Buffer} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import type {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUCommandGraph} from '../gpu-core/gpu-command-graph';
 import type {GPUGraphAlgorithmsData} from './gpu-graph';
 import {addGPUGraphAlgorithmsModularityToGraphWithDispatchLimit} from './gpu-graph-modularity-internals';

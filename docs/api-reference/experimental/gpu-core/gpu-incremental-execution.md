@@ -22,7 +22,7 @@ computed/reused/removed batches, submitted batch and merge commands, and persist
 
 ```ts
 import {GPUIncrementalExecution, GPUReduction} from '@luma.gl/graph/gpu-core';
-import type {GPUData, GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUData, GPUVectorLike} from '@luma.gl/graph/gpu-data';
 
 // output is a caller-owned one-row GPUData<'uint32'>.
 const execution = new GPUIncrementalExecution<GPUVectorLike<'uint32'>, GPUData<'uint32'>>(

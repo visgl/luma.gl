@@ -98,7 +98,7 @@ import {
   type GLTFCrowdActorOptions,
   type GLTFCrowdClipSelectionOptions,
   type GLTFCrowdPrimitiveGroup
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 ```
 
 | API | Purpose |

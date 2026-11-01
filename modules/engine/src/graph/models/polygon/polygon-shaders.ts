@@ -5,7 +5,7 @@
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import {ShaderInputs} from '../../../shader-inputs';
 import {getIndexPickingModule, indexPicking} from '../../../index';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 /** Uniforms that project prepared polygon positions into clip space. */
 export type PolygonViewportUniforms = {

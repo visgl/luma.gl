@@ -3,21 +3,15 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {BillboardController, AreaLightController} from '@luma.gl/engine';
-import {parseGLTFAreaLights, parseGLTFBillboards} from '@luma.gl/gltf';
+import {parseGLTFAreaLights, parseGLTFBillboards} from '@luma.gl/engine/gltf';
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
-import {
-  Light,
-  LightingProps,
-  pbrMaterial,
-  pbrScene,
-  skin,
-  createAreaLightLTCTextures
-} from '@luma.gl/shadertools';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+import {createAreaLightLTCTextures} from '@luma.gl/engine';
+import {Light, LightingProps, pbrMaterial, pbrScene, skin} from '@luma.gl/shaders';
 import {Matrix4, Vector3} from '@math.gl/core';
 import {
   INFO_HTML,

@@ -4,7 +4,7 @@
 import {TorusGeometry} from '@luma.gl/engine';
 import {ANARIDevice} from '@luma.gl/anari';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {ANARISceneAdapter} from '../src/anari-scene-adapter';

@@ -18,7 +18,7 @@ import {
   ShadowMapRenderer,
   shadow
 } from '@luma.gl/anari';
-import type {SpotLight, ShaderModule} from '@luma.gl/shadertools';
+import type {SpotLight, ShaderModule} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core';
 import {CradleGeometryNode} from './cradle-geometry';
 import {captureReflectionProbe} from './reflection-probe';

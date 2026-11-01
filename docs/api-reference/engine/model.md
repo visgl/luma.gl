@@ -78,7 +78,7 @@ restored after batched rendering. Indices remain a single contiguous stream shar
 geometry batches.
 
 `validateGPUVectorBatchStructure(vectors)`, exported from `@luma.gl/engine` and
-`@luma.gl/gpgpu/gpu-data`, validates row counts, chunk counts, and per-chunk row counts.
+`@luma.gl/graph/gpu-data`, validates row counts, chunk counts, and per-chunk row counts.
 It accepts a named map or array of vectors, ignores constants and undefined entries, and
 neither modifies nor repacks input storage.
 

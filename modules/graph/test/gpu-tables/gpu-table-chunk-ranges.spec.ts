@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
@@ -20,7 +20,7 @@ import {
   type GPUInputSchema
 } from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const TRIPLE_COMPUTE_SHADER = /* wgsl */ `\
 @group(0) @binding(0) var<storage, read_write> values : array<i32>;

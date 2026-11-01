@@ -19,12 +19,6 @@
       "path": "../engine"
     },
     {
-      "path": "../gpgpu"
-    },
-    {
-      "path": "../text"
-    },
-    {
       "path": "../graph"
     },
     {

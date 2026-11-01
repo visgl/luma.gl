@@ -27,14 +27,14 @@ Use the matching public package and explicit subpath for each API. Public scene 
 ## When to use it
 
 Use an experimental module when its current contract fits your application and you can absorb
-changes between releases. Prefer Core, Engine, Shadertools, or another stable package when they
+changes between releases. Prefer Core, Engine, Shaders, or another stable package when they
 already provide the required capability.
 
 ## Live example
 
 This explicitly activated example compares A-buffer, weighted-blended, and ordinary alpha
 blending on the same scene. It demonstrates how an experimental renderer can still compose with
-stable Engine models and Shadertools passes.
+stable Engine models and Shaders passes.
 
 <OITExample embedded showStats={false} />
 
@@ -44,7 +44,7 @@ stable Engine models and Shadertools passes.
 
 | Module | Use it for |
 | --- | --- |
-| [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
+| [`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
 | [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | GPU record batches, tables, schemas, bindings, computations, and generic table planners. |
 | `@luma.gl/engine/models` | Experimental path and polygon rendering models. GPU input preparation remains in `@luma.gl/graph/experimental/models`. |
 | [`@luma.gl/graph/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
@@ -116,7 +116,7 @@ specific rather than universal performance claims.
 - [Choosing a luma.gl API layer](/docs/api-guide)
 - [Core API](/docs/api-reference/core)
 - [Engine API](/docs/api-reference/engine)
-- [Shadertools API](/docs/api-reference/shadertools)
+- [Shaders API](/docs/api-reference/shaders)
 - [Effects API](/docs/api-reference/effects)
 
 [`DepthTextureCopy`](../scene/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.

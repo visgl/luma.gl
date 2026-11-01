@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {prepareCRSProjection, ProjectionTableTransform} from '@luma.gl/graph/gpu-project/crs';
 import {
   runProjectionProgramBenchmark,
@@ -76,7 +76,7 @@ for (const method of ['gnom', 'ortho'] as const) {
             {positions: new Float64Array(0)},
             {positions: Float64Array.from(coordinates.slice(32).flat())}
           ],
-          provider: '@math.gl/geospatial/projection 5.0.0-alpha.20 spherical visualization',
+          provider: '@math.gl/geospatial/projection 5.0.0-beta.2 spherical visualization',
           maximumError,
           warmupIterations: 0,
           measuredIterations: 1

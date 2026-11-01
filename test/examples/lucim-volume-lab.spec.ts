@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import VolumeLabAnimationLoopTemplate from '../../examples/experimental/lucim-volume-lab/app';
 import {makeVolumeLabDataset} from '../../examples/experimental/lucim-volume-lab/volume-lab-data';

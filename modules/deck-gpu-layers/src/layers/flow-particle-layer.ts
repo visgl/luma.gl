@@ -71,6 +71,7 @@ export class FlowParticleLayer extends Layer<FlowParticleLayerProps> {
     });
     try {
       const model = new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

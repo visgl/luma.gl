@@ -38,7 +38,7 @@ requiring motion vectors, such as TAA or motion blur, must retain the default co
 
 ```ts
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {createSSRCompositeShaderPass, createTAACompositeShaderPass} from '@luma.gl/effects';
+import {createSSRCompositeShaderPass, createTAACompositeShaderPass} from '@luma.gl/engine/effects';
 import {GBuffer} from '@luma.gl/anari';
 
 const gBuffer = new GBuffer(device, {

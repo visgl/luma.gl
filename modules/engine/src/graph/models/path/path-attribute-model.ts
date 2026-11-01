@@ -11,9 +11,9 @@ import {
 } from '@luma.gl/core';
 import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/engine/tables';
 import type {GPUTable} from '@luma.gl/graph/gpu-tables';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
-import {isVertexListGPUVectorFormat, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/graph/gpu-data';
+import {isVertexListGPUVectorFormat, type VertexList} from '@luma.gl/graph/gpu-data';
 import type {GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
 import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
 

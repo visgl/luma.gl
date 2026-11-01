@@ -1,0 +1,40 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {ShaderModule} from '../../shader-module/shader-module';
+import {capitalize} from '../utils/capitalize';
+
+export type WGSLGenerationOptions = {
+  shaderLanguage: 'wgsl';
+};
+
+export function generateWGSLForModule(module: ShaderModule, options: WGSLGenerationOptions) {
+  return generateWGSLUniformDeclarations(module, options);
+}
+
+export function generateWGSLUniformDeclarations(
+  module: ShaderModule,
+  options: WGSLGenerationOptions
+) {
+  const wgsl: string[] = [];
+
+  // => uniform UniformBlockName {
+  wgsl.push(`struct ${capitalize(module.name)} {`);
+
+  for (const [uniformName, uniformFormat] of Object.entries(module?.uniformTypes || {})) {
+    if (typeof uniformFormat !== 'string') {
+      throw new Error(
+        `Composite uniform types are not supported by WGSL shader generation: ${module.name}.${uniformName}`
+      );
+    }
+
+    const wgslUniformType = uniformFormat;
+    wgsl.push(`  ${uniformName} : ${wgslUniformType};`);
+  }
+  wgsl.push('};');
+
+  wgsl.push(`var<uniform> ${module.name} : ${capitalize(module.name)};`);
+
+  return wgsl.join('\n');
+}

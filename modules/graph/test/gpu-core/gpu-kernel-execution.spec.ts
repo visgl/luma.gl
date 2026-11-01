@@ -4,10 +4,10 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {Kernel} from '@luma.gl/gpgpu';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {Kernel} from '@luma.gl/graph';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPUCommandGraph, GPUElementwise} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test, vi} from 'vitest';
 
 test('graph kernels share pipelines without retaining bindings across graphs or encodings', async () => {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUSplatArrowRecordBatchLike, GPUSplatArrowSource} from '@luma.gl/arrow';
+import {type GPUSplatArrowRecordBatchLike, type GPUSplatArrowSource} from '@luma.gl/engine/arrow';
 
 declare global {
   interface Window {

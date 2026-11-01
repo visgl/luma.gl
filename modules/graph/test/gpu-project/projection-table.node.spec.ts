@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {Buffer} from '@luma.gl/core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUProjectionTable, findProjectionPatch} from '@luma.gl/graph/gpu-project';

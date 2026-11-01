@@ -5,16 +5,8 @@
 import {
   clearArrowPickingState,
   createArrowPickingManager,
-  getArrowFixedSizeListValues,
-  getArrowTemporalVectorInfo,
-  getArrowVectorBufferSource,
-  getArrowVectorByteLength,
-  isArrowFixedSizeListVector,
-  makeArrowFixedSizeListVector,
   makeArrowRecordBatchSourceInfo,
   makeArrowRowIndexGPUVector,
-  makeGPUVectorFromArrow,
-  convertArrowTemporalToGPUVector,
   getOptionalArrowColumn,
   getRequiredArrowColumn,
   hasArrowTableOrVectorSource,
@@ -25,12 +17,22 @@ import {
   type ArrowRecordBatchLoadContext,
   type ArrowRecordBatchLoadUpdate,
   type ArrowRecordBatchSource,
-  type ArrowTemporalType,
   type OptionalArrowColumnSelector
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {
+  getArrowFixedSizeListValues,
+  getArrowTemporalVectorInfo,
+  getArrowVectorBufferSource,
+  getArrowVectorByteLength,
+  isArrowFixedSizeListVector,
+  makeArrowFixedSizeListVector,
+  makeGPUVectorFromArrow,
+  convertArrowTemporalToGPUVector,
+  type ArrowTemporalType
+} from '@luma.gl/graph/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
-import {GPUConstant, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUTable, type GPURecordBatch} from '@luma.gl/graph/gpu-tables';
 import {type GPUTableModel} from '@luma.gl/engine/tables';
 import * as arrow from 'apache-arrow';

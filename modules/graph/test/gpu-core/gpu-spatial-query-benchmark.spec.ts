@@ -11,7 +11,7 @@ import {
   type GPUSpatialBenchmarkPath,
   type GPUSpatialBenchmarkStrategy
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('summarizeGPUSpatialBenchmarkSamples reports nearest-rank distributions', () => {
   expect(summarizeGPUSpatialBenchmarkSamples([4, 1, 3, 2])).toEqual({

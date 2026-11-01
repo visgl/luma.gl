@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {Texture} from '@luma.gl/core';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {GLTFAnimationStudio} from '../../examples/gltf/asset-studio/gltf-animation-studio';

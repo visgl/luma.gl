@@ -14,7 +14,7 @@ passes, ownership, reasons, and lossy-conversion warnings before any GPU resourc
 is allocated.
 
 ```ts
-import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/arrow';
+import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/graph/arrow';
 
 const plan = planArrowGPUConversion(device, sourceVector, {
   semantic: 'color',
@@ -106,7 +106,7 @@ generic in TypeScript; Arrow's runtime `FixedSizeList` type cannot otherwise
 encode the numeric width in its compile-time type.
 
 ```ts
-import {makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 
 const table = makeGPUTableFromArrowTable(device, arrowTable, {
   shaderLayout: {
@@ -285,7 +285,7 @@ which inputs are internal. It deliberately does not mention Arrow `DataType`
 objects, source column paths, temporal origins, tessellation, text dictionaries,
 or fallback-vector generation.
 
-`ArrowInputSchema` belongs to `@luma.gl/arrow`. It combines an Arrow-free
+`ArrowInputSchema` belongs to `@luma.gl/graph/arrow`. It combines an Arrow-free
 `gpuInputSchema` with adapter-owned `resolveSourceVectors`,
 `convertToGPUVectors`, and `getGPUInputVectors` functions. The
 `prepareArrowInput()` helper runs that pipeline and calls
@@ -294,7 +294,7 @@ or fallback-vector generation.
 Use a simple Arrow input schema for direct one-column uploads. Keep model-family
 adapters for cross-column conversions such as path normalization, polygon
 tessellation, temporal conversion, and text glyph preparation. Do not make
-`@luma.gl/gpgpu` or `@luma.gl/graph` depend on Apache Arrow to describe those policies.
+`@luma.gl/graph/gpu-simple-graph` or `@luma.gl/graph` depend on Apache Arrow to describe those policies.
 
 
 ## BufferLayouts
@@ -303,7 +303,7 @@ The module can derive GPU `BufferLayout` entries from Arrow schemas and create p
 and experimental table objects from compatible Arrow columns through
 `makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and
 `makeGPUTableFromArrowTable()`. Primitive storage is documented in the
-[GPGPU data reference](/docs/api-reference/gpgpu/gpu-data), while the higher-level object model is
+[GPGPU data reference](/docs/api-reference/graph/gpu-data), while the higher-level object model is
 documented in [Experimental GPU Tables](/docs/api-reference/experimental/gpu-tables) and
 [GPU Table Structure](/docs/api-reference/experimental/gpu-tables/gpu-table-structure).
 

@@ -15,9 +15,9 @@ import * as luDataFrameModule from '@luma.gl/graph/gpu-dataframe';
 import {GPUDataFrame as LuDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import * as sqlModule from '@luma.gl/graph/gpu-sql';
 import {LuSQLContext, LuSQLQuery} from '@luma.gl/graph/gpu-sql';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 type LuSQLFixtureColumns = {fare: 'float32'; category: 'uint32'; identifier: 'uint32'};

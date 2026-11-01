@@ -35,25 +35,27 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       image: 'showcase/instancing'
     },
     {
-      name: 'shadertools',
+      name: 'shaders',
       description: 'Compose WGSL and GLSL with reusable shader modules and hooks.',
       image: 'tutorials/shader-modules'
     }
   ],
   smaller: [
     {
-      name: 'text',
+      name: 'engine/text',
       description: 'Render GPU text with font atlases and reusable layout helpers.',
       image: 'experimental/text-space-crawl',
       status: 'Experimental'
     },
     {
-      name: 'gpgpu',
+      name: 'graph/gpu-simple-graph',
+      reference: 'graph/gpu-evaluation',
       description: 'GPU data primitives and immediate compute operations without CPU readback.',
       image: 'experimental/gpu-data-analysis'
     },
     {
-      name: 'effects',
+      name: 'engine/effects',
+      reference: 'effects',
       description: 'Build post-processing pipelines with composable image and lighting effects.',
       image: 'showcase/postprocessing'
     },
@@ -63,20 +65,23 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       image: 'gltf/asset-studio'
     },
     {
-      name: 'arrow',
-      description: 'Upload Apache Arrow columns and connect tabular data to GPU workflows.',
+      name: 'graph/arrow',
+      reference: 'arrow',
+      description: 'Convert Arrow vectors, tables and rendering data through optional /arrow subpaths.',
       image: 'arrow/arrow-points',
-      status: 'Private'
+      status: 'Experimental'
     },
     {
-      name: 'splats',
+      name: 'engine/splats',
+      reference: 'splats',
       description: 'Stream, sort, and render Gaussian splat scenes.',
       image: 'showcase/gaussian-splats',
       status: 'Experimental'
     },
     {
-      name: 'test-utils',
-      description: 'Set up rendering tests and compare captured images.',
+      name: 'core/test-utils',
+      reference: 'test-utils',
+      description: 'Create test devices and inspect resource ownership with the null backend.',
       image: 'tutorials/hello-triangle'
     }
   ],

@@ -45,16 +45,16 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'shaders',
     title: 'Shader Tools',
-    packageName: '@luma.gl/shadertools',
-    documentationPath: 'docs/api-reference/shadertools',
+    packageName: '@luma.gl/shaders',
+    documentationPath: 'docs/api-reference/shaders',
     capabilities: ['WGSL', 'GLSL', 'Shader modules'],
     descriptions: [/portable shaders/i, /reusable module library/i]
   },
   {
     id: 'effects',
     title: 'Effects',
-    packageName: '@luma.gl/effects',
-    documentationPath: 'docs/api-reference/shadertools/shader-passes/image-processing',
+    packageName: '@luma.gl/engine/effects',
+    documentationPath: 'docs/api-reference/shaders/shader-passes/image-processing',
     capabilities: ['Bloom', 'Tone mapping', 'Shader passes'],
     descriptions: [/reusable shader effects/i, /post-processing/i]
   },
@@ -69,7 +69,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'splats',
     title: 'Splats',
-    packageName: '@luma.gl/splats',
+    packageName: '@luma.gl/engine/splats',
     documentationPath: 'docs/api-reference/splats',
     capabilities: ['Streaming', 'Gaussian splats', 'HDR'],
     descriptions: [/stream and render Gaussian splats/i, /high-dynamic-range color/i]
@@ -77,8 +77,8 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'gpgpu',
     title: 'GPGPU',
-    packageName: '@luma.gl/gpgpu',
-    documentationPath: 'docs/api-reference/gpgpu',
+    packageName: '@luma.gl/graph/gpu-simple-graph',
+    documentationPath: 'docs/api-reference/graph/gpu-evaluation',
     capabilities: ['GPU graphs', 'Compute modules', 'Zero readback'],
     descriptions: [/compute modules and rendering/i, /GPU-native pipeline/i]
   }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {GPUCommandGraph, GraphDataView, GraphVectorView} from './gpu-command-graph';
 
 export function getGraphVectorData<T extends GPUVectorFormat>(

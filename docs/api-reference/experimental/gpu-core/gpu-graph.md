@@ -59,7 +59,7 @@ Arrays are root-level construction sugar. `GPUCompositeOperation` preserves sema
 The public semantic value and operation types are `GPUGraphScalar`, `GPUGraphVector`, `GPUGraphTexture`, `GPUGraphTextureView`,
 `GPUGraphScalarLiteral`, `GPUGraphScalarOperation`, `GPUGraphVectorMADD`,
 `GPUGraphDotProduct`, `GPUGraphCSRMatrix`, and `GPUGraphSpMV`. The WebGPU
-`GPUGraphCompiler` lowers these built-ins through its `GPUOperationLoweringRegistry`; custom
+`GPUGraphCompiler` lowers these built-ins using explicit `GPUOperationLowering` descriptors; custom
 semantic operation types can register an equally explicit backend lowering.
 
 ## Hard boundary

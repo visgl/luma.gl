@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {createSpatialReference} from '@math.gl/geospatial/crs';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   prepareCRSProjection,
   createCRSProjectionCPUBenchmarks

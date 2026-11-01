@@ -11,7 +11,7 @@ import {
   type Binding
 } from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {volumeRaymarch} from '@luma.gl/shadertools';
+import {volumeRaymarch} from '@luma.gl/shaders';
 import {Matrix4, type Matrix4Like, type NumberArray3} from '@math.gl/core';
 import {
   getStructuredVolumeShaderSource,

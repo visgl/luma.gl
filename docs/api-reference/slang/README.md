@@ -107,7 +107,7 @@ The `sourceName`, `locations`, `modules` and `exports` options have the same mea
 
 ## Use with luma.gl
 
-Core, Engine and Shadertools do not import the compiler. Register an application-owned callback
+Core, Engine and Shaders do not import the compiler. Register an application-owned callback
 with `shaderAssembler.addShaderTranspiler(...)`, then use `sourceLanguage: 'slang'` on a `Model`,
 `Computation` or reusable `ShaderModule`. The
 [sculpture adapter](https://github.com/visgl/luma.gl/blob/master/examples/tutorials/slang-shaders/slang-transpiler.ts)

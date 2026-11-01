@@ -2,6 +2,31 @@
 
 ## v10.0
 
+### v10.0.0-alpha.7
+
+- Consolidate GPU execution, data, and table APIs into graph subpaths and expose explicit package exports.
+- Add logical GPU operation contracts, typed graph rows, component access, row constructors, casts, and row-local expression functions.
+- Support transformed Arrow GPU columns and align graph declarations with expression execution.
+- Simplify ShaderPlugin language contributions and primary modules, preserve plugin composition, and improve scoped hooks, conflict reporting, and portability.
+- Fix model resource cleanup, WebGL device-loss reporting and lifecycle coverage, external canvas resizing, and storage-texture capability reporting.
+- Strengthen opaque GPU and glTF metadata types and upgrade math.gl and loaders.gl to beta.2 and dev-tools to beta.3.
+
+### v10.0.0-alpha.6
+
+- Consolidate glTF, splats, text, and effects APIs into engine subpaths and move test devices to core/test-utils.
+- Rename shadertools to shaders, split GLSL and WGSL assembler entry points, and remove global assembler defaults.
+- Make shaders independent of core with explicit shader assembler ownership.
+- Move optional Arrow adapters into gpgpu, graph, and engine subpaths.
+- Add attribution and research citations and improve physics endurance test scheduling.
+
+### v10.0.0-alpha.5
+
+- Consolidate WebGL and WebGPU adapters into core and introduce public graph, ANARI, and Three.js integration packages.
+- Establish GPUGraph authoring and execution APIs, GPU data processing, scientific advection, and GPU physics ensembles.
+- Expand engine rendering, table and vector models, scenegraph integration, glTF postprocessing, materials, and Gaussian splats.
+- Add GPU geometry, point-cloud, time-series, graph inspection, and tracing capabilities with updated examples and documentation.
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.1 and improve CI shard balance and test execution.
+
 ### v10.0.0-alpha.4
 
 - Align WebGL and WebGPU draw-call semantics and fix viewport, scissor, framebuffer, texture ownership, and buffer readback behavior.

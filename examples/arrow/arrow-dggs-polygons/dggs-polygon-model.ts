@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {PreparedDggsCellPathGPUVector} from '@luma.gl/arrow';
+import {type PreparedDggsCellPathGPUVector} from '@luma.gl/graph/arrow';
 import type {Device} from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
 import {PathStorageModel} from '@luma.gl/engine/models';

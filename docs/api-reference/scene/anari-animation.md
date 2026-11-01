@@ -1,13 +1,13 @@
 # ANARI Animation and glTF Integration
 
 `@luma.gl/anari/gltf` is an optional entry point that projects glTF-owned animation data onto
-retained ANARI objects. It reuses `@luma.gl/gltf` parsing and the shared `@luma.gl/engine`
+retained ANARI objects. It reuses `@luma.gl/engine/gltf` parsing and the shared `@luma.gl/engine`
 animation mixer; the ordinary `@luma.gl/anari` entry point does not import a glTF loader or own a
 second animation runtime.
 
 :::caution[Experimental optional adapter]
 `@luma.gl/anari` is a public package with experimental APIs. Import the `/gltf` subpath only
-when glTF animation integration is needed and `@luma.gl/gltf` is available.
+when glTF animation integration is needed and `@luma.gl/engine/gltf` is available.
 :::
 
 ## Optional entry-point exports
@@ -35,7 +35,7 @@ import type {
   objects and returns shared mixer/playback controls.
 
 None of these functions reads a `.gltf` or `.glb` file. Load/postprocess the asset with
-`@loaders.gl/gltf`; decode source animation channels through `@luma.gl/gltf`.
+`@loaders.gl/scene/gltf`; decode source animation channels through `@luma.gl/engine/gltf`.
 
 ## Bind a retained animated scene
 
