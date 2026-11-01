@@ -142,6 +142,14 @@ adds an animated collider-scale scene. Scene instances support transactional liv
 capture/restore and tracked asynchronous queries while preserving authored Reset
 behavior. Mesh deformation and full-profile qualification remain separate work.
 
+### ShaderPlugin portability
+
+ShaderPlugins accept concretely typed ShaderModules and numeric preprocessor defines.
+WGSL plugin varyings now support fragment entry points with individual parameters or
+no parameters, as well as named input structs. Existing direct input locations are
+reserved when allocating plugin varyings. GLSL plugin inputs and varyings are declared
+before module helpers, allowing helpers to access them directly.
+
 ### SimpleGraph value authoring
 
 `@luma.gl/graph/gpu-simple-graph` now offers `GPUSimpleGraphValue`,

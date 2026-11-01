@@ -7,7 +7,7 @@ import {type ShaderModule} from '../shader-module/shader-module';
 import {type ShaderHook} from './shader-hooks';
 import {type ShaderInjection} from './shader-injections';
 import {type AttributeShaderType} from '../../types';
-import {type ResolvedShaderPluginVarying} from '../shader-plugin';
+import {type ResolvedShaderPluginInterStageVariable} from '../shader-plugin';
 
 export type ShaderAssemblyLog = {
   deprecated?: (...args: unknown[]) => () => unknown;
@@ -52,8 +52,8 @@ export type AssembleShaderOptions = {
   pluginInjections?: Record<string, ShaderInjection[]>;
   /** Vertex inputs contributed by ShaderPlugin descriptors. */
   pluginVertexInputs?: Record<string, AttributeShaderType>;
-  /** Cross-stage varyings contributed by ShaderPlugin descriptors. */
-  pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
+  /** Inter-stage variables contributed by ShaderPlugin descriptors. */
+  pluginInterStageVariables?: Record<string, ResolvedShaderPluginInterStageVariable>;
   /** WGSL vertex entry point selected by the render pipeline. */
   vertexEntryPoint?: string;
   /** Whether WGSL interface scanning should include vertex attributes. */
@@ -86,8 +86,8 @@ export type AssembleStageOptions = {
   pluginInjections?: Record<string, ShaderInjection[]>;
   /** Vertex inputs contributed by ShaderPlugin descriptors. */
   pluginVertexInputs?: Record<string, AttributeShaderType>;
-  /** Cross-stage varyings contributed by ShaderPlugin descriptors. */
-  pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
+  /** Inter-stage variables contributed by ShaderPlugin descriptors. */
+  pluginInterStageVariables?: Record<string, ResolvedShaderPluginInterStageVariable>;
   /** WGSL vertex entry point selected by the render pipeline. */
   vertexEntryPoint?: string;
   /** WGSL fragment entry point selected by the render pipeline. */

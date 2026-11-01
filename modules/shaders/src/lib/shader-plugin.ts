@@ -29,21 +29,21 @@ export type ShaderPluginInjection = {
   order?: number;
 };
 
-/** Portable interpolation modes for ShaderPlugin varyings. */
-export type ShaderPluginVaryingInterpolation = 'smooth' | 'flat';
+/** Portable interpolation modes for ShaderPlugin inter-stage variables. */
+export type ShaderPluginInterStageVariableInterpolation = 'smooth' | 'flat';
 
 /** Cross-stage value contributed by a ShaderPlugin. */
-export type ShaderPluginVarying = {
+export type ShaderPluginInterStageVariable = {
   /** Portable scalar or vector shader type. */
   type: AttributeShaderType;
   /** Defaults to smooth for floating-point types and flat for integer types. */
-  interpolation?: ShaderPluginVaryingInterpolation;
+  interpolation?: ShaderPluginInterStageVariableInterpolation;
 };
 
-/** Fully normalized ShaderPlugin varying declaration. */
-export type ResolvedShaderPluginVarying = {
+/** Fully normalized ShaderPlugin inter-stage variable declaration. */
+export type ResolvedShaderPluginInterStageVariable = {
   type: AttributeShaderType;
-  interpolation: ShaderPluginVaryingInterpolation;
+  interpolation: ShaderPluginInterStageVariableInterpolation;
 };
 
 /** Reusable shader assembly descriptor with one portable interface and language-specific source. */
@@ -51,29 +51,29 @@ export type ShaderPlugin = {
   /** Stable plugin identifier. */
   name: string;
   /** Primary shader module. Supporting modules belong in its dependencies; omit for injection-only plugins. */
-  module?: ShaderModule;
-  /** Boolean preprocessor defines added to shader assembly. */
-  defines?: Record<string, boolean>;
+  module?: ShaderModule<any, any, any>;
+  /** Boolean or numeric preprocessor defines added to shader assembly. */
+  defines?: Record<string, boolean | number>;
   /** Named code injections added to shader assembly. */
   injections?: ShaderPluginInjection[];
   /** Shader-facing vertex inputs added by this plugin. Buffer ownership remains with the caller. */
   vertexInputs?: Record<string, AttributeShaderType>;
   /** Values transported from the selected vertex entry point to the fragment entry point. */
-  varyings?: Record<string, ShaderPluginVarying>;
+  interStageVariables?: Record<string, ShaderPluginInterStageVariable>;
 };
 
 /** ShaderPlugin contributions resolved for one shader language. */
 export type ResolvedShaderPlugins = {
   /** Resolved shader modules in plugin declaration order. */
   modules: ShaderModule[];
-  /** Resolved boolean preprocessor defines. */
-  defines: Record<string, boolean>;
+  /** Resolved boolean or numeric preprocessor defines. */
+  defines: Record<string, boolean | number>;
   /** Resolved named code injections grouped by target. */
   injections: Record<string, ShaderInjection[]>;
   /** Resolved shader-facing vertex inputs in plugin declaration order. */
   vertexInputs: Record<string, AttributeShaderType>;
-  /** Resolved cross-stage varyings in plugin declaration order. */
-  varyings: Record<string, ResolvedShaderPluginVarying>;
+  /** Resolved inter-stage variables in plugin declaration order. */
+  interStageVariables: Record<string, ResolvedShaderPluginInterStageVariable>;
 };
 
 const SHADER_PLUGIN_INJECTION_TARGET_REGEX =
@@ -89,15 +89,15 @@ export function resolveShaderPlugins(
     defines: {},
     injections: {},
     vertexInputs: {},
-    varyings: {}
+    interStageVariables: {}
   };
 
   for (const plugin of plugins) {
     appendShaderPlugin(resolved, plugin, shaderLanguage);
   }
-  const {vertexInputs, varyings} = resolved;
+  const {vertexInputs, interStageVariables} = resolved;
 
-  for (const name of Object.keys(varyings)) {
+  for (const name of Object.keys(interStageVariables)) {
     if (vertexInputs[name]) {
       throw new Error(`ShaderPlugin name "${name}" cannot be both a vertex input and a varying`);
     }
@@ -159,10 +159,10 @@ function appendShaderPlugin(
     }
     resolved.vertexInputs[name] = type;
   }
-  for (const [name, varying] of Object.entries(plugin.varyings || {})) {
+  for (const [name, varying] of Object.entries(plugin.interStageVariables || {})) {
     assertShaderPluginInterfaceName(name, 'varying');
-    const normalizedVarying = normalizeShaderPluginVarying(name, varying);
-    const existingVarying = resolved.varyings[name];
+    const normalizedVarying = normalizeShaderPluginInterStageVariable(name, varying);
+    const existingVarying = resolved.interStageVariables[name];
     if (
       existingVarying &&
       (existingVarying.type !== normalizedVarying.type ||
@@ -174,7 +174,7 @@ function appendShaderPlugin(
           `"${normalizedVarying.type}/${normalizedVarying.interpolation}"`
       );
     }
-    resolved.varyings[name] = normalizedVarying;
+    resolved.interStageVariables[name] = normalizedVarying;
   }
 
   for (const injection of plugin.injections || []) {
@@ -199,10 +199,10 @@ function assertShaderPluginInterfaceName(name: string, kind: 'vertex input' | 'v
   }
 }
 
-function normalizeShaderPluginVarying(
+function normalizeShaderPluginInterStageVariable(
   name: string,
-  varying: ShaderPluginVarying
-): ResolvedShaderPluginVarying {
+  varying: ShaderPluginInterStageVariable
+): ResolvedShaderPluginInterStageVariable {
   const {primitiveType} = shaderTypeDecoder.getAttributeShaderTypeInfo(varying.type);
   const integerType = primitiveType === 'i32' || primitiveType === 'u32';
   const interpolation = varying.interpolation || (integerType ? 'flat' : 'smooth');

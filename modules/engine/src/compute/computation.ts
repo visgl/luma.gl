@@ -137,7 +137,7 @@ export class Computation {
   readonly pipelineFactory: PipelineFactory;
   readonly shaderFactory: ShaderFactory;
 
-  userData: {[key: string]: any} = {};
+  userData: {[key: string]: unknown} = {};
 
   /** Bindings (textures, samplers, uniform buffers) */
   bindings: Record<string, Binding> = {};
@@ -187,9 +187,11 @@ export class Computation {
     const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
     if (
       Object.keys(resolvedPlugins.vertexInputs).length > 0 ||
-      Object.keys(resolvedPlugins.varyings).length > 0
+      Object.keys(resolvedPlugins.interStageVariables).length > 0
     ) {
-      throw new Error('Computation does not support ShaderPlugin vertex inputs or varyings');
+      throw new Error(
+        'Computation does not support ShaderPlugin vertex inputs or interStageVariables'
+      );
     }
 
     // Setup shader module inputs

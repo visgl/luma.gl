@@ -24,12 +24,12 @@ import {
 } from './shader-hooks';
 import {type ShaderInjection, injectShader} from './shader-injections';
 import {type AttributeShaderType} from '../../types';
-import {type ResolvedShaderPluginVarying} from '../shader-plugin';
+import {type ResolvedShaderPluginInterStageVariable} from '../shader-plugin';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 import {getPlatformShaderDefines} from './platform-defines';
 import {getShaderPluginVertexInputDeclarationsGLSL} from './shader-plugin-vertex-inputs';
-import {assembleShaderPluginVaryingsGLSL} from './shader-plugin-varyings';
+import {assembleShaderPluginInterStageVariablesGLSL} from './shader-plugin-varyings';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
 import {warnIfGLSLUniformBlocksAreNotStd140} from '../shader-module/shader-module-uniform-layout';
 
@@ -97,7 +97,7 @@ export function assembleShaderGLSL(
     inject?: Record<string, string | ShaderInjection>;
     pluginInjections?: Record<string, ShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;
-    pluginVaryings?: Record<string, ResolvedShaderPluginVarying>;
+    pluginInterStageVariables?: Record<string, ResolvedShaderPluginInterStageVariable>;
     prologue?: boolean;
     log?: ShaderAssemblyLog;
   }
@@ -112,7 +112,7 @@ export function assembleShaderGLSL(
     inject = {},
     pluginInjections = {},
     pluginVertexInputs = {},
-    pluginVaryings = {},
+    pluginInterStageVariables = {},
     prologue = true,
     log
   } = options;
@@ -193,24 +193,19 @@ ${getApplicationDefines(allDefines)}
       mainInjections[key] = [...(mainInjections[key] || []), injection];
     }
   }
+  // Module helpers may access plugin inputs and varyings. GLSL requires these
+  // interface declarations before the helpers, unlike ordinary #decl injections.
   if (stage === 'vertex') {
     const declarations = getShaderPluginVertexInputDeclarationsGLSL(coreSource, pluginVertexInputs);
-    if (declarations) {
-      declInjections['vs:#decl'] = declInjections['vs:#decl'] || [];
-      declInjections['vs:#decl'].push({
-        injection: declarations,
-        order: Number.MIN_SAFE_INTEGER
-      });
-    }
+    if (declarations) assembledSource += `${declarations}\n`;
   }
-  const pluginVaryingAssembly = assembleShaderPluginVaryingsGLSL(coreSource, stage, pluginVaryings);
+  const pluginVaryingAssembly = assembleShaderPluginInterStageVariablesGLSL(
+    coreSource,
+    stage,
+    pluginInterStageVariables
+  );
   if (pluginVaryingAssembly.declarations) {
-    const declarationTarget = stage === 'vertex' ? 'vs:#decl' : 'fs:#decl';
-    declInjections[declarationTarget] = declInjections[declarationTarget] || [];
-    declInjections[declarationTarget].push({
-      injection: pluginVaryingAssembly.declarations,
-      order: Number.MIN_SAFE_INTEGER
-    });
+    assembledSource += `${pluginVaryingAssembly.declarations}\n`;
   }
   if (pluginVaryingAssembly.initialization) {
     mainInjections['vs:#main-start'] = mainInjections['vs:#main-start'] || [];

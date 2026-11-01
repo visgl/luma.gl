@@ -10,7 +10,7 @@ attached to [`Model`](/docs/api-reference/engine/model) and
 [`Computation`](/docs/api-reference/engine/compute/computation). Prefer plugins
 as the application-facing optional composition layer when a behavior needs
 a primary shader module, defines, shader-facing vertex inputs, named injections, portable
-cross-stage varyings, or backend-specific shader source.
+inter-stage variables, or backend-specific shader source.
 
 For the authoring model, see
 [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders).
@@ -19,8 +19,8 @@ For the authoring model, see
   {label: 'Languages', value: 'One portable interface with GLSL/WGSL source per injection'},
   {label: 'Dependencies', value: 'Composes ShaderModules selected by the plugin'},
   {label: 'Hooks and injections', value: 'Targets named vertex and fragment extension points'},
-  {label: 'Props and bindings', value: 'Declares vertex inputs, varyings, a primary module, and defines'},
-  {label: 'Assembly output', value: 'Resolved modules, defines, injections, inputs, and varyings'},
+  {label: 'Props and bindings', value: 'Declares vertex inputs, inter-stage variables, a primary module, and defines'},
+  {label: 'Assembly output', value: 'Resolved modules, defines, injections, inputs, and inter-stage variables'},
   {label: 'Cost', value: 'Resolve when configuration changes, not for every draw'}
 ]} />
 
@@ -43,18 +43,18 @@ import type {ShaderInjection, ShaderModule} from '@luma.gl/shaders';
 
 export type ShaderPlugin = {
   name: string;
-  module?: ShaderModule;
-  defines?: Record<string, boolean>;
+  module?: ShaderModule<any, any, any>;
+  defines?: Record<string, boolean | number>;
   injections?: ShaderPluginInjection[];
   vertexInputs?: Record<string, AttributeShaderType>;
-  varyings?: Record<string, ShaderPluginVarying>;
+  interStageVariables?: Record<string, ShaderPluginInterStageVariable>;
 };
 
-export type ShaderPluginVaryingInterpolation = 'smooth' | 'flat';
+export type ShaderPluginInterStageVariableInterpolation = 'smooth' | 'flat';
 
-export type ShaderPluginVarying = {
+export type ShaderPluginInterStageVariable = {
   type: AttributeShaderType;
-  interpolation?: ShaderPluginVaryingInterpolation;
+  interpolation?: ShaderPluginInterStageVariableInterpolation;
 };
 
 export type ShaderPluginInjection = {
@@ -66,19 +66,25 @@ export type ShaderPluginInjection = {
 
 export type ResolvedShaderPlugins = {
   modules: ShaderModule[];
-  defines: Record<string, boolean>;
+  defines: Record<string, boolean | number>;
   injections: Record<string, ShaderInjection[]>;
   vertexInputs: Record<string, AttributeShaderType>;
-  varyings: Record<string, {
+  interStageVariables: Record<string, {
     type: AttributeShaderType;
-    interpolation: ShaderPluginVaryingInterpolation;
+    interpolation: ShaderPluginInterStageVariableInterpolation;
   }>;
 };
 ```
 
+Numeric defines support channel counts and other preprocessor specializations, alongside
+boolean feature flags. WGSL preprocessor conditions support simple numeric comparisons
+(`==`, `!=`, `<`, `<=`, `>`, `>=`) between defines and numeric literals. This does
+not add token substitution or general arithmetic expressions. Define precedence
+matches normal shader assembly.
+
 ## Primary module
 
-A plugin optionally supplies one `module`. That module owns its uniform and binding
+A plugin optionally supplies one `module`, including a concretely typed `ShaderModule<Props, Uniforms, Bindings>` without a cast. That module owns its uniform and binding
 contract; supporting shader code belongs in `module.dependencies`. For example,
 `glassTransmissionPlugin.module` depends on `glassMaterial`, which depends on
 `opticalLighting`. The assembler and `ShaderInputs` resolve that dependency graph.
@@ -104,10 +110,10 @@ assembly module list remain arrays.
 
 | Field | Resolution |
 | --- | --- |
-| `module`, `defines`, `vertexInputs`, and `varyings` | Shared across shader languages. Later plugins override same-named define keys. |
+| `module`, `defines`, `vertexInputs`, and `interStageVariables` | Shared across shader languages. Later plugins override same-named define keys. |
 | Injection `glsl` / `wgsl` | Select the source matching the assembly language. An omitted source skips that injection; an empty string remains an explicit injection. |
 | `vertexInputs` | Render-shader inputs merged by input name. Repeated names must use the same shader type; conflicting types throw. Buffer ownership remains with the caller. |
-| `varyings` | Cross-stage values merged by name. Repeated names must use the same type and interpolation. Floating-point values default to `smooth`; integer values default to and require `flat`. |
+| `interStageVariables` | Cross-stage values merged by name. Repeated names must use the same type and interpolation. Floating-point values default to `smooth`; integer values default to and require `flat`. |
 | Injection entries | Preserve author order within the same `order` value. |
 
 ## Injection Targets
@@ -159,7 +165,9 @@ resources remain `ShaderModule` bindings managed through `ShaderInputs`.
 
 ## Varyings
 
-`varyings` declares values that plugin hook source writes during the vertex
+GLSL plugin input and inter-stage variable declarations precede shader module source, so module helpers can read inputs and read or write inter-stage variables without redeclaring them. Ordinary `#decl` injections retain their existing ordering.
+
+`interStageVariables` declares values that plugin hook source writes during the vertex
 stage and reads during the fragment stage. The assembler owns the generated
 shader interface only. It does not own the source coordinates, attributes,
 buffers, events, resources, or update lifecycle.
@@ -172,14 +180,15 @@ vector types default to `smooth`; integer types default to `flat` and reject
 For GLSL, the assembler generates matching vertex `out` and fragment `in`
 declarations, then zero-initializes the vertex value before other main-start
 injections. For WGSL, the selected vertex entry point must return a named
-stage-I/O struct and the selected fragment entry point must consume exactly one
-named stage-I/O struct. The assembler appends matching fields at the first
-locations unused by both structs, initializes same-named private variables,
+stage-I/O struct. Fragment inputs may use a named struct, individual parameters,
+or no parameters. The assembler extends the fragment struct when present, or
+adds individual parameters otherwise. It allocates matching locations unused by
+either stage, including existing direct parameters, and initializes same-named private variables,
 copies them to every vertex return, and initializes them from the fragment
 input before fragment injections. Direct WGSL vertex outputs and ambiguous
 fragment struct inputs are rejected with an assembly error.
 
-`Computation` rejects plugins with `vertexInputs` or `varyings` because compute
+`Computation` rejects plugins with `vertexInputs` or `interStageVariables` because compute
 pipelines do not have a render vertex-to-fragment interface.
 
 ## `filterShaderPlugin`
@@ -226,7 +235,7 @@ inputs.
 ## `clipShaderPlugin`
 
 `clipShaderPlugin` provides coordinate-system-neutral rectangular clipping.
-It declares a smooth `clipCoordinates: vec2<f32>` varying and a `clip` shader
+It declares a smooth `clipCoordinates: vec2<f32>` inter-stage variable and a `clip` shader
 module with these props:
 
 ```ts
@@ -261,7 +270,7 @@ vs:CLIP_POSITION(
 fs:CLIP_COLOR(color: ptr<function, vec4<f32>>)
 ```
 
-The vertex hook always stores `geometryCoordinates` in the generated varying.
+The vertex hook always stores `geometryCoordinates` in the generated inter-stage variable.
 In `instance` mode, an out-of-bounds `instanceCoordinates` value moves the
 complete object outside clip space. In `geometry` mode, the fragment hook
 discards pixels whose interpolated coordinates are outside the bounds.

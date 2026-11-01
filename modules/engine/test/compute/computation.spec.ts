@@ -230,12 +230,12 @@ it('Computation#plugins assemble WGSL contributions', async () => {
           plugins: [
             {
               name: 'varying-plugin',
-              varyings: {pluginValue: {type: 'f32'}}
+              interStageVariables: {pluginValue: {type: 'f32'}}
             }
           ]
         }),
-      'compute pipelines reject plugin varyings'
-    ).toThrow(/does not support ShaderPlugin vertex inputs or varyings/);
+      'compute pipelines reject plugin interStageVariables'
+    ).toThrow(/does not support ShaderPlugin vertex inputs or interStageVariables/);
   }
   void 0;
 });
