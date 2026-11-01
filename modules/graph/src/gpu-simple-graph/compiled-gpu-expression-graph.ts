@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, assert, type Device} from '@luma.gl/core';
-import {GPUDataEvaluator, GPUEvaluationScope} from '@luma.gl/graph/gpu-simple-graph';
+import {
+  GPUDataEvaluator,
+  GPUEvaluationScope,
+  swizzle,
+  interleave
+} from '@luma.gl/graph/gpu-simple-graph';
 import {
   ArithmeticOperation,
   type ArithmeticOp,
@@ -100,6 +105,19 @@ export class CompiledGPUSimpleExpressionGraph {
           };
           const arithmetic = (operation: ArithmeticOp, ...arguments_: ArithmeticArgument[]) =>
             retain(new GPUExpressionArithmeticOperation(operation, arguments_).output);
+          const asEvaluator = (value: GPUDataEvaluator | number): GPUDataEvaluator =>
+            typeof value === 'number'
+              ? retain(
+                  new GPUDataEvaluator({
+                    type: 'float32',
+                    format: 'float32',
+                    size: 1,
+                    length: 1,
+                    isConstant: true,
+                    value: new Float32Array([value])
+                  })
+                )
+              : value;
           const lower = (expression: GPUExpression): GPUDataEvaluator | number => {
             switch (expression.kind) {
               case 'literal':
@@ -139,23 +157,52 @@ export class CompiledGPUSimpleExpressionGraph {
                   })
                 );
               }
+              case 'swizzle': {
+                const input = asEvaluator(lower(expression.argument));
+                // Constant views must select their values before legacy backend literal inlining.
+                if (input.isConstant && input.value)
+                  return retain(
+                    new GPUDataEvaluator({
+                      type: input.type,
+                      size: expression.components.length,
+                      isConstant: true,
+                      value: new input.ValueType(
+                        expression.components.map(
+                          component =>
+                            input.value![
+                              input.offset / input.ValueType.BYTES_PER_ELEMENT + component
+                            ]
+                        )
+                      )
+                    })
+                  );
+                const selected = retain(swizzle(input, expression.components));
+                // Legacy contiguous swizzles are borrowed views; preserve graph scalar broadcasting.
+                return input.isConstant && !selected.isConstant
+                  ? retain(
+                      new GPUDataEvaluator({
+                        type: selected.type,
+                        size: selected.size,
+                        source: selected,
+                        isConstant: true
+                      })
+                    )
+                  : selected;
+              }
+              case 'construct': {
+                const argumentsList = expression.arguments.map(argument =>
+                  asEvaluator(lower(argument))
+                );
+                const inputs =
+                  argumentsList.length === 1 && argumentsList[0].size === 1
+                    ? Array.from({length: expression.width}, () => argumentsList[0])
+                    : argumentsList;
+                return retain(interleave(...inputs));
+              }
               case 'negate':
                 return arithmetic('multiply', lower(expression.argument), -1);
               case 'cast': {
-                const value = lower(expression.argument);
-                const input =
-                  typeof value === 'number'
-                    ? retain(
-                        new GPUDataEvaluator({
-                          type: 'float32',
-                          format: 'float32',
-                          size: 1,
-                          length: 1,
-                          isConstant: true,
-                          value: new Float32Array([value])
-                        })
-                      )
-                    : value;
+                const input = asEvaluator(lower(expression.argument));
                 return retain(
                   new GPUExpressionCastOperation(
                     input,
