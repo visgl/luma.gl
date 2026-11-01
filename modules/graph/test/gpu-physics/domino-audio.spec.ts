@@ -63,6 +63,19 @@ it('ignores base support without consuming clacks for later domino impacts', asy
     audio.reset();
     audio.play([event(1, 2)]);
     expect(sourceStarts).toHaveBeenCalledTimes(3);
+    audio.reset();
+    sourceStarts.mockClear();
+    audio.play(
+      Array.from({length: 8}, (_, index) => ({...event(index + 1, index + 2), step: index})),
+      1 / 60,
+      7
+    );
+    expect(sourceStarts).toHaveBeenCalledTimes(8);
+    for (let index = 1; index < 8; index++) {
+      expect(sourceStarts.mock.calls[index][0] - sourceStarts.mock.calls[index - 1][0]).toBeCloseTo(
+        1 / 60
+      );
+    }
   } finally {
     audio.destroy();
     vi.unstubAllGlobals();

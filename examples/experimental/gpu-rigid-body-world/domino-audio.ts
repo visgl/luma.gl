@@ -71,12 +71,21 @@ export class DominoAudio {
   ): void {
     const context = this.context;
     if (!this.enabled || !context || context.state !== 'running' || !this.samples.length) return;
+    const contacts = events.filter(
+      event =>
+        event.phase !== 'end' &&
+        event.normalImpulse >= 0.015 &&
+        !event.bodies.includes(0) &&
+        !this.soundedBodies.has(Math.max(...event.bodies))
+    );
+    if (!contacts.length) return;
+    const earliestStep = Math.min(...contacts.map(event => event.step));
     const now = context.currentTime;
     if (
       this.timelineOrigin === undefined ||
       now - (this.timelineOrigin + simulationStep * timeStep) > 0.2
     ) {
-      this.timelineOrigin = now + 0.1 - simulationStep * timeStep;
+      this.timelineOrigin = now + 0.02 - earliestStep * timeStep;
     }
     for (const event of events) {
       if (event.phase === 'end' || event.normalImpulse < 0.015 || event.bodies.includes(0))

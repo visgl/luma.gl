@@ -84,12 +84,12 @@ try {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
     if (sceneName !== previousSceneName) {
       iterations.value = sceneName === 'cradle' ? '8' : '32';
+      if (sceneName === 'dominoSpiral') solver.value = 'parallel';
       previousSceneName = sceneName;
     }
     const mechanism = makeMechanism(sceneName);
     const bodies = mechanism?.bodies ?? makeRigidBodyScene(sceneName);
     if (mechanism) solver.value = 'ordered';
-    else if (sceneName === 'dominoSpiral') solver.value = 'parallel';
     const world = new GPURigidBodyWorld({
       bodies,
       publicationBounds:
