@@ -206,6 +206,7 @@ export class GPUExpressionProgram {
       )
     );
     const availableScalars = new Set<string>();
+    const readVectors = new Set<string>();
     try {
       for (const [name, binding] of Object.entries(bindings)) {
         if (produced.has(name)) throw new Error(`Use outputTargets for expression output ${name}`);
@@ -228,6 +229,11 @@ export class GPUExpressionProgram {
         values.set(name, binding);
       }
       for (const operation of this.operations) {
+        for (const use of this.contracts.get(operation)?.values ?? []) {
+          const name = getGPUOperationValueName(use.value);
+          if (use.access !== 'write' && values.get(name) instanceof GPUVector)
+            readVectors.add(name);
+        }
         if (!(operation instanceof GPUExpressionOperation)) {
           const contract = this.contracts.get(operation);
           for (const use of contract?.values ?? []) {
@@ -271,6 +277,8 @@ export class GPUExpressionProgram {
               throw new Error(`Missing read-write binding ${declaration.id}`);
             if (use.access === 'read-write' && target !== existing)
               throw new Error(`Read-write target must use its bound storage: ${declaration.id}`);
+            if (readVectors.has(declaration.id) && target !== existing)
+              throw new Error(`Output target replaces an earlier read: ${declaration.id}`);
             if (!target && !chunks)
               throw new Error(`Cannot infer length of produced vector ${declaration.id}`);
             const length = chunks?.reduce((total, count) => total + count, 0) ?? target!.length;

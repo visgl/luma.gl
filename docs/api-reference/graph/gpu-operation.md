@@ -49,6 +49,8 @@ targets. Add producers before consumers; contracts do not implicitly reorder ope
 Values updated by non-expression operations may instead have an initial execution binding,
 including when they are read before a later replacement. Missing initial bindings are checked
 when preparing execution. Expression outputs retain their single-assignment restrictions.
+An output target cannot replace storage already read by an earlier operation; reuse that
+binding as the target instead.
 Actual command-node resource uses remain required: they describe physical accesses and are
 what the command graph uses for scheduling and hazards.
 

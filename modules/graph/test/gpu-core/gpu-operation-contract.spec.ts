@@ -143,9 +143,18 @@ test('initialized execution vectors can be read before a later replacement', asy
     });
   const stateVector = makeVector(3);
   const addendVector = makeVector(1);
+  const replacement = makeVector(99);
   const compiled = graph.compile(device, {outputs: ['state']});
   try {
     await expect(compiled.run({scale: 2, addend: addendVector})).rejects.toThrow('binding state');
+    await expect(
+      compiled.run(
+        {state: stateVector, scale: 2, addend: addendVector},
+        {outputTargets: {state: replacement}}
+      )
+    ).rejects.toThrow('Output target replaces an earlier read: state');
+    expect(await readFloat(stateVector)).toEqual([3]);
+    expect(await readFloat(replacement)).toEqual([99]);
     const result = await compiled.run({state: stateVector, scale: 2, addend: addendVector});
     expect(result.state).toBe(stateVector);
     expect(await readFloat(result.state)).toEqual([15]);
@@ -153,6 +162,7 @@ test('initialized execution vectors can be read before a later replacement', asy
     compiled.destroy();
     stateVector.destroy();
     addendVector.destroy();
+    replacement.destroy();
   }
 });
 
