@@ -142,4 +142,4 @@ Returns the drawing buffer size used when borrowing the default `CanvasContext`.
 
 ### `setDrawingBufferSize(width: number, height: number): void`
 
-Overrides the drawing buffer size used for the next `getCurrentFramebuffer()` / `present()` cycle.
+Requests a drawing buffer resize for the next `getCurrentFramebuffer()` / `present()` cycle. If the canvas dimensions differ from their values at the latest pending request when it is applied, the current canvas dimensions take precedence. Repeating a pending request captures the current canvas dimensions again. Changes that return the canvas to the captured dimensions are not detected.
