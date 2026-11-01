@@ -649,7 +649,11 @@ it('GPU tables reject packing nullable fixed-size-list rows and scalar source id
     'failed identifier packing preserves both batches'
   ).toBe(2);
   expect(
-    nullableIdentifiers.batches[0].gpuData.sourceIdentifiers.readbackMetadata?.adapter,
+    (
+      nullableIdentifiers.batches[0].gpuData.sourceIdentifiers.readbackMetadata as
+        | {adapter?: string}
+        | undefined
+    )?.adapter,
     'failed packing retains adapter-owned numeric readback metadata'
   ).toBe('numeric-validity');
 

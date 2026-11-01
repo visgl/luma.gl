@@ -1,5 +1,9 @@
 # Upgrade Guide
 
+## Opaque GPU and glTF metadata
+
+GPU data `readbackMetadata` and postprocessed glTF `extras` are now typed as `unknown`. Narrow or explicitly type these values before reading their properties.
+
 ## Opaque metadata types
 
 Resource, model, and computation `userData` values and glTF `extras` now have type `unknown`. Narrow or explicitly type these values before reading their properties. Texture transform resource maps also use `unknown` values.

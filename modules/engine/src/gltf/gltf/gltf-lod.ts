@@ -72,7 +72,8 @@ export function getGLTFNodeLODs(
     uniqueNodeIndices.add(nodeIndex);
   }
 
-  const authoredCoverage = sourceNode.extras?.['MSFT_screencoverage'];
+  const sourceExtras = getExtrasObject(sourceNode.extras);
+  const authoredCoverage = sourceExtras?.['MSFT_screencoverage'];
   const screenCoverage = resolveScreenCoverage(
     nodeIndices.length,
     Array.isArray(authoredCoverage) ? authoredCoverage : undefined
@@ -150,6 +151,7 @@ export function generateGLTFLODLevels(
         continue;
       }
 
+      const simplifiedMeshExtras = getExtrasObject(simplifiedMesh.extras);
       meshes.push(simplifiedMesh);
       const alternativeNodeIndex = nodes.length;
       alternativeNodeIndices.push(alternativeNodeIndex);
@@ -160,7 +162,9 @@ export function generateGLTFLODLevels(
         mesh: simplifiedMesh,
         children: undefined,
         extensions: undefined,
-        extras: {geometricError: simplifiedMesh.extras?.['geometricError']}
+        extras: {
+          geometricError: simplifiedMeshExtras?.['geometricError']
+        }
       });
     }
 
@@ -170,8 +174,9 @@ export function generateGLTFLODLevels(
         ...sourceNode.extensions,
         [LOD_EXTENSION_NAME]: {ids: alternativeNodeIndices}
       };
+      const sourceExtras = getExtrasObject(sourceNode.extras);
       sourceNode.extras = {
-        ...sourceNode.extras,
+        ...sourceExtras,
         MSFT_screencoverage: resolveScreenCoverage(
           alternativeNodeIndices.length + 1,
           options.screenCoverage
@@ -295,13 +300,26 @@ function simplifyGLTFMesh(
     return null;
   }
 
+  const sourceExtras = getExtrasObject(sourceMesh.extras);
   return {
     ...sourceMesh,
     id: `${sourceMesh.id}-lod-${suffix}`,
     name: `${sourceMesh.name || sourceMesh.id} LOD ${suffix}`,
     primitives,
-    extras: {...sourceMesh.extras, geometricError}
+    extras: {...sourceExtras, geometricError}
   };
+}
+
+/** Preserve object-spread behavior for arbitrary glTF extras. */
+function getExtrasObject(extras: unknown): Record<string, unknown> {
+  if (isExtrasObject(extras)) {
+    return extras;
+  }
+  return typeof extras === 'string' ? Object.fromEntries(Object.entries(extras)) : {};
+}
+
+function isExtrasObject(extras: unknown): extras is Record<string, unknown> {
+  return typeof extras === 'object' && extras !== null;
 }
 
 /** glTF component types are numeric even though loaders.gl's shared table type also includes BigInt. */

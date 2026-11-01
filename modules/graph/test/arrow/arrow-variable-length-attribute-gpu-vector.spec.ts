@@ -105,7 +105,7 @@ it('GPUVector preserves chunked tuple nested attribute batches', async () => {
     'tracks flattened vec3 element count per chunk'
   ).toEqual([2, 3]);
   expect(
-    gpuVector.data[0].readbackMetadata?.kind,
+    (gpuVector.data[0].readbackMetadata as {kind?: string} | undefined)?.kind,
     'retains compact nested-list readback metadata'
   ).toBe('variable-length-attribute');
   expect(gpuVector.byteStride, 'reports one vec3 Float32 element byte stride').toBe(12);
