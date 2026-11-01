@@ -49,7 +49,6 @@ pushed. Replace the example versions throughout this guide with the intended rel
 ```sh
 nvm use
 yarn install
-# Edit CHANGELOG.md with the exact release heading.
 git add CHANGELOG.md
 git commit -m 'docs: prepare v10.0.0-alpha.7 release notes'
 npx lerna version 10.0.0-alpha.7 --force-publish --exact --no-commit-hooks --no-git-tag-version --no-push --yes
@@ -220,10 +219,11 @@ If the workflow already created its GitHub release, delete that incomplete relea
 this does not delete the Git tag or npm packages. The current publisher creates the GitHub release
 before npm publication, so leaving the entry in place prevents a clean retry.
 
+Replace `VERSION`, `RUN_ID`, and `JOB_ID` below with values from the failed release.
+The API query returns the publishing job's numeric ID.
+
 ```sh
-# Replace VERSION, RUN_ID, and JOB_ID with values from the failed release.
 gh release delete vVERSION --repo visgl/luma.gl --yes
-# Find the publishing job's numeric ID:
 gh api repos/visgl/luma.gl/actions/runs/RUN_ID/jobs --jq '.jobs[] | {id, name, conclusion}'
 gh run rerun RUN_ID --repo visgl/luma.gl --job JOB_ID
 ```
