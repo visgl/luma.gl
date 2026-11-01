@@ -189,7 +189,9 @@ export class Computation {
       Object.keys(resolvedPlugins.vertexInputs).length > 0 ||
       Object.keys(resolvedPlugins.interStageVariables).length > 0
     ) {
-      throw new Error('Computation does not support ShaderPlugin vertex inputs or varyings');
+      throw new Error(
+        'Computation does not support ShaderPlugin vertex inputs or interStageVariables'
+      );
     }
 
     // Setup shader module inputs

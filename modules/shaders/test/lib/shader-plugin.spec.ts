@@ -505,6 +505,31 @@ void main() { fragmentColor = pluginColor; }`,
   void 0;
 });
 
+it('ShaderPlugin#WGSL detects fragment structs around comments', () => {
+  const shaderAssembler = new WGSLShaderAssembler();
+  for (const parameters of [
+    'inputs: FragmentInput // trailing comment\n',
+    'inputs: FragmentInput /* comment, with comma */, @builtin(front_facing) facing: bool'
+  ]) {
+    const source = `
+struct VertexOutput { @builtin(position) position: vec4<f32>, };
+struct FragmentInput { @builtin(position) position: vec4<f32>, };
+@vertex fn vertexMain() -> VertexOutput { return VertexOutput(vec4<f32>(0.0)); }
+@fragment fn fragmentMain(${parameters}) -> @location(0) vec4<f32> { return vec4<f32>(0.0); }
+`;
+    const assembled = shaderAssembler.assembleWGSLShader({
+      platformInfo: WGSL_PLATFORM_INFO,
+      source,
+      vertexEntryPoint: 'vertexMain',
+      fragmentEntryPoint: 'fragmentMain',
+      pluginInterStageVariables: {pluginValue: {type: 'f32', interpolation: 'smooth'}}
+    });
+    expect(assembled.source.match(/@location\(0\) pluginValue: f32/g)?.length).toBe(2);
+    expect(assembled.source).toContain('pluginValue = inputs.pluginValue;');
+    expect(assembled.source).not.toContain('_luma_pluginValue:');
+  }
+});
+
 it('ShaderPlugin#WGSL interStageVariables extend named stage structs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');

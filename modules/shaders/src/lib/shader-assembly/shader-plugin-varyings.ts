@@ -222,7 +222,7 @@ function getWGSLFragmentStructInput(
   functionRange: WGSLFunctionRange
 ): {name: string; type: string} | null {
   const candidates: {name: string; type: string}[] = [];
-  for (const parameter of splitTopLevel(functionRange.parameters, ',')) {
+  for (const parameter of splitTopLevel(maskWGSLComments(functionRange.parameters), ',')) {
     const match =
       /(?:@[A-Za-z_][\w]*(?:\([^)]*\))?\s*)*([A-Za-z_][\w]*)\s*:\s*([A-Za-z_][\w]*)\s*$/.exec(
         parameter.trim()
