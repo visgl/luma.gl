@@ -17,7 +17,7 @@ import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs'
 
 `@luma.gl/graph/gpu-tables` provides experimental batch-preserving table helpers for rendering,
 transforms, and compute. It builds on the primitive objects in
-[`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data).
+[`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data).
 
 ## Start Here
 
@@ -40,7 +40,7 @@ transforms, and compute. It builds on the primitive objects in
 - [GPUInputSchema](/docs/api-reference/experimental/gpu-tables/gpu-input-schema)
 - [GPUTable Shader Bindings](/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings)
 - [GPUTableBufferPlanner](/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner)
-- [GPGPU Data Primitives](/docs/api-reference/gpgpu/gpu-data)
+- [GPGPU Data Primitives](/docs/api-reference/graph/gpu-data)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 
 The subpath owns `GPURecordBatch`, `GPUTable`, `GPUSchema`, `GPUField`, `GPUTypeMap`, table
@@ -63,7 +63,7 @@ This subpath is experimental in 9.4 and is installed with its containing package
 well when constructing primitive data objects directly:
 
 ```bash
-npm install @luma.gl/gpgpu @luma.gl/experimental
+npm install @luma.gl/graph/gpu-simple-graph @luma.gl/experimental
 ```
 
 `TableTransform` is owned by [`@luma.gl/engine/tables`](/docs/api-reference/engine/tables/table-transform), alongside the table model and geometry adapters.

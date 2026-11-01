@@ -10,7 +10,7 @@ WebGPU command graphs. Start with the highest-level API that expresses the workf
 
 ## Outcome and prerequisites
 
-This guide helps you choose between the stable `@luma.gl/gpgpu` evaluators, its experimental
+This guide helps you choose between the stable `@luma.gl/graph/gpu-simple-graph` evaluators, its experimental
 subpaths, Engine compute helpers, and experimental GPU tables. It assumes familiarity with
 buffers and typed arrays; the
 [Core GPU guide](/docs/api-guide/gpu) introduces those concepts.
@@ -20,7 +20,7 @@ buffers and typed arrays; the
 | Need | Start with |
 | --- | --- |
 | Portable lazy vector expressions on CPU, WebGL 2, or WebGPU | [GPU Evaluations with GPUVectorEvaluator](/docs/api-guide/gpu/gpu-evaluations) |
-| Primitive GPU chunks, vectors, and memory formats | [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) |
+| Primitive GPU chunks, vectors, and memory formats | [`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data) |
 | Batch-preserving GPU tables and schemas | [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) |
 | One explicit buffer or texture computation | [Engine compute helpers](/docs/api-guide/engine/transforms) |
 | Several dependent WebGPU operations, indirect work, or transient reuse | [GPU Core](/docs/api-reference/experimental/gpu-core) |
@@ -28,7 +28,7 @@ buffers and typed arrays; the
 ## Complete workflow
 
 ```ts
-import {GPUDataEvaluator, add, cleanEvaluate} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator, add, cleanEvaluate} from '@luma.gl/graph/gpu-simple-graph';
 
 const values = GPUDataEvaluator.fromArray(new Float32Array([1, 2, 3]), {size: 1});
 const adjusted = add(values, GPUDataEvaluator.fromConstant(0.5));

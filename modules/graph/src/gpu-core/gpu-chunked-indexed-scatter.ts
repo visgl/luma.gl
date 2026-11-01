@@ -4,7 +4,7 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphBufferHandle, type GraphDataView} from './gpu-command-graph';
 import {
   createTransientView,

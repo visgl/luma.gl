@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {ArrowTextRenderer, createArrowTextShaderInputs} from '@luma.gl/engine/arrow';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shaders';
 import {measureFontAtlasText, type FontAtlas, type TextGlyphLayout} from '@luma.gl/engine/text';

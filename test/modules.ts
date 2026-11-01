@@ -27,7 +27,7 @@ import '@luma.gl/engine/test/gltf';
 // Arrow adapter suites are included through their owning packages.
 import '@deck.gl-community/arrow-layers/test';
 import '@deck.gl-community/gpu-layers/test';
-import '@luma.gl/gpgpu/test';
+import '@luma.gl/graph/test';
 import '@luma.gl/engine/test/splats';
 import '@luma.gl/engine/test/text';
 // DEPRECATED TESTS

@@ -13,8 +13,11 @@ const alias = {
   '@luma.gl/engine/effects': `${__dirname}/../../../modules/engine/src/effects`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/shaders': `${__dirname}/../../../modules/shaders/src`,
-  '@luma.gl/gpgpu/_internal': `${__dirname}/../../../modules/gpgpu/src/execution`,
-  '@luma.gl/gpgpu': `${__dirname}/../../../modules/gpgpu/src`,
+  '@luma.gl/graph/_internal': `${__dirname}/../../../modules/graph/src/execution`,
+  '@luma.gl/graph/gpu-simple-graph/cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
+  '@luma.gl/graph/gpu-simple-graph/webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
+  '@luma.gl/graph/gpu-simple-graph/webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
+  '@luma.gl/graph/gpu-simple-graph': `${__dirname}/../../../modules/graph/src/gpu-simple-graph`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
   '@luma.gl/core/webgpu': `${__dirname}/../../../modules/core/src/webgpu`
 };
@@ -27,7 +30,7 @@ export default defineConfig({
       '@luma.gl/core',
       '@luma.gl/engine',
       '@luma.gl/shaders',
-      '@luma.gl/gpgpu',
+      '@luma.gl/graph/gpu-simple-graph',
       '@luma.gl/core/webgpu'
     ]
   },

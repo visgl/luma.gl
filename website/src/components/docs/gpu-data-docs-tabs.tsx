@@ -16,23 +16,23 @@ export const GPU_DATA_DOCS_TAB_GROUPS: DocumentationTabGroup<GPUDataDocsTabId>[]
       {
         id: 'constant',
         label: 'GPUConstant',
-        href: '/docs/api-reference/gpgpu/gpu-constant'
+        href: '/docs/api-reference/graph/gpu-constant'
       },
       {
         id: 'vector',
         label: 'GPUVector',
-        href: '/docs/api-reference/gpgpu/gpu-vector'
+        href: '/docs/api-reference/graph/gpu-vector'
       },
-      {id: 'data', label: 'GPUData', href: '/docs/api-reference/gpgpu/gpu-data'},
+      {id: 'data', label: 'GPUData', href: '/docs/api-reference/graph/gpu-data'},
       {
         id: 'data-view',
         label: 'GPUDataView',
-        href: '/docs/api-reference/gpgpu/gpu-data-view'
+        href: '/docs/api-reference/graph/gpu-data-view'
       },
       {
         id: 'vector-format',
         label: 'GPUVectorFormat',
-        href: '/docs/api-reference/gpgpu/gpu-vector-format'
+        href: '/docs/api-reference/graph/gpu-vector-format'
       }
     ]
   }

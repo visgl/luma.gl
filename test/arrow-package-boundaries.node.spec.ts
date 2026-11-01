@@ -6,7 +6,7 @@ import {existsSync, readFileSync} from 'node:fs';
 import {build} from 'esbuild';
 import {describe, expect, it} from 'vitest';
 
-const owners = ['gpgpu', 'graph', 'engine'];
+const owners = ['graph', 'engine'];
 
 describe('optional Arrow conversion entries', () => {
   it('publishes Arrow through optional subpaths without a standalone package', () => {
@@ -55,7 +55,7 @@ describe('optional Arrow conversion entries', () => {
     });
     expect(
       Object.keys(result.metafile.inputs).filter(filename =>
-        /^modules\/(?:gpgpu|graph|engine)\/src\/arrow\//.test(filename)
+        /^modules\/(?:graph|engine)\/src\/arrow\//.test(filename)
       )
     ).toEqual([]);
   });

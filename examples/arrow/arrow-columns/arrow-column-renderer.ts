@@ -7,7 +7,7 @@ import {
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 import {
   type Buffer,
   type CommandEncoder,
@@ -30,7 +30,7 @@ import {
   getGPUVectorData,
   getRequiredGPUVector,
   type GPUVector
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 import {GPURenderable, GPURecordBatch, GPUTable, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import * as arrow from 'apache-arrow';
 import {

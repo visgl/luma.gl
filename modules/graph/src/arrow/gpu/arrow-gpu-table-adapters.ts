@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
-import {GPUData, type GPUVectorBufferProps, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, type GPUVectorBufferProps, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
@@ -21,16 +21,16 @@ import {
   Vector,
   makeData
 } from 'apache-arrow';
-import {getArrowFieldByPath} from '@luma.gl/gpgpu/_internal/arrow';
-import {getArrowVectorByPath} from '@luma.gl/gpgpu/arrow';
-import {getArrowBufferLayout, type ArrowVertexFormatOptions} from '@luma.gl/gpgpu/arrow';
-import {getArrowFixedSizeListRowValidity} from '@luma.gl/gpgpu/_internal/arrow';
+import {getArrowFieldByPath} from '@luma.gl/graph/_internal/arrow';
+import {getArrowVectorByPath} from '@luma.gl/graph/arrow';
+import {getArrowBufferLayout, type ArrowVertexFormatOptions} from '@luma.gl/graph/arrow';
+import {getArrowFixedSizeListRowValidity} from '@luma.gl/graph/_internal/arrow';
 import {
   isInstanceArrowType,
   isVariableLengthAttributeArrowType
-} from '@luma.gl/gpgpu/_internal/arrow';
-import {type NumericArrowType} from '@luma.gl/gpgpu/arrow';
-import {getArrowMatrixVectorInfo} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/_internal/arrow';
+import {type NumericArrowType} from '@luma.gl/graph/arrow';
+import {getArrowMatrixVectorInfo} from '@luma.gl/graph/arrow';
 import {
   ArrowGPUDataProps,
   getSignedArrowDataType,
@@ -38,8 +38,8 @@ import {
   isStorageFixedSizeListArrowType,
   getGPUVectorFormatForArrowType,
   isCanonicalFloat32ArrowMatrixInfo
-} from '@luma.gl/gpgpu/_internal/arrow';
-import {makeGPUDataFromArrowData} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/_internal/arrow';
+import {makeGPUDataFromArrowData} from '@luma.gl/graph/arrow';
 
 /** Caller-selected row-validity storage sibling for one fixed-size-list Arrow column. */
 export type ArrowGPUValidityColumn =

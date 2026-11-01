@@ -14,8 +14,8 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {Model, type ModelProps} from '../../../index';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
+import {type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {planGeneratedBufferBatches} from '@luma.gl/graph/gpu-tables';
 import {
   createGpuPathExpansionInput,

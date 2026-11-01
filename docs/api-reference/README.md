@@ -27,10 +27,9 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 | [`@luma.gl/shaders/wgsl`][shaders] | Optional | WGSL assembler, assembly helpers and interface scanning. |
 | [`@luma.gl/slang`][slang] | Experimental (v10) | Optional TypeScript transpilation of a documented Slang shader subset to GLSL and WGSL. |
 | [`@luma.gl/engine/effects`][engine/effects] | Optional | Composable post-processing effects, screen-space lighting, and reusable shader-pass pipelines. |
-| [`@luma.gl/gpgpu`][gpgpu] | Optional | Portable GPU evaluation and GPU data primitives. |
+| [`@luma.gl/graph/gpu-simple-graph`][graph/gpu-simple-graph] | Optional | Portable GPU evaluation and GPU data primitives. |
 | [`@luma.gl/graph`][graph] | Experimental (v10) | GPU execution graphs, programs, and graph-based processing through explicit subpaths. |
-| [`@luma.gl/gpgpu/arrow`][arrow] | Optional / Experimental | Primitive Arrow conversion, GPU vector upload and readback. |
-| [`@luma.gl/graph/arrow`][arrow] | Optional / Experimental | Arrow GPU table conversion, analytics and geospatial preparation. |
+| [`@luma.gl/graph/arrow`][arrow] | Optional / Experimental | Arrow vector and table conversion, upload, readback, analytics and geospatial preparation. |
 | [`@luma.gl/engine/arrow`][arrow] | Optional / Experimental | Arrow geometry, rendering, text and splat adapters. |
 | [`@luma.gl/engine/text`][text] | Experimental | `TextRenderer` facade and caller-owned GPU text data. |
 | [`@luma.gl/engine/splats`][splats] | Experimental | Gaussian splat rendering and caller-owned prepared GPU splat data. |
@@ -47,7 +46,7 @@ Select at least one adapter from the core backend subpaths when creating a devic
 - [`@luma.gl/shaders`][shaders] for shader modules and shader assembly.
 - [`@luma.gl/slang`][slang] for experimental Slang shader authoring on WebGL 2 and WebGPU, available from v10.
 - [`@luma.gl/engine/effects`][engine/effects] for reusable image processing, bloom, and supported screen-space effects.
-- [`@luma.gl/gpgpu`][gpgpu] for portable GPU evaluation and GPU data primitives.
+- [`@luma.gl/graph/gpu-simple-graph`][graph/gpu-simple-graph] for portable GPU evaluation and GPU data primitives.
 - [`@luma.gl/graph`][graph] for `GPUCommandGraph`, `GPUGraph`, GPU tables, and graph-based processing.
 - [GPGPU data][gpu-data] for primitive `GPUData`/`GPUVector` APIs, and [Experimental GPU Tables][gpu-tables] for `GPURecordBatch`/`GPUTable` APIs.
 - [`@luma.gl/engine/text`][text] for `TextRenderer` and GPU text data; use [`@luma.gl/engine/arrow`][arrow] for Arrow text conversion.
@@ -65,9 +64,9 @@ Select at least one adapter from the core backend subpaths when creating a devic
 [shaders]: /docs/api-reference/shaders
 [slang]: /docs/api-reference/slang
 [engine/effects]: /docs/api-guide/shaders/shader-passes
-[gpgpu]: /docs/api-reference/gpgpu
+[graph/gpu-simple-graph]: /docs/api-reference/graph/gpu-evaluation
 [graph]: /docs/api-reference/graph
-[gpu-data]: /docs/api-reference/gpgpu/gpu-data
+[gpu-data]: /docs/api-reference/graph/gpu-data
 [gpu-tables]: /docs/api-reference/experimental/gpu-tables
 [arrow]: /docs/api-reference/arrow
 [text]: /docs/api-reference/engine/text

@@ -7,7 +7,7 @@ import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph
 import {GPUGraphTextureView, type GPUGraphTexture} from './gpu-graph-value';
 
 import {type Device} from '@luma.gl/core';
-import type {GPUVectorInput} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorInput} from '@luma.gl/graph/gpu-data';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import {
   addGPUCommandNodes,

@@ -275,7 +275,7 @@ RGBA vertex colors, normalized joint weights, animation pointers, and resource o
 ## Experimental physics import
 
 The optional `@luma.gl/engine/gltf-physics` entry point provides `parseGLTFPhysics(rawJSON)`
-and `createGLTFPhysicsWorld(description)`. Install the optional `@luma.gl/gpgpu` peer
+and `createGLTFPhysicsWorld(description)`. Install the optional `@luma.gl/graph/gpu-simple-graph` peer
 when using it. The importer implements a pinned sphere/box subset of the unratified
 rigid-body and implicit-shape drafts, with explicit per-asset capability issues.
 It supports compound ownership, authored mass properties, kinematics, material

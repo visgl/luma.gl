@@ -13,7 +13,7 @@ export default defineConfig(({mode}) => ({
     alias: {
       '@deck.gl-community/gpu-layers': `${__dirname}/../../../modules/deck-gpu-layers/src`,
       '@luma.gl/graph/gpu-core': `${__dirname}/../../../modules/graph/src/gpu-core`,
-      '@luma.gl/gpgpu/gpu-data': `${__dirname}/../../../modules/gpgpu/src/gpu-data`,
+      '@luma.gl/graph/gpu-data': `${__dirname}/../../../modules/graph/src/gpu-data`,
       '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
       '@luma.gl/engine/models': `${__dirname}/../../../modules/engine/src/graph/models`,
       '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,

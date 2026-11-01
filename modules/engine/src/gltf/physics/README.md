@@ -3,7 +3,7 @@
 `@luma.gl/engine/gltf-physics` is an optional WebGPU physics adapter. It imports **raw glTF
 JSON**, such as loaders.gl's `loadedAsset.json`, before node references are replaced
 with postprocessed objects. Normal glTF rendering does not import or start physics.
-Install the optional `@luma.gl/gpgpu` peer when using this subpath.
+Install the optional `@luma.gl/graph/gpu-simple-graph` peer when using this subpath.
 
 ```typescript
 import {parseGLTFPhysics, createGLTFPhysicsWorld} from '@luma.gl/engine/gltf-physics';

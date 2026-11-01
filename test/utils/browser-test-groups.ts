@@ -13,10 +13,7 @@ export const PHYSICS_ENDURANCE_TEST_PATTERNS = [
 ];
 export const PHYSICS_TEST_PATTERNS = ['modules/graph/test/gpu-physics/**/*.spec.{ts,js}'];
 // Graph explorer exercises document/pointer state and retains full browser isolation.
-export const COMPUTE_TEST_PATTERNS = [
-  'modules/gpgpu/test/**/*.spec.{ts,js}',
-  'modules/graph/test/**/!(gpu-graph-explorer).spec.{ts,js}'
-];
+export const COMPUTE_TEST_PATTERNS = ['modules/graph/test/**/!(gpu-graph-explorer).spec.{ts,js}'];
 
 export function getBrowserTestGroup(value: string | undefined): BrowserTestGroup {
   if (value === undefined || value === 'all') return 'all';

@@ -20,8 +20,8 @@ export default defineConfig(({mode}) => ({
   },
   resolve: {
     alias: {
-      '@luma.gl/gpgpu/_internal': fileURLToPath(
-        new URL('../../../modules/gpgpu/src/execution', import.meta.url)
+      '@luma.gl/graph/_internal': fileURLToPath(
+        new URL('../../../modules/graph/src/execution', import.meta.url)
       ),
       '@luma.gl/engine/models': fileURLToPath(
         new URL('../../../modules/engine/src/graph/models', import.meta.url)
@@ -33,12 +33,10 @@ export default defineConfig(({mode}) => ({
         new URL('../../../modules/engine/src/graph/tables', import.meta.url)
       ),
       ...Object.fromEntries(
-        ['core', 'effects', 'engine', 'gpgpu', 'three', 'webgl', 'webgpu', 'shaders', 'graph'].map(
-          name => [
-            `@luma.gl/${name}`,
-            fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
-          ]
-        )
+        ['core', 'effects', 'engine', 'three', 'webgl', 'webgpu', 'shaders', 'graph'].map(name => [
+          `@luma.gl/${name}`,
+          fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
+        ])
       )
     }
   },

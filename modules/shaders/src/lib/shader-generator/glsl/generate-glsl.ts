@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {UniformFormat} from '../../../types';
-import {ShaderModule} from '../../../lib/shader-module/shader-module';
+import {ShaderModule} from '../../shader-module/shader-module';
 import {capitalize} from '../utils/capitalize';
 
 export type GLSLGenerationOptions = {

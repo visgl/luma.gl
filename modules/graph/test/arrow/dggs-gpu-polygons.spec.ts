@@ -13,7 +13,7 @@ import {
   convertDggsCellKeysToGPUPaths,
   type DggsCellEncoding
 } from '@luma.gl/graph/arrow';
-import {readArrowGPUVectorAsync} from '@luma.gl/gpgpu/arrow';
+import {readArrowGPUVectorAsync} from '@luma.gl/graph/arrow';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GeohashDecoder} from '@math.gl/dggs';
 import {QuadkeyDecoder} from '@math.gl/dggs';

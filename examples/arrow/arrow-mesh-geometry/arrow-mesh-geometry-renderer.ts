@@ -7,7 +7,7 @@ import {
   makeArrowFixedSizeListVector,
   makeArrowMatrix4x4Vector,
   makeGPUVectorFromArrow
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {
   makeGPUGeometryFromArrow,
@@ -19,7 +19,7 @@ import {
 import type {CommandEncoder, Device} from '@luma.gl/core';
 import type {AnimationProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {CubeGeometry, type PickingManager} from '@luma.gl/engine';
-import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURenderable, type GPUTable} from '@luma.gl/graph/gpu-tables';
 import {type GPUTableModel} from '@luma.gl/engine/tables';
 import {Matrix4, radians} from '@math.gl/core';

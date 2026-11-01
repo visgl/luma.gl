@@ -4,7 +4,7 @@
 
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {
   GPUCommandGraph,
   GPUSegmentedSort,

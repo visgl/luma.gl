@@ -5,7 +5,7 @@
 import {ShaderModule, initializeShaderModules} from './shader-module';
 import {assert} from '../utils/assert';
 
-// import type {ShaderModule} from '../shader-module/shader-module';
+// import type {ShaderModule} from './shader-module';
 
 type AbstractModule = {
   name: string;

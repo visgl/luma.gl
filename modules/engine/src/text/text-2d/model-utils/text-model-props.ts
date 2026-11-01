@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ModelProps} from '@luma.gl/engine';
-import {type GPUVector, type ValueList, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUVector, type ValueList, type VertexList} from '@luma.gl/graph/gpu-data';
 import {
   validateGPUInputVectors,
   type GPUInputSchema,

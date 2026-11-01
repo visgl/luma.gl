@@ -10,14 +10,14 @@ import {
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
   type GPUVectorFormatForArrowType
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 import {
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable
 } from '@luma.gl/graph/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {expectTypeOf} from 'vitest';

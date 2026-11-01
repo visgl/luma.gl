@@ -219,7 +219,7 @@ Uint8 indices supplied to the engine compatibility adapter are widened to Uint16
 frusta. Primitive tessellation order can change, so derive face metadata from normals rather
 than relying on vertex or index ordering.
 
-**@luma.gl/gpgpu**
+**@luma.gl/graph/gpu-simple-graph**
 
 ### GPUFFT2D graph lifecycle
 
@@ -414,7 +414,7 @@ chunks through `.data` or canonical logical descriptors through `.chunks`.
 
 ## GPU Graph package
 
-Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
+Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/graph/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/graph/gpu-simple-graph`.
 
 ## Module loader dependencies
 
@@ -437,13 +437,13 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 
 ### Kernel imports
 
-`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/gpgpu`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/gpgpu`.
+`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/graph/gpu-simple-graph`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/graph/gpu-simple-graph`.
 
-`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/gpgpu` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
+`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/graph/gpu-simple-graph` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
 
 ### GPU vector rendering imports
 
-`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/gpgpu` or `@luma.gl/gpgpu/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant remain in gpgpu/gpu-data. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.
+`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/graph/gpu-simple-graph` or `@luma.gl/graph/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant remain in gpgpu/gpu-data. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.
 
 ### glTF imports
 
@@ -520,3 +520,17 @@ Dependencies retain their existing uniform/binding namespaces. Continue configur
 them by module name through `ShaderInputs`; the primary module does not automatically
 forward props to dependencies. The `modules` arrays accepted by models, computations,
 and assemblers, as well as `ResolvedShaderPlugins.modules`, are unchanged.
+
+### Removal of `@luma.gl/gpgpu`
+
+The v10 graph package now owns the former gpgpu APIs. The gpgpu package is removed without compatibility exports. Existing evaluator expressions retain their behavior. Update imports as follows:
+
+| Former entry | Replacement |
+| --- | --- |
+| `@luma.gl/gpgpu` evaluator and operation exports | `@luma.gl/graph/gpu-simple-graph` |
+| `@luma.gl/gpgpu` shared execution exports, including `Kernel` and `RenderKernel` | `@luma.gl/graph` |
+| `@luma.gl/gpgpu/gpu-data` | `@luma.gl/graph/gpu-data` |
+| `@luma.gl/gpgpu/cpu`, `/webgl`, `/webgpu` | `@luma.gl/graph/gpu-simple-graph/cpu`, `/webgl`, `/webgpu` |
+| `@luma.gl/gpgpu/arrow` | `@luma.gl/graph/arrow` |
+
+Replace the package dependency with `@luma.gl/graph`. Apache Arrow remains an optional peer used only by the Arrow entry.

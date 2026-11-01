@@ -4,7 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {
   GPUCommandGraph,
   summarizeGPUWorkgroupScanBenchmarkSamples as summarizeSamples

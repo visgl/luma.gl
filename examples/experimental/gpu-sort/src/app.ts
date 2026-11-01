@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
 import {Buffer, luma, type Device} from '@luma.gl/core';
 import {
   GPUBatchSort,
@@ -12,7 +12,7 @@ import {
   type GPUSortAlgorithm,
   type GPUSortDirection
 } from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import * as arrow from 'apache-arrow';
 import {mountGPUSortExampleUI, type GPUSortExampleElements} from './app-ui';

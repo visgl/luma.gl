@@ -36,7 +36,7 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/graph/test/arrow/arrow-gpu-analytics-adapters.spec.ts': 5,
   'modules/graph/test/arrow/arrow-gpu-fixed-size-list.spec.ts': 5,
   'modules/engine/test/arrow/arrow-path-model.spec.ts': 4,
-  'modules/gpgpu/test/arrow/arrow-temporal-gpu-vector.spec.ts': 5,
+  'modules/graph/test/arrow/arrow-temporal-gpu-vector.spec.ts': 5,
   'modules/engine/test/arrow/arrow-text-renderer.spec.ts': 5,
   'modules/graph/test/arrow/dggs-gpu-polygons.spec.ts': 7,
   'modules/graph/test/arrow/geoarrow/geoarrow.spec.ts': 5,

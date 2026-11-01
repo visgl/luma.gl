@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from './gpu-command-graph';
 
 /** One borrowed batch. Increment revision after changing any input bytes or batch-local parameters. */

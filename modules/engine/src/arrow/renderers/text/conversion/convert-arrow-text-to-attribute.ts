@@ -5,9 +5,9 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
 import type {Device} from '@luma.gl/core';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {TextAttributeModelProps} from '@luma.gl/engine/text-experimental';
 import {DataType} from 'apache-arrow';
 import type {ArrowUtf8TextVector} from './arrow-text';

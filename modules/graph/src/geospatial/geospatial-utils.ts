@@ -5,11 +5,12 @@
 
 import {UniformStore, type Binding, type Buffer, type Device} from '@luma.gl/core';
 import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
-import {Kernel, getPlatformInfo} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
+import {getPlatformInfo} from '../execution/utils/get-platform-info';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   GPUCommandGraph,
   type GraphVectorView,

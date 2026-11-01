@@ -14,7 +14,7 @@ passes, ownership, reasons, and lossy-conversion warnings before any GPU resourc
 is allocated.
 
 ```ts
-import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/gpgpu/arrow';
+import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/graph/arrow';
 
 const plan = planArrowGPUConversion(device, sourceVector, {
   semantic: 'color',
@@ -294,7 +294,7 @@ or fallback-vector generation.
 Use a simple Arrow input schema for direct one-column uploads. Keep model-family
 adapters for cross-column conversions such as path normalization, polygon
 tessellation, temporal conversion, and text glyph preparation. Do not make
-`@luma.gl/gpgpu` or `@luma.gl/graph` depend on Apache Arrow to describe those policies.
+`@luma.gl/graph/gpu-simple-graph` or `@luma.gl/graph` depend on Apache Arrow to describe those policies.
 
 
 ## BufferLayouts
@@ -303,7 +303,7 @@ The module can derive GPU `BufferLayout` entries from Arrow schemas and create p
 and experimental table objects from compatible Arrow columns through
 `makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and
 `makeGPUTableFromArrowTable()`. Primitive storage is documented in the
-[GPGPU data reference](/docs/api-reference/gpgpu/gpu-data), while the higher-level object model is
+[GPGPU data reference](/docs/api-reference/graph/gpu-data), while the higher-level object model is
 documented in [Experimental GPU Tables](/docs/api-reference/experimental/gpu-tables) and
 [GPU Table Structure](/docs/api-reference/experimental/gpu-tables/gpu-table-structure).
 

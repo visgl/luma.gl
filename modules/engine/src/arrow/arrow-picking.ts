@@ -13,10 +13,10 @@ import {
   type PickingShouldPickOptions,
   type ShaderInputs
 } from '@luma.gl/engine';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPURecordBatchSourceInfo, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {BufferType, Data, Uint32, Vector} from 'apache-arrow';
-import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
 
 /** Arrow row identity resolved from a picking pass. */
 export type ArrowPickingInfo = {

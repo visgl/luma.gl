@@ -14,7 +14,7 @@ const distributionDirectory = new URL('../modules/core/dist/', import.meta.url);
 await writeCommonJSModules(distributionDirectory);
 await writeCommonJSModules(new URL('../modules/shaders/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/anari/dist/', import.meta.url));
-await writeCommonJSModules(new URL('../modules/gpgpu/dist/', import.meta.url));
+
 await writeCommonJSModules(new URL('../modules/graph/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/engine/dist/', import.meta.url));
 
@@ -77,7 +77,6 @@ process.stdout.write('Verified CommonJS GPU graph constructor identity.\n');
 
 // The focused package root reuses scheduler and diagnostics constructors without
 // re-exporting the optional algorithms from gpu-core.
-const rootGraphEntryPoint = new URL('index.js', graphDistributionDirectory);
 const rootGraphExportNames = [
   ...Object.keys(graphApi),
   'GPUCommandGraphAutotuner',
@@ -85,14 +84,9 @@ const rootGraphExportNames = [
   'GPUCommandGraphExecutionBudgetController',
   'GPUCommandGraphInspector'
 ];
-const {code: rootGraphCode} = await transform(
-  `export {${rootGraphExportNames.join(',')}} from './gpu-core/index.cjs';`,
-  {format: 'cjs', platform: 'node', target: 'node16', sourcefile: fileURLToPath(rootGraphEntryPoint)}
-);
-await writeFile(new URL('index.cjs', graphDistributionDirectory), rootGraphCode);
 const rootGraphApi = require(fileURLToPath(new URL('index.cjs', graphDistributionDirectory)));
-for (const [name, value] of Object.entries(rootGraphApi)) {
-  assert.equal(value, gpuCoreApi[name]);
+for (const name of rootGraphExportNames) {
+  assert.equal(rootGraphApi[name], gpuCoreApi[name]);
 }
 assert.equal('GPUScan' in rootGraphApi, false);
 process.stdout.write('Verified CommonJS GPU Graph package root identity.\n');
@@ -118,8 +112,8 @@ process.stdout.write('Verified CommonJS renderer and experimental subpath identi
 
 // Dynamic resource facades preserve identity; engine owns shader-module convenience APIs.
 const engineApi = require('../modules/engine/dist/index.cjs');
-const executionApi = require('../modules/gpgpu/dist/index.cjs');
-const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
+const executionApi = require('../modules/graph/dist/index.cjs');
+const dataApi = require('../modules/graph/dist/gpu-data/index.cjs');
 for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(engineApi[name], executionApi[name]);
@@ -140,7 +134,7 @@ const [coreEsm, dynamicEsm, engineEsm, executionEsm] = await Promise.all([
   import('../modules/core/dist/index.js'),
   import('../modules/core/dist/dynamic/index.js'),
   import('../modules/engine/dist/index.js'),
-  import('../modules/gpgpu/dist/index.js')
+  import('../modules/graph/dist/index.js')
 ]);
 for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert.equal(typeof dynamicApi[name], 'function');
@@ -159,7 +153,7 @@ for (const name of ['Computation', 'ShaderInputs']) {
   assert(!(name in executionEsm));
 }
 
-// Kernel execution helpers are exported only by gpgpu, in both module formats.
+// Kernel execution helpers are exported only by graph, in both module formats.
 for (const name of ['Kernel', 'RenderKernel']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(typeof executionEsm[name], 'function');
@@ -168,7 +162,7 @@ for (const name of ['Kernel', 'RenderKernel']) {
   assert(!(name in coreApi));
   assert(!(name in coreEsm));
 }
-process.stdout.write('Verified gpgpu kernel export ownership.\n');
+process.stdout.write('Verified graph kernel export ownership.\n');
 
 // The lightweight browser entry shares existing CommonJS device singleton implementations.
 const testUtilities = require('../modules/core/dist/test-utils/index.cjs');
@@ -249,3 +243,17 @@ for (const name of ['shaderTypeDecoder', 'makeShaderBlockLayout', 'getVariableSh
 assert.equal(coreScanners.scanWGSLInterface, shaderScanners.scanWGSLInterface);
 assert(!('getDefaultShaderAssembler' in shadersApi.ShaderAssembler));
 process.stdout.write('Verified standalone shader contracts and core CommonJS identity.\n');
+
+// SimpleGraph and evaluator exports retain one implementation per module format.
+const simpleGraphApi = require('../modules/graph/dist/gpu-simple-graph/index.cjs');
+const evaluatorApi = require('../modules/graph/dist/gpu-simple-graph/operation/gpu-data-evaluator.cjs');
+assert.equal(simpleGraphApi.GPUDataEvaluator, evaluatorApi.GPUDataEvaluator);
+const simpleGraphEsm = await import('../modules/graph/dist/gpu-simple-graph/index.js');
+const evaluatorEsm = await import('../modules/graph/dist/gpu-simple-graph/operation/gpu-data-evaluator.js');
+assert.equal(simpleGraphEsm.GPUDataEvaluator, evaluatorEsm.GPUDataEvaluator);
+for (const backend of ['cpu', 'webgl', 'webgpu']) {
+  const entry = `@luma.gl/graph/gpu-simple-graph/${backend}`;
+  assert.equal(typeof require(entry).interleave, 'function');
+  assert.equal(typeof (await import(entry)).interleave, 'function');
+}
+process.stdout.write('Verified SimpleGraph evaluator identity and backend entries.\n');
