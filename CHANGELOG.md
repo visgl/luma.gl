@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-alpha.7
+
+- Consolidate GPU execution, data, and table APIs into graph subpaths and expose explicit package exports.
+- Add logical GPU operation contracts, typed graph rows, component access, row constructors, casts, and row-local expression functions.
+- Support transformed Arrow GPU columns and align graph declarations with expression execution.
+- Simplify ShaderPlugin language contributions and primary modules, preserve plugin composition, and improve scoped hooks, conflict reporting, and portability.
+- Fix model resource cleanup, WebGL device-loss reporting and lifecycle coverage, external canvas resizing, and storage-texture capability reporting.
+- Strengthen opaque GPU and glTF metadata types and upgrade math.gl and loaders.gl to beta.2 and dev-tools to beta.3.
+
 ### v10.0.0-alpha.6
 
 - Consolidate glTF, splats, text, and effects APIs into engine subpaths and move test devices to core/test-utils.

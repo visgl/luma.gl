@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "10.0.0-alpha.6",
+  "version": "10.0.0-alpha.7",
   "description": "Experimental Three.js rendering and GPU interoperability for luma.gl",
   "license": "MIT",
   "type": "module",
@@ -54,7 +54,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@luma.gl/core": "10.0.0-alpha.6"
+    "@luma.gl/core": "10.0.0-alpha.7"
   },
   "peerDependencies": {
     "@deck.gl/core": "9.4.0",
