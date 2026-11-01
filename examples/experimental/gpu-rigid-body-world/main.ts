@@ -34,7 +34,6 @@ const dominoAudio = new DominoAudio();
 const sound = document.querySelector<HTMLInputElement>('#sound')!;
 sound.onchange = () => {
   dominoAudio.enabled = sound.checked;
-  if (!sound.checked) dominoAudio.silence();
   dominoAudio.unlock();
 };
 canvas.addEventListener('pointerdown', () => dominoAudio.unlock());
@@ -571,9 +570,14 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       now - lastAudioRead > 50
     ) {
       lastAudioRead = now;
-      audioRead = resources.world
+      const target = resources;
+      const generation = dominoAudio.generation;
+      audioRead = target.world
         .readContactEvents()
-        .then(batch => dominoAudio.play(batch.events, resources.world.timeStep, batch.step))
+        .then(batch => {
+          if (alive && target === resources)
+            dominoAudio.play(batch.events, target.world.timeStep, batch.step, generation);
+        })
         .catch(() => {})
         .finally(() => {
           audioRead = null;

@@ -11,7 +11,23 @@ const IMPACT_URLS = [
 
 /** Recorded CC0 hard-surface impacts. No oscillators, pitch shifts or synthesized bass. */
 export class DominoAudio {
-  enabled = false;
+  private soundEnabled = false;
+  private audioGeneration = 0;
+  private discardNextBatch = false;
+
+  get enabled(): boolean {
+    return this.soundEnabled;
+  }
+  set enabled(enabled: boolean) {
+    if (enabled === this.soundEnabled) return;
+    this.soundEnabled = enabled;
+    this.audioGeneration++;
+    this.discardNextBatch = enabled;
+    if (!enabled) this.silence();
+  }
+  get generation(): number {
+    return this.audioGeneration;
+  }
   private context?: AudioContext;
   private samples: AudioBuffer[] = [];
   private loading?: Promise<void>;
@@ -67,8 +83,15 @@ export class DominoAudio {
   play(
     events: readonly GPURigidBodyContactEvent[],
     timeStep = 1 / 60,
-    simulationStep = events.at(-1)?.step ?? 0
+    simulationStep = events.at(-1)?.step ?? 0,
+    generation = this.audioGeneration
   ): void {
+    if (!this.enabled || generation !== this.audioGeneration) return;
+    // Enabling audio must advance the world's event cursor without replaying retained history.
+    if (this.discardNextBatch) {
+      this.discardNextBatch = false;
+      return;
+    }
     const context = this.context;
     if (!this.enabled || !context || context.state !== 'running' || !this.samples.length) return;
     const contacts = events.filter(
@@ -123,6 +146,8 @@ export class DominoAudio {
     this.sources.clear();
   }
   reset(): void {
+    this.audioGeneration++;
+    this.discardNextBatch = false;
     this.silence();
     this.soundedBodies.clear();
     this.timelineOrigin = undefined;

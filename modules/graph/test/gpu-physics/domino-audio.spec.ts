@@ -63,6 +63,14 @@ it('ignores base support without consuming clacks for later domino impacts', asy
     audio.reset();
     audio.play([event(1, 2)]);
     expect(sourceStarts).toHaveBeenCalledTimes(3);
+    audio.enabled = false;
+    audio.enabled = true;
+    const generation = audio.generation;
+    audio.play([event(4, 5)], 1 / 60, 1, generation - 1);
+    audio.play([event(4, 5)], 1 / 60, 1, generation);
+    expect(sourceStarts).toHaveBeenCalledTimes(3);
+    audio.play([event(5, 6)], 1 / 60, 2, generation);
+    expect(sourceStarts).toHaveBeenCalledTimes(4);
     audio.reset();
     sourceStarts.mockClear();
     audio.play(
