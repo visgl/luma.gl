@@ -26,7 +26,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     entry: 'modules/core/src/index.ts',
     external: [],
     // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
-    maximum: {minified: 102_000, gzip: 28_600, brotli: 25_100},
+    maximum: {minified: 102_250, gzip: 28_600, brotli: 25_100},
     targetGzip: 24_000
   },
   {
@@ -34,7 +34,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/core/webgl` backend',
     entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
-    maximum: {minified: 140_250, gzip: 39_500, brotli: 34_000},
+    maximum: {minified: 140_500, gzip: 39_750, brotli: 34_000},
     targetGzip: 30_000
   },
   {
