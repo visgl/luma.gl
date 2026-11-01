@@ -56,6 +56,28 @@ async function readVector(vector: GPUVector): Promise<number[]> {
 for (const backend of ['webgl-simple', 'webgpu-simple', 'webgpu-full'] as const) {
   const getDevice = backend === 'webgl-simple' ? getWebGLTestDevice : getWebGPUTestDevice;
   const makeGraph = () => (backend === 'webgpu-full' ? new GPUGraph() : new GPUSimpleGraph());
+  test(`${backend} accepts finite scalar bindings that overflow float32`, async () => {
+    const device = await getDevice();
+    if (!device) return;
+    const graph = makeGraph();
+    graph.scalar('input', 'float32');
+    graph.scalar('output', 'float32');
+    graph.add(new GPUExpressionOperation({output: 'output', expression: 'abs(input)'}));
+    const compiled = graph.compile(device);
+    try {
+      for (const input of [1e40, -1e40]) {
+        const result = await compiled.run({input});
+        try {
+          // Nonfinite results are backend-defined, but accepted bindings must execute.
+          expect(await readVector(result.output)).toHaveLength(1);
+        } finally {
+          result.output.destroy();
+        }
+      }
+    } finally {
+      compiled.destroy();
+    }
+  });
   test(`${backend} rounds scalar inputs and intermediate math to float32`, async () => {
     const device = await getDevice();
     if (!device) return;

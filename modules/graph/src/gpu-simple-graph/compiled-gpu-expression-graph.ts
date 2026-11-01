@@ -59,10 +59,11 @@ export class CompiledGPUSimpleExpressionGraph {
         for (const [chunkIndex, chunk] of target.data.entries()) {
           if (!chunk.length) continue;
           // Existing evaluator formatters append .0 to integer literals. Bind exponential
-          // integers as typed data so large finite values never become invalid shader tokens.
+          // integers and float32 overflow as typed data instead of invalid shader literals.
           const lowerNumber = (inputValue: number): GPUDataEvaluator | number => {
             const value = Math.fround(inputValue);
-            return Number.isInteger(value) && String(value).includes('e')
+            return !Number.isFinite(value) ||
+              (Number.isInteger(value) && String(value).includes('e'))
               ? retain(
                   new GPUDataEvaluator({
                     type: 'float32',
