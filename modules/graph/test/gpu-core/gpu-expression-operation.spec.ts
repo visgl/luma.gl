@@ -7,7 +7,11 @@ import {Buffer, type Device} from '@luma.gl/core';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUGraph, GPUExpressionOperation} from '@luma.gl/graph';
-import {GPUGraphVectorMADD, GPUGraphDotProduct} from '@luma.gl/graph/gpu-core';
+import {
+  GPUGraphVectorMADD,
+  GPUGraphDotProduct,
+  GPUGraphScalarLiteral
+} from '@luma.gl/graph/gpu-core';
 import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 
 function makeVector(device: Device, values: number[][], prefixLength = 0): GPUVector<'float32'> {
@@ -392,5 +396,64 @@ test('full graph validates inferred MADD target shape before creating an encoder
     createEncoder.mockRestore();
     source.destroy();
     compiled.destroy();
+  }
+});
+
+for (const backend of ['webgl-simple', 'webgpu-simple', 'webgpu-full'] as const) {
+  test(`${backend} binds exponential integer literals and scalars without invalid shader tokens`, async () => {
+    const device = await (backend === 'webgl-simple'
+      ? getWebGLTestDevice()
+      : getWebGPUTestDevice());
+    if (!device) return;
+    for (const expression of ['input + 1e21', 'input - 1e21', 'input + scale']) {
+      const graph = backend === 'webgpu-full' ? new GPUGraph() : new GPUSimpleGraph();
+      graph.vector('input', 'float32');
+      graph.scalar('scale', 'float32');
+      graph.vector('output', 'float32');
+      graph.add(new GPUExpressionOperation({output: 'output', expression}));
+      const compiled = graph.compile(device);
+      const input = makeVector(device, [[0, 1]]);
+      try {
+        const result = await compiled.run({input, scale: 1e21});
+        try {
+          expect(await readVector(result.output)).toEqual(
+            Array(2).fill(Math.fround(expression.includes('-') ? -1e21 : 1e21))
+          );
+        } finally {
+          result.output.destroy();
+        }
+      } finally {
+        input.destroy();
+        compiled.destroy();
+      }
+    }
+  });
+}
+
+test('selected built-in integer scalar outputs retain their declared formats', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  for (const format of ['uint32', 'sint32'] as const) {
+    const graph = new GPUGraph();
+    const output = graph.scalar('output', format);
+    const expected = format === 'uint32' ? 4294967295 : -42;
+    graph.add(new GPUGraphScalarLiteral({output, value: expected}));
+    const compiled = graph.compile(device, {outputs: ['output']});
+    try {
+      const result = await compiled.run({});
+      try {
+        expect(result.output.format).toBe(format);
+        const bytes = await result.output.data[0].buffer.readAsync();
+        expect(
+          (format === 'uint32'
+            ? new Uint32Array(bytes.buffer, bytes.byteOffset)
+            : new Int32Array(bytes.buffer, bytes.byteOffset))[0]
+        ).toBe(expected);
+      } finally {
+        result.output.destroy();
+      }
+    } finally {
+      compiled.destroy();
+    }
   }
 });

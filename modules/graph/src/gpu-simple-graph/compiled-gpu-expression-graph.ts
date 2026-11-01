@@ -58,13 +58,28 @@ export class CompiledGPUSimpleExpressionGraph {
         const target = invocation.values.get(plan.operation.output) as GPUVector;
         for (const [chunkIndex, chunk] of target.data.entries()) {
           if (!chunk.length) continue;
+          // Existing evaluator formatters append .0 to integer literals. Bind exponential
+          // integers as typed data so large finite values never become invalid shader tokens.
+          const lowerNumber = (value: number): GPUDataEvaluator | number =>
+            Number.isInteger(value) && String(value).includes('e')
+              ? retain(
+                  new GPUDataEvaluator({
+                    type: 'float32',
+                    format: 'float32',
+                    size: 1,
+                    length: 1,
+                    isConstant: true,
+                    value: new Float32Array([value])
+                  })
+                )
+              : value;
           const lower = (expression: GPUExpression): GPUDataEvaluator | number => {
             switch (expression.kind) {
               case 'literal':
-                return expression.value;
+                return lowerNumber(expression.value);
               case 'reference': {
                 const value = invocation!.values.get(expression.name)!;
-                if (typeof value === 'number') return value;
+                if (typeof value === 'number') return lowerNumber(value);
                 const scalar = this.program.scalars.some(
                   declaration => declaration.id === expression.name
                 );

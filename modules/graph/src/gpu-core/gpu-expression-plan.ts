@@ -5,7 +5,7 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from './gpu-graph';
-import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
+import type {GPUGraphScalar, GPUGraphVector, GPUGraphScalarFormat} from './gpu-graph-value';
 import {GPUGraphDotProduct, GPUGraphVectorMADD} from './gpu-semantic-vector-operation';
 import {GPUGraphSpMV} from './gpu-semantic-spmv';
 import {GPUGraphScalarLiteral} from './gpu-semantic-state-operation';
@@ -253,7 +253,12 @@ export class GPUExpressionProgram {
           !(values.get(name) instanceof GPUVector) &&
           this.scalars.some(scalar => scalar.id === name)
         ) {
-          const output = allocateVector(device, name, [1]);
+          const output = allocateVector(
+            device,
+            name,
+            [1],
+            this.scalars.find(scalar => scalar.id === name)!.format
+          );
           owned.add(output);
           values.set(name, output);
         }
@@ -294,9 +299,10 @@ export class GPUExpressionInvocation {
 function allocateVector(
   device: Device,
   name: string,
-  lengths: readonly number[]
-): GPUVector<'float32'> {
-  const data: GPUData<'float32'>[] = [];
+  lengths: readonly number[],
+  format: GPUGraphScalarFormat = 'float32'
+): GPUVector<GPUGraphScalarFormat> {
+  const data: GPUData<GPUGraphScalarFormat>[] = [];
   try {
     for (const length of lengths)
       data.push(
@@ -305,12 +311,12 @@ function allocateVector(
             byteLength: Math.max(1, length) * 4,
             usage: Buffer.STORAGE | Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
           }),
-          format: 'float32',
+          format,
           length,
           ownsBuffer: true
         })
       );
-    return new GPUVector({type: 'data', name, format: 'float32', data, ownsData: true});
+    return new GPUVector({type: 'data', name, format, data, ownsData: true});
   } catch (error) {
     for (const chunk of data) chunk.destroy();
     throw error;
