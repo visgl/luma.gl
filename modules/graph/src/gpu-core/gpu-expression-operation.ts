@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parse, type Expression} from '@math.gl/expressions';
+import {getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
+import type {GPUGraphVectorFormat} from './gpu-graph-value';
 import type {GPUOperation} from './gpu-operation';
 
 /** Parsed math.gl syntax tree. Only the documented numeric GPU subset is accepted. */
@@ -32,6 +34,28 @@ export class GPUExpressionOperation implements GPUOperation {
 }
 
 export type GPUExpressionFormat = 'float32' | 'sint32' | 'uint32';
+export type GPUExpressionRowFormat = GPUGraphVectorFormat;
+
+/** @internal */
+export function isGPUExpressionRowFormat(format: string): format is GPUExpressionRowFormat {
+  return /^(float32|sint32|uint32)(x[234])?$/.test(format);
+}
+
+/** @internal */
+export function getGPUExpressionRowInfo(format: GPUExpressionRowFormat) {
+  const info = getGPUVectorFormatInfo(format);
+  return {components: info.components, componentType: info.signedDataType as GPUExpressionFormat};
+}
+
+/** @internal */
+export function makeGPUExpressionRowFormat(
+  componentType: GPUExpressionFormat,
+  components: number
+): GPUExpressionRowFormat {
+  return components === 1
+    ? componentType
+    : (`${componentType}x${components}` as GPUExpressionRowFormat);
+}
 
 type GPUExpressionFunction = 'abs' | 'sqrt' | 'pow' | 'sin' | 'cos' | 'tan' | 'exp' | 'log';
 
@@ -123,8 +147,8 @@ export function isGPUExpressionFormat(format: string): format is GPUExpressionFo
 /** Explicit casts delimit the float32 arithmetic subset. @internal */
 export function getGPUExpressionFormat(
   expression: GPUExpression,
-  formats: ReadonlyMap<string, GPUExpressionFormat>
-): GPUExpressionFormat {
+  formats: ReadonlyMap<string, GPUExpressionRowFormat>
+): GPUExpressionRowFormat {
   switch (expression.kind) {
     case 'literal':
       return 'float32';
@@ -134,8 +158,10 @@ export function getGPUExpressionFormat(
       return format;
     }
     case 'cast':
-      getGPUExpressionFormat(expression.argument, formats);
-      return expression.format;
+      return makeGPUExpressionRowFormat(
+        expression.format,
+        getGPUExpressionRowInfo(getGPUExpressionFormat(expression.argument, formats)).components
+      );
     default: {
       const argumentsList =
         expression.kind === 'call'
@@ -143,9 +169,19 @@ export function getGPUExpressionFormat(
           : expression.kind === 'negate'
             ? [expression.argument]
             : [expression.left, expression.right];
-      if (argumentsList.some(argument => getGPUExpressionFormat(argument, formats) !== 'float32'))
+      const argumentTypes = argumentsList.map(argument =>
+        getGPUExpressionRowInfo(getGPUExpressionFormat(argument, formats))
+      );
+      if (argumentTypes.some(argument => argument.componentType !== 'float32'))
         throw new Error('Arithmetic requires float32 operands; use an explicit float32 cast');
-      return 'float32';
+      const components = Math.max(...argumentTypes.map(argument => argument.components));
+      if (
+        argumentTypes.some(
+          argument => argument.components !== 1 && argument.components !== components
+        )
+      )
+        throw new Error('Expression row widths must match or broadcast from one component');
+      return makeGPUExpressionRowFormat('float32', components);
     }
   }
 }

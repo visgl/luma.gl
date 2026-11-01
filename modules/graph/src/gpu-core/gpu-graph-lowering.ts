@@ -10,6 +10,7 @@ import type {GPUScalar} from './gpu-scalar';
 import type {
   GPUGraphScalar,
   GPUGraphVector,
+  GPUGraphVectorFormat,
   GPUGraphTexture,
   GPUGraphTextureView
 } from './gpu-graph-value';
@@ -35,9 +36,7 @@ export type GPUOperationLoweringContext<Parameters = void> = {
   resolveScalar: <T extends 'float32' | 'uint32' | 'sint32'>(
     scalar: GPUGraphScalar<T>
   ) => GPUScalar<T>;
-  resolveVector: <T extends 'float32' | 'uint32' | 'sint32'>(
-    vector: GPUGraphVector<T>
-  ) => GraphVectorView<T>;
+  resolveVector: <T extends GPUGraphVectorFormat>(vector: GPUGraphVector<T>) => GraphVectorView<T>;
   resolveTexture: <Format extends TextureFormat>(
     texture: GPUGraphTexture<Format>
   ) => GraphTextureHandle<Format>;

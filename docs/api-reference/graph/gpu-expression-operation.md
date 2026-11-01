@@ -33,7 +33,9 @@ compiled.destroy();
 Declarations contain types, not data. An omitted vector length is resolved from execution
 bindings. An explicit length, such as `graph.vector('positions', 'float32', {length: 1024})`, constrains
 all executions. Inputs are borrowed `GPUVector` objects or numeric scalar values. This first
-subset uses packed float32, sint32, and uint32 vectors and scalars. Arithmetic operands must be float32; use explicit casts for integer inputs.
+subset uses float32, sint32, and uint32 scalars and packed vector rows of one to four components
+(`float32`, `float32x2`, `float32x3`, `float32x4`, and corresponding integer formats).
+Arithmetic operands must have float32 components; use explicit casts for integer inputs.
 
 ## Expression syntax
 
@@ -58,6 +60,45 @@ Compilation rejects undeclared identifiers, incompatible formats, duplicate expr
 writers, forward references to expression outputs, and unsupported syntax. Add producers
 before their consumers. Expressions nested inside conditional or loop composites are not yet supported. Runtime checks enforce the supplied device, formats, declared lengths,
 and relationships between input dimensions.
+
+## Typed rows and component-wise execution
+
+The vector format fixes each row's component type and width. Vector length remains the
+number of rows and is supplied at execution; width is not another runtime dimension.
+
+```typescript
+graph.vector('positions', 'float32x3');
+graph.vector('offsets', 'float32x3');
+graph.scalar('scale', 'float32');
+graph.vector('transformed', 'float32x3');
+graph.vector('indices', 'sint32x3');
+graph.add(new GPUExpressionOperation({
+  output: 'transformed',
+  expression: 'positions * scale + offsets'
+}));
+graph.add(new GPUExpressionOperation({
+  output: 'indices',
+  expression: 'sint32(transformed)',
+  integerRounding: 'nearest'
+}));
+```
+
+Arithmetic and math calls operate independently on each component. One-component operands
+broadcast across the other operand's components; other width mismatches fail at compilation.
+This includes one-component vector rows: a `float32` vector can supply one weight per row
+for a `float32x3` vector, with matching row counts and chunk boundaries. Scalar declarations
+still accept a single numeric binding, which broadcasts across all rows and components.
+
+Casts preserve width: `sint32(positions)` produces `sint32x3`, applying rounding and saturation
+independently per component. The output declaration must match the inferred component type
+and width. Integer arithmetic requires an explicit conversion back to float32.
+
+Storage stays packed: `float32x3` occupies 12 bytes per row on both backends, without WGSL
+`vec3` padding. Inputs and caller-provided output targets must have the matching packed row
+stride and a four-byte-aligned offset. Existing chunk boundaries and ownership rules apply.
+
+Component access, swizzles, constructors, `dot`, `length`, predicates, and selection are not
+part of this tranche. Existing evaluator operations and their APIs remain unchanged.
 
 ## Math functions and numeric casts
 

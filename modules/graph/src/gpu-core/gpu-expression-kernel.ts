@@ -4,7 +4,11 @@
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
-import {getGPUExpressionFormat, type GPUExpression} from './gpu-expression-operation';
+import {
+  getGPUExpressionFormat,
+  getGPUExpressionRowInfo,
+  type GPUExpression
+} from './gpu-expression-operation';
 import {
   GPU_EXPRESSION_SHADER_TYPES,
   GPU_EXPRESSION_CAST_WGSL,
@@ -39,27 +43,32 @@ export class GPUExpressionKernel {
     this.outputIsScalar = program.scalars.some(value => value.id === plan.operation.output);
     const arenaUsed = this.scalarNames.length > 0 || this.outputIsScalar;
     const metadata = (index: number): string => `metadata[${Math.floor(index / 4)}][${index % 4}]`;
-    const emit = (expression: GPUExpression): string => {
+    const emit = (expression: GPUExpression, laneIndex: number): string => {
       switch (expression.kind) {
         case 'literal':
           return `f32(${Object.is(expression.value, -0) ? '-0.0' : expression.value.toExponential()})`;
         case 'negate':
-          return `(-${emit(expression.argument)})`;
+          return `(-${emit(expression.argument, laneIndex)})`;
         case 'cast':
           return getGPUExpressionCastWGSL(
-            emit(expression.argument),
-            getGPUExpressionFormat(expression.argument, plan.formats),
+            emit(expression.argument, laneIndex),
+            getGPUExpressionRowInfo(getGPUExpressionFormat(expression.argument, plan.formats))
+              .componentType,
             expression.format,
             plan.operation.integerRounding
           );
         case 'call':
-          return `${expression.name}(${expression.arguments.map(emit).join(', ')})`;
+          return `${expression.name}(${expression.arguments.map(argument => emit(argument, laneIndex)).join(', ')})`;
         case 'binary':
-          return `(${emit(expression.left)} ${expression.operator} ${emit(expression.right)})`;
+          return `(${emit(expression.left, laneIndex)} ${expression.operator} ${emit(expression.right, laneIndex)})`;
         case 'reference': {
           const index = this.vectorNames.indexOf(expression.name);
-          if (index >= 0) return `input${index}[${metadata(index + 2)} + index]`;
-          return `bitcast<${GPU_EXPRESSION_SHADER_TYPES[plan.formats.get(expression.name)!]}>(gpuValues[${program.scalars.findIndex(value => value.id === expression.name)}])`;
+          const {components, componentType} = getGPUExpressionRowInfo(
+            plan.formats.get(expression.name)!
+          );
+          if (index >= 0)
+            return `input${index}[${metadata(index + 2)} + index * ${components}u + ${components === 1 ? 0 : laneIndex}u]`;
+          return `bitcast<${GPU_EXPRESSION_SHADER_TYPES[componentType]}>(gpuValues[${program.scalars.findIndex(value => value.id === expression.name)}])`;
         }
       }
     };
@@ -72,11 +81,11 @@ export class GPUExpressionKernel {
     const shaderBindings: import('@luma.gl/core').ShaderLayout['bindings'] = [...bindings];
     const declarations = bindings.map(
       (binding, index) =>
-        `@group(0) @binding(${binding.location}) var<storage, read> ${binding.name}: array<${GPU_EXPRESSION_SHADER_TYPES[plan.formats.get(this.vectorNames[index])!]}>;`
+        `@group(0) @binding(${binding.location}) var<storage, read> ${binding.name}: array<${GPU_EXPRESSION_SHADER_TYPES[getGPUExpressionRowInfo(plan.formats.get(this.vectorNames[index])!).componentType]}>;`
     );
     if (!this.outputIsScalar) {
       declarations.push(
-        `@group(0) @binding(${shaderBindings.length}) var<storage, read_write> outputValues: array<${GPU_EXPRESSION_SHADER_TYPES[plan.format]}>;`
+        `@group(0) @binding(${shaderBindings.length}) var<storage, read_write> outputValues: array<${GPU_EXPRESSION_SHADER_TYPES[getGPUExpressionRowInfo(plan.format).componentType]}>;`
       );
       shaderBindings.push({
         name: 'outputValues',
@@ -106,8 +115,12 @@ export class GPUExpressionKernel {
       location: shaderBindings.length
     });
     const store = this.outputIsScalar
-      ? `gpuValues[${program.scalars.findIndex(value => value.id === plan.operation.output)}] = bitcast<u32>(${emit(plan.expression)});`
-      : `outputValues[${metadata(1)} + index] = ${emit(plan.expression)};`;
+      ? `gpuValues[${program.scalars.findIndex(value => value.id === plan.operation.output)}] = bitcast<u32>(${emit(plan.expression, 0)});`
+      : Array.from(
+          {length: getGPUExpressionRowInfo(plan.format).components},
+          (_, laneIndex) =>
+            `outputValues[${metadata(1)} + index * ${getGPUExpressionRowInfo(plan.format).components}u + ${laneIndex}u] = ${emit(plan.expression, laneIndex)};`
+        ).join('\n');
     this.kernel = new Kernel(device, {
       id: plan.operation.id,
       source: `${declarations.join('\n')}
