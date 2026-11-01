@@ -2,9 +2,15 @@
   "compilerOptions": {
     "target": "ESNext",
     "jsx": "react",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
     "allowJs": false,
     "skipLibCheck": true,
     "strict": true,
@@ -12,7 +18,14 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {
+      "@luma.gl/graph/*": [
+        "../../../modules/graph/src/*"
+      ]
+    }
   },
-  "include": ["."]
+  "include": [
+    "."
+  ]
 }

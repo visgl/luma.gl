@@ -9,6 +9,11 @@ import {
 } from '@luma.gl/graph/gpu-physics';
 
 export const RIGID_BODY_SCENES = {
+  dominoSpiral: {
+    title: 'Spiral dominoes',
+    description:
+      'A single nudge tips the innermost domino. Real box contacts carry the falling wave outward along three turns of an Archimedean spiral. Every domino is a free rigid body; no timed animation or scripted impulses drive the sequence. Reset rebuilds the upright spiral and replays the first nudge without changing your camera.'
+  },
   suspension: {
     title: 'Mechanisms · spring suspension',
     description:
@@ -93,6 +98,7 @@ export const RIGID_BODY_SCENES = {
 export type RigidBodyScene = keyof typeof RIGID_BODY_SCENES;
 
 export function makeRigidBodyScene(scene: RigidBodyScene): GPURigidBody[] {
+  if (scene === 'dominoSpiral') return makeDominoSpiral();
   if (scene === 'continuous')
     return [
       {
@@ -289,4 +295,69 @@ export function getRigidBodySceneGravity(scene: RigidBodyScene): [number, number
 
 export function isRigidBodyScene(value: string): value is RigidBodyScene {
   return Object.hasOwn(RIGID_BODY_SCENES, value);
+}
+
+export const DOMINO_PHYSICS = {
+  maximumPairs: 4096,
+  linearDamping: 0.2,
+  angularDamping: 1,
+  sleepAfter: 0.6,
+  sleepLinearSpeed: 0.2,
+  sleepAngularSpeed: 0.35,
+  penetrationRecoveryFraction: 0.04,
+  maximumRecoverySpeed: 0.1
+} as const;
+
+/** Equal arc-length spacing keeps contact propagation consistent as the spiral widens. */
+export function makeDominoSpiral(): GPURigidBody[] {
+  const bodies: GPURigidBody[] = [
+    {
+      position: [0, 0, -0.25],
+      mass: 0,
+      shape: {type: 'box', halfExtents: [9, 9, 0.25]},
+      friction: 0.65,
+      restitution: 0
+    }
+  ];
+  const radialGrowth = 1.8 / (2 * Math.PI);
+  let angle = 0;
+  while (angle < Math.PI * 6) {
+    const radius = 3 + radialGrowth * angle;
+    const tangentX = radialGrowth * Math.cos(angle) - radius * Math.sin(angle);
+    const tangentY = radialGrowth * Math.sin(angle) + radius * Math.cos(angle);
+    const heading = Math.atan2(tangentY, tangentX);
+    // Release the first tile already leaning beyond its base, with its bottom edge on the table.
+    // A pure COM angular impulse can be absorbed by the initial floor contact instead of tipping it.
+    const tilt = bodies.length === 1 ? 0.22 : 0;
+    const forward = 0.1 * (1 - Math.cos(tilt)) + 0.75 * Math.sin(tilt);
+    bodies.push({
+      position: [
+        radius * Math.cos(angle) + forward * Math.cos(heading),
+        radius * Math.sin(angle) + forward * Math.sin(heading),
+        0.1 * Math.sin(tilt) + 0.75 * Math.cos(tilt)
+      ],
+      orientation: [
+        -Math.sin(heading / 2) * Math.sin(tilt / 2),
+        Math.cos(heading / 2) * Math.sin(tilt / 2),
+        Math.sin(heading / 2) * Math.cos(tilt / 2),
+        Math.cos(heading / 2) * Math.cos(tilt / 2)
+      ],
+      velocity:
+        bodies.length === 1
+          ? [
+              1.5 * (0.1 * Math.sin(tilt) + 0.75 * Math.cos(tilt)) * Math.cos(heading),
+              1.5 * (0.1 * Math.sin(tilt) + 0.75 * Math.cos(tilt)) * Math.sin(heading),
+              -1.5 * (-0.1 * Math.cos(tilt) + 0.75 * Math.sin(tilt))
+            ]
+          : [0, 0, 0],
+      angularVelocity:
+        bodies.length === 1 ? [-Math.sin(heading) * 1.5, Math.cos(heading) * 1.5, 0] : [0, 0, 0],
+      shape: {type: 'box', halfExtents: [0.1, 0.32, 0.75]},
+      mass: 1,
+      friction: 0.65,
+      restitution: 0
+    });
+    angle += 0.52 / Math.hypot(radius, radialGrowth);
+  }
+  return bodies;
 }
