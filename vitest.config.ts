@@ -138,6 +138,7 @@ const browserBenchmarkTestPatterns = [
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',
+  'modules/graph/test/gpu-core/gpu-group-aggregation-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-spatial-query-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-reduction-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-workgroup-scan-benchmark.spec.ts',

@@ -92,7 +92,7 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
     }
   });
 
-  test('initializes and finalizes dense groups beyond one-dimensional workgroup capacity', () => {
+  test('reduces and combines dense group means beyond one-dimensional workgroup capacity', () => {
     const {device, graph} = createBoundedGraph();
     const keys = createView(graph, 'group-keys', 'uint32', 1_025);
     const values = createView(graph, 'group-values', 'float32', 1_025);
@@ -112,7 +112,7 @@ describe('bounded GPUDataFrame analytics dispatch', () => {
         )
       ).not.toThrow();
       expect(addComputePass.mock.calls.map(([pass]) => pass.id)).toEqual(
-        expect.arrayContaining(['bounded-groups-initialize', 'bounded-groups-finalize'])
+        expect.arrayContaining(['bounded-groups-mean', 'bounded-groups-finalize'])
       );
     } finally {
       addComputePass.mockRestore();
