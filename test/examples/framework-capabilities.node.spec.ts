@@ -18,13 +18,13 @@ const FRAMEWORK_PACKAGE_NAMES = [
   '@luma.gl/core/webgpu',
   '@luma.gl/core/webgl',
   '@luma.gl/engine',
-  '@luma.gl/shadertools',
-  '@luma.gl/effects',
+  '@luma.gl/shaders',
+  '@luma.gl/engine/effects',
   '@luma.gl/anari',
-  '@luma.gl/gltf',
-  '@luma.gl/splats',
-  '@luma.gl/gpgpu',
-  '@luma.gl/arrow',
+  '@luma.gl/engine/gltf',
+  '@luma.gl/engine/splats',
+  '@luma.gl/graph/gpu-simple-graph',
+  '@luma.gl/graph/arrow',
   '@luma.gl/graph/experimental'
 ] as const;
 const DATA_CAPABILITIES_HEADING = '## GPU-native data, compute, and visualization';
@@ -265,7 +265,7 @@ describe('framework capabilities documentation', () => {
     const arrowRows = readDetailedCapabilityRows(readCapabilitiesSource()).filter(
       row =>
         /Apache Arrow, geometry, and text/i.test(row.heading) &&
-        row.packageName.includes('@luma.gl/arrow')
+        row.packageName.includes('@luma.gl/graph/arrow')
     );
     const analyticsRows = arrowRows.filter(row =>
       /analytics|renderer[\s-]+independent/i.test(`${row.feature} ${row.details}`)
@@ -304,37 +304,37 @@ describe('framework capabilities documentation', () => {
       {
         feature: 'Authored PBR texture slots',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /\b21\b[\s\S]{0,50}texture\s+slots/i
       },
       {
         feature: 'Native material variants',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /KHR_materials_variants/
       },
       {
         feature: 'Typed animation pointers',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /KHR_animation_pointer[\s\S]{0,150}cameras?[\s\S]{0,40}lights?/i
       },
       {
         feature: 'Imported GPU instancing',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /EXT_mesh_gpu_instancing/
       },
       {
         feature: 'Imported node visibility',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /KHR_node_visibility/
       },
       {
         feature: 'Independently animated GPU crowds',
         status: 'Available',
-        packageName: '@luma.gl/gltf',
+        packageName: '@luma.gl/engine/gltf',
         implementation: /createGLTFAnimatedCrowd[\s\S]{0,120}actor/i
       },
       {
@@ -395,7 +395,7 @@ describe('framework capabilities documentation', () => {
       expect(splatRow, `${feature} is implemented and must not be labeled a gap`).toBeDefined();
       expect(splatRow!.status).toBe('Experimental');
       expect(splatRow!.backend).toBe('WebGPU + WebGL2');
-      expect(splatRow!.packageName).toContain('@luma.gl/splats');
+      expect(splatRow!.packageName).toContain('@luma.gl/engine/splats');
       expect(splatRow!.details).toMatch(implementation);
     }
 
@@ -495,7 +495,14 @@ describe('framework capabilities documentation', () => {
       );
     }
 
-    for (const experimentalPackage of ['anari', 'arrow', 'splats', 'text']) {
+    for (const experimentalPackage of [
+      'anari',
+      'graph/arrow',
+      'graph/arrow',
+      'engine/arrow',
+      'engine/splats',
+      'engine/text'
+    ]) {
       const experimentalRows = capabilityRows.filter(row =>
         row.packageName.includes(`@luma.gl/${experimentalPackage}`)
       );
@@ -527,8 +534,8 @@ describe('framework capabilities documentation', () => {
     expect(startHereSection, 'The API reference must include a Start Here section').toBeDefined();
 
     for (const [packageName, documentationPath] of [
-      ['effects', '/docs/api-guide/shaders/shader-passes'],
-      ['gpgpu', '/docs/api-reference/gpgpu']
+      ['engine/effects', '/docs/api-guide/shaders/shader-passes'],
+      ['graph/gpu-simple-graph', '/docs/api-reference/graph/gpu-evaluation']
     ]) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
@@ -557,17 +564,17 @@ describe('framework capabilities documentation', () => {
       expect(moduleRow![2]).not.toContain(`${otherBackend} API`);
     }
 
-    const textRow = moduleRows.find(row => row[0].includes('@luma.gl/text'));
+    const textRow = moduleRows.find(row => row[0].includes('@luma.gl/engine/text'));
     expect(textRow?.[1]).toBe('Experimental');
 
-    for (const packageName of ['arrow']) {
+    for (const packageName of ['graph/arrow', 'graph/arrow', 'engine/arrow']) {
       const moduleRow = moduleRows.find(row => row[0].includes(`@luma.gl/${packageName}`));
 
       expect(moduleRow, `The API reference must list @luma.gl/${packageName}`).toBeDefined();
       expect(
         moduleRow![1],
         `@luma.gl/${packageName} must disclose its actual availability`
-      ).toMatch(/experimental[\s/]+private/i);
+      ).toMatch(/optional[\s/]+experimental/i);
     }
   });
 
@@ -621,7 +628,7 @@ describe('framework capabilities documentation', () => {
     const ownershipDescription = capabilitiesSource.match(/ownership\s+boundaries[\s\S]*?\n\n/i);
 
     expect(ownershipDescription).not.toBeNull();
-    for (const packageName of ['gltf', 'shadertools', 'engine', 'anari']) {
+    for (const packageName of ['engine/gltf', 'shaders', 'engine', 'anari']) {
       expect(ownershipDescription![0]).toContain(`@luma.gl/${packageName}`);
     }
 
@@ -639,7 +646,7 @@ describe('framework capabilities documentation', () => {
       /anisotrop(?:y|ic)/i,
       /transmission[^\n]*captured\s+scene\s+color/i,
       /standalone\s+glTF\s+rendering\s+fallback[^\n]*approximate/i,
-      /@luma\.gl\/arrow[\s\S]{0,80}private/i
+      /@luma\.gl\/graph\/arrow/i
     ]) {
       expect(capabilitiesSource, `The shared asset overview must explain ${capability}`).toMatch(
         capability

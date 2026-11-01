@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ShaderPass} from '@luma.gl/shadertools';
+import {ShaderPass} from '@luma.gl/shaders';
 
 /**
  * Gets fragment shader source for a shader pass sub pass

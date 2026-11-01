@@ -29,8 +29,8 @@ import {
   pbrMaterial,
   pbrScene,
   WGSLShaderAssembler
-} from '@luma.gl/shadertools';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+} from '@luma.gl/shaders';
+import {getNullTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
@@ -68,7 +68,7 @@ describe('scene rendering package architecture', () => {
 
   test('keeps glTF model construction independent of experimental rendering', () => {
     const gltfPackage = JSON.parse(
-      readFileSync(new URL('../../../gltf/package.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../../../engine/package.json', import.meta.url), 'utf8')
     ) as {
       dependencies?: Record<string, string>;
       optionalDependencies?: Record<string, string>;
@@ -83,7 +83,7 @@ describe('scene rendering package architecture', () => {
 
     for (const sourcePath of ['gltf/create-gltf-model.ts', 'parsers/parse-gltf.ts']) {
       const source = readFileSync(
-        new URL(`../../../gltf/src/${sourcePath}`, import.meta.url),
+        new URL(`../../../engine/src/gltf/${sourcePath}`, import.meta.url),
         'utf8'
       );
       expect(source).not.toContain('@luma.gl/experimental');

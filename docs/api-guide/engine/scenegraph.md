@@ -97,7 +97,7 @@ same node object under multiple parents is not a substitute for creating instanc
 
 ## Importing glTF
 
-The `@luma.gl/gltf` adapter decodes asset-specific indices, extension fields, accessors
+The `@luma.gl/engine/gltf` adapter decodes asset-specific indices, extension fields, accessors
 and animation pointers into engine nodes, materials and bindings. Its scenegraph
 bundle exposes scene roots, materials, variants, skins, animation playback, cameras,
 lights, lookup maps and joint declarations.

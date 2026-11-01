@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Buffer, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 
@@ -200,13 +200,9 @@ it('Computation#plugins assemble WGSL contributions', async () => {
       plugins: [
         {
           name: 'compute-plugin',
-          wgsl: {
-            modules: [
-              {
-                name: 'compute-plugin-module',
-                source: 'const COMPUTE_PLUGIN_MARKER: i32 = 1;'
-              }
-            ]
+          module: {
+            name: 'compute-plugin-module',
+            source: 'const COMPUTE_PLUGIN_MARKER: i32 = 1;'
           }
         }
       ]
@@ -234,12 +230,12 @@ it('Computation#plugins assemble WGSL contributions', async () => {
           plugins: [
             {
               name: 'varying-plugin',
-              varyings: {pluginValue: {type: 'f32'}}
+              interStageVariables: {pluginValue: {type: 'f32'}}
             }
           ]
         }),
-      'compute pipelines reject plugin varyings'
-    ).toThrow(/does not support ShaderPlugin vertex inputs or varyings/);
+      'compute pipelines reject plugin interStageVariables'
+    ).toThrow(/does not support ShaderPlugin vertex inputs or interStageVariables/);
   }
   void 0;
 });

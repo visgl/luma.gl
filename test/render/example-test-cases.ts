@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
+import type {SnapshotTestRunnerTestCase} from '../utils/legacy-test-runners/snapshot-test-runner';
 import {AnimationLoopTemplate, AnimationProps, setPathPrefix} from '@luma.gl/engine';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';

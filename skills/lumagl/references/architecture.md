@@ -17,7 +17,7 @@ incompatibilities.
 Useful inspection commands include:
 
 ```bash
-npm ls @luma.gl/core @luma.gl/engine @luma.gl/shadertools @luma.gl/core/webgpu @luma.gl/core/webgl
+npm ls @luma.gl/core @luma.gl/engine @luma.gl/shaders @luma.gl/core/webgpu @luma.gl/core/webgl
 yarn why @luma.gl/core
 ```
 
@@ -48,8 +48,8 @@ not automatically portable. Check device features and limits before choosing a p
 
 ### Shader API
 
-Use `@luma.gl/shadertools` to assemble shader modules, plugins, hooks, defines, and
-typed shader inputs. Shadertools composes shader source and contracts; Engine or Core
+Use `@luma.gl/shaders` to assemble shader modules, plugins, hooks, defines, and
+typed shader inputs. Shaders composes shader source and contracts; Engine or Core
 still creates resources and executes work.
 
 ## Design rules

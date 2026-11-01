@@ -6,11 +6,11 @@ import {
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVectors,
   type PreparedArrowTemporalGPUVector
-} from '@luma.gl/arrow';
+} from '@luma.gl/graph/arrow';
 import {type Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
 import {type DynamicBuffer} from '@luma.gl/core/dynamic';
-import {getGPUVectorBuffer, getRequiredGPUVector, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorBuffer, getRequiredGPUVector, type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURenderable, GPUTable, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
 import * as arrow from 'apache-arrow';

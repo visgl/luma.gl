@@ -21,9 +21,9 @@ import {
   getWebGLTestDevice,
   getWebGPUTestDevice,
   getTestDevices
-} from '@luma.gl/test-utils';
-import {skin} from '@luma.gl/shadertools';
-import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
+} from '@luma.gl/core/test-utils';
+import {skin} from '@luma.gl/shaders';
+import {pbrProjection} from '../../../shaders/src/modules/lighting/pbr-material/pbr-projection';
 
 const stats = luma.stats.get('GPU Resource Counts');
 
@@ -1096,10 +1096,8 @@ it('Model#plugins assemble backend contributions', async () => {
     plugins: [
       {
         name: 'glsl-model-plugin',
-        modules: [pluginModule],
-        glsl: {
-          injections: [{target: 'fs:#decl', injection: 'float pluginMarker = 1.0;'}]
-        }
+        module: pluginModule,
+        injections: [{target: 'fs:#decl', glsl: 'float pluginMarker = 1.0;'}]
       }
     ]
   });
@@ -1122,9 +1120,7 @@ it('Model#plugins assemble backend contributions', async () => {
       plugins: [
         {
           name: 'wgsl-model-plugin',
-          wgsl: {
-            injections: [{target: 'fs:#decl', injection: 'const PLUGIN_MARKER: f32 = 1.0;'}]
-          }
+          injections: [{target: 'fs:#decl', wgsl: 'const PLUGIN_MARKER: f32 = 1.0;'}]
         }
       ]
     });
@@ -1146,7 +1142,7 @@ function isSoftwareBackedDevice(device: Device): boolean {
 }
 
 /*
-import {dirlight, picking} from '@luma.gl/shadertools';
+import {dirlight, picking} from '@luma.gl/shaders';
 
 const VS_300 = glsl`#version 300 es
 

@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "10.0.0-alpha.4",
+  "version": "10.0.0-alpha.7",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -60,6 +60,51 @@
       "types": "./dist/graph/models/index.d.ts",
       "import": "./dist/graph/models/index.js",
       "require": "./dist/graph/models/index.cjs"
+    },
+    "./gltf": {
+      "types": "./dist/gltf/index.d.ts",
+      "import": "./dist/gltf/index.js",
+      "require": "./dist/gltf/index.cjs"
+    },
+    "./gltf-physics": {
+      "types": "./dist/gltf/physics/index.d.ts",
+      "import": "./dist/gltf/physics/index.js",
+      "require": "./dist/gltf/physics/index.cjs"
+    },
+    "./splats": {
+      "types": "./dist/splats/index.d.ts",
+      "import": "./dist/splats/index.js",
+      "require": "./dist/splats/index.cjs"
+    },
+    "./text": {
+      "types": "./dist/text/index.d.ts",
+      "import": "./dist/text/index.js",
+      "require": "./dist/text/index.cjs"
+    },
+    "./text-fonts": {
+      "types": "./dist/text/fonts/index.d.ts",
+      "import": "./dist/text/fonts/index.js",
+      "require": "./dist/text/fonts/index.cjs"
+    },
+    "./text-3d": {
+      "types": "./dist/text/text-3d/index.d.ts",
+      "import": "./dist/text/text-3d/index.js",
+      "require": "./dist/text/text-3d/index.cjs"
+    },
+    "./text-experimental": {
+      "types": "./dist/text/experimental.d.ts",
+      "import": "./dist/text/experimental.js",
+      "require": "./dist/text/experimental.cjs"
+    },
+    "./effects": {
+      "types": "./dist/effects/index.d.ts",
+      "import": "./dist/effects/index.js",
+      "require": "./dist/effects/index.cjs"
+    },
+    "./arrow": {
+      "types": "./dist/arrow/index.d.ts",
+      "import": "./dist/arrow/index.js",
+      "require": "./dist/arrow/index.cjs"
     }
   },
   "files": [
@@ -76,17 +121,23 @@
   },
   "peerDependencies": {
     "@luma.gl/core": "~10.0.0-alpha.3",
-    "@luma.gl/shadertools": "~10.0.0-alpha.3"
+    "@luma.gl/shaders": "~10.0.0-alpha.3",
+    "apache-arrow": ">=17.0.0"
   },
   "dependencies": {
-    "@luma.gl/gpgpu": "10.0.0-alpha.4",
-    "@luma.gl/graph": "10.0.0-alpha.4",
-    "@math.gl/core": "~5.0.0-alpha.20",
-    "@math.gl/geometry": "~5.0.0-alpha.20",
+    "@luma.gl/graph": "10.0.0-alpha.7",
+    "@mapbox/tiny-sdf": "^2.0.7",
+    "@math.gl/core": "~5.0.0-beta.2",
+    "@math.gl/geometry": "~5.0.0-beta.2",
     "probe.gl": "^5.0.0"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
   "devDependencies": {
-    "@luma.gl/anari": "10.0.0-alpha.4"
+    "@luma.gl/anari": "10.0.0-alpha.7"
+  },
+  "peerDependenciesMeta": {
+    "apache-arrow": {
+      "optional": true
+    }
   }
 }

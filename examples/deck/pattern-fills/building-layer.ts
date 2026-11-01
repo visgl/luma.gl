@@ -13,7 +13,7 @@ import {
 } from '@deck.gl/core';
 import type {Buffer, RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {patternFill, type PatternFillProps} from '@luma.gl/shadertools';
+import {patternFill, type PatternFillProps} from '@luma.gl/shaders';
 import {makeCityMesh, type CityFeature} from '../river-district-data';
 
 type BuildingMeshLayerProps = LayerProps & {
@@ -38,6 +38,7 @@ export class BuildingMeshLayer extends Layer<BuildingMeshLayerProps> {
     const vertices = this.context.device.createBuffer({data: mesh});
     try {
       const model = new Model(this.context.device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

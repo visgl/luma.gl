@@ -17,20 +17,23 @@ import {GLTFExample} from '@site/src/examples';
 
 <GltfDocsTabs active="overview" />
 
-`@luma.gl/gltf` is a standards-first asset runtime for physically based materials, animated
+`@luma.gl/engine/gltf` is a standards-first asset runtime for physically based materials, animated
 characters, morph deformation, native animation pointers, and source-faithful `.gltf` / `.glb`
 interchange across WebGPU and WebGL. It turns postprocessed glTF assets into ordinary luma.gl
 scenegraphs and exports generic scene descriptors without depending on a particular renderer.
 
-File loading, decompression, and glTF postprocessing belong to `@loaders.gl/gltf`; animation
+File loading, decompression, and glTF postprocessing belong to `@loaders.gl/scene/gltf`; animation
 primitives, geometry, and shader modules remain in their existing luma.gl packages.
 
 <GLTFExample embedded showStats={false} />
 
+The glTF runtime is an optional engine subpath; it is not loaded by the engine root.
+Use `@luma.gl/engine/gltf-physics` for its physics integration.
+
 ## Installation
 
 ```bash
-npm install @luma.gl/gltf @loaders.gl/core @loaders.gl/gltf
+npm install @luma.gl/engine @loaders.gl/core @loaders.gl/scene
 ```
 
 A rendering application also needs a configured `Device` from `@luma.gl/core`, backed by
@@ -40,8 +43,8 @@ A rendering application also needs a configured `Device` from `@luma.gl/core`, b
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {createScenegraphsFromGLTF, postProcessGLTF} from '@luma.gl/engine/gltf';
 
 const asset = await load('/models/model.glb', GLTFLoader);
 const gltf = postProcessGLTF(asset);
@@ -70,7 +73,7 @@ legacy wall-clock API with direct mixer controls.
 
 ## Loading and postprocessing
 
-`@luma.gl/gltf` owns its glTF document types and `postProcessGLTF()`. The postprocessor accepts
+`@luma.gl/engine/gltf` owns its glTF document types and `postProcessGLTF()`. The postprocessor accepts
 standard glTF JSON plus resolved buffers and images, without fetching resources or importing
 loaders.gl. `GLTFLoader` remains an optional application-level decoder for file loading,
 compression, and texture transcoding. The package still uses loaders.gl for GLB writing and
@@ -96,7 +99,7 @@ Call luma.gl's `postProcessGLTF()` explicitly after loading. Existing loaders.gl
 results remain structurally compatible with luma.gl's scenegraph, material, and animation APIs.
 Runtime animation and geometry consume the resulting accessor `value` and `components`.
 The shared example exporter owns scene-to-glTF descriptor mapping and uses loaders.gl
-`GLBWriter` for the binary container envelope. Neither is shipped by `@luma.gl/gltf`.
+`GLBWriter` for the binary container envelope. Neither is shipped by `@luma.gl/engine/gltf`.
 
 The installed loader supports both `EXT_meshopt_compression` and the newer
 `KHR_meshopt_compression` release candidate. Generic browser AVIF decoding still does not imply
@@ -110,7 +113,7 @@ render-time concerns; an authored transform must not be applied twice across tho
 ## `postProcessGLTF()` and document types
 
 ```ts
-import {postProcessGLTF, type GLTFWithBuffers} from '@luma.gl/gltf';
+import {postProcessGLTF, type GLTFWithBuffers} from '@luma.gl/engine/gltf';
 
 const asset: GLTFWithBuffers = {
   json: gltfJSON,
@@ -122,7 +125,7 @@ const gltf = postProcessGLTF(asset);
 
 `GLTF` describes indexed source JSON. `GLTFWithBuffers` pairs that JSON with caller-supplied
 buffer ranges and optional decoded images. `GLTFPostprocessed` describes resolved runtime
-references and typed accessor values. These types are exported by `@luma.gl/gltf`, along with
+references and typed accessor values. These types are exported by `@luma.gl/engine/gltf`, along with
 their accessor, mesh, node, material, texture, scene, and skin types. Source animation types
 are exported as `GLTFAnimationJSON`, `GLTFAnimationChannelJSON`, and `GLTFAnimationSamplerJSON`
 to distinguish them from the existing runtime animation API. The source sampler type is
@@ -260,19 +263,19 @@ RGBA vertex colors, normalized joint weights, animation pointers, and resource o
 
 ## Package ownership
 
-- `@loaders.gl/gltf` owns container parsing, linked resources, codec decoding,
+- `@loaders.gl/scene/gltf` owns container parsing, linked resources, codec decoding,
   loader-supported extension decoding, and binary GLB container encoding.
 - Applications choose loaders and writers; luma.gl modules have no loaders.gl dependency.
-- `@luma.gl/gltf` owns accessor postprocessing and interprets glTF-specific scene, material, sampler, light, and animation data.
+- `@luma.gl/engine/gltf` owns accessor postprocessing and interprets glTF-specific scene, material, sampler, light, and animation data.
 - `@luma.gl/engine` owns generic scenegraph, animation, and morph-target primitives.
-- `@luma.gl/shadertools` owns the shared PBR, lighting, and skinning shader modules.
+- `@luma.gl/shaders` owns the shared PBR, lighting, and skinning shader modules.
 - `@luma.gl/anari/gltf`, when explicitly imported, adapts decoded glTF data to retained ANARI
   objects without making the core ANARI entry point a glTF loader.
 
 ## Experimental physics import
 
-The optional `@luma.gl/gltf/physics` entry point provides `parseGLTFPhysics(rawJSON)`
-and `createGLTFPhysicsWorld(description)`. Install the optional `@luma.gl/gpgpu` peer
+The optional `@luma.gl/engine/gltf-physics` entry point provides `parseGLTFPhysics(rawJSON)`
+and `createGLTFPhysicsWorld(description)`. Install the optional `@luma.gl/graph` peer
 when using it. The importer implements a pinned sphere/box subset of the unratified
 rigid-body and implicit-shape drafts, with explicit per-asset capability issues.
 It supports compound ownership, authored mass properties, kinematics, material

@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUH3CellProjection} from '@luma.gl/graph/gpu-h3';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {cellToLatLng, getPentagons, getRes0Cells, gridDisk, latLngToCell} from 'h3-js';
 
 const GEOGRAPHIC_TOLERANCE_DEGREES = 0.03;

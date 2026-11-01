@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device, type CommandEncoder, Texture} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {ClipSpace, ClipSpaceProps} from './clip-space';
 

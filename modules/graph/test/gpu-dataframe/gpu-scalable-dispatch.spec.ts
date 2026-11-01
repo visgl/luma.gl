@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUDataFrame,
@@ -11,9 +11,9 @@ import {
   literal,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
-import {GPUData, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test, vi} from 'vitest';
 
 type ScalableSource = {value: 'float32'; category: 'uint32'};

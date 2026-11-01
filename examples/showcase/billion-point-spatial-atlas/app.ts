@@ -4,7 +4,7 @@
 
 import type {Panel} from '@deck.gl-community/panels';
 import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, ShaderPassRenderer} from '@luma.gl/engine';
 import {

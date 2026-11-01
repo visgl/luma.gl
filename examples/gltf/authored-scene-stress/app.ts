@@ -11,7 +11,7 @@ import {
   makeGLTFPhysicsScene,
   parseGLTFPhysics,
   snapshotGLTFPhysicsScene
-} from '@luma.gl/gltf/physics';
+} from '@luma.gl/engine/gltf-physics';
 import PhysicsApp from '../physics/app';
 import {showError} from '../physics/app-ui';
 

@@ -124,13 +124,30 @@ jobs:
           done
 
   browser_coverage:
-    name: Browser coverage (${{ matrix.shard }}/6)
-    runs-on: ubuntu-22.04
+    name: Browser coverage (${{ matrix.group }} ${{ matrix.shard }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
+    env:
+      LUMA_TEST_BROWSER_GROUP: ${{ matrix.group }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        include:
+          - group: general
+            runner: ubuntu-22.04
+            shard: '1/3'
+          - group: general
+            runner: ubuntu-22.04
+            shard: '2/3'
+          - group: general
+            runner: ubuntu-22.04
+            shard: '3/3'
+          - group: compute
+            runner: ubuntu-22.04
+            shard: '1/1'
+          - group: physics
+            runner: macos-15
+            shard: '1/1'
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -173,24 +190,30 @@ jobs:
         id: playwright-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: ~/.cache/ms-playwright
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-ms-playwright-${{ hashFiles('yarn.lock', 'package.json') }}
 
       - name: Install Playwright Chromium
         run: yarn exec playwright install chromium
 
+      - name: Verify WebGL and WebGPU presentation
+        timeout-minutes: 2
+        run: ${{ runner.os == 'Linux' && 'xvfb-run -a yarn test-presentation' || 'yarn test-presentation' }}
+
       - name: Reclaim install cache and report disk usage
         run: |
           rm -rf "${HOME}/.yarn/berry/cache"
           df -h .
-          du -sh . "${HOME}/.yarn" "${HOME}/.cache/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
+          du -sh . "${HOME}/.yarn" "${HOME}/Library/Caches/ms-playwright" "${RUNNER_TEMP}" 2>/dev/null || true
 
       - name: Run headless tests and generate coverage
         env:
           # Include browser process failures alongside WebGPU test assertions.
           DEBUG: pw:browser
         run: |
-          yarn test-coverage --shard=${{ matrix.shard }}/6
+          yarn test-coverage --shard=${{ matrix.shard }} --coverage.reporter=lcovonly
 
       - name: Report disk usage after coverage
         if: always()
@@ -233,7 +256,7 @@ jobs:
       - name: Upload browser coverage artifact
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: browser-coverage-lcov-${{ matrix.shard }}
+          name: browser-coverage-lcov-${{ matrix.group }}-${{ strategy.job-index }}
           path: coverage/lcov.info
           if-no-files-found: error
           retention-days: 1

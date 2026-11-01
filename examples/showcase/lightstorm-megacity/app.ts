@@ -7,7 +7,7 @@ import {
   createBloomCompositeShaderPass,
   createSSRCompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,

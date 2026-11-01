@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
-import {Kernel, type KernelProps} from '@luma.gl/gpgpu';
+import {Kernel, type KernelProps} from '../../execution/compute/kernel';
 
 /** Caller-owned bindings kept alongside a reusable executable kernel. */
 export type BoundKernel = {kernel: Kernel; bindings: Record<string, Binding>};

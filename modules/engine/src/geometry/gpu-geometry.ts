@@ -5,10 +5,7 @@
 import type {PrimitiveTopology, BufferLayout} from '@luma.gl/core';
 import {Device, Buffer} from '@luma.gl/core';
 import type {Geometry} from '@math.gl/geometry';
-import {
-  getBufferLayoutFromGeometryAttributes,
-  getGeometryShaderAttributeName
-} from '../geometry/geometry';
+import {getBufferLayoutFromGeometryAttributes, getGeometryShaderAttributeName} from './geometry';
 import {makeInterleavedGeometry} from './geometry-utils';
 import {uid} from '../utils/uid';
 

@@ -124,7 +124,9 @@ describe('Gaussian splat documentation showcase', () => {
     expect(capabilities).toContain('| Globally sorted WebGL splat runs | Experimental | WebGL2 |');
     expect(capabilities).toContain('| Unclamped WebGL harmonic radiance | Experimental | WebGL2 |');
     expect(capabilities).toMatch(/Background RAD page decoding[^\n]*automatically fall back/);
-    expect(capabilities).toContain('[`@luma.gl/splats` reference](/docs/api-reference/splats)');
+    expect(capabilities).toContain(
+      '[`@luma.gl/engine/splats` reference](/docs/api-reference/splats)'
+    );
     for (const capability of [
       'Hierarchical splat refinement',
       'Dedicated splat picking',

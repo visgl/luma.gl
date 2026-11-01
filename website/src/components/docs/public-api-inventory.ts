@@ -11,7 +11,7 @@ export type CuratedPackageDocumentation = {
 
 export type PublicPackageDocumentation = {
   packageName: `@luma.gl/${string}`;
-  entryPoint: `modules/${string}/src/index.ts`;
+  entryPoint: `modules/${string}/src/${string}`;
   documentation: GeneratedPackageDocumentation | CuratedPackageDocumentation;
 };
 
@@ -34,9 +34,9 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     documentation: {kind: 'generated', routePrefix: '/docs/api-reference/generated/engine'}
   },
   {
-    packageName: '@luma.gl/shadertools',
-    entryPoint: 'modules/shadertools/src/index.ts',
-    documentation: {kind: 'generated', routePrefix: '/docs/api-reference/generated/shadertools'}
+    packageName: '@luma.gl/shaders',
+    entryPoint: 'modules/shaders/src/index.ts',
+    documentation: {kind: 'generated', routePrefix: '/docs/api-reference/generated/shaders'}
   },
   {
     packageName: '@luma.gl/core/webgl-constants',
@@ -44,20 +44,20 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     documentation: {kind: 'curated', defaultRoute: '/docs/api-reference/constants'}
   },
   {
-    packageName: '@luma.gl/effects',
-    entryPoint: 'modules/effects/src/index.ts',
+    packageName: '@luma.gl/engine/effects',
+    entryPoint: 'modules/engine/src/effects/index.ts',
     documentation: {
       kind: 'curated',
       defaultRoute: '/docs/api-reference/effects',
       routesBySourcePrefix: {
-        'passes/postprocessing': '/docs/api-reference/shadertools/shader-passes/image-processing',
+        'passes/postprocessing': '/docs/api-reference/shaders/shader-passes/image-processing',
         'passes/screen-space': '/docs/api-reference/effects'
       }
     }
   },
   {
-    packageName: '@luma.gl/gltf',
-    entryPoint: 'modules/gltf/src/index.ts',
+    packageName: '@luma.gl/engine/gltf',
+    entryPoint: 'modules/engine/src/gltf/index.ts',
     documentation: {
       kind: 'curated',
       defaultRoute: '/docs/api-reference/gltf',
@@ -70,22 +70,22 @@ export const PUBLIC_PACKAGE_API_INVENTORY: readonly PublicPackageDocumentation[]
     }
   },
   {
-    packageName: '@luma.gl/gpgpu',
-    entryPoint: 'modules/gpgpu/src/index.ts',
+    packageName: '@luma.gl/graph/gpu-simple-graph',
+    entryPoint: 'modules/graph/src/gpu-simple-graph/index.ts',
     documentation: {
       kind: 'curated',
-      defaultRoute: '/docs/api-reference/gpgpu',
+      defaultRoute: '/docs/api-reference/graph/gpu-evaluation',
       routesBySourcePrefix: {
-        'operation/gpu-data-evaluator': '/docs/api-reference/gpgpu/gpu-data-evaluator',
-        operations: '/docs/api-reference/gpgpu/operations',
-        'operation/operation': '/docs/api-reference/gpgpu/custom-operation',
-        'utils/clean-evaluate': '/docs/api-reference/gpgpu/clean-evaluate'
+        'operation/gpu-data-evaluator': '/docs/api-reference/graph/gpu-data-evaluator',
+        operations: '/docs/api-reference/graph/operations',
+        'operation/operation': '/docs/api-reference/graph/custom-operation',
+        'utils/clean-evaluate': '/docs/api-reference/graph/clean-evaluate'
       }
     }
   },
   {
-    packageName: '@luma.gl/test-utils',
-    entryPoint: 'modules/test-utils/src/index.ts',
+    packageName: '@luma.gl/core/test-utils',
+    entryPoint: 'modules/core/src/test-utils/index.ts',
     documentation: {
       kind: 'curated',
       defaultRoute: '/docs/api-reference/test-utils',

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   prepareCRSProjection,
   ProjectionTableTransform,
@@ -67,7 +67,7 @@ for (const fixture of performanceFixtures) {
         const report = await runProjectionTableBenchmark(device, {
           transform: new ProjectionTableTransform(prepared),
           batches,
-          provider: '@math.gl/geospatial/projection 5.0.0-alpha.20 TypeScript',
+          provider: '@math.gl/geospatial/projection 5.0.0-beta.2 TypeScript',
           maximumError: 0.001,
           warmupIterations: measured ? 2 : 0,
           measuredIterations: measured ? 5 : 1

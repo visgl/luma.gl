@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {packDggsH3CellKey} from '@luma.gl/arrow';
+import {packDggsH3CellKey} from '@luma.gl/graph/arrow';
 import * as arrow from 'apache-arrow';
 import {latLngToCell} from 'h3-js';
 

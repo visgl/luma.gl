@@ -10,8 +10,8 @@ import type {
   ShaderPassInputSource,
   CompositeShaderPass,
   ShaderPassRenderTarget
-} from '@luma.gl/shadertools';
-import {initializeShaderModule} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
+import {initializeShaderModule} from '@luma.gl/shaders';
 import {ShaderInputs} from '../shader-inputs';
 import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {TextureBindingSource} from '@luma.gl/core/dynamic';

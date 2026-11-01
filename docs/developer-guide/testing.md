@@ -28,7 +28,7 @@ tests that do not create a device or access browser globals; new CPU-only tests 
 
 ## Test device creation
 
-Creating too many GPU devices in one run can cause context loss and other instability. `@luma.gl/test-utils` exports reusable test devices for WebGL and WebGPU.
+Creating too many GPU devices in one run can cause context loss and other instability. `@luma.gl/core/test-utils` exports reusable test devices for WebGL and WebGPU.
 
 ## Accessing GPU in CI
 
@@ -41,7 +41,7 @@ work cannot safely be reused across files.
 
 ## Legacy render and perf tests
 
-`test/render/**` snapshot tests and `test/perf/**` benchmarks are still on the legacy browser harness in this phase of the migration. They are excluded from Vitest and continue to rely on `BrowserTestDriver` utilities.
+`test/render/**` snapshot tests and `test/perf/**` benchmarks are still on the legacy browser harness in this phase of the migration. They are excluded from Vitest and use repository-only runners under `test/utils/legacy-test-runners`; those runners are no longer published.
 
 ## Snapshot tests
 

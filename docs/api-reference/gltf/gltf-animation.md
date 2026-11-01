@@ -4,7 +4,7 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 
 <GltfDocsTabs active="animation" />
 
-`@luma.gl/gltf` interprets glTF animation channels and connects them to the format-independent
+`@luma.gl/engine/gltf` interprets glTF animation channels and connects them to the format-independent
 animation and deformation primitives in `@luma.gl/engine`. It does not introduce a separate
 animation mixer, interpolation implementation, or skinning shader.
 
@@ -12,9 +12,9 @@ animation mixer, interpolation implementation, or skinning shader.
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
-import {createScenegraphsFromGLTF, parseGLTFAnimations} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+import {createScenegraphsFromGLTF, parseGLTFAnimations} from '@luma.gl/engine/gltf';
 
 const asset = await load('/models/character.glb', GLTFLoader);
 const gltf = postProcessGLTF(asset);
@@ -171,7 +171,7 @@ matrix and strict extension diagnostics.
 
 Parsed geometry preserves the glTF `JOINTS_0` and `WEIGHTS_0` attributes. Authored normalized
 integer joint weights retain their intended normalized interpretation at the consumer boundary.
-The existing shared `skin` shader module in `@luma.gl/shadertools` applies joint palettes; its
+The existing shared `skin` shader module in `@luma.gl/shaders` applies joint palettes; its
 current uniform-array capacity is 64 joints.
 
 For native palette construction, ownership, and update order, see

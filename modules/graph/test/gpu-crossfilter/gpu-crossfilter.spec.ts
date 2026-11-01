@@ -11,8 +11,8 @@ import {
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
 import {GPUCrossfilter} from '@luma.gl/graph/gpu-crossfilter';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUCrossfilter coordinates linked views across reusable GPU-resident selections', async () => {
   const device = await getWebGPUTestDevice();

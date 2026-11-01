@@ -9,9 +9,9 @@ import {
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
 import {Buffer} from '@luma.gl/core';
-import {ShaderAssembler} from '@luma.gl/shadertools';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {ShaderAssembler} from '@luma.gl/shaders';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 import {userEvent} from 'vitest/browser';
@@ -385,7 +385,6 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     .spyOn(canvasContext, 'getCurrentFramebuffer')
     .mockReturnValue(framebuffer);
   let deck: ReturnType<typeof createGPUGraphExplorerDeck> | undefined;
-  const originalShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
   try {
     deck = createGPUGraphExplorerDeck(container, {
       device,
@@ -396,10 +395,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     });
     deck.setProps({_animate: false});
     await waitForDeckEffect(deck);
-    expect(
-      ShaderAssembler.getDefaultShaderAssembler,
-      'the real application restores luma.gl shader-assembler isolation before Deck is ready'
-    ).toBe(originalShaderAssembler);
+    expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
 
     const effect = deck.props.effects?.[0];
     expect(
@@ -811,10 +807,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     container.remove();
   }
 
-  expect(
-    ShaderAssembler.getDefaultShaderAssembler,
-    'finalizing the real Deck application never leaves a global shader-assembler override'
-  ).toBe(originalShaderAssembler);
+  expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
 
   void 0;
 });

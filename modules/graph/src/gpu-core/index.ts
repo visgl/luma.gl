@@ -613,7 +613,7 @@ export type {
   GPUGraphLoweredNode,
   GPUGraphLoweringReport
 } from './gpu-graph-compiler';
-export {GPUOperationLoweringRegistry} from './gpu-graph-lowering';
+export type {GPUOperationLowering} from './gpu-graph-lowering';
 export type {
   GPUOperationLowerer,
   GPUOperationLoweringContext,
@@ -653,3 +653,19 @@ export type {
 export type {GPUResourcePreview} from './gpu-resource-preview';
 
 export type {GPUIndexPickInfo} from './gpu-index-picking-target';
+
+export {GPUExpressionOperation} from './gpu-expression-operation';
+export type {GPUExpressionOperationProps, GPUExpressionAST} from './gpu-expression-operation';
+export {CompiledGPUGraph} from './compiled-gpu-graph';
+export type {
+  GPUGraphCompileOptions,
+  GPUGraphRunBindings,
+  GPUGraphRunOptions
+} from './gpu-expression-plan';
+
+export type {
+  GPUOperationContract,
+  GPUOperationValueReference,
+  GPUOperationValueUse,
+  GPUOperationVectorShape
+} from './gpu-operation-contract';

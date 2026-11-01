@@ -15,7 +15,7 @@ import {
   getSlangShaderLayout,
   getSlangUniformBufferLayouts
 } from '@luma.gl/slang/luma';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {MODULE_COMPUTE, MODULE_OPTIONS, MODULE_RENDER, NATIVE_RESOURCES} from './modules-fixtures';
 
 it.each([

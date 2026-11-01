@@ -4,7 +4,7 @@
 
 import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {
   GPUAncestorProjection,
   GPUCommandGraph,
@@ -14,8 +14,8 @@ import {
   type GPUGraphTraversalDirection,
   type GPUMaskOperation
 } from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 import {getGPUGraphTraversalCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-graph-traversal';
 

@@ -4,8 +4,8 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 
 <GltfDocsTabs active="materials" />
 
-`@luma.gl/gltf` translates source glTF material and lighting data into the existing
-`@luma.gl/shadertools` PBR modules. The same format-owned helpers are reused by retained-scene
+`@luma.gl/engine/gltf` translates source glTF material and lighting data into the existing
+`@luma.gl/shaders` PBR modules. The same format-owned helpers are reused by retained-scene
 importers, so sampler, UV, color-space, and extension interpretation stay in one place.
 
 For shading behavior and feature examples, see [Materials](/docs/api-guide/engine/materials).
@@ -17,7 +17,7 @@ This page describes how the glTF converter maps source data onto luma.gl materia
 implementing their own glTF integration can call the underlying parser directly:
 
 ```ts
-import {parsePBRMaterial} from '@luma.gl/gltf';
+import {parsePBRMaterial} from '@luma.gl/engine/gltf';
 
 const sourceMaterial: Parameters<typeof parsePBRMaterial>[1] = {
   pbrMetallicRoughness: {
@@ -53,7 +53,7 @@ piecewise transfer function rather than an approximate gamma curve.
 ## Supported texture slots
 
 ```ts
-import {getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
+import {getTextureTransformSlotDefinitions} from '@luma.gl/engine/gltf';
 
 for (const definition of getTextureTransformSlotDefinitions()) {
   console.log(definition.slot, definition.colorSpace);
@@ -96,7 +96,7 @@ create hardware sRGB textures should not decode those same samples again.
 sampler parameters:
 
 ```ts
-import {convertGLTFSampler, convertSamplerToGLTF} from '@luma.gl/gltf';
+import {convertGLTFSampler, convertSamplerToGLTF} from '@luma.gl/engine/gltf';
 
 const sampler = convertGLTFSampler({
   wrapS: 33071,
@@ -124,7 +124,7 @@ repeat addressing and linear sampling defaults when the source omits sampler fie
 requested by its sampler:
 
 ```ts
-import {createGLTFTexture} from '@luma.gl/gltf';
+import {createGLTFTexture} from '@luma.gl/engine/gltf';
 
 const baseColorTexture = createGLTFTexture(device, image, {
   id: 'base-color',
@@ -154,7 +154,7 @@ import {
   getTextureTransformMatrix,
   resolveTextureCoordinateSet,
   resolveTextureTransform
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 const coordinateSet = resolveTextureCoordinateSet(textureInfo);
 const transform = resolveTextureTransform(textureInfo);
@@ -250,7 +250,7 @@ behavior can change before standardization.
 ## Punctual lights
 
 ```ts
-import {parseGLTFLights} from '@luma.gl/gltf';
+import {parseGLTFLights} from '@luma.gl/engine/gltf';
 
 const lights = parseGLTFLights(gltf, {useByteColors: false});
 ```
@@ -267,8 +267,8 @@ legacy byte-style light convention.
 prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```ts
-import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
-import {loadImageTexture} from '@loaders.gl/textures';
+import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/engine/gltf';
+import {loadImageTexture} from '@loaders.gl/images/load-image';
 
 const environment = loadPBREnvironment(device, {
   loadImage: loadImageTexture,

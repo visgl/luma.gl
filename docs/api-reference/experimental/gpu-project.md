@@ -100,7 +100,7 @@ Bounds are `[minimumX, minimumY, maximumX, maximumY]` in the source coordinate s
 expressed in destination units: `0.01` requests one centimeter of sampled accuracy when the target
 coordinate system uses meters.
 
-`@math.gl/geospatial/projection` is an optional peer dependency loaded when the projection adapter is requested. Any function or
+`@math.gl/geospatial/projection` is provided by the graph package dependency and loaded only when the projection adapter is requested. Any function or
 object with a `project(coordinates)` method can provide the projection. For WGS84-to-Web-Mercator
 applications, `createWebMercatorProjection()` provides a zero-dependency alternative:
 
@@ -356,7 +356,7 @@ backend selection and CPU/GPU precision conversion are always application decisi
 The adapter rejects indexed tables, missing/constant selected columns, nonpacked layouts, native
 null bitmaps and wrong-device/non-storage buffers. A batch declaring null rows requires an explicit
 validity column; convert null bitmaps in a source adapter. Arrow ingestion/readback remains in
-`@luma.gl/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
+`@luma.gl/graph/arrow`, not GPU Project. `GPUProjectionTable` is also exported from the engine-independent
 `@luma.gl/graph/gpu-project` entry point for already compiled binary64-input programs.
 
 ## Explicit longitude normalization
@@ -455,7 +455,7 @@ the application.
 
 ## Optional math.gl CRS planner
 
-Install `@math.gl/geospatial` version `~5.0.0-alpha.20` and import the CPU planner from
+Install `@math.gl/geospatial` version `~5.0.0-beta.1` and import the CPU planner from
 `@luma.gl/graph/gpu-project/crs`. This optional peer is not loaded by the GPU execution
 entry point. Planning allocates no GPU resources and returns either
 `{status: 'ready', strategy, program, compiled, reasons}` or `{status: 'unsupported', reasons}`.
@@ -1054,7 +1054,7 @@ the real `ProjectionTableTransform` CPU adapter with its `GPUProjectionTable` ma
 ```typescript
 const report = await runProjectionTableBenchmark(device, {
   transform, // a prepared ProjectionTableTransform; preparation is outside this runner
-  provider: '@math.gl/geospatial/projection 5.0.0-alpha.20 TypeScript',
+  provider: '@math.gl/geospatial/projection 5.0.0-beta.1 TypeScript',
   batches: [{positions: new Float64Array([-122.4, 37.8])}],
   maximumError: 0.001, // destination units, including output encoding/rounding
   warmupIterations: 2,

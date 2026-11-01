@@ -12,10 +12,10 @@ import {
 } from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, GLTFScenegraph} from '@loaders.gl/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
-import {Light, LightingProps} from '@luma.gl/shadertools';
+import {GLTFLoader, GLTFScenegraph} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+import {Light, LightingProps} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core';
 import {
   createGLTFPhysicsWorld,
@@ -24,7 +24,7 @@ import {
   parseGLTFPhysics,
   makeGLTFPhysicsMeshResolver,
   type GLTFPhysicsDescription
-} from '@luma.gl/gltf/physics';
+} from '@luma.gl/engine/gltf-physics';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {ScenegraphPhysicsMotion, type ScenegraphPhysicsPublication} from '@luma.gl/engine/physics';
 import {type GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';

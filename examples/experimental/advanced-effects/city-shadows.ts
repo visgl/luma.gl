@@ -11,7 +11,7 @@ import type {
   ShadowRenderView,
   SpotShadowLight
 } from '@luma.gl/anari';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import type {Matrix4, NumberArray3} from '@math.gl/core';
 
 export const SUN_DIRECTION: NumberArray3 = normalize3([0.45, 0.82, 0.35]);

@@ -12,7 +12,7 @@ import {SplatsDocsTabs} from '@site/src/components/docs/splats-docs-tabs';
 ## Rendering prepared splats
 
 ```ts
-import {makeGPUSplatData, SplatRenderer} from '@luma.gl/splats';
+import {makeGPUSplatData, SplatRenderer} from '@luma.gl/engine/splats';
 
 const splatData = makeGPUSplatData(device, {
   positions: new Float32Array([0, 0, -2]),
@@ -45,7 +45,7 @@ The first prepared batch becomes visible without waiting for the entire scene, r
 preview, or relinquishing ownership of the original source buffers.
 
 ```ts
-import {GPUSplatGraphRenderer, type GPUSplatData} from '@luma.gl/splats';
+import {GPUSplatGraphRenderer, type GPUSplatData} from '@luma.gl/engine/splats';
 
 const renderer = new GPUSplatGraphRenderer(webgpuDevice, {
   viewportSize: [width, height],
@@ -222,7 +222,7 @@ may be less precise than the CPU renderer's higher-precision depth ordering.
 preserving one globally correct depth order across the entire active frontier:
 
 ```ts
-import {GPUPagedSplatRenderer} from '@luma.gl/splats';
+import {GPUPagedSplatRenderer} from '@luma.gl/engine/splats';
 
 const renderer = new GPUPagedSplatRenderer(webgpuDevice, {
   viewportSize: [width, height],

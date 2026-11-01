@@ -9,7 +9,7 @@ import {
   type SlangCompiledShader,
   type SlangUniformBufferLayout
 } from '@luma.gl/slang/luma';
-import type {ShaderTranspiler} from '@luma.gl/shadertools';
+import type {ShaderTranspiler} from '@luma.gl/shaders';
 
 /** Compiler imports and resource-name translation belong to this application. */
 export function createSlangTranspiler(options: SlangModuleOptions = {}): ShaderTranspiler & {

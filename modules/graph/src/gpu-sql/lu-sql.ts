@@ -91,7 +91,7 @@ type LuSQLDynamicQuery = LuSQLCompiledPlan & {
  * Dependency-free SQL frontend over explicitly registered, already GPU-resident dataframes.
  *
  * Parsing and planning never upload data, submit work, or read GPU buffers. Arrow upload/output
- * remain explicit `@luma.gl/arrow` operations around the shared GPU table execution core.
+ * remain explicit `@luma.gl/graph/arrow` operations around the shared GPU table execution core.
  */
 export class LuSQLContext {
   private readonly tables: Readonly<Record<string, LuDataFrame>>;
