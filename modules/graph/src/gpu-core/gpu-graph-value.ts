@@ -11,7 +11,7 @@ import type {
 
 /** Scalar/vector formats portable across current Jarnevon execution backends. */
 export type GPUGraphScalarFormat = 'float32' | 'uint32' | 'sint32';
-export type GPUGraphVectorFormat = GPUGraphScalarFormat;
+export type GPUGraphVectorFormat = GPUGraphScalarFormat | `${GPUGraphScalarFormat}x${2 | 3 | 4}`;
 
 /** Backend-independent scalar state owned by a GPUGraph. */
 export class GPUGraphScalar<T extends GPUGraphScalarFormat = GPUGraphScalarFormat> {

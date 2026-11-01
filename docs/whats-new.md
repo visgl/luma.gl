@@ -2,6 +2,10 @@
 
 ### Reusable graph expressions
 
+Graph expressions now also support packed rows of widths 1–4: component-wise float32
+arithmetic and math, scalar-component broadcasting, and width-preserving numeric casts.
+Row count remains execution-sized, and `float32x3` stays packed at 12 bytes per row.
+
 `GPUExpressionOperation` accepts math.gl expression strings or parsed ASTs. `GPUGraph` and
 `GPUSimpleGraph` share scalar/vector declarations and execution-time input bindings for the
 float32 arithmetic and math-function subset, with explicit `float32`, `sint32`, and `uint32`

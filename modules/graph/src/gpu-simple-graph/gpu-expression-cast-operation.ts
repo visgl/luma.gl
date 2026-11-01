@@ -11,6 +11,7 @@ import type {
   GPUExpressionFormat,
   GPUExpressionOperation
 } from '../gpu-core/gpu-expression-operation';
+import {makeGPUExpressionRowFormat} from '../gpu-core/gpu-expression-operation';
 import {
   GPU_EXPRESSION_SHADER_TYPES,
   GPU_EXPRESSION_CAST_WGSL,
@@ -31,8 +32,8 @@ export class GPUExpressionCastOperation extends Operation<{input: GPUDataEvaluat
     super({input: source});
     this.output = new GPUDataEvaluator({
       type: format,
-      format,
-      size: 1,
+      format: makeGPUExpressionRowFormat(format, input.size),
+      size: input.size,
       length: source.length,
       isConstant: source.isConstant,
       source: this
@@ -59,20 +60,25 @@ export class GPUExpressionCastOperation extends Operation<{input: GPUDataEvaluat
         output: this.output,
         operationType: input.type,
         outputBuffer: target,
-        expression: () =>
-          getGLSLExpressionCast('sourceValue[0]', sourceFormat, this.format, this.integerRounding)
+        expression: laneIndex =>
+          getGLSLExpressionCast(
+            `sourceValue[${laneIndex}]`,
+            sourceFormat,
+            this.format,
+            this.integerRounding
+          )
       });
       return {success: true};
     }
     // WebGPU expression casts must share the graph's explicit evaluation scope.
     assert(scope);
     const encoder = scope.commandEncoder;
-    const workgroups = Math.ceil(this.output.length / 64);
+    const workgroups = Math.ceil((this.output.length * this.output.size) / 64);
     const x = Math.min(workgroups, device.limits.maxComputeWorkgroupsPerDimension);
     const y = Math.ceil(workgroups / x);
     // The converted chunk must fit a two-dimensional dispatch.
     assert(y <= device.limits.maxComputeWorkgroupsPerDimension);
-    const value = `inputValues[${input.offset / 4}u + index * ${input.stride / 4}u]`;
+    const value = `inputValues[${input.offset / 4}u + rowIndex * ${input.stride / 4}u + laneIndex]`;
     const kernel = new Kernel(device, {
       source: `
 @group(0) @binding(0) var<storage, read> inputValues: array<${GPU_EXPRESSION_SHADER_TYPES[sourceFormat]}>;
@@ -81,8 +87,10 @@ ${GPU_EXPRESSION_CAST_WGSL}
 @compute @workgroup_size(64)
 fn main(@builtin(workgroup_id) workgroup: vec3u, @builtin(num_workgroups) dimensions: vec3u, @builtin(local_invocation_index) localIndex: u32) {
   let index = (workgroup.y * dimensions.x + workgroup.x) * 64u + localIndex;
-  if (index >= ${this.output.length}u) { return; }
-  outputValues[${this.output.offset / 4}u + index] = ${getGPUExpressionCastWGSL(value, sourceFormat, this.format, this.integerRounding)};
+  if (index >= ${this.output.length * this.output.size}u) { return; }
+  let rowIndex = index / ${input.size}u;
+  let laneIndex = index % ${input.size}u;
+  outputValues[${this.output.offset / 4}u + rowIndex * ${this.output.stride / 4}u + laneIndex] = ${getGPUExpressionCastWGSL(value, sourceFormat, this.format, this.integerRounding)};
 }`,
       shaderLayout: {
         bindings: [
