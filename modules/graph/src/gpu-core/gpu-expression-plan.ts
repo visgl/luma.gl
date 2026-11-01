@@ -7,6 +7,7 @@ import {GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-dat
 import type {GPUGraph} from './gpu-graph';
 import {GPUGraphVector, type GPUGraphScalar, type GPUGraphVectorFormat} from './gpu-graph-value';
 import {GPUCompositeOperation, isGPUOperation, type GPUGraphOperation} from './gpu-operation';
+import {GPULoopOperation} from './gpu-control-flow-operation';
 import {
   GPUExpressionOperation,
   parseGPUExpression,
@@ -18,7 +19,7 @@ import {
   getGPUExpressionFormat
 } from './gpu-expression-operation';
 
-import type {GPUOperationLoweringRegistry} from './gpu-graph-lowering';
+import type {GPUOperationLowering} from './gpu-graph-lowering';
 import {
   getGPUOperationValueName,
   validateGPUOperationContract,
@@ -28,7 +29,7 @@ import {
 export type GPUGraphRunBindings = Readonly<Record<string, GPUVector | number>>;
 export type GPUGraphCompileOptions = {
   outputs?: readonly string[];
-  lowerings?: GPUOperationLoweringRegistry;
+  lowerings?: readonly GPUOperationLowering[];
 };
 export type GPUGraphRunOptions = {outputTargets?: Readonly<Record<string, GPUVector>>};
 
@@ -85,7 +86,7 @@ export class GPUExpressionProgram {
         precedingScalarProducers.set(operation, new Set(scalarProducers));
       if (!isGPUOperation(operation)) continue;
       try {
-        const contract = operation.contract;
+        const contract = getPlanningContract(operation, this.scalars);
         if (!contract) continue;
         validateGPUOperationContract(program, contract);
         this.contracts.set(operation, contract);
@@ -149,6 +150,8 @@ export class GPUExpressionProgram {
           );
         const expression = parseGPUExpression(operation.expression);
         const references = getGPUExpressionReferences(expression);
+        if (references.includes(operation.output))
+          throw new Error(`Reads ${operation.output} before it is produced`);
         const formats = new Map<string, GPUExpressionRowFormat>();
         for (const name of references) {
           const declaration = declarations.get(name);
@@ -382,6 +385,31 @@ export class GPUExpressionProgram {
       throw error;
     }
   }
+}
+
+/** Fixed-count loops guarantee scalar writes; conditional bodies do not. */
+function getPlanningContract(
+  operation: GPUGraphOperation,
+  scalars: readonly GPUGraphScalar[]
+): GPUOperationContract | undefined {
+  if (
+    operation instanceof GPUCompositeOperation &&
+    (operation.type === 'composite' ||
+      (operation instanceof GPULoopOperation && !operation.predicate))
+  ) {
+    return {
+      values: operation.operations.flatMap(child =>
+        (getPlanningContract(child, scalars)?.values ?? [])
+          .filter(
+            use =>
+              use.access !== 'read' &&
+              scalars.some(scalar => scalar.id === getGPUOperationValueName(use.value))
+          )
+          .map(use => ({value: use.value, access: 'write' as const}))
+      )
+    };
+  }
+  return isGPUOperation(operation) ? operation.contract : undefined;
 }
 
 /** Per-run owned storage; selected outputs transfer to the caller after successful execution. @internal */

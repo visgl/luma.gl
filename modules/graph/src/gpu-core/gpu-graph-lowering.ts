@@ -51,33 +51,11 @@ export type GPUOperationLowerer<
   Parameters = void,
   Operation extends GPUOperation = GPUOperation
 > = (operation: Operation, context: GPUOperationLoweringContext<Parameters>) => void;
-export class GPUOperationLoweringRegistry<Parameters = void> {
-  private readonly lowerers = new Map<string, GPUOperationLowerer<Parameters>>();
-  register<Operation extends GPUOperation>(
-    operationType: string,
-    lowerer: GPUOperationLowerer<Parameters, Operation>
-  ): this {
-    if (!operationType) throw new Error('GPU operation lowering type is required');
-    if (this.lowerers.has(operationType))
-      throw new Error(`GPU operation lowering for "${operationType}" is already registered`);
-    this.lowerers.set(operationType, lowerer as GPUOperationLowerer<Parameters>);
-    return this;
-  }
-  /** Adds a registry without replacing existing lowerings or retaining mutable shared state. */
-  registerAll(registry: GPUOperationLoweringRegistry<Parameters>): this {
-    for (const name of registry.lowerers.keys())
-      if (this.lowerers.has(name))
-        throw new Error(`GPU operation lowering for "${name}" is already registered`);
-    for (const [name, lowerer] of registry.lowerers) this.lowerers.set(name, lowerer);
-    return this;
-  }
-  /** Copies registrations for an independent compiled program. @internal */
-  clone(): GPUOperationLoweringRegistry<Parameters> {
-    const registry = new GPUOperationLoweringRegistry<Parameters>();
-    for (const [name, lowerer] of this.lowerers) registry.register(name, lowerer);
-    return registry;
-  }
-  get(operationType: string): GPUOperationLowerer<Parameters> | undefined {
-    return this.lowerers.get(operationType);
-  }
-}
+/** Immutable compilation input; compose sets with ordinary array spread. */
+export type GPUOperationLowering<
+  Parameters = void,
+  Operation extends GPUOperation = GPUOperation
+> = Readonly<{
+  type: string;
+  lower(operation: Operation, context: GPUOperationLoweringContext<Parameters>): void;
+}>;

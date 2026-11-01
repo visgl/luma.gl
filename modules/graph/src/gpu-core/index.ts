@@ -613,7 +613,7 @@ export type {
   GPUGraphLoweredNode,
   GPUGraphLoweringReport
 } from './gpu-graph-compiler';
-export {GPUOperationLoweringRegistry} from './gpu-graph-lowering';
+export type {GPUOperationLowering} from './gpu-graph-lowering';
 export type {
   GPUOperationLowerer,
   GPUOperationLoweringContext,

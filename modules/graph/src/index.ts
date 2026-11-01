@@ -28,7 +28,7 @@ export {
   type GPUGraphCompilation,
   type GPUGraphLoweredNode,
   type GPUGraphLoweringReport,
-  GPUOperationLoweringRegistry,
+  type GPUOperationLowering,
   type GPUOperationLowerer,
   type GPUOperationLoweringContext,
   type GPUOperationLoweringDecision,

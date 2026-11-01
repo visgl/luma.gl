@@ -1,12 +1,5 @@
 # Upgrade Guide
 
-## Graph lowering registries
-
-Passing a registry to `GPUGraphCompiler` now augments the built-in lowerings rather than
-replacing them. Registries are copied at compiler construction; subsequent registrations do
-not affect existing compilers. Duplicate built-in type names are rejected. Supply only your
-extension registrations, and construct a new compiler when changing the registry.
-
 ## Opaque metadata types
 
 Resource, model, and computation `userData` values and glTF `extras` now have type `unknown`. Narrow or explicitly type these values before reading their properties. Texture transform resource maps also use `unknown` values.
@@ -57,73 +50,6 @@ Remove `@luma.gl/experimental` from project dependencies and update imports:
 | Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
 
 ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
-
-## GPU graph authoring and command graph names
-
-The application-facing `GPUProgram` is now `GPUGraph`. The former execution-level
-`GPUGraph` is now `GPUCommandGraph`; `CompiledGPUGraph` becomes
-`CompiledGPUCommandGraph`. These are naming changes only: constructors, methods,
-compilation, resource ownership, and execution behavior are unchanged.
-
-- Replace `GPUProgramCompiler` with `GPUGraphCompiler` and
-  `createGPUConjugateGradientProgram` with `createGPUConjugateGradientGraph`.
-- Replace the `GPUProgram` prefix on value, binding, operation, validation, and
-  inspection types with `GPUGraph` (for example, `GPUGraphVector` and
-  `GPUGraphCompilation`). Helpers become `validateGPUGraph` and
-  `inspectGPUGraphCompilation`.
-- Import `GPUGraph`, `GPUGraphCompiler`, and graph value types from
-  `@luma.gl/graph`, `@luma.gl/graph/gpu-graph`, or `@luma.gl/graph/gpu-core`.
-- Existing low-level `new GPUGraph(device)` calls must become
-  `new GPUCommandGraph(device)`. The new `GPUGraph` takes the former
-  `GPUProgram` options, not a device.
-
-Compilation result fields retain their existing names: `compilation.program`
-contains the authored `GPUGraph`, and `compilation.graph` contains the lowered
-`GPUCommandGraph`. This change does not introduce a new compile/run lifecycle or
-add WebGL support to the semantic graph compiler.
-
-## Graph package rename
-
-`@luma.gl/gpu-graph` is renamed to `@luma.gl/graph`. Replace the package in your
-project dependencies and update the package prefix in every import:
-
-```typescript
-import {GPUCommandGraph} from '@luma.gl/graph';
-import {GPUGraph} from '@luma.gl/graph/gpu-core';
-```
-
-The package rename preserves subpath suffixes; see the API naming changes below. For example,
-`@luma.gl/gpu-graph/gpu-tables` becomes `@luma.gl/graph/gpu-tables`.
-The source package directory is now `modules/graph`.
-
-## GPU graph naming
-
-Graph analytics now use `@luma.gl/graph/gpu-graph-algorithms` and a shared
-`GPUGraphAlgorithms` prefix for classes, types, and helpers:
-
-- The former analytics `GPUGraph` becomes `GPUGraphAlgorithmsData`.
-- `GPUGraphProps` becomes `GPUGraphAlgorithmsDataProps`.
-- `GPUGraphPageRank` becomes `GPUGraphAlgorithmsPageRank`.
-- `GPUGraphTopology` becomes `GPUGraphAlgorithmsTopology`.
-- `runGPUGraphBenchmark` becomes `runGPUGraphAlgorithmsBenchmark`.
-
-Update analytics imports from `@luma.gl/graph/gpu-graph` to
-`@luma.gl/graph/gpu-graph-algorithms`, including the `/benchmarks` entry point.
-The `gpu-graph` entry point exposes graph authoring and command execution.
-
-The execution scheduler is `GPUCommandGraph`, with compiled instances named
-`CompiledGPUCommandGraph`. Scheduling option and result types retain their
-`GPUCommandGraph` prefixes.
-
-The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications.
-
-Upgrade instructions assume that you are upgrading from the immediately previous release.
-If you are upgrading across multiple releases you will want to consider the release notes for all
-intermediary releases.
-
-luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking changes are typically only done in major versions, minor version bumps bring new functionality but few breaking changes, and patch releases typically contain only low-risk fixes.
-
-*For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
 ## Upgrading to v10.0
 
@@ -410,23 +336,6 @@ luma.gl v9 is a major modernization of the luma.gl API, with many breaking chang
 This page only covers luma.gl v9 and later releases.
 For information on upgrading to from v8 and earlier releases, see the [Legacy Upgrade Guide](/docs/legacy/legacy-upgrade-guide).
 
-## GPU Core composition
-
-GPU Core primitives now expose `getCommandNodes(graph)` instead of `addToGraph(graph)`. Schedule
-a primitive with `graph.add(primitive)`, which calls `getCommandNodes(graph)` internally. To inspect
-or modify nodes before scheduling, use `addGPUCommandNodes(graph, nodes)`. Graph-independent
-primitives can also be added to `GPUGraph`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
-removed. The three range/scatter primitives that also publish scratch views expose
-`getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.
-
-`GPUGraphBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector`
-instead of raw buffers. Compiler vector resolution returns `GraphVectorView`; access physical
-chunks through `.data` or canonical logical descriptors through `.chunks`.
-
-## GPU Graph package
-
-Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/graph/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives live in `@luma.gl/graph/gpu-data`; immediate operations live in `@luma.gl/graph/gpu-simple-graph`.
-
 ## Module loader dependencies
 
 - `exportGLTF` and its `GLTFExport*` descriptor types moved from `@luma.gl/engine/gltf` to
@@ -545,11 +454,3 @@ The v10 graph package now owns the former gpgpu APIs. The gpgpu package is remov
 | `@luma.gl/gpgpu/arrow` | `@luma.gl/graph/arrow` |
 
 Replace the package dependency with `@luma.gl/graph`. Apache Arrow remains an optional peer used only by the Arrow entry.
-
-### Logical graph vector lengths
-
-`GPUGraphVector.length` is now optional: `undefined` declares a vector whose length is supplied
-at execution. Code inspecting logical declarations must handle that case. Existing fixed-length
-`graph.vector(name, format, length, props)` declarations and `GPUGraphCompiler.compile(program,
-bindings)` continue to work. Dynamic declarations use `graph.compile(device).run(bindings)`.
-Concrete `GPUVector.length` remains a number.

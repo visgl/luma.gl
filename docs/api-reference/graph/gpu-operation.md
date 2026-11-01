@@ -1,7 +1,7 @@
 # GPUOperation contracts
 
 A `GPUOperation` describes logical work. Its contract identifies graph values it reads and
-writes and how vector output dimensions are determined. A registered lowering turns the
+writes and how vector output dimensions are determined. A supplied lowering turns the
 operation into command-graph passes. Contracts do not execute work or own GPU storage.
 
 This is the first part of the unified graph API: existing declarations and execution methods
@@ -76,68 +76,71 @@ For reusable programs, `read-write` vector values require execution bindings. A 
 output target cannot replace their initialized storage. This contract does not introduce
 new mutable-state semantics or permit self-referential expression outputs.
 
-## Register a lowering
+## Supply lowerings
 
 Extensions add to the built-in lowerings:
 
 ```typescript
-const lowerings = new GPUOperationLoweringRegistry();
+const copyRowsLowering: GPUOperationLowering<void, CopyRows> = {
+  type: 'copy-rows',
+  lower: (operation, context) => {
+    const source = context.resolveVector(operation.input);
+    const destination = context.resolveVector(operation.output);
 
-lowerings.register<CopyRows>('copy-rows', (operation, context) => {
-  const source = context.resolveVector(operation.input);
-  const destination = context.resolveVector(operation.output);
-
-  source.data.forEach((chunk, index) => {
-    if (chunk.length === 0) return;
-    const output = destination.data[index];
-    context.graph.addCopyPass({
-      id: `${operation.id}-${index}`,
-      resources: [
-        {buffer: chunk, usage: 'copy-source'},
-        {buffer: output, usage: 'copy-destination'}
-      ],
-      compile: () => ({
-        encode: ({commandEncoder, getBuffer}) => {
-          commandEncoder.copyBufferToBuffer({
-            sourceBuffer: getBuffer(chunk),
-            sourceOffset: chunk.byteOffset,
-            destinationBuffer: getBuffer(output),
-            destinationOffset: output.byteOffset,
-            size: chunk.length * 8 // Packed uint32x2 rows.
-          });
-        }
-      })
+    source.data.forEach((chunk, index) => {
+      if (chunk.length === 0) return;
+      const output = destination.data[index];
+      context.graph.addCopyPass({
+        id: `${operation.id}-${index}`,
+        resources: [
+          {buffer: chunk, usage: 'copy-source'},
+          {buffer: output, usage: 'copy-destination'}
+        ],
+        compile: () => ({
+          encode: ({commandEncoder, getBuffer}) => {
+            commandEncoder.copyBufferToBuffer({
+              sourceBuffer: getBuffer(chunk),
+              sourceOffset: chunk.byteOffset,
+              destinationBuffer: getBuffer(output),
+              destinationOffset: output.byteOffset,
+              size: chunk.length * 8 // Packed uint32x2 rows.
+            });
+          }
+        })
+      });
     });
-  });
-});
+  }
+};
 
 const graph = new GPUGraph();
 const input = graph.vector('input', 'uint32x2');
 const output = graph.vector('output', 'uint32x2');
 graph.add(new CopyRows('copy', input, output));
 
-const compiled = graph.compile(device, {lowerings, outputs: ['output']});
+const compiled = graph.compile(device, {lowerings: [copyRowsLowering], outputs: ['output']});
 const results = await compiled.run({input: inputVector});
 // Once downstream GPU consumers have finished:
 results.output.destroy();
 compiled.destroy();
 ```
 
-Import `GPUGraph` and `GPUOperationLoweringRegistry` from `@luma.gl/graph`.
+Import `GPUGraph` and the `GPUOperationLowering` type from `@luma.gl/graph`.
 The example requires WebGPU buffers with copy-source/copy-destination usage and aligned
 ranges. Lowerers encode work; they must not privately submit or read back data.
 
 Lowering resolvers accept declaration objects or string names; for example,
 `context.resolveVector('input')` resolves the declared vector to its execution view.
 
-The same registry can be supplied to `new GPUGraphCompiler(device, lowerings)` for the
-existing lower-level compilation path. Compilation copies registry entries; later registry
-changes do not alter an existing compiler. Duplicate type registrations are rejected,
-including collisions with built-in operations. `registerAll()` checks collisions before
-adding any entries. Silent replacement is unsupported.
+The same readonly descriptor array can be supplied to `new GPUGraphCompiler(device, lowerings)`.
+Compose extension sets with ordinary array spread: `[...applicationLowerings, copyRowsLowering]`.
+There is no registration step or shared global state. The compiler snapshots and freezes the
+array and each descriptor. Later changes to the source array or descriptors do not affect it.
+Duplicate type names, including collisions with built-in operations, are rejected. To change
+implementations, construct a new compiler with a new set. Lowering callbacks should avoid
+capturing mutable configuration; freezing descriptors cannot freeze their closures.
 
 Custom lowerings are a full-GPUGraph extension. SimpleGraph continues to accept its existing
-expression subset and reports an error if passed a custom lowering registry.
+expression subset and reports an error if passed custom lowerings.
 
 ## Capabilities and compatibility
 

@@ -8,13 +8,18 @@ import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   GPUGraph,
   GPUExpressionOperation,
-  GPUOperationLoweringRegistry,
+  type GPUOperationLowering,
   type GPUOperation,
   type GPUOperationContract,
   type GPUGraphVector,
   type GPUGraphScalar
 } from '@luma.gl/graph';
-import {GPUGraphScalarOperation, GPUGraphDotProduct} from '@luma.gl/graph/gpu-core';
+import {
+  GPUGraphScalarOperation,
+  GPULoopOperation,
+  GPUGraphScalarLiteral,
+  GPUGraphDotProduct
+} from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 
 class CustomCopy implements GPUOperation {
@@ -80,6 +85,32 @@ async function readFloat(vector: GPUVector): Promise<number[]> {
   ).flat();
 }
 
+test('fixed-count loop scalar producers execute before top-level consumers', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const graph = new GPUGraph();
+  const intermediate = graph.scalar('intermediate', 'float32');
+  const output = graph.scalar('output', 'float32');
+  graph.add([
+    new GPULoopOperation({
+      maximumIterations: 1,
+      body: new GPUGraphScalarLiteral({output: intermediate, value: 7})
+    }),
+    new GPUGraphScalarOperation({operation: 'copy', left: intermediate, output})
+  ]);
+  const compiled = graph.compile(device, {outputs: ['output']});
+  try {
+    const result = await compiled.run({});
+    try {
+      expect(await readFloat(result.output)).toEqual([7]);
+    } finally {
+      result.output.destroy();
+    }
+  } finally {
+    compiled.destroy();
+  }
+});
+
 test('custom contracts allocate typed outputs and feed expressions alongside built-in lowerings', async ({
   skip
 }) => {
@@ -99,42 +130,47 @@ test('custom contracts allocate typed outputs and feed expressions alongside bui
       expression: 'select(equalAll(copied, input), computed, 0)'
     })
   ]);
-  const lowerings = new GPUOperationLoweringRegistry();
-  lowerings.register<CustomCopy>('custom-copy', (operation, context) => {
-    const source = context.resolveVector(operation.input.id);
-    const destination = context.resolveVector(operation.output.id);
-    source.data.forEach((chunk, index) => {
-      if (!chunk.length) return;
-      const output = destination.data[index];
-      context.graph.addCopyPass({
-        id: `${operation.id}-${index}`,
-        resources: [
-          {buffer: chunk, usage: 'copy-source'},
-          {buffer: output, usage: 'copy-destination'}
-        ],
-        compile: () => ({
-          encode: ({commandEncoder, getBuffer}) =>
-            commandEncoder.copyBufferToBuffer({
-              sourceBuffer: getBuffer(chunk),
-              sourceOffset: chunk.byteOffset,
-              destinationBuffer: getBuffer(output),
-              destinationOffset: output.byteOffset,
-              size: chunk.length * 8
-            })
-        })
+  const copyLowering: GPUOperationLowering<void, CustomCopy> = {
+    type: 'custom-copy',
+    lower: (operation, context) => {
+      const source = context.resolveVector(operation.input.id);
+      const destination = context.resolveVector(operation.output.id);
+      source.data.forEach((chunk, index) => {
+        if (!chunk.length) return;
+        const output = destination.data[index];
+        context.graph.addCopyPass({
+          id: `${operation.id}-${index}`,
+          resources: [
+            {buffer: chunk, usage: 'copy-source'},
+            {buffer: output, usage: 'copy-destination'}
+          ],
+          compile: () => ({
+            encode: ({commandEncoder, getBuffer}) =>
+              commandEncoder.copyBufferToBuffer({
+                sourceBuffer: getBuffer(chunk),
+                sourceOffset: chunk.byteOffset,
+                destinationBuffer: getBuffer(output),
+                destinationOffset: output.byteOffset,
+                size: chunk.length * 8
+              })
+          })
+        });
       });
-    });
-  });
-  lowerings.register<CustomScalar>('custom-scalar', (operation, context) =>
-    context.lower(
-      new GPUGraphScalarOperation({
-        id: `${operation.id}-copy`,
-        operation: 'copy',
-        left: operation.input,
-        output: operation.output
-      })
-    )
-  );
+    }
+  };
+  const scalarLowering: GPUOperationLowering<void, CustomScalar> = {
+    type: 'custom-scalar',
+    lower: (operation, context) =>
+      context.lower(
+        new GPUGraphScalarOperation({
+          id: `${operation.id}-copy`,
+          operation: 'copy',
+          left: operation.input,
+          output: operation.output
+        })
+      )
+  };
+  const lowerings = [copyLowering, scalarLowering];
   const compiled = graph.compile(device, {lowerings, outputs: ['copied', 'computed', 'result']});
   try {
     for (const rows of [3, 1]) {

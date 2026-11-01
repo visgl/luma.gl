@@ -8,11 +8,17 @@ import {
   GPUGraph,
   GPUExpressionOperation,
   GPUGraphCompiler,
-  GPUOperationLoweringRegistry,
+  type GPUOperationLowering,
   type GPUOperation,
   type GPUOperationContract
 } from '@luma.gl/graph';
-import {GPUGraphDotProduct, GPUGraphVectorMADD} from '@luma.gl/graph/gpu-core';
+import {
+  GPUGraphDotProduct,
+  GPUGraphVectorMADD,
+  GPULoopOperation,
+  GPUGraphScalarLiteral,
+  GPUGraphScalarOperation
+} from '@luma.gl/graph/gpu-core';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUExpressionProgram} from '../../src/gpu-core/gpu-expression-plan';
 import {validateGPUOperationContract} from '../../src/gpu-core/gpu-operation-contract';
@@ -20,6 +26,40 @@ import {validateGPUOperationContract} from '../../src/gpu-core/gpu-operation-con
 function makeOperation(contract: GPUOperationContract): GPUOperation {
   return {id: 'custom', type: 'custom', contract};
 }
+
+test('expressions reject self references after a contract writer', () => {
+  const graph = new GPUGraph();
+  graph.vector('output', 'float32');
+  graph.add([
+    makeOperation({values: [{value: 'output', access: 'write', shape: {length: 1}}]}),
+    new GPUExpressionOperation({output: 'output', expression: 'output + 1'})
+  ]);
+  expect(() => new GPUExpressionProgram(graph)).toThrow('before it is produced');
+});
+
+test('fixed-count loop scalar writes are available to subsequent consumers', () => {
+  const device = new NullDevice({});
+  const graph = new GPUGraph();
+  const intermediate = graph.scalar('intermediate', 'float32');
+  const output = graph.scalar('output', 'float32');
+  graph.add([
+    new GPULoopOperation({
+      maximumIterations: 1,
+      body: new GPULoopOperation({
+        maximumIterations: 2,
+        body: new GPUGraphScalarLiteral({output: intermediate, value: 7})
+      })
+    }),
+    new GPUGraphScalarOperation({operation: 'copy', left: intermediate, output})
+  ]);
+  try {
+    const program = new GPUExpressionProgram(graph, {outputs: ['intermediate', 'output']});
+    const invocation = program.prepare(device, {});
+    invocation.destroy();
+  } finally {
+    device.destroy();
+  }
+});
 
 test('contracts resolve named and typed references and reject invalid shapes', () => {
   const graph = new GPUGraph();
@@ -149,29 +189,24 @@ test('existing algorithms describe their dependencies and output topology', () =
   expect(madd.contract.values.at(-1)?.shape).toEqual({like: input});
 });
 
-test('extension registries augment core lowerings without mutable sharing or silent replacement', () => {
+test('lowering inputs augment core implementations and are snapshotted without mutation', () => {
   const device = new NullDevice({});
-  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const custom = {type: 'custom', lower: () => {}};
+  const lowerings: GPUOperationLowering[] = [custom];
   try {
-    const registry = new GPUOperationLoweringRegistry().register('custom', () => {});
-    const compiler = new GPUGraphCompiler(device, registry);
-    expect(compiler.lowerings.get('custom')).toBeDefined();
-    expect(compiler.lowerings.get('dot-product')).toBeDefined();
-    expect(compiler.lowerings.get('scalar-literal')).toBeDefined();
-    registry.register('later', () => {});
-    expect(compiler.lowerings.get('later')).toBeUndefined();
-    expect(
-      () =>
-        new GPUGraphCompiler(
-          device,
-          new GPUOperationLoweringRegistry().register('dot-product', () => {})
-        )
-    ).toThrow('already registered');
-    const overlap = new GPUOperationLoweringRegistry()
-      .register('new', () => {})
-      .register('custom', () => {});
-    expect(() => compiler.lowerings.registerAll(overlap)).toThrow();
-    expect(compiler.lowerings.get('new')).toBeUndefined();
+    const compiler = new GPUGraphCompiler(device, lowerings);
+    expect(compiler.lowerings.map(lowering => lowering.type)).toContain('custom');
+    expect(compiler.lowerings.map(lowering => lowering.type)).toContain('dot-product');
+    lowerings.push({type: 'later', lower: () => {}});
+    custom.type = 'changed';
+    expect(compiler.lowerings.map(lowering => lowering.type)).toContain('custom');
+    expect(compiler.lowerings.map(lowering => lowering.type)).not.toContain('later');
+    expect(Object.isFrozen(compiler.lowerings)).toBe(true);
+    expect(compiler.lowerings.every(Object.isFrozen)).toBe(true);
+    expect(() => new GPUGraphCompiler(device, [{type: 'dot-product', lower: () => {}}])).toThrow(
+      'Duplicate'
+    );
+    expect(() => new GPUGraphCompiler(device, [custom, custom])).toThrow('Duplicate');
   } finally {
     device.destroy();
   }
@@ -187,10 +222,7 @@ test('feature requirements are checked by reusable and legacy compilation paths'
     expect(() => new GPUExpressionProgram(graph).prepare(device, {})).toThrow(
       'requires timestamp-query'
     );
-    const compiler = new GPUGraphCompiler(
-      device,
-      new GPUOperationLoweringRegistry().register('custom', () => {})
-    );
+    const compiler = new GPUGraphCompiler(device, [{type: 'custom', lower: () => {}}]);
     expect(() => compiler.compile(graph)).toThrow('custom requires timestamp-query');
   } finally {
     features.mockRestore();
