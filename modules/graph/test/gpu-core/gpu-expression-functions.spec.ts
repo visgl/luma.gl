@@ -192,6 +192,100 @@ for (const backend of ['webgl-simple', 'webgpu-simple', 'webgpu-full'] as const)
     }
   });
 
+  test(`${backend} configures integer rounding per expression without changing other casts`, async () => {
+    const device = await getDevice();
+    if (!device) return;
+    const graph = makeGraph();
+    graph.vector('input', 'float32');
+    graph.scalar('scalar', 'float32');
+    graph.scalar('scalarResult', 'sint32');
+    graph.add(
+      new GPUExpressionOperation({
+        output: 'scalarResult',
+        expression: 'sint32(scalar)',
+        integerRounding: 'nearest'
+      })
+    );
+    const outputs = [
+      {
+        name: 'nearestSigned',
+        format: 'sint32',
+        expression: 'sint32(input)',
+        integerRounding: 'nearest'
+      },
+      {
+        name: 'nearestUnsigned',
+        format: 'uint32',
+        expression: 'uint32(input)',
+        integerRounding: 'nearest'
+      },
+      {
+        name: 'truncated',
+        format: 'sint32',
+        expression: 'sint32(input)',
+        integerRounding: 'truncate'
+      },
+      {
+        name: 'nested',
+        format: 'uint32',
+        expression: 'uint32(sint32(input))',
+        integerRounding: 'nearest'
+      },
+      {
+        name: 'unchanged',
+        format: 'float32',
+        expression: 'float32(input)',
+        integerRounding: 'nearest'
+      }
+    ] as const;
+    for (const output of outputs) {
+      graph.vector(output.name, output.format);
+      graph.add(
+        new GPUExpressionOperation({
+          output: output.name,
+          expression: output.expression,
+          integerRounding: output.integerRounding
+        })
+      );
+    }
+    const compiled = graph.compile(device);
+    const values = [
+      -4294967296, -2.5, -1.5, -0.50000006, -0.5, -0.49999997, 0, 0.49999997, 0.5, 0.50000006, 1.5,
+      2.5, 8388609, 16777215, 2147483648, 4294967296
+    ].map(Math.fround);
+    try {
+      for (const scalar of [-1.5, 1.5]) {
+        const input = makeVector(device, [values.slice(0, 8), [], values.slice(8)]);
+        try {
+          const results = await compiled.run({input, scalar});
+          try {
+            expect(await readVector(results.scalarResult)).toEqual([scalar < 0 ? -2 : 2]);
+            for (const output of outputs) {
+              const expected = values.map(value => {
+                if (output.format === 'float32') return value;
+                const rounded =
+                  output.integerRounding === 'truncate'
+                    ? Math.trunc(value)
+                    : Math.sign(value) * Math.floor(Math.abs(value) + 0.5);
+                const minimum = output.format === 'sint32' ? -2147483648 : 0;
+                const maximum =
+                  output.format === 'sint32' || output.name === 'nested' ? 2147483647 : 4294967295;
+                return Math.max(minimum, Math.min(maximum, rounded)) || 0;
+              });
+              expect(await readVector(results[output.name])).toEqual(expected);
+            }
+          } finally {
+            Object.values(results).forEach(result => result.destroy());
+          }
+        } finally {
+          input.destroy();
+        }
+      }
+    } finally {
+      compiled.destroy();
+    }
+  });
+
   test(`${backend} casts integer vectors and scalars without losing input precision`, async () => {
     const device = await getDevice();
     if (!device) return;

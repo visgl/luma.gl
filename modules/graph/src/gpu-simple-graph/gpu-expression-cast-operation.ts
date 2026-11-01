@@ -7,7 +7,10 @@ import {Kernel} from '../execution/compute/kernel';
 import {GPUDataEvaluator} from './operation/gpu-data-evaluator';
 import {Operation, type OperationHandlerResult} from './operation/operation';
 import type {GPUEvaluationScope} from './operation/gpu-evaluation-scope';
-import type {GPUExpressionFormat} from '../gpu-core/gpu-expression-operation';
+import type {
+  GPUExpressionFormat,
+  GPUExpressionOperation
+} from '../gpu-core/gpu-expression-operation';
 import {
   GPU_EXPRESSION_SHADER_TYPES,
   GPU_EXPRESSION_CAST_WGSL,
@@ -21,7 +24,8 @@ export class GPUExpressionCastOperation extends Operation<{input: GPUDataEvaluat
 
   constructor(
     input: GPUDataEvaluator,
-    readonly format: GPUExpressionFormat
+    readonly format: GPUExpressionFormat,
+    readonly integerRounding: GPUExpressionOperation['integerRounding']
   ) {
     const source = input;
     super({input: source});
@@ -55,7 +59,8 @@ export class GPUExpressionCastOperation extends Operation<{input: GPUDataEvaluat
         output: this.output,
         operationType: input.type,
         outputBuffer: target,
-        expression: () => getGLSLExpressionCast('sourceValue[0]', sourceFormat, this.format)
+        expression: () =>
+          getGLSLExpressionCast('sourceValue[0]', sourceFormat, this.format, this.integerRounding)
       });
       return {success: true};
     }
@@ -77,7 +82,7 @@ ${GPU_EXPRESSION_CAST_WGSL}
 fn main(@builtin(workgroup_id) workgroup: vec3u, @builtin(num_workgroups) dimensions: vec3u, @builtin(local_invocation_index) localIndex: u32) {
   let index = (workgroup.y * dimensions.x + workgroup.x) * 64u + localIndex;
   if (index >= ${this.output.length}u) { return; }
-  outputValues[${this.output.offset / 4}u + index] = ${getGPUExpressionCastWGSL(value, sourceFormat, this.format)};
+  outputValues[${this.output.offset / 4}u + index] = ${getGPUExpressionCastWGSL(value, sourceFormat, this.format, this.integerRounding)};
 }`,
       shaderLayout: {
         bindings: [
@@ -103,6 +108,12 @@ fn main(@builtin(workgroup_id) workgroup: vec3u, @builtin(num_workgroups) dimens
 }
 
 const GPU_EXPRESSION_CAST_GLSL = `
+float expression_round_nearest(float value) {
+  float magnitude = abs(value);
+  float integral = floor(magnitude);
+  float rounded = integral + (magnitude - integral >= 0.5 ? 1.0 : 0.0);
+  return sign(value) * rounded;
+}
 int expression_to_sint32(float value) {
   if (value >= 2147483648.0) { return 2147483647; }
   if (value <= -2147483648.0) { return -2147483647 - 1; }
@@ -117,10 +128,14 @@ uint expression_to_uint32(float value) {
 function getGLSLExpressionCast(
   value: string,
   source: GPUExpressionFormat,
-  target: GPUExpressionFormat
+  target: GPUExpressionFormat,
+  integerRounding: GPUExpressionOperation['integerRounding']
 ): string {
   if (source === target) return value;
   if (target === 'float32') return `float(${value})`;
-  if (source === 'float32') return `expression_to_${target}(${value})`;
+  if (source === 'float32') {
+    const rounded = integerRounding === 'nearest' ? `expression_round_nearest(${value})` : value;
+    return `expression_to_${target}(${rounded})`;
+  }
   return target === 'uint32' ? `uint(max(${value}, 0))` : `int(min(${value}, 2147483647u))`;
 }

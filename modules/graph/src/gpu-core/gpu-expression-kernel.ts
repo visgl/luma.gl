@@ -49,7 +49,8 @@ export class GPUExpressionKernel {
           return getGPUExpressionCastWGSL(
             emit(expression.argument),
             getGPUExpressionFormat(expression.argument, plan.formats),
-            expression.format
+            expression.format,
+            plan.operation.integerRounding
           );
         case 'call':
           return `${expression.name}(${expression.arguments.map(emit).join(', ')})`;

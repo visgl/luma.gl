@@ -151,7 +151,13 @@ export class CompiledGPUSimpleExpressionGraph {
                         })
                       )
                     : value;
-                return retain(new GPUExpressionCastOperation(input, expression.format).output);
+                return retain(
+                  new GPUExpressionCastOperation(
+                    input,
+                    expression.format,
+                    plan.operation.integerRounding
+                  ).output
+                );
               }
               case 'call': {
                 const first = lower(expression.arguments[0]);

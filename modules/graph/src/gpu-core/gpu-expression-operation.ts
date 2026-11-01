@@ -11,6 +11,8 @@ export type GPUExpressionOperationProps = {
   id?: string;
   output: string;
   expression: string | GPUExpressionAST;
+  /** Float-to-integer casts; nearest ties round away from zero. Defaults to truncate. */
+  integerRounding?: 'truncate' | 'nearest';
 };
 
 /** A named, backend-independent numeric expression. Parsing and validation happen at compilation. */
@@ -19,11 +21,13 @@ export class GPUExpressionOperation implements GPUOperation {
   readonly id: string;
   readonly output: string;
   readonly expression: string | GPUExpressionAST;
+  readonly integerRounding: NonNullable<GPUExpressionOperationProps['integerRounding']>;
 
   constructor(props: GPUExpressionOperationProps) {
     this.id = props.id ?? `${props.output}-expression`;
     this.output = props.output;
     this.expression = props.expression;
+    this.integerRounding = props.integerRounding ?? 'truncate';
   }
 }
 

@@ -81,7 +81,22 @@ graph.add(new GPUExpressionOperation({
 }));
 ```
 
-Float-to-integer casts truncate toward zero and saturate to the destination range.
+Float-to-integer casts default to truncation toward zero and saturate to the destination range.
+Set `integerRounding: 'nearest'` on an expression operation to round to the nearest integer,
+with exact half-way ties away from zero, before saturation:
+
+```typescript
+graph.add(new GPUExpressionOperation({
+  output: 'indices',
+  expression: 'uint32(position)',
+  integerRounding: 'nearest' // default: 'truncate'
+}));
+```
+
+The option applies to every float-to-integer cast in that operation, including nested casts.
+Different operations in the same graph can select different modes. It does not change
+integer-to-integer casts, conversion to float32, or arithmetic. Both backends use the same
+rounding rule; for example, nearest maps `-1.5` to `-2` and `1.5` to `2` before saturation.
 Integer-to-integer casts also saturate; they do not reinterpret bits or wrap. Converting
 integers to float32 may lose precision. Integer input bindings must be integral and in
 range. Arithmetic and math calls require float32 operands, so `uint32(x) + 1` requires
