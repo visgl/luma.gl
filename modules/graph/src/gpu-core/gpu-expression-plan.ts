@@ -15,7 +15,10 @@ import {
   GPUExpressionOperation,
   parseGPUExpression,
   getGPUExpressionReferences,
-  type GPUExpression
+  type GPUExpression,
+  type GPUExpressionFormat,
+  isGPUExpressionFormat,
+  getGPUExpressionFormat
 } from './gpu-expression-operation';
 
 export type GPUGraphRunBindings = Readonly<Record<string, GPUVector | number>>;
@@ -26,6 +29,8 @@ export type GPUGraphRunOptions = {outputTargets?: Readonly<Record<string, GPUVec
 export type GPUExpressionPlan = {
   operation: GPUExpressionOperation;
   expression: GPUExpression;
+  format: GPUExpressionFormat;
+  formats: ReadonlyMap<string, GPUExpressionFormat>;
   references: readonly string[];
   gpuScalarInputs: readonly string[];
 };
@@ -87,14 +92,18 @@ export class GPUExpressionProgram {
     const available = new Set([...declarations.keys()].filter(name => !producers.has(name)));
     this.expressions = expressions.map(operation => {
       const output = declarations.get(operation.output);
-      if (!output || output.format !== 'float32')
-        throw new Error(`Expression output ${operation.output} must declare float32`);
+      if (!output || !isGPUExpressionFormat(output.format))
+        throw new Error(
+          `Expression output ${operation.output} must declare float32, sint32, or uint32`
+        );
       const expression = parseGPUExpression(operation.expression);
       const references = getGPUExpressionReferences(expression);
+      const formats = new Map<string, GPUExpressionFormat>();
       for (const name of references) {
         const declaration = declarations.get(name);
-        if (!declaration || declaration.format !== 'float32')
-          throw new Error(`Expression input ${name} must declare float32`);
+        if (!declaration || !isGPUExpressionFormat(declaration.format))
+          throw new Error(`Expression input ${name} must declare float32, sint32, or uint32`);
+        formats.set(name, declaration.format);
         if (!available.has(name))
           throw new Error(`Expression ${operation.id} reads ${name} before it is produced`);
       }
@@ -110,11 +119,14 @@ export class GPUExpressionProgram {
         throw new Error(
           `Vector expression ${operation.output} requires a vector input to determine its shape`
         );
+      const format = getGPUExpressionFormat(expression, formats);
+      if (output.format !== format)
+        throw new Error('Expression result type must match its output declaration');
       available.add(operation.output);
       const gpuScalarInputs = references.filter(name =>
         precedingScalarProducers.get(operation)!.has(name)
       );
-      return {operation, expression, references, gpuScalarInputs};
+      return {operation, expression, format, formats, references, gpuScalarInputs};
     });
     this.outputs = [...(options.outputs ?? expressions.map(operation => operation.output))];
     for (const name of this.outputs) {
@@ -151,6 +163,13 @@ export class GPUExpressionProgram {
         if (scalar) {
           if (typeof binding !== 'number' || !Number.isFinite(binding))
             throw new Error(`Expected numeric scalar ${name}`);
+          if (
+            scalar.format !== 'float32' &&
+            (!Number.isInteger(binding) ||
+              binding < (scalar.format === 'uint32' ? 0 : -2147483648) ||
+              binding > (scalar.format === 'uint32' ? 4294967295 : 2147483647))
+          )
+            throw new Error(`Scalar ${name} is outside its declared integer format`);
         } else if (vector) {
           if (!(binding instanceof GPUVector)) throw new Error(`Expected GPUVector ${name}`);
           validateVector(device, binding, vector.format, vector.length, vector.chunkLengths);
@@ -235,11 +254,11 @@ export class GPUExpressionProgram {
           throw new Error(`Chunk constraint failed for ${declaration.id}`);
         const target = targets.get(plan.operation.output);
         if (target) {
-          validateVector(device, target, 'float32', length, chunkLengths);
+          validateVector(device, target, plan.format, length, chunkLengths);
           validateWritableTarget(plan.operation.output, target, values);
           values.set(plan.operation.output, target);
         } else {
-          const output = allocateVector(device, plan.operation.output, chunkLengths);
+          const output = allocateVector(device, plan.operation.output, chunkLengths, plan.format);
           owned.add(output);
           values.set(plan.operation.output, output);
         }
@@ -346,7 +365,7 @@ function validateVector(
       chunk.rowByteLength !== 4
     )
       throw new Error(
-        `Expression vector ${vector.name} must contain packed float32 chunks on the execution device`
+        `Expression vector ${vector.name} must contain packed 32-bit numeric chunks on the execution device`
       );
   }
 }

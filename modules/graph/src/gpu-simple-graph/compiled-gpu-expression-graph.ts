@@ -9,7 +9,15 @@ import {
   add,
   subtract,
   multiply,
-  divide
+  divide,
+  abs,
+  sqrt,
+  pow,
+  sin,
+  cos,
+  tan,
+  exp,
+  log
 } from '@luma.gl/graph/gpu-simple-graph';
 import {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from '../gpu-core/gpu-graph';
@@ -20,6 +28,8 @@ import {
   type GPUGraphRunBindings,
   type GPUGraphRunOptions
 } from '../gpu-core/gpu-expression-plan';
+
+import {GPUExpressionCastOperation} from './gpu-expression-cast-operation';
 
 /** Reusable expression program implemented through the unchanged evaluator API. */
 export class CompiledGPUSimpleExpressionGraph {
@@ -79,17 +89,31 @@ export class CompiledGPUSimpleExpressionGraph {
                 return lowerNumber(expression.value);
               case 'reference': {
                 const value = invocation!.values.get(expression.name)!;
-                if (typeof value === 'number') return lowerNumber(value);
+                const format = plan.formats.get(expression.name)!;
+                if (typeof value === 'number') {
+                  if (format === 'float32') return lowerNumber(value);
+                  return retain(
+                    new GPUDataEvaluator({
+                      type: format,
+                      format,
+                      size: 1,
+                      length: 1,
+                      isConstant: true,
+                      value:
+                        format === 'uint32' ? new Uint32Array([value]) : new Int32Array([value])
+                    })
+                  );
+                }
                 const scalar = this.program.scalars.some(
                   declaration => declaration.id === expression.name
                 );
                 const input = value.data[scalar ? 0 : chunkIndex];
                 return retain(
                   new GPUDataEvaluator({
-                    type: 'float32',
+                    type: format,
                     size: 1,
                     length: input.length,
-                    format: 'float32',
+                    format,
                     buffer: input.buffer,
                     offset: input.byteOffset,
                     stride: input.byteStride,
@@ -99,6 +123,29 @@ export class CompiledGPUSimpleExpressionGraph {
               }
               case 'negate':
                 return retain(multiply(lower(expression.argument), -1));
+              case 'cast': {
+                const value = lower(expression.argument);
+                const input =
+                  typeof value === 'number'
+                    ? retain(
+                        new GPUDataEvaluator({
+                          type: 'float32',
+                          format: 'float32',
+                          size: 1,
+                          length: 1,
+                          isConstant: true,
+                          value: new Float32Array([value])
+                        })
+                      )
+                    : value;
+                return retain(new GPUExpressionCastOperation(input, expression.format).output);
+              }
+              case 'call': {
+                const first = lower(expression.arguments[0]);
+                if (expression.name === 'pow')
+                  return retain(pow(first, lower(expression.arguments[1])));
+                return retain({abs, sqrt, sin, cos, tan, exp, log}[expression.name](first));
+              }
               case 'binary': {
                 const operation = {'+': add, '-': subtract, '*': multiply, '/': divide}[
                   expression.operator

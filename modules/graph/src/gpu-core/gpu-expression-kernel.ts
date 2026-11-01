@@ -4,7 +4,12 @@
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
-import type {GPUExpression} from './gpu-expression-operation';
+import {getGPUExpressionFormat, type GPUExpression} from './gpu-expression-operation';
+import {
+  GPU_EXPRESSION_SHADER_TYPES,
+  GPU_EXPRESSION_CAST_WGSL,
+  getGPUExpressionCastWGSL
+} from './gpu-expression-cast';
 import type {GPUExpressionPlan, GPUExpressionProgram} from './gpu-expression-plan';
 import type {GPUOperationLoweringContext} from './gpu-graph-lowering';
 import {createGPUComputeCommandNode, addGPUCommandNodes} from './gpu-command-node';
@@ -40,12 +45,20 @@ export class GPUExpressionKernel {
           return `f32(${Object.is(expression.value, -0) ? '-0.0' : expression.value.toExponential()})`;
         case 'negate':
           return `(-${emit(expression.argument)})`;
+        case 'cast':
+          return getGPUExpressionCastWGSL(
+            emit(expression.argument),
+            getGPUExpressionFormat(expression.argument, plan.formats),
+            expression.format
+          );
+        case 'call':
+          return `${expression.name}(${expression.arguments.map(emit).join(', ')})`;
         case 'binary':
           return `(${emit(expression.left)} ${expression.operator} ${emit(expression.right)})`;
         case 'reference': {
           const index = this.vectorNames.indexOf(expression.name);
           if (index >= 0) return `input${index}[${metadata(index + 2)} + index]`;
-          return `bitcast<f32>(gpuValues[${program.scalars.findIndex(value => value.id === expression.name)}])`;
+          return `bitcast<${GPU_EXPRESSION_SHADER_TYPES[plan.formats.get(expression.name)!]}>(gpuValues[${program.scalars.findIndex(value => value.id === expression.name)}])`;
         }
       }
     };
@@ -57,12 +70,12 @@ export class GPUExpressionKernel {
     }));
     const shaderBindings: import('@luma.gl/core').ShaderLayout['bindings'] = [...bindings];
     const declarations = bindings.map(
-      binding =>
-        `@group(0) @binding(${binding.location}) var<storage, read> ${binding.name}: array<f32>;`
+      (binding, index) =>
+        `@group(0) @binding(${binding.location}) var<storage, read> ${binding.name}: array<${GPU_EXPRESSION_SHADER_TYPES[plan.formats.get(this.vectorNames[index])!]}>;`
     );
     if (!this.outputIsScalar) {
       declarations.push(
-        `@group(0) @binding(${shaderBindings.length}) var<storage, read_write> outputValues: array<f32>;`
+        `@group(0) @binding(${shaderBindings.length}) var<storage, read_write> outputValues: array<${GPU_EXPRESSION_SHADER_TYPES[plan.format]}>;`
       );
       shaderBindings.push({
         name: 'outputValues',
@@ -97,6 +110,7 @@ export class GPUExpressionKernel {
     this.kernel = new Kernel(device, {
       id: plan.operation.id,
       source: `${declarations.join('\n')}
+${GPU_EXPRESSION_CAST_WGSL}
 @compute @workgroup_size(${WORKGROUP_SIZE})
 fn main(@builtin(workgroup_id) workgroup: vec3u, @builtin(num_workgroups) dimensions: vec3u, @builtin(local_invocation_index) localIndex: u32) {
   let index = (workgroup.y * dimensions.x + workgroup.x) * ${WORKGROUP_SIZE}u + localIndex;

@@ -33,7 +33,7 @@ compiled.destroy();
 Declarations contain types, not data. An omitted vector length is resolved from execution
 bindings. An explicit length, such as `graph.vector('positions', 'float32', {length: 1024})`, constrains
 all executions. Inputs are borrowed `GPUVector` objects or numeric scalar values. This first
-subset uses packed float32 vectors and float32 scalars.
+subset uses packed float32, sint32, and uint32 vectors and scalars. Arithmetic operands must be float32; use explicit casts for integer inputs.
 
 ## Expression syntax
 
@@ -48,9 +48,9 @@ const operation = new GPUExpressionOperation({
 ```
 
 Supported expressions contain declared identifiers, finite numeric literals, parentheses,
-unary negation, and binary `+`, `-`, `*`, `/`. Operators act elementwise; scalars broadcast to
+unary negation, binary `+`, `-`, `*`, `/`, and the function calls described below. Operators act elementwise; scalars broadcast to
 vector rows. Vector outputs require at least one vector input. Scalar expressions produce a
-one-row float32 output vector. Functions, member access, indexing, comparisons, conditionals,
+one-row output vector with the declared numeric format. Arbitrary functions, member access, indexing, comparisons, conditionals,
 and other JavaScript syntax are not part of this initial GPU subset. Parsing successfully
 in math.gl does not imply support by the GPU compiler.
 
@@ -58,6 +58,46 @@ Compilation rejects undeclared identifiers, incompatible formats, duplicate expr
 writers, forward references to expression outputs, and unsupported syntax. Add producers
 before their consumers. Expressions nested inside conditional or loop composites are not yet supported. Runtime checks enforce the supplied device, formats, declared lengths,
 and relationships between input dimensions.
+
+## Math functions and numeric casts
+
+Expressions accept `abs(x)`, `sqrt(x)`, `pow(x, exponent)`, `sin(x)`, `cos(x)`,
+`tan(x)`, `exp(x)`, and `log(x)`. Arguments may be nested expressions and named inputs.
+These functions operate on float32 values, and vector inputs are evaluated row by row.
+Numeric literals are float32; use integer declarations to retain exact 32-bit integer inputs.
+Only these bare function names are accepted: `Math.sin(x)`, arbitrary functions, and
+incorrect argument counts are rejected at compilation. Function names are intrinsic,
+not callable values supplied through bindings.
+
+Use `float32(x)`, `sint32(x)`, and `uint32(x)` for explicit numeric value conversions.
+The expression result type must match its output declaration. For example:
+
+```typescript
+graph.vector('indices', 'uint32');
+graph.vector('weights', 'float32');
+graph.add(new GPUExpressionOperation({
+  output: 'weights',
+  expression: 'sqrt(float32(indices))'
+}));
+```
+
+Float-to-integer casts truncate toward zero and saturate to the destination range.
+Integer-to-integer casts also saturate; they do not reinterpret bits or wrap. Converting
+integers to float32 may lose precision. Integer input bindings must be integral and in
+range. Arithmetic and math calls require float32 operands, so `uint32(x) + 1` requires
+an explicit conversion back to float32 in this initial subset.
+
+These casts apply to finite numeric values. Results of out-of-domain math, overflow,
+and casts of nonfinite intermediate values have no cross-backend guarantee. Use positive
+bases for portable `pow` results, positive arguments for `log`, and nonnegative arguments
+for `sqrt`; transcendental results follow backend float32 accuracy rather than bitwise
+JavaScript equivalence.
+
+Numeric casts do not add normalized or packed storage formats to expression graphs.
+The existing `castData` evaluator retains its separate physical-format conversion and
+rounding behavior. Pure arithmetic/function expressions retain evaluator fusion.
+Casts introduce explicit conversion stages on SimpleGraph; WebGPU stages share its
+single evaluation scope, and WebGL uses GPU transform feedback without CPU readback.
 
 ## Chunking and ownership
 
@@ -71,7 +111,7 @@ is selected. Returned allocated vectors belong to the caller and survive another
 vectors remain caller-owned.
 
 To supply output storage, pass `run(bindings, {outputTargets: {transformed: destination}})`.
-Targets must have the inferred float32 layout and chunk topology. Writable chunks within a target must not overlap. They are borrowed and must
+Targets must have the inferred numeric layout and chunk topology. Writable chunks within a target must not overlap. They are borrowed and must
 not alias inputs or other expression outputs. Results reference the supplied target objects.
 
 ## Full-graph composition
