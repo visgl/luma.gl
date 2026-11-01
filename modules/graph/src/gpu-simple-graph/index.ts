@@ -96,3 +96,5 @@ export {
   inspectEvaluators as getGPUDataEvaluatorInspection,
   getGPUDataEvaluatorFormat
 } from './operation/gpu-evaluator-inspection';
+
+export {CompiledGPUSimpleExpressionGraph} from './compiled-gpu-expression-graph';

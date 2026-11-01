@@ -5117,6 +5117,7 @@ __metadata:
   resolution: "@luma.gl/graph@workspace:modules/graph"
   dependencies:
     "@math.gl/core": "npm:~5.0.0-beta.2"
+    "@math.gl/expressions": "npm:5.0.0-alpha.18"
     "@math.gl/geospatial": "npm:~5.0.0-beta.2"
     probe.gl: "npm:^5.0.0"
   peerDependencies:
@@ -5324,10 +5325,41 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@math.gl/core@npm:5.0.0-alpha.18":
+  version: 5.0.0-alpha.18
+  resolution: "@math.gl/core@npm:5.0.0-alpha.18"
+  dependencies:
+    "@math.gl/types": "npm:5.0.0-alpha.18"
+  checksum: 10c0/bb2c866b4333e6f61d2691abaa58f749c3085f10a3765be65e3ca204d9074b2f612a2b9412f9d9d7628cc55404786d2a3b7f30bfc8db01cb8ed8439c80489a36
+  languageName: node
+  linkType: hard
+
 "@math.gl/core@npm:5.0.0-beta.2, @math.gl/core@npm:~5.0.0-beta.2":
   version: 5.0.0-beta.2
   resolution: "@math.gl/core@npm:5.0.0-beta.2"
   checksum: 10c0/b6a2f6565d5cc203562a2efa331d06f5278249c58b08344227bc0ddb0172c9a30a2168e3d7827258e8d2c320a1714faadfb564a4d4865cdcab14fb8b43bdd7cb
+  languageName: node
+  linkType: hard
+
+"@math.gl/culling@npm:5.0.0-alpha.18":
+  version: 5.0.0-alpha.18
+  resolution: "@math.gl/culling@npm:5.0.0-alpha.18"
+  dependencies:
+    "@math.gl/core": "npm:5.0.0-alpha.18"
+    "@math.gl/types": "npm:5.0.0-alpha.18"
+  checksum: 10c0/d271f637b91cc2cb1158164cbfc80c6bda18dcd6a1106f530ccff96d092c35a18412a5c4a6d717ded86f91a51a2710c9ace01fd8655e659f918f3db91bbbb1b8
+  languageName: node
+  linkType: hard
+
+"@math.gl/dggs@npm:5.0.0-alpha.18":
+  version: 5.0.0-alpha.18
+  resolution: "@math.gl/dggs@npm:5.0.0-alpha.18"
+  dependencies:
+    "@math.gl/types": "npm:5.0.0-alpha.18"
+    a5-js: "npm:^0.10.0"
+    h3-js: "npm:^4.5.0"
+    open-location-code: "npm:^1.0.3"
+  checksum: 10c0/a962d71dbc5291fd66fdb17b97ccd3c8926ec52e22a81fb3daafc80798eab0a3387cffa7f6217cf24a90fed472c47e04296429a1898764218f75da6ced96e15c
   languageName: node
   linkType: hard
 
@@ -5353,12 +5385,35 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@math.gl/expressions@npm:5.0.0-alpha.18":
+  version: 5.0.0-alpha.18
+  resolution: "@math.gl/expressions@npm:5.0.0-alpha.18"
+  dependencies:
+    "@math.gl/core": "npm:5.0.0-alpha.18"
+    "@math.gl/dggs": "npm:5.0.0-alpha.18"
+    "@math.gl/geospatial": "npm:5.0.0-alpha.18"
+    jsep: "npm:^1.4.0"
+  checksum: 10c0/6ee089100c655d7f26f7e73b5077a6b79d7fd795b9c9565cfd432a3a2f4a026e336b815d33078d99896540c22a282b680ba270b7c59c35d035819cab0ae8e473
+  languageName: node
+  linkType: hard
+
 "@math.gl/geometry@npm:5.0.0-beta.2, @math.gl/geometry@npm:~5.0.0-beta.2":
   version: 5.0.0-beta.2
   resolution: "@math.gl/geometry@npm:5.0.0-beta.2"
   dependencies:
     "@math.gl/core": "npm:5.0.0-beta.2"
   checksum: 10c0/6ae02b20fa32f86b585ce0652bc2cb5b5da9d1d9c38330de458b98214fd51461e51f90dfde047d36299ed0caba9b06dd9ed4395734da807ac1a587014c5343e3
+  languageName: node
+  linkType: hard
+
+"@math.gl/geospatial@npm:5.0.0-alpha.18":
+  version: 5.0.0-alpha.18
+  resolution: "@math.gl/geospatial@npm:5.0.0-alpha.18"
+  dependencies:
+    "@math.gl/core": "npm:5.0.0-alpha.18"
+    "@math.gl/culling": "npm:5.0.0-alpha.18"
+    "@math.gl/types": "npm:5.0.0-alpha.18"
+  checksum: 10c0/5dc54ffaed375d85026224a43332e13e43b41695683044828798398401733e4233339a5fc7f802247e6031144b594dcf70c6b5cb653a6b3940f4d5584eff9613
   languageName: node
   linkType: hard
 
@@ -5395,6 +5450,13 @@ __metadata:
   version: 4.1.0
   resolution: "@math.gl/types@npm:4.1.0"
   checksum: 10c0/3c4dfa5ac5c9e2cef24d31f56b89c1dde785a5d70fd1a7030386346cb7dd4fa2cce5ba983b89842c1971492e30870dd22a078d64893f9c66887e38367bf992fa
+  languageName: node
+  linkType: hard
+
+"@math.gl/types@npm:5.0.0-alpha.18":
+  version: 5.0.0-alpha.18
+  resolution: "@math.gl/types@npm:5.0.0-alpha.18"
+  checksum: 10c0/78299ee82dd95c4e05676bb9376ce3172ecb3961b88c91d9dd5f724cae1189444e29b183d05993628877c5cec0b9ec6a128595e80db66ad92784a6e3044723c8
   languageName: node
   linkType: hard
 
@@ -14002,6 +14064,13 @@ __metadata:
   version: 1.1.0
   resolution: "jsbn@npm:1.1.0"
   checksum: 10c0/4f907fb78d7b712e11dea8c165fe0921f81a657d3443dde75359ed52eb2b5d33ce6773d97985a089f09a65edd80b11cb75c767b57ba47391fee4c969f7215c96
+  languageName: node
+  linkType: hard
+
+"jsep@npm:^1.4.0":
+  version: 1.6.0
+  resolution: "jsep@npm:1.6.0"
+  checksum: 10c0/68b706c9f8873599ecf9c408b063ce661d1f53e5bceb6c25bf59448c73b1b8d4906ee40f892ccf32d83c6dba70b3aae495f00f3855fa0049025a07eadcd672ea
   languageName: node
   linkType: hard
 

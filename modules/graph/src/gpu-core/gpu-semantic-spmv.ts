@@ -62,7 +62,7 @@ export class GPUGraphSpMV implements GPUOperation {
       workload: Object.freeze({
         rows: props.matrix.rows,
         columns: props.matrix.columns,
-        nonZeros: props.matrix.values.length
+        ...(props.matrix.values.length === undefined ? {} : {nonZeros: props.matrix.values.length})
       })
     });
   }

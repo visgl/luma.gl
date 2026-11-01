@@ -611,6 +611,7 @@
         "items": [
           "api-reference/graph/README",
           "api-reference/graph/gpu-simple-graph",
+          "api-reference/graph/gpu-expression-operation",
           {
             "type": "category",
             "label": "GPU Graph",
