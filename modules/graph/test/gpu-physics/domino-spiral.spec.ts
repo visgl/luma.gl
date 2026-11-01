@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld} from '../../src/gpu-physics';
 import {
@@ -60,7 +60,7 @@ it.each([120, 60])(
               Math.hypot(
                 ...body.position.map((value, axis) => value - earlyPositions![index][axis])
               )
-            ).toBeLessThan(0.015);
+            ).toBeLessThan(0.01);
           }
         }
         if (second === 0) {
@@ -80,24 +80,6 @@ it.each([120, 60])(
         })
       );
       const states = await world.readState();
-      console.log(
-        'Settled',
-        frequency,
-        states.filter(body => body.sleeping).length,
-        states.length,
-        'linear',
-        states
-          .slice(1)
-          .map(body => Math.hypot(...body.velocity))
-          .sort((first, second) => first - second)
-          .filter((_, index) => index % 15 === 0),
-        'angular',
-        states
-          .slice(1)
-          .map(body => Math.hypot(...body.angularVelocity))
-          .sort((first, second) => first - second)
-          .filter((_, index) => index % 15 === 0)
-      );
       expect(states.slice(1).filter(body => body.sleeping).length).toBeGreaterThan(
         bodies.length * 0.9
       );
@@ -108,7 +90,24 @@ it.each([120, 60])(
           .filter(body => 1 - 2 * (body.orientation[0] ** 2 + body.orientation[1] ** 2) < 0.7)
           .length
       ).toBeGreaterThan(bodies.length * 0.9);
+      for (let index = 1; index <= 10; index++) {
+        const initial = bodies[index].orientation!;
+        const heading = Math.atan2(
+          2 * (initial[3] * initial[2] + initial[0] * initial[1]),
+          1 - 2 * (initial[1] ** 2 + initial[2] ** 2)
+        );
+        const rotation = states[index].orientation;
+        const forward =
+          2 * (rotation[0] * rotation[2] + rotation[3] * rotation[1]) * Math.cos(heading) +
+          2 * (rotation[1] * rotation[2] - rotation[3] * rotation[0]) * Math.sin(heading);
+        expect(forward).toBeGreaterThan(0.6);
+      }
       expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+      const resting = device.createCommandEncoder();
+      for (let step = 0; step < frequency * 2; step++)
+        graph.encode(resting, {parameters: undefined});
+      device.submit(resting.finish());
+      expect(await world.readState()).toEqual(states);
     } finally {
       graph.destroy();
       world.destroy();

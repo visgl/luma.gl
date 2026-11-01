@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {Buffer, type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {ShadowMapRenderer} from '@luma.gl/experimental';
+import {ShadowMapRenderer} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core';
 
 export const DOMINO_LIGHT_POSITION = [-8, -12, 32] as const;

@@ -57,8 +57,9 @@ it('ignores base support without consuming clacks for later domino impacts', asy
     expect(sourceStarts).not.toHaveBeenCalled();
     audio.play([event(1, 2)]);
     expect(sourceStarts).toHaveBeenCalledTimes(1);
-    audio.play([event(1, 2), event(2, 3)]);
+    audio.play([event(1, 2), {...event(2, 3), step: 4}]);
     expect(sourceStarts).toHaveBeenCalledTimes(2);
+    expect(sourceStarts.mock.calls[1][0] - sourceStarts.mock.calls[0][0]).toBeCloseTo(3 / 60);
     audio.reset();
     audio.play([event(1, 2)]);
     expect(sourceStarts).toHaveBeenCalledTimes(3);

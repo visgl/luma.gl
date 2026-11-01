@@ -117,8 +117,8 @@ Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.
 
 ### Spiral dominoes
 
-The default scene lays free box rigid bodies along a three-turn spiral with approximately
-equal arc-length spacing. Only the first domino starts with angular velocity; GPU contact
+The default scene lays free box rigid bodies along a three-turn spiral with a wider inner radius with approximately
+equal arc-length spacing. Only the first domino is released leaning with a consistent pivot velocity; GPU contact
 solving propagates the wave. Reset restores the starting arrangement and preserves the camera.
 Use Pause to inspect the wave and drag to orbit.
 
@@ -134,6 +134,6 @@ transient, with a fast decay and reduced gain.
 
 Domino shadows use the shared ShadowMapRenderer and shadow module with a 2048-pixel
 map and one instanced depth draw from GPU body poses. The camera orbits gently until
-OrbitControls receives user input. The domino scene uses 60 Hz physics with eight solver
+OrbitControls receives user input. The domino scene uses 60 Hz physics with 32 solver
 iterations and 4096 contact slots; both 60 and 120 Hz propagation are regression-tested.
 The status reports simulation time relative to wall time to expose playback slowdown.

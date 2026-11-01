@@ -15,6 +15,8 @@ export class DominoAudio {
   private context?: AudioContext;
   private samples: AudioBuffer[] = [];
   private loading?: Promise<void>;
+  private sources = new Set<AudioBufferSourceNode>();
+  private timelineOrigin?: number;
   private soundedBodies = new Set<number>();
 
   unlock(): void {
@@ -62,23 +64,33 @@ export class DominoAudio {
     }
   }
 
-  play(events: readonly GPURigidBodyContactEvent[]): void {
+  play(
+    events: readonly GPURigidBodyContactEvent[],
+    timeStep = 1 / 60,
+    simulationStep = events.at(-1)?.step ?? 0
+  ): void {
     const context = this.context;
     if (!this.enabled || !context || context.state !== 'running' || !this.samples.length) return;
-    let voices = 0;
+    const now = context.currentTime;
+    if (
+      this.timelineOrigin === undefined ||
+      now - (this.timelineOrigin + simulationStep * timeStep) > 0.2
+    ) {
+      this.timelineOrigin = now + 0.1 - simulationStep * timeStep;
+    }
     for (const event of events) {
-      if (event.phase === 'end' || event.normalImpulse < 0.15 || event.bodies.includes(0)) continue;
-      // Base support impulses must not consume a standing tile's one sound for this replay.
-      const body = event.bodies[0];
-      if (this.soundedBodies.has(body) || voices >= 6) continue;
+      if (event.phase === 'end' || event.normalImpulse < 0.015 || event.bodies.includes(0))
+        continue;
+      // Adjacent tile impacts identify the struck domino; base support never consumes its clack.
+      const body = Math.max(...event.bodies);
+      if (this.soundedBodies.has(body)) continue;
       this.soundedBodies.add(body);
-      voices++;
-      const now = context.currentTime;
+      const scheduledTime = Math.max(now + 0.005, this.timelineOrigin + event.step * timeStep);
       const gain = context.createGain();
-      const amplitude = Math.min(0.12, Math.sqrt(event.normalImpulse) * 0.07);
-      gain.gain.setValueAtTime(amplitude, now);
-      gain.gain.setValueAtTime(amplitude, now + 0.002);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
+      const amplitude = Math.min(0.12, 0.05 + Math.sqrt(event.normalImpulse) * 0.04);
+      gain.gain.setValueAtTime(amplitude, scheduledTime);
+      gain.gain.setValueAtTime(amplitude, scheduledTime + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, scheduledTime + 0.018);
       const source = context.createBufferSource();
       source.buffer = this.samples[body % this.samples.length];
       const filter = context.createBiquadFilter();
@@ -86,19 +98,28 @@ export class DominoAudio {
       filter.frequency.value = 700;
       filter.Q.value = 0.5;
       source.connect(filter).connect(gain).connect(context.destination);
-      source.start(now);
-      source.stop(now + 0.02);
+      this.sources.add(source);
+      source.start(scheduledTime);
+      source.stop(scheduledTime + 0.02);
       source.onended = () => {
+        this.sources.delete(source);
         source.disconnect();
         filter.disconnect();
         gain.disconnect();
       };
     }
   }
+  silence(): void {
+    for (const source of this.sources) source.stop();
+    this.sources.clear();
+  }
   reset(): void {
+    this.silence();
     this.soundedBodies.clear();
+    this.timelineOrigin = undefined;
   }
   destroy(): void {
+    this.silence();
     void this.context?.close().catch(() => {});
   }
 }

@@ -5,7 +5,7 @@
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model} from '@luma.gl/engine';
-import {shadow} from '@luma.gl/experimental';
+import {shadow} from '@luma.gl/anari';
 import {DominoShadows, DOMINO_LIGHT_POSITION} from './domino-shadows';
 import {DominoAudio} from './domino-audio';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
@@ -34,6 +34,7 @@ const dominoAudio = new DominoAudio();
 const sound = document.querySelector<HTMLInputElement>('#sound')!;
 sound.onchange = () => {
   dominoAudio.enabled = sound.checked;
+  if (!sound.checked) dominoAudio.silence();
   dominoAudio.unlock();
 };
 canvas.addEventListener('pointerdown', () => dominoAudio.unlock());
@@ -572,7 +573,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       lastAudioRead = now;
       audioRead = resources.world
         .readContactEvents()
-        .then(batch => dominoAudio.play(batch.events))
+        .then(batch => dominoAudio.play(batch.events, resources.world.timeStep, batch.step))
         .catch(() => {})
         .finally(() => {
           audioRead = null;
