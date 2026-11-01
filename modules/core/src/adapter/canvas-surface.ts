@@ -142,6 +142,8 @@ export abstract class CanvasSurface {
   protected _needsDrawingBufferResize: boolean = true;
   /** Drawing buffer size the device was last configured for; subclass constructors configure at the initial canvas size */
   protected _configuredDrawingBufferSize: [number, number] = [0, 0];
+  /** Canvas size when the pending drawing buffer resize was requested */
+  protected _canvasSizeAtResizeRequest: [number, number] = [0, 0];
 
   abstract get [Symbol.toStringTag](): string;
 
@@ -185,6 +187,7 @@ export abstract class CanvasSurface {
     this.drawingBufferWidth = this.canvas.width;
     this.drawingBufferHeight = this.canvas.height;
     this._configuredDrawingBufferSize = [this.canvas.width, this.canvas.height];
+    this._canvasSizeAtResizeRequest = [this.canvas.width, this.canvas.height];
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
     this._position = [0, 0];
     this._canvasObserver = new CanvasObserver({
@@ -249,10 +252,15 @@ export abstract class CanvasSurface {
     width = Math.floor(width);
     height = Math.floor(height);
     if (this.drawingBufferWidth === width && this.drawingBufferHeight === height) {
+      if (this._needsDrawingBufferResize) {
+        // A repeated request is still the latest one: it wins over canvas resizes made before it.
+        this._canvasSizeAtResizeRequest = [this.canvas.width, this.canvas.height];
+      }
       return;
     }
     this.drawingBufferWidth = width;
     this.drawingBufferHeight = height;
+    this._canvasSizeAtResizeRequest = [this.canvas.width, this.canvas.height];
     this._needsDrawingBufferResize = true;
   }
 
@@ -438,6 +446,14 @@ export abstract class CanvasSurface {
   _resizeDrawingBufferIfNeeded() {
     if (this._needsDrawingBufferResize) {
       this._needsDrawingBufferResize = false;
+      // The canvas owner (e.g. a basemap sharing the context) may have resized the canvas again
+      // after this resize was requested. The pending size is then stale: follow the canvas
+      // instead of overwriting it.
+      const [requestCanvasWidth, requestCanvasHeight] = this._canvasSizeAtResizeRequest;
+      if (this.canvas.width !== requestCanvasWidth || this.canvas.height !== requestCanvasHeight) {
+        this.drawingBufferWidth = this.canvas.width;
+        this.drawingBufferHeight = this.canvas.height;
+      }
       const canvasSizeChanged =
         this.drawingBufferWidth !== this.canvas.width ||
         this.drawingBufferHeight !== this.canvas.height;
