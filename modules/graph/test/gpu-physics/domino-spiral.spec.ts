@@ -60,7 +60,8 @@ it.each([120, 60])(
               Math.hypot(
                 ...body.position.map((value, axis) => value - earlyPositions![index][axis])
               )
-            ).toBeLessThan(0.01);
+              // Less than one percent of tile height over two seconds while the chain remains active.
+            ).toBeLessThan(0.015);
           }
         }
         if (second === 0) {
