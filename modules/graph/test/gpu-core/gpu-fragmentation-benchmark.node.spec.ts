@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph, GraphVectorView} from '@luma.gl/graph/gpu-core';
 import {getGraphDataRange, validateChunkViews} from '../../src/gpu-core/gpu-chunk-utils';
 import {expect, test} from 'vitest';

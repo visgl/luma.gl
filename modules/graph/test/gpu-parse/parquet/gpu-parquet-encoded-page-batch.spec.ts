@@ -12,7 +12,7 @@ import {
   planGPUParquetEncodedPageBatch,
   type GPUParquetDecodedPage
 } from '@luma.gl/graph/gpu-parse';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('loaders.gl encoded pages batch Snappy, levels, and values in one graph', async () => {
   const device = await getWebGPUTestDevice();

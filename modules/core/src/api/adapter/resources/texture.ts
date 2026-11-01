@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type TypedArray} from '@math.gl/core/types';
+import {type TypedArray} from '@math.gl/core';
 import {type Device} from '../device';
 import {
   type TextureFormat,

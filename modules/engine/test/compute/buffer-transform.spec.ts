@@ -3,10 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {BufferTransform, GPUVectorModel} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {Buffer, Device} from '@luma.gl/core';
 
 const VS = /* glsl */ `\

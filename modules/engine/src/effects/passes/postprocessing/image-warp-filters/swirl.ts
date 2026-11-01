@@ -1,0 +1,115 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import type {ShaderPass} from '@luma.gl/shaders';
+import {warp} from './warp';
+
+const source = /* wgsl */ `\
+struct swirlUniforms {
+  center: vec2f,
+  radius: f32,
+  angle: f32,
+};
+
+@group(0) @binding(auto) var<uniform> swirl: swirlUniforms;
+
+fn swirl_warp(coordIn: vec2f, texCenter: vec2f) -> vec2f {
+  var coord = coordIn - texCenter;
+  let distance = length(coord);
+  if (distance < swirl.radius) {
+    let percent = (swirl.radius - distance) / swirl.radius;
+    let theta = percent * percent * swirl.angle;
+    let s = sin(theta);
+    let c = cos(theta);
+    coord = vec2f(
+      coord.x * c - coord.y * s,
+      coord.x * s + coord.y * c
+    );
+  }
+  coord += texCenter;
+  return coord;
+}
+
+fn swirl_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  var coord = texCoord * texSize;
+  coord = swirl_warp(coord, swirl.center * texSize);
+  return warp_sampleColor(sourceTexture, sourceTextureSampler, texSize, coord);
+}
+`;
+
+const fs = /* glsl */ `\
+layout(std140) uniform swirlUniforms {
+  vec2 center;
+  float radius;
+  float angle;
+} swirl;
+
+vec2 swirl_warp(vec2 coord, vec2 texCenter) {
+  coord -= texCenter;
+  float distance = length(coord);
+  if (distance < swirl.radius) {
+    float percent = (swirl.radius - distance) / swirl.radius;
+    float theta = percent * percent * swirl.angle;
+    float s = sin(theta);
+    float c = cos(theta);
+    coord = vec2(
+      coord.x * c - coord.y * s,
+      coord.x * s + coord.y * c
+    );
+  }
+  coord += texCenter;
+  return coord;
+}
+
+vec4 swirl_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
+  vec2 coord = texCoord * texSize;
+  coord = swirl_warp(coord, swirl.center * texSize);
+
+  return warp_sampleColor(source, texSize, coord);
+}
+`;
+
+/**
+ * Warps a circular region of the image in a swirl.
+ */
+export type SwirlProps = {
+  /** [x, y] coordinates of the center of the circle of effect. default: [0.5, 0.5] */
+  center?: [number, number];
+  /**  The radius of the circular region. */
+  radius?: number;
+  /** The angle in radians that the pixels in the center of the circular region will be rotated by. */
+  angle?: number;
+};
+
+export type SwirlUniforms = SwirlProps;
+
+/**
+ * Warps a circular region of the image in a swirl.
+ */
+export const swirl = {
+  name: 'swirl',
+  dependencies: [warp],
+  source,
+  fs,
+
+  props: {} as SwirlProps,
+  uniforms: {} as SwirlProps,
+  uniformTypes: {
+    center: 'vec2<f32>',
+    radius: 'f32',
+    angle: 'f32'
+  },
+  propTypes: {
+    center: {value: [0.5, 0.5]},
+    radius: {value: 200, min: 1, softMax: 600},
+    angle: {value: 3, softMin: -25, softMax: 25}
+  },
+
+  passes: [{sampler: true}]
+} as const satisfies ShaderPass<SwirlProps, SwirlProps>;

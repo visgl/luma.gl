@@ -11,14 +11,14 @@ Instancing draws many placements of shared geometry with one draw per compatible
 
 The **SimpleInstancing** sample demonstrates this capability. Drag to orbit and scroll to zoom.
 
-<GLTFModelExample modelUrl={new URL('../../../../modules/gltf/test/data/SimpleInstancing.glb', import.meta.url).href} title="SimpleInstancing" embedded showStats={false} />
+<GLTFModelExample modelUrl={new URL('../../../../modules/engine/test/gltf/data/SimpleInstancing.glb', import.meta.url).href} title="SimpleInstancing" embedded showStats={false} />
 
 ## API
 
 Engine `Model` supports instanced attributes and an `instanceCount`. The glTF adapter creates those instanced models automatically from authored transforms. `getGLTFNodeInstancing()` exposes resolved matrices and source attributes for inspection or a custom integration.
 
 ```ts
-import {createScenegraphsFromGLTF, getGLTFNodeInstancing} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, getGLTFNodeInstancing} from '@luma.gl/engine/gltf';
 
 const scenegraphs = createScenegraphsFromGLTF(device, gltf);
 for (const sourceNode of gltf.nodes || []) {

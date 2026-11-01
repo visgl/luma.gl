@@ -28,11 +28,7 @@ const config = getDocusaurusConfig({
   exampleTableOfContents: require('./content/examples/table-of-contents.json'),
 
   search: 'local',
-  // TODO: Remove after @vis.gl/docusaurus-website handles an omitted webpack resolve config.
-  webpackConfig: {resolve: {}},
   customCss: ['./src/custom.css'],
-  // The shared website package deep-merges this field and currently requires an object.
-  webpackConfig: {resolve: {}},
   navbarItems: [
     {
       to: '/showcase',
@@ -52,6 +48,28 @@ const config = getDocusaurusConfig({
       '@docusaurus/plugin-client-redirects',
       {
         redirects: [
+          {from: ['/docs/api-reference/gpgpu'], to: '/docs/api-reference/graph/gpu-evaluation'},
+          {from: ['/docs/api-reference/gpgpu/clean-evaluate'], to: '/docs/api-reference/graph/clean-evaluate'},
+          {from: ['/docs/api-reference/gpgpu/custom-operation'], to: '/docs/api-reference/graph/custom-operation'},
+          {from: ['/docs/api-reference/gpgpu/gpu-constant'], to: '/docs/api-reference/graph/gpu-constant'},
+          {from: ['/docs/api-reference/gpgpu/gpu-data-evaluator'], to: '/docs/api-reference/graph/gpu-data-evaluator'},
+          {from: ['/docs/api-reference/gpgpu/gpu-data-view'], to: '/docs/api-reference/graph/gpu-data-view'},
+          {from: ['/docs/api-reference/gpgpu/gpu-data'], to: '/docs/api-reference/graph/gpu-data'},
+          {from: ['/docs/api-reference/gpgpu/gpu-geometry'], to: '/docs/api-reference/graph/gpu-geometry'},
+          {from: ['/docs/api-reference/gpgpu/gpu-parse'], to: '/docs/api-reference/graph/gpu-parse'},
+          {from: ['/docs/api-reference/gpgpu/gpu-physics-collision-coverage'], to: '/docs/api-reference/graph/gpu-physics-collision-coverage'},
+          {from: ['/docs/api-reference/gpgpu/gpu-physics'], to: '/docs/api-reference/graph/gpu-physics'},
+          {from: ['/docs/api-reference/gpgpu/gpu-pointcloud'], to: '/docs/api-reference/graph/gpu-pointcloud'},
+          {from: ['/docs/api-reference/gpgpu/gpu-rigid-body-world'], to: '/docs/api-reference/graph/gpu-rigid-body-world'},
+          {from: ['/docs/api-reference/gpgpu/gpu-sphere-world'], to: '/docs/api-reference/graph/gpu-sphere-world'},
+          {from: ['/docs/api-reference/gpgpu/gpu-vector-format'], to: '/docs/api-reference/graph/gpu-vector-format'},
+          {from: ['/docs/api-reference/gpgpu/gpu-vector-search'], to: '/docs/api-reference/graph/gpu-vector-search'},
+          {from: ['/docs/api-reference/gpgpu/gpu-vector'], to: '/docs/api-reference/graph/gpu-vector'},
+          {from: ['/docs/api-reference/gpgpu/kernel'], to: '/docs/api-reference/graph/kernel'},
+          {from: ['/docs/api-reference/gpgpu/operations'], to: '/docs/api-reference/graph/operations'},
+          {from: ['/docs/api-reference/gpgpu/render-kernel'], to: '/docs/api-reference/graph/render-kernel'},
+
+          {from: ['/docs/api-reference/text'], to: '/docs/api-reference/engine/text'},
           {"from":["/docs/api-reference/experimental/a-buffer-renderer"],"to":"/docs/api-reference/scene/a-buffer-renderer"},
           {"from":["/docs/api-reference/experimental/clustered-lighting"],"to":"/docs/api-reference/scene/clustered-lighting"},
           {"from":["/docs/api-reference/experimental/deferred-lighting"],"to":"/docs/api-reference/scene/deferred-lighting"},
@@ -104,23 +122,23 @@ const config = getDocusaurusConfig({
           },
           {
             from: ['/docs/api-reference/tables/gpu-constant'],
-            to: '/docs/api-reference/gpgpu/gpu-constant'
+            to: '/docs/api-reference/graph/gpu-constant'
           },
           {
             from: ['/docs/api-reference/tables/gpu-data'],
-            to: '/docs/api-reference/gpgpu/gpu-data'
+            to: '/docs/api-reference/graph/gpu-data'
           },
           {
             from: ['/docs/api-reference/tables/gpu-data-view'],
-            to: '/docs/api-reference/gpgpu/gpu-data-view'
+            to: '/docs/api-reference/graph/gpu-data-view'
           },
           {
             from: ['/docs/api-reference/tables/gpu-vector'],
-            to: '/docs/api-reference/gpgpu/gpu-vector'
+            to: '/docs/api-reference/graph/gpu-vector'
           },
           {
             from: ['/docs/api-reference/tables/gpu-vector-format'],
-            to: '/docs/api-reference/gpgpu/gpu-vector-format'
+            to: '/docs/api-reference/graph/gpu-vector-format'
           },
           {
             from: ['/docs/api-reference/tables/gpu-table'],
@@ -165,6 +183,12 @@ const config = getDocusaurusConfig({
           }
         ],
         createRedirects(existingPath) {
+          if (existingPath.startsWith('/docs/api-reference/shaders')) {
+            return [existingPath.replace('/docs/api-reference/shaders', '/docs/api-reference/shadertools')];
+          }
+          if (existingPath.startsWith('/docs/api-reference/generated/shaders')) {
+            return [existingPath.replace('/docs/api-reference/generated/shaders', '/docs/api-reference/generated/shadertools')];
+          }
           // docs/examples/tutorials/*/api-reference <= /docs/tutorials
           if (existingPath.includes('/docs/examples/tutorials/')) {
             return [existingPath.replace('/docs/examples/tutorials/', '/docs/tutorials/')];
@@ -329,11 +353,11 @@ module.exports = {
     [
       'docusaurus-plugin-typedoc',
       {
-        id: 'shadertools-api-reference',
-        name: '@luma.gl/shadertools generated API',
-        entryPoints: ['../modules/shadertools/src/index.ts'],
-        tsconfig: '../modules/shadertools/tsconfig.json',
-        out: '../docs/api-reference/generated/shadertools',
+        id: 'shaders-api-reference',
+        name: '@luma.gl/shaders generated API',
+        entryPoints: ['../modules/shaders/src/index.ts'],
+        tsconfig: '../modules/shaders/tsconfig.json',
+        out: '../docs/api-reference/generated/shaders',
         docsPath: '../docs',
         readme: 'none',
         excludeInternal: true,
@@ -358,7 +382,22 @@ module.exports = {
         configureWebpack(_configuration, isServer) {
           // Subpath aliases must precede the package aliases generated by ocular.
           _configuration.resolve.alias = {
-            '@luma.gl/gpgpu/_internal': path.resolve(__dirname, '../modules/gpgpu/src/execution'),
+            '@luma.gl/graph/gpu-simple-graph/cpu': path.resolve(__dirname, '../modules/graph/src/gpu-simple-graph/operations/cpu'),
+            '@luma.gl/graph/gpu-simple-graph/webgl': path.resolve(__dirname, '../modules/graph/src/gpu-simple-graph/operations/webgl'),
+            '@luma.gl/graph/gpu-simple-graph/webgpu': path.resolve(__dirname, '../modules/graph/src/gpu-simple-graph/operations/webgpu'),
+            '@luma.gl/graph/_internal/arrow': path.resolve(__dirname, '../modules/graph/src/arrow/internal.ts'),
+            '@luma.gl/graph/arrow': path.resolve(__dirname, '../modules/graph/src/arrow'),
+            '@luma.gl/engine/arrow': path.resolve(__dirname, '../modules/engine/src/arrow'),
+            '@luma.gl/core/test-utils': path.resolve(__dirname, '../modules/core/src/test-utils'),
+            '@luma.gl/graph/_internal': path.resolve(__dirname, '../modules/graph/src/execution'),
+            '@luma.gl/engine/effects': path.resolve(__dirname, '../modules/engine/src/effects'),
+            '@luma.gl/engine/text-fonts': path.resolve(__dirname, '../modules/engine/src/text/fonts'),
+            '@luma.gl/engine/text-3d': path.resolve(__dirname, '../modules/engine/src/text/text-3d'),
+            '@luma.gl/engine/text-experimental': path.resolve(__dirname, '../modules/engine/src/text/experimental.ts'),
+            '@luma.gl/engine/text': path.resolve(__dirname, '../modules/engine/src/text'),
+            '@luma.gl/engine/gltf-physics': path.resolve(__dirname, '../modules/engine/src/gltf/physics'),
+            '@luma.gl/engine/gltf': path.resolve(__dirname, '../modules/engine/src/gltf'),
+            '@luma.gl/engine/splats': path.resolve(__dirname, '../modules/engine/src/splats'),
             '@luma.gl/engine/models': path.resolve(__dirname, '../modules/engine/src/graph/models'),
             '@luma.gl/engine/physics': path.resolve(__dirname, '../modules/engine/src/graph/physics'),
             '@luma.gl/engine/tables': path.resolve(__dirname, '../modules/engine/src/graph/tables'),

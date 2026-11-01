@@ -3,7 +3,7 @@
 
 import {type Device, type Texture, type TextureFormat} from '@luma.gl/core';
 import {ShaderPassRenderer} from '@luma.gl/engine';
-import {bokehDof} from '@luma.gl/effects';
+import {bokehDof} from '@luma.gl/engine/effects';
 import {ExternalTexture, type Texture as ThreeTexture, type WebGPURenderer} from 'three/webgpu';
 
 // The example pins Three r185. Keep its private native-texture lookup at this adapter boundary.

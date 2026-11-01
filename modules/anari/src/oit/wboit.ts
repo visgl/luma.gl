@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 
 /** Weighted blended OIT capture pass. */
 export type WBOITPass = 'accumulation' | 'revealage';
@@ -115,5 +115,5 @@ export const wboit = {
 /** Shader plugin that installs the portable weighted blended OIT shader module. */
 export const wboitPlugin = {
   name: 'wboit',
-  modules: [wboit as ShaderModule]
+  module: wboit as ShaderModule
 } as const satisfies ShaderPlugin;

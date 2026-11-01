@@ -11,7 +11,7 @@ import type {
   ShaderLayout
 } from '@luma.gl/core';
 import {Buffer, ExternalTexture, Texture, TextureView, UniformStore} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {
   DynamicBuffer,
   type DynamicBufferRange,

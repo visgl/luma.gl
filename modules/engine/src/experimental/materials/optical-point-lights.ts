@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 import {opticalLighting} from './optical-lighting';
 
 /** Maximum number of local lights carried by the portable fixed-size uniform block. */
@@ -284,5 +284,5 @@ export const opticalPointLights = {
 /** Explicitly installs bounded point lights and enables illuminated material helpers. */
 export const opticalPointLightsPlugin = {
   name: 'opticalPointLights',
-  modules: [opticalPointLights as ShaderModule]
+  module: opticalPointLights as ShaderModule
 } as const satisfies ShaderPlugin;

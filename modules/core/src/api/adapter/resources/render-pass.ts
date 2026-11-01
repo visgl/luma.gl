@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray4, TypedArray} from '@math.gl/core/types';
+import type {NumberArray4, TypedArray} from '@math.gl/core';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';

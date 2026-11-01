@@ -1,0 +1,87 @@
+diff --git a/dist/browser.js b/dist/browser.js
+index 1d012283ddfaad7d8ca994932eacb34cb4c9b367..f8605958bf62050730e81443cb8e93f14494a520 100644
+--- a/dist/browser.js
++++ b/dist/browser.js
+@@ -1,23 +1,67 @@
+ import { B as BaseCoverageProviderModule } from './base-BO8X8tRz.js';
+ import './constants-BCJfMgEg.js';
+ 
++// Keep the transport incremental when multiple files share one browser context. Metadata is
++// immutable for a source hash; only counters changed by the current file need another report.
++const coverageSnapshots = new Map();
++
++function subtractCounter(current, previous = 0) {
++  return current >= previous ? current - previous : current;
++}
++
++function collectCoverageDelta(coverage) {
++  const changedCoverage = Object.create(null);
++  for (const [filename, fileCoverage] of Object.entries(coverage)) {
++    const snapshot = {
++      hash: fileCoverage.hash,
++      s: {...fileCoverage.s},
++      f: {...fileCoverage.f},
++      b: Object.fromEntries(Object.entries(fileCoverage.b).map(([key, counts]) => [key, [...counts]]))
++    };
++    const previous = coverageSnapshots.get(filename);
++    let changed = !previous || previous.hash !== snapshot.hash;
++    let counters = snapshot;
++    if (!changed) {
++      counters = {s: {}, f: {}, b: {}};
++      for (const metric of ['s', 'f']) {
++        for (const [key, count] of Object.entries(snapshot[metric])) {
++          const difference = subtractCounter(count, previous[metric][key]);
++          counters[metric][key] = difference;
++          changed ||= difference > 0;
++        }
++      }
++      for (const [key, counts] of Object.entries(snapshot.b)) {
++        counters.b[key] = counts.map((count, index) => {
++          const difference = subtractCounter(count, previous.b[key]?.[index]);
++          changed ||= difference > 0;
++          return difference;
++        });
++      }
++    }
++    if (changed) changedCoverage[filename] = {...fileCoverage, s: counters.s, f: counters.f, b: counters.b};
++    coverageSnapshots.set(filename, snapshot);
++  }
++  return changedCoverage;
++}
++
+ function triggerCommand(command, args = []) {
+-	return globalThis.__vitest_browser_runner__?.commands?.triggerCommand?.(command, args);
++  return globalThis.__vitest_browser_runner__?.commands?.triggerCommand?.(command, args);
+ }
+ const mod = {
+-	takeCoverage() {
+-		const coverage = BaseCoverageProviderModule.takeCoverage();
+-		if (!coverage) {
+-			return;
+-		}
+-		return triggerCommand("__vitest_writeCoverageFile", [coverage]);
+-	},
+-	startCoverage() {
+-		BaseCoverageProviderModule.startCoverage();
+-	},
+-	getProvider() {
+-		return BaseCoverageProviderModule.getProvider();
+-	}
++  takeCoverage() {
++    const coverage = BaseCoverageProviderModule.takeCoverage();
++    if (!coverage) return;
++    const changedCoverage = collectCoverageDelta(coverage);
++    if (!Object.keys(changedCoverage).length) return;
++    return triggerCommand('__vitest_writeCoverageFile', [changedCoverage]);
++  },
++  startCoverage() {
++    coverageSnapshots.clear();
++    BaseCoverageProviderModule.startCoverage();
++  },
++  getProvider() {
++    return BaseCoverageProviderModule.getProvider();
++  }
+ };
+ 
+-export { mod as default };
++export {mod as default};

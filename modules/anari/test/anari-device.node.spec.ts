@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {ANARIDevice, type ANARIRendererRuntimeFactory} from '@luma.gl/anari';
 import {ANARISceneAdapter} from '../src/anari-scene-adapter';

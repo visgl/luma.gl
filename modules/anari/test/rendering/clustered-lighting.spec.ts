@@ -12,7 +12,7 @@ import {
   MAX_CLUSTERED_POINT_LIGHTS,
   type DeferredPointLight
 } from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 
 it('clustered lighting exposes one composable fullscreen resolve', () => {

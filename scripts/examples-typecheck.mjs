@@ -132,17 +132,21 @@ const SHARED_COMPILER_OPTIONS = {
   moduleResolution: 'bundler',
   jsx: 'react-jsx',
   paths: {
-    '@luma.gl/arrow': [join(repoRoot, 'modules/arrow/src/index.ts')],
-    '@luma.gl/arrow/*': [join(repoRoot, 'modules/arrow/src/*')],
+    '@luma.gl/graph/_internal/arrow': [join(repoRoot, 'modules/graph/dist/arrow/internal.d.ts')],
+    '@luma.gl/graph/arrow': [join(repoRoot, 'modules/graph/dist/arrow/index.d.ts')],
+    '@luma.gl/engine/arrow': [join(repoRoot, 'modules/engine/dist/arrow/index.d.ts')],
     '@deck.gl-community/arrow-layers': [join(repoRoot, 'modules/deck-arrow-layers/src/index.ts')],
     '@deck.gl-community/arrow-layers/*': [join(repoRoot, 'modules/deck-arrow-layers/src/*')],
     '@deck.gl-community/gpu-layers': [join(repoRoot, 'modules/deck-gpu-layers/src/index.ts')],
     '@deck.gl-community/gpu-layers/*': [join(repoRoot, 'modules/deck-gpu-layers/src/*')],
-    '@luma.gl/gpgpu/_internal/*': [join(repoRoot, 'modules/gpgpu/dist/execution/*')],
-    '@luma.gl/gpgpu': [join(repoRoot, 'modules/gpgpu/dist/index.d.ts')],
-    '@luma.gl/gpgpu/*': [join(repoRoot, 'modules/gpgpu/dist/*')],
-    '@luma.gl/splats': [join(repoRoot, 'modules/splats/src/index.ts')],
-    '@luma.gl/splats/*': [join(repoRoot, 'modules/splats/src/*')],
+    '@luma.gl/graph/gpu-simple-graph/cpu': [join(repoRoot, 'modules/graph/dist/gpu-simple-graph/operations/cpu/index.d.ts')],
+    '@luma.gl/graph/gpu-simple-graph/webgl': [join(repoRoot, 'modules/graph/dist/gpu-simple-graph/operations/webgl/index.d.ts')],
+    '@luma.gl/graph/gpu-simple-graph/webgpu': [join(repoRoot, 'modules/graph/dist/gpu-simple-graph/operations/webgpu/index.d.ts')],
+    '@luma.gl/graph/_internal/*': [join(repoRoot, 'modules/graph/dist/execution/*')],
+    '@luma.gl/graph/gpu-simple-graph': [join(repoRoot, 'modules/graph/dist/gpu-simple-graph/index.d.ts')],
+    '@luma.gl/graph/*': [join(repoRoot, 'modules/graph/dist/*')],
+    '@luma.gl/engine/splats': [join(repoRoot, 'modules/engine/src/splats/index.ts')],
+    '@luma.gl/engine/splats/*': [join(repoRoot, 'modules/engine/src/splats/*')],
   }
 };
 

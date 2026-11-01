@@ -4,7 +4,7 @@
 
 import {describe, expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {GPUSegmentedReduction} from '../../src/gpu-core/gpu-segmented-reduction';
 

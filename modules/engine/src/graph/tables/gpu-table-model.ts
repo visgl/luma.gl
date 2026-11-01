@@ -20,7 +20,7 @@ import {GPUTableShaderBindings} from '@luma.gl/graph/gpu-tables';
 import type {GPURecordBatch} from '@luma.gl/graph/gpu-tables';
 import {GPU_TABLE_INDEX_COLUMN_NAME} from '@luma.gl/graph/gpu-tables';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
-import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/graph/gpu-data';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */
 export type GPUTableModelCount = 'instance' | 'vertex' | 'none';

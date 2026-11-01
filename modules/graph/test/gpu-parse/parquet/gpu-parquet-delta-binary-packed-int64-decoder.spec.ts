@@ -9,7 +9,7 @@ import {
   parseParquetDeltaBinaryPackedInt64Plan
 } from '@luma.gl/graph/gpu-parse';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUParquetDeltaBinaryPackedInt64Decoder reconstructs signed INT64 values', async () => {
   const device = await getWebGPUTestDevice();

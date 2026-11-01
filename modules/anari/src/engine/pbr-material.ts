@@ -2,19 +2,15 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Binding, Device} from '@luma.gl/core';
+import type {Binding, Device, Texture} from '@luma.gl/core';
 import {type Material, MaterialFactory} from '@luma.gl/engine';
 import {type TextureBindingSource} from '@luma.gl/core/dynamic';
-import {
-  type PBRMaterialBindings,
-  type PBRMaterialUniforms,
-  pbrMaterial
-} from '@luma.gl/shadertools';
+import {type PBRMaterialBindings, type PBRMaterialUniforms, pbrMaterial} from '@luma.gl/shaders';
 
 /** Concrete or deferred texture resources accepted by the shared PBR material factory. */
 export type PBRMaterialResources = Record<string, Binding | TextureBindingSource>;
 
-/** Typed material instance backed by the canonical shadertools PBR module. */
+/** Typed material instance backed by the canonical shaders PBR module. */
 export type PBRMaterial = Material<{pbrMaterial: PBRMaterialUniforms}, PBRMaterialResources>;
 
 /** Options used to create a reusable physically based material. */
@@ -24,7 +20,7 @@ export type CreatePBRMaterialOptions = {
   /** Canonical glTF-compatible physically based material uniforms. */
   uniforms?: PBRMaterialUniforms;
   /** Material-owned texture bindings; absent maps do not allocate fallback resources. */
-  bindings?: Partial<PBRMaterialBindings> | PBRMaterialResources;
+  bindings?: Partial<PBRMaterialBindings<Texture>> | PBRMaterialResources;
   /** Existing compatible factory reused across materials in the same scene. */
   factory?: MaterialFactory<{pbrMaterial: PBRMaterialUniforms}, PBRMaterialResources>;
 };
@@ -62,7 +58,7 @@ export function createPBRMaterial(
 
 /** Returns texture-presence flags matching the canonical PBR shader bindings. */
 export function getPBRMaterialMapUniforms(
-  bindings: Partial<PBRMaterialBindings> | PBRMaterialResources
+  bindings: Partial<PBRMaterialBindings<Texture>> | PBRMaterialResources
 ): Partial<PBRMaterialUniforms> {
   return {
     baseColorMapEnabled: Boolean(bindings.pbr_baseColorSampler),

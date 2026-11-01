@@ -5,9 +5,9 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 <ExperimentalDocsTabs active="scene-renderer" />
 
 `SceneRenderer` renders retained, physically based surface descriptions on WebGPU and WebGL. It
-combines the canonical `@luma.gl/shadertools` PBR modules with experimental scene orchestration,
+combines the canonical `@luma.gl/shaders` PBR modules with experimental scene orchestration,
 instanced drawing, transparent ordering, material specialization, roughness-aware image-based
-lighting, opaque-scene transmission, and existing shadertools-owned skinning and engine-owned
+lighting, opaque-scene transmission, and existing shaders-owned skinning and engine-owned
 morph-target primitives.
 
 The renderer is intentionally format-independent. glTF loaders, ANARI retained objects, and
@@ -92,7 +92,7 @@ borrowed resources. Applications combining multiple passes may submit once after
 | `geometryVersion` | Optional structural version; increment it when geometry must be rebuilt. |
 | `material` | A format-independent `SceneMaterial` descriptor. |
 | `transforms` | Readonly column-major world matrices for all instances in this draw. |
-| `skin` | Optional caller-supplied shadertools skin inputs, including `jointMatrices`, for geometry containing both `JOINTS_0` and `WEIGHTS_0`. |
+| `skin` | Optional caller-supplied shaders skin inputs, including `jointMatrices`, for geometry containing both `JOINTS_0` and `WEIGHTS_0`. |
 | `morphTargets` | Optional immutable glTF-style displacement attributes. |
 | `morphWeights` | Current morph-target weights; changing weights updates shared geometry buffers without recreating the model. |
 
@@ -125,7 +125,7 @@ renderer.render({...options, surfaces: [deformingSurface]});
 device.submit();
 ```
 
-The existing shadertools `skin` module uploads the supplied joint palette, and the existing
+The existing shaders `skin` module uploads the supplied joint palette, and the existing
 engine morph helper updates the retained model's vertex buffers without mutating the source CPU
 geometry. Scene adapters remain responsible for extracting skeleton hierarchy, evaluating animated
 joints, and supplying the current palette; preserving `JOINTS_0`/`WEIGHTS_0` alone does not
@@ -137,7 +137,7 @@ automatically calculate or bind joint matrices.
 | --- | --- |
 | `id` | Stable material identifier. |
 | `version` | Optional adapter-owned material version. Uniform changes remain nonstructural. |
-| `uniforms` | Canonical `PBRMaterialUniforms` from `@luma.gl/shadertools`. |
+| `uniforms` | Canonical `PBRMaterialUniforms` from `@luma.gl/shaders`. |
 | `bindings` | Present canonical PBR texture bindings, such as `pbr_baseColorSampler`. |
 | `alphaMode` | Explicit `OPAQUE`, `MASK`, or `BLEND` behavior. |
 | `doubleSided` | Disables back-face culling when `true`. |
@@ -194,7 +194,7 @@ ordered back-to-front at the surface level.
 | `id` | Stable frame identifier used to retain compiled models between renders. |
 | `surfaces` | Retained surface batches. |
 | `camera` | `viewMatrix`, `projectionMatrix`, and world-space `position`. |
-| `lights` | Existing shadertools light descriptors using normalized color values; directional vectors describe incoming light propagation. |
+| `lights` | Existing shaders light descriptors using normalized color values; directional vectors describe incoming light propagation. |
 | `background` | Linear RGBA clear color; defaults to `[0, 0, 0, 1]`. |
 | `framebuffer` | Optional caller-owned forward-rendering or ray-tracing target; its attachment dimensions and formats determine presentation. |
 | `width`, `height` | Explicit target dimensions when a framebuffer is not supplied. |
@@ -213,7 +213,7 @@ linear color space. Exposure is applied before tone mapping. Import the named se
 configuring an output transform:
 
 ```ts
-import {PBR_TONE_MAP_MODE} from '@luma.gl/shadertools';
+import {PBR_TONE_MAP_MODE} from '@luma.gl/shaders';
 
 renderer.render({
   ...options,
@@ -279,11 +279,11 @@ split-sum BRDF lookup texture on WebGL or WebGPU.
 
 Applications that already use the glTF environment loader can await its `DynamicTexture`
 resources and adapt their underlying textures without introducing an experimental dependency into
-`@luma.gl/gltf`:
+`@luma.gl/engine/gltf`:
 
 ```ts
-import {loadPBREnvironment} from '@luma.gl/gltf';
-import {loadImageTexture} from '@loaders.gl/textures';
+import {loadPBREnvironment} from '@luma.gl/engine/gltf';
+import {loadImageTexture} from '@loaders.gl/images/load-image';
 
 const loadedEnvironment = loadPBREnvironment(device, {
   loadImage: loadImageTexture,
@@ -444,10 +444,10 @@ Releases all renderer-owned frame resources.
   compatible opaque/masked metallic-roughness scenes on WebGPU and falls back to this renderer.
 - [`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) generates
   roughness-prefiltered cubemaps, diffuse irradiance, and BRDF lookup textures.
-- [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material) documents canonical
+- [`pbrMaterial`](/docs/api-reference/shaders/shader-modules/pbr-material) documents canonical
   physically based shader uniforms and bindings.
 - [`GBuffer`](/docs/api-reference/scene/g-buffer) documents the deferred attachment model.
-- [`@luma.gl/gltf`](/docs/api-reference/gltf) owns glTF parsing, material interpretation,
+- [`@luma.gl/engine/gltf`](/docs/api-reference/gltf) owns glTF parsing, material interpretation,
   environment-image loading, and animation decoding.
 
 ## Tiled ray image export

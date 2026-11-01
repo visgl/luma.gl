@@ -5,17 +5,16 @@
 import {
   getArrowFixedSizeListValues,
   isArrowFixedSizeListVector,
-  loadArrowRecordBatches,
   makeArrowFixedSizeListVector,
-  makeGPUVectorFromArrow,
-  makeGPURecordBatchFromArrowRecordBatch,
-  type ArrowRecordBatchSource
-} from '@luma.gl/arrow';
+  makeGPUVectorFromArrow
+} from '@luma.gl/graph/arrow';
+import {loadArrowRecordBatches, type ArrowRecordBatchSource} from '@luma.gl/engine/arrow';
+import {makeGPURecordBatchFromArrowRecordBatch} from '@luma.gl/graph/arrow';
 import {Buffer, type CommandEncoder, type Device, type RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {TableTransform} from '@luma.gl/engine/tables';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {getGPUVectorBuffer, type GPUData, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorBuffer, type GPUData, type GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   GPURenderable,
   GPUTableComputation,

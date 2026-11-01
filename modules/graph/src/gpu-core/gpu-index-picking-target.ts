@@ -4,7 +4,7 @@
 
 import {Buffer, Texture, type Binding, type RenderPassProps} from '@luma.gl/core';
 export type GPUIndexPickInfo = {batchIndex: number | null; objectIndex: number | null};
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
 import {
   GPUCommandGraph,
   type GraphBufferHandle,

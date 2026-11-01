@@ -6,7 +6,7 @@ import {PostprocessingExample} from '@site/src/examples';
 <ShaderLevelDocsTabs active="shader-passes" />
 
 A shader pass is a shader module that can run as a fullscreen texture-processing
-stage. The pass descriptor lives in `@luma.gl/shadertools`; the renderer that
+stage. The pass descriptor lives in `@luma.gl/shaders`; the renderer that
 executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
 
 Choose an effect and adjust its parameters to see a shader pass update the source texture live:
@@ -18,9 +18,9 @@ Choose an effect and adjust its parameters to see a shader pass update the sourc
 | Component | Role |
 | --- | --- |
 | [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) | Owns the fullscreen draw path, swap framebuffers, named targets, shader inputs, and presentation step. |
-| [`CompositeShaderPass`](/docs/api-reference/shadertools/shader-pass#compositeshaderpass) | Chains existing passes with named intermediate render targets. |
-| [`ShaderPass`](/docs/api-reference/shadertools/shader-pass) | Describes one standalone texture-processing effect and its optional subpasses. |
-| [`ShaderSubPass`](/docs/api-reference/shadertools/shader-pass#shadersubpass) | Describes one draw inside a pass, including source routing, output routing, and subpass uniforms. |
+| [`CompositeShaderPass`](/docs/api-reference/shaders/shader-pass#compositeshaderpass) | Chains existing passes with named intermediate render targets. |
+| [`ShaderPass`](/docs/api-reference/shaders/shader-pass) | Describes one standalone texture-processing effect and its optional subpasses. |
+| [`ShaderSubPass`](/docs/api-reference/shaders/shader-pass#shadersubpass) | Describes one draw inside a pass, including source routing, output routing, and subpass uniforms. |
 
 Use a plain `ShaderPass` when each stage only needs the original input texture
 or the previous result. Use a `CompositeShaderPass` when later steps need named
@@ -89,7 +89,7 @@ import {
   createSSRCompositeShaderPass,
   createTAACompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {GBuffer} from '@luma.gl/anari';
 
 const gBuffer = new GBuffer(device, {width, height});
@@ -155,7 +155,7 @@ GTAO defaults to its backward-compatible full-color composite. Deferred applicat
 isolate ambient light should request the physically accurate ambient-only mode instead:
 
 ```ts
-import {createGTAOCompositeShaderPass} from '@luma.gl/effects';
+import {createGTAOCompositeShaderPass} from '@luma.gl/engine/effects';
 import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/anari';
 
 const ambientRenderer = new ShaderPassRenderer(device, {
@@ -424,11 +424,11 @@ const renderer = new ShaderPassRenderer(device, {
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
 
-For descriptor fields, see [`ShaderPass`](/docs/api-reference/shadertools/shader-pass).
+For descriptor fields, see [`ShaderPass`](/docs/api-reference/shaders/shader-pass).
 For execution methods and routing details, see
 [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer).
 The current built-in effect catalog is under
-[Shader Pass Catalog](/docs/api-reference/shadertools/shader-passes/image-processing).
+[Shader Pass Catalog](/docs/api-reference/shaders/shader-passes/image-processing).
 
 ### Analytic height fog
 

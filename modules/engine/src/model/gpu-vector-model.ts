@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type TypedArray} from '@math.gl/core/types';
+import {type TypedArray} from '@math.gl/core';
 import {
   type RenderPipelineProps,
   type RenderPipelineParameters,
@@ -37,18 +37,10 @@ import {
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 
-import type {
-  ShaderBindingDebugRow,
-  ShaderModule,
-  ShaderPlugin,
-  GLSLShaderAssembler,
-  WGSLShaderAssembler
-} from '@luma.gl/shadertools';
-import {
-  mergeShaderPluginModules,
-  resolveShaderPlugins,
-  ShaderAssembler
-} from '@luma.gl/shadertools';
+import type {ShaderBindingDebugRow, ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
+import {mergeShaderPluginModules, resolveShaderPlugins, ShaderAssembler} from '@luma.gl/shaders';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
@@ -130,9 +122,9 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
   vs?: string | null;
   fs?: string | null;
 
-  /** Shadertools shader modules added to shader code. */
+  /** Shader modules added to shader code. */
   modules?: ShaderModule<any, any, any>[];
-  /** Shadertools boolean or numeric preprocessor defines that configure shader code. */
+  /** Shader boolean or numeric preprocessor defines that configure shader code. */
   defines?: Record<string, boolean | number>;
   /** Reusable shader assembly plugins resolved for the active GLSL or WGSL backend. */
   plugins?: ShaderPlugin[];
@@ -195,7 +187,7 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
  *
  * Features:
  * - Reuses and lazily recompiles {@link RenderPipeline | pipelines} as needed.
- * - Integrates with `@luma.gl/shadertools` to assemble GLSL or WGSL from shader modules.
+ * - Integrates with `@luma.gl/shaders` to assemble GLSL or WGSL from shader modules.
  * - Manages geometry attributes and buffer bindings.
  * - Accepts textures, samplers and uniform buffers as bindings, including texture binding sources.
  * - Provides detailed debug logging and optional shader source inspection.
@@ -266,7 +258,7 @@ export class GPUVectorModel {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler('glsl'),
+    shaderAssembler: undefined!,
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -290,7 +282,7 @@ export class GPUVectorModel {
   /** Factory used to create shaders */
   readonly shaderFactory: ShaderFactory;
   /** User-supplied per-model data */
-  userData: {[key: string]: any} = {};
+  userData: {[key: string]: unknown} = {};
 
   // Fixed properties (change can trigger pipeline rebuild)
 
@@ -397,9 +389,12 @@ export class GPUVectorModel {
       ...props,
       shaderAssembler:
         props.shaderAssembler ??
-        (isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
+        (defaultShaderAssembler &&
+        isShaderAssemblerForLanguage(defaultShaderAssembler, device.info.shadingLanguage)
           ? defaultShaderAssembler
-          : ShaderAssembler.getDefaultShaderAssembler(device.info.shadingLanguage))
+          : device.info.shadingLanguage === 'wgsl'
+            ? new WGSLShaderAssembler()
+            : new GLSLShaderAssembler())
     };
     this._vertexCountSet = vertexCountSet;
     props = this.props;
@@ -427,119 +422,130 @@ export class GPUVectorModel {
     this.explicitBufferLayout = this.bufferLayout;
     this.geometryVectorBindings = new GPUVectorBindings(device, `${this.id}-geometry`);
     this.attributeVectorBindings = new GPUVectorBindings(device, `${this.id}-attributes`);
-    this._initializeProps(props);
+    try {
+      this._initializeProps(props);
 
-    const platformInfo = getPlatformInfo(device);
-    const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
+      const platformInfo = getPlatformInfo(device);
+      const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
 
-    // Setup shader module inputs
-    const shaderInputModules = mergeShaderPluginModules(
-      this.props.modules,
-      resolvedPlugins.modules
-    );
-    const moduleMap = Object.fromEntries(shaderInputModules.map(module => [module.name, module]));
-
-    const shaderInputs =
-      props.shaderInputs ||
-      new ShaderInputs(moduleMap, {disableWarnings: this.props.disableWarnings});
-    if (props.shaderInputs && resolvedPlugins.modules.length > 0) {
-      shaderInputs.addModules(resolvedPlugins.modules);
-    }
-    // @ts-ignore
-    this.setShaderInputs(shaderInputs);
-
-    // Setup shader assembler
-    const modules = mergeShaderModules(this.props.modules, shaderInputs.getModules());
-    const defines = {...resolvedPlugins.defines, ...this.props.defines};
-
-    if (this.device.type === 'webgl') {
-      this.props._uniformBlockLayouts = getShaderModuleUniformBlockLayouts(modules);
-    }
-
-    this.props.shaderLayout =
-      mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
-
-    const isWebGPU = this.device.type === 'webgpu';
-
-    // WebGPU
-    // TODO - hack to support unified WGSL shader
-    // TODO - this is wrong, compile a single shader
-    if (isWebGPU && this.props.source) {
-      // WGSL
-      const shaderAssembler = this.props.shaderAssembler;
-      // WGSL sources require an assembler with WGSL-specific hooks and binding state.
-      assert(isShaderAssemblerForLanguage(shaderAssembler, 'wgsl'));
-      const {
-        source,
-        getUniforms,
-        bindingTable,
-        entryPoints = {},
-        shaderLayout: assembledShaderLayout
-      } = shaderAssembler.assembleWGSLShader({
-        platformInfo,
-        ...this.props,
-        modules,
-        defines,
-        pluginInjections: resolvedPlugins.injections,
-        pluginVertexInputs: resolvedPlugins.vertexInputs,
-        pluginVaryings: resolvedPlugins.varyings
-      });
-      this.source = source;
-      this.props.vertexEntryPoint = entryPoints.vertex || this.props.vertexEntryPoint;
-      this.props.fragmentEntryPoint = entryPoints.fragment || this.props.fragmentEntryPoint;
-      // @ts-expect-error
-      this._getModuleUniforms = getUniforms;
-      this._bindingTable = bindingTable;
-      // Infer the layout after modules have been added so their bindings are included.
-      const scannedOrReflectedShaderLayout =
-        assembledShaderLayout ??
-        (device as Device & {getShaderLayout?: (source: string) => any}).getShaderLayout?.(
-          this.source
-        );
-      const inferredShaderLayout = normalizeShaderPluginAttributeNames(
-        scannedOrReflectedShaderLayout,
-        resolvedPlugins.vertexInputs
+      // Setup shader module inputs
+      const shaderInputModules = mergeShaderPluginModules(
+        this.props.modules,
+        resolvedPlugins.modules
       );
-      const shaderLayout = mergeInferredShaderLayout(
-        this.props.shaderLayout,
-        inferredShaderLayout,
-        Object.keys(resolvedPlugins.vertexInputs)
-      );
+      const moduleMap = Object.fromEntries(shaderInputModules.map(module => [module.name, module]));
+
+      const shaderInputs =
+        props.shaderInputs ||
+        new ShaderInputs(moduleMap, {disableWarnings: this.props.disableWarnings});
+      if (props.shaderInputs && resolvedPlugins.modules.length > 0) {
+        shaderInputs.addModules(resolvedPlugins.modules);
+      }
+      // @ts-ignore
+      this.setShaderInputs(shaderInputs);
+
+      // Setup shader assembler
+      const modules = mergeShaderModules(this.props.modules, shaderInputs.getModules());
+      const defines = {...resolvedPlugins.defines, ...this.props.defines};
+
+      if (this.device.type === 'webgl') {
+        this.props._uniformBlockLayouts = getShaderModuleUniformBlockLayouts(modules);
+      }
+
       this.props.shaderLayout =
-        mergeShaderModuleBindingsIntoLayout(shaderLayout || null, modules) || null;
-    } else {
-      // GLSL
-      const shaderAssembler = this.props.shaderAssembler;
-      // GLSL shader pairs require an assembler with GLSL-specific hooks.
-      assert(isShaderAssemblerForLanguage(shaderAssembler, 'glsl'));
-      const {vs, fs, getUniforms} = shaderAssembler.assembleGLSLShaderPair({
-        platformInfo,
-        ...this.props,
-        modules,
-        defines,
-        pluginInjections: resolvedPlugins.injections,
-        pluginVertexInputs: resolvedPlugins.vertexInputs,
-        pluginVaryings: resolvedPlugins.varyings
-      });
+        mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
 
-      this.vs = vs;
-      this.fs = fs;
-      // @ts-expect-error
-      this._getModuleUniforms = getUniforms;
-      this._bindingTable = [];
-    }
+      const isWebGPU = this.device.type === 'webgpu';
 
-    this.pipelineFactory =
-      props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
-    this.shaderFactory = props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
+      // WebGPU
+      // TODO - hack to support unified WGSL shader
+      // TODO - this is wrong, compile a single shader
+      if (isWebGPU && this.props.source) {
+        // WGSL
+        const shaderAssembler = this.props.shaderAssembler;
+        // WGSL sources require an assembler with WGSL-specific hooks and binding state.
+        assert(isShaderAssemblerForLanguage(shaderAssembler, 'wgsl'));
+        const {
+          source,
+          getUniforms,
+          bindingTable,
+          entryPoints = {},
+          shaderLayout: assembledShaderLayout
+        } = shaderAssembler.assembleWGSLShader({
+          platformInfo,
+          ...this.props,
+          modules,
+          defines,
+          pluginInjections: resolvedPlugins.injections,
+          pluginVertexInputs: resolvedPlugins.vertexInputs,
+          pluginInterStageVariables: resolvedPlugins.interStageVariables
+        });
+        this.source = source;
+        this.props.vertexEntryPoint = entryPoints.vertex || this.props.vertexEntryPoint;
+        this.props.fragmentEntryPoint = entryPoints.fragment || this.props.fragmentEntryPoint;
+        // @ts-expect-error
+        this._getModuleUniforms = getUniforms;
+        this._bindingTable = bindingTable;
+        // Infer the layout after modules have been added so their bindings are included.
+        const scannedOrReflectedShaderLayout =
+          assembledShaderLayout ??
+          (device as Device & {getShaderLayout?: (source: string) => any}).getShaderLayout?.(
+            this.source
+          );
+        const inferredShaderLayout = normalizeShaderPluginAttributeNames(
+          scannedOrReflectedShaderLayout,
+          resolvedPlugins.vertexInputs
+        );
+        const shaderLayout = mergeInferredShaderLayout(
+          this.props.shaderLayout,
+          inferredShaderLayout,
+          Object.keys(resolvedPlugins.vertexInputs)
+        );
+        this.props.shaderLayout =
+          mergeShaderModuleBindingsIntoLayout(shaderLayout || null, modules) || null;
+      } else {
+        // GLSL
+        const shaderAssembler = this.props.shaderAssembler;
+        // GLSL shader pairs require an assembler with GLSL-specific hooks.
+        assert(isShaderAssemblerForLanguage(shaderAssembler, 'glsl'));
+        const {vs, fs, getUniforms} = shaderAssembler.assembleGLSLShaderPair({
+          platformInfo,
+          ...this.props,
+          modules,
+          defines,
+          pluginInjections: resolvedPlugins.injections,
+          pluginVertexInputs: resolvedPlugins.vertexInputs,
+          pluginInterStageVariables: resolvedPlugins.interStageVariables
+        });
 
-    const asyncCompilation = PipelineFactory.getAsyncCompilation(this.device);
-    if (asyncCompilation) {
-      this._pipelineInitialization = this._initializePipelineAsync(props);
-      asyncCompilation.push(this._pipelineInitialization);
-    } else {
-      this.pipeline = this._updatePipeline();
-      this._initializePipelineResources(props);
+        this.vs = vs;
+        this.fs = fs;
+        // @ts-expect-error
+        this._getModuleUniforms = getUniforms;
+        this._bindingTable = [];
+      }
+
+      this.pipelineFactory =
+        props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
+      this.shaderFactory =
+        props.shaderFactory || ShaderFactory.getDefaultShaderFactory(this.device);
+
+      const asyncCompilation = PipelineFactory.getAsyncCompilation(this.device);
+      if (asyncCompilation) {
+        this._pipelineInitialization = this._initializePipelineAsync(props);
+        asyncCompilation.push(this._pipelineInitialization);
+      } else {
+        this.pipeline = this._updatePipeline();
+        this._initializePipelineResources(props);
+      }
+    } catch (error) {
+      // Failed construction never returns a model for the caller to destroy.
+      // Subclass fields may not exist yet, so bypass virtual teardown.
+      try {
+        GPUVectorModel.prototype.destroy.call(this);
+      } finally {
+        throw error;
+      }
     }
   }
 
@@ -600,9 +606,10 @@ export class GPUVectorModel {
           this.shaderFactory.release(this.pipeline.fs);
         }
       }
+      this.vertexArray?.destroy();
       this.geometryVectorBindings.destroy();
       this.attributeVectorBindings.destroy();
-      this._uniformStore.destroy();
+      this._uniformStore?.destroy();
       this._destroyed = true;
     }
   }
@@ -1129,10 +1136,12 @@ export class GPUVectorModel {
 
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
+    const previousVertexArray = this.vertexArray;
     this.vertexArray = this.device.createVertexArray({
       shaderLayout: this.pipeline.shaderLayout,
       bufferLayout: this.pipeline.bufferLayout
     });
+    previousVertexArray.destroy();
     this._dynamicAttributeBufferSources = {};
     this.applyVectorAttributes();
     if (this.indexBuffer) this.vertexArray.setIndexBuffer(this.indexBuffer);
@@ -1472,7 +1481,13 @@ export class GPUVectorModel {
   _updatePipeline(): RenderPipeline {
     const update = this._preparePipelineUpdate();
     if (update) {
-      this.pipeline = this.pipelineFactory.createRenderPipeline(update.props);
+      try {
+        this.pipeline = this.pipelineFactory.createRenderPipeline(update.props);
+      } catch (error) {
+        this._releasePipelineShaders(update.vertexShader, update.fragmentShader);
+        this._pipelineNeedsUpdate = 'pipeline creation failed';
+        throw error;
+      }
       this._finishPipelineUpdate(update);
     }
     return this.pipeline;
@@ -1512,22 +1527,29 @@ export class GPUVectorModel {
     }
     this._pipelineNeedsUpdate = false;
 
-    const vertexShader = this.shaderFactory.createShader({
-      id: `${this.id}-vertex`,
-      stage: 'vertex',
-      source: this.source || this.vs,
-      debugShaders: this.props.debugShaders
-    });
+    let vertexShader: Shader | null = null;
     let fragmentShader: Shader | null = null;
-    if (this.source) {
-      fragmentShader = vertexShader;
-    } else if (this.fs) {
-      fragmentShader = this.shaderFactory.createShader({
-        id: `${this.id}-fragment`,
-        stage: 'fragment',
-        source: this.fs,
+    try {
+      vertexShader = this.shaderFactory.createShader({
+        id: `${this.id}-vertex`,
+        stage: 'vertex',
+        source: this.source || this.vs,
         debugShaders: this.props.debugShaders
       });
+      if (this.source) {
+        fragmentShader = vertexShader;
+      } else if (this.fs) {
+        fragmentShader = this.shaderFactory.createShader({
+          id: `${this.id}-fragment`,
+          stage: 'fragment',
+          source: this.fs,
+          debugShaders: this.props.debugShaders
+        });
+      }
+    } catch (error) {
+      this._releasePipelineShaders(vertexShader, fragmentShader);
+      this._pipelineNeedsUpdate = 'shader creation failed';
+      throw error;
     }
     return {
       props: {

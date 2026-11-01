@@ -3,7 +3,7 @@
 
 import {expect, it} from 'vitest';
 import {transpileSlang} from '@luma.gl/slang';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import reference from './reference.json';
 import {EVERYDAY_SHADER, EVERYDAY_RESULTS, EVERYDAY_FUNCTIONS} from './everyday-fixtures';
 import {FULLSCREEN_VERTEX} from './compute-textures-fixtures';

@@ -17,7 +17,7 @@ const adapterLanes = [
   },
   {
     adapter: 'nullAdapter',
-    adapterPackage: '@luma.gl/test-utils',
+    adapterPackage: '@luma.gl/core/test-utils',
     device: 'NullDevice',
     deviceDetail: 'test-only device',
     variant: 'null'

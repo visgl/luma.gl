@@ -5,8 +5,8 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from '@luma.gl/graph/gpu-core';
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {planCRSProjection, planProjectionPipeline} from '@luma.gl/graph/gpu-project/crs';
 import {expect, it, vi, type TestContext} from 'vitest';

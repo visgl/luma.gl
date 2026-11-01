@@ -67,7 +67,7 @@ test('complete evidence qualifies only the explicitly requested feature profile'
 test('the qualification target pins the same draft revisions as the importer', async () => {
   const target = await loadQualificationProfile();
   const source = await readFile(
-    new URL('../../modules/gltf/src/physics/parse-gltf-physics.ts', import.meta.url),
+    new URL('../../modules/engine/src/gltf/physics/parse-gltf-physics.ts', import.meta.url),
     'utf8'
   );
   for (const field of ['rigidBodies', 'implicitShapes'])

@@ -2,45 +2,41 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {afterAll, expect, it} from 'vitest';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
-import {GPURigidBodyWorld, type GPURigidBodyJoint} from '../../src/gpu-physics';
+import {
+  GPURigidBodyWorld,
+  type GPURigidBodyJoint,
+  type GPURigidBodyWorldProps
+} from '../../src/gpu-physics';
 import {ScenegraphPhysicsProperties} from '@luma.gl/engine/physics';
+
+const getAttachmentFixture = createJointDimensionFixture(dimensions => ({
+  timeStep: 1 / 120,
+  iterations: 16,
+  gravity: [4, 3, 2],
+  failurePolicy: 'rollback',
+  bodies: [
+    {mode: 'static', position: [0, 0, 0], colliders: []},
+    {position: [0, 0, 0], mass: 1, shape: {type: 'sphere', radius: 0.2}}
+  ],
+  joints: [{type: 'general', first: 0, second: 1, axes: [0, 1, 2].slice(0, dimensions), maximum: 0}]
+}));
 
 it.for([
   1, 2, 3
 ])('holds a loaded %s-dimensional zero-radius attachment', async (dimensions, context) => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return context.skip('WebGPU unavailable');
-  const world = new GPURigidBodyWorld({
-    timeStep: 1 / 120,
-    iterations: 16,
-    gravity: [4, 3, 2],
-    failurePolicy: 'rollback',
-    bodies: [
-      {mode: 'static', position: [0, 0, 0], colliders: []},
-      {position: [0, 0, 0], mass: 1, shape: {type: 'sphere', radius: 0.2}}
-    ],
-    joints: [
-      {type: 'general', first: 0, second: 1, axes: [0, 1, 2].slice(0, dimensions), maximum: 0}
-    ]
-  });
-  const definition = new GPUCommandGraph(device);
-  world.addToGraph(definition);
-  const graph = await definition.compileAsync();
-  try {
-    const encoder = device.createCommandEncoder();
-    for (let step = 0; step < 240; step++) graph.encode(encoder, {parameters: undefined});
-    device.submit(encoder.finish());
-    const state = (await world.readState())[1];
-    for (let axis = 0; axis < dimensions; axis++)
-      expect(Math.abs(state.position[axis])).toBeLessThan(0.01);
-    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
-  } finally {
-    graph.destroy();
-    world.destroy();
-  }
+  const fixture = await getAttachmentFixture(dimensions);
+  if (!fixture) return context.skip('WebGPU unavailable');
+  const {device, world, graph} = fixture;
+  const encoder = device.createCommandEncoder();
+  for (let step = 0; step < 240; step++) graph.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+  const state = (await world.readState())[1];
+  for (let axis = 0; axis < dimensions; axis++)
+    expect(Math.abs(state.position[axis])).toBeLessThan(0.01);
+  expect((await world.readSimulationDiagnostics()).complete).toBe(true);
 });
 
 it.for([
@@ -189,54 +185,48 @@ it('uses the twist coordinate gradient when an angular drive has a large swing o
   }
 });
 
+const getAngularLimitFixture = createJointDimensionFixture(dimensions => ({
+  gravity: [0, 0, 0],
+  timeStep: 1 / 120,
+  bodies: [
+    {position: [0, 0, 0], mode: 'static', colliders: []},
+    {
+      position: [0, 0, 0],
+      orientation: [Math.sin(0.6), 0, 0, Math.cos(0.6)],
+      shape: {type: 'sphere', radius: 0.2}
+    }
+  ],
+  joints: [
+    {
+      type: 'general',
+      first: 0,
+      second: 1,
+      axes: [0, 1, 2].slice(0, dimensions),
+      angular: true,
+      maximum: 0.4
+    }
+  ]
+}));
+
 it.for([
   1, 2, 3
 ])('enforces the %s-dimensional angular limit metric', async (dimensions, context) => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return context.skip('WebGPU unavailable');
-  const world = new GPURigidBodyWorld({
-    gravity: [0, 0, 0],
-    timeStep: 1 / 120,
-    bodies: [
-      {position: [0, 0, 0], mode: 'static', colliders: []},
-      {
-        position: [0, 0, 0],
-        orientation: [Math.sin(0.6), 0, 0, Math.cos(0.6)],
-        shape: {type: 'sphere', radius: 0.2}
-      }
-    ],
-    joints: [
-      {
-        type: 'general',
-        first: 0,
-        second: 1,
-        axes: [0, 1, 2].slice(0, dimensions),
-        angular: true,
-        maximum: 0.4
-      }
-    ]
-  });
-  const definition = new GPUCommandGraph(device);
-  world.addToGraph(definition);
-  const graph = await definition.compileAsync();
-  try {
-    const encoder = device.createCommandEncoder();
-    for (let step = 0; step < 240; step++) graph.encode(encoder, {parameters: undefined});
-    device.submit(encoder.finish());
-    const rotation = (await world.readState())[1].orientation;
-    const angle =
-      dimensions === 1
-        ? 2 * Math.atan2(rotation[0], rotation[3])
-        : dimensions === 2
-          ? Math.acos(Math.max(-1, Math.min(1, 1 - 2 * (rotation[0] ** 2 + rotation[1] ** 2))))
-          : 2 * Math.atan2(Math.hypot(...rotation.slice(0, 3)), Math.abs(rotation[3]));
-    expect(angle).toBeLessThanOrEqual(0.401);
-    expect(Math.hypot(...rotation)).toBeCloseTo(1, 5);
-    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
-  } finally {
-    graph.destroy();
-    world.destroy();
-  }
+  const fixture = await getAngularLimitFixture(dimensions);
+  if (!fixture) return context.skip('WebGPU unavailable');
+  const {device, world, graph} = fixture;
+  const encoder = device.createCommandEncoder();
+  for (let step = 0; step < 240; step++) graph.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+  const rotation = (await world.readState())[1].orientation;
+  const angle =
+    dimensions === 1
+      ? 2 * Math.atan2(rotation[0], rotation[3])
+      : dimensions === 2
+        ? Math.acos(Math.max(-1, Math.min(1, 1 - 2 * (rotation[0] ** 2 + rotation[1] ** 2))))
+        : 2 * Math.atan2(Math.hypot(...rotation.slice(0, 3)), Math.abs(rotation[3]));
+  expect(angle).toBeLessThanOrEqual(0.401);
+  expect(Math.hypot(...rotation)).toBeCloseTo(1, 5);
+  expect((await world.readSimulationDiagnostics()).complete).toBe(true);
 });
 
 it('settles a compliant general limit at its independent gravity-load equilibrium', async context => {
@@ -322,134 +312,116 @@ it.for([
     }
 });
 
+const getHalfTurnFixture = createJointDimensionFixture(dimensions => ({
+  gravity: [0, 0, 0],
+  timeStep: 1 / 120,
+  bodies: [
+    {mode: 'static', position: [0, 0, 0], colliders: []},
+    {position: [0, 0, 0], orientation: [1, 0, 0, 0], shape: {type: 'sphere', radius: 0.2}}
+  ],
+  joints: [
+    {
+      type: 'general',
+      first: 0,
+      second: 1,
+      axes: [0, 1, 2].slice(0, dimensions),
+      angular: true,
+      maximum: 0.3,
+      minimum: dimensions === 1 ? -0.3 : 0
+    }
+  ]
+}));
+
 it.for([
   1, 2, 3
 ])('resolves a %s-dimensional angular limit from a half-turn', async (dimensions, context) => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return context.skip('WebGPU unavailable');
-  const world = new GPURigidBodyWorld({
-    gravity: [0, 0, 0],
-    timeStep: 1 / 120,
-    bodies: [
-      {mode: 'static', position: [0, 0, 0], colliders: []},
-      {position: [0, 0, 0], orientation: [1, 0, 0, 0], shape: {type: 'sphere', radius: 0.2}}
-    ],
-    joints: [
-      {
-        type: 'general',
-        first: 0,
-        second: 1,
-        axes: [0, 1, 2].slice(0, dimensions),
-        angular: true,
-        maximum: 0.3,
-        minimum: dimensions === 1 ? -0.3 : 0
-      }
-    ]
-  });
-  const definition = new GPUCommandGraph(device);
-  world.addToGraph(definition);
-  const graph = await definition.compileAsync();
-  try {
-    const encoder = device.createCommandEncoder();
-    for (let step = 0; step < 480; step++) graph.encode(encoder, {parameters: undefined});
-    device.submit(encoder.finish());
-    const state = (await world.readState())[1];
-    const angle =
-      2 * Math.atan2(Math.hypot(...state.orientation.slice(0, 3)), Math.abs(state.orientation[3]));
-    expect(angle).toBeLessThan(0.31);
-    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
-  } finally {
-    graph.destroy();
-    world.destroy();
-  }
+  const fixture = await getHalfTurnFixture(dimensions);
+  if (!fixture) return context.skip('WebGPU unavailable');
+  const {device, world, graph} = fixture;
+  const encoder = device.createCommandEncoder();
+  for (let step = 0; step < 480; step++) graph.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+  const state = (await world.readState())[1];
+  const angle =
+    2 * Math.atan2(Math.hypot(...state.orientation.slice(0, 3)), Math.abs(state.orientation[3]));
+  expect(angle).toBeLessThan(0.31);
+  expect((await world.readSimulationDiagnostics()).complete).toBe(true);
 });
+
+const getLinearRadiusFixture = createJointDimensionFixture(dimensions => ({
+  gravity: [0, 0, 0],
+  timeStep: 1 / 120,
+  bodies: [
+    {mode: 'static', position: [0, 0, 0], colliders: []},
+    {position: [0.1, 0.1, 0.1], shape: {type: 'sphere', radius: 0.1}}
+  ],
+  joints: [
+    {
+      type: 'general',
+      first: 0,
+      second: 1,
+      axes: [0, 1, 2].slice(0, dimensions),
+      minimum: 1,
+      maximum: 2
+    }
+  ]
+}));
 
 it.for([
   2, 3
 ])('enforces nonzero inner and outer radii for a %s-dimensional linear limit', async (dimensions, context) => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return context.skip('WebGPU unavailable');
-  const world = new GPURigidBodyWorld({
-    gravity: [0, 0, 0],
-    timeStep: 1 / 120,
-    bodies: [
-      {mode: 'static', position: [0, 0, 0], colliders: []},
-      {position: [0.1, 0.1, 0.1], shape: {type: 'sphere', radius: 0.1}}
-    ],
-    joints: [
-      {
-        type: 'general',
-        first: 0,
-        second: 1,
-        axes: [0, 1, 2].slice(0, dimensions),
-        minimum: 1,
-        maximum: 2
-      }
-    ]
-  });
-  const definition = new GPUCommandGraph(device);
-  world.addToGraph(definition);
-  const graph = await definition.compileAsync();
-  try {
-    const encoder = device.createCommandEncoder();
-    for (let step = 0; step < 480; step++) graph.encode(encoder, {parameters: undefined});
-    device.submit(encoder.finish());
-    const radius = Math.hypot(...(await world.readState())[1].position.slice(0, dimensions));
-    expect(radius).toBeGreaterThan(0.999);
-    expect(radius).toBeLessThan(2.001);
-  } finally {
-    graph.destroy();
-    world.destroy();
-  }
+  const fixture = await getLinearRadiusFixture(dimensions);
+  if (!fixture) return context.skip('WebGPU unavailable');
+  const {device, world, graph} = fixture;
+  const encoder = device.createCommandEncoder();
+  for (let step = 0; step < 480; step++) graph.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+  const radius = Math.hypot(...(await world.readState())[1].position.slice(0, dimensions));
+  expect(radius).toBeGreaterThan(0.999);
+  expect(radius).toBeLessThan(2.001);
 });
+
+const getCompliantTorqueFixture = createJointDimensionFixture(dimensions => ({
+  gravity: [0, 0, 0],
+  timeStep: 1 / 120,
+  bodies: [
+    {mode: 'static', position: [0, 0, 0], colliders: []},
+    {position: [0, 0, 0], inertiaDiagonal: [1, 1, 1], shape: {type: 'sphere', radius: 0.1}}
+  ],
+  joints: [
+    {
+      type: 'general',
+      first: 0,
+      second: 1,
+      axes: [0, 1, 2].slice(0, dimensions),
+      angular: true,
+      maximum: 0,
+      stiffness: 20,
+      damping: 4
+    },
+    {
+      type: 'general',
+      first: 0,
+      second: 1,
+      axes: [0],
+      angular: true,
+      drive: {mode: 'force', maximumForce: 1, velocityTarget: 100, damping: 100}
+    }
+  ]
+}));
 
 it.for([
   1, 2, 3
 ])('balances a capped torque against a compliant %s-dimensional angular limit', async (dimensions, context) => {
-  const device = await getWebGPUTestDevice();
-  if (!device) return context.skip('WebGPU unavailable');
-  const world = new GPURigidBodyWorld({
-    gravity: [0, 0, 0],
-    timeStep: 1 / 120,
-    bodies: [
-      {mode: 'static', position: [0, 0, 0], colliders: []},
-      {position: [0, 0, 0], inertiaDiagonal: [1, 1, 1], shape: {type: 'sphere', radius: 0.1}}
-    ],
-    joints: [
-      {
-        type: 'general',
-        first: 0,
-        second: 1,
-        axes: [0, 1, 2].slice(0, dimensions),
-        angular: true,
-        maximum: 0,
-        stiffness: 20,
-        damping: 4
-      },
-      {
-        type: 'general',
-        first: 0,
-        second: 1,
-        axes: [0],
-        angular: true,
-        drive: {mode: 'force', maximumForce: 1, velocityTarget: 100, damping: 100}
-      }
-    ]
-  });
-  const definition = new GPUCommandGraph(device);
-  world.addToGraph(definition);
-  const graph = await definition.compileAsync();
-  try {
-    const encoder = device.createCommandEncoder();
-    for (let step = 0; step < 600; step++) graph.encode(encoder, {parameters: undefined});
-    device.submit(encoder.finish());
-    const state = (await world.readState())[1];
-    expect(2 * Math.atan2(state.orientation[0], state.orientation[3])).toBeCloseTo(1 / 20, 2);
-    expect(Math.abs(state.angularVelocity[0])).toBeLessThan(0.01);
-  } finally {
-    graph.destroy();
-    world.destroy();
-  }
+  const fixture = await getCompliantTorqueFixture(dimensions);
+  if (!fixture) return context.skip('WebGPU unavailable');
+  const {device, world, graph} = fixture;
+  const encoder = device.createCommandEncoder();
+  for (let step = 0; step < 600; step++) graph.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+  const state = (await world.readState())[1];
+  expect(2 * Math.atan2(state.orientation[0], state.orientation[3])).toBeCloseTo(1 / 20, 2);
+  expect(Math.abs(state.angularVelocity[0])).toBeLessThan(0.01);
 });
 
 it.for([
@@ -565,3 +537,37 @@ it('keeps disabled joints disabled through property edits and checkpoint restora
     world.destroy();
   }
 });
+
+// Dimension variants change runtime joint records, not shader structure. Retain one compiled
+// graph per family, restoring all GPU state and authored joint metadata before every test.
+function createJointDimensionFixture(makeProps: (dimensions: number) => GPURigidBodyWorldProps) {
+  let fixture: ReturnType<typeof initializeJointFixture> | undefined;
+  afterAll(async () => {
+    const resources = await fixture;
+    resources?.checkpoint.destroy();
+    resources?.graph.destroy();
+    resources?.world.destroy();
+  });
+  return async (dimensions: number) => {
+    fixture ??= initializeJointFixture(makeProps(dimensions));
+    const resources = await fixture;
+    if (!resources) return null;
+    resources.checkpoint.restore();
+    makeProps(dimensions).joints?.forEach((joint, index) =>
+      resources.world.setJointParameters(index, joint)
+    );
+    return resources;
+  };
+}
+
+async function initializeJointFixture(props: GPURigidBodyWorldProps) {
+  const device = await getWebGPUTestDevice();
+  if (!device) return null;
+  const world = new GPURigidBodyWorld(props);
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  const checkpoint = world.createGPUCheckpoint();
+  checkpoint.save();
+  return {device, world, graph, checkpoint};
+}

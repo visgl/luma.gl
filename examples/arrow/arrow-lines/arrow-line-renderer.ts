@@ -7,16 +7,18 @@ import {
   convertArrowPathsToStorage,
   convertArrowPathsToAttribute,
   convertArrowTripsToStorage,
-  getArrowVectorByteLength,
-  makeArrowFixedSizeListVector,
-  convertArrowTemporalToGPUVector,
   loadArrowRecordBatches,
   type ArrowRecordBatchLoadUpdate,
   type ArrowRecordBatchSource,
   type ArrowPathPreparedState
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {
+  getArrowVectorByteLength,
+  makeArrowFixedSizeListVector,
+  convertArrowTemporalToGPUVector
+} from '@luma.gl/graph/arrow';
 import {type CommandEncoder, type Device} from '@luma.gl/core';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {GPURenderable} from '@luma.gl/graph/gpu-tables';
 import {
   PathAttributeModel,

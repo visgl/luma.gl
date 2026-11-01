@@ -36,7 +36,7 @@ distance-field module, and `palette.slang` material module. Animation and camera
 parameters share a flat uniform buffer; the application uses compiler reflection to
 bind its resource by the generated name.
 WebGL 2 receives GLSL ES 300; WebGPU receives one WGSL program with generated entry points.
-The example also imports the existing `valueNoise` ShaderModule from `@luma.gl/shadertools`.
+The example also imports the existing `valueNoise` ShaderModule from `@luma.gl/shaders`.
 Slang renders into a texture; a native WGSL or GLSL pass reads it and calls `valueNoise_noise`
 to add grain. Set **Native grain** to zero to see the original image. This demonstrates a shared
 texture boundary, while direct calls from Slang into native modules remain unsupported.

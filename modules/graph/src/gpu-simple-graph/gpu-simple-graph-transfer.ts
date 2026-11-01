@@ -3,13 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, Buffer, type Device, type SignedDataType} from '@luma.gl/core';
-import type {TypedArray} from '@math.gl/core/types';
-import {
-  GPUDataEvaluator,
-  GPUVectorEvaluator,
-  Operation,
-  type GPUEvaluationScope
-} from '@luma.gl/gpgpu';
+import type {TypedArray} from '@math.gl/core';
+import {GPUDataEvaluator} from './operation/gpu-data-evaluator';
+import {GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
+import {Operation} from './operation/operation';
+import {type GPUEvaluationScope} from './operation/gpu-evaluation-scope';
 import type {GPUOperation, GPUOperationMetadata} from '@luma.gl/graph/gpu-core';
 import type {GPUSimpleGraphEvaluator} from './gpu-simple-graph-operation';
 

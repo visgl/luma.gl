@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture} from '../../core/src/index';
-import type {ShaderModule} from '../../shadertools/src/index';
+import type {ShaderModule} from '../../shaders/src/index';
 import type {ModelProps} from '../src/model/model';
 import {ShaderInputs} from '../src/shader-inputs';
 

@@ -46,7 +46,7 @@ Opt in to detail selection when creating the crowd, then provide the current cam
 whenever they change:
 
 ```ts
-import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+import {createGLTFAnimatedCrowd} from '@luma.gl/engine/gltf';
 
 const crowd = createGLTFAnimatedCrowd(device, gltf, {
   capacity: 100,
@@ -235,7 +235,7 @@ active in either mode.
 For explicit document preparation, use `generateGLTFLODLevels()`:
 
 ```ts
-import {generateGLTFLODLevels, getGLTFNodeLODs} from '@luma.gl/gltf';
+import {generateGLTFLODLevels, getGLTFNodeLODs} from '@luma.gl/engine/gltf';
 
 const prepared = generateGLTFLODLevels(gltf, {
   ratios: [0.5, 0.25],

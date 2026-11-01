@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
 import {Device, Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';

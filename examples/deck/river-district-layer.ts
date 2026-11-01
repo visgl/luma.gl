@@ -22,7 +22,7 @@ import {
   type LambertMaterialProps,
   type HeightFogProps,
   type ShaderModule
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {getMeterOffsetPosition, surfaceBuffer} from '@deck.gl-community/gpu-layers';
 import {makeCityMesh, type CityFeature} from './river-district-data';
 
@@ -64,6 +64,7 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
     const surfaceExposure = this.context.device.createBuffer({data: weights});
     try {
       const model = new Model(this.context.device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

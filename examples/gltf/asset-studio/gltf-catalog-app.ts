@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {type GLTFPostprocessed, postProcessGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {type GLTFPostprocessed, postProcessGLTF} from '@luma.gl/engine/gltf';
 import {Device, log, RenderPass} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
@@ -13,7 +13,7 @@ import {
   ModelNode,
   OrbitControls
 } from '@luma.gl/engine';
-import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shadertools';
+import {Light, LightingProps, type PBRMaterialUniforms} from '@luma.gl/shaders';
 import {
   createGLTFAnimatedCrowd,
   createScenegraphsFromGLTF,
@@ -21,7 +21,7 @@ import {
   type GLTFCrowdActorOptions,
   type GLTFScenegraphs,
   type PBREnvironment
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 import {mergeGLTFModelCatalog} from './gltf-model-catalog';
 import {Matrix4} from '@math.gl/core';
 import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
@@ -50,11 +50,11 @@ const ROBOT_EXPRESSIVE_MODEL_URL = new URL(
   import.meta.url
 ).href;
 const SIMPLE_SKIN_LOD_MODEL_URL = new URL(
-  '../../../modules/gltf/test/data/SimpleSkinLOD.gltf',
+  '../../../modules/engine/test/gltf/data/SimpleSkinLOD.gltf',
   import.meta.url
 ).href;
 const BUMP_MATERIAL_MODEL_URL = new URL(
-  '../../../modules/gltf/test/data/BumpMaterial.gltf',
+  '../../../modules/engine/test/gltf/data/BumpMaterial.gltf',
   import.meta.url
 ).href;
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';

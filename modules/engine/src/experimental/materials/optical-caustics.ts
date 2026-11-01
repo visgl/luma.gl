@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 import {opticalLighting} from './optical-lighting';
 
 /** Maximum number of nearby focusing glass lenses in the portable uniform block. */
@@ -230,5 +230,5 @@ export const opticalCaustics = {
 /** Explicitly installs bounded focusing lenses for nearby reflective receiver surfaces. */
 export const opticalCausticsPlugin = {
   name: 'opticalCaustics',
-  modules: [opticalCaustics as ShaderModule]
+  module: opticalCaustics as ShaderModule
 } as const satisfies ShaderPlugin;

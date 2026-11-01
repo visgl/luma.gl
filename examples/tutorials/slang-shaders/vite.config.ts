@@ -8,8 +8,8 @@ import {fileURLToPath} from 'node:url';
 export default defineConfig({
   resolve: {
     alias: {
-      '@luma.gl/gpgpu/_internal': fileURLToPath(
-        new URL('../../../modules/gpgpu/src/execution', import.meta.url)
+      '@luma.gl/graph/_internal': fileURLToPath(
+        new URL('../../../modules/graph/src/execution', import.meta.url)
       ),
       '@luma.gl/engine/models': fileURLToPath(
         new URL('../../../modules/engine/src/graph/models', import.meta.url)
@@ -21,7 +21,7 @@ export default defineConfig({
         new URL('../../../modules/engine/src/graph/tables', import.meta.url)
       ),
       ...Object.fromEntries(
-        ['core', 'engine', 'shadertools', 'slang', 'webgl', 'webgpu'].map(moduleName => [
+        ['core', 'engine', 'shaders', 'slang', 'webgl', 'webgpu'].map(moduleName => [
           `@luma.gl/${moduleName}`,
           fileURLToPath(new URL(`../../../modules/${moduleName}/src`, import.meta.url))
         ])

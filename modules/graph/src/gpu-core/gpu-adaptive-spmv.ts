@@ -10,7 +10,7 @@ import {
   validatePackedView
 } from './graph-data-view-utils';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
-import {getGPUVectorChunks} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorChunks} from '@luma.gl/graph/gpu-data';
 import {GPUGather} from './gpu-gather';
 import {
   createChunkNode,

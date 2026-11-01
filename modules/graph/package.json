@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "10.0.0-alpha.4",
+  "version": "10.0.0-alpha.7",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -192,21 +192,57 @@
       "types": "./dist/experimental/index.d.ts",
       "import": "./dist/experimental/index.js",
       "require": "./dist/experimental/index.cjs"
+    },
+    "./arrow": {
+      "types": "./dist/arrow/index.d.ts",
+      "import": "./dist/arrow/index.js",
+      "require": "./dist/arrow/index.cjs"
+    },
+    "./_internal/arrow": {
+      "types": "./dist/arrow/internal.d.ts",
+      "import": "./dist/arrow/internal.js",
+      "require": "./dist/arrow/internal.cjs"
+    },
+    "./gpu-data": {
+      "types": "./dist/gpu-data/index.d.ts",
+      "import": "./dist/gpu-data/index.js",
+      "require": "./dist/gpu-data/index.cjs"
+    },
+    "./_internal/*": {
+      "types": "./dist/execution/*.d.ts",
+      "import": "./dist/execution/*.js",
+      "require": "./dist/execution/*.cjs"
+    },
+    "./gpu-simple-graph/cpu": {
+      "types": "./dist/gpu-simple-graph/operations/cpu/index.d.ts",
+      "import": "./dist/gpu-simple-graph/operations/cpu/index.js",
+      "require": "./dist/gpu-simple-graph/operations/cpu/index.cjs"
+    },
+    "./gpu-simple-graph/webgl": {
+      "types": "./dist/gpu-simple-graph/operations/webgl/index.d.ts",
+      "import": "./dist/gpu-simple-graph/operations/webgl/index.js",
+      "require": "./dist/gpu-simple-graph/operations/webgl/index.cjs"
+    },
+    "./gpu-simple-graph/webgpu": {
+      "types": "./dist/gpu-simple-graph/operations/webgpu/index.d.ts",
+      "import": "./dist/gpu-simple-graph/operations/webgpu/index.js",
+      "require": "./dist/gpu-simple-graph/operations/webgpu/index.cjs"
     }
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.4",
-    "@luma.gl/shadertools": "~10.0.0-alpha.4",
-    "@math.gl/geospatial": "~5.0.0-alpha.20"
+    "@luma.gl/core": "~10.0.0-alpha.7",
+    "@luma.gl/shaders": "~10.0.0-alpha.7",
+    "apache-arrow": ">=17.0.0"
   },
   "peerDependenciesMeta": {
-    "@math.gl/geospatial": {
+    "apache-arrow": {
       "optional": true
     }
   },
   "dependencies": {
-    "@luma.gl/gpgpu": "10.0.0-alpha.4",
-    "@math.gl/core": "~5.0.0-alpha.20",
+    "@math.gl/core": "~5.0.0-beta.2",
+    "@math.gl/expressions": "5.0.0-alpha.18",
+    "@math.gl/geospatial": "~5.0.0-beta.2",
     "probe.gl": "^5.0.0"
   }
 }

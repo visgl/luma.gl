@@ -13,8 +13,8 @@ import {
   type GPUGraphAlgorithmsAdjacency,
   type GPUGraphAlgorithmsSpatialForceLayoutProps
 } from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 
 type VectorFormat = 'uint32' | 'float32' | 'float32x2';

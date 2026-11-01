@@ -12,10 +12,10 @@ import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {Matrix4, radians} from '@math.gl/core';
 
 import {CUBEMAP_INFO_HTML} from './app-ui';
-import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
+import type {NumberArray3, NumberArray16} from '@math.gl/core';
 import type {Device} from '@luma.gl/core';
 import {CubeGeometry, Model, type ModelProps} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = CUBEMAP_INFO_HTML;

@@ -13,7 +13,7 @@ import {
   TruncatedConeGeometry
 } from '@luma.gl/engine';
 import {makeGPUGeometry} from '@luma.gl/engine/geometry/gpu-geometry';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
 const BUILT_IN_GEOMETRY_TESTS = [
   {name: 'ConeGeometry', Geometry: ConeGeometry},

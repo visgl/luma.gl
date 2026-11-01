@@ -16,6 +16,26 @@ const config = {
   },
 
   aliases: {
+    '@luma.gl/graph/gpu-simple-graph/cpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/cpu'),
+    '@luma.gl/graph/gpu-simple-graph/webgl': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgl'),
+    '@luma.gl/graph/gpu-simple-graph/webgpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgpu'),
+
+    '@luma.gl/graph/_internal/arrow': join(packageRoot, 'modules/graph/src/arrow/internal.ts'),
+    '@luma.gl/graph/arrow': join(packageRoot, 'modules/graph/src/arrow/index.ts'),
+    '@luma.gl/engine/arrow': join(packageRoot, 'modules/engine/src/arrow/index.ts'),
+    '@luma.gl/core/test-utils': join(packageRoot, 'modules/core/src/test-utils'),
+
+    '@luma.gl/engine/effects': join(packageRoot, 'modules/engine/src/effects'),
+    '@luma.gl/engine/text-fonts': join(packageRoot, 'modules/engine/src/text/fonts'),
+    '@luma.gl/engine/text-3d': join(packageRoot, 'modules/engine/src/text/text-3d'),
+    '@luma.gl/engine/text-experimental': join(packageRoot, 'modules/engine/src/text/experimental.ts'),
+    '@luma.gl/engine/text': join(packageRoot, 'modules/engine/src/text'),
+    '@luma.gl/engine/gltf-physics': join(packageRoot, 'modules/engine/src/gltf/physics'),
+    '@luma.gl/engine/gltf': join(packageRoot, 'modules/engine/src/gltf'),
+    '@luma.gl/engine/splats': join(packageRoot, 'modules/engine/src/splats'),
+    // Match the graph export map instead of appending _internal to the package directory.
+    '@luma.gl/graph/_internal': join(packageRoot, 'modules/graph/src/execution'),
+
     // DEV MODULES
     'dev-modules': devModules,
 

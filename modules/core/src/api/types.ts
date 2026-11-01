@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** TypeScript type covering all typed arrays */
-import type {TypedArray, NumberArray} from '@math.gl/core/types';
+import type {TypedArray, NumberArray} from '@math.gl/core';
 
 export type {TypedArray, NumberArray};
 

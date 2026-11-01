@@ -4,7 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, type AnimationProps} from '@luma.gl/engine';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   GPUCommandGraph,
   GPUCommandGraphInspector,

@@ -43,18 +43,54 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
 - Node test files run in worker threads and reuse the worker's module graph. Tests that replace
   globals or mutate module-level state must restore that state in an `afterEach` or `afterAll` hook.
 - `nodeOnlyTestPatterns` routes audited CPU-only legacy specs away from browser-page isolation.
-- Browser test files remain isolated because GPU devices, presentation contexts, and queued GPU
-  work are not safe to share between files. Files run serially within each browser project,
+- Device-only tests import `@luma.gl/core/test-utils` to avoid loading legacy animation/test
+  runners and eagerly creating an unused WebGL context in each isolated browser file.
+- Browser files run serially within each browser project,
   both locally and in CI: native keyboard/pointer tests need foreground focus, and concurrent
   shader compilation and readback compete for the same GPU. CI still parallelizes across shards.
-  This preserves real input and GPU integration coverage without increasing test timeouts.
-- Browser coverage uses weighted sharding so known slow GPU specs are spread across six
-  CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
-  instrumented browser pages to every pull request.
+  CI selects complementary `general`, `compute`, and `physics` groups. General tests, including
+  graph explorer document/pointer checks, keep full file isolation on three Linux workers. Audited
+  compute and physics groups restore mocks between tests and reuse their device/module context
+  serially on one Linux and one Apple Silicon worker respectively. Tests that mutate globals or
+  exercise browser/device lifecycle belong in the isolated general group. Local commands default
+  to all files with isolation enabled, including the full endurance matrix.
+- Browser coverage uses weighted sharding so known slow GPU specs are spread across the three
+  isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
+  instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
+  `test/utils/browser-test-sequencer.ts` from a successful general-browser run when expensive suites
+  are added or changed. Refresh `NATIVE_PHYSICS_TEST_WEIGHTS` from native physics runs.
+  Use rounded wall times between completed files to include isolated-page
+  and import overhead, and replay the complete discovered suite set to check all shard totals.
 - CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage
-  anchors with Istanbul coverage from the six browser shards. The complete Node suite still runs
+  anchors with Istanbul coverage from all five browser workers. The complete Node suite still runs
   separately without instrumentation so coverage remapping does not slow the build job.
+- A pinned Yarn patch makes Istanbul browser coverage transport incremental: the first capture
+  includes every loaded source, including zero-hit records; later captures send changed counters.
+  Regression tests verify exact statement, function, and branch totals and reset behavior. Source
+  instrumentation, the complete all-files denominator, and the Node coverage provider are unchanged.
 - The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
+
+## Nightly physics endurance
+
+PR physics coverage retains one-second stack regressions for all three scenarios (eight boxes,
+10:1 heavy-on-light, and offset center of mass), both solvers, and both 120/240 Hz time steps.
+The same diagnostics, penetration, drift, sleep-state, and residual-energy assertions run, with
+64 solver iterations. Sustained six-second behavior is checked separately by the complete original
+12-case matrix in `physics-endurance.yml`, nightly at 07:17 UTC, and through manual dispatch.
+Nightly also retains both 600-tick stack-settling cases and the 600-tick rotating-contact arena
+case, for 15 cases across five files. PRs retain the same assertions at 120 and 60 ticks respectively.
+The full matrix also runs on PRs that change its definitions or scheduling, so the nightly path
+is validated before those changes merge. Ordinary implementation PRs run the focused regressions.
+
+Run `yarn test-physics-endurance` to execute the full matrix locally without coverage overhead.
+It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless` and
+release sharding continue to include the full-duration specs. No endurance assertion, simulation
+step, solver, or time-step combination is removed from the full suite.
+
+The nightly job requires WebGPU/WebGL presentation before testing and saves JUnit results and
+console output for 14 days, including failures. It uses native Apple Silicon and avoids Istanbul
+instrumentation. PR code coverage still includes every source file; compare merged LCOV artifacts
+when changing the split, since a short run is not a substitute for proving unchanged code coverage.
 
 ## Playwright behavior
 
