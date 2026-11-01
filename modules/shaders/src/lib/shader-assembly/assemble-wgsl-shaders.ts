@@ -26,7 +26,7 @@ import {PlatformInfo} from './platform-info';
 import {assert} from '../utils/assert';
 import {preprocess} from '../preprocessor/preprocessor';
 import {assembleShaderPluginVertexInputsWGSL} from './shader-plugin-vertex-inputs';
-import {assembleShaderPluginVaryingsWGSL} from './shader-plugin-varyings';
+import {assembleShaderPluginInterStageVariablesWGSL} from './shader-plugin-varyings';
 import {
   normalizeShaderHooks,
   validateShaderHookInjections,
@@ -113,7 +113,7 @@ export function assembleShaderWGSL(
     inject = {},
     pluginInjections = {},
     pluginVertexInputs = {},
-    pluginVaryings = {},
+    pluginInterStageVariables = {},
     vertexEntryPoint = 'vertexMain',
     fragmentEntryPoint = 'fragmentMain',
     log
@@ -130,11 +130,11 @@ export function assembleShaderWGSL(
     vertexEntryPoint,
     pluginVertexInputs
   );
-  const pluginVaryingAssembly = assembleShaderPluginVaryingsWGSL(
+  const pluginVaryingAssembly = assembleShaderPluginInterStageVariablesWGSL(
     pluginVertexInputAssembly.source,
     vertexEntryPoint,
     fragmentEntryPoint,
-    pluginVaryings
+    pluginInterStageVariables
   );
   const coreSource = pluginVaryingAssembly.source;
 

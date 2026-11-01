@@ -282,7 +282,7 @@ export class GPUVectorModel {
   /** Factory used to create shaders */
   readonly shaderFactory: ShaderFactory;
   /** User-supplied per-model data */
-  userData: {[key: string]: any} = {};
+  userData: {[key: string]: unknown} = {};
 
   // Fixed properties (change can trigger pipeline rebuild)
 
@@ -478,7 +478,7 @@ export class GPUVectorModel {
           defines,
           pluginInjections: resolvedPlugins.injections,
           pluginVertexInputs: resolvedPlugins.vertexInputs,
-          pluginVaryings: resolvedPlugins.varyings
+          pluginInterStageVariables: resolvedPlugins.interStageVariables
         });
         this.source = source;
         this.props.vertexEntryPoint = entryPoints.vertex || this.props.vertexEntryPoint;
@@ -515,7 +515,7 @@ export class GPUVectorModel {
           defines,
           pluginInjections: resolvedPlugins.injections,
           pluginVertexInputs: resolvedPlugins.vertexInputs,
-          pluginVaryings: resolvedPlugins.varyings
+          pluginInterStageVariables: resolvedPlugins.interStageVariables
         });
 
         this.vs = vs;

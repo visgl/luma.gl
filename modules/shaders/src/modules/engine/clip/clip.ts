@@ -101,7 +101,7 @@ fn clip_isInBounds(coordinates: vec2<f32>) -> bool {
 export const clipShaderPlugin: ShaderPlugin = {
   name: 'clip',
   module: clipShaderModule,
-  varyings: {
+  interStageVariables: {
     clipCoordinates: {type: 'vec2<f32>', interpolation: 'smooth'}
   },
   injections: [

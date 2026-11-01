@@ -73,7 +73,7 @@ it.each([
   {integer: false, parameters: '@location(0) color: vec4<f32> // final parameter\n'},
   {integer: false, parameters: '@location(0) color: vec4<f32>, // trailing comma\n'},
   {integer: false, parameters: '/* comments only */ // no parameters\n'}
-])('Model#plugin varyings compile with direct fragment inputs ($parameters, integer=$integer)', async ({
+])('Model#plugin interStageVariables compile with direct fragment inputs ($parameters, integer=$integer)', async ({
   integer,
   parameters
 }) => {
@@ -83,7 +83,7 @@ it.each([
   let model: Model | undefined;
   try {
     model = await Model.createAsync(device, {
-      id: 'direct-fragment-plugin-varyings',
+      id: 'direct-fragment-plugin-interStageVariables',
       source: `
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -99,7 +99,7 @@ struct VertexOutput {
         {
           name: 'direct-fragment-varying',
           defines: {PLUGIN_VALUE: 1},
-          varyings: {pluginValue: {type: integer ? 'u32' : 'f32'}},
+          interStageVariables: {pluginValue: {type: integer ? 'u32' : 'f32'}},
           injections: [
             {
               target: 'vs:#main-start',
@@ -122,7 +122,7 @@ pluginValue = ${integer ? 'u32' : 'f32'}(0);
   }
 });
 
-it('Model#GLSL module helpers can access plugin inputs and varyings', async () => {
+it('Model#GLSL module helpers can access plugin inputs and interStageVariables', async () => {
   const device = await getWebGLTestDevice();
   if (!device) return;
   const model = await Model.createAsync(device, {
@@ -133,7 +133,7 @@ it('Model#GLSL module helpers can access plugin inputs and varyings', async () =
       {
         name: 'helper-interface',
         vertexInputs: {pluginInput: 'f32'},
-        varyings: {pluginValue: {type: 'f32'}},
+        interStageVariables: {pluginValue: {type: 'f32'}},
         module: {
           name: 'pluginHelpers',
           vs: 'void writePluginValue() { pluginValue = pluginInput; }',

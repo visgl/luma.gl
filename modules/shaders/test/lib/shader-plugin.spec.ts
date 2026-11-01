@@ -52,7 +52,7 @@ it('ShaderPlugin#shares its interface and selects injection sources by language'
     module: SHARED_MODULE,
     defines: {ENABLED: true},
     vertexInputs: {filterValue: 'f32'},
-    varyings: {color: {type: 'vec4<f32>'}, category: {type: 'u32'}},
+    interStageVariables: {color: {type: 'vec4<f32>'}, category: {type: 'u32'}},
     injections: [
       {target: 'fs:#decl', glsl: 'void portable() {}', wgsl: 'fn portable() {}', order: 10},
       {target: 'fs:#decl', wgsl: 'fn wgslOnly() {}'},
@@ -65,7 +65,7 @@ it('ShaderPlugin#shares its interface and selects injection sources by language'
     expect(resolved.modules).toEqual([SHARED_MODULE]);
     expect(resolved.defines).toEqual({ENABLED: true});
     expect(resolved.vertexInputs).toEqual({filterValue: 'f32'});
-    expect(resolved.varyings).toEqual({
+    expect(resolved.interStageVariables).toEqual({
       color: {type: 'vec4<f32>', interpolation: 'smooth'},
       category: {type: 'u32', interpolation: 'flat'}
     });
@@ -130,11 +130,11 @@ it('ShaderPlugin#rejects invalid and conflicting vertex inputs', () => {
   void 0;
 });
 
-it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
+it('ShaderPlugin#rejects invalid and conflicting interStageVariables', () => {
   expect(
     () =>
       resolveShaderPlugins(
-        [{name: 'invalid-varying', varyings: {'invalid-name': {type: 'f32'}} as any}],
+        [{name: 'invalid-varying', interStageVariables: {'invalid-name': {type: 'f32'}} as any}],
         'glsl'
       ),
     'invalid varying identifiers are rejected'
@@ -142,7 +142,7 @@ it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
   expect(
     () =>
       resolveShaderPlugins(
-        [{name: 'reserved-varying', varyings: {_luma_value: {type: 'f32'}}}],
+        [{name: 'reserved-varying', interStageVariables: {_luma_value: {type: 'f32'}}}],
         'wgsl'
       ),
     'reserved varying identifiers are rejected'
@@ -151,8 +151,8 @@ it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
     () =>
       resolveShaderPlugins(
         [
-          {name: 'first-varying', varyings: {value: {type: 'f32'}}},
-          {name: 'second-varying', varyings: {value: {type: 'vec2<f32>'}}}
+          {name: 'first-varying', interStageVariables: {value: {type: 'f32'}}},
+          {name: 'second-varying', interStageVariables: {value: {type: 'vec2<f32>'}}}
         ],
         'wgsl'
       ),
@@ -162,10 +162,10 @@ it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
     () =>
       resolveShaderPlugins(
         [
-          {name: 'smooth-varying', varyings: {value: {type: 'f32'}}},
+          {name: 'smooth-varying', interStageVariables: {value: {type: 'f32'}}},
           {
             name: 'flat-varying',
-            varyings: {value: {type: 'f32', interpolation: 'flat'}}
+            interStageVariables: {value: {type: 'f32', interpolation: 'flat'}}
           }
         ],
         'wgsl'
@@ -175,10 +175,15 @@ it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
   expect(
     () =>
       resolveShaderPlugins(
-        [{name: 'smooth-integer', varyings: {value: {type: 'u32', interpolation: 'smooth'}}}],
+        [
+          {
+            name: 'smooth-integer',
+            interStageVariables: {value: {type: 'u32', interpolation: 'smooth'}}
+          }
+        ],
         'wgsl'
       ),
-    'integer varyings cannot use smooth interpolation'
+    'integer interStageVariables cannot use smooth interpolation'
   ).toThrow(/must use flat interpolation/);
   expect(
     () =>
@@ -187,7 +192,7 @@ it('ShaderPlugin#rejects invalid and conflicting varyings', () => {
           {
             name: 'input-varying-collision',
             vertexInputs: {value: 'f32'},
-            varyings: {value: {type: 'f32'}}
+            interStageVariables: {value: {type: 'f32'}}
           }
         ],
         'glsl'
@@ -426,7 +431,7 @@ it('ShaderPlugin#WGSL vertex inputs support an entry point without parameters', 
   void 0;
 });
 
-it('ShaderPlugin#GLSL varyings generate matched stage interfaces', () => {
+it('ShaderPlugin#GLSL interStageVariables generate matched stage interfaces', () => {
   const shaderAssembler = new GLSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
   shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(inout vec4 color)');
@@ -444,7 +449,7 @@ void main() {
   fragmentColor = vec4(1.0);
   USE_PLUGIN_VARYINGS(fragmentColor);
 }`,
-    pluginVaryings: {
+    pluginInterStageVariables: {
       pluginColor: {type: 'vec4<f32>', interpolation: 'smooth'},
       pluginCategory: {type: 'u32', interpolation: 'flat'}
     },
@@ -479,7 +484,7 @@ void main() {
     Boolean(
       shaders.vs.indexOf('pluginColor = vec4(0.0);') < shaders.vs.indexOf('pluginColor.x = 0.5;')
     ),
-    'varyings initialize before other main-start injections'
+    'interStageVariables initialize before other main-start injections'
   ).toBe(true);
   expect(
     () =>
@@ -493,14 +498,14 @@ precision highp float;
 in vec4 pluginColor;
 out vec4 fragmentColor;
 void main() { fragmentColor = pluginColor; }`,
-        pluginVaryings: {pluginColor: {type: 'vec4<f32>', interpolation: 'smooth'}}
+        pluginInterStageVariables: {pluginColor: {type: 'vec4<f32>', interpolation: 'smooth'}}
       }),
-    'application stage I/O cannot shadow plugin varyings'
+    'application stage I/O cannot shadow plugin interStageVariables'
   ).toThrow(/conflicts with existing GLSL stage I\/O/);
   void 0;
 });
 
-it('ShaderPlugin#WGSL varyings extend named stage structs', () => {
+it('ShaderPlugin#WGSL interStageVariables extend named stage structs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
   shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
   shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(color: ptr<function, vec4<f32>>)');
@@ -544,7 +549,7 @@ fn selectedFragmentMain(inputs: FragmentInput, @builtin(front_facing) frontFacin
     source,
     vertexEntryPoint: 'selectedVertexMain',
     fragmentEntryPoint: 'selectedFragmentMain',
-    pluginVaryings: {
+    pluginInterStageVariables: {
       pluginCoordinates: {type: 'vec2<f32>', interpolation: 'smooth'},
       pluginCategory: {type: 'u32', interpolation: 'flat'}
     },
@@ -604,14 +609,14 @@ fn selectedFragmentMain(inputs: FragmentInput, @builtin(front_facing) frontFacin
   void 0;
 });
 
-it('ShaderPlugin#WGSL varyings reject unsupported interfaces', () => {
+it('ShaderPlugin#WGSL interStageVariables reject unsupported interfaces', () => {
   const assembler = new WGSLShaderAssembler();
   expect(
     () =>
       assembler.assembleWGSLShader({
         platformInfo: WGSL_PLATFORM_INFO,
         source: WGSL_SOURCE,
-        pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
+        pluginInterStageVariables: {value: {type: 'f32', interpolation: 'smooth'}}
       }),
     'direct vertex return types are rejected'
   ).toThrow(/vertex entry point to return a named struct/);
@@ -634,7 +639,7 @@ fn makeOutput() -> VertexOutput {
       assembler.assembleWGSLShader({
         platformInfo: WGSL_PLATFORM_INFO,
         source: sourceWithExternalConstructor,
-        pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
+        pluginInterStageVariables: {value: {type: 'f32', interpolation: 'smooth'}}
       }),
     'output struct constructors outside the selected entry point are rejected'
   ).toThrow(/constructed outside the selected vertex entry point/);
@@ -658,7 +663,7 @@ struct OtherInput { @location(0) other: f32, };
 @fragment fn fragmentMain(vertex: VertexOutput, other: OtherInput) -> @location(0) vec4<f32> {
   return vec4<f32>(other.other);
 }`,
-        pluginVaryings: {value: {type: 'f32', interpolation: 'smooth'}}
+        pluginInterStageVariables: {value: {type: 'f32', interpolation: 'smooth'}}
       }),
     'ambiguous fragment input structs are rejected'
   ).toThrow(/exactly one named WGSL fragment input struct; found 2/);
@@ -671,9 +676,9 @@ struct OtherInput { @location(0) other: f32, };
 @fragment fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32> {
   return vec4<f32>(1.0);
 }`,
-        pluginVaryings: {position: {type: 'vec4<f32>', interpolation: 'smooth'}}
+        pluginInterStageVariables: {position: {type: 'vec4<f32>', interpolation: 'smooth'}}
       }),
-    'application WGSL stage I/O cannot shadow plugin varyings'
+    'application WGSL stage I/O cannot shadow plugin interStageVariables'
   ).toThrow(/conflicts with existing WGSL stage I\/O/);
   void 0;
 });
@@ -932,7 +937,7 @@ struct VertexOutput { @builtin(position) position: vec4<f32>, @location(2) color
   const result = new WGSLShaderAssembler().assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
     source,
-    pluginVaryings: {filterWeight: {type: 'f32', interpolation: 'smooth'}}
+    pluginInterStageVariables: {filterWeight: {type: 'f32', interpolation: 'smooth'}}
   });
   expect(result.source).toContain('@location(0) _luma_filterWeight: f32');
   expect(result.source).toContain('filterWeight = _luma_filterWeight;');

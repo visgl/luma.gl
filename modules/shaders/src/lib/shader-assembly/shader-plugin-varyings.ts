@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {shaderTypeDecoder} from '../../types';
-import type {ResolvedShaderPluginVarying} from '../shader-plugin';
+import type {ResolvedShaderPluginInterStageVariable} from '../shader-plugin';
 import {getGLSLAttributeType} from './shader-plugin-vertex-inputs';
 import {maskWGSLComments} from './wgsl-binding-scan';
 
-export type ShaderPluginVaryingAssembly = {
+export type ShaderPluginInterStageVariableAssembly = {
   source: string;
   declarations: string;
   vertexInitialization: string;
@@ -15,14 +15,14 @@ export type ShaderPluginVaryingAssembly = {
 };
 
 /** Generate one stage of the GLSL interface contributed by shader plugins. */
-export function assembleShaderPluginVaryingsGLSL(
+export function assembleShaderPluginInterStageVariablesGLSL(
   source: string,
   stage: 'vertex' | 'fragment',
-  varyings: Record<string, ResolvedShaderPluginVarying>
+  interStageVariables: Record<string, ResolvedShaderPluginInterStageVariable>
 ): {declarations: string; initialization: string} {
   const declarations: string[] = [];
   const initialization: string[] = [];
-  for (const [name, varying] of Object.entries(varyings)) {
+  for (const [name, varying] of Object.entries(interStageVariables)) {
     assertGLSLVaryingIsNew(source, name);
     const qualifier = varying.interpolation === 'flat' ? 'flat ' : '';
     const direction = stage === 'vertex' ? 'out' : 'in';
@@ -34,14 +34,14 @@ export function assembleShaderPluginVaryingsGLSL(
   return {declarations: declarations.join('\n'), initialization: initialization.join('\n')};
 }
 
-/** Add plugin varyings to selected WGSL vertex and fragment entry points. */
-export function assembleShaderPluginVaryingsWGSL(
+/** Add plugin interStageVariables to selected WGSL vertex and fragment entry points. */
+export function assembleShaderPluginInterStageVariablesWGSL(
   source: string,
   vertexEntryPoint: string,
   fragmentEntryPoint: string,
-  varyings: Record<string, ResolvedShaderPluginVarying>
-): ShaderPluginVaryingAssembly {
-  const entries = Object.entries(varyings);
+  interStageVariables: Record<string, ResolvedShaderPluginInterStageVariable>
+): ShaderPluginInterStageVariableAssembly {
+  const entries = Object.entries(interStageVariables);
   if (entries.length === 0) {
     return {
       source,
@@ -186,7 +186,9 @@ function getWGSLFunctionRange(
   const functionPattern = new RegExp(`\\bfn\\s+${escapeRegExp(entryPoint)}\\s*\\(`, 'g');
   const match = functionPattern.exec(source);
   if (!match) {
-    throw new Error(`ShaderPlugin varyings require WGSL ${stage} entry point "${entryPoint}"`);
+    throw new Error(
+      `ShaderPlugin interStageVariables require WGSL ${stage} entry point "${entryPoint}"`
+    );
   }
   const openParenthesis = source.indexOf('(', match.index);
   const closeParenthesis = findMatchingDelimiter(source, openParenthesis, '(', ')');
@@ -209,7 +211,7 @@ function getWGSLNamedReturnType(source: string, functionRange: WGSLFunctionRange
   const match = /->\s*([A-Za-z_][\w]*)\s*$/.exec(resultSource.trim());
   if (!match || getWGSLStructRangeOrNull(source, match[1]) === null) {
     throw new Error(
-      'ShaderPlugin varyings require the WGSL vertex entry point to return a named struct'
+      'ShaderPlugin interStageVariables require the WGSL vertex entry point to return a named struct'
     );
   }
   return match[1];
@@ -231,7 +233,7 @@ function getWGSLFragmentStructInput(
   }
   if (candidates.length > 1) {
     throw new Error(
-      `ShaderPlugin varyings require exactly one named WGSL fragment input struct; found ${candidates.length}`
+      `ShaderPlugin interStageVariables require exactly one named WGSL fragment input struct; found ${candidates.length}`
     );
   }
   return candidates[0] || null;
@@ -469,13 +471,13 @@ function getFirstUnusedLocation(usedLocations: Set<number>): number {
   return location;
 }
 
-function getGLSLZeroValue(type: ResolvedShaderPluginVarying['type']): string {
+function getGLSLZeroValue(type: ResolvedShaderPluginInterStageVariable['type']): string {
   const {primitiveType, components} = shaderTypeDecoder.getAttributeShaderTypeInfo(type);
   const scalar = primitiveType === 'u32' ? '0u' : primitiveType === 'i32' ? '0' : '0.0';
   return components === 1 ? scalar : `${getGLSLAttributeType(type)}(${scalar})`;
 }
 
-function getWGSLZeroValue(type: ResolvedShaderPluginVarying['type']): string {
+function getWGSLZeroValue(type: ResolvedShaderPluginInterStageVariable['type']): string {
   const {primitiveType, components} = shaderTypeDecoder.getAttributeShaderTypeInfo(type);
   const scalar = `${primitiveType}(0)`;
   return components === 1 ? scalar : `${type}(${scalar})`;

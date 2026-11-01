@@ -20,12 +20,12 @@ export {
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {
   ResolvedShaderPlugins,
-  ResolvedShaderPluginVarying,
+  ResolvedShaderPluginInterStageVariable,
   ShaderPlugin,
   ShaderPluginInjection,
   ShaderPluginInjectionTarget,
-  ShaderPluginVarying,
-  ShaderPluginVaryingInterpolation
+  ShaderPluginInterStageVariable,
+  ShaderPluginInterStageVariableInterpolation
 } from './lib/shader-plugin';
 export type {
   ShaderPass,
