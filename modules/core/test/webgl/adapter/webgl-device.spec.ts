@@ -23,6 +23,18 @@ it('WebGLDevice#lost (Promise)', async () => {
   device.destroy();
 });
 
+it('WebGLDevice#loseDevice marks the wrapper lost without WEBGL_lose_context', async () => {
+  const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
+  device.extensions.WEBGL_lose_context = null;
+
+  expect(device.isLost, 'device starts active').toBe(false);
+  expect(device.loseDevice(), 'native context loss was unavailable').toBe(false);
+  expect(device.isLost, 'loseDevice synchronously marks the wrapper lost').toBe(true);
+  await expect(device.lost).resolves.toMatchObject({reason: 'destroyed'});
+
+  device.destroy();
+});
+
 it('WebGLDevice#lost classifies external context loss as unknown', async () => {
   const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
 
