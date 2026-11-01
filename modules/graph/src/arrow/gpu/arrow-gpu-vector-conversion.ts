@@ -864,6 +864,7 @@ async function convertArrowNumericVectorOnGPU(
         variableLength || fixedSizeList
           ? targetElementInfo.elementByteLength * (fixedSizeList ? targetInfo.listSize! : 1)
           : targetInfo.byteLength;
+      const readbackMetadata = sourceData.readbackMetadata;
       outputData.push(
         new GPUData({
           buffer: outputBuffer,
@@ -877,10 +878,10 @@ async function convertArrowNumericVectorOnGPU(
           ownsBuffer: true,
           nullBitmap: sourceData.nullBitmap,
           valueOffsets: sourceData.valueOffsets,
-          ...(sourceData.readbackMetadata
+          ...(readbackMetadata
             ? {
                 readbackMetadata: updateNumericReadbackMetadata(
-                  sourceData.readbackMetadata as Record<string, unknown>,
+                  readbackMetadata,
                   converted.byteLength
                 )
               }
@@ -907,11 +908,11 @@ async function convertArrowNumericVectorOnGPU(
   });
 }
 
-function updateNumericReadbackMetadata(
-  metadata: Record<string, unknown>,
-  valueByteLength: number
-): Record<string, unknown> {
-  return metadata['kind'] === 'variable-length-attribute'
+function updateNumericReadbackMetadata(metadata: unknown, valueByteLength: number): unknown {
+  return typeof metadata === 'object' &&
+    metadata !== null &&
+    'kind' in metadata &&
+    metadata.kind === 'variable-length-attribute'
     ? {...metadata, valueByteLength}
     : metadata;
 }
