@@ -1,5 +1,11 @@
 # What's New
 
+### Graph operation contracts
+
+Logical Operations can declare reads, writes, output shapes, and required device features.
+Reusable graph planning discovers custom outputs through these contracts; extension lowerings
+augment the built-ins. See [GPUOperation contracts](./api-reference/graph/gpu-operation.md).
+
 ### Reusable graph expressions
 
 Graph expressions now also support packed rows of widths 1–4: component-wise float32

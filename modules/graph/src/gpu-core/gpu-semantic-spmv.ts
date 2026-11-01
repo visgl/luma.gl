@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUOperationContract} from './gpu-operation-contract';
 import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
 import type {GPUGraphVector} from './gpu-graph-value';
 import type {GPUSpMVRowStatistics, GPUSpMVStrategyId} from './gpu-spmv-strategy';
@@ -40,6 +41,18 @@ export class GPUGraphCSRMatrix {
 
 /** Semantic `output = matrix * vector`. Strategy selection belongs to the backend compiler. */
 export class GPUGraphSpMV implements GPUOperation {
+  get contract(): GPUOperationContract {
+    const {matrix, vector, output} = this.props;
+    return {
+      values: [
+        ...[matrix.rowOffsets, matrix.columnIndices, matrix.values, vector].map(value => ({
+          value,
+          access: 'read' as const
+        })),
+        {value: output, access: 'write', shape: {length: matrix.rows}}
+      ]
+    };
+  }
   readonly type = 'spmv';
   readonly id: string;
   readonly metadata: GPUOperationMetadata;

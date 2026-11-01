@@ -34,14 +34,16 @@ export type GPUOperationLoweringContext<Parameters = void> = {
   lower: (operation: GPUGraphOperation) => void;
   lowerConditional: (predicate: GPUOperationPredicate, operation: GPUGraphOperation) => void;
   resolveScalar: <T extends 'float32' | 'uint32' | 'sint32'>(
-    scalar: GPUGraphScalar<T>
+    scalar: GPUGraphScalar<T> | string
   ) => GPUScalar<T>;
-  resolveVector: <T extends GPUGraphVectorFormat>(vector: GPUGraphVector<T>) => GraphVectorView<T>;
+  resolveVector: <T extends GPUGraphVectorFormat>(
+    vector: GPUGraphVector<T> | string
+  ) => GraphVectorView<T>;
   resolveTexture: <Format extends TextureFormat>(
-    texture: GPUGraphTexture<Format>
+    texture: GPUGraphTexture<Format> | string
   ) => GraphTextureHandle<Format>;
   resolveTextureView: <Format extends TextureFormat>(
-    texture: GPUGraphTexture<Format> | GPUGraphTextureView<Format>
+    texture: GPUGraphTexture<Format> | GPUGraphTextureView<Format> | string
   ) => GraphTextureView<Format>;
   recordDecision: (decision: GPUOperationLoweringDecision) => void;
 };
@@ -59,6 +61,14 @@ export class GPUOperationLoweringRegistry<Parameters = void> {
     if (this.lowerers.has(operationType))
       throw new Error(`GPU operation lowering for "${operationType}" is already registered`);
     this.lowerers.set(operationType, lowerer as GPUOperationLowerer<Parameters>);
+    return this;
+  }
+  /** Adds a registry without replacing existing lowerings or retaining mutable shared state. */
+  registerAll(registry: GPUOperationLoweringRegistry<Parameters>): this {
+    for (const name of registry.lowerers.keys())
+      if (this.lowerers.has(name))
+        throw new Error(`GPU operation lowering for "${name}" is already registered`);
+    for (const [name, lowerer] of registry.lowerers) this.lowerers.set(name, lowerer);
     return this;
   }
   /** Copies registrations for an independent compiled program. @internal */

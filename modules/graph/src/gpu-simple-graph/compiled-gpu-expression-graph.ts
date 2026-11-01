@@ -44,6 +44,7 @@ export class CompiledGPUSimpleExpressionGraph {
     source: GPUGraph,
     options: GPUGraphCompileOptions = {}
   ) {
+    if (options.lowerings) throw new Error('Custom lowerings require GPUGraph');
     this.program = new GPUExpressionProgram(source, options);
     if (this.program.operations.some(operation => !(operation instanceof GPUExpressionOperation)))
       throw new Error('SimpleGraph declarative execution supports expression operations only');

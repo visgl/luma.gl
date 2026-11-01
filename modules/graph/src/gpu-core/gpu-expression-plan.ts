@@ -5,12 +5,8 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from './gpu-graph';
-import type {GPUGraphScalar, GPUGraphVector, GPUGraphVectorFormat} from './gpu-graph-value';
-import {GPUGraphDotProduct, GPUGraphVectorMADD} from './gpu-semantic-vector-operation';
-import {GPUGraphSpMV} from './gpu-semantic-spmv';
-import {GPUGraphScalarLiteral} from './gpu-semantic-state-operation';
-import {GPUGraphScalarOperation} from './gpu-semantic-scalar-operation';
-import {GPUCompositeOperation, type GPUGraphOperation} from './gpu-operation';
+import {GPUGraphVector, type GPUGraphScalar, type GPUGraphVectorFormat} from './gpu-graph-value';
+import {GPUCompositeOperation, isGPUOperation, type GPUGraphOperation} from './gpu-operation';
 import {
   GPUExpressionOperation,
   parseGPUExpression,
@@ -22,8 +18,18 @@ import {
   getGPUExpressionFormat
 } from './gpu-expression-operation';
 
+import type {GPUOperationLoweringRegistry} from './gpu-graph-lowering';
+import {
+  getGPUOperationValueName,
+  validateGPUOperationContract,
+  type GPUOperationContract
+} from './gpu-operation-contract';
+
 export type GPUGraphRunBindings = Readonly<Record<string, GPUVector | number>>;
-export type GPUGraphCompileOptions = {outputs?: readonly string[]};
+export type GPUGraphCompileOptions = {
+  outputs?: readonly string[];
+  lowerings?: GPUOperationLoweringRegistry;
+};
 export type GPUGraphRunOptions = {outputTargets?: Readonly<Record<string, GPUVector>>};
 
 /** @internal */
@@ -38,6 +44,7 @@ export type GPUExpressionPlan = {
 
 /** Snapshot of declarations and checked expressions; contains no bound resources. @internal */
 export class GPUExpressionProgram {
+  private readonly contracts = new Map<GPUGraphOperation, GPUOperationContract>();
   readonly expressions: readonly GPUExpressionPlan[];
   readonly operations: readonly GPUGraphOperation[];
   readonly outputs: readonly string[];
@@ -76,13 +83,23 @@ export class GPUExpressionProgram {
     for (const operation of operations) {
       if (operation instanceof GPUExpressionOperation)
         precedingScalarProducers.set(operation, new Set(scalarProducers));
-      else if (operation instanceof GPUGraphScalarOperation)
-        scalarProducers.add(operation.output.id);
-      else if (
-        operation instanceof GPUGraphDotProduct ||
-        operation instanceof GPUGraphScalarLiteral
-      )
-        scalarProducers.add(operation.props.output.id);
+      if (!isGPUOperation(operation)) continue;
+      try {
+        const contract = operation.contract;
+        if (!contract) continue;
+        validateGPUOperationContract(program, contract);
+        this.contracts.set(operation, contract);
+        for (const use of contract.values) {
+          const name = getGPUOperationValueName(use.value);
+          if (use.access !== 'read' && this.scalars.some(value => value.id === name))
+            scalarProducers.add(name);
+        }
+      } catch (error) {
+        throw new Error(
+          `${operation.id}: ${error instanceof Error ? error.message : String(error)}`,
+          {cause: error}
+        );
+      }
     }
     const producers = new Set<string>();
     for (const operation of expressions) {
@@ -90,8 +107,40 @@ export class GPUExpressionProgram {
         throw new Error(`Multiple expression writers for ${operation.output}`);
       producers.add(operation.output);
     }
-    const available = new Set([...declarations.keys()].filter(name => !producers.has(name)));
-    this.expressions = expressions.map(operation => {
+    const written = new Set<string>();
+    const readWrite = new Set<string>();
+    for (const contract of this.contracts.values()) {
+      for (const use of contract.values) {
+        const name = getGPUOperationValueName(use.value);
+        if (use.access !== 'read') written.add(name);
+        if (
+          !producers.has(name) &&
+          use.access !== 'read' &&
+          contract.values.some(
+            input => input.access !== 'write' && getGPUOperationValueName(input.value) === name
+          )
+        )
+          readWrite.add(name);
+      }
+    }
+    const available = new Set(
+      [...declarations.keys()].filter(name => !written.has(name) || readWrite.has(name))
+    );
+    const expressionPlans: GPUExpressionPlan[] = [];
+    for (const operation of operations) {
+      const contract = this.contracts.get(operation);
+      if (!(operation instanceof GPUExpressionOperation)) {
+        for (const use of contract?.values ?? []) {
+          const name = getGPUOperationValueName(use.value);
+          if (use.access !== 'write' && !available.has(name))
+            throw new Error(
+              `${'id' in operation ? operation.id : 'Operation'}: Reads ${name} before it is produced`
+            );
+        }
+        for (const use of contract?.values ?? [])
+          if (use.access !== 'read') available.add(getGPUOperationValueName(use.value));
+        continue;
+      }
       try {
         const output = declarations.get(operation.output);
         if (!output || !isGPUExpressionRowFormat(output.format))
@@ -129,13 +178,14 @@ export class GPUExpressionProgram {
         const gpuScalarInputs = references.filter(name =>
           precedingScalarProducers.get(operation)!.has(name)
         );
-        return {operation, expression, format, formats, references, gpuScalarInputs};
+        expressionPlans.push({operation, expression, format, formats, references, gpuScalarInputs});
       } catch (error) {
         if (error instanceof Error)
           throw new Error(`${operation.id}: ${error.message}`, {cause: error});
         throw error;
       }
-    });
+    }
+    this.expressions = expressionPlans;
     this.outputs = [...(options.outputs ?? expressions.map(operation => operation.output))];
     for (const name of this.outputs) {
       if (!declarations.has(name)) throw new Error(`Undeclared output ${name}`);
@@ -158,11 +208,17 @@ export class GPUExpressionProgram {
     const produced = new Set(this.expressions.map(plan => plan.operation.output));
     const targets = new Map(Object.entries(options.outputTargets ?? {}));
     const writableVectors = new Set(
-      this.operations
-        .map(getProducedVector)
-        .filter(vector => vector !== undefined)
-        .map(vector => vector.id)
+      [...this.contracts.values()].flatMap(contract =>
+        contract.values
+          .filter(
+            use =>
+              use.access !== 'read' &&
+              this.vectors.some(vector => vector.id === getGPUOperationValueName(use.value))
+          )
+          .map(use => getGPUOperationValueName(use.value))
+      )
     );
+    const availableScalars = new Set<string>();
     try {
       for (const [name, binding] of Object.entries(bindings)) {
         if (produced.has(name)) throw new Error(`Use outputTargets for expression output ${name}`);
@@ -186,39 +242,69 @@ export class GPUExpressionProgram {
       }
       for (const operation of this.operations) {
         if (!(operation instanceof GPUExpressionOperation)) {
-          const declaration = getProducedVector(operation);
-          if (declaration) {
+          const contract = this.contracts.get(operation);
+          for (const use of contract?.values ?? []) {
+            const name = getGPUOperationValueName(use.value);
+            if (use.access !== 'write' && !values.has(name) && !availableScalars.has(name))
+              throw new Error(
+                `Missing ${use.access === 'read-write' ? 'read-write' : 'execution'} binding ${name}`
+              );
+          }
+          for (const use of contract?.values ?? []) {
+            const name = getGPUOperationValueName(use.value);
+            if (use.access !== 'read' && this.scalars.some(scalar => scalar.id === name))
+              availableScalars.add(name);
+          }
+          for (const feature of contract?.requiredFeatures ?? [])
+            if (!device.features.has(feature)) throw new Error(`Operation requires ${feature}`);
+          for (const use of contract?.values ?? []) {
+            if (use.access === 'read') continue;
+            const declaration = this.vectors.find(
+              vector => vector.id === getGPUOperationValueName(use.value)
+            );
+            if (!declaration) continue;
             const existing = values.get(declaration.id);
             const target =
               targets.get(declaration.id) ?? (existing instanceof GPUVector ? existing : undefined);
-            const input =
-              operation instanceof GPUGraphVectorMADD
-                ? values.get(operation.props.input.id)
+            const shape = use.shape;
+            const template =
+              shape && 'like' in shape
+                ? values.get(getGPUOperationValueName(shape.like))
                 : undefined;
+            if (shape && 'like' in shape && !(template instanceof GPUVector))
+              throw new Error(`Missing shape input ${getGPUOperationValueName(shape.like)}`);
             const chunks =
-              declaration.chunkLengths ??
-              (input instanceof GPUVector
-                ? input.data.map(chunk => chunk.length)
-                : declaration.length === undefined
-                  ? undefined
-                  : [declaration.length]);
+              template instanceof GPUVector
+                ? template.data.map(chunk => chunk.length)
+                : shape && 'length' in shape
+                  ? (shape.chunkLengths ?? declaration.chunkLengths ?? [shape.length])
+                  : (declaration.chunkLengths ??
+                    (declaration.length === undefined ? undefined : [declaration.length]));
+            if (use.access === 'read-write' && !(existing instanceof GPUVector))
+              throw new Error(`Missing read-write binding ${declaration.id}`);
+            if (use.access === 'read-write' && target !== existing)
+              throw new Error(`Read-write target must use its bound storage: ${declaration.id}`);
             if (!target && !chunks)
               throw new Error(`Cannot infer length of produced vector ${declaration.id}`);
+            const length = chunks?.reduce((total, count) => total + count, 0) ?? target!.length;
+            if (
+              (declaration.length !== undefined && declaration.length !== length) ||
+              (shape && 'length' in shape && shape.length !== length)
+            )
+              throw new Error(`Length constraint failed for ${declaration.id}`);
+            if (
+              declaration.chunkLengths &&
+              chunks &&
+              (declaration.chunkLengths.length !== chunks.length ||
+                declaration.chunkLengths.some((count, index) => count !== chunks[index]))
+            )
+              throw new Error(`Chunk constraint failed for ${declaration.id}`);
             if (target) {
-              validateVector(
-                device,
-                target,
-                declaration.format,
-                declaration.length ?? chunks?.reduce((total, count) => total + count, 0),
-                chunks
-              );
+              validateVector(device, target, declaration.format, length, chunks);
               validateWritableTarget(declaration.id, target, values);
               values.set(declaration.id, target);
             } else {
-              const length = chunks!.reduce((total, count) => total + count, 0);
-              if (declaration.length !== undefined && declaration.length !== length)
-                throw new Error(`Length constraint failed for ${declaration.id}`);
-              const output = allocateVector(device, declaration.id, chunks!);
+              const output = allocateVector(device, declaration.id, chunks!, declaration.format);
               owned.add(output);
               values.set(declaration.id, output);
             }
@@ -377,13 +463,6 @@ function validateVector(
         `Expression vector ${vector.name} must contain packed 32-bit numeric chunks on the execution device`
       );
   }
-}
-
-/** Outputs known to the built-in full-graph lowerers. */
-function getProducedVector(operation: GPUGraphOperation): GPUGraphVector<'float32'> | undefined {
-  return operation instanceof GPUGraphVectorMADD || operation instanceof GPUGraphSpMV
-    ? operation.props.output
-    : undefined;
 }
 
 function validateWritableTarget(

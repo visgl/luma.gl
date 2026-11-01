@@ -1,5 +1,12 @@
 # Upgrade Guide
 
+## Graph lowering registries
+
+Passing a registry to `GPUGraphCompiler` now augments the built-in lowerings rather than
+replacing them. Registries are copied at compiler construction; subsequent registrations do
+not affect existing compilers. Duplicate built-in type names are rejected. Supply only your
+extension registrations, and construct a new compiler when changing the registry.
+
 ## Opaque metadata types
 
 Resource, model, and computation `userData` values and glTF `extras` now have type `unknown`. Narrow or explicitly type these values before reading their properties. Texture transform resource maps also use `unknown` values.

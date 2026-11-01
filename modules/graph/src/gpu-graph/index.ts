@@ -51,3 +51,11 @@ export type {
   GPUGraphValidationIssue,
   GPUGraphValidationReport
 } from '../gpu-core/gpu-graph-validation';
+
+export type {
+  GPUOperationContract,
+  GPUOperationValueReference,
+  GPUOperationValueUse,
+  GPUOperationVectorShape
+} from '../gpu-core/gpu-operation-contract';
+export type {GPUOperation} from '../gpu-core/gpu-operation';

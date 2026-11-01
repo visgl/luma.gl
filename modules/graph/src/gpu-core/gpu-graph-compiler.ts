@@ -94,7 +94,7 @@ export class GPUGraphCompiler<Parameters = void> {
   readonly capabilities: GPUGraphBackendCapabilities;
   readonly lowerings: GPUOperationLoweringRegistry<Parameters>;
   constructor(device: Device, lowerings?: GPUOperationLoweringRegistry<Parameters>) {
-    this.lowerings = lowerings ?? new GPUOperationLoweringRegistry<Parameters>();
+    this.lowerings = new GPUOperationLoweringRegistry<Parameters>();
     this.device = device;
     this.capabilities = Object.freeze({
       backend: 'webgpu',
@@ -102,7 +102,8 @@ export class GPUGraphCompiler<Parameters = void> {
       nativeLoops: false,
       childGraphs: false
     });
-    if (!lowerings) this.registerCoreLowerings();
+    this.registerCoreLowerings();
+    if (lowerings) this.lowerings.registerAll(lowerings);
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
     const validation = validateGPUGraph(program, bindings);
@@ -387,6 +388,8 @@ export class GPUGraphCompiler<Parameters = void> {
         return;
       }
       if (isGPUOperation(operation)) {
+        for (const feature of operation.contract?.requiredFeatures ?? [])
+          if (!this.device.features.has(feature)) throw new Error(`${id} requires ${feature}`);
         const lowerer = this.lowerings.get(operation.type);
         if (lowerer) {
           const invoke = () =>
@@ -549,32 +552,44 @@ export class GPUGraphCompiler<Parameters = void> {
     return {...node, id};
   }
   private resolveTexture<Format extends TextureFormat>(
-    texture: GPUGraphTexture<Format>,
+    texture: GPUGraphTexture<Format> | string,
     state: LoweringState
   ): GraphTextureHandle<Format> {
-    if (!state.textureValues.includes(texture))
-      throw new Error(`Undeclared program texture "${texture.id}"`);
+    const name = typeof texture === 'string' ? texture : texture.id;
+    if (
+      typeof texture === 'string'
+        ? !state.textures.has(name)
+        : !state.textureValues.includes(texture)
+    )
+      throw new Error(`Undeclared program texture "${name}"`);
     // The map erases formats; identity validation above preserves the declared texture's format.
-    return state.textures.get(texture.id)! as GraphTextureHandle<Format>;
+    return state.textures.get(name)! as GraphTextureHandle<Format>;
   }
 
   private resolveScalar<T extends 'float32' | 'uint32' | 'sint32'>(
-    s: GPUGraphScalar<T>,
+    scalar: GPUGraphScalar<T> | string,
     state: LoweringState
   ): GPUScalar<T> {
-    const r = state.scalars.get(s.id);
-    if (!r || r.format !== s.format)
-      throw new Error(`GPUGraph scalar "${s.id}" is not part of compilation`);
-    return r as GPUScalar<T>;
+    const name = typeof scalar === 'string' ? scalar : scalar.id;
+    const resolved = state.scalars.get(name);
+    if (!resolved || (typeof scalar !== 'string' && resolved.format !== scalar.format))
+      throw new Error(`GPUGraph scalar "${name}" is not part of compilation`);
+    return resolved as GPUScalar<T>;
   }
   private resolveVector<T extends GPUGraphVectorFormat>(
-    v: GPUGraphVector<T>,
+    vector: GPUGraphVector<T> | string,
     state: LoweringState
   ): GraphVectorView<T> {
-    const r = state.vectors.get(v.id);
-    if (!r || r.format !== v.format || (v.length !== undefined && r.length !== v.length))
-      throw new Error(`GPUGraph vector "${v.id}" is not part of compilation`);
-    return r as GraphVectorView<T>;
+    const name = typeof vector === 'string' ? vector : vector.id;
+    const resolved = state.vectors.get(name);
+    if (
+      !resolved ||
+      (typeof vector !== 'string' &&
+        (resolved.format !== vector.format ||
+          (vector.length !== undefined && resolved.length !== vector.length)))
+    )
+      throw new Error(`GPUGraph vector "${name}" is not part of compilation`);
+    return resolved as GraphVectorView<T>;
   }
 }
 

@@ -170,3 +170,11 @@ export type {
   GPUGraphRunBindings,
   GPUGraphRunOptions
 } from './gpu-core/gpu-expression-plan';
+
+export type {
+  GPUOperationContract,
+  GPUOperationValueReference,
+  GPUOperationValueUse,
+  GPUOperationVectorShape
+} from './gpu-core/gpu-operation-contract';
+export type {GPUOperation} from './gpu-core/gpu-operation';

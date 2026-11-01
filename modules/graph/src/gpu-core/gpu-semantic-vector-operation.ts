@@ -2,11 +2,23 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUOperationContract} from './gpu-operation-contract';
 import type {GPUOperation, GPUOperationMetadata} from './gpu-operation';
 import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
 
 /** Semantic broadcast multiply-add: output = scale * input + addend. */
 export class GPUGraphVectorMADD implements GPUOperation {
+  get contract(): GPUOperationContract {
+    const {input, scale, addend, output} = this.props;
+    return {
+      values: [
+        {value: input, access: 'read'},
+        {value: scale, access: 'read'},
+        {value: addend, access: 'read'},
+        {value: output, access: 'write', shape: {like: input}}
+      ]
+    };
+  }
   readonly type = 'vector-madd';
   readonly id: string;
   readonly metadata: GPUOperationMetadata;
@@ -35,6 +47,15 @@ export class GPUGraphVectorMADD implements GPUOperation {
 
 /** Semantic float32 dot product writing one scalar. */
 export class GPUGraphDotProduct implements GPUOperation {
+  get contract(): GPUOperationContract {
+    return {
+      values: [
+        {value: this.props.left, access: 'read'},
+        {value: this.props.right, access: 'read'},
+        {value: this.props.output, access: 'write'}
+      ]
+    };
+  }
   readonly type = 'dot-product';
   readonly id: string;
   readonly metadata: GPUOperationMetadata;

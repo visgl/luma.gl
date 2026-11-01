@@ -34,7 +34,7 @@ export class CompiledGPUGraph {
     if (source.textures.length)
       throw new Error('Reusable expression programs do not yet support texture declarations');
     this.program = new GPUExpressionProgram(source, options);
-    this.compiler = new GPUGraphCompiler(device, lowerings?.clone());
+    this.compiler = new GPUGraphCompiler(device, (lowerings ?? options.lowerings)?.clone());
     try {
       for (const plan of this.program.expressions)
         this.kernels.set(plan.operation, new GPUExpressionKernel(device, this.program, plan));
