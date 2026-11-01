@@ -173,6 +173,9 @@ it('WEBGLRenderPass does not overwrite a canvas resized after a deferred resize 
   const canvasContext = device.getDefaultCanvasContext();
   const canvas = canvasContext.canvas as HTMLCanvasElement;
 
+  canvasContext.setDrawingBufferSize(100, 50);
+  new WEBGLRenderPass(device, {}).end();
+
   // The canvas owner resizes the canvas and the drawing buffer is synced to it...
   canvas.width = 300;
   canvas.height = 150;

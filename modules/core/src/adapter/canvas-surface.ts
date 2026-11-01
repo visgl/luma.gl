@@ -248,6 +248,10 @@ export abstract class CanvasSurface {
     return [maxTextureDimension, maxTextureDimension];
   }
 
+  /**
+   * Request a deferred resize. If canvas dimensions differ from their values at the latest
+   * pending request when it is applied, the current canvas dimensions take precedence.
+   */
   setDrawingBufferSize(width: number, height: number) {
     width = Math.floor(width);
     height = Math.floor(height);
@@ -449,8 +453,12 @@ export abstract class CanvasSurface {
       // The canvas owner (e.g. a basemap sharing the context) may have resized the canvas again
       // after this resize was requested. The pending size is then stale: follow the canvas
       // instead of overwriting it.
-      const [requestCanvasWidth, requestCanvasHeight] = this._canvasSizeAtResizeRequest;
-      if (this.canvas.width !== requestCanvasWidth || this.canvas.height !== requestCanvasHeight) {
+      const [canvasWidthAtResizeRequest, canvasHeightAtResizeRequest] =
+        this._canvasSizeAtResizeRequest;
+      if (
+        this.canvas.width !== canvasWidthAtResizeRequest ||
+        this.canvas.height !== canvasHeightAtResizeRequest
+      ) {
         this.drawingBufferWidth = this.canvas.width;
         this.drawingBufferHeight = this.canvas.height;
       }
