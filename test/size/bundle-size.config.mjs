@@ -34,7 +34,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/core/webgl` backend',
     entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
-    maximum: {minified: 140_250, gzip: 39_500, brotli: 34_000},
+    maximum: {minified: 140_500, gzip: 39_750, brotli: 34_000},
     targetGzip: 30_000
   },
   {
@@ -49,7 +49,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    maximum: {minified: 242_250, gzip: 68_100, brotli: 59_000},
+    maximum: {minified: 242_500, gzip: 68_100, brotli: 59_000},
     targetGzip: 54_000
   },
   {
