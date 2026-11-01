@@ -114,3 +114,26 @@ The frame is authored as a CPU scenegraph of geometry nodes before GPU allocatio
 
 Ball impacts use restitution 0.985, with low-speed restitution disabled below 0.05. Exponential linear/angular damping (0.08/0.12 inverse seconds) approximates air and suspension losses, including collective swings without impacts. The two-minute reset remains active. Steel roughness is 0.07 for sharper PBR reflections without raising scene exposure.
 
+
+### Spiral dominoes
+
+The default scene lays free box rigid bodies along a three-turn spiral with a wider inner radius with approximately
+equal arc-length spacing. Only the first domino is released leaning with a consistent pivot velocity; GPU contact
+solving propagates the wave. Reset restores the starting arrangement and preserves the camera.
+Use Pause to inspect the wave and drag to orbit.
+
+Enable **Domino sound** to unlock recorded hard-surface clacks. Sounds follow GPU contact
+impulses, with one clack per domino per replay and bounded voices. Three small OGG recordings
+from [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) are bundled under CC0;
+the original license is retained in `audio/License.txt`. Playback high-passes the low thump
+and fades the tail. No oscillators or pitch shifting are used.
+
+Dominoes and the base use procedural surface grain and varying roughness, lit by a warm
+overhead point source and cool ambient fill. Short clacks retain only an 18 ms recording
+transient, with a fast decay and reduced gain.
+
+Domino shadows use the shared ShadowMapRenderer and shadow module with a 2048-pixel
+map and one instanced depth draw from GPU body poses. The camera orbits gently until
+OrbitControls receives user input. The domino scene uses 60 Hz physics with 32 solver
+iterations and 4096 contact slots; both 60 and 120 Hz propagation are regression-tested.
+The status reports simulation time relative to wall time to expose playback slowdown.
