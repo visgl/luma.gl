@@ -1,0 +1,1 @@
+import{i as e}from"./webgl-device-U1CbKn8W.js";export{e as webgl2Adapter};

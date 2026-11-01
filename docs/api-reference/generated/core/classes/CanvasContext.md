@@ -14,7 +14,7 @@ Manages a renderable backend canvas. Supports both HTML or offscreen canvas and 
 
 > **new CanvasContext**(`props?`): `CanvasContext`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L152)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L154)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -288,7 +288,7 @@ Defined in: [modules/core/src/adapter/canvas-context.ts:13](https://github.com/v
 
 > **get** `abstract` **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L146)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L148)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -304,7 +304,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:146](https://github.com/
 
 > **\_observeDevicePixelRatio**(): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:460](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L460)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:476](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L476)
 
 #### Returns[​](#returns-2 "Direct link to Returns")
 
@@ -320,7 +320,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:460](https://github.com/
 
 > **\_resizeDrawingBufferIfNeeded**(): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:438](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L438)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:446](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L446)
 
 #### Returns[​](#returns-3 "Direct link to Returns")
 
@@ -336,7 +336,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:438](https://github.com/
 
 > **\_startObservers**(): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:325](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L325)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:333](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L333)
 
 Starts DOM observation after the derived context and its device are fully initialized.
 
@@ -356,7 +356,7 @@ Starts DOM observation after the derived context and its device are fully initia
 
 > **\_stopObservers**(): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:340](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L340)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:348](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L348)
 
 Stops all DOM observation and timers associated with a canvas surface.
 
@@ -376,7 +376,7 @@ This pairs with `_startObservers()` so teardown uses the same lifecycle whether 
 
 > **cssToDevicePixels**(`cssPixel`, `yInvert?`): `object`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:264](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L264)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:272](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L272)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 
@@ -418,7 +418,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:264](https://github.com/
 
 > **cssToDeviceRatio**(): `number`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:290](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L290)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:298](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L298)
 
 #### Returns[​](#returns-7 "Direct link to Returns")
 
@@ -438,7 +438,7 @@ Returns multiplier need to convert CSS size to Device size
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:202](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L202)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:205](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L205)
 
 #### Returns[​](#returns-8 "Direct link to Returns")
 
@@ -454,7 +454,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:202](https://github.com/
 
 > **getAspect**(): `number`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:284](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L284)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:292](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L292)
 
 #### Returns[​](#returns-9 "Direct link to Returns")
 
@@ -474,7 +474,7 @@ Use the current drawing buffer size for projection setup.
 
 > **getCSSSize**(): \[`number`, `number`]
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:227](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L227)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:230](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L230)
 
 #### Returns[​](#returns-10 "Direct link to Returns")
 
@@ -490,7 +490,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:227](https://github.com/
 
 > **getCurrentFramebuffer**(`options?`): [`Framebuffer`](https://luma.gl/docs/api-reference/generated/core/classes/Framebuffer.md)
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:220](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L220)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:223](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L223)
 
 Returns a framebuffer with properly resized current 'swap chain' textures
 
@@ -516,7 +516,7 @@ Returns a framebuffer with properly resized current 'swap chain' textures
 
 > **getDevicePixelRatio**(): `number`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:259](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L259)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:267](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L267)
 
 #### Returns[​](#returns-12 "Direct link to Returns")
 
@@ -532,7 +532,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:259](https://github.com/
 
 > **getDevicePixelSize**(): \[`number`, `number`]
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:235](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L235)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:238](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L238)
 
 #### Returns[​](#returns-13 "Direct link to Returns")
 
@@ -548,7 +548,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:235](https://github.com/
 
 > **getDrawingBufferSize**(): \[`number`, `number`]
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:239](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L239)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:242](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L242)
 
 #### Returns[​](#returns-14 "Direct link to Returns")
 
@@ -564,7 +564,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:239](https://github.com/
 
 > **getMaxDrawingBufferSize**(): \[`number`, `number`]
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:243](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L243)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:246](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L246)
 
 #### Returns[​](#returns-15 "Direct link to Returns")
 
@@ -580,7 +580,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:243](https://github.com/
 
 > **getPixelSize**(): \[`number`, `number`]
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:279](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L279)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:287](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L287)
 
 #### Returns[​](#returns-16 "Direct link to Returns")
 
@@ -600,7 +600,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:279](https://github.com/
 
 > **getPosition**(): \[`number`, `number`]
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:231](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L231)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:234](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L234)
 
 #### Returns[​](#returns-17 "Direct link to Returns")
 
@@ -616,7 +616,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:231](https://github.com/
 
 > **resize**(`size`): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:301](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L301)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:309](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L309)
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
@@ -648,7 +648,7 @@ Use canvasContext.setDrawingBufferSize()
 
 > **setDrawingBufferSize**(`width`, `height`): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:248](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L248)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:251](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L251)
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
@@ -674,7 +674,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:248](https://github.com/
 
 > **setProps**(`props`): `this`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:211](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L211)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L214)
 
 #### Parameters[​](#parameters-5 "Direct link to Parameters")
 
@@ -696,7 +696,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:211](https://github.com/
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L148)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:150](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L150)
 
 #### Returns[​](#returns-21 "Direct link to Returns")
 
@@ -712,7 +712,7 @@ Defined in: [modules/core/src/adapter/canvas-surface.ts:148](https://github.com/
 
 > **updatePosition**(): `void`
 
-Defined in: [modules/core/src/adapter/canvas-surface.ts:483](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L483)
+Defined in: [modules/core/src/adapter/canvas-surface.ts:499](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/canvas-surface.ts#L499)
 
 #### Returns[​](#returns-22 "Direct link to Returns")
 
