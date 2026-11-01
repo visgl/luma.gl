@@ -19,6 +19,30 @@ For scenegraph-specific guidance, see the
 [Scenegraph guide](/docs/api-guide/engine/scenegraph). For bind-group ownership,
 see the [Bind Groups guide](/docs/api-guide/gpu/gpu-bindings).
 
+luma.gl owns the material implementations described here. The glTF converter maps authored
+factors, textures, and extensions onto those shared materials; retained ANARI scenes use the
+same PBR shader implementation.
+
+## Material capabilities
+
+Each capability page explains the native material inputs and includes an existing glTF asset
+example. Core material features are documented alongside advanced surface and volume effects.
+
+| Capability | Pages |
+| --- | --- |
+| Surface color and coverage | [Base color](./features/base-color.mdx), [opacity](./features/opacity.mdx), [double-sided surfaces](./features/double-sided.mdx) |
+| Metallic and rough surfaces | [Metallic](./features/metallic.mdx), [roughness](./features/roughness.mdx) |
+| Self-emission | [Emission](./features/emission.mdx), [emissive strength](./features/emissive-strength.mdx) |
+| Surface detail | [Normal mapping](./features/normal-mapping.mdx), [bump mapping](./features/bump-mapping.mdx), [ambient occlusion](./features/occlusion.mdx) |
+| Light response | [Unlit](./features/unlit.mdx), [specular](./features/specular.mdx), [index of refraction](./features/index-of-refraction.mdx) |
+| Layered and directional response | [Clearcoat](./features/clearcoat.mdx), [sheen](./features/sheen.mdx), [anisotropy](./features/anisotropy.mdx), [iridescence](./features/iridescence.mdx) |
+| Transmission and volumes | [Transmission](./features/transmission.mdx), [thickness and attenuation](./features/volume.mdx), [dispersion](./features/dispersion.mdx) |
+| Translucency and scattering | [Diffuse transmission](./features/diffuse-transmission.mdx), [volume scattering](./features/volume-scattering.mdx), [thin-wall scattering](./features/thin-wall-scattering.mdx) |
+| Texture inputs and lighting | [Coordinates and transforms](./features/texture-coordinates.mdx), [lightmaps](./features/lightmaps.mdx), [environment lighting](/docs/api-reference/scene/pbr-environment) |
+
+See [glTF material conversion](/docs/api-reference/gltf/gltf-materials) for importer contracts
+and [ANARI materials](/docs/api-reference/scene/anari-materials-and-lights) for retained parameters.
+
 ## What Is a Material?
 
 A material describes how a surface responds to light and how its surface colors
@@ -83,3 +107,9 @@ In the current luma.gl convention:
 That means a material is the natural owner of per-surface uniform buffers,
 textures, and samplers that can be reused across many draws, while scene-level
 state like lighting stays outside the material itself.
+
+## Explore engine features
+
+Learn each material aspect and rendering capability through its API and a live sample in the
+[engine feature guide](/docs/api-guide/engine/features). glTF core and extension mappings are
+described within each feature page; the Materials section is organized by shading capability rather than source format.

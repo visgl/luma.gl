@@ -22,7 +22,7 @@ describe('reusable visual comparison examples', () => {
     const source = readFileSync(path.join(directory, 'app.ts'), 'utf8');
 
     expect(source).toMatch(
-      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/experimental['"]/
+      /import\s*\{[^}]*\bComparisonSplitter\b[^}]*\}\s*from\s*['"]@luma\.gl\/engine\/experimental\/controls['"]/
     );
     expect(source).toMatch(/new\s+ComparisonSplitter\s*\(/);
     expect(source).toContain(`id: '${splitterId}'`);
@@ -75,10 +75,8 @@ describe('reusable visual comparison examples', () => {
     ) as {dependencies: Record<string, string>};
     const viteConfig = readFileSync(path.join(ANTIALIASING_DIRECTORY, 'vite.config.ts'), 'utf8');
 
-    expect(packageJson.dependencies['@luma.gl/experimental']).toBe(
-      packageJson.dependencies['@luma.gl/engine']
-    );
-    expect(viteConfig).toMatch(/['"]@luma\.gl\/experimental['"]:\s*`/);
+    expect(packageJson.dependencies['@luma.gl/engine']).toBeDefined();
+    expect(viteConfig).toMatch(/['"]@luma\.gl\/engine['"]:\s*`/);
   });
 
   test.each([

@@ -1,9 +1,9 @@
 /* eslint-disable no-var, max-statements */
 import {glsl} from '@luma.gl/core';
-import {GL} from '@luma.gl/webgl/constants';
+import {GL} from '@luma.gl/core/webgl-constants';
 // eslint-disable-next-line
 import {AnimationLoop, Cube} from '@luma.gl/engine';
-import {createTestContext} from '@luma.gl/test-utils';
+import {createTestContext} from '@luma.gl/core/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 
 const SIDE = 256;

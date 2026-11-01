@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {type TypedArray} from '@math.gl/types';
+import {type TypedArray} from '@math.gl/core';
 import {vertexFormatDecoder, VertexFormat} from '@luma.gl/core';
 
 // biome-ignore format: preserve layout

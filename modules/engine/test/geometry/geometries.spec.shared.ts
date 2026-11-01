@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArrayConstructor} from '@math.gl/types';
+import type {TypedArrayConstructor} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {
   ConeGeometry,

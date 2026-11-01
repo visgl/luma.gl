@@ -91,6 +91,7 @@ export class GPUBitmapLayer extends Layer<GPUBitmapLayerProps> {
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
     const model = new Model(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_BITMAP_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',

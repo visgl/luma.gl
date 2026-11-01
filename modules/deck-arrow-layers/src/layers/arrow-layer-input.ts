@@ -6,12 +6,11 @@ import {
   canConvertColors,
   convertArrowToGPUVector,
   getArrowPaths,
-  getArrowRecordBatchAsyncIterator,
-  readArrowGPUVectorAsync,
-  type ArrowRecordBatchSource
-} from '@luma.gl/arrow';
+  readArrowGPUVectorAsync
+} from '@luma.gl/graph/arrow';
+import {getArrowRecordBatchAsyncIterator, type ArrowRecordBatchSource} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {RecordBatch, Table, type DataType, type Vector} from 'apache-arrow';
 
 /** Arrow or GPU-resident column accepted by a deck Arrow layer input. */

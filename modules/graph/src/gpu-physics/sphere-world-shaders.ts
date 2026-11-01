@@ -1,0 +1,385 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+/** @internal Shader constants are structural; live material and gravity values are uniforms. */
+export function getSphereWorldShaderHeader(
+  count: number,
+  maximumRadius: number,
+  maximumContacts: number,
+  contactSkin: number,
+  maximumCandidateTests = 0
+): string {
+  return /* wgsl */ `
+const BODY_COUNT = ${count}u;
+const CELL_SIZE = ${maximumRadius * 2 + contactSkin};
+const MAXIMUM_RADIUS = ${maximumRadius};
+const MAXIMUM_CANDIDATES = ${maximumCandidateTests}u;
+const MAXIMUM_CONTACTS = ${maximumContacts}u;
+const INVALID_KEY = 0xffffffffu;
+struct Plane {normal: vec4f, right: vec4f, forward: vec4f, center: vec4f, material: vec4f, response: vec4f};
+struct Clock {timeStep: f32, remaining: f32, step: u32, reserved: u32};
+struct Settings {
+  gravity: vec4f,
+  normal: vec4f,
+  right: vec4f,
+  forward: vec4f,
+  material: vec4f,
+  resting: vec4f,
+  solver: vec4f,
+  contactEffects: vec4f,
+  planes: array<Plane, 32>,
+};
+@group(0) @binding(0) var<uniform> settings: Settings;
+@group(0) @binding(9) var<uniform> clock: Clock;
+fn getCell(point: vec3f) -> vec3i { return vec3i(floor(point / CELL_SIZE)); }
+fn hashCell(cell: vec3i) -> u32 {
+  return ((bitcast<u32>(cell.x) * 73856093u) ^
+    (bitcast<u32>(cell.y) * 19349663u) ^
+    (bitcast<u32>(cell.z) * 83492791u)) & 0x7fffffffu;
+}
+fn isValidSphere(sphere: vec4f) -> bool {
+  return sphere.w > 0.0 && sphere.w <= MAXIMUM_RADIUS &&
+    all(abs(sphere.xyz) < vec3f(CELL_SIZE * 100000000.0));
+}
+fn getPlaneDelta(point: vec3f, plane: Plane) -> vec3f {
+  let relative = point - plane.center.xyz;
+  let horizontal = clamp(dot(relative, plane.right.xyz), -plane.right.w, plane.right.w);
+  let vertical = clamp(dot(relative, plane.forward.xyz), -plane.forward.w, plane.forward.w);
+  return relative - plane.right.xyz * horizontal - plane.forward.xyz * vertical;
+}
+fn getContactNormal(delta: vec3f, first: u32, second: u32) -> vec3f {
+  let distance = length(delta);
+  if (distance > 0.0) { return delta / distance; }
+  return vec3f(select(-1.0, 1.0, first < second), 0.0, 0.0);
+}
+`;
+}
+
+export const INTEGRATE_SPHERES = /* wgsl */ `
+@group(0) @binding(1) var<storage, read> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read> velocities: array<vec4f>;
+@group(0) @binding(3) var<storage, read> angularVelocities: array<vec4f>;
+@group(0) @binding(4) var<storage, read_write> sleepStates: array<vec4f>;
+@group(0) @binding(5) var<storage, read_write> predictedPositions: array<vec4f>;
+@group(0) @binding(6) var<storage, read_write> predictedVelocities: array<vec4f>;
+@group(0) @binding(7) var<storage, read_write> predictedAngularVelocities: array<vec4f>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) invocation: vec3u) {
+  let index = invocation.x;
+  if (index >= BODY_COUNT) { return; }
+  let sphere = positions[index];
+  var velocity = velocities[index];
+  var sleep = sleepStates[index];
+  if (sleep.y != settings.gravity.w) { sleep.x = 0.0; }
+  sleep.y = settings.gravity.w;
+  sleepStates[index] = sleep;
+  var point = sphere.xyz;
+  let sleeping = settings.solver.x > 0.0 && sleep.x >= settings.solver.x;
+  if (velocity.w > 0.0 && !sleeping && isValidSphere(sphere)) {
+    velocity = vec4f(velocity.xyz + settings.gravity.xyz * clock.timeStep, velocity.w);
+    point += velocity.xyz * clock.timeStep;
+  }
+  predictedPositions[index] = vec4f(point, sphere.w);
+  predictedVelocities[index] = velocity;
+  predictedAngularVelocities[index] = angularVelocities[index];
+}
+`;
+
+export const ASSIGN_SPHERE_CELLS = /* wgsl */ `
+@group(0) @binding(1) var<storage, read> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read_write> keys: array<u32>;
+@group(0) @binding(3) var<storage, read_write> values: array<u32>;
+@group(0) @binding(4) var<storage, read_write> diagnostics: array<atomic<u32>>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) invocation: vec3u) {
+  let index = invocation.x;
+  if (index >= BODY_COUNT) { return; }
+  let sphere = positions[index];
+  var key = INVALID_KEY;
+  if (isValidSphere(sphere)) { key = hashCell(getCell(sphere.xyz)); }
+  else if (sphere.w >= 0.0 || !isValidSphere(vec4f(sphere.xyz, -sphere.w))) { atomicAdd(&diagnostics[1], 1u); }
+  keys[index] = key; values[index] = index;
+}
+`;
+
+export function getSphereContactShader(mode: 'count' | 'emit', allPairs: boolean): string {
+  return /* wgsl */ `
+@group(0) @binding(1) var<storage, read> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read> velocities: array<vec4f>;
+@group(0) @binding(3) var<storage, read> sortedKeys: array<u32>;
+@group(0) @binding(4) var<storage, read> sortedBodies: array<u32>;
+@group(0) @binding(5) var<storage, read_write> counts: array<u32>;
+@group(0) @binding(6) var<storage, read> offsets: array<u32>;
+@group(0) @binding(7) var<storage, read_write> contacts: array<vec2u>;
+@group(0) @binding(8) var<storage, read_write> diagnostics: array<atomic<u32>>;
+fn lowerBound(key: u32) -> u32 {
+  var first = 0u; var last = BODY_COUNT;
+  while (first < last) {
+    let middle = first + (last - first) / 2u;
+    if (sortedKeys[middle] < key) { first = middle + 1u; } else { last = middle; }
+  }
+  return first;
+}
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) invocation: vec3u) {
+  let index = invocation.x;
+  if (index >= BODY_COUNT) { return; }
+  let sphere = positions[index];
+  var contactCount = 0u;
+  var candidateCount = 0u;
+  if (isValidSphere(sphere)) {
+    let cell = getCell(sphere.xyz);
+    ${allPairs ? 'let neighborCount = 1u;' : 'let neighborCount = 27u;'}
+    for (var neighborIndex = 0u; neighborIndex < neighborCount; neighborIndex++) {
+      if(MAXIMUM_CANDIDATES > 0u && candidateCount >= MAXIMUM_CANDIDATES) {break;}
+      let neighborCell = cell + vec3i(i32(neighborIndex % 3u) - 1,
+        i32((neighborIndex / 3u) % 3u) - 1, i32(neighborIndex / 9u) - 1);
+      let key = hashCell(neighborCell);
+      var cursor = ${allPairs ? '0u' : 'lowerBound(key)'};
+      while (cursor < BODY_COUNT) {
+        ${allPairs ? '' : 'if (sortedKeys[cursor] != key) { break; }'}
+        let other = ${allPairs ? 'cursor' : 'sortedBodies[cursor]'};
+        cursor++;
+        if(MAXIMUM_CANDIDATES > 0u && candidateCount >= MAXIMUM_CANDIDATES) {break;}
+        candidateCount++;
+        if (other == index) { continue; }
+        let neighbor = positions[other];
+        ${allPairs ? '' : 'if (any(getCell(neighbor.xyz) != neighborCell)) { continue; }'}
+        if (!isValidSphere(neighbor)) { continue; }
+        if (velocities[index].w <= 0.0 && velocities[other].w <= 0.0) { continue; }
+        let delta = sphere.xyz - neighbor.xyz;
+        let radius = sphere.w + neighbor.w;
+        if (dot(delta, delta) > (radius + settings.solver.z) * (radius + settings.solver.z)) { continue; }
+        ${
+          mode === 'emit'
+            ? `if (contactCount < MAXIMUM_CONTACTS) {
+          let closing = dot(velocities[index].xyz - velocities[other].xyz, getContactNormal(delta, index, other));
+          let bounce = select(0.0, -settings.material.y * closing,
+            closing < -settings.solver.y && length(delta) <= radius);
+          contacts[offsets[index] + contactCount] = vec2u(other, bitcast<u32>(bounce));
+        }`
+            : ''
+        }
+        contactCount++;
+      }
+    }
+  }
+  ${
+    mode === 'count'
+      ? `counts[index] = min(contactCount, MAXIMUM_CONTACTS);
+    if (contactCount > MAXIMUM_CONTACTS) {
+      var current = atomicLoad(&diagnostics[0]);
+      loop {
+        let next = current + min(contactCount - MAXIMUM_CONTACTS, 0xffffffffu - current);
+        let result = atomicCompareExchangeWeak(&diagnostics[0], current, next);
+        if (result.exchanged) {break;} current = result.old_value;
+      }
+    }
+    var currentCandidates = atomicLoad(&diagnostics[5]);
+    loop {
+      let next = currentCandidates + min(candidateCount, 0xffffffffu - currentCandidates);
+      let result = atomicCompareExchangeWeak(&diagnostics[5], currentCandidates, next);
+      if (result.exchanged) {break;} currentCandidates = result.old_value;
+    }
+    atomicMax(&diagnostics[6], contactCount);
+    if(MAXIMUM_CANDIDATES > 0u && candidateCount >= MAXIMUM_CANDIDATES) {atomicAdd(&diagnostics[7], 2u);}`
+      : 'atomicAdd(&diagnostics[2], min(contactCount, MAXIMUM_CONTACTS));'
+  }
+}
+`;
+}
+
+export const SOLVE_SPHERE_CONTACTS = /* wgsl */ `
+@group(0) @binding(1) var<storage, read> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read> velocities: array<vec4f>;
+@group(0) @binding(3) var<storage, read> angularVelocities: array<vec4f>;
+@group(0) @binding(4) var<storage, read> offsets: array<u32>;
+@group(0) @binding(5) var<storage, read> contacts: array<vec2u>;
+@group(0) @binding(6) var<storage, read_write> outputPositions: array<vec4f>;
+@group(0) @binding(7) var<storage, read_write> outputVelocities: array<vec4f>;
+@group(0) @binding(8) var<storage, read_write> outputAngularVelocities: array<vec4f>;
+fn getFrictionImpulse(relative: vec3f, normal: vec3f, normalImpulse: f32, denominator: f32, staticFriction: f32, dynamicFriction: f32) -> vec3f {
+  let tangent = relative - normal * dot(relative, normal);
+  let speed = length(tangent);
+  if (speed < 0.000001 || normalImpulse <= 0.0) { return vec3f(0.0); }
+  let stoppingImpulse = speed / denominator;
+  let limit = select(dynamicFriction * normalImpulse, stoppingImpulse,
+    stoppingImpulse <= staticFriction * normalImpulse);
+  return -tangent * min(stoppingImpulse, limit) / speed;
+}
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) invocation: vec3u) {
+  let index = invocation.x;
+  if (index >= BODY_COUNT) { return; }
+  let sphere = positions[index];
+  let velocity = velocities[index];
+  let angular = angularVelocities[index];
+  var point = sphere.xyz; var linearVelocity = velocity.xyz; var angularVelocity = angular.xyz;
+  if (clock.timeStep > 0.0 && velocity.w > 0.0 && isValidSphere(sphere)) {
+    let inverseInertia = 2.5 * velocity.w / (sphere.w * sphere.w);
+    for (var cursor = offsets[index]; cursor < offsets[index + 1u]; cursor++) {
+      let contact = contacts[cursor]; let other = contact.x;
+      let neighbor = positions[other]; let neighborVelocity = velocities[other];
+      let delta = sphere.xyz - neighbor.xyz; let distance = length(delta);
+      let normal = getContactNormal(delta, index, other);
+      if (distance > sphere.w + neighbor.w) { continue; }
+      let inverseMass = velocity.w + max(neighborVelocity.w, 0.0);
+      let degree = max(1u, max(offsets[index + 1u] - offsets[index], offsets[other + 1u] - offsets[other]));
+      let relaxation = 1.0 / f32(degree);
+      let penetration = max(sphere.w + neighbor.w - distance - settings.solver.z * 0.1, 0.0);
+      point += normal * penetration * velocity.w / inverseMass * settings.solver.w * relaxation;
+      let linearRelative = velocity.xyz - neighborVelocity.xyz;
+      let angularRelative = cross(angular.xyz, -normal * sphere.w) - cross(angularVelocities[other].xyz, normal * neighbor.w);
+      let relative = linearRelative + angularRelative;
+      let frictionRelative = linearRelative * settings.contactEffects.x + angularRelative * settings.contactEffects.y;
+      let normalImpulse = max((bitcast<f32>(contact.y) - dot(relative, normal)) / inverseMass, 0.0);
+      let tangentImpulse = getFrictionImpulse(frictionRelative, normal, normalImpulse, 3.5 * inverseMass, settings.material.z, settings.material.w);
+      linearVelocity += (normal * normalImpulse + tangentImpulse) * velocity.w * relaxation;
+      angularVelocity += cross(-normal * sphere.w, tangentImpulse) * inverseInertia * relaxation;
+    }
+    for (var planeIndex = 0u; planeIndex < u32(settings.resting.w); planeIndex++) {
+      let plane = settings.planes[planeIndex];
+      let floorDelta = getPlaneDelta(point, plane);
+      let floorDistance = length(floorDelta);
+      let signedHeight = dot(point, plane.normal.xyz) - plane.normal.w;
+      if (signedHeight > -sphere.w && floorDistance <= sphere.w) {
+        let outsideEdge = length(floorDelta - plane.normal.xyz * signedHeight) > 0.000001;
+        let useClosestPoint = signedHeight > 0.0 || outsideEdge;
+        let rectangleNormal = select(plane.normal.xyz, floorDelta / max(floorDistance, 0.000001), useClosestPoint);
+        let penetration = select(sphere.w - signedHeight, sphere.w - floorDistance, useClosestPoint);
+        point += rectangleNormal * max(penetration, 0.0);
+        // An optional raised cushion nose couples follow/draw into the normal rebound.
+        // Collision detection still uses the rectangle; this is a rigid impulse approximation.
+        let upward = -settings.gravity.xyz + rectangleNormal * dot(settings.gravity.xyz, rectangleNormal);
+        let height = select(0.0, plane.response.x, length(upward) > 0.000001);
+        let normal = rectangleNormal * sqrt(1.0 - height * height) -
+          upward / max(length(upward), 0.000001) * height;
+        let arm = -normal * sphere.w;
+        let relative = linearVelocity + cross(angularVelocity, arm);
+        let closing = dot(relative, normal);
+        let restitution = plane.material.x / (1.0 + plane.response.y * max(-closing, 0.0));
+        let bounce = select(0.0, -restitution * closing, closing < -settings.solver.y);
+        let normalArm = cross(arm, normal);
+        let normalMass = velocity.w + inverseInertia * dot(normalArm, normalArm);
+        let normalImpulse = max((bounce - closing) / normalMass, 0.0);
+        linearVelocity += normal * normalImpulse * velocity.w;
+        angularVelocity += normalArm * normalImpulse * inverseInertia;
+        // Friction uses the post-impact contact velocity and its directional effective mass.
+        let surfaceVelocity = linearVelocity + cross(angularVelocity, arm);
+        let tangent = surfaceVelocity - normal * dot(surfaceVelocity, normal);
+        let tangentDirection = tangent / max(length(tangent), 0.000001);
+        let tangentArm = cross(arm, tangentDirection);
+        let tangentMass = velocity.w + inverseInertia * dot(tangentArm, tangentArm);
+        let tangentImpulse = getFrictionImpulse(surfaceVelocity, normal, normalImpulse, tangentMass, plane.material.y, plane.material.z);
+        linearVelocity += tangentImpulse * velocity.w;
+        angularVelocity += cross(arm, tangentImpulse) * inverseInertia;
+      }
+    }
+  }
+  outputPositions[index] = vec4f(point, sphere.w);
+  outputVelocities[index] = vec4f(linearVelocity, velocity.w);
+  outputAngularVelocities[index] = vec4f(angularVelocity, angular.w);
+}
+`;
+
+export const FINALIZE_SPHERES = /* wgsl */ `
+@group(0) @binding(1) var<storage, read> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read_write> velocities: array<vec4f>;
+@group(0) @binding(3) var<storage, read_write> angularVelocities: array<vec4f>;
+@group(0) @binding(4) var<storage, read_write> orientations: array<vec4f>;
+@group(0) @binding(5) var<storage, read_write> sleepStates: array<vec4f>;
+@group(0) @binding(6) var<storage, read_write> diagnostics: array<atomic<u32>>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) invocation: vec3u) {
+  let index = invocation.x;
+  if (index >= BODY_COUNT) { return; }
+  if(clock.timeStep <= 0.0) {return;}
+  let sphere = positions[index]; var velocity = velocities[index];
+  var angular = angularVelocities[index]; var sleep = sleepStates[index];
+  var orientation = orientations[index];
+  if (dot(orientation, orientation) < 0.000001) { orientation = vec4f(0.0, 0.0, 0.0, 1.0); }
+  if (velocity.w <= 0.0 || !isValidSphere(sphere)) {
+    orientations[index] = normalize(orientation);
+    return;
+  }
+  var grounded = false;
+  var supportNormal = vec3f(0.0, 0.0, 1.0);
+  var rollingResistance = 0.0;
+  var spinningResistance = 0.0;
+  var supportWeight = -1e30;
+  for (var planeIndex = 0u; planeIndex < u32(settings.resting.w); planeIndex++) {
+    let plane = settings.planes[planeIndex];
+    if (length(getPlaneDelta(sphere.xyz, plane)) <= sphere.w + settings.solver.z &&
+      dot(sphere.xyz, plane.normal.xyz) - plane.normal.w >= 0.0) {
+      grounded = true;
+      let weight = dot(plane.normal.xyz, -settings.gravity.xyz);
+      if (weight > supportWeight) {supportWeight = weight; supportNormal = plane.normal.xyz; rollingResistance = plane.material.w; spinningResistance = plane.center.w;}
+    }
+  }
+
+  // Only fixed-plane support can authorize sleep. Dynamic contact cycles are not
+  // evidence of support: an airborne pair must keep integrating gravity.
+  if (grounded) {
+    let normalVelocity = supportNormal * dot(velocity.xyz, supportNormal);
+    let tangentVelocity = velocity.xyz - normalVelocity;
+    let normalSpin = supportNormal * dot(angular.xyz, supportNormal);
+    let rollingAngular = angular.xyz - normalSpin;
+    let slip = tangentVelocity + cross(rollingAngular, -supportNormal * sphere.w);
+    // Sliding friction already exchanges translation and spin in the contact solver.
+    // Apply rolling resistance only after reaching no-slip, without damping sidespin.
+    if (length(slip) <= 0.0001) {
+      let speed = length(tangentVelocity);
+      let damping = max(0.0, 1.0 - rollingResistance * max(supportWeight, 0.0) * clock.timeStep / max(speed, 0.000001));
+      velocity = vec4f(normalVelocity + tangentVelocity * damping, velocity.w);
+      angular = vec4f(normalSpin + rollingAngular * damping, angular.w);
+    }
+    let spin = dot(angular.xyz, supportNormal);
+    let spinLoss = spinningResistance * max(supportWeight, 0.0) * clock.timeStep / sphere.w;
+    angular = vec4f(angular.xyz - supportNormal * sign(spin) * min(abs(spin), spinLoss), angular.w);
+  }
+  if (grounded && length(velocity.xyz) < settings.resting.y && length(angular.xyz) < settings.resting.z) {
+    sleep.x += clock.timeStep;
+  } else { sleep.x = 0.0; }
+  if (settings.solver.x > 0.0 && sleep.x >= settings.solver.x) {
+    velocity = vec4f(0.0, 0.0, 0.0, velocity.w); angular = vec4f(0.0);
+    atomicAdd(&diagnostics[4], 1u);
+  } else { atomicAdd(&diagnostics[3], 1u); }
+  let derivative = vec4f(orientation.w * angular.xyz + cross(angular.xyz, orientation.xyz), -dot(angular.xyz, orientation.xyz));
+  orientations[index] = normalize(orientation + derivative * (0.5 * clock.timeStep));
+  velocities[index] = velocity; angularVelocities[index] = angular; sleepStates[index] = sleep;
+}
+`;
+
+/** Commands submit independently of simulation steps, so each impulse executes exactly once. */
+export const CONTROL_SPHERE = /* wgsl */ `
+struct Command {control: vec4f, value: vec4f, point: vec4f, orientation: vec4f, reserved: vec4f};
+@group(0) @binding(0) var<uniform> command: Command;
+@group(0) @binding(1) var<storage, read_write> positions: array<vec4f>;
+@group(0) @binding(2) var<storage, read_write> velocities: array<vec4f>;
+@group(0) @binding(3) var<storage, read_write> angularVelocities: array<vec4f>;
+@group(0) @binding(4) var<storage, read_write> orientations: array<vec4f>;
+@group(0) @binding(5) var<storage, read_write> sleepStates: array<vec4f>;
+@compute @workgroup_size(1) fn main() {
+  let index = u32(command.control.x); let operation = u32(command.control.y);
+  var sphere = positions[index]; var velocity = velocities[index]; var angular = angularVelocities[index];
+  if (operation == 1u && sphere.w > 0.0 && velocity.w > 0.0) {
+    let inverseInertia = 2.5 * velocity.w / (sphere.w * sphere.w);
+    velocity = vec4f(velocity.xyz + command.value.xyz * velocity.w, velocity.w);
+    if (command.control.z > 0.0) {
+      angular = vec4f(angular.xyz + cross(command.point.xyz - sphere.xyz, command.value.xyz) * inverseInertia, angular.w);
+    }
+  }
+  if (operation == 2u && sphere.w > 0.0 && velocity.w > 0.0) {
+    let inverseInertia = 2.5 * velocity.w / (sphere.w * sphere.w);
+    angular = vec4f(angular.xyz + command.value.xyz * inverseInertia, angular.w);
+  }
+  if (operation == 4u) {
+    sphere = vec4f(command.value.xyz, sphere.w); orientations[index] = normalize(command.orientation);
+  }
+  if (operation == 5u) {sphere.w = abs(sphere.w) * command.value.x;}
+  if (operation == 4u || operation == 5u) {velocity = vec4f(0.0, 0.0, 0.0, velocity.w); angular = vec4f(0.0);}
+  positions[index] = sphere; velocities[index] = velocity; angularVelocities[index] = angular;
+  sleepStates[index] = vec4f(0.0);
+}
+`;

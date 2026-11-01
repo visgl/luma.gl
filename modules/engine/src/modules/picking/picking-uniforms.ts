@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray4} from '@math.gl/types';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {NumberArray4} from '@math.gl/core';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 /** Default color for auto highlight, a cyan color */
 const DEFAULT_HIGHLIGHT_COLOR: NumberArray4 = [0, 1, 1, 1];

@@ -12,7 +12,7 @@ and whether the computation is a single transformation or a reusable multi-pass 
 
 | Start with | Use it when |
 | --- | --- |
-| [`@luma.gl/gpgpu`](/docs/api-reference/gpgpu) | You want portable, composable data operations that run on CPU, WebGL, or WebGPU. |
+| [`@luma.gl/graph/gpu-simple-graph`](/docs/api-reference/graph/gpu-evaluation) | You want portable, composable data operations that run on CPU, WebGL, or WebGPU. |
 | [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph) | You are building a WebGPU-only, multi-pass workflow and need explicit control over resources, command encoding, and temporary memory. |
 | [`Computation`](/docs/api-reference/engine/compute/computation) | You want to write and dispatch one custom WebGPU compute shader directly. |
 | [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) | You want to write a custom WebGL transform-feedback operation directly. |
@@ -23,12 +23,12 @@ management.
 
 ## GPGPU Evaluators
 
-The `@luma.gl/gpgpu` module presents computation as lazy values. Operations such as `add()`,
+The `@luma.gl/graph/gpu-simple-graph` module presents computation as lazy values. Operations such as `add()`,
 `gather()`, and `interleave()` return a `GPUDataEvaluator`; no work runs until the result is
 evaluated.
 
 ```ts
-import {add, multiply} from '@luma.gl/gpgpu';
+import {add, multiply} from '@luma.gl/graph/gpu-simple-graph';
 
 const adjusted = add(multiply(sourceData, 2), 1);
 const result = await adjusted.evaluate(device);
@@ -84,7 +84,7 @@ The two APIs exchange caller-owned table resources without repacking them. A mat
 result is a `GPUVector`, which can be imported into a command graph:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
 const evaluatedVector = await adjusted.evaluate(webgpuDevice);
 
@@ -125,9 +125,9 @@ the explicit resource boundary described above today.
 
 ## Related Pages
 
-- [GPGPU overview](/docs/api-reference/gpgpu)
-- [GPGPU operations](/docs/api-reference/gpgpu/operations)
-- [GPU evaluators](/docs/api-reference/gpgpu/gpu-data-evaluator)
+- [GPGPU overview](/docs/api-reference/graph/gpu-evaluation)
+- [GPGPU operations](/docs/api-reference/graph/operations)
+- [GPU evaluators](/docs/api-reference/graph/gpu-data-evaluator)
 - [GPUCommandGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)
 - [Issuing GPU commands](/docs/api-guide/gpu/gpu-commands)

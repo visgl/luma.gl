@@ -1,23 +1,27 @@
 ---
-title: "@luma.gl/effects"
+title: "@luma.gl/engine/effects"
 description: Composable post-processing, screen-space lighting, temporal effects, and shader-pass pipelines.
 ---
 
-# @luma.gl/effects
+# @luma.gl/engine/effects
 
-`@luma.gl/effects` provides shader passes and multi-pass pipelines for image adjustment, blur,
+`@luma.gl/engine/effects` provides shader passes and multi-pass pipelines for image adjustment, blur,
 bloom, antialiasing, depth-aware lighting, temporal reconstruction, atmosphere, and stylization.
+
+Install `@luma.gl/engine` to use this optional subpath. Effects are not re-exported from the
+engine root. Shader-pass contracts remain in shaders; graph executes caller-supplied
+pass definitions without depending on engine.
 
 ## When to use it
 
 Use Effects after rendering a scene into textures that can be consumed by a fullscreen
-`ShaderPassRenderer`. Use a Shadertools shader module instead when the behavior belongs inside an
+`ShaderPassRenderer`. Use a Shaders shader module instead when the behavior belongs inside an
 object's material shader rather than a post-processing stage.
 
 ## Quick start
 
 ```ts
-import {brightnessContrast, toneMapping} from '@luma.gl/effects';
+import {brightnessContrast, toneMapping} from '@luma.gl/engine/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
@@ -48,7 +52,7 @@ renderer.destroy();
 
 ## Public API index
 
-The [Shader Pass Catalog](/docs/api-reference/shadertools/shader-passes/image-processing) lists
+The [Shader Pass Catalog](/docs/api-reference/shaders/shader-passes/image-processing) lists
 every effect, its inputs, compatibility, and cost. The
 [Shader Passes guide](/docs/api-guide/shaders/shader-passes) explains scene integration and
 multi-pass composition.
@@ -61,9 +65,9 @@ Check the compatibility section on the individual pass page.
 
 ## Related modules
 
-- [`@luma.gl/shadertools`](/docs/api-reference/shadertools)
+- [`@luma.gl/shaders`](/docs/api-reference/shaders)
 - [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer)
-- [Experimental deferred rendering](/docs/api-reference/experimental/deferred-scene-renderer)
+- [Experimental deferred rendering](/docs/api-reference/scene/deferred-scene-renderer)
 
 ## Selection outlines
 
@@ -73,7 +77,7 @@ The mask and source must use the same UV orientation. Render the mask against op
 depth when the outline should respect occlusion.
 
 ```ts
-import {selectionOutline} from '@luma.gl/effects';
+import {selectionOutline} from '@luma.gl/engine/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {shaderPasses: [selectionOutline]});

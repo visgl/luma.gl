@@ -4,13 +4,13 @@
 
 /* eslint-disable no-continue */
 
-import {expect, it} from 'vitest';
-import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {expect, it, vi} from 'vitest';
+import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 
-import {TypedArray} from '@math.gl/types';
+import {TypedArray} from '@math.gl/core';
 import {Buffer, Device} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {GL} from '@luma.gl/webgl/constants';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {GL} from '@luma.gl/core/webgl-constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 
@@ -577,6 +577,51 @@ it('Buffer#mapAndReadAsync (WebGPU alignment cases)', async () => {
   void 0;
 });
 
+it('Buffer#readAsync (WebGPU range readback stages only the requested range)', async ({skip}) => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    skip('WebGPU unavailable');
+    return;
+  }
+
+  // One 64 KiB column read back in 16 ranges, like per-batch views of one shared buffer.
+  const rangeCount = 16;
+  const rangeByteLength = 4096;
+  const initialData = new Uint32Array((rangeCount * rangeByteLength) / 4).map((_, index) => index);
+  const buffer = webgpuDevice.createBuffer({
+    data: initialData,
+    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const createBuffer = vi.spyOn(webgpuDevice.handle, 'createBuffer');
+  try {
+    for (let rangeIndex = 0; rangeIndex < rangeCount; rangeIndex++) {
+      const bytes = await buffer.readAsync(rangeIndex * rangeByteLength, rangeByteLength);
+      const values = new Uint32Array(bytes.buffer, bytes.byteOffset, rangeByteLength / 4);
+      expect(values[0], `range ${rangeIndex} starts at its own offset`).toBe(
+        (rangeIndex * rangeByteLength) / 4
+      );
+      expect(values[values.length - 1], `range ${rangeIndex} ends at its own end`).toBe(
+        ((rangeIndex + 1) * rangeByteLength) / 4 - 1
+      );
+    }
+    // Unaligned ranges stage the aligned covering range, starting at offset zero.
+    const unaligned = await buffer.readAsync(4098, 6);
+    expect(Array.from(unaligned)).toEqual(Array.from(new Uint8Array(initialData.buffer, 4098, 6)));
+
+    const stagingByteLengths = createBuffer.mock.calls
+      .map(([descriptor]) => descriptor)
+      .filter(descriptor => descriptor.usage & Buffer.MAP_READ)
+      .map(descriptor => descriptor.size);
+    expect(
+      stagingByteLengths,
+      'each staging buffer covers the aligned requested range, not the whole source buffer'
+    ).toEqual([...new Array(rangeCount).fill(rangeByteLength), 8]);
+  } finally {
+    createBuffer.mockRestore();
+    buffer.destroy();
+  }
+});
+
 it('Buffer#mapAndReadAsync (WebGPU invalid range)', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
 
@@ -732,4 +777,35 @@ it('Buffer#uint8 index buffer conversion', async () => {
     buffer.destroy();
   }
   void 0;
+});
+
+it('Buffer#readAsync waits for submitted copies without queue-wide completion', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const expected = new Uint32Array([1, 2049, 4294967295, 7]);
+  const source = device.createBuffer({data: expected, usage: Buffer.COPY_SRC | Buffer.COPY_DST});
+  const destination = device.createBuffer({
+    byteLength: 16,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const commandEncoder = device.createCommandEncoder();
+  // A queue-wide completion callback may fail independently of buffer mapping.
+  const completion = vi
+    .spyOn(device.handle.queue, 'onSubmittedWorkDone')
+    .mockRejectedValue(new Error('Queue completion unavailable'));
+  try {
+    commandEncoder.copyBufferToBuffer({
+      sourceBuffer: source,
+      destinationBuffer: destination,
+      size: 16
+    });
+    device.submit(commandEncoder.finish());
+    const bytes = await destination.readAsync();
+    expect(new Uint32Array(bytes.buffer, bytes.byteOffset, 4)).toEqual(expected);
+  } finally {
+    completion.mockRestore();
+    commandEncoder.destroy();
+    source.destroy();
+    destination.destroy();
+  }
 });

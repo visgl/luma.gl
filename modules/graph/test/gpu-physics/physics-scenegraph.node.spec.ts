@@ -1,0 +1,79 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+import {expect, it} from 'vitest';
+import {CubeGeometry, Geometry, GroupNode} from '@luma.gl/engine';
+import {Matrix4} from '@math.gl/core';
+import {PhysicsGeometryNode, makePhysicsScenegraph} from '@luma.gl/engine/physics';
+
+it('keeps visual transforms separate from overridden body frames and bounds', () => {
+  const node = new PhysicsGeometryNode({
+    id: 'visual',
+    geometry: new CubeGeometry(),
+    matrix: new Matrix4().translate([2, 0, 0]).scale([2, 1, 1]),
+    collision: {position: [1, 0, 0], shape: {type: 'sphere', radius: 0.5}}
+  });
+  const snapshot = makePhysicsScenegraph(new GroupNode({children: [node]}));
+  expect(snapshot.bodies[0]).toEqual(node.physics.collision);
+  expect(snapshot.publicationBounds).toEqual([
+    [
+      [-1, -1, -1],
+      [3, 1, 1]
+    ]
+  ]);
+  expect(snapshot.bindings[0].localMatrix.transformAsPoint([1, 0, 0])).toEqual([3, 0, 0]);
+  expect(node.matrix[12]).toBe(2);
+});
+
+it('preserves a single open triangle when triangle mesh cooking is explicit', () => {
+  const geometry = new Geometry({
+    attributes: {POSITION: {size: 3, value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])}}
+  });
+  const snapshot = makePhysicsScenegraph(
+    new GroupNode({
+      children: [new PhysicsGeometryNode({id: 'triangle', geometry, geometryMode: 'triangle-mesh'})]
+    })
+  );
+  expect(snapshot.bodies[0].shape?.type).toBe('triangle-mesh');
+  expect(snapshot.publicationBounds).toEqual([
+    [
+      [0, 0, 0],
+      [1, 1, 0]
+    ]
+  ]);
+});
+
+it('rejects ambiguous duplicate node identities', () => {
+  const geometry = new CubeGeometry();
+  const root = new GroupNode({
+    children: [
+      new PhysicsGeometryNode({id: 'same', geometry}),
+      new PhysicsGeometryNode({id: 'same', geometry})
+    ]
+  });
+  expect(() => makePhysicsScenegraph(root)).toThrow();
+});
+
+it('normalizes override rotation consistently with the physics world', () => {
+  const node = new PhysicsGeometryNode({
+    id: 'rotated-override',
+    geometry: new CubeGeometry(),
+    collision: {position: [0, 0, 0], orientation: [0, 0, 2, 2], shape: {type: 'sphere', radius: 1}}
+  });
+  const snapshot = makePhysicsScenegraph(new GroupNode({children: [node]}));
+  const local = snapshot.bindings[0].localMatrix.transformAsPoint([1, 0, 0]);
+  expect(local[0]).toBeCloseTo(0);
+  expect(local[1]).toBeCloseTo(-1);
+});
+
+it('owns a collision override snapshot independently of later authoring edits', () => {
+  const position: [number, number, number] = [1, 0, 0];
+  const node = new PhysicsGeometryNode({
+    id: 'owned',
+    geometry: new CubeGeometry(),
+    collision: {position, shape: {type: 'sphere', radius: 1}}
+  });
+  const snapshot = makePhysicsScenegraph(new GroupNode({children: [node]}));
+  position[0] = 10;
+  expect(snapshot.bodies[0].position).toEqual([1, 0, 0]);
+});

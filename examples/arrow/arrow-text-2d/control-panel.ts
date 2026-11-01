@@ -13,7 +13,7 @@ import {
   getChangedSetting,
   makeHtmlCustomPanel
 } from '../../example-panels';
-import type {ArrowTextRendererProps} from '@luma.gl/arrow';
+import {type ArrowTextRendererProps} from '@luma.gl/engine/arrow';
 import {supportsVertexStorageBuffers} from '../utils/device-limits';
 
 type TextModelKind = NonNullable<ArrowTextRendererProps['model']>;

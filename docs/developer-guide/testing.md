@@ -28,7 +28,7 @@ tests that do not create a device or access browser globals; new CPU-only tests 
 
 ## Test device creation
 
-Creating too many GPU devices in one run can cause context loss and other instability. `@luma.gl/test-utils` exports reusable test devices for WebGL and WebGPU.
+Creating too many GPU devices in one run can cause context loss and other instability. `@luma.gl/core/test-utils` exports reusable test devices for WebGL and WebGPU.
 
 ## Accessing GPU in CI
 
@@ -41,57 +41,10 @@ work cannot safely be reused across files.
 
 ## Legacy render and perf tests
 
-`test/render/**` snapshot tests and `test/perf/**` benchmarks are still on the legacy browser harness in this phase of the migration. They are excluded from Vitest and continue to rely on `BrowserTestDriver` utilities.
+`test/render/**` snapshot tests and `test/perf/**` benchmarks are still on the legacy browser harness in this phase of the migration. They are excluded from Vitest and use repository-only runners under `test/utils/legacy-test-runners`; those runners are no longer published.
 
-## SnapshotTestRunner
+## Snapshot tests
 
-`@luma.gl/test-utils` provides `SnapshotTestRunner` for browser-based WebGL render tests.
-
-This utility is still intended to be used with `BrowserTestDriver` from `@probe.gl/test-utils`:
-
-- Launch a browser test application.
-- Create a canvas and WebGL context in the browser page.
-- Render a frame, capture it, and compare against a golden image.
-- Repeat for each test case.
-
-## Example
-
-In your Node.js start script:
-
-```typescript
-const {BrowserTestDriver} = require('@probe.gl/test-utils');
-
-new BrowserTestDriver().run({
-  server: {
-    command: 'webpack-dev-server',
-    arguments: ['--env.render-test']
-  },
-  headless: true
-});
-```
-
-In the browser test script:
-
-```typescript
-const {SnapshotTestRunner} = require('@luma.gl/test-utils');
-const {Cube} = require('@luma.gl/engine');
-
-const TEST_CASES = [
-  {
-    name: 'Render A Cube',
-    onRender: ({gl, done}) => {
-      const model = new Cube(gl);
-      model.draw(...);
-      done();
-    },
-    goldenImage: './test/render/golden-images/cube.png'
-  }
-];
-
-new SnapshotTestRunner({width: 800, height: 600})
-  .add(TEST_CASES)
-  .run({
-    onTestFail: window.browserTestDriver_fail
-  })
-  .then(window.browserTestDriver_finish);
-```
+See [SnapshotTestRunner](/docs/api-reference/test-utils/snapshot-test-runner) for the
+legacy screenshot harness. Prefer the repository's Vitest and Playwright workflows for new
+tests; do not copy legacy WebGL-context or removed `Cube` examples into new coverage.

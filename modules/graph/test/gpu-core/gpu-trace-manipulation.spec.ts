@@ -1,0 +1,890 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {addGPUCommandNodes} from '../../src/gpu-core/gpu-command-node';
+import {Buffer, type Device} from '@luma.gl/core';
+import {Kernel} from '@luma.gl/graph';
+import {
+  GPUAncestorProjection,
+  GPUCommandGraph,
+  GPUGraphTraversal,
+  GPUHierarchyLayout,
+  GPUMask,
+  type GPUGraphTraversalDirection,
+  type GPUMaskOperation
+} from '@luma.gl/graph/gpu-core';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {expect, it, vi} from 'vitest';
+import {getGPUGraphTraversalCommandNodesWithDispatchLimit} from '../../src/gpu-core/gpu-graph-traversal';
+
+it('GPUMask composes canonical GPU selection masks', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const first = Uint32Array.from([0, 1, 2, 0, 9, 1]);
+  const second = Uint32Array.from([0, 1, 0, 8, 3, 0]);
+  const third = Uint32Array.from([0, 0, 1, 1, 7, 1]);
+  expect(
+    await runMask(device, [first, second], 'and'),
+    'intersection treats every nonzero input as true'
+  ).toEqual([0, 1, 0, 0, 1, 0]);
+  expect(
+    await runMask(device, [first, second], 'or'),
+    'union writes canonical zero and one values'
+  ).toEqual([0, 1, 1, 1, 1, 1]);
+  expect(
+    await runMask(device, [first, second, third], 'xor'),
+    'exclusive union supports more than two masks'
+  ).toEqual([0, 0, 0, 0, 1, 0]);
+  expect(
+    await runMask(device, [first, second, third], 'difference'),
+    'difference excludes every later matching input'
+  ).toEqual([0, 0, 0, 0, 0, 0]);
+  expect(await runMask(device, [first], 'not'), 'inversion canonicalizes nonzero values').toEqual([
+    1, 0, 0, 1, 0, 0
+  ]);
+  expect(await runMask(device, [new Uint32Array(0)], 'and'), 'empty masks add no work').toEqual([]);
+});
+
+it('GPUMask aligns independent GPUVector chunk boundaries', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const firstChunks = [Uint32Array.from([1, 0, 9]), new Uint32Array(0), Uint32Array.from([0, 2])];
+  const secondChunks = [Uint32Array.from([1]), Uint32Array.from([1, 0, 8, 1])];
+  const first = createVectorFixture(device, 'first', firstChunks, false);
+  const second = createVectorFixture(device, 'second', secondChunks, false);
+  const output = createVectorFixture(
+    device,
+    'output',
+    [Uint32Array.from([0, 0]), Uint32Array.from([0, 0, 0])],
+    true
+  );
+  const graph = new GPUCommandGraph(device, {id: 'chunked-mask'});
+  const firstView = graph.importGPUVector('first', first.vector);
+  const secondView = graph.importGPUVector('second', second.vector);
+  const outputView = graph.importGPUVector('output', output.vector);
+  graph.add(new GPUMask({inputs: [firstView, secondView], output: outputView}));
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'chunked-mask');
+  expect(
+    await Promise.all(output.buffers.map((buffer, index) => readUint32(buffer, [2, 3][index]))),
+    'output chunks receive the logical mask result at their own boundaries'
+  ).toEqual([
+    [1, 0],
+    [0, 0, 1]
+  ]);
+  expect(
+    compiled.stats.nodeOrder,
+    'empty chunks preserve their identity without generating a dispatch'
+  ).toEqual(['gpu-mask-chunk-0', 'gpu-mask-chunk-2', 'gpu-mask-chunk-1', 'gpu-mask-chunk-3']);
+  compiled.destroy();
+  destroyVectorFixture(first);
+  destroyVectorFixture(second);
+  destroyVectorFixture(output);
+});
+
+it('GPUHierarchyLayout scans live parent and child expansion states', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  expect(
+    await runHierarchyLayout(device, Uint32Array.from([1, 0]), Uint32Array.from([1, 0, 1, 1]), 2),
+    'expanded children and collapsed parent summaries receive stable scanned row offsets'
+  ).toEqual({heights: [4, 1, 1, 0], offsets: [0, 4, 5, 6]});
+  expect(
+    await runHierarchyLayout(device, Uint32Array.from([1, 1]), Uint32Array.from([1, 0, 0, 1]), 2),
+    'individually collapsed children retain one row while expanded children retain four'
+  ).toEqual({heights: [4, 1, 1, 4], offsets: [0, 4, 5, 6]});
+  expect(
+    await runHierarchyLayout(device, new Uint32Array(0), new Uint32Array(0), 2),
+    'an empty hierarchy adds no scan or dispatch'
+  ).toEqual({heights: [], offsets: []});
+});
+
+it('GPUHierarchyLayout preserves uneven parent and child partitions', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const result = await runPartitionedHierarchyLayout(device);
+  expect(
+    result.heights,
+    'global parent IDs remain correct when one child chunk crosses parent chunk boundaries'
+  ).toEqual([[4, 1, 1], [], [0, 1, 4]]);
+  expect(result.offsets, 'the vector-wide scan preserves empty and uneven output chunks').toEqual([
+    [0, 4, 5],
+    [],
+    [6, 6, 7]
+  ]);
+  expect(
+    Boolean(result.nodeOrder.includes('partitioned-hierarchy-heights-child-0-parent-2')),
+    'the crossing child chunk is split against the relevant parent partition'
+  ).toBe(true);
+  expect(
+    result.updatedOffsets,
+    'replacing one child batch updates the vector-wide layout without recompiling the graph'
+  ).toEqual([[0, 4, 5], [], [6, 6, 10]]);
+});
+
+it('GPUGraphTraversal expands outgoing, incoming, and bidirectional frontiers', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  expect(
+    await runTraversal(device, {seeds: [0], maxDepth: 0}),
+    'zero-hop traversal preserves the selected seed'
+  ).toEqual([1, 0, 0, 0, 0, 0]);
+  expect(
+    await runTraversal(device, {seeds: [0], maxDepth: 1}),
+    'one-hop traversal returns direct outgoing neighbors'
+  ).toEqual([1, 1, 1, 0, 0, 0]);
+  expect(
+    await runTraversal(device, {seeds: [0], maxDepth: 3}),
+    'multi-hop traversal handles cycles and shared descendants'
+  ).toEqual([1, 1, 1, 1, 1, 0]);
+  expect(
+    await runTraversal(device, {seeds: [3], maxDepth: 1, direction: 'incoming'}),
+    'reverse CSR returns direct incoming dependencies'
+  ).toEqual([0, 1, 1, 1, 0, 0]);
+  expect(
+    await runTraversal(device, {seeds: [1], maxDepth: 1, direction: 'both'}),
+    'bidirectional traversal combines parents and children in the same frontier'
+  ).toEqual([1, 1, 1, 1, 0, 0]);
+  expect(
+    await runTraversal(device, {seeds: [0, 99, 5], maxDepth: 1}),
+    'multiple seeds are retained while out-of-range references are ignored'
+  ).toEqual([1, 1, 1, 0, 0, 1]);
+});
+
+it('GPUGraphTraversal executes packed initialization, seeds, and expansion in three dimensions', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const seedCount = 4 * 256 + 1;
+  const nodeCount = seedCount + 1;
+  const sourceNodes = [0, 256, 512, 768, 1024];
+  const seeds = new Uint32Array(seedCount).fill(0xffffffff);
+  for (const sourceNode of sourceNodes) {
+    seeds[sourceNode] = sourceNode;
+  }
+  const offsets = createTraversalOffsets(nodeCount, sourceNodes);
+  const neighbors = Uint32Array.from(sourceNodes, sourceNode => sourceNode + 1);
+  const graph = new GPUCommandGraph(device, {id: 'packed-bounded-traversal-test'});
+  const buffers = {
+    offsets: createUint32Buffer(device, offsets, false),
+    neighbors: createUint32Buffer(device, neighbors, false),
+    seeds: createUint32Buffer(device, seeds, false),
+    output: createUint32Buffer(device, new Uint32Array(nodeCount).fill(7), true)
+  };
+  const traversal = new GPUGraphTraversal({
+    id: 'packed-bounded-traversal',
+    offsets: importUint32View(graph, 'offsets', buffers.offsets, offsets.length),
+    neighbors: importUint32View(graph, 'neighbors', buffers.neighbors, neighbors.length),
+    seeds: importUint32View(graph, 'seeds', buffers.seeds, seeds.length),
+    output: importUint32View(graph, 'output', buffers.output, nodeCount),
+    maxDepth: 1
+  });
+  addGPUCommandNodes(graph, getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2));
+  const compiled = graph.compile();
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
+
+  try {
+    submitGraph(device, compiled, 'packed-bounded-traversal-test');
+    const expectedOutput = new Uint32Array(nodeCount);
+    for (const sourceNode of sourceNodes) {
+      expectedOutput[sourceNode] = 1;
+      expectedOutput[sourceNode + 1] = 1;
+    }
+    expect(
+      await readUint32(buffers.output, nodeCount),
+      'initialization, seed publication, and outgoing expansion cover x, y, and z workgroups'
+    ).toEqual(Array.from(expectedOutput));
+
+    for (const passName of ['initialize', 'seed', 'depth-0-clear', 'depth-0-outgoing']) {
+      const dispatchIndex = dispatchSpy.mock.instances.findIndex(
+        kernel => (kernel as Kernel).id === `packed-bounded-traversal-${passName}`
+      );
+      expect(
+        dispatchSpy.mock.calls[dispatchIndex]?.[1],
+        `${passName} respects the synthetic two-workgroup limit in every dimension`
+      ).toMatchObject({x: 2, y: 2, z: 2});
+    }
+  } finally {
+    dispatchSpy.mockRestore();
+    compiled.destroy();
+    for (const buffer of Object.values(buffers)) {
+      buffer.destroy();
+    }
+  }
+});
+
+it('GPUGraphTraversal reads dynamic seed counts and traversal depth', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  expect(
+    await runTraversal(device, {
+      seeds: [0, 5],
+      activeSeedCount: 1,
+      maxDepth: 3,
+      activeDepth: 1
+    }),
+    'GPU-resident counts restrict both seed selection and traversal depth'
+  ).toEqual([1, 1, 1, 0, 0, 0]);
+  expect(
+    await runTraversal(device, {
+      seeds: [0, 5],
+      activeSeedCount: 0,
+      maxDepth: 3,
+      activeDepth: 2
+    }),
+    'zero active seeds clear every previously selected node'
+  ).toEqual([0, 0, 0, 0, 0, 0]);
+});
+
+it('GPUGraphTraversal follows global IDs across local CSR partitions', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const result = await runPartitionedTraversal(device);
+  expect(
+    result.output,
+    'cross-partition edges match the packed traversal while preserving output topology'
+  ).toEqual([[1, 1], [], [1, 1], [1, 0]]);
+  expect(
+    Boolean(
+      result.nodeOrder.includes('partitioned-traversal-depth-0-outgoing-source-0-target-2') &&
+        result.nodeOrder.includes('partitioned-traversal-depth-1-outgoing-source-2-target-3')
+    ),
+    'source-to-target partition pairs make cross-partition routing explicit'
+  ).toBe(true);
+});
+
+it('GPUGraphTraversal routes large seed and output partitions through three-dimensional dispatches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const partitionLength = 4 * 256 + 1;
+  const sourceNodes = [0, 256, 512, 768, 1024];
+  const seedChunk = new Uint32Array(partitionLength).fill(0xffffffff);
+  for (const sourceNode of sourceNodes) {
+    seedChunk[sourceNode] = sourceNode;
+  }
+  const outputChunks = [
+    new Uint32Array(partitionLength),
+    new Uint32Array(0),
+    new Uint32Array(partitionLength)
+  ];
+  const offsetChunks = [
+    createTraversalOffsets(partitionLength, sourceNodes),
+    Uint32Array.from([0]),
+    createTraversalOffsets(partitionLength, sourceNodes)
+  ];
+  const neighborChunks = [
+    Uint32Array.from(sourceNodes, sourceNode => partitionLength + sourceNode),
+    new Uint32Array(0),
+    Uint32Array.from(sourceNodes, sourceNode =>
+      sourceNode === partitionLength - 1 ? sourceNode - 1 : sourceNode + 1
+    )
+  ];
+  const offsets = createVectorFixture(device, 'bounded-offsets', offsetChunks, false);
+  const neighbors = createVectorFixture(device, 'bounded-neighbors', neighborChunks, false);
+  const seeds = createVectorFixture(
+    device,
+    'bounded-seeds',
+    [seedChunk, new Uint32Array(0)],
+    false
+  );
+  const output = createVectorFixture(device, 'bounded-output', outputChunks, true);
+  output.buffers[0].write(new Uint32Array(partitionLength).fill(7));
+  output.buffers[2].write(new Uint32Array(partitionLength).fill(7));
+  const graph = new GPUCommandGraph(device, {id: 'partitioned-bounded-traversal-test'});
+  const traversal = new GPUGraphTraversal({
+    id: 'partitioned-bounded-traversal',
+    offsets: graph.importGPUVector('offsets', offsets.vector),
+    neighbors: graph.importGPUVector('neighbors', neighbors.vector),
+    seeds: graph.importGPUVector('seeds', seeds.vector),
+    output: graph.importGPUVector('output', output.vector),
+    maxDepth: 2
+  });
+  addGPUCommandNodes(graph, getGPUGraphTraversalCommandNodesWithDispatchLimit(traversal, graph, 2));
+  const compiled = graph.compile();
+  const dispatchSpy = vi.spyOn(Kernel.prototype, 'dispatch');
+
+  try {
+    submitGraph(device, compiled, 'partitioned-bounded-traversal-test');
+    const expectedFirstPartition = new Uint32Array(partitionLength);
+    const expectedLastPartition = new Uint32Array(partitionLength);
+    for (const sourceNode of sourceNodes) {
+      expectedFirstPartition[sourceNode] = 1;
+      expectedFirstPartition[sourceNode === partitionLength - 1 ? sourceNode - 1 : sourceNode + 1] =
+        1;
+      expectedLastPartition[sourceNode] = 1;
+    }
+    expect(
+      await readVectorFixture(output),
+      'large chunks preserve their empty partition while following global IDs in both directions'
+    ).toEqual([Array.from(expectedFirstPartition), [], Array.from(expectedLastPartition)]);
+
+    for (const passName of [
+      'partition-0-initialize',
+      'partition-2-initialize',
+      'seed-0-target-0',
+      'seed-0-target-2',
+      'depth-0-clear-0',
+      'depth-0-clear-2',
+      'depth-0-outgoing-source-0-target-2',
+      'depth-1-outgoing-source-2-target-0'
+    ]) {
+      const dispatchIndex = dispatchSpy.mock.instances.findIndex(
+        kernel => (kernel as Kernel).id === `partitioned-bounded-traversal-${passName}`
+      );
+      expect(
+        dispatchSpy.mock.calls[dispatchIndex]?.[1],
+        `${passName} preserves the bounded three-dimensional dispatch`
+      ).toMatchObject({x: 2, y: 2, z: 2});
+    }
+  } finally {
+    dispatchSpy.mockRestore();
+    compiled.destroy();
+    for (const fixture of [offsets, neighbors, seeds, output]) {
+      destroyVectorFixture(fixture);
+    }
+  }
+});
+
+it('GPUAncestorProjection reconnects visible nodes across hidden parent chains', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const invalid = 0xffffffff;
+  expect(
+    await runAncestorProjection(
+      device,
+      Uint32Array.from([invalid, 0, 1, 2, 3, 4]),
+      Uint32Array.from([1, 0, 1, 0, 0, 1]),
+      8
+    ),
+    'visible records project to themselves and filtered records select the nearest visible parent'
+  ).toEqual([0, 0, 2, 2, 2, 5]);
+  expect(
+    await runAncestorProjection(
+      device,
+      Uint32Array.from([invalid, 0, 1, 2, 3, 4]),
+      Uint32Array.from([1, 0, 1, 0, 0, 1]),
+      1
+    ),
+    'depth-bounded projection rejects unresolved hidden-parent chains'
+  ).toEqual([0, 0, 2, 2, invalid, 5]);
+  expect(
+    await runAncestorProjection(
+      device,
+      Uint32Array.from([1, 0, 99]),
+      Uint32Array.from([0, 0, 0]),
+      6
+    ),
+    'cycles and out-of-range parents resolve to the sentinel'
+  ).toEqual([invalid, invalid, invalid]);
+  expect(
+    await runAncestorProjection(device, new Uint32Array(0), new Uint32Array(0), 4),
+    'empty parent mappings do not dispatch'
+  ).toEqual([]);
+});
+
+it('GPU trace-manipulation primitives reject incompatible views', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const graph = new GPUCommandGraph(device, {id: 'trace-manipulation-validation'});
+  const firstHandle = graph.createTransientBuffer({
+    id: 'first',
+    byteLength: 32,
+    usage: Buffer.STORAGE
+  });
+  const secondHandle = graph.createTransientBuffer({
+    id: 'second',
+    byteLength: 32,
+    usage: Buffer.STORAGE
+  });
+  const first = graph.createDataView(firstHandle, {format: 'uint32', length: 4});
+  const second = graph.createDataView(secondHandle, {format: 'uint32', length: 4});
+  const short = graph.createDataView(secondHandle, {format: 'uint32', length: 2});
+  expect(
+    () => new GPUMask({inputs: [], output: second}),
+    'mask composition requires an input'
+  ).toThrow(/at least one input/);
+  expect(
+    () => new GPUMask({inputs: [first, first], output: second, operation: 'not'}),
+    'inversion rejects ambiguous source masks'
+  ).toThrow(/exactly one input/);
+  expect(
+    () => new GPUMask({inputs: [first], output: first}),
+    'read-write mask aliases are rejected'
+  ).toThrow(/separate buffers/);
+  expect(
+    () => new GPUMask({inputs: [first], output: short}),
+    'mask composition requires matching row counts'
+  ).toThrow(/length/);
+  expect(
+    () =>
+      new GPUHierarchyLayout({
+        parentStates: short,
+        childStates: first,
+        heights: second,
+        offsets: first,
+        childrenPerParent: 0
+      }),
+    'hierarchy layout requires a positive child grouping'
+  ).toThrow(/positive/);
+  expect(
+    () =>
+      new GPUHierarchyLayout({
+        parentStates: short,
+        childStates: first,
+        heights: second,
+        offsets: first,
+        childrenPerParent: 3
+      }),
+    'hierarchy layout requires complete source-aligned child groups'
+  ).toThrow(/parent count/);
+  expect(
+    () => new GPUGraphTraversal({offsets: short, neighbors: first, seeds: first, output: second}),
+    'CSR offsets must describe every output node'
+  ).toThrow(/one more row/);
+  const offsets = graph.createDataView(firstHandle, {format: 'uint32', length: 5});
+  expect(
+    () =>
+      new GPUGraphTraversal({
+        offsets,
+        neighbors: first,
+        seeds: first,
+        output: second,
+        direction: 'both'
+      }),
+    'bidirectional traversal requires reverse CSR'
+  ).toThrow(/reverse adjacency/);
+  expect(
+    () =>
+      new GPUGraphTraversal({
+        offsets,
+        neighbors: first,
+        seeds: first,
+        output: second,
+        maxDepth: -1
+      }),
+    'negative traversal depth is rejected'
+  ).toThrow(/nonnegative/);
+  expect(
+    () =>
+      new GPUGraphTraversal({
+        offsets,
+        neighbors: first,
+        seeds: first,
+        output: second,
+        maxDepth: 1025
+      }),
+    'traversal depth is bounded before graph-node expansion'
+  ).toThrow(/at most 1024/);
+  expect(
+    () =>
+      new GPUGraphTraversal({
+        offsets,
+        neighbors: first,
+        seeds: first,
+        output: second,
+        maxDepth: 0x100000000
+      }),
+    'traversal depth cannot reach an unrepresentable WGSL literal'
+  ).toThrow(/at most 1024/);
+  expect(
+    () => new GPUAncestorProjection({parents: first, visibility: short, output: second}),
+    'ancestor projection requires source-aligned masks'
+  ).toThrow(/matching lengths/);
+  expect(
+    () => new GPUAncestorProjection({parents: first, visibility: second, output: second}),
+    'ancestor projection rejects writable input aliases'
+  ).toThrow(/separate buffer/);
+  expect(
+    () =>
+      new GPUAncestorProjection({parents: first, visibility: first, output: second, maxDepth: -1}),
+    'ancestor projection rejects negative depth'
+  ).toThrow(/nonnegative/);
+  expect(
+    () =>
+      new GPUAncestorProjection({
+        parents: first,
+        visibility: first,
+        output: second,
+        maxDepth: 0x100000000
+      }),
+    'ancestor projection rejects depth constants that WGSL cannot represent'
+  ).toThrow(/uint32/);
+});
+
+async function runHierarchyLayout(
+  device: Device,
+  parentStates: Uint32Array,
+  childStates: Uint32Array,
+  childrenPerParent: number
+): Promise<{heights: number[]; offsets: number[]}> {
+  const parentBuffer = createUint32Buffer(device, parentStates, false);
+  const childBuffer = createUint32Buffer(device, childStates, false);
+  const heightsBuffer = createUint32Buffer(device, new Uint32Array(childStates.length), true);
+  const offsetsBuffer = createUint32Buffer(device, new Uint32Array(childStates.length), true);
+  const graph = new GPUCommandGraph(device, {id: 'hierarchy-layout-test'});
+  graph.add(
+    new GPUHierarchyLayout({
+      parentStates: importUint32View(graph, 'parents', parentBuffer, parentStates.length),
+      childStates: importUint32View(graph, 'children', childBuffer, childStates.length),
+      heights: importUint32View(graph, 'heights', heightsBuffer, childStates.length),
+      offsets: importUint32View(graph, 'offsets', offsetsBuffer, childStates.length),
+      childrenPerParent,
+      expandedChildHeight: 4
+    })
+  );
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'hierarchy-layout-test');
+  const [heights, offsets] = await Promise.all([
+    readUint32(heightsBuffer, childStates.length),
+    readUint32(offsetsBuffer, childStates.length)
+  ]);
+  compiled.destroy();
+  parentBuffer.destroy();
+  childBuffer.destroy();
+  heightsBuffer.destroy();
+  offsetsBuffer.destroy();
+  return {heights, offsets};
+}
+
+async function runPartitionedHierarchyLayout(device: Device): Promise<{
+  heights: number[][];
+  offsets: number[][];
+  updatedOffsets: number[][];
+  nodeOrder: string[];
+}> {
+  const parentChunks = [Uint32Array.from([1]), new Uint32Array(0), Uint32Array.from([0, 1])];
+  const childChunks = [
+    Uint32Array.from([1, 0, 1]),
+    new Uint32Array(0),
+    Uint32Array.from([1, 0, 1])
+  ];
+  const parents = createVectorFixture(device, 'parents', parentChunks, false);
+  const children = createVectorFixture(device, 'children', childChunks, false);
+  const heights = createVectorFixture(device, 'heights', childChunks, true);
+  const offsets = createVectorFixture(device, 'offsets', childChunks, true);
+  const graph = new GPUCommandGraph(device, {id: 'partitioned-hierarchy-test'});
+  graph.add(
+    new GPUHierarchyLayout({
+      id: 'partitioned-hierarchy',
+      parentStates: graph.importGPUVector('parents', parents.vector),
+      childStates: graph.importGPUVector('children', children.vector),
+      heights: graph.importGPUVector('heights', heights.vector),
+      offsets: graph.importGPUVector('offsets', offsets.vector),
+      childrenPerParent: 2,
+      expandedChildHeight: 4
+    })
+  );
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'partitioned-hierarchy-test');
+  const firstHeights = await readVectorFixture(heights);
+  const firstOffsets = await readVectorFixture(offsets);
+  children.buffers[2].write(Uint32Array.from([1, 1, 1]));
+  submitGraph(device, compiled, 'partitioned-hierarchy-update-test');
+  const result = {
+    heights: firstHeights,
+    offsets: firstOffsets,
+    updatedOffsets: await readVectorFixture(offsets),
+    nodeOrder: compiled.stats.nodeOrder
+  };
+  compiled.destroy();
+  for (const fixture of [parents, children, heights, offsets]) {
+    destroyVectorFixture(fixture);
+  }
+  return result;
+}
+
+async function runAncestorProjection(
+  device: Device,
+  parents: Uint32Array,
+  visibility: Uint32Array,
+  maxDepth: number
+): Promise<number[]> {
+  const parentBuffer = createUint32Buffer(device, parents, false);
+  const visibilityBuffer = createUint32Buffer(device, visibility, false);
+  const outputBuffer = createUint32Buffer(device, new Uint32Array(parents.length), true);
+  const graph = new GPUCommandGraph(device, {id: 'ancestor-projection-test'});
+  graph.add(
+    new GPUAncestorProjection({
+      parents: importUint32View(graph, 'parents', parentBuffer, parents.length),
+      visibility: importUint32View(graph, 'visibility', visibilityBuffer, visibility.length),
+      output: importUint32View(graph, 'output', outputBuffer, parents.length),
+      maxDepth
+    })
+  );
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'ancestor-projection-test');
+  const result = await readUint32(outputBuffer, parents.length);
+  compiled.destroy();
+  parentBuffer.destroy();
+  visibilityBuffer.destroy();
+  outputBuffer.destroy();
+  return result;
+}
+
+async function runMask(
+  device: Device,
+  inputs: readonly Uint32Array[],
+  operation: GPUMaskOperation
+): Promise<number[]> {
+  const length = inputs[0].length;
+  const inputBuffers = inputs.map(values => createUint32Buffer(device, values, false));
+  const outputBuffer = createUint32Buffer(device, new Uint32Array(length), true);
+  const graph = new GPUCommandGraph(device, {id: 'mask-' + operation});
+  const inputViews = inputBuffers.map((buffer, index) =>
+    importUint32View(graph, 'input-' + index, buffer, length)
+  );
+  const output = importUint32View(graph, 'output', outputBuffer, length);
+  graph.add(new GPUMask({inputs: inputViews, output, operation}));
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'mask-' + operation);
+  const result = await readUint32(outputBuffer, length);
+  compiled.destroy();
+  for (const buffer of inputBuffers) {
+    buffer.destroy();
+  }
+  outputBuffer.destroy();
+  return result;
+}
+
+async function runTraversal(
+  device: Device,
+  props: {
+    seeds: readonly number[];
+    maxDepth: number;
+    direction?: GPUGraphTraversalDirection;
+    activeSeedCount?: number;
+    activeDepth?: number;
+  }
+): Promise<number[]> {
+  const offsets = Uint32Array.from([0, 2, 4, 6, 7, 7, 7]);
+  const neighbors = Uint32Array.from([1, 2, 2, 3, 0, 3, 4]);
+  const reverseOffsets = Uint32Array.from([0, 1, 2, 4, 6, 7, 7]);
+  const reverseNeighbors = Uint32Array.from([2, 0, 0, 1, 1, 2, 3]);
+  const nodeCount = offsets.length - 1;
+  const graph = new GPUCommandGraph(device, {id: 'graph-traversal-test'});
+  const buffers = {
+    offsets: createUint32Buffer(device, offsets, false),
+    neighbors: createUint32Buffer(device, neighbors, false),
+    reverseOffsets: createUint32Buffer(device, reverseOffsets, false),
+    reverseNeighbors: createUint32Buffer(device, reverseNeighbors, false),
+    seeds: createUint32Buffer(device, Uint32Array.from(props.seeds), false),
+    output: createUint32Buffer(device, new Uint32Array(nodeCount), true),
+    ...(props.activeSeedCount === undefined
+      ? {}
+      : {
+          seedCount: createUint32Buffer(device, Uint32Array.from([props.activeSeedCount]), false)
+        }),
+    ...(props.activeDepth === undefined
+      ? {}
+      : {activeDepth: createUint32Buffer(device, Uint32Array.from([props.activeDepth]), false)})
+  };
+  graph.add(
+    new GPUGraphTraversal({
+      offsets: importUint32View(graph, 'offsets', buffers.offsets, offsets.length),
+      neighbors: importUint32View(graph, 'neighbors', buffers.neighbors, neighbors.length),
+      reverseOffsets: importUint32View(
+        graph,
+        'reverse-offsets',
+        buffers.reverseOffsets,
+        reverseOffsets.length
+      ),
+      reverseNeighbors: importUint32View(
+        graph,
+        'reverse-neighbors',
+        buffers.reverseNeighbors,
+        reverseNeighbors.length
+      ),
+      seeds: importUint32View(graph, 'seeds', buffers.seeds, props.seeds.length),
+      ...(buffers.seedCount
+        ? {seedCount: importUint32View(graph, 'seed-count', buffers.seedCount, 1)}
+        : {}),
+      ...(buffers.activeDepth
+        ? {activeDepth: importUint32View(graph, 'active-depth', buffers.activeDepth, 1)}
+        : {}),
+      output: importUint32View(graph, 'output', buffers.output, nodeCount),
+      direction: props.direction,
+      maxDepth: props.maxDepth
+    })
+  );
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'graph-traversal-test');
+  const result = await readUint32(buffers.output, nodeCount);
+  compiled.destroy();
+  for (const buffer of Object.values(buffers)) {
+    buffer.destroy();
+  }
+  return result;
+}
+
+function createTraversalOffsets(nodeCount: number, sourceNodes: readonly number[]): Uint32Array {
+  const offsets = new Uint32Array(nodeCount + 1);
+  for (const sourceNode of sourceNodes) {
+    offsets[sourceNode + 1]++;
+  }
+  for (let nodeIndex = 1; nodeIndex < offsets.length; nodeIndex++) {
+    offsets[nodeIndex] += offsets[nodeIndex - 1];
+  }
+  return offsets;
+}
+
+async function runPartitionedTraversal(device: Device): Promise<{
+  output: number[][];
+  nodeOrder: string[];
+}> {
+  const outputChunks = [
+    new Uint32Array(2),
+    new Uint32Array(0),
+    new Uint32Array(2),
+    new Uint32Array(2)
+  ];
+  const offsetChunks = [
+    Uint32Array.from([0, 2, 4]),
+    Uint32Array.from([0]),
+    Uint32Array.from([0, 2, 3]),
+    Uint32Array.from([0, 0, 0])
+  ];
+  const neighborChunks = [
+    Uint32Array.from([1, 2, 2, 3]),
+    new Uint32Array(0),
+    Uint32Array.from([0, 3, 4]),
+    new Uint32Array(0)
+  ];
+  const seedChunks = [Uint32Array.from([0]), new Uint32Array(0), new Uint32Array(0)];
+  const offsets = createVectorFixture(device, 'offsets', offsetChunks, false);
+  const neighbors = createVectorFixture(device, 'neighbors', neighborChunks, false);
+  const seeds = createVectorFixture(device, 'seeds', seedChunks, false);
+  const output = createVectorFixture(device, 'output', outputChunks, true);
+  const graph = new GPUCommandGraph(device, {id: 'partitioned-traversal-test'});
+  graph.add(
+    new GPUGraphTraversal({
+      id: 'partitioned-traversal',
+      offsets: graph.importGPUVector('offsets', offsets.vector),
+      neighbors: graph.importGPUVector('neighbors', neighbors.vector),
+      seeds: graph.importGPUVector('seeds', seeds.vector),
+      output: graph.importGPUVector('output', output.vector),
+      maxDepth: 3
+    })
+  );
+  const compiled = graph.compile();
+  submitGraph(device, compiled, 'partitioned-traversal-test');
+  const result = {output: await readVectorFixture(output), nodeOrder: compiled.stats.nodeOrder};
+  compiled.destroy();
+  for (const fixture of [offsets, neighbors, seeds, output]) {
+    destroyVectorFixture(fixture);
+  }
+  return result;
+}
+
+type Uint32VectorFixture = {
+  vector: GPUVector<'uint32'>;
+  buffers: Buffer[];
+};
+
+function createVectorFixture(
+  device: Device,
+  name: string,
+  chunks: readonly Uint32Array[],
+  readable: boolean
+): Uint32VectorFixture {
+  const buffers = chunks.map(chunk =>
+    createUint32Buffer(device, readable ? new Uint32Array(chunk.length) : chunk, readable)
+  );
+  return {
+    buffers,
+    vector: new GPUVector({
+      type: 'data',
+      name,
+      format: 'uint32',
+      data: buffers.map(
+        (buffer, index) =>
+          new GPUData({
+            buffer,
+            format: 'uint32',
+            length: chunks[index].length,
+            ownsBuffer: false
+          })
+      ),
+      ownsData: false
+    })
+  };
+}
+
+function destroyVectorFixture(fixture: Uint32VectorFixture): void {
+  fixture.vector.destroy();
+  for (const buffer of fixture.buffers) {
+    buffer.destroy();
+  }
+}
+
+async function readVectorFixture(fixture: Uint32VectorFixture): Promise<number[][]> {
+  return Promise.all(
+    fixture.buffers.map((buffer, index) => readUint32(buffer, fixture.vector.data[index].length))
+  );
+}
+
+function createUint32Buffer(device: Device, values: Uint32Array, readable: boolean): Buffer {
+  return device.createBuffer({
+    data: values.length > 0 ? values : new Uint32Array(1),
+    usage: Buffer.STORAGE | Buffer.COPY_DST | (readable ? Buffer.COPY_SRC : 0)
+  });
+}
+
+function importUint32View(graph: GPUCommandGraph, id: string, buffer: Buffer, length: number) {
+  const handle = graph.importBuffer(
+    {id, byteLength: buffer.byteLength, usage: buffer.usage},
+    buffer
+  );
+  return graph.createDataView(handle, {format: 'uint32', length});
+}
+
+function submitGraph(
+  device: Device,
+  compiled: ReturnType<GPUCommandGraph['compile']>,
+  id: string
+): void {
+  const encoder = device.createCommandEncoder({id});
+  compiled.encode(encoder, {parameters: undefined});
+  device.submit(encoder.finish());
+}
+
+async function readUint32(buffer: Buffer, length: number): Promise<number[]> {
+  if (length === 0) {
+    return [];
+  }
+  const bytes = await buffer.readAsync();
+  return Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, length));
+}

@@ -2,15 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getArrowPickingModule, supportsArrowIndexPicking} from '@luma.gl/arrow';
+import {getArrowPickingModule, supportsArrowIndexPicking} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {indexPicking, ShaderInputs} from '@luma.gl/engine';
-import {
-  GPUTableModel,
-  type GPUColumn,
-  type GPUInputSchema,
-  type GPUTable
-} from '@luma.gl/experimental/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
+import {type GPUColumn, type GPUInputSchema, type GPUTable} from '@luma.gl/graph/gpu-tables';
 import {
   FS_GLSL,
   PICKING_FS_GLSL,

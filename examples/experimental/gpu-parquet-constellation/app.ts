@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ParquetSourceLoader} from '@loaders.gl/parquet/parquet-source-loader';
+import {ParquetSourceLoader} from '@loaders.gl/tables/parquet-source-loader';
 import {Buffer, type Device, type Framebuffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model} from '@luma.gl/engine';
 import {
@@ -10,13 +10,13 @@ import {
   type CompiledGPUCommandGraph,
   type GraphBufferHandle,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   addGPUParquetEncodedPageBatchToGraph,
   createGPUParquetEncodedPageBatchInputBuffer,
   planGPUParquetEncodedPageBatch,
   type GPUParquetDecodedPage
-} from '@luma.gl/gpgpu/gpu-parse';
+} from '@luma.gl/graph/gpu-parse';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   PARQUET_CONSTELLATION_COLUMNS,

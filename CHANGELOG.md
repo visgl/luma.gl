@@ -2,6 +2,31 @@
 
 ## v10.0
 
+### v10.0.0-alpha.6
+
+- Consolidate glTF, splats, text, and effects APIs into engine subpaths and move test devices to core/test-utils.
+- Rename shadertools to shaders, split GLSL and WGSL assembler entry points, and remove global assembler defaults.
+- Make shaders independent of core with explicit shader assembler ownership.
+- Move optional Arrow adapters into gpgpu, graph, and engine subpaths.
+- Add attribution and research citations and improve physics endurance test scheduling.
+
+### v10.0.0-alpha.5
+
+- Consolidate WebGL and WebGPU adapters into core and introduce public graph, ANARI, and Three.js integration packages.
+- Establish GPUGraph authoring and execution APIs, GPU data processing, scientific advection, and GPU physics ensembles.
+- Expand engine rendering, table and vector models, scenegraph integration, glTF postprocessing, materials, and Gaussian splats.
+- Add GPU geometry, point-cloud, time-series, graph inspection, and tracing capabilities with updated examples and documentation.
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.1 and improve CI shard balance and test execution.
+
+### v10.0.0-alpha.4
+
+- Align WebGL and WebGPU draw-call semantics and fix viewport, scissor, framebuffer, texture ownership, and buffer readback behavior.
+- Add progressive RAD selection and shared-pass Gaussian splat rendering.
+- Expand GPU table projection with CPU/GPU consumers, routing, domain partitions, and measured execution selection.
+- Delegate CPU geometry to math.gl and update loaders.gl and math.gl alpha dependencies.
+- Add Slang module registry and typed native shader contracts, fullscreen triangle geometry, and shared celestial sky layers.
+- Improve example rendering performance, replace CARTO basemaps with OpenFreeMap, and audit rendering and compute documentation.
+
 ### v10.0.0-alpha.3
 
 ### v10.0.0-alpha.2

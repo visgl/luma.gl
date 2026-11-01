@@ -154,9 +154,9 @@ texture semantics are required.
 
 ## Related APIs
 
-- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) wraps asynchronous or replaceable
+- [`DynamicTexture`](/docs/api-reference/core/dynamic/dynamic-texture) wraps asynchronous or replaceable
   ordinary texture data.
 - [`ExternalTexture`](/docs/api-reference/core/resources/external-texture) is the low-level concrete
   one-shot WebGPU external binding.
-- Experimental [`WebXRCameraTexture`](/docs/api-reference/experimental/webxr/webxr-camera-texture)
+- Experimental [`WebXRCameraTexture`](/docs/api-reference/engine/experimental/webxr/webxr-camera-texture)
   handles WebXR Raw Camera Access without making WebXR part of `VideoTexture`.

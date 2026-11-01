@@ -16,6 +16,26 @@ const config = {
   },
 
   aliases: {
+    '@luma.gl/graph/gpu-simple-graph/cpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/cpu'),
+    '@luma.gl/graph/gpu-simple-graph/webgl': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgl'),
+    '@luma.gl/graph/gpu-simple-graph/webgpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgpu'),
+
+    '@luma.gl/graph/_internal/arrow': join(packageRoot, 'modules/graph/src/arrow/internal.ts'),
+    '@luma.gl/graph/arrow': join(packageRoot, 'modules/graph/src/arrow/index.ts'),
+    '@luma.gl/engine/arrow': join(packageRoot, 'modules/engine/src/arrow/index.ts'),
+    '@luma.gl/core/test-utils': join(packageRoot, 'modules/core/src/test-utils'),
+
+    '@luma.gl/engine/effects': join(packageRoot, 'modules/engine/src/effects'),
+    '@luma.gl/engine/text-fonts': join(packageRoot, 'modules/engine/src/text/fonts'),
+    '@luma.gl/engine/text-3d': join(packageRoot, 'modules/engine/src/text/text-3d'),
+    '@luma.gl/engine/text-experimental': join(packageRoot, 'modules/engine/src/text/experimental.ts'),
+    '@luma.gl/engine/text': join(packageRoot, 'modules/engine/src/text'),
+    '@luma.gl/engine/gltf-physics': join(packageRoot, 'modules/engine/src/gltf/physics'),
+    '@luma.gl/engine/gltf': join(packageRoot, 'modules/engine/src/gltf'),
+    '@luma.gl/engine/splats': join(packageRoot, 'modules/engine/src/splats'),
+    // Match the graph export map instead of appending _internal to the package directory.
+    '@luma.gl/graph/_internal': join(packageRoot, 'modules/graph/src/execution'),
+
     // DEV MODULES
     'dev-modules': devModules,
 
@@ -35,20 +55,35 @@ const config = {
       examples: {
         animation: '/examples/api/animation',
         'algebraic-varieties': '/examples/showcase/algebraic-varieties',
-        scenes: '/examples/showcase/scene',
+        scenes: '/examples/anari/scenes',
         'arrow-points': '/examples/arrow/arrow-points',
         'arrow-filtering': '/examples/arrow/arrow-filtering',
         cubemap: '/examples/api/cubemap',
         fp64: '/examples/experimental/fp64',
+        three: '/examples/experimental/three',
+        'pool': '/examples/experimental/gpu-pool',
+        'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
+        'vector-observatory': '/examples/experimental/vector-observatory',
+        'wind': '/examples/deck/wind',
+        'physics-batch': '/examples/experimental/physics-batch',
+        'physics-stress': '/examples/experimental/physics-stress',
+        'space-salvage': '/examples/experimental/space-salvage',
+        'sphere-world': '/examples/experimental/gpu-sphere-world',
         'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',
         'arrow-text-2d': '/examples/arrow/arrow-text-2d',
         'arrow-text-3d': '/examples/arrow/arrow-text-3d',
         'gaussian-splats': '/examples/showcase/gaussian-splats',
-        gltf: '/examples/showcase/gltf',
+        gltf: '/examples/gltf/asset-studio',
+        'gltf-interactivity': '/examples/deck/gltf-interactivity',
+        'gltf-physics': '/examples/gltf/physics',
+        'authored-scene-stress': '/examples/gltf/authored-scene-stress',
         'hello-cube': '/examples/tutorials/hello-cube',
         'hello-instancing': '/examples/tutorials/hello-instancing',
         'hello-triangle-geometry': '/examples/tutorials/hello-triangle-geometry',
+        'gltf-audio': '/examples/showcase/gltf-audio',
+        'gltf-audio-environment': '/examples/showcase/gltf-audio-environment',
+        'gltf-audio-graph': '/examples/showcase/gltf-audio-graph',
         'hello-gltf': '/examples/tutorials/hello-gltf',
         'hello-triangle': '/examples/tutorials/hello-triangle',
         globe: '/examples/showcase/globe',
@@ -89,9 +124,9 @@ const config = {
 
   entry: {
     size: 'test/size/import-nothing.js',
-    'modules/webgl/test/context/create-context.spec.ts':
-      'modules/webgl/test/context/create-browser-context.spec.ts',
-    'modules/webgl/test/context/create-context.spec.ts-browser': 'test/index.html'
+    'modules/core/test/webgl/context/create-context.spec.ts':
+      'modules/core/test/webgl/context/create-browser-context.spec.ts',
+    'modules/core/test/webgl/context/create-context.spec.ts-browser': 'test/index.html'
   }
 };
 

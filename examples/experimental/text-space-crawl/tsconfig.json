@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "paths": {
-      "@luma.gl/text/text-3d": ["../../../modules/text/src/text-3d/index.ts"]
+      "@luma.gl/engine/text-3d": ["../../../modules/engine/src/text/text-3d/index.ts"]
     }
   },
   "include": ["."]

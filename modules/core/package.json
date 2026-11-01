@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/core",
-  "version": "10.0.0-alpha.3",
+  "version": "10.0.0-alpha.6",
   "description": "The luma.gl core Device API",
   "license": "MIT",
   "type": "module",
@@ -26,6 +26,51 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./webgl": {
+      "types": "./dist/webgl/index.d.ts",
+      "import": "./dist/webgl/index.js",
+      "require": "./dist/webgl/index.cjs"
+    },
+    "./webgpu": {
+      "types": "./dist/webgpu/index.d.ts",
+      "import": "./dist/webgpu/index.js",
+      "require": "./dist/webgpu/index.cjs"
+    },
+    "./webgl-constants": {
+      "types": "./dist/webgl-constants/index.d.ts",
+      "import": "./dist/webgl-constants/index.js",
+      "require": "./dist/webgl-constants/index.cjs"
+    },
+    "./wgsl": {
+      "types": "./dist/wgsl.d.ts",
+      "import": "./dist/wgsl.js",
+      "require": "./dist/wgsl.cjs"
+    },
+    "./wgsl-binding-scan": {
+      "types": "./dist/wgsl-binding-scan.d.ts",
+      "import": "./dist/wgsl-binding-scan.js",
+      "require": "./dist/wgsl-binding-scan.cjs"
+    },
+    "./webgl-debug": {
+      "types": "./dist/webgl-debug/index.d.ts",
+      "import": "./dist/webgl-debug/index.js",
+      "require": "./dist/webgl-debug/index.cjs"
+    },
+    "./dynamic": {
+      "types": "./dist/dynamic/index.d.ts",
+      "import": "./dist/dynamic/index.js",
+      "require": "./dist/dynamic/index.cjs"
+    },
+    "./test-utils": {
+      "types": "./dist/test-utils/index.d.ts",
+      "import": "./dist/test-utils/index.js",
+      "require": "./dist/test-utils/index.cjs"
+    },
+    "./test-utils-legacy": {
+      "types": "./dist/test-utils-legacy.d.ts",
+      "import": "./dist/test-utils-legacy.js",
+      "require": "./dist/test-utils-legacy.cjs"
+    },
     "./shadertypes": {
       "types": "./dist/shadertypes/index.d.ts",
       "import": "./dist/shadertypes/index.js",
@@ -38,18 +83,40 @@
     "dist.min.js",
     "README.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/webgl-debug/index.ts",
+    "./src/webgl-debug/webgl-developer-tools.ts",
+    "./src/webgl-debug/spector.ts",
+    "./dist/webgl-debug/index.js",
+    "./dist/webgl-debug/webgl-developer-tools.js",
+    "./dist/webgl-debug/spector.js",
+    "./dist/webgl-debug/index.cjs",
+    "./dist/webgl-debug/webgl-developer-tools.cjs",
+    "./dist/webgl-debug/spector.cjs",
+    "./src/test-utils/register-devices.ts",
+    "./dist/test-utils/register-devices.js",
+    "./dist/test-utils/register-devices.cjs",
+    "./src/test-utils/deprecated/sync-test-device.ts",
+    "./dist/test-utils/deprecated/sync-test-device.js",
+    "./dist/test-utils/deprecated/sync-test-device.cjs",
+    "./src/test-utils/index.ts",
+    "./dist/test-utils/index.js",
+    "./dist/test-utils/index.cjs",
+    "./src/test-utils-legacy.ts",
+    "./dist/test-utils-legacy.js",
+    "./dist/test-utils-legacy.cjs"
+  ],
   "scripts": {
     "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
     "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "dependencies": {
-    "@math.gl/types": "~5.0.0-alpha.12",
-    "@probe.gl/env": "^4.1.1",
-    "@probe.gl/log": "^4.1.1",
-    "@probe.gl/stats": "^4.1.1",
-    "@types/offscreencanvas": "^2019.7.3"
+    "@luma.gl/shaders": "10.0.0-alpha.6",
+    "@math.gl/core": "~5.0.0-beta.2",
+    "@types/offscreencanvas": "^2019.7.3",
+    "@webgpu/types": "^0.1.69",
+    "probe.gl": "^5.0.0"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

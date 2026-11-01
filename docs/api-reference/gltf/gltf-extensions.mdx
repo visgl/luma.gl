@@ -96,7 +96,7 @@ export const SupportRow = ({name, support, fromVersion, children}) => (
   <FromVersionBadge version="9.3" />
 </p>
 
-This page summarizes the glTF extensions that `@luma.gl/gltf` handles in its
+This page summarizes the glTF extensions that `@luma.gl/engine/gltf` handles in its
 default loader-to-scenegraph path.
 Each extension name links to its official Khronos-managed specification page in
 the glTF extension registry repository.
@@ -110,7 +110,7 @@ Status meanings:
 
 - `✅`: works end-to-end in the default luma.gl glTF pipeline.
 - `✅ *️⃣`: works in the default pipeline, with low-level decoding handled by
-  `@loaders.gl/gltf` during load.
+  `@loaders.gl/scene/gltf` during load.
 - `🚧`: partially implemented; the linked row states which paths are available and which
   limitations remain.
 - `*️⃣`: extension data is preserved or exposed, but applications still need to
@@ -122,7 +122,7 @@ Status meanings:
 postprocessing, Draco, `EXT_meshopt_compression`, and `KHR_meshopt_compression` decoding, Basis/KTX2 texture selection,
 conditional WebP selection, and supported 3D Tiles feature/structural metadata. The rendering
 package consumes those results; it does not need independent mesh codecs, accessor decoders, or
-GLB container serialization. `postProcessGLTF()` must still be called explicitly in loaders.gl v4.
+GLB container serialization. Call luma.gl’s [`postProcessGLTF()`](/docs/api-reference/gltf/post-process-gltf) explicitly before rendering.
 
 <MarkdownTable style={{width: '100%'}}>
   <thead>
@@ -134,15 +134,15 @@ GLB container serialization. `postProcessGLTF()` must still be called explicitly
   </thead>
   <tbody>
     <SupportRow name="KHR_draco_mesh_compression" support="✅ *️⃣">
-      <code>@loaders.gl/gltf</code> decompresses Draco meshes and converts them to
+      <code>@loaders.gl/scene/gltf</code> decompresses Draco meshes and converts them to
       regular glTF meshes.
     </SupportRow>
     <SupportRow name="EXT_meshopt_compression" support="✅ *️⃣">
-      <code>@loaders.gl/gltf</code> already decodes EXT meshopt-compressed buffer views
+      <code>@loaders.gl/scene/gltf</code> already decodes EXT meshopt-compressed buffer views
       during load; luma.gl consumes the resulting accessor values.
     </SupportRow>
     <SupportRow name="KHR_meshopt_compression" support="✅ *️⃣">
-      <code>@loaders.gl/gltf</code> decodes Khronos meshopt-compressed buffer views
+      <code>@loaders.gl/scene/gltf</code> decodes Khronos meshopt-compressed buffer views
       during load; luma.gl consumes the resulting accessor values.
     </SupportRow>
     <SupportRow name="KHR_mesh_quantization" support="✅ *️⃣">
@@ -150,11 +150,11 @@ GLB container serialization. `postProcessGLTF()` must still be called explicitly
       luma.gl preserves the GPU attribute format or expands morph bases only when needed.
     </SupportRow>
     <SupportRow name="EXT_mesh_features" support="*️⃣">
-      <code>@loaders.gl/gltf</code> decodes supported feature identifiers. Automatic
+      <code>@loaders.gl/scene/gltf</code> decodes supported feature identifiers. Automatic
       rendering, picking, and application-specific feature queries are not provided.
     </SupportRow>
     <SupportRow name="EXT_structural_metadata" support="*️⃣">
-      <code>@loaders.gl/gltf</code> decodes supported structural metadata and property
+      <code>@loaders.gl/scene/gltf</code> decodes supported structural metadata and property
       tables. Applications remain responsible for interpreting and presenting that data.
     </SupportRow>
     <SupportRow name="EXT_mesh_gpu_instancing" support="✅">
@@ -231,7 +231,7 @@ GLB container serialization. `postProcessGLTF()` must still be called explicitly
       anisotropy-direction approximation.
     </SupportRow>
     <SupportRow name="KHR_materials_pbrSpecularGlossiness" support="*️⃣">
-      loaders.gl can preserve the extension data, but <code>@luma.gl/gltf</code> does
+      loaders.gl can preserve the extension data, but <code>@luma.gl/engine/gltf</code> does
       not translate it into the default metallic-roughness shader path.
     </SupportRow>
     <SupportRow name="KHR_materials_variants" support="✅">
@@ -246,7 +246,7 @@ GLB container serialization. `postProcessGLTF()` must still be called explicitly
       <code>strictExtensions</code> instead of issuing an invalid backend texture operation.
     </SupportRow>
     <SupportRow name="EXT_texture_webp" support="✅ *️⃣">
-      <code>@loaders.gl/gltf</code> resolves the texture source; runtime support still
+      <code>@loaders.gl/scene/gltf</code> resolves the texture source; runtime support still
       depends on browser and device decode support.
     </SupportRow>
     <SupportRow name="EXT_texture_avif" support="❌">
@@ -321,7 +321,7 @@ import {
   getGLTFExtensionSupportSummary,
   getRegisteredGLTFExtensions,
   getUnsupportedRequiredGLTFExtensions
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 const registrySummary = getGLTFExtensionSupportSummary();
 console.log(
@@ -370,7 +370,7 @@ partially constructed GPU scene behind.
 ## Use authored runtime extensions
 
 ```ts
-import {getGLTFNodeInstancing} from '@luma.gl/gltf';
+import {getGLTFNodeInstancing} from '@luma.gl/engine/gltf';
 
 scenegraphs.variants.selectVariant('Midnight');
 scenegraphs.variants.resetVariant();
@@ -412,7 +412,7 @@ targets are evaluated in the same frame.
   slots, including auxiliary specular, clearcoat, sheen, iridescence, anisotropy,
   transmission, and volume maps. The physical response of some advanced effects
   remains an approximation.
-- `@luma.gl/gltf` relies on `@loaders.gl/gltf` for low-level extension decoding,
+- `@luma.gl/engine/gltf` relies on `@loaders.gl/scene/gltf` for low-level extension decoding,
   decompression, accessor post-processing, and binary GLB container encoding. The
   loader's legacy CPU texture-transform preprocessing and the runtime's animated
   shader transforms must not both apply the same authored UV transform.

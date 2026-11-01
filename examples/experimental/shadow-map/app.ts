@@ -17,8 +17,8 @@ import {
   type DirectionalShadowLight,
   type ShadowRenderView,
   type ShadowShaderProps
-} from '@luma.gl/experimental';
-import type {ShaderModule} from '@luma.gl/shadertools';
+} from '@luma.gl/anari';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {type Panel, type SettingsSchema} from '@deck.gl-community/panels';
 import {

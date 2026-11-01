@@ -9,6 +9,14 @@ export type {DocumentationTab} from './docs-page-tabs';
  */
 export const FOUNDATION_DOCS_CATALOG = {
   core: {
+    'dynamic-resources': {
+      label: 'Optional resource conveniences',
+      tabs: [
+        {id: 'core-reference', label: 'Core overview', href: '/docs/api-reference/core'},
+        {id: 'dynamic-buffer', label: 'DynamicBuffer', href: '/docs/api-reference/core/dynamic/dynamic-buffer'},
+        {id: 'dynamic-texture', label: 'DynamicTexture', href: '/docs/api-reference/core/dynamic/dynamic-texture'}
+      ]
+    },
     starting: {
       label: 'Core starting points',
       tabs: [
@@ -166,6 +174,8 @@ export const FOUNDATION_DOCS_CATALOG = {
       label: 'Scenegraphs',
       tabs: [
         {id: 'scenegraphs', label: 'Workflow', href: '/docs/api-guide/engine/scenegraph'},
+        {id: 'controllers', label: 'Controllers', href: '/docs/api-guide/engine/scene-controllers'},
+        {id: 'physics', label: 'Physics', href: '/docs/api-guide/engine/scenegraph-physics'},
         {id: 'scenegraph-node', label: 'ScenegraphNode', href: '/docs/api-reference/engine/scenegraph/scenegraph-node'},
         {id: 'group-node', label: 'GroupNode', href: '/docs/api-reference/engine/scenegraph/group-node'},
         {id: 'model-node', label: 'ModelNode', href: '/docs/api-reference/engine/scenegraph/model-node'}
@@ -196,8 +206,8 @@ export const FOUNDATION_DOCS_CATALOG = {
     'dynamic-resources': {
       label: 'Dynamic resources',
       tabs: [
-        {id: 'dynamic-buffer', label: 'DynamicBuffer', href: '/docs/api-reference/engine/dynamic-buffer'},
-        {id: 'dynamic-texture', label: 'DynamicTexture', href: '/docs/api-reference/engine/dynamic-texture'},
+        {id: 'dynamic-buffer', label: 'DynamicBuffer', href: '/docs/api-reference/core/dynamic/dynamic-buffer'},
+        {id: 'dynamic-texture', label: 'DynamicTexture', href: '/docs/api-reference/core/dynamic/dynamic-texture'},
         {id: 'video-texture', label: 'VideoTexture', href: '/docs/api-reference/engine/video-texture'},
         {id: 'load-image-bitmap', label: 'loadImageBitmap', href: '/docs/api-reference/engine/load-image-bitmap'}
       ]
@@ -219,13 +229,13 @@ export const FOUNDATION_DOCS_CATALOG = {
       ]
     }
   },
-  shadertools: {
+  shaders: {
     starting: {
-      label: 'Shadertools starting points',
+      label: 'Shaders starting points',
       tabs: [
-        {id: 'shadertools-reference', label: 'Overview', href: '/docs/api-reference/shadertools'},
-        {id: 'shadertools-guide', label: 'Programming guide', href: '/docs/api-guide/shaders'},
-        {id: 'shadertools-cookbook', label: 'Cookbook', href: '/docs/api-guide/shaders/cookbook'}
+        {id: 'shaders-reference', label: 'Overview', href: '/docs/api-reference/shaders'},
+        {id: 'shaders-guide', label: 'Programming guide', href: '/docs/api-guide/shaders'},
+        {id: 'shaders-cookbook', label: 'Cookbook', href: '/docs/api-guide/shaders/cookbook'}
       ]
     },
     'guide-authoring': {
@@ -248,19 +258,19 @@ export const FOUNDATION_DOCS_CATALOG = {
     authoring: {
       label: 'Module authoring',
       tabs: [
-        {id: 'shader-module', label: 'ShaderModule', href: '/docs/api-reference/shadertools/shader-module'},
-        {id: 'shader-plugin', label: 'ShaderPlugin', href: '/docs/api-reference/shadertools/shader-plugin'},
-        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shadertools/shader-assembler'},
-        {id: 'shader-conventions', label: 'Conventions', href: '/docs/api-reference/shadertools/shader-conventions'}
+        {id: 'shader-module', label: 'ShaderModule', href: '/docs/api-reference/shaders/shader-module'},
+        {id: 'shader-plugin', label: 'ShaderPlugin', href: '/docs/api-reference/shaders/shader-plugin'},
+        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shaders/shader-assembler'},
+        {id: 'shader-conventions', label: 'Conventions', href: '/docs/api-reference/shaders/shader-conventions'}
       ]
     },
     execution: {
       label: 'Assembly and execution',
       tabs: [
-        {id: 'shader-pass', label: 'ShaderPass', href: '/docs/api-reference/shadertools/shader-pass'},
-        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shadertools/shader-assembler'},
-        {id: 'shader-info', label: 'Shader parsing', href: '/docs/api-reference/shadertools/shader-info'},
-        {id: 'wgsl-support', label: 'WGSL', href: '/docs/api-reference/shadertools/wgsl-support'}
+        {id: 'shader-pass', label: 'ShaderPass', href: '/docs/api-reference/shaders/shader-pass'},
+        {id: 'shader-assembler', label: 'Assembler', href: '/docs/api-reference/shaders/shader-assembler'},
+        {id: 'shader-info', label: 'Shader parsing', href: '/docs/api-reference/shaders/shader-info'},
+        {id: 'wgsl-support', label: 'WGSL', href: '/docs/api-reference/shaders/wgsl-support'}
       ]
     }
   }
@@ -270,11 +280,11 @@ export type CoreDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.core;
 export type CoreDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.core)[CoreDocsTabGroupId]['tabs'][number]['id'];
 export type EngineDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.engine;
 export type EngineDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.engine)[EngineDocsTabGroupId]['tabs'][number]['id'];
-export type ShadertoolsDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.shadertools;
-export type ShadertoolsDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.shadertools)[ShadertoolsDocsTabGroupId]['tabs'][number]['id'];
+export type ShadersDocsTabGroupId = keyof typeof FOUNDATION_DOCS_CATALOG.shaders;
+export type ShadersDocsTabId = (typeof FOUNDATION_DOCS_CATALOG.shaders)[ShadersDocsTabGroupId]['tabs'][number]['id'];
 
 export const FOUNDATION_ADJACENCIES = [
-  {id: 'shadertools', label: 'Shadertools', href: '/docs/api-reference/shadertools'},
+  {id: 'shaders', label: 'Shaders', href: '/docs/api-reference/shaders'},
   {id: 'engine', label: 'Engine', href: '/docs/api-reference/engine'},
   {id: 'core', label: 'Core', href: '/docs/api-reference/core'},
   {id: 'gpu-core', label: 'GPU Core', href: '/docs/api-reference/experimental/gpu-core'}

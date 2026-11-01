@@ -13,8 +13,8 @@ import {
   type UpdateParameters
 } from '@deck.gl/core';
 import {type Buffer, type RenderPass} from '@luma.gl/core';
-import type {Model} from '@luma.gl/engine';
-import {GPUVectorModel, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVectorModel} from '@luma.gl/engine';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   createGPUVectorStyleBuffer,
   getGPUVectorStyleBufferBinding,
@@ -132,6 +132,7 @@ export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
     const defaultNormal = device.createBuffer({data: new Float32Array([0, 0, 1])});
     const defaultColor = device.createBuffer({data: new Uint8Array([0, 0, 0, 255])});
     const model = new GPUVectorModel(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_POINT_CLOUD_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
@@ -158,7 +159,7 @@ export class GPUPointCloudLayer extends Layer<GPUPointCloudLayerProps> {
     this.setState({model, styleBuffer, defaults: [defaultNormal, defaultColor]});
   }
 
-  override getModels(): Model[] {
+  override getModels(): GPUVectorModel[] {
     return (this.state as GPUPointCloudLayerState).model
       ? [(this.state as GPUPointCloudLayerState).model!]
       : [];

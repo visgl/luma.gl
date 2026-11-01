@@ -14,10 +14,10 @@ import {
 } from '@deck.gl/core';
 import {
   ArrowPolygonRenderer,
-  type ArrowColorType,
   type ArrowPolygonRendererDataBatchUpdate,
   type ArrowPolygonRendererProps
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {type ArrowColorType} from '@luma.gl/graph/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {
@@ -29,9 +29,9 @@ import {
   watchDeckArrowModelPipeline
 } from './arrow-layer-types';
 import type {ArrowLayerPickingInfo} from './arrow-layer-types';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {type GPURecordBatchSourceInfo} from '@luma.gl/experimental/gpu-tables';
-import {POLYGON_STORAGE_SHADER_LAYOUT} from '@luma.gl/experimental/models';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
+import {type GPURecordBatchSourceInfo} from '@luma.gl/graph/gpu-tables';
+import {POLYGON_STORAGE_SHADER_LAYOUT} from '@luma.gl/engine/models';
 import {Vector} from 'apache-arrow';
 import {
   assertArrowLayerColorGPUVector,
@@ -464,21 +464,24 @@ export class ArrowPolygonLayer extends Layer<ArrowPolygonLayerProps> {
     const useStorageModel = props.model === 'storage';
     return {
       model: useStorageModel ? 'storage' : 'attribute',
-      modelProps: this.getShaders(
-        this.context.device.type === 'webgpu'
-          ? useStorageModel
-            ? {
-                modules: [deckArrowViewport, picking],
-                source: DECK_POLYGON_STORAGE_WGSL,
-                shaderLayout: DECK_POLYGON_STORAGE_SHADER_LAYOUT
-              }
-            : {
-                modules: [deckArrowViewport, picking],
-                source: DECK_POLYGON_WGSL,
-                vs: DECK_POLYGON_VS
-              }
-          : {modules: [project32, picking], vs: DECK_POLYGON_VS, fs: DECK_POLYGON_FS}
-      )
+      modelProps: {
+        shaderAssembler: this.context.shaderAssembler,
+        ...this.getShaders(
+          this.context.device.type === 'webgpu'
+            ? useStorageModel
+              ? {
+                  modules: [deckArrowViewport, picking],
+                  source: DECK_POLYGON_STORAGE_WGSL,
+                  shaderLayout: DECK_POLYGON_STORAGE_SHADER_LAYOUT
+                }
+              : {
+                  modules: [deckArrowViewport, picking],
+                  source: DECK_POLYGON_WGSL,
+                  vs: DECK_POLYGON_VS
+                }
+            : {modules: [project32, picking], vs: DECK_POLYGON_VS, fs: DECK_POLYGON_FS}
+        )
+      }
     };
   }
 

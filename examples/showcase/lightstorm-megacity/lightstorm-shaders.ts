@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Texture, TextureFormatColor} from '@luma.gl/core';
-import {clusteredDeferredLighting} from '@luma.gl/experimental';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import {clusteredDeferredLighting} from '@luma.gl/anari';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import type {NumberArray16} from '@math.gl/core';
 import {
   LIGHTSTORM_LIGHTNING_RETURN_STROKE_DELAY_SECONDS,

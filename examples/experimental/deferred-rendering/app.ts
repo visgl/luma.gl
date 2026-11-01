@@ -20,7 +20,7 @@ import {
   createHDRAutoExposureCompositeShaderPass,
   createSSGICompositeShaderPass,
   createSSRCompositeShaderPass
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {
   ClusteredLightGrid,
   createDeferredAmbientLightingCompositeShaderPass,
@@ -29,8 +29,8 @@ import {
   makeDeferredPointLightBufferData,
   MAX_CLUSTERED_POINT_LIGHTS,
   type DeferredPointLight
-} from '@luma.gl/experimental';
-import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+} from '@luma.gl/anari';
+import type {ShaderModule, ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 import {type Panel, type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData, type GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, type GPUVectorLike} from '@luma.gl/graph/gpu-data';
 import {
   GPUIncrementalExecution,
   GPUElementwise,
@@ -15,7 +15,7 @@ import {
   type GPUCommandGraph,
   type GPUIncrementalBatch,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 
 /** A borrowed source batch may itself contain multiple chunks with different boundaries. */
 export type StreamingAnalyticsBatch = {

@@ -7,7 +7,7 @@ import {
   isFloat16ArrayConstructor,
   type TypedArray,
   type TypedArrayConstructor
-} from '../../types';
+} from '../../api/types';
 import type {
   DataTypeInfo,
   NormalizedDataType,
@@ -45,16 +45,6 @@ export function getNormalizedDataType(signedDataType: SignedDataType): Normalize
     case 'uint16': return 'unorm16';
     case 'sint16': return 'snorm16';
     default: return dataType;
-  }
-}
-
-/** Align offset to 1, 2 or 4 elements (4, 8 or 16 bytes) */
-export function alignTo(size: number, count: number): number {
-  // biome-ignore format: preserve layout
-  switch (count) {
-    case 1: return size; // Pad upwards to even multiple of 2
-    case 2: return size + (size % 2); // Pad upwards to even multiple of 2
-    default: return size + ((4 - (size % 4)) % 4); // Pad upwards to even multiple of 4
   }
 }
 
@@ -131,3 +121,5 @@ const NORMALIZED_TYPE_MAP: Record<
   uint32: ['uint32', 'u32', 4, false, Uint32Array],
   sint32: ['sint32', 'i32', 4, false, Int32Array]
 };
+
+export {alignTo} from '@luma.gl/shaders/types';

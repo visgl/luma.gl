@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice, getWebGPUTestDevices} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice, getWebGPUTestDevices} from '@luma.gl/core/test-utils';
 import {
   luma,
   ComputePipeline,
@@ -12,7 +12,7 @@ import {
   _getDefaultBindGroupFactory,
   type Device
 } from '@luma.gl/core';
-import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
+import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/core/webgpu';
 
 const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
 

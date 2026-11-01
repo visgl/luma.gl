@@ -1,6 +1,6 @@
 ---
 title: Experimental GPU Tables
-description: Model batch-preserving GPU tables, schemas, bindings, ownership, and lifecycle through the private experimental subpath.
+description: Model batch-preserving GPU tables, schemas, bindings, ownership, and lifecycle through the experimental Graph subpath.
 ---
 
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
@@ -15,9 +15,9 @@ import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs'
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/experimental/gpu-tables` provides private batch-preserving table helpers for rendering,
+`@luma.gl/graph/gpu-tables` provides experimental batch-preserving table helpers for rendering,
 transforms, and compute. It builds on the primitive objects in
-[`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data).
+[`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data).
 
 ## Start Here
 
@@ -28,7 +28,7 @@ transforms, and compute. It builds on the primitive objects in
 - Use [`GPUTable`](/docs/api-reference/experimental/gpu-tables/gpu-table) for data ownership and
   [`GPUTableShaderBindings`](/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings)
   for backend-specific shader resources.
-- Use `@luma.gl/arrow` adapters when source data is Apache Arrow.
+- Use `@luma.gl/graph/arrow` adapters when source data is Apache Arrow.
 
 ## API Reference
 
@@ -40,7 +40,7 @@ transforms, and compute. It builds on the primitive objects in
 - [GPUInputSchema](/docs/api-reference/experimental/gpu-tables/gpu-input-schema)
 - [GPUTable Shader Bindings](/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings)
 - [GPUTableBufferPlanner](/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner)
-- [GPGPU Data Primitives](/docs/api-reference/gpgpu/gpu-data)
+- [GPGPU Data Primitives](/docs/api-reference/graph/gpu-data)
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 
 The subpath owns `GPURecordBatch`, `GPUTable`, `GPUSchema`, `GPUField`, `GPUTypeMap`, table
@@ -48,13 +48,12 @@ bindings, table computations, and generic table planners. Models can publish `GP
 declarations for the prepared table inputs they accept. `GPUTableShaderBindings`
 resolves those declarations into owned, batch-preserving attribute and storage
 resources for a shader layout. Table-oriented execution helpers include
-`TableTransform`,
 `GPUTableComputation`, `GPUTableBufferPlanner`, and generated-buffer batching
 utilities. `GPUTableModel` renders preserved table batches through one model pipeline, while
 `GPUTableGeometry` exposes a packed static table as ordinary GPU geometry. Specialized path and
-polygon models live separately in `@luma.gl/experimental/models`.
+polygon models live separately in `@luma.gl/engine/models`.
 
-Arrow-specific construction and analysis helpers live in `@luma.gl/arrow`.
+Arrow-specific construction and analysis helpers live in `@luma.gl/graph/arrow`.
 Applications that ingest Apache Arrow data should use those adapters to build
 the generic GPU table objects exposed here.
 
@@ -64,5 +63,7 @@ This subpath is experimental in 9.4 and is installed with its containing package
 well when constructing primitive data objects directly:
 
 ```bash
-npm install @luma.gl/gpgpu @luma.gl/experimental
+npm install @luma.gl/graph
 ```
+
+`TableTransform` is owned by [`@luma.gl/engine/tables`](/docs/api-reference/engine/tables/table-transform), alongside the table model and geometry adapters.

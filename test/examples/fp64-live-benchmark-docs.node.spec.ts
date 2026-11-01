@@ -7,8 +7,8 @@ import {describe, expect, test} from 'vitest';
 
 const PRECISION_DOCUMENTATION_PAGES = [
   '../../docs/api-guide/shaders/gpu-floating-point-precision.md',
-  '../../docs/api-reference/shadertools/shader-modules/fp64.md',
-  '../../docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md'
+  '../../docs/api-reference/shaders/shader-modules/fp64.md',
+  '../../docs/api-reference/shaders/shader-modules/fp64-arithmetic.md'
 ] as const;
 
 describe('FP64 live benchmark documentation', () => {
@@ -27,7 +27,7 @@ describe('FP64 live benchmark documentation', () => {
   test('explains that fp64 arithmetic benchmarks run only when requested', () => {
     const documentationContent = readFileSync(
       new URL(
-        '../../docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md',
+        '../../docs/api-reference/shaders/shader-modules/fp64-arithmetic.md',
         import.meta.url
       ),
       'utf8'

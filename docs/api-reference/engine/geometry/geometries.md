@@ -6,6 +6,12 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 `@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 
+The engine exports are compatibility adapters over the tessellators in `@math.gl/geometry`.
+They retain legacy size defaults, plane axis options, and cube face identifiers. New code can
+import primitives directly from `@math.gl/geometry` and pass them to `Model`; use explicit
+sizes and radii because math.gl defaults follow glTF shape conventions. GPU buffer layouts and
+interleaving remain engine responsibilities.
+
 ## Overview
 
 | Class | Notes |
@@ -72,3 +78,35 @@ const geometry = new SphereGeometry({radius: 2});
 - These classes are convenience wrappers around typed-array geometry generation.
 - Most built-in primitives generate indexed geometry by default. `CubeGeometry({indices: false})` and `PlaneGeometry({unpack: true})` are non-indexed variants.
 - When uploaded through [`Model`](/docs/api-reference/engine/model) or [`makeGPUGeometry()`](/docs/api-reference/engine/geometry/gpu-geometry), built-in primitives are interleaved into one vertex buffer plus an optional index buffer.
+
+### `TorusGeometry`
+
+`TorusGeometry` wraps the shared `@math.gl/geometry` tessellator with
+luma.gl's CPU `Geometry` container. It preserves indexed `POSITION`, `NORMAL`,
+and `TEXCOORD_0` semantics and caller-provided attribute overrides.
+
+```ts
+import {TorusGeometry} from '@luma.gl/engine';
+
+const geometry = new TorusGeometry({
+  majorRadius: 1,
+  minorRadius: 0.3,
+  majorSegments: 48,
+  minorSegments: 24,
+  arc: Math.PI * 1.5
+});
+```
+
+The defaults above apply except that `arc` defaults to `2 * Math.PI`. The ring
+lies around Y, starts at +X and sweeps toward −Z. Partial sweeps have open ends.
+Radii must be positive, the minor radius must be smaller than the major radius,
+and each segment count must be an integer of at least three.
+
+### `RingGeometry`
+
+`RingGeometry` constructs a closed annular prism or capped ring segment by
+assembling shared math.gl lathe/plane meshes. Props are `innerRadius` (`0.5`),
+`outerRadius` (`1`), `height` (`0.2`), `segments` (`48`), `startAngle` (`0`) and
+`angle` (`2 * Math.PI`). Zero inner radius creates a disk. Partial sweeps include
+both radial caps; cap/wall corners have hard normals. The source mesh retains
+indexed glTF attribute semantics and caller-provided attribute overrides.

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumericArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/core';
 import {Buffer, UniformStore, Framebuffer, Texture} from '@luma.gl/core';
-import {persistenceEffect} from '@luma.gl/effects';
+import {persistenceEffect} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -12,10 +12,10 @@ import {
   Model,
   makeRandomGenerator,
   loadImageBitmap,
-  DynamicTexture,
   BackgroundTextureModel,
   ShaderPassRenderer
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 import {PERSISTENCE_INFO_HTML} from './app-ui';
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';

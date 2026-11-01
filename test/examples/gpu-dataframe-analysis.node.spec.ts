@@ -31,23 +31,23 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const tableOfContents = JSON.parse(
       readFileSync(path.join(REPOSITORY_DIRECTORY, 'docs/table-of-contents.json'), 'utf8')
     ) as DocumentationEntry[];
-    const experimentalCategories: DocumentationCategory[] = [];
+    const graphCategories: DocumentationCategory[] = [];
 
     const visit = (entries: readonly DocumentationEntry[]): void => {
       for (const entry of entries) {
         if (typeof entry === 'string' || entry.type !== 'category') {
           continue;
         }
-        if (entry.label === '@luma.gl/experimental') {
-          experimentalCategories.push(entry);
+        if (entry.label === '@luma.gl/graph') {
+          graphCategories.push(entry);
         }
         visit(entry.items);
       }
     };
     visit(tableOfContents);
 
-    expect(experimentalCategories).toHaveLength(1);
-    const dataframesCategory = experimentalCategories[0].items.find(
+    expect(graphCategories).toHaveLength(1);
+    const dataframesCategory = graphCategories[0].items.find(
       entry => typeof entry !== 'string' && entry.label === 'GPU Dataframe'
     );
     expect(dataframesCategory).toBeDefined();
@@ -69,8 +69,8 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
   test('documents real Arrow ingestion, owned GPU work, supported joins, and accurate limitations', () => {
     const documentation = readGPUDataFrameDocumentation();
 
-    expect(documentation).toContain("from '@luma.gl/arrow'");
-    expect(documentation).toContain("from '@luma.gl/experimental/gpu-dataframe'");
+    expect(documentation).toContain("from '@luma.gl/graph/arrow'");
+    expect(documentation).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(documentation).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(documentation).toContain('GPUCommandGraph');
     expect(documentation).toContain('selectionMask');
@@ -123,17 +123,15 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     const benchmark = readRepositoryFile(
       'examples/experimental/gpu-data-analysis/src/gpu-dataframe-benchmark.ts'
     );
-    const experimentalPackage = JSON.parse(
-      readRepositoryFile('modules/experimental/package.json')
-    ) as {
+    const graphPackage = JSON.parse(readRepositoryFile('modules/graph/package.json')) as {
       dependencies?: Record<string, string>;
     };
-    const gpuPackage = JSON.parse(readRepositoryFile('modules/gpgpu/package.json')) as {
+    const gpuPackage = JSON.parse(readRepositoryFile('modules/graph/package.json')) as {
       dependencies?: Record<string, string>;
     };
 
-    expect(benchmark).toContain("from '@luma.gl/arrow'");
-    expect(benchmark).toContain("from '@luma.gl/experimental/gpu-dataframe'");
+    expect(benchmark).toContain("from '@luma.gl/graph/arrow'");
+    expect(benchmark).toContain("from '@luma.gl/graph/gpu-dataframe'");
     expect(benchmark).toContain("from 'apache-arrow'");
     expect(benchmark).toContain('makeGPUAnalyticsTableFromArrowTable');
     expect(benchmark).toContain('runGPUDataFrameBenchmark');
@@ -143,7 +141,7 @@ describe('GPU Dataframe documentation and opt-in Arrow benchmark integration', (
     expect(benchmark).toContain('MAXIMUM_ROW_COUNT = 1_048_576');
     expect(benchmark).toContain('summarizeGPUDataFrameBenchmarkSamples');
     expect(benchmark).not.toContain('BenchmarkSourceRow[]');
-    expect(experimentalPackage.dependencies?.['apache-arrow']).toBeUndefined();
+    expect(graphPackage.dependencies?.['apache-arrow']).toBeUndefined();
     expect(gpuPackage.dependencies?.['apache-arrow']).toBeUndefined();
   });
 });

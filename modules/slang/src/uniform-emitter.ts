@@ -10,7 +10,8 @@ export class UniformEmitter {
   constructor(
     private structures: Map<string, Structure>,
     private getValueTypeName: (type: SlangType) => string,
-    private getLayout: (type: SlangType) => SlangTypeLayout
+    private getLayout: (type: SlangType) => SlangTypeLayout,
+    private getFieldName: (type: SlangType, name: string) => string
   ) {}
 
   private getKey(type: SlangType): string {
@@ -47,7 +48,7 @@ export class UniformEmitter {
       const layout = this.getLayout(type);
       const fields = structure.fields.map((field, index) => {
         const member = layout.members![index];
-        return `  @align(${member.alignment}) @size(${member.size}) _slang_${field.name}: ${this.getTypeName(field.type)},`;
+        return `  @align(${member.alignment}) @size(${member.size}) ${this.getFieldName(type, field.name)}: ${this.getTypeName(field.type)},`;
       });
       // Give even a flat struct its std140 rounded size when nested or copied as a whole.
       if (fields.length) {
@@ -84,7 +85,7 @@ export class UniformEmitter {
       const structure = this.structures.get(type.name);
       if (structure) {
         const fields = structure.fields.map(field =>
-          this.readValue(field.type, `_slang_value._slang_${field.name}`)
+          this.readValue(field.type, `_slang_value.${this.getFieldName(type, field.name)}`)
         );
         body = `return ${valueType}(${fields.join(', ')});`;
       } else if (type.name === 'array') {

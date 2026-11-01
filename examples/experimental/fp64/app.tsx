@@ -7,9 +7,9 @@ import {createRoot, type Root} from 'react-dom/client';
 
 import {luma, type Device, type PresentationContext} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

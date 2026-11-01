@@ -110,20 +110,22 @@ export type {GPUGeometryProps} from './geometry/gpu-geometry';
 export {GPUGeometry} from './geometry/gpu-geometry';
 
 // Primitives
-export type {ConeGeometryProps} from './geometries/cone-geometry';
-export {ConeGeometry} from './geometries/cone-geometry';
-export type {CubeGeometryProps} from './geometries/cube-geometry';
-export {CubeGeometry} from './geometries/cube-geometry';
-export type {CylinderGeometryProps} from './geometries/cylinder-geometry';
-export {CylinderGeometry} from './geometries/cylinder-geometry';
-export type {IcoSphereGeometryProps} from './geometries/ico-sphere-geometry';
-export {IcoSphereGeometry} from './geometries/ico-sphere-geometry';
-export type {PlaneGeometryProps} from './geometries/plane-geometry';
-export {PlaneGeometry} from './geometries/plane-geometry';
-export type {SphereGeometryProps} from './geometries/sphere-geometry';
-export {SphereGeometry} from './geometries/sphere-geometry';
-export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
-export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
+export type {ConeGeometryProps} from './geometry/geometry-primitives';
+export {ConeGeometry} from './geometry/geometry-primitives';
+export type {CubeGeometryProps} from './geometry/geometry-primitives';
+export {CubeGeometry} from './geometry/geometry-primitives';
+export type {CylinderGeometryProps} from './geometry/geometry-primitives';
+export {CylinderGeometry} from './geometry/geometry-primitives';
+export {TorusGeometry} from './geometry/geometry-primitives';
+export type {TorusGeometryProps} from './geometry/geometry-primitives';
+export type {IcoSphereGeometryProps} from './geometry/geometry-primitives';
+export {IcoSphereGeometry} from './geometry/geometry-primitives';
+export type {PlaneGeometryProps} from './geometry/geometry-primitives';
+export {PlaneGeometry} from './geometry/geometry-primitives';
+export type {SphereGeometryProps} from './geometry/geometry-primitives';
+export {SphereGeometry} from './geometry/geometry-primitives';
+export type {TruncatedConeGeometryProps} from './geometry/geometry-primitives';
+export {TruncatedConeGeometry} from './geometry/geometry-primitives';
 
 export {ShaderInputs} from './shader-inputs';
 export type {ShaderInputBinding, ShaderInputsProps} from './shader-inputs';
@@ -180,18 +182,7 @@ export {SwapFramebuffers} from './compute/swap';
 
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
-export type {
-  KernelProps,
-  KernelDispatchOptions,
-  KernelDispatchIndirectOptions
-} from './compute/kernel';
-export {Kernel} from './compute/kernel';
-export type {
-  RenderKernelProps,
-  RenderKernelDrawOptions,
-  RenderKernelIndirectDrawOptions
-} from './compute/render-kernel';
-export {RenderKernel} from './compute/render-kernel';
+export {getPlatformInfo} from './utils/get-platform-info';
 
 export type {
   PickInfo,
@@ -219,13 +210,141 @@ export {
   cancelAnimationFramePolyfill
 } from './animation-loop/request-animation-frame';
 
+// Format-independent scene runtime controllers. Source adapters provide resolved bindings.
+export {
+  SkinController,
+  createSkinJointPaletteResource,
+  type SkinBinding,
+  type SkinControllerProps
+} from './scenegraph/controllers/skin-controller';
+export {
+  MaterialVariants,
+  type MaterialVariant,
+  type MaterialVariantBinding,
+  type PrimitiveMaterialVariants,
+  type MaterialVariantsProps
+} from './scenegraph/controllers/material-variants';
+export {
+  BillboardController,
+  type BillboardOrientation,
+  type BillboardBinding,
+  type BillboardDrawEntry,
+  type BillboardControllerProps
+} from './scenegraph/controllers/billboard-controller';
+export {
+  AreaLightController,
+  type AreaLightDefinition,
+  type AreaLightBinding,
+  type AreaLightControllerProps
+} from './scenegraph/controllers/area-light-controller';
+export {
+  Interactivity,
+  type InteractivityValue,
+  type InteractivityNode,
+  type InteractivityGraph,
+  type InteractivityDefinition,
+  type InteractivityValueType,
+  type InteractivityPropertyAdapter,
+  type InteractivityOptions
+} from './interactivity/interactivity';
+export {AudioGraph, type AudioGraphNode, type AudioGraphDefinition} from './audio/audio-graph';
+export {
+  AudioReverbBus,
+  selectAudioEnvironmentZone,
+  createParametricAudioResponse,
+  type AudioEnvironmentZone,
+  type AudioParametricReverb
+} from './audio/audio-environment';
+
+export {
+  AudioController,
+  type AudioControllerOptions,
+  type AudioDefinition,
+  type AudioNodeBinding,
+  type AudioEnvironmentDefinition,
+  type AudioSourceProperties
+} from './audio/audio-controller';
+
 // DEPRECATED
 
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
 export {legacyColorPicking} from './modules/picking/legacy-color-picking';
 
-import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+import {DynamicTexture, type DynamicTextureProps} from '@luma.gl/core/dynamic';
 /** @deprecated use DynamicTexture */
 export const AsyncTexture = DynamicTexture;
 /** @deprecated use DynamicTextureProps */
 export type AsyncTextureProps = DynamicTextureProps;
+
+export {RingGeometry, type RingGeometryProps} from './geometry/ring-geometry';
+
+export {
+  GPUVectorModel,
+  getGPUVectorModelBatches,
+  type GPUVectorModelProps,
+  type GPUVectorModelCount,
+  type GPUVectorModelData,
+  type GPUVectorModelInput,
+  type GPUVectorModelInputs,
+  type GPUVectorModelBatch,
+  type GPUVectorModelDrawBatchesOptions
+} from './model/gpu-vector-model';
+
+export {GPUVectorGeometry, type GPUVectorGeometryProps} from './geometry/gpu-vector-geometry';
+export type {GPUVectorModelAttributes, GPUVectorModelConstant} from './model/gpu-vector-bindings';
+
+export {
+  validateGPUVectorBatchStructure,
+  type GPUVectorBatchStructureInput
+} from './utils/gpu-vector-batch-structure';
+
+export {JointController} from './scenegraph/controllers/joint-controller';
+export type {
+  ScenegraphJoint,
+  ScenegraphJointLimit,
+  ScenegraphJointDrive,
+  ScenegraphJointAttachment,
+  ResolvedScenegraphJoint
+} from './scenegraph/controllers/joint-controller';
+export {
+  decomposePhysicsTransform,
+  readPhysicsRotation,
+  readPhysicsVector,
+  transformPhysicsVector
+} from './scenegraph/physics-transforms';
+export type {PhysicsVector, PhysicsRotation} from './scenegraph/physics-transforms';
+
+export {publishedTransforms} from './scenegraph/published-transforms';
+
+export type {InteractivityPhysics} from './interactivity/physics';
+
+export {setMorphWeights} from './scenegraph/controllers/morph-controller';
+export type {MorphTargetState, MorphWeightState} from './scenegraph/controllers/morph-controller';
+export {makeNodeAnimationBinding} from './animation/node-animation-binding';
+export type {NodeAnimationProperty} from './animation/node-animation-binding';
+
+export {
+  ScenegraphAnimator,
+  MixerAnimationClip,
+  type AnimationSelectionOptions,
+  type ScenegraphAnimationClip
+} from './animation/scenegraph-animator';
+export {
+  makeMaterialAnimationBinding,
+  makeTextureTransformAnimationBinding,
+  makePropertyAnimationBinding,
+  type MaterialAnimationTarget,
+  type TextureTransformAnimationTarget,
+  type MaterialTextureTransformState
+} from './animation/property-animation-binding';
+export {
+  getTextureTransformMatrix,
+  getTextureTransformDeltaMatrix,
+  type PBRTextureTransform
+} from './animation/texture-transform';
+
+export {makeAdapterAnimationBinding} from './animation/property-animation-binding';
+
+export {deformPositions} from './animation/deform-positions';
+
+export {createAreaLightLTCTextures} from './lighting/ltc-textures';

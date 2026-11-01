@@ -18,7 +18,7 @@ import {
   waterMaterial,
   type WaterMaterialProps,
   type RiverWaterMaterialProps
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {surfaceBuffer} from './surface-buffer';
 
 export type WaterSurfaceLayerProps = LayerProps & {
@@ -55,6 +55,7 @@ export class WaterSurfaceLayer extends Layer<WaterSurfaceLayerProps> {
 
   override initializeState({device}: LayerContext): void {
     const model = new Model(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({
         source: SOURCE,
         vs: VERTEX_SHADER,

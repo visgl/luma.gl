@@ -10,22 +10,21 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@luma.gl/arrow": ["../../../modules/arrow/src/index.ts"],
-      "@luma.gl/arrow/*": ["../../../modules/arrow/src/*"],
+      "@luma.gl/graph/arrow": ["../../../modules/graph/src/arrow/index.ts"],
+      "@luma.gl/graph/arrow": ["../../../modules/graph/src/arrow/index.ts"],
+      "@luma.gl/engine/arrow": ["../../../modules/engine/src/arrow/index.ts"],
       "@luma.gl/core": ["../../../modules/core/src/index.ts"],
       "@luma.gl/core/*": ["../../../modules/core/src/*"],
       "@luma.gl/engine": ["../../../modules/engine/src/index.ts"],
       "@luma.gl/engine/*": ["../../../modules/engine/src/*"],
-      "@luma.gl/experimental": ["../../../modules/experimental/src/index.ts"],
-      "@luma.gl/experimental/*": ["../../../modules/experimental/src/*"],
-      "@luma.gl/gpgpu": ["../../../modules/gpgpu/src/index.ts"],
-      "@luma.gl/gpgpu/*": ["../../../modules/gpgpu/src/*"],
-      "@luma.gl/shadertools": ["../../../modules/shadertools/src/index.ts"],
-      "@luma.gl/shadertools/*": ["../../../modules/shadertools/src/*"],
-      "@luma.gl/text": ["../../../modules/text/src/index.ts"],
-      "@luma.gl/text/*": ["../../../modules/text/src/*"],
-      "@luma.gl/webgpu": ["../../../modules/webgpu/src/index.ts"],
-      "@luma.gl/webgpu/*": ["../../../modules/webgpu/src/*"]
+      "@luma.gl/graph/gpu-simple-graph": ["../../../modules/graph/src/gpu-simple-graph/index.ts"],
+      "@luma.gl/graph/*": ["../../../modules/graph/src/*"],
+      "@luma.gl/shaders": ["../../../modules/shaders/src/index.ts"],
+      "@luma.gl/shaders/*": ["../../../modules/shaders/src/*"],
+      "@luma.gl/engine/text": ["../../../modules/engine/src/text/index.ts"],
+      "@luma.gl/engine/text-experimental": ["../../../modules/engine/src/text/experimental.ts"],
+      "@luma.gl/core/webgpu": ["../../../modules/core/src/webgpu/index.ts"],
+      "@luma.gl/core/webgpu/*": ["../../../modules/core/src/webgpu/*"]
     }
   },
   "include": ["."]

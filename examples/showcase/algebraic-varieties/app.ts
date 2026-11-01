@@ -10,8 +10,8 @@ import {
   ShaderInputs,
   type AnimationProps
 } from '@luma.gl/engine';
-import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {Matrix4, radians} from '@math.gl/core';
 import {
   ALGEBRAIC_VARIETIES_WGSL,

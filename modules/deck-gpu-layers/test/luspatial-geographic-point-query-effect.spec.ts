@@ -5,7 +5,7 @@
 import type {Effect, EffectContext} from '@deck.gl/core';
 import {LuSpatialGeographicPointQueryEffect} from '@deck.gl-community/gpu-layers/query';
 import type {Device} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test} from 'vitest';
 
 test('LuSpatialGeographicPointQueryEffect validates props before browser GPU allocation', () => {
@@ -62,6 +62,12 @@ test('LuSpatialGeographicPointQueryEffect supports a browser WebGPU lifecycle on
 
   try {
     expect(publishedStats).toHaveLength(1);
+    expect(publishedStats[0]).toMatchObject({
+      trace: {
+        graphId: 'luspatial-geographic-point-query-build-graph',
+        timingReport: {cpuEncodeStartTimeMilliseconds: expect.any(Number), nodes: expect.any(Array)}
+      }
+    });
     expect(effect.getSelection()).toEqual({
       center: [-73.97, 40.75],
       radiusKilometres: 1

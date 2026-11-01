@@ -43,15 +43,54 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
 - Node test files run in worker threads and reuse the worker's module graph. Tests that replace
   globals or mutate module-level state must restore that state in an `afterEach` or `afterAll` hook.
 - `nodeOnlyTestPatterns` routes audited CPU-only legacy specs away from browser-page isolation.
-- Browser test files remain isolated because GPU devices, presentation contexts, and queued GPU
-  work are not safe to share between files.
-- Browser coverage uses weighted sharding so known slow GPU specs are spread across the existing
-  three CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
-  instrumented browser pages to every pull request.
+- Device-only tests import `@luma.gl/core/test-utils` to avoid loading legacy animation/test
+  runners and eagerly creating an unused WebGL context in each isolated browser file.
+- Browser files run serially within each browser project,
+  both locally and in CI: native keyboard/pointer tests need foreground focus, and concurrent
+  shader compilation and readback compete for the same GPU. CI still parallelizes across shards.
+  CI selects complementary `general`, `compute`, and `physics` groups. General tests, including
+  graph explorer document/pointer checks, keep full file isolation on three Linux workers. Audited
+  compute and physics groups restore mocks between tests and reuse their device/module context
+  serially on one Linux and one Apple Silicon worker respectively. Tests that mutate globals or
+  exercise browser/device lifecycle belong in the isolated general group. Local commands default
+  to all files with isolation enabled, including the full endurance matrix.
+- Browser coverage uses weighted sharding so known slow GPU specs are spread across the three
+  isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
+  instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
+  `test/utils/browser-test-sequencer.ts` from a successful general-browser run when expensive suites
+  are added or changed. Refresh `NATIVE_PHYSICS_TEST_WEIGHTS` from native physics runs.
+  Use rounded wall times between completed files to include isolated-page
+  and import overhead, and replay the complete discovered suite set to check all shard totals.
 - CI merges focused Istanbul coverage from CPU-only specs moved to Node and native Node coverage
-  anchors with Istanbul coverage from the three browser shards. The complete Node suite still runs
+  anchors with Istanbul coverage from all five browser workers. The complete Node suite still runs
   separately without instrumentation so coverage remapping does not slow the build job.
+- A pinned Yarn patch makes Istanbul browser coverage transport incremental: the first capture
+  includes every loaded source, including zero-hit records; later captures send changed counters.
+  Regression tests verify exact statement, function, and branch totals and reset behavior. Source
+  instrumentation, the complete all-files denominator, and the Node coverage provider are unchanged.
 - The tape-style compatibility helper lives at `test/utils/vitest-tape.ts`.
+
+## Nightly physics endurance
+
+PR physics coverage retains one-second stack regressions for all three scenarios (eight boxes,
+10:1 heavy-on-light, and offset center of mass), both solvers, and both 120/240 Hz time steps.
+The same diagnostics, penetration, drift, sleep-state, and residual-energy assertions run, with
+64 solver iterations. Sustained six-second behavior is checked separately by the complete original
+12-case matrix in `physics-endurance.yml`, nightly at 07:17 UTC, and through manual dispatch.
+Nightly also retains both 600-tick stack-settling cases and the 600-tick rotating-contact arena
+case, for 15 cases across five files. PRs retain the same assertions at 120 and 60 ticks respectively.
+The full matrix also runs on PRs that change its definitions or scheduling, so the nightly path
+is validated before those changes merge. Ordinary implementation PRs run the focused regressions.
+
+Run `yarn test-physics-endurance` to execute the full matrix locally without coverage overhead.
+It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless` and
+release sharding continue to include the full-duration specs. No endurance assertion, simulation
+step, solver, or time-step combination is removed from the full suite.
+
+The nightly job requires WebGPU/WebGL presentation before testing and saves JUnit results and
+console output for 14 days, including failures. It uses native Apple Silicon and avoids Istanbul
+instrumentation. PR code coverage still includes every source file; compare merged LCOV artifacts
+when changing the split, since a short run is not a substitute for proving unchanged code coverage.
 
 ## Playwright behavior
 
@@ -74,3 +113,79 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   - `docs/developer/dev-tools/browser-debug.md`
   - `vitest.config.ts`
   - `.ocularrc.js`
+
+## Example visual test workload
+
+Flow, weather, globe clouds, and the fog smoke test render at half the CSS pixel size
+by default. `scripts/playwright/visual-test-utils.mjs` sets the actual canvas pixel
+ratio and verifies its dimensions; screenshots stay in CSS coordinates so image
+regions and assertion thresholds are unchanged. Set `LUMA_VISUAL_TEST_PIXEL_SCALE=1`
+for a full-resolution diagnostic run. Thumbnail generation retains full resolution.
+The focused catalog-star assertion also uses full resolution because SwiftShader
+WebGL can lose subpixel stars at half resolution.
+Set `GLOBE_SOFTWARE_GPU=true` to reproduce the globe smoke test with SwiftShader locally.
+
+Flow correctness runs still exercise all three particle densities on both backends.
+The six 30-frame timing samples are a separate opt-in workload:
+
+```bash
+yarn workspace luma.gl-examples-deck-flow-particles benchmark
+```
+
+`FLOW_RUN_TIMING=true` also enables these samples directly; the existing
+`FLOW_SKIP_TIMING` override takes precedence. PR visual tests do not collect timing
+samples because they have no performance assertions.
+
+Example scripts check integration: scene composition, visible effects, UI wiring,
+picking, and resource ownership. Algorithmic matrices belong in focused tests:
+
+- `ssr-camera-temporal.spec.ts` measures changing-sample history suppression using
+  3×3 GPU textures, alongside reprojection rejection checks. City retains scene-level
+  reflection radiance, capture/composition, settling, and history-reset checks. The
+  WebGPU reflection phase uses a quarter-width/height canvas; water and edge detail
+  checks and WebGL retain half size. `CITY_SCENE_DEVICE_SCALE=1` restores full resolution.
+- Weather checks fog density on both scene and precipitation layers for every preset,
+  with a representative visual toggle check on each backend. Height-fog GPU fixtures
+  independently verify numerical integration and material fog.
+- `deck-example-device.node.spec.ts` covers explicit selection and available, absent,
+  null, and rejected default adapters. Flow and weather each retain a rejected-adapter
+  startup smoke check, instead of reinitializing their scenes for every shared case.
+
+## Presentation capture canary
+
+Run `yarn test-presentation` to clear WebGPU and WebGL2 canvases red and verify
+the captured PNG pixels. This checks the browser compositor independently of
+rendering code and golden images. Missing GPU support or blank captures fail
+with an infrastructure diagnostic instead of passing as skipped tests.
+
+On Linux, run `xvfb-run -a yarn test-presentation`. The software GPU launch
+helper retains ANGLE SwiftShader for WebGL and adds `--enable-gpu`, Vulkan
+compositing, and Vulkan SwiftShader for WebGPU. An X display is required for
+headless canvas capture. CI runs this check in the first browser coverage shard.
+Other platforms retain their existing launch configuration.
+
+Use offscreen texture readback for numeric GPU correctness assertions and this
+small presentation check for canvas capture. The legacy `test/render/` suite
+remains excluded: reviving its goldens and choosing backend-specific tolerances
+is separate work. See [issue #2874](https://github.com/visgl/luma.gl/issues/2874).
+
+
+### CI presentation and package build costs
+
+The test workflow builds package outputs once and transfers a tar archive from the current
+workflow run to the example and lighting jobs. It is retained for 35 days to support delayed job reruns. The archive preserves package paths and file
+permissions; it is not a cache across commits. Coverage and visual jobs that run directly from
+source remain independent. This removes four duplicate package builds, at the cost of artifact
+transfer and waiting for the shared build before starting the consumer jobs.
+
+Canvas presentation runs in its own job. A compositor failure still fails the aggregate required
+check, while browser coverage continues and uploads its results. Retrying a failed presentation
+job no longer requires recollecting a browser shard. The canary reports JSON phase timings and
+writes start records and completion records to the Actions summary, including the failed phase: browser startup, navigation,
+GPU submission/presentation, screenshot capture, and PNG decoding. This distinguishes a screenshot
+stall from shader or rendering cost without extending timeouts or adding automatic retries.
+
+The WebGPU canary keeps submitting its tiny fixed-color frame until screenshot capture completes,
+then stops the frame loop and releases the device. CI checks three repetitions with fresh browser
+processes per backend so a single lucky capture is insufficient. The screenshot assertions still
+require all 4096 pixels to match; failed captures are not retried or replaced with GPU readback.

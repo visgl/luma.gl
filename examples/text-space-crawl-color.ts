@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray4} from '@math.gl/types';
+import type {NumberArray4} from '@math.gl/core';
 
 export const TEXT_SPACE_COLOR_STORAGE_KEY = 'text-space-crawl-color';
 export const DEFAULT_TEXT_SPACE_CRAWL_COLOR: NumberArray4 = [1, 0.62, 0.32, 1];

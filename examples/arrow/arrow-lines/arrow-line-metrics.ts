@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {PathStorageModel, PathTripsStorageModel} from '@luma.gl/experimental/models';
+import {type GPUVector} from '@luma.gl/graph/gpu-data';
+import {PathStorageModel, PathTripsStorageModel} from '@luma.gl/engine/models';
 import type {ArrowLineControlPanelMetrics} from './control-panel';
 import type {
   ArrowLineRenderer,
@@ -141,7 +141,7 @@ function isPathStorageModel(
 
 function getGpuVectorByteLength(vector: GPUVector<any>): number {
   return vector.data.reduce((byteLength, data) => {
-    const variableLengthByteLength = data.readbackMetadata?.valueByteLength;
+    const variableLengthByteLength = data.valueByteLength;
     return (
       byteLength +
       (variableLengthByteLength !== undefined

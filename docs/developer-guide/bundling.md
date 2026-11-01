@@ -19,9 +19,9 @@ higher-level engine or shader APIs. This configuration consists of:
 
 - [`@luma.gl/core`](/docs/api-reference/core), which defines the portable `Device` and resource
   APIs;
-- [`@luma.gl/webgpu`](/docs/api-reference/webgpu), which implements the portable subset using
+- [`@luma.gl/core/webgpu`](/docs/api-reference/webgpu), which implements the portable subset using
   WebGPU; and
-- [`@luma.gl/webgl`](/docs/api-reference/webgl), which implements the portable subset using WebGL
+- [`@luma.gl/core/webgl`](/docs/api-reference/webgl), which implements the portable subset using WebGL
   2.
 
 The backends share a common API where practical, but they do not have identical capabilities. For
@@ -31,8 +31,8 @@ For example, an application can prefer WebGPU and fall back to WebGL:
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 const device = await luma.createDevice({
   type: 'best-available',
@@ -42,7 +42,7 @@ const device = await luma.createDevice({
 ```
 
 Import only the adapter or adapters the application can use. A WebGPU-only application should not
-import `@luma.gl/webgl`, and a WebGL-only application should not import `@luma.gl/webgpu`.
+import `@luma.gl/core/webgl`, and a WebGL-only application should not import `@luma.gl/core/webgpu`.
 See [Installing](/docs/developer-guide/installing#a-minimal-install) for package setup and
 [WebGPU versus WebGL](/docs/api-guide/background/webgpu-vs-webgl) for backend selection guidance.
 
@@ -91,17 +91,17 @@ integrations, and higher-level luma.gl modules add to the final application bund
 
 Applications commonly add two first-class libraries above the portability layer:
 
-- [`@luma.gl/shadertools`](/docs/api-reference/shadertools) assembles reusable WGSL and GLSL shader
+- [`@luma.gl/shaders`](/docs/api-reference/shaders) assembles reusable WGSL and GLSL shader
   modules, plugins, and passes. It does not compile shaders or call WebGPU or WebGL itself, so it can
   be used with either the core API or the engine. See the
   [Shader API guide](/docs/api-guide/shaders).
 - [`@luma.gl/engine`](/docs/api-reference/engine) builds on `@luma.gl/core` and
-  `@luma.gl/shadertools` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and
+  `@luma.gl/shaders` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and
   shader-pass rendering.
 
-Focused packages such as `@luma.gl/effects`, `@luma.gl/gltf`, and `@luma.gl/gpgpu` build on one or
-more of these layers. Experimental GPU tables and models live under `@luma.gl/experimental`. These
-packages are not automatically included by the engine. See the [API overview](/docs/api-guide) and
+Focused packages and subpaths such as `@luma.gl/engine/effects`, `@luma.gl/engine/gltf`, and `@luma.gl/graph/gpu-simple-graph` build on one or
+more of these layers. GPU tables live under `@luma.gl/graph/gpu-tables`; experimental path/polygon models live under `@luma.gl/engine/models`. These
+APIs are not automatically included by the engine root. See the [API overview](/docs/api-guide) and
 [module catalog](/docs/api-reference) for the complete package map.
 
 ### Shader Source Bundling
@@ -119,7 +119,7 @@ A portable `ShaderModule` commonly references all three strings from one object,
 selects the active fields after creating a device. Tree-shaking can remove a wholly unused shader
 module, but generally cannot remove the inactive properties of a module object that remains
 reachable. Importing only one backend therefore removes the other backend implementation, but does
-not guarantee that the unused shader dialect is removed from portable engine or shadertools code.
+not guarantee that the unused shader dialect is removed from portable engine or shaders code.
 Shader `defines` are evaluated during shader assembly, after the JavaScript has loaded, and do not
 reduce transfer size. JavaScript minifiers also do not normally minify the contents of shader
 strings.
@@ -149,12 +149,12 @@ reference, but it is not representative of an application that imports a few nam
 
 | Full public-entry fixture | Reference minified | Reference gzip | Reference Brotli |
 | --- | ---: | ---: | ---: |
-| `@luma.gl/shadertools`, excluding core | 321.9 KB | 73.4 KB | 58.8 KB |
-| `@luma.gl/engine`, excluding core and shadertools | 163.6 KB | 45.4 KB | 38.4 KB |
-| core + shadertools + engine | 582.9 KB | 145.9 KB | 121.1 KB |
+| `@luma.gl/shaders`, excluding core | 321.9 KB | 73.4 KB | 58.8 KB |
+| `@luma.gl/engine`, excluding core and shaders | 163.6 KB | 45.4 KB | 38.4 KB |
+| core + shaders + engine | 582.9 KB | 145.9 KB | 121.1 KB |
 
 The first two rows externalize the named peer packages so that shared code is not counted twice.
-The combined row adds the separately compressed core, shadertools, and engine fixtures; it is a
+The combined row adds the separately compressed core, shaders, and engine fixtures; it is a
 stable comparison point, not a required chunking strategy.
 
 Named-import fixtures demonstrate how tree-shaking changes the result:
@@ -206,7 +206,7 @@ can retain a much larger dependency graph.
 `type: 'best-available'` selects among loaded adapters at runtime; it is not a build-time signal that
 lets a bundler remove a backend. luma.gl does contain literal dynamic imports in several places:
 the WebGL and WebGPU adapters import their concrete device implementations when `create()` runs,
-and `@luma.gl/gpgpu` imports the operation backend that matches the first asynchronously evaluated
+and `@luma.gl/graph/gpu-simple-graph` imports the operation backend that matches the first asynchronously evaluated
 device.
 
 A literal `import()` is a possible code-splitting boundary, not automatic code removal. With ESM
@@ -231,11 +231,11 @@ package specifiers:
 ```typescript
 async function loadAdapter(type: 'webgpu' | 'webgl') {
   if (type === 'webgpu') {
-    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {webgpuAdapter} = await import('@luma.gl/core/webgpu');
     return webgpuAdapter;
   }
 
-  const {webgl2Adapter} = await import('@luma.gl/webgl');
+  const {webgl2Adapter} = await import('@luma.gl/core/webgl');
   return webgl2Adapter;
 }
 ```

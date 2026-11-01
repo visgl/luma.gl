@@ -3,13 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {PanelSelect, type PanelSelectOption} from '@deck.gl-community/panels';
-import {makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
+import {makeGPUSplatDataFromArrowStream} from '@luma.gl/engine/arrow';
 import type {Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {
   GPUCommandGraphInspector,
   type GPUCommandGraphInspectorGraph
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUPagedSplatRenderer,
   GPUSplatGraphRenderer,
@@ -19,7 +19,7 @@ import {
   type SplatHierarchyView,
   type SplatRendererProps,
   type SplatSortMode
-} from '@luma.gl/splats';
+} from '@luma.gl/engine/splats';
 import {Matrix4} from '@math.gl/core';
 import {h, render} from 'preact';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
@@ -903,7 +903,9 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     if (this.graphInspector && graphDetails && graphInspectorElement) {
       graphDetails.hidden = false;
-      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement);
+      const inspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
+        inspector: this.graphInspector
+      });
       this.graphInspectorPanels.push(inspectorPanel);
       this.controlDisposers.push(() => {
         inspectorPanel.destroy();

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUDataEvaluator} from '@luma.gl/gpgpu';
+import type {GPUDataEvaluator} from '@luma.gl/graph/gpu-simple-graph';
 import {Virtualizer, observeElementRect, type VirtualItem} from '@tanstack/virtual-core';
 
 const ROW_HEIGHT = 34;
@@ -11,11 +11,8 @@ const MAXIMUM_CELL_VALUES = 12;
 const MAXIMUM_PHYSICAL_SCROLL_SIZE = 16_000_000;
 const READ_CHUNK_ROWS = 128;
 const ROW_INDEX_COLUMN_WIDTH = 112;
-const SCALAR_COLUMN_WIDTH = 120;
-const VECTOR_COLUMN_WIDTH = 300;
-const SEGMENTED_COLUMN_WIDTH = 320;
-const VALUE_WIDTH = 72;
-const MAXIMUM_VECTOR_COLUMN_WIDTH = 520;
+const MINIMUM_COLUMN_WIDTH = 64;
+const MAXIMUM_COLUMN_WIDTH = 960;
 
 export type TableValueArray =
   | Float32Array
@@ -73,11 +70,13 @@ export class VirtualGPUTableRenderer {
   columns: TableColumn[];
   readonly elements: RenderedTableElements;
   readonly virtualizer: Virtualizer<HTMLElement, Element>;
+  private isDestroyed = false;
+  private outputCleanup: (() => void) | undefined;
   private cleanupCallback: (() => void) | undefined;
   private readonly handleHeaderScroll = (): void => this.syncHeaderScroll();
   private renderVersion = 0;
-  private gridTemplateColumns = '';
-  private gridMinimumWidth = 0;
+  private columnWidths: number[] = [];
+  private pendingWidthMeasurement = 0;
 
   constructor(elements: RenderedTableElements, columns: TableColumn[], rowCount: number) {
     this.elements = elements;
@@ -98,7 +97,13 @@ export class VirtualGPUTableRenderer {
     });
   }
 
-  setColumns(columns: TableColumn[]): void {
+  setColumns(columns: TableColumn[], cleanup?: () => void): void {
+    if (this.isDestroyed) {
+      cleanup?.();
+      return;
+    }
+    this.outputCleanup?.();
+    this.outputCleanup = cleanup;
     this.columns = columns;
     this.updateGridLayout();
     this.renderHeader();
@@ -121,9 +126,13 @@ export class VirtualGPUTableRenderer {
   }
 
   destroy(): void {
+    this.isDestroyed = true;
+    this.outputCleanup?.();
+    this.outputCleanup = undefined;
     this.elements.scrollContainer.removeEventListener('scroll', this.handleHeaderScroll);
     this.cleanupCallback?.();
     this.cleanupCallback = undefined;
+    cancelAnimationFrame(this.pendingWidthMeasurement);
   }
 
   private renderHeader(): void {
@@ -133,6 +142,7 @@ export class VirtualGPUTableRenderer {
       fragment.appendChild(makeHeaderCell(column.id, column.logicalType));
     }
     this.elements.headerRow.replaceChildren(fragment);
+    this.scheduleWidthMeasurement();
   }
 
   private renderRows(): void {
@@ -145,6 +155,7 @@ export class VirtualGPUTableRenderer {
       fragment.appendChild(this.renderRow(virtualItem, this.renderVersion));
     }
     this.elements.rowLayer.replaceChildren(fragment);
+    this.scheduleWidthMeasurement();
   }
 
   private renderRow(virtualItem: VirtualItem, version: number): HTMLElement {
@@ -171,6 +182,7 @@ export class VirtualGPUTableRenderer {
     const value = column.getRowText(rowIndex);
     if (typeof value === 'string') {
       cell.textContent = value;
+      this.scheduleWidthMeasurement();
       return;
     }
 
@@ -179,6 +191,7 @@ export class VirtualGPUTableRenderer {
       .then(text => {
         if (cell.isConnected && version === this.renderVersion) {
           cell.textContent = text;
+          this.scheduleWidthMeasurement();
         }
       })
       .catch(error => {
@@ -193,16 +206,61 @@ export class VirtualGPUTableRenderer {
   }
 
   private updateGridLayout(): void {
-    const columnTracks = this.columns.map(column => getColumnGridTrack(column));
-    this.gridTemplateColumns = [`${ROW_INDEX_COLUMN_WIDTH}px`, ...columnTracks].join(' ');
-    this.gridMinimumWidth =
-      ROW_INDEX_COLUMN_WIDTH +
-      this.columns.reduce((width, column) => width + getColumnMinimumWidth(column), 0);
+    this.columnWidths = this.columns.map(() => MINIMUM_COLUMN_WIDTH);
+    this.applyGridLayout();
+  }
 
-    this.elements.headerRow.style.setProperty('--table-grid-template', this.gridTemplateColumns);
-    this.elements.headerRow.style.minWidth = `${this.gridMinimumWidth}px`;
-    this.elements.rowLayer.style.setProperty('--table-grid-template', this.gridTemplateColumns);
-    this.elements.rowLayer.style.minWidth = `${this.gridMinimumWidth}px`;
+  private applyGridLayout(): void {
+    const minimumWidth =
+      ROW_INDEX_COLUMN_WIDTH + this.columnWidths.reduce((sum, width) => sum + width, 0);
+    const gridTemplateColumns = [
+      `${ROW_INDEX_COLUMN_WIDTH}px`,
+      ...this.columnWidths.map(width => `${width}px`)
+    ].join(' ');
+    this.elements.headerRow.style.setProperty('--table-grid-template', gridTemplateColumns);
+    this.elements.headerRow.style.minWidth = `${minimumWidth}px`;
+    this.elements.rowLayer.style.setProperty('--table-grid-template', gridTemplateColumns);
+    this.elements.rowLayer.style.minWidth = `${minimumWidth}px`;
+  }
+
+  private scheduleWidthMeasurement(): void {
+    if (!this.pendingWidthMeasurement) {
+      this.pendingWidthMeasurement = requestAnimationFrame(() => this.measureColumnWidths());
+    }
+  }
+
+  private measureColumnWidths(): void {
+    this.pendingWidthMeasurement = 0;
+    let changed = false;
+    for (let columnIndex = 0; columnIndex < this.columns.length; columnIndex++) {
+      let width = this.columnWidths[columnIndex];
+      const header = this.elements.headerRow.children[columnIndex + 1];
+      for (const label of header?.children ?? []) {
+        if (label.scrollWidth > label.clientWidth + 1) {
+          width = Math.max(width, label.scrollWidth + 20);
+        }
+      }
+      for (const row of this.elements.rowLayer.children) {
+        const cell = row.children[columnIndex + 1];
+        if (cell && cell.scrollWidth > cell.clientWidth + 1) {
+          width = Math.max(width, cell.scrollWidth + 1);
+        }
+      }
+      width = Math.min(width, MAXIMUM_COLUMN_WIDTH);
+      if (width > this.columnWidths[columnIndex]) {
+        this.columnWidths[columnIndex] = width;
+        changed = true;
+      }
+    }
+    if (changed) {
+      const container = this.elements.scrollContainer;
+      const atRightEdge = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+      this.applyGridLayout();
+      if (atRightEdge) {
+        container.scrollLeft = container.scrollWidth;
+        this.syncHeaderScroll();
+      }
+    }
   }
 
   private readonly observeScaledElementOffset = (
@@ -325,6 +383,9 @@ export function makeSegmentedEvaluatorTableColumn(
 }
 
 export function formatFixedRow(values: TableValueArray, startIndex: number, size: number): string {
+  if (size === 1) {
+    return formatNumber(values[startIndex] ?? 0);
+  }
   const rowValues: string[] = [];
   for (let valueIndex = 0; valueIndex < size; valueIndex++) {
     rowValues.push(formatNumber(values[startIndex + valueIndex] ?? 0));
@@ -487,26 +548,6 @@ function formatSegmentedEvaluatorRow(
     rowValues.push(`... ${formatInteger(totalScalarCount - visibleValueCount)} more`);
   }
   return `[${rowValues.join(', ')}]`;
-}
-
-function getColumnGridTrack(column: TableColumn): string {
-  const minimumWidth = getColumnMinimumWidth(column);
-  const flexibleWidth =
-    column.kind === 'segmented' ? '1.25fr' : column.evaluator.size === 1 ? '0.45fr' : '1fr';
-  return `minmax(${minimumWidth}px, ${flexibleWidth})`;
-}
-
-function getColumnMinimumWidth(column: TableColumn): number {
-  if (column.kind === 'segmented') {
-    return SEGMENTED_COLUMN_WIDTH;
-  }
-  if (column.evaluator.size === 1) {
-    return SCALAR_COLUMN_WIDTH;
-  }
-  return Math.min(
-    MAXIMUM_VECTOR_COLUMN_WIDTH,
-    Math.max(VECTOR_COLUMN_WIDTH, column.evaluator.size * VALUE_WIDTH)
-  );
 }
 
 function formatNumber(value: number): string {

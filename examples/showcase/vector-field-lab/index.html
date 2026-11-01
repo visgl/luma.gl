@@ -39,7 +39,7 @@
     const status = document.querySelector('#vector-field-status');
     try {
       const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] = await Promise.all([
-        import('@luma.gl/core'), import('@luma.gl/engine'), import('@luma.gl/webgpu'), import('./app.ts')
+        import('@luma.gl/core'), import('@luma.gl/engine'), import('@luma.gl/core/webgpu'), import('./app.ts')
       ]);
       const device = await luma.createDevice({
         id:'vector-field-lab', adapters:[webgpuAdapter], featureLevel:'best-available',

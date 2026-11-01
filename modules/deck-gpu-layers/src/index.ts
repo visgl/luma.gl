@@ -66,3 +66,18 @@ export {
   type SceneShaderPassContext
 } from './effects/scene-shader-pass-effect';
 export {FireflyLayer} from './layers/firefly-layer';
+
+export {
+  GlobeCloudLayer,
+  getGlobeCloudViewUniforms,
+  type GlobeCloudLayerProps
+} from './layers/globe-cloud-layer';
+
+export {SkyLayer, type SkyLayerProps} from './layers/sky-layer';
+export {StarfieldLayer, type StarfieldLayerProps} from './layers/starfield-layer';
+
+export {WindParticleLayer, type WindParticleLayerProps} from './layers/wind-particle-layer';
+export {
+  WindSimulationEffect,
+  type WindSimulationEffectProps
+} from './effects/wind-simulation-effect';

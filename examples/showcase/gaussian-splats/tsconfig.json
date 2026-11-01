@@ -10,7 +10,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "@luma.gl/splats": ["../../../modules/splats/src/index.ts"]
+      "@luma.gl/engine/splats": ["../../../modules/engine/src/splats/index.ts"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true

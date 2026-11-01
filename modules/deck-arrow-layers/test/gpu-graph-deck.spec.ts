@@ -9,9 +9,9 @@ import {
   GPUGraphNodeLayer
 } from '@deck.gl-community/arrow-layers';
 import {Buffer} from '@luma.gl/core';
-import {ShaderAssembler} from '@luma.gl/shadertools';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {ShaderAssembler} from '@luma.gl/shaders';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {vi} from 'vitest';
 import {userEvent} from 'vitest/browser';
@@ -385,7 +385,6 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     .spyOn(canvasContext, 'getCurrentFramebuffer')
     .mockReturnValue(framebuffer);
   let deck: ReturnType<typeof createGPUGraphExplorerDeck> | undefined;
-  const originalShaderAssembler = ShaderAssembler.getDefaultShaderAssembler;
   try {
     deck = createGPUGraphExplorerDeck(container, {
       device,
@@ -396,10 +395,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     });
     deck.setProps({_animate: false});
     await waitForDeckEffect(deck);
-    expect(
-      ShaderAssembler.getDefaultShaderAssembler,
-      'the real application restores luma.gl shader-assembler isolation before Deck is ready'
-    ).toBe(originalShaderAssembler);
+    expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
 
     const effect = deck.props.effects?.[0];
     expect(
@@ -602,7 +598,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
         graphScale.value,
         'a genuine trusted keyboard arrow advances the accessible real graph-size slider'
       ).toBe('1');
-      await waitForReplacementDeckEffect(deck, effect);
+      await waitForReplacementDeckEffect(deck, effect, 256);
       const resizedEffect = deck.props.effects?.[0];
       if (!(resizedEffect instanceof GPUGraphDeckEffect)) {
         throw new Error('The real Deck graph slider did not replace its GPU effect');
@@ -721,7 +717,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
         graphScale.value,
         'a trusted ArrowRight changes a pristine slider without synthetic pending state'
       ).toBe('2');
-      await waitForReplacementDeckEffect(deck, resizedEffect);
+      await waitForReplacementDeckEffect(deck, resizedEffect, 512);
       const keyboardEffect = deck.props.effects?.[0];
       if (!(keyboardEffect instanceof GPUGraphDeckEffect)) {
         throw new Error('A genuine keyboard action did not rebuild the actual WebGPU graph');
@@ -767,7 +763,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
         graphScale.value,
         'a genuine trusted pointer click changes a pristine graph-size range control'
       ).toBe('0');
-      await waitForReplacementDeckEffect(deck, keyboardEffect);
+      await waitForReplacementDeckEffect(deck, keyboardEffect, 128);
       const pointerEffect = deck.props.effects?.[0];
       if (!(pointerEffect instanceof GPUGraphDeckEffect)) {
         throw new Error('A genuine pointer click did not rebuild the actual WebGPU graph');
@@ -811,10 +807,7 @@ it('GPU Graph deck.gl renders real source-chunk layers and asynchronously picks 
     container.remove();
   }
 
-  expect(
-    ShaderAssembler.getDefaultShaderAssembler,
-    'finalizing the real Deck application never leaves a global shader-assembler override'
-  ).toBe(originalShaderAssembler);
+  expect('getDefaultShaderAssembler' in ShaderAssembler).toBe(false);
 
   void 0;
 });
@@ -833,12 +826,15 @@ async function waitForDeckEffect(
 
 async function waitForReplacementDeckEffect(
   deck: ReturnType<typeof createGPUGraphExplorerDeck>,
-  previous: GPUGraphDeckEffect
+  previous: GPUGraphDeckEffect,
+  expectedVertexCount: number
 ): Promise<void> {
   const deadline = performance.now() + 5_000;
   while (
     !(deck.props.effects?.[0] instanceof GPUGraphDeckEffect) ||
-    deck.props.effects[0] === previous
+    deck.props.effects[0] === previous ||
+    // An intermediate debounced resize may finish while trusted keyboard input is delivered.
+    deck.props.effects[0].graph.vertexCount !== expectedVertexCount
   ) {
     if (performance.now() >= deadline) {
       throw new Error('The real Deck graph-size slider did not replace its resident GPU effect');

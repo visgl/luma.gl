@@ -4,18 +4,18 @@
 
 import type {Framebuffer, Sampler, SamplerProps, Texture, TextureView} from '@luma.gl/core';
 import {Texture as TextureResource, UniformStore} from '@luma.gl/core';
-import {fxaa} from '@luma.gl/effects';
+import {fxaa} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   ClipSpace,
-  DynamicTexture,
   Geometry,
   Model,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {ComparisonSplitter} from '@luma.gl/experimental';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {type Panel, type SettingsSchema, type SettingsState} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

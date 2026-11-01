@@ -1,12 +1,15 @@
 import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 
-# glTF Materials, Textures, and Lighting
+# glTF Material Conversion
 
 <GltfDocsTabs active="materials" />
 
-`@luma.gl/gltf` translates source glTF material and lighting data into the existing
-`@luma.gl/shadertools` PBR modules. The same format-owned helpers are reused by retained-scene
+`@luma.gl/engine/gltf` translates source glTF material and lighting data into the existing
+`@luma.gl/shaders` PBR modules. The same format-owned helpers are reused by retained-scene
 importers, so sampler, UV, color-space, and extension interpretation stay in one place.
+
+For shading behavior and feature examples, see [Materials](/docs/api-guide/engine/materials).
+This page describes how the glTF converter maps source data onto luma.gl materials.
 
 ## Parse a physically based material
 
@@ -14,7 +17,7 @@ importers, so sampler, UV, color-space, and extension interpretation stay in one
 implementing their own glTF integration can call the underlying parser directly:
 
 ```ts
-import {parsePBRMaterial} from '@luma.gl/gltf';
+import {parsePBRMaterial} from '@luma.gl/engine/gltf';
 
 const sourceMaterial: Parameters<typeof parsePBRMaterial>[1] = {
   pbrMetallicRoughness: {
@@ -50,7 +53,7 @@ piecewise transfer function rather than an approximate gamma curve.
 ## Supported texture slots
 
 ```ts
-import {getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
+import {getTextureTransformSlotDefinitions} from '@luma.gl/engine/gltf';
 
 for (const definition of getTextureTransformSlotDefinitions()) {
   console.log(definition.slot, definition.colorSpace);
@@ -93,7 +96,7 @@ create hardware sRGB textures should not decode those same samples again.
 sampler parameters:
 
 ```ts
-import {convertGLTFSampler, convertSamplerToGLTF} from '@luma.gl/gltf';
+import {convertGLTFSampler, convertSamplerToGLTF} from '@luma.gl/engine/gltf';
 
 const sampler = convertGLTFSampler({
   wrapS: 33071,
@@ -121,7 +124,7 @@ repeat addressing and linear sampling defaults when the source omits sampler fie
 requested by its sampler:
 
 ```ts
-import {createGLTFTexture} from '@luma.gl/gltf';
+import {createGLTFTexture} from '@luma.gl/engine/gltf';
 
 const baseColorTexture = createGLTFTexture(device, image, {
   id: 'base-color',
@@ -151,7 +154,7 @@ import {
   getTextureTransformMatrix,
   resolveTextureCoordinateSet,
   resolveTextureTransform
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 const coordinateSet = resolveTextureCoordinateSet(textureInfo);
 const transform = resolveTextureTransform(textureInfo);
@@ -247,7 +250,7 @@ behavior can change before standardization.
 ## Punctual lights
 
 ```ts
-import {parseGLTFLights} from '@luma.gl/gltf';
+import {parseGLTFLights} from '@luma.gl/engine/gltf';
 
 const lights = parseGLTFLights(gltf, {useByteColors: false});
 ```
@@ -260,13 +263,15 @@ legacy byte-style light convention.
 
 ## Image-based lighting
 
-`loadPBREnvironment()` loads an already prepared diffuse cubemap, specular cubemap mip chain, and
-BRDF lookup texture:
+`loadPBREnvironment()` uses an application-supplied `loadImage` callback to load an already
+prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```ts
-import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/engine/gltf';
+import {loadImageTexture} from '@loaders.gl/images/load-image';
 
 const environment = loadPBREnvironment(device, {
+  loadImage: loadImageTexture,
   brdfLutUrl: '/environment/brdf-lut.png',
   getTexUrl: (kind, face, level) => `/environment/${kind}/${face}/${level}.png`,
   specularMipLevels: 6
@@ -280,15 +285,15 @@ const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
 This API loads precomputed resources; it does not convert arbitrary HDR images into prefiltered
 lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF
 lookup from an existing equirectangular texture, use the separate
-[`PBREnvironmentGenerator`](/docs/api-reference/experimental/pbr-environment) owned by
-`@luma.gl/experimental`.
+[`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) owned by
+`@luma.gl/anari`.
 
 ## Transmission and rendering-path differences
 
 Transmission and volume factors/textures are preserved across rendering paths, but physical
 refraction depends on the renderer:
 
-- The shared [experimental SceneRenderer](/docs/api-reference/experimental/scene-renderer) and
+- The shared [experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) and
   retained ANARI path capture the opaque scene and sample it for screen-space refraction with
   thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and
   roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment

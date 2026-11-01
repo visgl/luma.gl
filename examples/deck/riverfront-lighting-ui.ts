@@ -14,16 +14,30 @@ declare global {
   }
 }
 export function startRiverfrontLightingExample(kind: RiverfrontLightingKind): void {
+  const backend = document.querySelector<HTMLSelectElement>('#backend')!;
+  backend.value =
+    new URLSearchParams(location.search).get('backend') === 'webgl' ? 'webgl' : 'webgpu';
+  backend.addEventListener('change', () => {
+    location.search = `?backend=${backend.value}`;
+  });
   const scene = createRiverfrontLightingScene(
     document.querySelector<HTMLDivElement>('#scene')!,
-    kind
+    kind,
+    {deviceType: backend.value === 'webgl' ? 'webgl' : 'webgpu'}
   );
   window.riverfrontLighting = scene;
   const status = document.querySelector<HTMLOutputElement>('#status')!;
   document
     .querySelector<HTMLButtonElement>('#center')!
     .addEventListener('click', () => scene.center());
-  for (const name of ['animate', 'enabled', 'bloom', 'autoExposure', 'reflections'] as const) {
+  for (const name of [
+    'animate',
+    'enabled',
+    'lamps',
+    'bloom',
+    'autoExposure',
+    'reflections'
+  ] as const) {
     document.querySelector<HTMLInputElement>(`#${name}`)?.addEventListener('change', event => {
       const target = event.currentTarget;
       if (target instanceof HTMLInputElement) scene.setSetting(name, target.checked);
@@ -59,7 +73,16 @@ export function startRiverfrontLightingExample(kind: RiverfrontLightingKind): vo
   });
   scene.ready
     .then(() => {
-      status.value = `${scene.diagnostics.highDynamicRange ? 'HDR display output' : 'SDR display output'} · shared depth, normals and motion`;
+      if (scene.diagnostics.backend === 'webgl') {
+        for (const selector of ['#bloom', '#bloomStrength', '#exposure', '#buffer-view']) {
+          const control = document.querySelector<HTMLInputElement | HTMLSelectElement>(selector);
+          if (control) control.disabled = true;
+        }
+      }
+      status.value =
+        scene.diagnostics.backend === 'webgl'
+          ? 'WebGL2 · additive lights and water mirrors'
+          : `${scene.diagnostics.highDynamicRange ? 'HDR display output' : 'SDR display output'} · shared depth, normals and motion`;
       document.body.dataset['ready'] = 'true';
     })
     .catch(error => {

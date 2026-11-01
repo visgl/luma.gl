@@ -101,7 +101,16 @@ describe('Gaussian splat documentation showcase', () => {
       expect(tranche).toMatch(/\| Implemented/);
     }
     for (const tranche of trancheRows.slice(7)) {
-      expect(tranche).toMatch(/\| Planned/);
+      if (tranche.startsWith('| T7:')) {
+        expect(tranche).toContain(
+          '| Partial: `prepare()` and `draw()` support paged host-pass composition'
+        );
+        expect(tranche).toContain(
+          'dedicated picking and mesh helpers still target non-paged renderers'
+        );
+      } else {
+        expect(tranche).toMatch(/\| Planned/);
+      }
     }
     for (const pullRequest of [2929, 2932, 2938, 2966, 3035, 3041, 3051, 3057]) {
       expect(roadmap).toContain(`https://github.com/visgl/luma.gl/pull/${pullRequest}`);
@@ -115,7 +124,9 @@ describe('Gaussian splat documentation showcase', () => {
     expect(capabilities).toContain('| Globally sorted WebGL splat runs | Experimental | WebGL2 |');
     expect(capabilities).toContain('| Unclamped WebGL harmonic radiance | Experimental | WebGL2 |');
     expect(capabilities).toMatch(/Background RAD page decoding[^\n]*automatically fall back/);
-    expect(capabilities).toContain('[`@luma.gl/splats` reference](/docs/api-reference/splats)');
+    expect(capabilities).toContain(
+      '[`@luma.gl/engine/splats` reference](/docs/api-reference/splats)'
+    );
     for (const capability of [
       'Hierarchical splat refinement',
       'Dedicated splat picking',

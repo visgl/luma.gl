@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, BindingsByGroup, Device} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import type {TextureBindingSource} from '../dynamic-texture/texture-binding-source';
+import type {ShaderModule} from '@luma.gl/shaders';
+import type {TextureBindingSource} from '@luma.gl/core/dynamic';
 import {ShaderInputs} from '../shader-inputs';
 import type {Material, MaterialProps} from './material';
 import {Material as MaterialClass} from './material';

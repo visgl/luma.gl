@@ -13,16 +13,17 @@ import {
   type ShaderLayout,
   type Texture
 } from '@luma.gl/core';
-import {DynamicBuffer, Model, type TextureBindingSource} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {DynamicBuffer, type TextureBindingSource} from '@luma.gl/core/dynamic';
 import {ShaderInputs} from '../../src/shader-inputs';
 import {
   getNullTestDevice,
   getWebGLTestDevice,
   getWebGPUTestDevice,
   getTestDevices
-} from '@luma.gl/test-utils';
-import {skin} from '@luma.gl/shadertools';
-import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
+} from '@luma.gl/core/test-utils';
+import {skin} from '@luma.gl/shaders';
+import {pbrProjection} from '../../../shaders/src/modules/lighting/pbr-material/pbr-projection';
 
 const stats = luma.stats.get('GPU Resource Counts');
 
@@ -814,6 +815,63 @@ it('Model#topology', async () => {
   void 0;
 });
 
+it('Model#setParameters keeps the WebGL pipeline', async () => {
+  const webglDevice = await getWebGLTestDevice();
+  const model = new Model(webglDevice, {
+    id: 'set-parameters-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    vertexCount: 3,
+    parameters: {depthWriteEnabled: true}
+  });
+  const pipeline = model.pipeline;
+  const drawParameters: unknown[] = [];
+  const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
+  const draw = renderPass.draw.bind(renderPass);
+  renderPass.draw = options => {
+    drawParameters.push(options.parameters);
+    return draw(options);
+  };
+
+  model.setParameters({depthWriteEnabled: false});
+  expect(model.draw(renderPass), 'draw succeeded').toBe(true);
+  expect(model.pipeline, 'parameters change keeps the pipeline').toBe(pipeline);
+  expect(drawParameters[0], 'draw applies the new parameters').toEqual({
+    depthWriteEnabled: false
+  });
+
+  model.setParameters({depthWriteEnabled: true});
+  expect(model.draw(renderPass), 'draw succeeded').toBe(true);
+  expect(model.pipeline).toBe(pipeline);
+  expect(drawParameters[1]).toEqual({depthWriteEnabled: true});
+
+  renderPass.destroy();
+  model.destroy();
+});
+
+it('Model#setParameters rebuilds the WebGPU pipeline', async () => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) return;
+
+  const model = new Model(webgpuDevice, {
+    id: 'set-parameters-webgpu-test',
+    source: DUMMY_WGSL,
+    vertexEntryPoint: 'vertexMain',
+    fragmentEntryPoint: 'fragmentMain',
+    vertexCount: 3,
+    parameters: {cullMode: 'none'}
+  });
+  const pipeline = model.pipeline;
+
+  model.setParameters({cullMode: 'back'});
+  expect(model._updatePipeline(), 'parameters change replaces the pipeline').not.toBe(pipeline);
+  expect(model.pipeline.props.parameters, 'new pipeline has the new parameters').toEqual({
+    cullMode: 'back'
+  });
+
+  model.destroy();
+});
+
 async function waitForPipelineError(pipeline: {
   linkStatus: 'pending' | 'success' | 'error';
 }): Promise<'pending' | 'success' | 'error'> {
@@ -1038,10 +1096,8 @@ it('Model#plugins assemble backend contributions', async () => {
     plugins: [
       {
         name: 'glsl-model-plugin',
-        modules: [pluginModule],
-        glsl: {
-          injections: [{target: 'fs:#decl', injection: 'float pluginMarker = 1.0;'}]
-        }
+        module: pluginModule,
+        injections: [{target: 'fs:#decl', glsl: 'float pluginMarker = 1.0;'}]
       }
     ]
   });
@@ -1064,9 +1120,7 @@ it('Model#plugins assemble backend contributions', async () => {
       plugins: [
         {
           name: 'wgsl-model-plugin',
-          wgsl: {
-            injections: [{target: 'fs:#decl', injection: 'const PLUGIN_MARKER: f32 = 1.0;'}]
-          }
+          injections: [{target: 'fs:#decl', wgsl: 'const PLUGIN_MARKER: f32 = 1.0;'}]
         }
       ]
     });
@@ -1088,7 +1142,7 @@ function isSoftwareBackedDevice(device: Device): boolean {
 }
 
 /*
-import {dirlight, picking} from '@luma.gl/shadertools';
+import {dirlight, picking} from '@luma.gl/shaders';
 
 const VS_300 = glsl`#version 300 es
 

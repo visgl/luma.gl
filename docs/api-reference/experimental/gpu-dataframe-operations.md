@@ -11,7 +11,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 
 ## Overview
 
-`@luma.gl/experimental/gpu-dataframe` provides immutable, visualization-oriented dataframe operations on
+`@luma.gl/graph/gpu-dataframe` provides immutable, visualization-oriented dataframe operations on
 existing WebGPU-resident tables. Filters, derived columns, reductions, histograms, categorical
 grouping, stable per-batch sorting, and bounded hash joins compile into reusable
 `GPUCommandGraph` work. Source record batches, null masks, stable row identifiers, and results stay
@@ -51,13 +51,13 @@ index construction, fenced GPU execution, explicit validation readback, and CPU 
 | Execution | One browser WebGPU device and caller-owned command encoding, submission, and optional readback. |
 
 Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to
-`@luma.gl/arrow`; generic GPU storage remains in `@luma.gl/gpgpu/gpu-data`, while record batches and
-tables come from `@luma.gl/experimental/gpu-tables`. Neither GPU package requires Apache Arrow as a
+`@luma.gl/graph/arrow`; generic GPU storage remains in `@luma.gl/graph/gpu-data`, while record batches and
+tables come from `@luma.gl/graph/gpu-tables`. Neither GPU package requires Apache Arrow as a
 runtime dependency.
 
 ```ts
-import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/graph/arrow';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUDataFrame,
   and,
@@ -65,10 +65,10 @@ import {
   literal,
   parameter,
   type GPUDataFrameQueryParameters
-} from '@luma.gl/experimental/gpu-dataframe';
+} from '@luma.gl/graph/gpu-dataframe';
 ```
 
-The root `@luma.gl/experimental` entry point does not export `GPUDataFrame`; applications that do
+The root `@luma.gl/graph` entry point does not export `GPUDataFrame`; applications that do
 not import `/gpu-dataframe` do not take on the dataframe facade.
 
 ## Upload Arrow data or borrow an existing table

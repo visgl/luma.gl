@@ -1,0 +1,285 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {GL} from '@luma.gl/core/webgl-constants';
+import {WEBGLRenderPass} from '@luma.gl/core/webgl';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
+import {expect, it} from 'vitest';
+
+it('WEBGLRenderPass#drawBuffers for framebuffer attachments', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+
+  const drawBufferCalls: number[][] = [];
+  const originalDrawBuffers = gl.drawBuffers.bind(gl);
+  gl.drawBuffers = ((buffers: number[]) => {
+    drawBufferCalls.push([...buffers]);
+    return originalDrawBuffers(buffers as any);
+  }) as typeof gl.drawBuffers;
+
+  const framebuffer = device.createFramebuffer({colorAttachments: ['rgba8unorm', 'rgba8unorm']});
+
+  const renderPass = new WEBGLRenderPass(device, {framebuffer});
+  renderPass.end();
+
+  expect(drawBufferCalls[0], 'uses framebuffer color attachments as draw buffers').toEqual([
+    GL.COLOR_ATTACHMENT0,
+    GL.COLOR_ATTACHMENT0 + 1
+  ]);
+
+  gl.drawBuffers = originalDrawBuffers;
+  framebuffer.destroy();
+  device.destroy();
+});
+
+it('WEBGLRenderPass#drawBuffers for default framebuffer', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+
+  const drawBufferCalls: number[][] = [];
+  const originalDrawBuffers = gl.drawBuffers.bind(gl);
+  gl.drawBuffers = ((buffers: number[]) => {
+    drawBufferCalls.push([...buffers]);
+    return originalDrawBuffers(buffers as any);
+  }) as typeof gl.drawBuffers;
+
+  const renderPass = new WEBGLRenderPass(device, {});
+  renderPass.end();
+
+  expect(drawBufferCalls[0], 'draws to GL.BACK for default framebuffer').toEqual([GL.BACK]);
+
+  gl.drawBuffers = originalDrawBuffers;
+  device.destroy();
+});
+
+it('WEBGLRenderPass#drawBuffers for explicit default framebuffer wrapper', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+
+  const drawBufferCalls: number[][] = [];
+  const originalDrawBuffers = gl.drawBuffers.bind(gl);
+  gl.drawBuffers = ((buffers: number[]) => {
+    drawBufferCalls.push([...buffers]);
+    return originalDrawBuffers(buffers as any);
+  }) as typeof gl.drawBuffers;
+
+  const framebuffer = device.getDefaultCanvasContext().getCurrentFramebuffer();
+  const renderPass = new WEBGLRenderPass(device, {framebuffer});
+  renderPass.end();
+
+  expect(drawBufferCalls[0], 'explicit default framebuffer still draws to GL.BACK').toEqual([
+    GL.BACK
+  ]);
+
+  gl.drawBuffers = originalDrawBuffers;
+  device.destroy();
+});
+
+it('WEBGLRenderPass#drawBuffers for wrapped external WebGLFramebuffer', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+
+  const drawBufferCalls: number[][] = [];
+  const originalDrawBuffers = gl.drawBuffers.bind(gl);
+  gl.drawBuffers = ((buffers: number[]) => {
+    drawBufferCalls.push([...buffers]);
+    return originalDrawBuffers(buffers as any);
+  }) as typeof gl.drawBuffers;
+
+  // Simulate wrapping an external WebGLFramebuffer (e.g. from Google Maps interleaved rendering).
+  // Attach a color renderbuffer so gl.clear() doesn't error on an incomplete FBO.
+  const externalFbo = gl.createFramebuffer()!;
+  gl.bindFramebuffer(GL.FRAMEBUFFER, externalFbo);
+  const rb = gl.createRenderbuffer()!;
+  gl.bindRenderbuffer(GL.RENDERBUFFER, rb);
+  gl.renderbufferStorage(GL.RENDERBUFFER, gl.RGBA8, 64, 64);
+  gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.RENDERBUFFER, rb);
+  gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+
+  const framebuffer = device.createFramebuffer({handle: externalFbo, width: 64, height: 64});
+
+  // Should not crash accessing colorAttachments.map() on wrapped external framebuffer
+  const renderPass = new WEBGLRenderPass(device, {framebuffer});
+  expect(renderPass, 'does not crash on wrapped external WebGLFramebuffer').toBeTruthy();
+  renderPass.end();
+
+  expect(
+    drawBufferCalls.length,
+    'does not call drawBuffers for wrapped external WebGLFramebuffer'
+  ).toBe(0);
+
+  gl.drawBuffers = originalDrawBuffers;
+  framebuffer.destroy();
+  gl.deleteRenderbuffer(rb);
+  gl.deleteFramebuffer(externalFbo);
+  device.destroy();
+});
+
+it('WEBGLRenderPass flushes deferred default canvas resize', async () => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+  const {gl} = device;
+
+  canvas.width = 300;
+  canvas.height = 150;
+  canvasContext.setDrawingBufferSize(640, 480);
+
+  expect(canvas.width, 'canvas width is unchanged before default render pass').toBe(300);
+  expect(canvas.height, 'canvas height is unchanged before default render pass').toBe(150);
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  expect(canvas.width, 'default render pass flushes deferred canvas width resize').toBe(640);
+  expect(canvas.height, 'default render pass flushes deferred canvas height resize').toBe(480);
+  expect(
+    Array.from(gl.getParameter(GL.VIEWPORT)),
+    'viewport uses flushed drawing buffer size'
+  ).toEqual([0, 0, 640, 480]);
+
+  renderPass.end();
+  device.destroy();
+});
+
+it('WEBGLRenderPass resizes the default framebuffer after an external canvas resize', async () => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+  canvasContext.setDrawingBufferSize(300, 150);
+  new WEBGLRenderPass(device, {}).end();
+  const framebuffer = canvasContext.getCurrentFramebuffer();
+
+  expect(framebuffer.width, 'framebuffer follows the luma-driven resize').toBe(300);
+
+  // Another library owning the canvas (for example a basemap) has already resized it.
+  canvas.width = 640;
+  canvas.height = 480;
+  canvasContext.setDrawingBufferSize(640, 480);
+
+  expect(framebuffer.width, 'framebuffer is unchanged before default render pass').toBe(300);
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  expect(framebuffer.width, 'default render pass resizes framebuffer width').toBe(640);
+  expect(framebuffer.height, 'default render pass resizes framebuffer height').toBe(480);
+
+  renderPass.end();
+  device.destroy();
+});
+
+const ATTRIBUTELESS_VERTEX_SOURCE = `#version 300 es
+const vec2 positions[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+void main() {
+  gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+}
+`;
+
+const RED_FRAGMENT_SOURCE = `#version 300 es
+precision highp float;
+out vec4 fragmentColor;
+void main() {
+  fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
+`;
+
+it('WEBGLRenderPass#draw supports attribute-less draws and rejects indexCount without indices', async () => {
+  const device = await getWebGLTestDevice();
+  const vertexShader = device.createShader({stage: 'vertex', source: ATTRIBUTELESS_VERTEX_SOURCE});
+  const fragmentShader = device.createShader({stage: 'fragment', source: RED_FRAGMENT_SOURCE});
+  await Promise.all([vertexShader.asyncCompilationStatus, fragmentShader.asyncCompilationStatus]);
+  const shaderLayout = {attributes: [], bindings: []};
+  const renderPipeline = device.createRenderPipeline({
+    vs: vertexShader,
+    fs: fragmentShader,
+    shaderLayout
+  });
+  const framebuffer = device.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const vertexArray = device.createVertexArray({shaderLayout, bufferLayout: []});
+
+  const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1]});
+  renderPass.setPipeline(renderPipeline);
+  expect(renderPass.draw({vertexCount: 3}), 'attribute-less draw is issued').toBe(true);
+  expect(
+    () => renderPass.draw({indexCount: 3}),
+    'indexCount without a vertex array is rejected'
+  ).toThrow('indexCount without index buffer');
+  renderPass.setVertexArray(vertexArray);
+  expect(
+    () => renderPass.draw({indexCount: 3}),
+    'indexCount with a vertex array that has no index buffer is rejected'
+  ).toThrow('indexCount without index buffer');
+  renderPass.end();
+
+  const pixel = device.readPixelsToArrayWebGL(framebuffer, {sourceWidth: 1, sourceHeight: 1});
+  expect(Array.from(pixel.slice(0, 4)), 'attribute-less draw rendered').toEqual([255, 0, 0, 255]);
+
+  vertexArray.destroy();
+  framebuffer.destroy();
+  renderPipeline.destroy();
+  vertexShader.destroy();
+  fragmentShader.destroy();
+});
+
+it('WEBGLRenderPass does not overwrite a canvas resized after a deferred resize request', async () => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+
+  canvasContext.setDrawingBufferSize(100, 50);
+  new WEBGLRenderPass(device, {}).end();
+
+  // The canvas owner resizes the canvas and the drawing buffer is synced to it...
+  canvas.width = 300;
+  canvas.height = 150;
+  canvasContext.setDrawingBufferSize(300, 150);
+
+  // ...then the owner resizes the canvas again before the deferred resize is flushed.
+  canvas.width = 640;
+  canvas.height = 480;
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  expect(canvas.width, 'canvas width keeps the owner size').toBe(640);
+  expect(canvas.height, 'canvas height keeps the owner size').toBe(480);
+  expect(canvasContext.getDrawingBufferSize(), 'drawing buffer follows the canvas').toEqual([
+    640, 480
+  ]);
+  expect(canvasContext.getCurrentFramebuffer().width, 'framebuffer follows the canvas').toBe(640);
+
+  renderPass.end();
+  device.destroy();
+});
+
+it('WEBGLRenderPass applies a repeated resize request made after an external canvas resize', async () => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+
+  canvas.width = 100;
+  canvas.height = 50;
+  canvasContext.setDrawingBufferSize(100, 50);
+  new WEBGLRenderPass(device, {}).end();
+
+  // The application requests a size, another library resizes the canvas, and the application
+  // repeats its request before the deferred resize is flushed.
+  canvasContext.setDrawingBufferSize(300, 150);
+  canvas.width = 640;
+  canvas.height = 480;
+  canvasContext.setDrawingBufferSize(300, 150);
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  expect(canvas.width, 'canvas width follows the latest request').toBe(300);
+  expect(canvas.height, 'canvas height follows the latest request').toBe(150);
+  expect(canvasContext.getDrawingBufferSize(), 'drawing buffer follows the latest request').toEqual(
+    [300, 150]
+  );
+
+  renderPass.end();
+  device.destroy();
+});

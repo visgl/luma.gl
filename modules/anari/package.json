@@ -1,0 +1,70 @@
+{
+  "name": "@luma.gl/anari",
+  "version": "10.0.0-alpha.6",
+  "description": "ANARI-inspired declarative rendering for luma.gl",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./forward": {
+      "types": "./dist/forward.d.ts",
+      "import": "./dist/forward.js",
+      "require": "./dist/forward.cjs"
+    },
+    "./deferred": {
+      "types": "./dist/deferred.d.ts",
+      "import": "./dist/deferred.js",
+      "require": "./dist/deferred.cjs"
+    },
+    "./raytrace": {
+      "types": "./dist/raytrace.d.ts",
+      "import": "./dist/raytrace.js",
+      "require": "./dist/raytrace.cjs"
+    },
+    "./raymarch": {
+      "types": "./dist/raymarch.d.ts",
+      "import": "./dist/raymarch.js",
+      "require": "./dist/raymarch.cjs"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.js"
+    },
+    "./gltf": {
+      "types": "./dist/gltf.d.ts",
+      "import": "./dist/gltf.js",
+      "require": "./dist/gltf.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "peerDependencies": {
+    "@luma.gl/core": "~10.0.0-alpha.6",
+    "@luma.gl/engine": "~10.0.0-alpha.6",
+    "@luma.gl/shaders": "~10.0.0-alpha.6"
+  },
+  "dependencies": {
+    "@luma.gl/graph": "10.0.0-alpha.6",
+    "@math.gl/core": "5.0.0-beta.2",
+    "@math.gl/geometry": "~5.0.0-beta.2",
+    "zod": "^4.4.3"
+  }
+}

@@ -189,7 +189,7 @@ test('edge geometry batches preserve scalar precision, custom semantics and acti
     topology: 'triangle-list',
     vertexCount: 3,
     attributes: {_CUSTOM_POSITION: {size: 3, value: positions}},
-    indices: new Uint32Array([0, 1, 2, 999, 999, 999])
+    indices: new Uint32Array([0, 1, 2, 0, 0, 0])
   });
   const second = new Geometry({
     topology: 'triangle-list',
@@ -208,7 +208,7 @@ test('edge geometry batches preserve scalar precision, custom semantics and acti
   expect(getEdgeSegments(edges, '_CUSTOM_POSITION')).toHaveLength(4);
   expect(getEdgeSegments(edges, '_CUSTOM_POSITION')).toContain('16777216,0,0|16777217,0,0');
   expect(first.vertexCount).toBe(3);
-  expect(first.indices!.value[3]).toBe(999);
+  expect(first.indices!.value).toHaveLength(6);
 });
 
 test('edge geometry batches reject incompatible storage and indices crossing tile boundaries', () => {

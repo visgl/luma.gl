@@ -7,7 +7,6 @@ import {
   AnimationLoopTemplate,
   type AnimationProps,
   CubeGeometry,
-  DynamicTexture,
   loadImageBitmap,
   type Material,
   MaterialFactory,
@@ -16,13 +15,14 @@ import {
   ShaderInputs,
   SphereGeometry
 } from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {
   floatColors,
   lighting,
   phongMaterial,
   type LightingProps,
   waterMaterial
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {Matrix4, radians} from '@math.gl/core';
 import {
   ColumnPanel,
@@ -48,7 +48,7 @@ import tychoPosyUrl from './tycho-posy.jpg';
 import tychoPoszUrl from './tycho-posz.jpg';
 
 import {GLOBE_DESCRIPTION_HTML} from './app-ui';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 const {
   SKYBOX_SHADER_WGSL,

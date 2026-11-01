@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {addGPUCommandNodes} from '../../../modules/gpgpu/src/gpu-core/gpu-command-node';
+import {addGPUCommandNodes} from '@luma.gl/graph/gpu-core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {type Binding, Buffer, type Device, type RenderBundle} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -36,13 +36,13 @@ import {
   GraphVectorView,
   decodeGPUIndexPickInfo,
   getGPUCommandGraphAdapterIdentity
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   FlatController,
   type FlatControllerPick,
   type RectangleSelection,
   RectangleSelectController
-} from '@luma.gl/experimental';
+} from '@luma.gl/engine/experimental/controls';
 import {
   GPUTraceAggregation,
   GPUTraceAnomalyScoring,
@@ -53,9 +53,9 @@ import {
   GPUTraceTemporalIndex,
   GPUTraceTemporalIndexBuilder,
   GPUTraceTimeBuckets
-} from '@luma.gl/experimental/gpu-trace';
-import {buildSdfFontAtlas} from '@luma.gl/text';
-import {DictionaryTextRenderer} from '@luma.gl/text/experimental';
+} from '@luma.gl/graph/gpu-trace';
+import {buildSdfFontAtlas} from '@luma.gl/engine/text';
+import {DictionaryTextRenderer} from '@luma.gl/engine/text-experimental';
 import {
   FillPattern,
   type FillPatternType,
@@ -67,6 +67,7 @@ import {
   makeHtmlCustomPanel
 } from '../../example-panels';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
+import {GPUTracePanel} from '../../gpu-trace-panel';
 import {
   getTraceAllocationStats,
   getTraceCapacityContract,
@@ -585,6 +586,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
   readonly viewUniformBuffer: Buffer;
   readonly panels: ExamplePanelManager;
   readonly graphInspector = new GPUCommandGraphInspector({maxSamples: 90});
+  readonly gpuTracePanel = new GPUTracePanel();
+  private latestTraceEncoding: GPUCommandGraphEncoding | null = null;
   private readonly graphAutotuner: GPUCommandGraphAutotuner;
   readonly capacityOptions: number[];
   readonly dependencyCapacityOptions: number[];
@@ -1011,6 +1014,10 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     });
     this.encodeTimeMilliseconds = encoding.stats.cpuEncodeTimeMilliseconds;
     this.frameIndex++;
+    if (this.frameIndex === 1 || this.frameIndex % 60 === 0) {
+      this.latestTraceEncoding = encoding;
+      this.gpuTracePanel.update(encoding.stats, resources.compiled.id);
+    }
     if (
       (this.graphGPUTimingSampleCount === 0 || this.frameIndex % 60 === 0) &&
       encoding.canReadGPUTimings &&
@@ -4945,6 +4952,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
             this.inspectorPanel = new GPUCommandGraphInspectorPanel(
               root.querySelector<HTMLElement>('[data-command-graph-inspector]')!,
               {
+                inspector: this.graphInspector,
                 graphLabels: {[TRACE_GRAPH_ID]: 'Trace interaction + LOD + draw'},
                 counterLabels: TRACE_INSPECTOR_COUNTER_LABELS
               }
@@ -4988,7 +4996,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
               this.inspectorPanel = null;
             };
           }
-        })
+        }),
+        this.gpuTracePanel.panel
       ]
     });
   }
@@ -5389,7 +5398,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       if (button) button.dataset.confirmed = 'true';
       if (this.analysisWindowElement) {
         const fullScanInvocations = spanCount * 7;
-        this.analysisWindowElement.textContent = `Full-trace preflight: about ${formatCount(fullScanInvocations)} row invocations plus histogram/time-bucket atomics. GPUGraph will budget the work across frames. ${button ? 'Click Full trace again to run it.' : 'Use the Full trace button to confirm.'}`;
+        this.analysisWindowElement.textContent = `Full-trace preflight: about ${formatCount(fullScanInvocations)} row invocations plus histogram/time-bucket atomics. GPUGraphAlgorithmsData will budget the work across frames. ${button ? 'Click Full trace again to run it.' : 'Use the Full trace button to confirm.'}`;
       }
       return true;
     };
@@ -6610,6 +6619,7 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
     observation: GPUCommandGraphInspectorObservation<TraceViewParameters>,
     encoding: GPUCommandGraphEncoding
   ): void {
+    this.latestTraceEncoding = encoding;
     const timer = setTimeout(() => {
       this.gpuTimingReadbackTimers.delete(timer);
       if (this.graphObservation !== observation) {
@@ -6617,6 +6627,8 @@ export default class GPUTraceViewerAnimationLoopTemplate extends AnimationLoopTe
       }
       void observation.recordGPUTimings(encoding).then(timingReport => {
         if (this.graphObservation === observation) {
+          if (timingReport && this.latestTraceEncoding === encoding)
+            this.gpuTracePanel.update(timingReport, observation.graph.id);
           if (
             timingReport &&
             observation.graph.preflight &&

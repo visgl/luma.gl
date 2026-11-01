@@ -5,11 +5,11 @@
 import {
   createArrowPickingManager,
   getArrowPickingModule,
-  makeArrowFixedSizeListVector,
-  makeGPUTableFromArrowTable,
   runArrowPickingPass,
   supportsArrowIndexPicking
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {Device, type CommandEncoder, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {ModelProps, PickingShouldPickOptions} from '@luma.gl/engine';
 import {
@@ -22,9 +22,10 @@ import {
   indexPicking,
   type PickingManager
 } from '@luma.gl/engine';
-import {dirlight, ShaderModule} from '@luma.gl/shadertools';
-import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
-import {GPURenderable, GPUTable, GPUTableModel} from '@luma.gl/experimental/gpu-tables';
+import {dirlight, ShaderModule} from '@luma.gl/shaders';
+import {getGPUDataBuffersForLayout} from '@luma.gl/graph/gpu-data';
+import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 import {Matrix4} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 

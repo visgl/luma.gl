@@ -58,7 +58,7 @@ open 3D assets, animation, and data visualization.
 Applications can adopt the modules they need without taking on an independent renderer, a
 parallel material implementation, or a monolithic scene runtime.
 
-> **Standards identity:** The private `@luma.gl/scenes` workspace is independently developed and
+> **Standards identity:** The private `@luma.gl/anari` workspace is independently developed and
 > inspired by concepts from the Khronos ANARI standard. It is not an official ANARI implementation, is not certified or
 > conformant, and is not affiliated with or endorsed by The Khronos Group. glTF, WebGL, and ANARI
 > trademarks belong to their respective owners.
@@ -72,3 +72,5 @@ While generic enough to be used for general 3D rendering, luma.gl's mandate is p
 # Installation, Running Examples etc
 
 For details, please refer to the extensive [online website](https://luma.gl).
+
+See [Attributions and Credits](https://luma.gl/docs/credits) for upstream sources, research citations, and example asset credits.

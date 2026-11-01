@@ -58,7 +58,7 @@ For `rows × columns`, matrix element `(row,column)` is at `row * columns + colu
 ## Contract
 
 ```ts
-import {GPUMatVec} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMatVec} from '@luma.gl/graph/gpu-core';
 
 graph.add(new GPUMatVec({
   matrix,

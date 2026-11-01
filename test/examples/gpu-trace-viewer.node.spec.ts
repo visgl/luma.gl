@@ -252,7 +252,7 @@ it('trace analytics cache identity includes scope and selection generation input
   ).toEqual([0, 100]);
 });
 
-it('GPU trace feature cards expose concrete GPUGraph and gpu-trace capabilities', () => {
+it('GPU trace feature cards expose concrete GPUGraphAlgorithmsData and gpu-trace capabilities', () => {
   expect(GPU_CORE_FEATURE_CARDS.length, 'lists the GPU Core capability contract').toBe(17);
   expect(GPU_TRACE_FEATURE_CARDS.length, 'lists the GPU Trace capability contract').toBe(19);
   const graphHtml = getTraceFeatureCardsHtml(GPU_CORE_FEATURE_CARDS, 'GPU Core');
@@ -1106,7 +1106,7 @@ it('GPU trace adaptive LOD shaders parse as WGSL', () => {
   ).toMatch(/array<vec2<f32>, 3>/);
   expect(FillPattern.hash45, 'the default diagonal dash pattern has a stable shader value').toBe(2);
   expect(
-    Boolean(fillPatternShaderPlugin.wgsl),
+    fillPatternShaderPlugin.injections.some(injection => Boolean(injection.wgsl)),
     'the shared fill-pattern plugin supports WGSL'
   ).toBe(true);
   expect(

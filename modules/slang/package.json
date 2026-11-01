@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/slang",
-  "version": "10.0.0-alpha.3",
+  "version": "10.0.0-alpha.6",
   "description": "Experimental TypeScript Slang to GLSL and WGSL transpiler for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -33,15 +33,9 @@
   "files": [
     "src",
     "dist",
-    "dist.min.js",
     "README.md"
   ],
   "sideEffects": false,
-  "scripts": {
-    "build-minified-bundle": "ocular-bundle ./src/index.ts --output=dist/dist.min.js",
-    "build-dev-bundle": "ocular-bundle ./src/index.ts --output=dist/dist.dev.js --env=dev",
-    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
-  },
   "publishConfig": {
     "access": "public"
   }

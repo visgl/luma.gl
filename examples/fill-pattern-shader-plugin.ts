@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderPlugin} from '@luma.gl/shaders';
 
 export const FillPattern = {
   none: 0,
@@ -167,20 +167,5 @@ fn pluginApplyFillPattern(
 
 export const fillPatternShaderPlugin = {
   name: 'fill-pattern-plugin',
-  glsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: GLSL_FILL_PATTERN_SOURCE
-      }
-    ]
-  },
-  wgsl: {
-    injections: [
-      {
-        target: 'fs:#decl',
-        injection: WGSL_FILL_PATTERN_SOURCE
-      }
-    ]
-  }
+  injections: [{target: 'fs:#decl', glsl: GLSL_FILL_PATTERN_SOURCE, wgsl: WGSL_FILL_PATTERN_SOURCE}]
 } as const satisfies ShaderPlugin;

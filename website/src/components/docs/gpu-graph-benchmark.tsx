@@ -1,19 +1,19 @@
 import React, {useEffect, useState, type ReactNode} from 'react';
 
 import {
-  runGPUGraphBenchmark,
-  type GPUGraphBenchmarkAlgorithm,
-  type GPUGraphBenchmarkDatasetKind,
-  type GPUGraphBenchmarkPathReport,
-  type GPUGraphBenchmarkReport
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+  runGPUGraphAlgorithmsBenchmark,
+  type GPUGraphAlgorithmsBenchmarkAlgorithm,
+  type GPUGraphAlgorithmsBenchmarkDatasetKind,
+  type GPUGraphAlgorithmsBenchmarkPathReport,
+  type GPUGraphAlgorithmsBenchmarkReport
+} from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
 
 import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';
 
 const GRAPH_BENCHMARK_VERTEX_COUNTS = [32, 64, 128, 256] as const;
 const GRAPH_BENCHMARK_DATASETS: {
-  kind: GPUGraphBenchmarkDatasetKind;
+  kind: GPUGraphAlgorithmsBenchmarkDatasetKind;
   label: string;
 }[] = [
   {kind: 'sparse', label: 'Sparse'},
@@ -26,7 +26,7 @@ const GRAPH_BENCHMARK_DATASETS: {
 /** Runs honest CPU and fence-synchronized WebGPU graph workloads only after an explicit click. */
 export function GPUGraphBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice || store.device);
-  const [datasetKind, setDatasetKind] = useState<GPUGraphBenchmarkDatasetKind>('scale-free');
+  const [datasetKind, setDatasetKind] = useState<GPUGraphAlgorithmsBenchmarkDatasetKind>('scale-free');
   const [vertexCount, setVertexCount] = useState<number>(GRAPH_BENCHMARK_VERTEX_COUNTS[0]);
   const [webGPUUnavailable, setWebGPUUnavailable] = useState(false);
 
@@ -61,7 +61,7 @@ export function GPUGraphBenchmark(): ReactNode {
           <select
             id="gpu-graph-benchmark-dataset"
             onChange={event =>
-              setDatasetKind(event.target.value as GPUGraphBenchmarkDatasetKind)
+              setDatasetKind(event.target.value as GPUGraphAlgorithmsBenchmarkDatasetKind)
             }
             value={datasetKind}
           >
@@ -104,7 +104,7 @@ export function GPUGraphBenchmark(): ReactNode {
         onRun={async () => {
           const device =
             selectedDevice?.type === 'webgpu' ? selectedDevice : await createDevice('webgpu-core');
-          const report = await runGPUGraphBenchmark(device, {
+          const report = await runGPUGraphAlgorithmsBenchmark(device, {
             kind: datasetKind,
             vertexCount,
             seed: 42,
@@ -133,7 +133,7 @@ function GPUGraphBenchmarkResults({
   report,
   deviceLabel
 }: {
-  report: GPUGraphBenchmarkReport;
+  report: GPUGraphAlgorithmsBenchmarkReport;
   deviceLabel: string;
 }): ReactNode {
   return (
@@ -204,7 +204,7 @@ function GPUGraphBenchmarkRow({
   path,
   showTimestamp
 }: {
-  path: GPUGraphBenchmarkPathReport;
+  path: GPUGraphAlgorithmsBenchmarkPathReport;
   showTimestamp: boolean;
 }): ReactNode {
   const cpuMedian = path.cpuTimeMilliseconds.median;
@@ -235,8 +235,8 @@ function GPUGraphBenchmarkRow({
   );
 }
 
-function formatAlgorithm(algorithm: GPUGraphBenchmarkAlgorithm): string {
-  const labels: Record<GPUGraphBenchmarkAlgorithm, string> = {
+function formatAlgorithm(algorithm: GPUGraphAlgorithmsBenchmarkAlgorithm): string {
+  const labels: Record<GPUGraphAlgorithmsBenchmarkAlgorithm, string> = {
     topology: 'CSR adjacency',
     'breadth-first-search': 'Neighborhood search',
     'single-source-shortest-path': 'Weighted shortest paths',
@@ -262,7 +262,7 @@ function formatError(error: number): string {
   return error === 0 ? 'Exact' : error.toExponential(2);
 }
 
-function formatConvergence(path: GPUGraphBenchmarkPathReport): string {
+function formatConvergence(path: GPUGraphAlgorithmsBenchmarkPathReport): string {
   if (
     (path.algorithm === 'connected-components' ||
       path.algorithm === 'label-propagation' ||

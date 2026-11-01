@@ -1,0 +1,483 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import type {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
+import type {Device, TextureFormat} from '@luma.gl/core';
+
+export type GLTFExtensionSupportLevel = 'built-in' | 'parsed-and-wired' | 'loader-only' | 'none';
+
+export type GLTFExtensionStandardStatus =
+  | 'ratified'
+  | 'release-candidate'
+  | 'multi-vendor'
+  | 'vendor'
+  | 'draft'
+  | 'archived'
+  | 'unknown';
+
+export type GLTFExtensionSupport = {
+  extensionName: string;
+  /** Whether the source document declares this extension in `extensionsRequired`. */
+  required: boolean;
+  supported: boolean;
+  supportLevel: GLTFExtensionSupportLevel;
+  standardStatus: GLTFExtensionStandardStatus;
+  comment: string;
+};
+
+export type GLTFRegisteredExtensionSupport = Omit<GLTFExtensionSupport, 'required'>;
+
+export type GLTFExtensionSupportSummary = {
+  total: number;
+  supported: number;
+  bySupportLevel: Record<GLTFExtensionSupportLevel, number>;
+  byStandardStatus: Record<GLTFExtensionStandardStatus, number>;
+};
+
+type GLTFExtensionSupportDefinition = Omit<
+  GLTFRegisteredExtensionSupport,
+  'extensionName' | 'supported'
+>;
+
+type GLTFPostprocessedWithRemovedExtensions = GLTFPostprocessed & {
+  extensionsRemoved?: string[];
+  lights?: unknown[];
+};
+
+const UNKNOWN_EXTENSION_SUPPORT: GLTFExtensionSupportDefinition = {
+  supportLevel: 'none',
+  standardStatus: 'unknown',
+  comment: 'Not currently listed in the luma.gl glTF extension support registry.'
+};
+
+const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefinition> = {
+  KHR_physics_rigid_bodies: {
+    supportLevel: 'none',
+    standardStatus: 'draft',
+    comment:
+      'The optional @luma.gl/engine/gltf-physics adapter validates a pinned subset; ordinary scenegraph loading does not execute physics.'
+  },
+  KHR_implicit_shapes: {
+    supportLevel: 'none',
+    standardStatus: 'draft',
+    comment:
+      'The optional physics adapter supports sphere/box colliders; shapes alone do not define rendering or simulation.'
+  },
+  EXT_lights_area: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in AreaLightController feeds the shared Light API. PBR supports four rect/disk lights with LTC diffuse, isotropic GGX and clearcoat; disks use a 32-gon and other lobes retain numerical integration. No shadows or indirect light; strict loading does not claim full draft conformance.'
+  },
+  KHR_lightmap: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Draft irradiance rendering supports UV0/UV1, node overrides and atlas instances through individual draws. Strict required-extension loading does not claim full draft conformance.'
+  },
+  KHR_billboard: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Optional BillboardController supports an explicit full-axis profile. Constrained-axis semantics remain ambiguous; strict required-extension loading does not claim full support.'
+  },
+  KHR_audio_emitter: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in AudioController provides Web Audio playback; the application owns context activation and listener updates.'
+  },
+  KHR_audio_environment: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in listener selection, environment zones, emitter sends and impulse-response or approximate parametric reverb. Doppler, air absorption and listener graph hooks remain unsupported.'
+  },
+  KHR_audio_graph: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Opt-in AudioController implements a processing and scheduled-source profile; animation pointers and general pulse-width synthesis remain unsupported.'
+  },
+  KHR_draco_mesh_compression: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'Decoded by loaders.gl before luma.gl builds the scenegraph.'
+  },
+  EXT_meshopt_compression: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'EXT meshopt-compressed buffer views are decoded by loaders.gl before rendering.'
+  },
+  KHR_meshopt_compression: {
+    supportLevel: 'built-in',
+    standardStatus: 'release-candidate',
+    comment: 'Decoded by loaders.gl v5 before luma.gl builds the scenegraph.'
+  },
+  KHR_mesh_quantization: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'Loader-materialized quantized accessors retain their typed values and normalization.'
+  },
+  EXT_mesh_features: {
+    supportLevel: 'loader-only',
+    standardStatus: 'ratified',
+    comment:
+      'Feature identifiers are decoded by loaders.gl; automatic rendering and picking are application-owned.'
+  },
+  EXT_structural_metadata: {
+    supportLevel: 'loader-only',
+    standardStatus: 'ratified',
+    comment:
+      'Structural metadata is decoded by loaders.gl; automatic rendering and querying are application-owned.'
+  },
+  KHR_lights_punctual: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'Parsed into luma.gl Light objects.'
+  },
+  KHR_materials_unlit: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'Unlit materials bypass the default lighting path.'
+  },
+  KHR_materials_emissive_strength: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'Applied by the stock PBR shader.'
+  },
+  KHR_texture_basisu: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'BasisU / KTX2 textures pass through when the device supports them.'
+  },
+  KHR_texture_transform: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment:
+      'Per-slot UV transforms and animated pointers are applied at runtime; avoid duplicate legacy loader-side baking.'
+  },
+  EXT_texture_webp: {
+    supportLevel: 'loader-only',
+    standardStatus: 'ratified',
+    comment:
+      'Texture source is resolved during load; final support depends on browser and device decode support.'
+  },
+  EXT_texture_avif: {
+    supportLevel: 'none',
+    standardStatus: 'ratified',
+    comment:
+      'The image loader can decode supported AVIF images, but GLTFLoader does not select EXT_texture_avif sources.'
+  },
+  KHR_materials_specular: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'The stock shader now applies specular factors and textures to the dielectric F0 term.'
+  },
+  KHR_materials_ior: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'The stock shader now drives dielectric reflectance from the glTF IOR value.'
+  },
+  KHR_materials_transmission: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment:
+      'The stock shader now applies transmission to the base layer and exposes transparency through alpha, without a scene-color refraction buffer.'
+  },
+  KHR_materials_volume: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'Thickness and attenuation now tint transmitted light in the stock shader.'
+  },
+  KHR_materials_clearcoat: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'The stock shader now adds a secondary clearcoat specular lobe.'
+  },
+  KHR_materials_sheen: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'The stock shader now adds a sheen lobe for cloth-like materials.'
+  },
+  KHR_materials_iridescence: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment:
+      'The stock shader now tints specular response with a view-dependent thin-film iridescence approximation.'
+  },
+  KHR_materials_anisotropy: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment:
+      'The stock shader now shapes highlights and IBL response with an anisotropy-direction approximation.'
+  },
+  KHR_materials_pbrSpecularGlossiness: {
+    supportLevel: 'loader-only',
+    standardStatus: 'archived',
+    comment:
+      'Extension data can be loaded, but it is not translated into the default metallic-roughness material path.'
+  },
+  KHR_materials_variants: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'ratified',
+    comment: 'Primitive material variants can be selected and restored on the generated scenegraph.'
+  },
+  EXT_mesh_gpu_instancing: {
+    supportLevel: 'built-in',
+    standardStatus: 'ratified',
+    comment: 'Accessor-backed instance transforms use one instanced draw per source primitive.'
+  },
+  KHR_node_visibility: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'ratified',
+    comment: 'Recursive node visibility controls rendered geometry, punctual lights, and animation.'
+  },
+  KHR_animation_pointer: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'ratified',
+    comment:
+      'Node transforms, morph weights and visibility, material factors, texture transforms, camera projections, and punctual lights are wired to runtime updates.'
+  },
+  EXT_materials_bump: {
+    supportLevel: 'built-in',
+    standardStatus: 'draft',
+    comment:
+      'The experimental bump-map draft perturbs the canonical surface normal from a linear height texture.'
+  },
+  KHR_materials_diffuse_transmission: {
+    supportLevel: 'built-in',
+    standardStatus: 'release-candidate',
+    comment:
+      'The Khronos release candidate adds energy-conserving back-lit diffuse transmission and independent color/factor textures.'
+  },
+  KHR_materials_dispersion: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'ratified',
+    comment:
+      'The canonical PBR shader separates red, green, and blue transmission using wavelength-dependent refraction.'
+  },
+  KHR_materials_scatter: {
+    supportLevel: 'loader-only',
+    standardStatus: 'draft',
+    comment:
+      'Thin-wall rendering supports transmission-gated forward/backward diffuse scattering, alpha strength textures and sRGB scatter color. Volumetric mode is rejected; strict required-extension loading does not claim full draft conformance.'
+  },
+  KHR_materials_volume_scatter: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'draft',
+    comment:
+      'The unratified volume-scattering draft is approximated per surface; random-walk and screen-space diffusion are not implemented.'
+  },
+  KHR_xmp: {
+    supportLevel: 'none',
+    standardStatus: 'archived',
+    comment: 'Metadata payloads remain in the loaded glTF, but luma.gl does not interpret them.'
+  },
+  KHR_xmp_json_ld: {
+    supportLevel: 'none',
+    standardStatus: 'ratified',
+    comment: 'Metadata is preserved in the glTF, but luma.gl does not interpret it.'
+  },
+  EXT_lights_image_based: {
+    supportLevel: 'none',
+    standardStatus: 'multi-vendor',
+    comment: 'Use loadPBREnvironment() or custom environment setup instead.'
+  },
+  EXT_texture_video: {
+    supportLevel: 'none',
+    standardStatus: 'multi-vendor',
+    comment: 'Video textures are not created automatically by the stock pipeline.'
+  },
+  MSFT_lod: {
+    supportLevel: 'parsed-and-wired',
+    standardStatus: 'vendor',
+    comment:
+      'Node levels are parsed and selected by opt-in animated crowds; material LOD and GPU-driven selection are not implemented.'
+  }
+};
+
+/** Returns the complete sorted runtime registry used by support checks and documentation ledgers. */
+export function getRegisteredGLTFExtensions(): GLTFRegisteredExtensionSupport[] {
+  return Object.entries(GLTF_EXTENSION_SUPPORT_REGISTRY)
+    .sort(([leftExtensionName], [rightExtensionName]) =>
+      leftExtensionName.localeCompare(rightExtensionName)
+    )
+    .map(([extensionName, definition]) => ({
+      extensionName,
+      supported: isRuntimeSupported(definition.supportLevel),
+      ...definition
+    }));
+}
+
+/** Summarizes registry counts without requiring documentation to duplicate the registry. */
+export function getGLTFExtensionSupportSummary(): GLTFExtensionSupportSummary {
+  const summary: GLTFExtensionSupportSummary = {
+    total: 0,
+    supported: 0,
+    bySupportLevel: {'built-in': 0, 'parsed-and-wired': 0, 'loader-only': 0, none: 0},
+    byStandardStatus: {
+      ratified: 0,
+      'release-candidate': 0,
+      'multi-vendor': 0,
+      vendor: 0,
+      draft: 0,
+      archived: 0,
+      unknown: 0
+    }
+  };
+
+  for (const extension of getRegisteredGLTFExtensions()) {
+    summary.total++;
+    summary.supported += extension.supported ? 1 : 0;
+    summary.bySupportLevel[extension.supportLevel]++;
+    summary.byStandardStatus[extension.standardStatus]++;
+  }
+
+  return summary;
+}
+
+export function getGLTFExtensionSupport(
+  gltf: GLTFPostprocessed,
+  device?: Device
+): Map<string, GLTFExtensionSupport> {
+  const extensionNames = Array.from(collectGLTFExtensionNames(gltf)).sort();
+  const requiredExtensionNames = new Set(gltf.extensionsRequired || []);
+  const extensionSupportEntries: [string, GLTFExtensionSupport][] = extensionNames.map(
+    extensionName => {
+      const extensionSupportDefinition =
+        GLTF_EXTENSION_SUPPORT_REGISTRY[extensionName] || UNKNOWN_EXTENSION_SUPPORT;
+      const deviceSupport = getDeviceExtensionSupport(
+        extensionName,
+        extensionSupportDefinition,
+        gltf,
+        device
+      );
+
+      return [
+        extensionName,
+        {
+          extensionName,
+          required: requiredExtensionNames.has(extensionName),
+          supported: isRuntimeSupported(deviceSupport.supportLevel),
+          supportLevel: deviceSupport.supportLevel,
+          standardStatus: extensionSupportDefinition.standardStatus,
+          comment: deviceSupport.comment
+        }
+      ];
+    }
+  );
+
+  return new Map(extensionSupportEntries);
+}
+
+/** Returns required extensions that have no complete runtime implementation. */
+export function getUnsupportedRequiredGLTFExtensions(
+  gltf: GLTFPostprocessed,
+  device?: Device
+): GLTFExtensionSupport[] {
+  return Array.from(getGLTFExtensionSupport(gltf, device).values()).filter(
+    extension => extension.required && !extension.supported
+  );
+}
+
+/** Rejects documents whose required extensions cannot be honored by the runtime. */
+export function assertSupportedGLTFExtensions(gltf: GLTFPostprocessed, device?: Device): void {
+  const unsupportedExtensions = getUnsupportedRequiredGLTFExtensions(gltf, device);
+  if (unsupportedExtensions.length) {
+    throw new Error(
+      `Unsupported required glTF extensions: ${unsupportedExtensions
+        .map(extension => extension.extensionName)
+        .join(', ')}`
+    );
+  }
+}
+
+function getDeviceExtensionSupport(
+  extensionName: string,
+  definition: GLTFExtensionSupportDefinition,
+  gltf: GLTFPostprocessed,
+  device?: Device
+): Pick<GLTFExtensionSupportDefinition, 'supportLevel' | 'comment'> {
+  if (extensionName !== 'KHR_texture_basisu' || !device) {
+    return definition;
+  }
+
+  const compressedFormats = collectCompressedTextureFormats(gltf);
+  const unsupportedFormat = compressedFormats.find(
+    format => format === null || !device.isTextureFormatSupported(format)
+  );
+  if (unsupportedFormat === undefined) {
+    return definition;
+  }
+
+  return {
+    supportLevel: 'none',
+    comment:
+      unsupportedFormat === null
+        ? `The ${device.type} device cannot use a BasisU texture whose transcoded GPU format is missing.`
+        : `The ${device.type} device does not support the transcoded BasisU texture format '${unsupportedFormat}'.`
+  };
+}
+
+function collectCompressedTextureFormats(gltf: GLTFPostprocessed): Array<TextureFormat | null> {
+  const formats: Array<TextureFormat | null> = [];
+  for (const texture of gltf.textures || []) {
+    const image = (texture as any)?.source?.image;
+    if (!image?.compressed) {
+      continue;
+    }
+    const firstLevel = Array.isArray(image.data)
+      ? image.data[0]
+      : Array.isArray(image.mipmaps)
+        ? image.mipmaps[0]
+        : undefined;
+    formats.push((firstLevel?.textureFormat as TextureFormat | undefined) ?? null);
+  }
+  return formats;
+}
+
+export function getRegisteredGLTFExtensionSupport(
+  extensionName: string
+): GLTFExtensionSupportDefinition | null {
+  return GLTF_EXTENSION_SUPPORT_REGISTRY[extensionName] || null;
+}
+
+function collectGLTFExtensionNames(gltf: GLTFPostprocessed): Set<string> {
+  const gltfWithRemovedExtensions = gltf as GLTFPostprocessedWithRemovedExtensions;
+  const extensionNames = new Set<string>();
+
+  addExtensionNames(extensionNames, gltf.extensionsUsed);
+  addExtensionNames(extensionNames, gltf.extensionsRequired);
+  addExtensionNames(extensionNames, gltfWithRemovedExtensions.extensionsRemoved);
+  addExtensionNames(extensionNames, Object.keys(gltf.extensions || {}));
+
+  if (
+    gltfWithRemovedExtensions.lights?.length ||
+    (gltf.nodes || []).some(node => 'light' in node)
+  ) {
+    extensionNames.add('KHR_lights_punctual');
+  }
+
+  if (
+    (gltf.materials || []).some(material => {
+      const gltfMaterial = material as typeof material & {unlit?: boolean};
+      return gltfMaterial.unlit || gltfMaterial.extensions?.KHR_materials_unlit;
+    })
+  ) {
+    extensionNames.add('KHR_materials_unlit');
+  }
+
+  return extensionNames;
+}
+
+function addExtensionNames(extensionNames: Set<string>, newExtensionNames: string[] = []): void {
+  for (const extensionName of newExtensionNames) {
+    extensionNames.add(extensionName);
+  }
+}
+
+function isRuntimeSupported(supportLevel: GLTFExtensionSupportLevel): boolean {
+  return supportLevel === 'built-in' || supportLevel === 'parsed-and-wired';
+}

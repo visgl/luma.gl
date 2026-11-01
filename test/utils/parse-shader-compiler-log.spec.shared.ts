@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {parseShaderCompilerLog} from '@luma.gl/webgl/adapter/helpers/parse-shader-compiler-log';
+import {parseShaderCompilerLog} from '@luma.gl/core/webgl/adapter/helpers/parse-shader-compiler-log';
 import {expect, it} from 'vitest';
 
 const ERROR_LOG = `\

@@ -1,0 +1,73 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {expect, test} from 'vitest';
+import {_refreshLostCachedTestDevice} from '../../../src/test-utils/create-test-device';
+
+test('NullAdapter imports from the ESM package entry without circular init errors', async () => {
+  // Import the local entry file directly to avoid workspace alias resolution mixing src/dist modules.
+  // This regression is about entry-module initialization, not package alias behavior.
+  const testUtilsModule = await import('../../../src/test-utils/index');
+
+  expect(testUtilsModule.nullAdapter.type).toBe('null');
+  expect(testUtilsModule.NullDevice.name).toBe('NullDevice');
+}, 15000);
+
+test('NullDevice#destroy marks the device lost', async () => {
+  const {NullDevice} = await import('../../../src/test-utils/index');
+  const device = new NullDevice({});
+
+  expect(device.isLost).toBe(false);
+  device.destroy();
+  expect(device.isLost).toBe(true);
+});
+
+test('refreshLostCachedTestDevice recreates a lost cached device', async () => {
+  let cachedDevicePromise: Promise<{isLost: boolean; id: string}> | null = Promise.resolve({
+    isLost: true,
+    id: 'lost-device'
+  });
+  let createCount = 0;
+
+  const refreshedDevice = await _refreshLostCachedTestDevice(
+    async () => {
+      if (cachedDevicePromise) {
+        return cachedDevicePromise;
+      }
+
+      createCount++;
+      cachedDevicePromise = Promise.resolve({
+        isLost: false,
+        id: `fresh-device-${createCount}`
+      });
+      return cachedDevicePromise;
+    },
+    () => {
+      cachedDevicePromise = null;
+    }
+  );
+
+  expect(refreshedDevice.isLost).toBe(false);
+  expect(refreshedDevice.id).toBe('fresh-device-1');
+  expect(createCount).toBe(1);
+});
+
+test('NullDevice#withParametersWebGL preserves callback results and exceptions', async () => {
+  const {NullDevice} = await import('../../../src/test-utils/index');
+  const device = new NullDevice({});
+  const result = {};
+  const callbackError = new Error('Callback failed');
+  try {
+    for (const parameters of [{}, {nocatch: false}, {nocatch: true}]) {
+      expect(device.withParametersWebGL(parameters, () => result)).toBe(result);
+      expect(() =>
+        device.withParametersWebGL(parameters, () => {
+          throw callbackError;
+        })
+      ).toThrow(callbackError);
+    }
+  } finally {
+    device.destroy();
+  }
+});

@@ -10,9 +10,32 @@ import {
 } from "@site/src/components/docs/documentation-badges";
 
 # Introduction
-Luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web.
+luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web.
 It provides one application-facing API with pluggable WebGPU and WebGL2 backends,
 plus higher-level building blocks for models, animation, shader composition, and GPU data processing.
+
+## Explore the documentation
+
+Follow a topic based on what you want to build. Start with the higher-level APIs and
+use the package reference when you need a specific class, method, or option.
+
+| Topic | Start here |
+| --- | --- |
+| Getting Started | [Install luma.gl and render your first triangle](/docs/getting-started) |
+| Creating GPU Resources | [Create a device](/docs/api-guide/gpu/gpu-initialization), then work with [buffers](/docs/api-guide/gpu/gpu-buffers) and [textures](/docs/api-guide/gpu/gpu-textures) |
+| Computing on the GPU | [Run GPU computations](/docs/api-guide/gpu/gpgpu) and [schedule GPU graphs](/docs/api-reference/experimental/gpu-core/concepts) |
+| Rendering | [Build with the engine](/docs/api-guide/engine) or follow the [triangle tutorial](/docs/tutorials/hello-triangle) |
+| Materials and Lighting | [Work with materials](/docs/api-guide/engine/materials) and [physically based rendering](/docs/api-guide/engine/features) |
+| Writing Shaders | [Compose and customize shaders](/docs/api-guide/shaders) |
+| Debugging and Performance | [Debug GPU applications](/docs/developer-guide/debugging), [inspect command graphs](/docs/api-reference/experimental/gpu-core/debugging), and [profile execution](/docs/developer-guide/profiling) |
+| API Reference | [Look up packages and APIs](/docs/api-reference) |
+
+## Packages
+
+Start with `@luma.gl/core` and `@luma.gl/engine`, then add the modules your application needs.
+WebGPU and WebGL2 adapters are included in core and imported through their own entry points.
+
+Browse the [packages](/docs/packages) to explore primary packages, smaller packages, and exploratory modules.
 
 ## Why luma.gl?
 
@@ -23,19 +46,15 @@ plus higher-level building blocks for models, animation, shader composition, and
 
 ## A WebGPU-style API
 
-The luma.gl v9 API design launched in 2023 stays fairly close to the WebGPU API,
-just as the earlier luma.gl v8 API followed the WebGL 2 API. The idea is to let users
-build their knowledge of WebGPU and the luma.gl API in tandem, rather than asking them
-to learn an abstraction and perhaps never get to work directly with WebGPU.
-
-For more about our api design philosophy checkout our [Design Philosophy](/docs/api-guide/background/api-design)
+Core follows WebGPU resource and command concepts while supporting a WebGL 2 backend.
+See [Design philosophy](/docs/api-guide/background/api-design) for the design goals.
 
 ## Three Key APIs
 
-### 1. Core Api
+### 1. Core API
 
 The Core API exposes low level GPU resources such as devices, buffers, textures, shaders, bindings, pipelines, and
-render or compute passes. `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete
+render or compute passes. `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide the concrete
 backends.
 
 ### 2. Engine API
@@ -45,9 +64,14 @@ and GPU transformation helpers. It is the recommended starting point for applica
 
 ### 3. Shader API
 
-Shadertools assembles WGSL and GLSL from reusable shader modules and application-defined
+Shaders assembles WGSL and GLSL from reusable shader modules and application-defined
 hooks. It is used by luma.gl, deck.gl, and custom renderers.
 
-## Whats Next?
+## Contributors and credits
+
+See [Attributions and Credits](/docs/credits) for upstream implementation credits,
+research citations, and example asset notices.
+
+## Next steps
 
 Ready for your first `Hello Triangle`? Proceed to [Getting Started](/docs/getting-started).

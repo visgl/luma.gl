@@ -1,9 +1,9 @@
 # GPURaster Roadmap
 
 - **Status:** Active; foundation, tiled analysis, dense components, region metrics, and complete cross-tile segmentation implemented
-- **Experimental API:** `@luma.gl/experimental/gpu-raster`
+- **Experimental API:** `@luma.gl/graph/gpu-raster`
 - **Execution model:** WebGPU `GPUCommandGraph` contributors
-- **Positioning:** GPU-resident raster analytics complementing `@luma.gl/experimental/geospatial`
+- **Positioning:** GPU-resident raster analytics complementing `@luma.gl/graph/geospatial`
 - **Next tranche:** 6.3, seam-safe contour ownership and external vector overlays
 
 ## Overview
@@ -120,7 +120,7 @@ Official cuCIM references:
 - Assuming the existing `GPUFFT2D` primitive is already a graph-native raster convolution
   contributor or supports arbitrary image dimensions.
 - Claiming a repository package named `luSpatial`: the implemented vector sibling is
-  `@luma.gl/experimental/geospatial`.
+  `@luma.gl/graph/geospatial`.
 - Shipping a public npm package without a deliberate decision about the existing experimental
   package's current `"private": true` setting.
 - Promising complete cuCIM feature parity. NDVI, marching squares, and possible watershed support
@@ -130,31 +130,31 @@ Official cuCIM references:
 
 | Capability                        | Existing location                                                                        | GPURaster implication                                                                          |
 | --------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Graph contributor contract        | `modules/gpgpu/src/gpu-core/gpu-command-graph.ts`                                  | Algorithms implement `addToGraph(graph)`; no registry is needed.                              |
+| Graph contributor contract        | `modules/graph/src/gpu-core/gpu-command-graph.ts`                                  | Algorithms implement `addToGraph(graph)`; no registry is needed.                              |
 | Optional algorithm subpaths       | `modules/experimental/package.json`; `src/geospatial/index.ts`; `src/gpu-crossfilter/index.ts` | Add `./gpu-raster` beside `./geospatial` and `./gpu-crossfilter`.                                     |
 | Imported/transient graph textures | `gpu-command-graph.ts`; `gpu-command-graph-types.ts`                                     | Borrow input/output textures and declare graph-owned intermediate textures.                   |
-| Texture graph integration tests   | `modules/gpgpu/test/gpu-core/gpu-command-graph-textures.spec.ts`                   | Existing coverage proves storage-texture compute followed by sampled rendering.               |
+| Texture graph integration tests   | `modules/graph/test/gpu-core/gpu-command-graph-textures.spec.ts`                   | Existing coverage proves storage-texture compute followed by sampled rendering.               |
 | Typed packed buffer views         | `gpu-command-graph-types.ts`; `graph-data-view-utils.ts`                                 | Existing analysis primitives consume buffers, so texture bridges must be explicit.            |
-| Hierarchical reduction            | `modules/gpgpu/src/gpu-core/gpu-reduction.ts`                                      | Reuse `sum`, `min`, `max`, and `extent` with their additive validity-mask option.             |
-| Masked scalar histogram           | `modules/gpgpu/src/gpu-core/gpu-histogram.ts`                                      | Reuse equal-width/irregular histograms, but provide explicit valid-pixel domains.             |
-| Unsigned scans                    | `modules/gpgpu/src/gpu-core/gpu-scan.ts`                                           | Reuse for cumulative distributions, dense labels, and contour offsets.                        |
-| Bounded multidimensional dispatch | `modules/gpgpu/src/gpu-core/gpu-dispatch-utils.ts`                                 | Reuse existing 3D planning/index helpers; `GPUScan` already uses them correctly.              |
-| Unsigned compaction               | `modules/gpgpu/src/gpu-core/gpu-compaction.ts`                                     | Reuse only for `uint32` IDs; float values and vertices require typed scatter.                 |
-| Grouped statistics                | `modules/gpgpu/src/gpu-core/gpu-group-aggregation.ts`                              | Reuse dense label keys with masked count, sum, min, max, and mean.                            |
-| Two-dimensional complex FFT       | `modules/gpgpu/src/gpu-core/gpu-fft2d.ts`                                          | Reuse bounded power-of-two transforms after designing an explicit graph-native adapter.       |
-| Indirect drawing                  | `modules/gpgpu/src/gpu-core/draw-command-buffer.ts`                                | Write capacity-clamped segment counts directly into indirect draw records.                    |
+| Hierarchical reduction            | `modules/graph/src/gpu-core/gpu-reduction.ts`                                      | Reuse `sum`, `min`, `max`, and `extent` with their additive validity-mask option.             |
+| Masked scalar histogram           | `modules/graph/src/gpu-core/gpu-histogram.ts`                                      | Reuse equal-width/irregular histograms, but provide explicit valid-pixel domains.             |
+| Unsigned scans                    | `modules/graph/src/gpu-core/gpu-scan.ts`                                           | Reuse for cumulative distributions, dense labels, and contour offsets.                        |
+| Bounded multidimensional dispatch | `modules/graph/src/gpu-core/gpu-dispatch-utils.ts`                                 | Reuse existing 3D planning/index helpers; `GPUScan` already uses them correctly.              |
+| Unsigned compaction               | `modules/graph/src/gpu-core/gpu-compaction.ts`                                     | Reuse only for `uint32` IDs; float values and vertices require typed scatter.                 |
+| Grouped statistics                | `modules/graph/src/gpu-core/gpu-group-aggregation.ts`                              | Reuse dense label keys with masked count, sum, min, max, and mean.                            |
+| Two-dimensional complex FFT       | `modules/graph/src/gpu-core/gpu-fft2d.ts`                                          | Reuse bounded power-of-two transforms after designing an explicit graph-native adapter.       |
+| Indirect drawing                  | `modules/graph/src/gpu-core/draw-command-buffer.ts`                                | Write capacity-clamped segment counts directly into indirect draw records.                    |
 | Indirect compute                  | `modules/engine/src/compute/computation.ts`                                              | Predeclared iterative passes may receive GPU-generated zero-work dispatches.                  |
 | Existing subpath verification     | `scripts/verify-experimental-geospatial-package.mjs`                                     | Generalize or extend built ESM/CommonJS/declaration and root-isolation checks.                |
 | Existing streaming example        | `examples/showcase/billion-point-spatial-atlas/ept-source.ts`                            | Adapt bounded source, cancellation, selection, and cache patterns; it is not a raster loader. |
 
 Paths in the existing-location column's GPU primitive references are relative to
-`modules/gpgpu/src/gpu-core/` when only a filename is shown.
+`modules/graph/src/gpu-core/` when only a filename is shown.
 
 ### Existing contracts that must not change accidentally
 
 `GPUHistogram({mask, domain: 'auto'})` deliberately computes its domain from the entire input,
 then applies the mask only while counting. This behavior is explicitly covered by
-`modules/gpgpu/test/gpu-core/gpu-histogram-mask.spec.ts` and supports stable linked
+`modules/graph/test/gpu-core/gpu-histogram-mask.spec.ts` and supports stable linked
 dashboard ranges. A finite nodata sentinel therefore corrupts a raster-specific automatic range
 unless GPURaster computes a separate masked extent and passes it as an explicit GPU domain.
 
@@ -179,7 +179,7 @@ and a measured kernel-size crossover.
 ### Shared FFT architecture and the proposed LuFFT subpath
 
 `SpectralOceanSimulation` already uses the existing `GPUFFT2D` primitive for three inverse
-transforms per update. The transform is public through `@luma.gl/experimental`, and its current
+transforms per update. The transform is public through `@luma.gl/graph/experimental`, and its current
 constructor, caller-owned buffers, encoder-based `encode` method, and ocean integration must
 remain compatible.
 
@@ -242,20 +242,20 @@ flowchart LR
 
 ### Package and dependency boundaries
 
-The implementation belongs under `modules/experimental/src/gpu-raster/` and is imported as:
+The implementation belongs under `modules/graph/src/gpu-raster/` and is imported as:
 
 ```ts
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPURaster,
   GPURasterContours,
   GPURasterHistogram,
   GPURasterNDVI
-} from '@luma.gl/experimental/gpu-raster';
+} from '@luma.gl/graph/gpu-raster';
 ```
 
 Proposed runtime dependencies remain limited to existing experimental-package dependencies:
-`@luma.gl/core`, `@luma.gl/engine`, `@luma.gl/shadertools`, and `@luma.gl/gpgpu`. No
+`@luma.gl/core`, `@luma.gl/engine`, `@luma.gl/shaders`, and `@luma.gl/graph/gpu-simple-graph`. No
 `apache-arrow`, deck.gl, loaders.gl, GeoTIFF decoder, projection database, browser fetch client,
 or codec belongs in this package.
 
@@ -733,12 +733,12 @@ MVP definition, and non-goals before implementation begins.
 
 **Entry:** Tranche 0.1.
 
-**Work:** Add `modules/experimental/src/gpu-raster/index.ts` and the `./gpu-raster` conditional
+**Work:** Add `modules/graph/src/gpu-raster/index.ts` and the `./gpu-raster` conditional
 `import`/`require`/`types` export. Add an isolated package-boundary node test. Generalize the
 built-package verifier or add an analogous independently runnable GPURaster verifier.
 
 **Exit evidence:** Built ESM, CommonJS, and declarations resolve from
-`@luma.gl/experimental/gpu-raster`. Raster runtime symbols do not appear in the main experimental
+`@luma.gl/graph/gpu-raster`. Raster runtime symbols do not appear in the main experimental
 barrel. Existing geospatial/GPUCrossfilter imports, `sideEffects: false`, and package privacy remain
 unchanged.
 
@@ -1390,7 +1390,7 @@ the implemented feature set. Task-specific microscopy/segmentation guides, exter
 walkthroughs, published benchmark baselines, and final complete website/release verification
 remain later productization work.
 
-**Work:** Add `modules/experimental/src/gpu-raster/README.md` and
+**Work:** Add `modules/graph/src/gpu-raster/README.md` and
 `docs/api-reference/experimental/gpu-raster/` guides. Add the raster category to both experimental
 sections of `docs/table-of-contents.json`, update the experimental overview, and document new
 features in `docs/whats-new.md`. Keep new features out of `docs/upgrade-guide.md`.
@@ -1430,7 +1430,7 @@ examples changed, and all skipped setup checks are explicitly reported.
 ### New runtime and test files
 
 ```text
-modules/experimental/src/gpu-raster/
+modules/graph/src/gpu-raster/
   index.ts
   types.ts
   gpu-raster.ts
@@ -1455,7 +1455,7 @@ modules/experimental/src/gpu-raster/
   gpu-raster-contours.ts
   README.md
 
-modules/experimental/test/gpu-raster/
+modules/graph/test/gpu-raster/
   index.ts
   gpu-raster-package-boundary.node.spec.ts
   raster-metadata.node.spec.ts
@@ -1490,8 +1490,8 @@ later tranches.
 
 - `modules/experimental/package.json`: conditional `./gpu-raster` subpath.
 - `modules/experimental/test/index.ts`: browser/headless raster test registration.
-- `modules/gpgpu/src/gpu-core/gpu-reduction.ts`: separately reviewed opt-in masks.
-- `modules/gpgpu/test/gpu-core/`: masked reduction and dispatch-limit regressions.
+- `modules/graph/src/gpu-core/gpu-reduction.ts`: separately reviewed opt-in masks.
+- `modules/graph/test/gpu-core/`: masked reduction and dispatch-limit regressions.
 - `scripts/verify-experimental-geospatial-package.mjs`: generalize optional subpath verification,
   or introduce an equivalently scoped additional verifier.
 - `package.json`: expose an explicit built-package verification command without changing
@@ -1622,7 +1622,7 @@ The integration should exercise real raster data in the Raster Lab, translate me
 normalized windows without introducing another transport or decoder, propagate cancellation
 across the adapter, and reconcile source-side and GPU-side cache policies so retained CPU
 allocations are not duplicated or hidden. This is a version-gated follow-up, not a new
-`@luma.gl/experimental` runtime dependency or a prerequisite for halo and seam correctness.
+`@luma.gl/graph/experimental` runtime dependency or a prerequisite for halo and seam correctness.
 
 WebGPU and WGSL behavior must follow the current
 [WebGPU specification](https://gpuweb.github.io/gpuweb/) and

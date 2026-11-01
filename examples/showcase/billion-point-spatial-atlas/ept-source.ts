@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {load} from '@loaders.gl/core';
-import {LASLoader} from '@loaders.gl/las';
+import {LASLoader} from '@loaders.gl/pointclouds/las';
 
 export const NYC_EPT_URL =
   'https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_NewYorkCity/ept.json';

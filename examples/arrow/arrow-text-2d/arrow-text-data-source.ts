@@ -17,7 +17,7 @@ import {
   type ArrowTextRendererInput,
   type ArrowTextRendererProps,
   type ArrowTextRendererSetPropsResult
-} from '@luma.gl/arrow';
+} from '@luma.gl/engine/arrow';
 import {
   AnimationLoopTemplate,
   type AnimationProps,
@@ -25,8 +25,8 @@ import {
   type PickingManager,
   type PickingShouldPickOptions
 } from '@luma.gl/engine';
-import type {GPUTable} from '@luma.gl/experimental/gpu-tables';
-import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/text';
+import type {GPUTable} from '@luma.gl/graph/gpu-tables';
+import {buildSdfFontAtlas, type FontAtlas} from '@luma.gl/engine/text';
 import * as arrow from 'apache-arrow';
 import {
   ArrowText2DControlPanel,

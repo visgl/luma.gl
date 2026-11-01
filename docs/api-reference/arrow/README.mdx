@@ -11,7 +11,30 @@ import {ArrowGeoArrowExample, ArrowRenderingDocsExample} from '@site/src/example
   <DocumentationBadge tone="experimental">Experimental API</DocumentationBadge>
 </DocumentationBadges>
 
-Apache Arrow utilities for luma.gl.
+Apache Arrow conversion is available through optional subpaths of the published luma.gl packages.
+Install `apache-arrow` alongside the packages whose adapters you use. The generic package roots
+remain usable without Apache Arrow. The graph package installs its required
+`@math.gl/geospatial` dependency for GeoArrow conversion automatically.
+
+```bash
+yarn add @luma.gl/graph @luma.gl/engine apache-arrow
+```
+
+| Import | Responsibilities |
+| --- | --- |
+| `@luma.gl/graph/arrow` | Primitive Arrow inspection, colors, matrix and temporal conversion, GPU data/vector upload, and vector readback. |
+| `@luma.gl/graph/arrow` | Record batches, GPU tables, analytical table ingestion/readback, input schemas, GeoArrow adaptation, and DGGS preparation. |
+| `@luma.gl/engine/arrow` | Geometry and picking adapters, path/polygon/text preparation and rendering facades, and Gaussian splat conversion. |
+
+```ts
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
+import {makeGPUGeometryFromArrow} from '@luma.gl/engine/arrow';
+```
+
+The standalone private Arrow workspace package has been removed. These entries retain the existing
+conversion and renderer behavior; they do not introduce a new graph execution model. Application
+renderers can consume converted GPU vectors and geometries without depending on Arrow themselves.
 
 <ArrowGeoArrowExample embedded showStats={false} />
 
@@ -32,42 +55,25 @@ storage rendering.
 - [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [deck.gl v10 API Directions](/docs/api-reference/arrow/deck-target-api)
 
-## Apache Arrow Preliminaries
+## Choose a column representation
 
-Apache Arrow has a rich type system that can represent a wide variety of binary
-data columns. A subset of these column types can be used directly as GPU vertex
-attribute data, meaning that such arrow columns can be uploaded efficiently to the GPU.
-
-Apache Arrow supports primitive types like `Float32`, `Uint32`, and `Uint8` that
-describe the value stored in each row. It also supports fixed-length vectors of
-these types with `FixedSizeList`. These scalar and fixed-length vector types map
-directly to the memory layouts used by GPU vertex attributes.
-
-Arrow also supports variable-length `List` columns. These are useful for data
-such as polygons and paths, but they do not map directly to a single vertex
-attribute without an additional conversion step. `PathAttributeModel` provides the
-attribute-backed conversion for prepared Float32 XY, XYZ, and XYZM path coordinate
-rows, expanding each logical path into segment instances while keeping row-level
-style columns at the path boundary. `PathStorageModel` provides the WebGPU
-storage-backed form: compute expands GPU-resident path values into compact indexed
-segment records from copied list-offset metadata, render shaders fetch coordinates
-from the original path-value storage buffer, and per-path style rows remain storage
-bindings instead of being repeated for every generated segment. Use
-`ArrowPathRenderer.convertToGPUVectors()` or `convertArrowPathToGPUVectors()` to turn raw
-Float32 or Float64 Arrow path vectors into prepared path-attribute inputs. Use
-`ArrowPathRenderer.convertToGPUVectors(..., {model: 'storage'})` or
-`convertArrowPathStorageToGPUVectors()`
-when WebGPU storage rendering should convert Float64 path payloads into Float32
-deltas on the GPU before rendering.
+Scalar and fixed-size-list columns can map to vertex attributes. Variable-length lists
+need a model-specific conversion or storage path. See
+[Supported Arrow types](/docs/api-reference/arrow/supported-arrow-types) for the support matrix
+and [Arrow conversion](/docs/api-reference/arrow/arrow-conversion) for path, color, matrix,
+and temporal conversion helpers.
 
 ## GPU Table Interop
 
-`@luma.gl/arrow` adapts Apache Arrow objects into primitive
-[`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) objects and higher-level
-[`@luma.gl/experimental/gpu-tables`](/docs/api-reference/experimental/gpu-tables) objects:
+The optional Arrow adapters convert Apache Arrow objects into primitive
+[`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data) objects and higher-level
+[`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) objects:
 
 - `makeGPUDataFromArrowData()` uploads one Arrow `Data` chunk into a `GPUData`.
 - `makeGPUVectorFromArrow()` uploads one Arrow `Vector` into a `GPUVector`.
+- `convertArrowColumnToGPUVector()` converts numeric and color columns for rendering, optionally
+  applying a row transform and returning validity and residual-low vectors. Its result owns the
+  uploaded buffers; call `destroy()` when finished.
 - `makeGPURecordBatchFromArrowRecordBatch()` uploads one Arrow `RecordBatch`.
 - `makeGPUTableFromArrowTable()` uploads one Arrow `Table` while preserving source record
   batch boundaries.
@@ -78,10 +84,10 @@ deltas on the GPU before rendering.
   reconstructing nullable numeric/dictionary columns and either preserved per-batch selection or
   explicitly requested global ordering. Combined with
   [`LuSQLContext`](/docs/api-reference/experimental/gpu-sql) from the separate
-  `@luma.gl/experimental/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution →
+  `@luma.gl/graph/gpu-sql` subpath, this provides an Arrow input → GPU dataframe execution →
   Arrow output workflow without adding Apache Arrow to generic table or SQL packages.
 - `makeGPUSplatDataFromArrow()` prepares independently owned Gaussian splat batches for
-  [`@luma.gl/splats`](/docs/api-reference/splats), decoding GraphDECO encodings without
+  [`@luma.gl/engine/splats`](/docs/api-reference/splats), decoding GraphDECO encodings without
   clamping or quantizing spherical-harmonic DC radiance.
 - `makeGPUSplatDataFromArrowStream()` progressively prepares Gaussian splat batches without
   concatenating Arrow tables or rebuilding previously uploaded GPU buffers. Both Gaussian
@@ -93,7 +99,15 @@ deltas on the GPU before rendering.
 The resulting table schema is `GPUSchema`, and each vector has a
 `GPUVector.format` memory-layout string such as `float32x3`, `unorm8x4`, or
 `vertex-list<float32x3>`. Arrow `DataType` metadata may still be retained by
-adapter/readback paths, but neither `@luma.gl/gpgpu` nor `@luma.gl/experimental` depends on
-`apache-arrow`.
+adapter/readback paths. Apache Arrow is an optional peer of the three owning packages and is
+loaded only by their Arrow entries. `@luma.gl/graph/arrow` does not import graph or engine;
+`@luma.gl/graph/arrow` does not import engine.
 
-See [luma.gl](http://luma.gl) for documentation.
+## Ownership and streaming
+
+The move preserves source chunks, record batches, nullability, and source-row metadata. Upload
+helpers retain their existing ownership rules: converted data owns its uploaded buffers, borrowed
+chunks remain borrowed, and destroying aggregate vectors must not destroy borrowed data. Streaming
+adapters append independent batches; packing or merging remains an explicit caller decision.
+Readback remains asynchronous and explicit. `GPUVector.format` describes stored GPU bytes;
+Arrow type metadata supports conversion and readback rather than replacing the GPU format.

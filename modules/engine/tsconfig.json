@@ -1,14 +1,25 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
   },
   "references": [
-    {"path": "../core"},
-    {"path": "../shadertools"}
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../shaders"
+    },
+    {
+      "path": "../graph"
+    }
   ]
 }

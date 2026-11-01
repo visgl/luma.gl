@@ -1,13 +1,13 @@
 # ANARI Animation and glTF Integration
 
-`@luma.gl/scene/gltf` is an optional entry point that projects glTF-owned animation data onto
-retained ANARI objects. It reuses `@luma.gl/gltf` parsing and the shared `@luma.gl/engine`
-animation mixer; the ordinary `@luma.gl/scene` entry point does not import a glTF loader or own a
+`@luma.gl/anari/gltf` is an optional entry point that projects glTF-owned animation data onto
+retained ANARI objects. It reuses `@luma.gl/engine/gltf` parsing and the shared `@luma.gl/engine`
+animation mixer; the ordinary `@luma.gl/anari` entry point does not import a glTF loader or own a
 second animation runtime.
 
 :::caution[Experimental optional adapter]
-`@luma.gl/scene` is a private, experimental workspace package. Import the `/gltf` subpath only
-when glTF animation integration is needed and `@luma.gl/gltf` is available.
+`@luma.gl/anari` is a public package with experimental APIs. Import the `/gltf` subpath only
+when glTF animation integration is needed and `@luma.gl/engine/gltf` is available.
 :::
 
 ## Optional entry-point exports
@@ -17,13 +17,13 @@ import {
   makeANARIAnimationClipsFromGLTF,
   makeANARIAnimationDataFromGLTF,
   makeANARIAnimationScene
-} from '@luma.gl/scene/gltf';
+} from '@luma.gl/anari/gltf';
 
 import type {
   ANARIAnimationBindings,
   ANARIAnimationSceneHandle,
   ANARIGLTFAnimationMappings
-} from '@luma.gl/scene/gltf';
+} from '@luma.gl/anari/gltf';
 ```
 
 - `makeANARIAnimationClipsFromGLTF(animations, mappings?)` converts already-decoded glTF clips
@@ -35,12 +35,12 @@ import type {
   objects and returns shared mixer/playback controls.
 
 None of these functions reads a `.gltf` or `.glb` file. Load/postprocess the asset with
-`@loaders.gl/gltf`; decode source animation channels through `@luma.gl/gltf`.
+`@loaders.gl/scene/gltf`; decode source animation channels through `@luma.gl/engine/gltf`.
 
 ## Bind a retained animated scene
 
 ```ts
-import {makeANARIAnimationDataFromGLTF, makeANARIAnimationScene} from '@luma.gl/scene/gltf';
+import {makeANARIAnimationDataFromGLTF, makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 
 const animationData = makeANARIAnimationDataFromGLTF(scenegraphs, {
   instanceIdentifiers: {
@@ -174,7 +174,7 @@ integration. See [ANARI arrays and geometry](/docs/api-reference/scene/anari-geo
 
 ## Validation
 
-The optional `@luma.gl/scene/schemas` entry point validates animation nodes, targets, tracks,
+The optional `@luma.gl/anari/schemas` entry point validates animation nodes, targets, tracks,
 clips, playback settings, parent relationships, retained references, increasing keyframe times,
 and cubic tangent/value/tangent counts. See
 [ANARI scene schemas](/docs/api-reference/scene/anari-schemas).

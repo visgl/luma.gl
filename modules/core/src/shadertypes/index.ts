@@ -73,10 +73,7 @@ export {
   textureFormatDecoder
 } from './texture-types/texture-format-decoder';
 
-export {
-  getTextureImageView,
-  setTextureImageData
-} from './texture-types/texture-layout';
+export {getTextureImageView, setTextureImageData} from './texture-types/texture-layout';
 
 export {type PixelData, readPixel, writePixel} from './texture-types/pixel-utils';
 

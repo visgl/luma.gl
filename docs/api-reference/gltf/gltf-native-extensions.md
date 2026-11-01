@@ -5,20 +5,21 @@ import {GltfDocsTabs} from '@site/src/components/docs/gltf-docs-tabs';
 <GltfDocsTabs active="native-extensions" />
 
 glTF extensions should describe what an asset actually does, not merely which JSON properties
-survived loading. `@luma.gl/gltf` connects authored material variants, GPU instance transforms,
+survived loading. `@luma.gl/engine/gltf` connects authored material variants, GPU instance transforms,
 recursive node visibility, typed animation pointers, and required-extension capabilities to the
 existing luma.gl scenegraph and animation runtime.
 
-The implementation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset,
-`@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph,
-model, and animation behavior. There is no parallel loader, material system, or renderer.
+Source interpretation remains format-owned: `@loaders.gl/scene/gltf` reads and postprocesses the asset,
+`@luma.gl/engine/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph,
+model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
 
 ## Load a standards-native scene
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 const asset = await load('/models/product.glb', GLTFLoader);
 const gltf = postProcessGLTF(asset);
@@ -33,7 +34,7 @@ console.log(scenegraphs.extensionSupport);
 console.log(scenegraphs.animations.map(animation => animation.name));
 ```
 
-`postProcessGLTF()` is explicit: loaders.gl v4 does not support the historical
+`postProcessGLTF()` is an explicit luma.gl operation. The decoder does not support the historical
 `{gltf: {postProcess: true}}` loader option. Use `useByteColors: false` when consuming punctual
 light colors as glTF-authored linear RGB values. Strict extension handling is described below.
 
@@ -140,7 +141,7 @@ source primitive becomes one real instanced model on WebGL and WebGPU:
 Inspect resolved instance transforms and exact authored accessor metadata:
 
 ```ts
-import {getGLTFNodeInstancing} from '@luma.gl/gltf';
+import {getGLTFNodeInstancing} from '@luma.gl/engine/gltf';
 
 const instancing = getGLTFNodeInstancing(gltf, gltf.nodes[0]);
 
@@ -293,7 +294,7 @@ import {
   parseGLTFAnimations,
   type GLTFCameraAnimationChannel,
   type GLTFLightAnimationChannel
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 for (const animation of parseGLTFAnimations(gltf)) {
   for (const channel of animation.channels) {
@@ -333,7 +334,7 @@ import {
   assertSupportedGLTFExtensions,
   getGLTFExtensionSupport,
   getUnsupportedRequiredGLTFExtensions
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 const support = getGLTFExtensionSupport(gltf);
 
@@ -388,7 +389,7 @@ function renderFrame(timestampMilliseconds: number): void {
   scenegraphs.animator.setTime(timestampMilliseconds);
 
   for (const binding of scenegraphs.skins.bindings) {
-    console.log(binding.nodeIndex, binding.joints.length, binding.jointMatrices);
+    console.log(binding.node.id, binding.joints.length, binding.jointMatrices);
   }
 
   requestAnimationFrame(renderFrame);
@@ -398,7 +399,7 @@ function renderFrame(timestampMilliseconds: number): void {
 `setTime()` accepts absolute milliseconds; `selectClip()` crossfade duration and
 `animator.update(deltaSeconds)` use seconds. Imported skin palettes are updated automatically once
 after all channels evaluate, using existing mesh-local joint matrices and the canonical shared skin
-shader. `scenegraphs.skins.getBinding(nodeIndex)` exposes a specific reusable skin binding.
+shader. `scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(nodeIndex))` exposes a specific reusable skin binding.
 
 ## Official fixture coverage
 
@@ -417,18 +418,18 @@ tests derive material-variant and camera/light/dispersion-pointer cases from the
 documents instead of adding large synthetic assets.
 
 The fixture attribution and pinned source revision are recorded in
-`modules/gltf/test/data/README.md`.
+`modules/engine/test/gltf/data/README.md`.
 
 ## Architecture and ownership
 
 | Package | Responsibility |
 | --- | --- |
-| `@loaders.gl/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
-| `@luma.gl/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
+| `@loaders.gl/scene/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
+| `@luma.gl/engine/gltf` | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting. |
 | `@luma.gl/engine` | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities. |
-| `@luma.gl/shadertools` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
-| `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission. |
-| `@luma.gl/scene` | Optional thin retained-object orchestration through `@luma.gl/scene/gltf`; no loader or BRDF ownership. |
+| `@luma.gl/shaders` | Canonical PBR material uniforms, physical shading, and reusable skinning. |
+| `@luma.gl/anari` | Optional format-independent physical scene rendering and captured-scene transmission. |
+| `@luma.gl/anari` | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership. |
 
 The core ANARI package does not import glTF. Its optional glTF adapter imports the existing glTF
 parsers and engine animation primitives. Camera, punctual-light, and visibility pointer playback
