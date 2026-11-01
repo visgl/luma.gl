@@ -4,8 +4,10 @@
 
 `GPUExpressionOperation` accepts math.gl expression strings or parsed ASTs. `GPUGraph` and
 `GPUSimpleGraph` share scalar/vector declarations and execution-time input bindings for the
-initial float32 arithmetic subset. Vector dimensions can change between executions; existing
-evaluator APIs remain unchanged. See the [expression reference](./api-reference/graph/gpu-expression-operation.md).
+float32 arithmetic and math-function subset, with explicit `float32`, `sint32`, and `uint32`
+casts. Float-to-integer casts offer per-operation `integerRounding`: truncation by default,
+or nearest with ties away from zero. Vector dimensions can change between executions;
+existing evaluator APIs remain unchanged. See the [expression reference](./api-reference/graph/gpu-expression-operation.md).
 
 
 ## Shader plugin primary modules
@@ -991,3 +993,11 @@ contracts and remaining qualification limits.
 - **WebGL operation execution** - Gpgpu row transforms, gather, sequence, segmented-map, and extent use RenderKernel while preserving their existing shaders and operation semantics. BufferTransform and TextureTransform are owned by engine.
 
 - **Vector rendering ownership** - GPUVectorModel, GPUVectorGeometry, and their binding and batching helpers live in engine. Gpgpu and graph no longer depend on these rendering APIs.
+
+
+### Graph expression functions and numeric casts
+
+`GPUExpressionOperation` accepts `abs`, `sqrt`, `pow`, `sin`, `cos`, `tan`, `exp`, and
+`log` calls, plus explicit `float32`, `sint32`, and `uint32` value conversions. Both
+graph implementations accept typed 32-bit numeric inputs and outputs. Existing evaluator
+APIs and physical-format conversion behavior are unchanged.
