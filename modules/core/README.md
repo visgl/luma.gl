@@ -38,3 +38,6 @@ Source is organized into `src/api` (portable Device API), `src/shadertypes` (sha
 and `src/webgl-constants`. Backend implementations import the portable API
 internally, so it does not depend on either backend. WGSL interface scanning
 lives in the portable API and is shared with shaders.
+
+Shader types, formats, and layout utilities are also available from
+`@luma.gl/core/shadertypes`.

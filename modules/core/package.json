@@ -70,6 +70,11 @@
       "types": "./dist/test-utils-legacy.d.ts",
       "import": "./dist/test-utils-legacy.js",
       "require": "./dist/test-utils-legacy.cjs"
+    },
+    "./shadertypes": {
+      "types": "./dist/shadertypes/index.d.ts",
+      "import": "./dist/shadertypes/index.js",
+      "require": "./dist/shadertypes/index.cjs"
     }
   },
   "files": [
