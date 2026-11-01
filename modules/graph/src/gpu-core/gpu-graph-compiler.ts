@@ -7,7 +7,8 @@ import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph
 import {GPUGraphTextureView, type GPUGraphTexture} from './gpu-graph-value';
 
 import {Buffer, type Device} from '@luma.gl/core';
-import type {GPUVectorInput} from '@luma.gl/graph/gpu-data';
+import {getGPUVectorFormatInfo, type GPUVectorInput} from '@luma.gl/graph/gpu-data';
+import type {GPUGraphVectorFormat} from './gpu-graph-value';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import {
   addGPUCommandNodes,
@@ -176,7 +177,12 @@ export class GPUGraphCompiler<Parameters = void> {
         }
       } else {
         const chunkLengths =
-          vector.chunkLengths ?? getTransientChunkLengths(vector.length, this.device);
+          vector.chunkLengths ??
+          getTransientChunkLengths(
+            vector.length,
+            this.device,
+            getGPUVectorFormatInfo(vector.format).byteLength
+          );
         const data = chunkLengths.map((length, index) =>
           createTransientView(
             graph,
@@ -185,15 +191,16 @@ export class GPUGraphCompiler<Parameters = void> {
             length
           )
         );
+        const formatInfo = getGPUVectorFormatInfo(vector.format);
         resolved = new GraphVectorView({
           id: vector.id,
           name: vector.id,
           format: vector.format,
           length: vector.length,
           valueLength: vector.length,
-          stride: 1,
-          byteStride: 4,
-          rowByteLength: 4,
+          stride: formatInfo.components,
+          byteStride: formatInfo.byteLength,
+          rowByteLength: formatInfo.byteLength,
           data
         });
       }
@@ -560,7 +567,7 @@ export class GPUGraphCompiler<Parameters = void> {
       throw new Error(`GPUGraph scalar "${s.id}" is not part of compilation`);
     return r as GPUScalar<T>;
   }
-  private resolveVector<T extends 'float32' | 'uint32' | 'sint32'>(
+  private resolveVector<T extends GPUGraphVectorFormat>(
     v: GPUGraphVector<T>,
     state: LoweringState
   ): GraphVectorView<T> {
@@ -571,8 +578,12 @@ export class GPUGraphCompiler<Parameters = void> {
   }
 }
 
-function getTransientChunkLengths(length: number, device: Device): readonly number[] {
-  const maximumLength = Math.floor(device.limits.maxStorageBufferBindingSize / 4);
+function getTransientChunkLengths(
+  length: number,
+  device: Device,
+  rowByteLength: number
+): readonly number[] {
+  const maximumLength = Math.floor(device.limits.maxStorageBufferBindingSize / rowByteLength);
   if (maximumLength < 1 || length <= maximumLength) return [length];
   const lengths: number[] = [];
   for (let offset = 0; offset < length; offset += maximumLength) {

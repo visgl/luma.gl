@@ -11,7 +11,11 @@ import {
 } from './operations/arithmetic-operation';
 import {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from '../gpu-core/gpu-graph';
-import {GPUExpressionOperation, type GPUExpression} from '../gpu-core/gpu-expression-operation';
+import {
+  GPUExpressionOperation,
+  getGPUExpressionRowInfo,
+  type GPUExpression
+} from '../gpu-core/gpu-expression-operation';
 import {
   GPUExpressionProgram,
   type GPUGraphCompileOptions,
@@ -103,11 +107,12 @@ export class CompiledGPUSimpleExpressionGraph {
               case 'reference': {
                 const value = invocation!.values.get(expression.name)!;
                 const format = plan.formats.get(expression.name)!;
+                const {componentType, components} = getGPUExpressionRowInfo(format);
                 if (typeof value === 'number') {
                   if (format === 'float32') return lowerNumber(value);
                   return retain(
                     new GPUDataEvaluator({
-                      type: format,
+                      type: componentType,
                       format,
                       size: 1,
                       length: 1,
@@ -123,8 +128,8 @@ export class CompiledGPUSimpleExpressionGraph {
                 const input = value.data[scalar ? 0 : chunkIndex];
                 return retain(
                   new GPUDataEvaluator({
-                    type: format,
-                    size: 1,
+                    type: componentType,
+                    size: components,
                     length: input.length,
                     format,
                     buffer: input.buffer,

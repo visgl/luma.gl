@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from './gpu-graph';
-import type {GPUGraphScalar, GPUGraphVector, GPUGraphScalarFormat} from './gpu-graph-value';
+import type {GPUGraphScalar, GPUGraphVector, GPUGraphVectorFormat} from './gpu-graph-value';
 import {GPUGraphDotProduct, GPUGraphVectorMADD} from './gpu-semantic-vector-operation';
 import {GPUGraphSpMV} from './gpu-semantic-spmv';
 import {GPUGraphScalarLiteral} from './gpu-semantic-state-operation';
@@ -16,8 +16,9 @@ import {
   parseGPUExpression,
   getGPUExpressionReferences,
   type GPUExpression,
-  type GPUExpressionFormat,
-  isGPUExpressionFormat,
+  type GPUExpressionRowFormat,
+  isGPUExpressionRowFormat,
+  getGPUExpressionRowInfo,
   getGPUExpressionFormat
 } from './gpu-expression-operation';
 
@@ -29,8 +30,8 @@ export type GPUGraphRunOptions = {outputTargets?: Readonly<Record<string, GPUVec
 export type GPUExpressionPlan = {
   operation: GPUExpressionOperation;
   expression: GPUExpression;
-  format: GPUExpressionFormat;
-  formats: ReadonlyMap<string, GPUExpressionFormat>;
+  format: GPUExpressionRowFormat;
+  formats: ReadonlyMap<string, GPUExpressionRowFormat>;
   references: readonly string[];
   gpuScalarInputs: readonly string[];
 };
@@ -92,17 +93,19 @@ export class GPUExpressionProgram {
     const available = new Set([...declarations.keys()].filter(name => !producers.has(name)));
     this.expressions = expressions.map(operation => {
       const output = declarations.get(operation.output);
-      if (!output || !isGPUExpressionFormat(output.format))
+      if (!output || !isGPUExpressionRowFormat(output.format))
         throw new Error(
-          `Expression output ${operation.output} must declare float32, sint32, or uint32`
+          `Expression output ${operation.output} must declare a 32-bit numeric row of width 1–4`
         );
       const expression = parseGPUExpression(operation.expression);
       const references = getGPUExpressionReferences(expression);
-      const formats = new Map<string, GPUExpressionFormat>();
+      const formats = new Map<string, GPUExpressionRowFormat>();
       for (const name of references) {
         const declaration = declarations.get(name);
-        if (!declaration || !isGPUExpressionFormat(declaration.format))
-          throw new Error(`Expression input ${name} must declare float32, sint32, or uint32`);
+        if (!declaration || !isGPUExpressionRowFormat(declaration.format))
+          throw new Error(
+            `Expression input ${name} must declare a 32-bit numeric row of width 1–4`
+          );
         formats.set(name, declaration.format);
         if (!available.has(name))
           throw new Error(`Expression ${operation.id} reads ${name} before it is produced`);
@@ -319,15 +322,15 @@ function allocateVector(
   device: Device,
   name: string,
   lengths: readonly number[],
-  format: GPUGraphScalarFormat = 'float32'
-): GPUVector<GPUGraphScalarFormat> {
-  const data: GPUData<GPUGraphScalarFormat>[] = [];
+  format: GPUGraphVectorFormat = 'float32'
+): GPUVector<GPUGraphVectorFormat> {
+  const data: GPUData<GPUGraphVectorFormat>[] = [];
   try {
     for (const length of lengths)
       data.push(
         new GPUData({
           buffer: device.createBuffer({
-            byteLength: Math.max(1, length) * 4,
+            byteLength: Math.max(1, length) * getGPUExpressionRowInfo(format).components * 4,
             usage: Buffer.STORAGE | Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
           }),
           format,
@@ -357,12 +360,13 @@ function validateVector(
       chunks.some((count, index) => count !== vector.data[index].length))
   )
     throw new Error(`Incompatible chunks for ${vector.name}`);
+  const rowByteLength = getGPUVectorFormatInfo(vector.format).byteLength;
   for (const chunk of vector.data) {
     if (
       chunk.buffer.device !== device ||
-      chunk.byteStride !== 4 ||
+      chunk.byteStride !== rowByteLength ||
       chunk.byteOffset % 4 !== 0 ||
-      chunk.rowByteLength !== 4
+      chunk.rowByteLength !== rowByteLength
     )
       throw new Error(
         `Expression vector ${vector.name} must contain packed 32-bit numeric chunks on the execution device`
