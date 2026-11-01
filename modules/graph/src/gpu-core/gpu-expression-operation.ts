@@ -57,7 +57,19 @@ export function makeGPUExpressionRowFormat(
     : (`${componentType}x${components}` as GPUExpressionRowFormat);
 }
 
-type GPUExpressionFunction = 'abs' | 'sqrt' | 'pow' | 'sin' | 'cos' | 'tan' | 'exp' | 'log';
+type GPUExpressionFunction =
+  | 'abs'
+  | 'sqrt'
+  | 'pow'
+  | 'sin'
+  | 'cos'
+  | 'tan'
+  | 'exp'
+  | 'log'
+  | 'dot'
+  | 'length'
+  | 'equalAll'
+  | 'select';
 
 /** Normalized numeric subset shared by the two execution implementations. @internal */
 export type GPUExpression =
@@ -109,8 +121,26 @@ export function parseGPUExpression(expression: string | GPUExpressionAST): GPUEx
           if (node.arguments.length !== 1) throw new Error(`Invalid argument count for ${name}`);
           return {kind: 'cast', format: name, argument: visit(node.arguments[0])};
         }
-        if (!['abs', 'sqrt', 'pow', 'sin', 'cos', 'tan', 'exp', 'log'].includes(name)) break;
-        if (node.arguments.length !== (name === 'pow' ? 2 : 1))
+        if (
+          ![
+            'abs',
+            'sqrt',
+            'pow',
+            'sin',
+            'cos',
+            'tan',
+            'exp',
+            'log',
+            'dot',
+            'length',
+            'equalAll',
+            'select'
+          ].includes(name)
+        )
+          break;
+        const argumentCount =
+          name === 'select' ? 3 : ['pow', 'dot', 'equalAll'].includes(name) ? 2 : 1;
+        if (node.arguments.length !== argumentCount)
           throw new Error(`Invalid argument count for GPU expression function ${name}`);
         return {
           kind: 'call',
@@ -222,8 +252,35 @@ export function getGPUExpressionFormat(
       const argumentTypes = argumentsList.map(argument =>
         getGPUExpressionRowInfo(getGPUExpressionFormat(argument, formats))
       );
+      if (expression.kind === 'call') {
+        const [first, second, third] = argumentTypes;
+        if (expression.name === 'equalAll') {
+          if (
+            first.componentType !== second.componentType ||
+            first.components !== second.components
+          )
+            throw new Error('equalAll requires matching types and row widths');
+          return 'uint32';
+        }
+        if (expression.name === 'select') {
+          if (second.componentType !== third.componentType)
+            throw new Error('select branches require matching component types');
+          const components = Math.max(second.components, third.components);
+          if (
+            argumentTypes.some(
+              argument => argument.components !== 1 && argument.components !== components
+            )
+          )
+            throw new Error('select widths must match its branches or be one component');
+          return makeGPUExpressionRowFormat(second.componentType, components);
+        }
+        if (expression.name === 'dot' && first.components !== second.components)
+          throw new Error('dot requires matching row widths');
+      }
       if (argumentTypes.some(argument => argument.componentType !== 'float32'))
         throw new Error('Arithmetic requires float32 operands; use an explicit float32 cast');
+      if (expression.kind === 'call' && (expression.name === 'dot' || expression.name === 'length'))
+        return 'float32';
       const components = Math.max(...argumentTypes.map(argument => argument.components));
       if (
         argumentTypes.some(

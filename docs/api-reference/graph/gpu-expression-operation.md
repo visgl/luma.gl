@@ -3,6 +3,17 @@
 `GPUExpressionOperation` describes a numeric expression over named graph declarations.
 Both `GPUGraph` and `GPUSimpleGraph` accept it through `graph.add()`. Expressions are parsed
 with `@math.gl/expressions`; its JavaScript evaluator is not used to execute GPU work.
+The same expression works on WebGL through SimpleGraph and on WebGPU through either graph.
+
+This page is the expression syntax reference as well as the operation API guide.
+
+- [Syntax at a glance](#syntax-at-a-glance)
+- [Types and broadcasting](#typed-rows-and-component-wise-execution)
+- [Components and constructors](#component-access-and-row-construction)
+- [Math and casts](#math-functions-and-numeric-casts)
+- [Row math, equality, and selection](#row-math-equality-and-selection)
+- [Errors and unsupported syntax](#errors-and-unsupported-syntax)
+- [Chunking and ownership](#chunking-and-ownership)
 
 ## Declare, compile, and bind
 
@@ -37,7 +48,28 @@ subset uses float32, sint32, and uint32 scalars and packed vector rows of one to
 (`float32`, `float32x2`, `float32x3`, `float32x4`, and corresponding integer formats).
 Arithmetic operands must have float32 components; use explicit casts for integer inputs.
 
-## Expression syntax
+## Syntax at a glance
+
+| Syntax | Meaning | Example |
+| --- | --- | --- |
+| Declared name | Execution-time scalar or vector input, or preceding output | `positions`, `scale` |
+| Numeric literal | Finite float32 number | `1`, `0.25`, `1e-3` |
+| `(...)` | Grouping; multiplication/division precede addition/subtraction | `(positions + offset) * scale` |
+| `-x`, `+`, `-`, `*`, `/` | Component-wise float32 arithmetic | `positions * scale` |
+| `abs`, `sqrt`, `sin`, `cos`, `tan`, `exp`, `log` | One-argument component-wise float32 functions | `sqrt(abs(values))` |
+| `pow(x, exponent)` | Component-wise float32 power | `pow(values, 2)` |
+| `float32`, `sint32`, `uint32` | Explicit, width-preserving numeric casts | `sint32(positions)` |
+| `.x`, `.yz`, `.zyx`, `.xx` | Static component selection, reordering, repetition | `positions.zyx` |
+| `vec2`, `vec3`, `vec4` | Concatenate components or replicate one component | `vec4(positions, 1)` |
+| `dot(x, y)` | Sum component products **within each row** | `dot(positions, directions)` |
+| `length(x)` | Euclidean magnitude **within each row** | `length(positions)` |
+| `equalAll(x, y)` | All components equal; one uint32 0/1 per row | `equalAll(ids, targetIds)` |
+| `select(condition, whenTrue, whenFalse)` | Choose values using a numeric condition | `select(mask, colors, vec4(0))` |
+
+These are the complete supported operators and function names; JavaScript's broader
+syntax and math.gl's other functions are not implicitly available.
+
+## Expression strings and ASTs
 
 The `expression` property accepts a string or the AST returned by math.gl's `parse()`:
 
@@ -52,9 +84,9 @@ const operation = new GPUExpressionOperation({
 Supported expressions contain declared identifiers, finite numeric literals, parentheses,
 unary negation, binary `+`, `-`, `*`, `/`, and the function calls described below. Operators act elementwise; scalars broadcast to
 vector rows. Vector outputs require at least one vector input. Scalar expressions produce a
-one-row output vector with the declared numeric format. Arbitrary functions, general property access, indexing, comparisons, conditionals,
-and other JavaScript syntax are not part of this initial GPU subset. Parsing successfully
-in math.gl does not imply support by the GPU compiler.
+one-row output vector with the declared numeric format. Use `equalAll` and `select` for
+equality and conditional value selection; JavaScript comparison and ternary operators are
+not supported. Parsing successfully in math.gl does not imply support by the GPU compiler.
 
 Compilation rejects undeclared identifiers, incompatible formats, duplicate expression
 writers, forward references to expression outputs, and unsupported syntax. Add producers
@@ -83,7 +115,7 @@ graph.add(new GPUExpressionOperation({
 }));
 ```
 
-Arithmetic and math calls operate independently on each component. One-component operands
+Arithmetic and component-wise math calls operate independently on each component. One-component operands
 broadcast across the other operand's components; other width mismatches fail at compilation.
 This includes one-component vector rows: a `float32` vector can supply one weight per row
 for a `float32x3` vector, with matching row counts and chunk boundaries. Scalar declarations
@@ -97,7 +129,7 @@ Storage stays packed: `float32x3` occupies 12 bytes per row on both backends, wi
 `vec3` padding. Inputs and caller-provided output targets must have the matching packed row
 stride and a four-byte-aligned offset. Existing chunk boundaries and ownership rules apply.
 
-`dot`, `length`, predicates, and selection remain outside the expression subset.
+Row functions can change the component width, but do not change the number of rows.
 Existing evaluator operations and their APIs remain unchanged.
 
 ## Component access and row construction
@@ -146,7 +178,7 @@ Expressions accept `abs(x)`, `sqrt(x)`, `pow(x, exponent)`, `sin(x)`, `cos(x)`,
 `tan(x)`, `exp(x)`, and `log(x)`. Arguments may be nested expressions and named inputs.
 These functions operate on float32 values, and vector inputs are evaluated row by row.
 Numeric literals are float32; use integer declarations to retain exact 32-bit integer inputs.
-Only these bare function names are accepted: `Math.sin(x)`, arbitrary functions, and
+Only the documented bare function names are accepted: `Math.sin(x)`, arbitrary functions, and
 incorrect argument counts are rejected at compilation. Function names are intrinsic,
 not callable values supplied through bindings.
 
@@ -180,7 +212,7 @@ integer-to-integer casts, conversion to float32, or arithmetic. Both backends us
 rounding rule; for example, nearest maps `-1.5` to `-2` and `1.5` to `2` before saturation.
 Integer-to-integer casts also saturate; they do not reinterpret bits or wrap. Converting
 integers to float32 may lose precision. Integer input bindings must be integral and in
-range. Arithmetic and math calls require float32 operands, so `uint32(x) + 1` requires
+range. Arithmetic and float32 math calls require float32 operands, so `uint32(x) + 1` requires
 an explicit conversion back to float32 in this initial subset.
 
 These casts apply to finite numeric values. Results of out-of-domain math, overflow,
@@ -194,6 +226,117 @@ The existing `castData` evaluator retains its separate physical-format conversio
 rounding behavior. Pure arithmetic/function expressions retain evaluator fusion.
 Casts introduce explicit conversion stages on SimpleGraph; WebGPU stages share its
 single evaluation scope, and WebGL uses GPU transform feedback without CPU readback.
+
+## Row math, equality, and selection
+
+All four functions are row-local: they preserve row counts and chunk boundaries. They can
+be nested with arithmetic, casts, constructors, and selectors.
+
+| Function | Input rules | Result |
+| --- | --- | --- |
+| `dot(x, y)` | Float32 components; identical widths from 1 to 4 | One float32 component per row |
+| `length(x)` | Float32 components; width 1 to 4 | One float32 component per row |
+| `equalAll(x, y)` | Identical component types and widths | One uint32 component, either 0 or 1, per row |
+| `select(condition, whenTrue, whenFalse)` | Branch component types must match; widths follow the rules below | The branch component type and resolved branch width |
+
+### Dot products and lengths
+
+`dot(vec3(1, 2, 3), vec3(4, 5, 6))` is `32`. `length(vec2(3, 4))` is `5`.
+For one-component rows, `dot(x, y)` is multiplication and `length(x)` is magnitude.
+Neither function reduces across rows: `length(positions)` gives one length for each position,
+not the number of positions or the length of the whole buffer.
+
+`dot` requires equal widths; write `dot(positions, vec3(scale))` to explicitly replicate a
+scalar. Integer inputs require a cast, such as `length(float32(integerPositions))`.
+The scalar row result broadcasts in surrounding arithmetic:
+
+```typescript
+graph.vector('positions', 'float32x3');
+graph.vector('distance', 'float32');
+graph.vector('direction', 'float32x3');
+graph.scalar('epsilon', 'float32'); // Bind a positive value, e.g. 1e-6.
+graph.add(new GPUExpressionOperation({output: 'distance', expression: 'length(positions)'}));
+graph.add(new GPUExpressionOperation({
+  output: 'direction',
+  expression: 'positions / (distance + epsilon)'
+}));
+```
+
+The positive `epsilon` keeps the denominator nonzero. The result approaches unit length
+for positions whose magnitude is large relative to epsilon; zero positions remain zero.
+
+### Equality
+
+`equalAll` compares corresponding components without converting their type. It returns
+`uint32(1)` only when every component matches, otherwise `uint32(0)`. Integer comparisons
+retain exact 32-bit values, including values beyond float32's exact integer range.
+Float comparisons are exact comparisons, not approximate comparisons with a tolerance.
+
+There is no implicit width broadcast in `equalAll`. To compare every component to the same
+value, write `equalAll(ids, vec3(targetId))`, where both inputs have uint32 components.
+
+### Selection
+
+The argument order matches the existing evaluator API:
+
+```text
+select(condition, whenTrue, whenFalse)
+```
+
+**This differs from WGSL's builtin order**, which places the false value first and condition
+last. Expression syntax always uses the condition-first order shown above.
+
+- Zero selects `whenFalse`; any nonzero numeric value selects `whenTrue`.
+- A one-component condition chooses a whole row. A multi-component condition chooses each
+  component independently.
+- Branch component types must match. A one-component branch broadcasts to the other branch's
+  width; otherwise branch widths must match.
+- The condition must have one component or the resolved branch width. It may use any of the
+  three numeric component types, independently of the branch type. Fractional and negative
+  nonzero conditions remain true even when selecting integer values.
+- Both branches are evaluated. Selection preserves rows; it neither filters nor compacts data.
+
+```typescript
+graph.vector('ids', 'uint32');
+graph.scalar('selectedId', 'uint32');
+graph.vector('colors', 'float32x4');
+graph.vector('highlighted', 'float32x4');
+graph.add(new GPUExpressionOperation({
+  output: 'highlighted',
+  expression: 'select(equalAll(ids, selectedId), vec4(1, 1, 0, 1), colors)'
+}));
+```
+
+Component-wise example: `select(vec3(0, -2, 0.5), vec3(10), vec3(20))` produces
+`vec3(20, 10, 10)`. Selecting integer branches preserves their type and precision;
+use `uint32(0)` instead of the float32 literal `0` for an integer fallback.
+
+On SimpleGraph, row functions use existing evaluator handlers. Condition normalization
+happens before branch-type conversion. Row operations can introduce intermediate GPU passes;
+WebGPU still submits once. Full GPUGraph compiles the functions into each expression's shader.
+
+## Errors and unsupported syntax
+
+Compilation prefixes concise errors with the operation ID. Supplying `id` makes failures
+easier to locate; the default is `<output>-expression`.
+
+| Error or unsupported expression | Fix |
+| --- | --- |
+| `reorder: .w needs 4 components; positions has 3` | Choose an existing component or construct a wider row. |
+| `dot requires matching row widths` | Match both widths; explicitly replicate a scalar with `vecN`. |
+| `equalAll requires matching types and row widths` | Cast deliberately and match widths before comparing. |
+| `select branches require matching component types` | Cast one branch, including numeric literal fallbacks. |
+| `select widths must match its branches or be one component` | Use a scalar condition or match the branch row width. |
+| `Arithmetic requires float32 operands` | Use `float32(...)` around integer operands. |
+| `Math.sqrt(x)` | Use the bare function `sqrt(x)`. |
+| `positions[0]`, `positions.rgba` | Use static `.xyzw` selectors. |
+| `x == y`, `condition ? a : b` | Use `equalAll(x, y)` and `select(condition, a, b)`. |
+
+Assignments, arbitrary calls, logical/comparison operators, computed indexing, and general
+JavaScript objects are unsupported. Expressions cannot gather other rows, generate sequences,
+perform whole-vector reductions, or process variable-length rows. Use dedicated graph/evaluator
+operations for those tasks. Physical formats such as float16, narrow integers, normalized
+colors, and float64 high/low splitting remain outside the expression format subset.
 
 ## Chunking and ownership
 
