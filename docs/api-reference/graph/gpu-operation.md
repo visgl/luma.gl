@@ -46,6 +46,9 @@ kind and format. They are not physical buffers or command-graph views.
 List every logical read and write. Reusable-program planning uses these declarations to
 check producer order, discover scalar results, allocate vector outputs, and accept output
 targets. Add producers before consumers; contracts do not implicitly reorder operations.
+Values updated by non-expression operations may instead have an initial execution binding,
+including when they are read before a later replacement. Missing initial bindings are checked
+when preparing execution. Expression outputs retain their single-assignment restrictions.
 Actual command-node resource uses remain required: they describe physical accesses and are
 what the command graph uses for scheduling and hazards.
 

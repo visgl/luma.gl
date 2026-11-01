@@ -108,25 +108,9 @@ export class GPUExpressionProgram {
         throw new Error(`Multiple expression writers for ${operation.output}`);
       producers.add(operation.output);
     }
-    const written = new Set<string>();
-    const readWrite = new Set<string>();
-    for (const contract of this.contracts.values()) {
-      for (const use of contract.values) {
-        const name = getGPUOperationValueName(use.value);
-        if (use.access !== 'read') written.add(name);
-        if (
-          !producers.has(name) &&
-          use.access !== 'read' &&
-          contract.values.some(
-            input => input.access !== 'write' && getGPUOperationValueName(input.value) === name
-          )
-        )
-          readWrite.add(name);
-      }
-    }
-    const available = new Set(
-      [...declarations.keys()].filter(name => !written.has(name) || readWrite.has(name))
-    );
+    // Non-expression values may be initialized by execution bindings, even if overwritten later.
+    // Expression outputs remain single-assignment values with compile-time producer ordering.
+    const available = new Set([...declarations.keys()].filter(name => !producers.has(name)));
     const expressionPlans: GPUExpressionPlan[] = [];
     for (const operation of operations) {
       const contract = this.contracts.get(operation);

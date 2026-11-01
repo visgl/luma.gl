@@ -16,6 +16,7 @@ import {
 } from '@luma.gl/graph';
 import {
   GPUGraphScalarOperation,
+  GPUGraphVectorMADD,
   GPULoopOperation,
   GPUGraphScalarLiteral,
   GPUGraphDotProduct
@@ -108,6 +109,50 @@ test('fixed-count loop scalar producers execute before top-level consumers', asy
     }
   } finally {
     compiled.destroy();
+  }
+});
+
+test('initialized execution vectors can be read before a later replacement', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const graph = new GPUGraph();
+  const state = graph.vector('state', 'float32');
+  const intermediate = graph.vector('intermediate', 'float32');
+  const addend = graph.vector('addend', 'float32');
+  const scale = graph.scalar('scale', 'float32');
+  graph.add([
+    new GPUGraphVectorMADD({input: state, scale, addend, output: intermediate}),
+    new GPUGraphVectorMADD({input: intermediate, scale, addend, output: state})
+  ]);
+  const makeVector = (value: number) =>
+    new GPUVector({
+      type: 'data',
+      format: 'float32',
+      ownsData: true,
+      data: [
+        new GPUData({
+          format: 'float32',
+          length: 1,
+          ownsBuffer: true,
+          buffer: device.createBuffer({
+            data: new Float32Array([value]),
+            usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+          })
+        })
+      ]
+    });
+  const stateVector = makeVector(3);
+  const addendVector = makeVector(1);
+  const compiled = graph.compile(device, {outputs: ['state']});
+  try {
+    await expect(compiled.run({scale: 2, addend: addendVector})).rejects.toThrow('binding state');
+    const result = await compiled.run({state: stateVector, scale: 2, addend: addendVector});
+    expect(result.state).toBe(stateVector);
+    expect(await readFloat(result.state)).toEqual([15]);
+  } finally {
+    compiled.destroy();
+    stateVector.destroy();
+    addendVector.destroy();
   }
 });
 

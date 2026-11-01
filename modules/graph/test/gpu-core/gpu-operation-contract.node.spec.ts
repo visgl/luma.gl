@@ -157,7 +157,15 @@ test('custom producers participate in ordering and scalar output selection', () 
   reversed.scalar('computed', 'float32');
   reversed.scalar('output', 'float32');
   reversed.add([consumer, producer]);
-  expect(() => new GPUExpressionProgram(reversed)).toThrow('before it is produced');
+  const device = new NullDevice({});
+  try {
+    const reversedProgram = new GPUExpressionProgram(reversed);
+    expect(() => reversedProgram.prepare(device, {})).toThrow('Missing execution binding computed');
+    const invocation = reversedProgram.prepare(device, {computed: 3});
+    invocation.destroy();
+  } finally {
+    device.destroy();
+  }
 });
 
 test('contract dependencies reject a forward read by a custom operation', () => {
