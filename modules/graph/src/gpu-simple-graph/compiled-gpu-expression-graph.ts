@@ -45,6 +45,7 @@ export class CompiledGPUSimpleExpressionGraph {
     assert(!this.running && !this.destroyed);
     this.running = true;
     const evaluators = new Set<GPUDataEvaluator>();
+    const scalarBuffers = new Set<Buffer>();
     let scope: GPUEvaluationScope | undefined;
     let invocation: ReturnType<GPUExpressionProgram['prepare']> | undefined;
     try {
@@ -62,8 +63,25 @@ export class CompiledGPUSimpleExpressionGraph {
           // integers and float32 overflow as typed data instead of invalid shader literals.
           const lowerNumber = (inputValue: number): GPUDataEvaluator | number => {
             const value = Math.fround(inputValue);
-            return !Number.isFinite(value) ||
-              (Number.isInteger(value) && String(value).includes('e'))
+            if (!Number.isFinite(value)) {
+              // A host value would be inlined by the WebGPU evaluator. Keep overflow in storage.
+              const buffer = this.device.createBuffer({
+                data: new Float32Array([value]),
+                usage: Buffer.STORAGE | Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
+              });
+              scalarBuffers.add(buffer);
+              return retain(
+                new GPUDataEvaluator({
+                  type: 'float32',
+                  format: 'float32',
+                  size: 1,
+                  length: 1,
+                  isConstant: true,
+                  buffer
+                })
+              );
+            }
+            return Number.isInteger(value) && String(value).includes('e')
               ? retain(
                   new GPUDataEvaluator({
                     type: 'float32',
@@ -171,6 +189,7 @@ export class CompiledGPUSimpleExpressionGraph {
       throw error;
     } finally {
       for (const evaluator of evaluators) evaluator.destroy();
+      for (const buffer of scalarBuffers) buffer.destroy();
       this.running = false;
     }
   }

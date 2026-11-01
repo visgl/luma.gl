@@ -59,6 +59,7 @@ for (const backend of ['webgl-simple', 'webgpu-simple', 'webgpu-full'] as const)
   test(`${backend} accepts finite scalar bindings that overflow float32`, async () => {
     const device = await getDevice();
     if (!device) return;
+    const createShader = vi.spyOn(device, 'createShader');
     const graph = makeGraph();
     graph.scalar('input', 'float32');
     graph.scalar('output', 'float32');
@@ -76,6 +77,10 @@ for (const backend of ['webgl-simple', 'webgpu-simple', 'webgpu-full'] as const)
       }
     } finally {
       compiled.destroy();
+      for (const [properties] of createShader.mock.calls) {
+        expect(properties.source).not.toMatch(/\bInfinity\b/);
+      }
+      createShader.mockRestore();
     }
   });
   test(`${backend} rounds scalar inputs and intermediate math to float32`, async () => {
