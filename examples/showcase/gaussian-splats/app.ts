@@ -482,14 +482,12 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         throw new Error('The glTF showcase currently requires one identity-placed splat instance.');
       }
       signal.throwIfAborted();
-      for (const batch of groups[0]?.batches ?? []) {
-        this.batches.push(batch);
-        this.loadedSplatCount += batch.length;
-        this.appendRendererBatch(batch);
-      }
+      const batches = groups[0]?.batches ?? [];
+      if (!batches.length) throw new Error('The glTF scene does not contain any Gaussian splats.');
+      for (const batch of batches) this.appendRendererBatch(batch);
+      this.batches.push(...batches);
+      this.loadedSplatCount = batches.reduce((count, batch) => count + batch.length, 0);
       groups = [];
-      if (!this.batches.length)
-        throw new Error('The glTF scene does not contain any Gaussian splats.');
       this.expectedSplatCount = this.loadedSplatCount;
       this.expectedBatchCount = this.batches.length;
       if (!this.hasManualCameraInteraction) this.fitCameraToBatches();
@@ -497,8 +495,14 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       this.requestRedraw();
       this.updatePanel();
     } finally {
-      for (const group of groups) for (const batch of group.batches) batch.destroy();
-      scenegraphs.destroy();
+      try {
+        if (groups.length && !(this.renderer instanceof GPUPagedSplatRenderer)) {
+          this.renderer.setProps({data: []});
+        }
+      } finally {
+        for (const group of groups) for (const batch of group.batches) batch.destroy();
+        scenegraphs.destroy();
+      }
     }
   }
 
