@@ -77,7 +77,10 @@ describe('Gaussian splat documentation showcase', () => {
     expect(roadmap).toContain('https://github.com/visgl/loaders.gl/pull/3431');
     expect(roadmap).toContain('https://github.com/visgl/loaders.gl/issues/1245');
     expect(roadmap).toContain('`Tileset3D` and `Tiles3DSource` traversal');
-    expect(roadmap).toContain('loaders.gl has SPZ v4 decoding, but not SPZ v2');
+    expect(roadmap).toContain('beta.4 upstream source includes legacy SPZ v2/v3 and v4 decoding');
+    expect(roadmap).toContain(
+      'published-package qualification and end-to-end transformed Gaussian tile integration remain'
+    );
     expect(roadmap).toContain('existing `SplatLayer`');
     expect(roadmap).toContain('loader-computed transforms per tile/page in the renderer');
     expect(roadmap).toContain('per-tile/page renderer transforms');
