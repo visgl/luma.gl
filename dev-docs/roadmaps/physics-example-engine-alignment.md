@@ -58,6 +58,13 @@ instance-matrix attributes, but physics publication buffers are currently alloca
 storage/copy buffers; direct vertex use needs an explicit buffer usage contract or a
 shared storage-backed pose lookup. Do not silently add a CPU upload bridge.
 
+Extend the existing ANARI `SceneRenderer` rather than creating a second retained renderer.
+Its `SceneSurface.transforms` currently accepts CPU matrix arrays, and
+`updateInstanceTransforms` repacks and uploads those matrices into four vertex buffers.
+That is appropriate for CPU-authored placements, but it is not yet a direct consumer of
+physics publication buffers. A GPU-backed surface-transform alternative would let the
+same renderer own batching, materials and caster preparation for physics-driven scenes.
+
 Gate: one programmatic scene and one imported scene render moving bodies through the
 same adapter, including their shadow casters, without per-frame pose readback. Test
 nonuniform visual scale, collider offsets, body-index mapping and borrowed-buffer cleanup.
