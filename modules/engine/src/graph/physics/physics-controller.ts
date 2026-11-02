@@ -225,6 +225,8 @@ export class PhysicsController {
   /** Compile once, or explicitly rebuild after body, geometry, scale or topology edits. */
   prepare({preserveState = true}: {preserveState?: boolean} = {}): Promise<void> {
     return this.exclusive(async () => {
+      // Destruction can begin before this queued preparation starts.
+      assert(!this.closed);
       if (this.scene.transformSource && this.scene.transformSource !== this.transformSource)
         throw new Error('Scene already has a transform source');
       // Claim before the first await so another controller cannot prepare this root concurrently.

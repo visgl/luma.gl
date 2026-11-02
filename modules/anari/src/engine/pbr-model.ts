@@ -198,11 +198,13 @@ fn fragmentMain(inputs: ScenePBRFragmentInputs) -> @location(0) vec4f {
   fragmentInputs.pbr_vTBN = mat3x3f(tangent, bitangent, inputs.pbrNormal);
 #endif
 #ifndef SCENE_DEPTH_PASS
+#ifndef SCENE_PICK_PASS
 #ifdef DEBUG_NORMALS
   return vec4f(normalize(inputs.pbrNormal) * 0.5 + vec3f(0.5), 1.0);
 #endif
 #ifdef DEBUG_DEPTH
   return vec4f(vec3f(inputs.position.z), 1.0);
+#endif
 #endif
 #endif
 #ifdef SCENE_DEPTH_PASS

@@ -334,6 +334,9 @@ export class SceneRenderer {
         transmission: false
       };
       const capturedScene = this.prepareScene(captureOptions);
+      if (shadowProps)
+        for (const surface of capturedScene.surfaces)
+          surface.model.shaderInputs.setProps({shadow: shadowProps});
       const capturePass = this.device.beginRenderPass({
         id: `scene-${options.id}-transmission`,
         framebuffer: transmission.framebuffer,
@@ -433,6 +436,7 @@ export class SceneRenderer {
         id: identifier,
         framebuffer,
         rasterPass: 'picking',
+        renderMode: 'default',
         spotShadows: undefined,
         transmission: false,
         background: [0, 0, 0, 0],
@@ -442,6 +446,7 @@ export class SceneRenderer {
         toneMapMode: 0
       });
       const nodes = new Map(this.pickNodes);
+      this.pickNodes.clear();
       this.device.submit();
       color.readBuffer({x: pixel.x, y: pixel.y, width: 1, height: 1}, readback);
       const bytes = await readback.readAsync(0, layout.byteLength);
@@ -464,12 +469,15 @@ export class SceneRenderer {
       renderer = new ShadowMapRenderer(this.device, {
         directionalLightCapacity: 0,
         pointLightCapacity: 0,
-        spotLightCapacity: 4,
+        spotLightCapacity: options.spotShadows!.spotLights.length,
         spotMapSize: options.spotShadows!.mapSize ?? 2048
       });
       this.shadowMaps.set(options.id, renderer);
     }
-    renderer.setProps({spotMapSize: options.spotShadows!.mapSize ?? 2048});
+    renderer.setProps({
+      spotMapSize: options.spotShadows!.mapSize ?? 2048,
+      spotLightCapacity: options.spotShadows!.spotLights.length
+    });
     const preparedViews = new Map<number, PreparedScene>();
     return renderer.render({
       camera: {

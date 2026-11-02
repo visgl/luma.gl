@@ -6,7 +6,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {CubeGeometry, GroupNode, Model, type ScenegraphTransformFrame} from '@luma.gl/engine';
 import {PhysicsController} from '@luma.gl/engine/physics';
-import {SceneRenderer, SceneMeshNode} from '@luma.gl/anari';
+import {SceneRenderer, SceneMeshNode, DeferredSceneRenderer} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core';
 import {expect, test} from 'vitest';
 
@@ -112,6 +112,8 @@ test('retained color, depth, picking and shadow passes use current borrowed GPU 
     expect(await readPixel(48)).toBeGreaterThan(200);
     expect(await readPixel(32)).toBe(0);
     expect(await renderer.pick(options, {x: 48, y: 32})).toBe(first);
+    for (const renderMode of ['debugNormals', 'debugDepth'] as const)
+      expect(await renderer.pick({...options, renderMode}, {x: 48, y: 32})).toBe(first);
     expect(await renderer.pick(options, {x: 16, y: 32})).toBe(second);
     expect(await renderer.pick(options, {x: 32, y: 32})).toBeUndefined();
     renderer.render({...options, framebuffer: depthFramebuffer, rasterPass: 'depth'});
@@ -198,6 +200,146 @@ test('PhysicsController publishes through the scene and detaches on disposal', a
   } finally {
     renderer.destroy();
     await physics.destroy();
+    scene.destroy();
+  }
+});
+
+test('alpha-masked GPU meshes keep identity picking consistent through the deferred forward path', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const texture = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    data: new Uint8Array([255, 255, 255, 0])
+  });
+  const matrices = device.createBuffer({
+    usage: Buffer.STORAGE,
+    data: new Float32Array(new Matrix4().translate([0, 0, 0.5]))
+  });
+  const node = new SceneMeshNode({
+    id: 'masked',
+    geometry: new CubeGeometry(),
+    material: {
+      id: 'masked',
+      alphaMode: 'MASK',
+      uniforms: {alphaCutoff: 0.5},
+      bindings: {pbr_baseColorSampler: texture}
+    }
+  });
+  const scene = new GroupNode({
+    children: [node],
+    transformSource: {
+      getFrame: () => ({
+        matrices,
+        matrixCount: 1,
+        revision: 0,
+        bindings: new Map([
+          [node, {matrixIndex: 0, localMatrix: new Matrix4().scale([0.2, 0.2, 0.2])}]
+        ])
+      })
+    }
+  });
+  const renderer = new DeferredSceneRenderer(device);
+  const options = {scene, camera, width: 32, height: 32};
+  try {
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBeUndefined();
+    texture.writeData(new Uint8Array([255, 255, 255, 255]));
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBe(node);
+    renderer.destroyScene(scene);
+    expect(texture.destroyed).toBe(false);
+  } finally {
+    renderer.destroy();
+    texture.destroy();
+    matrices.destroy();
+    scene.destroy();
+  }
+});
+
+test('disposing a queued controller preparation cannot leave a source attached to the scene', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const node = new SceneMeshNode({id: 'box', geometry: new CubeGeometry(), material: {id: 'box'}});
+  const scene = new GroupNode({children: [node]});
+  const physics = new PhysicsController(device, {scene});
+  physics.addBody(node);
+  const preparation = physics.prepare();
+  const destruction = physics.destroy();
+  const [result] = await Promise.allSettled([preparation, destruction]);
+  expect(result.status).toBe('rejected');
+  expect(scene.transformSource).toBeNull();
+  expect(physics.transformSource.getFrame()).toBeNull();
+  scene.destroy();
+});
+
+test('spot shadows bind opaque capture models before physical transmission samples them', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const geometry = new CubeGeometry();
+  const background = new SceneMeshNode({
+    geometry,
+    matrix: new Matrix4().translate([0, 0, 0.75]).scale([0.8, 0.8, 0.05]),
+    material: {id: 'opaque-red', uniforms: {unlit: true, baseColorFactor: [1, 0.01, 0.01, 1]}}
+  });
+  const glass = new SceneMeshNode({
+    geometry,
+    matrix: new Matrix4().translate([0, 0, 0.3]).scale([0.4, 0.4, 0.05]),
+    material: {
+      id: 'glass',
+      doubleSided: true,
+      uniforms: {
+        baseColorFactor: [1, 1, 1, 1],
+        metallicRoughnessValues: [0, 0.05],
+        transmissionFactor: 1,
+        thicknessFactor: 0.01,
+        ior: 1.5
+      }
+    }
+  });
+  const scene = new GroupNode({children: [background, glass]});
+  const renderer = new SceneRenderer(device);
+  const color = device.createTexture({
+    width: 32,
+    height: 32,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: 32,
+    height: 32,
+    colorAttachments: [color],
+    depthStencilAttachment: 'depth24plus'
+  });
+  const readback = device.createBuffer({
+    byteLength: color.computeMemoryLayout({width: 1, height: 1}).byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    expect(
+      renderer.render({
+        scene,
+        camera,
+        framebuffer,
+        background: [0, 0, 0, 1],
+        outputColorSpace: 'linear',
+        toneMapMode: 0,
+        lights: [{type: 'spot', position: [0, 0, 3], direction: [0, 0, -1]}],
+        spotShadows: {
+          mapSize: 128,
+          spotLights: [{position: [0, 0, 3], direction: [0, 0, -1], outerConeAngle: 0.6, range: 10}]
+        }
+      }).drawCount
+    ).toBe(2);
+    device.submit();
+    color.readBuffer({x: 16, y: 16, width: 1, height: 1}, readback);
+    const pixel = await readback.readAsync();
+    expect(pixel[0]).toBeGreaterThan(pixel[1] * 2);
+    expect(pixel[0]).toBeGreaterThan(100);
+  } finally {
+    renderer.destroy();
+    framebuffer.destroy();
+    color.destroy();
+    readback.destroy();
     scene.destroy();
   }
 });

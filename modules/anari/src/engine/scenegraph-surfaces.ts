@@ -125,5 +125,6 @@ export class ScenegraphSurfaces {
 
   destroy(): void {
     this.identifiers.clear();
+    this.used.clear();
   }
 }
