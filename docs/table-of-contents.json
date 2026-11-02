@@ -454,6 +454,7 @@
               "api-reference/engine/orbit-controls",
               "api-reference/engine/picking-manager",
               "api-reference/engine/scenegraph/group-node",
+              "api-reference/engine/physics-controller",
               "api-reference/engine/scenegraph/model-node",
               "api-reference/engine/scenegraph/scenegraph-node"
             ]

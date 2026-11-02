@@ -34,6 +34,12 @@ export class Model extends GPUVectorModel {
   declare material: Material | null;
   declare _gpuGeometry: GPUGeometry | null;
   private declare indexCountOverride: number | undefined;
+  private declare sourceGeometryValue: ModelProps['geometry'];
+
+  /** Borrowed source geometry, retained for scene adapters such as physics cooking. */
+  get sourceGeometry(): ModelProps['geometry'] {
+    return this.sourceGeometryValue;
+  }
 
   constructor(device: Device, props: ModelProps) {
     const sourceGeometry =
@@ -56,12 +62,14 @@ export class Model extends GPUVectorModel {
       throw error;
     }
     this._gpuGeometry = gpuGeometry;
+    this.sourceGeometryValue = sourceGeometry;
     if (gpuGeometry) this.setIndexCount(this.props.indexCount);
   }
 
   protected override _initializeProps(props: GPUVectorModelProps & {material?: Material}): void {
     this.material = props.material || null;
     this._gpuGeometry = null;
+    this.sourceGeometryValue = null;
     super._initializeProps(props);
   }
 
@@ -75,6 +83,7 @@ export class Model extends GPUVectorModel {
     super.destroy();
     this._gpuGeometry?.destroy();
     this._gpuGeometry = null;
+    this.sourceGeometryValue = null;
   }
 
   /** Adapts CPU and legacy buffer geometry into the GPU vector geometry API. */
@@ -89,6 +98,7 @@ export class Model extends GPUVectorModel {
       : geometry;
     super.setGeometry(vectorGeometry instanceof GPUVectorGeometry ? vectorGeometry : null);
     if (!(geometry instanceof GPUVectorGeometry)) super.setIndexCount(this.indexCountOverride);
+    this.sourceGeometryValue = geometry;
   }
 
   override setIndexCount(indexCount: number | undefined): void {

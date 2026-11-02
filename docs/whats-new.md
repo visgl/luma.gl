@@ -1,5 +1,12 @@
 # What's New
 
+### Path-based scenegraph physics
+
+`PhysicsController` attaches bodies and shared joint declarations using node references,
+IDs or paths. It infers CPU collision geometry, prepares GPU sessions and submits bounded
+fixed-step updates without pose readback. See the
+[controller API](./api-reference/engine/physics-controller.md).
+
 ### Graph transfers and GPU-sized selection
 
 Reusable GPUGraph and GPUSimpleGraph share [upload and copy operations](./api-reference/graph/gpu-transfer-operations.md).
