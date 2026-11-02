@@ -58,6 +58,13 @@ subrange, bind a vector whose chunks describe that range, using `GPUData.byteOff
 For capacity/count results, copying the vector copies its entire capacity. The associated
 count remains a separate graph value; select it explicitly if the caller needs it.
 
+## Texture copies
+
+On WebGPU, the same `GPUCopyOperation({input, output})` also copies named texture values in
+GPUGraph and reusable SimpleGraph. It preserves format, extent, and selected mip/layer ranges,
+without sampling or conversion. See [texture bindings](./gpu-graph-textures.md) for declarations,
+caller-owned encoding, and output ownership. Vector copy behavior is unchanged.
+
 ## Execution and ownership
 
 Both operations support the normal `outputTargets` bindings. Supplied targets remain borrowed;

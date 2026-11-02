@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, assert, type Device} from '@luma.gl/core';
+import {Buffer, assert, type Device, type CommandEncoder} from '@luma.gl/core';
 import {
   GPUDataEvaluator,
   GPUEvaluationScope,
@@ -33,12 +33,16 @@ import {
 
 import {GPUUploadOperation, GPUCopyOperation} from '../gpu-core/gpu-transfer-operation';
 import {executeGPUTransfer} from './gpu-transfer-execution';
+import {encodeTextureCopy} from '../gpu-core/gpu-texture-copy';
+import type {GPUGraphOutputs} from '../gpu-core/gpu-texture-plan';
 
 import {GPUExpressionCastOperation} from './gpu-expression-cast-operation';
 import {GPUExpressionRowOperation} from './gpu-expression-row-operation';
 
 /** Reusable expression program implemented through the unchanged evaluator API. */
-export class CompiledGPUSimpleExpressionGraph {
+export class CompiledGPUSimpleExpressionGraph<
+  Outputs extends GPUGraphOutputs = Record<string, GPUVector>
+> {
   private readonly program: GPUExpressionProgram;
   private running = false;
   private destroyed = false;
@@ -50,6 +54,8 @@ export class CompiledGPUSimpleExpressionGraph {
   ) {
     if (options.lowerings) throw new Error('Custom lowerings require GPUGraph');
     this.program = new GPUExpressionProgram(source, options);
+    if (this.program.textures.length && device.type !== 'webgpu')
+      throw new Error('SimpleGraph texture execution requires WebGPU');
     if (this.program.vectors.some(value => value.role === 'state'))
       throw new Error('SimpleGraph state execution is unsupported');
     if (
@@ -67,10 +73,51 @@ export class CompiledGPUSimpleExpressionGraph {
       );
   }
 
+  /** Prepare a straight-line texture-copy program without submitting work. */
+  prepare(
+    supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
+    options: GPUGraphRunOptions = {}
+  ) {
+    assert(!this.destroyed && !this.running && this.device.type === 'webgpu');
+    if (
+      !this.program.textures.length ||
+      this.program.operations.some(
+        operation =>
+          !(operation instanceof GPUCopyOperation) ||
+          !this.program.textures.some(texture => texture.id === operation.input)
+      )
+    )
+      throw new Error('SimpleGraph prepare currently supports texture-copy programs only');
+    const resolved = this.program.resolveBindings(supplied, options);
+    const invocation = this.program.prepare(this.device, resolved.bindings, resolved.options);
+    let encoded = false;
+    let destroyed = false;
+    return {
+      outputs: invocation.getOutputs<Outputs>(),
+      encode: (encoder: CommandEncoder): void => {
+        assert(!this.destroyed && !destroyed && !encoded && encoder.device === this.device);
+        encoded = true;
+        for (const operation of this.program.operations) {
+          assert(operation instanceof GPUCopyOperation);
+          encodeTextureCopy(
+            encoder,
+            invocation.textures!.values.get(operation.input)!,
+            invocation.textures!.values.get(operation.output)!
+          );
+        }
+      },
+      destroy: (): void => {
+        if (destroyed) return;
+        destroyed = true;
+        invocation.finish();
+      }
+    };
+  }
+
   async run(
     supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
-  ): Promise<Record<string, GPUVector>> {
+  ): Promise<Outputs> {
     // Evaluators do not support concurrent evaluation on one execution scope.
     assert(!this.running && !this.destroyed);
     const resolvedBindings = this.program.resolveBindings(supplied, options);
@@ -90,7 +137,17 @@ export class CompiledGPUSimpleExpressionGraph {
       };
       for (const operation of this.program.operations) {
         if (operation instanceof GPUUploadOperation || operation instanceof GPUCopyOperation) {
-          executeGPUTransfer(this.device, operation, invocation.values, scope);
+          if (
+            operation instanceof GPUCopyOperation &&
+            invocation.textures?.values.has(operation.input)
+          ) {
+            assert(scope);
+            encodeTextureCopy(
+              scope.commandEncoder,
+              invocation.textures.values.get(operation.input)!,
+              invocation.textures.values.get(operation.output)!
+            );
+          } else executeGPUTransfer(this.device, operation, invocation.values, scope);
           continue;
         }
         const plan = this.program.expressions.find(plan => plan.operation === operation)!;
@@ -301,7 +358,7 @@ export class CompiledGPUSimpleExpressionGraph {
         }
       }
       scope?.submit();
-      return invocation.finish();
+      return invocation.finish<Outputs>();
     } catch (error) {
       scope?.cancel();
       invocation?.destroy();

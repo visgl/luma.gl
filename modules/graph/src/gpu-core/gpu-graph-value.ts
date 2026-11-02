@@ -26,10 +26,42 @@ export type GPUGraphVectorDescriptor<T extends GPUGraphVectorFormat = GPUGraphVe
     length?: number;
     chunkLengths?: readonly number[];
   }>;
-export type GPUGraphValueDescriptor = GPUGraphScalarDescriptor | GPUGraphVectorDescriptor;
+export type GPUGraphTextureExtent =
+  | Readonly<{width: number; height: number; depth?: number}>
+  | Readonly<{like: string; scale?: readonly [number, number]}>;
+export type GPUGraphTextureDescriptor<Format extends TextureFormat = TextureFormat> = Readonly<{
+  type: 'texture';
+  format: Format;
+  dimension?: GraphTextureDimension;
+  extent?: GPUGraphTextureExtent;
+  mipLevels?: number;
+  samples?: number;
+}>;
+export type GPUGraphValueDescriptor =
+  | GPUGraphScalarDescriptor
+  | GPUGraphVectorDescriptor
+  | GPUGraphTextureDescriptor;
 
 /** Pure logical descriptors: no allocation, device, or registration. */
 export const gpuGraph = {
+  texture<Format extends TextureFormat>(
+    props: Omit<GPUGraphTextureDescriptor<Format>, 'type'>
+  ): GPUGraphTextureDescriptor<Format> {
+    return Object.freeze({
+      ...props,
+      type: 'texture',
+      ...(props.extent
+        ? {
+            extent: Object.freeze({
+              ...props.extent,
+              ...('scale' in props.extent && props.extent.scale
+                ? {scale: Object.freeze([...props.extent.scale]) as readonly [number, number]}
+                : {})
+            })
+          }
+        : {})
+    });
+  },
   scalar<T extends GPUGraphScalarFormat>(format: T): GPUGraphScalarDescriptor<T> {
     return Object.freeze({type: 'scalar', format});
   },
@@ -112,8 +144,10 @@ export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorForma
 export class GPUGraphTexture<Format extends TextureFormat = TextureFormat> {
   readonly id: string;
   readonly format: Format;
-  readonly width: number;
-  readonly height: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly role?: GPUGraphValueRole;
+  readonly descriptor?: GPUGraphTextureDescriptor<Format>;
   readonly usage: number;
   readonly dimension?: GraphTextureDimension;
   readonly depth?: number;
@@ -122,7 +156,17 @@ export class GPUGraphTexture<Format extends TextureFormat = TextureFormat> {
   /** Caller-owned storage, optionally bound at compilation or supplied when encoding. */
   readonly external: boolean;
 
-  constructor(props: GPUGraphTextureProps<Format> & {id: string}) {
+  constructor(
+    props: Omit<GPUGraphTextureProps<Format>, 'width' | 'height'> & {
+      id: string;
+      width?: number;
+      height?: number;
+      role?: GPUGraphValueRole;
+      descriptor?: GPUGraphTextureDescriptor<Format>;
+    }
+  ) {
+    this.role = props.role;
+    this.descriptor = props.descriptor ? gpuGraph.texture(props.descriptor) : undefined;
     this.id = props.id;
     this.format = props.format;
     this.width = props.width;

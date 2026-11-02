@@ -1,5 +1,13 @@
 # What's New
 
+### Reusable graph texture bindings
+
+GPUGraph and WebGPU SimpleGraph accept named texture inputs and operation-produced texture
+copy results, including selected mip/layer views and borrowed output targets. GPUGraph custom
+lowerings can also produce textures with execution-sized or scaled extents. See
+[texture values and execution bindings](./api-reference/graph/gpu-graph-textures.md).
+Evaluator APIs remain unchanged.
+
 ### Path-based scenegraph physics
 
 `PhysicsController` attaches bodies and shared joint declarations using node references,

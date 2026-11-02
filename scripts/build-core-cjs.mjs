@@ -102,6 +102,9 @@ for (const name of ['GPUExpressionOperation', 'GPUUploadOperation', 'GPUCopyOper
   assert.equal(rootGraphApi[name], gpuCoreApi[name]);
   assert.equal(graphEsm[name], gpuCoreEsm[name]);
 }
+for (const api of [rootGraphApi, graphEsm, gpuCoreApi, gpuCoreEsm]) {
+  assert.equal(api.gpuGraph.texture({format: 'rgba8unorm'}).type, 'texture');
+}
 process.stdout.write('Verified expression operation exports in ESM and CommonJS.\n');
 
 

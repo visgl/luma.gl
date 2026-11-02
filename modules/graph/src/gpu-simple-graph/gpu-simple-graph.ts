@@ -3,6 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {GPUGraph} from '../gpu-core/gpu-graph';
+import type {TextureFormat} from '@luma.gl/core';
+import type {GPUGraphOutputs} from '../gpu-core/gpu-texture-plan';
+import {GPUGraphTexture, type GPUGraphTextureDescriptor} from '../gpu-core/gpu-graph-value';
 import {GPUExpressionOperation} from '../gpu-core/gpu-expression-operation';
 import type {GPUGraphCompileOptions} from '../gpu-core/gpu-expression-plan';
 import type {
@@ -112,8 +115,16 @@ export class GPUSimpleGraph {
     id: string,
     descriptor: GPUGraphVectorDescriptor<T>
   ): GPUGraphVector<T>;
-  addInput(id: string, descriptor: GPUGraphValueDescriptor): GPUGraphScalar | GPUGraphVector {
+  addInput<Format extends TextureFormat>(
+    id: string,
+    descriptor: GPUGraphTextureDescriptor<Format>
+  ): GPUGraphTexture<Format>;
+  addInput(
+    id: string,
+    descriptor: GPUGraphValueDescriptor
+  ): GPUGraphScalar | GPUGraphVector | GPUGraphTexture {
     assert(!this.compiled);
+    if (descriptor.type === 'texture') return this.declarations.addInput(id, descriptor);
     return descriptor.type === 'scalar'
       ? this.declarations.addInput(id, descriptor)
       : this.declarations.addInput(id, descriptor);
@@ -230,12 +241,15 @@ export class GPUSimpleGraph {
   }
 
   /** Captures selected roots and an inspectable dependency plan without executing work. */
-  compile(device: Device, options?: GPUGraphCompileOptions): CompiledGPUSimpleExpressionGraph;
+  compile<Outputs extends GPUGraphOutputs = Record<string, GPUVector>>(
+    device: Device,
+    options?: GPUGraphCompileOptions
+  ): CompiledGPUSimpleExpressionGraph<Outputs>;
   compile(options?: GPUSimpleGraphCompileOptions): CompiledGPUSimpleGraph;
   compile(
     deviceOrOptions: Device | GPUSimpleGraphCompileOptions = {},
     expressionOptions: GPUGraphCompileOptions = {}
-  ): CompiledGPUSimpleGraph | CompiledGPUSimpleExpressionGraph {
+  ): CompiledGPUSimpleGraph | CompiledGPUSimpleExpressionGraph<GPUGraphOutputs> {
     if ('type' in deviceOrOptions) {
       assert(!this.compiled && this.leafOperations.length === 0);
       this.compiled = true;
@@ -247,7 +261,13 @@ export class GPUSimpleGraph {
     }
     // Legacy evaluator graphs bind their device in the constructor.
     assert(this.device && this.declarations.operations.length === 0);
-    if ([...this.declarations.scalars, ...this.declarations.vectors].some(value => value.role))
+    if (
+      [
+        ...this.declarations.scalars,
+        ...this.declarations.vectors,
+        ...this.declarations.textures
+      ].some(value => value.role)
+    )
       throw new Error('Explicit input/state declarations require compile(device)');
     const options = deviceOrOptions;
     // A graph is compiled once, including when compilation fails.

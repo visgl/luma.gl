@@ -67,3 +67,5 @@ the graph package does not imply every algorithm accepts the reusable expression
 | `gpu-raster`, `lucim` | Raster and volume processing |
 | `gpu-simulation`, `gpu-effects` | Graph-based ocean/fire simulations and FFT bloom |
 | `gpu-trace` | Trace analytics |
+
+For image processing, see [texture values and execution bindings](./gpu-graph-textures.md).
