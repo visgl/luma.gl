@@ -99,6 +99,39 @@ geometry batches.
 It accepts a named map or array of vectors, ignores constants and undefined entries, and
 neither modifies nor repacks input storage.
 
+### Per-batch uniforms
+
+`drawBatches()` invokes `onBatch` before each aligned vector chunk. Set managed shader-input
+uniforms in the callback to supply batch-local state such as a picking row offset:
+
+```typescript
+model.drawBatches(renderPass, {
+  vectors: {positions, colors},
+  onBatch: ({rowIndexOffset, rowCount}) => {
+    model.shaderInputs.setProps({picking: {indexOffset: rowIndexOffset}});
+  }
+});
+```
+
+`rowIndexOffset` is cumulative within the supplied vectors; `rowCount` is the current chunk's
+length. Corresponding vectors must have equal lengths, chunk counts, and per-chunk row counts.
+This API does not pad, split, concatenate, or realign chunks. As with other `drawBatches()`
+inputs, configure matching model buffer layouts and initial attribute bindings first.
+
+Each draw retains the managed uniform values present after its callback returns. On WebGPU,
+luma creates immutable uniform snapshots, so later callbacks, repeated `drawBatches()` calls,
+and later managed-uniform writes cannot change an earlier batch's encoded values. Snapshots
+belong to the render pass's command encoder, including caller-owned encoders. They survive
+`finish()` and are released after submission completes, or when unsubmitted commands are
+destroyed. When recording a render bundle, snapshots instead belong to the finished bundle
+and survive replay until that bundle is destroyed. Each managed block uses one snapshot buffer per batch draw; no snapshot buffers
+are reused across pending draws. WebGL applies uniforms immediately and needs no snapshots.
+
+Explicit uniform-buffer bindings remain caller-managed and are not snapshotted. The guarantee
+covers `drawBatches()` managed uniforms, not arbitrary external resource writes or ordinary
+`draw()` calls. The callback's shader-input values remain set after the call; temporary buffer
+bindings, attributes, and draw counts are restored, including when a callback throws.
+
 ## Usage
 
 ```typescript

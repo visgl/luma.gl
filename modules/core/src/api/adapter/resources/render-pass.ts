@@ -107,6 +107,15 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** Clears all stencil bits */
   static defaultClearStencil = 0;
 
+  /**
+   * @internal Creates an immutable uniform upload owned by this pass's command encoder or render bundle.
+   * WebGPU retains the buffer through submission; callers must not destroy or overwrite it.
+   */
+  _createUniformBufferSnapshot(data: Uint8Array): Buffer {
+    void data;
+    throw new Error('Uniform snapshots require WebGPU');
+  }
+
   override get [Symbol.toStringTag](): string {
     return 'RenderPass';
   }

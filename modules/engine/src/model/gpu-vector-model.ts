@@ -1009,7 +1009,12 @@ export class GPUVectorModel {
     }
   }
 
-  /** Draws each aligned physical chunk without retaining or taking ownership of input vectors. */
+  /**
+   * Draws each aligned physical chunk without taking ownership of input vectors.
+   * Each draw retains the managed shader-input uniform values set by `onBatch`, including
+   * when several batches or calls share one WebGPU submission. Explicit buffer bindings
+   * remain caller-managed. Vector lengths and physical chunk boundaries must match.
+   */
   drawBatches<Inputs extends GPUVectorModelInputs = GPUVectorModelInputs>(
     renderPass: RenderPass,
     {vectors, onBatch}: GPUVectorModelDrawBatchesOptions<Inputs>
@@ -1028,6 +1033,10 @@ export class GPUVectorModel {
     const previousIsInstanced = this.isInstanced;
     const previousVertexCountSet = this._vertexCountSet;
     const drawingVectorBatches = this.drawingVectorBatches;
+    const uniformSnapshots =
+      this.device.type === 'webgpu' && batches.length
+        ? new UniformStore(this.device, this.shaderInputs.modules)
+        : undefined;
     this.drawingVectorBatches = true;
     let drawSuccess = true;
     try {
@@ -1035,9 +1044,29 @@ export class GPUVectorModel {
         this.setGPUData(batch.data);
         this.setBatchDrawCount(batch.rowCount);
         onBatch?.(batch);
-        drawSuccess = GPUVectorModel.prototype.draw.call(this, renderPass) && drawSuccess;
+        const managedBindings: Record<string, ModelBinding> = {};
+        try {
+          if (uniformSnapshots) {
+            uniformSnapshots.setUniforms(this.shaderInputs.getUniformValues());
+            for (const [moduleName, buffer] of this._uniformStore.uniformBuffers) {
+              const bindingName = `${moduleName}Uniforms`;
+              // Explicit bindings are caller-owned and must not be replaced.
+              if (this.bindings[bindingName] !== buffer) continue;
+              managedBindings[bindingName] = buffer;
+              this.setBindings({
+                [bindingName]: renderPass._createUniformBufferSnapshot(
+                  uniformSnapshots.getUniformBufferData(moduleName)
+                )
+              });
+            }
+          }
+          drawSuccess = GPUVectorModel.prototype.draw.call(this, renderPass) && drawSuccess;
+        } finally {
+          this.setBindings(managedBindings);
+        }
       }
     } finally {
+      uniformSnapshots?.destroy();
       this.setAttributes(previousAttributes, {byteOffsets: previousAttributeByteOffsets});
       for (const name of Object.keys(this.bindings)) {
         if (!(name in previousBindings)) delete this.bindings[name];

@@ -65,6 +65,16 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
   /** Vertex array used by subsequent draw commands. */
   vertexArray: VertexArray | null = null;
 
+  private uniformSnapshots: WebGPUBuffer[] = [];
+
+  /** @internal Retains immutable uniforms for the lifetime of the finished bundle. */
+  override _createUniformBufferSnapshot(data: Uint8Array): WebGPUBuffer {
+    const buffer = this.device.createBuffer({data, usage: Buffer.UNIFORM | Buffer.COPY_DST});
+    this.uniformSnapshots.push(buffer);
+    this.attachResource(buffer);
+    return buffer;
+  }
+
   private recordingErrorScopeOpen = false;
 
   /**
@@ -106,6 +116,11 @@ export class WebGPURenderBundleEncoder extends RenderBundleEncoder {
       userData: this.userData,
       handle
     });
+    for (const buffer of this.uniformSnapshots) {
+      this.detachResource(buffer);
+      renderBundle.attachResource(buffer);
+    }
+    this.uniformSnapshots = [];
     this.popRecordingErrorScope('finish');
     this.destroy();
     return renderBundle;

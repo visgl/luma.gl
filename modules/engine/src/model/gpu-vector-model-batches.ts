@@ -50,6 +50,10 @@ export type GPUVectorModelDrawBatchesOptions<
   Inputs extends GPUVectorModelInputs = GPUVectorModelInputs
 > = {
   vectors: Inputs;
+  /**
+   * Runs before each chunk draw. Managed shader-input uniforms set here are captured for
+   * that draw; external buffer bindings remain caller-managed. Row offsets are cumulative.
+   */
   onBatch?: (batch: GPUVectorModelBatch<NonNullable<Inputs[keyof Inputs]>['data'][number]>) => void;
 };
 

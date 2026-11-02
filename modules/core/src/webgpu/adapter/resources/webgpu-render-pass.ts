@@ -23,7 +23,7 @@ import {
 } from '../../../index';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
-// import {WebGPUCommandEncoder} from './webgpu-command-encoder';
+import type {WebGPUCommandEncoder} from './webgpu-command-encoder';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 import {WebGPUQuerySet} from './webgpu-query-set';
 import {WebGPUFramebuffer} from './webgpu-framebuffer';
@@ -35,6 +35,13 @@ export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPassEncoder;
   readonly framebuffer: WebGPUFramebuffer;
+
+  /** @internal Allocates a draw-local uniform buffer retained by the owning encoder. */
+  override _createUniformBufferSnapshot(data: Uint8Array): WebGPUBuffer {
+    const buffer = this.device.createBuffer({data, usage: Buffer.UNIFORM | Buffer.COPY_DST});
+    this.commandEncoder.trackTransientUploadBuffer(buffer);
+    return buffer;
+  }
 
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
@@ -49,7 +56,7 @@ export class WebGPURenderPass extends RenderPass {
   constructor(
     device: WebGPUDevice,
     props: RenderPassProps = {},
-    commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
+    private readonly commandEncoder: WebGPUCommandEncoder = device.commandEncoder
   ) {
     super(device, props);
     this.device = device;
@@ -101,7 +108,7 @@ export class WebGPURenderPass extends RenderPass {
       this.device.pushErrorScope('validation');
       const beginRenderPassStartTime = profiler ? getTimestamp() : 0;
       const suppliedHandle = this.props.handle as GPURenderPassEncoder | undefined;
-      this.handle = suppliedHandle || commandEncoder.beginRenderPass(renderPassDescriptor);
+      this.handle = suppliedHandle || commandEncoder.handle.beginRenderPass(renderPassDescriptor);
       if (profiler) {
         profiler.renderPassBeginCount = (profiler.renderPassBeginCount || 0) + 1;
         profiler.renderPassBeginTimeMs =
