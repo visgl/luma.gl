@@ -3,6 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
+import {Buffer} from '@luma.gl/core';
+import {GPUData} from '@luma.gl/graph/gpu-data';
+import {GPUGraphCompiler} from '@luma.gl/graph/gpu-core';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   GPUGraph,
@@ -76,6 +79,47 @@ test('compaction declares capacity and GPU count independently', () => {
   try {
     expect(() => simple.compile(device)).toThrow('supports expression, upload and copy');
   } finally {
+    device.destroy();
+  }
+});
+
+test('direct compiler inherits bound partitions through copy chains and adds transfer usage', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'type', {value: 'webgpu'});
+  const data = [1, 2].map(
+    length =>
+      new GPUData({
+        format: 'uint32',
+        length,
+        ownsBuffer: true,
+        buffer: device.createBuffer({
+          byteLength: length * 4,
+          usage: Buffer.STORAGE | Buffer.COPY_SRC
+        })
+      })
+  );
+  const graph = new GPUGraph();
+  graph.vector('input', 'uint32', 3, {external: true});
+  graph.vector('intermediate', 'uint32', 3);
+  graph.add([
+    new GPUCopyOperation({input: 'input', output: 'intermediate'}),
+    new GPUCopyOperation({input: 'intermediate', output: 'result'})
+  ]);
+  const compilation = new GPUGraphCompiler(device).compile(graph, {vectors: {input: data}});
+  try {
+    for (const name of ['intermediate', 'result'])
+      expect(compilation.vectors.get(name)!.data.map(chunk => chunk.length)).toEqual([1, 2]);
+    for (const chunk of compilation.vectors.get('intermediate')!.data) {
+      expect(chunk.buffer.usage & (Buffer.COPY_SRC | Buffer.COPY_DST)).toBe(
+        Buffer.COPY_SRC | Buffer.COPY_DST
+      );
+    }
+    expect(graph.vectors.find(vector => vector.id === 'input')!.chunkLengths).toBeUndefined();
+    expect(
+      graph.vectors.find(vector => vector.id === 'intermediate')!.chunkLengths
+    ).toBeUndefined();
+  } finally {
+    data.forEach(chunk => chunk.destroy());
     device.destroy();
   }
 });

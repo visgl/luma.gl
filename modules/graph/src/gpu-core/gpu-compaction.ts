@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
@@ -230,7 +231,7 @@ function addClearCountPass<Parameters>(
     })
   );
 
-  return nodes;
+  return nodes.map(node => setGPUComputeDispatchWorkgroups(node, [1, 1, 1]));
 }
 
 /** Routes every non-empty input chunk through each non-empty logical output range. */
@@ -452,7 +453,13 @@ function addCompactionPass<Parameters>(
     })
   );
 
-  return nodes;
+  return nodes.map(node =>
+    setGPUComputeDispatchWorkgroups(node, [
+      props.dispatchLayout.x,
+      props.dispatchLayout.y,
+      props.dispatchLayout.z
+    ])
+  );
 }
 
 /** Normalizes one compaction input or vector into its ordered atomic chunks. */

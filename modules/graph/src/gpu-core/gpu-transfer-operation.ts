@@ -87,7 +87,12 @@ export class GPUCopyOperation implements GPUOperation {
         const input = getValue(this.input);
         // Copy is a vector transfer, not a scalar assignment or conversion.
         assert(input.type === 'vector');
-        return {[this.output]: gpuGraph.vector(input.format)};
+        return {
+          [this.output]: gpuGraph.vector(input.format, {
+            length: input.length,
+            chunkLengths: input.chunkLengths
+          })
+        };
       },
       values: [
         {value: this.input, access: 'read'},

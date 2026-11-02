@@ -13,6 +13,12 @@ import {
   GPUCompactionOperation,
   GPUExpressionOperation
 } from '@luma.gl/graph';
+import {
+  GPUGraphCompiler,
+  GPUGraphScalarLiteral,
+  GPUConditionalOperation,
+  GPULoopOperation
+} from '@luma.gl/graph/gpu-core';
 import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 
@@ -201,3 +207,160 @@ for (const flags of [[0, 2, 0, 7, 1], [0, 0, 0, 0, 0], [1, 1, 1, 1, 1], []]) {
     }
   });
 }
+
+test('direct compiler transfers preserve bound chunks and legacy transient usage', async ({
+  skip
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return skip();
+  const makeVector = () =>
+    new GPUVector({
+      type: 'data',
+      format: 'uint32',
+      ownsData: true,
+      data: [1, 2].map(
+        length =>
+          new GPUData({
+            format: 'uint32',
+            length,
+            ownsBuffer: true,
+            buffer: device.createBuffer({
+              byteLength: length * 4,
+              usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+            })
+          })
+      )
+    });
+  const input = makeVector();
+  const output = makeVector();
+  const graph = new GPUGraph();
+  graph.vector('input', 'uint32', 3, {external: true});
+  graph.vector('output', 'uint32', 3, {external: true});
+  graph.vector('scratch', 'uint32', 3);
+  graph.vector('intermediate', 'uint32', 3);
+  graph.add([
+    new GPUUploadOperation({
+      output: 'scratch',
+      format: 'uint32',
+      data: [new Uint32Array([1]), new Uint32Array([2, 3])]
+    }),
+    new GPUCopyOperation({input: 'scratch', output: 'input'}),
+    new GPUCopyOperation({input: 'input', output: 'intermediate'}),
+    new GPUCopyOperation({input: 'intermediate', output: 'output'})
+  ]);
+  const compilation = new GPUGraphCompiler(device).compile(graph, {vectors: {input, output}});
+  expect(compilation.vectors.get('intermediate')!.data.map(chunk => chunk.length)).toEqual([1, 2]);
+  const executable = compilation.graph.compile();
+  const encoder = device.createCommandEncoder();
+  try {
+    executable.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    expect(await read(output)).toEqual([1, 2, 3]);
+  } finally {
+    executable.destroy();
+    encoder.destroy();
+    input.destroy();
+    output.destroy();
+  }
+});
+
+for (const control of ['conditional', 'loop'])
+  for (const length of [0, 600])
+    for (const enabled of [0, 1]) {
+      test(`direct compaction respects ${control} predicate ${enabled}, capacity ${length}`, async ({
+        skip
+      }) => {
+        const device = await getWebGPUTestDevice();
+        if (!device) return skip();
+        const makeVector = (data: Uint32Array) =>
+          new GPUVector({
+            type: 'data',
+            format: 'uint32',
+            ownsData: true,
+            data: [
+              new GPUData({
+                format: 'uint32',
+                length: data.length,
+                ownsBuffer: true,
+                buffer: device.createBuffer({
+                  data: data.length ? data : new Uint32Array(1),
+                  usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+                })
+              })
+            ]
+          });
+        const input = makeVector(Uint32Array.from({length}, (_, index) => index + 1));
+        const flags = makeVector(Uint32Array.from({length}, (_, index) => (index % 2 ? 7 : 0)));
+        const output = makeVector(new Uint32Array(length));
+        const countBuffer = device.createBuffer({
+          byteLength: 4,
+          usage: Buffer.COPY_SRC | Buffer.COPY_DST
+        });
+        const graph = new GPUGraph();
+        for (const name of ['input', 'flags', 'output'])
+          graph.vector(name, 'uint32', length, {external: true});
+        const count = graph.scalar('count', 'uint32');
+        const active = graph.scalar('active', 'uint32');
+        const body = new GPUCompactionOperation({
+          input: 'input',
+          flags: 'flags',
+          output: 'output',
+          count: 'count'
+        });
+        const predicate = {id: 'enabled', source: 'gpu' as const, value: active};
+        graph.add([
+          new GPUGraphScalarLiteral({output: count, value: 17}),
+          new GPUGraphScalarLiteral({output: active, value: enabled}),
+          control === 'conditional'
+            ? new GPUConditionalOperation({predicate, body})
+            : new GPULoopOperation({predicate, body, maximumIterations: 2})
+        ]);
+        const compilation = new GPUGraphCompiler(device).compile(graph, {
+          vectors: {input, flags, output}
+        });
+        const source = compilation.scalars.get('count')!.view;
+        const destination = compilation.graph.importBuffer(
+          {id: 'count-result', byteLength: 4, usage: countBuffer.usage},
+          countBuffer
+        );
+        compilation.graph.addCopyPass({
+          id: 'read-count',
+          resources: [
+            {buffer: source, usage: 'copy-source'},
+            {buffer: destination, usage: 'copy-destination'}
+          ],
+          compile: () => ({
+            encode: ({commandEncoder, getBuffer}) =>
+              commandEncoder.copyBufferToBuffer({
+                sourceBuffer: getBuffer(source),
+                sourceOffset: source.byteOffset,
+                destinationBuffer: getBuffer(destination),
+                size: 4
+              })
+          })
+        });
+        const executable = compilation.graph.compile();
+        const encoder = device.createCommandEncoder();
+        try {
+          executable.encode(encoder, {parameters: undefined});
+          device.submit(encoder.finish());
+          const bytes = await countBuffer.readAsync();
+          expect(new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0]).toBe(
+            enabled ? length / 2 : 17
+          );
+          const values = await read(output);
+          expect(values.slice(0, enabled ? length / 2 : length)).toEqual(
+            enabled
+              ? Array.from({length: length / 2}, (_, index) => 2 * index + 2)
+              : Array(length).fill(0)
+          );
+        } finally {
+          executable.destroy();
+          encoder.destroy();
+          input.destroy();
+          flags.destroy();
+          output.destroy();
+          countBuffer.destroy();
+        }
+      });
+    }
