@@ -2,7 +2,7 @@
 
 `GPUExpressionOperation` describes a numeric expression over named graph declarations.
 Both `GPUGraph` and `GPUSimpleGraph` accept it through `graph.add()`. Expressions are parsed
-with `@math.gl/expressions`; its JavaScript evaluator is not used to execute GPU work.
+with `@math.gl/core`; its JavaScript evaluator is not used to execute GPU work.
 The same expression works on WebGL through SimpleGraph and on WebGPU through either graph.
 
 This page is the expression syntax reference as well as the operation API guide. For the complete
@@ -76,7 +76,7 @@ syntax and math.gl's other functions are not implicitly available.
 The `expression` property accepts a string or the AST returned by math.gl's `parse()`:
 
 ```typescript
-import {parse} from '@math.gl/expressions';
+import {parse} from '@math.gl/core';
 const operation = new GPUExpressionOperation({
   output: 'transformed',
   expression: parse('positions * scale + offset')
