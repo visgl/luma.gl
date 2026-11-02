@@ -21,6 +21,7 @@ import type {GLTFScenegraphs} from '@luma.gl/engine/gltf';
 import {getGLTFModelOptions, selectGLTFModelOption, type GLTFModelSource} from './components/gltf-model-options';
 
 import {makeHtmlCustomPanel} from '../../examples/example-panels';
+import type {RigidBodyScene} from '../../examples/experimental/gpu-rigid-body-world/scenes';
 import type {GPUSortExampleHandle} from '../../examples/experimental/gpu-sort/src/app';
 import type {GPUDataAnalysisExampleHandle} from '../../examples/experimental/gpu-data-analysis/src/app';
 import type {GPGPUShowcaseHandle} from '../../examples/v10/gpgpu/src/app';
@@ -2917,10 +2918,11 @@ export const SpaceSalvageExample: React.FC = () => {
 };
 
 
-export const GPURigidBodyWorldExample: React.FC = () => {
-  const source = useBaseUrl('/standalone-examples/gpu-rigid-body-world/index.html');
+export const GPURigidBodyWorldExample: React.FC<{scene?: RigidBodyScene; title?: string}> = ({scene, title = 'Rigid Body Lab'}) => {
+  const baseSource = useBaseUrl('/standalone-examples/gpu-rigid-body-world/index.html');
+  const source = scene ? `${baseSource}?scene=${encodeURIComponent(scene)}` : baseSource;
   return <ExamplePage style={{background: '#050b18', minHeight: '720px'}}>
-    <iframe title="Rigid Body Lab" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+    <iframe title={title} src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
 

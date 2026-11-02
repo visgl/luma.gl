@@ -156,3 +156,18 @@ stack stability, demolition and suspension error. Box and sphere triangles are p
 one draw for each pass: 8,676 visible vertices and 8,640 shadow vertices instead of
 241,920 vertices per pass. The base receives shadows and is excluded from the caster draw.
 This changes rendering work without changing collision geometry.
+
+## Selecting an initial scenario
+
+The website wrapper accepts a typed `scene` prop and an optional accessible iframe title:
+
+```tsx
+<GPURigidBodyWorldExample scene="cradle" title="Newton's Cradle" />
+<GPURigidBodyWorldExample scene="dominoSpiral" title="Spiral Dominoes" />
+```
+
+The wrapper forwards the scene through the standalone lab's existing `?scene=` parameter.
+Without the prop, the lab keeps its default scenario. The scene remains selectable in the
+lab controls, and Reset rebuilds the selected scenario without changing the camera.
+Newton's Cradle and Spiral Dominoes have separate entries in the Physics examples sidebar
+while sharing the same lab runtime and assets.
