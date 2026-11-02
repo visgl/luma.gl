@@ -2,9 +2,18 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Device} from '@luma.gl/core';
+import {Buffer, Texture, TextureView, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from './gpu-graph';
+import {GPUCopyOperation} from './gpu-transfer-operation';
+import {validateTextureCopy} from './gpu-texture-copy';
+import {
+  GPUTextureInvocation,
+  type GPUGraphTextureBinding,
+  type GPUGraphOutput,
+  type GPUGraphOutputs
+} from './gpu-texture-plan';
+import type {GPUGraphTexture} from './gpu-graph-value';
 import {resolveGPUGraphDeclarations} from './gpu-graph-declarations';
 import {GPUGraphVector, type GPUGraphScalar, type GPUGraphVectorFormat} from './gpu-graph-value';
 import {GPUCompositeOperation, isGPUOperation, type GPUGraphOperation} from './gpu-operation';
@@ -27,17 +36,19 @@ import {
   type GPUOperationContract
 } from './gpu-operation-contract';
 
-export type GPUGraphRunBindings = Readonly<Record<string, GPUVector | number>>;
+export type GPUGraphRunBindings = Readonly<
+  Record<string, GPUVector | number | GPUGraphTextureBinding>
+>;
 export type GPUGraphExecutionBindings = {
   inputs?: GPUGraphRunBindings;
   state?: Readonly<Record<string, GPUVector>>;
-  outputTargets?: Readonly<Record<string, GPUVector>>;
+  outputTargets?: Readonly<Record<string, GPUGraphOutput>>;
 };
 export type GPUGraphCompileOptions = {
   outputs?: readonly string[];
   lowerings?: readonly GPUOperationLowering[];
 };
-export type GPUGraphRunOptions = {outputTargets?: Readonly<Record<string, GPUVector>>};
+export type GPUGraphRunOptions = {outputTargets?: Readonly<Record<string, GPUGraphOutput>>};
 
 /** @internal */
 export type GPUExpressionPlan = {
@@ -64,11 +75,13 @@ export class GPUExpressionProgram {
   readonly outputs: readonly string[];
   readonly scalars: readonly GPUGraphScalar[];
   readonly vectors: readonly GPUGraphVector[];
+  readonly textures: readonly GPUGraphTexture[];
 
   constructor(program: GPUGraph, options: GPUGraphCompileOptions = {}) {
     program = resolveGPUGraphDeclarations(program);
     this.scalars = program.scalars;
     this.vectors = program.vectors;
+    this.textures = program.textures;
     const operations: GPUGraphOperation[] = [];
     const flatten = (operation: GPUGraphOperation): void => {
       if (operation instanceof GPUCompositeOperation && operation.type === 'composite')
@@ -87,7 +100,7 @@ export class GPUExpressionProgram {
     program.operations.forEach(flatten);
     this.operations = operations;
     const declarations = new Map(
-      [...this.scalars, ...this.vectors].map(value => [value.id, value])
+      [...this.scalars, ...this.vectors, ...this.textures].map(value => [value.id, value])
     );
     const expressions = operations.filter(
       (operation): operation is GPUExpressionOperation =>
@@ -237,12 +250,17 @@ export class GPUExpressionProgram {
     supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
   ): {bindings: GPUGraphRunBindings; options: GPUGraphRunOptions} {
-    const declarations = [...this.scalars, ...this.vectors];
+    const declarations = [...this.scalars, ...this.vectors, ...this.textures];
     const explicit = declarations.some(value => value.role === 'input' || value.role === 'state');
     const grouped =
       explicit ||
       Object.values(supplied).some(
-        value => value !== undefined && typeof value === 'object' && !(value instanceof GPUVector)
+        value =>
+          value !== undefined &&
+          typeof value === 'object' &&
+          !(value instanceof GPUVector) &&
+          !(value instanceof Texture) &&
+          !(value instanceof TextureView)
       );
     if (!grouped) {
       for (const name of Object.keys(supplied))
@@ -254,7 +272,8 @@ export class GPUExpressionProgram {
       if (!['inputs', 'state', 'outputTargets'].includes(name))
         throw new Error(`Unknown execution option ${name}`);
     const execution = supplied as GPUGraphExecutionBindings;
-    const bindings: Record<string, GPUVector | number> = Object.create(null);
+    const bindings: Record<string, GPUVector | number | GPUGraphTextureBinding> =
+      Object.create(null);
     for (const [role, group] of [
       ['input', execution.inputs],
       ['state', execution.state]
@@ -288,6 +307,13 @@ export class GPUExpressionProgram {
     options: GPUGraphRunOptions = {},
     deferIntermediateStorage = false
   ): GPUExpressionInvocation {
+    const textures = new GPUTextureInvocation(
+      device,
+      this.textures,
+      [...this.contracts.values()],
+      bindings,
+      options.outputTargets ?? {}
+    );
     const values = new Map<string, GPUVector | number>();
     const owned = new Set<GPUVector>();
     const transientVectors = new Map<string, GPUExpressionVectorShape>();
@@ -322,7 +348,16 @@ export class GPUExpressionProgram {
       }
     };
     const produced = new Set(this.expressions.map(plan => plan.operation.output));
-    const targets = new Map(Object.entries(options.outputTargets ?? {}));
+    const targets = new Map<string, GPUVector>();
+    for (const [name, target] of Object.entries(options.outputTargets ?? {})) {
+      if (this.textures.some(texture => texture.id === name)) continue;
+      // Numeric targets retain their existing GPUVector contract.
+      if (!(target instanceof GPUVector)) {
+        textures.destroy();
+        throw new Error(`Expected GPUVector ${name}`);
+      }
+      targets.set(name, target);
+    }
     const writableVectors = new Set(
       [...this.contracts.values()].flatMap(contract =>
         contract.values
@@ -338,6 +373,7 @@ export class GPUExpressionProgram {
     const readVectors = new Set<string>();
     try {
       for (const [name, binding] of Object.entries(bindings)) {
+        if (this.textures.some(texture => texture.id === name)) continue;
         if (produced.has(name)) throw new Error(`Use outputTargets for expression output ${name}`);
         const scalar = this.scalars.find(value => value.id === name);
         const vector = this.vectors.find(value => value.id === name);
@@ -355,9 +391,14 @@ export class GPUExpressionProgram {
           if (!(binding instanceof GPUVector)) throw new Error(`Expected GPUVector ${name}`);
           validateVector(device, binding, vector.format, vector.length, vector.chunkLengths);
         } else throw new Error(`Undeclared binding ${name}`);
-        values.set(name, binding);
+        values.set(name, binding as GPUVector | number);
       }
       for (const operation of this.operations) {
+        if (operation instanceof GPUCopyOperation && textures.values.has(operation.input))
+          validateTextureCopy(
+            textures.values.get(operation.input)!,
+            textures.values.get(operation.output)!
+          );
         for (const use of this.contracts.get(operation)?.values ?? []) {
           const name = getGPUOperationValueName(use.value);
           if (use.access !== 'write' && values.get(name) instanceof GPUVector)
@@ -370,6 +411,7 @@ export class GPUExpressionProgram {
             if (
               use.access !== 'write' &&
               !values.has(name) &&
+              !textures.values.has(name) &&
               !transientVectors.has(name) &&
               !availableScalars.has(name)
             )
@@ -486,7 +528,12 @@ export class GPUExpressionProgram {
       for (const name of Object.keys(options.outputTargets ?? {})) {
         const scalarOutput =
           this.outputs.includes(name) && this.scalars.some(scalar => scalar.id === name);
-        if (!produced.has(name) && !writableVectors.has(name) && !scalarOutput)
+        if (
+          !produced.has(name) &&
+          !writableVectors.has(name) &&
+          !scalarOutput &&
+          !this.textures.some(texture => texture.id === name && texture.role === 'value')
+        )
           throw new Error(`Unknown graph output target ${name}`);
       }
       for (const name of this.outputs) {
@@ -517,8 +564,9 @@ export class GPUExpressionProgram {
           values.set(name, output);
         }
       }
-      return new GPUExpressionInvocation(this, values, owned, transientVectors);
+      return new GPUExpressionInvocation(this, values, owned, transientVectors, textures);
     } catch (error) {
+      textures.destroy();
       for (const vector of owned) vector.destroy();
       throw error;
     }
@@ -565,25 +613,29 @@ export class GPUExpressionInvocation {
     readonly program: GPUExpressionProgram,
     readonly values: Map<string, GPUVector | number>,
     private readonly owned: Set<GPUVector>,
-    readonly transientVectors: ReadonlyMap<string, GPUExpressionVectorShape> = new Map()
+    readonly transientVectors: ReadonlyMap<string, GPUExpressionVectorShape> = new Map(),
+    readonly textures?: GPUTextureInvocation
   ) {}
-  getOutputs(): Record<string, GPUVector> {
-    const outputs: Record<string, GPUVector> = Object.create(null);
+  getOutputs<Outputs extends GPUGraphOutputs = Record<string, GPUVector>>(): Outputs {
+    const outputs: GPUGraphOutputs = Object.create(null);
     for (const name of this.program.outputs) {
-      const value = this.values.get(name);
-      if (!(value instanceof GPUVector))
-        throw new Error(`Output ${name} has no materialized vector`);
+      const value = this.textures?.values.get(name) ?? this.values.get(name);
+      if (!(value instanceof GPUVector || value instanceof Texture || value instanceof TextureView))
+        throw new Error(`Output ${name} has no materialized resource`);
       outputs[name] = value;
     }
-    return outputs;
+    return outputs as Outputs;
   }
-  finish(): Record<string, GPUVector> {
-    const outputs = this.getOutputs();
-    for (const value of Object.values(outputs)) this.owned.delete(value);
+  finish<Outputs extends GPUGraphOutputs = Record<string, GPUVector>>(): Outputs {
+    const outputs = this.getOutputs<Outputs>();
+    for (const value of Object.values(outputs))
+      if (value instanceof GPUVector) this.owned.delete(value);
+    this.textures?.finish(this.program.outputs);
     this.destroy();
     return outputs;
   }
   destroy(): void {
+    this.textures?.destroy();
     for (const vector of this.owned) vector.destroy();
     this.owned.clear();
   }

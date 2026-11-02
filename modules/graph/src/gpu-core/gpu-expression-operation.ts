@@ -25,7 +25,11 @@ export class GPUExpressionOperation implements GPUOperation {
     const references = getGPUExpressionReferences(expression);
     return {
       outputs: ({getValue}) => {
-        const inputs = references.map(name => [name, getValue(name)] as const);
+        const inputs = references.map(name => {
+          const value = getValue(name);
+          if (value.type === 'texture') throw new Error('Numeric expressions cannot read textures');
+          return [name, value] as const;
+        });
         const format = getGPUExpressionFormat(
           expression,
           new Map(inputs.map(([name, value]) => [name, value.format]))

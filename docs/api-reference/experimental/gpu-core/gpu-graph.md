@@ -208,3 +208,6 @@ fields plus `external`. `graph.textureView(texture, props)` selects subresources
 storage. `GPUGraphCompiler.compile()` accepts optional `textures` defaults; imported textures may
 also be supplied when encoding. `compilation.textures` exposes logical graph texture handles.
 Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
+
+Reusable `compile(device)` programs also support named texture inputs and operation-produced
+texture results. See [texture values and execution bindings](/docs/api-reference/graph/gpu-graph-textures).

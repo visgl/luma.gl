@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {DeviceFeature} from '@luma.gl/core';
+import type {GraphTextureUsage} from './gpu-command-graph';
 import {GPUGraphScalar, GPUGraphVector, GPUGraphTexture} from './gpu-graph-value';
 import type {GPUGraphValueDescriptor} from './gpu-graph-value';
 import type {GPUGraph} from './gpu-graph';
@@ -18,6 +19,8 @@ export type GPUOperationVectorShape =
 export type GPUOperationValueUse = {
   value: GPUOperationValueReference;
   access: 'read' | 'write' | 'read-write';
+  /** Required texture access; drives allocation usage and binding validation. */
+  textureUsage?: GraphTextureUsage;
   /** Vector outputs only. Omitted shapes use the output declaration or supplied storage. */
   shape?: GPUOperationVectorShape;
 };
@@ -67,6 +70,11 @@ export function validateGPUOperationContract(
 ): void {
   for (const use of contract.values) {
     const declaration = resolveGPUOperationValue(program, use.value);
+    if (declaration instanceof GPUGraphTexture && use.shape && 'like' in use.shape) {
+      if (!(resolveGPUOperationValue(program, use.shape.like) instanceof GPUGraphTexture))
+        throw new Error('Texture shape requires a texture source');
+      continue;
+    }
     if (!use.shape) continue;
     if (!(declaration instanceof GPUGraphVector) || use.access === 'read')
       throw new Error('Operation shapes require writable vectors');

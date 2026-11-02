@@ -5,6 +5,8 @@
 import {CompiledGPUGraph} from './compiled-gpu-graph';
 import type {GPUGraphCompileOptions} from './gpu-expression-plan';
 import type {Device} from '@luma.gl/core';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import type {GPUGraphOutputs} from './gpu-texture-plan';
 
 import type {TextureFormat} from '@luma.gl/core';
 import type {GraphTextureViewProps} from './gpu-command-graph';
@@ -18,6 +20,7 @@ import {
 } from './gpu-operation';
 import {
   type GPUGraphScalarDescriptor,
+  type GPUGraphTextureDescriptor,
   type GPUGraphVectorDescriptor,
   type GPUGraphValueDescriptor,
   type GPUGraphValueRole,
@@ -53,7 +56,14 @@ export class GPUGraph {
     id: string,
     descriptor: GPUGraphVectorDescriptor<T>
   ): GPUGraphVector<T>;
-  addInput(id: string, descriptor: GPUGraphValueDescriptor): GPUGraphScalar | GPUGraphVector {
+  addInput<Format extends TextureFormat>(
+    id: string,
+    descriptor: GPUGraphTextureDescriptor<Format>
+  ): GPUGraphTexture<Format>;
+  addInput(
+    id: string,
+    descriptor: GPUGraphValueDescriptor
+  ): GPUGraphScalar | GPUGraphVector | GPUGraphTexture {
     return this.addDeclaration(id, descriptor, 'input');
   }
   /** State is initialized, borrowed vector storage supplied for every invocation. */
@@ -69,8 +79,21 @@ export class GPUGraph {
     id: string,
     descriptor: GPUGraphValueDescriptor,
     role?: GPUGraphValueRole
-  ): GPUGraphScalar | GPUGraphVector {
+  ): GPUGraphScalar | GPUGraphVector | GPUGraphTexture {
     this.assertValueId(id);
+    if (descriptor.type === 'texture') {
+      const texture = new GPUGraphTexture({
+        id,
+        ...descriptor,
+        usage: 0,
+        role,
+        descriptor,
+        external: role === 'input',
+        ...('width' in (descriptor.extent ?? {}) ? descriptor.extent : {})
+      });
+      this.programTextures.set(id, texture);
+      return texture;
+    }
     if (descriptor.type === 'scalar') {
       const scalar = new GPUGraphScalar(id, descriptor.format, role);
       this.programScalars.set(id, scalar);
@@ -126,8 +149,11 @@ export class GPUGraph {
     }
     return new GPUGraphTextureView(texture, props);
   }
-  compile(device: Device, options: GPUGraphCompileOptions = {}): CompiledGPUGraph {
-    return new CompiledGPUGraph(device, this, options);
+  compile<Outputs extends GPUGraphOutputs = Record<string, GPUVector>>(
+    device: Device,
+    options: GPUGraphCompileOptions = {}
+  ): CompiledGPUGraph<Outputs> {
+    return new CompiledGPUGraph<Outputs>(device, this, options);
   }
   /** @internal */
   constrainResult(vector: GPUGraphVector, descriptor: GPUGraphVectorDescriptor): GPUGraphVector {

@@ -39,6 +39,8 @@ on a compilation snapshot; compilation does not add declarations to the authored
 
 `gpuGraph.scalar(format)` describes a numeric scalar supplied as a JavaScript number.
 `gpuGraph.vector(format, constraints?)` describes packed rows supplied as a `GPUVector`.
+`gpuGraph.texture({format, ...})` describes a texture supplied as a `Texture` or `TextureView`;
+see [texture values and execution bindings](./gpu-graph-textures.md).
 Neither helper creates GPU resources. A vector's length and exact chunk boundaries normally
 come from execution bindings, so the same compiled graph can run on differently sized batches.
 Optional `{length, chunkLengths}` constraints are checked rather than used to repack inputs.
