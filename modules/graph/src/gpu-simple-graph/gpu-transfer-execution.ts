@@ -19,6 +19,22 @@ export function executeGPUTransfer(
     const chunks = operation.getData();
     for (const [index, chunk] of output.data.entries()) {
       if (!chunk.length) continue;
+      if (scope) {
+        // Queue writes would overtake earlier encoded reads of a mutable declaration.
+        const staging = device.createBuffer({data: chunks[index], usage: Buffer.COPY_SRC});
+        scope.retain(() => staging.destroy());
+        const packed = chunk.byteStride === chunk.rowByteLength;
+        for (let row = 0; row < chunk.length; row += packed ? chunk.length : 1) {
+          scope.commandEncoder.copyBufferToBuffer({
+            sourceBuffer: staging,
+            sourceOffset: row * chunk.rowByteLength,
+            destinationBuffer: chunk.buffer instanceof Buffer ? chunk.buffer : chunk.buffer.buffer,
+            destinationOffset: chunk.byteOffset + row * chunk.byteStride,
+            size: chunk.rowByteLength * (packed ? chunk.length : 1)
+          });
+        }
+        continue;
+      }
       if (chunk.byteStride === chunk.rowByteLength)
         chunk.buffer.write(chunks[index], chunk.byteOffset);
       else

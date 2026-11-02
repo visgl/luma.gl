@@ -121,6 +121,36 @@ for (const backend of ['webgpu', 'webgpu-simple', 'webgl-simple']) {
   });
 }
 
+for (const backend of ['webgpu', 'webgpu-simple', 'webgl-simple']) {
+  test(`uploads preserve ordering around reads of legacy mutable values (${backend})`, async ({
+    skip
+  }) => {
+    const device = await (backend === 'webgl-simple'
+      ? getWebGLTestDevice()
+      : getWebGPUTestDevice());
+    if (!device) return skip();
+    const graph = backend === 'webgpu' ? new GPUGraph() : new GPUSimpleGraph();
+    graph.vector('value', 'uint32', 1);
+    graph.add([
+      new GPUUploadOperation({output: 'value', format: 'uint32', data: new Uint32Array([1])}),
+      new GPUCopyOperation({input: 'value', output: 'snapshot'}),
+      new GPUUploadOperation({output: 'value', format: 'uint32', data: new Uint32Array([2])})
+    ]);
+    const compiled = graph.compile(device, {outputs: ['snapshot', 'value']});
+    try {
+      const outputs = await compiled.run({});
+      try {
+        expect(await read(outputs.snapshot)).toEqual([1]);
+        expect(await read(outputs.value)).toEqual([2]);
+      } finally {
+        Object.values(outputs).forEach(output => output.destroy());
+      }
+    } finally {
+      compiled.destroy();
+    }
+  });
+}
+
 for (const flags of [[0, 2, 0, 7, 1], [0, 0, 0, 0, 0], [1, 1, 1, 1, 1], []]) {
   test(`GPU compaction capacity/count with flags ${flags}`, async ({skip}) => {
     const device = await getWebGPUTestDevice();
