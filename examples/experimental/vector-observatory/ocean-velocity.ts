@@ -35,10 +35,10 @@ export function sampleOceanVelocity(
   if (valid && valid.length !== width * height) return undefined;
   const span = east - west;
   const periodic = Math.abs(span - 360) < 1e-6;
-  const lon = periodic ? west + (((longitude - west) % span) + span) % span : longitude;
+  const lon = periodic ? west + ((((longitude - west) % span) + span) % span) : longitude;
   const x = ((lon - west) / span) * (periodic ? width : width - 1);
   const y = ((latitude - south) / (north - south)) * (height - 1);
-  if (x < 0 || x > width - 1 && !periodic || y < 0 || y > height - 1) return undefined;
+  if (x < 0 || (x > width - 1 && !periodic) || y < 0 || y > height - 1) return undefined;
   const x0 = Math.floor(x);
   const x1 = periodic ? (x0 + 1) % width : Math.min(width - 1, x0 + 1);
   const y0 = Math.floor(y);
@@ -52,7 +52,11 @@ export function sampleOceanVelocity(
   for (let i = 0; i < 4; i++) {
     if (weights[i] === 0) continue;
     const index = indices[i];
-    if ((valid && valid[index] === 0) || !Number.isFinite(eastward[index]) || !Number.isFinite(northward[index])) {
+    if (
+      (valid && valid[index] === 0) ||
+      !Number.isFinite(eastward[index]) ||
+      !Number.isFinite(northward[index])
+    ) {
       return undefined;
     }
     u += weights[i] * eastward[index];
