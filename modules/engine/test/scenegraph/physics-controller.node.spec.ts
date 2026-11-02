@@ -7,6 +7,7 @@ import {NullDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {
   CubeGeometry,
+  PlaneGeometry,
   SphereGeometry,
   GroupNode,
   ScenegraphNode,
@@ -213,5 +214,22 @@ test('explicit mesh overrides support unit scale and reflected nonuniform scale 
       }
     }
     expect(source.geometry.positions).toEqual(positions);
+  }
+});
+
+test('flat static floor geometry uses finite triangles instead of an invalid volumetric hull', () => {
+  const floor = new PhysicsGeometryNode({
+    geometry: new PlaneGeometry({type: 'x,z', xlen: 10, zlen: 10})
+  });
+  const cooked = makePhysicsControllerScene(
+    new GroupNode([floor]),
+    new Map([[floor, {motion: 'static'}]]),
+    {}
+  );
+  const shape = cooked.definition.world.bodies[0].colliders?.[0].shape;
+  expect(shape?.type).toBe('triangle-mesh');
+  if (shape?.type === 'triangle-mesh') {
+    expect(shape.geometry.minimum).toEqual([-5, 0, -5]);
+    expect(shape.geometry.maximum).toEqual([5, 0, 5]);
   }
 });

@@ -129,7 +129,8 @@ export function makePhysicsControllerScene(
                 new Matrix4(inverse)
                   .multiplyRight(matrices.get(descendant)!)
                   .multiplyRight(placement),
-                options.geometryMode
+                options.geometryMode,
+                options.motion === 'static'
               )
             );
         }
@@ -178,7 +179,8 @@ export function makePhysicsControllerScene(
 function makeGeometryCollider(
   geometry: Geometry,
   matrix: Matrix4,
-  mode: PhysicsBodyOptions['geometryMode']
+  mode: PhysicsBodyOptions['geometryMode'],
+  staticBody = false
 ): GPURigidBodyCollider {
   const positions = geometry.attributes['POSITION'];
   if (geometry.topology !== 'triangle-list' || !positions || positions.size !== 3)
@@ -197,6 +199,9 @@ function makeGeometryCollider(
     }
   }
   let shape: GPURigidBodyShape;
+  // A flat static surface has no volumetric hull; retain its authored triangles instead.
+  if (!mode && staticBody && maximum.some((value, axis) => value === minimum[axis]))
+    mode = 'triangle-mesh';
   const transform = decomposePhysicsTransform(matrix);
   const scale = transform.scale.map(Math.abs);
   const isBox =

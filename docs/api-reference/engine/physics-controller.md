@@ -54,6 +54,7 @@ geometry participates. Declared `ModelNode.instanceMatrices` become compound col
 
 - Unmodified box primitives use analytic boxes.
 - Spherical primitives with uniform scale use analytic spheres.
+- Flat static surfaces retain their finite triangles rather than attempting a volumetric hull.
 - Other triangle-list geometry is cooked as a convex hull by default.
 - `geometryMode: 'triangle-mesh'` explicitly requests triangle surfaces, including concavity.
 - An explicit `collider` shape overrides inference. Its dimensions are scaled by the

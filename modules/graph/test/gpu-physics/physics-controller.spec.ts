@@ -4,7 +4,7 @@
 
 import {expect, it, vi} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {GroupNode, ScenegraphNode, CubeGeometry} from '@luma.gl/engine';
+import {GroupNode, ScenegraphNode, CubeGeometry, PlaneGeometry} from '@luma.gl/engine';
 import {PhysicsController, PhysicsGeometryNode} from '@luma.gl/engine/physics';
 import {GPURigidBodyWorld, rotateRigidBodyVector} from '@luma.gl/graph/gpu-physics';
 
@@ -226,6 +226,32 @@ it('controller publishes cooked visual bounds without changing authored node tra
     expect(bounds[5]).toBeCloseTo(3, 4);
     expect(bounds[6]).toBeCloseTo(14, 4);
     expect(node.position[0]).toBe(0);
+  } finally {
+    await physics.destroy();
+  }
+});
+
+it('a path-attached static plane supports a falling sphere with default geometry inference', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip();
+  const floor = new PhysicsGeometryNode({
+    id: 'floor',
+    geometry: new PlaneGeometry({type: 'x,z', xlen: 10, zlen: 10})
+  });
+  const node = new ScenegraphNode({id: 'ball', position: [0, 1, 0]});
+  const physics = new PhysicsController(device, {
+    scene: new GroupNode([floor, node]),
+    gravity: [0, -9.81, 0],
+    timeStep: 1 / 120
+  });
+  physics.addBody('/floor', {motion: 'static'});
+  const ball = physics.addBody('ball', {collider: {type: 'sphere', radius: 0.5}});
+  try {
+    await physics.prepare();
+    for (let index = 0; index < 60; index++) physics.update(1 / 60);
+    const pose = await ball.readPose();
+    expect(pose.position[1]).toBeGreaterThan(0.45);
+    expect(pose.position[1]).toBeLessThan(0.55);
   } finally {
     await physics.destroy();
   }
