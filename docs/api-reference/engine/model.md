@@ -69,6 +69,23 @@ layouts, including packed buffers and mixed WebGPU vector/constant bindings. Web
 constants are converted to shader values; WebGPU constants use model-owned vertex buffers.
 All caller-supplied vectors and buffers remain borrowed.
 
+Omit `bufferLayouts` to infer formats, strides, and offsets from the inputs:
+
+```typescript
+model.setAttributeVectors({positions, colors, radius});
+```
+
+Within each vector input group, inferred constants share one model-owned, zero-stride
+vertex buffer on WebGPU. WebGL continues to use constant attribute values. Inferred
+vector views share one layout when every corresponding chunk uses the same buffer,
+stride, and relative attribute offsets within a row. This recognizes existing interleaved
+storage without copying it. Separate column allocations remain separate bindings;
+inference does not interleave or concatenate their data to fit device limits.
+
+Explicit layouts and layouts carried by packed vectors remain authoritative and are not
+consolidated. Geometry and supplemental attribute groups are consolidated independently.
+
+
 Geometry vectors must share logical length and chunk boundaries, as must supplemental
 attribute vectors. Non-instanced models require both groups to share their batch structure.
 `draw()` renders matching batches together for non-instanced models. Instanced models draw

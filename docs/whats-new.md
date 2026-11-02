@@ -7,6 +7,13 @@ Append graph commands with `execution.encode(encoder)` alongside other compute o
 then submit once and release scratch with `execution.destroy()`. `run()` uses the same path.
 See [Caller-owned encoding](./api-reference/graph/gpu-graph-values.md#caller-owned-encoding).
 
+### Consolidated inferred vector layouts
+
+`GPUVectorModel` consolidates inferred constant attributes and compatible views of existing
+interleaved buffers. Arrow and other column adapters can omit hand-built layouts for these
+inputs. Explicit layouts and source buffer ownership are preserved. See
+[vector model inputs](./api-reference/engine/model.md#gpuvectormodel-base).
+
 ### Operation-defined graph results
 
 `GPUGraph.addInput()` and `addState()` describe the external interface, while operation
