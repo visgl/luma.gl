@@ -1,5 +1,11 @@
 # What's New
 
+### Scenegraph node paths
+
+`GroupNode.findNode()` and `findNodes()` resolve node references by exact ID, anchored
+hierarchy path or a partial path. Lookup includes hidden nodes and reports ambiguous
+single-node references. See [Finding nodes by ID or path](./api-guide/engine/scenegraph.md#finding-nodes-by-id-or-path).
+
 ### Graph intermediate storage reuse
 
 Straight-line WebGPU graphs now route unselected operation-defined vector results through the
