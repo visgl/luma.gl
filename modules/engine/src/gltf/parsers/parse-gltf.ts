@@ -59,6 +59,8 @@ export type ParseGLTFOptions = {
   useTangents?: boolean;
   /** When true, parsed semantic light colors are converted into luma.gl's legacy byte-style range. */
   useByteColors?: boolean;
+  /** Leave Gaussian primitives for a caller-managed splat renderer instead of creating mesh models. */
+  excludeGaussianSplatPrimitives?: boolean;
   /** Reject documents whose required extensions have no complete runtime implementation. */
   strictExtensions?: boolean;
 };
@@ -80,7 +82,8 @@ const defaultOptions: Required<ParseGLTFOptions> = {
   lights: true,
   useTangents: false,
   useByteColors: true,
-  strictExtensions: false
+  strictExtensions: false,
+  excludeGaussianSplatPrimitives: false
 };
 
 /**
@@ -346,19 +349,23 @@ function createNodeForGLTFMesh(
       )
     });
   }
-  const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
-    createNodeForGLTFPrimitive({
-      device,
-      gltfPrimitive,
-      primitiveIndex: i,
-      gltfMesh,
-      gltf,
-      gltfMaterialIdToMaterialMap,
-      options,
-      instancing,
-      nodeLightmap,
-      lightmapInstance
-    })
+  const primitives = gltfPrimitives.flatMap((gltfPrimitive, i) =>
+    options.excludeGaussianSplatPrimitives && gltfPrimitive.extensions?.KHR_gaussian_splatting
+      ? []
+      : [
+          createNodeForGLTFPrimitive({
+            device,
+            gltfPrimitive,
+            primitiveIndex: i,
+            gltfMesh,
+            gltf,
+            gltfMaterialIdToMaterialMap,
+            options,
+            instancing,
+            nodeLightmap,
+            lightmapInstance
+          })
+        ]
   );
   const mesh = new GroupNode({
     id: gltfMesh.name || gltfMesh.id,
