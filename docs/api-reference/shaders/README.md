@@ -46,9 +46,9 @@ Plugin input declarations describe interfaces, while the application retains
 buffer allocation, attribute generation, and cleanup. Neither modules nor plugins
 schedule additional passes.
 
-Start with the [ShaderPlugin guide](./shader-plugin#learn-the-composition-model)
+Start with the [ShaderPlugin guide](/docs/api-reference/shaders/shader-plugin#learn-the-composition-model)
 for a provider/consumer example with GLSL and WGSL variants. Then read
-[ShaderModule](./shader-module) for uniform contracts and dependencies, and
+[ShaderModule](/docs/api-reference/shaders/shader-module) for uniform contracts and dependencies, and
 [Shader Assembly](/docs/api-guide/shaders/shader-assembly) for assembly mechanics.
 
 ## Language entry points
@@ -57,7 +57,7 @@ Use `@luma.gl/shaders/glsl` for `GLSLShaderAssembler` and GLSL assembly helpers,
 `@luma.gl/shaders/wgsl` for `WGSLShaderAssembler`, WGSL assembly, interface scanning and binding
 diagnostics. The language entries share the abstract `ShaderAssembler` contract and common module
 logic, while keeping the other assembly backend out of application bundles. Root exports retain
-constructor identity. See [ShaderAssembler](./shader-assembler) for explicit assembler ownership.
+constructor identity. See [ShaderAssembler](/docs/api-reference/shaders/shader-assembler) for explicit assembler ownership.
 
 ## When to use it
 
