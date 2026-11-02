@@ -21,6 +21,36 @@ not create a device or compile shaders itself.
 The generated Shaders API index at `/docs/api-reference/generated/shaders` contains every
 public descriptor, helper, built-in module, and type with source links.
 
+## How the pieces fit together
+
+| Concept | Responsibility | Example |
+| --- | --- | --- |
+| Shader source | Defines entry points and the algorithm the GPU executes | A vertex transform and fragment color calculation |
+| `ShaderModule` | Reuses shader helpers and declares uniforms, bindings, and dependencies | Lighting calculations and material parameters |
+| `ShaderPlugin` | Packages optional assembly behavior around one primary module | Clipping, filtering, or tinting |
+| Hook | Declares a callable extension point in the host shader | `FILTER_COLOR(color)` |
+| Injection | Adds language-specific source to a hook or structural anchor | Multiply the color inside `FILTER_COLOR` |
+| Shader assembler | Resolves dependencies and contributions into shader source | Select WGSL for WebGPU or GLSL for WebGL |
+| `ShaderInputs` | Updates module props and manages their uniform/binding representation | Change a material color between draws |
+| `Model` | Creates a render pipeline, binds resources, and draws | Render geometry with optional plugins |
+
+A host shader computes a value, calls a hook, and uses the modified value. A plugin
+can declare that hook, contribute injections to it, or do both. The assembler
+collects declarations before resolving consumers, selects language variants, and
+emits a no-op function when a declared hook has no injections. Shader code must
+still call the function: assembly does not infer where behavior belongs.
+
+A module and a plugin are complementary. Put reusable math and data contracts in
+a module; use a plugin to connect optional behavior to a host's extension points.
+Plugin input declarations describe interfaces, while the application retains
+buffer allocation, attribute generation, and cleanup. Neither modules nor plugins
+schedule additional passes.
+
+Start with the [ShaderPlugin guide](./shader-plugin#learn-the-composition-model)
+for a provider/consumer example with GLSL and WGSL variants. Then read
+[ShaderModule](./shader-module) for uniform contracts and dependencies, and
+[Shader Assembly](/docs/api-guide/shaders/shader-assembly) for assembly mechanics.
+
 ## Language entry points
 
 Use `@luma.gl/shaders/glsl` for `GLSLShaderAssembler` and GLSL assembly helpers, or

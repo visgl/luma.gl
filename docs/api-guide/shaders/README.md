@@ -9,6 +9,9 @@ run on the GPU. Such code must be provided as WGSL and/or GLSL depending on
 which backend(s) are targeted. luma.gl helps assemble that source, bind its
 inputs, and run it through the engine APIs.
 
+For an introduction to modules, plugins, hooks, injections, and their ownership
+boundaries, start with the [Shaders module overview](/docs/api-reference/shaders).
+
 | Question | Guide page | Main reference pages |
 | --- | --- | --- |
 | How does luma.gl combine application source with reusable shader code? | [Shader Assembly](/docs/api-guide/shaders/shader-assembly) | [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler), [`ShaderModule`](/docs/api-reference/shaders/shader-module), [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) |

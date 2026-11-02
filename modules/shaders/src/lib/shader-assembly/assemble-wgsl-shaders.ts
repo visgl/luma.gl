@@ -159,7 +159,7 @@ export function assembleShaderWGSL(
   // `
   // `;
 
-  const hookFunctionMap = normalizeShaderHooks(hookFunctions);
+  const hookFunctionMap = normalizeShaderHooks(hookFunctions, options.pluginHooks, 'wgsl');
 
   // Add source of dependent modules in resolved order
   const hookInjections: Record<string, ShaderInjection[]> = {};

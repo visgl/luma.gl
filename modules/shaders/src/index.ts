@@ -22,6 +22,8 @@ export type {
   ResolvedShaderPlugins,
   ResolvedShaderPluginInterStageVariable,
   ShaderPlugin,
+  ShaderPluginHook,
+  ShaderPluginTarget,
   ShaderPluginInjection,
   ShaderPluginInjectionTarget,
   ShaderPluginInterStageVariable,

@@ -402,7 +402,7 @@ const plugin: ShaderPlugin = {
   module: tintModule,
   injections: [
     {
-      target: 'fs:FILTER_COLOR',
+      stage: 'fragment', target: 'FILTER_COLOR',
       glsl: 'color *= tint.color;',
       wgsl: '*color *= tint.color;'
     }
@@ -458,3 +458,11 @@ The v10 graph package now owns the former gpgpu APIs. The gpgpu package is remov
 | `@luma.gl/gpgpu/arrow` | `@luma.gl/graph/arrow` |
 
 Replace the package dependency with `@luma.gl/graph`. Apache Arrow remains an optional peer used only by the Arrow entry.
+
+## ShaderPlugin object targets
+
+ShaderPlugin hook and injection objects now separate the shader stage from the
+target: replace `{target: 'fs:FILTER_COLOR', glsl: '...'}` with
+`{stage: 'fragment', target: 'FILTER_COLOR', glsl: '...'}`. Use `vertex` for `vs`.
+String forms retain `vs:` and `fs:` prefixes and additionally support `glsl:` and
+`wgsl:` language prefixes. See [ShaderPlugin](/docs/api-reference/shaders/shader-plugin).

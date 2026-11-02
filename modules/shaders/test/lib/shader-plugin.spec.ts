@@ -54,9 +54,15 @@ it('ShaderPlugin#shares its interface and selects injection sources by language'
     vertexInputs: {filterValue: 'f32'},
     interStageVariables: {color: {type: 'vec4<f32>'}, category: {type: 'u32'}},
     injections: [
-      {target: 'fs:#decl', glsl: 'void portable() {}', wgsl: 'fn portable() {}', order: 10},
-      {target: 'fs:#decl', wgsl: 'fn wgslOnly() {}'},
-      {target: 'fs:#decl', glsl: ''}
+      {
+        stage: 'fragment',
+        target: '#decl',
+        glsl: 'void portable() {}',
+        wgsl: 'fn portable() {}',
+        order: 10
+      },
+      {stage: 'fragment', target: '#decl', wgsl: 'fn wgslOnly() {}'},
+      {stage: 'fragment', target: '#decl', glsl: ''}
     ]
   };
   const before = JSON.stringify(plugin);
@@ -90,12 +96,12 @@ it('ShaderPlugin#preserves contribution order across plugins', () => {
       {
         name: 'first',
         defines: {ENABLED: false},
-        injections: [{target: 'fs:#decl', wgsl: 'first', order: 2}]
+        injections: [{stage: 'fragment', target: '#decl', wgsl: 'first', order: 2}]
       },
       {
         name: 'second',
         defines: {ENABLED: true},
-        injections: [{target: 'fs:#decl', wgsl: 'second', order: 2}]
+        injections: [{stage: 'fragment', target: '#decl', wgsl: 'second', order: 2}]
       }
     ],
     'wgsl'
@@ -210,7 +216,12 @@ it('ShaderPlugin#rejects raw replacement targets', () => {
           {
             name: 'invalid-target',
             injections: [
-              {target: 'fragmentColor = vec4(1.0);' as any, glsl: 'ignored', wgsl: 'ignored'}
+              {
+                stage: 'fragment',
+                target: 'fragmentColor = vec4(1.0);',
+                glsl: 'ignored',
+                wgsl: 'ignored'
+              }
             ]
           }
         ],
@@ -240,8 +251,8 @@ it('ShaderPlugin#WGSL main injections land in stage bodies', () => {
       {
         name: 'wgsl-main-plugin-injections',
         injections: [
-          {target: 'vs:#main-start', wgsl: 'let pluginVertexStart = 1u;'},
-          {target: 'fs:#main-end', wgsl: 'let pluginFragmentEnd = 2u;'}
+          {stage: 'vertex', target: '#main-start', wgsl: 'let pluginVertexStart = 1u;'},
+          {stage: 'fragment', target: '#main-end', wgsl: 'let pluginFragmentEnd = 2u;'}
         ]
       }
     ],
@@ -278,7 +289,11 @@ it('ShaderPlugin#WGSL fragment declarations enter unified shader source', () => 
       {
         name: 'wgsl-plugin-fragment-declaration',
         injections: [
-          {target: 'fs:#decl', wgsl: 'fn pluginGetColor() -> vec4<f32> { return vec4<f32>(1.0); }'}
+          {
+            stage: 'fragment',
+            target: '#decl',
+            wgsl: 'fn pluginGetColor() -> vec4<f32> { return vec4<f32>(1.0); }'
+          }
         ]
       }
     ],
@@ -713,7 +728,7 @@ it('ShaderPlugin#unknown hooks identify the contributing plugin', () => {
     [
       {
         name: 'missing-color',
-        injections: [{target: 'fs:MISSING_COLOR', wgsl: ''}]
+        injections: [{stage: 'fragment', target: 'MISSING_COLOR', wgsl: ''}]
       }
     ],
     'wgsl'
@@ -733,7 +748,7 @@ it('ShaderPlugin#assembly-local hooks do not leak between calls', () => {
     [
       {
         name: 'local-color',
-        injections: [{target: 'fs:LOCAL_COLOR', wgsl: '*color *= 0.5;'}]
+        injections: [{stage: 'fragment', target: 'LOCAL_COLOR', wgsl: '*color *= 0.5;'}]
       }
     ],
     'wgsl'
@@ -798,7 +813,8 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
           name: 'first',
           injections: [
             {
-              target: 'fs:FILTER_COLOR',
+              stage: 'fragment',
+              target: 'FILTER_COLOR',
               glsl: language === 'wgsl' ? 'let firstMarker = 1.0;' : 'float firstMarker = 1.0;',
               wgsl: language === 'wgsl' ? 'let firstMarker = 1.0;' : 'float firstMarker = 1.0;'
             }
@@ -808,7 +824,8 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
           name: 'second',
           injections: [
             {
-              target: 'fs:FILTER_COLOR',
+              stage: 'fragment',
+              target: 'FILTER_COLOR',
               glsl: language === 'wgsl' ? 'let secondMarker = 1.0;' : 'float secondMarker = 1.0;',
               wgsl: language === 'wgsl' ? 'let secondMarker = 1.0;' : 'float secondMarker = 1.0;'
             }
@@ -864,7 +881,8 @@ it('ShaderPlugin#mixed main anchors preserve numeric order on both backends', ()
               name: 'ordered-main',
               injections: [
                 {
-                  target,
+                  stage: stage === 'vs' ? 'vertex' : 'fragment',
+                  target: anchor,
                   order: 10,
                   glsl: `${declaration} pluginOrdered = 1.0;`,
                   wgsl: `${declaration} pluginOrdered = 1.0;`
@@ -908,7 +926,12 @@ it('ShaderPlugin#mixed main anchors preserve numeric order on both backends', ()
 
 it('ShaderPlugin#injection-only plugins contribute no module', () => {
   const resolved = resolveShaderPlugins(
-    [{name: 'source-only', injections: [{target: 'fs:#decl', wgsl: 'fn helper() {}'}]}],
+    [
+      {
+        name: 'source-only',
+        injections: [{stage: 'fragment', target: '#decl', wgsl: 'fn helper() {}'}]
+      }
+    ],
     'wgsl'
   );
   expect(resolved.modules).toEqual([]);
@@ -989,4 +1012,91 @@ it.each([
       .defines
   });
   expect(result.source).toContain(`const selected = ${enabled ? 1 : 0};`);
+});
+
+it.each([
+  'glsl',
+  'wgsl'
+] as const)('ShaderPlugin#language-selected hook providers compose on %s', language => {
+  const provider: ShaderPlugin = {
+    name: 'hooks',
+    hooks: [
+      {
+        stage: 'fragment',
+        target: 'FILTER_COLOR',
+        glsl: '(inout vec4 color)',
+        wgsl: '(color: ptr<function, vec4<f32>>)'
+      }
+    ]
+  };
+  const consumer: ShaderPlugin = {
+    name: 'tint',
+    injections: [
+      {stage: 'fragment', target: 'FILTER_COLOR', glsl: 'color.r = 0.5;', wgsl: '(*color).r = 0.5;'}
+    ]
+  };
+  const resolved = resolveShaderPlugins([consumer, provider, provider], language);
+  expect(resolved.hooks).toHaveLength(1);
+  expect(resolved.hooks[0].hook).toContain(language === 'glsl' ? 'inout' : 'ptr<function');
+  const assembled =
+    language === 'glsl'
+      ? new GLSLShaderAssembler().assembleGLSLShaderPair({
+          platformInfo: GLSL_PLATFORM_INFO,
+          vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+          fs: '#version 300 es\nprecision highp float;out vec4 color;void main(){color=vec4(1.0);FILTER_COLOR(color);}',
+          pluginHooks: resolved.hooks,
+          pluginInjections: resolved.injections
+        }).fs
+      : new WGSLShaderAssembler().assembleWGSLShader({
+          platformInfo: WGSL_PLATFORM_INFO,
+          source: WGSL_SOURCE,
+          pluginHooks: resolved.hooks,
+          pluginInjections: resolved.injections
+        }).source;
+  expect(assembled).toContain('FILTER_COLOR(');
+  expect(assembled).toContain(language === 'glsl' ? 'color.r = 0.5;' : '(*color).r = 0.5;');
+  expect(() =>
+    resolveShaderPlugins(
+      [
+        provider,
+        {name: 'conflict', hooks: [{stage: 'fragment', target: 'FILTER_COLOR', [language]: '()'}]}
+      ],
+      language
+    )
+  ).toThrow(/Conflicting/);
+});
+
+it('ShaderPlugin#qualified shorthand selects language and rejects compact objects', () => {
+  const plugin: ShaderPlugin = {
+    name: 'short',
+    hooks: ['glsl:fs:TINT(inout vec4 color)', 'wgsl:fs:TINT(color: ptr<function, vec4<f32>>)'],
+    injections: {'glsl:fs:TINT': 'color.r = 1.0;', 'wgsl:fs:TINT': '(*color).r = 1.0;'}
+  };
+  expect(resolveShaderPlugins([plugin], 'glsl').injections['fs:TINT'][0].injection).toBe(
+    'color.r = 1.0;'
+  );
+  expect(resolveShaderPlugins([plugin], 'wgsl').hooks).toHaveLength(1);
+  expect(() =>
+    resolveShaderPlugins(
+      [{name: 'old', injections: [{target: 'fs:TINT', glsl: ''} as any]}],
+      'glsl'
+    )
+  ).toThrow(/explicit stage/);
+});
+
+it('ShaderPlugin#assembler strings select language and reject provider conflicts', () => {
+  const assembler = new GLSLShaderAssembler();
+  assembler.addShaderHook('glsl:fs:TINT(inout vec4 color)');
+  assembler.addShaderHook('wgsl:fs:TINT(color: ptr<function, vec4<f32>>)');
+  const props = {
+    platformInfo: GLSL_PLATFORM_INFO,
+    vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+    fs: '#version 300 es\nprecision highp float;out vec4 color;void main(){color=vec4(1.0);TINT(color);}'
+  };
+  const source = assembler.assembleGLSLShaderPair(props).fs;
+  expect(source).toContain('void TINT(inout vec4 color)');
+  expect(source).not.toContain('ptr<function');
+  expect(() =>
+    assembler.assembleGLSLShaderPair({...props, pluginHooks: [{hook: 'fs:TINT()'}]})
+  ).toThrow(/Conflicting/);
 });
