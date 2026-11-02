@@ -25,6 +25,9 @@ export function drawGPUVectorGroups(
   const attributeInputs = attributes.inputs;
   const geometryLayouts = geometry.sourceLayouts;
   const attributeLayouts = attributes.sourceLayouts;
+  // Keep the full group's inference stable when selecting individual chunks.
+  const geometryBatchLayouts = geometry.layouts;
+  const attributeBatchLayouts = attributes.layouts;
   const attributeStepMode = attributes.stepMode;
   const geometryBatchCount = geometry.batchCount;
   const attributeBatchCount = attributes.batchCount;
@@ -52,10 +55,10 @@ export function drawGPUVectorGroups(
       const attributeBatchIndex = independentInstances
         ? batchIndex % attributeBatchCount
         : Math.min(batchIndex, attributeBatchCount - 1);
-      geometry.setInputs(geometryBatches[geometryBatchIndex], geometryLayouts, 'vertex');
+      geometry.setInputs(geometryBatches[geometryBatchIndex], geometryBatchLayouts, 'vertex');
       attributes.setInputs(
         attributeBatches[attributeBatchIndex],
-        attributeLayouts,
+        attributeBatchLayouts,
         attributeStepMode
       );
       syncBindings();
