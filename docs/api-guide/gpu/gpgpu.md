@@ -25,6 +25,11 @@ buffers and typed arrays; the
 | One explicit buffer or texture computation | [Engine compute helpers](/docs/api-guide/engine/transforms) |
 | Several dependent WebGPU operations, indirect work, or transient reuse | [GPU Core](/docs/api-reference/experimental/gpu-core) |
 
+For a reusable graph with named runtime inputs, begin with
+[Getting started with graphs](/docs/api-reference/graph/getting-started). `GPUGraph` executes
+on WebGPU; `GPUSimpleGraph` shares its expression subset on WebGL and WebGPU. The evaluator
+workflow below is a separate lazy API with evaluator-owned outputs.
+
 ## Complete workflow
 
 ```ts

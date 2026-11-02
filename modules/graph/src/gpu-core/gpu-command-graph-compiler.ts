@@ -805,6 +805,27 @@ function getBufferTransientAllocationPlan<Parameters>(
   const lifetimes = getResourceLifetimes(nodes, resource =>
     isGraphBufferUse(resource) ? getBufferHandle(resource.buffer) : null
   );
+  // Each operation shares one retained-buffer list across all its command nodes. Find the
+  // scope once, rather than visiting every chunk on every node in a chunked operation.
+  const scopes = new Map<readonly GraphBufferHandle[], {firstUse: number; lastUse: number}>();
+  nodes.forEach((node, nodeIndex) => {
+    if (!node.retainedBuffers?.length) return;
+    const scope = scopes.get(node.retainedBuffers);
+    if (scope) scope.lastUse = nodeIndex;
+    else scopes.set(node.retainedBuffers, {firstUse: nodeIndex, lastUse: nodeIndex});
+  });
+  // Logical operation inputs/results overlap even for multi-pass lowerings. Private command
+  // scratch continues to use its precise command-level lifetime.
+  for (const [buffers, scope] of scopes) {
+    for (const buffer of buffers) {
+      if (!buffer.transient) continue;
+      const lifetime = lifetimes.get(buffer);
+      lifetimes.set(buffer, {
+        firstUse: Math.min(lifetime?.firstUse ?? scope.firstUse, scope.firstUse),
+        lastUse: Math.max(lifetime?.lastUse ?? scope.lastUse, scope.lastUse)
+      });
+    }
+  }
   const allocations: BufferTransientAllocation[] = [];
   const transientBuffers = Array.from(buffers)
     .filter(buffer => buffer.transient)
@@ -821,19 +842,30 @@ function getBufferTransientAllocationPlan<Parameters>(
   const active = new GPUPlanningHeap<Candidate>(
     (left, right) => left.allocation.lastUse - right.allocation.lastUse || left.index - right.index
   );
-  const available = new GPUPlanningHeap<Candidate>(
-    (left, right) =>
-      left.allocation.byteLength - right.allocation.byteLength || left.index - right.index
-  );
+  // Mappable staging buffers cannot combine their usages with storage/vertex buffers.
+  const available = new Map<number, GPUPlanningHeap<Candidate>>();
+  const getAvailable = (usage: number): GPUPlanningHeap<Candidate> => {
+    const key = usage & (Buffer.MAP_READ | Buffer.MAP_WRITE);
+    let pool = available.get(key);
+    if (!pool) {
+      pool = new GPUPlanningHeap<Candidate>(
+        (left, right) =>
+          left.allocation.byteLength - right.allocation.byteLength || left.index - right.index
+      );
+      available.set(key, pool);
+    }
+    return pool;
+  };
 
   for (const {buffer, lifetime} of transientBuffers) {
     if (!lifetime) {
       continue;
     }
     while (active.peek() && active.peek()!.allocation.lastUse < lifetime.firstUse) {
-      available.push(active.pop()!);
+      const completed = active.pop()!;
+      getAvailable(completed.allocation.usage).push(completed);
     }
-    let candidate = available.pop();
+    let candidate = getAvailable(buffer.usage).pop();
     if (!candidate) {
       candidate = {
         allocation: {byteLength: 0, usage: 0, lastUse: -1, handles: []},

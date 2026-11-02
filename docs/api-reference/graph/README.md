@@ -1,19 +1,57 @@
 ---
 title: Graph
-description: Schedule GPU work and compose graph-based algorithms and processing modules.
+description: Describe GPU computations, bind data, and compose execution with rendering.
 ---
 
 # Graph
 
-`@luma.gl/graph` owns GPU execution graphs and graph-based processing.
+`@luma.gl/graph` provides operations, GPU data, and execution infrastructure. Start with
+[Getting started with graphs](./getting-started.md) for a complete computation and cleanup example.
 
-```typescript
-import {GPUGraph, GPUGraphCompiler, GPUCommandGraph} from '@luma.gl/graph';
-import {GPUScan} from '@luma.gl/graph/gpu-core';
-import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
-```
+## Learn in this order
 
-The root exposes scheduling, compilation, encoding, inspection, and autotuning. Optional processing modules use explicit subpaths.
+1. [Getting started](./getting-started.md): inputs → operations → selected results → execution.
+2. [Inputs, results, and state](./gpu-graph-values.md): types, dimensions, ownership, storage reuse, and caller-owned encoding.
+3. [Expression syntax](./gpu-expression-operation.md): arithmetic, functions, casts, components, and typed rows.
+4. [Operation contracts](./gpu-operation.md): extend the graph with explicit logical effects and lowerings.
+5. [Command-graph concepts](/docs/api-reference/experimental/gpu-core/concepts): scheduling and physical resources when implementing a lowering or diagnosing execution.
+
+## Choose an interface
+
+| Interface | Use it for | Execution |
+| --- | --- | --- |
+| `GPUGraph` | Named inputs/state and operation-defined results, including custom WebGPU operations | `compile(device)`, then `run(bindings)` or `prepare(bindings)` and caller-owned encoding |
+| `GPUSimpleGraph` reusable expressions | The shared `GPUExpressionOperation` subset on WebGL and WebGPU | `compile(device)`, then `run({inputs, outputTargets})` |
+| `GPUSimpleGraph` evaluator recipes | Lazy uploads and evaluator operations beyond the shared expression subset | `new GPUSimpleGraph(device)`, then `compile()` and `run()` |
+| `GPUCommandGraph` | Explicit compute, render, and copy passes, textures, and advanced scheduling | Compile fixed resource descriptors, encode into a caller-owned encoder, submit explicitly |
+
+These are related layers, not interchangeable APIs. Full `GPUGraph` execution currently requires
+WebGPU. SimpleGraph does not support full-graph custom lowerings, mutable state, or the prepared
+execution API. Its evaluator recipes also have different result ownership; see its
+[mode comparison](./gpu-simple-graph.md#choose-an-authoring-mode).
+
+## How the layers fit
+
+`GPUGraph` describes logical operations. Reusable compilation checks their contracts and builds
+expression kernels. Preparing an invocation resolves dimensions and lowers operations through
+`GPUGraphCompiler` into a `GPUCommandGraph`. The command graph schedules concrete passes,
+tracks hazards, and plans compatible transient reuse. Encoding appends those commands; the
+application or `run()` submits them.
+
+Applications normally use `graph.compile(device)`. The lower-level `GPUGraphCompiler.compile()`
+returns command-graph declarations for advanced composition and requires concrete vector
+sizes. See the [GPUGraph reference](/docs/api-reference/experimental/gpu-core/gpu-graph) and
+[command-graph reference](/docs/api-reference/experimental/gpu-core/gpu-command-graph).
+
+## Data and processing modules
+
+GPU data primitives live in `@luma.gl/graph/gpu-data`. A `GPUData` owns or borrows one buffer;
+a `GPUVector` describes an ordered sequence of chunks. Engine renderers consume these shared
+types. Logical graph declarations describe values; they do not own the input buffers.
+
+Optional processing modules use explicit subpaths. Their individual references identify whether
+they provide semantic operations, command-graph contributors, or higher-level workflows; sharing
+the graph package does not imply every algorithm accepts the reusable expression interface.
 
 | Subpath | Capability |
 | --- | --- |
@@ -28,32 +66,3 @@ The root exposes scheduling, compilation, encoding, inspection, and autotuning. 
 | `gpu-raster`, `lucim` | Raster and volume processing |
 | `gpu-simulation`, `gpu-effects` | Graph-based ocean/fire simulations and FFT bloom |
 | `gpu-trace` | Trace analytics |
-
-GPU data primitives live in `@luma.gl/graph/gpu-data`; evaluator expressions and immediate operations live in `@luma.gl/graph/gpu-simple-graph`. Engine renderers and application adapters consume these graph APIs from their own packages.
-
-See the [execution guide](/docs/api-reference/experimental/gpu-core/concepts), [scheduler reference](/docs/api-reference/experimental/gpu-core/gpu-command-graph), and [migration guide](/docs/upgrade-guide).
-
-## Buffer and texture management
-
-See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
-views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
-
-`GPUGraph` describes application operations and logical values. `GPUGraphCompiler`
-lowers those operations to a `GPUCommandGraph`, which schedules concrete GPU passes
-and resources. `CompiledGPUCommandGraph` encodes the resulting commands. The existing
-compiler remains WebGPU-only; `GPUSimpleGraph` is the separate portable evaluator API.
-
-## Reusable expressions
-
-[`GPUExpressionOperation`](./gpu-expression-operation.md) supplies the same named arithmetic
-expression operation to `GPUGraph` and `GPUSimpleGraph`. Declare external inputs, let operations define results, compile
-without input data, then bind GPUVectors and scalar values on each run. See
-[Graph inputs, results, and state](./gpu-graph-values.md) for declarations, ownership, and allocation boundaries.
-The [expression syntax reference](./gpu-expression-operation.md#syntax-at-a-glance) covers
-math functions, casts, component selection, row construction, dot products, lengths, equality,
-and conditional value selection, with typing rules and examples.
-
-## Operation contracts
-
-[GPUOperation contracts](./gpu-operation.md) describe logical reads, writes, and output shapes.
-Custom full-graph lowerings can participate in reusable output planning alongside built-in operations.

@@ -3,7 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TextureFormat} from '@luma.gl/core';
-import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph';
+import type {
+  GraphBufferHandle,
+  GraphTextureHandle,
+  GraphImportedTexture
+} from './gpu-command-graph';
 import {GPUGraphTextureView, type GPUGraphTexture} from './gpu-graph-value';
 
 import {Buffer, type Device} from '@luma.gl/core';
@@ -89,6 +93,8 @@ type LoweringState = {
   textureValues: readonly GPUGraphTexture[];
   predicateConjunctions: Map<string, GPUScalar<'uint32'>>;
   commandNodeIds: Set<string>;
+  transientResultNames: ReadonlySet<string>;
+  retainedBuffers: readonly GraphBufferHandle[];
 };
 export class GPUGraphCompiler<Parameters = void> {
   readonly device: Device;
@@ -200,7 +206,10 @@ export class GPUGraphCompiler<Parameters = void> {
             graph,
             chunkLengths.length === 1 ? vector.id : `${vector.id}-chunk-${index}`,
             vector.format,
-            length
+            length,
+            vector.role === 'value'
+              ? Buffer.STORAGE | Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
+              : Buffer.STORAGE
           )
         );
         const formatInfo = getGPUVectorFormatInfo(vector.format);
@@ -235,7 +244,13 @@ export class GPUGraphCompiler<Parameters = void> {
       textures,
       textureValues: program.textures,
       predicateConjunctions: new Map(),
-      commandNodeIds: new Set()
+      commandNodeIds: new Set(),
+      transientResultNames: new Set(
+        program.vectors
+          .filter(vector => vector.role === 'value' && !vector.external)
+          .map(vector => vector.id)
+      ),
+      retainedBuffers: []
     };
     for (const operation of program.operations) this.lower(graph, operation, state);
     return Object.freeze({
@@ -413,6 +428,16 @@ export class GPUGraphCompiler<Parameters = void> {
         ? operation.id
         : (operation.constructor?.name ?? 'command-node-producer');
     state.path.push(id);
+    const previousRetainedBuffers = state.retainedBuffers;
+    const retainedBuffers = [...previousRetainedBuffers];
+    if (isGPUOperation(operation)) {
+      for (const use of operation.contract?.values ?? []) {
+        const name = typeof use.value === 'string' ? use.value : use.value.id;
+        if (state.transientResultNames.has(name))
+          for (const chunk of state.vectors.get(name)!.data) retainedBuffers.push(chunk.buffer);
+      }
+    }
+    state.retainedBuffers = retainedBuffers;
     try {
       if (operation instanceof GPUCompositeOperation && operation.type === 'composite') {
         state.decisions.push({
@@ -470,6 +495,7 @@ export class GPUGraphCompiler<Parameters = void> {
       }
       throw new Error(`GPUGraph operation "${id}" has no WebGPU lowering`);
     } finally {
+      state.retainedBuffers = previousRetainedBuffers;
       state.path.pop();
     }
   }
@@ -517,7 +543,7 @@ export class GPUGraphCompiler<Parameters = void> {
             nodeType: decorated.type,
             operationPath: [...state.path]
           });
-          return decorated;
+          return {...decorated, retainedBuffers: state.retainedBuffers};
         }, callback)
     );
   }
@@ -526,7 +552,10 @@ export class GPUGraphCompiler<Parameters = void> {
     node: any,
     state: LoweringState
   ): any {
-    node = this.makeCommandNodeIdUnique(node, state);
+    node = {
+      ...this.makeCommandNodeIdUnique(node, state),
+      retainedBuffers: state.retainedBuffers
+    };
     if (state.path.length)
       state.nodes.push({nodeId: node.id, nodeType: 'compute', operationPath: [...state.path]});
     if (!state.predicates.length) return node;

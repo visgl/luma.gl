@@ -9,6 +9,10 @@ description: Compose lazy GPU vector expressions while preserving source chunks 
 ordered data chunks, so streaming data can stay in its original batches without implicit packing.
 Use it to compose supported operations and materialize the result when it is needed.
 
+For named inputs rebound on each execution, see
+[reusable graph expressions](/docs/api-reference/graph/getting-started). This page covers the
+lazy evaluator API and its cached, evaluator-owned results.
+
 ## Evaluate a vector expression
 
 Given an existing `GPUVector` named `vector` and a luma.gl `device`:

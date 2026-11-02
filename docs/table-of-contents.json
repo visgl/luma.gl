@@ -590,21 +590,14 @@
       },
       {
         "type": "category",
-        "label": "@luma.gl/graph/gpu-simple-graph",
+        "label": "@luma.gl/graph",
         "items": [
-          "api-reference/graph/gpu-evaluation",
-          "api-reference/graph/kernel",
-          "api-reference/graph/render-kernel",
-          {
-            "type": "category",
-            "label": "GPU Evaluations",
-            "items": [
-              "api-reference/graph/gpu-data-evaluator",
-              "api-reference/graph/operations",
-              "api-reference/graph/clean-evaluate",
-              "api-reference/graph/custom-operation"
-            ]
-          },
+          "api-reference/graph/README",
+          "api-reference/graph/getting-started",
+          "api-reference/graph/gpu-graph-values",
+          "api-reference/graph/gpu-expression-operation",
+          "api-reference/graph/gpu-operation",
+          "api-reference/graph/gpu-simple-graph",
           {
             "type": "category",
             "label": "GPU Data",
@@ -615,21 +608,29 @@
               "api-reference/graph/gpu-data-view",
               "api-reference/graph/gpu-vector-format"
             ]
-          }
-        ]
-      },
-      {
-        "type": "category",
-        "label": "@luma.gl/graph",
-        "items": [
-          "api-reference/graph/README",
-          "api-reference/graph/gpu-simple-graph",
-          "api-reference/graph/gpu-graph-values",
-          "api-reference/graph/gpu-operation",
-          "api-reference/graph/gpu-expression-operation",
+          },
           {
             "type": "category",
-            "label": "GPU Graph",
+            "label": "Kernels",
+            "items": [
+              "api-reference/graph/kernel",
+              "api-reference/graph/render-kernel"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Evaluator APIs",
+            "items": [
+              "api-reference/graph/gpu-evaluation",
+              "api-reference/graph/gpu-data-evaluator",
+              "api-reference/graph/operations",
+              "api-reference/graph/clean-evaluate",
+              "api-reference/graph/custom-operation"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Command graphs",
             "items": [
               "api-reference/experimental/gpu-core/gpu-command-graph"
             ]

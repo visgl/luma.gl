@@ -179,7 +179,7 @@ describe('experimental GPU module naming', () => {
     }
   });
 
-  test('gives every public GPU submodule a subgroup in the GPGPU API reference', () => {
+  test('groups shared data, kernels, and evaluator APIs under the graph reference', () => {
     type DocumentationCategory = {label: string; items: Array<string | DocumentationCategory>};
     const documentation = JSON.parse(
       readFileSync(path.join(process.cwd(), 'docs/table-of-contents.json'), 'utf8')
@@ -187,7 +187,7 @@ describe('experimental GPU module naming', () => {
     const reference = documentation.find(category => category.label === 'API Reference');
     const packageReference = reference?.items.find(
       (category): category is DocumentationCategory =>
-        typeof category !== 'string' && category.label === '@luma.gl/graph/gpu-simple-graph'
+        typeof category !== 'string' && category.label === '@luma.gl/graph'
     );
     const moduleGroups: Record<string, string> = {'gpu-data': 'GPU Data'};
     const graphReference = reference?.items.find(
@@ -196,7 +196,9 @@ describe('experimental GPU module naming', () => {
     );
     for (const label of [
       'GPU Core',
-      'GPU Graph',
+      'Command graphs',
+      'Kernels',
+      'Evaluator APIs',
       'GPU Graph Algorithms',
       'GPU Tables',
       'GPU Raster',
