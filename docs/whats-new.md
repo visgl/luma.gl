@@ -1056,9 +1056,11 @@ shorthand supports language prefixes. See the [ShaderPlugin guide](/docs/api-ref
 and [Shaders overview](/docs/api-reference/shaders).
 
 
-### Stable per-batch shader uniforms
+### Aligned per-batch shader uniforms
 
-`GPUVectorModel.drawBatches()` and `Model.drawBatches()` retain each batch's managed shader-input
-uniform values through WebGPU submission. Set picking offsets or other uniforms in `onBatch`
-without managing per-batch buffers. Matching chunk boundaries are still required; external
-buffers remain caller-managed. See [Per-batch uniforms](./api-reference/engine/model.md#per-batch-uniforms).
+`GPUVectorModel.drawBatches()` and `Model.drawBatches()` use separate aligned regions of one
+engine-owned WebGPU uniform buffer for each batch. Set picking offsets or other uniforms in
+`onBatch` without managing the batch buffer yourself. The model reuses its allocation across
+submitted calls and grows it when needed. Matching chunk boundaries are still required.
+See [Per-batch uniforms](./api-reference/engine/model.md#per-batch-uniforms) for the submission
+and lifetime contract.

@@ -15,7 +15,6 @@ import type {
 } from '../../../index';
 import {
   Buffer,
-  assert,
   RenderPass,
   RenderPipeline,
   _getDefaultBindGroupFactory,
@@ -24,7 +23,7 @@ import {
 } from '../../../index';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
-import type {WebGPUCommandEncoder} from './webgpu-command-encoder';
+// import {WebGPUCommandEncoder} from './webgpu-command-encoder';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 import {WebGPUQuerySet} from './webgpu-query-set';
 import {WebGPUFramebuffer} from './webgpu-framebuffer';
@@ -36,15 +35,6 @@ export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPassEncoder;
   readonly framebuffer: WebGPUFramebuffer;
-
-  /** @internal Allocates a draw-local uniform buffer retained by the owning encoder. */
-  override _createUniformBufferSnapshot(data: Uint8Array): WebGPUBuffer {
-    // Native encoders supplied directly must identify their luma owner for managed snapshots.
-    assert(this.ownerCommandEncoder.handle === this.commandEncoder);
-    const buffer = this.device.createBuffer({data, usage: Buffer.UNIFORM | Buffer.COPY_DST});
-    this.ownerCommandEncoder.trackTransientUploadBuffer(buffer);
-    return buffer;
-  }
 
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
@@ -59,8 +49,7 @@ export class WebGPURenderPass extends RenderPass {
   constructor(
     device: WebGPUDevice,
     props: RenderPassProps = {},
-    private readonly commandEncoder: GPUCommandEncoder = device.commandEncoder.handle,
-    private readonly ownerCommandEncoder: WebGPUCommandEncoder = device.commandEncoder
+    commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
   ) {
     super(device, props);
     this.device = device;

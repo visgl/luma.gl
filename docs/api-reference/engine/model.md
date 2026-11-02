@@ -118,19 +118,28 @@ length. Corresponding vectors must have equal lengths, chunk counts, and per-chu
 This API does not pad, split, concatenate, or realign chunks. As with other `drawBatches()`
 inputs, configure matching model buffer layouts and initial attribute bindings first.
 
-Each draw retains the managed uniform values present after its callback returns. On WebGPU,
-luma creates immutable uniform snapshots, so later callbacks, repeated `drawBatches()` calls,
-and later managed-uniform writes cannot change an earlier batch's encoded values. Snapshots
-belong to the render pass's command encoder, including caller-owned encoders. They survive
-`finish()` and are released after submission completes, or when unsubmitted commands are
-destroyed. When recording a render bundle, snapshots instead belong to the finished bundle
-and survive replay until that bundle is destroyed. Each managed block uses one snapshot buffer per batch draw; no snapshot buffers
-are reused across pending draws. WebGL applies uniforms immediately and needs no snapshots.
+On WebGPU, the model reserves one buffer for all managed uniform blocks and batches in the
+call. Each batch binds a distinct `{buffer, offset, size}` range, aligned to the device's
+`minUniformBufferOffsetAlignment`. The model grows the allocation before drawing when needed,
+keeps it for reuse, and destroys it with the model. WebGL updates uniforms immediately.
 
-Explicit uniform-buffer bindings remain caller-managed and are not snapshotted. The guarantee
-covers `drawBatches()` managed uniforms, not arbitrary external resource writes or ordinary
-`draw()` calls. The callback's shader-input values remain set after the call; temporary buffer
-bindings, attributes, and draw counts are restored, including when a callback throws.
+**Slots are reused on every `drawBatches()` call.** Submit previous draws before another call
+changes their uniform values or requires a larger allocation:
+
+```typescript
+const pass = encoder.beginRenderPass({framebuffer});
+model.drawBatches(pass, {vectors, onBatch});
+pass.end();
+device.submit(encoder.finish());
+// The model's batch slots can now be reused with different values.
+```
+
+This matches the proposed GPU layers' per-batch style-buffer pattern. It is not an immutable
+snapshot across multiple calls before submission. Keep the model alive while pending commands
+or reusable render bundles reference its buffers. Re-record or stop replaying bundles before
+changing the slots they reference. Explicit external buffer bindings remain caller-managed.
+The callback's shader-input values remain set after the call; temporary buffer bindings,
+attributes, and draw counts are restored, including when a callback throws.
 
 ## Usage
 

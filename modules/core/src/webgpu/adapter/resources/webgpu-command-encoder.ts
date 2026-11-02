@@ -103,8 +103,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     const pass = new WebGPURenderPass(
       this.device,
       this._applyTimeProfilingToPassProps(props),
-      this.handle,
-      this
+      this.handle
     );
     this.trackTimestampPass(pass.props);
     return pass;

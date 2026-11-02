@@ -393,8 +393,6 @@ export class WebGPUDevice extends Device {
     const startTime = profiler ? getTimestamp() : 0;
     const submitReason = getWebGPUCpuHotspotSubmitReason(this);
     const transientUploadBuffers = commandBuffer.transientUploadBuffers;
-    // Submission owns these uploads now; destroying the command buffer must not retire them.
-    commandBuffer.transientUploadBuffers = [];
     let didSubmit = false;
     try {
       this.pushErrorScope('validation');
