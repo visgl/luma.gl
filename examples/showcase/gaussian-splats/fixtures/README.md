@@ -12,7 +12,8 @@ Other publicly available assets for follow-up testing:
   contain SPZ-compressed GLBs and authored node transforms. These files use an older draft and omit
   the now-required `kernel` and `colorSpace` fields, so loaders.gl beta.4 rejects them unchanged.
 - [godot-gsplat minimal point](https://github.com/shiena/godot-gsplat/tree/main/samples/minimal_gsplat)
-  is a small uncompressed glTF using the current base extension declaration.
+  is a small uncompressed glTF using the current base extension declaration. The unmodified sample
+  and its MIT license (Copyright 2026 KOGA Mitsuhiro) are retained in `godot-minimal/`.
 - [Niantic SPZ samples](https://github.com/nianticlabs/spz/tree/main/samples) include captured
   scenes; these are standalone SPZ files, not glTF assets.
 

@@ -373,3 +373,23 @@ test('resolves EXT_mesh_gpu_instancing transforms for Gaussian nodes', () => {
   ]);
   scene.destroy();
 });
+
+test('prepares the upstream uncompressed Gaussian glTF sample', async () => {
+  const {parse} = await import('@loaders.gl/core');
+  const {GLTFLoader} = await import('@loaders.gl/scene/gltf');
+  const {readFile} = await import('node:fs/promises');
+  const directory = new URL(
+    '../../../../examples/showcase/gaussian-splats/fixtures/godot-minimal/',
+    import.meta.url
+  );
+  const json = JSON.parse(await readFile(new URL('minimal_point.gltf', directory), 'utf8'));
+  const binary = await readFile(new URL('minimal_point.bin', directory));
+  json.buffers[0].uri = `data:application/octet-stream;base64,${binary.toString('base64')}`;
+  const loaded = await parse(JSON.stringify(json), GLTFLoader);
+  const gltf = postProcessGLTF(loaded as any);
+  const groups = await makeGPUSplatDataFromGLTFScene(new NullDevice({}), gltf);
+  expect(groups).toHaveLength(1);
+  expect(groups[0].batches[0].rowCount).toBe(1);
+  expect(Array.from(groups[0].batches[0].source.positions)).toEqual([0, 0, 0]);
+  groups[0].batches[0].destroy();
+});
