@@ -1,5 +1,9 @@
 # Upgrade Guide
 
+## PBR directional light direction
+
+`pbrMaterial` now interprets directional light `direction` as the direction light travels, matching Phong and Lambert. Applications that previously reversed directions to compensate for PBR lighting must remove that workaround.
+
 ## Opaque GPU and glTF metadata
 
 GPU data `readbackMetadata` and postprocessed glTF `extras` are now typed as `unknown`. Narrow or explicitly type these values before reading their properties.

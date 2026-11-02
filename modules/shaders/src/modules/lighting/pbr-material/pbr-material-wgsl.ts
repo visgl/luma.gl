@@ -1468,7 +1468,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
 
       for (var i = 0; i < lighting.directionalLightCount; i++) {
         if (i < lighting.directionalLightCount) {
-          PBRInfo_setDirectionalLight(&pbrInfo, lighting_getDirectionalLight(i).direction);
+          PBRInfo_setDirectionalLight(&pbrInfo, -lighting_getDirectionalLight(i).direction);
           color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
         }
       }
@@ -1828,7 +1828,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
     // Apply directional light
     for (var i = 0; i < lighting.directionalLightCount; i++) {
       if (i < lighting.directionalLightCount) {
-        PBRInfo_setDirectionalLight(&pbrInfo, lighting_getDirectionalLight(i).direction);
+        PBRInfo_setDirectionalLight(&pbrInfo, -lighting_getDirectionalLight(i).direction);
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getDirectionalLight(i).color,
