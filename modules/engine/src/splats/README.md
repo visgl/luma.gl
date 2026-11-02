@@ -78,5 +78,7 @@ released. Cancellation is checked before each primitive and after preparation.
 
 `excludeGaussianSplatPrimitives` leaves those primitives out of the mesh scenegraph; it does not
 create or draw splat renderers. Applications must resolve scene-node instances, transforms,
-visibility, and mixed-scene draw ordering. Decoded splats retain glTF feature-ID attributes when their row counts match the decoded table. Strict required-extension
+visibility, and mixed-scene draw ordering. Decoded splats retain glTF feature-ID attributes when their row counts match the decoded table.
+The decoded Arrow path currently accepts linear Rec. 709 display colors; sRGB display colors require
+a separate conversion and are rejected. Strict required-extension
 support remains unchanged until ordinary scene creation can render the extension end to end.

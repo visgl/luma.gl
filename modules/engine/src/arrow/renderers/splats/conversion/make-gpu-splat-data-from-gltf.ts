@@ -54,6 +54,16 @@ export async function makeGPUSplatDataFromGLTFScene(
         let consumedSourceBatches = 1;
         const firstSourceBatchIndex = sourceBatchIndex;
         if (descriptor?.decoded !== undefined) {
+          const extension = primitive.extensions.KHR_gaussian_splatting;
+          if (
+            primitive.mode !== 0 ||
+            extension.kernel !== 'ellipse' ||
+            extension.colorSpace !== 'lin_rec709_display' ||
+            (extension.projection !== undefined && extension.projection !== 'perspective') ||
+            (extension.sortingMethod !== undefined && extension.sortingMethod !== 'cameraDistance')
+          ) {
+            throw new Error('Unsupported decoded glTF Gaussian splat primitive');
+          }
           if (
             typeof descriptor.decoded !== 'object' ||
             descriptor.decoded === null ||

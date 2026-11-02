@@ -282,3 +282,19 @@ test('resolves visible splat node instances with their ancestor transforms', () 
   ]);
   scene.destroy();
 });
+
+test('rejects decoded sRGB splats until their color space is converted', async () => {
+  const primitive = {
+    ...makePrimitive(),
+    extensions: {KHR_gaussian_splatting: {...extension, colorSpace: 'srgb_rec709_display'}}
+  };
+  const gltf = {
+    meshes: [{primitives: [primitive]}],
+    gaussianSplatPrimitives: [
+      {meshIndex: 0, primitiveIndex: 0, decoded: {shape: 'arrow-table', data: makeArrowTable()}}
+    ]
+  };
+  await expect(makeGPUSplatDataFromGLTFScene(new NullDevice({}), gltf as any)).rejects.toThrow(
+    'Unsupported decoded glTF Gaussian splat primitive'
+  );
+});
