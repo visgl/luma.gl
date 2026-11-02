@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {lowerGPUUpload, lowerGPUCopy} from './gpu-transfer-lowering';
+import {GPUUploadOperation, GPUCopyOperation} from './gpu-transfer-operation';
+import {GPUCompactionOperation} from './gpu-compaction-operation';
+import {GPUCompaction} from './gpu-compaction';
+
 import type {TextureFormat} from '@luma.gl/core';
 import type {
   GraphBufferHandle,
@@ -100,6 +105,7 @@ export class GPUGraphCompiler<Parameters = void> {
   readonly device: Device;
   readonly capabilities: GPUGraphBackendCapabilities;
   readonly lowerings: readonly GPUOperationLowering<Parameters>[];
+  private compactionIndex = 0;
   constructor(device: Device, lowerings: readonly GPUOperationLowering<Parameters>[] = []) {
     this.device = device;
     this.capabilities = Object.freeze({
@@ -122,7 +128,35 @@ export class GPUGraphCompiler<Parameters = void> {
     );
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
+    this.compactionIndex = 0;
+    // Bound external partitions must be available when resolving shape-inheriting results.
+    program = program.clone();
+    for (const vector of program.vectors) {
+      const binding = bindings.vectors?.[vector.id];
+      if (!vector.external || !binding || vector.chunkLengths) continue;
+      const data = 'data' in binding ? binding.data : 'buffer' in binding ? [binding] : binding;
+      program.constrainResult(vector, {
+        type: 'vector',
+        format: vector.format,
+        chunkLengths: data.map(chunk => chunk.length)
+      });
+    }
     program = resolveGPUGraphDeclarations(program);
+    const transferUsages = new Map<string, number>();
+    const addTransferUsage = (name: string, usage: number): void => {
+      transferUsages.set(name, (transferUsages.get(name) ?? 0) | usage);
+    };
+    const collectTransferUsages = (operation: GPUGraphOperation): void => {
+      if (operation instanceof GPUCompositeOperation)
+        operation.operations.forEach(collectTransferUsages);
+      else if (operation instanceof GPUUploadOperation)
+        addTransferUsage(operation.output, Buffer.COPY_DST);
+      else if (operation instanceof GPUCopyOperation) {
+        addTransferUsage(operation.input, Buffer.COPY_SRC);
+        addTransferUsage(operation.output, Buffer.COPY_DST);
+      }
+    };
+    program.operations.forEach(collectTransferUsages);
     const validation = validateGPUGraph(program, bindings);
     if (!validation.valid)
       throw new Error(
@@ -209,7 +243,7 @@ export class GPUGraphCompiler<Parameters = void> {
             length,
             vector.role === 'value'
               ? Buffer.STORAGE | Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
-              : Buffer.STORAGE
+              : Buffer.STORAGE | (transferUsages.get(vector.id) ?? 0)
           )
         );
         const formatInfo = getGPUVectorFormatInfo(vector.format);
@@ -273,6 +307,24 @@ export class GPUGraphCompiler<Parameters = void> {
   }
   protected createCoreLowerings(): GPUOperationLowering<Parameters>[] {
     return [
+      {type: 'vector-upload', lower: lowerGPUUpload},
+      {type: 'vector-copy', lower: lowerGPUCopy},
+      {
+        type: 'compaction',
+        lower: (operation: GPUCompactionOperation, context) => {
+          const {input, flags, output, count} = operation.props;
+          context.graph.add(
+            new GPUCompaction({
+              // Unrolled iterations need distinct scratch resources as well as distinct nodes.
+              id: `${operation.id}-${this.compactionIndex++}`,
+              input: context.resolveVector<'uint32'>(input),
+              flags: context.resolveVector<'uint32'>(flags),
+              output: context.resolveVector<'uint32'>(output),
+              count: context.resolveScalar<'uint32'>(count).view
+            })
+          );
+        }
+      },
       {
         type: 'scalar-literal',
         lower: (operation: GPUGraphScalarLiteral, context) => {
