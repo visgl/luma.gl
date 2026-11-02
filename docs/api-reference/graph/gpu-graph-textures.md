@@ -50,7 +50,9 @@ compiled program can accept a different size on its next invocation. Fixed dimen
 bindings; they do not resize them.
 
 For a produced texture, `{like: 'image'}` takes dimensions from that logical value. Scaling
-applies to width and height with `max(1, round(size * scale))`; depth is preserved. Specify
+applies to width and height with `max(1, round(size * scale))`; depth is preserved except that
+cube results always have six faces. Cube-array results require a depth divisible by six; use a
+fixed extent with an explicit depth or inherit from an appropriate array input. Specify
 `mipLevels: 1` when producing a single-level downsampled image from a mipmapped input.
 All extents must be known during preparation. GPU-generated texture sizes are not supported.
 

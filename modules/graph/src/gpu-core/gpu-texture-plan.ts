@@ -163,8 +163,12 @@ export class GPUTextureInvocation {
             : extent && 'height' in extent
               ? extent.height
               : undefined;
-          const depth = source?.depth ?? (extent && 'depth' in extent ? extent.depth : undefined);
           const dimension = descriptor.dimension ?? source?.dimension ?? '2d';
+          // Cube results always contain six faces, including when sized from a 2d input.
+          const depth =
+            dimension === 'cube'
+              ? 6
+              : (source?.depth ?? (extent && 'depth' in extent ? extent.depth : undefined));
           const mipLevels = descriptor.mipLevels ?? source?.mipLevels ?? 1;
           const samples = descriptor.samples ?? source?.samples ?? 1;
           const usage = (usages.get(declaration.id) ?? 0) | declaration.usage;

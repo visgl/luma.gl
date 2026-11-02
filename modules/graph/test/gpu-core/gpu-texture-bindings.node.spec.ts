@@ -243,3 +243,41 @@ test('SimpleGraph rejects texture execution on WebGL without altering evaluator 
   expect(() => makeGraph(true).compile(device)).toThrow('texture execution requires WebGPU');
   device.destroy();
 });
+
+for (const inheritExtent of [false, true]) {
+  test(`cube results allocate six faces with fixed or inherited extents (${inheritExtent})`, () => {
+    const device = makeDevice();
+    const graph = new GPUGraph();
+    graph.addInput('image', gpuGraph.texture({format: 'rgba8unorm'}));
+    graph.add({
+      id: 'cube-result',
+      type: 'test-cube-result',
+      contract: {
+        values: [
+          {value: 'image', access: 'read', textureUsage: 'sampled'},
+          {value: 'result', access: 'write', textureUsage: 'render-attachment'}
+        ],
+        outputs: {
+          result: gpuGraph.texture({
+            format: 'rgba8unorm',
+            dimension: 'cube',
+            extent: inheritExtent ? {like: 'image'} : {width: 4, height: 4}
+          })
+        }
+      }
+    });
+    const compiled = graph.compile<{result: Texture}>(device, {
+      lowerings: [{type: 'test-cube-result', lower: () => {}}]
+    });
+    const image = makeTexture(device);
+    const allocate = vi.spyOn(device, 'createTexture');
+    const execution = compiled.prepare({inputs: {image}});
+    expect(allocate).toHaveBeenCalledWith(expect.objectContaining({dimension: 'cube', depth: 6}));
+    expect(execution.outputs.result.depth).toBe(6);
+    execution.destroy();
+    execution.outputs.result.destroy();
+    image.destroy();
+    compiled.destroy();
+    device.destroy();
+  });
+}
