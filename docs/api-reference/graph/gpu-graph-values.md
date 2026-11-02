@@ -200,8 +200,9 @@ scalar result, not a persistent GPU scalar binding. Expressions cannot write dir
 state. Use `GPUCopyOperation({input: 'nextPositions', target: 'positions'})` after producing
 an expression result.
 
-For independent owned copies and explicit reset/cleanup, use `compiled.createState(bindings,
-{copy: true})` and pass the resulting `GPUGraphState` as `state`. Borrowing remains the default.
+For independent owned copies and explicit reset/cleanup, use
+`compiled.createState(bindings, {copy: true})` and pass the resulting `GPUGraphState` as `state`.
+Borrowing remains the default.
 See [Mutable graph state](./gpu-graph-state.md) for initialization, reset, ownership, and
 caller-owned encoding examples.
 
