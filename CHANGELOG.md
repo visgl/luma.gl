@@ -2,6 +2,16 @@
 
 ## v10.0
 
+### v10.0.0-alpha.8
+
+- Add graph texture values and execution bindings, operation-defined results, capacity/count outputs, and shared transfer operations.
+- Support caller-owned graph encoding and reuse intermediate storage across graph execution.
+- Add path-based scenegraph lookup and physics controllers, integrate GPU physics rendering with engine PBR, and expand physics examples and guides.
+- Isolate per-batch uniforms in aligned buffer ranges and consolidate inferred vector buffer layouts.
+- Make shader, fence, and vertex-array destruction idempotent; support reverse-Z splat alpha ordering and improve glTF extension capability diagnostics.
+- Add portable ShaderPlugin hooks, align PBR directional lighting with Phong and Lambert, and add ocean velocity sampling with a geographic RK2 reference.
+- Upgrade math.gl and loaders.gl to beta.4, use the consolidated math.gl expression parser, and accept the standard ETC1 texture-format spelling while preserving its legacy alias.
+
 ### v10.0.0-alpha.7
 
 - Consolidate GPU execution, data, and table APIs into graph subpaths and expose explicit package exports.
