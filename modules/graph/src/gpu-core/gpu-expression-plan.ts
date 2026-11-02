@@ -52,6 +52,7 @@ export type GPUExpressionPlan = {
 /** Snapshot of declarations and checked expressions; contains no bound resources. @internal */
 export class GPUExpressionProgram {
   private readonly contracts = new Map<GPUGraphOperation, GPUOperationContract>();
+  private readonly resultNames: ReadonlySet<string>;
   readonly expressions: readonly GPUExpressionPlan[];
   readonly operations: readonly GPUGraphOperation[];
   readonly outputs: readonly string[];
@@ -190,6 +191,18 @@ export class GPUExpressionProgram {
     }
     this.expressions = expressionPlans;
     const producedValues = [...declarations.values()].filter(value => value.role === 'value');
+    this.resultNames = new Set(
+      [...this.contracts.values()]
+        .flatMap(contract =>
+          contract.values
+            .filter(use => use.access !== 'read')
+            .map(use => getGPUOperationValueName(use.value))
+        )
+        .filter(
+          name =>
+            declarations.get(name)?.role !== 'input' && declarations.get(name)?.role !== 'state'
+        )
+    );
     const consumed = new Set(
       [...this.contracts.values()].flatMap(contract =>
         contract.values
@@ -200,7 +213,7 @@ export class GPUExpressionProgram {
     this.outputs = [
       ...(options.outputs ??
         (producedValues.length
-          ? producedValues.filter(value => !consumed.has(value.id)).map(value => value.id)
+          ? [...this.resultNames].filter(name => !consumed.has(name))
           : expressions.map(operation => operation.output)))
     ];
     for (const name of this.outputs) {
@@ -242,7 +255,8 @@ export class GPUExpressionProgram {
     ] as const) {
       for (const [name, value] of Object.entries(group ?? {})) {
         const declaration = declarations.find(value => value.id === name);
-        if (!declaration || declaration.role !== role)
+        const bindingRole = declaration?.role ?? (this.resultNames.has(name) ? 'value' : 'input');
+        if (!declaration || bindingRole !== role)
           throw new Error(`Invalid ${role} binding ${name}`);
         bindings[name] = value;
       }
@@ -257,10 +271,7 @@ export class GPUExpressionProgram {
       throw new Error('Duplicate output targets');
     const outputTargets = execution.outputTargets ?? options.outputTargets;
     for (const name of Object.keys(outputTargets ?? {}))
-      if (
-        declarations.find(value => value.id === name)?.role !== 'value' ||
-        !this.outputs.includes(name)
-      )
+      if (!this.resultNames.has(name) || !this.outputs.includes(name))
         throw new Error(`Invalid graph output target ${name}`);
     return {bindings, options: {outputTargets}};
   }

@@ -130,6 +130,29 @@ export class GPUGraph {
     return new CompiledGPUGraph(device, this, options);
   }
   /** @internal */
+  constrainResult(vector: GPUGraphVector, descriptor: GPUGraphVectorDescriptor): GPUGraphVector {
+    if (
+      vector.length !== undefined &&
+      descriptor.length !== undefined &&
+      vector.length !== descriptor.length
+    )
+      throw new Error(`Incompatible result length ${vector.id}`);
+    if (
+      vector.chunkLengths &&
+      descriptor.chunkLengths &&
+      (vector.chunkLengths.length !== descriptor.chunkLengths.length ||
+        vector.chunkLengths.some((length, index) => length !== descriptor.chunkLengths![index]))
+    )
+      throw new Error(`Incompatible result chunks ${vector.id}`);
+    const constrained = new GPUGraphVector({
+      ...vector,
+      length: vector.length ?? descriptor.length,
+      chunkLengths: vector.chunkLengths ?? descriptor.chunkLengths
+    });
+    this.programVectors.set(vector.id, constrained);
+    return constrained;
+  }
+  /** @internal */
   clone(): GPUGraph {
     const program = new GPUGraph({id: this.id});
     for (const [name, value] of this.programScalars) program.programScalars.set(name, value);

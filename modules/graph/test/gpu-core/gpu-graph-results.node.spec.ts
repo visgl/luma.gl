@@ -145,6 +145,11 @@ test('grouped bindings separate initialized inputs, state and selected targets',
     const simple = new GPUSimpleGraph();
     simple.addState('state', gpuGraph.vector('float32'));
     expect(() => simple.compile(device)).toThrow('SimpleGraph state execution is unsupported');
+    const legacy = new GPUSimpleGraph(device);
+    legacy.addState('state', gpuGraph.vector('float32'));
+    expect(() => legacy.compile()).toThrow(
+      'Explicit input/state declarations require compile(device)'
+    );
   } finally {
     vector.destroy();
     device.destroy();
@@ -214,6 +219,78 @@ test('custom scalar results honor selected caller-owned targets', () => {
     expect(invocation.finish().count).toBe(target);
     expect(target.data[0].buffer.destroyed).toBe(false);
   } finally {
+    target.destroy();
+    device.destroy();
+  }
+});
+
+test('explicit declarations must agree with operation-defined result types', () => {
+  for (const kind of ['format', 'kind'] as const) {
+    const graph = new GPUGraph();
+    graph.addInput('input', gpuGraph.vector('uint32x2'));
+    if (kind === 'format') graph.vector('result', 'float32');
+    else graph.scalar('result', 'uint32');
+    graph.add(copy('input', 'result'));
+    expect(() => new GPUExpressionProgram(graph)).toThrow('Incompatible operation result result');
+  }
+});
+
+test('operation result dimensions constrain explicit declarations on a snapshot', () => {
+  for (const length of [undefined, 2, 3]) {
+    const graph = new GPUGraph();
+    const output = graph.vector('output', 'float32', length);
+    graph.add({
+      id: 'fixed',
+      type: 'custom',
+      contract: {
+        outputs: {output: gpuGraph.vector('float32', {length: 3})},
+        values: [{value: 'output', access: 'write'}]
+      }
+    });
+    if (length === 2)
+      expect(() => resolveGPUGraphDeclarations(graph)).toThrow('Incompatible result length');
+    else expect(resolveGPUGraphDeclarations(graph).vectors[0].length).toBe(3);
+    expect(output.length).toBe(length);
+  }
+});
+
+test('mixed explicit and inferred results retain terminal outputs and caller targets', () => {
+  const device = new NullDevice({});
+  const makeVector = () =>
+    new GPUVector({
+      type: 'data',
+      format: 'float32',
+      ownsData: true,
+      data: [
+        new GPUData({
+          format: 'float32',
+          length: 1,
+          ownsBuffer: true,
+          buffer: device.createBuffer({byteLength: 4})
+        })
+      ]
+    });
+  const input = makeVector();
+  const target = makeVector();
+  try {
+    for (const explicitRole of [false, true]) {
+      const graph = new GPUGraph();
+      if (explicitRole) graph.addInput('input', gpuGraph.vector('float32'));
+      else graph.vector('input', 'float32');
+      graph.vector('result', 'float32');
+      graph.add([
+        new GPUExpressionOperation({output: 'scratch', expression: 'input * 2'}),
+        new GPUExpressionOperation({output: 'result', expression: 'scratch + 1'})
+      ]);
+      const program = new GPUExpressionProgram(graph);
+      expect(program.outputs).toEqual(['result']);
+      const resolved = program.resolveBindings({inputs: {input}, outputTargets: {result: target}});
+      const invocation = program.prepare(device, resolved.bindings, resolved.options);
+      expect(invocation.finish().result).toBe(target);
+      expect(target.data[0].buffer.destroyed).toBe(false);
+    }
+  } finally {
+    input.destroy();
     target.destroy();
     device.destroy();
   }

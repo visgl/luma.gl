@@ -247,6 +247,8 @@ export class GPUSimpleGraph {
     }
     // Legacy evaluator graphs bind their device in the constructor.
     assert(this.device && this.declarations.operations.length === 0);
+    if ([...this.declarations.scalars, ...this.declarations.vectors].some(value => value.role))
+      throw new Error('Explicit input/state declarations require compile(device)');
     const options = deviceOrOptions;
     // A graph is compiled once, including when compilation fails.
     assert(!this.compiled);

@@ -74,11 +74,12 @@ export function resolveGPUGraphDeclarations(source: GPUGraph): GPUGraph {
           const declaration = program.addDeclaration(name, resolvedDescriptor, 'value');
           values.set(name, declaration);
         } else if (
-          existing.role === 'value' &&
-          (existing.format !== descriptor.format ||
-            existing instanceof GPUGraphVector !== (descriptor.type === 'vector'))
+          existing.format !== descriptor.format ||
+          existing instanceof GPUGraphVector !== (descriptor.type === 'vector')
         )
           throw new Error(`Incompatible operation result ${name}`);
+        else if (existing instanceof GPUGraphVector && descriptor.type === 'vector')
+          values.set(name, program.constrainResult(existing, descriptor));
       }
       validateGPUOperationContract(program, contract);
       for (const use of contract.values) {
