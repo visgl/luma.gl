@@ -81,7 +81,7 @@ const model = new Model(device, {
 
 `Model` selects sources for its device. Providers are collected before injections
 are validated, so `[tint, colorHooks]` also works. Identical hook declarations
-compose; conflicting signatures, including conflicts with assembler-registered
+compose and preserve an existing assembler hook’s header/footer; conflicting signatures, including conflicts with assembler-registered
 hooks, throw. Injection `order` determines execution order; equal orders preserve
 plugin declaration order. A missing language variant contributes nothing for that
 language. An injection into a missing hook throws rather than silently disappearing.

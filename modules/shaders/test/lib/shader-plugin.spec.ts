@@ -1100,3 +1100,31 @@ it('ShaderPlugin#assembler strings select language and reject provider conflicts
     assembler.assembleGLSLShaderPair({...props, pluginHooks: [{hook: 'fs:TINT()'}]})
   ).toThrow(/Conflicting/);
 });
+
+it('ShaderPlugin#matching declarations preserve assembler hook wrappers', () => {
+  const assembler = new GLSLShaderAssembler();
+  assembler.addShaderHook('fs:TINT(inout vec4 color)', {
+    header: 'color.r = 0.25;',
+    footer: 'color.b = 0.75;'
+  });
+  const resolved = resolveShaderPlugins(
+    [
+      {
+        name: 'provider',
+        hooks: [{stage: 'fragment', target: 'TINT', glsl: '(inout vec4 color)'}],
+        injections: [{stage: 'fragment', target: 'TINT', glsl: 'color.g = 0.5;'}]
+      }
+    ],
+    'glsl'
+  );
+  const source = assembler.assembleGLSLShaderPair({
+    platformInfo: GLSL_PLATFORM_INFO,
+    vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+    fs: '#version 300 es\nprecision highp float;out vec4 color;void main(){color=vec4(1.0);TINT(color);}',
+    pluginHooks: resolved.hooks,
+    pluginInjections: resolved.injections
+  }).fs;
+  expect(source.indexOf('color.r = 0.25;')).toBeGreaterThan(-1);
+  expect(source.indexOf('color.g = 0.5;')).toBeGreaterThan(source.indexOf('color.r = 0.25;'));
+  expect(source.indexOf('color.b = 0.75;')).toBeGreaterThan(source.indexOf('color.g = 0.5;'));
+});

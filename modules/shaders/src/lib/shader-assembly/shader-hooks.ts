@@ -96,15 +96,10 @@ export function normalizeShaderHooks(
     for (const stage of ['vertex', 'fragment'] as const) {
       for (const [name, declaration] of Object.entries(normalized[stage])) {
         const existing = result[stage][name];
-        if (
-          existing &&
-          (existing.signature !== declaration.signature ||
-            existing.header !== declaration.header ||
-            existing.footer !== declaration.footer)
-        ) {
+        if (existing && existing.signature !== declaration.signature) {
           throw new Error(`Conflicting ShaderPlugin hook ${name}`);
         }
-        result[stage][name] = declaration;
+        result[stage][name] = existing || declaration;
       }
     }
   }
