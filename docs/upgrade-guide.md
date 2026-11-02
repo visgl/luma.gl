@@ -63,7 +63,7 @@ ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remai
 
 ### loaders.gl grouped packages
 
-luma.gl now uses loaders.gl 5.0.0-beta.2. Install `@loaders.gl/tables` in place of
+luma.gl now uses loaders.gl 5.0.0-beta.4. Install `@loaders.gl/tables` in place of
 `@loaders.gl/parquet`, and import Parquet APIs from `@loaders.gl/tables/parquet` or
 its explicit implementation subpaths. Schema, schema utilities, and Node polyfills
 now come from `@loaders.gl/core/schema`, `@loaders.gl/core/schema-utils`, and
@@ -93,7 +93,7 @@ resource ownership rules, and preserves luma.gl's support for legacy draft attac
 
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.2. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.4. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
 `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS, projection, and
 GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
