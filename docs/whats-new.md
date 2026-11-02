@@ -7,6 +7,13 @@ WebGPU graphs also expose [stable compaction](./api-reference/graph/gpu-compacti
 with input-sized capacity and a separate GPU logical count, without implicit readback or allocation
 based on CPU-visible counts. Evaluator APIs remain unchanged.
 
+### Independent graph state instances
+
+`CompiledGPUGraph.createState()` supports borrowed or independently copied mutable state,
+explicit GPU reset, and caller-owned reset encoding. Multiple instances share one compiled
+program. `GPUCopyOperation` can commit a result to declared state using `target`. See
+[Mutable graph state](./api-reference/graph/gpu-graph-state.md). Evaluator APIs are unchanged.
+
 ### Scenegraph node paths
 
 `GroupNode.findNode()` and `findNodes()` resolve node references by exact ID, anchored

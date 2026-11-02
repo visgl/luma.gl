@@ -11,7 +11,7 @@ description: Describe GPU computations, bind data, and compose execution with re
 ## Learn in this order
 
 1. [Getting started](./getting-started.md): inputs → operations → selected results → execution.
-2. [Inputs, results, and state](./gpu-graph-values.md): types, dimensions, ownership, storage reuse, and caller-owned encoding.
+2. [Inputs, results, and state](./gpu-graph-values.md): types, dimensions, ownership, storage reuse, and caller-owned encoding. For persistent simulations, continue with [mutable state](./gpu-graph-state.md).
 3. [Expression syntax](./gpu-expression-operation.md): arithmetic, functions, casts, components, and typed rows.
 4. [Upload and copy](./gpu-transfer-operations.md) and [capacity/count results](./gpu-compaction-operation.md): data movement and GPU-sized selection.
 5. [Operation contracts](./gpu-operation.md): extend the graph with explicit logical effects and lowerings.

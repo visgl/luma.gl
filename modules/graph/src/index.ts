@@ -199,3 +199,6 @@ export type {
 } from './gpu-core/gpu-transfer-operation';
 export {GPUCompactionOperation} from './gpu-core/gpu-compaction-operation';
 export type {GPUCompactionOperationProps} from './gpu-core/gpu-compaction-operation';
+
+export {GPUGraphState} from './gpu-core/gpu-graph-state';
+export type {GPUGraphStateBindings, GPUGraphStateOptions} from './gpu-core/gpu-graph-state';

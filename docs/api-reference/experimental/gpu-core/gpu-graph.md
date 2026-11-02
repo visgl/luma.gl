@@ -49,7 +49,7 @@ This separation is also compatible with native execution systems such as CUDA Gr
 ## External inputs and operation-defined results
 
 Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))` for
-external inputs, and `addState()` for initialized borrowed vector state. Operations declare
+external inputs, and `addState()` for mutable vector state. Operations declare
 their results through contracts; expressions infer theirs automatically. Applications select
 returned outputs at compilation and supply `{inputs, state, outputTargets}` at execution.
 See [Graph inputs, results, and state](/docs/api-reference/graph/gpu-graph-values) for examples,
@@ -208,3 +208,6 @@ fields plus `external`. `graph.textureView(texture, props)` selects subresources
 storage. `GPUGraphCompiler.compile()` accepts optional `textures` defaults; imported textures may
 also be supplied when encoding. `compilation.textures` exposes logical graph texture handles.
 Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
+
+`CompiledGPUGraph.createState()` creates a `GPUGraphState` with explicit borrowing or copying,
+reset, and destruction. See [Mutable graph state](/docs/api-reference/graph/gpu-graph-state).
