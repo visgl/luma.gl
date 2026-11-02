@@ -26,7 +26,7 @@ export function createLabMaterial(device: Device, bodies: GPURigidBody[], scene:
   });
   const material = createPBRMaterial(device, {
     id: 'lab-pbr-material',
-    uniforms: {metallicRoughnessValues: [1, 1], metallicRoughnessUVSet: 1},
+    uniforms: {metallicRoughnessValues: [1, 1], metallicRoughnessUVSet: 1, IBLenabled: true},
     bindings: {pbr_metallicRoughnessSampler: materialTexture}
   });
   const pixels = new Uint8Array(64 * 32 * 4);
