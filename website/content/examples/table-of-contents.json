@@ -71,6 +71,8 @@
       "experimental/gpu-sphere-scale",
       "experimental/gpu-pool",
       "experimental/gpu-rigid-body-world",
+      "experimental/newtons-cradle",
+      "experimental/dominoes",
       "experimental/wrecking-ball",
       "experimental/physics-stress",
       "experimental/physics-batch",

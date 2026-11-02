@@ -38,8 +38,9 @@ simulation fallback.
 
 The examples sidebar has a **Physics** category. Start with
 [Wrecking Ball](/examples/experimental/wrecking-ball) for a heavy pendulum demolishing a
-204-block pyramid, or [Rigid Body Lab](/examples/experimental/gpu-rigid-body-world)
-for smaller mechanisms and contact scenes. [Physics Stress Lab](/examples/experimental/physics-stress)
+204-block pyramid, [Newton's Cradle](/examples/experimental/newtons-cradle) for momentum
+transfer, or [Spiral Dominoes](/examples/experimental/dominoes) for a propagating contact chain.
+[Rigid Body Lab](/examples/experimental/gpu-rigid-body-world) provides the full scenario selector. [Physics Stress Lab](/examples/experimental/physics-stress)
 and [Physics Batch Lab](/examples/experimental/physics-batch) expose qualification and scale workloads.
 
 ## API contracts and maturity
