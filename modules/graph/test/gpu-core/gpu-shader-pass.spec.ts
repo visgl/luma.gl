@@ -42,6 +42,47 @@ async function readPixel(texture: Texture, x = 0, y = 0, mipLevel = 0, z = 0) {
 }
 
 for (const simple of [false, true]) {
+  test(`shader-pass diagnostic IDs do not collide with internal or named resources (${simple})`, async ({
+    skip
+  }) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return skip();
+    const graph = simple ? new GPUSimpleGraph() : new GPUGraph();
+    graph.addInput('effect-parameters', gpuGraph.texture({format: 'rgba8unorm'}));
+    graph.addInput('gain', gpuGraph.scalar('float32'));
+    for (const [input, output] of [
+      ['effect-parameters', 'effect-parameters-1'],
+      ['effect-parameters-1', 'result']
+    ]) {
+      graph.add(
+        new GPUShaderPassOperation({
+          id: 'effect',
+          inputs: {imageTexture: input},
+          samplers: {imageSampler: {}},
+          parameters: {gain: 'gain'},
+          output,
+          outputDescriptor: gpuGraph.texture({format: 'rgba8unorm', extent: {like: input}}),
+          fragmentSource: `fn shade(textureCoordinates: vec2<f32>) -> vec4<f32> {
+          let color = textureSample(imageTexture, imageSampler, textureCoordinates);
+          return vec4<f32>(color.rgb * parameters.gain, color.a);
+        }`
+        })
+      );
+    }
+    const compiled = graph.compile<{result: Texture}>(device);
+    const image = makeImage(device);
+    try {
+      const {result} = await compiled.run({inputs: {'effect-parameters': image, gain: 0.5}});
+      try {
+        expect(await readPixel(result)).toEqual([10, 20, 30, 255]);
+      } finally {
+        result.destroy();
+      }
+    } finally {
+      compiled.destroy();
+      image.destroy();
+    }
+  });
   test(`shader-pass unsupported bound topology releases allocated outputs (${simple})`, async ({
     skip
   }) => {

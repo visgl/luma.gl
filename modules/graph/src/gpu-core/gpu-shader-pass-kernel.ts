@@ -159,7 +159,7 @@ export class GPUShaderPassKernel {
     const output = context.resolveTextureView(operation.output);
     const parameters = this.parameterFormats.length
       ? context.graph.createTransientBuffer({
-          id: `${operation.id}-parameters`,
+          id: context.graph.getUniqueResourceId(`${operation.id}-parameters`),
           byteLength: this.parameterByteLength,
           usage: Buffer.UNIFORM | Buffer.COPY_DST
         })
