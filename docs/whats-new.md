@@ -1062,3 +1062,13 @@ ShaderPlugins can provide render hooks with GLSL/WGSL parameter signatures as we
 as inject behavior into them. Object forms separate stage and target; string
 shorthand supports language prefixes. See the [ShaderPlugin guide](/docs/api-reference/shaders/shader-plugin)
 and [Shaders overview](/docs/api-reference/shaders).
+
+
+### Aligned per-batch shader uniforms
+
+`GPUVectorModel.drawBatches()` and `Model.drawBatches()` use separate aligned regions of one
+engine-owned WebGPU uniform buffer for each batch. Set picking offsets or other uniforms in
+`onBatch` without managing the batch buffer yourself. The model reuses its allocation across
+submitted calls and grows it when needed. Matching chunk boundaries are still required.
+See [Per-batch uniforms](./api-reference/engine/model.md#per-batch-uniforms) for the submission
+and lifetime contract.

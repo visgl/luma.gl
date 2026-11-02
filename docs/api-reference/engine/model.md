@@ -99,6 +99,48 @@ geometry batches.
 It accepts a named map or array of vectors, ignores constants and undefined entries, and
 neither modifies nor repacks input storage.
 
+### Per-batch uniforms
+
+`drawBatches()` invokes `onBatch` before each aligned vector chunk. Set managed shader-input
+uniforms in the callback to supply batch-local state such as a picking row offset:
+
+```typescript
+model.drawBatches(renderPass, {
+  vectors: {positions, colors},
+  onBatch: ({rowIndexOffset, rowCount}) => {
+    model.shaderInputs.setProps({picking: {indexOffset: rowIndexOffset}});
+  }
+});
+```
+
+`rowIndexOffset` is cumulative within the supplied vectors; `rowCount` is the current chunk's
+length. Corresponding vectors must have equal lengths, chunk counts, and per-chunk row counts.
+This API does not pad, split, concatenate, or realign chunks. As with other `drawBatches()`
+inputs, configure matching model buffer layouts and initial attribute bindings first.
+
+On WebGPU, the model reserves one buffer for all managed uniform blocks and batches in the
+call. Each batch binds a distinct `{buffer, offset, size}` range, aligned to the device's
+`minUniformBufferOffsetAlignment`. The model grows the allocation before drawing when needed,
+keeps it for reuse, and destroys it with the model. WebGL updates uniforms immediately.
+
+**Slots are reused on every `drawBatches()` call.** Submit previous draws before another call
+changes their uniform values or requires a larger allocation:
+
+```typescript
+const pass = encoder.beginRenderPass({framebuffer});
+model.drawBatches(pass, {vectors, onBatch});
+pass.end();
+device.submit(encoder.finish());
+// The model's batch slots can now be reused with different values.
+```
+
+This matches the proposed GPU layers' per-batch style-buffer pattern. It is not an immutable
+snapshot across multiple calls before submission. Keep the model alive while pending commands
+or reusable render bundles reference its buffers. Re-record or stop replaying bundles before
+changing the slots they reference. Explicit external buffer bindings remain caller-managed.
+The callback's shader-input values remain set after the call; temporary buffer bindings,
+attributes, and draw counts are restored, including when a callback throws.
+
 ## Usage
 
 ```typescript
