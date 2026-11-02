@@ -1,5 +1,14 @@
 # What's New
 
+### Operation-defined graph results
+
+`GPUGraph.addInput()` and `addState()` describe the external interface, while operation
+contracts define internal results. Expressions infer output types without manual intermediate
+declarations. Reusable runs accept grouped inputs, borrowed state, and selected output targets.
+SimpleGraph shares input declarations and inferred expression results; evaluator APIs are unchanged.
+See [Graph inputs, results, and state](./api-reference/graph/gpu-graph-values.md).
+
+
 ### Graph operation contracts
 
 Logical Operations can declare reads, writes, output shapes, and required device features.

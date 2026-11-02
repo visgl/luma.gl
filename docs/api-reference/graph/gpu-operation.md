@@ -8,6 +8,9 @@ This is the first part of the unified graph API: existing declarations and execu
 remain unchanged. Input/value/state declaration roles, new invocation APIs, and changes to
 control flow are not introduced here.
 
+Operation contracts can also [define their own results](./gpu-graph-values.md#operation-defined-results),
+so application code only declares external inputs and state.
+
 ## Contract types
 
 ```typescript

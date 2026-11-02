@@ -13,6 +13,7 @@ import {
   GPUExpressionProgram,
   type GPUGraphCompileOptions,
   type GPUGraphRunBindings,
+  type GPUGraphExecutionBindings,
   type GPUGraphRunOptions
 } from './gpu-expression-plan';
 import {GPUExpressionKernel} from './gpu-expression-kernel';
@@ -52,11 +53,14 @@ export class CompiledGPUGraph {
   }
 
   async run(
-    bindings: GPUGraphRunBindings,
+    supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
   ): Promise<Record<string, GPUVector>> {
     // A destroyed compiled program cannot encode further work.
     assert(!this.destroyed);
+    const resolvedBindings = this.program.resolveBindings(supplied, options);
+    const bindings = resolvedBindings.bindings;
+    options = resolvedBindings.options;
     const invocation = this.program.prepare(this.device, bindings, options);
     let executable: CompiledGPUCommandGraph | undefined;
     const encoder = this.device.createCommandEncoder();

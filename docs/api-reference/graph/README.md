@@ -46,8 +46,9 @@ compiler remains WebGPU-only; `GPUSimpleGraph` is the separate portable evaluato
 ## Reusable expressions
 
 [`GPUExpressionOperation`](./gpu-expression-operation.md) supplies the same named arithmetic
-expression operation to `GPUGraph` and `GPUSimpleGraph`. Declare scalars and vectors, compile
-without input data, then bind GPUVectors and scalar values on each run.
+expression operation to `GPUGraph` and `GPUSimpleGraph`. Declare external inputs, let operations define results, compile
+without input data, then bind GPUVectors and scalar values on each run. See
+[Graph inputs, results, and state](./gpu-graph-values.md) for declarations, ownership, and allocation boundaries.
 The [expression syntax reference](./gpu-expression-operation.md#syntax-at-a-glance) covers
 math functions, casts, component selection, row construction, dot products, lengths, equality,
 and conditional value selection, with typing rules and examples.

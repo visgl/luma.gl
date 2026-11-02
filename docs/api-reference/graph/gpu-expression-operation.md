@@ -17,23 +17,25 @@ This page is the expression syntax reference as well as the operation API guide.
 
 ## Declare, compile, and bind
 
+Declare external inputs; expressions define their own results. No output declaration is needed.
+See [Graph inputs, results, and state](./gpu-graph-values.md) for the shared ownership model.
+
 ```typescript
-import {GPUGraph, GPUExpressionOperation} from '@luma.gl/graph';
+import {GPUGraph, GPUExpressionOperation, gpuGraph} from '@luma.gl/graph';
 import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 
 const graph = device.type === 'webgpu' ? new GPUGraph() : new GPUSimpleGraph();
-graph.vector('positions', 'float32');
-graph.scalar('scale', 'float32');
-graph.vector('offset', 'float32');
-graph.vector('transformed', 'float32');
+graph.addInput('positions', gpuGraph.vector('float32'));
+graph.addInput('scale', gpuGraph.scalar('float32'));
+graph.addInput('offset', gpuGraph.vector('float32'));
 graph.add(new GPUExpressionOperation({
   output: 'transformed',
   expression: 'positions * scale + offset'
 }));
 
 const compiled = graph.compile(device, {outputs: ['transformed']});
-const first = await compiled.run({positions, scale: 2, offset});
-const second = await compiled.run({positions: nextPositions, scale: 3, offset: nextOffset});
+const first = await compiled.run({inputs: {positions, scale: 2, offset}});
+const second = await compiled.run({inputs: {positions: nextPositions, scale: 3, offset: nextOffset}});
 // Each result is independent, including when the second input has a different length.
 // After GPU consumers have finished:
 first.transformed.destroy();
@@ -83,7 +85,7 @@ const operation = new GPUExpressionOperation({
 
 Supported expressions contain declared identifiers, finite numeric literals, parentheses,
 unary negation, binary `+`, `-`, `*`, `/`, and the function calls described below. Operators act elementwise; scalars broadcast to
-vector rows. Vector outputs require at least one vector input. Scalar expressions produce a
+vector rows. Execution-sized vector outputs require a vector input; inferred constant rows have length one. Scalar expressions produce a
 one-row output vector with the declared numeric format. Use `equalAll` and `select` for
 equality and conditional value selection; JavaScript comparison and ternary operators are
 not supported. Parsing successfully in math.gl does not imply support by the GPU compiler.
@@ -122,7 +124,7 @@ for a `float32x3` vector, with matching row counts and chunk boundaries. Scalar 
 still accept a single numeric binding, which broadcasts across all rows and components.
 
 Casts preserve width: `sint32(positions)` produces `sint32x3`, applying rounding and saturation
-independently per component. The output declaration must match the inferred component type
+independently per component. An explicitly supplied output declaration must match the inferred component type
 and width. Integer arithmetic requires an explicit conversion back to float32.
 
 Storage stays packed: `float32x3` occupies 12 bytes per row on both backends, without WGSL
@@ -165,7 +167,7 @@ width-preserving casts apply to constructed rows and selections.
 
 One-component selections broadcast in arithmetic: `positions + positions.y` adds each row's
 second component to every component in that row. Scalar-only constructors can be used inside
-expressions, such as `positions + vec3(scale)`. A vector output still needs a vector input to
+expressions, such as `positions + vec3(scale)`. An execution-sized vector output needs a vector input to
 determine its runtime row count. Chunk-boundary and ownership rules are unchanged; returned
 outputs are materialized results, even when a selector can use a borrowed intermediate view.
 
@@ -183,7 +185,7 @@ incorrect argument counts are rejected at compilation. Function names are intrin
 not callable values supplied through bindings.
 
 Use `float32(x)`, `sint32(x)`, and `uint32(x)` for explicit numeric value conversions.
-The expression result type must match its output declaration. For example:
+When an output is explicitly declared, its type must match the expression result. For example:
 
 ```typescript
 graph.vector('indices', 'uint32');

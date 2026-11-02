@@ -13,11 +13,48 @@ import type {
 export type GPUGraphScalarFormat = 'float32' | 'uint32' | 'sint32';
 export type GPUGraphVectorFormat = GPUGraphScalarFormat | `${GPUGraphScalarFormat}x${2 | 3 | 4}`;
 
+export type GPUGraphValueRole = 'input' | 'state' | 'value';
+export type GPUGraphScalarDescriptor<T extends GPUGraphScalarFormat = GPUGraphScalarFormat> =
+  Readonly<{
+    type: 'scalar';
+    format: T;
+  }>;
+export type GPUGraphVectorDescriptor<T extends GPUGraphVectorFormat = GPUGraphVectorFormat> =
+  Readonly<{
+    type: 'vector';
+    format: T;
+    length?: number;
+    chunkLengths?: readonly number[];
+  }>;
+export type GPUGraphValueDescriptor = GPUGraphScalarDescriptor | GPUGraphVectorDescriptor;
+
+/** Pure logical descriptors: no allocation, device, or registration. */
+export const gpuGraph = {
+  scalar<T extends GPUGraphScalarFormat>(format: T): GPUGraphScalarDescriptor<T> {
+    return Object.freeze({type: 'scalar', format});
+  },
+  vector<T extends GPUGraphVectorFormat>(
+    format: T,
+    shape: {length?: number; chunkLengths?: readonly number[]} = {}
+  ): GPUGraphVectorDescriptor<T> {
+    return Object.freeze({
+      type: 'vector',
+      format,
+      ...shape,
+      ...(shape.chunkLengths ? {chunkLengths: Object.freeze([...shape.chunkLengths])} : {})
+    });
+  }
+};
+
 /** Backend-independent scalar state owned by a GPUGraph. */
 export class GPUGraphScalar<T extends GPUGraphScalarFormat = GPUGraphScalarFormat> {
   readonly id: string;
   readonly format: T;
-  constructor(id: string, format: T) {
+  constructor(
+    id: string,
+    format: T,
+    readonly role?: GPUGraphValueRole
+  ) {
     if (!id) throw new Error('GPUGraphScalar id is required');
     this.id = id;
     this.format = format;
@@ -38,6 +75,7 @@ export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorForma
   /** Optional fixed-length constraint; undefined means execution-sized. */
   readonly length?: number;
   readonly external: boolean;
+  readonly role?: GPUGraphValueRole;
   /** Optional physical partition lengths; omitted external topology is supplied by its binding. */
   readonly chunkLengths?: readonly number[];
   constructor(props: {
@@ -46,6 +84,7 @@ export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorForma
     length?: number;
     external?: boolean;
     chunkLengths?: readonly number[];
+    role?: GPUGraphValueRole;
   }) {
     if (!props.id) throw new Error('GPUGraphVector id is required');
     if (props.length !== undefined && (!Number.isSafeInteger(props.length) || props.length < 0)) {
@@ -55,6 +94,7 @@ export class GPUGraphVector<T extends GPUGraphVectorFormat = GPUGraphVectorForma
     this.format = props.format;
     this.length = props.length;
     this.external = props.external ?? false;
+    this.role = props.role;
     if (props.chunkLengths) {
       if (
         props.chunkLengths.some(length => !Number.isSafeInteger(length) || length < 0) ||

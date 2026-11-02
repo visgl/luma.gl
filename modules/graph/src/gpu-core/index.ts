@@ -669,3 +669,16 @@ export type {
   GPUOperationValueUse,
   GPUOperationVectorShape
 } from './gpu-operation-contract';
+
+export {gpuGraph} from './gpu-graph-value';
+export type {
+  GPUGraphScalarDescriptor,
+  GPUGraphVectorDescriptor,
+  GPUGraphValueDescriptor,
+  GPUGraphValueRole
+} from './gpu-graph-value';
+export type {GPUGraphExecutionBindings} from './gpu-expression-plan';
+export type {
+  GPUOperationOutputDeclarations,
+  GPUOperationContractContext
+} from './gpu-operation-contract';

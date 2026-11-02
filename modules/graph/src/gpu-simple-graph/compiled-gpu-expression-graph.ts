@@ -27,6 +27,7 @@ import {
   GPUExpressionProgram,
   type GPUGraphCompileOptions,
   type GPUGraphRunBindings,
+  type GPUGraphExecutionBindings,
   type GPUGraphRunOptions
 } from '../gpu-core/gpu-expression-plan';
 
@@ -46,16 +47,21 @@ export class CompiledGPUSimpleExpressionGraph {
   ) {
     if (options.lowerings) throw new Error('Custom lowerings require GPUGraph');
     this.program = new GPUExpressionProgram(source, options);
+    if (this.program.vectors.some(value => value.role === 'state'))
+      throw new Error('SimpleGraph state execution is unsupported');
     if (this.program.operations.some(operation => !(operation instanceof GPUExpressionOperation)))
       throw new Error('SimpleGraph declarative execution supports expression operations only');
   }
 
   async run(
-    bindings: GPUGraphRunBindings,
+    supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
   ): Promise<Record<string, GPUVector>> {
     // Evaluators do not support concurrent evaluation on one execution scope.
     assert(!this.running && !this.destroyed);
+    const resolvedBindings = this.program.resolveBindings(supplied, options);
+    const bindings = resolvedBindings.bindings;
+    options = resolvedBindings.options;
     this.running = true;
     const evaluators = new Set<GPUDataEvaluator>();
     const scalarBuffers = new Set<Buffer>();
