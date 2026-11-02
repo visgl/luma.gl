@@ -212,6 +212,65 @@ test('custom render lowering produces scaled textures with inferred attachment u
   }
 });
 
+for (const simple of [false, true]) {
+  test(`cube views default to six layers within cube arrays (${simple})`, async ({skip}) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return skip();
+    const graph = simple ? new GPUSimpleGraph() : new GPUGraph();
+    graph.addInput('image', gpuGraph.texture({format: 'rgba8unorm', dimension: 'cube'}));
+    graph.add(new GPUCopyOperation({input: 'image', output: 'result'}));
+    const compiled = graph.compile<{result: Texture}>(device);
+    const input = device.createTexture({
+      format: 'rgba8unorm',
+      dimension: 'cube-array',
+      width: 2,
+      height: 2,
+      depth: 12,
+      usage: Texture.COPY_SRC | Texture.COPY_DST | Texture.SAMPLE
+    });
+    const target = device.createTexture({
+      format: 'rgba8unorm',
+      dimension: 'cube',
+      width: 2,
+      height: 2,
+      depth: 6,
+      usage: Texture.COPY_SRC | Texture.COPY_DST | Texture.SAMPLE
+    });
+    for (const layer of [0, 1]) {
+      input.writeData(new Uint8Array(2 * 2 * 6 * 4).fill(31 + layer), {
+        width: 2,
+        height: 2,
+        depthOrArrayLayers: 6,
+        z: layer * 6
+      });
+    }
+    try {
+      for (const baseArrayLayer of [0, 6]) {
+        const image = input.createView({dimension: 'cube', baseArrayLayer});
+        try {
+          const {result} = await compiled.run({inputs: {image}});
+          try {
+            expect(result.depth).toBe(6);
+            expect(result.dimension).toBe('cube');
+            expect(await readPixel(result, 0, 5)).toEqual(Array(4).fill(31 + baseArrayLayer / 6));
+          } finally {
+            result.destroy();
+          }
+          const borrowed = await compiled.run({inputs: {image}, outputTargets: {result: target}});
+          expect(borrowed.result).toBe(target);
+          expect(await readPixel(target, 0, 5)).toEqual(Array(4).fill(31 + baseArrayLayer / 6));
+        } finally {
+          image.destroy();
+        }
+      }
+    } finally {
+      input.destroy();
+      target.destroy();
+      compiled.destroy();
+    }
+  });
+}
+
 for (const dimension of ['2d-array', '3d'] as const) {
   test(`copy retains mip chains and ${dimension} depth`, async ({skip}) => {
     const device = await getWebGPUTestDevice();

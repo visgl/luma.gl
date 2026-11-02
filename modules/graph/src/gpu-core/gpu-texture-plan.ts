@@ -24,7 +24,8 @@ export function getTextureBindingInfo(binding: GPUGraphTextureBinding) {
   const depth =
     dimension === '3d'
       ? Math.max(1, texture.depth >> baseMipLevel)
-      : (props.arrayLayerCount ?? (dimension === '2d' ? 1 : texture.depth - baseArrayLayer));
+      : (props.arrayLayerCount ??
+        (dimension === 'cube' ? 6 : dimension === '2d' ? 1 : texture.depth - baseArrayLayer));
   // Format reinterpretation and partial aspects need separate binding/operation semantics.
   assert((props.format ?? texture.format) === texture.format && (props.aspect ?? 'all') === 'all');
   assert(!binding.destroyed && !texture.destroyed);
@@ -64,9 +65,15 @@ export function getBoundTextureViewProps(
   const info = getTextureBindingInfo(binding);
   const baseMipLevel = props.baseMipLevel ?? 0;
   const baseArrayLayer = props.baseArrayLayer ?? 0;
+  const dimension = props.dimension ?? info.dimension;
   const mipLevelCount = props.mipLevelCount ?? info.mipLevels - baseMipLevel;
   const arrayLayerCount =
-    props.arrayLayerCount ?? (info.dimension === '3d' ? 1 : info.depth - baseArrayLayer);
+    props.arrayLayerCount ??
+    (dimension === 'cube'
+      ? 6
+      : dimension === '2d' || dimension === '3d'
+        ? 1
+        : info.depth - baseArrayLayer);
   // Nested selections cannot escape the caller-supplied view.
   assert(
     baseMipLevel >= 0 &&
@@ -76,7 +83,7 @@ export function getBoundTextureViewProps(
   );
   return {
     ...props,
-    dimension: props.dimension ?? info.dimension,
+    dimension,
     baseMipLevel: info.baseMipLevel + baseMipLevel,
     mipLevelCount,
     baseArrayLayer: info.baseArrayLayer + baseArrayLayer,
