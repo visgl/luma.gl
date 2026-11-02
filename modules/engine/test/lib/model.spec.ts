@@ -1097,7 +1097,7 @@ it('Model#plugins assemble backend contributions', async () => {
       {
         name: 'glsl-model-plugin',
         module: pluginModule,
-        injections: [{target: 'fs:#decl', glsl: 'float pluginMarker = 1.0;'}]
+        injections: [{stage: 'fragment', target: '#decl', glsl: 'float pluginMarker = 1.0;'}]
       }
     ]
   });
@@ -1120,7 +1120,9 @@ it('Model#plugins assemble backend contributions', async () => {
       plugins: [
         {
           name: 'wgsl-model-plugin',
-          injections: [{target: 'fs:#decl', wgsl: 'const PLUGIN_MARKER: f32 = 1.0;'}]
+          injections: [
+            {stage: 'fragment', target: '#decl', wgsl: 'const PLUGIN_MARKER: f32 = 1.0;'}
+          ]
         }
       ]
     });

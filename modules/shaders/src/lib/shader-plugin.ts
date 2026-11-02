@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ShaderHook} from './shader-assembly/shader-hooks';
 import type {ShaderInjection} from './shader-assembly/shader-injections';
 import type {ShaderModule} from './shader-module/shader-module';
 import {shaderTypeDecoder, type AttributeShaderType} from '../types';
@@ -17,10 +18,24 @@ export type ShaderPluginInjectionTarget =
   | `vs:${string}`
   | `fs:${string}`;
 
+/** Explicit stage and unqualified target for plugin object declarations. */
+export type ShaderPluginTarget = {
+  /** Shader stage containing this extension point. */
+  stage: 'vertex' | 'fragment';
+  /** Unqualified hook name or structural anchor such as #main-start. */
+  target: string;
+};
+
+/** Hook function declared by a plugin, with parameter signatures per language. */
+export type ShaderPluginHook = ShaderPluginTarget & {
+  /** GLSL parameter list, including parentheses. */
+  glsl?: string;
+  /** WGSL parameter list, including parentheses. */
+  wgsl?: string;
+};
+
 /** Named shader source injection contributed by a ShaderPlugin. */
-export type ShaderPluginInjection = {
-  /** Named shader anchor or hook that receives this source. */
-  target: ShaderPluginInjectionTarget;
+export type ShaderPluginInjection = ShaderPluginTarget & {
   /** GLSL source for this target. Omit to skip this injection when assembling GLSL. */
   glsl?: string;
   /** WGSL source for this target. Omit to skip this injection when assembling WGSL. */
@@ -54,8 +69,10 @@ export type ShaderPlugin = {
   module?: ShaderModule<any, any, any>;
   /** Boolean or numeric preprocessor defines added to shader assembly. */
   defines?: Record<string, boolean | number>;
-  /** Named code injections added to shader assembly. */
-  injections?: ShaderPluginInjection[];
+  /** Named injections as explicit-stage objects or optionally language-qualified string keys. */
+  injections?: ShaderPluginInjection[] | Record<string, string>;
+  /** Callable extension points as explicit-stage objects or optionally language-qualified signatures. */
+  hooks?: (ShaderPluginHook | string)[];
   /** Shader-facing vertex inputs added by this plugin. Buffer ownership remains with the caller. */
   vertexInputs?: Record<string, AttributeShaderType>;
   /** Values transported from the selected vertex entry point to the fragment entry point. */
@@ -66,6 +83,8 @@ export type ShaderPlugin = {
 export type ResolvedShaderPlugins = {
   /** Resolved shader modules in plugin declaration order. */
   modules: ShaderModule[];
+  /** Language-selected hook declarations. */
+  hooks: ShaderHook[];
   /** Resolved boolean or numeric preprocessor defines. */
   defines: Record<string, boolean | number>;
   /** Resolved named code injections grouped by target. */
@@ -86,6 +105,7 @@ export function resolveShaderPlugins(
 ): ResolvedShaderPlugins {
   const resolved: ResolvedShaderPlugins = {
     modules: [],
+    hooks: [],
     defines: {},
     injections: {},
     vertexInputs: {},
@@ -177,14 +197,52 @@ function appendShaderPlugin(
     resolved.interStageVariables[name] = normalizedVarying;
   }
 
-  for (const injection of plugin.injections || []) {
+  for (const hook of plugin.hooks || []) {
+    const declarationSource =
+      typeof hook === 'string' ? selectShaderLanguage(hook, shaderLanguage) : undefined;
+    if (typeof hook === 'string' && declarationSource === undefined) continue;
+    const signature =
+      typeof hook === 'string'
+        ? declarationSource!.slice(declarationSource!.indexOf('('))
+        : hook[shaderLanguage];
+    if (signature === undefined) continue;
+    const target =
+      typeof hook === 'string' ? declarationSource!.split('(')[0] : getShaderPluginTarget(hook);
+    if (!/^(vs|fs):[A-Za-z_][A-Za-z0-9_]*$/.test(target) || !/^\([^]*\)$/.test(signature.trim())) {
+      throw new Error(`Invalid ShaderPlugin hook ${target}`);
+    }
+    const declaration = {hook: `${target}${signature.trim()}`};
+    const existing = resolved.hooks.find(value => value.hook.split('(')[0] === target);
+    if (existing && existing.hook !== declaration.hook) {
+      throw new Error(`Conflicting ShaderPlugin hook ${target}`);
+    }
+    if (!existing) resolved.hooks.push(declaration);
+  }
+  const pluginInjections = Array.isArray(plugin.injections)
+    ? plugin.injections
+    : Object.entries(plugin.injections || {}).flatMap(([key, source]): ShaderPluginInjection[] => {
+        const target = selectShaderLanguage(key, shaderLanguage);
+        if (target === undefined) return [];
+        const [stage, ...name] = target.split(':');
+        if (stage !== 'vs' && stage !== 'fs')
+          throw new Error(`Invalid ShaderPlugin injection ${key}`);
+        return [
+          {
+            stage: stage === 'vs' ? ('vertex' as const) : ('fragment' as const),
+            target: name.join(':'),
+            [shaderLanguage]: source
+          }
+        ];
+      });
+  for (const injection of pluginInjections) {
     const source = injection[shaderLanguage];
     if (source === undefined) continue;
-    assertNamedShaderPluginInjectionTarget(injection.target);
-    if (!resolved.injections[injection.target]) {
-      resolved.injections[injection.target] = [];
+    const target = getShaderPluginTarget(injection);
+    assertNamedShaderPluginInjectionTarget(target);
+    if (!resolved.injections[target]) {
+      resolved.injections[target] = [];
     }
-    const injections = resolved.injections[injection.target];
+    const injections = resolved.injections[target];
     injections.push({
       pluginName: plugin.name,
       injection: source,
@@ -218,4 +276,16 @@ function assertNamedShaderPluginInjectionTarget(target: ShaderPluginInjectionTar
       `ShaderPlugin injection target "${target}" must be a named shader anchor or hook`
     );
   }
+}
+
+function getShaderPluginTarget(value: ShaderPluginTarget): ShaderPluginInjectionTarget {
+  if ((value.stage !== 'vertex' && value.stage !== 'fragment') || value.target.includes(':')) {
+    throw new Error('ShaderPlugin object targets require an explicit stage and unqualified target');
+  }
+  return `${value.stage === 'vertex' ? 'vs' : 'fs'}:${value.target}` as ShaderPluginInjectionTarget;
+}
+
+function selectShaderLanguage(value: string, language: 'glsl' | 'wgsl'): string | undefined {
+  const match = /^(glsl|wgsl):([\s\S]+)$/.exec(value);
+  return match ? (match[1] === language ? match[2] : undefined) : value;
 }

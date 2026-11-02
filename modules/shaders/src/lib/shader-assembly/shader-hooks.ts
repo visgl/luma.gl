@@ -71,14 +71,38 @@ export function getShaderHooks(
  * A later declaration of the same stage-prefixed hook name replaces an earlier one.
  */
 export function normalizeShaderHooks(
-  hookFunctions: readonly (ShaderHook | string)[]
+  hookFunctions: readonly (ShaderHook | string)[],
+  pluginHooks: readonly ShaderHook[] = [],
+  language?: 'glsl' | 'wgsl'
 ): ShaderHookRegistry {
   const result: ShaderHookRegistry = {vertex: {}, fragment: {}};
 
   for (const hookFunction of hookFunctions) {
-    addShaderHookToRegistry(result, hookFunction);
+    const text = typeof hookFunction === 'string' ? hookFunction : hookFunction.hook;
+    const qualified = /^(glsl|wgsl):([\s\S]+)$/.exec(text);
+    if (qualified && qualified[1] !== language) continue;
+    addShaderHookToRegistry(
+      result,
+      qualified
+        ? typeof hookFunction === 'string'
+          ? qualified[2]
+          : {...hookFunction, hook: qualified[2]}
+        : hookFunction
+    );
   }
 
+  for (const hook of pluginHooks) {
+    const normalized = normalizeShaderHooks([hook]);
+    for (const stage of ['vertex', 'fragment'] as const) {
+      for (const [name, declaration] of Object.entries(normalized[stage])) {
+        const existing = result[stage][name];
+        if (existing && existing.signature !== declaration.signature) {
+          throw new Error(`Conflicting ShaderPlugin hook ${name}`);
+        }
+        result[stage][name] = existing || declaration;
+      }
+    }
+  }
   return result;
 }
 
@@ -125,7 +149,7 @@ function addShaderHookToRegistry(
   const stageSeparatorIndex = hook.indexOf(':');
   const shaderStage = hook.slice(0, stageSeparatorIndex);
   const signature = hook.slice(stageSeparatorIndex + 1);
-  const name = hook.replace(/\(.+/, '');
+  const name = hook.split('(')[0].trim();
   const normalizedHook: Required<ShaderHook> = {
     hook: name,
     signature,

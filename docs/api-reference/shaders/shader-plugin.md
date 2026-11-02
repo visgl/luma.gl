@@ -24,6 +24,120 @@ For the authoring model, see
   {label: 'Cost', value: 'Resolve when configuration changes, not for every draw'}
 ]} />
 
+## Learn the composition model
+
+A **shader module** owns reusable shader code and its data contract: uniform types,
+bindings, a uniform getter, and dependencies. A **shader plugin** packages optional
+assembly contributions around one primary module. A **hook** is a function the host
+shader calls at a deliberate extension point. An **injection** supplies statements
+inside that function, or source at a structural anchor.
+
+The host chooses *where* extension behavior runs. Plugins choose *what* it does.
+Declaring a hook does not insert a call into your shader: the host must call it.
+With no injections its generated function is a no-op.
+
+### Provide a hook
+
+```ts
+import type {ShaderPlugin} from '@luma.gl/shaders';
+
+const colorHooks: ShaderPlugin = {
+  name: 'color-hooks',
+  hooks: [{
+    stage: 'fragment',
+    target: 'FILTER_COLOR',
+    glsl: '(inout vec4 color)',
+    wgsl: '(color: ptr<function, vec4<f32>>)'
+  }]
+};
+```
+
+The signatures describe the same logical function in two languages. GLSL `inout`
+and WGSL function pointers let injected statements modify the host's local color.
+The GLSL host calls `FILTER_COLOR(color)`; the WGSL host calls `FILTER_COLOR(&color)`
+after computing its local color and before returning it.
+
+### Contribute behavior
+
+```ts
+const tint: ShaderPlugin = {
+  name: 'tint',
+  injections: [{
+    stage: 'fragment',
+    target: 'FILTER_COLOR',
+    glsl: 'color.rgb *= vec3(1.0, 0.5, 0.5);',
+    wgsl: '(*color) = vec4<f32>((*color).rgb * vec3<f32>(1.0, 0.5, 0.5), (*color).a);',
+    order: 0
+  }]
+};
+
+const model = new Model(device, {
+  vs: glslVertexSource,
+  fs: glslFragmentSource, // Calls FILTER_COLOR(color)
+  source: wgslSource,    // Calls FILTER_COLOR(&color)
+  plugins: [colorHooks, tint]
+});
+```
+
+`Model` selects sources for its device. Providers are collected before injections
+are validated, so `[tint, colorHooks]` also works. Identical hook declarations
+compose and preserve an existing assembler hook’s header/footer; conflicting signatures, including conflicts with assembler-registered
+hooks, throw. Injection `order` determines execution order; equal orders preserve
+plugin declaration order. A missing language variant contributes nothing for that
+language. An injection into a missing hook throws rather than silently disappearing.
+
+### String shorthand
+
+Object declarations always separate `stage` and the unqualified `target`. String
+forms can retain stage and language prefixes:
+
+```ts
+const shortTint: ShaderPlugin = {
+  name: 'short-tint',
+  hooks: [
+    'glsl:fs:FILTER_COLOR(inout vec4 color)',
+    'wgsl:fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)'
+  ],
+  injections: {
+    'glsl:fs:FILTER_COLOR': 'color.r = 0.5;',
+    'wgsl:fs:FILTER_COLOR': '(*color).r = 0.5;'
+  }
+};
+```
+
+Unqualified string targets such as `fs:FILTER_COLOR` remain available when source
+is intentionally language-independent. Prefer qualified strings for shader code.
+Use object injections when you need explicit ordering. Compact objects such as
+`{target: 'fs:FILTER_COLOR', glsl: '...'}` are not supported; supply
+`stage: 'fragment', target: 'FILTER_COLOR'` instead.
+
+### Hooks versus structural anchors
+
+Named hooks express semantic operations such as filtering a color. Structural
+anchors such as `#decl`, `#main-start`, and `#main-end` add declarations or statements
+to an entry point. They use the same injection descriptor, for example
+`{stage: 'vertex', target: '#main-start', wgsl: '...'}`. Anchors are built in;
+do not declare them as hooks. Prefer named hooks when the placement is part of a
+host shader's public extension contract.
+
+### Configure data and own resources
+
+Put uniforms, bindings, and helper functions in the plugin's primary `module`;
+put supporting modules in that module's `dependencies`. Update runtime values
+through `model.shaderInputs.setProps({moduleName: {...}})`. Changing uniform values
+does not require replacing the plugin or rebuilding the shader interface.
+
+`vertexInputs` and `interStageVariables` declare shader interfaces. They do not
+allocate buffers or compute attributes. The application still supplies the matching
+buffer layout, vertex buffers, updates, and cleanup. Luma injects the required stage
+inputs and transports inter-stage values. This keeps optional features composable
+without moving application resource ownership into shader assembly.
+
+Hooks describe render stages. `Computation` rejects render hooks, vertex inputs,
+and inter-stage variables; compute plugins can still contribute modules, defines,
+and supported structural injections. Plugins do not schedule extra render or
+compute passes. Use engine and graph APIs for execution.
+
 ## Usage
 
 ```ts
@@ -39,13 +153,14 @@ const model = new Model(device, {
 
 ```ts
 import type {AttributeShaderType} from '@luma.gl/core';
-import type {ShaderInjection, ShaderModule} from '@luma.gl/shaders';
+import type {ShaderHook, ShaderInjection, ShaderModule} from '@luma.gl/shaders';
 
 export type ShaderPlugin = {
   name: string;
   module?: ShaderModule<any, any, any>;
   defines?: Record<string, boolean | number>;
-  injections?: ShaderPluginInjection[];
+  hooks?: (ShaderPluginHook | string)[];
+  injections?: ShaderPluginInjection[] | Record<string, string>;
   vertexInputs?: Record<string, AttributeShaderType>;
   interStageVariables?: Record<string, ShaderPluginInterStageVariable>;
 };
@@ -57,14 +172,23 @@ export type ShaderPluginInterStageVariable = {
   interpolation?: ShaderPluginInterStageVariableInterpolation;
 };
 
+export type ShaderPluginHook = {
+  stage: 'vertex' | 'fragment';
+  target: string;
+  glsl?: string; // Parameter list
+  wgsl?: string; // Parameter list
+};
+
 export type ShaderPluginInjection = {
-  target: ShaderPluginInjectionTarget;
+  stage: 'vertex' | 'fragment';
+  target: string;
   glsl?: string;
   wgsl?: string;
   order?: number;
 };
 
 export type ResolvedShaderPlugins = {
+  hooks: ShaderHook[];
   modules: ShaderModule[];
   defines: Record<string, boolean | number>;
   injections: Record<string, ShaderInjection[]>;
@@ -126,11 +250,11 @@ assembly module list remain arrays.
 - `fs:#decl`
 - `fs:#main-start`
 - `fs:#main-end`
-- named shader hooks such as `vs:OFFSET_POSITION` and `fs:FILTER_COLOR` when the active shader assembly path already exposes those hooks
+- named shader hooks such as `vs:OFFSET_POSITION` and `fs:FILTER_COLOR` declared by a provider plugin or the active shader assembler
 
 Raw regex or arbitrary text-replacement targets from lower-level assembler APIs are intentionally not part of `ShaderPlugin`.
 
-Use a named hook target only when the active shader assembly path already
+Use a named hook target only when a provider plugin or the active shader assembly path
 registers and calls that hook. Use `#decl` for helper functions and globals,
 and `#main-*` for short entry-point statements.
 
@@ -291,7 +415,7 @@ const tintPlugin: ShaderPlugin = {
   name: 'tint-plugin',
   injections: [
     {
-      target: 'fs:#decl',
+      stage: 'fragment', target: '#decl',
       glsl: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }',
       wgsl: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
     }

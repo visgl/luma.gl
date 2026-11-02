@@ -1024,3 +1024,10 @@ contracts and remaining qualification limits.
 `log` calls, plus explicit `float32`, `sint32`, and `uint32` value conversions. Both
 graph implementations accept typed 32-bit numeric inputs and outputs. Existing evaluator
 APIs and physical-format conversion behavior are unchanged.
+
+### Plugin-owned shader hooks
+
+ShaderPlugins can provide render hooks with GLSL/WGSL parameter signatures as well
+as inject behavior into them. Object forms separate stage and target; string
+shorthand supports language prefixes. See the [ShaderPlugin guide](/docs/api-reference/shaders/shader-plugin)
+and [Shaders overview](/docs/api-reference/shaders).

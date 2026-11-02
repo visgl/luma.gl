@@ -218,6 +218,16 @@ it('Computation#plugins assemble WGSL contributions', async () => {
       () =>
         new Computation(webgpuDevice, {
           source,
+          plugins: [
+            {name: 'render-hooks', hooks: [{stage: 'fragment', target: 'TINT', wgsl: '()'}]}
+          ]
+        })
+    ).toThrow(/does not support ShaderPlugin render hooks/);
+
+    expect(
+      () =>
+        new Computation(webgpuDevice, {
+          source,
           plugins: [{name: 'vertex-input-plugin', vertexInputs: {filterValues: 'f32'}}]
         }),
       'compute pipelines reject plugin vertex inputs'

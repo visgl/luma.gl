@@ -60,7 +60,7 @@ const tintPlugin: ShaderPlugin = {
   name: 'tint-plugin',
   injections: [
     {
-      target: 'fs:#decl',
+      stage: 'fragment', target: '#decl',
       glsl: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }',
       wgsl: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
     }

@@ -46,6 +46,8 @@ export type AssembleShaderOptions = {
   constants?: Record<string, number>;
   /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
   hookFunctions?: readonly (ShaderHook | string)[];
+  /** Hook declarations contributed by resolved plugins. */
+  pluginHooks?: readonly ShaderHook[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
@@ -80,6 +82,8 @@ export type AssembleStageOptions = {
   constants?: Record<string, number>;
   /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
   hookFunctions?: readonly (ShaderHook | string)[];
+  /** Hook declarations contributed by resolved plugins. */
+  pluginHooks?: readonly ShaderHook[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */

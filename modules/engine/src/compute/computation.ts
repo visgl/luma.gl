@@ -185,6 +185,9 @@ export class Computation {
 
     const platformInfo = getPlatformInfo(device);
     const resolvedPlugins = resolveShaderPlugins(this.props.plugins, platformInfo.shaderLanguage);
+    if (resolvedPlugins.hooks.length > 0) {
+      throw new Error('Computation does not support ShaderPlugin render hooks');
+    }
     if (
       Object.keys(resolvedPlugins.vertexInputs).length > 0 ||
       Object.keys(resolvedPlugins.interStageVariables).length > 0

@@ -94,6 +94,7 @@ export function assembleShaderGLSL(
     modules: ShaderModule[];
     defines?: Record<string, boolean | number>;
     hookFunctions?: readonly (ShaderHook | string)[];
+    pluginHooks?: readonly ShaderHook[];
     inject?: Record<string, string | ShaderInjection>;
     pluginInjections?: Record<string, ShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;
@@ -163,7 +164,7 @@ ${getApplicationDefines(allDefines)}
       break;
   }
 
-  const hookFunctionMap = normalizeShaderHooks(hookFunctions);
+  const hookFunctionMap = normalizeShaderHooks(hookFunctions, options.pluginHooks, 'glsl');
 
   // Add source of dependent modules in resolved order
   const hookInjections: Record<string, ShaderInjection[]> = {};

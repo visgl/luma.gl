@@ -167,5 +167,12 @@ fn pluginApplyFillPattern(
 
 export const fillPatternShaderPlugin = {
   name: 'fill-pattern-plugin',
-  injections: [{target: 'fs:#decl', glsl: GLSL_FILL_PATTERN_SOURCE, wgsl: WGSL_FILL_PATTERN_SOURCE}]
+  injections: [
+    {
+      stage: 'fragment',
+      target: '#decl',
+      glsl: GLSL_FILL_PATTERN_SOURCE,
+      wgsl: WGSL_FILL_PATTERN_SOURCE
+    }
+  ]
 } as const satisfies ShaderPlugin;

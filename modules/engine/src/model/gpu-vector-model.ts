@@ -476,6 +476,7 @@ export class GPUVectorModel {
           ...this.props,
           modules,
           defines,
+          pluginHooks: resolvedPlugins.hooks,
           pluginInjections: resolvedPlugins.injections,
           pluginVertexInputs: resolvedPlugins.vertexInputs,
           pluginInterStageVariables: resolvedPlugins.interStageVariables
@@ -513,6 +514,7 @@ export class GPUVectorModel {
           ...this.props,
           modules,
           defines,
+          pluginHooks: resolvedPlugins.hooks,
           pluginInjections: resolvedPlugins.injections,
           pluginVertexInputs: resolvedPlugins.vertexInputs,
           pluginInterStageVariables: resolvedPlugins.interStageVariables
