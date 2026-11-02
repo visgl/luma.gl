@@ -15,6 +15,7 @@ import type {
 } from '../../../index';
 import {
   Buffer,
+  assert,
   RenderPass,
   RenderPipeline,
   _getDefaultBindGroupFactory,
@@ -38,8 +39,10 @@ export class WebGPURenderPass extends RenderPass {
 
   /** @internal Allocates a draw-local uniform buffer retained by the owning encoder. */
   override _createUniformBufferSnapshot(data: Uint8Array): WebGPUBuffer {
+    // Native encoders supplied directly must identify their luma owner for managed snapshots.
+    assert(this.ownerCommandEncoder.handle === this.commandEncoder);
     const buffer = this.device.createBuffer({data, usage: Buffer.UNIFORM | Buffer.COPY_DST});
-    this.commandEncoder.trackTransientUploadBuffer(buffer);
+    this.ownerCommandEncoder.trackTransientUploadBuffer(buffer);
     return buffer;
   }
 
@@ -56,7 +59,8 @@ export class WebGPURenderPass extends RenderPass {
   constructor(
     device: WebGPUDevice,
     props: RenderPassProps = {},
-    private readonly commandEncoder: WebGPUCommandEncoder = device.commandEncoder
+    private readonly commandEncoder: GPUCommandEncoder = device.commandEncoder.handle,
+    private readonly ownerCommandEncoder: WebGPUCommandEncoder = device.commandEncoder
   ) {
     super(device, props);
     this.device = device;
@@ -108,7 +112,7 @@ export class WebGPURenderPass extends RenderPass {
       this.device.pushErrorScope('validation');
       const beginRenderPassStartTime = profiler ? getTimestamp() : 0;
       const suppliedHandle = this.props.handle as GPURenderPassEncoder | undefined;
-      this.handle = suppliedHandle || commandEncoder.handle.beginRenderPass(renderPassDescriptor);
+      this.handle = suppliedHandle || commandEncoder.beginRenderPass(renderPassDescriptor);
       if (profiler) {
         profiler.renderPassBeginCount = (profiler.renderPassBeginCount || 0) + 1;
         profiler.renderPassBeginTimeMs =
