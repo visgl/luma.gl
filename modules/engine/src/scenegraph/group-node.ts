@@ -4,7 +4,7 @@
 
 import {Matrix4, Vector3} from '@math.gl/core';
 import type {NumericArray} from '@math.gl/core';
-import {log} from '@luma.gl/core';
+import {assert, log} from '@luma.gl/core';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 import {
   areScenegraphBoundsDefined,
@@ -121,9 +121,8 @@ export class GroupNode extends ScenegraphNode {
     const pending: {node: ScenegraphNode; depth: number}[] = [{node: this, depth: 0}];
     while (pending.length) {
       const {node, depth} = pending.pop()!;
-      if (visited.has(node)) {
-        throw new Error('Scenegraph lookup requires a tree');
-      }
+      // Structural lookup requires a tree: cycles and shared node objects are invalid.
+      assert(!visited.has(node));
       visited.add(node);
       ancestors.length = depth;
       ancestors.push(node.id);
