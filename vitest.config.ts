@@ -1,7 +1,7 @@
 import {fileURLToPath} from 'node:url';
 import {getVitestConfig} from '@vis.gl/dev-tools';
 import {BrowserTestSequencer} from './test/utils/browser-test-sequencer';
-import {getBrowserTestGroup, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
+import {getBrowserTestGroup, getReleaseQualificationExcludes, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
 
 const optionalTextureCompressorShim = fileURLToPath(
   new URL('./test/utils/texture-compressor-shim.ts', import.meta.url)
@@ -163,6 +163,7 @@ const browserIncludePatterns = browserTestGroup === 'physics-endurance'
 const reuseComputeContext = ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
+  ...getReleaseQualificationExcludes(browserTestGroup),
   'modules/**/*.node.spec.{ts,js}',
   'test/**/*.node.spec.{ts,js}',
   ...browserBenchmarkTestPatterns,

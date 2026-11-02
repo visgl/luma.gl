@@ -54,6 +54,11 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   serially on one Linux and one Apple Silicon worker respectively. Tests that mutate globals or
   exercise browser/device lifecycle belong in the isolated general group. Local commands default
   to all files with isolation enabled, including the full endurance matrix.
+- npm release CI selects `LUMA_TEST_BROWSER_GROUP=release`. This retains ordinary correctness
+  checks, including physics, while excluding the application-scale domino scenario and full
+  endurance qualification listed in `PHYSICS_QUALIFICATION_TEST_PATTERNS`. The ordinary local
+  suite and PR physics group still run the domino assertions unchanged; the dedicated physics
+  workflow runs the full endurance matrix. Simulation qualification does not gate npm publication.
 - Browser coverage uses weighted sharding so known slow GPU specs are spread across the three
   isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
   instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in

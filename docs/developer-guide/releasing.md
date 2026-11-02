@@ -128,8 +128,15 @@ git push origin refs/tags/v10.0.0-alpha.7
 ```
 
 Substitute the release branch for `master` when appropriate. The workflow runs node tests and all
-six headless shards, then builds packages, checks the changelog, creates the GitHub release, and
+six headless release-suite shards, then builds packages, checks the changelog, creates the GitHub release, and
 publishes missing package versions through OIDC. Monitor the whole workflow through completion.
+
+The release suite uses `LUMA_TEST_BROWSER_GROUP=release`. It keeps rendering, data processing,
+and ordinary physics correctness checks, while application-scale domino and endurance
+qualification stays in physics CI. Their assertions and thresholds are unchanged. Default local
+tests and PR physics coverage still exercise the domino scenario; the full endurance matrix also
+runs through the scheduled/manual physics workflow. The qualification list lives in
+`test/utils/browser-test-groups.ts`.
 
 ## Verify the registry, not just the workflow
 
