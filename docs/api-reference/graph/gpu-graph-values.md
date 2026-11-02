@@ -75,21 +75,24 @@ results and scratch. It does not encode commands or submit work. Each prepared e
 can be encoded once into a caller-owned encoder:
 
 ```typescript
+import type {CommandEncoder} from '@luma.gl/core';
+
 const execution = compiled.prepare({
   inputs: {positions: positionsVector, scale: 2}
 });
-const encoder = device.createCommandEncoder();
+let encoder: CommandEncoder | undefined;
 try {
+  encoder = device.createCommandEncoder();
   execution.encode(encoder);
   // Append other graph work or rendering that consumes execution.outputs.lengths.
   device.submit(encoder.finish());
 } finally {
   // On failure, abandon the encoder; never submit a partially encoded invocation.
-  encoder.destroy();
+  encoder?.destroy();
   execution.destroy();
+  // This example retains no outputs, including on failure or cancellation.
+  execution.outputs.lengths.destroy();
 }
-// Outputs remain caller-owned, including when an execution is cancelled.
-execution.outputs.lengths.destroy();
 ```
 
 `execution.outputs` is available immediately after preparation, allowing one prepared
