@@ -333,10 +333,7 @@ export class SceneRenderer {
         outputColorSpace: 'linear',
         transmission: false
       };
-      const capturedScene = this.prepareScene(captureOptions);
-      if (shadowProps)
-        for (const surface of capturedScene.surfaces)
-          surface.model.shaderInputs.setProps({shadow: shadowProps});
+      const capturedScene = this.prepareScene(captureOptions, undefined, shadowProps);
       const capturePass = this.device.beginRenderPass({
         id: `scene-${options.id}-transmission`,
         framebuffer: transmission.framebuffer,
@@ -349,10 +346,7 @@ export class SceneRenderer {
       this.destroyFrame(getTransmissionCaptureIdentifier(options.id));
     }
 
-    const scene = this.prepareScene(options, transmission?.colorTexture);
-    if (shadowProps)
-      for (const surface of scene.surfaces)
-        surface.model.shaderInputs.setProps({shadow: shadowProps});
+    const scene = this.prepareScene(options, transmission?.colorTexture, shadowProps);
     const renderPass = this.device.beginRenderPass({
       id: `scene-${options.id}`,
       framebuffer: options.framebuffer,
@@ -550,7 +544,8 @@ export class SceneRenderer {
   /** Creates or updates all models and uploads uniforms before a render pass begins. */
   protected prepareScene(
     options: SceneRenderOptions,
-    transmissionTexture?: Texture
+    transmissionTexture?: Texture,
+    shadowProps?: ShadowShaderProps
   ): PreparedScene {
     let resources = this.frames.get(options.id);
     if (!resources) {
@@ -647,6 +642,7 @@ export class SceneRenderer {
         }
       });
       setSceneShaderInputs(compiledSurface.model, surfaceOptions, surfaceTransmissionTexture);
+      if (shadowProps) compiledSurface.model.shaderInputs.setProps({shadow: shadowProps});
       compiledSurface.model.predraw(this.device.commandEncoder);
       compiledSurface.depth = getSurfaceDepth(surface.transforms, options.camera.viewMatrix);
       surfaceIdentifiers.add(surface.id);

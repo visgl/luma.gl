@@ -167,7 +167,7 @@ describe('DeferredSceneRenderer', () => {
     ).toBe(false);
   });
 
-  test('rejects surface-local reflection probes before selecting the G-buffer path', () => {
+  test('rejects surface-local reflection probes before selecting the G-buffer path', async () => {
     const options: SceneRenderOptions = {
       id: 'local-probe',
       surfaces: [
@@ -183,7 +183,11 @@ describe('DeferredSceneRenderer', () => {
       ],
       camera: {viewMatrix: new Matrix4(), projectionMatrix: new Matrix4(), position: [0, 0, 3]}
     };
-    const texture = getNullTestDevice().createTexture({width: 1, height: 1, format: 'rgba8unorm'});
+    const texture = (await getNullTestDevice()).createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm'
+    });
     try {
       expect(supportsDeferredScene(options)).toBe(true);
       for (const binding of ['diffuseTexture', 'specularTexture', 'brdfLUTTexture'] as const) {

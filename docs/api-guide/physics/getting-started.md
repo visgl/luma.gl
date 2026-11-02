@@ -116,8 +116,8 @@ function renderFrame(elapsedSeconds: number) {
     scene,
     camera: {viewMatrix, projectionMatrix, position: eye, clipDepth: 'zero-to-one'},
     lights: [
-      {type: 'ambient', intensity: 0.25},
-      {type: 'directional', direction: [-1, -1, -2], intensity: 2}
+      {type: 'ambient', color: [1, 1, 1], intensity: 0.25},
+      {type: 'directional', color: [1, 1, 1], direction: [-1, -1, -2], intensity: 2}
     ],
     background: [0.04, 0.05, 0.07, 1]
   });
@@ -134,6 +134,9 @@ successive timestamps and divide by 1,000.
 then records rendering work using the current publication buffer; `device.submit()` submits
 that work on the same device queue. Queue ordering keeps physics before rendering without
 waiting for a CPU fence or reading a body pose.
+
+Supply explicit normalized RGB light colors, such as `[1, 1, 1]` for white. Intensity
+scales the color; it does not supply a default white color.
 
 A slow frame can require more work than the configured substep budget. The returned
 `droppedTime` reports elapsed time that was discarded. Sustained dropped time means the

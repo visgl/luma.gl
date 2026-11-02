@@ -421,3 +421,115 @@ test('blended scenegraph leaves sort independently against an interleaved materi
     scene.destroy();
   }
 });
+
+test('the first GPU shadowed frame matches subsequent frames and darkens the receiver', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const geometry = new CubeGeometry();
+  const material = {
+    id: 'diffuse',
+    uniforms: {baseColorFactor: [0.6, 0.6, 0.6, 1], metallicRoughnessValues: [0, 1]}
+  };
+  const floor = new SceneMeshNode({geometry, material});
+  const box = new SceneMeshNode({geometry, material});
+  const matrices = device.createBuffer({
+    usage: Buffer.STORAGE,
+    data: new Float32Array([
+      ...new Matrix4().translate([0, 0, -0.05]),
+      ...new Matrix4().translate([0, 0, 0.5])
+    ])
+  });
+  const scene = new GroupNode({
+    children: [floor, box],
+    transformSource: {
+      getFrame: () => ({
+        matrices,
+        matrixCount: 2,
+        revision: 0,
+        bindings: new Map([
+          [floor, {matrixIndex: 0, localMatrix: new Matrix4().scale([2, 2, 0.05])}],
+          [box, {matrixIndex: 1, localMatrix: new Matrix4().scale([0.2, 0.2, 0.5])}]
+        ])
+      })
+    }
+  });
+  const renderer = new SceneRenderer(device);
+  const color = device.createTexture({
+    width: 64,
+    height: 64,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: 64,
+    height: 64,
+    colorAttachments: [color],
+    depthStencilAttachment: 'depth24plus'
+  });
+  const readback = device.createBuffer({
+    byteLength: color.computeMemoryLayout().byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  const projectionMatrix = new Matrix4([
+    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
+  ]).multiplyRight(new Matrix4().perspective({fovy: Math.PI / 3, aspect: 1, near: 0.1, far: 10}));
+  const options = {
+    scene,
+    framebuffer,
+    camera: {
+      viewMatrix: new Matrix4().lookAt({eye: [3, -3, 4], center: [0, 0, 0], up: [0, 0, 1]}),
+      projectionMatrix,
+      position: [3, -3, 4]
+    },
+    lights: [
+      {
+        type: 'spot' as const,
+        color: [1, 1, 1] as const,
+        position: [-2, 0, 3] as const,
+        direction: [2, 0, -3] as const,
+        intensity: 1,
+        outerConeAngle: 0.7,
+        innerConeAngle: 0.5
+      }
+    ],
+    spotShadows: {
+      mapSize: 256,
+      spotLights: [
+        {
+          position: [-2, 0, 3] as const,
+          direction: [2, 0, -3] as const,
+          outerConeAngle: 0.7,
+          range: 10,
+          normalBias: 0.005,
+          sourceRadius: 0.01
+        }
+      ]
+    },
+    toneMapMode: 0,
+    outputColorSpace: 'linear' as const
+  };
+  const renderImage = async (shadowed: boolean) => {
+    renderer.render({...options, spotShadows: shadowed ? options.spotShadows : undefined});
+    device.submit();
+    color.readBuffer({}, readback);
+    return readback.readAsync();
+  };
+  try {
+    const first = await renderImage(true);
+    const second = await renderImage(true);
+    expect(
+      first.reduce((maximum, value, index) => Math.max(maximum, Math.abs(value - second[index])), 0)
+    ).toBeLessThanOrEqual(1);
+    const unshadowed = await renderImage(false);
+    expect(first.some((value, index) => index % 4 === 0 && unshadowed[index] > value + 20)).toBe(
+      true
+    );
+  } finally {
+    renderer.destroy();
+    framebuffer.destroy();
+    color.destroy();
+    readback.destroy();
+    matrices.destroy();
+    scene.destroy();
+  }
+});
