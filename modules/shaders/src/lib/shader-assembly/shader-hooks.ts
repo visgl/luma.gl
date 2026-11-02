@@ -154,7 +154,7 @@ function addShaderHookToRegistry(
   const stageSeparatorIndex = hook.indexOf(':');
   const shaderStage = hook.slice(0, stageSeparatorIndex);
   const signature = hook.slice(stageSeparatorIndex + 1);
-  const name = hook.replace(/\(.+/, '');
+  const name = hook.split('(')[0].trim();
   const normalizedHook: Required<ShaderHook> = {
     hook: name,
     signature,

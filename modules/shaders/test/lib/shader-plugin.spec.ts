@@ -1024,8 +1024,8 @@ it.each([
       {
         stage: 'fragment',
         target: 'FILTER_COLOR',
-        glsl: '(inout vec4 color)',
-        wgsl: '(color: ptr<function, vec4<f32>>)'
+        glsl: '(\n  inout vec4 color\n)',
+        wgsl: '(\n  color: ptr<function, vec4<f32>>\n)'
       }
     ]
   };
