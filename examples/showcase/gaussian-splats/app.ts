@@ -943,8 +943,8 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         this.localLoadersConfiguration.sceneId === 'coit'
           ? 'Explore Coit Tower and San Francisco with camera-prioritized Gaussian pages. Drag to orbit; pinch to zoom and twist to roll.'
           : this.localLoadersConfiguration.loaderMode === 'local'
-            ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; pinch to zoom and twist to roll.'
-            : 'Complete Gaussian splat scenes streamed through loaders.gl 5 alpha. Drag to orbit; pinch to zoom and twist to roll.';
+            ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 checkout. Drag to orbit; pinch to zoom and twist to roll.'
+            : 'Complete Gaussian splat scenes streamed through loaders.gl 5. Drag to orbit; pinch to zoom and twist to roll.';
     }
 
     if (this.device.type === 'webgpu' && executionControl && executionElement) {
