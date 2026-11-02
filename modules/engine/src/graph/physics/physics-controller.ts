@@ -10,7 +10,12 @@ import type {
   GPURigidBodyWorldProps
 } from '@luma.gl/graph/gpu-physics';
 import {rotateRigidBodyVector} from '@luma.gl/graph/gpu-physics';
-import {GroupNode, type ScenegraphNode, type ScenegraphJoint} from '../../index';
+import {
+  GroupNode,
+  type ScenegraphNode,
+  type ScenegraphJoint,
+  type ScenegraphTransformSource
+} from '../../index';
 import {ScenegraphPhysicsSession} from './scenegraph-session';
 import {makePhysicsControllerScene} from './physics-controller-geometry';
 
@@ -83,6 +88,20 @@ export class PhysicsController {
   private destruction?: Promise<void>;
   private dirty = true;
   private accumulator = 0;
+  /** Stable proxy: renderers fetch current borrowed buffers after reset/rebuild. */
+  readonly transformSource: ScenegraphTransformSource = {
+    getFrame: () => {
+      // A pending replacement must not expose buffers being retired asynchronously.
+      if (this.closed || this.dirty || this.pending || !this.session) return null;
+      const publication = this.session.publication;
+      return {
+        matrices: publication.matrices,
+        matrixCount: this.session.world.count,
+        revision: this.session.revision,
+        bindings: publication.transformBindings
+      };
+    }
+  };
 
   constructor(
     private readonly device: Device,
@@ -206,19 +225,31 @@ export class PhysicsController {
   /** Compile once, or explicitly rebuild after body, geometry, scale or topology edits. */
   prepare({preserveState = true}: {preserveState?: boolean} = {}): Promise<void> {
     return this.exclusive(async () => {
-      this.dirty = true;
-      const scene = makePhysicsControllerScene(
-        this.scene,
-        this.definitions,
-        this.worldOptions,
-        this.joints
-      );
-      if (this.session) await this.session.rebuild(async () => scene, preserveState);
-      else this.session = await ScenegraphPhysicsSession.create(this.device, scene);
-      this.indices = scene.definition.bodies;
-      this.manualTargets.clear();
-      this.accumulator = 0;
-      this.dirty = false;
+      // Destruction can begin before this queued preparation starts.
+      assert(!this.closed);
+      if (this.scene.transformSource && this.scene.transformSource !== this.transformSource)
+        throw new Error('Scene already has a transform source');
+      // Claim before the first await so another controller cannot prepare this root concurrently.
+      this.scene.transformSource = this.transformSource;
+      try {
+        this.dirty = true;
+        const scene = makePhysicsControllerScene(
+          this.scene,
+          this.definitions,
+          this.worldOptions,
+          this.joints
+        );
+        if (this.session) await this.session.rebuild(async () => scene, preserveState);
+        else this.session = await ScenegraphPhysicsSession.create(this.device, scene);
+        this.indices = scene.definition.bodies;
+        this.manualTargets.clear();
+        this.accumulator = 0;
+        this.dirty = false;
+      } catch (error) {
+        if (!this.session && this.scene.transformSource === this.transformSource)
+          this.scene.transformSource = null;
+        throw error;
+      }
     });
   }
 
@@ -274,6 +305,7 @@ export class PhysicsController {
   destroy(): Promise<void> {
     if (this.destruction) return this.destruction;
     this.closed = true;
+    if (this.scene.transformSource === this.transformSource) this.scene.transformSource = null;
     this.destruction = (async () => {
       try {
         await this.pending;

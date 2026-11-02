@@ -24,6 +24,7 @@ export type {
   SceneMaterial,
   SceneRenderOptions,
   SceneRenderStatistics,
+  ScenegraphRenderOptions,
   SceneSurface
 } from './engine/scene-renderer';
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';

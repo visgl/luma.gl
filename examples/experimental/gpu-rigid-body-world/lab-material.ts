@@ -29,6 +29,20 @@ export function createLabMaterial(device: Device, bodies: GPURigidBody[], scene:
     uniforms: {metallicRoughnessValues: [1, 1], metallicRoughnessUVSet: 1, IBLenabled: true},
     bindings: {pbr_metallicRoughnessSampler: materialTexture}
   });
+  const environment = createLabEnvironment(device);
+  return {
+    material,
+    environment,
+    destroy() {
+      material.destroy();
+      materialTexture.destroy();
+      environment.destroy();
+    }
+  };
+}
+
+/** Shared studio lighting for retained and procedural lab renderers. */
+export function createLabEnvironment(device: Device) {
   const pixels = new Uint8Array(64 * 32 * 4);
   for (let row = 0; row < 32; row++) {
     const brightness = row < 16 ? 220 : 140;
@@ -50,13 +64,5 @@ export function createLabMaterial(device: Device, bodies: GPURigidBody[], scene:
   });
   generator.destroy();
   panorama.destroy();
-  return {
-    material,
-    environment,
-    destroy() {
-      material.destroy();
-      materialTexture.destroy();
-      environment.destroy();
-    }
-  };
+  return environment;
 }

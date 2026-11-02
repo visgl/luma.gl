@@ -8,6 +8,15 @@ lowerings can also produce textures with execution-sized or scaled extents. See
 [texture values and execution bindings](./api-reference/graph/gpu-graph-textures.md).
 Evaluator APIs remain unchanged.
 
+### Retained scenegraph physics rendering
+
+`SceneRenderer` accepts `SceneMeshNode` trees and generic engine GPU transform sources.
+`PhysicsController` publishes through that contract, with automatic borrowed-buffer refresh
+after reset/rebuild. Shared spot-shadow, depth and picking passes follow the evaluated poses.
+Newton's Cradle and Wrecking Ball use retained PBR geometry instead of example-owned pose
+shaders. Start with the expanded [physics walkthrough](/docs/api-guide/physics/getting-started).
+
+
 ### Path-based scenegraph physics
 
 `PhysicsController` attaches bodies and shared joint declarations using node references,
@@ -83,6 +92,7 @@ existing evaluator APIs remain unchanged. See the [expression reference](./api-r
 GPU expressions now support row-local `dot`, `length`, `equalAll`, and
 `select(condition, whenTrue, whenFalse)` on WebGL SimpleGraph and both WebGPU graph paths.
 See the [expression syntax reference](./api-reference/graph/gpu-expression-operation.md).
+
 
 ## Shader plugin primary modules
 

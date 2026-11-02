@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
+  assert,
   Buffer,
   type BufferLayout,
   type Device,
@@ -13,6 +14,8 @@ import {
   textureFormatDecoder
 } from '@luma.gl/core';
 import {
+  GroupNode,
+  type ScenegraphNode,
   type Geometry,
   type Model,
   type ModelProps,
@@ -38,6 +41,15 @@ import {
   type PBRMaterial
 } from './pbr-material';
 import {createPBRModel, getPBRGeometryDefines} from './pbr-model';
+import {sceneInstances} from './scene-instances';
+import {ScenegraphSurfaces} from './scenegraph-surfaces';
+import {
+  ShadowMapRenderer,
+  type SpotShadowLight,
+  type ShadowRenderView,
+  type ShadowShaderProps
+} from '../shadows/shadow-map-renderer';
+import {shadow} from '../shadows/shadow';
 
 /** Pipeline-level alpha representation for one retained physically based scene material. */
 export type SceneAlphaMode = 'OPAQUE' | 'MASK' | 'BLEND';
@@ -74,6 +86,18 @@ export type SceneSurface = {
   transforms: readonly Readonly<NumericArray>[];
   /** Optional stable placement identities aligned one-to-one with transforms. */
   instanceIds?: readonly string[];
+  /** Optional retained identities, aligned with instances for GPU picking. */
+  nodes?: readonly ScenegraphNode[];
+  /** Optional local reflection probe. */
+  environment?: SceneEnvironment;
+  /** Borrowed GPU matrices; transforms become mesh-to-producer local matrices. WebGPU only. */
+  gpuTransforms?: {
+    matrices: Buffer;
+    matrixCount: number;
+    revision: number;
+    indices: readonly number[];
+    connections?: readonly ({first: number; second: number; radius: number} | undefined)[];
+  };
   /** Optional adapter-owned joint palette for geometry with JOINTS_0 and WEIGHTS_0. */
   skin?: SkinProps;
   /** Immutable glTF-style displacement attributes for each morph target. */
@@ -90,6 +114,9 @@ export type SceneCamera = {
   projectionMatrix: Readonly<NumericArray>;
   /** World-space camera position. */
   position: Readonly<NumericArray>;
+  near?: number;
+  far?: number;
+  clipDepth?: 'negative-one-to-one' | 'zero-to-one';
 };
 
 /** Optional prefiltered image-based-lighting resources. Textures remain caller-owned. */
@@ -155,6 +182,17 @@ export type SceneRenderOptions = {
   fogDensity?: number;
   /** Debug output selected without introducing a format-specific shader module. */
   renderMode?: 'default' | 'debugNormals' | 'debugDepth';
+  /** Spot shadow slots correspond to the order of spot lights in lights. WebGPU only. */
+  spotShadows?: {spotLights: readonly SpotShadowLight[]; mapSize?: number};
+  /** Shared geometry/deformation path for depth and identity targets. WebGPU only. */
+  rasterPass?: 'depth' | 'picking';
+  /** Internal raster bias supplied by the shared shadow renderer. */
+  rasterParameters?: ShadowRenderView['rasterParameters'];
+};
+
+/** Direct scenegraph input; renderer caches use the root object identity. */
+export type ScenegraphRenderOptions = Omit<SceneRenderOptions, 'id' | 'surfaces'> & {
+  scene: GroupNode;
 };
 
 /** Synchronous encoding costs for one graph-owned ray-tracing stage. */
@@ -215,6 +253,7 @@ type CompiledSceneSurface = {
   model: Model;
   instanceBuffers: Buffer[];
   instanceColumns: Float32Array[];
+  metadataBuffer: Buffer;
   signature: string;
   textureBindings: [string, unknown][];
   triangleCount: number;
@@ -261,6 +300,10 @@ export class SceneRenderer {
   readonly device: Device;
 
   private readonly materialFactory;
+  private readonly scenegraphs = new Map<GroupNode, {id: string; adapter: ScenegraphSurfaces}>();
+  private nextSceneIdentifier = 1;
+  private readonly shadowMaps = new Map<string, ShadowMapRenderer>();
+  private readonly pickNodes = new Map<number, ScenegraphNode>();
   private readonly frames = new Map<string, SceneFrameResources>();
 
   constructor(device: Device) {
@@ -269,7 +312,10 @@ export class SceneRenderer {
   }
 
   /** Compiles, updates, orders, and draws one retained frame. */
-  render(options: SceneRenderOptions): SceneRenderStatistics {
+  render(input: SceneRenderOptions | ScenegraphRenderOptions): SceneRenderStatistics {
+    const options = this.resolveSceneOptions(input);
+    let shadowProps: ShadowShaderProps | undefined;
+    if (options.spotShadows && !options.rasterPass) shadowProps = this.renderShadows(options);
     const transmission = this.getTransmissionResources(options);
     const background = options.background || [0, 0, 0, 1];
 
@@ -287,7 +333,7 @@ export class SceneRenderer {
         outputColorSpace: 'linear',
         transmission: false
       };
-      const capturedScene = this.prepareScene(captureOptions);
+      const capturedScene = this.prepareScene(captureOptions, undefined, shadowProps);
       const capturePass = this.device.beginRenderPass({
         id: `scene-${options.id}-transmission`,
         framebuffer: transmission.framebuffer,
@@ -300,7 +346,7 @@ export class SceneRenderer {
       this.destroyFrame(getTransmissionCaptureIdentifier(options.id));
     }
 
-    const scene = this.prepareScene(options, transmission?.colorTexture);
+    const scene = this.prepareScene(options, transmission?.colorTexture, shadowProps);
     const renderPass = this.device.beginRenderPass({
       id: `scene-${options.id}`,
       framebuffer: options.framebuffer,
@@ -312,34 +358,194 @@ export class SceneRenderer {
     return scene.statistics;
   }
 
+  /** Resolve nodes to retained batches without reading GPU poses. */
+  protected resolveSceneOptions(
+    input: SceneRenderOptions | ScenegraphRenderOptions
+  ): SceneRenderOptions {
+    if (!('scene' in input)) return input;
+    let cached = this.scenegraphs.get(input.scene);
+    if (!cached) {
+      cached = {id: `scenegraph-${this.nextSceneIdentifier++}`, adapter: new ScenegraphSurfaces()};
+      this.scenegraphs.set(input.scene, cached);
+    }
+    const {scene, ...options} = input;
+    return {...options, id: cached.id, surfaces: cached.adapter.getSurfaces(scene)};
+  }
+
+  /** Release one retained root before disposing its producer or geometry resources. */
+  destroyScene(scene: GroupNode): void {
+    const cached = this.scenegraphs.get(scene);
+    if (!cached) return;
+    this.destroyFrame(cached.id);
+    cached.adapter.destroy();
+    this.scenegraphs.delete(scene);
+  }
+
+  /** Explicit asynchronous pixel readback; no body poses are read or copied to CPU nodes. */
+  async pick(
+    input: SceneRenderOptions | ScenegraphRenderOptions,
+    pixel: {x: number; y: number}
+  ): Promise<ScenegraphNode | undefined> {
+    // This identity attachment uses WebGPU's top-left texture coordinates.
+    assert(this.device.type === 'webgpu');
+    const options = this.resolveSceneOptions(input);
+    const [width, height] = getSceneRenderSize(this.device, options);
+    if (
+      !Number.isInteger(pixel.x) ||
+      !Number.isInteger(pixel.y) ||
+      pixel.x < 0 ||
+      pixel.y < 0 ||
+      pixel.x >= width ||
+      pixel.y >= height
+    )
+      return undefined;
+    const color = this.device.createTexture({
+      width,
+      height,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const depth = this.device.createTexture({
+      width,
+      height,
+      format: 'depth24plus',
+      usage: Texture.RENDER
+    });
+    const framebuffer = this.device.createFramebuffer({
+      width,
+      height,
+      colorAttachments: [color],
+      depthStencilAttachment: depth
+    });
+    const layout = color.computeMemoryLayout({width: 1, height: 1});
+    const readback = this.device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    const identifier = `${options.id}-pick-${this.nextSceneIdentifier++}`;
+    try {
+      this.pickNodes.clear();
+      this.render({
+        ...options,
+        id: identifier,
+        framebuffer,
+        rasterPass: 'picking',
+        renderMode: 'default',
+        spotShadows: undefined,
+        transmission: false,
+        background: [0, 0, 0, 0],
+        environment: undefined,
+        lights: [],
+        outputColorSpace: 'linear',
+        toneMapMode: 0
+      });
+      const nodes = new Map(this.pickNodes);
+      this.pickNodes.clear();
+      this.device.submit();
+      color.readBuffer({x: pixel.x, y: pixel.y, width: 1, height: 1}, readback);
+      const bytes = await readback.readAsync(0, layout.byteLength);
+      const values = new Uint8Array(bytes.buffer, bytes.byteOffset, 4);
+      return nodes.get(values[0] | (values[1] << 8) | (values[2] << 16));
+    } finally {
+      this.pickNodes.clear();
+      this.destroyFrame(identifier);
+      readback.destroy();
+      framebuffer.destroy();
+      color.destroy();
+      depth.destroy();
+    }
+  }
+
+  private renderShadows(options: SceneRenderOptions): ShadowShaderProps {
+    // GPU storage transforms and this caster pipeline require WebGPU.
+    assert(this.device.type === 'webgpu');
+    let renderer = this.shadowMaps.get(options.id);
+    if (!renderer) {
+      renderer = new ShadowMapRenderer(this.device, {
+        directionalLightCapacity: 0,
+        pointLightCapacity: 0,
+        spotLightCapacity: options.spotShadows!.spotLights.length,
+        spotMapSize: options.spotShadows!.mapSize ?? 2048
+      });
+      this.shadowMaps.set(options.id, renderer);
+    }
+    renderer.setProps({
+      spotMapSize: options.spotShadows!.mapSize ?? 2048,
+      spotLightCapacity: options.spotShadows!.spotLights.length
+    });
+    const preparedViews = new Map<number, PreparedScene>();
+    return renderer.render({
+      camera: {
+        viewMatrix: new Matrix4(options.camera.viewMatrix),
+        projectionMatrix: new Matrix4(options.camera.projectionMatrix),
+        near: options.camera.near ?? 0.1,
+        far: options.camera.far ?? 1000,
+        clipDepth: options.camera.clipDepth
+      },
+      spotLights: [...options.spotShadows!.spotLights],
+      prepareShadowCasters: view => {
+        const prepared = this.prepareScene({
+          ...options,
+          id: `${options.id}-shadow-${view.lightIndex}`,
+          spotShadows: undefined,
+          rasterPass: 'depth',
+          transmission: false,
+          environment: undefined,
+          lights: [],
+          framebuffer: view.framebuffer,
+          camera: {
+            ...options.camera,
+            viewMatrix: view.camera.viewMatrix,
+            projectionMatrix: view.camera.projectionMatrix
+          },
+          rasterParameters: view.rasterParameters
+        });
+        preparedViews.set(view.lightIndex, prepared);
+      },
+      drawShadowCasters: view => {
+        this.drawPreparedScene(preparedViews.get(view.lightIndex)!, view.renderPass);
+      }
+    });
+  }
+
   /** Destroys cached models and instance buffers associated with one frame identity. */
   destroyFrame(frameIdentifier: string): void {
     const resources = this.frames.get(frameIdentifier);
-    if (!resources) {
-      return;
+    if (resources) {
+      for (const surface of resources.surfaces.values()) destroyCompiledSceneSurface(surface);
+      destroyTransmissionResources(resources.transmission);
+      this.frames.delete(frameIdentifier);
     }
-
-    for (const surface of resources.surfaces.values()) {
-      destroyCompiledSceneSurface(surface);
+    // Shadow preparation precedes the presented frame and may survive a failed color preparation.
+    this.shadowMaps.get(frameIdentifier)?.destroy();
+    this.shadowMaps.delete(frameIdentifier);
+    for (let index = 0; index < 4; index++) {
+      const shadowIdentifier = `${frameIdentifier}-shadow-${index}`;
+      if (this.frames.has(shadowIdentifier) || this.shadowMaps.has(shadowIdentifier))
+        this.destroyFrame(shadowIdentifier);
     }
-    destroyTransmissionResources(resources.transmission);
-    this.frames.delete(frameIdentifier);
-    if (resources.transmission) {
-      this.destroyFrame(getTransmissionCaptureIdentifier(frameIdentifier));
-    }
+    const captureIdentifier = getTransmissionCaptureIdentifier(frameIdentifier);
+    if (this.frames.has(captureIdentifier)) this.destroyFrame(captureIdentifier);
   }
 
   /** Releases all engine-owned scene models, materials, and instance buffers. */
   destroy(): void {
+    for (const cached of this.scenegraphs.values()) cached.adapter.destroy();
+    this.scenegraphs.clear();
+    this.pickNodes.clear();
     for (const frameIdentifier of Array.from(this.frames.keys())) {
       this.destroyFrame(frameIdentifier);
     }
+    // Failed preparation can leave a shadow allocation without a presented frame.
+    for (const renderer of this.shadowMaps.values()) renderer.destroy();
+    this.shadowMaps.clear();
   }
 
   /** Creates or updates all models and uploads uniforms before a render pass begins. */
   protected prepareScene(
     options: SceneRenderOptions,
-    transmissionTexture?: Texture
+    transmissionTexture?: Texture,
+    shadowProps?: ShadowShaderProps
   ): PreparedScene {
     let resources = this.frames.get(options.id);
     if (!resources) {
@@ -351,22 +557,78 @@ export class SceneRenderer {
     const preparedSurfaces: CompiledSceneSurface[] = [];
     let instanceCount = 0;
     let triangleCount = 0;
+    let nextPickIdentifier = 1;
+    if (options.rasterPass === 'picking') {
+      // Zero denotes background; RGB stores a 24-bit placement identity.
+      assert(
+        options.surfaces.reduce((count, surface) => count + surface.transforms.length, 0) <=
+          0xffffff
+      );
+    }
+    if (options.rasterPass || options.spotShadows) {
+      // These auxiliary raster targets currently use the shared WebGPU entry points.
+      assert(this.device.type === 'webgpu');
+    }
 
     for (const surface of options.surfaces) {
       if (surface.transforms.length === 0) {
         continue;
       }
 
+      const surfaceOptions = surface.environment
+        ? {...options, environment: surface.environment}
+        : options;
+      if (surface.gpuTransforms) {
+        // GPU positions cannot be sorted from authored CPU matrices.
+        assert(this.device.type === 'webgpu' && getSceneAlphaMode(surface.material) !== 'BLEND');
+        assert(surface.gpuTransforms.indices.length === surface.transforms.length);
+        assert(surface.gpuTransforms.matrices.usage & Buffer.STORAGE);
+        assert(
+          Number.isSafeInteger(surface.gpuTransforms.matrixCount) &&
+            surface.gpuTransforms.matrixCount > 0
+        );
+        assert(surface.gpuTransforms.matrices.byteLength >= surface.gpuTransforms.matrixCount * 64);
+      }
       const surfaceTransmissionTexture = isTransmissiveSurface(surface)
         ? transmissionTexture
         : undefined;
       const compiledSurface = this.getCompiledSurface(
         resources,
         surface,
-        options,
+        surfaceOptions,
         surfaceTransmissionTexture
       );
       updateInstanceTransforms(compiledSurface, surface.transforms);
+      const metadata = new Uint32Array(surface.transforms.length * 4);
+      const metadataFloats = new Float32Array(metadata.buffer);
+      for (let index = 0; index < surface.transforms.length; index++) {
+        const matrixIndex = surface.gpuTransforms?.indices[index] ?? 0xffffffff;
+        const connection = surface.gpuTransforms?.connections?.[index];
+        if (surface.gpuTransforms) {
+          // Producer indices must be in range before any storage-buffer access.
+          assert(
+            Number.isInteger(matrixIndex) &&
+              matrixIndex >= 0 &&
+              matrixIndex < surface.gpuTransforms.matrixCount
+          );
+          assert(
+            !connection ||
+              (connection.second >= 0 &&
+                connection.second < surface.gpuTransforms.matrixCount &&
+                connection.radius > 0)
+          );
+        }
+        metadata[index * 4] = matrixIndex;
+        metadata[index * 4 + 1] = connection?.second ?? 0xffffffff;
+        metadata[index * 4 + 2] = nextPickIdentifier;
+        metadataFloats[index * 4 + 3] = connection?.radius ?? 0;
+        const node = surface.nodes?.[index];
+        if (node && options.rasterPass === 'picking') this.pickNodes.set(nextPickIdentifier, node);
+        nextPickIdentifier++;
+      }
+      compiledSurface.metadataBuffer.write(metadata);
+      if (surface.gpuTransforms)
+        compiledSurface.model.setBindings({sceneWorldMatrices: surface.gpuTransforms.matrices});
       if (hasUsableSkin(surface)) {
         compiledSurface.model.shaderInputs.setProps({skin: surface.skin});
       }
@@ -376,10 +638,11 @@ export class SceneRenderer {
           ...getPBRMaterialMapUniforms(surface.material.bindings || {}),
           ...surface.material.uniforms,
           alphaCutoffEnabled: compiledSurface.alphaMode === 'MASK',
-          IBLenabled: hasCompleteEnvironment(options.environment)
+          IBLenabled: hasCompleteEnvironment(surfaceOptions.environment)
         }
       });
-      setSceneShaderInputs(compiledSurface.model, options, surfaceTransmissionTexture);
+      setSceneShaderInputs(compiledSurface.model, surfaceOptions, surfaceTransmissionTexture);
+      if (shadowProps) compiledSurface.model.shaderInputs.setProps({shadow: shadowProps});
       compiledSurface.model.predraw(this.device.commandEncoder);
       compiledSurface.depth = getSurfaceDepth(surface.transforms, options.camera.viewMatrix);
       surfaceIdentifiers.add(surface.id);
@@ -487,6 +750,13 @@ export class SceneRenderer {
         instanceColumns.push(column);
       }
 
+      const metadataBuffer = this.device.createBuffer({
+        id: `${surface.id}-metadata`,
+        data: new Uint32Array(surface.transforms.length * 4),
+        usage: Buffer.VERTEX | Buffer.COPY_DST
+      });
+      attributes['instanceMetadata'] = metadataBuffer;
+      bufferLayout.push({name: 'instanceMetadata', format: 'uint32x4', stepMode: 'instance'});
       const overrides = this.getSurfaceModelOptions(surface, options);
       const hasSkin = hasUsableSkin(surface);
       const model = createPBRModel(this.device, {
@@ -497,24 +767,46 @@ export class SceneRenderer {
         attributes,
         bufferLayout,
         instanceCount: surface.transforms.length,
-        shaderInputs: new ShaderInputs({pbrMaterial, pbrScene, ...(hasSkin ? {skin} : {})}),
+        modules: [
+          ...(surface.gpuTransforms ? [sceneInstances] : []),
+          ...(options.spotShadows && !options.rasterPass ? [shadow] : [])
+        ],
+        bindings: surface.gpuTransforms ? {sceneWorldMatrices: surface.gpuTransforms.matrices} : {},
+        shaderInputs: new ShaderInputs({
+          pbrMaterial,
+          pbrScene,
+          ...(hasSkin ? {skin} : {}),
+          ...(surface.gpuTransforms ? {sceneInstances} : {}),
+          ...(options.spotShadows && !options.rasterPass ? {shadow} : {})
+        }),
         colorAttachmentFormats: options.framebuffer?.colorAttachments.map(
           attachment => attachment.texture.format as TextureFormatColor
         ),
+        depthStencilAttachmentFormat: getSceneDepthFormat(options.framebuffer),
         parameters: {
+          ...options.rasterParameters,
           cullMode: surface.material.doubleSided ? 'none' : 'back',
           depthWriteEnabled: alphaMode !== 'BLEND',
           depthCompare: 'less-equal',
-          blend: alphaMode === 'BLEND',
-          blendColorSrcFactor: 'src-alpha',
-          blendColorDstFactor: 'one-minus-src-alpha',
-          blendAlphaSrcFactor: 'one',
-          blendAlphaDstFactor: 'one-minus-src-alpha',
+          ...(options.rasterPass === 'depth'
+            ? {}
+            : {
+                blend: alphaMode === 'BLEND',
+                blendColorSrcFactor: 'src-alpha',
+                blendColorDstFactor: 'one-minus-src-alpha',
+                blendAlphaSrcFactor: 'one',
+                blendAlphaDstFactor: 'one-minus-src-alpha'
+              }),
           ...overrides.parameters
         },
         ...overrides,
         defines: {
           HAS_INSTANCING: true,
+          USE_SCENE_INSTANCES: true,
+          HAS_GPU_TRANSFORMS: Boolean(surface.gpuTransforms),
+          USE_SCENE_SHADOWS: Boolean(options.spotShadows && !options.rasterPass),
+          SCENE_DEPTH_PASS: options.rasterPass === 'depth',
+          SCENE_PICK_PASS: options.rasterPass === 'picking',
           USE_LIGHTS: Boolean(options.lights?.length),
           USE_MATERIAL_EXTENSIONS: true,
           ALPHA_CUTOFF: alphaMode === 'MASK',
@@ -538,6 +830,7 @@ export class SceneRenderer {
         model,
         instanceBuffers,
         instanceColumns,
+        metadataBuffer,
         signature,
         textureBindings,
         triangleCount: Math.floor(
@@ -559,6 +852,7 @@ export class SceneRenderer {
   ): SceneTransmissionResources | undefined {
     const captureEnabled =
       options.transmission !== false &&
+      !options.rasterPass &&
       (!options.renderMode || options.renderMode === 'default') &&
       options.surfaces.some(isTransmissiveSurface);
     let resources = this.frames.get(options.id);
@@ -653,6 +947,11 @@ function getSceneSurfaceSignature(
   transmissionTexture?: Texture
 ): string {
   return JSON.stringify({
+    gpuTransforms: Boolean(surface.gpuTransforms),
+    rasterPass: options.rasterPass,
+    shadows: Boolean(options.spotShadows),
+    depthFormat: options.framebuffer?.depthStencilAttachment?.texture.format,
+    rasterParameters: options.rasterParameters,
     geometryVersion: surface.geometryVersion,
     material: surface.material.id,
     instanceCount: surface.transforms.length,
@@ -931,8 +1230,14 @@ function getSurfaceDepth(
 
 function destroyCompiledSceneSurface(surface: CompiledSceneSurface): void {
   surface.model.destroy();
+  surface.metadataBuffer.destroy();
   surface.material.destroy();
   for (const instanceBuffer of surface.instanceBuffers) {
     instanceBuffer.destroy();
   }
+}
+
+function getSceneDepthFormat(framebuffer?: Framebuffer) {
+  const format = framebuffer?.depthStencilAttachment?.texture.format;
+  return format && textureFormatDecoder.isDepthStencil(format) ? format : undefined;
 }

@@ -10,6 +10,7 @@ import {
   GroupNode,
   IcoSphereGeometry,
   ModelNode,
+  GeometryNode,
   SphereGeometry,
   decomposePhysicsTransform,
   JointController,
@@ -62,7 +63,7 @@ export function makePhysicsControllerScene(
   for (const node of matrices.keys()) {
     const source =
       definitions.get(node)?.geometry ??
-      (node instanceof PhysicsGeometryNode
+      (node instanceof PhysicsGeometryNode || node instanceof GeometryNode
         ? node.geometry
         : node instanceof ModelNode
           ? node.model.sourceGeometry
