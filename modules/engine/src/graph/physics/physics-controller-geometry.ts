@@ -101,7 +101,20 @@ export function makePhysicsControllerScene(
       .invert();
     const colliders: GPURigidBodyCollider[] = [];
     if (options.collider && options.collider !== 'geometry') {
-      colliders.push({shape: scaleRigidBodyShape(options.collider, scale.map(Math.abs))});
+      const shape = options.collider;
+      if (shape.type === 'convex-hull' || shape.type === 'triangle-mesh') {
+        const positions = shape.geometry.positions.map((value, index) => value * scale[index % 3]);
+        const indices = [...shape.geometry.indices];
+        if (scale[0] * scale[1] * scale[2] < 0)
+          for (let index = 0; index < indices.length; index += 3)
+            [indices[index + 1], indices[index + 2]] = [indices[index + 2], indices[index + 1]];
+        colliders.push({
+          shape:
+            shape.type === 'convex-hull'
+              ? {type: 'convex-hull', geometry: makeConvexHullGeometry(positions)}
+              : {type: 'triangle-mesh', geometry: makeTriangleMeshGeometry(positions, indices)}
+        });
+      } else colliders.push({shape: scaleRigidBodyShape(shape, scale.map(Math.abs))});
     } else {
       const descendants = [node];
       while (descendants.length) {

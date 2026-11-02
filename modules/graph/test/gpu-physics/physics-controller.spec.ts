@@ -6,7 +6,7 @@ import {expect, it, vi} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GroupNode, ScenegraphNode, CubeGeometry} from '@luma.gl/engine';
 import {PhysicsController, PhysicsGeometryNode} from '@luma.gl/engine/physics';
-import {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
+import {GPURigidBodyWorld, rotateRigidBodyVector} from '@luma.gl/graph/gpu-physics';
 
 it('controller encodes bounded fixed steps without pose readback and publishes node origins', async context => {
   const device = await getWebGPUTestDevice();
@@ -50,8 +50,44 @@ it('controller encodes bounded fixed steps without pose readback and publishes n
     const read = ball.readPose();
     expect(() => physics.update(0.01)).toThrow();
     await read;
+    const pendingRead = ball.readPose();
+    const destruction = physics.destroy();
+    expect(physics.destroy()).toBe(destruction);
+    await pendingRead;
+    await destruction;
   } finally {
     reads.mockRestore();
+    await physics.destroy();
+  }
+});
+
+it('controller compiles path-based joint attachments into a stable world-anchored constraint', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip();
+  const attachment = new ScenegraphNode({id: 'attachment', position: [0, 1, 0]});
+  const node = new GroupNode({id: 'ball', position: [0, -1, 0], children: [attachment]});
+  const anchor = new ScenegraphNode({id: 'anchor'});
+  const physics = new PhysicsController(device, {
+    scene: new GroupNode([node, anchor]),
+    gravity: [0, 0, 0],
+    timeStep: 0.01
+  });
+  const ball = physics.addBody('ball', {collider: {type: 'sphere', radius: 0.1}});
+  physics.addJoint({
+    first: 'ball/attachment',
+    second: '/anchor',
+    limits: [{axes: [0, 1, 2], minimum: 0, maximum: 0}]
+  });
+  try {
+    await physics.prepare();
+    ball.applyImpulse([0.1, 0, 0]);
+    for (let index = 0; index < 10; index++) physics.update(0.02);
+    const pose = await ball.readPose();
+    const offset = rotateRigidBodyVector(pose.rotation, [0, 1, 0]);
+    expect(Math.hypot(...pose.position.map((value, axis) => value + offset[axis]))).toBeLessThan(
+      0.01
+    );
+  } finally {
     await physics.destroy();
   }
 });
@@ -81,6 +117,11 @@ it('controller keeps handles through path changes and rebuilds, rejecting detach
     expect(physics.removeBody(outside)).toBe(true);
     await physics.prepare();
     expect((await ball.readPose()).position[0]).toBeCloseTo(0.01, 4);
+    node.setScale([0, 1, 1]).updateMatrix();
+    await expect(physics.prepare()).rejects.toThrow('Singular');
+    expect(() => physics.update(0.01)).toThrow();
+    node.setScale([1, 1, 1]).updateMatrix();
+    await physics.prepare();
     physics.removeBody(node);
     const replacement = physics.addBody(node, options);
     expect(() => physics.update(0.01)).toThrow();
@@ -89,6 +130,39 @@ it('controller keeps handles through path changes and rebuilds, rejecting detach
     replacement.applyImpulse([1, 0, 0]);
     physics.update(0.01);
     expect((await replacement.readPose()).position[0]).toBeGreaterThan(0.01);
+  } finally {
+    await physics.destroy();
+  }
+});
+
+it('kinematic parents preserve independent dynamics and manual targets do not block descendant animation', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip();
+  const child = new ScenegraphNode({id: 'child', position: [5, 0, 0]});
+  const parent = new GroupNode({id: 'parent', children: [child]});
+  const scene = new GroupNode([parent]);
+  const physics = new PhysicsController(device, {scene, gravity: [0, 0, 0], timeStep: 0.1});
+  const parentBody = physics.addBody('parent', {
+    motion: 'kinematic',
+    collider: {type: 'sphere', radius: 0.1}
+  });
+  const childBody = physics.addBody('parent/child', {
+    collider: {type: 'sphere', radius: 0.1},
+    velocity: [1, 0, 0]
+  });
+  try {
+    await physics.prepare();
+    parent.setPosition([1, 0, 0]).updateMatrix();
+    physics.update(0.1);
+    expect((await parentBody.readPose()).position[0]).toBeCloseTo(1, 4);
+    expect((await childBody.readPose()).position[0]).toBeCloseTo(5.1, 4);
+    parentBody.setKinematicTarget({position: [2, 0, 0], rotation: [0, 0, 0, 1]});
+    parent.setPosition([3, 0, 0]).updateMatrix();
+    physics.update(0.1, {animatedNodes: new Set([scene])});
+    expect((await parentBody.readPose()).position[0]).toBeCloseTo(2, 4);
+    expect((await childBody.readPose()).position[0]).toBeCloseTo(8, 4);
+    physics.update(0.1);
+    expect((await childBody.readPose()).position[0]).toBeGreaterThan(8);
   } finally {
     await physics.destroy();
   }

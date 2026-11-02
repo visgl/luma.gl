@@ -4,6 +4,7 @@
 
 import {expect, test} from 'vitest';
 import {NullDevice} from '@luma.gl/core/test-utils';
+import {Matrix4} from '@math.gl/core';
 import {
   CubeGeometry,
   SphereGeometry,
@@ -148,4 +149,69 @@ test('physics cooking rejects detached, empty, cyclic and unsupported geometry a
   ).toThrow('outside');
   scene.add(scene);
   expect(() => makePhysicsControllerScene(scene, new Map([[node, {}]]), {})).toThrow();
+});
+
+test('physics cooking preserves reflected triangle winding and explicit convex geometry', () => {
+  const node = new PhysicsGeometryNode({geometry: new CubeGeometry(), scale: [-2, 3, 4]});
+  const scene = new GroupNode([node]);
+  for (const geometryMode of ['convex-hull', 'triangle-mesh'] as const) {
+    const cooked = makePhysicsControllerScene(scene, new Map([[node, {geometryMode}]]), {});
+    const shape = cooked.definition.world.bodies[0].colliders?.[0].shape;
+    expect(shape?.type).toBe(geometryMode);
+    if (shape?.type === 'convex-hull' || shape?.type === 'triangle-mesh') {
+      expect(shape.geometry.closed).toBe(true);
+      expect(shape.geometry.volume).toBeCloseTo(192, 4);
+      expect(shape.geometry.minimum).toEqual([-2, -3, -4]);
+      expect(shape.geometry.maximum).toEqual([2, 3, 4]);
+    }
+  }
+});
+
+test('physics cooking includes declared render instances in compound shapes and visual bounds', () => {
+  const device = new NullDevice({});
+  const geometry = new CubeGeometry();
+  const model = new Model(device, {
+    geometry,
+    vs: '#version 300 es\nvoid main() {gl_Position=vec4(0.0);}',
+    fs: '#version 300 es\nprecision highp float; out vec4 color; void main() {color=vec4(1.0);}'
+  });
+  const node = new ModelNode({
+    model,
+    instanceMatrices: [new Matrix4().translate([-2, 0, 0]), new Matrix4().translate([2, 0, 0])]
+  });
+  const cooked = makePhysicsControllerScene(new GroupNode([node]), new Map([[node, {}]]), {});
+  expect(cooked.definition.world.bodies[0].colliders).toHaveLength(2);
+  expect(cooked.localBounds?.get(node)).toEqual([
+    [-3, -1, -1],
+    [3, 1, 1]
+  ]);
+  node.destroy();
+  device.destroy();
+});
+
+test('explicit mesh overrides support unit scale and reflected nonuniform scale without mutation', () => {
+  const node = new PhysicsGeometryNode({geometry: new CubeGeometry()});
+  const scene = new GroupNode([node]);
+  for (const geometryMode of ['convex-hull', 'triangle-mesh'] as const) {
+    node.setScale([1, 1, 1]).updateMatrix();
+    const source = makePhysicsControllerScene(scene, new Map([[node, {geometryMode}]]), {})
+      .definition.world.bodies[0].colliders?.[0].shape;
+    if (source?.type !== 'convex-hull' && source?.type !== 'triangle-mesh')
+      throw new Error('Expected mesh');
+    const positions = [...source.geometry.positions];
+    for (const scale of [
+      [1, 1, 1],
+      [-2, 3, 4]
+    ]) {
+      node.setScale(scale).updateMatrix();
+      const shape = makePhysicsControllerScene(scene, new Map([[node, {collider: source}]]), {})
+        .definition.world.bodies[0].colliders?.[0].shape;
+      expect(shape?.type).toBe(geometryMode);
+      if (shape?.type === 'convex-hull' || shape?.type === 'triangle-mesh') {
+        expect(shape.geometry.volume).toBeCloseTo(scale[0] === 1 ? 8 : 192, 4);
+        expect(shape.geometry.closed).toBe(true);
+      }
+    }
+    expect(source.geometry.positions).toEqual(positions);
+  }
 });

@@ -59,9 +59,10 @@ geometry participates. Declared `ModelNode.instanceMatrices` become compound col
 - An explicit `collider` shape overrides inference. Its dimensions are scaled by the
   authored body-node scale. Supply `geometry` when a node has no retained CPU geometry.
 
-Cooking includes authored transforms and scale. Sheared transforms are rejected. GPU-only
+Cooking includes authored transforms and scale. Controller options are authoritative;
+legacy `PhysicsGeometryNode` body/collision fields are not imported automatically. Sheared transforms are rejected. GPU-only
 geometry requires an explicit shape; shaders, skinning, morphing and procedural GPU
-deformation are not evaluated by inference. Geometry, scale, instance and hierarchy edits
+deformation are not evaluated by inference. Geometry, scale, instance, collider-local child-transform and hierarchy edits
 require another `prepare()`. Visual bounds are prepared from CPU geometry as a fallback
 for nodes without bounds; normal node bounds remain authoritative.
 
@@ -92,6 +93,8 @@ use the existing solver envelope; the controller does not expand solver capabili
 an existing session. Dynamic state is preserved by node identity by default. Set
 `preserveState: false` to start from the newly authored scene. Preparation and reset clear
 the elapsed-time accumulator and explicit kinematic targets.
+If preparation fails, the old session remains owned but updates stay disabled until a
+successful preparation; fix the authoring error and retry.
 
 `update(deltaTime, {animatedNodes} = {})` accumulates nonnegative seconds and submits at most
 `maximumSubsteps` fixed steps. It returns `{steps, simulatedTime, droppedTime}`. Excess time
@@ -100,8 +103,11 @@ GPU fence; the host still owns frame pacing and rendering. Do not overlap it wit
 prepare, readback, reset or destroy operations.
 
 Kinematic bodies follow authored scenegraph transforms by default. `animatedNodes` is a set
-of resolved node references from an animation system, including paused actions; it temporarily
-hands affected bodies to animation. Releasing animation retains the last accepted pose and
+of animation roots, not the list of kinematic bodies. A scene-following kinematic parent
+does not take ownership of separately registered dynamic descendants. Explicit target
+exclusions affect only that body; animation still propagates to independent descendants.
+Supply resolved node references from the animation system, including paused actions. This
+temporarily hands affected bodies to animation. Releasing animation retains the last accepted pose and
 velocity. This API does not resample animation or interpolate targets between substeps.
 
 ## Body commands

@@ -140,18 +140,20 @@ export class ScenegraphPhysicsSession {
     {
       steps = 1,
       animatedNodes = new Set<ScenegraphNode>(),
-      excludedNodes
+      excludedNodes,
+      targetNodes
     }: {
       steps?: number;
       animatedNodes?: ReadonlySet<ScenegraphNode>;
       excludedNodes?: ReadonlySet<ScenegraphNode>;
+      targetNodes?: ReadonlySet<ScenegraphNode>;
     } = {}
   ): void {
     // Synchronous frame encoding must not overlap readback, reset, rebuild or destruction.
     assert(!this.pending && !this.closing);
     // Validate the batch before mutating animation ownership or targets.
     assert(Number.isSafeInteger(steps) && steps > 0);
-    this.motion.setAnimatedNodes(animatedNodes, {excludedNodes});
+    this.motion.setAnimatedNodes(animatedNodes, {excludedNodes, targetNodes});
     this.motion.update();
     this.publication.update();
     this.instance.encode(encoder, steps);

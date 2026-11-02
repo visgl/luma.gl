@@ -206,6 +206,7 @@ export class PhysicsController {
   /** Compile once, or explicitly rebuild after body, geometry, scale or topology edits. */
   prepare({preserveState = true}: {preserveState?: boolean} = {}): Promise<void> {
     return this.exclusive(async () => {
+      this.dirty = true;
       const scene = makePhysicsControllerScene(
         this.scene,
         this.definitions,
@@ -240,11 +241,16 @@ export class PhysicsController {
       Math.floor((this.accumulator + this.timeStep * 1e-9) / this.timeStep)
     );
     if (steps) {
-      const active = new Set(animatedNodes);
+      const targetNodes = new Set<ScenegraphNode>();
       for (const [node, options] of this.definitions)
-        if (options.motion === 'kinematic' && !this.manualTargets.has(node)) active.add(node);
+        if (options.motion === 'kinematic' && !this.manualTargets.has(node)) targetNodes.add(node);
       const encoder = this.device.createCommandEncoder();
-      session.encode(encoder, {steps, animatedNodes: active, excludedNodes: this.manualTargets});
+      session.encode(encoder, {
+        steps,
+        animatedNodes,
+        targetNodes,
+        excludedNodes: this.manualTargets
+      });
       this.device.submit(encoder.finish());
       this.accumulator = Math.max(0, this.accumulator - steps * this.timeStep);
     }
