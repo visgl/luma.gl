@@ -750,16 +750,9 @@ function setSceneShaderInputs(
   });
 }
 
-/** Adapts incoming directional vectors and additive ambient radiance to forward PBR conventions. */
+/** Combines additive ambient radiance for forward PBR without changing light directions. */
 function getScenePBRLights(lights: readonly Light[] = []): Light[] {
-  const adaptedLights = lights.map<Light>(light =>
-    light.type === 'directional'
-      ? {
-          ...light,
-          direction: [-light.direction[0], -light.direction[1], -light.direction[2]]
-        }
-      : light
-  );
+  const adaptedLights = [...lights];
   const ambientLights = adaptedLights.filter(light => light.type === 'ambient');
   if (ambientLights.length <= 1) {
     return adaptedLights;

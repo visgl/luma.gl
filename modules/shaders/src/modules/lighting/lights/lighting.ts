@@ -49,7 +49,7 @@ export type PointLight = {
 export type DirectionalLight = {
   /** Discriminator used to identify directional lights in `lights: Light[]`. */
   type: 'directional';
-  /** World-space light direction. */
+  /** World-space direction in which light travels. */
   direction: Readonly<NumberArray3>;
   /** RGB light color in the existing `0..255` convention used by luma.gl materials. */
   color?: Readonly<NumberArray3>;

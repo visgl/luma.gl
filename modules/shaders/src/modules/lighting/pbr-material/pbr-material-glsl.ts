@@ -1249,7 +1249,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
 
       for(int i = 0; i < lighting.directionalLightCount; i++) {
         if (i < lighting.directionalLightCount) {
-          PBRInfo_setDirectionalLight(pbrInfo, lighting_getDirectionalLight(i).direction);
+          PBRInfo_setDirectionalLight(pbrInfo, -lighting_getDirectionalLight(i).direction);
           color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
         }
       }
@@ -1537,7 +1537,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
     // Apply directional light
     for(int i = 0; i < lighting.directionalLightCount; i++) {
       if (i < lighting.directionalLightCount) {
-        PBRInfo_setDirectionalLight(pbrInfo, lighting_getDirectionalLight(i).direction);
+        PBRInfo_setDirectionalLight(pbrInfo, -lighting_getDirectionalLight(i).direction);
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getDirectionalLight(i).color,
