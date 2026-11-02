@@ -305,6 +305,7 @@ test('resource tab shows textures, reads selected data and ignores stale hover r
       expect(host.querySelector('[data-resource-viewer]')!.textContent).toContain('10, 20, 30, 255')
     );
     expect(host.querySelector('[data-resource-viewer] canvas')).not.toBeNull();
+    expect(rows[1].querySelector('canvas')).not.toBeNull();
     complete!({data: new Uint8Array([99])});
     await Promise.resolve();
     expect(tooltip.hidden).toBe(true);
@@ -312,6 +313,73 @@ test('resource tab shows textures, reads selected data and ignores stale hover r
     expect(read).toHaveBeenCalledTimes(2);
     host.querySelector<HTMLButtonElement>('[data-resource-refresh]')!.click();
     await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(3));
+    host.querySelector<HTMLButtonElement>('[data-texture-previews]')!.click();
+    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(4));
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLButtonElement>('[data-texture-previews]')!.disabled).toBe(false)
+    );
+    expect(rows[0].querySelector('canvas')).toBeNull();
+    expect(rows[1].querySelector('canvas')).not.toBeNull();
+  } finally {
+    panel.destroy();
+    host.remove();
+  }
+});
+
+test('texture thumbnail batches ignore graph switches and do not read on snapshot updates', async () => {
+  const inspector = new GPUCommandGraphInspector();
+  for (const id of ['first', 'second'])
+    inspector.registerGraph({id, stats: EMPTY_GRAPH_STATS, capabilities: GRAPH_CAPABILITIES});
+  const snapshot = inspector.getSnapshot();
+  const graphs = snapshot.graphs.map(graph => ({
+    ...graph,
+    nodes: [
+      {
+        id: 'draw',
+        type: 'render' as const,
+        cpu: {sampleCount: 0},
+        gpu: {sampleCount: 0},
+        resources: [
+          {
+            id: 'image',
+            kind: 'texture' as const,
+            usage: 'sampled' as const,
+            width: 1,
+            height: 1,
+            format: 'rgba8unorm'
+          }
+        ]
+      }
+    ]
+  }));
+  let complete!: (preview: {
+    data: Uint8Array;
+    width: number;
+    height: number;
+    format: string;
+  }) => void;
+  const read = vi.spyOn(inspector, 'readResource').mockImplementation(
+    () =>
+      new Promise(resolve => {
+        complete = resolve;
+      })
+  );
+  const host = document.createElement('div');
+  document.body.append(host);
+  const panel = new GPUCommandGraphInspectorPanel(host, {inspector});
+  try {
+    panel.update({graphs}, 'first');
+    panel.update({graphs}, 'first');
+    expect(read).not.toHaveBeenCalled();
+    host.querySelector<HTMLButtonElement>('[data-texture-previews]')!.click();
+    expect(read).toHaveBeenCalledTimes(1);
+    panel.update({graphs}, 'second');
+    complete({data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'});
+    await vi.waitFor(() =>
+      expect(host.querySelector<HTMLButtonElement>('[data-texture-previews]')!.disabled).toBe(false)
+    );
+    expect(host.querySelector('[data-resource-key] canvas')).toBeNull();
+    expect(read).toHaveBeenCalledTimes(1);
   } finally {
     panel.destroy();
     host.remove();

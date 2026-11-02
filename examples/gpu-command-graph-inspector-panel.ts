@@ -8,6 +8,7 @@ import type {
   GPUCommandGraphResourceSummary,
   GPUResourcePreview
 } from '@luma.gl/graph/gpu-core';
+import {makeTexturePreviewCanvas} from './gpu-texture-preview';
 import {CompactDropdown} from './compact-dropdown';
 import {
   createGPUOperationTooltip,
@@ -68,6 +69,7 @@ export class GPUCommandGraphInspectorPanel {
   private selectedResourceKey: string | undefined;
   private viewerGeneration = 0;
   private readonly pendingPreviews = new Map<string, Promise<GPUResourcePreview>>();
+  private thumbnailGeneration = 0;
   private activeNodeId: string | undefined;
 
   constructor(element: HTMLElement, props: GPUCommandGraphInspectorPanelProps = {}) {
@@ -145,6 +147,7 @@ export class GPUCommandGraphInspectorPanel {
         <div data-inspector-view="resources" hidden>
         <div class="graph-inspector-legend">Select a resource to inspect current data</div>
         <div class="graph-inspector-resources" data-graph-inspector-resources role="group" aria-label="Graph resources"></div>
+        <button type="button" data-texture-previews>Refresh texture thumbnails</button>
         <button type="button" data-resource-refresh>Refresh selected resource</button>
         <div data-resource-viewer role="region" aria-label="Resource contents" aria-live="polite">Select a buffer or texture.</div>
         </div>
@@ -162,6 +165,7 @@ export class GPUCommandGraphInspectorPanel {
           for (const view of element.querySelectorAll<HTMLElement>('[data-inspector-view]'))
             view.hidden = view.dataset['inspectorView'] !== tab.dataset['inspectorTab'];
         }
+        if (target.closest('[data-texture-previews]')) void this.refreshTextureThumbnails();
         const row = target.closest<HTMLElement>('[data-resource-key]');
         if (row) void this.selectResource(row.dataset['resourceKey']!);
         if (target.closest('[data-resource-refresh]') && this.selectedResourceKey)
@@ -204,6 +208,7 @@ export class GPUCommandGraphInspectorPanel {
   destroy(): void {
     this.hideTooltip();
     this.viewerGeneration++;
+    this.thumbnailGeneration++;
     this.tooltipEvents.abort();
     this.tooltip.remove();
     this.graphDropdown.destroy();
@@ -254,8 +259,9 @@ export class GPUCommandGraphInspectorPanel {
       if (!this.inspector) throw new Error('No live inspector is connected.');
       const preview = await this.readPreview(key, graphId, resource);
       if (generation !== this.previewGeneration) return;
+      this.showTextureThumbnail(key, preview);
       status.textContent = formatPreview(preview);
-      const canvas = makePreviewCanvas(this.tooltip.ownerDocument, preview);
+      const canvas = makeTexturePreviewCanvas(this.tooltip.ownerDocument, preview);
       if (canvas) content.insertBefore(canvas, status);
     } catch (error) {
       if (generation !== this.previewGeneration) return;
@@ -294,12 +300,58 @@ export class GPUCommandGraphInspectorPanel {
     try {
       const preview = await this.readPreview(key, graphId, resource);
       if (generation !== this.viewerGeneration) return;
+      this.showTextureThumbnail(key, preview);
       viewer.textContent = `${resource.summary.id} · ${describeResource(resource.summary)}\n${formatPreview(preview)}`;
-      const canvas = makePreviewCanvas(viewer.ownerDocument, preview);
+      const canvas = makeTexturePreviewCanvas(viewer.ownerDocument, preview);
       if (canvas) viewer.prepend(canvas);
     } catch (error) {
       if (generation === this.viewerGeneration)
         viewer.textContent = `${resource.summary.id}\nPreview unavailable: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
+  private showTextureThumbnail(key: string, preview: GPUResourcePreview): void {
+    const row = this.resourceRows.get(key);
+    if (!row) return;
+    const canvas = makeTexturePreviewCanvas(row.ownerDocument, preview);
+    if (!canvas) return;
+    canvas.style.width = '48px';
+    canvas.style.flexShrink = '0';
+    row.removeAttribute('title');
+    row.querySelector('canvas')?.remove();
+    row.prepend(canvas);
+  }
+
+  /** Explicit bounded readbacks; snapshot updates never trigger GPU work. */
+  private async refreshTextureThumbnails(): Promise<void> {
+    const graphId = this.selectedGraphId;
+    if (!graphId) return;
+    const generation = ++this.thumbnailGeneration;
+    const button = this.element.querySelector<HTMLButtonElement>('[data-texture-previews]')!;
+    button.disabled = true;
+    // Keep one readback in flight. Large graphs can inspect additional textures individually.
+    const resources = [...this.resources]
+      .filter(([, resource]) => resource.summary.kind === 'texture')
+      .slice(0, 32);
+    button.textContent = 'Reading up to 32 textures…';
+    try {
+      for (const [key, resource] of resources) {
+        if (generation !== this.thumbnailGeneration) return;
+        this.resourceRows.get(key)?.querySelector('canvas')?.remove();
+        try {
+          const preview = await this.readPreview(key, graphId, resource);
+          if (generation !== this.thumbnailGeneration) return;
+          this.showTextureThumbnail(key, preview);
+        } catch (error) {
+          if (generation !== this.thumbnailGeneration) return;
+          const row = this.resourceRows.get(key);
+          if (row)
+            row.title = `Preview unavailable: ${error instanceof Error ? error.message : String(error)}`;
+        }
+      }
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Refresh texture thumbnails';
     }
   }
 
@@ -320,6 +372,7 @@ export class GPUCommandGraphInspectorPanel {
       this.hideTooltip();
       this.viewerGeneration++;
       this.selectedResourceKey = undefined;
+      this.thumbnailGeneration++;
       this.renderedGraphId = undefined;
       emptyElement.hidden = false;
       contentElement.hidden = true;
@@ -327,6 +380,8 @@ export class GPUCommandGraphInspectorPanel {
     }
 
     if (this.renderedGraphId !== graph.id) {
+      this.thumbnailGeneration++;
+      for (const row of this.resourceRows.values()) row.querySelector('canvas')?.remove();
       this.hideTooltip();
       this.viewerGeneration++;
       this.selectedResourceKey = undefined;
@@ -361,8 +416,13 @@ export class GPUCommandGraphInspectorPanel {
         setAttribute(element, 'aria-pressed', String(resource.id === this.selectedResourceKey));
         setAttribute(element, 'data-resource-key', resource.id);
         setAttribute(element, 'aria-describedby', this.tooltip.id);
+        let label = element.querySelector('span');
+        if (!label) {
+          label = element.ownerDocument.createElement('span');
+          element.append(label);
+        }
         setElementText(
-          element,
+          label,
           `${resource.summary.kind === 'buffer' ? 'Buffer' : 'Texture'} · ${resource.summary.id} · ${describeResource(resource.summary)}`
         );
       }
@@ -670,7 +730,7 @@ const GPU_COMMAND_GRAPH_INSPECTOR_CSS = /* css */ `
   [data-gpu-command-graph-inspector] .graph-inspector-nodes { max-height: 154px; overflow: auto; }
   [data-gpu-command-graph-inspector] .graph-inspector-legend { font: 10px/1.4 system-ui, sans-serif; }
   [data-gpu-command-graph-inspector] .graph-inspector-resources { max-height: 140px; overflow: auto; }
-  [data-gpu-command-graph-inspector] .graph-inspector-resource { color: #b9c8dc; font: 10px/1.5 ui-monospace, monospace; padding: 4px 0; overflow-wrap: anywhere; border-bottom: 1px solid #26354a; }
+  [data-gpu-command-graph-inspector] .graph-inspector-resource { display: flex; align-items: center; gap: 8px; color: #b9c8dc; font: 10px/1.5 ui-monospace, monospace; padding: 4px 0; overflow-wrap: anywhere; border-bottom: 1px solid #26354a; }
   [data-gpu-command-graph-inspector] .graph-inspector-empty { color: #8192aa; font-size: 9px; }
 `;
 
@@ -739,26 +799,4 @@ function formatPreview(preview: GPUResourcePreview): string {
     interpretation = 'uint32';
   } else values = Array.from(bytes);
   return `Current allocation · ${bytes.length} bytes read${preview.width ? ` · top-left ${preview.width} × ${preview.height}` : ''}\n${interpretation}: ${values.slice(0, 64).join(', ')}${values.length > 64 ? ', …' : ''}`;
-}
-
-function makePreviewCanvas(
-  document: Document,
-  preview: GPUResourcePreview
-): HTMLCanvasElement | undefined {
-  if (
-    !preview.width ||
-    !preview.height ||
-    !/^(rgba8unorm|bgra8unorm)(-srgb)?$/.test(preview.format ?? '')
-  )
-    return undefined;
-  const canvas = document.createElement('canvas');
-  canvas.width = preview.width;
-  canvas.height = preview.height;
-  const pixels = new Uint8ClampedArray(preview.data);
-  if (preview.format?.startsWith('bgra'))
-    for (let index = 0; index < pixels.length; index += 4)
-      [pixels[index], pixels[index + 2]] = [pixels[index + 2], pixels[index]];
-  canvas.getContext('2d')?.putImageData(new ImageData(pixels, preview.width, preview.height), 0, 0);
-  canvas.style.cssText = 'width:128px;image-rendering:pixelated;background:#777';
-  return canvas;
 }
