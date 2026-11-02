@@ -31,6 +31,9 @@ import {
   type GPUGraphRunOptions
 } from '../gpu-core/gpu-expression-plan';
 
+import {GPUUploadOperation, GPUCopyOperation} from '../gpu-core/gpu-transfer-operation';
+import {executeGPUTransfer} from './gpu-transfer-execution';
+
 import {GPUExpressionCastOperation} from './gpu-expression-cast-operation';
 import {GPUExpressionRowOperation} from './gpu-expression-row-operation';
 
@@ -49,8 +52,19 @@ export class CompiledGPUSimpleExpressionGraph {
     this.program = new GPUExpressionProgram(source, options);
     if (this.program.vectors.some(value => value.role === 'state'))
       throw new Error('SimpleGraph state execution is unsupported');
-    if (this.program.operations.some(operation => !(operation instanceof GPUExpressionOperation)))
-      throw new Error('SimpleGraph declarative execution supports expression operations only');
+    if (
+      this.program.operations.some(
+        operation =>
+          !(
+            operation instanceof GPUExpressionOperation ||
+            operation instanceof GPUUploadOperation ||
+            operation instanceof GPUCopyOperation
+          )
+      )
+    )
+      throw new Error(
+        'SimpleGraph declarative execution supports expression, upload and copy operations only'
+      );
   }
 
   async run(
@@ -74,7 +88,12 @@ export class CompiledGPUSimpleExpressionGraph {
         evaluators.add(evaluator);
         return evaluator;
       };
-      for (const plan of this.program.expressions) {
+      for (const operation of this.program.operations) {
+        if (operation instanceof GPUUploadOperation || operation instanceof GPUCopyOperation) {
+          executeGPUTransfer(this.device, operation, invocation.values, scope);
+          continue;
+        }
+        const plan = this.program.expressions.find(plan => plan.operation === operation)!;
         const target = invocation.values.get(plan.operation.output) as GPUVector;
         for (const [chunkIndex, chunk] of target.data.entries()) {
           if (!chunk.length) continue;

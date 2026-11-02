@@ -1,13 +1,13 @@
 # GPUSimpleGraph
 
-`@luma.gl/graph/gpu-simple-graph` provides portable expression execution and the lazy evaluator
+`@luma.gl/graph/gpu-simple-graph` provides portable expression and transfer execution and the lazy evaluator
 API on WebGL and WebGPU. Evaluator operations and their fusion/caching behavior remain available.
 
 ## Choose an authoring mode
 
 | Mode | Authoring and compilation | Result ownership |
 | --- | --- | --- |
-| Reusable named expressions | `new GPUSimpleGraph()`, `addInput()`, `GPUExpressionOperation`, `compile(device)` | Allocated results returned by `run()` belong to the caller |
+| Reusable named operations | `new GPUSimpleGraph()`, `addInput()`, shared expression/upload/copy operations, `compile(device)` | Allocated results returned by `run()` belong to the caller |
 | Evaluator-backed recipes | `new GPUSimpleGraph(device)`, `addValue()` or upload/copy operations, `compile()` | Generated recipe results belong to the compiled graph |
 
 Use reusable expressions when supplying new input vectors on each run. Use evaluator recipes
@@ -20,7 +20,7 @@ rejects declaration-based inputs/state. `GPUGraph` has a separate WebGPU executi
 Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))`
 to declare external inputs, add a
 [`GPUExpressionOperation`](./gpu-expression-operation.md), and call `compile(device)`.
-Operations infer their results; callers need not declare intermediates.
+Expressions and shared [upload/copy operations](./gpu-transfer-operations.md) infer their results; callers need not declare intermediates.
 Supply actual inputs with `compiled.run({inputs})`. Vector lengths can change between runs.
 See [Graph inputs, results, and state](./gpu-graph-values.md); state execution remains full-graph only.
 The expression reference documents the shared interface with `GPUGraph`, supported syntax,
@@ -77,7 +77,9 @@ interfaces for existing evaluator users; new consumers use the GPUVectors return
 Evaluator exports remain supported. These recipes do not provide runtime input rebinding or
 full command-graph lowering; use the reusable expression mode for changing input bindings.
 
-## Upload and copy
+## Evaluator recipe upload and copy
+
+For reusable `compile(device)` graphs, use the shared [GPUUploadOperation and GPUCopyOperation](./gpu-transfer-operations.md). The following operations belong to the older evaluator recipe mode.
 
 ```typescript
 import {

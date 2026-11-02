@@ -10,6 +10,12 @@ pass and resource graph produced by lowering. Start with the
 [graph tutorial](/docs/api-reference/graph/getting-started) for reusable compilation and runtime inputs;
 this reference also covers the advanced, concrete-dimension compiler interface.
 
+Built-in reusable operations include
+[GPUUploadOperation and GPUCopyOperation](/docs/api-reference/graph/gpu-transfer-operations),
+which also work in reusable SimpleGraph, and WebGPU
+[GPUCompactionOperation](/docs/api-reference/graph/gpu-compaction-operation), which produces
+capacity and a GPU logical count.
+
 <GPUOperationContract operation="gpu-graph" />
 
 ```text

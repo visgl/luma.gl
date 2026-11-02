@@ -596,6 +596,8 @@
           "api-reference/graph/getting-started",
           "api-reference/graph/gpu-graph-values",
           "api-reference/graph/gpu-expression-operation",
+          "api-reference/graph/gpu-transfer-operations",
+          "api-reference/graph/gpu-compaction-operation",
           "api-reference/graph/gpu-operation",
           "api-reference/graph/gpu-simple-graph",
           {

@@ -1,5 +1,12 @@
 # What's New
 
+### Graph transfers and GPU-sized selection
+
+Reusable GPUGraph and GPUSimpleGraph share [upload and copy operations](./api-reference/graph/gpu-transfer-operations.md).
+WebGPU graphs also expose [stable compaction](./api-reference/graph/gpu-compaction-operation.md)
+with input-sized capacity and a separate GPU logical count, without implicit readback or allocation
+based on CPU-visible counts. Evaluator APIs remain unchanged.
+
 ### Scenegraph node paths
 
 `GroupNode.findNode()` and `findNodes()` resolve node references by exact ID, anchored
