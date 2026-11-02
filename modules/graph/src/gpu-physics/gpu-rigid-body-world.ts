@@ -125,7 +125,7 @@ export type GPURigidBodyWorldProps = {
   publicationBounds?: readonly GPURigidBodyBounds[];
   /** Publish rigid body-node matrices without requiring authored visual bounds. */
   publishPoses?: boolean;
-  /** Up to 64 ordered-solver joints with persistent impulses and connected-island sleeping. */
+  /** Up to 64 joints. Parallel solving supports static-anchored distance joints only. */
   joints?: readonly GPURigidBodyJoint[];
   gravity?: Vector3;
   timeStep?: number;
@@ -1095,6 +1095,23 @@ export class GPURigidBodyWorld {
       parallelSleep: ['velocities', 'angularVelocities', 'bodies', 'sleepStates', 'parallelState']
     };
     parallelBindings['parallelSolve'] = parallelBindings['parallelPairs'];
+    if (this.props.joints?.length) {
+      const jointBindings = [
+        'settings',
+        'positions',
+        'orientations',
+        'velocities',
+        'angularVelocities',
+        'bodies',
+        'sleepStates',
+        'targets'
+      ];
+      parallelBindings['parallelJointWarm'] = jointBindings;
+      parallelBindings['parallelJointSolve'] = jointBindings;
+      parallelBindings['parallelSolve'] = [
+        ...new Set([...parallelBindings['parallelSolve'], ...jointBindings])
+      ];
+    }
     this.simulationStatistics = allocate('simulation-statistics', 64);
     const statisticsResource = graph.importBuffer(
       {id: `${this.id}-statistics`, byteLength: 64, usage: Buffer.STORAGE},
@@ -1426,7 +1443,12 @@ export class GPURigidBodyWorld {
           ? [{buffer: dispatchBinding!.resource, usage: 'indirect' as const}]
           : [];
       if (entryPoint === 'parallelSolve') {
-        const stages = ['parallelWarm', 'parallelPairs', 'parallelGather'];
+        const stages = [
+          'parallelWarm',
+          'parallelPairs',
+          'parallelGather',
+          ...(this.props.joints?.length ? ['parallelJointWarm', 'parallelJointSolve'] : [])
+        ];
         const properties = stages.map(stage => ({
           id: `${this.id}-${stage}`,
           source,
@@ -1482,9 +1504,19 @@ export class GPURigidBodyWorld {
             };
             dispatchPairs(computations[0]);
             dispatchBodies(computations[2]);
+            if (computations[3])
+              computations[3].kernel.dispatch(computePass, {
+                bindings: computations[3].bindings,
+                x: 1
+              });
             for (let iteration = 0; iteration < (this.props.iterations ?? 16); iteration++) {
               dispatchPairs(computations[1]);
               dispatchBodies(computations[2]);
+              if (computations[4])
+                computations[4].kernel.dispatch(computePass, {
+                  bindings: computations[4].bindings,
+                  x: 1
+                });
             }
           },
           destroy: () => {
@@ -1494,7 +1526,11 @@ export class GPURigidBodyWorld {
         // Iterations share one semantic graph node; dispatch boundaries synchronize pair and body owners.
         graph.addComputePass({
           id: `${this.id}-solve`,
-          workload: {commandCount: 2 + 2 * (this.props.iterations ?? 16)},
+          workload: {
+            commandCount:
+              (this.props.joints?.length ? 3 : 2) +
+              (this.props.joints?.length ? 3 : 2) * (this.props.iterations ?? 16)
+          },
           description: passDescriptions['solve'],
           resources: [
             ...indirectResources,

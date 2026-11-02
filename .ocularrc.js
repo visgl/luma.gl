@@ -63,6 +63,7 @@ const config = {
         three: '/examples/experimental/three',
         'pool': '/examples/experimental/gpu-pool',
         'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
+        'wrecking-ball': '/examples/experimental/gpu-rigid-body-world/wrecking-ball.html',
         'vector-observatory': '/examples/experimental/vector-observatory',
         'wind': '/examples/deck/wind',
         'physics-batch': '/examples/experimental/physics-batch',

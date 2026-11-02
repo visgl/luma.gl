@@ -2950,3 +2950,31 @@ export const PhysicsBatchExample: React.FC = () => {
     <iframe title="Physics Batch Lab" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
+
+export const WreckingBallExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-rigid-body-world/wrecking-ball.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Wrecking Ball" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const GPUSphereWorldExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-sphere-world/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Sphere World" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const GPUSphereScaleExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-sphere-scale/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Large Sphere World" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
+export const GPUPoolExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/gpu-pool/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Pool" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};

@@ -15,6 +15,11 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makeMechanism} from './mechanisms';
+import {
+  WRECKING_BALL_BODY_INDEX,
+  WRECKING_BALL_PHYSICS,
+  WRECKING_BALL_TIME_STEP
+} from './wrecking-ball';
 import {CradleScene} from './cradle-scene';
 import {createRigidBodyPanel} from './info-box';
 import {
@@ -28,6 +33,10 @@ import {
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const scene = document.querySelector<HTMLSelectElement>('#scene')!;
+const initialScene =
+  document.body.dataset.scene ?? new URLSearchParams(window.location.search).get('scene');
+if (initialScene && isRigidBodyScene(initialScene)) scene.value = initialScene;
+const isWreckingBallExample = document.body.dataset.scene === 'wreckingBall';
 const solver = document.querySelector<HTMLSelectElement>('#solver')!;
 const iterations = document.querySelector<HTMLSelectElement>('#iterations')!;
 const dominoAudio = new DominoAudio();
@@ -40,7 +49,18 @@ canvas.addEventListener('pointerdown', () => dominoAudio.unlock());
 const autoPlay = document.querySelector<HTMLInputElement>('#auto-play')!;
 const playbackStatus = document.querySelector<HTMLOutputElement>('#playback-status')!;
 const diagnostics = new GPUGraphDiagnostics({traceTitle: 'GPU Graph Timeline'});
-const panel = createRigidBodyPanel(diagnostics);
+const panel = createRigidBodyPanel(
+  diagnostics,
+  isWreckingBallExample ? 'Wrecking Ball' : 'Rigid Body Lab',
+  isWreckingBallExample ? 'GPU physics · 204 blocks and a heavy pendulum' : undefined
+);
+if (isWreckingBallExample) {
+  scene.hidden = true;
+  sound.closest('label')!.style.display = 'none';
+  autoPlay.closest('label')!.style.display = 'none';
+  document.querySelector<HTMLButtonElement>('#push')!.hidden = true;
+  solver.disabled = true;
+}
 const controlsButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
 try {
   let failure: Error | null = null;
@@ -58,7 +78,8 @@ try {
   });
   const camera = new PerspectiveCamera(45, 1, 0.1, 200);
   camera.up.set(0, 0, 1);
-  camera.position.set(13, -19, 19);
+  if (scene.value === 'wreckingBall') camera.position.set(24, -30, 22);
+  else camera.position.set(13, -19, 19);
   const controls = new OrbitControls(camera, canvas);
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.5;
@@ -66,7 +87,11 @@ try {
     controls.autoRotate = false;
   });
   let lastOrbitTime = performance.now();
-  controls.target.set(0, 0, 2);
+  controls.target.set(
+    scene.value === 'wreckingBall' ? -2 : 0,
+    0,
+    scene.value === 'wreckingBall' ? 4 : 2
+  );
   controls.update();
   const cameraBuffer = device.createBuffer({
     id: 'rigid-body-camera',
@@ -82,13 +107,13 @@ try {
   async function createScene() {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
     if (sceneName !== previousSceneName) {
-      iterations.value = sceneName === 'cradle' ? '8' : '32';
-      if (sceneName === 'dominoSpiral') solver.value = 'parallel';
+      iterations.value = sceneName === 'cradle' ? '8' : sceneName === 'wreckingBall' ? '16' : '32';
+      if (sceneName === 'dominoSpiral' || sceneName === 'wreckingBall') solver.value = 'parallel';
       previousSceneName = sceneName;
     }
     const mechanism = makeMechanism(sceneName);
     const bodies = mechanism?.bodies ?? makeRigidBodyScene(sceneName);
-    if (mechanism) solver.value = 'ordered';
+    if (mechanism && sceneName !== 'wreckingBall') solver.value = 'ordered';
     const world = new GPURigidBodyWorld({
       bodies,
       publicationBounds:
@@ -108,9 +133,17 @@ try {
       ...(sceneName === 'dominoSpiral'
         ? {...DOMINO_PHYSICS, eventCapacity: 512, impactImpulseThreshold: 0.15}
         : {}),
+      ...(sceneName === 'wreckingBall' ? WRECKING_BALL_PHYSICS : {}),
       failurePolicy: 'rollback',
       // Resolve the cradle's closely spaced elastic impacts before the next pair closes.
-      timeStep: sceneName === 'cradle' ? 1 / 480 : sceneName === 'dominoSpiral' ? 1 / 60 : 1 / 120,
+      timeStep:
+        sceneName === 'cradle'
+          ? 1 / 480
+          : sceneName === 'wreckingBall'
+            ? WRECKING_BALL_TIME_STEP
+            : sceneName === 'dominoSpiral'
+              ? 1 / 60
+              : 1 / 120,
       ...(sceneName === 'cradle'
         ? {restitutionThreshold: 0.05, linearDamping: 0.08, angularDamping: 0.12}
         : {}),
@@ -167,7 +200,7 @@ try {
         ? null
         : new Model(device, {
             id: 'rigid-body-shapes',
-            modules: sceneName === 'dominoSpiral' ? [shadow] : [],
+            modules: sceneName === 'dominoSpiral' || sceneName === 'wreckingBall' ? [shadow] : [],
             source: `
 @group(0) @binding(0) var<uniform> matrix: mat4x4f;
 @group(0) @binding(1) var<storage,read> positions: array<vec4f>;
@@ -178,7 +211,18 @@ try {
 @group(0) @binding(6) var<uniform> cameraPosition:vec4f;
 struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32, @location(4) worldPosition: vec3f, @location(5) @interpolate(flat) body: u32, @location(6) localPoint:vec3f}
 fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotation.xyz,cross(rotation.xyz,vector)+rotation.w*vector);}
-@vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {
+${
+  sceneName === 'wreckingBall'
+    ? `
+// Pack box triangles and the single sphere into one draw; no collapsed sphere vertices per box.
+@vertex fn vertexMain(@builtin(vertex_index) renderVertex:u32)->Output {
+ let sphere=renderVertex>=${(bodies.length - 1) * 36}u;
+ let box=renderVertex/36u;
+ let body=select(box+select(0u,1u,box>=${WRECKING_BALL_BODY_INDEX}u),${WRECKING_BALL_BODY_INDEX}u,sphere);
+ let vertex=select(renderVertex%36u,renderVertex-${(bodies.length - 1) * 36}u,sphere);
+`
+    : '@vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {'
+}
  let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
  let corner=corners[vertex%6u];var point=vec3f(0);var normal=vec3f(0);
  if(shapes[body].w==3.0) {
@@ -208,7 +252,7 @@ fn surfaceGrain(point:vec2f)->f32{
 @fragment fn fragmentMain(input:Output)->@location(0) vec4f {
 
  ${
-   sceneName === 'dominoSpiral'
+   sceneName === 'dominoSpiral' || sceneName === 'wreckingBall'
      ? `
 
  let distanceToPip=min(length(input.localPoint.yz-vec2f(0,0.38)),length(input.localPoint.yz+vec2f(0,0.38)));
@@ -224,6 +268,16 @@ fn surfaceGrain(point:vec2f)->f32{
    let divider=(1.0-smoothstep(0.006,0.013,abs(input.localPoint.z)))*select(0.0,1.0,abs(input.localPoint.y)<0.27);
    color=mix(color,vec3f(0.85,0.83,0.77),max(pip,divider*0.65));
   }
+ }
+ ${
+   sceneName === 'wreckingBall'
+     ? `
+ color=select(vec3f(0.40,0.23,0.11)*(0.85+grain*0.12+fract(f32(input.body)*0.618)*0.2),vec3f(0.17,0.20,0.22),input.body<6u);
+ roughness=select(0.72,0.18,input.sphere>0.5);
+ if(input.sphere>0.5){color=vec3f(0.60,0.66,0.72);}
+ if(input.body==0u){color=vec3f(0.26,0.28,0.29)*(0.95+grain*0.1);}
+ `
+     : ''
  }
  // A warm overhead key and cool ambient fill reveal the rough dielectric surfaces.
  let lightOffset=vec3f(${DOMINO_LIGHT_POSITION.join(',')})-input.worldPosition;
@@ -248,8 +302,9 @@ fn surfaceGrain(point:vec2f)->f32{
  }
  let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
 `,
-            vertexCount,
-            instanceCount: bodies.length,
+            vertexCount:
+              sceneName === 'wreckingBall' ? (bodies.length - 1) * 36 + vertexCount : vertexCount,
+            instanceCount: sceneName === 'wreckingBall' ? 1 : bodies.length,
             parameters: {
               depthWriteEnabled: true,
               depthCompare: 'less-equal',
@@ -323,8 +378,15 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
         : null;
     return {
       dominoShadows:
-        sceneName === 'dominoSpiral'
-          ? new DominoShadows(device, world.positions!, world.orientations!, shapes, bodies.length)
+        sceneName === 'dominoSpiral' || sceneName === 'wreckingBall'
+          ? new DominoShadows(
+              device,
+              world.positions!,
+              world.orientations!,
+              shapes,
+              bodies.length,
+              sceneName === 'wreckingBall' ? WRECKING_BALL_BODY_INDEX : null
+            )
           : null,
       cradle:
         sceneName === 'cradle'
@@ -348,7 +410,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     };
   }
   let resources = await createScene();
-  let paused = false;
+  let paused = isWreckingBallExample;
   let loading = false;
   let alive = true;
   let previous = performance.now();
@@ -365,6 +427,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
   let previousSampleSimulation = 0;
   let previousSampleWall = performance.now();
   let simulationRate = 0;
+  const frameWorkSamples: number[] = [];
   let playbackStartedAt = 0;
   let quietSince: number | null = null;
   let advanceAt: number | null = null;
@@ -408,14 +471,26 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       diagnostics.clear();
       destroy(resources);
       resources = replacement;
-      if (changedScene)
-        camera.position.set(
-          resources.sceneName === 'mixed' ? 24 : 11,
-          resources.sceneName === 'mixed' ? -30 : -16,
-          resources.sceneName === 'mixed' ? 25 : resources.sceneName === 'dominoSpiral' ? 19 : 12
-        );
+      if (changedScene) {
+        if (resources.sceneName === 'wreckingBall') {
+          camera.position.set(24, -30, 22);
+          controls.target.set(-2, 0, 4);
+        } else {
+          camera.position.set(
+            resources.sceneName === 'mixed' ? 24 : 11,
+            resources.sceneName === 'mixed' ? -30 : -16,
+            resources.sceneName === 'mixed' ? 25 : resources.sceneName === 'dominoSpiral' ? 19 : 12
+          );
+          controls.target.set(0, 0, 2);
+        }
+      }
+      if (isWreckingBallExample) {
+        paused = true;
+        document.querySelector<HTMLButtonElement>('#pause')!.textContent = 'Release ball';
+      }
       accumulator = 0;
       elapsedSimulation = 0;
+      frameWorkSamples.length = 0;
       previousSampleSimulation = 0;
       previousSampleWall = performance.now();
       restartPlayback();
@@ -427,7 +502,8 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       controlsButtons.forEach(button => {
         button.disabled = false;
       });
-      scene.disabled = solver.disabled = iterations.disabled = false;
+      scene.disabled = iterations.disabled = false;
+      solver.disabled = isWreckingBallExample;
     }
   }
   document.querySelector<HTMLButtonElement>('#reset')!.onclick = reset;
@@ -435,6 +511,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
   solver.onchange = reset;
   iterations.onchange = reset;
   const pauseButton = document.querySelector<HTMLButtonElement>('#pause')!;
+  if (isWreckingBallExample) pauseButton.textContent = 'Release ball';
   pauseButton.onclick = () => {
     paused = !paused;
     restartPlayback();
@@ -498,12 +575,16 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       animation = requestAnimationFrame(frame);
       return;
     }
+    const frameWorkStarted = performance.now();
+    const measureFrame = !paused && !loading;
     const elapsed = Math.min(0.05, (now - previous) / 1000);
     previous = now;
     if (!loading && !paused && advanceAt === null) {
       accumulator = Math.min(
         accumulator + elapsed,
-        resources.sceneName === 'dominoSpiral' ? 4 / 60 : 4 / 120
+        resources.sceneName === 'dominoSpiral' || resources.sceneName === 'wreckingBall'
+          ? 4 / 60
+          : 4 / 120
       );
       const encoder = device.createCommandEncoder();
       while (accumulator >= resources.world.timeStep) {
@@ -555,6 +636,12 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     device.submit();
     const fence = device.createFence();
     submitted = fence.signaled
+      .then(() => {
+        if (measureFrame && resources.sceneName === 'wreckingBall') {
+          frameWorkSamples.push(performance.now() - frameWorkStarted);
+          if (frameWorkSamples.length > 180) frameWorkSamples.shift();
+        }
+      })
       .catch(error => {
         failure = error;
       })
@@ -629,7 +716,14 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
             }
           }
           const memory = target.capacity;
-          status.value = `${counters.complete ? '' : 'INCOMPLETE SIMULATION · '}${target.bodies.filter(body => body.mass !== 0).length} moving bodies · ${target.world.solver} solver\n${elapsedSimulation.toFixed(1)} s simulated · ${(simulationRate * 100).toFixed(0)}% real time · ${target.graph.stats.nodeOrder.length} graph nodes\n${counters.maximumCandidatePairs} peak candidate pairs · ${counters.maximumCandidateTests} peak candidate tests\n${counters.incompleteSteps} incomplete steps / ${counters.steps} total · ${(memory.ownedBufferBytes / 1048576).toFixed(2)} MiB world buffers`;
+          const sortedWork = [...frameWorkSamples].sort((first, second) => first - second);
+          const frameWork = sortedWork[Math.max(0, Math.ceil(sortedWork.length * 0.95) - 1)];
+          const performanceSummary =
+            target.sceneName === 'wreckingBall' && sortedWork.length >= 30
+              ? `\n${frameWork.toFixed(1)} ms p95 frame work · ${Math.max(0, (1 - frameWork / (1000 / 60)) * 100).toFixed(0)}% margin at 60 fps`
+              : '';
+
+          status.value = `${counters.complete ? '' : 'INCOMPLETE SIMULATION · '}${target.bodies.filter(body => body.mass !== 0).length} moving bodies · ${target.world.solver} solver\n${elapsedSimulation.toFixed(1)} s simulated · ${(simulationRate * 100).toFixed(0)}% real time · ${target.graph.stats.nodeOrder.length} graph nodes\n${counters.maximumCandidatePairs} peak candidate pairs · ${counters.maximumCandidateTests} peak candidate tests\n${counters.incompleteSteps} incomplete steps / ${counters.steps} total · ${(memory.ownedBufferBytes / 1048576).toFixed(2)} MiB world buffers${performanceSummary}`;
         })
         .catch(error => {
           failure = error;
