@@ -213,6 +213,11 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-sphere-world': sphereWorldSupport,
   'experimental/gpu-sphere-scale': sphereScaleSupport,
   'experimental/gpu-rigid-body-world': rigidBodyWorldSupport,
+  'experimental/wrecking-ball': {
+    ...rigidBodyWorldSupport,
+    id: 'experimental/wrecking-ball',
+    sourceDirectory: 'experimental/gpu-rigid-body-world'
+  },
   'experimental/vector-observatory': vectorObservatorySupport,
   'experimental/physics-batch': physicsBatchSupport,
   'experimental/physics-stress': physicsStressSupport,

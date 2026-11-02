@@ -140,7 +140,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(132);
+    expect(LIVE_EXAMPLES).toHaveLength(136);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();
@@ -286,7 +286,7 @@ describe('live example catalog metadata', () => {
         ? ['webgl2']
         : id === 'v10/gpu-simple-graph'
           ? ['webgpu', 'webgl2']
-          : ['WebGPU', 'GPGPU'].includes(categories[0]) ||
+          : ['WebGPU', 'GPGPU', 'Physics'].includes(categories[0]) ||
               categories[0].startsWith('GPU Graph Layers') ||
               WEBGPU_ONLY_EXAMPLES.has(id)
             ? ['webgpu']

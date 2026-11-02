@@ -117,7 +117,20 @@
           "api-guide/gpu/tabular-data-in-wgsl",
           "api-guide/shaders/gpu-floating-point-precision"
         ]
-      },
+      }
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Physics",
+    "items": [
+      "api-guide/physics/overview",
+      "api-guide/physics/getting-started",
+      "api-guide/physics/bodies-and-collisions",
+      "api-guide/physics/joints-and-mechanisms",
+      "api-guide/physics/scenes-and-gltf",
+      "api-guide/physics/large-worlds",
+      "api-guide/physics/performance",
       "api-guide/gpu/gpu-physics"
     ]
   },

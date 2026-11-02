@@ -19,7 +19,8 @@ export class DominoShadows {
     positions: Buffer,
     orientations: Buffer,
     shapes: Buffer,
-    count: number
+    count: number,
+    sphereBodyIndex: number | null = null
   ) {
     this.renderer = new ShadowMapRenderer(device, {
       quality: 'balanced',
@@ -37,16 +38,32 @@ export class DominoShadows {
 @group(0) @binding(2) var<storage,read> orientations:array<vec4f>;
 @group(0) @binding(3) var<storage,read> shapes:array<vec4f>;
 fn rotate(rotation:vec4f,point:vec3f)->vec3f{return point+2.0*cross(rotation.xyz,cross(rotation.xyz,point)+rotation.w*point);}
-@vertex fn vertexMain(@builtin(vertex_index) vertex:u32,@builtin(instance_index) body:u32)->@builtin(position) vec4f{
+${
+  sphereBodyIndex !== null
+    ? `
+@vertex fn vertexMain(@builtin(vertex_index) renderVertex:u32)->@builtin(position) vec4f{
+ let sphere=renderVertex>=${(count - 2) * 36}u;let box=renderVertex/36u+1u;
+ let body=select(box+select(0u,1u,box>=${sphereBodyIndex}u),${sphereBodyIndex}u,sphere);
+ let vertex=select(renderVertex%36u,renderVertex-${(count - 2) * 36}u,sphere);
+`
+    : '@vertex fn vertexMain(@builtin(vertex_index) vertex:u32,@builtin(instance_index) body:u32)->@builtin(position) vec4f{'
+}
  let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
- let corner=corners[vertex%6u];let face=vertex/6u;let axis=face/2u;var point=vec3f(0);
+ let corner=corners[vertex%6u];
+ if(shapes[body].w==0.0){
+  let tile=vertex/6u;let longitude=(f32(tile%16u)+corner.x)*6.2831853/16.0;let latitude=(f32(tile/16u)+corner.y)*3.14159265/12.0;
+  let normal=vec3f(cos(longitude)*sin(latitude),sin(longitude)*sin(latitude),cos(latitude));
+  return matrix*vec4f(positions[body].xyz+normal*shapes[body].x,1);
+ }
+ if(vertex>=36u){return matrix*vec4f(positions[body].xyz,1);}
+ let face=vertex/6u;let axis=face/2u;var point=vec3f(0);
  point[axis]=select(-1.0,1.0,face%2u==0u);point[(axis+1u)%3u]=corner.x*2.0-1.0;point[(axis+2u)%3u]=corner.y*2.0-1.0;
  return matrix*vec4f(positions[body].xyz+rotate(orientations[body],point*shapes[body].xyz),1);
 }
 @fragment fn fragmentMain(){}
 `,
-      vertexCount: 36,
-      instanceCount: count,
+      vertexCount: sphereBodyIndex !== null ? (count - 2) * 36 + 16 * 12 * 6 : 36,
+      instanceCount: sphereBodyIndex !== null ? 1 : count,
       colorAttachmentFormats: [],
       depthStencilAttachmentFormat: 'depth32float',
       parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', cullMode: 'none'},

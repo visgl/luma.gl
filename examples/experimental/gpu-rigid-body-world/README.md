@@ -137,3 +137,22 @@ map and one instanced depth draw from GPU body poses. The camera orbits gently u
 OrbitControls receives user input. The domino scene uses 60 Hz physics with 32 solver
 iterations and 4096 contact slots; both 60 and 120 Hz propagation are regression-tested.
 The status reports simulation time relative to wall time to expose playback slowdown.
+
+## Wrecking Ball
+
+Open `wrecking-ball.html` for the dedicated demolition example: an eight-level square pyramid
+of 204 individually simulated blocks and an 400-unit ball on a ten-unit suspension. The scene
+starts paused. **Release ball** starts gravity-driven motion, **Pause** freezes it, and **Reset**
+rebuilds the pyramid and raises the ball without moving the camera. Settings, GPU Graph and
+GPU Graph Timeline use the shared luma.gl panel.
+
+The pendulum uses a static-anchored distance joint. Its small joint sweep alternates with
+parallel block-contact iterations entirely on the GPU. The shared renderer reads GPU poses
+directly and casts shadows from both boxes and the sphere. The dedicated page and the lab
+share simulation, rendering and UI code.
+
+The wrecking-ball scene uses a fixed 60 Hz step, qualified alongside 120 Hz for pre-impact
+stack stability, demolition and suspension error. Box and sphere triangles are packed into
+one draw for each pass: 8,676 visible vertices and 8,640 shadow vertices instead of
+241,920 vertices per pass. The base receives shadows and is excluded from the caster draw.
+This changes rendering work without changing collision geometry.
