@@ -88,8 +88,8 @@ The full matrix also runs on PRs that change its definitions or scheduling, so t
 is validated before those changes merge. Ordinary implementation PRs run the focused regressions.
 
 Run `yarn test-physics-endurance` to execute the full matrix locally without coverage overhead.
-It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless` and
-release sharding continue to include the full-duration specs. No endurance assertion, simulation
+It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless`
+continue to include the full-duration specs; npm release sharding excludes them. No endurance assertion, simulation
 step, solver, or time-step combination is removed from the full suite.
 
 The nightly job requires WebGPU/WebGL presentation before testing and saves JUnit results and
