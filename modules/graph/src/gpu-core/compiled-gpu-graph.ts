@@ -23,12 +23,15 @@ import {
   type GPUGraphRunOptions
 } from './gpu-expression-plan';
 import {GPUExpressionKernel} from './gpu-expression-kernel';
+import {GPUShaderPassOperation} from './gpu-shader-pass-operation';
+import {GPUShaderPassKernel} from './gpu-shader-pass-kernel';
 
 /** Reusable WebGPU program. Returned output vectors belong to the caller. */
 export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, GPUVector>> {
   private readonly program: GPUExpressionProgram;
   private readonly compiler: GPUGraphCompiler;
   private readonly kernels = new Map<GPUExpressionOperation, GPUExpressionKernel>();
+  private readonly shaderPasses = new Map<GPUShaderPassOperation, GPUShaderPassKernel>();
   private destroyed = false;
 
   constructor(
@@ -42,6 +45,11 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
     this.compiler = new GPUGraphCompiler(device, [
       ...(lowerings ?? options.lowerings ?? []),
       {
+        type: 'shader-pass',
+        lower: (operation: GPUShaderPassOperation, context) =>
+          this.shaderPasses.get(operation)!.lower(context)
+      },
+      {
         type: 'expression',
         lower: (operation: GPUExpressionOperation, context) =>
           this.kernels.get(operation)!.lower(context)
@@ -50,6 +58,12 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
     try {
       for (const plan of this.program.expressions)
         this.kernels.set(plan.operation, new GPUExpressionKernel(device, this.program, plan));
+      for (const operation of this.program.operations)
+        if (operation instanceof GPUShaderPassOperation)
+          this.shaderPasses.set(
+            operation,
+            new GPUShaderPassKernel(device, operation, this.program)
+          );
     } catch (error) {
       this.destroy();
       throw error;
@@ -89,6 +103,8 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
     const invocation = this.program.prepare(this.device, bindings, options, true);
     let executable: CompiledGPUCommandGraph | undefined;
     try {
+      for (const kernel of this.shaderPasses.values())
+        kernel.validateTextures(invocation.textures!.values);
       const resolved = new GPUGraph();
       for (const scalar of this.program.scalars) resolved.scalar(scalar.id, scalar.format);
       const vectors: Record<string, GPUVector> = Object.create(null);
@@ -179,6 +195,8 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
   }
 
   destroy(): void {
+    for (const kernel of this.shaderPasses.values()) kernel.destroy();
+    this.shaderPasses.clear();
     for (const kernel of this.kernels.values()) kernel.destroy();
     this.kernels.clear();
     this.destroyed = true;

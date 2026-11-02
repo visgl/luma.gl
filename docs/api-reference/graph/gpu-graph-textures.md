@@ -156,8 +156,9 @@ submission, and failure cleanup, returning selected outputs only on success.
 
 - GPUGraph supports texture copies and custom lowerings alongside numeric operations, through
   both `run()` and caller-owned `prepare()`/`encode()`.
-- SimpleGraph supports mixed numeric and texture-copy operations through `run()` on WebGPU.
-  Its new `prepare()` path currently supports texture-copy-only programs; numeric evaluator
+- Both graphs support [fullscreen shader-pass operations](./gpu-shader-pass-operation.md) on WebGPU.
+- SimpleGraph supports mixed numeric, texture-copy and shader-pass operations through `run()` on WebGPU.
+  Its `prepare()` path supports texture-copy and shader-pass programs; numeric evaluator
   preparation remains asynchronous and is not exposed through that path.
 - SimpleGraph texture programs reject WebGL at compilation. Existing numeric/evaluator WebGL
   execution remains unchanged.

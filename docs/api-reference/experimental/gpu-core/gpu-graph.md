@@ -2,6 +2,10 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 # GPUGraph
 
+For portable fullscreen image processing on WebGPU, use
+[`GPUShaderPassOperation`](../../graph/gpu-shader-pass-operation.md) with named texture inputs
+and scalar parameters. The same operation description also runs on WebGPU GPUSimpleGraph.
+
 ## Overview
 
 `GPUGraph` describes operations and logical values without requiring a device during authoring.
