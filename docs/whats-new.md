@@ -1,5 +1,13 @@
 # What's New
 
+### Graph intermediate storage reuse
+
+Straight-line WebGPU graphs now route unselected operation-defined vector results through the
+command-graph transient planner. Non-overlapping results can share storage without changing
+chunk boundaries, output ownership, or evaluator behavior. Start with the new
+[graph tutorial](./api-reference/graph/getting-started.md) and
+[storage rules](./api-reference/graph/gpu-graph-values.md#intermediate-storage-reuse).
+
 ### Prepared graph execution
 
 `CompiledGPUGraph.prepare()` binds one invocation and exposes its outputs before encoding.

@@ -63,10 +63,29 @@ boundaries, and device. They cannot replace inputs or state. Aliasing incompatib
 ranges is rejected. Without a target, returned produced vectors transfer to the caller;
 caller-supplied inputs, targets, and state are always borrowed.
 
-Logical intermediates remain alive for the invocation. This API does not introduce new
-cross-operation buffer reuse or fusion. Operation-private transient command resources retain
-the existing command graph's allocation and reuse behavior. Lowerings should describe scratch
-resources through the command graph rather than privately allocating opaque buffers.
+## Intermediate storage reuse
+
+For straight-line WebGPU `GPUGraph` executions, unselected operation-defined vector results
+remain logical shape declarations until lowering. The command-graph planner allocates their
+chunks and can reuse physical buffers when scheduled lifetimes do not overlap. Logical row
+counts and exact chunk boundaries are unchanged; compatible buffers may have different formats
+or capacities because each view retains its own layout and the allocation uses sufficient capacity
+and the union of required usages.
+
+All logical inputs and outputs of an operation overlap for allocation purposes, including when
+its lowering emits multiple passes. Reuse does not imply in-place execution. Private command
+scratch retains its finer command-level lifetimes. Lowerings must declare actual physical reads
+and writes and resolve buffers through the encoding context; they must not cache a logical
+intermediate's physical storage for later use. Transient contents are unspecified until written;
+producers must initialize all elements that consumers read, including explicit clearing before
+accumulation when required.
+
+Borrowed inputs, mutable state, caller-owned targets, and selected outputs never enter this
+pool. Selected results keep independent storage even when another operation consumes them.
+Legacy explicit result declarations, control-flow graphs, scalars, and SimpleGraph retain their
+existing allocation behavior. Each prepared execution owns a separate pool: concurrently
+prepared invocations cannot reuse one another's storage. No expression fusion or cross-run
+pooling is introduced. Destroy the prepared execution after submission to release its scratch.
 
 ## Caller-owned encoding
 

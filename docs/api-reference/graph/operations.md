@@ -1,8 +1,12 @@
 import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
-# Operations
+# Evaluator operations
 
 <GPGPUDocsTabs active="operations" />
+
+This page describes the evaluator API. For logical operations added to `GPUGraph`, see
+[GPUOperation contracts](./gpu-operation.md); their lowering interface is separate from
+an evaluator `Operation` and its backend handlers.
 
 This page is the top-level API reference for the lazy operations exported by `@luma.gl/graph/gpu-simple-graph`.
 

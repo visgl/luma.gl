@@ -4,7 +4,11 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 ## Overview
 
-`GPUGraph` is luma.gl's backend-independent graph of operations and logical values. It is intentionally distinct from `GPUCommandGraph`, which is the WebGPU execution graph.
+`GPUGraph` describes operations and logical values without requiring a device during authoring.
+Its execution implementation currently requires WebGPU. `GPUCommandGraph` is the lower-level
+pass and resource graph produced by lowering. Start with the
+[graph tutorial](/docs/api-reference/graph/getting-started) for reusable compilation and runtime inputs;
+this reference also covers the advanced, concrete-dimension compiler interface.
 
 <GPUOperationContract operation="gpu-graph" />
 

@@ -49,6 +49,12 @@ export type GPUExpressionPlan = {
   gpuScalarInputs: readonly string[];
 };
 
+/** CPU-known dimensions for an unallocated operation result. @internal */
+export type GPUExpressionVectorShape = {
+  length: number;
+  chunkLengths: readonly number[];
+};
+
 /** Snapshot of declarations and checked expressions; contains no bound resources. @internal */
 export class GPUExpressionProgram {
   private readonly contracts = new Map<GPUGraphOperation, GPUOperationContract>();
@@ -279,10 +285,42 @@ export class GPUExpressionProgram {
   prepare(
     device: Device,
     bindings: GPUGraphRunBindings,
-    options: GPUGraphRunOptions = {}
+    options: GPUGraphRunOptions = {},
+    deferIntermediateStorage = false
   ): GPUExpressionInvocation {
     const values = new Map<string, GPUVector | number>();
     const owned = new Set<GPUVector>();
+    const transientVectors = new Map<string, GPUExpressionVectorShape>();
+    // Keep legacy declarations and control-flow allocation behavior unchanged.
+    const deferStorage =
+      deferIntermediateStorage &&
+      !this.operations.some(operation => operation instanceof GPUCompositeOperation);
+    const getShape = (name: string): GPUExpressionVectorShape | undefined => {
+      const value = values.get(name);
+      return value instanceof GPUVector
+        ? {length: value.length, chunkLengths: value.data.map(chunk => chunk.length)}
+        : transientVectors.get(name);
+    };
+    const allocateOutput = (
+      name: string,
+      chunkLengths: readonly number[],
+      format: GPUGraphVectorFormat
+    ): void => {
+      if (
+        deferStorage &&
+        !this.outputs.includes(name) &&
+        this.vectors.some(vector => vector.id === name && vector.role === 'value')
+      ) {
+        transientVectors.set(name, {
+          length: chunkLengths.reduce((sum, count) => sum + count, 0),
+          chunkLengths
+        });
+      } else {
+        const output = allocateVector(device, name, chunkLengths, format);
+        owned.add(output);
+        values.set(name, output);
+      }
+    };
     const produced = new Set(this.expressions.map(plan => plan.operation.output));
     const targets = new Map(Object.entries(options.outputTargets ?? {}));
     const writableVectors = new Set(
@@ -329,7 +367,12 @@ export class GPUExpressionProgram {
           const contract = this.contracts.get(operation);
           for (const use of contract?.values ?? []) {
             const name = getGPUOperationValueName(use.value);
-            if (use.access !== 'write' && !values.has(name) && !availableScalars.has(name))
+            if (
+              use.access !== 'write' &&
+              !values.has(name) &&
+              !transientVectors.has(name) &&
+              !availableScalars.has(name)
+            )
               throw new Error(
                 `Missing ${use.access === 'read-write' ? 'read-write' : 'execution'} binding ${name}`
               );
@@ -352,18 +395,15 @@ export class GPUExpressionProgram {
               targets.get(declaration.id) ?? (existing instanceof GPUVector ? existing : undefined);
             const shape = use.shape;
             const template =
-              shape && 'like' in shape
-                ? values.get(getGPUOperationValueName(shape.like))
-                : undefined;
-            if (shape && 'like' in shape && !(template instanceof GPUVector))
+              shape && 'like' in shape ? getShape(getGPUOperationValueName(shape.like)) : undefined;
+            if (shape && 'like' in shape && !template)
               throw new Error(`Missing shape input ${getGPUOperationValueName(shape.like)}`);
-            const chunks =
-              template instanceof GPUVector
-                ? template.data.map(chunk => chunk.length)
-                : shape && 'length' in shape
-                  ? (shape.chunkLengths ?? declaration.chunkLengths ?? [shape.length])
-                  : (declaration.chunkLengths ??
-                    (declaration.length === undefined ? undefined : [declaration.length]));
+            const chunks = template
+              ? template.chunkLengths
+              : shape && 'length' in shape
+                ? (shape.chunkLengths ?? declaration.chunkLengths ?? [shape.length])
+                : (declaration.chunkLengths ??
+                  (declaration.length === undefined ? undefined : [declaration.length]));
             if (use.access === 'read-write' && !(existing instanceof GPUVector))
               throw new Error(`Missing read-write binding ${declaration.id}`);
             if (use.access === 'read-write' && target !== existing)
@@ -390,34 +430,36 @@ export class GPUExpressionProgram {
               validateWritableTarget(declaration.id, target, values);
               values.set(declaration.id, target);
             } else {
-              const output = allocateVector(device, declaration.id, chunks!, declaration.format);
-              owned.add(output);
-              values.set(declaration.id, output);
+              allocateOutput(declaration.id, chunks!, declaration.format);
             }
           }
           continue;
         }
         const plan = this.expressions.find(expression => expression.operation === operation)!;
-        const vectorInputs: GPUVector[] = [];
+        const vectorInputs: GPUExpressionVectorShape[] = [];
         for (const name of plan.references) {
           const value = values.get(name);
-          if (value === undefined && !plan.gpuScalarInputs.includes(name))
+          if (
+            value === undefined &&
+            !transientVectors.has(name) &&
+            !plan.gpuScalarInputs.includes(name)
+          )
             throw new Error(`Missing execution binding ${name}`);
-          if (value instanceof GPUVector && this.vectors.some(vector => vector.id === name))
-            vectorInputs.push(value);
+          const shape = getShape(name);
+          if (shape && this.vectors.some(vector => vector.id === name)) vectorInputs.push(shape);
         }
         const declaration = this.vectors.find(value => value.id === plan.operation.output);
         const template = vectorInputs[0];
         const chunkLengths = declaration
-          ? (template?.data.map(chunk => chunk.length) ??
+          ? (template?.chunkLengths ??
             declaration.chunkLengths ??
             (declaration.length === undefined ? undefined : [declaration.length]))
           : [1];
         if (!chunkLengths) throw new Error(`Cannot infer length of ${plan.operation.output}`);
         for (const vector of vectorInputs) {
           if (
-            vector.data.length !== chunkLengths.length ||
-            vector.data.some((chunk, index) => chunk.length !== chunkLengths[index])
+            vector.chunkLengths.length !== chunkLengths.length ||
+            vector.chunkLengths.some((length, index) => length !== chunkLengths[index])
           )
             throw new Error(
               `Expression ${plan.operation.id} requires matching vector chunk boundaries`
@@ -438,9 +480,7 @@ export class GPUExpressionProgram {
           validateWritableTarget(plan.operation.output, target, values);
           values.set(plan.operation.output, target);
         } else {
-          const output = allocateVector(device, plan.operation.output, chunkLengths, plan.format);
-          owned.add(output);
-          values.set(plan.operation.output, output);
+          allocateOutput(plan.operation.output, chunkLengths, plan.format);
         }
       }
       for (const name of Object.keys(options.outputTargets ?? {})) {
@@ -477,7 +517,7 @@ export class GPUExpressionProgram {
           values.set(name, output);
         }
       }
-      return new GPUExpressionInvocation(this, values, owned);
+      return new GPUExpressionInvocation(this, values, owned, transientVectors);
     } catch (error) {
       for (const vector of owned) vector.destroy();
       throw error;
@@ -524,7 +564,8 @@ export class GPUExpressionInvocation {
   constructor(
     readonly program: GPUExpressionProgram,
     readonly values: Map<string, GPUVector | number>,
-    private readonly owned: Set<GPUVector>
+    private readonly owned: Set<GPUVector>,
+    readonly transientVectors: ReadonlyMap<string, GPUExpressionVectorShape> = new Map()
   ) {}
   getOutputs(): Record<string, GPUVector> {
     const outputs: Record<string, GPUVector> = Object.create(null);

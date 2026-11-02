@@ -5,7 +5,8 @@ Both `GPUGraph` and `GPUSimpleGraph` accept it through `graph.add()`. Expression
 with `@math.gl/expressions`; its JavaScript evaluator is not used to execute GPU work.
 The same expression works on WebGL through SimpleGraph and on WebGPU through either graph.
 
-This page is the expression syntax reference as well as the operation API guide.
+This page is the expression syntax reference as well as the operation API guide. For the complete
+authoring and execution lifecycle, start with [Getting started](./getting-started.md).
 
 - [Syntax at a glance](#syntax-at-a-glance)
 - [Types and broadcasting](#typed-rows-and-component-wise-execution)
@@ -44,9 +45,8 @@ compiled.destroy();
 ```
 
 Declarations contain types, not data. An omitted vector length is resolved from execution
-bindings. An explicit length, such as `graph.vector('positions', 'float32', {length: 1024})`, constrains
-all executions. Inputs are borrowed `GPUVector` objects or numeric scalar values. This first
-subset uses float32, sint32, and uint32 scalars and packed vector rows of one to four components
+bindings. An explicit length, such as `gpuGraph.vector('float32', {length: 1024})` passed to `addInput()`,
+constrains all executions. Inputs are borrowed `GPUVector` objects or numeric scalar values. Expressions use float32, sint32, and uint32 scalars and packed vector rows of one to four components
 (`float32`, `float32x2`, `float32x3`, `float32x4`, and corresponding integer formats).
 Arithmetic operands must have float32 components; use explicit casts for integer inputs.
 

@@ -83,7 +83,7 @@ export class CompiledGPUGraph {
     const resolvedBindings = this.program.resolveBindings(supplied, options);
     const bindings = resolvedBindings.bindings;
     options = resolvedBindings.options;
-    const invocation = this.program.prepare(this.device, bindings, options);
+    const invocation = this.program.prepare(this.device, bindings, options, true);
     let executable: CompiledGPUCommandGraph | undefined;
     try {
       const resolved = new GPUGraph();
@@ -99,6 +99,20 @@ export class CompiledGPUGraph {
       }
       for (const vector of this.program.vectors) {
         const binding = vectors[vector.id];
+        const transient = invocation.transientVectors.get(vector.id);
+        if (transient) {
+          resolved.addDeclaration(
+            vector.id,
+            {
+              type: 'vector',
+              format: vector.format,
+              length: transient.length,
+              chunkLengths: transient.chunkLengths
+            },
+            'value'
+          );
+          continue;
+        }
         if (!binding && vector.length === undefined)
           throw new Error(`Missing length or execution binding for ${vector.id}`);
         resolved.vector(vector.id, vector.format, binding?.length ?? vector.length, {

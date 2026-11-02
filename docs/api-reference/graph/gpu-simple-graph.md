@@ -1,9 +1,19 @@
 # GPUSimpleGraph
 
-`@luma.gl/graph/gpu-simple-graph` provides graph composition around existing GPGPU
-operations on WebGL and WebGPU. The existing operations, expression fusion, and
-materialization logic remain the implementation. Evaluator objects are a compatibility
-interface; upload, copy, execution, and output storage can be expressed through the graph.
+`@luma.gl/graph/gpu-simple-graph` provides portable expression execution and the lazy evaluator
+API on WebGL and WebGPU. Evaluator operations and their fusion/caching behavior remain available.
+
+## Choose an authoring mode
+
+| Mode | Authoring and compilation | Result ownership |
+| --- | --- | --- |
+| Reusable named expressions | `new GPUSimpleGraph()`, `addInput()`, `GPUExpressionOperation`, `compile(device)` | Allocated results returned by `run()` belong to the caller |
+| Evaluator-backed recipes | `new GPUSimpleGraph(device)`, `addValue()` or upload/copy operations, `compile()` | Generated recipe results belong to the compiled graph |
+
+Use reusable expressions when supplying new input vectors on each run. Use evaluator recipes
+for the broader evaluator operation set and lazy materialization. Do not mix the modes in one
+graph. The reusable path rejects state and custom full-graph lowerings; the evaluator path
+rejects declaration-based inputs/state. `GPUGraph` has a separate WebGPU execution implementation.
 
 ## Reusable declaration-based expressions
 
@@ -16,9 +26,9 @@ See [Graph inputs, results, and state](./gpu-graph-values.md); state execution r
 The expression reference documents the shared interface with `GPUGraph`, supported syntax,
 and caller-owned output results. The evaluator-based APIs below remain available unchanged.
 
-## Author expressions with graph values
+## Evaluator-backed graph values
 
-New code can use graph values instead of constructing or managing evaluators:
+Evaluator recipes can use graph values instead of directly constructing evaluators:
 
 ```typescript
 import {
@@ -64,8 +74,8 @@ graph.addValue('scaled', chunks);
 Use `new GPUSimpleGraphValueOperation({id, value})` when composing with operation arrays
 or shared composite groups. `compiled.outputs` and `addEvaluator()` remain compatibility
 interfaces for existing evaluator users; new consumers use the GPUVectors returned by `run()`.
-No GPGPU exports are removed or deprecated in this first phase. Dynamic input rebinding,
-full GPUCommandGraph lowering, and migration of legacy table-viewer readback adapters remain follow-ups.
+Evaluator exports remain supported. These recipes do not provide runtime input rebinding or
+full command-graph lowering; use the reusable expression mode for changing input bindings.
 
 ## Upload and copy
 

@@ -13,6 +13,10 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
   <DocumentationBadge tone="webgpu">WebGPU required</DocumentationBadge>
 </DocumentationBadges>
 
+For application code using named inputs and operation-defined results, start with the
+[graph tutorial](/docs/api-reference/graph/getting-started). This section goes deeper into
+command graphs, algorithms, and execution infrastructure beneath that interface.
+
 ## Overview
 
 GPU Core is the experimental WebGPU dataflow and scheduling layer in
