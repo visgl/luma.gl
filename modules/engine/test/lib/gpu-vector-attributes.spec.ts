@@ -100,6 +100,13 @@ for (const backend of ['webgl', 'webgpu'] as const) {
       isInstanced: true,
       geometry: new GPUVectorGeometry({attributes: {positions}, topology: 'triangle-strip'})
     });
+    model.setAttributeVectors({instancePositions, instancePositions64Low: low, colors});
+    // Geometry, varying instances, and all constants need only three layouts.
+    expect(model.bufferLayout).toHaveLength(3);
+    const inferredPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
+    expect(model.draw(inferredPass)).toBe(true);
+    inferredPass.end();
+    device.submit();
     model.setGPUAttributes({instancePositions, instancePositions64Low: low, colors}, layouts);
     expect(model.vertexCount).toBe(4);
     expect(model.instanceCount).toBe(2);
