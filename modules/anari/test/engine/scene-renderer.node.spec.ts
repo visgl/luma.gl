@@ -427,7 +427,7 @@ void main(void) {
 });
 
 describe('SceneRenderer', () => {
-  test('adapts incoming directional lights and additive ambient radiance at the forward PBR boundary', async () => {
+  test('preserves directional lights and combines additive ambient radiance at the forward PBR boundary', async () => {
     const device = await getNullTestDevice();
     const renderer = new InspectableSceneRenderer(device);
     const surface: SceneSurface = {
@@ -478,7 +478,7 @@ describe('SceneRenderer', () => {
       });
       expect(lighting.lights[0].position).toEqual([2, 3, 4]);
       expect(lighting.lights[1].direction).toEqual([0, -1, 0]);
-      expect(lighting.lights[2].direction).toEqual([-0.4, 0.6, 1]);
+      expect(lighting.lights[2].direction).toEqual([0.4, -0.6, -1]);
       expect(lighting.ambientColor).toEqual([0.25, 0.4, 0]);
       expect(options.lights?.[0]).toBe(redAmbientLight);
       expect(options.lights?.[4]).toBe(greenAmbientLight);
