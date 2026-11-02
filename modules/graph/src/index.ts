@@ -208,3 +208,6 @@ export type {
   GPUGraphOutput,
   GPUGraphOutputs
 } from './gpu-core/gpu-texture-plan';
+
+export {GPUEffect, appendEffects} from './gpu-core/gpu-effect';
+export type {GPUEffectProps, GPUEffectBinding, AppendEffectsOptions} from './gpu-core/gpu-effect';

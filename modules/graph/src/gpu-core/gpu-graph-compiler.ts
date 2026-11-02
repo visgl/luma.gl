@@ -68,6 +68,8 @@ export type GPUGraphBindings = {
   scalars?: Readonly<Record<string, number>>;
   vectors?: Readonly<Record<string, GPUVectorInput>>;
   textures?: Readonly<Record<string, GraphImportedTexture | TextureView>>;
+  /** @internal Lifetime-proven aliases of invocation-owned textures. */
+  textureAliases?: ReadonlyMap<string, string>;
 };
 export type GPUGraphLoweredNode = {
   nodeId: string;
@@ -289,9 +291,14 @@ export class GPUGraphCompiler<Parameters = void> {
           samples: binding.samples
         };
       }
-      const handle = texture.external
-        ? graph.importTexture(descriptor, binding)
-        : graph.createTransientTexture(descriptor);
+      const alias = bindings.textureAliases?.get(texture.id);
+      const sharedHandle = alias ? textures.get(alias) : undefined;
+      if (alias) assert(sharedHandle && binding === bindings.textures?.[alias]);
+      const handle =
+        sharedHandle ??
+        (texture.external
+          ? graph.importTexture(descriptor, binding)
+          : graph.createTransientTexture(descriptor));
       textures.set(texture.id, handle);
     }
     const state: LoweringState = {

@@ -157,7 +157,12 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
         textures[texture.id] = binding;
       }
       resolved.add(this.program.operations);
-      const compilation = this.compiler.compile(resolved, {vectors, scalars, textures});
+      const compilation = this.compiler.compile(resolved, {
+        vectors,
+        scalars,
+        textures,
+        textureAliases: invocation.textures!.aliases
+      });
       for (const scalar of this.program.scalars) {
         const target = invocation.values.get(scalar.id);
         if (!(target instanceof GPUVector)) continue;

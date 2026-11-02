@@ -266,6 +266,7 @@ Target Release Date: Q3, 2026
 
 **General**
 
+- **Composable graph effects** - Link independent shader-pass fragments before compilation and automatically reuse compatible private textures across effects. See [GPUEffect](/docs/api-reference/graph/gpu-effect).
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 

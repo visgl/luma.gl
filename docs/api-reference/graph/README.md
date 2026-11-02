@@ -15,8 +15,9 @@ description: Describe GPU computations, bind data, and compose execution with re
 3. [Expression syntax](./gpu-expression-operation.md): arithmetic, functions, casts, components, and typed rows.
 4. [Upload and copy](./gpu-transfer-operations.md) and [capacity/count results](./gpu-compaction-operation.md): data movement and GPU-sized selection.
 5. [Texture values](./gpu-graph-textures.md) and [fullscreen shader passes](./gpu-shader-pass-operation.md): image inputs, operation-owned results, and shared WebGPU effects.
-6. [Operation contracts](./gpu-operation.md): extend the graph with explicit logical effects and lowerings.
-7. [Command-graph concepts](/docs/api-reference/experimental/gpu-core/concepts): scheduling and physical resources when implementing a lowering or diagnosing execution.
+6. [Composable effects](./gpu-effect.md): link independent fragments and automatically reuse private textures.
+7. [Operation contracts](./gpu-operation.md): extend the graph with explicit logical effects and lowerings.
+8. [Command-graph concepts](/docs/api-reference/experimental/gpu-core/concepts): scheduling and physical resources when implementing a lowering or diagnosing execution.
 
 ## Choose an interface
 

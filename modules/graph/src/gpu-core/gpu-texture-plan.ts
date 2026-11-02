@@ -105,16 +105,22 @@ const TEXTURE_USAGE: Record<GraphTextureUsage, number> = {
 export class GPUTextureInvocation {
   readonly values = new Map<string, GPUGraphTextureBinding>();
   private readonly owned = new Set<Texture>();
+  /** Compiler-proven aliases only; caller bindings are never included. */
+  readonly aliases = new Map<string, string>();
   constructor(
     device: Device,
     declarations: readonly GPUGraphTexture[],
     contracts: readonly GPUOperationContract[],
     bindings: Readonly<Record<string, GPUVector | number | GPUGraphTextureBinding>>,
-    targets: Readonly<Record<string, GPUGraphOutput>>
+    targets: Readonly<Record<string, GPUGraphOutput>>,
+    outputs: readonly string[] = [],
+    reuse = false
   ) {
     const usages = new Map<string, number>();
     const writable = new Set<string>();
-    for (const contract of contracts)
+    const lifetimes = new Map<string, {first: number; last: number}>();
+    const allocations: {texture: Texture; name: string; key: string; last: number}[] = [];
+    for (const [index, contract] of contracts.entries())
       for (const use of contract.values) {
         const name = getGPUOperationValueName(use.value);
         if (!declarations.some(value => value.id === name)) continue;
@@ -130,6 +136,9 @@ export class GPUTextureInvocation {
         );
         usages.set(name, (usages.get(name) ?? 0) | TEXTURE_USAGE[usage]);
         if (use.access !== 'read') writable.add(name);
+        const lifetime = lifetimes.get(name);
+        if (lifetime) lifetime.last = index;
+        else lifetimes.set(name, {first: index, last: index});
       }
     try {
       const pending = new Set(declarations);
@@ -187,17 +196,46 @@ export class GPUTextureInvocation {
             assert(
               Number.isSafeInteger(width) && width > 0 && Number.isSafeInteger(height) && height > 0
             );
-            const texture = device.createTexture({
-              id: declaration.id,
-              format: descriptor.format,
+            const physicalUsage = usage | (samples === 1 ? Texture.COPY_SRC : 0) | Texture.SAMPLE;
+            const key = JSON.stringify([
+              descriptor.format,
               dimension,
               width,
               height,
-              depth: depth ?? 1,
+              depth ?? 1,
               mipLevels,
               samples,
-              usage: usage | (samples === 1 ? Texture.COPY_SRC : 0) | Texture.SAMPLE
-            });
+              physicalUsage
+            ]);
+            const lifetime = lifetimes.get(declaration.id);
+            const transient =
+              reuse &&
+              declaration.role === 'value' &&
+              !outputs.includes(declaration.id) &&
+              lifetime;
+            const allocation =
+              transient &&
+              allocations.find(
+                candidate => candidate.key === key && candidate.last < lifetime.first
+              );
+            const texture = allocation
+              ? allocation.texture
+              : device.createTexture({
+                  id: declaration.id,
+                  format: descriptor.format,
+                  dimension,
+                  width,
+                  height,
+                  depth: depth ?? 1,
+                  mipLevels,
+                  samples,
+                  usage: physicalUsage
+                });
+            if (allocation) {
+              allocation.last = lifetime!.last;
+              this.aliases.set(declaration.id, allocation.name);
+            } else if (transient)
+              allocations.push({texture, name: declaration.id, key, last: lifetime.last});
             this.owned.add(texture);
             binding = texture;
           }
@@ -223,11 +261,16 @@ export class GPUTextureInvocation {
         }
         assert(progress); // Missing or cyclic texture extent dependency.
       }
-      // Conservative alias policy: writable values cannot share backing storage with another value.
+      // Only lifetime-proven compiler allocations may alias; borrowed bindings remain disjoint.
       for (const name of writable) {
         const texture = getTextureBindingInfo(this.values.get(name)!).texture;
         for (const [otherName, value] of this.values)
-          assert(name === otherName || getTextureBindingInfo(value).texture !== texture);
+          assert(
+            name === otherName ||
+              getTextureBindingInfo(value).texture !== texture ||
+              (this.owned.has(texture) &&
+                (this.aliases.get(name) ?? name) === (this.aliases.get(otherName) ?? otherName))
+          );
       }
     } catch (error) {
       this.destroy();
