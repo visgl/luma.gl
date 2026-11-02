@@ -239,17 +239,17 @@ it('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summ
     summary,
     'summary is derived from the registry rather than copied into documentation'
   ).toEqual({
-    total: 44,
+    total: 48,
     supported: 27,
-    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 7, 'loader-only': 10, none: 7},
+    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 7, 'loader-only': 10, none: 11},
     byStandardStatus: {
-      ratified: 26,
+      ratified: 27,
       'release-candidate': 2,
       'multi-vendor': 2,
       vendor: 1,
       draft: 11,
       archived: 2,
-      unknown: 0
+      unknown: 3
     }
   });
   expect(
@@ -261,4 +261,25 @@ it('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summ
     extensions.find(extension => extension.extensionName === 'MSFT_lod')?.standardStatus,
     'vendor extensions retain their source maturity'
   ).toBe('vendor');
+});
+
+it('gltf registry reports new ratified extensions without claiming runtime support', () => {
+  const extensions = getRegisteredGLTFExtensions();
+  for (const name of [
+    'KHR_gaussian_splatting',
+    'KHR_interactivity',
+    'KHR_node_selectability',
+    'KHR_node_hoverability'
+  ]) {
+    expect(extensions.find(extension => extension.extensionName === name)).toMatchObject({
+      standardStatus: 'ratified',
+      supportLevel: 'none',
+      supported: false
+    });
+  }
+  for (const name of ['EXT_texture_avif', 'EXT_mesh_features', 'EXT_structural_metadata']) {
+    expect(extensions.find(extension => extension.extensionName === name)?.standardStatus).toBe(
+      'unknown'
+    );
+  }
 });
