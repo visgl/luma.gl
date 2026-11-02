@@ -325,7 +325,11 @@ export function getLocalGaussianSplatLoadersConfiguration(
     if (!loadersRoot) {
       throw new Error('Start the showcase with VITE_LOADERS_GL_ROOT=/path/to/loaders.gl.');
     }
-  } else if (!loaderBundleUrl && parameters.get('scene') !== 'gltf-fixture') {
+  } else if (
+    !loaderBundleUrl &&
+    parameters.get('scene') !== 'gltf-fixture' &&
+    !parameters.get('source')?.toLowerCase().split('?')[0].endsWith('.glb')
+  ) {
     return undefined;
   }
 
@@ -350,8 +354,8 @@ export function getLocalGaussianSplatLoadersConfiguration(
             )
           }
         : {}),
-      upAxis: 'z',
-      up: [0, 0, 1]
+      upAxis: sourceFormat === 'GLB' ? 'y' : 'z',
+      up: sourceFormat === 'GLB' ? [0, 1, 0] : [0, 0, 1]
     };
   }
 

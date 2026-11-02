@@ -130,6 +130,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private frameIndex = 0;
   private startTimeMilliseconds: number | null = null;
   private cameraTarget: [number, number, number] = [0, 0, 0];
+  private gltfWorldMatrix: Matrix4 | undefined;
   private readonly cameraFrame: GaussianSplatCameraFrame;
   private cameraSceneRadius = INITIAL_CAMERA_DISTANCE / 2;
   private cameraHomeDistance = INITIAL_CAMERA_DISTANCE;
@@ -438,7 +439,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
-  /** Loads a single identity-placed glTF Gaussian primitive into the existing showcase renderer. */
+  /** Loads a single glTF Gaussian instance into the existing showcase renderer. */
   private async loadGLTFSplatData(
     configuration: LocalGaussianSplatLoadersConfiguration
   ): Promise<void> {
@@ -474,14 +475,16 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     try {
       groups = await arrowModule.makeGPUSplatDataFromGLTFScene(this.device, gltf, {signal});
       const instances = arrowModule.getGLTFSplatSceneInstances(scenegraphs, groups);
-      const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-      if (
-        instances.length !== 1 ||
-        instances[0].worldMatrix.some((value, index) => value !== identity[index])
-      ) {
-        throw new Error('The glTF showcase currently requires one identity-placed splat instance.');
+      if (instances.length !== 1) {
+        throw new Error('The glTF showcase currently requires one visible splat instance.');
+      }
+      const worldMatrix = new Matrix4(instances[0].worldMatrix);
+      if (Math.abs(worldMatrix.determinant()) < 1e-12) {
+        throw new Error('The glTF showcase requires an invertible node transform.');
       }
       signal.throwIfAborted();
+      this.gltfWorldMatrix = worldMatrix;
+      this.previousCameraState = undefined;
       const batches = groups[0]?.batches ?? [];
       if (!batches.length) throw new Error('The glTF scene does not contain any Gaussian splats.');
       for (const batch of batches) this.appendRendererBatch(batch);
@@ -498,6 +501,8 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       try {
         if (groups.length && !(this.renderer instanceof GPUPagedSplatRenderer)) {
           this.renderer.setProps({data: []});
+          this.gltfWorldMatrix = undefined;
+          this.previousCameraState = undefined;
         }
       } finally {
         for (const group of groups) for (const batch of group.batches) batch.destroy();
@@ -771,11 +776,19 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       up: rolledCameraUp
     });
     const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
+    let rendererCameraPosition = cameraPosition;
+    if (this.gltfWorldMatrix) {
+      modelViewProjectionMatrix.multiplyRight(this.gltfWorldMatrix);
+      const localCamera = new Matrix4(this.gltfWorldMatrix)
+        .invert()
+        .transformAsPoint(cameraPosition);
+      rendererCameraPosition = [localCamera[0], localCamera[1], localCamera[2]];
+    }
     const cameraProps: Pick<SplatRendererProps, 'modelViewProjectionMatrix' | 'viewportSize'> = {
       modelViewProjectionMatrix,
       viewportSize: [cameraState.viewportWidth, cameraState.viewportHeight]
     };
-    this.renderer.setProps({...cameraProps, cameraPosition});
+    this.renderer.setProps({...cameraProps, cameraPosition: rendererCameraPosition});
     this.hierarchyView = {
       cameraPosition,
       modelViewProjectionMatrix,
@@ -855,9 +868,15 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         positionIndex < positions.length;
         positionIndex += sampleStride * 3
       ) {
-        const positionX = positions[positionIndex];
-        const positionY = positions[positionIndex + 1];
-        const positionZ = positions[positionIndex + 2];
+        const position = [
+          positions[positionIndex],
+          positions[positionIndex + 1],
+          positions[positionIndex + 2]
+        ];
+        const worldPosition = this.gltfWorldMatrix
+          ? this.gltfWorldMatrix.transformAsPoint(position)
+          : position;
+        const [positionX, positionY, positionZ] = worldPosition;
         if (
           Number.isFinite(positionX) &&
           Number.isFinite(positionY) &&
