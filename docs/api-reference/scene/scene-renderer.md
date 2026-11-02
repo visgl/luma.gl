@@ -37,7 +37,9 @@ device.submit();
 controller and frame-loop code. `ScenegraphRenderOptions` uses `scene` instead of the
 low-level `id` and `surfaces` fields. Caches are scoped by root **object identity**; duplicate
 node IDs do not alias compiled resources or picking identities. Shared geometry/material/
-producer combinations are instanced, and inherited visibility is respected.
+producer combinations are instanced for opaque/masked meshes, and inherited visibility is
+respected. CPU-transformed blended leaves stay in separate surfaces so they can be sorted
+back to front against other transparent objects.
 
 `SceneMeshNode` extends engine `GeometryNode` and adds a `SceneMaterial`, an optional
 `environment` reflection probe, and an advanced `connection` descriptor. The renderer owns

@@ -60,7 +60,13 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
     !options.rasterPass &&
     !options.spotShadows &&
     options.surfaces.every(surface => {
-      if (surface.gpuTransforms) return false;
+      if (
+        surface.gpuTransforms ||
+        surface.environment?.diffuseTexture ||
+        surface.environment?.specularTexture ||
+        surface.environment?.brdfLUTTexture
+      )
+        return false;
       const uniforms = surface.material.uniforms || {};
       const bindings = surface.material.bindings || {};
       return (

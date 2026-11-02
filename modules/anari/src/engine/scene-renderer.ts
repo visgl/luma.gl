@@ -185,7 +185,7 @@ export type SceneRenderOptions = {
   /** Spot shadow slots correspond to the order of spot lights in lights. WebGPU only. */
   spotShadows?: {spotLights: readonly SpotShadowLight[]; mapSize?: number};
   /** Shared geometry/deformation path for depth and identity targets. WebGPU only. */
-  rasterPass?: 'color' | 'depth' | 'picking';
+  rasterPass?: 'depth' | 'picking';
   /** Internal raster bias supplied by the shared shadow renderer. */
   rasterParameters?: ShadowRenderView['rasterParameters'];
 };
@@ -453,6 +453,7 @@ export class SceneRenderer {
       const values = new Uint8Array(bytes.buffer, bytes.byteOffset, 4);
       return nodes.get(values[0] | (values[1] << 8) | (values[2] << 16));
     } finally {
+      this.pickNodes.clear();
       this.destroyFrame(identifier);
       readback.destroy();
       framebuffer.destroy();
@@ -541,6 +542,9 @@ export class SceneRenderer {
     for (const frameIdentifier of Array.from(this.frames.keys())) {
       this.destroyFrame(frameIdentifier);
     }
+    // Failed preparation can leave a shadow allocation without a presented frame.
+    for (const renderer of this.shadowMaps.values()) renderer.destroy();
+    this.shadowMaps.clear();
   }
 
   /** Creates or updates all models and uploads uniforms before a render pass begins. */

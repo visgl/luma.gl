@@ -6,7 +6,7 @@ import {assert} from '@luma.gl/core';
 import {GroupNode, type ScenegraphNode, type ScenegraphTransformFrame} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {SceneMeshNode} from './scene-mesh-node';
-import type {SceneSurface} from './scene-renderer';
+import {getSceneAlphaMode, type SceneSurface} from './scene-renderer';
 
 type MutableSurface = Omit<SceneSurface, 'transforms' | 'nodes' | 'gpuTransforms'> & {
   transforms: Matrix4[];
@@ -65,7 +65,9 @@ export class ScenegraphSurfaces {
           this.getIdentifier(node.geometry),
           this.getIdentifier(node.material),
           node.environment ? this.getIdentifier(node.environment) : 0,
-          usesGPU ? this.getIdentifier(frame!.matrices) : 0
+          usesGPU ? this.getIdentifier(frame!.matrices) : 0,
+          // Blended leaves must sort independently, including against other materials.
+          getSceneAlphaMode(node.material) === 'BLEND' ? this.getIdentifier(node) : 0
         ].join('-');
         let surface = surfaces.get(key);
         if (!surface) {

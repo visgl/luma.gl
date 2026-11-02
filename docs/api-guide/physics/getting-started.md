@@ -11,11 +11,12 @@ need to write a physics shader or copy positions back to JavaScript each frame.
 
 This guide uses **WebGPU**, an existing luma.gl `device`, and three layers:
 
-| Layer | What you describe | What it manages |
-| --- | --- | --- |
-| Scenegraph | Objects, local placement, geometry and materials | Hierarchy and stable node identity |
-| `PhysicsController` | Which objects move and how they collide | Geometry cooking, fixed steps and GPU pose publication |
-| `SceneRenderer` | Camera, lights and render target | PBR models, instance batches and GPU transform bindings |
+- **Scenegraph:** describes objects, their local placement, geometry and materials. It keeps
+  the hierarchy and stable node identities.
+- **`PhysicsController`:** describes which objects move and how they collide. It prepares
+  colliders, advances fixed steps and publishes GPU poses.
+- **`SceneRenderer`:** receives the camera, lights and target. It manages PBR models,
+  batches compatible meshes and binds their evaluated transforms.
 
 For device setup, see [GPU initialization](/docs/api-guide/gpu/gpu-initialization).
 

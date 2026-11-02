@@ -4,7 +4,13 @@
 
 import {Buffer, Texture} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {CubeGeometry, GroupNode, Model, type ScenegraphTransformFrame} from '@luma.gl/engine';
+import {
+  CubeGeometry,
+  Geometry,
+  GroupNode,
+  Model,
+  type ScenegraphTransformFrame
+} from '@luma.gl/engine';
 import {PhysicsController} from '@luma.gl/engine/physics';
 import {SceneRenderer, SceneMeshNode, DeferredSceneRenderer} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core';
@@ -335,6 +341,78 @@ test('spot shadows bind opaque capture models before physical transmission sampl
     const pixel = await readback.readAsync();
     expect(pixel[0]).toBeGreaterThan(pixel[1] * 2);
     expect(pixel[0]).toBeGreaterThan(100);
+  } finally {
+    renderer.destroy();
+    framebuffer.destroy();
+    color.destroy();
+    readback.destroy();
+    scene.destroy();
+  }
+});
+
+test('blended scenegraph leaves sort independently against an interleaved material', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const geometry = new Geometry({
+    topology: 'triangle-list',
+    attributes: {
+      POSITION: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, 0, 1, 0])}
+    }
+  });
+  const red = {
+    id: 'red-blend',
+    alphaMode: 'BLEND' as const,
+    uniforms: {unlit: true, baseColorFactor: [1, 0, 0, 0.5]}
+  };
+  const green = {
+    id: 'green-blend',
+    alphaMode: 'BLEND' as const,
+    uniforms: {unlit: true, baseColorFactor: [0, 1, 0, 0.5]}
+  };
+  // Deliberately author near-first, far-second; the green object belongs between them.
+  const scene = new GroupNode({
+    children: [
+      new SceneMeshNode({geometry, material: red, position: [0, 0, 0.5]}),
+      new SceneMeshNode({geometry, material: red, position: [0, 0, -0.5]}),
+      new SceneMeshNode({geometry, material: green})
+    ]
+  });
+  const renderer = new SceneRenderer(device);
+  const color = device.createTexture({
+    width: 32,
+    height: 32,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER | Texture.COPY_SRC
+  });
+  const framebuffer = device.createFramebuffer({
+    width: 32,
+    height: 32,
+    colorAttachments: [color],
+    depthStencilAttachment: 'depth24plus'
+  });
+  const readback = device.createBuffer({
+    byteLength: color.computeMemoryLayout({width: 1, height: 1}).byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 3], center: [0, 0, 0], up: [0, 1, 0]});
+    const projectionMatrix = new Matrix4([
+      1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
+    ]).multiplyRight(new Matrix4().perspective({fovy: Math.PI / 3, aspect: 1, near: 0.1, far: 10}));
+    expect(
+      renderer.render({
+        scene,
+        framebuffer,
+        camera: {viewMatrix, projectionMatrix, position: [0, 0, 3]},
+        background: [0, 0, 0, 1],
+        toneMapMode: 0,
+        outputColorSpace: 'linear'
+      }).drawCount
+    ).toBe(3);
+    device.submit();
+    color.readBuffer({x: 16, y: 16, width: 1, height: 1}, readback);
+    const pixel = await readback.readAsync();
+    expect(pixel[0]).toBeGreaterThan(pixel[1] * 1.5);
   } finally {
     renderer.destroy();
     framebuffer.destroy();
