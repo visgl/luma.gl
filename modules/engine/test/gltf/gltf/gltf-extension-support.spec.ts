@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {readFile} from 'node:fs/promises';
+import {parse} from '@loaders.gl/core';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {
   type GLTFPostprocessed,
+  postProcessGLTF,
   assertSupportedGLTFExtensions,
   createScenegraphsFromGLTF,
   getGLTFExtensionSupport,
@@ -20,26 +24,51 @@ class CompressedTextureNullDevice extends NullDevice {
   }
 }
 
-it('strict extension validation rejects before creating GPU resources', () => {
-  const device = new NullDevice({});
+it('strict extension validation rejects before creating GPU resources', async () => {
+  const data = await readFile(new URL('../data/CubeVisibility.glb', import.meta.url));
+  const gltf = postProcessGLTF(await parse(data, GLTFLoader, {gltf: {loadImages: false}}));
+  const image = {
+    compressed: true,
+    mipmaps: true,
+    data: [{data: new Uint8Array(16), width: 4, height: 4, textureFormat: 'bc7-rgba-unorm'}]
+  };
+  for (const material of gltf.materials) {
+    material.pbrMetallicRoughness = {
+      ...material.pbrMetallicRoughness,
+      baseColorTexture: {id: 'image', texture: {source: {image}, sampler: {parameters: {}}}} as any
+    };
+  }
+  for (const mesh of gltf.meshes) {
+    for (const primitive of mesh.primitives) {
+      const position = primitive.attributes['POSITION'];
+      primitive.attributes['TEXCOORD_0'] = {
+        ...position,
+        components: 2,
+        value: new Float32Array(position.count * 2)
+      };
+    }
+  }
+  gltf.extensionsUsed = [...(gltf.extensionsUsed || []), 'VENDOR_optional'];
+  gltf.extensionsRequired = [...(gltf.extensionsRequired || []), 'VENDOR_missing'];
+
+  const device = new CompressedTextureNullDevice({});
   const createBuffer = vi.spyOn(device, 'createBuffer');
   const createTexture = vi.spyOn(device, 'createTexture');
-  const createSampler = vi.spyOn(device, 'createSampler');
-  const gltf = {
-    extensionsUsed: ['VENDOR_optional'],
-    extensionsRequired: ['VENDOR_missing'],
-    nodes: [],
-    materials: [],
-    textures: []
-  } as unknown as GLTFPostprocessed;
   try {
     expect(() => createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})).toThrow(
       /VENDOR_missing: Not currently listed/
     );
     expect(createBuffer).not.toHaveBeenCalled();
     expect(createTexture).not.toHaveBeenCalled();
-    expect(createSampler).not.toHaveBeenCalled();
     expect(getGLTFExtensionSupport(gltf).get('VENDOR_optional')?.required).toBe(false);
+
+    const scenegraphs = createScenegraphsFromGLTF(device, gltf, {strictExtensions: false});
+    try {
+      expect(createBuffer).toHaveBeenCalled();
+      expect(createTexture).toHaveBeenCalled();
+    } finally {
+      scenegraphs.destroy();
+    }
   } finally {
     device.destroy();
   }
