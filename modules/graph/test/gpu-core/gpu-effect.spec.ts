@@ -238,3 +238,65 @@ for (const simple of [false, true]) {
     }
   });
 }
+
+for (const simple of [false, true]) {
+  test(`bloom branches blur and downsample a bright quadrant (${simple})`, async ({skip}) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return skip();
+    const pixels = new Uint8Array(4 * 4 * 4);
+    for (let row = 0; row < 4; row++) {
+      for (let column = 0; column < 4; column++) {
+        const value = row >= 2 && column >= 2 ? 255 : 0;
+        pixels.set([value, value, value, 255], (row * 4 + column) * 4);
+      }
+    }
+    const image = device.createTexture({
+      width: 4,
+      height: 4,
+      format: 'rgba8unorm',
+      data: pixels,
+      usage: Texture.SAMPLE | Texture.COPY_DST
+    });
+    // Hand-computed four-neighbor blur, including clamp-to-edge and bilinear upsampling.
+    const expected = [
+      [0, 0, 0, 0, 0, 0, 32, 32, 0, 32, 255, 255, 0, 32, 255, 255],
+      [0, 8, 24, 32, 8, 16, 32, 40, 24, 32, 255, 255, 32, 40, 255, 255]
+    ];
+    try {
+      for (const [index, scale] of [1, 0.5].entries()) {
+        const compiled = compileEffects(device, simple, scale);
+        try {
+          const {result} = await compiled.run({
+            inputs: {color: image, strength: 1, exposure: 1, contrast: 1}
+          });
+          const layout = result.computeMemoryLayout({width: 4, height: 4, depthOrArrayLayers: 1});
+          const staging = device.createBuffer({
+            byteLength: layout.byteLength,
+            usage: Buffer.MAP_READ | Buffer.COPY_DST
+          });
+          try {
+            result.readBuffer({width: 4, height: 4}, staging);
+            const actual = await staging.readAsync();
+            for (let row = 0; row < 4; row++) {
+              for (let column = 0; column < 4; column++) {
+                const offset = row * layout.bytesPerRow + column * 4;
+                for (let channel = 0; channel < 3; channel++)
+                  expect(
+                    Math.abs(actual[offset + channel] - expected[index][row * 4 + column])
+                  ).toBeLessThanOrEqual(1);
+                expect(actual[offset + 3]).toBe(255);
+              }
+            }
+          } finally {
+            staging.destroy();
+            result.destroy();
+          }
+        } finally {
+          compiled.destroy();
+        }
+      }
+    } finally {
+      image.destroy();
+    }
+  });
+}
