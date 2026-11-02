@@ -62,7 +62,9 @@ geometry participates. Declared `ModelNode.instanceMatrices` become compound col
 
 Cooking includes authored transforms and scale. Controller options are authoritative;
 legacy `PhysicsGeometryNode` body/collision fields are not imported automatically. Sheared transforms are rejected. GPU-only
-geometry requires an explicit shape; shaders, skinning, morphing and procedural GPU
+geometry requires an explicit shape, even when CPU-backed siblings could supply only part
+of a compound collider. Inference rejects such incomplete groups instead of omitting their
+GPU-only meshes. Separately registered descendant bodies remain independent. Shaders, skinning, morphing and procedural GPU
 deformation are not evaluated by inference. Geometry, scale, instance, collider-local child-transform and hierarchy edits
 require another `prepare()`. Visual bounds are prepared from CPU geometry as a fallback
 for nodes without bounds; normal node bounds remain authoritative.

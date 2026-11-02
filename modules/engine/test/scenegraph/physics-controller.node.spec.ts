@@ -12,7 +12,8 @@ import {
   GroupNode,
   ScenegraphNode,
   Model,
-  ModelNode
+  ModelNode,
+  GPUVectorGeometry
 } from '@luma.gl/engine';
 import {PhysicsController, PhysicsGeometryNode} from '@luma.gl/engine/physics';
 import {makePhysicsControllerScene} from '../../src/graph/physics/physics-controller-geometry';
@@ -231,5 +232,40 @@ test('flat static floor geometry uses finite triangles instead of an invalid vol
   if (shape?.type === 'triangle-mesh') {
     expect(shape.geometry.minimum).toEqual([-5, 0, -5]);
     expect(shape.geometry.maximum).toEqual([5, 0, 5]);
+  }
+});
+
+test('mixed CPU and GPU-only compound bodies reject incomplete inference', () => {
+  const device = new NullDevice({});
+  const shaders = {
+    vs: '#version 300 es\nvoid main() {gl_Position=vec4(0.0);}',
+    fs: '#version 300 es\nprecision highp float; out vec4 color; void main() {color=vec4(1.0);}'
+  };
+  const cpuModel = new Model(device, {geometry: new CubeGeometry(), ...shaders});
+  const gpuGeometry = new GPUVectorGeometry({attributes: {}, vertexCount: 3});
+  const gpuModel = new Model(device, {geometry: gpuGeometry, ...shaders});
+  const cpuNode = new ModelNode({id: 'cpu-part', model: cpuModel});
+  const gpuNode = new ModelNode({id: 'gpu-part', model: gpuModel});
+  const body = new GroupNode({id: 'body', children: [cpuNode, gpuNode]});
+  const scene = new GroupNode([body]);
+  const definitions = new Map<ScenegraphNode, PhysicsBodyOptions>([[body, {}]]);
+  try {
+    expect(() => makePhysicsControllerScene(scene, definitions, {})).toThrow(
+      'Missing CPU collision geometry for model node gpu-part; supply an explicit collider'
+    );
+    definitions.set(body, {collider: {type: 'box', halfExtents: [1, 1, 1]}});
+    expect(
+      makePhysicsControllerScene(scene, definitions, {}).definition.world.bodies[0].colliders
+    ).toHaveLength(1);
+    definitions.set(body, {});
+    definitions.set(gpuNode, {collider: {type: 'sphere', radius: 1}});
+    const separated = makePhysicsControllerScene(scene, definitions, {});
+    expect(separated.definition.world.bodies).toHaveLength(2);
+    expect(separated.definition.world.bodies[0].colliders).toHaveLength(1);
+    expect(separated.definition.world.bodies[1].colliders).toHaveLength(1);
+  } finally {
+    gpuNode.destroy();
+    cpuNode.destroy();
+    device.destroy();
   }
 });

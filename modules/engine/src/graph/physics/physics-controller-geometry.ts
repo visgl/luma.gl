@@ -121,6 +121,10 @@ export function makePhysicsControllerScene(
         const descendant = descendants.pop()!;
         if (descendant !== node && definitions.has(descendant)) continue;
         const source = geometries.get(descendant);
+        if (!source && descendant instanceof ModelNode)
+          throw new Error(
+            `Missing CPU collision geometry for model node ${descendant.id}; supply an explicit collider`
+          );
         if (source) {
           for (const placement of source.placements)
             colliders.push(
