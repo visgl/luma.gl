@@ -318,7 +318,10 @@ export class GPUExpressionProgram {
       this.textures,
       [...this.contracts.values()],
       bindings,
-      options.outputTargets ?? {}
+      options.outputTargets ?? {},
+      this.outputs,
+      this.contracts.size === this.operations.length &&
+        !this.operations.some(operation => operation instanceof GPUCompositeOperation)
     );
     const values = new Map<string, GPUVector | number>();
     const owned = new Set<GPUVector>();

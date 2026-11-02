@@ -215,3 +215,5 @@ Custom lowerers resolve storage with `resolveTexture()` and views with `resolveT
 
 Reusable `compile(device)` programs also support named texture inputs and operation-produced
 texture results. See [texture values and execution bindings](/docs/api-reference/graph/gpu-graph-textures).
+
+See [GPUEffect and appendEffects](/docs/api-reference/graph/gpu-effect) for linking independently authored fullscreen effects and reusing their private textures.

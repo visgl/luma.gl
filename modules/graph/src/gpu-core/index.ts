@@ -692,3 +692,6 @@ export type {GPUCompactionOperationProps} from './gpu-compaction-operation';
 
 export type {GPUGraphTextureDescriptor, GPUGraphTextureExtent} from './gpu-graph-value';
 export type {GPUGraphTextureBinding, GPUGraphOutput, GPUGraphOutputs} from './gpu-texture-plan';
+
+export {GPUEffect, appendEffects} from './gpu-effect';
+export type {GPUEffectProps, GPUEffectBinding, AppendEffectsOptions} from './gpu-effect';

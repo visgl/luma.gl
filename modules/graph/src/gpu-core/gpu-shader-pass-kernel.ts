@@ -5,6 +5,7 @@
 import {
   assert,
   Buffer,
+  Texture,
   type Binding,
   type CommandEncoder,
   type Device,
@@ -217,7 +218,11 @@ export class GPUShaderPassKernel {
   ) {
     this.validateTextures(textures);
     const inputs = Object.fromEntries(
-      Object.entries(this.operation.inputs).map(([name, value]) => [name, textures.get(value)!])
+      Object.entries(this.operation.inputs).map(([name, value]) => {
+        const binding = textures.get(value)!;
+        // Explicit sampler bindings must not trigger Texture's implicit nameSampler adapter.
+        return [name, binding instanceof Texture ? binding.view : binding];
+      })
     );
     const output = textures.get(this.operation.output)!;
     const info = getTextureBindingInfo(output);

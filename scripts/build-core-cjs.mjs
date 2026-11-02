@@ -83,6 +83,8 @@ const rootGraphExportNames = [
   'GPUUploadOperation',
   'GPUCopyOperation',
   'GPUShaderPassOperation',
+  'GPUEffect',
+  'appendEffects',
   'GPUCompactionOperation',
   'CompiledGPUGraph',
   'GPUCommandGraphAutotuner',
@@ -98,7 +100,7 @@ assert.equal('GPUScan' in rootGraphApi, false);
 process.stdout.write('Verified CommonJS GPU Graph package root identity.\n');
 const graphEsm = await import(new URL('index.js', graphDistributionDirectory));
 const gpuCoreEsm = await import(new URL('gpu-core/index.js', graphDistributionDirectory));
-for (const name of ['GPUExpressionOperation', 'GPUUploadOperation', 'GPUCopyOperation', 'GPUShaderPassOperation', 'GPUCompactionOperation', 'CompiledGPUGraph']) {
+for (const name of ['GPUEffect', 'appendEffects', 'GPUExpressionOperation', 'GPUUploadOperation', 'GPUCopyOperation', 'GPUShaderPassOperation', 'GPUCompactionOperation', 'CompiledGPUGraph']) {
   assert.equal(typeof rootGraphApi[name], 'function');
   assert.equal(rootGraphApi[name], gpuCoreApi[name]);
   assert.equal(graphEsm[name], gpuCoreEsm[name]);
