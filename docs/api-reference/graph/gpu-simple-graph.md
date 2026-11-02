@@ -7,9 +7,12 @@ interface; upload, copy, execution, and output storage can be expressed through 
 
 ## Reusable declaration-based expressions
 
-Use `.scalar()` and `.vector()` to declare inputs and outputs, add a
+Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))`
+to declare external inputs, add a
 [`GPUExpressionOperation`](./gpu-expression-operation.md), and call `compile(device)`.
-Supply actual inputs with `compiled.run(bindings)`. Vector lengths can change between runs.
+Operations infer their results; callers need not declare intermediates.
+Supply actual inputs with `compiled.run({inputs})`. Vector lengths can change between runs.
+See [Graph inputs, results, and state](./gpu-graph-values.md); state execution remains full-graph only.
 The expression reference documents the shared interface with `GPUGraph`, supported syntax,
 and caller-owned output results. The evaluator-based APIs below remain available unchanged.
 

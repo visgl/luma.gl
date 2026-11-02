@@ -4,6 +4,7 @@
 
 import type {DeviceFeature} from '@luma.gl/core';
 import {GPUGraphScalar, GPUGraphVector, GPUGraphTexture} from './gpu-graph-value';
+import type {GPUGraphValueDescriptor} from './gpu-graph-value';
 import type {GPUGraph} from './gpu-graph';
 
 /** A logical declaration or its name; never a bound buffer or command-graph view. */
@@ -21,9 +22,18 @@ export type GPUOperationValueUse = {
   shape?: GPUOperationVectorShape;
 };
 
+export type GPUOperationOutputDeclarations = Readonly<Record<string, GPUGraphValueDescriptor>>;
+export type GPUOperationContractContext = {
+  getValue(name: string): GPUGraphValueDescriptor;
+};
+
 /** Compiler-facing dependencies and outputs, separate from diagnostic metadata. */
 export type GPUOperationContract = {
   values: readonly GPUOperationValueUse[];
+  /** Logical results owned by this operation. Types may depend on earlier logical values. */
+  outputs?:
+    | GPUOperationOutputDeclarations
+    | ((context: GPUOperationContractContext) => GPUOperationOutputDeclarations);
   requiredFeatures?: readonly DeviceFeature[];
 };
 

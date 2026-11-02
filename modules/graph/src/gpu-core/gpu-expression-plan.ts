@@ -5,6 +5,7 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from './gpu-graph';
+import {resolveGPUGraphDeclarations} from './gpu-graph-declarations';
 import {GPUGraphVector, type GPUGraphScalar, type GPUGraphVectorFormat} from './gpu-graph-value';
 import {GPUCompositeOperation, isGPUOperation, type GPUGraphOperation} from './gpu-operation';
 import {GPULoopOperation} from './gpu-control-flow-operation';
@@ -27,6 +28,11 @@ import {
 } from './gpu-operation-contract';
 
 export type GPUGraphRunBindings = Readonly<Record<string, GPUVector | number>>;
+export type GPUGraphExecutionBindings = {
+  inputs?: GPUGraphRunBindings;
+  state?: Readonly<Record<string, GPUVector>>;
+  outputTargets?: Readonly<Record<string, GPUVector>>;
+};
 export type GPUGraphCompileOptions = {
   outputs?: readonly string[];
   lowerings?: readonly GPUOperationLowering[];
@@ -46,6 +52,7 @@ export type GPUExpressionPlan = {
 /** Snapshot of declarations and checked expressions; contains no bound resources. @internal */
 export class GPUExpressionProgram {
   private readonly contracts = new Map<GPUGraphOperation, GPUOperationContract>();
+  private readonly resultNames: ReadonlySet<string>;
   readonly expressions: readonly GPUExpressionPlan[];
   readonly operations: readonly GPUGraphOperation[];
   readonly outputs: readonly string[];
@@ -53,6 +60,7 @@ export class GPUExpressionProgram {
   readonly vectors: readonly GPUGraphVector[];
 
   constructor(program: GPUGraph, options: GPUGraphCompileOptions = {}) {
+    program = resolveGPUGraphDeclarations(program);
     this.scalars = program.scalars;
     this.vectors = program.vectors;
     const operations: GPUGraphOperation[] = [];
@@ -110,7 +118,11 @@ export class GPUExpressionProgram {
     }
     // Non-expression values may be initialized by execution bindings, even if overwritten later.
     // Expression outputs remain single-assignment values with compile-time producer ordering.
-    const available = new Set([...declarations.keys()].filter(name => !producers.has(name)));
+    const available = new Set(
+      [...declarations.keys()].filter(
+        name => !producers.has(name) && declarations.get(name)?.role !== 'value'
+      )
+    );
     const expressionPlans: GPUExpressionPlan[] = [];
     for (const operation of operations) {
       const contract = this.contracts.get(operation);
@@ -153,7 +165,12 @@ export class GPUExpressionProgram {
           throw new Error(`Vector expression cannot write scalar ${operation.output}`);
         if (
           this.vectors.some(vector => vector.id === operation.output) &&
-          !references.some(name => this.vectors.some(vector => vector.id === name))
+          !references.some(name => this.vectors.some(vector => vector.id === name)) &&
+          !(
+            output instanceof GPUGraphVector &&
+            output.role === 'value' &&
+            output.length !== undefined
+          )
         )
           throw new Error(
             `Vector expression ${operation.output} requires a vector input to determine its shape`
@@ -173,7 +190,32 @@ export class GPUExpressionProgram {
       }
     }
     this.expressions = expressionPlans;
-    this.outputs = [...(options.outputs ?? expressions.map(operation => operation.output))];
+    const producedValues = [...declarations.values()].filter(value => value.role === 'value');
+    this.resultNames = new Set(
+      [...this.contracts.values()]
+        .flatMap(contract =>
+          contract.values
+            .filter(use => use.access !== 'read')
+            .map(use => getGPUOperationValueName(use.value))
+        )
+        .filter(
+          name =>
+            declarations.get(name)?.role !== 'input' && declarations.get(name)?.role !== 'state'
+        )
+    );
+    const consumed = new Set(
+      [...this.contracts.values()].flatMap(contract =>
+        contract.values
+          .filter(use => use.access !== 'write')
+          .map(use => getGPUOperationValueName(use.value))
+      )
+    );
+    this.outputs = [
+      ...(options.outputs ??
+        (producedValues.length
+          ? [...this.resultNames].filter(name => !consumed.has(name))
+          : expressions.map(operation => operation.output)))
+    ];
     for (const name of this.outputs) {
       if (!declarations.has(name)) throw new Error(`Undeclared output ${name}`);
       if (
@@ -183,6 +225,55 @@ export class GPUExpressionProgram {
       )
         throw new Error(`Selected scalar ${name} must be produced by a graph operation`);
     }
+  }
+
+  resolveBindings(
+    supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
+    options: GPUGraphRunOptions = {}
+  ): {bindings: GPUGraphRunBindings; options: GPUGraphRunOptions} {
+    const declarations = [...this.scalars, ...this.vectors];
+    const explicit = declarations.some(value => value.role === 'input' || value.role === 'state');
+    const grouped =
+      explicit ||
+      Object.values(supplied).some(
+        value => value !== undefined && typeof value === 'object' && !(value instanceof GPUVector)
+      );
+    if (!grouped) {
+      for (const name of Object.keys(supplied))
+        if (declarations.find(value => value.id === name)?.role === 'value')
+          throw new Error(`Use outputTargets for graph result ${name}`);
+      return {bindings: supplied as GPUGraphRunBindings, options};
+    }
+    for (const name of Object.keys(supplied))
+      if (!['inputs', 'state', 'outputTargets'].includes(name))
+        throw new Error(`Unknown execution option ${name}`);
+    const execution = supplied as GPUGraphExecutionBindings;
+    const bindings: Record<string, GPUVector | number> = Object.create(null);
+    for (const [role, group] of [
+      ['input', execution.inputs],
+      ['state', execution.state]
+    ] as const) {
+      for (const [name, value] of Object.entries(group ?? {})) {
+        const declaration = declarations.find(value => value.id === name);
+        const bindingRole = declaration?.role ?? (this.resultNames.has(name) ? 'value' : 'input');
+        if (!declaration || bindingRole !== role)
+          throw new Error(`Invalid ${role} binding ${name}`);
+        bindings[name] = value;
+      }
+    }
+    for (const declaration of declarations)
+      if (
+        (declaration.role === 'input' || declaration.role === 'state') &&
+        bindings[declaration.id] === undefined
+      )
+        throw new Error(`Missing ${declaration.role} binding ${declaration.id}`);
+    if (options.outputTargets && execution.outputTargets)
+      throw new Error('Duplicate output targets');
+    const outputTargets = execution.outputTargets ?? options.outputTargets;
+    for (const name of Object.keys(outputTargets ?? {}))
+      if (!this.resultNames.has(name) || !this.outputs.includes(name))
+        throw new Error(`Invalid graph output target ${name}`);
+    return {bindings, options: {outputTargets}};
   }
 
   prepare(
@@ -353,7 +444,9 @@ export class GPUExpressionProgram {
         }
       }
       for (const name of Object.keys(options.outputTargets ?? {})) {
-        if (!produced.has(name) && !writableVectors.has(name))
+        const scalarOutput =
+          this.outputs.includes(name) && this.scalars.some(scalar => scalar.id === name);
+        if (!produced.has(name) && !writableVectors.has(name) && !scalarOutput)
           throw new Error(`Unknown graph output target ${name}`);
       }
       for (const name of this.outputs) {
@@ -361,6 +454,19 @@ export class GPUExpressionProgram {
           !(values.get(name) instanceof GPUVector) &&
           this.scalars.some(scalar => scalar.id === name)
         ) {
+          const target = targets.get(name);
+          if (target) {
+            validateVector(
+              device,
+              target,
+              this.scalars.find(scalar => scalar.id === name)!.format,
+              1,
+              [1]
+            );
+            validateWritableTarget(name, target, values);
+            values.set(name, target);
+            continue;
+          }
           const output = allocateVector(
             device,
             name,

@@ -5,7 +5,15 @@
 import {GPUGraph} from '../gpu-core/gpu-graph';
 import {GPUExpressionOperation} from '../gpu-core/gpu-expression-operation';
 import type {GPUGraphCompileOptions} from '../gpu-core/gpu-expression-plan';
-import type {GPUGraphScalarFormat, GPUGraphVectorFormat} from '../gpu-core/gpu-graph-value';
+import type {
+  GPUGraphScalarFormat,
+  GPUGraphVectorFormat,
+  GPUGraphScalarDescriptor,
+  GPUGraphVectorDescriptor,
+  GPUGraphValueDescriptor,
+  GPUGraphScalar,
+  GPUGraphVector
+} from '../gpu-core/gpu-graph-value';
 import {CompiledGPUSimpleExpressionGraph} from './compiled-gpu-expression-graph';
 import {assert, type Device} from '@luma.gl/core';
 import {GPUDataEvaluator, type GPUDataEvaluatorTargetBuffer} from './operation/gpu-data-evaluator';
@@ -94,6 +102,29 @@ export class GPUSimpleGraph {
       dynamicBindings: !device,
       transientAllocation: false
     });
+  }
+
+  addInput<T extends GPUGraphScalarFormat>(
+    id: string,
+    descriptor: GPUGraphScalarDescriptor<T>
+  ): GPUGraphScalar<T>;
+  addInput<T extends GPUGraphVectorFormat>(
+    id: string,
+    descriptor: GPUGraphVectorDescriptor<T>
+  ): GPUGraphVector<T>;
+  addInput(id: string, descriptor: GPUGraphValueDescriptor): GPUGraphScalar | GPUGraphVector {
+    assert(!this.compiled);
+    return descriptor.type === 'scalar'
+      ? this.declarations.addInput(id, descriptor)
+      : this.declarations.addInput(id, descriptor);
+  }
+
+  addState<T extends GPUGraphVectorFormat>(
+    id: string,
+    descriptor: GPUGraphVectorDescriptor<T>
+  ): GPUGraphVector<T> {
+    assert(!this.compiled);
+    return this.declarations.addState(id, descriptor);
   }
 
   scalar<T extends GPUGraphScalarFormat>(id: string, format: T) {
@@ -216,6 +247,8 @@ export class GPUSimpleGraph {
     }
     // Legacy evaluator graphs bind their device in the constructor.
     assert(this.device && this.declarations.operations.length === 0);
+    if ([...this.declarations.scalars, ...this.declarations.vectors].some(value => value.role))
+      throw new Error('Explicit input/state declarations require compile(device)');
     const options = deviceOrOptions;
     // A graph is compiled once, including when compilation fails.
     assert(!this.compiled);

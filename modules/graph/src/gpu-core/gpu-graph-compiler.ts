@@ -50,6 +50,7 @@ import {
   type GPUOperationLoweringDecision,
   type GPUGraphBackendCapabilities
 } from './gpu-graph-lowering';
+import {resolveGPUGraphDeclarations} from './gpu-graph-declarations';
 import {validateGPUGraph, type GPUGraphValidationReport} from './gpu-graph-validation';
 import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
 import type {GPUGraph} from './gpu-graph';
@@ -115,6 +116,7 @@ export class GPUGraphCompiler<Parameters = void> {
     );
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
+    program = resolveGPUGraphDeclarations(program);
     const validation = validateGPUGraph(program, bindings);
     if (!validation.valid)
       throw new Error(

@@ -98,3 +98,12 @@ export {
 } from './operation/gpu-evaluator-inspection';
 
 export {CompiledGPUSimpleExpressionGraph} from './compiled-gpu-expression-graph';
+
+export {gpuGraph} from '../gpu-core/gpu-graph-value';
+export type {
+  GPUGraphScalarDescriptor,
+  GPUGraphVectorDescriptor,
+  GPUGraphValueDescriptor,
+  GPUGraphValueRole
+} from '../gpu-core/gpu-graph-value';
+export type {GPUGraphExecutionBindings} from '../gpu-core/gpu-expression-plan';
