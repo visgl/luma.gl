@@ -45,6 +45,7 @@ import {
   type GaussianSplatRADWorkerDecoder
 } from './rad-worker-decoder';
 import {makeGaussianSplatInfoHtml} from './app-ui';
+export {makeGaussianSplatInfoHtml} from './app-ui';
 
 export const title = 'Gaussian Splats';
 export const description =
@@ -437,10 +438,78 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
+  /** Loads a single identity-placed glTF Gaussian primitive into the existing showcase renderer. */
+  private async loadGLTFSplatData(
+    configuration: LocalGaussianSplatLoadersConfiguration
+  ): Promise<void> {
+    const signal = this.loadAbortController!.signal;
+    const [{load}, {GLTFLoader}, {SPZLoader}, gltfModule, arrowModule] = await Promise.all([
+      import('@loaders.gl/core'),
+      import('@loaders.gl/scene/gltf'),
+      import('@loaders.gl/splats'),
+      import('@luma.gl/engine/gltf'),
+      import('@luma.gl/engine/arrow')
+    ]);
+    const loaded = await load(configuration.sourceUrl, [GLTFLoader, SPZLoader], {
+      signal,
+      splats: {shape: 'arrow-table', targetCoordinateSystem: 'LUF'}
+    });
+    signal.throwIfAborted();
+    const gltf = gltfModule.postProcessGLTF(
+      loaded as unknown as import('@luma.gl/engine/gltf').GLTFWithBuffers
+    );
+    if (
+      gltf.meshes.length !== 1 ||
+      gltf.meshes[0].primitives.length !== 1 ||
+      !gltf.meshes[0].primitives[0].extensions?.KHR_gaussian_splatting
+    ) {
+      throw new Error(
+        'The glTF showcase currently supports one Gaussian primitive without meshes.'
+      );
+    }
+    const scenegraphs = gltfModule.createScenegraphsFromGLTF(this.device, gltf, {
+      excludeGaussianSplatPrimitives: true
+    });
+    let groups: Awaited<ReturnType<typeof arrowModule.makeGPUSplatDataFromGLTFScene>> = [];
+    try {
+      groups = await arrowModule.makeGPUSplatDataFromGLTFScene(this.device, gltf, {signal});
+      const instances = arrowModule.getGLTFSplatSceneInstances(scenegraphs, groups);
+      const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+      if (
+        instances.length !== 1 ||
+        instances[0].worldMatrix.some((value, index) => value !== identity[index])
+      ) {
+        throw new Error('The glTF showcase currently requires one identity-placed splat instance.');
+      }
+      signal.throwIfAborted();
+      for (const batch of groups[0]?.batches ?? []) {
+        this.batches.push(batch);
+        this.loadedSplatCount += batch.length;
+        this.appendRendererBatch(batch);
+      }
+      groups = [];
+      if (!this.batches.length)
+        throw new Error('The glTF scene does not contain any Gaussian splats.');
+      this.expectedSplatCount = this.loadedSplatCount;
+      this.expectedBatchCount = this.batches.length;
+      if (!this.hasManualCameraInteraction) this.fitCameraToBatches();
+      this.isLoading = false;
+      this.requestRedraw();
+      this.updatePanel();
+    } finally {
+      for (const group of groups) for (const batch of group.batches) batch.destroy();
+      scenegraphs.destroy();
+    }
+  }
+
   private async loadLocalSplatData(
     configuration: LocalGaussianSplatLoadersConfiguration
   ): Promise<void> {
     this.loadAbortController = new AbortController();
+    if (configuration.sourceFormat === 'GLB') {
+      await this.loadGLTFSplatData(configuration);
+      return;
+    }
     if (configuration.sourceFormat === 'RAD' && this.renderer instanceof GPUPagedSplatRenderer) {
       if (await this.loadAdaptiveRADScene(configuration)) {
         return;
@@ -918,11 +987,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     const hasBundledLoaders = Boolean(window.__lumaGaussianSplatsLoaderBundleUrl);
     const hasLocalLoaders = Boolean(window.__lumaGaussianSplatsLocalLoadersRoot);
-    if (
-      (this.localLoadersConfiguration || hasBundledLoaders || hasLocalLoaders) &&
-      sceneControl &&
-      sceneElement
-    ) {
+    if (sceneControl && sceneElement) {
       sceneControl.hidden = false;
       sceneControl.style.display = 'grid';
       const shouldUseLocalLoaders =
@@ -931,7 +996,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       const sceneOptions: PanelSelectOption[] = [
         {value: 'synthetic', label: 'Synthetic chromatic showcase'},
         ...GAUSSIAN_SPLAT_SOURCE_CATALOG.filter(
-          source => shouldUseLocalLoaders || source.id !== 'fixture'
+          source =>
+            source.id === 'gltf-fixture' ||
+            ((hasBundledLoaders || hasLocalLoaders) &&
+              (shouldUseLocalLoaders || source.id !== 'fixture'))
         ).map(source => ({
           value: source.id,
           label: source.label

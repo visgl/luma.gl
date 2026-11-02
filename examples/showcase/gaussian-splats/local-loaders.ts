@@ -19,7 +19,15 @@ export type GaussianSplatCameraPreset = {
 
 /** Complete public reference scenes shared with the loaders.gl Gaussian splat showcase. */
 export type GaussianSplatSourceCatalogEntry = {
-  id: 'train' | 'drjohnson' | 'playroom' | 'truck' | 'coit' | 'train-github' | 'fixture';
+  id:
+    | 'train'
+    | 'drjohnson'
+    | 'playroom'
+    | 'truck'
+    | 'coit'
+    | 'train-github'
+    | 'fixture'
+    | 'gltf-fixture';
   label: string;
   sourceUrl: string;
   sourceUrls?: readonly string[];
@@ -38,7 +46,7 @@ export type LocalGaussianSplatLoadersConfiguration = {
   sourceUrl: string;
   sourceUrls: readonly string[];
   fallbackSourceUrls: readonly string[];
-  sourceFormat: 'PLY' | 'SPLAT' | 'KSPLAT' | 'SPZ' | 'RAD';
+  sourceFormat: 'PLY' | 'SPLAT' | 'KSPLAT' | 'SPZ' | 'RAD' | 'GLB';
   sceneId: GaussianSplatSourceCatalogEntry['id'] | 'custom';
   sourceLabel: string;
   expectedSplatCount?: number;
@@ -277,6 +285,14 @@ export const GAUSSIAN_SPLAT_SOURCE_CATALOG: readonly GaussianSplatSourceCatalogE
     up: GRAPHDECO_CAMERA_UP
   },
   {
+    id: 'gltf-fixture',
+    label: 'Embedded glTF Gaussian splats (256)',
+    sourceUrl: new URL('./fixtures/gaussian-splats.glb', import.meta.url).href,
+    expectedSplatCount: 256,
+    upAxis: 'y',
+    up: [0, 1, 0]
+  },
+  {
     id: 'fixture',
     label: 'Local Train parser fixture (1,000)',
     sourceUrl: DEFAULT_GAUSSIAN_PLY_PATH,
@@ -309,7 +325,7 @@ export function getLocalGaussianSplatLoadersConfiguration(
     if (!loadersRoot) {
       throw new Error('Start the showcase with VITE_LOADERS_GL_ROOT=/path/to/loaders.gl.');
     }
-  } else if (!loaderBundleUrl) {
+  } else if (!loaderBundleUrl && parameters.get('scene') !== 'gltf-fixture') {
     return undefined;
   }
 
@@ -353,7 +369,8 @@ export function getLocalGaussianSplatLoadersConfiguration(
       ? makeLocalLoadersFileUrl(loadersRoot, scene.sourceUrl)
       : scene.sourceUrl;
   const sourceUrls = scene.sourceUrls || [sourceUrl];
-  const sourceFormat = getGaussianSplatSourceFormat(sourceUrl);
+  const sourceFormat =
+    scene.id === 'gltf-fixture' ? 'GLB' : getGaussianSplatSourceFormat(sourceUrl);
   const maxResidentSplatCount =
     sourceFormat === 'RAD'
       ? getGaussianSplatResidentSplatCount(parameters, defaultRADResidentSplatCount)
@@ -1193,6 +1210,9 @@ function getGaussianSplatSourceFormat(
   sourceUrl: string
 ): LocalGaussianSplatLoadersConfiguration['sourceFormat'] {
   const sourcePath = new URL(sourceUrl, window.location.href).pathname.toLowerCase();
+  if (sourcePath.endsWith('.glb')) {
+    return 'GLB';
+  }
   if (sourcePath.endsWith('.ply')) {
     return 'PLY';
   }
@@ -1208,7 +1228,7 @@ function getGaussianSplatSourceFormat(
   if (sourcePath.endsWith('.rad')) {
     return 'RAD';
   }
-  throw new Error('Choose a .ply, .splat, .ksplat, .spz, or .rad Gaussian splat source.');
+  throw new Error('Choose a .ply, .splat, .ksplat, .spz, .rad, or .glb Gaussian splat source.');
 }
 
 function getGaussianSplatSourceLabel(sourceUrl: string): string {

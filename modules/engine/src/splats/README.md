@@ -82,3 +82,8 @@ visibility, and mixed-scene draw ordering. Decoded splats retain glTF feature-ID
 The decoded Arrow path currently accepts linear Rec. 709 display colors; sRGB display colors require
 a separate conversion and are rejected. Strict required-extension
 support remains unchanged until ordinary scene creation can render the extension end to end.
+
+The Gaussian splat showcase includes a synthetic embedded-GLB scene. Select **Embedded glTF
+Gaussian splats** in the scene control. The showcase currently accepts one identity-placed Gaussian
+primitive; applications needing mixed meshes or transformed instances must compose their own render
+passes using the instance transforms.

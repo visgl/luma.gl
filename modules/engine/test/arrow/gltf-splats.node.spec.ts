@@ -311,3 +311,31 @@ test('rejects decoded sRGB splats until their color space is converted', async (
     'Unsupported decoded glTF Gaussian splat primitive'
   );
 });
+
+test('showcase GLB produces an identity-placed visible Gaussian instance', async () => {
+  const {readFile} = await import('node:fs/promises');
+  const {parse} = await import('@loaders.gl/core');
+  const {GLTFLoader} = await import('@loaders.gl/scene/gltf');
+  const {SPZLoader} = await import('@loaders.gl/splats');
+  const bytes = await readFile(
+    new URL(
+      '../../../../examples/showcase/gaussian-splats/fixtures/gaussian-splats.glb',
+      import.meta.url
+    )
+  );
+  const loaded = await parse(Uint8Array.from(bytes).buffer, [GLTFLoader, SPZLoader], {
+    splats: {shape: 'arrow-table', targetCoordinateSystem: 'LUF'}
+  });
+  const gltf = postProcessGLTF(loaded as any);
+  const device = new NullDevice({});
+  const scene = createScenegraphsFromGLTF(device, gltf, {excludeGaussianSplatPrimitives: true});
+  const groups = await makeGPUSplatDataFromGLTFScene(device, gltf);
+  const instances = getGLTFSplatSceneInstances(scene, groups);
+  expect(instances).toHaveLength(1);
+  expect(instances[0].worldMatrix).toEqual(
+    new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
+  );
+  expect(groups[0].batches.reduce((count, batch) => count + batch.rowCount, 0)).toBe(256);
+  for (const group of groups) for (const batch of group.batches) batch.destroy();
+  scene.destroy();
+});
