@@ -43,10 +43,17 @@ export class ScenegraphPhysicsMotion {
    * Paused actions should remain in this set; stopped actions should be removed. On release,
    * physics retains the last accepted pose and kinematic velocity rather than snapping to authoring.
    */
-  setAnimatedNodes(nodes: ReadonlySet<ScenegraphNode>): void {
+  setAnimatedNodes(
+    nodes: ReadonlySet<ScenegraphNode>,
+    {
+      excludedNodes = new Set<ScenegraphNode>()
+    }: {
+      excludedNodes?: ReadonlySet<ScenegraphNode>;
+    } = {}
+  ): void {
     const active = new Set<ScenegraphNode>();
     const visit = (node: ScenegraphNode, inherited: boolean) => {
-      const animated = inherited || nodes.has(node);
+      const animated = (inherited || nodes.has(node)) && !excludedNodes.has(node);
       if (animated && this.targets.has(node)) active.add(node);
       if (node instanceof GroupNode) for (const child of node.children) visit(child, animated);
     };

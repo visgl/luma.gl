@@ -13,6 +13,35 @@ For attachment declarations and an inline constraint example, see
 [Physical joints](./scenegraph-joints.mdx). For skeleton deformation, see
 [Skins](./scenegraph-skins.mdx); skin palettes and physics constraints have separate update paths.
 
+## Application-facing controller
+
+Use `PhysicsController` to attach physics to an existing scene without assembling backend
+body-index maps. Node paths use the same ID, anchored-path and partial-path syntax as
+`GroupNode.findNode()`:
+
+```ts
+import {PhysicsController} from '@luma.gl/engine/physics';
+
+const physics = new PhysicsController(device, {scene, gravity: [0, -9.81, 0]});
+const ball = physics.addBody('/room/ball', {mass: 2, collider: 'geometry'});
+physics.addBody('floor', {motion: 'static'});
+await physics.prepare();
+
+physics.update(deltaTimeInSeconds);
+ball.applyImpulse([1, 0, 0]);
+```
+
+Body and joint paths resolve to stable node references during authoring. Inference uses
+retained CPU model geometry, or an explicit collider override. Hidden branches and compound
+groups are supported; nested registered bodies keep independent ownership.
+
+The controller reuses `ScenegraphPhysicsSession` for compilation, reset, rebuild and lifetime
+handling. Its synchronous frame path encodes fixed steps and publishes GPU transforms without
+pose readback. Existing physics-aware render adapters consume `physics.publication`; automatic
+`SceneRenderer` traversal and binding are a separate follow-up. See the
+[PhysicsController API](/docs/api-reference/engine/physics-controller) for paths, geometry,
+kinematic targets, animation ownership and asynchronous editing boundaries.
+
 ## Physical Joints
 
 `JointController` holds `ScenegraphJoint` declarations. Each joint references two

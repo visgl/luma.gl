@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
-import {GroupNode, decomposePhysicsTransform, type ScenegraphNode} from '../../index';
+import {
+  GroupNode,
+  decomposePhysicsTransform,
+  type ScenegraphNode,
+  type ScenegraphBounds
+} from '../../index';
 import type {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import type {GPURigidBodyBounds} from '@luma.gl/graph/gpu-physics';
 
@@ -21,7 +26,8 @@ export class ScenegraphPhysicsPublication {
   constructor(
     readonly world: GPURigidBodyWorld,
     readonly roots: readonly ScenegraphNode[],
-    readonly bodies: ReadonlyMap<ScenegraphNode, number>
+    readonly bodies: ReadonlyMap<ScenegraphNode, number>,
+    readonly localBounds?: ReadonlyMap<ScenegraphNode, ScenegraphBounds>
   ) {
     if (!world.poseMatrices || !world.poseBounds)
       throw new Error('Scene publication requires pose and bounds buffers');
@@ -69,7 +75,10 @@ export class ScenegraphPhysicsPublication {
           throw new Error('Invalid publication body');
         bindings.set(node, {body, localMatrix, visible: displayed});
         // Group bounds include descendants, which may belong to independent child bodies.
-        const localBounds = node instanceof GroupNode ? null : node.getBounds();
+        const localBounds =
+          node instanceof GroupNode
+            ? null
+            : (node.getBounds() ?? this.localBounds?.get(node) ?? null);
         if (
           localBounds &&
           (localBounds.length !== 2 ||
