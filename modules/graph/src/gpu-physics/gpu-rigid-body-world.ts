@@ -2298,6 +2298,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       (next.inertiaOrientation && !next.inertiaDiagonal)
     )
       throw new Error('Invalid motion properties');
+    if (this.props.joints?.length) {
+      const proposedBodies = [...this.props.bodies];
+      proposedBodies[bodyIndex] = next;
+      validateRigidBodyJoints(this.props.joints, proposedBodies, this.solver);
+    }
     const colliders = this.colliders.filter(collider => collider.body === bodyIndex);
     for (const collider of colliders)
       if (
