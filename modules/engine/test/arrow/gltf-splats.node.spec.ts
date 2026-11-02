@@ -339,3 +339,37 @@ test('showcase GLB produces an identity-placed visible Gaussian instance', async
   for (const group of groups) for (const batch of group.batches) batch.destroy();
   scene.destroy();
 });
+
+test('resolves EXT_mesh_gpu_instancing transforms for Gaussian nodes', () => {
+  const gltf = postProcessGLTF({
+    json: {
+      asset: {version: '2.0'},
+      accessors: [
+        {componentType: 5126, count: 2, type: 'VEC3', value: new Float32Array([1, 0, 0, 3, 0, 0])}
+      ],
+      meshes: [
+        {primitives: [{mode: 0, attributes: {}, extensions: {KHR_gaussian_splatting: extension}}]}
+      ],
+      nodes: [
+        {
+          translation: [0, 2, 0],
+          mesh: 0,
+          extensions: {EXT_mesh_gpu_instancing: {attributes: {TRANSLATION: 0}}}
+        }
+      ],
+      scenes: [{nodes: [0]}]
+    },
+    buffers: []
+  } as any);
+  const scene = createScenegraphsFromGLTF(new NullDevice({}), gltf, {
+    excludeGaussianSplatPrimitives: true
+  });
+  const group = {meshIndex: 0, primitiveIndex: 0, batches: []};
+  const instances = getGLTFSplatSceneInstances(scene, [group]);
+  expect(instances.map(instance => instance.instanceIndex)).toEqual([0, 1]);
+  expect(instances.map(instance => Array.from(instance.worldMatrix.slice(12, 15)))).toEqual([
+    [1, 2, 0],
+    [3, 2, 0]
+  ]);
+  scene.destroy();
+});

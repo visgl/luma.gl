@@ -5,6 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import {GroupNode} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
+import {getGLTFNodeInstancing} from '../../../../gltf/gltf/gltf-instancing';
 import {makeVector} from 'apache-arrow';
 import type {GLTFPostprocessed} from '@luma.gl/engine/gltf';
 import {
@@ -163,6 +164,8 @@ export type GLTFSplatInstance = {
   sceneIndex: number;
   /** Source node index. */
   nodeIndex: number;
+  /** Index of the authored GPU instance, when the node uses GPU instancing. */
+  instanceIndex?: number;
   /** Source mesh and primitive indices and their borrowed batches. */
   group: GLTFSplatBatchGroup;
   /** Current column-major world transform, including the complete ancestor hierarchy. */
@@ -184,10 +187,25 @@ export function getGLTFSplatSceneInstances(
       const world = parent.clone().multiplyRight(node.matrix);
       const nodeIndex = nodeIndices.get(node);
       if (nodeIndex !== undefined) {
-        const mesh = scenegraphs.gltf.nodes[nodeIndex]?.mesh;
+        const sourceNode = scenegraphs.gltf.nodes[nodeIndex];
+        const mesh = sourceNode?.mesh;
         const meshIndex = mesh ? scenegraphs.gltf.meshes.indexOf(mesh) : -1;
+        const instancing =
+          sourceNode && mesh ? getGLTFNodeInstancing(scenegraphs.gltf, sourceNode) : null;
         for (const group of groups) {
-          if (group.meshIndex === meshIndex) {
+          if (group.meshIndex !== meshIndex) continue;
+          if (instancing) {
+            for (const [instanceIndex, localMatrix] of instancing.matrices.entries()) {
+              const worldMatrix = world.clone().multiplyRight(localMatrix);
+              instances.push({
+                sceneIndex,
+                nodeIndex,
+                instanceIndex,
+                group,
+                worldMatrix: Float32Array.from(worldMatrix)
+              });
+            }
+          } else {
             instances.push({sceneIndex, nodeIndex, group, worldMatrix: Float32Array.from(world)});
           }
         }

@@ -70,7 +70,8 @@ const instances = getGLTFSplatSceneInstances(scenegraphs, splatGroups);
 // Destroy the borrowing renderer first, then each batch and scenegraphs.destroy().
 ```
 
-The bridge preserves the Arrow record-batch boundaries and source mesh/primitive indices. The
+The bridge preserves the Arrow record-batch boundaries and source mesh/primitive indices.
+Instance discovery expands `EXT_mesh_gpu_instancing` matrices and reports each source instance index. The
 splat upload is caller-owned, and decoded loader data remains borrowed. Quaternion conversion and
 SH layout adaptation occur in the existing upload adapters; no coordinate-system conversion is
 performed by the bridge. If decoding or preparation fails, previously prepared batches are
