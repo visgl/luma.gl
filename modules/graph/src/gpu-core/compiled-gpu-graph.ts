@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {assert, type Device} from '@luma.gl/core';
+import {assert, type CommandEncoder, type Device} from '@luma.gl/core';
 import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUGraph} from './gpu-graph';
 import type {CompiledGPUCommandGraph} from './gpu-command-graph';
@@ -11,6 +11,7 @@ import type {GPUOperationLowering} from './gpu-graph-lowering';
 import {GPUExpressionOperation} from './gpu-expression-operation';
 import {
   GPUExpressionProgram,
+  type GPUExpressionInvocation,
   type GPUGraphCompileOptions,
   type GPUGraphRunBindings,
   type GPUGraphExecutionBindings,
@@ -56,6 +57,27 @@ export class CompiledGPUGraph {
     supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
   ): Promise<Record<string, GPUVector>> {
+    const execution = this.prepare(supplied, options);
+    let encoder: CommandEncoder | undefined;
+    try {
+      encoder = this.device.createCommandEncoder();
+      execution.encode(encoder);
+      this.device.submit(encoder.finish());
+      return execution.outputs;
+    } catch (error) {
+      execution.discard();
+      throw error;
+    } finally {
+      execution.destroy();
+      encoder?.destroy();
+    }
+  }
+
+  /** Bind one invocation without encoding or submitting commands. */
+  prepare(
+    supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
+    options: GPUGraphRunOptions = {}
+  ): PreparedGPUGraphExecution {
     // A destroyed compiled program cannot encode further work.
     assert(!this.destroyed);
     const resolvedBindings = this.program.resolveBindings(supplied, options);
@@ -63,7 +85,6 @@ export class CompiledGPUGraph {
     options = resolvedBindings.options;
     const invocation = this.program.prepare(this.device, bindings, options);
     let executable: CompiledGPUCommandGraph | undefined;
-    const encoder = this.device.createCommandEncoder();
     try {
       const resolved = new GPUGraph();
       for (const scalar of this.program.scalars) resolved.scalar(scalar.id, scalar.format);
@@ -112,15 +133,14 @@ export class CompiledGPUGraph {
         });
       }
       executable = compilation.graph.compile();
-      executable.encode(encoder, {parameters: undefined});
-      this.device.submit(encoder.finish());
-      return invocation.finish();
+      return new PreparedGPUGraphExecution(this.device, invocation, executable, () => {
+        // Keep the compiled program alive until encoding and submission have completed.
+        assert(!this.destroyed);
+      });
     } catch (error) {
+      executable?.destroy();
       invocation.destroy();
       throw error;
-    } finally {
-      executable?.destroy();
-      encoder.destroy();
     }
   }
 
@@ -128,5 +148,48 @@ export class CompiledGPUGraph {
     for (const kernel of this.kernels.values()) kernel.destroy();
     this.kernels.clear();
     this.destroyed = true;
+  }
+}
+
+/** One bound invocation. Outputs remain caller-owned after destruction. */
+export class PreparedGPUGraphExecution {
+  readonly outputs: Record<string, GPUVector>;
+  private encoded = false;
+  private destroyed = false;
+
+  /** @internal Use CompiledGPUGraph.prepare(). */
+  constructor(
+    private readonly device: Device,
+    private readonly invocation: GPUExpressionInvocation,
+    private readonly executable: CompiledGPUCommandGraph,
+    private readonly checkProgram: () => void
+  ) {
+    this.outputs = invocation.getOutputs();
+  }
+
+  /** Append commands once to a caller-owned encoder; never finish or submit it. */
+  encode(commandEncoder: CommandEncoder): void {
+    // An execution is single-use, and its encoder must belong to the same device.
+    assert(!this.destroyed && !this.encoded && commandEncoder.device === this.device);
+    this.checkProgram();
+    // A partial encoding cannot be retried. Discard the caller's encoder on failure.
+    this.encoded = true;
+    this.executable.encode(commandEncoder, {parameters: undefined});
+  }
+
+  /** Release scratch after submission, or after abandoning an unsubmitted encoder. */
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.executable.destroy();
+    this.invocation.finish();
+  }
+
+  /** @internal run() has no caller to receive allocated outputs when it fails. */
+  discard(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.executable.destroy();
+    this.invocation.destroy();
   }
 }

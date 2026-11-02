@@ -656,7 +656,7 @@ export type {GPUIndexPickInfo} from './gpu-index-picking-target';
 
 export {GPUExpressionOperation} from './gpu-expression-operation';
 export type {GPUExpressionOperationProps, GPUExpressionAST} from './gpu-expression-operation';
-export {CompiledGPUGraph} from './compiled-gpu-graph';
+export {CompiledGPUGraph, PreparedGPUGraphExecution} from './compiled-gpu-graph';
 export type {
   GPUGraphCompileOptions,
   GPUGraphRunBindings,

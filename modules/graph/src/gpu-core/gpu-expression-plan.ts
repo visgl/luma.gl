@@ -526,7 +526,7 @@ export class GPUExpressionInvocation {
     readonly values: Map<string, GPUVector | number>,
     private readonly owned: Set<GPUVector>
   ) {}
-  finish(): Record<string, GPUVector> {
+  getOutputs(): Record<string, GPUVector> {
     const outputs: Record<string, GPUVector> = Object.create(null);
     for (const name of this.program.outputs) {
       const value = this.values.get(name);
@@ -534,6 +534,10 @@ export class GPUExpressionInvocation {
         throw new Error(`Output ${name} has no materialized vector`);
       outputs[name] = value;
     }
+    return outputs;
+  }
+  finish(): Record<string, GPUVector> {
+    const outputs = this.getOutputs();
     for (const value of Object.values(outputs)) this.owned.delete(value);
     this.destroy();
     return outputs;

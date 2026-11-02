@@ -72,3 +72,5 @@ export type {
   GPUOperationOutputDeclarations,
   GPUOperationContractContext
 } from '../gpu-core/gpu-operation-contract';
+
+export {CompiledGPUGraph, PreparedGPUGraphExecution} from '../gpu-core/compiled-gpu-graph';

@@ -1,5 +1,12 @@
 # What's New
 
+### Prepared graph execution
+
+`CompiledGPUGraph.prepare()` binds one invocation and exposes its outputs before encoding.
+Append graph commands with `execution.encode(encoder)` alongside other compute or rendering,
+then submit once and release scratch with `execution.destroy()`. `run()` uses the same path.
+See [Caller-owned encoding](./api-reference/graph/gpu-graph-values.md#caller-owned-encoding).
+
 ### Operation-defined graph results
 
 `GPUGraph.addInput()` and `addState()` describe the external interface, while operation
