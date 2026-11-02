@@ -11,11 +11,114 @@ lighting, opaque-scene transmission, and existing shaders-owned skinning and eng
 morph-target primitives.
 
 The renderer is intentionally format-independent. glTF loaders, ANARI retained objects, and
-application scenegraphs remain responsible for translating their own data into `SceneSurface`
-descriptors. `@luma.gl/engine` continues to own generic geometry, model, material, and animation
+application adapters can translate their data into `SceneSurface` descriptors.
+The built-in scenegraph adapter also accepts `SceneMeshNode` trees directly. `@luma.gl/engine` continues to own generic geometry, model, material, and animation
 primitives rather than an opinionated scene renderer.
 
-## Usage
+## Scenegraph input
+
+For a scene built from shared geometry and PBR descriptions, pass the root directly:
+
+```ts
+import {CubeGeometry, GroupNode} from '@luma.gl/engine';
+import {SceneMeshNode, SceneRenderer} from '@luma.gl/anari';
+
+const scene = new GroupNode({children: [new SceneMeshNode({
+  id: 'box', geometry: new CubeGeometry(),
+  material: {id: 'paint', uniforms: {baseColorFactor: [0.2, 0.4, 0.8, 1]}}
+})]});
+const renderer = new SceneRenderer(device);
+renderer.render({scene, camera, lights});
+device.submit();
+```
+
+`camera`, `lights` and `device` are application inputs. The
+[physics walkthrough](/docs/api-guide/physics/getting-started) supplies complete camera,
+controller and frame-loop code. `ScenegraphRenderOptions` uses `scene` instead of the
+low-level `id` and `surfaces` fields. Caches are scoped by root **object identity**; duplicate
+node IDs do not alias compiled resources or picking identities. Shared geometry/material/
+producer combinations are instanced, and inherited visibility is respected.
+
+`SceneMeshNode` extends engine `GeometryNode` and adds a `SceneMaterial`, an optional
+`environment` reflection probe, and an advanced `connection` descriptor. The renderer owns
+compiled models; CPU geometry, descriptor textures and transform buffers remain borrowed.
+`ModelNode` is an already compiled model with its own rendering contract and is rejected
+by this traversal rather than silently reinterpreted. Other metadata-only leaves are skipped.
+
+### GPU transform sources
+
+`GroupNode.transformSource` accepts the engine's generic `ScenegraphTransformSource`.
+`getFrame()` returns `null` for authored placement, or:
+
+| Field | Contract |
+| --- | --- |
+| `matrices` | Borrowed STORAGE buffer of column-major float32 world `mat4` values. |
+| `matrixCount` | Number of valid matrices; the buffer must contain at least `matrixCount * 64` bytes. |
+| `revision` | Producer revision after replacing buffers or index mappings. |
+| `bindings` | Map keyed by node objects; each binding has `matrixIndex`, `localMatrix`, and optional `visible`. |
+
+A bound mesh is evaluated as `matrices[matrixIndex] * localMatrix`. Bindings describe the
+mesh's complete relation to its producer frame; they are not added to the authored world
+matrix a second time. The nearest group's source applies to its subtree. A nested source
+returning `null` selects authored placement in that subtree. Unbound meshes retain authored
+world placement. Producers must include bindings for visual descendants they control;
+`PhysicsController` does this during publication updates.
+
+Each render obtains the accepted publication and refreshes bindings, including replacement
+buffers after reset/rebuild. GPU poses are never read back or written into CPU node matrices.
+No CPU frustum culling is applied using stale authored bounds. Normals use the inverse
+transpose of the combined evaluated matrix.
+
+GPU-transformed surfaces require WebGPU and reject `BLEND` materials: authored CPU matrices
+cannot provide correct transparent depth ordering. Static CPU-matrix scenes keep their
+existing WebGL/WebGPU path. Deferred rendering forwards GPU-transform scenes to the shared
+forward renderer. The ray-tracing renderer does not consume this transform-source contract.
+
+Advanced low-level `SceneSurface.gpuTransforms` supplies `matrices`, `matrixCount`, `revision`
+and an `indices` array aligned with `transforms`; those transforms become mesh-to-producer
+matrices. `nodes` optionally supplies the retained identity for each instance.
+
+### Spot shadows, depth and picking
+
+On WebGPU, `spotShadows: {spotLights, mapSize?}` enables the shared `ShadowMapRenderer`.
+Shadow slots correspond to the order of spot lights in `lights`; each shadow declaration
+supplies position, direction, range and outer cone angle, plus optional bias and source-radius
+settings. Up to four spot slots are supported. Camera `near`, `far` and `clipDepth` describe
+its projection; `clipDepth` defaults to math.gl's negative-one-to-one convention. Specify
+`zero-to-one` for an already converted WebGPU projection. Directional and point shadow
+orchestration remain explicit lower-level paths.
+
+The caster pipeline uses the same geometry, instance metadata, skin/morph inputs and GPU
+matrix lookup as the visible pass. Depth and identity fragments apply the material's alpha
+cutoff, including base-color texture UV transforms. `rasterPass: 'depth'` renders to a
+caller-owned depth framebuffer with no color attachments. `rasterPass: 'picking'` writes
+24-bit instance identities to an `rgba8unorm` target; normal applications should use `pick()`:
+
+```ts
+const node = await renderer.pick({scene, camera, width, height}, {x, y});
+```
+
+Coordinates are integer target pixels from the top left. The method renders an identity
+target, explicitly reads one pixel and returns the corresponding node or `undefined`.
+It does not read simulated poses. Convert CSS pointer coordinates to target pixels and await
+pending picks before disposing scene resources. Low-level surfaces without `nodes` have no
+node result. Identity picking currently covers at most 16,777,215 placements per call.
+
+`SceneMeshNode.connection` is an advanced box-between-matrix-origins descriptor:
+`{first, second, radius}`. Indices address the current source's GPU matrix array, and geometry
+must be a unit cube spanning `[-1, 1]`. It is useful for visual pendulum tethers; it is not a
+physics joint or a deformable rope. Both endpoints must be valid and distinct in position.
+
+### Scene lifetime
+
+`destroyScene(root)` releases that root's cached models, instance buffers, shadow maps and
+adapter identities. It does not destroy the root, its CPU geometry, textures or producer.
+Submit already encoded work before disposal. `destroy()` releases all retained frames and
+scenegraph caches. Stop rendering before destroying a physics controller or another transform
+producer; the controller detaches its source when destroyed.
+
+## Surface descriptor input
+
 
 ```ts
 import {Geometry} from '@luma.gl/engine';

@@ -269,3 +269,37 @@ test('mixed CPU and GPU-only compound bodies reject incomplete inference', () =>
     device.destroy();
   }
 });
+
+test('shared GeometryNode keeps source geometry and bounds available for collider inference', async () => {
+  const {GeometryNode} = await import('@luma.gl/engine');
+  const geometry = new CubeGeometry();
+  const node = new GeometryNode({id: 'shared', geometry, scale: [2, 3, 4]});
+  expect(node.geometry).toBe(geometry);
+  expect(node.getBounds()).toEqual([
+    [-1, -1, -1],
+    [1, 1, 1]
+  ]);
+  const scene = new GroupNode({children: [node]});
+  const prepared = makePhysicsControllerScene(scene, new Map([[node, {mass: 2}]]), {});
+  expect(prepared.definition.world.bodies[0].colliders?.[0].shape).toEqual({
+    type: 'box',
+    halfExtents: [2, 3, 4]
+  });
+});
+
+test('a controller cannot replace or detach another producer on its scene', async () => {
+  const source = {getFrame: () => null};
+  const scene = new GroupNode({transformSource: source});
+  const device = new NullDevice({});
+  const physics = new PhysicsController(device, {scene});
+  try {
+    await expect(physics.prepare()).rejects.toThrow('Scene already has a transform source');
+    expect(physics.transformSource.getFrame()).toBeNull();
+    expect(scene.transformSource).toBe(source);
+    await physics.destroy();
+    expect(scene.transformSource).toBe(source);
+  } finally {
+    await physics.destroy();
+    device.destroy();
+  }
+});

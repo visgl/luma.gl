@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type Texture, type TextureFormatColor} from '@luma.gl/core';
-import {type ModelProps, ShaderPassRenderer} from '@luma.gl/engine';
+import {type ModelProps, type ScenegraphNode, ShaderPassRenderer} from '@luma.gl/engine';
 import type {Light} from '@luma.gl/shaders';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {
@@ -18,6 +18,7 @@ import {
   getSceneAlphaMode,
   SceneRenderer,
   type SceneRenderOptions,
+  type ScenegraphRenderOptions,
   type SceneRenderStatistics,
   type SceneSurface
 } from './scene-renderer';
@@ -55,31 +56,37 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
     return false;
   }
 
-  return options.surfaces.every(surface => {
-    const uniforms = surface.material.uniforms || {};
-    const bindings = surface.material.bindings || {};
-    return (
-      getSceneAlphaMode(surface.material) !== 'BLEND' &&
-      !uniforms.unlit &&
-      !(uniforms.transmissionFactor && uniforms.transmissionFactor > 0) &&
-      !(uniforms.diffuseTransmissionFactor && uniforms.diffuseTransmissionFactor > 0) &&
-      !(uniforms.multiscatterColorFactor || []).some(component => component > 0) &&
-      !uniforms.bumpMapEnabled &&
-      !bindings.pbr_bumpSampler &&
-      !(uniforms.thicknessFactor && uniforms.thicknessFactor > 0) &&
-      !(uniforms.clearcoatFactor && uniforms.clearcoatFactor > 0) &&
-      !(uniforms.iridescenceFactor && uniforms.iridescenceFactor > 0) &&
-      !(uniforms.anisotropyStrength && uniforms.anisotropyStrength > 0) &&
-      !(uniforms.sheenColorFactor || []).some(component => component > 0) &&
-      (uniforms.ior === undefined || uniforms.ior === 1.5) &&
-      (uniforms.specularIntensityFactor === undefined || uniforms.specularIntensityFactor === 1) &&
-      (uniforms.specularColorFactor || [1, 1, 1]).every(component => component === 1) &&
-      !uniforms.specularColorMapEnabled &&
-      !uniforms.specularIntensityMapEnabled &&
-      !bindings.pbr_specularColorSampler &&
-      !bindings.pbr_specularIntensitySampler
-    );
-  });
+  return (
+    !options.rasterPass &&
+    !options.spotShadows &&
+    options.surfaces.every(surface => {
+      if (surface.gpuTransforms) return false;
+      const uniforms = surface.material.uniforms || {};
+      const bindings = surface.material.bindings || {};
+      return (
+        getSceneAlphaMode(surface.material) !== 'BLEND' &&
+        !uniforms.unlit &&
+        !(uniforms.transmissionFactor && uniforms.transmissionFactor > 0) &&
+        !(uniforms.diffuseTransmissionFactor && uniforms.diffuseTransmissionFactor > 0) &&
+        !(uniforms.multiscatterColorFactor || []).some(component => component > 0) &&
+        !uniforms.bumpMapEnabled &&
+        !bindings.pbr_bumpSampler &&
+        !(uniforms.thicknessFactor && uniforms.thicknessFactor > 0) &&
+        !(uniforms.clearcoatFactor && uniforms.clearcoatFactor > 0) &&
+        !(uniforms.iridescenceFactor && uniforms.iridescenceFactor > 0) &&
+        !(uniforms.anisotropyStrength && uniforms.anisotropyStrength > 0) &&
+        !(uniforms.sheenColorFactor || []).some(component => component > 0) &&
+        (uniforms.ior === undefined || uniforms.ior === 1.5) &&
+        (uniforms.specularIntensityFactor === undefined ||
+          uniforms.specularIntensityFactor === 1) &&
+        (uniforms.specularColorFactor || [1, 1, 1]).every(component => component === 1) &&
+        !uniforms.specularColorMapEnabled &&
+        !uniforms.specularIntensityMapEnabled &&
+        !bindings.pbr_specularColorSampler &&
+        !bindings.pbr_specularIntensitySampler
+      );
+    })
+  );
 }
 
 /**
@@ -112,8 +119,17 @@ export class DeferredSceneRenderer extends SceneRenderer {
     });
   }
 
+  override pick(
+    input: SceneRenderOptions | ScenegraphRenderOptions,
+    pixel: {x: number; y: number}
+  ): Promise<ScenegraphNode | undefined> {
+    this.forwardRenderer ||= new SceneRenderer(this.device);
+    return this.forwardRenderer.pick(this.resolveSceneOptions(input), pixel);
+  }
+
   /** Draws compatible scenes through deferred lighting and falls back for advanced materials. */
-  override render(options: SceneRenderOptions): SceneRenderStatistics {
+  override render(input: SceneRenderOptions | ScenegraphRenderOptions): SceneRenderStatistics {
+    const options = this.resolveSceneOptions(input);
     if (!supportsDeferredScene(options)) {
       this.lastDeferredFrameIdentifiers.delete(options.id);
       this.forwardRenderer ||= new SceneRenderer(this.device);

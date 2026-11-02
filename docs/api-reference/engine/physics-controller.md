@@ -48,7 +48,8 @@ for scene/application-driven motion. Options include mass, friction, restitution
 velocities, center of mass, inertia and gravity factor.
 
 `collider: 'geometry'` is the default. The controller snapshots CPU geometry from
-`PhysicsGeometryNode.geometry` or `ModelNode.model.sourceGeometry`. A registered group
+`GeometryNode.geometry` (including `SceneMeshNode`), `PhysicsGeometryNode.geometry` or
+`ModelNode.model.sourceGeometry`. A registered group
 collects descendant geometry, stopping at descendants with their own bodies. Hidden
 geometry participates. Declared `ModelNode.instanceMatrices` become compound colliders.
 
@@ -129,10 +130,23 @@ velocity. This API does not resample animation or interpolate targets between su
 matrices, bounds and node bindings. Rendering composes each published body matrix with its
 mesh-relative matrix. CPU node transforms remain authored/animated values.
 
-Fetch publication again after prepare/reset changes `physics.revision`; old buffers belong
-to the old session revision. This controller does not yet add automatic scene traversal,
-shadow casting or physics bindings to `SceneRenderer`. Those remain the next renderer
-integration step; existing physics-aware render adapters can consume this publication.
+Successful `prepare()` installs the stable `physics.transformSource` on
+`scene.transformSource`. It returns a generic `ScenegraphTransformFrame` containing borrowed
+matrices, matrix count, revision and node bindings. `SceneRenderer` consumes it when traversing
+`SceneMeshNode` leaves, including in spot-shadow, depth and picking passes. It fetches current
+buffers after reset/rebuild. The source returns `null` before preparation, during pending/dirty
+edits and after disposal; the retained renderer falls back to authored transforms. Pause rendering
+during asynchronous edits when that temporary fallback is undesirable.
+
+A scene can have one transform source. Preparation rejects an existing source owned by another
+producer; destruction detaches only this controller's source. The renderer never destroys
+producer-owned buffers. When using `physics.publication` directly, fetch it again after
+prepare/reset changes `physics.revision`; old buffers belong to the old session revision.
+
+Direct traversal currently accepts `SceneMeshNode`, not already compiled `ModelNode` leaves.
+Existing glTF/custom model adapters continue consuming publication explicitly. GPU-transformed
+alpha blending, CPU evaluated bounds and GPU-driven skin palette generation are separate work.
+See the [walkthrough](/docs/api-guide/physics/getting-started) for a complete application.
 
 `await reset()` restores authored bodies and scene-node transforms, preserving cameras
 outside the controlled scene. `destroy()` is idempotent, waits for pending operations and

@@ -19,6 +19,7 @@ import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makeMechanism} from './mechanisms';
 import {WRECKING_BALL_PHYSICS, WRECKING_BALL_TIME_STEP} from './wrecking-ball';
 import {CradleScene} from './cradle-scene';
+import {WreckingBallScene} from './wrecking-ball-scene';
 import {createRigidBodyPanel} from './info-box';
 import {
   makeRigidBodyScene,
@@ -110,6 +111,7 @@ try {
     if (mechanism && sceneName !== 'wreckingBall') solver.value = 'ordered';
     const world = new GPURigidBodyWorld({
       bodies,
+      publishPoses: sceneName === 'cradle' || sceneName === 'wreckingBall',
       publicationBounds:
         sceneName === 'cradle'
           ? bodies.map(body => {
@@ -189,26 +191,26 @@ try {
       data: new Float32Array(meshVerticesData.length ? meshVerticesData : [0, 0, 0, 0]),
       usage: Buffer.STORAGE
     });
-    const surface = sceneName === 'cradle' ? null : createLabMaterial(device, bodies, sceneName);
-    const model =
-      sceneName === 'cradle'
-        ? null
-        : createPBRModel(device, {
-            id: 'rigid-body-shapes',
-            material: surface!.material,
-            defines: {
-              HAS_NORMALS: true,
-              HAS_TANGENTS: true,
-              HAS_UV: true,
-              HAS_UV_1: true,
-              USE_LIGHTS: true,
-              USE_IBL: true,
-              USE_SCENE_ENVIRONMENT: true,
-              USE_TEX_LOD: true,
-              USE_SCENE_COLOR_MANAGEMENT: true
-            },
-            modules: [rigidBodyPose, shadow],
-            source: `
+    const retainedScene = sceneName === 'cradle' || sceneName === 'wreckingBall';
+    const surface = retainedScene ? null : createLabMaterial(device, bodies, sceneName);
+    const model = retainedScene
+      ? null
+      : createPBRModel(device, {
+          id: 'rigid-body-shapes',
+          material: surface!.material,
+          defines: {
+            HAS_NORMALS: true,
+            HAS_TANGENTS: true,
+            HAS_UV: true,
+            HAS_UV_1: true,
+            USE_LIGHTS: true,
+            USE_IBL: true,
+            USE_SCENE_ENVIRONMENT: true,
+            USE_TEX_LOD: true,
+            USE_SCENE_COLOR_MANAGEMENT: true
+          },
+          modules: [rigidBodyPose, shadow],
+          source: `
 ${makeRigidBodyVertexShader(sceneName, bodies.length, longitudeSegments, latitudeSegments)}
 fn grainHash(point:vec2f)->f32{return fract(sin(dot(point,vec2f(127.1,311.7)))*43758.5453);}
 fn surfaceGrain(point:vec2f)->f32{
@@ -220,7 +222,7 @@ fn surfaceGrain(point:vec2f)->f32{
  var colorValue=input.color*band;
 
  ${
-   sceneName === 'dominoSpiral' || sceneName === 'wreckingBall'
+   sceneName === 'dominoSpiral'
      ? `
 
  let distanceToPip=min(length(input.localPoint.yz-vec2f(0,0.38)),length(input.localPoint.yz+vec2f(0,0.38)));
@@ -237,16 +239,7 @@ fn surfaceGrain(point:vec2f)->f32{
    color=mix(color,vec3f(0.85,0.83,0.77),max(pip,divider*0.65));
   }
  }
- ${
-   sceneName === 'wreckingBall'
-     ? `
- color=select(vec3f(0.40,0.23,0.11)*(0.85+grain*0.12+fract(f32(input.body)*0.618)*0.2),vec3f(0.17,0.20,0.22),input.body<6u);
 
- if(input.sphere>0.5){color=vec3f(0.60,0.66,0.72);}
- if(input.body==0u){color=vec3f(0.26,0.28,0.29)*(0.95+grain*0.1);}
- `
-     : ''
- }
  colorValue=color;
 
  `
@@ -263,22 +256,21 @@ fn surfaceGrain(point:vec2f)->f32{
  let visibility=shadow_getSpotFactor(0,input.worldPosition,normal);
  return pbr_filterColorWithSpotShadows(vec4f(colorValue,1),vec4f(visibility,1,1,1));}
 `,
-            vertexCount:
-              sceneName === 'wreckingBall' ? (bodies.length - 1) * 36 + vertexCount : vertexCount,
-            instanceCount: sceneName === 'wreckingBall' ? 1 : bodies.length,
-            parameters: {
-              depthWriteEnabled: true,
-              depthCompare: 'less-equal',
-              depthFormat: 'depth24plus'
-            },
-            bindings: {
-              positions: world.positions!,
-              orientations: world.orientations!,
-              shapes,
-              meshVertices,
-              sleepStates: world.sleepStates!
-            }
-          });
+          vertexCount,
+          instanceCount: bodies.length,
+          parameters: {
+            depthWriteEnabled: true,
+            depthCompare: 'less-equal',
+            depthFormat: 'depth24plus'
+          },
+          bindings: {
+            positions: world.positions!,
+            orientations: world.orientations!,
+            shapes,
+            meshVertices,
+            sleepStates: world.sleepStates!
+          }
+        });
     if (model && surface)
       model.shaderInputs.setProps({
         lighting: {
@@ -299,7 +291,7 @@ fn surfaceGrain(point:vec2f)->f32{
     // Distance joints have no physical rods; thin cylinders visualize their centered attachments.
     const tethers = mechanism?.joints.filter(joint => joint.type === 'distance') ?? [];
     const tether =
-      sceneName !== 'cradle' && tethers.length > 0
+      !retainedScene && tethers.length > 0
         ? new Model(device, {
             id: 'mechanism-tethers',
             source: `
@@ -337,44 +329,36 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
           })
         : null;
     return {
-      shadows:
-        sceneName === 'cradle'
-          ? null
-          : new RigidBodyShadows(
-              device,
-              {
-                positions: world.positions!,
-                orientations: world.orientations!,
-                shapes,
-                sleepStates: world.sleepStates!,
-                meshVertices
-              },
-              makeRigidBodyVertexShader(
-                sceneName,
-                bodies.length,
-                longitudeSegments,
-                latitudeSegments,
-                true
-              ),
-              {
-                vertexCount:
-                  sceneName === 'wreckingBall'
-                    ? (bodies.length - 2) * 36 + longitudeSegments * latitudeSegments * 6
-                    : vertexCount,
-                instanceCount: sceneName === 'wreckingBall' ? 1 : bodies.length
-              }
+      shadows: retainedScene
+        ? null
+        : new RigidBodyShadows(
+            device,
+            {
+              positions: world.positions!,
+              orientations: world.orientations!,
+              shapes,
+              sleepStates: world.sleepStates!,
+              meshVertices
+            },
+            makeRigidBodyVertexShader(
+              sceneName,
+              bodies.length,
+              longitudeSegments,
+              latitudeSegments,
+              true
             ),
+            {
+              vertexCount,
+              instanceCount: bodies.length
+            }
+          ),
       surface,
       cradle:
         sceneName === 'cradle'
-          ? new CradleScene(
-              device,
-              world.positions!,
-              world.orientations!,
-              world.poseMatrices!,
-              mechanism!.frame!
-            )
-          : null,
+          ? new CradleScene(device, world, mechanism!.frame!)
+          : sceneName === 'wreckingBall'
+            ? new WreckingBallScene(device, world, bodies)
+            : null,
       world,
       graph,
       model,
