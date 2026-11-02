@@ -12,13 +12,38 @@ import {
 } from '@luma.gl/engine/gltf';
 import type {TextureFormat} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {
   override isTextureFormatSupported(_format: TextureFormat): boolean {
     return true;
   }
 }
+
+it('strict extension validation rejects before creating GPU resources', () => {
+  const device = new NullDevice({});
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const createTexture = vi.spyOn(device, 'createTexture');
+  const createSampler = vi.spyOn(device, 'createSampler');
+  const gltf = {
+    extensionsUsed: ['VENDOR_optional'],
+    extensionsRequired: ['VENDOR_missing'],
+    nodes: [],
+    materials: [],
+    textures: []
+  } as unknown as GLTFPostprocessed;
+  try {
+    expect(() => createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})).toThrow(
+      /VENDOR_missing: Not currently listed/
+    );
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(createTexture).not.toHaveBeenCalled();
+    expect(createSampler).not.toHaveBeenCalled();
+    expect(getGLTFExtensionSupport(gltf).get('VENDOR_optional')?.required).toBe(false);
+  } finally {
+    device.destroy();
+  }
+});
 
 type GLTFPostprocessedWithRemovedExtensions = GLTFPostprocessed & {
   extensionsRemoved?: string[];

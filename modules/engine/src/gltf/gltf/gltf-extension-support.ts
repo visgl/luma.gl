@@ -389,7 +389,9 @@ export function assertSupportedGLTFExtensions(gltf: GLTFPostprocessed, device?: 
     throw new Error(
       `Unsupported required glTF extensions: ${unsupportedExtensions
         .map(extension => extension.extensionName)
-        .join(', ')}`
+        .join(', ')}. ${unsupportedExtensions
+        .map(extension => `${extension.extensionName}: ${extension.comment}`)
+        .join(' ')}`
     );
   }
 }
