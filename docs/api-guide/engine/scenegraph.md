@@ -87,6 +87,39 @@ joint bindings retain **node references**, so duplicate display IDs do not redir
 those bindings. glTF indices are resolved by the importer; compact physics body
 indices are created by the physics adapter. Neither replaces runtime node identity.
 
+### Finding nodes by ID or path
+
+Use `GroupNode.findNode(path)` to resolve a node reference within a scene or subtree:
+
+```ts
+room.findNode('hinge');       // Exact ID anywhere in this subtree, including its root.
+room.findNode('door/hinge');  // Contiguous partial path ending at the target.
+room.findNode('/door/hinge'); // Exact path from room's children; omit room's own ID.
+room.findNode('/');          // room itself.
+```
+
+Each segment matches a complete, case-sensitive node ID. Partial paths may omit leading
+ancestors, but do not skip intermediate nodes or match fragments of an ID. Leading `/`
+anchors the path to the receiving group, so the same imported asset can be searched under
+different parents without knowing its complete placement in the application scene.
+
+`findNode` returns `undefined` when nothing matches and throws when more than one node
+matches. Add ancestor segments or search a smaller subtree to disambiguate. To operate on
+all matches, use `room.findNodes('door/hinge')`; it returns node references in structural
+preorder, including hidden nodes and branches. Even an anchored path can be ambiguous if
+siblings have duplicate IDs. No global uniqueness requirement is imposed on IDs.
+
+Paths use `~1` for a literal `/` within an ID and `~0` for a literal `~`, following JSON
+Pointer's escaping convention. For example, `room.findNode('door~1hinge')` searches for a
+single node whose ID is `door/hinge`. Empty segments and invalid escapes throw. There are
+no wildcard, parent-directory, or property selectors; other characters are literal.
+
+Resolve paths when configuring controllers, joints, or application behavior, then retain
+the returned **node objects**. Lookup always reads the current hierarchy, without cached
+indices or matrix calculations. Moving a node changes its path but does not invalidate an
+existing object reference. As with controllers, lookup requires a tree and rejects cycles
+and nodes shared under multiple parents.
+
 Animation binding IDs have a different purpose: they identify properties for mixer
 blending. Use the same binding identity for tracks affecting the same property, and
 scope identities when combining independent asset instances in one mixer.

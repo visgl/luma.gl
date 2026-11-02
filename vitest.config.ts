@@ -117,6 +117,7 @@ const nodeCoverageIncludePatterns = [
 // this list focused: Istanbul remapping for the complete Node graph takes several minutes.
 const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
+  'modules/engine/test/scenegraph/node-paths.node.spec.{ts,js}',
   'modules/engine/test/gltf/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
   'modules/{graph,engine}/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',

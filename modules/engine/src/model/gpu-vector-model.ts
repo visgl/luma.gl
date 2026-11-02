@@ -42,6 +42,7 @@ import {mergeShaderPluginModules, resolveShaderPlugins, ShaderAssembler} from '@
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
+import {BatchUniformBuffer} from './batch-uniform-buffer';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
@@ -339,6 +340,7 @@ export class GPUVectorModel {
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   protected props: Required<GPUVectorModelProps>;
+  private batchUniformBuffer?: BatchUniformBuffer;
   private geometryVectorBindings!: GPUVectorBindings;
   private attributeVectorBindings!: GPUVectorBindings;
   private explicitBufferLayout: BufferLayout[] = [];
@@ -612,6 +614,7 @@ export class GPUVectorModel {
       this.geometryVectorBindings.destroy();
       this.attributeVectorBindings.destroy();
       this._uniformStore?.destroy();
+      this.batchUniformBuffer?.destroy();
       this._destroyed = true;
     }
   }
@@ -1009,7 +1012,13 @@ export class GPUVectorModel {
     }
   }
 
-  /** Draws each aligned physical chunk without retaining or taking ownership of input vectors. */
+  /**
+   * Draws each aligned physical chunk without taking ownership of input vectors.
+   * Each batch uses a separate aligned slot for managed shader-input uniforms set by
+   * `onBatch`. Slots are reused on each call: submit previous draws before changing their
+   * values or growing the allocation. Explicit buffers remain caller-managed. Vector
+   * lengths and physical chunk boundaries must match.
+   */
   drawBatches<Inputs extends GPUVectorModelInputs = GPUVectorModelInputs>(
     renderPass: RenderPass,
     {vectors, onBatch}: GPUVectorModelDrawBatchesOptions<Inputs>
@@ -1028,6 +1037,20 @@ export class GPUVectorModel {
     const previousIsInstanced = this.isInstanced;
     const previousVertexCountSet = this._vertexCountSet;
     const drawingVectorBatches = this.drawingVectorBatches;
+    const batchUniformStore =
+      this.device.type === 'webgpu' && batches.length
+        ? new UniformStore(this.device, this.shaderInputs.modules)
+        : undefined;
+    if (batchUniformStore && this._uniformStore.uniformBuffers.size) {
+      this.batchUniformBuffer ??= new BatchUniformBuffer(this.device);
+      let batchByteLength = 0;
+      for (const moduleName of this._uniformStore.uniformBuffers.keys()) {
+        batchByteLength += this.batchUniformBuffer.getAlignedByteLength(
+          batchUniformStore.getUniformBufferData(moduleName).byteLength
+        );
+      }
+      this.batchUniformBuffer.prepare(batchByteLength * batches.length);
+    }
     this.drawingVectorBatches = true;
     let drawSuccess = true;
     try {
@@ -1035,9 +1058,29 @@ export class GPUVectorModel {
         this.setGPUData(batch.data);
         this.setBatchDrawCount(batch.rowCount);
         onBatch?.(batch);
-        drawSuccess = GPUVectorModel.prototype.draw.call(this, renderPass) && drawSuccess;
+        const managedBindings: Record<string, ModelBinding> = {};
+        try {
+          if (batchUniformStore) {
+            batchUniformStore.setUniforms(this.shaderInputs.getUniformValues());
+            for (const [moduleName, buffer] of this._uniformStore.uniformBuffers) {
+              const bindingName = `${moduleName}Uniforms`;
+              // Explicit bindings are caller-owned and must not be replaced.
+              if (this.bindings[bindingName] !== buffer) continue;
+              managedBindings[bindingName] = buffer;
+              this.setBindings({
+                [bindingName]: this.batchUniformBuffer!.write(
+                  batchUniformStore.getUniformBufferData(moduleName)
+                )
+              });
+            }
+          }
+          drawSuccess = GPUVectorModel.prototype.draw.call(this, renderPass) && drawSuccess;
+        } finally {
+          this.setBindings(managedBindings);
+        }
       }
     } finally {
+      batchUniformStore?.destroy();
       this.setAttributes(previousAttributes, {byteOffsets: previousAttributeByteOffsets});
       for (const name of Object.keys(this.bindings)) {
         if (!(name in previousBindings)) delete this.bindings[name];

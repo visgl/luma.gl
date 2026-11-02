@@ -7,6 +7,11 @@ WebGPU graphs also expose [stable compaction](./api-reference/graph/gpu-compacti
 with input-sized capacity and a separate GPU logical count, without implicit readback or allocation
 based on CPU-visible counts. Evaluator APIs remain unchanged.
 
+### Scenegraph node paths
+
+`GroupNode.findNode()` and `findNodes()` resolve node references by exact ID, anchored
+hierarchy path or a partial path. Lookup includes hidden nodes and reports ambiguous
+single-node references. See [Finding nodes by ID or path](./api-guide/engine/scenegraph.md#finding-nodes-by-id-or-path).
 
 ### Graph intermediate storage reuse
 
@@ -1070,3 +1075,13 @@ ShaderPlugins can provide render hooks with GLSL/WGSL parameter signatures as we
 as inject behavior into them. Object forms separate stage and target; string
 shorthand supports language prefixes. See the [ShaderPlugin guide](/docs/api-reference/shaders/shader-plugin)
 and [Shaders overview](/docs/api-reference/shaders).
+
+
+### Aligned per-batch shader uniforms
+
+`GPUVectorModel.drawBatches()` and `Model.drawBatches()` use separate aligned regions of one
+engine-owned WebGPU uniform buffer for each batch. Set picking offsets or other uniforms in
+`onBatch` without managing the batch buffer yourself. The model reuses its allocation across
+submitted calls and grows it when needed. Matching chunk boundaries are still required.
+See [Per-batch uniforms](./api-reference/engine/model.md#per-batch-uniforms) for the submission
+and lifetime contract.
