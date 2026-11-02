@@ -54,6 +54,8 @@ export type SplatRendererProps = {
   semanticFilter?: SplatSemanticFilter;
   /** Camera-dependent depth ordering strategy. Defaults to `global`. */
   sortMode?: SplatSortMode;
+  /** Projected-depth convention for alpha ordering, independent of depthCompare. Defaults to standard. */
+  depthConvention?: 'standard' | 'reverse';
   /** Minimum fragment opacity retained after Gaussian attenuation. */
   alphaCutoff?: number;
   /** Alias for {@link alphaCutoff} when integrating opacity-threshold controls. */
@@ -124,6 +126,7 @@ type ResolvedSplatRendererProps = {
   sphericalHarmonicsDegree: SplatSphericalHarmonicsDegree;
   semanticFilter?: SplatSemanticFilter;
   sortMode: SplatSortMode;
+  depthConvention: 'standard' | 'reverse';
   alphaCutoff: number;
   screenSizeCutoffPixels: number;
   gaussianSupportRadius: number;
@@ -241,6 +244,7 @@ export class SplatRenderer {
       sphericalHarmonicsDegree: props.sphericalHarmonicsDegree ?? 3,
       semanticFilter: props.semanticFilter,
       sortMode: props.sortMode ?? 'global',
+      depthConvention: props.depthConvention ?? 'standard',
       alphaCutoff: props.alphaCutoff ?? props.opacityThreshold ?? 1 / 255,
       screenSizeCutoffPixels: props.screenSizeCutoffPixels ?? 0,
       gaussianSupportRadius: props.gaussianSupportRadius ?? 3,
@@ -349,6 +353,9 @@ export class SplatRenderer {
       this.props.semanticFilter = props.semanticFilter;
       this.requiresUpdate = true;
       this.requiresWebGLSourceUpdate = this.device.type !== 'webgpu';
+    }
+    if (props.depthConvention !== undefined) {
+      this.setResolvedProp('depthConvention', props.depthConvention);
     }
     if (props.sortMode !== undefined) {
       this.setResolvedProp('sortMode', props.sortMode);
@@ -773,7 +780,8 @@ export class SplatRenderer {
           const tileRow = Math.max(0, Math.floor(screenPositionY / SPLAT_TILE_SIZE_PIXELS));
           tileIndex = tileRow * tileColumns + tileColumn;
         }
-        const depth = clipPositionW !== 0 ? clipPositionZ / clipPositionW : clipPositionZ;
+        const projectedDepth = clipPositionW !== 0 ? clipPositionZ / clipPositionW : clipPositionZ;
+        const depth = this.props.depthConvention === 'reverse' ? -projectedDepth : projectedDepth;
         let reference = cachedBatchReferences[batchRowIndex];
         if (reference) {
           reference.depth = depth;
