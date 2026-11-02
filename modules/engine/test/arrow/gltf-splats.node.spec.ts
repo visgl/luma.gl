@@ -169,7 +169,7 @@ test('prepares an embedded SPZ payload decoded by loaders.gl', async () => {
   const json = JSON.stringify({
     asset: {version: '2.0'},
     extensionsUsed: ['KHR_gaussian_splatting', 'KHR_gaussian_splatting_compression_spz_2'],
-    buffers: [{byteLength: bytes.length, uri: `data:application/octet-stream;base64,${encoded}`}],
+    buffers: [{byteLength: bytes.length}],
     bufferViews: [{buffer: 0, byteLength: bytes.length}],
     meshes: [
       {
@@ -188,8 +188,21 @@ test('prepares an embedded SPZ payload decoded by loaders.gl', async () => {
       }
     ]
   });
-  const loaded = await parse(json, [GLTFLoader, SPZLoader], {
-    core: {mimeType: 'model/gltf+json'},
+  const jsonBytes = Buffer.from(json);
+  const jsonLength = (jsonBytes.length + 3) & ~3;
+  const binaryLength = (bytes.length + 3) & ~3;
+  const glb = Buffer.alloc(12 + 8 + jsonLength + 8 + binaryLength);
+  glb.writeUInt32LE(0x46546c67, 0);
+  glb.writeUInt32LE(2, 4);
+  glb.writeUInt32LE(glb.length, 8);
+  glb.writeUInt32LE(jsonLength, 12);
+  glb.writeUInt32LE(0x4e4f534a, 16);
+  glb.fill(0x20, 20, 20 + jsonLength);
+  jsonBytes.copy(glb, 20);
+  glb.writeUInt32LE(binaryLength, 20 + jsonLength);
+  glb.writeUInt32LE(0x004e4942, 24 + jsonLength);
+  bytes.copy(glb, 28 + jsonLength);
+  const loaded = await parse(Uint8Array.from(glb).buffer, [GLTFLoader, SPZLoader], {
     splats: {shape: 'arrow-table'}
   });
   const gltf = postProcessGLTF(loaded as any);
