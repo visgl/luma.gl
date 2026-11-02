@@ -173,7 +173,7 @@ at compilation. Existing explicit `.scalar()`/`.vector()` declarations and flat 
 bindings remain supported for existing graph consumers; the role-based interface uses grouped
 bindings. Evaluator APIs are unchanged.
 
-## Borrowed mutable state
+## Mutable state
 
 ```typescript
 const positions = graph.addState('positions', gpuGraph.vector('float32x3'));
@@ -192,15 +192,18 @@ await compiled.run({
 
 Supply initialized state on every invocation. Reusing the same vector preserves its contents
 across runs; rebinding a different initialized vector starts from that vector's contents.
-The compiled graph does not retain state bindings or implicitly initialize, reset, swap, or
-destroy state. A selected state output is the same borrowed vector, not transferred ownership.
+The compiled graph does not retain or destroy these plain state bindings. A selected state output is the same borrowed vector, not transferred ownership.
 
 State currently requires vector storage. Represent a single mutable GPU element as a vector
 with `{length: 1}`; `gpuGraph.scalar()` remains a host numeric input or an operation-produced
 scalar result, not a persistent GPU scalar binding. Expressions cannot write directly to
-state. Use a supported state-writing operation or an explicit copy lowering after producing
-an expression result. In-place expression execution and managed state lifecycles are separate
-work.
+state. Use `GPUCopyOperation({input: 'nextPositions', target: 'positions'})` after producing
+an expression result.
+
+For independent owned copies and explicit reset/cleanup, use `compiled.createState(bindings,
+{copy: true})` and pass the resulting `GPUGraphState` as `state`. Borrowing remains the default.
+See [Mutable graph state](./gpu-graph-state.md) for initialization, reset, ownership, and
+caller-owned encoding examples.
 
 ## Backend and allocation boundaries
 
@@ -208,12 +211,12 @@ work.
 bindings on WebGL and WebGPU. Its reusable expression path rejects state declarations and
 custom lowerings explicitly. Its existing evaluator-backed APIs remain unchanged.
 
-This tranche supports fixed sizes and sizes derived from execution bindings or preceding
+Graph preparation supports fixed sizes and sizes derived from execution bindings or preceding
 operation results whose dimensions are already known to the CPU. `shape: {like: input}`
 preserves exact chunk boundaries; `{length, chunkLengths?}` specifies fixed dimensions.
 
-GPU-computed logical lengths, capacity/count pairs, exact-size allocation after readback,
-and staged execution are not implemented here. If dimensions cannot be determined from a
+[Compaction](./gpu-compaction-operation.md) supports capacity/count pairs with a separate GPU
+logical count. Exact-size allocation after readback and staged execution are not automatic. If dimensions cannot be determined from a
 contract, declaration, or supplied target, preparation fails instead of guessing a capacity.
 New operation-defined results inside conditionals/loops are also deferred; existing explicit
 control-flow declarations remain supported.

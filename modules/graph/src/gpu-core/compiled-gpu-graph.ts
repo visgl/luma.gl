@@ -8,6 +8,11 @@ import {GPUGraph} from './gpu-graph';
 import type {CompiledGPUCommandGraph} from './gpu-command-graph';
 import {GPUGraphCompiler} from './gpu-graph-compiler';
 import type {GPUOperationLowering} from './gpu-graph-lowering';
+import {
+  GPUGraphState,
+  type GPUGraphStateBindings,
+  type GPUGraphStateOptions
+} from './gpu-graph-state';
 import {GPUExpressionOperation} from './gpu-expression-operation';
 import {
   GPUExpressionProgram,
@@ -53,6 +58,19 @@ export class CompiledGPUGraph {
     }
   }
 
+  /** Bind borrowed state by default, or allocate independent copies explicitly. */
+  createState(bindings: GPUGraphStateBindings, options: GPUGraphStateOptions = {}): GPUGraphState {
+    // State creation requires a live compiled program; its lifetime is independent afterward.
+    assert(!this.destroyed);
+    return new GPUGraphState(
+      this.device,
+      this.program,
+      this.program.vectors.filter(value => value.role === 'state'),
+      bindings,
+      options
+    );
+  }
+
   async run(
     supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
@@ -80,6 +98,21 @@ export class CompiledGPUGraph {
   ): PreparedGPUGraphExecution {
     // A destroyed compiled program cannot encode further work.
     assert(!this.destroyed);
+    const state = (supplied as GPUGraphExecutionBindings).state;
+    const releaseState = state instanceof GPUGraphState ? state.retain(this.program) : undefined;
+    try {
+      return this.prepareExecution(supplied, options, releaseState);
+    } catch (error) {
+      releaseState?.();
+      throw error;
+    }
+  }
+
+  private prepareExecution(
+    supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
+    options: GPUGraphRunOptions,
+    releaseState?: () => void
+  ): PreparedGPUGraphExecution {
     const resolvedBindings = this.program.resolveBindings(supplied, options);
     const bindings = resolvedBindings.bindings;
     options = resolvedBindings.options;
@@ -147,10 +180,16 @@ export class CompiledGPUGraph {
         });
       }
       executable = compilation.graph.compile();
-      return new PreparedGPUGraphExecution(this.device, invocation, executable, () => {
-        // Keep the compiled program alive until encoding and submission have completed.
-        assert(!this.destroyed);
-      });
+      return new PreparedGPUGraphExecution(
+        this.device,
+        invocation,
+        executable,
+        () => {
+          // Keep the compiled program alive until encoding and submission have completed.
+          assert(!this.destroyed);
+        },
+        releaseState
+      );
     } catch (error) {
       executable?.destroy();
       invocation.destroy();
@@ -176,7 +215,8 @@ export class PreparedGPUGraphExecution {
     private readonly device: Device,
     private readonly invocation: GPUExpressionInvocation,
     private readonly executable: CompiledGPUCommandGraph,
-    private readonly checkProgram: () => void
+    private readonly checkProgram: () => void,
+    private readonly releaseState?: () => void
   ) {
     this.outputs = invocation.getOutputs();
   }
@@ -195,15 +235,29 @@ export class PreparedGPUGraphExecution {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.executable.destroy();
-    this.invocation.finish();
+    try {
+      this.executable.destroy();
+    } finally {
+      try {
+        this.invocation.finish();
+      } finally {
+        this.releaseState?.();
+      }
+    }
   }
 
   /** @internal run() has no caller to receive allocated outputs when it fails. */
   discard(): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.executable.destroy();
-    this.invocation.destroy();
+    try {
+      this.executable.destroy();
+    } finally {
+      try {
+        this.invocation.destroy();
+      } finally {
+        this.releaseState?.();
+      }
+    }
   }
 }
