@@ -191,3 +191,11 @@ export type {
   GPUOperationOutputDeclarations,
   GPUOperationContractContext
 } from './gpu-core/gpu-operation-contract';
+
+export {GPUUploadOperation, GPUCopyOperation} from './gpu-core/gpu-transfer-operation';
+export type {
+  GPUUploadOperationProps,
+  GPUCopyOperationProps
+} from './gpu-core/gpu-transfer-operation';
+export {GPUCompactionOperation} from './gpu-core/gpu-compaction-operation';
+export type {GPUCompactionOperationProps} from './gpu-core/gpu-compaction-operation';

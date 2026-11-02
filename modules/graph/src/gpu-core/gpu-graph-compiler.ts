@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {lowerGPUUpload, lowerGPUCopy} from './gpu-transfer-lowering';
+import {GPUCompactionOperation} from './gpu-compaction-operation';
+import {GPUCompaction} from './gpu-compaction';
+
 import type {TextureFormat} from '@luma.gl/core';
 import type {
   GraphBufferHandle,
@@ -273,6 +277,23 @@ export class GPUGraphCompiler<Parameters = void> {
   }
   protected createCoreLowerings(): GPUOperationLowering<Parameters>[] {
     return [
+      {type: 'vector-upload', lower: lowerGPUUpload},
+      {type: 'vector-copy', lower: lowerGPUCopy},
+      {
+        type: 'compaction',
+        lower: (operation: GPUCompactionOperation, context) => {
+          const {input, flags, output, count} = operation.props;
+          context.graph.add(
+            new GPUCompaction({
+              id: operation.id,
+              input: context.resolveVector<'uint32'>(input),
+              flags: context.resolveVector<'uint32'>(flags),
+              output: context.resolveVector<'uint32'>(output),
+              count: context.resolveScalar<'uint32'>(count).view
+            })
+          );
+        }
+      },
       {
         type: 'scalar-literal',
         lower: (operation: GPUGraphScalarLiteral, context) => {
