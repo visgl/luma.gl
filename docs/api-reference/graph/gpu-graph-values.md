@@ -68,6 +68,51 @@ cross-operation buffer reuse or fusion. Operation-private transient command reso
 the existing command graph's allocation and reuse behavior. Lowerings should describe scratch
 resources through the command graph rather than privately allocating opaque buffers.
 
+## Caller-owned encoding
+
+`compiled.prepare(bindings)` binds one invocation, resolves dimensions, and allocates its
+results and scratch. It does not encode commands or submit work. Each prepared execution
+can be encoded once into a caller-owned encoder:
+
+```typescript
+const execution = compiled.prepare({
+  inputs: {positions: positionsVector, scale: 2}
+});
+const encoder = device.createCommandEncoder();
+try {
+  execution.encode(encoder);
+  // Append other graph work or rendering that consumes execution.outputs.lengths.
+  device.submit(encoder.finish());
+} finally {
+  // On failure, abandon the encoder; never submit a partially encoded invocation.
+  encoder.destroy();
+  execution.destroy();
+}
+// Outputs remain caller-owned, including when an execution is cancelled.
+execution.outputs.lengths.destroy();
+```
+
+`execution.outputs` is available immediately after preparation, allowing one prepared
+graph's outputs to bind another graph before either is submitted. GPU contents become
+available in command order. Encoding neither finishes nor submits nor destroys the encoder.
+The encoder must belong to the compiled graph's device.
+
+Keep the compiled graph, borrowed bindings, outputs, and prepared execution alive through
+submission. Call `execution.destroy()` **after submission**, or after abandoning an
+unsubmitted encoder. This releases invocation scratch and command resources, while preserving
+outputs and borrowed inputs, state, and targets. It is idempotent. You need not wait for GPU
+completion to release scratch after submission; keep outputs alive for downstream consumers.
+Destroying the compiled graph prevents further preparation or encoding.
+
+An execution cannot be encoded twice, including after a failed encoding attempt. To run again,
+prepare another execution. Cancellation before encoding uses the same `destroy()` method;
+allocated outputs still belong to the caller and must also be destroyed when unused.
+
+`await compiled.run(bindings)` is the convenience path over preparation, encoding, submission,
+and scratch cleanup. On failure it also releases allocated outputs that it could not return;
+borrowed resources survive. Its promise does not imply GPU completion. These caller-owned
+encoding APIs apply to WebGPU `GPUGraph`; SimpleGraph's evaluator and execution APIs are unchanged.
+
 ## Operation-defined results
 
 A custom operation can publish result declarations through its contract:

@@ -164,7 +164,7 @@ export type {
   GPUExpressionOperationProps,
   GPUExpressionAST
 } from './gpu-core/gpu-expression-operation';
-export {CompiledGPUGraph} from './gpu-core/compiled-gpu-graph';
+export {CompiledGPUGraph, PreparedGPUGraphExecution} from './gpu-core/compiled-gpu-graph';
 export type {
   GPUGraphCompileOptions,
   GPUGraphRunBindings,
