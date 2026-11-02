@@ -10,6 +10,7 @@ import type {ScenegraphNode} from './scenegraph-node';
 export type ScenegraphTransformBinding = {
   matrixIndex: number;
   localMatrix: Readonly<NumericArray>;
+  /** Optional producer visibility mask; authored display is evaluated live by traversal. */
   visible?: boolean;
 };
 

@@ -511,21 +511,21 @@ export class SceneRenderer {
   /** Destroys cached models and instance buffers associated with one frame identity. */
   destroyFrame(frameIdentifier: string): void {
     const resources = this.frames.get(frameIdentifier);
-    if (!resources) {
-      return;
+    if (resources) {
+      for (const surface of resources.surfaces.values()) destroyCompiledSceneSurface(surface);
+      destroyTransmissionResources(resources.transmission);
+      this.frames.delete(frameIdentifier);
     }
-
-    for (const surface of resources.surfaces.values()) {
-      destroyCompiledSceneSurface(surface);
-    }
-    destroyTransmissionResources(resources.transmission);
-    this.frames.delete(frameIdentifier);
+    // Shadow preparation precedes the presented frame and may survive a failed color preparation.
     this.shadowMaps.get(frameIdentifier)?.destroy();
     this.shadowMaps.delete(frameIdentifier);
-    for (let index = 0; index < 4; index++) this.destroyFrame(`${frameIdentifier}-shadow-${index}`);
-    if (resources.transmission) {
-      this.destroyFrame(getTransmissionCaptureIdentifier(frameIdentifier));
+    for (let index = 0; index < 4; index++) {
+      const shadowIdentifier = `${frameIdentifier}-shadow-${index}`;
+      if (this.frames.has(shadowIdentifier) || this.shadowMaps.has(shadowIdentifier))
+        this.destroyFrame(shadowIdentifier);
     }
+    const captureIdentifier = getTransmissionCaptureIdentifier(frameIdentifier);
+    if (this.frames.has(captureIdentifier)) this.destroyFrame(captureIdentifier);
   }
 
   /** Releases all engine-owned scene models, materials, and instance buffers. */

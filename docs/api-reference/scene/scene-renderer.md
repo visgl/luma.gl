@@ -63,7 +63,9 @@ A bound mesh is evaluated as `matrices[matrixIndex] * localMatrix`. Bindings des
 mesh's complete relation to its producer frame; they are not added to the authored world
 matrix a second time. The nearest group's source applies to its subtree. A nested source
 returning `null` selects authored placement in that subtree. Unbound meshes retain authored
-world placement. Producers must include bindings for visual descendants they control;
+world placement. Authored visibility is evaluated live on every traversal; the optional
+binding flag is an additional producer mask. The physics source does not snapshot authored
+visibility into that mask, so hide/show works while simulation is paused. Producers must include bindings for visual descendants they control;
 `PhysicsController` does this during publication updates.
 
 Each render obtains the accepted publication and refreshes bindings, including replacement

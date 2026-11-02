@@ -12,9 +12,17 @@ import {
   type ScenegraphTransformFrame
 } from '@luma.gl/engine';
 import {PhysicsController} from '@luma.gl/engine/physics';
-import {SceneRenderer, SceneMeshNode, DeferredSceneRenderer} from '@luma.gl/anari';
+import {
+  SceneRenderer,
+  SceneMeshNode,
+  DeferredSceneRenderer,
+  ShadowMapRenderer,
+  type SceneRenderOptions,
+  type PreparedScene,
+  type ShadowShaderProps
+} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core';
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 
 const camera = {viewMatrix: new Matrix4(), projectionMatrix: new Matrix4(), position: [0, 0, 2]};
 
@@ -531,5 +539,100 @@ test('the first GPU shadowed frame matches subsequent frames and darkens the rec
     readback.destroy();
     matrices.destroy();
     scene.destroy();
+  }
+});
+
+test('paused physics responds to live mesh and ancestor visibility without a simulation step', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  const node = new SceneMeshNode({
+    id: 'box',
+    geometry: new CubeGeometry(),
+    display: false,
+    matrix: new Matrix4().translate([0, 0, 0.5]).scale([0.1, 0.1, 0.1]),
+    material: {id: 'box'}
+  });
+  const parent = new GroupNode({id: 'parent', children: [node], display: false});
+  const scene = new GroupNode({children: [parent]});
+  const physics = new PhysicsController(device, {scene, gravity: [0, 0, 0]});
+  const renderer = new SceneRenderer(device);
+  physics.addBody(node);
+  const options = {scene, camera, width: 32, height: 32};
+  try {
+    await physics.prepare();
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBeUndefined();
+    parent.display = true;
+    node.display = true;
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBe(node);
+    parent.display = false;
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBeUndefined();
+    parent.display = true;
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBe(node);
+    node.display = false;
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBeUndefined();
+    node.display = true;
+    expect(await renderer.pick(options, {x: 16, y: 16})).toBe(node);
+  } finally {
+    renderer.destroy();
+    await physics.destroy();
+    scene.destroy();
+  }
+});
+
+test('destroyScene releases caster models and shadow textures after failed color preparation', async () => {
+  const device = await getWebGPUTestDevice('core');
+  if (!device) return;
+  class FailingRenderer extends SceneRenderer {
+    readonly casters: Model[] = [];
+    protected override prepareScene(options: SceneRenderOptions): PreparedScene {
+      if (options.rasterPass !== 'depth') throw new Error('Color preparation failed');
+      const prepared = super.prepareScene(options);
+      this.casters.push(...prepared.surfaces.map(surface => surface.model));
+      return prepared;
+    }
+  }
+  const shadowPublications: ShadowShaderProps[] = [];
+  const renderShadows = ShadowMapRenderer.prototype.render;
+  const shadowSpy = vi.spyOn(ShadowMapRenderer.prototype, 'render').mockImplementation(function (
+    this: ShadowMapRenderer,
+    options
+  ) {
+    const publication = renderShadows.call(this, options);
+    shadowPublications.push(publication);
+    return publication;
+  });
+  const renderer = new FailingRenderer(device);
+  const scene = new GroupNode({
+    children: [new SceneMeshNode({geometry: new CubeGeometry(), material: {id: 'caster'}})]
+  });
+  try {
+    expect(() =>
+      renderer.render({
+        scene,
+        camera,
+        spotShadows: {
+          mapSize: 128,
+          spotLights: [{position: [0, 0, 3], direction: [0, 0, -1], range: 10, outerConeAngle: 0.6}]
+        }
+      })
+    ).toThrow('Color preparation failed');
+    device.submit();
+    expect(renderer.casters.length).toBeGreaterThan(0);
+    const modelSpies = renderer.casters.map(model => vi.spyOn(model, 'destroy'));
+    renderer.destroyScene(scene);
+    for (const spy of modelSpies) {
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    }
+    expect(shadowPublications).toHaveLength(1);
+    for (const publication of shadowPublications) {
+      expect(publication.spotShadowTexture.destroyed).toBe(true);
+      expect(publication.directionalShadowTexture.destroyed).toBe(true);
+      expect(publication.pointShadowTexture.destroyed).toBe(true);
+    }
+  } finally {
+    renderer.destroy();
+    scene.destroy();
+    shadowSpy.mockRestore();
   }
 });

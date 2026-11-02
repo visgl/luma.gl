@@ -129,8 +129,7 @@ export class ScenegraphPhysicsPublication {
       this.bindings.set(node, binding);
       this.transformBindings.set(node, {
         matrixIndex: binding.body,
-        localMatrix: binding.localMatrix,
-        visible: binding.visible
+        localMatrix: binding.localMatrix
       });
     }
   }
