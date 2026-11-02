@@ -385,3 +385,68 @@ test('texture thumbnail batches ignore graph switches and do not read on snapsho
     host.remove();
   }
 });
+
+for (const [width, height] of [
+  [1, 32],
+  [32, 1]
+]) {
+  test(`texture thumbnails preserve ${width} by ${height} aspect ratio within the row`, async () => {
+    const inspector = new GPUCommandGraphInspector();
+    inspector.registerGraph({
+      id: 'image',
+      stats: EMPTY_GRAPH_STATS,
+      capabilities: GRAPH_CAPABILITIES
+    });
+    vi.spyOn(inspector, 'readResource').mockResolvedValue({
+      width,
+      height,
+      format: 'r32float',
+      data: new Uint8Array(new Float32Array(width * height).fill(0.5).buffer)
+    });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const panel = new GPUCommandGraphInspectorPanel(host, {inspector});
+    try {
+      panel.update({
+        graphs: [
+          {
+            ...inspector.getSnapshot().graphs[0],
+            nodes: [
+              {
+                id: 'draw',
+                type: 'render',
+                cpu: {sampleCount: 0},
+                gpu: {sampleCount: 0},
+                resources: [
+                  {
+                    id: 'narrow',
+                    kind: 'texture',
+                    usage: 'sampled',
+                    width,
+                    height,
+                    format: 'r32float'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      });
+      host.querySelector<HTMLButtonElement>('[data-inspector-tab="resources"]')!.click();
+      host.querySelector<HTMLButtonElement>('[data-texture-previews]')!.click();
+      await vi.waitFor(() =>
+        expect(host.querySelector('[data-resource-key] canvas')).not.toBeNull()
+      );
+      const bounds = host.querySelector('canvas')!.getBoundingClientRect();
+      expect(bounds.width).toBeLessThanOrEqual(48);
+      expect(bounds.height).toBeLessThanOrEqual(48);
+      expect(bounds.width / bounds.height).toBeCloseTo(width / height);
+      expect(
+        host.querySelector('[data-resource-key]')!.getBoundingClientRect().height
+      ).toBeLessThan(80);
+    } finally {
+      panel.destroy();
+      host.remove();
+    }
+  });
+}

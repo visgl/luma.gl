@@ -315,7 +315,9 @@ export class GPUCommandGraphInspectorPanel {
     if (!row) return;
     const canvas = makeTexturePreviewCanvas(row.ownerDocument, preview);
     if (!canvas) return;
-    canvas.style.width = '48px';
+    const extent = Math.max(canvas.width, canvas.height);
+    canvas.style.width = `${(48 * canvas.width) / extent}px`;
+    canvas.style.height = `${(48 * canvas.height) / extent}px`;
     canvas.style.flexShrink = '0';
     row.removeAttribute('title');
     row.querySelector('canvas')?.remove();

@@ -7,7 +7,7 @@ import type {GPUResourcePreview} from '@luma.gl/graph/gpu-core';
 /** Display conversion only: preserve the readback bytes for numeric inspection. */
 export function makeTexturePreviewPixels(
   preview: GPUResourcePreview
-): Uint8ClampedArray | undefined {
+): Uint8ClampedArray<ArrayBuffer> | undefined {
   const match = /^(r|rg|rgba|bgra)(8unorm|8snorm|16float|32float)(-srgb)?$/.exec(
     preview.format ?? ''
   );
@@ -75,7 +75,6 @@ export function makeTexturePreviewCanvas(
   );
   canvas.title = 'Current allocation · top-left crop · display range 0–1';
   canvas.getContext('2d')?.putImageData(new ImageData(pixels, canvas.width, canvas.height), 0, 0);
-  canvas.style.cssText =
-    'width:128px;max-width:100%;height:auto;image-rendering:pixelated;background:repeating-conic-gradient(#888 0% 25%,#bbb 0% 50%) 0/12px 12px';
+  canvas.style.cssText = `width:${(128 * canvas.width) / Math.max(canvas.width, canvas.height)}px;max-width:100%;height:auto;image-rendering:pixelated;background:repeating-conic-gradient(#888 0% 25%,#bbb 0% 50%) 0/12px 12px`;
   return canvas;
 }
