@@ -9,10 +9,33 @@ and controllers. The hierarchy places objects; controllers animate, deform, or c
 them. The same engine objects serve imported glTF assets and programmatically constructed
 scenes.
 
+A scenegraph is the description that rendering and simulation share. You can build it
+in code or obtain it from an importer. For example, a room group can contain a door group,
+a visible mesh and an attachment node; those objects keep their identity as you add
+animation or physics.
+
 A scenegraph is not a second renderer or a physics world. `ModelNode` connects the
 hierarchy to engine `Model` rendering. Physics adapters connect selected nodes to a GPU
 simulation. Applications still choose the render passes, frame scheduling, and resources
 appropriate for their renderer.
+
+## A practical reading path
+
+1. **Place objects.** Start with the hierarchy, local transforms and path lookup below.
+2. **Choose a render path.** `ModelNode` holds a compiled model for an existing renderer.
+   `SceneMeshNode` from `@luma.gl/anari` describes geometry and a PBR material for
+   `SceneRenderer.render({scene, camera, lights})`; the renderer manages models and batching.
+3. **Add motion.** Use [animation](./animation.md) for authored playback or
+   [physics](/docs/api-guide/physics/getting-started) for simulated bodies. Give each body
+   a clear pose owner.
+4. **Connect objects.** Use skins to deform a mesh, physical joints to constrain bodies,
+   and interactivity to react to input. These are referenced relationships, not extra
+   transform-tree children.
+5. **Manage revisions.** Prepare or rebuild after structural edits, and dispose controllers
+   and render caches before their borrowed resources.
+
+Read only the capability you need. A static scene does not require a physics world, an
+animation mixer or a skeleton.
 
 ## Scenegraph Capabilities
 
@@ -44,7 +67,10 @@ into the spatial hierarchy.
 | Part | Engine representation | Responsibility |
 | --- | --- | --- |
 | Spatial hierarchy | `ScenegraphNode`, `GroupNode` | Local transforms, visibility, traversal, aggregate bounds |
-| Renderable primitive | `ModelNode` referencing a `Model` | Draw a mesh at its accumulated transform |
+| Compiled renderable primitive | `ModelNode` referencing a `Model` | Keep an existing model and its render path |
+| Retained CPU geometry | `GeometryNode` | Share geometry between adapters and collider cooking |
+| Declarative PBR mesh | `SceneMeshNode` from `@luma.gl/anari` | Let `SceneRenderer` compile and batch geometry/material pairs |
+| Evaluated GPU placement | `GroupNode.transformSource` | Borrow current world matrices without overwriting authored transforms |
 | Surface appearance | `Material`, textures and shader inputs | Reusable rendering state shared across primitives |
 | Alternate appearance | `MaterialVariants` | Select materials and pipeline parameters without rebuilding nodes |
 | Keyframe animation | Bindings, tracks, clips, actions and `AnimationMixer` | Sample and blend properties on resolved runtime objects |

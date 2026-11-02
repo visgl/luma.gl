@@ -22,6 +22,10 @@ export type ScenegraphPhysicsRenderBinding = {
 /** Authoring transforms feed GPU publication metadata; simulated poses never come back. */
 export class ScenegraphPhysicsPublication {
   readonly bindings = new Map<ScenegraphNode, ScenegraphPhysicsRenderBinding>();
+  readonly transformBindings = new Map<
+    ScenegraphNode,
+    import('../../scenegraph/transform-source').ScenegraphTransformBinding
+  >();
   private boundsKey = '';
   constructor(
     readonly world: GPURigidBodyWorld,
@@ -120,6 +124,13 @@ export class ScenegraphPhysicsPublication {
       this.boundsKey = key;
     }
     this.bindings.clear();
-    for (const [node, binding] of bindings) this.bindings.set(node, binding);
+    this.transformBindings.clear();
+    for (const [node, binding] of bindings) {
+      this.bindings.set(node, binding);
+      this.transformBindings.set(node, {
+        matrixIndex: binding.body,
+        localMatrix: binding.localMatrix
+      });
+    }
   }
 }

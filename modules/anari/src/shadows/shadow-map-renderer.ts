@@ -91,6 +91,7 @@ export type ShadowMapRendererProps = {
 /** One depth-only light view passed to the application caster callback. */
 export type ShadowRenderView = {
   renderPass: RenderPass;
+  framebuffer: Framebuffer;
   type: 'directional' | 'spot' | 'point';
   lightIndex: number;
   cascadeIndex?: number;
@@ -108,6 +109,8 @@ export type ShadowRenderOptions = {
   spotLights?: readonly SpotShadowLight[];
   pointLights?: readonly PointShadowLight[];
   drawShadowCasters: (view: ShadowRenderView) => void;
+  /** Upload resources before opening the depth render pass. */
+  prepareShadowCasters?: (view: Omit<ShadowRenderView, 'renderPass'>) => void;
 };
 
 /** Fully resolved props returned by the renderer and consumed by the `shadow` shader module. */
@@ -255,7 +258,8 @@ export class ShadowMapRenderer {
           cascadeIndex,
           mapSize: this.props.directionalMapSize,
           light,
-          drawShadowCasters: options.drawShadowCasters
+          drawShadowCasters: options.drawShadowCasters,
+          prepareShadowCasters: options.prepareShadowCasters
         });
       });
     }
@@ -269,7 +273,8 @@ export class ShadowMapRenderer {
         lightIndex,
         mapSize: this.props.spotMapSize,
         light: resolveSpotLight(spotLights[lightIndex]),
-        drawShadowCasters: options.drawShadowCasters
+        drawShadowCasters: options.drawShadowCasters,
+        prepareShadowCasters: options.prepareShadowCasters
       });
     });
 
@@ -286,7 +291,8 @@ export class ShadowMapRenderer {
           pointFace: POINT_FACE_ORIENTATIONS[faceIndex].face,
           mapSize: this.props.pointMapSize,
           light,
-          drawShadowCasters: options.drawShadowCasters
+          drawShadowCasters: options.drawShadowCasters,
+          prepareShadowCasters: options.prepareShadowCasters
         });
       }
     });
@@ -341,6 +347,7 @@ export class ShadowMapRenderer {
     mapSize: number;
     light: ShadowBiasProps;
     drawShadowCasters: ShadowRenderOptions['drawShadowCasters'];
+    prepareShadowCasters?: ShadowRenderOptions['prepareShadowCasters'];
   }): void {
     const rasterParameters = Object.freeze({
       depthWriteEnabled: true,
@@ -349,6 +356,18 @@ export class ShadowMapRenderer {
       depthBiasSlopeScale: options.light.depthBiasSlopeScale,
       cullMode: 'back'
     } satisfies RenderPipelineParameters);
+    const context = {
+      framebuffer: options.framebuffer,
+      type: options.type,
+      lightIndex: options.lightIndex,
+      cascadeIndex: options.cascadeIndex,
+      pointFace: options.pointFace,
+      camera: options.view.camera,
+      viewProjectionMatrix: options.view.viewProjectionMatrix,
+      mapSize: options.mapSize,
+      rasterParameters
+    };
+    options.prepareShadowCasters?.(context);
     const renderPass = this.device.beginRenderPass({
       id: makeShadowResourceId(`${options.type}-shadow-pass`),
       framebuffer: options.framebuffer,
@@ -357,6 +376,7 @@ export class ShadowMapRenderer {
     try {
       options.drawShadowCasters({
         renderPass,
+        framebuffer: options.framebuffer,
         type: options.type,
         lightIndex: options.lightIndex,
         cascadeIndex: options.cascadeIndex,

@@ -85,6 +85,12 @@ export type {
   GroupNodeProps
 } from './scenegraph/group-node';
 export {GroupNode} from './scenegraph/group-node';
+export {GeometryNode, type GeometryNodeProps} from './scenegraph/geometry-node';
+export type {
+  ScenegraphTransformSource,
+  ScenegraphTransformFrame,
+  ScenegraphTransformBinding
+} from './scenegraph/transform-source';
 export type {ModelNodeProps} from './scenegraph/model-node';
 export {ModelNode} from './scenegraph/model-node';
 
