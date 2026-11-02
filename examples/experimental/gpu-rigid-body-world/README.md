@@ -128,12 +128,15 @@ from [Kenney Impact Sounds](https://kenney.nl/assets/impact-sounds) are bundled 
 the original license is retained in `audio/License.txt`. Playback high-passes the low thump
 and fades the tail. No oscillators or pitch shifting are used.
 
-Dominoes and the base use procedural surface grain and varying roughness, lit by a warm
-overhead point source and cool ambient fill. Short clacks retain only an 18 ms recording
+Dominoes and the base use procedural surface grain and shared PBR materials, lit by a warm
+overhead spotlight, ambient fill and a shared generated IBL environment. Short clacks retain only an 18 ms recording
 transient, with a fast decay and reduced gain.
 
-Domino shadows use the shared ShadowMapRenderer and shadow module with a 2048-pixel
-map and one instanced depth draw from GPU body poses. The camera orbits gently until
+All general lab scenes use the shared `SpotLight`, `createPBRMaterial`, `createPBRModel`
+and `ShadowMapRenderer` support with a 2048-pixel map. The same geometry and GPU-pose
+shader drives visible and shadow passes, including mesh scenes. Spotlight cone falloff,
+PBR response and tone mapping come from the shared modules; per-body roughness and metallic
+values are a material texture rather than another lighting implementation. The camera orbits gently until
 OrbitControls receives user input. The domino scene uses 60 Hz physics with 32 solver
 iterations and 4096 contact slots; both 60 and 120 Hz propagation are regression-tested.
 The status reports simulation time relative to wall time to expose playback slowdown.
@@ -171,3 +174,10 @@ Without the prop, the lab keeps its default scenario. The scene remains selectab
 lab controls, and Reset rebuilds the selected scenario without changing the camera.
 Newton's Cradle and Spiral Dominoes have separate entries in the Physics examples sidebar
 while sharing the same lab runtime and assets.
+
+## Engine alignment review
+
+The [physics example audit](../../../dev-docs/roadmaps/physics-example-engine-alignment.md)
+covers the full Physics catalog and separates application behavior from remaining engine
+rendering gaps. The next shared engine pieces are a GPU transform-source adapter,
+geometry/material batches with reusable shadow casters, and a sphere-impostor model.

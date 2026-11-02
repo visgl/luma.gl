@@ -5,8 +5,10 @@
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model} from '@luma.gl/engine';
-import {shadow} from '@luma.gl/anari';
-import {DominoShadows, DOMINO_LIGHT_POSITION} from './domino-shadows';
+import {createPBRModel, shadow} from '@luma.gl/anari';
+import {RigidBodyShadows, LAB_SPOTLIGHT} from './rigid-body-shadows';
+import {makeRigidBodyVertexShader, rigidBodyPose} from './rigid-body-shaders';
+import {createLabMaterial} from './lab-material';
 import {DominoAudio} from './domino-audio';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
@@ -15,11 +17,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makeMechanism} from './mechanisms';
-import {
-  WRECKING_BALL_BODY_INDEX,
-  WRECKING_BALL_PHYSICS,
-  WRECKING_BALL_TIME_STEP
-} from './wrecking-ball';
+import {WRECKING_BALL_PHYSICS, WRECKING_BALL_TIME_STEP} from './wrecking-ball';
 import {CradleScene} from './cradle-scene';
 import {createRigidBodyPanel} from './info-box';
 import {
@@ -98,11 +96,7 @@ try {
     byteLength: 64,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
-  const cameraPositionBuffer = device.createBuffer({
-    id: 'rigid-body-camera-position',
-    byteLength: 16,
-    usage: Buffer.UNIFORM | Buffer.COPY_DST
-  });
+
   let previousSceneName: string | null = null;
   async function createScene() {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
@@ -195,61 +189,35 @@ try {
       data: new Float32Array(meshVerticesData.length ? meshVerticesData : [0, 0, 0, 0]),
       usage: Buffer.STORAGE
     });
+    const surface = sceneName === 'cradle' ? null : createLabMaterial(device, bodies, sceneName);
     const model =
       sceneName === 'cradle'
         ? null
-        : new Model(device, {
+        : createPBRModel(device, {
             id: 'rigid-body-shapes',
-            modules: sceneName === 'dominoSpiral' || sceneName === 'wreckingBall' ? [shadow] : [],
+            material: surface!.material,
+            defines: {
+              HAS_NORMALS: true,
+              HAS_TANGENTS: true,
+              HAS_UV: true,
+              HAS_UV_1: true,
+              USE_LIGHTS: true,
+              USE_IBL: true,
+              USE_SCENE_ENVIRONMENT: true,
+              USE_TEX_LOD: true,
+              USE_SCENE_COLOR_MANAGEMENT: true
+            },
+            modules: [rigidBodyPose, shadow],
             source: `
-@group(0) @binding(0) var<uniform> matrix: mat4x4f;
-@group(0) @binding(1) var<storage,read> positions: array<vec4f>;
-@group(0) @binding(2) var<storage,read> orientations: array<vec4f>;
-@group(0) @binding(3) var<storage,read> shapes: array<vec4f>;
-@group(0) @binding(4) var<storage,read> sleepStates: array<vec4f>;
-@group(0) @binding(5) var<storage,read> meshVertices: array<vec4f>;
-@group(0) @binding(6) var<uniform> cameraPosition:vec4f;
-struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32, @location(4) worldPosition: vec3f, @location(5) @interpolate(flat) body: u32, @location(6) localPoint:vec3f}
-fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotation.xyz,cross(rotation.xyz,vector)+rotation.w*vector);}
-${
-  sceneName === 'wreckingBall'
-    ? `
-// Pack box triangles and the single sphere into one draw; no collapsed sphere vertices per box.
-@vertex fn vertexMain(@builtin(vertex_index) renderVertex:u32)->Output {
- let sphere=renderVertex>=${(bodies.length - 1) * 36}u;
- let box=renderVertex/36u;
- let body=select(box+select(0u,1u,box>=${WRECKING_BALL_BODY_INDEX}u),${WRECKING_BALL_BODY_INDEX}u,sphere);
- let vertex=select(renderVertex%36u,renderVertex-${(bodies.length - 1) * 36}u,sphere);
-`
-    : '@vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {'
-}
- let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
- let corner=corners[vertex%6u];var point=vec3f(0);var normal=vec3f(0);
- if(shapes[body].w==3.0) {
-  if(vertex<u32(shapes[body].y)) {
-   let first=u32(shapes[body].x)+(vertex/3u)*3u;
-   point=meshVertices[u32(shapes[body].x)+vertex].xyz;
-   normal=normalize(cross(meshVertices[first+1u].xyz-meshVertices[first].xyz,meshVertices[first+2u].xyz-meshVertices[first].xyz));
-  } else {normal=vec3f(0,0,1);}
- } else if(shapes[body].w==0.0) {
-  let tile=vertex/6u;let longitude=(f32(tile%${longitudeSegments}u)+corner.x)*6.2831853/${longitudeSegments}.0;let latitude=(f32(tile/${longitudeSegments}u)+corner.y)*3.14159265/${latitudeSegments}.0;
-  normal=vec3f(cos(longitude)*sin(latitude),sin(longitude)*sin(latitude),cos(latitude));point=normal*shapes[body].x;
- } else {
-  let face=(vertex/6u)%6u;let axis=face/2u;let direction=select(-1.0,1.0,face%2u==0u);normal[axis]=direction;point[axis]=direction;
-  point[(axis+1u)%3u]=corner.x*2.0-1.0;point[(axis+2u)%3u]=corner.y*2.0-1.0;point*=shapes[body].xyz;
-  // Remaining sphere tessellation vertices collapse for boxes.
-  if(vertex>=36u) {point=vec3f(0);}
- }
- var output:Output;output.localPoint=point;output.worldPosition=positions[body].xyz+rotate(orientations[body],point);output.body=body;
- output.position=matrix*vec4f(output.worldPosition,1);
- output.localNormal=normal;output.sphere=1.0-shapes[body].w;output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),(shapes[body].w==2.0||(shapes[body].w==3.0&&shapes[body].z>0.5)));output.color=mix(output.color,vec3f(0.55),select(0.0,0.7,sleepStates[body].y>0.5));return output;
-}
+${makeRigidBodyVertexShader(sceneName, bodies.length, longitudeSegments, latitudeSegments)}
 fn grainHash(point:vec2f)->f32{return fract(sin(dot(point,vec2f(127.1,311.7)))*43758.5453);}
 fn surfaceGrain(point:vec2f)->f32{
  let cell=floor(point);let fraction=fract(point);let weight=fraction*fraction*(3.0-2.0*fraction);
  return mix(mix(grainHash(cell),grainHash(cell+vec2f(1,0)),weight.x),mix(grainHash(cell+vec2f(0,1)),grainHash(cell+vec2f(1,1)),weight.x),weight.y);
 }
 @fragment fn fragmentMain(input:Output)->@location(0) vec4f {
+ let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);
+ var colorValue=input.color*band;
 
  ${
    sceneName === 'dominoSpiral' || sceneName === 'wreckingBall'
@@ -259,10 +227,10 @@ fn surfaceGrain(point:vec2f)->f32{
  let edge=max(fwidth(distanceToPip),0.001);
  let grain=surfaceGrain((input.localPoint.xy+input.localPoint.z*vec2f(0.73,0.29))*75.0);
  var color=vec3f(0.20,0.23,0.24)*(0.94+grain*0.12);
- var roughness=0.78+grain*0.08;
+
  if(input.body>0u){
   color=vec3f(0.018,0.022,0.028)*(0.87+grain*0.26);
-  roughness=0.34+grain*0.18;
+
   if(abs(input.localNormal.x)>0.9){
    let pip=1.0-smoothstep(0.085-edge,0.085+edge,distanceToPip);
    let divider=(1.0-smoothstep(0.006,0.013,abs(input.localPoint.z)))*select(0.0,1.0,abs(input.localPoint.y)<0.27);
@@ -273,34 +241,27 @@ fn surfaceGrain(point:vec2f)->f32{
    sceneName === 'wreckingBall'
      ? `
  color=select(vec3f(0.40,0.23,0.11)*(0.85+grain*0.12+fract(f32(input.body)*0.618)*0.2),vec3f(0.17,0.20,0.22),input.body<6u);
- roughness=select(0.72,0.18,input.sphere>0.5);
+
  if(input.sphere>0.5){color=vec3f(0.60,0.66,0.72);}
  if(input.body==0u){color=vec3f(0.26,0.28,0.29)*(0.95+grain*0.1);}
  `
      : ''
  }
- // A warm overhead key and cool ambient fill reveal the rough dielectric surfaces.
- let lightOffset=vec3f(${DOMINO_LIGHT_POSITION.join(',')})-input.worldPosition;
- let light=normalize(lightOffset);let normal=normalize(input.normal);
- let view=normalize(cameraPosition.xyz-input.worldPosition);let halfway=normalize(light+view);
- let normalLight=max(0.0,dot(normal,light));let normalView=max(0.001,dot(normal,view));
- let normalHalf=max(0.0,dot(normal,halfway));let viewHalf=max(0.0,dot(view,halfway));
- let alphaSquared=pow(roughness,4.0);
- let distribution=alphaSquared/(3.14159265*pow(normalHalf*normalHalf*(alphaSquared-1.0)+1.0,2.0));
- let masking=(roughness+1.0)*(roughness+1.0)/8.0;
- let geometry=(normalLight/(normalLight*(1.0-masking)+masking))*(normalView/(normalView*(1.0-masking)+masking));
- let fresnel=0.04+0.96*pow(1.0-viewHalf,5.0);
- let specular=distribution*geometry*fresnel/max(4.0*normalLight*normalView,0.001);
- let illumination=vec3f(1.0,0.9,0.76)*4600.0/dot(lightOffset,lightOffset);
- let ambient=color*vec3f(0.12,0.16,0.22);
- let visibility=shadow_getSpotFactor(0,input.worldPosition,normal);
- let reflected=ambient+visibility*(color*(1.0-fresnel)/3.14159265+vec3f(specular))*illumination*normalLight;
- return vec4f(pow(reflected/(vec3f(1)+reflected),vec3f(1.0/2.2)),1);
+ colorValue=color;
 
  `
      : ''
  }
- let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
+ let normal=normalize(input.normal);
+ let reference=select(vec3f(0,0,1),vec3f(0,1,0),abs(normal.z)>0.9);
+ let tangent=normalize(cross(reference,normal));
+ fragmentInputs.pbr_vPosition=input.worldPosition;
+ fragmentInputs.pbr_vNormal=normal;
+ fragmentInputs.pbr_vTBN=mat3x3f(tangent,cross(normal,tangent),normal);
+ fragmentInputs.pbr_vUV0=input.localPoint.xy;
+ fragmentInputs.pbr_vUV1=vec2f((f32(input.body)+0.5)/${bodies.length}.0,0.5);
+ let visibility=shadow_getSpotFactor(0,input.worldPosition,normal);
+ return pbr_filterColorWithSpotShadows(vec4f(colorValue,1),vec4f(visibility,1,1,1));}
 `,
             vertexCount:
               sceneName === 'wreckingBall' ? (bodies.length - 1) * 36 + vertexCount : vertexCount,
@@ -311,31 +272,30 @@ fn surfaceGrain(point:vec2f)->f32{
               depthFormat: 'depth24plus'
             },
             bindings: {
-              matrix: cameraBuffer,
-              cameraPosition: cameraPositionBuffer,
               positions: world.positions!,
               orientations: world.orientations!,
               shapes,
               meshVertices,
               sleepStates: world.sleepStates!
-            },
-            shaderLayout: {
-              attributes: [],
-              bindings: [
-                {name: 'matrix', group: 0, location: 0, type: 'uniform'},
-                {name: 'cameraPosition', group: 0, location: 6, type: 'uniform'},
-                ...['positions', 'orientations', 'shapes', 'sleepStates', 'meshVertices'].map(
-                  (name, index) => ({
-                    name,
-                    group: 0,
-                    location: index + 1,
-                    type: 'read-only-storage' as const,
-                    visibility: name === 'positions' ? 3 : 1
-                  })
-                )
-              ]
             }
           });
+    if (model && surface)
+      model.shaderInputs.setProps({
+        lighting: {
+          lights: [{type: 'ambient', color: [160, 190, 230], intensity: 0.15}, LAB_SPOTLIGHT]
+        },
+        ibl: {
+          pbr_diffuseEnvSampler: surface.environment.diffuseTexture,
+          pbr_specularEnvSampler: surface.environment.specularTexture,
+          pbr_brdfLUT: surface.environment.brdfLUTTexture
+        },
+        pbrScene: {
+          environmentIntensity: 0.7,
+          environmentRotation: 0,
+          environmentMipCount: surface.environment.specularTexture.mipLevels,
+          toneMapMode: 1
+        }
+      });
     // Distance joints have no physical rods; thin cylinders visualize their centered attachments.
     const tethers = mechanism?.joints.filter(joint => joint.type === 'distance') ?? [];
     const tether =
@@ -377,17 +337,34 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
           })
         : null;
     return {
-      dominoShadows:
-        sceneName === 'dominoSpiral' || sceneName === 'wreckingBall'
-          ? new DominoShadows(
+      shadows:
+        sceneName === 'cradle'
+          ? null
+          : new RigidBodyShadows(
               device,
-              world.positions!,
-              world.orientations!,
-              shapes,
-              bodies.length,
-              sceneName === 'wreckingBall' ? WRECKING_BALL_BODY_INDEX : null
-            )
-          : null,
+              {
+                positions: world.positions!,
+                orientations: world.orientations!,
+                shapes,
+                sleepStates: world.sleepStates!,
+                meshVertices
+              },
+              makeRigidBodyVertexShader(
+                sceneName,
+                bodies.length,
+                longitudeSegments,
+                latitudeSegments,
+                true
+              ),
+              {
+                vertexCount:
+                  sceneName === 'wreckingBall'
+                    ? (bodies.length - 2) * 36 + longitudeSegments * latitudeSegments * 6
+                    : vertexCount,
+                instanceCount: sceneName === 'wreckingBall' ? 1 : bodies.length
+              }
+            ),
+      surface,
       cradle:
         sceneName === 'cradle'
           ? new CradleScene(
@@ -440,10 +417,11 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
   };
   autoPlay.onchange = restartPlayback;
   const destroy = (target: typeof resources) => {
-    target.dominoShadows?.destroy();
+    target.shadows?.destroy();
     target.cradle?.destroy();
     target.tether?.destroy();
     target.model?.destroy();
+    target.surface?.destroy();
     target.graph.destroy();
     target.world.destroy();
     target.shapes.destroy();
@@ -606,7 +584,10 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     const depth = new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]);
     depth.multiplyRight(matrix);
     cameraBuffer.write(new Float32Array(depth));
-    cameraPositionBuffer.write(new Float32Array([...camera.position.toArray(), 1]));
+    resources.model?.shaderInputs.setProps({
+      rigidBodyPose: {matrix: depth},
+      pbrProjection: {camera: camera.position.toArray()}
+    });
     if (resources.cradle) {
       const projection = new Matrix4([
         1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
@@ -617,12 +598,12 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
         camera.position.z
       ]);
     } else {
-      if (resources.dominoShadows) {
+      if (resources.shadows) {
         const projection = new Matrix4([
           1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
         ]).multiplyRight(camera.projectionMatrix.elements);
         resources.model!.shaderInputs.setProps({
-          shadow: resources.dominoShadows.render(
+          shadow: resources.shadows.render(
             new Matrix4(camera.matrixWorldInverse.elements),
             projection
           )
@@ -744,7 +725,6 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       void Promise.allSettled([snapshot, audioRead, pushing, rebuilding, submitted]).then(() => {
         destroy(resources);
         panel.destroy();
-        cameraPositionBuffer.destroy();
         cameraBuffer.destroy();
         dominoAudio.destroy();
         device.destroy();
