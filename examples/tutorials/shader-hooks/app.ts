@@ -5,6 +5,7 @@
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
+import type {ShaderPlugin} from '@luma.gl/shaders';
 import {ShaderHooksInfoHtml} from './app-ui';
 
 // Base vertex and fragment shader code
@@ -33,18 +34,14 @@ void main() {
 }
 `;
 
-const offsetLeftModule = {
+const offsetLeftPlugin: ShaderPlugin = {
   name: 'offsetLeft',
-  inject: {
-    'vs:OFFSET_POSITION': 'position.x -= 0.5;'
-  }
+  injections: [{stage: 'vertex', target: 'OFFSET_POSITION', glsl: 'position.x -= 0.5;'}]
 };
 
-const offsetRightModule = {
+const offsetRightPlugin: ShaderPlugin = {
   name: 'offsetRight',
-  inject: {
-    'vs:OFFSET_POSITION': 'position.x += 0.5;'
-  }
+  injections: [{stage: 'vertex', target: 'OFFSET_POSITION', glsl: 'position.x += 0.5;'}]
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -104,7 +101,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs,
       fs,
       shaderAssembler,
-      modules: [offsetLeftModule],
+      plugins: [offsetLeftPlugin],
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
         position: this.positionBuffer
@@ -119,7 +116,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs,
       fs,
       shaderAssembler,
-      modules: [offsetRightModule],
+      plugins: [offsetRightPlugin],
       bufferLayout: [{name: 'position', format: 'float32x2'}],
       vertexCount: 3,
       attributes: {

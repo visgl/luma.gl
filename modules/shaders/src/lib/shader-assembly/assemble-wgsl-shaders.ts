@@ -27,12 +27,7 @@ import {assert} from '../utils/assert';
 import {preprocess} from '../preprocessor/preprocessor';
 import {assembleShaderPluginVertexInputsWGSL} from './shader-plugin-vertex-inputs';
 import {assembleShaderPluginInterStageVariablesWGSL} from './shader-plugin-varyings';
-import {
-  normalizeShaderHooks,
-  validateShaderHookInjections,
-  isShaderHookRegistered,
-  getShaderHooks
-} from './shader-hooks';
+import {normalizeShaderHooks, validateShaderHookInjections, getShaderHooks} from './shader-hooks';
 import {
   type ResolvedShaderInjection,
   injectShader,
@@ -245,22 +240,6 @@ export function assembleShaderWGSL(
       checkShaderModuleDeprecations(module, coreSource, log);
     }
     assembledSource += moduleSource;
-
-    const injections = getWGSLModuleInjections(module);
-    for (const key in injections) {
-      const match = /^(v|f)s:#([\w-]+)$/.exec(key);
-      if (match) {
-        const name = match[2];
-        const injectionType = name === 'decl' ? declInjections : mainInjections;
-        injectionType[key] = injectionType[key] || [];
-        injectionType[key].push(injections[key]);
-      } else if (isShaderHookRegistered(hookFunctionMap, key)) {
-        // `ShaderModule.inject` is not language-specific and often carries GLSL-only hook
-        // injections, so WGSL silently skips module injections into hooks it has not declared.
-        hookInjections[key] = hookInjections[key] || [];
-        hookInjections[key].push(injections[key]);
-      }
-    }
   }
 
   // For injectShader
@@ -344,15 +323,6 @@ export function appendGeneratedVaryingInjections(
       order: Number.MIN_SAFE_INTEGER
     });
   }
-}
-
-export function getWGSLModuleInjections(
-  module: ShaderModule
-): Record<string, ResolvedShaderInjection> {
-  return {
-    ...(module.instance?.normalizedInjections.vertex || {}),
-    ...(module.instance?.normalizedInjections.fragment || {})
-  };
 }
 
 export function getWGSLDeclarationInjections(

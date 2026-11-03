@@ -228,13 +228,13 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 
 **@luma.gl/shaders**
 
+- `ShaderModule.inject` has been removed. Move module-owned hook and anchor injections to a named `ShaderPlugin` with `injections`, and attach the shader module through the plugin's `module` field when source or uniforms are needed. Plugins select GLSL and WGSL injection source explicitly.
 - `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 - Named shader hook injections now throw if their target is not registered. Register the hook
-  for the matching shader stage before injecting into it. WGSL continues to skip unregistered
-  module injections, which may contain GLSL-only code.
+  for the matching shader stage before injecting into it.
 
 **@luma.gl/core/webgpu**
 

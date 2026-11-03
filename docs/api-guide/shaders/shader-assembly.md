@@ -28,7 +28,7 @@ textual composition around application-owned shader source.
 | --- | --- | --- | --- |
 | Application shader source | The shader entry points and primary flow. | The WGSL `source` string or GLSL `vs`/`fs` strings supplied by the application. | [`Model`](/docs/api-reference/engine/model) |
 | `ShaderInputs` | Module props, uniforms, and bindings after assembly. | Updating typed module props and explicit resource bindings after source assembly. | [`ShaderInputs`](/docs/api-reference/engine/shader-inputs) |
-| `ShaderModule` | Reusable WGSL/GLSL source, uniform descriptors, bindings, dependencies, and optional injections. | Importing a static shader library such as picking, lighting, projection, or a helper library. | [`ShaderModule`](/docs/api-reference/shaders/shader-module) |
+| `ShaderModule` | Reusable WGSL/GLSL source, uniform descriptors, bindings, and dependencies. | Importing a static shader library such as picking, lighting, projection, or a helper library. | [`ShaderModule`](/docs/api-reference/shaders/shader-module) |
 | `ShaderPlugin` | A reusable primary module, defines, shader-facing vertex inputs, varyings, hooks, and named injections resolved for one shader language. | Attaching a dynamic, optional shader extension to a `Model` or `Computation`. | [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) |
 | Shader dependency | Module ordering. | Bringing required modules in before a module that calls them. | [`ShaderModule.dependencies`](/docs/api-reference/shaders/shader-module#fields) |
 | Define | Conditional source selection. | Backend or feature switches evaluated before assembly. | [`WGSL Support`](/docs/api-reference/shaders/wgsl-support) |
