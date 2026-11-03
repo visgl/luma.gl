@@ -830,7 +830,7 @@ export class GPUVectorModel {
         this.attributeVectorBindings.vertexCount === undefined ||
         rowCount === this.attributeVectorBindings.vertexCount
     );
-    if (this.props.inferDrawCount !== 'no' && this.props.inferDrawCount !== 'instance')
+    if (this.props.inferDrawCount === 'vertex')
       this.setVertexCount(rowCount ?? this.attributeVectorBindings.vertexCount ?? 0);
   }
 
@@ -874,17 +874,12 @@ export class GPUVectorModel {
     this.claimVectorLayouts(this.attributeVectorBindings);
     this.syncVectorBindings();
     if (
-      this.props.inferDrawCount !== 'no' &&
-      this.props.inferDrawCount !== 'vertex' &&
+      this.props.inferDrawCount === 'instance' &&
       this.attributeVectorBindings.instanceCount !== undefined
     )
       this.setInstanceCount(this.attributeVectorBindings.instanceCount);
     const vertexCount = this.attributeVectorBindings.vertexCount;
-    if (
-      vertexCount !== undefined &&
-      this.props.inferDrawCount !== 'no' &&
-      this.props.inferDrawCount !== 'instance'
-    ) {
+    if (vertexCount !== undefined && this.props.inferDrawCount === 'vertex') {
       const geometryRowCount = this.geometryVectorBindings.rowCount;
       // Supplemental vertex columns describe the same rows as the geometry columns.
       assert(geometryRowCount === undefined || geometryRowCount === vertexCount);

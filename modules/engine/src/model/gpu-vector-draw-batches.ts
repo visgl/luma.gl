@@ -69,7 +69,7 @@ export function drawGPUVectorGroups(
           : attributes.vertexCount !== undefined
             ? attributeOffsets[attributeBatchIndex]
             : 0;
-      if (inferDrawCount !== 'no' && inferDrawCount !== 'instance')
+      if (inferDrawCount === 'vertex')
         model.setVertexCount(
           Math.max(
             0,
@@ -79,11 +79,7 @@ export function drawGPUVectorGroups(
             )
           )
         );
-      if (
-        inferDrawCount !== 'no' &&
-        inferDrawCount !== 'vertex' &&
-        attributes.instanceCount !== undefined
-      )
+      if (inferDrawCount === 'instance' && attributes.instanceCount !== undefined)
         model.setInstanceCount(
           Math.max(
             0,

@@ -681,7 +681,7 @@ function makeIndexSliceVector(
 it('GPUTableModel preserves table batching alongside inherited vector batching', () => {
   const device = new NullDevice({});
   const table = makePositionsTable(device, 3);
-  const model = makeTableModel(device, table, {vertexCount: 1});
+  const model = makeTableModel(device, table, {vertexCount: 1, inferDrawCount: 'instance'});
   const renderPass = device.getDefaultRenderPass();
   const vectorBatchRows: number[] = [];
   const vectorTable = makeBatchedPositionsTable(device, [1, 2]);
