@@ -35,8 +35,26 @@ const GROUP_AGGREGATION_WORKGROUP_SIZE = 256;
 const MAXIMUM_LOCAL_GROUP_COUNT = 256;
 const MAXIMUM_SUBGROUP_COALESCED_GROUP_COUNT = 16;
 const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
+/** Rows loaded, sorted, and reduced together by one floating-point sum workgroup iteration. */
+const SUM_TILE_ROW_COUNT = GROUP_AGGREGATION_WORKGROUP_SIZE;
+/** Smallest number of row tiles reduced by one floating-point sum workgroup. */
+const MINIMUM_SUM_TILES_PER_WORKGROUP = 16;
+/** Target number of partials per group statistic before row ranges grow or columns are reused. */
+const TARGET_SUM_PARTIAL_COUNT = 1 << 20;
+/** Largest row-block tile count whose row count stays representable as a WGSL `u32`. */
+const MAXIMUM_SUM_TILES_PER_WORKGROUP = Math.floor(0xffffffff / GROUP_AGGREGATION_WORKGROUP_SIZE);
+/** WebGPU's guaranteed `maxComputeWorkgroupStorageSize`, used when a device reports no limit. */
+const MINIMUM_WORKGROUP_STORAGE_BYTE_LENGTH = 16384;
+/** Workgroup bytes used by the sort keys, staged values, and scan values and counts of one tile. */
+const SUM_TILE_WORKGROUP_BYTE_LENGTH = 4 * SUM_TILE_ROW_COUNT * UINT32_BYTE_LENGTH;
+/** Largest workgroup-memory group accumulator, small enough to keep several workgroups resident. */
+const MAXIMUM_WORKGROUP_ACCUMULATOR_BYTE_LENGTH = 8192;
+/** Sort keys reserve 8 low bits for the tile lane. */
+const MAXIMUM_SUM_GROUP_COUNT = 0xffffff;
 
 type GPUGroupAggregationDispatchLayout = GPUBoundedDispatchLayout;
+type GPUGroupOrderedOperation = 'min' | 'max';
+type GPUGroupSumOperation = 'sum' | 'mean';
 
 /** One scalar group-key chunk or an ordered vector of scalar group-key chunks. */
 export type GPUGroupAggregationKeys = GraphDataView<'uint32'> | GraphVectorView<'uint32'>;
@@ -84,9 +102,15 @@ export type GPUGroupAggregationProps = GPUGroupAggregationBaseProps &
  *
  * Inputs may be packed or interleaved scalar columns. Output is cleared on every encoding. Group
  * keys in `[0, output.length)` identify output rows;
- * larger keys are ignored. Nonzero mask values include a row. Count uses unsigned atomics; sum and
- * mean use compare-exchange float addition; minimum and maximum use ordered float bits. Vector
- * inputs retain their source chunk boundaries without packing.
+ * larger keys are ignored. Nonzero mask values include a row. Count uses unsigned atomics, and
+ * minimum and maximum use ordered float bits. Vector inputs retain their source chunk boundaries
+ * without packing.
+ *
+ * Sum and mean use a deterministic two-pass reduction without float atomics. Each workgroup reduces
+ * a fixed row range into one column of per-group partials in graph-owned scratch, by sorting each
+ * 256-row tile by group and running a fixed-shape segmented scan. A second pass sums each group's
+ * partials in a fixed order. The same inputs, chunking, and device give bitwise-identical results
+ * on every run. Additions are ordinary `float32` additions, so cancellation can lose small terms.
  */
 export class GPUGroupAggregation {
   /** Prefix for generated graph node IDs. */
@@ -218,11 +242,22 @@ export class GPUGroupAggregation {
 
     const output = this.output as GraphDataView<'float32'>;
     const operation = this.operation;
-    const counts =
-      operation === 'mean'
-        ? createTransientView(graph, `${this.id}-counts`, 'uint32', output.length)
-        : undefined;
-    nodes.push(...addInitializeGroupStatisticsPass(graph, this.id, output, operation, counts));
+    if (operation === 'sum' || operation === 'mean') {
+      nodes.push(
+        ...addGroupSumNodes(graph, {
+          id: this.id,
+          vectorInput: this.keys instanceof GraphVectorView || keyChunks.length > 1,
+          keyChunks,
+          valueChunks: valueChunks!,
+          maskChunks,
+          output,
+          operation
+        })
+      );
+      return nodes;
+    }
+
+    nodes.push(...addInitializeGroupStatisticsPass(graph, this.id, output, operation));
     for (let chunkIndex = 0; chunkIndex < keyChunks.length; chunkIndex++) {
       const keys = keyChunks[chunkIndex];
       if (keys.length === 0) continue;
@@ -237,7 +272,6 @@ export class GPUGroupAggregation {
           mask: maskChunks?.[chunkIndex],
           output,
           operation,
-          counts,
           dispatchLayout: getGPUGroupAggregationDispatchLayout(
             keys.length,
             graph.device.limits.maxComputeWorkgroupsPerDimension
@@ -245,9 +279,7 @@ export class GPUGroupAggregation {
         })
       );
     }
-    if (operation !== 'sum') {
-      nodes.push(...addFinalizeGroupStatisticsPass(graph, this.id, output, operation, counts));
-    }
+    nodes.push(...addFinalizeGroupStatisticsPass(graph, this.id, output, operation));
 
     return nodes;
   }
@@ -425,31 +457,22 @@ ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
   return nodes;
 }
 
-/** Initializes every floating-point group result and optional mean count. */
+/** Initializes every ordered minimum or maximum group result. */
 function addInitializeGroupStatisticsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   output: GraphDataView<'float32'>,
-  operation: Exclude<GPUGroupAggregationOperation, 'count'>,
-  counts?: GraphDataView<'uint32'>
+  operation: GPUGroupOrderedOperation
 ): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGroupAggregationDispatchLayout(
     output.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
   const initialBits = operation === 'min' ? '0xffffffffu' : '0u';
-  const countBinding = counts
-    ? '@group(0) @binding(1) var<storage, read_write> outputCounts: array<atomic<u32>>;'
-    : '';
-  const countInitialization = counts
-    ? `atomicStore(&outputCounts[${getViewElementOffset(counts)}u + index], 0u);`
-    : '';
   const source = /* wgsl */ `
 const GROUP_COUNT: u32 = ${output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<atomic<u32>>;
-${countBinding}
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(workgroup_id) workgroupId: vec3<u32>
@@ -457,26 +480,18 @@ ${countBinding}
   ${getBoundedInvocationIndexSource(dispatchLayout, GROUP_AGGREGATION_WORKGROUP_SIZE)}
   if (index < GROUP_COUNT) {
     atomicStore(&outputValues[OUTPUT_OFFSET + index], ${initialBits});
-    ${countInitialization}
   }
 }`;
-  nodes.push(
-    ...addKernelPass(graph, {
-      id: operation === 'sum' ? `${id}-clear` : `${id}-initialize`,
-      source,
-      resources: [
-        {buffer: output, usage: 'storage-write'},
-        ...(counts ? ([{buffer: counts, usage: 'storage-write'}] as GraphBufferUse[]) : [])
-      ],
-      bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-      dispatchSize: dispatchLayout
-    })
-  );
-
-  return nodes;
+  return addKernelPass(graph, {
+    id: `${id}-initialize`,
+    source,
+    resources: [{buffer: output, usage: 'storage-write'}],
+    bindings: {outputValues: output},
+    dispatchSize: dispatchLayout
+  });
 }
 
-/** Accumulates one aligned packed key/value chunk with direct global atomics. */
+/** Accumulates one aligned minimum or maximum chunk with direct ordered-bit atomics. */
 function addGroupStatisticPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   props: {
@@ -485,8 +500,7 @@ function addGroupStatisticPass<Parameters>(
     values: GraphDataView<'float32'>;
     mask?: GraphDataView<'uint32'>;
     output: GraphDataView<'float32'>;
-    operation: Exclude<GPUGroupAggregationOperation, 'count'>;
-    counts?: GraphDataView<'uint32'>;
+    operation: GPUGroupOrderedOperation;
     dispatchLayout: GPUGroupAggregationDispatchLayout;
   }
 ): readonly GPUCommandNode<Parameters>[] {
@@ -498,17 +512,13 @@ function addGroupStatisticPass<Parameters>(
     ? '@group(0) @binding(2) var<storage, read> selectionMask: array<u32>;'
     : '';
   const outputBinding = props.mask ? 3 : 2;
-  const countsBinding = props.counts
-    ? `@group(0) @binding(${outputBinding + 1}) var<storage, read_write> outputCounts: array<atomic<u32>>;`
-    : '';
   const maskCondition = props.mask
     ? `selectionMask[${getViewElementOffset(props.mask)}u + index * ${getScalarStride(props.mask)}u] != 0u`
     : 'true';
   const accumulation = useSubgroups
-    ? getSubgroupStatisticAggregationWGSL(props.operation, props.output.length, props.counts)
+    ? getSubgroupStatisticAggregationWGSL(props.operation, props.output.length)
     : `  if (accepted) {
-    ${getFloatAggregationCall(props.operation, 'groupIndex')}
-    ${props.counts ? `atomicAdd(&outputCounts[${getViewElementOffset(props.counts)}u + groupIndex], 1u);` : ''}
+    ${getOrderedAggregationCall(props.operation, 'groupIndex')}
   }`;
   const source = /* wgsl */ `
 ${useSubgroups ? 'enable subgroups;' : ''}
@@ -523,9 +533,8 @@ const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
 @group(0) @binding(1) var<storage, read> inputValues: array<f32>;
 ${maskBinding}
 @group(0) @binding(${outputBinding}) var<storage, read_write> outputValues: array<atomic<u32>>;
-${countsBinding}
 
-${getFloatAggregationFunction(props.operation)}
+${ORDERED_FLOAT_ENCODE_WGSL}
 ${useSubgroups ? getSubgroupBallotHelpersWGSL() : ''}
 
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
@@ -549,10 +558,7 @@ ${accumulation}
     {buffer: props.keys, usage: 'storage-read'},
     {buffer: props.values, usage: 'storage-read'},
     ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
-    {buffer: props.output, usage: 'storage-read-write'},
-    ...(props.counts
-      ? ([{buffer: props.counts, usage: 'storage-read-write'}] as GraphBufferUse[])
-      : [])
+    {buffer: props.output, usage: 'storage-read-write'}
   ];
   nodes.push(
     ...addKernelPass(graph, {
@@ -563,8 +569,7 @@ ${accumulation}
         groupKeys: props.keys,
         inputValues: props.values,
         ...(props.mask ? {selectionMask: props.mask} : {}),
-        outputValues: props.output,
-        ...(props.counts ? {outputCounts: props.counts} : {})
+        outputValues: props.output
       },
       dispatchSize: props.dispatchLayout
     })
@@ -573,128 +578,70 @@ ${accumulation}
   return nodes;
 }
 
-/** Converts aggregate identities into empty-group NaNs and divides sums for means. */
+/** Converts ordered minimum or maximum identities into empty-group NaNs and decodes values. */
 function addFinalizeGroupStatisticsPass<Parameters>(
   graph: GPUCommandGraph<Parameters>,
   id: string,
   output: GraphDataView<'float32'>,
-  operation: 'min' | 'max' | 'mean',
-  counts?: GraphDataView<'uint32'>
+  operation: GPUGroupOrderedOperation
 ): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
   const dispatchLayout = getGPUGroupAggregationDispatchLayout(
     output.length,
     graph.device.limits.maxComputeWorkgroupsPerDimension
   );
-  const countBinding = counts
-    ? '@group(0) @binding(1) var<storage, read> outputCounts: array<u32>;'
-    : '';
-  const finalizeStatement =
-    operation === 'mean'
-      ? `let count = outputCounts[${getViewElementOffset(counts as GraphDataView)}u + index];
-    if (count == 0u) {
-      outputValues[OUTPUT_OFFSET + index] = 0x7fc00000u;
-    } else {
-      let sum = bitcast<f32>(outputValues[OUTPUT_OFFSET + index]);
-      outputValues[OUTPUT_OFFSET + index] = bitcast<u32>(sum / f32(count));
-    }`
-      : `let orderedValue = outputValues[OUTPUT_OFFSET + index];
-    if (orderedValue == ${operation === 'min' ? '0xffffffffu' : '0u'}) {
-      outputValues[OUTPUT_OFFSET + index] = 0x7fc00000u;
-    } else {
-      outputValues[OUTPUT_OFFSET + index] = bitcast<u32>(decodeOrderedFloat(orderedValue));
-    }`;
-  const decodeFunction =
-    operation === 'mean'
-      ? ''
-      : `fn decodeOrderedFloat(value: u32) -> f32 {
-  let bits = select(~value, value ^ 0x80000000u, (value & 0x80000000u) != 0u);
-  return bitcast<f32>(bits);
-}`;
   const source = /* wgsl */ `
 const GROUP_COUNT: u32 = ${output.length}u;
 const OUTPUT_OFFSET: u32 = ${getViewElementOffset(output)}u;
 @group(0) @binding(0) var<storage, read_write> outputValues: array<u32>;
-${countBinding}
-${decodeFunction}
+fn decodeOrderedFloat(value: u32) -> f32 {
+  let bits = select(~value, value ^ 0x80000000u, (value & 0x80000000u) != 0u);
+  return bitcast<f32>(bits);
+}
 @compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
   @builtin(local_invocation_index) localInvocationIndex: u32,
   @builtin(workgroup_id) workgroupId: vec3<u32>
 ) {
   ${getBoundedInvocationIndexSource(dispatchLayout, GROUP_AGGREGATION_WORKGROUP_SIZE)}
   if (index < GROUP_COUNT) {
-    ${finalizeStatement}
+    let orderedValue = outputValues[OUTPUT_OFFSET + index];
+    if (orderedValue == ${operation === 'min' ? '0xffffffffu' : '0u'}) {
+      outputValues[OUTPUT_OFFSET + index] = 0x7fc00000u;
+    } else {
+      outputValues[OUTPUT_OFFSET + index] = bitcast<u32>(decodeOrderedFloat(orderedValue));
+    }
   }
 }`;
-  nodes.push(
-    ...addKernelPass(graph, {
-      id: `${id}-finalize`,
-      source,
-      resources: [
-        {buffer: output, usage: 'storage-read-write'},
-        ...(counts ? ([{buffer: counts, usage: 'storage-read'}] as GraphBufferUse[]) : [])
-      ],
-      bindings: {outputValues: output, ...(counts ? {outputCounts: counts} : {})},
-      dispatchSize: dispatchLayout
-    })
-  );
-
-  return nodes;
+  return addKernelPass(graph, {
+    id: `${id}-finalize`,
+    source,
+    resources: [{buffer: output, usage: 'storage-read-write'}],
+    bindings: {outputValues: output},
+    dispatchSize: dispatchLayout
+  });
 }
 
-/** Returns the WGSL helper for one floating-point group statistic. */
-function getFloatAggregationFunction(
-  operation: Exclude<GPUGroupAggregationOperation, 'count'>
-): string {
-  if (operation === 'min' || operation === 'max') {
-    return `fn encodeOrderedFloat(value: f32) -> u32 {
+const ORDERED_FLOAT_ENCODE_WGSL = /* wgsl */ `fn encodeOrderedFloat(value: f32) -> u32 {
   let bits = bitcast<u32>(value);
   return select(bits ^ 0x80000000u, ~bits, (bits & 0x80000000u) != 0u);
 }`;
-  }
-  return `fn atomicAddFloat(destination: ptr<storage, atomic<u32>, read_write>, value: f32) {
-  var oldBits = atomicLoad(destination);
-  loop {
-    let newBits = bitcast<u32>(bitcast<f32>(oldBits) + value);
-    let result = atomicCompareExchangeWeak(destination, oldBits, newBits);
-    if (result.exchanged) { break; }
-    oldBits = result.old_value;
-  }
-}`;
-}
 
-/** Returns the WGSL statement that contributes one accepted floating-point value. */
-function getFloatAggregationCall(
-  operation: Exclude<GPUGroupAggregationOperation, 'count'>,
+/** Returns the WGSL statement that contributes one accepted ordered minimum or maximum value. */
+function getOrderedAggregationCall(
+  operation: GPUGroupOrderedOperation,
   groupIndex: string,
-  valueExpression: string = 'value'
+  valueExpression: string = 'encodeOrderedFloat(value)'
 ): string {
-  if (operation === 'min' || operation === 'max') {
-    const atomicOperation = operation === 'min' ? 'atomicMin' : 'atomicMax';
-    return `${atomicOperation}(&outputValues[OUTPUT_OFFSET + ${groupIndex}], encodeOrderedFloat(${valueExpression}));`;
-  }
-  return `atomicAddFloat(&outputValues[OUTPUT_OFFSET + ${groupIndex}], ${valueExpression});`;
+  const atomicOperation = operation === 'min' ? 'atomicMin' : 'atomicMax';
+  return `${atomicOperation}(&outputValues[OUTPUT_OFFSET + ${groupIndex}], ${valueExpression});`;
 }
 
-/** Coalesces equal group keys and emits one statistic atomic per key represented in a subgroup. */
+/** Coalesces equal group keys and emits one ordered atomic per key represented in a subgroup. */
 function getSubgroupStatisticAggregationWGSL(
-  operation: Exclude<GPUGroupAggregationOperation, 'count'>,
-  groupCount: number,
-  counts?: GraphDataView<'uint32'>
+  operation: GPUGroupOrderedOperation,
+  groupCount: number
 ): string {
-  const orderedOperation = operation === 'min' || operation === 'max';
-  const selectedValue = orderedOperation
-    ? `select(${operation === 'min' ? '0xffffffffu' : '0u'}, encodeOrderedFloat(value), matchingKey)`
-    : 'select(0.0, value, matchingKey)';
-  const collective =
-    operation === 'min'
-      ? 'subgroupMin(selectedValue)'
-      : operation === 'max'
-        ? 'subgroupMax(selectedValue)'
-        : 'subgroupAdd(selectedValue)';
-  const aggregationCall = orderedOperation
-    ? `${operation === 'min' ? 'atomicMin' : 'atomicMax'}(&outputValues[OUTPUT_OFFSET + leaderKey], aggregatedValue);`
-    : getFloatAggregationCall(operation, 'leaderKey', 'aggregatedValue');
+  const identity = operation === 'min' ? '0xffffffffu' : '0u';
+  const collective = operation === 'min' ? 'subgroupMin' : 'subgroupMax';
   return /* wgsl */ `
   var subgroupPending = accepted;
   for (var subgroupGroup = 0u; subgroupGroup < ${groupCount}u; subgroupGroup++) {
@@ -703,15 +650,424 @@ function getSubgroupStatisticAggregationWGSL(
     let leaderInvocation = getFirstBallotLane(pendingBallot);
     let leaderKey = subgroupShuffle(groupIndex, leaderInvocation);
     let matchingKey = hasPending && subgroupPending && groupIndex == leaderKey;
-    let matchingBallot = subgroupBallot(matchingKey);
-    let selectedValue = ${selectedValue};
-    let aggregatedValue = ${collective};
+    let selectedValue = select(${identity}, encodeOrderedFloat(value), matchingKey);
+    let aggregatedValue = ${collective}(selectedValue);
     if (hasPending && subgroupInvocationId == leaderInvocation) {
-      ${aggregationCall}
-      ${counts ? `atomicAdd(&outputCounts[${getViewElementOffset(counts)}u + leaderKey], getBallotLaneCount(matchingBallot));` : ''}
+      ${getOrderedAggregationCall(operation, 'leaderKey', 'aggregatedValue')}
     }
     subgroupPending = subgroupPending && !matchingKey;
   }`;
+}
+
+/** Adds deterministic per-workgroup partial sums and one fixed-order combine pass. */
+function addGroupSumNodes<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  props: {
+    id: string;
+    vectorInput: boolean;
+    keyChunks: readonly GraphDataView<'uint32'>[];
+    valueChunks: readonly GraphDataView<'float32'>[];
+    maskChunks?: readonly GraphDataView<'uint32'>[];
+    output: GraphDataView<'float32'>;
+    operation: GPUGroupSumOperation;
+  }
+): readonly GPUCommandNode<Parameters>[] {
+  const {limits} = graph.device;
+  const plan = getGPUGroupSumPlan(
+    props.keyChunks.map(chunk => chunk.length),
+    props.output.length,
+    props.operation,
+    limits.maxComputeWorkgroupStorageSize || MINIMUM_WORKGROUP_STORAGE_BYTE_LENGTH
+  );
+  // Sort keys pack the group above an 8-bit tile lane, and partials must fit one storage binding.
+  if (
+    props.output.length > MAXIMUM_SUM_GROUP_COUNT ||
+    plan.partialCount * UINT32_BYTE_LENGTH > limits.maxStorageBufferBindingSize
+  ) {
+    throw new Error(`${props.id} sum partials exceed device limits`);
+  }
+  const partialSums = createTransientView(
+    graph,
+    `${props.id}-partial-sums`,
+    'float32',
+    plan.partialCount
+  );
+  const partialCounts =
+    props.operation === 'mean'
+      ? createTransientView(graph, `${props.id}-partial-counts`, 'uint32', plan.partialCount)
+      : undefined;
+
+  const nodes: GPUCommandNode<Parameters>[] = [];
+  let rowBlockOffset = 0;
+  for (let chunkIndex = 0; chunkIndex < props.keyChunks.length; chunkIndex++) {
+    const keys = props.keyChunks[chunkIndex];
+    if (keys.length === 0) continue;
+    const rowBlockCount = Math.ceil(keys.length / plan.rowsPerWorkgroup);
+    nodes.push(
+      ...addGroupPartialSumPass(graph, {
+        id: props.vectorInput
+          ? `${props.id}-chunk-${chunkIndex}-${props.operation}`
+          : `${props.id}-${props.operation}`,
+        keys,
+        values: props.valueChunks[chunkIndex],
+        mask: props.maskChunks?.[chunkIndex],
+        partialSums,
+        partialCounts,
+        groupCount: props.output.length,
+        accumulateInWorkgroup: plan.accumulateInWorkgroup,
+        rowsPerWorkgroup: plan.rowsPerWorkgroup,
+        rowBlockCount,
+        rowBlockOffset,
+        columnCount: plan.columnCount
+      })
+    );
+    rowBlockOffset += rowBlockCount;
+  }
+  nodes.push(
+    ...addGroupCombineSumPass(graph, {
+      id: `${props.id}-finalize`,
+      partialSums,
+      partialCounts,
+      output: props.output,
+      columnCount: plan.columnCount
+    })
+  );
+  return nodes;
+}
+
+/** Static sizing for the deterministic floating-point sum path. @internal */
+export type GPUGroupSumPlan = {
+  /** Rows reduced by one workgroup, a multiple of the 256-row tile. */
+  rowsPerWorkgroup: number;
+  /** Total row blocks across every non-empty chunk. */
+  rowBlockCount: number;
+  /** Scratch columns; row block `b` accumulates into column `b % columnCount`. */
+  columnCount: number;
+  /** Whether group accumulators fit in workgroup memory instead of the scratch column. */
+  accumulateInWorkgroup: boolean;
+  /** Partial values per scratch array, `columnCount * groupCount`. */
+  partialCount: number;
+};
+
+/**
+ * Sizes row blocks, scratch columns, and the accumulator location for deterministic sums. @internal
+ *
+ * Scratch holds at most about one million partials per array, or one column when the group count
+ * alone exceeds that. Row blocks grow beyond the minimum until the largest chunk fits the available
+ * columns, but never beyond the largest chunk. Row blocks beyond the column count, which come from
+ * fragmented inputs, add into earlier columns in row order, so scratch does not grow with the chunk
+ * count. Group accumulators live in workgroup memory while they fit an 8 KB budget beside the 3 KB
+ * row tile, which keeps several workgroups resident per compute unit. Larger outputs accumulate
+ * directly in the workgroup's own scratch column, which no other workgroup in the pass touches.
+ */
+export function getGPUGroupSumPlan(
+  chunkLengths: readonly number[],
+  groupCount: number,
+  operation: GPUGroupSumOperation,
+  maxComputeWorkgroupStorageSize: number
+): GPUGroupSumPlan {
+  const columnCapacity = Math.max(1, Math.floor(TARGET_SUM_PARTIAL_COUNT / groupCount));
+  const largestChunkLength = chunkLengths.reduce((largest, length) => Math.max(largest, length), 0);
+  const largestChunkTileCount = Math.ceil(largestChunkLength / SUM_TILE_ROW_COUNT);
+  const tilesPerWorkgroup = Math.max(
+    1,
+    Math.min(
+      largestChunkTileCount,
+      MAXIMUM_SUM_TILES_PER_WORKGROUP,
+      Math.max(MINIMUM_SUM_TILES_PER_WORKGROUP, Math.ceil(largestChunkTileCount / columnCapacity))
+    )
+  );
+  const rowsPerWorkgroup = tilesPerWorkgroup * SUM_TILE_ROW_COUNT;
+  const rowBlockCount = chunkLengths.reduce(
+    (total, length) => total + Math.ceil(length / rowsPerWorkgroup),
+    0
+  );
+  // Row blocks of one chunk run concurrently, so each one needs its own column.
+  const columnCount = Math.min(
+    rowBlockCount,
+    Math.max(columnCapacity, Math.ceil(largestChunkLength / rowsPerWorkgroup))
+  );
+  const accumulatorByteLength = groupCount * (operation === 'mean' ? 2 : 1) * UINT32_BYTE_LENGTH;
+  return {
+    rowsPerWorkgroup,
+    rowBlockCount,
+    columnCount,
+    accumulateInWorkgroup:
+      accumulatorByteLength <= MAXIMUM_WORKGROUP_ACCUMULATOR_BYTE_LENGTH &&
+      SUM_TILE_WORKGROUP_BYTE_LENGTH + accumulatorByteLength <= maxComputeWorkgroupStorageSize,
+    partialCount: columnCount * groupCount
+  };
+}
+
+/**
+ * Reduces each fixed row block of one chunk into one column of per-group partials.
+ *
+ * Every 256-row tile is staged in workgroup memory with a packed `(group << 8) | lane` sort key,
+ * bitonic-sorted, and reduced with a segmented Hillis-Steele scan. The last row of each run adds
+ * the run total to the group's accumulator. Each accumulator has one writer per tile, and tiles are
+ * separated by barriers, so the addition order is fixed by the input rows alone. Accumulators are
+ * workgroup memory, flushed at the end, or the workgroup's own scratch column. A row block that
+ * reuses a column written by an earlier pass starts from that column's partials.
+ */
+function addGroupPartialSumPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  props: {
+    id: string;
+    keys: GraphDataView<'uint32'>;
+    values: GraphDataView<'float32'>;
+    mask?: GraphDataView<'uint32'>;
+    partialSums: GraphDataView<'float32'>;
+    partialCounts?: GraphDataView<'uint32'>;
+    groupCount: number;
+    accumulateInWorkgroup: boolean;
+    rowsPerWorkgroup: number;
+    rowBlockCount: number;
+    rowBlockOffset: number;
+    columnCount: number;
+  }
+): readonly GPUCommandNode<Parameters>[] {
+  const dispatchLayout = getGPUGroupAggregationDispatchLayout(
+    props.rowBlockCount * GROUP_AGGREGATION_WORKGROUP_SIZE,
+    graph.device.limits.maxComputeWorkgroupsPerDimension
+  );
+  const includesCounts = Boolean(props.partialCounts);
+  const local = props.accumulateInWorkgroup;
+  const maskBinding = props.mask
+    ? '@group(0) @binding(2) var<storage, read> selectionMask: array<u32>;'
+    : '';
+  const partialBinding = props.mask ? 3 : 2;
+  const maskCondition = props.mask
+    ? `selectionMask[${getViewElementOffset(props.mask)}u + index * ${getScalarStride(props.mask)}u] != 0u`
+    : 'true';
+  const partialSum = 'partialSums[PARTIAL_SUMS_OFFSET + columnStart + group]';
+  const partialCount = 'partialCounts[PARTIAL_COUNTS_OFFSET + columnStart + group]';
+  const sumAccumulator = local ? 'localSums[group]' : partialSum;
+  const countAccumulator = local ? 'localCounts[group]' : partialCount;
+  const source = /* wgsl */ `
+const ELEMENT_COUNT: u32 = ${props.keys.length}u;
+const GROUP_COUNT: u32 = ${props.groupCount}u;
+const ROWS_PER_WORKGROUP: u32 = ${props.rowsPerWorkgroup}u;
+const ROW_BLOCK_COUNT: u32 = ${props.rowBlockCount}u;
+const ROW_BLOCK_OFFSET: u32 = ${props.rowBlockOffset}u;
+const COLUMN_COUNT: u32 = ${props.columnCount}u;
+const KEYS_OFFSET: u32 = ${getViewElementOffset(props.keys)}u;
+const VALUES_OFFSET: u32 = ${getViewElementOffset(props.values)}u;
+const KEYS_STRIDE: u32 = ${getScalarStride(props.keys)}u;
+const VALUES_STRIDE: u32 = ${getScalarStride(props.values)}u;
+const PARTIAL_SUMS_OFFSET: u32 = ${getViewElementOffset(props.partialSums)}u;
+const PARTIAL_COUNTS_OFFSET: u32 = ${props.partialCounts ? getViewElementOffset(props.partialCounts) : 0}u;
+const TILE_ROW_COUNT: u32 = ${SUM_TILE_ROW_COUNT}u;
+const INVALID_SORT_KEY: u32 = 0xffffffffu;
+@group(0) @binding(0) var<storage, read> groupKeys: array<u32>;
+@group(0) @binding(1) var<storage, read> inputValues: array<f32>;
+${maskBinding}
+@group(0) @binding(${partialBinding}) var<storage, read_write> partialSums: array<f32>;
+${includesCounts ? `@group(0) @binding(${partialBinding + 1}) var<storage, read_write> partialCounts: array<u32>;` : ''}
+
+var<workgroup> sortKeys: array<u32, ${SUM_TILE_ROW_COUNT}>;
+var<workgroup> tileValues: array<f32, ${SUM_TILE_ROW_COUNT}>;
+var<workgroup> scanValues: array<f32, ${SUM_TILE_ROW_COUNT}>;
+${includesCounts ? `var<workgroup> scanCounts: array<u32, ${SUM_TILE_ROW_COUNT}>;` : ''}
+${local ? `var<workgroup> localSums: array<f32, ${props.groupCount}>;` : ''}
+${local && includesCounts ? `var<workgroup> localCounts: array<u32, ${props.groupCount}>;` : ''}
+
+@compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) lane: u32
+) {
+  let rowBlock = (workgroupId.z * ${dispatchLayout.y}u + workgroupId.y) * ${dispatchLayout.x}u + workgroupId.x;
+  if (rowBlock >= ROW_BLOCK_COUNT) { return; }
+  let globalRowBlock = ROW_BLOCK_OFFSET + rowBlock;
+  let columnStart = (globalRowBlock % COLUMN_COUNT) * GROUP_COUNT;
+  let reusesColumn = globalRowBlock >= COLUMN_COUNT;
+  for (var group = lane; group < GROUP_COUNT; group += TILE_ROW_COUNT) {
+    ${sumAccumulator} = select(0.0, ${partialSum}, reusesColumn);
+    ${includesCounts ? `${countAccumulator} = select(0u, ${partialCount}, reusesColumn);` : ''}
+  }
+
+  let rowStart = rowBlock * ROWS_PER_WORKGROUP;
+  let rowLength = min(ROWS_PER_WORKGROUP, ELEMENT_COUNT - rowStart);
+  let tileCount = (rowLength + TILE_ROW_COUNT - 1u) / TILE_ROW_COUNT;
+  for (var tile = 0u; tile < tileCount; tile++) {
+    let rowOffset = tile * TILE_ROW_COUNT + lane;
+    let index = rowStart + rowOffset;
+    var sortKey = INVALID_SORT_KEY;
+    var value = 0.0;
+    if (rowOffset < rowLength && ${maskCondition}) {
+      let groupIndex = groupKeys[KEYS_OFFSET + index * KEYS_STRIDE];
+      value = inputValues[VALUES_OFFSET + index * VALUES_STRIDE];
+      let finiteValue = value == value && abs(value) <= 3.402823466e+38;
+      if (finiteValue && groupIndex < GROUP_COUNT) {
+        sortKey = (groupIndex << 8u) | lane;
+      }
+    }
+    // Accumulator updates and sort-key reads of the previous tile are complete.
+    ${local ? 'workgroupBarrier();' : 'storageBarrier();\n    workgroupBarrier();'}
+    sortKeys[lane] = sortKey;
+    tileValues[lane] = value;
+    workgroupBarrier();
+
+    for (var size = 2u; size <= TILE_ROW_COUNT; size <<= 1u) {
+      for (var stride = size >> 1u; stride > 0u; stride >>= 1u) {
+        let partner = lane ^ stride;
+        if (partner > lane) {
+          let first = sortKeys[lane];
+          let second = sortKeys[partner];
+          if ((first > second) == ((lane & size) == 0u)) {
+            sortKeys[lane] = second;
+            sortKeys[partner] = first;
+          }
+        }
+        workgroupBarrier();
+      }
+    }
+
+    let sortedKey = sortKeys[lane];
+    let group = sortedKey >> 8u;
+    let valid = sortedKey != INVALID_SORT_KEY;
+    var sum = select(0.0, tileValues[sortedKey & 0xffu], valid);
+    ${includesCounts ? 'var count = select(0u, 1u, valid);' : ''}
+    for (var offset = 1u; offset < TILE_ROW_COUNT; offset <<= 1u) {
+      scanValues[lane] = sum;
+      ${includesCounts ? 'scanCounts[lane] = count;' : ''}
+      workgroupBarrier();
+      if (lane >= offset && (sortKeys[lane - offset] >> 8u) == group) {
+        sum = scanValues[lane - offset] + sum;
+        ${includesCounts ? 'count = scanCounts[lane - offset] + count;' : ''}
+      }
+      workgroupBarrier();
+    }
+    let segmentEnd = lane == TILE_ROW_COUNT - 1u || (sortKeys[lane + 1u] >> 8u) != group;
+    if (valid && segmentEnd) {
+      ${sumAccumulator} = ${sumAccumulator} + sum;
+      ${includesCounts ? `${countAccumulator} = ${countAccumulator} + count;` : ''}
+    }
+  }
+${
+  local
+    ? `  workgroupBarrier();
+  for (var group = lane; group < GROUP_COUNT; group += TILE_ROW_COUNT) {
+    partialSums[PARTIAL_SUMS_OFFSET + columnStart + group] = localSums[group];
+    ${includesCounts ? 'partialCounts[PARTIAL_COUNTS_OFFSET + columnStart + group] = localCounts[group];' : ''}
+  }`
+    : ''
+}
+}`;
+  const resources: GraphBufferUse[] = [
+    {buffer: props.keys, usage: 'storage-read'},
+    {buffer: props.values, usage: 'storage-read'},
+    ...(props.mask ? ([{buffer: props.mask, usage: 'storage-read'}] as GraphBufferUse[]) : []),
+    {buffer: props.partialSums, usage: 'storage-read-write'},
+    ...(props.partialCounts
+      ? ([{buffer: props.partialCounts, usage: 'storage-read-write'}] as GraphBufferUse[])
+      : [])
+  ];
+  return addKernelPass(graph, {
+    id: props.id,
+    source,
+    resources,
+    bindings: {
+      groupKeys: props.keys,
+      inputValues: props.values,
+      ...(props.mask ? {selectionMask: props.mask} : {}),
+      partialSums: props.partialSums,
+      ...(props.partialCounts ? {partialCounts: props.partialCounts} : {})
+    },
+    dispatchSize: dispatchLayout
+  });
+}
+
+/**
+ * Sums each group's column partials in a fixed order and writes the sum or mean.
+ *
+ * One workgroup reduces one group at a time: each lane adds a strided subset of columns in index
+ * order, then a fixed binary tree combines the lanes. Workgroups stride over groups when the group
+ * count exceeds one dispatch dimension. Means of groups without accepted rows are NaN.
+ */
+function addGroupCombineSumPass<Parameters>(
+  graph: GPUCommandGraph<Parameters>,
+  props: {
+    id: string;
+    partialSums: GraphDataView<'float32'>;
+    partialCounts?: GraphDataView<'uint32'>;
+    output: GraphDataView<'float32'>;
+    columnCount: number;
+  }
+): readonly GPUCommandNode<Parameters>[] {
+  const groupCount = props.output.length;
+  const workgroupCount = Math.min(
+    groupCount,
+    Math.floor(graph.device.limits.maxComputeWorkgroupsPerDimension)
+  );
+  const includesCounts = Boolean(props.partialCounts);
+  const outputBinding = includesCounts ? 2 : 1;
+  const resultStatement = includesCounts
+    ? `let count = reductionCounts[0];
+    outputValues[OUTPUT_OFFSET + groupIndex] = select(
+      bitcast<u32>(reductionSums[0] / f32(max(count, 1u))),
+      0x7fc00000u,
+      count == 0u
+    );`
+    : 'outputValues[OUTPUT_OFFSET + groupIndex] = bitcast<u32>(reductionSums[0]);';
+  const source = /* wgsl */ `
+const GROUP_COUNT: u32 = ${groupCount}u;
+const COLUMN_COUNT: u32 = ${props.columnCount}u;
+const PARTIAL_SUMS_OFFSET: u32 = ${getViewElementOffset(props.partialSums)}u;
+const PARTIAL_COUNTS_OFFSET: u32 = ${props.partialCounts ? getViewElementOffset(props.partialCounts) : 0}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(props.output)}u;
+const WORKGROUP_SIZE: u32 = ${GROUP_AGGREGATION_WORKGROUP_SIZE}u;
+const WORKGROUP_COUNT: u32 = ${workgroupCount}u;
+@group(0) @binding(0) var<storage, read> partialSums: array<f32>;
+${includesCounts ? '@group(0) @binding(1) var<storage, read> partialCounts: array<u32>;' : ''}
+@group(0) @binding(${outputBinding}) var<storage, read_write> outputValues: array<u32>;
+var<workgroup> reductionSums: array<f32, ${GROUP_AGGREGATION_WORKGROUP_SIZE}>;
+${includesCounts ? `var<workgroup> reductionCounts: array<u32, ${GROUP_AGGREGATION_WORKGROUP_SIZE}>;` : ''}
+
+@compute @workgroup_size(${GROUP_AGGREGATION_WORKGROUP_SIZE}) fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_index) lane: u32
+) {
+  for (var groupIndex = workgroupId.x; groupIndex < GROUP_COUNT; groupIndex += WORKGROUP_COUNT) {
+    var sum = 0.0;
+    ${includesCounts ? 'var count = 0u;' : ''}
+    for (var column = lane; column < COLUMN_COUNT; column += WORKGROUP_SIZE) {
+      let partialIndex = column * GROUP_COUNT + groupIndex;
+      sum += partialSums[PARTIAL_SUMS_OFFSET + partialIndex];
+      ${includesCounts ? 'count += partialCounts[PARTIAL_COUNTS_OFFSET + partialIndex];' : ''}
+    }
+    // Lane 0 has finished reading the previous group's reduction.
+    workgroupBarrier();
+    reductionSums[lane] = sum;
+    ${includesCounts ? 'reductionCounts[lane] = count;' : ''}
+    for (var stride = WORKGROUP_SIZE >> 1u; stride > 0u; stride >>= 1u) {
+      workgroupBarrier();
+      if (lane < stride) {
+        reductionSums[lane] = reductionSums[lane] + reductionSums[lane + stride];
+        ${includesCounts ? 'reductionCounts[lane] = reductionCounts[lane] + reductionCounts[lane + stride];' : ''}
+      }
+    }
+    if (lane == 0u) {
+      ${resultStatement}
+    }
+  }
+}`;
+  return addKernelPass(graph, {
+    id: props.id,
+    source,
+    resources: [
+      {buffer: props.partialSums, usage: 'storage-read'},
+      ...(props.partialCounts
+        ? ([{buffer: props.partialCounts, usage: 'storage-read'}] as GraphBufferUse[])
+        : []),
+      {buffer: props.output, usage: 'storage-write'}
+    ],
+    bindings: {
+      partialSums: props.partialSums,
+      ...(props.partialCounts ? {partialCounts: props.partialCounts} : {}),
+      outputValues: props.output
+    },
+    dispatchCount: workgroupCount
+  });
 }
 
 /** Plans a bounded 3D dispatch for one packed group-key chunk. @internal */
