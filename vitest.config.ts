@@ -9,6 +9,9 @@ const optionalTextureCompressorShim = fileURLToPath(
 
 const excludePatterns = [
   '**/*.disabled.*',
+  // Deck integration packages are scheduled for removal; omit their module suites.
+  'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/*.spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',
