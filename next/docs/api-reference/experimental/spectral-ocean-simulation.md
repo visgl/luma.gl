@@ -11,7 +11,7 @@ The simulation records into an application-owned `CommandEncoder`. It never subm
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {SpectralOceanSimulation} from '@luma.gl/experimental';
+import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
 
 
 

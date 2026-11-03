@@ -2,7 +2,7 @@
 
 > **makeShaderBlockLayout**(`uniformTypes`, `options?`): [`ShaderBlockLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ShaderBlockLayout.md)
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L68)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:58
 
 Builds a deterministic shader-block layout from composite shader type declarations.
 
@@ -16,7 +16,7 @@ The returned value is pure layout metadata. It records the packed field offsets 
 
 ### options?[​](#options "Direct link to options?")
 
-[`ShaderBlockLayoutOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ShaderBlockLayoutOptions.md) = `{}`
+[`ShaderBlockLayoutOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ShaderBlockLayoutOptions.md)
 
 ## Returns[​](#returns "Direct link to Returns")
 

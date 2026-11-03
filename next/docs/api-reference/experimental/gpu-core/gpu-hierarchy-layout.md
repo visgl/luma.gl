@@ -20,7 +20,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -52,7 +56,7 @@ This layout fits large, regularly grouped views whose expansion state changes mo
 The current contract assumes a fixed `childrenPerParent` and one parent level. Use a CPU layout or a more general hierarchy algorithm for arbitrary-depth trees, variable child ranges, text measurement, or constraints that depend on sibling content. The primitive computes scalar row placement; it does not choose styling or animation.
 
 ```
-import {GPUHierarchyLayout} from '@luma.gl/gpgpu/gpu-core';
+import {GPUHierarchyLayout} from '@luma.gl/graph/gpu-core';
 
 
 

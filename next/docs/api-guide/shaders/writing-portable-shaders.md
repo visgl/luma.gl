@@ -17,19 +17,19 @@ luma.gl does not transpile an application shader from WGSL to GLSL or from GLSL 
 
 A portable shader pair is easier to maintain when both backend sources expose the same logical contract:
 
-| Contract     | Keep aligned                                                                                                            |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Attributes   | Attribute names, formats, and buffer layout expected by the model.                                                      |
-| Varyings     | Values passed from vertex to fragment stage.                                                                            |
-| Module props | `ShaderModule.uniformTypes`, `defaultUniforms`, and `getUniforms()` output.                                             |
-| Bindings     | Resource names passed from JavaScript, even when WGSL and GLSL syntax differs.                                          |
-| Plugins      | Shared plugin behavior and shader-facing vertex input names, with `glsl` and `wgsl` variants only where syntax differs. |
+| Contract     | Keep aligned                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| Attributes   | Attribute names, formats, and buffer layout expected by the model.                                            |
+| Varyings     | Values passed from vertex to fragment stage.                                                                  |
+| Module props | `ShaderModule.uniformTypes`, `defaultUniforms`, and `getUniforms()` output.                                   |
+| Bindings     | Resource names passed from JavaScript, even when WGSL and GLSL syntax differs.                                |
+| Plugins      | Shared plugin behavior and shader-facing vertex input names, with `glsl` and `wgsl` source on each injection. |
 
 Do not make the shader language difference leak into application props unless the feature is genuinely backend-specific. Prefer one JavaScript prop model and two shader implementations.
 
 ## WGSL Binding Rule[​](#wgsl-binding-rule "Direct link to WGSL Binding Rule")
 
-WGSL used through shadertools should usually declare named resources with `@binding(auto)`:
+WGSL used through shaders should usually declare named resources with `@binding(auto)`:
 
 ```
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
@@ -51,11 +51,11 @@ model.setBindings({
 });
 ```
 
-The assembler assigns concrete WGSL binding numbers before WebGPU reflects and compiles the shader. Raw low-level WebGPU shader creation that bypasses shadertools still needs ordinary numeric WGSL bindings.
+The assembler assigns concrete WGSL binding numbers before WebGPU reflects and compiles the shader. Raw low-level WebGPU shader creation that bypasses shaders still needs ordinary numeric WGSL bindings.
 
 ## Portable Modules And Plugins[​](#portable-modules-and-plugins "Direct link to Portable Modules And Plugins")
 
-A portable `ShaderModule` may provide `source` for WGSL, `vs` and `fs` for GLSL, or all three. A portable `ShaderPlugin` can keep backend-neutral modules and defines at the top level while placing language-specific injection source under `glsl` and `wgsl`. If a plugin declares `vertexInputs`, keep those shader-facing names and types aligned with the caller-owned buffer layout and attribute data.
+A portable `ShaderModule` may provide `source` for WGSL, `vs` and `fs` for GLSL, or all three. A portable `ShaderPlugin` can declare one backend-neutral primary `module` and shared defines while placing language-specific injection source in each injection’s `glsl` and `wgsl` fields. If a plugin declares `vertexInputs`, keep those shader-facing names and types aligned with the caller-owned buffer layout and attribute data.
 
 Use defines for real source variants, not as a substitute for two clear shader implementations. WGSL conditionals are preprocessed by luma.gl before binding assignment, so inactive resource declarations do not consume binding slots.
 
@@ -66,4 +66,4 @@ Use defines for real source variants, not as a substitute for two clear shader i
 * Keep module uniform descriptors aligned with the shader declarations.
 * Use shader plugins when a reusable behavior needs different GLSL and WGSL source but one application-facing attachment point.
 
-For exact WGSL rules, see [`WGSL Support`](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md). For render model props, see [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md). For a working dual-backend example, see the [Shader Plugins tutorial](https://luma.gl/next/docs/tutorials/shader-plugins.md).
+For exact WGSL rules, see [`WGSL Support`](https://luma.gl/next/docs/api-reference/shaders/wgsl-support.md). For render model props, see [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md). For a working dual-backend example, see the [Shader Plugins tutorial](https://luma.gl/next/docs/tutorials/shader-plugins.md).

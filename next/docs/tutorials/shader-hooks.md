@@ -6,7 +6,13 @@ Shader hooks let shader modules inject code into designated points in a shader. 
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
 
@@ -19,7 +25,7 @@ import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 
 import {AnimationLoopTemplate, AnimationProps, Model, makeAnimationLoop} from '@luma.gl/engine';
 
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 
@@ -159,7 +165,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 
 
-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+    const shaderAssembler = new GLSLShaderAssembler();
 
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
@@ -205,7 +211,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       fs,
 
-      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
+      shaderAssembler,
 
       modules: [offsetLeftModule],
 
@@ -235,7 +241,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       fs,
 
-      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
+      shaderAssembler,
 
       modules: [offsetRightModule],
 

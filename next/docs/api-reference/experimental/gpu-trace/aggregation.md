@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUTraceAggregation` computes dense counts and duration statistics over canonical trace columns. `GPUTraceTimeBuckets` computes interval occupancy and clipped active duration over trace time. Both are exported from `@luma.gl/experimental/gpu-trace`; the underlying generic aggregations remain [`GPUGroupAggregation`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md) and [`GPUHistogram`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-histogram.md).
+`GPUTraceAggregation` computes dense counts and duration statistics over canonical trace columns. `GPUTraceTimeBuckets` computes interval occupancy and clipped active duration over trace time. Both are exported from `@luma.gl/graph/gpu-trace`; the underlying generic aggregations remain [`GPUGroupAggregation`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md) and [`GPUHistogram`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-histogram.md).
 
 ### GPU Hierarchical Trace Viewer
 
@@ -18,7 +18,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -46,7 +50,7 @@ The live viewer uses a separate analysis command graph. It can profile the entir
 `GPUTraceAnalyticsOutputLayout` packs named `uint32` and `float32` series into one compact result buffer. It calculates aligned offsets, creates typed graph views for contributors, and decodes the same named series after a small asynchronous readback. Applications therefore do not need to duplicate byte-offset arithmetic between their GPU graph and chart UI.
 
 ```
-import {GPUTraceAnalyticsOutputLayout} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceAnalyticsOutputLayout} from '@luma.gl/graph/gpu-trace';
 
 
 
@@ -88,7 +92,7 @@ The layout owns no buffers, submission policy, or charts. The same views can rem
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUTraceAggregation} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceAggregation} from '@luma.gl/graph/gpu-trace';
 
 
 
@@ -114,7 +118,7 @@ The supported metrics are `count`, `duration-sum`, `duration-min`, `duration-max
 ## Trace-time buckets[​](#trace-time-buckets "Direct link to Trace-time buckets")
 
 ```
-import {GPUTraceTimeBuckets} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceTimeBuckets} from '@luma.gl/graph/gpu-trace';
 
 
 

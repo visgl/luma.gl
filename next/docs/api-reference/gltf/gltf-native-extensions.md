@@ -1,19 +1,21 @@
 # Native glTF Extensions
 
-[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Materials](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
 
-glTF extensions should describe what an asset actually does, not merely which JSON properties survived loading. `@luma.gl/gltf` connects authored material variants, GPU instance transforms, recursive node visibility, typed animation pointers, and required-extension capabilities to the existing luma.gl scenegraph and animation runtime.
+glTF extensions should describe what an asset actually does, not merely which JSON properties survived loading. `@luma.gl/engine/gltf` connects authored material variants, GPU instance transforms, recursive node visibility, typed animation pointers, and required-extension capabilities to the existing luma.gl scenegraph and animation runtime.
 
-Source interpretation remains format-owned: `@loaders.gl/gltf` reads and postprocesses the asset, `@luma.gl/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph, model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
+Source interpretation remains format-owned: `@loaders.gl/scene/gltf` reads and postprocesses the asset, `@luma.gl/engine/gltf` resolves glTF extension semantics, and `@luma.gl/engine` owns generic scenegraph, model, animation, and scene-controller behavior. The optional glTF parsers produce construction props for engine billboard, area-light, and audio controllers; skin and material-variant controllers are returned automatically. There is no parallel loader, material system, or renderer.
 
 ## Load a standards-native scene[​](#load-a-standards-native-scene "Direct link to Load a standards-native scene")
 
 ```
 import {load} from '@loaders.gl/core';
 
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 
 
@@ -40,7 +42,7 @@ console.log(scenegraphs.extensionSupport);
 console.log(scenegraphs.animations.map(animation => animation.name));
 ```
 
-`postProcessGLTF()` is explicit: loaders.gl v4 does not support the historical `{gltf: {postProcess: true}}` loader option. Use `useByteColors: false` when consuming punctual light colors as glTF-authored linear RGB values. Strict extension handling is described below.
+`postProcessGLTF()` is an explicit luma.gl operation. The decoder does not support the historical `{gltf: {postProcess: true}}` loader option. Use `useByteColors: false` when consuming punctual light colors as glTF-authored linear RGB values. Strict extension handling is described below.
 
 | Extension                  | Runtime behavior                                                        | Scenegraph access                                          |
 | -------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -189,7 +191,7 @@ for (const variant of scenegraphs.variants.variants) {
 Inspect resolved instance transforms and exact authored accessor metadata:
 
 ```
-import {getGLTFNodeInstancing} from '@luma.gl/gltf';
+import {getGLTFNodeInstancing} from '@luma.gl/engine/gltf';
 
 
 
@@ -382,7 +384,7 @@ import {
 
   type GLTFLightAnimationChannel
 
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 
 
@@ -438,7 +440,7 @@ import {
 
   getUnsupportedRequiredGLTFExtensions
 
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 
 
@@ -534,18 +536,18 @@ The runtime is tested against compact, unmodified CC0 assets from Khronos glTF S
 
 CPU tests inspect parsed source behavior and scenegraph identity using `NullDevice`. Browser tests execute real WebGL and WebGPU draw calls against the same official instancing fixture. Mutation tests derive material-variant and camera/light/dispersion-pointer cases from the small official documents instead of adding large synthetic assets.
 
-The fixture attribution and pinned source revision are recorded in `modules/gltf/test/data/README.md`.
+The fixture attribution and pinned source revision are recorded in `modules/engine/test/gltf/data/README.md`.
 
 ## Architecture and ownership[​](#architecture-and-ownership "Direct link to Architecture and ownership")
 
-| Package                 | Responsibility                                                                                                                                 |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@loaders.gl/gltf`      | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
-| `@luma.gl/gltf`         | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting.                                  |
-| `@luma.gl/engine`       | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities.                                      |
-| `@luma.gl/shadertools`  | Canonical PBR material uniforms, physical shading, and reusable skinning.                                                                      |
-| `@luma.gl/experimental` | Optional format-independent physical scene rendering and captured-scene transmission.                                                          |
-| `@luma.gl/anari`        | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership.                                        |
+| Package                  | Responsibility                                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@loaders.gl/scene/gltf` | Container/resource decoding, Draco and EXT meshopt decompression, accessor/image postprocessing, feature metadata, and GLB container encoding. |
+| `@luma.gl/engine/gltf`   | Extension interpretation, source-material mappings, typed pointers, skin ownership, and capability reporting.                                  |
+| `@luma.gl/engine`        | Generic `GroupNode` visibility, reusable `Model` instancing, animation mixing, and deformation utilities.                                      |
+| `@luma.gl/shaders`       | Canonical PBR material uniforms, physical shading, and reusable skinning.                                                                      |
+| `@luma.gl/anari`         | Optional format-independent physical scene rendering and captured-scene transmission.                                                          |
+| `@luma.gl/anari`         | Optional thin retained-object orchestration through `@luma.gl/anari/gltf`; no loader or BRDF ownership.                                        |
 
 The core ANARI package does not import glTF. Its optional glTF adapter imports the existing glTF parsers and engine animation primitives. Camera, punctual-light, and visibility pointer playback currently belongs to the canonical glTF scenegraph; the thin ANARI animation adapter safely ignores unsupported target families instead of creating an independent extension runtime.
 

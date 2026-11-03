@@ -1,10 +1,12 @@
-# GPU physics
+# How physics engines work
+
+For setup and feature guides, start with the [Physics overview](https://luma.gl/next/docs/api-guide/physics/overview.md).
 
 A physics engine advances a model of a world through time. For rigid bodies, that means predicting motion under forces and finding impulses that prevent objects from passing through each other while allowing bouncing, sliding, rolling and constrained movement. The difficult part is making those interactions stable and fast when many bodies touch.
 
-luma.gl's experimental `@luma.gl/gpgpu/gpu-physics` module approaches physics as a GPU computation pipeline. It reuses sorting, scanning and command-graph infrastructure, keeps simulation state in buffers, and makes that state available to rendering. The long-term goal is a state-of-the-art GPU rigid-body library. Complete, performant support for a pinned glTF physics proposal profile is the first qualification milestone, not a claim about current coverage.
+luma.gl's experimental `@luma.gl/graph/gpu-physics` module approaches physics as a GPU computation pipeline. It reuses sorting, scanning and command-graph infrastructure, keeps simulation state in buffers, and makes that state available to rendering. The long-term goal is a state-of-the-art GPU rigid-body library. Complete, performant support for a pinned glTF physics proposal profile is the first qualification milestone, not a claim about current coverage.
 
-This page explains the architecture rather than prescribing an application API. See the [API reference](https://luma.gl/next/docs/api-reference/gpgpu/gpu-physics.md) for API details and limitations, and the [roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md) for implementation status and qualification gates.
+This page explains the architecture rather than prescribing an application API. See the [API reference](https://luma.gl/next/docs/api-reference/graph/gpu-physics.md) for API details and limitations, and the [roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md) for implementation status and qualification gates.
 
 ## Bodies, shapes and rendered objects[​](#bodies-shapes-and-rendered-objects "Direct link to Bodies, shapes and rendered objects")
 
@@ -89,7 +91,7 @@ The target is GPU-resident simulation: broad phase, contact generation, solving,
 | Submit input commands and schedule fixed steps                  | Integrate poses and produce compact events     |
 | Consume requested diagnostics or gameplay events asynchronously | Publish state for GPU rendering                |
 
-This is the intended boundary. In particular, the glTF example's CPU pose bridge is a remaining integration limitation; a GPU solver alone does not make that whole application GPU-resident.
+The engine and glTF gallery can consume published GPU body-node matrices. Deforming geometry and live scene mutations have separate update and ownership requirements; a GPU solver alone does not make every asset operation GPU-resident.
 
 Readback has two costs: copying data and waiting for the producer. Even a small readback can stall progress if the next simulation step depends on it. Diagnostics should normally be asynchronous and optional. Gameplay events need explicit tick identities and latency semantics; JavaScript cannot synchronously consume a GPU result that has not completed.
 
@@ -99,7 +101,7 @@ GPU queues, pair lists, manifolds and event buffers have finite capacities. Ever
 
 Capacity planning should consider dense piles, extreme size ratios, mesh complexity and contact-cache churn, not just body count. Recovery may require reallocating and rebuilding resources between submissions, retrying from preserved state, or rejecting a scene beyond the declared envelope. A failed step must not be labeled valid merely because it rendered.
 
-The rigid world retains lifetime failure counters on the GPU, so infrequent sampling does not hide an incomplete step. Its simulation still advances when work is incomplete; recovery requires corrected settings and replay from known valid state. Allocation preflight catches device-limit violations before state allocation, but cannot predict all driver memory failures. See [capacity and diagnostics](https://luma.gl/next/docs/api-reference/gpgpu/gpu-rigid-body-world.md#capacity-and-diagnostics).
+The rigid world retains lifetime failure counters on the GPU, so infrequent sampling does not hide an incomplete step. Its simulation still advances when work is incomplete; recovery requires corrected settings and replay from known valid state. Allocation preflight catches device-limit violations before state allocation, but cannot predict all driver memory failures. See [capacity and diagnostics](https://luma.gl/next/docs/api-reference/graph/gpu-rigid-body-world.md#capacity-and-diagnostics).
 
 ### Synchronization and portability constrain the design[​](#synchronization-and-portability-constrain-the-design "Direct link to Synchronization and portability constrain the design")
 
@@ -115,7 +117,7 @@ The glTF adapter translates authored shapes, body modes, mass properties, filter
 
 Support has several distinct levels: accepting a schema field, importing it, simulating its intended behavior, and doing so within a qualified performance envelope. Four working example scenes do not prove all four levels for an extension. Draft revisions also need to be pinned; historical sample conventions and newer proposal semantics can differ.
 
-Remaining work includes general moving nonconvex mesh interactions, broad general-body CCD qualification, proposal joints and drives, complete trigger/interactivity semantics, and GPU pose publication through the glTF renderer. Unsupported behavior must remain visible. An asset-specific collision exclusion is not a substitute for implementing the shape pair.
+Remaining work includes general moving nonconvex mesh interactions, broad CCD qualification, deformation-driven recooking and full proposal-profile qualification. Supported joints, drives and triggers have explicit solver and geometry envelopes. Unsupported behavior must remain visible. An asset-specific collision exclusion is not a substitute for implementing the shape pair.
 
 ## Measuring progress toward state of the art[​](#measuring-progress-toward-state-of-the-art "Direct link to Measuring progress toward state of the art")
 
@@ -136,6 +138,6 @@ Independent analytical cases and reference implementations provide stronger evid
 
 * [GPGPU programming](https://luma.gl/next/docs/api-guide/gpu/gpgpu.md)
 * [GPU command graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)
-* [Physics implementation and limitations](https://github.com/visgl/luma.gl/blob/master/modules/gpgpu/src/gpu-physics/README.md)
-* [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/gltf/src/physics/README.md)
+* [Physics implementation and limitations](https://github.com/visgl/luma.gl/blob/master/modules/graph/src/gpu-physics/README.md)
+* [glTF physics adapter profile](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/gltf/physics/README.md)
 * [Physics roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)

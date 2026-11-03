@@ -16,7 +16,11 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -25,7 +29,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 Engine `Model` supports instanced attributes and an `instanceCount`. The glTF adapter creates those instanced models automatically from authored transforms. `getGLTFNodeInstancing()` exposes resolved matrices and source attributes for inspection or a custom integration.
 
 ```
-import {createScenegraphsFromGLTF, getGLTFNodeInstancing} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, getGLTFNodeInstancing} from '@luma.gl/engine/gltf';
 
 
 

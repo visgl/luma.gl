@@ -1,0 +1,1 @@
+import{t as e}from"./log-6ICLTgtF.js";var t=`v5.0.0-beta.4`;function n(){let n=new e({id:`loaders.gl`});return globalThis.loaders||={},globalThis.loaders.log=n,globalThis.loaders.version=t,globalThis.probe||={},globalThis.probe.loaders=n,n}var r=n();export{r as t};

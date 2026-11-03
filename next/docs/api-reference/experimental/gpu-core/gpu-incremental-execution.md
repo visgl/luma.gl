@@ -1,6 +1,6 @@
 # GPUIncrementalExecution
 
-[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Incremental Execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
+[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md)[Incremental Execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -28,9 +28,9 @@ The [GPU Data Analysis example](https://luma.gl/next/examples/experimental/gpu-d
 ## Usage: streaming sum[​](#usage-streaming-sum "Direct link to Usage: streaming sum")
 
 ```
-import {GPUIncrementalExecution, GPUReduction} from '@luma.gl/gpgpu/gpu-core';
+import {GPUIncrementalExecution, GPUReduction} from '@luma.gl/graph/gpu-core';
 
-import type {GPUData, GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUData, GPUVectorLike} from '@luma.gl/graph/gpu-data';
 
 
 
@@ -127,7 +127,7 @@ Callbacks must be deterministic for their declared batch and query revision. A b
 
 ## Supported decompositions and broader recomputation[​](#supported-decompositions-and-broader-recomputation "Direct link to Supported decompositions and broader recomputation")
 
-This is an explicit composition API. It does not automatically incrementalize arbitrary `GPUProgram` operations or dataframe queries.
+This is an explicit composition API. It does not automatically incrementalize arbitrary `GPUGraph` operations or dataframe queries.
 
 | Operation                                                              | Reusable partial                                                | Merge and invalidation rule                                                           |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |

@@ -1,6 +1,8 @@
 # GPUCommandGraph
 
-[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Incremental Execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
+Use `GPUCommandGraph` and `CompiledGPUCommandGraph` from `@luma.gl/graph/gpu-graph` for execution scheduling. They are also exported by `@luma.gl/graph` and `@luma.gl/graph/gpu-core`. Use `GPUGraph` to author semantic operations and `GPUGraphCompiler` to lower them to this command graph. Option and result types retain their `GPUCommandGraph` prefixes. Graph analytics live separately in `@luma.gl/graph/gpu-graph-algorithms`, using `GPUGraphAlgorithmsData`.
+
+[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md)[Incremental Execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -37,7 +39,11 @@ For changing batch topology, [GPUIncrementalExecution](https://luma.gl/next/docs
 
 This example composes reduction, histogram, and grid-binning nodes in one reusable graph:
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -101,10 +107,10 @@ Imported buffers, textures, external textures, `GPUData`, and `GPUVectorLike` ch
 
 ## Extension libraries[​](#extension-libraries "Direct link to Extension libraries")
 
-Small algorithm libraries can implement the structural `GPUProgramPrimitive` interface:
+Small algorithm libraries can implement the structural `GPUGraphPrimitive` interface:
 
 ```
-class GPUAlgorithm implements GPUProgramPrimitive {
+class GPUAlgorithm implements GPUGraphPrimitive {
 
   getCommandNodes<Parameters>(graph: GPUCommandGraph<Parameters>): readonly GPUCommandNode<Parameters>[] {
 
@@ -251,7 +257,7 @@ Declares a caller-owned `Texture` or ready `DynamicTexture`. Texture descriptors
 ```
 import {Texture} from '@luma.gl/core';
 
-import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/graph/gpu-core';
 
 
 
@@ -790,7 +796,7 @@ Destroys compiled node resources, cached views/framebuffers, and physical transi
 `GPUCommandGraphInspector` is a data-only collector for one or more compiled graphs. Its non-owning observation handle registers a graph and records synchronous CPU measurements whenever encoding is routed through the handle. Optional GPU timestamp readback remains explicit and happens only after the caller submits the command buffer:
 
 ```
-import {GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
 
 
 
@@ -827,6 +833,8 @@ const snapshot = inspector.getSnapshot();
 observation.detach();
 ```
 
+`readResource(graphId, nodeId, resourceIndex)` explicitly reads a bounded preview from the latest recorded encoding, after application submission. It returns tightly packed bytes and, for textures, the preview dimensions and format. This reads current allocation contents, not historical per-node values, and can submit a diagnostic copy. Unsupported or expired resources reject with an explanation. See [Graph Resources](https://luma.gl/next/docs/api-reference/experimental/gpu-core/debugging.md#graph-resources-inspect-buffers-and-textures) for the panel, limits, and required resource usage.
+
 `getSnapshot()` returns an immutable view of every registered graph in registration order. Each graph snapshot includes its compile-time `stats` and `capabilities`, encoding and failed-timing-read counts, bounded whole-graph CPU and GPU duration summaries, application-defined scalar counter summaries, and per-node summaries in compiled schedule order. Duration and counter summaries contain the retained sample count plus latest, p50, and p95 values. Counters remain in first-observed order. Pass `getNodeGroup` to the constructor to add application-specific semantic groups to node snapshots; pass `maxSamples` to bound every retained history.
 
 The inspector does not submit commands, poll frames, render a panel, or read GPU timestamps automatically. An observation does not own or destroy its graph. `detach()` stops that observation and removes its registration when it is still current; an old handle cannot remove a replacement with the same graph ID or publish delayed counters into it. A handle accepts timing reads only for encodings it produced and records at most one GPU sample per encoding. `recordCounters()` only stores caller-provided finite, non-negative values; it does not read a buffer or synchronize the device. `clear()` removes all registrations. The lower-level `registerGraph()`, `recordEncoding()`, `recordGPUTimings()`, and `recordCounters()` methods remain available for applications that cannot route graph activity through an observation handle.
@@ -843,7 +851,7 @@ const tracePanel = new GPUTracePanel();
 tracePanel.update(await encoding.readTimings(), compiled.id);
 ```
 
-Call `readTimings()` after submission, or reuse the report returned by `observation.recordGPUTimings(encoding)` to avoid an extra read. For a CPU-only preview, `tracePanel.update(encoding.stats, compiled.id)` works before GPU readback completes. The panel retains only the latest report across unmounts, shows separate CPU and GPU clocks, keeps gaps between node spans, and exposes node details on hover and keyboard focus. `GPUTracePanelRenderer` provides the same view directly inside an `HTMLElement` with `update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and luSpatial Taxi use this panel.
+Call `readTimings()` after submission, or reuse the report returned by `observation.recordGPUTimings(encoding)` to avoid an extra read. For a CPU-only preview, `tracePanel.update(encoding.stats, compiled.id)` works before GPU readback completes. The panel retains only the latest report across unmounts, shows separate CPU and GPU clocks, keeps gaps between node spans, and exposes node details on hover and keyboard focus. `GPUTracePanelRenderer` provides the same view directly inside an `HTMLElement` with `update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and GPU Spatial Taxi use this panel.
 
 ### Estimated combined CPU/GPU timeline[​](#estimated-combined-cpugpu-timeline "Direct link to Estimated combined CPU/GPU timeline")
 
@@ -856,3 +864,13 @@ The device correlator intersects compatible bounds from recent submissions, expi
 The reusable GPU Trace panel offers **Combined timeline (estimated)** when correlation is available. Both lanes then share one origin and scale, and the panel displays alignment uncertainty. Separate CPU/GPU timelines remain the default. No extra `ClockSync` graph operation is required.
 
 For sampled WebGPU diagnostics, `commandEncoder.withTimeProfilingQuerySet?.(querySet, encode)` scopes automatic pass timestamps to a synchronous encoding callback. Supply a fresh timestamp query set for each scope and retain it until submission and timing readback complete. The encoder restores the caller's profiling query set and slot count afterward, including when encoding throws. This WebGPU-only hook avoids enabling a device-wide profiler for every frame; unsupported encoders can encode normally and report CPU spans. The Graph Explorer examples use this path for sampled traces.
+
+### Describing operations[​](#describing-operations "Direct link to Describing operations")
+
+Compute, render, and copy nodes accept an optional `description` string. Use it to explain application intent, for example `description: 'Resolve contact and joint constraints.'`. Descriptions are plain text displayed in GPU Graph and GPU Trace tooltips. They are retained in compiled preflight reports, encoding statistics, timing reports, and inspector snapshots, including when those reports are serialized to JSON. They do not affect scheduling or execution.
+
+Tooltips also show declared resource inputs and outputs, access modes, buffer byte ranges, and available view formats, row counts, and texture dimensions. These are static declarations, not measured traffic or a readback of buffer contents. Serializable resource summaries are retained in preflight reports and traces.
+
+## Buffer and texture management[​](#buffer-and-texture-management "Direct link to Buffer and texture management")
+
+See [Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md) for logical values, views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.

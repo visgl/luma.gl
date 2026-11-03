@@ -1,0 +1,67 @@
+# Spatial Audio
+
+`AudioController` attaches audio emitters and listener state to engine scene nodes. Its runtime uses Web Audio independently of the graphics backend. glTF can supply definitions and source bytes, while applications can construct the same controller directly.
+
+## Example[​](#example "Direct link to Example")
+
+Loading interactive example…
+
+Use the example's playback control to resume audio from a user gesture. Related existing examples demonstrate audio processing graphs and environment reverb zones.
+
+## Construct a positional emitter[​](#construct-a-positional-emitter "Direct link to Construct a positional emitter")
+
+```
+import {AudioController, GroupNode} from '@luma.gl/engine';
+
+
+
+const emitterNode = new GroupNode({position: [2, 0, 0]});
+
+const scene = new GroupNode({children: [emitterNode]});
+
+const audio = new AudioController({
+
+  scene,
+
+  audioContext,
+
+  baseUrl: document.baseURI,
+
+  definition: {
+
+    audio: [{uri: '/audio/ambience.ogg'}],
+
+    sources: [{audio: 0, loop: true}],
+
+    emitters: [{type: 'positional', sources: [0]}]
+
+  },
+
+  nodes: [{node: emitterNode, emitterIndices: [0]}]
+
+});
+
+
+
+await audio.initialize();
+
+// In the application's playback-button handler:
+
+await audioContext.resume();
+
+await audio.play();
+```
+
+`audioContext` is an application-owned Web Audio context. The source URI is an example path; supply an accessible clip or embedded bytes through the definition's `audio` entries. Global emitters and positional emitters share source scheduling, gain, looping, and playback-rate controls. Positional definitions also configure distance attenuation and cone response.
+
+After animated transforms change, call `audio.update(listenerMatrix)` with the listener's world matrix. Listener pose and authored environment selection must follow the application's active camera policy.
+
+## Graphs, environments, and lifetime[​](#graphs-environments-and-lifetime "Direct link to Graphs, environments, and lifetime")
+
+`AudioGraph` constructs supported processing nodes and connects scheduled sources to emitter inputs. `AudioReverbBus`, `createParametricAudioResponse()`, and `selectAudioEnvironmentZone()` provide reusable reverb and zone behavior. Pass graph and environment definitions to the controller when needed; these helpers do not load glTF documents.
+
+`stop()` stops sources; `destroy()` releases controller-owned sources and processing resources. The controller borrows its context, so the application resumes and closes that context. Initialization fetches and decodes selected audio resources; it does not remove the browser's user-gesture requirement for realtime playback.
+
+## Importing audio[​](#importing-audio "Direct link to Importing audio")
+
+`parseGLTFAudio()` resolves source indices, node attachments, URLs, and embedded buffer views into `AudioControllerOptions`. Runtime playback and spatial updates belong to the engine. See [glTF audio conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-audio.md) and [audio environment conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-audio-environment.md) for source profiles.

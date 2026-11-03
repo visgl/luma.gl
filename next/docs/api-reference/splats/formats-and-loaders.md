@@ -7,7 +7,7 @@
 Decoded glTF primitives declaring `KHR_gaussian_splatting` can be prepared directly without adding a loaders.gl or glTF dependency to the rendering package:
 
 ```
-import {loadGPUSplatDataFromGLTF, makeGPUSplatDataFromGLTF} from '@luma.gl/splats';
+import {loadGPUSplatDataFromGLTF, makeGPUSplatDataFromGLTF} from '@luma.gl/engine/splats';
 
 
 
@@ -41,9 +41,9 @@ loaders.gl already provides `Tileset3D` and `Tiles3DSource` for 3D Tiles travers
 ## Apache Arrow conversion[​](#apache-arrow-conversion "Direct link to Apache Arrow conversion")
 
 ```
-import {makeGPUSplatDataFromArrow, makeGPUSplatDataFromArrowStream} from '@luma.gl/arrow';
+import {makeGPUSplatDataFromArrow, makeGPUSplatDataFromArrowStream} from '@luma.gl/engine/arrow';
 
-import {SplatRenderer} from '@luma.gl/splats';
+import {SplatRenderer} from '@luma.gl/engine/splats';
 
 
 
@@ -78,7 +78,7 @@ Provide an authorized custom RAD source with `?source=https://example.com/scene.
 
 The website showcase ships a bounded module-worker pool for actual RAD chunk decoding. Abortable source byte ranges are transferred to a background worker, parsed with the isolated loaders.gl 5 bundle, serialized as transferable Arrow IPC, and reconstructed without losing original child-row links or global source identities. Unsupported worker environments retain an explicit main-thread fallback. Compatible RAD sources use Spark-calibrated best-first angular refinement, nonlinear coarse-level opacity, analytic covariance projection, and area-preserving Gaussian antialiasing. Explicit CPU and non-hierarchical RAD sources retain their bounded whole-page path.
 
-Use `?loaders=local&scene=fixture` for the lightweight 1,000-splat parser fixture, or provide `source` to select a custom `.ply`, `.splat`, `.ksplat`, `.spz`, or `.rad` file. Full PLY scenes are streamed through their original Arrow record batches, and the showcase reports download, batch, and splat progress while retaining independently owned GPU buffers. The loader remains an application-level dependency; `@luma.gl/splats` owns source residency, hierarchy selection, GPU data, and rendering, while transport and parsing remain external. Both the default WebGPU graph and the explicit `&renderer=cpu` comparison retain and evaluate camera-dependent higher-order spherical harmonics.
+Use `?loaders=local&scene=fixture` for the lightweight 1,000-splat parser fixture, or provide `source` to select a custom `.ply`, `.splat`, `.ksplat`, `.spz`, or `.rad` file. Full PLY scenes are streamed through their original Arrow record batches, and the showcase reports download, batch, and splat progress while retaining independently owned GPU buffers. The loader remains an application-level dependency; `@luma.gl/engine/splats` owns source residency, hierarchy selection, GPU data, and rendering, while transport and parsing remain external. Both the default WebGPU graph and the explicit `&renderer=cpu` comparison retain and evaluate camera-dependent higher-order spherical harmonics.
 
 GraphDECO captures do not embed a universal world-up direction. The showcase applies known scene-specific up vectors and, for Truck, its published initial camera; unfamiliar custom sources retain the existing Z-up default. Foreground-centered framing, preserved manual camera movement during streaming, and idle redraw suppression keep large scenes easier to inspect.
 
@@ -86,9 +86,9 @@ GraphDECO captures do not embed a universal world-up direction. The showcase app
 
 * `@loaders.gl/splats` parses Gaussian splat file formats and produces application-level data.
 * `@loaders.gl/tiles` and `@loaders.gl/3d-tiles` own tileset traversal, content transport, transforms, request scheduling, and caching.
-* `@loaders.gl/gltf` owns glTF parsing, extension decoding, and feature metadata.
-* `@luma.gl/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
-* `@luma.gl/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
+* `@loaders.gl/scene/gltf` owns glTF parsing, extension decoding, and feature metadata.
+* `@luma.gl/engine/arrow` maps Apache Arrow columns and metadata into GPU-ready splat data.
+* `@luma.gl/engine/splats` owns rendering, Gaussian projection, sorting, and GPU resource lifetimes.
 * Applications or deck.gl layers own viewport integration, file selection, and interactive UI.
 
 This separation keeps the renderer reusable from standalone luma.gl applications and deck.gl adapters while preserving streaming batch boundaries.

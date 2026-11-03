@@ -2,7 +2,7 @@
 
 > **TextureMemoryLayout** = `object`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L79)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L99)
 
 Memory layout for reading/writing data to a texture's memory.
 
@@ -27,7 +27,7 @@ byteLength = bytesPerRow \* rowsPerImage \* depthOrArrayLayers.
 
 > **byteLength**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L81)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L101)
 
 Total length in bytes
 
@@ -37,7 +37,7 @@ Total length in bytes
 
 > **bytesPerImage**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:85](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L85)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L105)
 
 Stride between successive images (Use when depthOrArrayLayers > 1)
 
@@ -47,7 +47,7 @@ Stride between successive images (Use when depthOrArrayLayers > 1)
 
 > **bytesPerPixel**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L91)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:111](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L111)
 
 Number of bytes per pixel
 
@@ -57,7 +57,7 @@ Number of bytes per pixel
 
 > **bytesPerRow**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:89](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L89)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L109)
 
 Number of bytes per row (padded)
 
@@ -67,7 +67,7 @@ Number of bytes per row (padded)
 
 > **depthOrArrayLayers**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L83)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L103)
 
 Number of images
 
@@ -77,6 +77,6 @@ Number of images
 
 > **rowsPerImage**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L87)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L107)
 
 Number of rows per image

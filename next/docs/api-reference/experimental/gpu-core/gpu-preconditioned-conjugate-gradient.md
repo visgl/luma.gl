@@ -134,7 +134,7 @@ PCG is therefore a composition test for the GPU graph architecture rather than a
 `GPUJacobiPCG` accepts graph data or vector views for CSR row offsets, column indices, values, right-hand side and solution. The operands can have independent chunk boundaries. Solver scratch follows the right-hand side topology and remains graph-owned. Input storage is borrowed; only the solution and declared scratch are written.
 
 ```
-import {GPUJacobiPCG} from '@luma.gl/gpgpu/gpu-core/gpu-pcg';
+import {GPUJacobiPCG} from '@luma.gl/graph/gpu-core/gpu-pcg';
 
 
 
@@ -163,7 +163,7 @@ compiled.encode(encoder, {parameters: undefined});
 
 The result scalars can feed later graph operations or explicit diagnostic copies. `breakdown` is nonzero if a nonpositive preconditioned residual product or search curvature prevents a valid step. Such a solve preserves its last valid solution instead of dividing by zero. This is an SPD solver; these checks do not establish that an arbitrary input matrix is positive definite. Small positive curvature and ill-conditioned inputs remain subject to ordinary float32 accuracy limits.
 
-`createGPUConjugateGradientProgram()` provides the unpreconditioned semantic program path. It also checks the initial residual before entering its loop, stops on nonpositive curvature, and returns `residualSquared` and `breakdown` program scalars in addition to its resource bindings.
+`createGPUConjugateGradientGraph()` provides the unpreconditioned semantic program path. It also checks the initial residual before entering its loop, stops on nonpositive curvature, and returns `residualSquared` and `breakdown` program scalars in addition to its resource bindings.
 
 Both paths use `GPUDotProductScalar`: bounded hierarchical reduction over borrowed spans, optional subgroup reduction, and direct scalar-arena output. Each gated level uses its own exact workgroup count, including multidimensional dispatch and independently chunked vector updates.
 

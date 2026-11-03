@@ -8,8 +8,8 @@ The `@luma.gl/core` module defines the portable shader type descriptors used by 
 
 This page is the canonical reference for the uniform and shader-module side of that system:
 
-* `uniformTypes` on [`ShaderModule`](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)
-* `UniformTypes<T>` validation in `@luma.gl/shadertools`
+* `uniformTypes` on [`ShaderModule`](https://luma.gl/next/docs/api-reference/shaders/shader-module.md)
+* `UniformTypes<T>` validation in `@luma.gl/shaders`
 * nested values flowing through [`ShaderInputs`](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md), [`UniformStore`](https://luma.gl/next/docs/api-reference/core/uniform-store.md), and [`ShaderBlockLayout`](https://luma.gl/next/docs/api-reference/core/shader-block-layout.md)
 
 For adjacent type families, see:
@@ -121,7 +121,7 @@ type Uniforms = {
 
 ## TypeScript Type Inference[​](#typescript-type-inference "Direct link to TypeScript Type Inference")
 
-`@luma.gl/shadertools` exports `UniformTypes<T>` to validate `uniformTypes` against your declared uniform value shape.
+`@luma.gl/shaders` exports `UniformTypes<T>` to validate `uniformTypes` against your declared uniform value shape.
 
 When a module is declared with both `uniformTypes` and a typed `ShaderModule<PropsT, UniformsT>`, luma.gl can type-check several boundaries automatically:
 
@@ -132,7 +132,7 @@ When a module is declared with both `uniformTypes` and a typed `ShaderModule<Pro
 Example:
 
 ```
-import type {ShaderModule, UniformTypes} from '@luma.gl/shadertools';
+import type {ShaderModule, UniformTypes} from '@luma.gl/shaders';
 
 import {ShaderInputs} from '@luma.gl/engine';
 
@@ -286,7 +286,7 @@ That matters for composite values because plain objects no longer imply "binding
 * if a key exists in `module.uniformTypes`, it is treated as a uniform even when the value is a struct or array
 * only keys outside `uniformTypes` are treated as bindings
 
-This is what makes modules like [`lighting`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/lighting.md) work with a nested `lights` array at the public API boundary.
+This is what makes modules like [`lighting`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md) work with a nested `lights` array at the public API boundary.
 
 ## Limitations[​](#limitations "Direct link to Limitations")
 

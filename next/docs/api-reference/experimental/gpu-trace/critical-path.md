@@ -30,7 +30,7 @@ Use this contributor when a trace has one canonical parent per span and the appl
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUTraceCriticalPath} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceCriticalPath} from '@luma.gl/graph/gpu-trace';
 
 
 

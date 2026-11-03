@@ -4,23 +4,19 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/experimental` publishes usable APIs that are still evolving. These modules let the project validate new GPU architecture, analytics, rendering, and simulation contracts before they are considered for stable packages.
+`@luma.gl/experimental` has been removed. Its APIs now live in ANARI, Engine experimental subpaths, and Graph experimental subpaths. These modules let the project validate new GPU architecture, analytics, rendering, and simulation contracts before they are considered for stable packages.
 
 Experimental APIsWebGPU features available
 
-Install matching luma.gl package versions:
-
-```
-yarn add @luma.gl/gpgpu @luma.gl/experimental @luma.gl/core @luma.gl/engine @luma.gl/shadertools
-```
+Use the matching public package and explicit subpath for each API. Public scene renderers and their lighting, shadow, and transparency helpers now live in `@luma.gl/anari`. Controls, material plugins, texture helpers, and WebXR APIs live under `@luma.gl/engine/experimental/*`. Path/polygon models live under `@luma.gl/engine/models`; simulation code lives under `@luma.gl/graph/experimental/simulation`.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-Use an experimental module when its current contract fits your application and you can absorb changes between releases. Prefer Core, Engine, Shadertools, or another stable package when they already provide the required capability.
+Use an experimental module when its current contract fits your application and you can absorb changes between releases. Prefer Core, Engine, Shaders, or another stable package when they already provide the required capability.
 
 ## Live example[​](#live-example "Direct link to Live example")
 
-This explicitly activated example compares A-buffer, weighted-blended, and ordinary alpha blending on the same scene. It demonstrates how an experimental renderer can still compose with stable Engine models and Shadertools passes.
+This explicitly activated example compares A-buffer, weighted-blended, and ordinary alpha blending on the same scene. It demonstrates how an experimental renderer can still compose with stable Engine models and Shaders passes.
 
 ### Order-independent Transparency
 
@@ -34,7 +30,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -42,46 +42,48 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 ### GPU Core and GPU analytics[​](#gpu-core-and-gpu-analytics "Direct link to GPU Core and GPU analytics")
 
-| Module                                                                                                        | Use it for                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md)                   | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers.                          |
-| [`@luma.gl/experimental/gpu-tables`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md) | Private record batches, tables, schemas, bindings, computations, and generic table planners.                        |
-| `@luma.gl/experimental/models`                                                                                | Private path and polygon rendering models, GPU input helpers, and model-specific planners.                          |
-| [`@luma.gl/gpgpu/gpu-core`](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)            | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
-| [`@luma.gl/gpgpu/gpu-graph`](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md)          | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms.                          |
-| [GPU Raster](https://luma.gl/next/docs/api-reference/experimental/gpu-raster.md)                         | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency.                  |
-| [LuCIM](https://luma.gl/next/docs/api-reference/experimental/lucim.md)                                   | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements.             |
-| [GPU Project](https://luma.gl/next/docs/api-reference/experimental/gpu-project.md)                       | Adaptive high-precision coordinate projection on WebGPU.                                                            |
-| [GPU DGGS cells](https://luma.gl/next/docs/api-reference/experimental/gpu-dggs.md)                       | H3 and A5 cell-center decoding for GPU-resident split-uint64 indexes.                                               |
-| [GPU Trace](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md)                           | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis.      |
-| [GPU Dataframe](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md)                   | Immutable GPU-resident dataframe expressions, grouping, aggregation, sorting, indexes, and joins.                   |
-| [GPU SQL](https://luma.gl/next/docs/api-reference/experimental/gpu-sql.md)                               | Bounded SQL planning over registered GPU Dataframe inputs.                                                          |
-| [GPU Crossfilter](https://luma.gl/next/docs/api-reference/experimental/gpu-crossfilter.md)               | Linked GPU filtering, histograms, aggregates, and rendering masks.                                                  |
-| [Geospatial kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md)                 | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations.                              |
+| Module                                                                                                          | Use it for                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| [`@luma.gl/graph/gpu-data`](https://luma.gl/next/docs/api-reference/graph/gpu-data.md)                     | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers.                             |
+| [`@luma.gl/graph/gpu-tables`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md)          | GPU record batches, tables, schemas, bindings, computations, and generic table planners.                               |
+| `@luma.gl/engine/models`                                                                                        | Experimental path and polygon rendering models. GPU input preparation remains in `@luma.gl/graph/experimental/models`. |
+| [`@luma.gl/graph/gpu-core`](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)              | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work.    |
+| [`@luma.gl/graph/gpu-graph-algorithms`](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms.                             |
+| [GPU Raster](https://luma.gl/next/docs/api-reference/experimental/gpu-raster.md)                           | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency.                     |
+| [GPU Volume Algorithms](https://luma.gl/next/docs/api-reference/experimental/lucim.md)                     | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements.                |
+| [GPU Project](https://luma.gl/next/docs/api-reference/experimental/gpu-project.md)                         | Adaptive high-precision coordinate projection on WebGPU.                                                               |
+| [GPU DGGS cells](https://luma.gl/next/docs/api-reference/experimental/gpu-dggs.md)                         | H3 and A5 cell-center decoding for GPU-resident split-uint64 indexes.                                                  |
+| [GPU Trace](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md)                             | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis.         |
+| [GPU Dataframe](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md)                     | Immutable GPU-resident dataframe expressions, grouping, aggregation, sorting, indexes, and joins.                      |
+| [GPU SQL](https://luma.gl/next/docs/api-reference/experimental/gpu-sql.md)                                 | Bounded SQL planning over registered GPU Dataframe inputs.                                                             |
+| [GPU Crossfilter](https://luma.gl/next/docs/api-reference/experimental/gpu-crossfilter.md)                 | Linked GPU filtering, histograms, aggregates, and rendering masks.                                                     |
+| [Geospatial kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md)                   | Projection, distance, point-in-polygon, nearest-feature, and spatial-query operations.                                 |
 
-### Scene rendering and lighting[​](#scene-rendering-and-lighting "Direct link to Scene rendering and lighting")
+### Rendering moved to ANARI[​](#rendering-moved-to-anari "Direct link to Rendering moved to ANARI")
 
-| Module                                                                                                        | Use it for                                                                       |
-| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [SceneRenderer](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md)                  | Retained physically based forward rendering on WebGPU and WebGL 2.               |
-| [DeferredSceneRenderer](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
-| [PBR environments](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md)              | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures.     |
-| [GBuffer](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md)                              | Standard scene color, normal, roughness, velocity, and depth attachments.        |
-| [Selection outlines](https://luma.gl/next/docs/api-reference/experimental/selection-outline.md)          | Visible placement boundaries from exact integer ID textures.                     |
-| [Deferred lighting](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md)           | Fullscreen lighting from G-buffer material targets.                              |
-| [Clustered lighting](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md)         | Compute-binned local lights for deferred shading.                                |
-| [Shadow maps](https://luma.gl/next/docs/api-reference/experimental/shadow-map-renderer.md)               | Cascaded, spot-array, and point cube-array shadows with PCSS filtering.          |
+The following APIs are owned by `@luma.gl/anari`.
+
+| Module                                                                                                 | Use it for                                                                       |
+| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| [SceneRenderer](https://luma.gl/next/docs/api-reference/anari/scene-renderer.md)                  | Retained physically based forward rendering on WebGPU and WebGL 2.               |
+| [DeferredSceneRenderer](https://luma.gl/next/docs/api-reference/anari/deferred-scene-renderer.md) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
+| [PBR environments](https://luma.gl/next/docs/api-reference/anari/pbr-environment.md)              | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures.     |
+| [GBuffer](https://luma.gl/next/docs/api-reference/anari/g-buffer.md)                              | Standard scene color, normal, roughness, velocity, and depth attachments.        |
+| [Selection outlines](https://luma.gl/next/docs/api-reference/anari/selection-outline.md)          | Visible placement boundaries from exact integer ID textures.                     |
+| [Deferred lighting](https://luma.gl/next/docs/api-reference/anari/deferred-lighting.md)           | Fullscreen lighting from G-buffer material targets.                              |
+| [Clustered lighting](https://luma.gl/next/docs/api-reference/anari/clustered-lighting.md)         | Compute-binned local lights for deferred shading.                                |
+| [Shadow maps](https://luma.gl/next/docs/api-reference/anari/shadow-map-renderer.md)               | Cascaded, spot-array, and point cube-array shadows with PCSS filtering.          |
 
 ### Materials and transparency[​](#materials-and-transparency "Direct link to Materials and transparency")
 
-| Module                                                                                                       | Use it for                                                               |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [A-buffer renderer](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md)          | Accurate bounded per-pixel fragment storage, sorting, and compositing.   |
-| [Weighted blended OIT](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md)          | Portable approximate order-independent transparency without sorting.     |
-| [Glass material](https://luma.gl/next/docs/api-reference/experimental/glass-material.md)                | Screen-space refraction, Fresnel reflection, dispersion, and absorption. |
-| [Reflective material](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md)      | Lightweight glossy environment reflection.                               |
-| [Spectral caustics](https://luma.gl/next/docs/api-reference/experimental/spectral-caustics-renderer.md) | Geometry-derived multi-wavelength planar caustic lighting.               |
-| [Comparison splitter](https://luma.gl/next/docs/api-reference/experimental/comparison-splitter.md)      | Accessible before-and-after canvas comparisons.                          |
+| Module                                                                                                         | Use it for                                                               |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [A-buffer renderer](https://luma.gl/next/docs/api-reference/anari/a-buffer-renderer.md)                   | Accurate bounded per-pixel fragment storage, sorting, and compositing.   |
+| [Weighted blended OIT](https://luma.gl/next/docs/api-reference/anari/wboit-renderer.md)                   | Portable approximate order-independent transparency without sorting.     |
+| [Glass material](https://luma.gl/next/docs/api-reference/engine/experimental/glass-material.md)           | Screen-space refraction, Fresnel reflection, dispersion, and absorption. |
+| [Reflective material](https://luma.gl/next/docs/api-reference/engine/experimental/reflective-material.md) | Lightweight glossy environment reflection.                               |
+| [Spectral caustics](https://luma.gl/next/docs/api-reference/anari/spectral-caustics-renderer.md)          | Geometry-derived multi-wavelength planar caustic lighting.               |
+| [Comparison splitter](https://luma.gl/next/docs/api-reference/engine/experimental/comparison-splitter.md) | Accessible before-and-after canvas comparisons.                          |
 
 ### Simulation and immersive input[​](#simulation-and-immersive-input "Direct link to Simulation and immersive input")
 
@@ -90,7 +92,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 | [MLS-MPM fluid](https://luma.gl/next/docs/api-reference/experimental/mls-mpm-fluid-simulation.md)     | Fixed-capacity two-dimensional particle/grid fluid simulation. |
 | [Spectral ocean](https://luma.gl/next/docs/api-reference/experimental/spectral-ocean-simulation.md)   | Deterministic FFT-based ocean displacement and foam.           |
 | [Volumetric fire](https://luma.gl/next/docs/api-reference/experimental/volumetric-fire-simulation.md) | GPU-resident volumetric combustion and rendering.              |
-| [WebXR](https://luma.gl/next/docs/api-reference/experimental/webxr.md)                                | Experimental WebGPU/WebGL session, frame, and camera helpers.  |
+| [WebXR](https://luma.gl/next/docs/api-reference/engine/experimental/webxr.md)                         | Experimental WebGPU/WebGL session, frame, and camera helpers.  |
 
 ## Core concepts[​](#core-concepts "Direct link to Core concepts")
 
@@ -107,9 +109,9 @@ Experimental APIs may change or be removed without the compatibility guarantees 
 * [Choosing a luma.gl API layer](https://luma.gl/next/docs/api-guide.md)
 * [Core API](https://luma.gl/next/docs/api-reference/core.md)
 * [Engine API](https://luma.gl/next/docs/api-reference/engine.md)
-* [Shadertools API](https://luma.gl/next/docs/api-reference/shadertools.md)
+* [Shaders API](https://luma.gl/next/docs/api-reference/shaders.md)
 * [Effects API](https://luma.gl/next/docs/api-reference/effects.md)
 
-[`DepthTextureCopy`](https://luma.gl/next/docs/api-reference/experimental/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
+[`DepthTextureCopy`](https://luma.gl/next/docs/api-reference/anari/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
 
-[`getRayTracingQualityPreset`](https://luma.gl/next/docs/api-reference/experimental/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.
+[`getRayTracingQualityPreset`](https://luma.gl/next/docs/api-reference/anari/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.

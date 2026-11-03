@@ -22,7 +22,7 @@ import {
   type WebXRFrameState,
   type WebXRInputState,
   type WebXRManagerProps
-} from '@luma.gl/experimental';
+} from '@luma.gl/engine/experimental/webxr';
 import {Matrix4} from '@math.gl/core';
 import {WebxrKaleidoscopeInfoHtml} from './app-ui';
 

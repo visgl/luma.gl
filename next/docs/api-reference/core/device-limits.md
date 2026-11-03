@@ -32,7 +32,7 @@ if (limits.maxTextureDimension2D > 2048) {
 
 ## DeviceLimits[​](#devicelimits-1 "Direct link to DeviceLimits")
 
-The stage-specific storage limits matter when an application wants to read storage resources from a vertex or fragment shader. A WebGPU core device can report `0` for vertex-stage storage buffers, so storage-backed vertex rendering should check `maxStorageBuffersInVertexStage` before choosing that path. For assembled WGSL, see the [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md) platform define for the same decision in shader source.
+The stage-specific storage limits matter when an application wants to read storage resources from a vertex or fragment shader. A WebGPU core device can report `0` for vertex-stage storage buffers, so storage-backed vertex rendering should check `maxStorageBuffersInVertexStage` before choosing that path. For assembled WGSL, see the [WGSL Support](https://luma.gl/next/docs/api-reference/shaders/wgsl-support.md) platform define for the same decision in shader source.
 
 | Limit                                       | WebGPU<br />max | WebGPU<br />core | WebGPU<br />compat | WebGL2 | WebGL parameter                                                                                               |
 | ------------------------------------------- | --------------- | ---------------- | ------------------ | ------ | ------------------------------------------------------------------------------------------------------------- |

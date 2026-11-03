@@ -108,7 +108,7 @@ Keep input and output buffers distinct for one iteration. If an iterative algori
 
 * use `Computation` when WebGPU compute and storage textures fit the task;
 * use an explicit Core render pass for portable image processing;
-* use a Shadertools pass for a reusable screen-space effect.
+* use a Shaders pass for a reusable screen-space effect.
 
 This avoids designing a new workflow around a compatibility abstraction with a narrower future.
 

@@ -1,6 +1,6 @@
-# Shadertools cookbook
+# Shaders cookbook
 
-[Overview](https://luma.gl/next/docs/api-reference/shadertools.md)[Programming guide](https://luma.gl/next/docs/api-guide/shaders.md)[Cookbook](https://luma.gl/next/docs/api-guide/shaders/cookbook.md)
+[Overview](https://luma.gl/next/docs/api-reference/shaders.md)[Programming guide](https://luma.gl/next/docs/api-guide/shaders.md)[Cookbook](https://luma.gl/next/docs/api-guide/shaders/cookbook.md)
 
 These snippets show the smallest useful descriptor or assembly action. Add both WGSL and GLSL source when the feature must run on both backends.
 
@@ -49,7 +49,11 @@ const exposure = {
 ## Add a hook[​](#add-a-hook "Direct link to Add a hook")
 
 ```
-const assembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
+
+
+
+const assembler = new WGSLShaderAssembler();
 
 assembler.addShaderHook(
 
@@ -58,7 +62,7 @@ assembler.addShaderHook(
 );
 ```
 
-The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated hook is a no-op.
+Pass this assembler to the model through its `shaderAssembler` prop. The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated hook is a no-op.
 
 ## Inject source[​](#inject-source "Direct link to Inject source")
 
@@ -101,11 +105,9 @@ const tintPlugin: ShaderPlugin = {
 
   name: 'tint-plugin',
 
-  modules: [tint],
+  module: tint,
 
-  wgsl: {injections: [{target: 'fs:#main-end', injection: 'color *= tint.color;'}]},
-
-  glsl: {injections: [{target: 'fs:#main-end', injection: 'color *= tint.color;'}]}
+  injections: [{stage: 'fragment', target: '#main-end', glsl: 'color *= tint.color;', wgsl: 'color *= tint.color;'}]
 
 };
 ```
@@ -137,4 +139,4 @@ Execute it with Engine’s `ShaderPassRenderer`. Each subpass is a draw and may 
 * [Shader programming guide](https://luma.gl/next/docs/api-guide/shaders.md)
 * [Shader assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)
 * [Writing customizable shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)
-* [`ShaderModule`](https://luma.gl/next/docs/api-reference/shadertools/shader-module.md)
+* [`ShaderModule`](https://luma.gl/next/docs/api-reference/shaders/shader-module.md)

@@ -2,7 +2,7 @@
 
 > **AttributeShaderTypeInfo** = `object`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L20)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:9
 
 Information extracted from a AttributeShaderType constant
 
@@ -12,7 +12,7 @@ Information extracted from a AttributeShaderType constant
 
 > `optional` **byteLength?**: `number`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L26)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:15
 
 Length in bytes of the data for one vertex
 
@@ -22,7 +22,7 @@ Length in bytes of the data for one vertex
 
 > **components**: `1` | `2` | `3` | `4`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L24)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:13
 
 Whether this is a normalized integer (that must be used as float)
 
@@ -32,7 +32,7 @@ Whether this is a normalized integer (that must be used as float)
 
 > **integer**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L28)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:17
 
 Whether this is for integer or float vert
 
@@ -42,7 +42,7 @@ Whether this is for integer or float vert
 
 > **primitiveType**: [`PrimitiveDataType`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/PrimitiveDataType.md)
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L22)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:11
 
 WGSL-style primitive data type, f32, i32, u32
 
@@ -52,6 +52,6 @@ WGSL-style primitive data type, f32, i32, u32
 
 > **signed**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L30)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:19
 
 Whether this data type is signed

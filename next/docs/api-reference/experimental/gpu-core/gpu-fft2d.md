@@ -24,7 +24,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -62,7 +66,7 @@ A two-dimensional FFT changes how a complex field is represented without changin
 Each complex value occupies two consecutive `float32` components: real followed by imaginary. Values are row-major, so the complete field contains `width * height * 2` floats.
 
 ```
-import {GPUCommandGraph, GPUFFT2D} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUFFT2D} from '@luma.gl/graph/gpu-core';
 
 
 

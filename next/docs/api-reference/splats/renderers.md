@@ -5,7 +5,7 @@
 ## Rendering prepared splats[​](#rendering-prepared-splats "Direct link to Rendering prepared splats")
 
 ```
-import {makeGPUSplatData, SplatRenderer} from '@luma.gl/splats';
+import {makeGPUSplatData, SplatRenderer} from '@luma.gl/engine/splats';
 
 
 
@@ -51,7 +51,7 @@ nextSplatBatch.destroy();
 `GPUSplatGraphRenderer` renders streamed Gaussian captures directly through a WebGPU command graph. The first prepared batch becomes visible without waiting for the entire scene, running a CPU preview, or relinquishing ownership of the original source buffers.
 
 ```
-import {GPUSplatGraphRenderer, type GPUSplatData} from '@luma.gl/splats';
+import {GPUSplatGraphRenderer, type GPUSplatData} from '@luma.gl/engine/splats';
 
 
 
@@ -202,7 +202,7 @@ Reserving the final scene size avoids repeated graph compilation, but the global
 `GPUPagedSplatRenderer` projects independently owned source pages into bounded GPU segments while preserving one globally correct depth order across the entire active frontier:
 
 ```
-import {GPUPagedSplatRenderer} from '@luma.gl/splats';
+import {GPUPagedSplatRenderer} from '@luma.gl/engine/splats';
 
 
 
@@ -276,3 +276,9 @@ The host pass must use compatible canvas color/depth formats and sample count. S
 * [Gaussian splats overview](https://luma.gl/next/docs/api-reference/splats.md)
 * [Gaussian splat showcase](https://luma.gl/next/examples/showcase/gaussian-splats)
 * [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)
+
+### Projected-depth convention[​](#projected-depth-convention "Direct link to Projected-depth convention")
+
+For `SplatRenderer`, set `depthConvention: 'reverse'` when the camera projection maps near geometry to larger depth values. The default, `'standard'`, preserves conventional far-to-near projected-depth ordering. This option controls alpha sorting independently of `depthCompare`: reverse-Z callers must also configure their shared depth test (typically `'greater'` or `'greater-equal'`) and clear depth (typically `0`). Changing the convention with `setProps` invalidates cached sorting, including when the camera matrix is unchanged.
+
+This option does not alter `sortMode: 'none'`, the bounded draw-run approximation for densely interleaved source batches, or transparent mesh composition. It does not add reverse-Z support to `GPUSplatGraphRenderer` or `GPUPagedSplatRenderer`.

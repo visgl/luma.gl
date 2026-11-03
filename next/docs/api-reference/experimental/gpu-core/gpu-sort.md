@@ -47,12 +47,16 @@ Scratch remains graph-owned and batch-local. Empty chunks add no nodes, single-r
 
 The live example switches between one packed Arrow column and preserved Arrow chunks. Its streaming case preserves batch boundaries and reports the algorithm selected independently for each chunk:
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ```
-import {GPUCommandGraph, GPUSort} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUSort} from '@luma.gl/graph/gpu-core';
 
 
 
@@ -116,7 +120,7 @@ device.submit(commandEncoder.finish());
 For independent batch order, import aligned input and output vectors directly:
 
 ```
-import {GPUBatchSort, GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUBatchSort, GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
 
 

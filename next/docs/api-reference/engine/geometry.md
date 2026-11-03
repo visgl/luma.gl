@@ -112,7 +112,7 @@ Optional index attribute.
 
 ### `attributes`[​](#attributes "Direct link to attributes")
 
-Named CPU geometry attributes. `Geometry` preserves the keys supplied to the constructor. Built-in geometries and `@luma.gl/gltf` use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`; glTF calls these mesh attribute semantics, while each semantic points to accessor data in `mesh.primitive.attributes`. See the official [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html).
+Named CPU geometry attributes. `Geometry` preserves the keys supplied to the constructor. Built-in geometries and `@luma.gl/engine/gltf` use glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`; glTF calls these mesh attribute semantics, while each semantic points to accessor data in `mesh.primitive.attributes`. See the official [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html).
 
 Shader-facing names are separate. Synthesized buffer layouts map supported semantic names at the render boundary: `POSITION` becomes `positions`, `NORMAL` becomes `normals`, `TEXCOORD_0` becomes `texCoords`, `TEXCOORD_1` becomes `texCoords1`, and `COLOR_0` becomes `colors`. Caller-provided non-glTF names such as `positions`, `clipSpacePositions`, and `faceIndex` are preserved as-is. When writing glTF custom semantics, use the spec's `_NAME` convention. If constructor input contains both a semantic key and its supported shader-facing name, the later key wins so built-in geometry attribute overrides keep their legacy behavior without storing duplicate CPU aliases.
 

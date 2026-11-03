@@ -1,6 +1,6 @@
-# Installing
+# Setup
 
-[Overview](https://luma.gl/next/docs/developer-guide.md)[Installing](https://luma.gl/next/docs/developer-guide/installing.md)[Editing](https://luma.gl/next/docs/developer-guide/editing.md)[Contributing](https://luma.gl/next/docs/developer-guide/contributing.md)[Documentation](https://luma.gl/next/docs/developer-guide/documentation.md)
+[Overview](https://luma.gl/next/docs/developer-guide.md)[Setup](https://luma.gl/next/docs/developer-guide/installing.md)[Contributing](https://luma.gl/next/docs/developer-guide/contributing.md)
 
 When you are ready to turn an idea into your own application, this guide takes you from a new project to your first GPU-rendered frame. luma.gl is published as a family of npm packages, so you can choose the rendering tools and GPU backends your project needs.
 
@@ -112,6 +112,10 @@ pnpm dev
 
 You should see a dark canvas. luma.gl creates the best available device, begins a render pass each frame, and presents the result to the page.
 
+## Editing shaders[​](#editing-shaders "Direct link to Editing shaders")
+
+For practical reasons, luma.gl stores GLSL and WGSL shader source inline in strings rather than in separate files. This simplifies cross-platform bundling, but shader code may lack syntax highlighting. To add highlighting in Visual Studio Code, install the [GLSL Literal](https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal) and [WGSL Literal](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal) extensions.
+
 ## How Backend Selection Works[​](#how-backend-selection-works "Direct link to How Backend Selection Works")
 
 `type: 'best-available'` selects a supported WebGPU adapter before WebGL 2, regardless of adapter array order. It does not retry WebGL after a selected WebGPU adapter fails to create a device; handle that rejection in application code. Portable application code uses the same `Device`, resource, and render-pass APIs with backend-appropriate shaders.
@@ -191,10 +195,10 @@ const device = await luma.createDevice({
 * `@luma.gl/core` provides portable devices, GPU resources, and rendering primitives.
 * `@luma.gl/engine` adds models, animation loops, geometry, and higher-level rendering tools.
 * `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide the WebGPU and WebGL2 backends.
-* `@luma.gl/shadertools` assembles reusable shader modules, hooks, and effects.
+* `@luma.gl/shaders` assembles reusable shader modules, hooks, and effects.
 
 ```
-yarn add @luma.gl/core @luma.gl/engine @luma.gl/shadertools
+yarn add @luma.gl/core @luma.gl/engine @luma.gl/shaders
 ```
 
 Explore the [module catalog](https://luma.gl/next/docs/api-reference.md) to choose the packages that match your application.

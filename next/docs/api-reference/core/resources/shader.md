@@ -34,7 +34,7 @@ The `Shader` class holds a compiled shader.
 
   Compilation can be expensive and unpredictable; never rebuild unchanged shaders per frame
 
-:::warning Common mistake Shadertools assembles source, but the active Core adapter still compiles it. Supplying only WGSL does not create a WebGL fallback, and supplying only GLSL does not create a WebGPU path. :::
+:::warning Common mistake Shaders assembles source, but the active Core adapter still compiles it. Supplying only WGSL does not create a WebGL fallback, and supplying only GLSL does not create a WebGPU path. :::
 
 ## Usage[​](#usage "Direct link to Usage")
 

@@ -6,7 +6,13 @@
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## From a draw to a scene object[​](#from-a-draw-to-a-scene-object "Direct link to From a draw to a scene object")
 

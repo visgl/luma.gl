@@ -2,10 +2,10 @@
 
 [Projection](https://luma.gl/next/docs/api-reference/experimental/gpu-project.md)[Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md)[DGGS](https://luma.gl/next/docs/api-reference/experimental/gpu-dggs.md)[H3](https://luma.gl/next/docs/api-reference/experimental/gpu-h3.md)[A5](https://luma.gl/next/docs/api-reference/experimental/gpu-a5.md)
 
-`@luma.gl/gpgpu/gpu-h3` decodes GPU-resident H3 cell indexes into center coordinates. It covers every H3 resolution, pentagon topology, and face transition while retaining one output row per input cell.
+`@luma.gl/graph/gpu-h3` decodes GPU-resident H3 cell indexes into center coordinates. It covers every H3 resolution, pentagon topology, and face transition while retaining one output row per input cell.
 
 ```
-import {GPUH3CellProjection} from '@luma.gl/gpgpu/gpu-h3';
+import {GPUH3CellProjection} from '@luma.gl/graph/gpu-h3';
 
 
 

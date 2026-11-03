@@ -45,7 +45,7 @@ Only the first `segmentCount + 1` entries of `segmentOffsets` are defined. A pre
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUFlagOffsets, GPUSegmentOffsets} from '@luma.gl/gpgpu/gpu-core';
+import {GPUFlagOffsets, GPUSegmentOffsets} from '@luma.gl/graph/gpu-core';
 
 
 

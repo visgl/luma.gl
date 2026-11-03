@@ -14,7 +14,11 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -23,7 +27,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 Engine scenegraph nodes expose `display` and `setProps({display})`. Visible traversal skips hidden nodes and their descendants, while structural traversal can still inspect them. Imported nodes are available through `scenegraphs.gltfNodeIndexToNodeMap`; source node indices are asset-specific.
 
 ```
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 
 

@@ -2,7 +2,7 @@
 
 > **SamplerBindingLayout** = `object`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L155)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:123
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:155](https://gi
 
 > **group**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:160](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L160)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:128
 
 Bind group index. Always 0 in WebGL
 
@@ -20,7 +20,7 @@ Bind group index. Always 0 in WebGL
 
 > **location**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:162](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L162)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:130
 
 Binding index within the bind group
 
@@ -30,7 +30,7 @@ Binding index within the bind group
 
 > **name**: `string`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L158)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:126
 
 Name of the binding. Used by luma to map bindings by name
 
@@ -40,7 +40,7 @@ Name of the binding. Used by luma to map bindings by name
 
 > `optional` **samplerType?**: `"filtering"` | `"non-filtering"` | `"comparison"`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:165](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L165)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:133
 
 ***
 
@@ -48,7 +48,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:165](https://gi
 
 > **type**: `"sampler"`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:156](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L156)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:124
 
 ***
 
@@ -56,6 +56,6 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:156](https://gi
 
 > `optional` **visibility?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L164)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:132
 
 Which shader stages can access this binding

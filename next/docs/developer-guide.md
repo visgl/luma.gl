@@ -1,6 +1,6 @@
 # Developer Guide
 
-[Overview](https://luma.gl/next/docs/developer-guide.md)[Installing](https://luma.gl/next/docs/developer-guide/installing.md)[Editing](https://luma.gl/next/docs/developer-guide/editing.md)[Contributing](https://luma.gl/next/docs/developer-guide/contributing.md)[Documentation](https://luma.gl/next/docs/developer-guide/documentation.md)
+[Overview](https://luma.gl/next/docs/developer-guide.md)[Setup](https://luma.gl/next/docs/developer-guide/installing.md)[Contributing](https://luma.gl/next/docs/developer-guide/contributing.md)
 
 You have seen what luma.gl can do. This is where you turn those ideas into a working application, then make it easier to debug, faster to run, and lighter to ship.
 
@@ -10,7 +10,7 @@ You have seen what luma.gl can do. This is where you turn those ideas into a wor
 
 * [Testing](https://luma.gl/next/docs/developer-guide/testing.md) covers reliable GPU-aware verification.
 * [Working with AI coding agents](https://luma.gl/next/docs/developer-guide/working-with-ai.md) helps agents navigate the documentation and choose the right API layer.
-* [Editing](https://luma.gl/next/docs/developer-guide/editing.md) improves your shader development environment.
+* [Setup](https://luma.gl/next/docs/developer-guide/installing.md) improves your shader development environment.
 * [Contributing](https://luma.gl/next/docs/developer-guide/contributing.md) explains how to work on luma.gl itself.
 
 Not ready to set up a project? [Explore live examples](https://luma.gl/next/examples) or start with [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md) directly in your browser.

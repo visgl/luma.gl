@@ -124,8 +124,14 @@ The [generated <!-- -->Core<!-- --> API index](https://luma.gl/next/docs/api-ref
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-[Shadertools](https://luma.gl/next/docs/api-reference/shadertools.md)[Engine](https://luma.gl/next/docs/api-reference/engine.md)[Core](https://luma.gl/next/docs/api-reference/core.md)[GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)
+[Shaders](https://luma.gl/next/docs/api-reference/shaders.md)[Engine](https://luma.gl/next/docs/api-reference/engine.md)[Core](https://luma.gl/next/docs/api-reference/core.md)[GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)
 
 * Move up to [Engine](https://luma.gl/next/docs/api-reference/engine.md) for managed models and redraw state.
-* Move down to [Shadertools](https://luma.gl/next/docs/api-reference/shadertools.md) to author reusable shader behavior.
+* Move down to [Shaders](https://luma.gl/next/docs/api-reference/shaders.md) to author reusable shader behavior.
 * Add [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md) for multi-operation scheduling.
+
+## Optional dynamic resources[​](#optional-dynamic-resources "Direct link to Optional dynamic resources")
+
+`@luma.gl/core/dynamic` provides [DynamicBuffer](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-buffer.md) and [DynamicTexture](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-texture.md), along with their props, texture data types and binding-source helpers. They wrap ordinary core resources to support replacement, resizing and, for textures, asynchronous initialization and mipmap generation.
+
+Import these conveniences explicitly; the core root does not re-export them. The optional entry point depends only on core internals. Engine and gpgpu retain compatibility exports with identical class identity.

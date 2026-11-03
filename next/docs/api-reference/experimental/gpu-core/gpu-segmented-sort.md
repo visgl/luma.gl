@@ -38,7 +38,7 @@ Typical packed-segment workloads include mesh-local Morton permutations, tile-lo
 ## Example[​](#example "Direct link to Example")
 
 ```
-import {GPUCommandGraph, GPUSegmentedSort} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUSegmentedSort} from '@luma.gl/graph/gpu-core';
 
 
 

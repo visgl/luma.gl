@@ -6,7 +6,13 @@ This tutorial demonstrates animating geometry using transform feedback via the `
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
 

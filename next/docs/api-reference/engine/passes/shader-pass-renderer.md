@@ -6,7 +6,7 @@
 
 Internally it uses [`ClipSpace`](https://luma.gl/next/docs/api-reference/engine/clip-space.md), [`BackgroundTextureModel`](https://luma.gl/next/docs/api-reference/engine/background-texture-model.md), and [`SwapFramebuffers`](https://luma.gl/next/docs/api-reference/engine/compute/swap.md) to manage the pass chain.
 
-For the descriptor types, see [`ShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md). For the authoring model, see [Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md).
+For the descriptor types, see [`ShaderPass`](https://luma.gl/next/docs/api-reference/shaders/shader-pass.md). For the authoring model, see [Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md).
 
 ### Bloom
 
@@ -20,7 +20,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 

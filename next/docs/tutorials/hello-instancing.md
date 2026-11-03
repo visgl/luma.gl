@@ -6,7 +6,13 @@
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Shared and per-instance data[​](#shared-and-per-instance-data "Direct link to Shared and per-instance data")
 

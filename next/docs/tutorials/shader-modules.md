@@ -6,7 +6,13 @@ This tutorial shows how to build reusable shader functionality with luma.gl's sh
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
 
@@ -17,7 +23,7 @@ The complete source for this example is shown below:
 The WGSL uses `@binding(auto)`, so shader module bindings are matched by name instead of hard-coded binding numbers.
 
 ```
-import {NumberArray3} from '@math.gl/types';
+import {NumberArray3} from '@math.gl/core';
 
 import {Buffer} from '@luma.gl/core';
 
@@ -35,7 +41,7 @@ import {
 
 } from '@luma.gl/engine';
 
-import {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderModule} from '@luma.gl/shaders';
 
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 

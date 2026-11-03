@@ -2,7 +2,7 @@
 
 > **PrimitiveDataType** = `"u32"` | `"i32"` | `"f32"` | `"f16"`
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L10)
+Defined in: modules/shaders/dist/types/primitive-data-types.d.ts:6
 
 Primitive data types that shaders can perform calculations in and declare variables with.
 

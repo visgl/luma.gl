@@ -4,9 +4,11 @@
 
 From v10ExperimentalWebGPU required
 
+For application code using named inputs and operation-defined results, start with the [graph tutorial](https://luma.gl/next/docs/api-reference/graph/getting-started.md). This section goes deeper into command graphs, algorithms, and execution infrastructure beneath that interface.
+
 ## Overview[​](#overview "Direct link to Overview")
 
-GPU Core is the experimental WebGPU dataflow and scheduling layer in `@luma.gl/gpgpu/gpu-core`. Applications and reusable contributors declare resources, compute/copy/render nodes, dependencies, conditions, and work estimates. A compiled graph allocates compatible transient resources, orders read/write hazards (resource conflicts), and records work into a caller-owned command encoder.
+GPU Core is the experimental WebGPU dataflow and scheduling layer in `@luma.gl/graph/gpu-core`. Applications and reusable contributors declare resources, compute/copy/render nodes, dependencies, conditions, and work estimates. A compiled graph allocates compatible transient resources, orders read/write hazards (resource conflicts), and records work into a caller-owned command encoder.
 
 GPU Core does not own command submission or the application frame loop. This makes it suitable for GPU-resident workflows that combine analysis, culling, indirect rendering, and bounded readback without synchronizing the source dataset through JavaScript.
 
@@ -215,7 +217,7 @@ firstInstance**0**
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {GPUCommandGraph, GPUScan} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUScan} from '@luma.gl/graph/gpu-core';
 
 
 
@@ -271,21 +273,21 @@ See [Execution and composition](https://luma.gl/next/docs/api-reference/experime
 
 ## GPU Core feature card[​](#gpu-core-feature-card "Direct link to GPU Core feature card")
 
-| Capability                     | What it enables                                                                                       | Public surface                                   |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| **Declarative graph**          | One schedule for GPU preparation, analysis, indirect drawing, and picking                             | `GPUCommandGraph` and graph contributors         |
-| **Composable primitives**      | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback  | `GPU*` contributors from `@luma.gl/experimental` |
-| **GPU-driven output**          | Bounded counts, compacted IDs, and indirect commands without source-data readback                     | `GPUScan`, `GPUCompaction`, `DrawCommandBuffer`  |
-| **Batch-preserving execution** | Ordered `GPUVector` chunks without silently repacking a dataset                                       | `GraphVectorView` and chunk-aware contributors   |
-| **Conditional execution**      | CPU-known work can be omitted and GPU-known empty work can resolve through indirect dispatch          | CPU predicates and GPU indirect conditions       |
-| **Multi-frame execution**      | Large immutable plans can advance in bounded resumable steps                                          | `planExecution()` and resumable execution        |
-| **Adaptive budgets**           | Measured queue time can tune bounded step sizes                                                       | `GPUCommandGraphExecutionBudgetController`       |
-| **Kernel autotuning**          | Equivalent supported kernels can be selected per adapter and workload                                 | `GPUCommandGraphAutotuner`                       |
-| **Instrumentation**            | Encode time, GPU timing, work estimates, allocations, dispatches, draws, and custom counters          | `GPUCommandGraphInspector` and timing reports    |
-| **Hazard scheduling**          | RAW, WAR, and WAW dependencies derive from resource uses                                              | Compiled schedule diagnostics                    |
-| **Transient reuse**            | Compatible resources share allocations when lifetimes do not overlap                                  | Allocation plan and reuse statistics             |
-| **Validation**                 | Binding aliases, device limits, unsupported features, and incomplete estimates fail before submission | Compilation and preflight reports                |
-| **Explicit ownership**         | Applications retain submission, readback cadence, cancellation, and UI publication                    | Compile-and-encode lifecycle                     |
+| Capability                     | What it enables                                                                                       | Public surface                                     |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Declarative graph**          | One schedule for GPU preparation, analysis, indirect drawing, and picking                             | `GPUCommandGraph` and graph contributors           |
+| **Composable primitives**      | Masks, scans, sorting, traversal, BVHs, binning, reductions, histograms, FFTs, picking, and readback  | `GPU*` contributors from `@luma.gl/graph/gpu-core` |
+| **GPU-driven output**          | Bounded counts, compacted IDs, and indirect commands without source-data readback                     | `GPUScan`, `GPUCompaction`, `DrawCommandBuffer`    |
+| **Batch-preserving execution** | Ordered `GPUVector` chunks without silently repacking a dataset                                       | `GraphVectorView` and chunk-aware contributors     |
+| **Conditional execution**      | CPU-known work can be omitted and GPU-known empty work can resolve through indirect dispatch          | CPU predicates and GPU indirect conditions         |
+| **Multi-frame execution**      | Large immutable plans can advance in bounded resumable steps                                          | `planExecution()` and resumable execution          |
+| **Adaptive budgets**           | Measured queue time can tune bounded step sizes                                                       | `GPUCommandGraphExecutionBudgetController`         |
+| **Kernel autotuning**          | Equivalent supported kernels can be selected per adapter and workload                                 | `GPUCommandGraphAutotuner`                         |
+| **Instrumentation**            | Encode time, GPU timing, work estimates, allocations, dispatches, draws, and custom counters          | `GPUCommandGraphInspector` and timing reports      |
+| **Hazard scheduling**          | RAW, WAR, and WAW dependencies derive from resource uses                                              | Compiled schedule diagnostics                      |
+| **Transient reuse**            | Compatible resources share allocations when lifetimes do not overlap                                  | Allocation plan and reuse statistics               |
+| **Validation**                 | Binding aliases, device limits, unsupported features, and incomplete estimates fail before submission | Compilation and preflight reports                  |
+| **Explicit ownership**         | Applications retain submission, readback cadence, cancellation, and UI publication                    | Compile-and-encode lifecycle                       |
 
 ## Examples[​](#examples "Direct link to Examples")
 
@@ -309,7 +311,7 @@ See [Execution and composition](https://luma.gl/next/docs/api-reference/experime
 | GPU scenes                | [`GPUScene`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene.md), [scene adapters](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-adapters.md), [draw generation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md), [resource groups](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene-resource-groups.md), [`GPUIndexPickingTarget`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-index-picking-target.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Hash indexes and joins    | [`GPUHashIndex`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-hash-index.md), [`GPUBatchHashIndex`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-batch-hash-index.md), [`GPUHashJoin`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-hash-join.md), [`GPUBatchHashJoin`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-batch-hash-join.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
-Trace-domain algorithms are indexed from the [`@luma.gl/experimental/gpu-trace` overview](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md).
+Trace-domain algorithms are indexed from the [`@luma.gl/graph/gpu-trace` overview](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md).
 
 ## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
 
@@ -321,8 +323,16 @@ Trace-domain algorithms are indexed from the [`@luma.gl/experimental/gpu-trace` 
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* [`@luma.gl/experimental/gpu-trace`](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md) adds trace semantics.
-* [GPU Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md) provides graph-data analytics.
+* [`@luma.gl/graph/gpu-trace`](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md) adds trace semantics.
+* [GPU Graph Algorithms](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md) provides graph-data analytics.
 * [GPU Raster](https://luma.gl/next/docs/api-reference/experimental/gpu-raster.md) provides raster and field operations.
 * [GPU Dataframe](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md) provides dataframe-style GPU analysis.
-* [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md) defines Arrow-independent GPU data containers.
+* [`@luma.gl/graph/gpu-data`](https://luma.gl/next/docs/api-reference/graph/gpu-data.md) defines Arrow-independent GPU data containers.
+
+## Buffer and texture management[​](#buffer-and-texture-management "Direct link to Buffer and texture management")
+
+See [Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md) for logical values, views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+## Reusable expression programs[​](#reusable-expression-programs "Direct link to Reusable expression programs")
+
+`GPUExpressionOperation` represents named float32 expressions parsed with math.gl. `GPUGraph.compile(device)` returns a `CompiledGPUGraph` whose `run(bindings)` accepts new GPUVectors and scalar values, including new vector lengths, on each execution. See the [expression operation reference](https://luma.gl/next/docs/api-reference/graph/gpu-expression-operation.md) for declarations, supported operators, output ownership, and SimpleGraph compatibility.

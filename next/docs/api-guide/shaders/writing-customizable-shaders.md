@@ -25,11 +25,11 @@ A hook has three parts:
 3. A module or plugin injects ordered source into that hook.
 
 ```
-import {ShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 
 
 
-const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
+const shaderAssembler = new GLSLShaderAssembler();
 
 shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 ```
@@ -48,10 +48,10 @@ If nothing injects into the hook, the generated hook body is empty. That lets th
 
 ## Plugin Pattern[​](#plugin-pattern "Direct link to Plugin Pattern")
 
-A plugin is the reusable attachment unit. It can contribute modules, defines, shader-facing vertex inputs, and named injections, with `glsl` and `wgsl` variants where the shader syntax differs.
+A plugin is the reusable attachment unit. It can contribute a primary shader module, defines, shader-facing vertex inputs, and named injections. Each injection supplies `glsl` and `wgsl` source for the same target and order.
 
 ```
-import type {ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderPlugin} from '@luma.gl/shaders';
 
 
 
@@ -59,37 +59,19 @@ const tintPlugin: ShaderPlugin = {
 
   name: 'tint-plugin',
 
-  glsl: {
+  injections: [
 
-    injections: [
+    {
 
-      {
+      stage: 'fragment', target: '#decl',
 
-        target: 'fs:#decl',
+      glsl: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }',
 
-        injection: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }'
+      wgsl: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
 
-      }
+    }
 
-    ]
-
-  },
-
-  wgsl: {
-
-    injections: [
-
-      {
-
-        target: 'fs:#decl',
-
-        injection: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
-
-      }
-
-    ]
-
-  }
+  ]
 
 };
 ```
@@ -125,4 +107,4 @@ const model = new Model(device, {
 * Treat plugins as shader composition, not as a render lifecycle. They do not create or update buffers, run layer lifecycle methods, or schedule extra passes.
 * Put reusable shader-facing data in modules, then let plugins attach those modules when the behavior is optional.
 
-For exact hook, injection, and plugin fields, see [`ShaderAssembler`](https://luma.gl/next/docs/api-reference/shadertools/shader-assembler.md) and [`ShaderPlugin`](https://luma.gl/next/docs/api-reference/shadertools/shader-plugin.md). For runnable examples, see [Shader Hooks](https://luma.gl/next/docs/tutorials/shader-hooks.md) and [Shader Plugins](https://luma.gl/next/docs/tutorials/shader-plugins.md). The [Arrow ShaderPlugin Filtering example](https://luma.gl/next/examples/arrow/arrow-filtering) shows a plugin-declared scalar attribute backed by a caller-owned `GPUTable` on WebGL 2 and WebGPU.
+For exact hook, injection, and plugin fields, see [`ShaderAssembler`](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md) and [`ShaderPlugin`](https://luma.gl/next/docs/api-reference/shaders/shader-plugin.md). For runnable examples, see [Shader Hooks](https://luma.gl/next/docs/tutorials/shader-hooks.md) and [Shader Plugins](https://luma.gl/next/docs/tutorials/shader-plugins.md). The [Arrow ShaderPlugin Filtering example](https://luma.gl/next/examples/arrow/arrow-filtering) shows a plugin-declared scalar attribute backed by a caller-owned `GPUTable` on WebGL 2 and WebGPU.

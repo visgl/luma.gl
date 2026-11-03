@@ -106,7 +106,7 @@ Both techniques estimate visibility from the current depth buffer; neither trace
 
 Use one AO estimator per stack. GTAO is usually the higher-quality replacement for SSAO, not a second layer to multiply on top of it. Reset history after camera cuts, resize events, or changes that invalidate scene velocity.
 
-`createGTAOCompositeShaderPass()` retains its backward-compatible full-color composite. Select `createGTAOCompositeShaderPass({composition: 'ambient-only'})` when the application can bind an `ambientLightingTexture` containing the isolated linear ambient contribution. The ambient-only path preserves direct lighting and emissive color instead of darkening the entire resolved image. Deferred applications can create that texture with `createDeferredAmbientLightingCompositeShaderPass()` from `@luma.gl/experimental`.
+`createGTAOCompositeShaderPass()` retains its backward-compatible full-color composite. Select `createGTAOCompositeShaderPass({composition: 'ambient-only'})` when the application can bind an `ambientLightingTexture` containing the isolated linear ambient contribution. The ambient-only path preserves direct lighting and emissive color instead of darkening the entire resolved image. Deferred applications can create that texture with `createDeferredAmbientLightingCompositeShaderPass()` from `@luma.gl/anari`.
 
 ## Indirect Lighting: Ambient Occlusion, SSGI, and SSR[​](#indirect-lighting-ambient-occlusion-ssgi-and-ssr "Direct link to Indirect Lighting: Ambient Occlusion, SSGI, and SSR")
 
@@ -207,9 +207,9 @@ import {
 
   toneMapping
 
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 
-import {createClusteredDeferredLightingCompositeShaderPass} from '@luma.gl/experimental';
+import {createClusteredDeferredLightingCompositeShaderPass} from '@luma.gl/anari';
 
 
 

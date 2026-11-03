@@ -15,7 +15,7 @@ For the required and optional `GPUVector` inputs accepted by a model, see [`GPUI
 ```
 import type {VertexFormat} from '@luma.gl/core';
 
-import type {FixedSizeList, GPUVectorFormat, VertexList} from '@luma.gl/gpgpu/gpu-data';
+import type {FixedSizeList, GPUVectorFormat, VertexList} from '@luma.gl/graph/gpu-data';
 
 
 
@@ -118,7 +118,7 @@ Every column has the same logical table row count. The embedding allocation cont
 * fixed-size storage values use `fixed-size-list<format,size>`;
 * shader values remain in `ShaderLayout`, such as `vec3<f32>` or `vec4<f32>`.
 
-Compatibility between `GPUField.format` and shader values is checked separately with [`isGPUVectorFormatCompatibleWithShaderType()`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md).
+Compatibility between `GPUField.format` and shader values is checked separately with [`isGPUVectorFormatCompatibleWithShaderType()`](https://luma.gl/next/docs/api-reference/graph/gpu-vector-format.md).
 
 ### Reserved `indices` Column[​](#reserved-indices-column "Direct link to reserved-indices-column")
 
@@ -136,8 +136,8 @@ The tables-core format is `vertex-list<uint32>`. The vector represents one batch
 
 `GPUSchema` has no behavior that needs identity, inheritance, or lifecycle management. The objects that need lifecycle management are GPU resource owners:
 
-* [`GPUData`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md) owns or borrows one buffer.
-* [`GPUVector`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md) owns or borrows ordered `GPUData` chunks.
+* [`GPUData`](https://luma.gl/next/docs/api-reference/graph/gpu-data.md) owns or borrows one buffer.
+* [`GPUVector`](https://luma.gl/next/docs/api-reference/graph/gpu-vector.md) owns or borrows ordered `GPUData` chunks.
 * [`GPURecordBatch`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md) owns one batch-local `GPUData` chunk per selected column.
 * [`GPUTable`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table.md) owns preserved batches.
 
@@ -145,7 +145,7 @@ Keeping schema as plain data lets Arrow, gpgpu, generated-geometry, and applicat
 
 ## Arrow Interop[​](#arrow-interop "Direct link to Arrow Interop")
 
-`@luma.gl/arrow` creates `GPUSchema` objects from selected Arrow fields. Arrow `DataType` values may still be retained on `GPUData` or `GPUVector` as adapter/readback metadata during migration, but tables and record batches expose `GPUSchema` instead of `arrow.Schema`.
+`@luma.gl/graph/arrow` creates `GPUSchema` objects from selected Arrow fields. Arrow `DataType` values may still be retained on `GPUData` or `GPUVector` as adapter/readback metadata during migration, but tables and record batches expose `GPUSchema` instead of `arrow.Schema`.
 
 For example:
 

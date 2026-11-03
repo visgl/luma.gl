@@ -2,7 +2,7 @@
 
 > **TextureFormatInfo** = `object`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L12)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L32)
 
 Information about the structure of a texture format
 
@@ -12,7 +12,7 @@ Information about the structure of a texture format
 
 > `optional` **attachment?**: `"color"` | `"depth"` | `"stencil"` | `"depth-stencil"`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L16)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L36)
 
 Color or depth stencil attachment formats
 
@@ -22,7 +22,7 @@ Color or depth stencil attachment formats
 
 > **bitsPerChannel**: \[`number`, `number`, `number`, `number`]
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L28)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L48)
 
 Number of bits per channel (may be unreliable for packed formats)
 
@@ -32,7 +32,7 @@ Number of bits per channel (may be unreliable for packed formats)
 
 > `optional` **blockHeight?**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L46)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L66)
 
 Compressed formats only: Block size for ASTC formats (texture height must be a multiple of this value)
 
@@ -42,7 +42,7 @@ Compressed formats only: Block size for ASTC formats (texture height must be a m
 
 > `optional` **blockWidth?**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L44)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L64)
 
 Compressed formats only: Block size for ASTC formats (texture width must be a multiple of this value)
 
@@ -52,7 +52,7 @@ Compressed formats only: Block size for ASTC formats (texture width must be a mu
 
 > `optional` **bytesPerBlock?**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L26)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L46)
 
 Compressed formats only: Number of bytes per block
 
@@ -62,7 +62,7 @@ Compressed formats only: Number of bytes per block
 
 > **bytesPerPixel**: `number`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L24)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L44)
 
 Number of bytes per pixel
 
@@ -72,7 +72,7 @@ Number of bytes per pixel
 
 > **channels**: `"r"` | `"rg"` | `"rgb"` | `"rgba"` | `"bgra"`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L18)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L38)
 
 String describing which channels this texture has
 
@@ -82,7 +82,7 @@ String describing which channels this texture has
 
 > **components**: `1` | `2` | `3` | `4`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L20)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L40)
 
 Number of components (corresponds to channels string)
 
@@ -92,7 +92,7 @@ Number of components (corresponds to channels string)
 
 > `optional` **compressed?**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L42)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L62)
 
 Is this a compressed texture format
 
@@ -102,7 +102,7 @@ Is this a compressed texture format
 
 > `optional` **dataType?**: [`NormalizedDataType`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/NormalizedDataType.md)
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L22)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L42)
 
 What is the data type of each component
 
@@ -112,7 +112,7 @@ What is the data type of each component
 
 > **format**: [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L14)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L34)
 
 The format that is described
 
@@ -122,7 +122,7 @@ The format that is described
 
 > **integer**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L36)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L56)
 
 Is this an integer or floating point format?
 
@@ -132,7 +132,7 @@ Is this an integer or floating point format?
 
 > **normalized**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L40)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L60)
 
 Is this a normalized integer format?
 
@@ -142,7 +142,7 @@ Is this a normalized integer format?
 
 > `optional` **packed?**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L30)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L50)
 
 If this is a packed data type
 
@@ -152,7 +152,7 @@ If this is a packed data type
 
 > **signed**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L38)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L58)
 
 Is this a signed or unsigned format?
 
@@ -162,7 +162,7 @@ Is this a signed or unsigned format?
 
 > `optional` **srgb?**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L32)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L52)
 
 SRGB texture format?
 
@@ -172,6 +172,6 @@ SRGB texture format?
 
 > `optional` **webgl?**: `boolean`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L34)
+Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L54)
 
 WebGL specific texture format?

@@ -92,4 +92,4 @@ Use resumable execution and explicit budgets when an algorithm spans frames. A s
 
 ## Measure the result[​](#measure-the-result "Direct link to Measure the result")
 
-Track CPU encoding, GPU duration, transient bytes, allocation reuse, output counts, and overflow separately. See [debugging GPU command graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-core/debugging.md) for the GPU Graph and GPU Trace panels, and [execution and composition](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md) for the detailed execution contract.
+Track CPU encoding, GPU duration, transient bytes, allocation reuse, output counts, and overflow separately. See [debugging GPU graphs](https://luma.gl/next/docs/api-reference/experimental/gpu-core/debugging.md) for the GPU Graph and GPU Trace panels, and [execution and composition](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md) for the detailed execution contract.

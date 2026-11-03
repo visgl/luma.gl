@@ -2,7 +2,7 @@
 
 > **ShaderBlockLayoutEntry** = `object`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L16)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:9
 
 Describes the packing for one flattened field in a shader block.
 
@@ -14,7 +14,7 @@ Offsets, sizes, and strides are expressed in 32-bit words so the result can be c
 
 > **columns**: `number`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L24)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:17
 
 Number of matrix columns, or `1` for scalars and vectors.
 
@@ -24,7 +24,7 @@ Number of matrix columns, or `1` for scalars and vectors.
 
 > **columnStride**: `number`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L28)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:21
 
 Distance between matrix columns in 32-bit words.
 
@@ -34,7 +34,7 @@ Distance between matrix columns in 32-bit words.
 
 > **components**: `number`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L22)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:15
 
 Number of logical scalar components in the declared value.
 
@@ -44,7 +44,7 @@ Number of logical scalar components in the declared value.
 
 > **offset**: `number`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L18)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:11
 
 Offset in 32-bit words from the start of the block.
 
@@ -54,7 +54,7 @@ Offset in 32-bit words from the start of the block.
 
 > **rows**: `number`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L26)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:19
 
 Number of rows in each column, or vector length for vectors.
 
@@ -64,7 +64,7 @@ Number of rows in each column, or vector length for vectors.
 
 > **shaderType**: [`VariableShaderType`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VariableShaderType.md)
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L30)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:23
 
 Canonical shader type after alias resolution.
 
@@ -74,7 +74,7 @@ Canonical shader type after alias resolution.
 
 > **size**: `number`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L20)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:13
 
 Occupied size in 32-bit words, excluding external array stride.
 
@@ -84,6 +84,6 @@ Occupied size in 32-bit words, excluding external array stride.
 
 > **type**: [`PrimitiveDataType`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/PrimitiveDataType.md)
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L32)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:25
 
 Scalar data type used to write the value.

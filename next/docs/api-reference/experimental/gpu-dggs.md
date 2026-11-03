@@ -2,7 +2,7 @@
 
 [Projection](https://luma.gl/next/docs/api-reference/experimental/gpu-project.md)[Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md)[DGGS](https://luma.gl/next/docs/api-reference/experimental/gpu-dggs.md)[H3](https://luma.gl/next/docs/api-reference/experimental/gpu-h3.md)[A5](https://luma.gl/next/docs/api-reference/experimental/gpu-a5.md)
 
-Discrete global grid indexes are compact, stable identifiers. Rendering and spatial analysis need coordinates. The experimental `@luma.gl/gpgpu/gpu-dggs` module connects those two representations without pulling a large cell column back to JavaScript.
+Discrete global grid indexes are compact, stable identifiers. Rendering and spatial analysis need coordinates. The experimental `@luma.gl/graph/gpu-dggs` module connects those two representations without pulling a large cell column back to JavaScript.
 
 | Input                      | Shared GPU primitive                                | Output                                                     |
 | -------------------------- | --------------------------------------------------- | ---------------------------------------------------------- |
@@ -32,14 +32,14 @@ Benchmark input is already resident when timing begins. Upload, shader compilati
 
 | Entry point               | Primary class           | Best fit                                               |
 | ------------------------- | ----------------------- | ------------------------------------------------------ |
-| `@luma.gl/gpgpu/gpu-dggs` | `GPUDGGSCellProjection` | Runtime-selected H3/A5 workflows and reusable planners |
-| `@luma.gl/gpgpu/gpu-h3`   | `GPUH3CellProjection`   | H3-specific pipelines and the clearest static types    |
-| `@luma.gl/gpgpu/gpu-a5`   | `GPUA5CellProjection`   | A5-specific pipelines and the clearest static types    |
+| `@luma.gl/graph/gpu-dggs` | `GPUDGGSCellProjection` | Runtime-selected H3/A5 workflows and reusable planners |
+| `@luma.gl/graph/gpu-h3`   | `GPUH3CellProjection`   | H3-specific pipelines and the clearest static types    |
+| `@luma.gl/graph/gpu-a5`   | `GPUA5CellProjection`   | A5-specific pipelines and the clearest static types    |
 
 All three classes implement `GPUCommandGraphContributor`. They add one bounded compute pass; they do not submit commands, allocate hidden result buffers, or read output back.
 
 ```
-import {GPUDGGSCellProjection} from '@luma.gl/gpgpu/gpu-dggs';
+import {GPUDGGSCellProjection} from '@luma.gl/graph/gpu-dggs';
 
 
 
@@ -106,7 +106,7 @@ The shared split-64-bit representation, validity handling, bounded dispatch, and
 The live page uses an isolated optional entry point, keeping measurement code out of application bundles:
 
 ```
-import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/gpgpu/gpu-dggs/benchmarks';
+import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs/benchmarks';
 
 
 

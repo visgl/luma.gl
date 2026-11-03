@@ -1,15 +1,17 @@
-# @luma.gl/effects
+# @luma.gl/engine/effects
 
-`@luma.gl/effects` provides shader passes and multi-pass pipelines for image adjustment, blur, bloom, antialiasing, depth-aware lighting, temporal reconstruction, atmosphere, and stylization.
+`@luma.gl/engine/effects` provides shader passes and multi-pass pipelines for image adjustment, blur, bloom, antialiasing, depth-aware lighting, temporal reconstruction, atmosphere, and stylization.
+
+Install `@luma.gl/engine` to use this optional subpath. Effects are not re-exported from the engine root. Shader-pass contracts remain in shaders; graph executes caller-supplied pass definitions without depending on engine.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-Use Effects after rendering a scene into textures that can be consumed by a fullscreen `ShaderPassRenderer`. Use a Shadertools shader module instead when the behavior belongs inside an object's material shader rather than a post-processing stage.
+Use Effects after rendering a scene into textures that can be consumed by a fullscreen `ShaderPassRenderer`. Use a Shaders shader module instead when the behavior belongs inside an object's material shader rather than a post-processing stage.
 
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {brightnessContrast, toneMapping} from '@luma.gl/effects';
+import {brightnessContrast, toneMapping} from '@luma.gl/engine/effects';
 
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
@@ -48,7 +50,7 @@ renderer.destroy();
 
 ## Public API index[​](#public-api-index "Direct link to Public API index")
 
-The [Shader Pass Catalog](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md) lists every effect, its inputs, compatibility, and cost. The [Shader Passes guide](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) explains scene integration and multi-pass composition.
+The [Shader Pass Catalog](https://luma.gl/next/docs/api-reference/shaders/shader-passes/image-processing.md) lists every effect, its inputs, compatibility, and cost. The [Shader Passes guide](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md) explains scene integration and multi-pass composition.
 
 ## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
 
@@ -56,16 +58,16 @@ Simple fullscreen passes support WebGPU and WebGL 2 when both shader variants ar
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-* [`@luma.gl/shadertools`](https://luma.gl/next/docs/api-reference/shadertools.md)
+* [`@luma.gl/shaders`](https://luma.gl/next/docs/api-reference/shaders.md)
 * [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md)
-* [Experimental deferred rendering](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md)
+* [Experimental deferred rendering](https://luma.gl/next/docs/api-reference/anari/deferred-scene-renderer.md)
 
 ## Selection outlines[​](#selection-outlines "Direct link to Selection outlines")
 
 `selectionOutline` draws an outer contour around a caller-provided `selectionTexture`. Supply an `r8unorm` mask with selected visible surfaces set to one and other pixels to zero. The mask and source must use the same UV orientation. Render the mask against opaque scene depth when the outline should respect occlusion.
 
 ```
-import {selectionOutline} from '@luma.gl/effects';
+import {selectionOutline} from '@luma.gl/engine/effects';
 
 import {ShaderPassRenderer} from '@luma.gl/engine';
 

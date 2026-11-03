@@ -6,7 +6,13 @@
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
 
@@ -19,10 +25,10 @@ The base shaders keep the vertex interface explicit:
 
 The fill-pattern plugin does not add inputs, so the base shader declares its application-owned attributes explicitly. Plugins that need optional per-vertex data may declare the shader-facing name and type through `vertexInputs`; the model or table still owns the matching `bufferLayout`, buffer, and update lifecycle.
 
-Each backend-specific plugin variant injects the pattern implementation into `fs:#decl`. The base fragment shader calls that implementation without knowing how the GLSL or WGSL source differs.
+One injection selects the GLSL or WGSL pattern implementation for `fs:#decl`. The base fragment shader calls that implementation without knowing how the GLSL or WGSL source differs.
 
 ```
-import type {ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderPlugin} from '@luma.gl/shaders';
 
 
 
@@ -30,37 +36,7 @@ const fillPatternPlugin: ShaderPlugin = {
 
   name: 'fill-pattern-plugin',
 
-  glsl: {
-
-    injections: [
-
-      {
-
-        target: 'fs:#decl',
-
-        injection: GLSL_FILL_PATTERN_SOURCE
-
-      }
-
-    ]
-
-  },
-
-  wgsl: {
-
-    injections: [
-
-      {
-
-        target: 'fs:#decl',
-
-        injection: WGSL_FILL_PATTERN_SOURCE
-
-      }
-
-    ]
-
-  }
+  injections: [{stage: 'fragment', target: '#decl', glsl: GLSL_FILL_PATTERN_SOURCE, wgsl: WGSL_FILL_PATTERN_SOURCE}]
 
 };
 ```
@@ -189,6 +165,9 @@ const model = new Model(device, {
 
 `clipShaderPlugin` declares `clipCoordinates: vec2<f32>` as a smooth plugin varying. The application supplies each triangle's center and each vertex's position to a pair of named hooks:
 
+* GLSL
+* WGSL
+
 ```
 CLIP_POSITION(gl_Position, triangleCenter, position);
 
@@ -208,7 +187,7 @@ CLIP_COLOR(&color);
 The hook signatures are registered for the active shader language:
 
 ```
-import {GLSLShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 
 
 
@@ -253,6 +232,6 @@ Prefer `ShaderPlugin` as the public composition layer. Shader hooks are the lowe
 
 The runnable example includes all nine pattern variants: `none`, `hash0`, `hash45`, `hash90`, `hash135`, `checker0`, `checker45`, `dotgrid`, and `dotgrid45`.
 
-Use shared plugin fields when a contribution is backend-neutral. Use `glsl` or `wgsl` blocks when the shader language needs different code, defines, or modules.
+Keep modules, defines, and shader interfaces at the plugin root. Each injection selects its `glsl` or `wgsl` source without merging a second plugin descriptor.
 
 For a plugin that declares an Arrow-backed scalar input and updates only `ShaderInputs` as its range changes, see [Arrow ShaderPlugin Filtering](https://luma.gl/next/examples/arrow/arrow-filtering).

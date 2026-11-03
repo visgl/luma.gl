@@ -100,7 +100,7 @@ const device = await luma.createDevice({
 
 This follows the compatibility upgrade flow described by [WebGPU Fundamentals](https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html): luma.gl requests a compatibility adapter, then requires `core-features-and-limits` when that adapter exposes it. For `'best-available'`, `device.info.featureLevel` reports whether the created device is `'core'` or `'compatibility'`.
 
-Read `device.info.featureLevel` to see the effective level. Use `device.limits` when selecting optional paths such as vertex-stage storage buffers. For assembled WGSL, shadertools also exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS`; see [WGSL Support](https://luma.gl/next/docs/api-reference/shadertools/wgsl-support.md).
+Read `device.info.featureLevel` to see the effective level. Use `device.limits` when selecting optional paths such as vertex-stage storage buffers. For assembled WGSL, shaders also exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS`; see [WGSL Support](https://luma.gl/next/docs/api-reference/shaders/wgsl-support.md).
 
 ## Using for compute only[​](#using-for-compute-only "Direct link to Using for compute only")
 

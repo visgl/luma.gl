@@ -34,7 +34,7 @@ Typical workloads include mesh-local ray-tracing BLAS builds, spatial bins, inde
 ## Example[​](#example "Direct link to Example")
 
 ```
-import {GPUCommandGraph, GPUSegmentedBVH} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUSegmentedBVH} from '@luma.gl/graph/gpu-core';
 
 
 

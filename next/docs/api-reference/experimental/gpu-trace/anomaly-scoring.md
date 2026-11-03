@@ -30,7 +30,7 @@ Use this contributor after a grouping or comparison stage has produced explicit 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUTraceAnomalyScoring} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceAnomalyScoring} from '@luma.gl/graph/gpu-trace';
 
 
 

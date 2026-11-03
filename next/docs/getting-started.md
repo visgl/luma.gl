@@ -192,7 +192,13 @@ Keep Vite's `index.html` with its `<div id="app"></div>` and `<script type="modu
 npm run dev
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Follow the frame[​](#follow-the-frame "Direct link to Follow the frame")
 
@@ -212,8 +218,10 @@ npm run dev
 
 ## Next steps[​](#next-steps "Direct link to Next steps")
 
+Browse the [packages](https://luma.gl/next/docs/packages.md) to choose additional tools and integrations.
+
 * [Hello Cube](https://luma.gl/next/docs/tutorials/hello-cube.md) adds geometry, uniforms, and depth testing.
-* [Choosing an API layer](https://luma.gl/next/docs/api-guide.md) explains Engine, Core, and Shadertools.
+* [Choosing an API layer](https://luma.gl/next/docs/api-guide.md) explains Engine, Core, and Shaders.
 * [API reference](https://luma.gl/next/docs/api-reference.md) provides exact class and resource contracts.
 * [Examples](https://luma.gl/next/examples) show larger rendering and compute workflows.
 

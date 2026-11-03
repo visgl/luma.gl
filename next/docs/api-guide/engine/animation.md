@@ -341,5 +341,5 @@ See the [morph-target reference](https://luma.gl/next/docs/api-reference/engine/
 * [`AnimationMixer`](https://luma.gl/next/docs/api-reference/engine/animation/animation-mixer.md) owns reusable keyframe playback, blending, and property bindings.
 * [`AnimationLoop`](https://luma.gl/next/docs/api-reference/engine/animation-loop.md) schedules application frames; its timestamps must be converted from milliseconds before advancing a mixer.
 * [`Timeline`](https://luma.gl/next/docs/api-reference/engine/animation/timeline.md) and [`KeyFrames`](https://luma.gl/next/docs/api-reference/engine/animation/key-frames.md) remain available for existing timeline-driven applications.
-* `@luma.gl/gltf` owns glTF animation decoding, node bindings, skinning, and the compatibility `GLTFAnimator`.
+* `@luma.gl/engine/gltf` owns glTF animation decoding, node bindings, skinning, and the compatibility `GLTFAnimator`.
 * Higher-level scene renderers and ANARI adapters orchestrate these engine primitives instead of implementing independent animation or deformation systems.

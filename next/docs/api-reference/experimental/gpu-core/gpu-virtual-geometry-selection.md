@@ -34,7 +34,7 @@ import {
 
   GPUVirtualGeometrySelection
 
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 
 
 

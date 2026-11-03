@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/experimental/gpu-dataframe` provides immutable, visualization-oriented dataframe operations on existing WebGPU-resident tables. Filters, derived columns, reductions, histograms, categorical grouping, stable per-batch sorting, and bounded hash joins compile into reusable `GPUCommandGraph` work. Source record batches, null masks, stable row identifiers, and results stay on the GPU until an application explicitly chooses to read them.
+`@luma.gl/graph/gpu-dataframe` provides immutable, visualization-oriented dataframe operations on existing WebGPU-resident tables. Filters, derived columns, reductions, histograms, categorical grouping, stable per-batch sorting, and bounded hash joins compile into reusable `GPUCommandGraph` work. Source record batches, null masks, stable row identifiers, and results stay on the GPU until an application explicitly chooses to read them.
 
 GPU Dataframe is inspired by the GPU-resident dataframe ideas pioneered by [NVIDIA RAPIDS cuDF](https://github.com/rapidsai/cudf). It is an independent browser-native WebGPU implementation, not a CUDA port, a compatible cuDF API, a SQL engine, or a claim of feature parity.
 
@@ -29,12 +29,12 @@ The [GPU Data Analysis example](https://luma.gl/next/examples/experimental/gpu-d
 | Row identity       | Stable original source-row identifiers, including caller-provided batch offsets.                                                    |
 | Execution          | One browser WebGPU device and caller-owned command encoding, submission, and optional readback.                                     |
 
-Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to `@luma.gl/arrow`; generic GPU storage remains in `@luma.gl/gpgpu/gpu-data`, while record batches and tables come from `@luma.gl/experimental/gpu-tables`. Neither GPU package requires Apache Arrow as a runtime dependency.
+Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to `@luma.gl/graph/arrow`; generic GPU storage remains in `@luma.gl/graph/gpu-data`, while record batches and tables come from `@luma.gl/graph/gpu-tables`. Neither GPU package requires Apache Arrow as a runtime dependency.
 
 ```
-import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/graph/arrow';
 
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
 import {
 
@@ -50,10 +50,10 @@ import {
 
   type GPUDataFrameQueryParameters
 
-} from '@luma.gl/experimental/gpu-dataframe';
+} from '@luma.gl/graph/gpu-dataframe';
 ```
 
-The root `@luma.gl/experimental` entry point does not export `GPUDataFrame`; applications that do not import `/gpu-dataframe` do not take on the dataframe facade.
+The root `@luma.gl/graph` entry point does not export `GPUDataFrame`; applications that do not import `/gpu-dataframe` do not take on the dataframe facade.
 
 ## Upload Arrow data or borrow an existing table[​](#upload-arrow-data-or-borrow-an-existing-table "Direct link to Upload Arrow data or borrow an existing table")
 

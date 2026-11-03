@@ -27,7 +27,7 @@ The returned `Geometry` has triangle-list topology and owned Float32 arrays:
 | `POSITION`   | Local XYZ positions (three values per vertex)                     |
 | `TEXCOORD_0` | Cumulative XY path distance and signed distance across the stroke |
 
-Use the first texture coordinate with the [`pathDash`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/path-dash.md) shader module. GPU upload and resource ownership follow the normal `Geometry` and `Model` contracts.
+Use the first texture coordinate with the [`pathDash`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/path-dash.md) shader module. GPU upload and resource ownership follow the normal `Geometry` and `Model` contracts.
 
 ## Options[​](#options "Direct link to Options")
 

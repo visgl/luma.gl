@@ -18,7 +18,7 @@ Arrow also supports variable-length `List` columns. These are useful for data su
 
 Support depends on how the column is consumed. A column can be uploadable as a `GPUVector` without also being usable as a generic vertex attribute.
 
-Arrow adapters publish `GPUVector.format` strings from [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md). Arrow `DataType` values are retained only as adapter/readback metadata during migration.
+Arrow adapters publish `GPUVector.format` strings from [`@luma.gl/graph/gpu-data`](https://luma.gl/next/docs/api-reference/graph/gpu-vector-format.md). Arrow `DataType` values are retained only as adapter/readback metadata during migration.
 
 | Arrow column pattern                               | GPUVector format               | Generic `BufferLayout` |
 | -------------------------------------------------- | ------------------------------ | ---------------------- |
@@ -57,7 +57,9 @@ Status: ✅ directly supported, 🟡 conditionally supported, ❌ not supported.
 
 The [Points example](https://luma.gl/next/examples/arrow/arrow-points) demonstrates `FixedSizeList<Float32, 2 | 3 | 4>` and DenseUnion point rows, including M-coordinate or timestamp animation and hover identity labels. The [Lines example](https://luma.gl/next/examples/arrow/arrow-lines) demonstrates DenseUnion line rows and polygon outlines by normalizing them into prepared line rows before the path models consume them. The [GeoArrow example](https://luma.gl/next/examples/arrow/arrow-geoarrow) routes a mixed DenseUnion geometry column through point, line, and polygon renderers.
 
-`@luma.gl/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from `@math.gl/geoarrow`. `makeGeoArrowColumnFromArrowVector()` borrows the source buffers, while interleaving, WKB/WKT decoding, dense-union normalization, and polygon tessellation delegate to math.gl. Renderer-specific color expansion and GPU resource creation remain in luma.gl.
+`iterateGeoArrowBatchesFromArrowVector(vector, options)` exposes each physical chunk with its `chunkIndex` and logical `rowOffset`. `getGeoArrowRowViewFromArrowVector(vector, rowIndex, options)` selects one logical row across chunks and resolves mixed-geometry union dispatch. Both return borrowed math.gl views with a `column` descriptor, retain null rows, and allocate no coordinate buffers. Keep the source storage alive and do not mutate or detach it while views are in use. These APIs require native GeoArrow geometry; decode WKB/WKT before requesting views.
+
+`@luma.gl/graph/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from `@math.gl/geospatial/geoarrow`. `makeGeoArrowColumnFromArrowVector()` borrows the source buffers, while interleaving, WKB/WKT decoding, dense-union normalization, and polygon tessellation delegate to math.gl. Renderer-specific color expansion and GPU resource creation remain in luma.gl.
 
 ### Matrix-valued Columns[​](#matrix-valued-columns "Direct link to Matrix-valued Columns")
 
@@ -141,7 +143,7 @@ Semantic RGB color columns use three source components, but most luma.gl color s
 Use `getArrowBufferLayout()` with an Arrow table when Arrow column names match shader attribute names:
 
 ```
-import {getArrowBufferLayout} from '@luma.gl/arrow';
+import {getArrowBufferLayout} from '@luma.gl/graph/arrow';
 
 
 
@@ -219,7 +221,7 @@ The GPU representation does not always stay byte-for-byte identical to the sourc
 
 ## Matrix Columns[​](#matrix-columns "Direct link to Matrix Columns")
 
-`@luma.gl/arrow` provides explicit matrix vector helpers for the WGSL floating point matrix shapes used by GPU table workflows:
+`@luma.gl/graph/arrow` provides explicit matrix vector helpers for the WGSL floating point matrix shapes used by GPU table workflows:
 
 | Helper                       | Logical shape |
 | ---------------------------- | ------------- |
@@ -234,7 +236,7 @@ The GPU representation does not always stay byte-for-byte identical to the sourc
 The generic `makeArrowMatrixVector(shape, values, options)` form is available when the shape is selected dynamically.
 
 ```
-import {makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+import {makeArrowMatrix4x4Vector} from '@luma.gl/graph/arrow';
 
 
 
@@ -433,7 +435,7 @@ For `FixedSizeList` vectors, the parent row may be nullable and will expand to t
 `closeArrowPaths()` turns logical closed-path flags into explicit closing vertices without mutating the input vector. The helper accepts GPU-resident `List<FixedSizeList<Float32>>` path rows with one to four components per vertex, an Arrow Bool vector with one closed flag per row, and a non-negative epsilon. Those Float32 rows can be absolute path coordinates or origin-relative delta coordinates produced from Float64 path conversion.
 
 ```
-import {closeArrowPaths} from '@luma.gl/arrow';
+import {closeArrowPaths} from '@luma.gl/engine/arrow';
 
 
 
@@ -533,15 +535,7 @@ Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with on
 `GPUTableGeometry` exposes one packed static `GPUTable` as `GPUGeometry`. `ArrowTableGeometry` and `makeGPUGeometryFromArrow()` convert loaders.gl- compatible Mesh Arrow tables into that generic geometry surface. These helpers support mesh and point-cloud tables that use glTF-style column names such as `POSITION`, `NORMAL`, `COLOR_0`, and `TEXCOORD_0`.
 
 ```
-import {
-
-  ArrowTableGeometry,
-
-  makeGPUGeometryFromArrow,
-
-  type ArrowMeshTable
-
-} from '@luma.gl/arrow';
+import {ArrowTableGeometry, makeGPUGeometryFromArrow, type ArrowMeshTable} from '@luma.gl/engine/arrow';
 
 import {Model} from '@luma.gl/engine';
 
@@ -601,7 +595,7 @@ By default, `ArrowTableGeometry` packs all selected vertex attributes into one i
 Streaming sources stay application-owned. Convert each yielded Arrow record batch once, keep the resulting immutable `GPURecordBatch`, and add it to the retained `GPUTable`:
 
 ```
-import {makeGPURecordBatchFromArrowRecordBatch, makeGPUTableFromArrowTable} from '@luma.gl/arrow';
+import {makeGPURecordBatchFromArrowRecordBatch, makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
 
 
 

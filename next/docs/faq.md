@@ -22,4 +22,4 @@ Pass `clearColor`, `clearDepth`, and `clearStencil` to `beginRenderPass()`. Set 
 
 ## Which packages and backend should I use?[​](#which-packages-and-backend-should-i-use "Direct link to Which packages and backend should I use?")
 
-Start with [Getting started](https://luma.gl/next/docs/getting-started.md) for a portable triangle. Use [Choosing an API layer](https://luma.gl/next/docs/api-guide.md) to decide between Engine, Core, Shadertools, and experimental GPU Core. Check [WebGPU versus WebGL 2](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md) before depending on compute or other backend-specific features.
+Start with [Getting started](https://luma.gl/next/docs/getting-started.md) for a portable triangle. Use [Choosing an API layer](https://luma.gl/next/docs/api-guide.md) to decide between Engine, Core, Shaders, and experimental GPU Core. Check [WebGPU versus WebGL 2](https://luma.gl/next/docs/api-guide/background/webgpu-vs-webgl.md) before depending on compute or other backend-specific features.

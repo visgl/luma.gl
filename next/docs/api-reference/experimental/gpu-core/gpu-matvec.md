@@ -80,7 +80,7 @@ For `rows × columns`, matrix element `(row,column)` is at `row * columns + colu
 ## Contract[​](#contract "Direct link to Contract")
 
 ```
-import {GPUMatVec} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMatVec} from '@luma.gl/graph/gpu-core';
 
 
 

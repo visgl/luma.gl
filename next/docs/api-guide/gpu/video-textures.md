@@ -22,7 +22,11 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -158,7 +162,7 @@ Do not close the current frame immediately after `setSource()`. The frame must s
 
 ## Related APIs[​](#related-apis "Direct link to Related APIs")
 
-Experimental [`WebXRCameraTexture`](https://luma.gl/next/docs/api-reference/experimental/webxr/webxr-camera-texture.md) handles WebXR Raw Camera Access. It is not a `VideoTexture`: WebXR exposes a browser-owned WebGL texture for one `XRView`, so the experimental helper wraps that borrowed texture as a normal read-only binding.
+Experimental [`WebXRCameraTexture`](https://luma.gl/next/docs/api-reference/engine/experimental/webxr/webxr-camera-texture.md) handles WebXR Raw Camera Access. It is not a `VideoTexture`: WebXR exposes a browser-owned WebGL texture for one `XRView`, so the experimental helper wraps that borrowed texture as a normal read-only binding.
 
 ## Practical Rule[​](#practical-rule "Direct link to Practical Rule")
 

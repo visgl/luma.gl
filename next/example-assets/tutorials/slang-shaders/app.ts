@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {packSlangUniforms, type SlangTypeLayout} from '@luma.gl/slang';
 import {AnimationLoopTemplate, type AnimationProps, Model} from '@luma.gl/engine';
-import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import {createSlangTranspiler} from './slang-transpiler';
 import {createShaderViewer} from './shader-viewer';
 import {filmGrain} from './film-grain';
@@ -14,8 +14,10 @@ import paletteSource from './palette.slang?raw';
 import geometrySource from './geometry.slang?raw';
 
 export default class SlangShadersExample extends AnimationLoopTemplate {
-  static info =
-    `<h3>Slang: Orbital sculpture</h3><p>Animated distance fields, iridescent lighting, and a floor reflection, written once in Slang. Drag to orbit or open the shader viewer to compare Slang with the generated code. The application registers its compiler; named Slang imports supply geometry and material. A typed bridge calls native valueNoise code, which calls a public Slang helper to add adjustable grain.</p>`;
+  static info = `    <h3>Slang: Orbital sculpture</h3>
+    <p>Orbit an animated ray-marched sculpture, change its material and twist, or pause to inspect it.</p>
+    <p>One Slang shader contains both render entry points and uses reusable Slang distance-field and material modules. The application supplies compiler registration and uniform packing on both backends.</p>
+    <p>Select <strong>Shaders</strong> to compare the main source and reusable modules with the generated WGSL or GLSL ES 300 code used by the active renderer. <strong>Native grain</strong> controls a direct call into the existing <code>valueNoise</code> shader module. Native code calls an explicitly exported Slang helper through a typed contract.</p>`;
 
   readonly model: Model;
   readonly uniformBuffer: Buffer;
@@ -85,6 +87,13 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
     if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
     this.controls = document.createElement('div');
     this.controls.className = 'slang-sculpture-controls';
+    const infoBoxControls = canvas
+      .closest('[data-luma-example-page]')
+      ?.querySelector<HTMLElement>('[data-luma-example-extra-tab="settings"]');
+    const infoBoxShaders = canvas
+      .closest('[data-luma-example-page]')
+      ?.querySelector<HTMLElement>('[data-luma-example-extra-tab="shaders"]');
+    if (infoBoxControls) this.controls.dataset.infoboxControls = '';
     this.controls.innerHTML = `
       <style>
         .slang-sculpture-controls { position:absolute; left:24px; bottom:24px; z-index:2;
@@ -92,6 +101,12 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
           font:13px/1.5 system-ui,sans-serif; background:rgba(10,17,29,.88);
           border:1px solid #ffffff20; border-radius:16px; padding:18px 20px;
           backdrop-filter:blur(16px); box-shadow:0 12px 40px #0005; }
+        .slang-sculpture-controls[data-infobox-controls] { position:static; max-width:none; width:100%;
+          padding:0; margin:0 0 16px; border:0; border-radius:0; background:transparent;
+          backdrop-filter:none; box-shadow:none; color:inherit; }
+        .slang-sculpture-controls[data-infobox-controls] h2,
+        .slang-sculpture-controls[data-infobox-controls] p,
+        .slang-sculpture-controls[data-infobox-controls] .eyebrow { display:none; }
         .slang-sculpture-controls h2 { margin:4px 0 2px; font-size:21px; font-weight:500; }
         .slang-sculpture-controls p { margin:0 0 16px; color:#9cabbd; }
         .slang-sculpture-controls .eyebrow { color:#7edbdc; font-size:10px; letter-spacing:.15em; }
@@ -110,6 +125,7 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
       <span class="eyebrow">SLANG / ${device.info.type === 'webgpu' ? 'WEBGPU' : 'WEBGL 2'}</span>
       <h2>Orbital sculpture</h2>
       <p>Three rings. One glowing core.<br>Drag the scene to explore.</p>
+      <label>Output shader language <span>${device.info.shadingLanguage === 'wgsl' ? 'WGSL' : 'GLSL ES 300'}</span></label>
       <label>Material <select aria-label="Material"><option value="0">Prismatic</option>
         <option value="1">Ember</option><option value="2">Glacier</option></select></label>
       <label>Twist <input aria-label="Twist" type="range" min="0" max="0.75" step="0.01" value="0.35"></label>
@@ -133,9 +149,11 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
       this.paused = !this.paused;
       (event.target as HTMLButtonElement).textContent = this.paused ? 'Play' : 'Pause';
     });
-    host.append(this.controls);
+    if (infoBoxShaders)
+      this.controls.querySelector<HTMLElement>('[data-action="shaders"]')!.hidden = true;
+    (infoBoxControls || host).append(this.controls);
     this.shaderViewer = createShaderViewer(
-      host,
+      infoBoxShaders || host,
       [
         {name: 'shader.slang', code: shaderSource},
         {name: 'geometry.slang', code: geometrySource},
@@ -152,7 +170,8 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
         : [
             {name: 'GLSL ES 300 · vertex', code: this.model.vs},
             {name: 'GLSL ES 300 · fragment', code: this.model.fs}
-          ]
+          ],
+      Boolean(infoBoxShaders)
     );
     const showShaders = this.controls.querySelector<HTMLButtonElement>('[data-action="shaders"]')!;
     showShaders.addEventListener('click', () => this.shaderViewer?.open(showShaders));

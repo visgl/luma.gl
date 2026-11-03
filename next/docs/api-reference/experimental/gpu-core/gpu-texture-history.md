@@ -1,10 +1,10 @@
 # GPUTextureHistory
 
-[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Incremental Execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
+[Command Graph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)[Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md)[Incremental Execution](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-incremental-execution.md)[Texture History](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md)[Readback Ring](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-readback-ring.md)[Indirect Draw](https://luma.gl/next/docs/api-reference/experimental/gpu-core/draw-command-buffer.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUTextureHistory` owns exactly two descriptor-identical, caller-configured textures and rotates their previous/current roles without copying texels. Its bindings plug directly into [`GPUCommandGraph.encode()`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md#compiledgpucommandgraph), allowing one compiled graph to reuse retained radiance, temporal metadata, simulation state, or feedback buffers across frames.
+`GPUTextureHistory` owns exactly two descriptor-identical, caller-configured textures and rotates their previous/current roles without copying texels. Its bindings plug directly into [`CompiledGPUCommandGraph.encode()`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md#compiledgpucommandgraph), allowing one compiled graph to reuse retained radiance, temporal metadata, simulation state, or feedback buffers across frames.
 
 The class neither records GPU commands nor submits work. Physical textures remain application-owned and are destroyed only when the application destroys their history object.
 
@@ -76,7 +76,7 @@ type GPUTextureHistoryProps<Format extends TextureFormat = TextureFormat> = {
 ```
 import {Texture} from '@luma.gl/core';
 
-import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUTextureHistory} from '@luma.gl/graph/gpu-core';
 
 
 

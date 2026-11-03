@@ -206,7 +206,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -524,7 +528,7 @@ If you need a matching layout, call `texture.computeMemoryLayout()` for the same
 
 Deprecated convenience API.
 
-Use `readBuffer()` with an explicit destination buffer, or engine [`DynamicTexture`](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md) when you want convenience readback that allocates temporary buffers for you.
+Use `readBuffer()` with an explicit destination buffer, or engine [`DynamicTexture`](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-texture.md) when you want convenience readback that allocates temporary buffers for you.
 
 ### `writeBuffer()`[​](#writebuffer "Direct link to writebuffer")
 

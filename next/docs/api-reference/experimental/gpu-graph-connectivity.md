@@ -2,20 +2,20 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md)[Operations](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-operations.md)[Topology](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-topology.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-traversal.md)[Connectivity](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-connectivity.md)[Metrics](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-metrics.md)[Layouts](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-layouts.md)
 
-## Find disconnected groups with GPUGraphConnectedComponents[​](#find-disconnected-groups-with-gpugraphconnectedcomponents "Direct link to Find disconnected groups with GPUGraphConnectedComponents")
+## Find disconnected groups with GPUGraphAlgorithmsConnectedComponents[​](#find-disconnected-groups-with-gpugraphalgorithmsconnectedcomponents "Direct link to Find disconnected groups with GPUGraphAlgorithmsConnectedComponents")
 
 **Question: Which vertices belong to the same connected island if edge direction is ignored?**
 
-`GPUGraphConnectedComponents` identifies vertices connected by any path when edge direction is ignored. Use it to separate disconnected social networks, collect related transaction accounts, find infrastructure islands, or detect independent dependency groups.
+`GPUGraphAlgorithmsConnectedComponents` identifies vertices connected by any path when edge direction is ignored. Use it to separate disconnected social networks, collect related transaction accounts, find infrastructure islands, or detect independent dependency groups.
 
 For example, two transfers `Ana -> Bo` and `Bo -> Cy` put all three accounts in the same group, even though Cy has no outgoing transfer. An unrelated transfer `Dee -> Eli` forms a different group. Choose weak components when group membership matters, not the distance from a selected account or the direction in which influence flows.
 
 ```
-import {GPUGraphConnectedComponents} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsConnectedComponents} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const components = new GPUGraphConnectedComponents({
+const components = new GPUGraphAlgorithmsConnectedComponents({
 
   topology,
 
@@ -32,20 +32,20 @@ Once propagation converges, every vertex in a weakly connected component receive
 
 The caller chooses a bounded iteration budget. The optional one-row `uint32` `converged` result is one only when the final iteration reaches a fixed point; zero means convergence was not established or the required adjacency overflowed. A connected component answers whether entities connect at all; it does not claim to discover densely connected communities within one connected network.
 
-## Discover densely connected communities with GPUGraphLabelPropagation[​](#discover-densely-connected-communities-with-gpugraphlabelpropagation "Direct link to Discover densely connected communities with GPUGraphLabelPropagation")
+## Discover densely connected communities with GPUGraphAlgorithmsLabelPropagation[​](#discover-densely-connected-communities-with-gpugraphalgorithmslabelpropagation "Direct link to Discover densely connected communities with GPUGraphAlgorithmsLabelPropagation")
 
 **Question: Which vertices form closely connected communities inside a network that is otherwise connected?**
 
-`GPUGraphLabelPropagation` groups vertices by the labels most common in their immediate neighborhood. Use it to reveal circles of friends within a social network, identify related transaction accounts within a larger fraud investigation, separate service ownership groups inside a connected dependency graph, or color locally cohesive regions of a citation network.
+`GPUGraphAlgorithmsLabelPropagation` groups vertices by the labels most common in their immediate neighborhood. Use it to reveal circles of friends within a social network, identify related transaction accounts within a larger fraud investigation, separate service ownership groups inside a connected dependency graph, or color locally cohesive regions of a citation network.
 
 A connected component answers whether any path links two vertices. Community detection asks a different question: are these vertices more strongly connected to one another than to the rest of the same network? Imagine two teams whose members interact frequently within their own team but share only one relationship across teams. That single bridge makes the whole network one weakly connected component, while label propagation can still give each team a different community label. Use weak components to find disconnected islands; use community labels to inspect local structure within an island.
 
 ```
-import {GPUGraphLabelPropagation} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsLabelPropagation} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const communities = new GPUGraphLabelPropagation({
+const communities = new GPUGraphAlgorithmsLabelPropagation({
 
   topology,
 
@@ -66,20 +66,20 @@ The default is `32` synchronous rounds; applications can explicitly choose an in
 
 If required forward or reverse adjacency overflows, all output labels become `0xffffffff` and `converged` becomes zero rather than publishing partial communities. The worst-case work is `O(sum(degree²))` per round because counting support for each candidate can rescan a vertex's neighborhood; a high-degree hub can therefore be disproportionately expensive. This deterministic label-propagation heuristic is not Louvain or Leiden, does not optimize modularity, and does not guarantee objectively correct communities or a particular clustering quality.
 
-## Improve weighted community partitions with GPUGraphModularityOptimization[​](#improve-weighted-community-partitions-with-gpugraphmodularityoptimization "Direct link to Improve weighted community partitions with GPUGraphModularityOptimization")
+## Improve weighted community partitions with GPUGraphAlgorithmsModularityOptimization[​](#improve-weighted-community-partitions-with-gpugraphalgorithmsmodularityoptimization "Direct link to Improve weighted community partitions with GPUGraphAlgorithmsModularityOptimization")
 
 **Question: Which actual community reassignment improves a network's measurable partition quality, rather than merely winning a neighborhood vote?**
 
-`GPUGraphModularityOptimization` improves an existing or automatically initialized community partition by accepting the best strictly beneficial single-vertex move in each bounded round. Use it when a social grouping should reflect actual interaction strength, a proposed fraud ring should concentrate transaction weight, ownership boundaries should better match weighted service dependencies, or a knowledge-graph partition needs an objective comparison before and after refinement.
+`GPUGraphAlgorithmsModularityOptimization` improves an existing or automatically initialized community partition by accepting the best strictly beneficial single-vertex move in each bounded round. Use it when a social grouping should reflect actual interaction strength, a proposed fraud ring should concentrate transaction weight, ownership boundaries should better match weighted service dependencies, or a knowledge-graph partition needs an objective comparison before and after refinement.
 
-Three community questions are related but distinct. `GPUGraphLabelPropagation` cheaply proposes groups from unweighted neighborhood votes without optimizing their quality; `GPUGraphModularity` scores any caller-provided partition without changing it; and `GPUGraphModularityOptimization` actually changes group assignments when the same weighted modularity objective improves. Start from separate communities when discovering structure, or provide `initialCommunities` to refine labels supplied by a heuristic, application, or prior analysis. The caller receives both the improved labels and the score of that exact final partition.
+Three community questions are related but distinct. `GPUGraphAlgorithmsLabelPropagation` cheaply proposes groups from unweighted neighborhood votes without optimizing their quality; `GPUGraphAlgorithmsModularity` scores any caller-provided partition without changing it; and `GPUGraphAlgorithmsModularityOptimization` actually changes group assignments when the same weighted modularity objective improves. Start from separate communities when discovering structure, or provide `initialCommunities` to refine labels supplied by a heuristic, application, or prior analysis. The caller receives both the improved labels and the score of that exact final partition.
 
 ```
-import {GPUGraphModularityOptimization} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsModularityOptimization} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const optimizedCommunities = new GPUGraphModularityOptimization({
+const optimizedCommunities = new GPUGraphAlgorithmsModularityOptimization({
 
   topology,
 
@@ -108,7 +108,7 @@ optimizedCommunities.addToGraph(workflow);
 
 `output` is a caller-owned, packed `GPUVector<'uint32'>` with exactly one community identifier per vertex. The optional `initialCommunities` is a separate caller-owned, packed `uint32` vector with the same number of rows; without it, every vertex initially belongs to its own stable-identifier community. `modularity` is a separate caller-owned one-row `GPUVector<'float32'>` containing the real final weighted partition score. The optional `converged` and `valid` results are physically distinct caller-owned one-row `GPUVector<'uint32'>` status vectors.
 
-The objective is the same Newman modularity used by `GPUGraphModularity`. Directed graphs use `Q = Σc [Lc / W - γ × Kout,c × Kin,c / W²]`; undirected graphs use `Q = Σc [Lc / W - γ × (Kc / (2W))²]`. For every eligible vertex, the contributor considers neighboring communities and the lowest genuinely unused stable community identifier. Occupancy counts every vertex, including zero-degree isolates, so an occupied zero-volume community is never mistaken for an empty one. This singleton candidate lets an over-merged warm start split even when its only relationships are self-loops: two equally weighted self-loops with initial labels `[0, 0]` can become `[1, 0]`, improving modularity from zero to `0.5`.
+The objective is the same Newman modularity used by `GPUGraphAlgorithmsModularity`. Directed graphs use `Q = Σc [Lc / W - γ × Kout,c × Kin,c / W²]`; undirected graphs use `Q = Σc [Lc / W - γ × (Kc / (2W))²]`. For every eligible vertex, the contributor considers neighboring communities and the lowest genuinely unused stable community identifier. Occupancy counts every vertex, including zero-degree isolates, so an occupied zero-volume community is never mistaken for an empty one. This singleton candidate lets an over-merged warm start split even when its only relationships are self-loops: two equally weighted self-loops with initial labels `[0, 0]` can become `[1, 0]`, improving modularity from zero to `0.5`.
 
 For each candidate, the contributor evaluates `ΔQ = Q(partition after moving the vertex) - Q(current partition)`. It accepts exactly **one** globally best move per round, and only when `ΔQ` is strictly positive and strictly greater than `minimumGain`. Tied gains choose the lowest stable vertex identifier, followed by the lowest candidate community identifier. Evaluating an immutable prior partition and applying only one move avoids simultaneous conflicting moves and never intentionally accepts a modularity regression.
 
@@ -116,24 +116,24 @@ This tie-breaking policy is deterministic for a fixed snapshot of computed `floa
 
 `iterations` defaults to `32` and may be any integer from `0` through `1024`. `minimumGain` defaults to zero and must be a finite, nonnegative value representable as `float32`. `resolution` defaults to one and follows the same finite, nonnegative `float32` contract as the standalone modularity scorer. Zero rounds preserve the caller's initial partition or the identity assignment, publish its real modularity, and report convergence zero for a valid nonempty graph. If a completed round finds no admissible positive-gain move, `converged` becomes one. If the iteration budget ends immediately after an improving move, convergence remains zero: a bounded improvement is not evidence that a local optimum has been reached. A local fixed point is not necessarily the globally best partition.
 
-Directed graphs require both forward and reverse CSR; undirected graphs reuse symmetric forward CSR. Original nonnegative `float32` edge weights are preserved, and missing weights mean one. Parallel source edges, reciprocal directed edges, and self-loops retain exactly the same weighted multiplicity and degree-volume conventions as `GPUGraphModularity`. Out-of-domain source endpoints are ignored together with their weights; an invalid warm-start label, negative or nonfinite accepted edge weight, zero valid total edge weight, floating-point accumulation overflow, or overflow in required adjacency fails closed. Every output label then becomes `0xffffffff`, the modularity score becomes zero, and optional validity and convergence become zero. An empty graph has no label rows, score zero, validity zero, and convergence one if adjacency did not overflow.
+Directed graphs require both forward and reverse CSR; undirected graphs reuse symmetric forward CSR. Original nonnegative `float32` edge weights are preserved, and missing weights mean one. Parallel source edges, reciprocal directed edges, and self-loops retain exactly the same weighted multiplicity and degree-volume conventions as `GPUGraphAlgorithmsModularity`. Out-of-domain source endpoints are ignored together with their weights; an invalid warm-start label, negative or nonfinite accepted edge weight, zero valid total edge weight, floating-point accumulation overflow, or overflow in required adjacency fails closed. Every output label then becomes `0xffffffff`, the modularity score becomes zero, and optional validity and convergence become zero. An empty graph has no label rows, score zero, validity zero, and convergence one if adjacency did not overflow.
 
-The contributor encodes all bounded candidate evaluation, stable tie-broken winner selection, label updates, and final `GPUGraphModularity` scoring into the caller-owned GPU command graph. It does not submit work, read results back, or synchronize with the CPU. Worst-case work for `K` rounds is `O(K × (V + E + sum(degree²)))`, with separate `O(V + E)` initialization and final scoring and `O(V + E)` graph-owned packed scratch; linear per-round community occupancy and vacancy checks are included in that bound. High-degree hubs and large round budgets require explicit measurement. This is **single-level Louvain-style local moving**, not the complete multilevel Louvain algorithm, Leiden refinement, community coarsening, hierarchical aggregation, a global optimality guarantee, or a seventh Graphalytics workload.
+The contributor encodes all bounded candidate evaluation, stable tie-broken winner selection, label updates, and final `GPUGraphAlgorithmsModularity` scoring into the caller-owned GPU command graph. It does not submit work, read results back, or synchronize with the CPU. Worst-case work for `K` rounds is `O(K × (V + E + sum(degree²)))`, with separate `O(V + E)` initialization and final scoring and `O(V + E)` graph-owned packed scratch; linear per-round community occupancy and vacancy checks are included in that bound. High-degree hubs and large round budgets require explicit measurement. This is **single-level Louvain-style local moving**, not the complete multilevel Louvain algorithm, Leiden refinement, community coarsening, hierarchical aggregation, a global optimality guarantee, or a seventh Graphalytics workload.
 
-## Evaluate community quality with GPUGraphModularity[​](#evaluate-community-quality-with-gpugraphmodularity "Direct link to Evaluate community quality with GPUGraphModularity")
+## Evaluate community quality with GPUGraphAlgorithmsModularity[​](#evaluate-community-quality-with-gpugraphalgorithmsmodularity "Direct link to Evaluate community quality with GPUGraphAlgorithmsModularity")
 
 **Question: Does an existing community grouping keep more relationship weight inside its groups than a degree-matched random network would predict?**
 
-`GPUGraphModularity` scores a partition that the application already owns; it does not create or improve that partition. Use it to compare rival social-network groupings, check whether a detected fraud ring concentrates transaction weight, evaluate whether service ownership labels follow real dependency structure, or monitor whether an evolving document grouping is more meaningful than chance. Feed it labels from `GPUGraphLabelPropagation`, `GPUGraphModularityOptimization`, an external clustering method, or any other caller-owned assignment.
+`GPUGraphAlgorithmsModularity` scores a partition that the application already owns; it does not create or improve that partition. Use it to compare rival social-network groupings, check whether a detected fraud ring concentrates transaction weight, evaluate whether service ownership labels follow real dependency structure, or monitor whether an evolving document grouping is more meaningful than chance. Feed it labels from `GPUGraphAlgorithmsLabelPropagation`, `GPUGraphAlgorithmsModularityOptimization`, an external clustering method, or any other caller-owned assignment.
 
 A high positive score means the specified partition keeps more relationship weight within its groups than the corresponding degree-preserving random baseline predicts; a score near zero suggests little advantage over that baseline. A negative score means the partition keeps less internal weight than expected. Scores depend on the graph and resolution parameter: they are not universal quality percentages or proof that one partition is objectively correct.
 
 ```
-import {GPUGraphModularity} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsModularity} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const partitionQuality = new GPUGraphModularity({
+const partitionQuality = new GPUGraphAlgorithmsModularity({
 
   graph,
 

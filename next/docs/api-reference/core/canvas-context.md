@@ -131,7 +131,11 @@ A single device can present into multiple canvases. On WebGPU each canvas is bac
 
 Initializing device...
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -246,7 +250,7 @@ With `autoResize: true` and `useDevicePixels: true`, this follows `getDevicePixe
 
 ### `setDrawingBufferSize(width: number, height: number): void`[​](#setdrawingbuffersizewidth-number-height-number-void "Direct link to setdrawingbuffersizewidth-number-height-number-void")
 
-Resize the drawing surface. Usually called after the window has been resized.
+Request a drawing surface resize, usually after the window has been resized. The resize is applied when the current framebuffer is acquired. If the canvas dimensions differ from their values at the latest pending request when it is applied, the current canvas dimensions take precedence. Repeating a pending request captures the current canvas dimensions again. Changes that return the canvas to the captured dimensions are not detected.
 
 ```
 canvasContext.setDrawingBufferSize(width, height);

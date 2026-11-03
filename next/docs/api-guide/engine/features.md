@@ -46,7 +46,11 @@ Choose a material aspect or rendering capability, learn its public API, and expl
 
 * [Dispersion](https://luma.gl/next/docs/api-guide/engine/features/dispersion.md)
 
-## Scene capabilities and asset delivery[​](#scene-capabilities-and-asset-delivery "Direct link to Scene capabilities and asset delivery")
+## Scenegraph capabilities[​](#scenegraph-capabilities "Direct link to Scenegraph capabilities")
+
+The [Scenegraphs guide](https://luma.gl/next/docs/api-guide/engine/scenegraph.md) is the canonical index for animation, skins, morph targets, interactivity, physics, physical joints, billboards, scene lights, and spatial audio. These engine runtimes work with imported and programmatically constructed scenes.
+
+### Related scene and asset guides[​](#related-scene-and-asset-guides "Direct link to Related scene and asset guides")
 
 * [Material variants](https://luma.gl/next/docs/api-guide/engine/features/material-variants.md) — Material variants switch authored surface appearances while preserving the scene hierarchy and model identities.
 

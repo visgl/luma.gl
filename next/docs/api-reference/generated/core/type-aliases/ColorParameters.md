@@ -2,7 +2,7 @@
 
 > **ColorParameters** = `object`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L152)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L144)
 
 Color parameters are set on the RenderPipeline
 
@@ -16,7 +16,7 @@ Color parameters are set on the RenderPipeline
 
 > `optional` **blend?**: `boolean`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L154)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L146)
 
 Enable blending
 
@@ -26,7 +26,7 @@ Enable blending
 
 > `optional` **blendAlphaDstFactor?**: [`BlendFactor`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BlendFactor.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:168](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L168)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:160](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L160)
 
 Defines the operation to be performed on values from the target attachment.
 
@@ -36,7 +36,7 @@ Defines the operation to be performed on values from the target attachment.
 
 > `optional` **blendAlphaOperation?**: [`BlendOperation`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BlendOperation.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L164)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:156](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L156)
 
 Defines the operation used to calculate the values written to the target attachment components.
 
@@ -46,7 +46,7 @@ Defines the operation used to calculate the values written to the target attachm
 
 > `optional` **blendAlphaSrcFactor?**: [`BlendFactor`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BlendFactor.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L166)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L158)
 
 Defines the operation to be performed on values from the fragment shader.
 
@@ -56,7 +56,7 @@ Defines the operation to be performed on values from the fragment shader.
 
 > `optional` **blendColorDstFactor?**: [`BlendFactor`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BlendFactor.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L161)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L153)
 
 Defines the operation to be performed on values from the target attachment.
 
@@ -66,7 +66,7 @@ Defines the operation to be performed on values from the target attachment.
 
 > `optional` **blendColorOperation?**: [`BlendOperation`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BlendOperation.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L157)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L149)
 
 Defines the operation used to calculate the values written to the target attachment components.
 
@@ -76,7 +76,7 @@ Defines the operation used to calculate the values written to the target attachm
 
 > `optional` **blendColorSrcFactor?**: [`BlendFactor`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/BlendFactor.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L159)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L151)
 
 Defines the operation to be performed on values from the fragment shader.
 
@@ -86,6 +86,6 @@ Defines the operation to be performed on values from the fragment shader.
 
 > `optional` **colorMask?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:171](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L171)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:163](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L163)
 
 Bitmask controlling which channels are are written to when drawing to this color target. defaulting to 0xF

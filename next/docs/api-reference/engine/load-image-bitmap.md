@@ -1,6 +1,6 @@
 # loadImageBitmap
 
-[DynamicBuffer](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md)[DynamicTexture](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md)[VideoTexture](https://luma.gl/next/docs/api-reference/engine/video-texture.md)[loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md)
+[DynamicBuffer](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-buffer.md)[DynamicTexture](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-texture.md)[VideoTexture](https://luma.gl/next/docs/api-reference/engine/video-texture.md)[loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md)
 
 A simple small utility to load images from URLs. The loaded `ImageBitmaps` can be used to create textures.
 
@@ -31,4 +31,4 @@ Returns:
 
 ## Remarks[​](#remarks "Direct link to Remarks")
 
-* The `@loaders.gl/textures` module provides a range of more capable texture loaders for additional compressed and super-compressed texture formats, texture cubes, composite textures etc.
+* The `@loaders.gl/images` module provides a range of more capable texture loaders for additional compressed and super-compressed texture formats, texture cubes, composite textures etc.

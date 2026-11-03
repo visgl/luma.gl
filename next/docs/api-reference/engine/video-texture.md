@@ -1,6 +1,6 @@
 # VideoTexture
 
-[DynamicBuffer](https://luma.gl/next/docs/api-reference/engine/dynamic-buffer.md)[DynamicTexture](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md)[VideoTexture](https://luma.gl/next/docs/api-reference/engine/video-texture.md)[loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md)
+[DynamicBuffer](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-buffer.md)[DynamicTexture](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-texture.md)[VideoTexture](https://luma.gl/next/docs/api-reference/engine/video-texture.md)[loadImageBitmap](https://luma.gl/next/docs/api-reference/engine/load-image-bitmap.md)
 
 From v9.4
 
@@ -143,6 +143,6 @@ The copied texture is uploaded only after the observed frame token changes. A na
 
 ## Related APIs[​](#related-apis "Direct link to Related APIs")
 
-* [`DynamicTexture`](https://luma.gl/next/docs/api-reference/engine/dynamic-texture.md) wraps asynchronous or replaceable ordinary texture data.
+* [`DynamicTexture`](https://luma.gl/next/docs/api-reference/core/dynamic/dynamic-texture.md) wraps asynchronous or replaceable ordinary texture data.
 * [`ExternalTexture`](https://luma.gl/next/docs/api-reference/core/resources/external-texture.md) is the low-level concrete one-shot WebGPU external binding.
-* Experimental [`WebXRCameraTexture`](https://luma.gl/next/docs/api-reference/experimental/webxr/webxr-camera-texture.md) handles WebXR Raw Camera Access without making WebXR part of `VideoTexture`.
+* Experimental [`WebXRCameraTexture`](https://luma.gl/next/docs/api-reference/engine/experimental/webxr/webxr-camera-texture.md) handles WebXR Raw Camera Access without making WebXR part of `VideoTexture`.

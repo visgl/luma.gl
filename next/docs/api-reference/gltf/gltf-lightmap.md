@@ -17,7 +17,7 @@ The renderer supports UV0/UV1 material bindings, complete node overrides, and th
 Node and instance bindings are preserved while switching between already lightmapped material variants. Changing the primitive's shader feature set through variants, additional UV sets, and the broader image-format/HDR combinations are outside this tested profile. The support registry retains `loader-only` status so strict required-extension loading does not claim complete draft conformance.
 
 ```
-<GLTFFeatureExample feature="lightmap" />
+<GLTFFeatureExample feature="lightmap" embedded />
 ```
 
 The standalone shared viewer accepts `?feature=lightmap&backend=webgl` or `?feature=lightmap&backend=webgpu` to select one backend explicitly.

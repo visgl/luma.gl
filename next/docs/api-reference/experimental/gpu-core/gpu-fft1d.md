@@ -34,7 +34,7 @@ Use `GPUFFT1D` when complex signals already live in GPU buffers, when many equal
 Each complex value is one packed `float32x2` row: real followed by imaginary. Input and output accept either `GraphDataView<'float32x2'>` or `GraphVectorView<'float32x2'>`.
 
 ```
-import {GPUFFT1D} from '@luma.gl/experimental';
+import {GPUFFT1D} from '@luma.gl/graph/gpu-core';
 
 
 

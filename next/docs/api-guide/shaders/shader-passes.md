@@ -2,7 +2,7 @@
 
 [Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customization](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portability](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
-A shader pass is a shader module that can run as a fullscreen texture-processing stage. The pass descriptor lives in `@luma.gl/shadertools`; the renderer that executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
+A shader pass is a shader module that can run as a fullscreen texture-processing stage. The pass descriptor lives in `@luma.gl/shaders`; the renderer that executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
 
 Choose an effect and adjust its parameters to see a shader pass update the source texture live:
 
@@ -18,18 +18,22 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Components[​](#components "Direct link to Components")
 
-| Component                                                                                                            | Role                                                                                                   |
-| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md)           | Owns the fullscreen draw path, swap framebuffers, named targets, shader inputs, and presentation step. |
-| [`CompositeShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md#compositeshaderpass) | Chains existing passes with named intermediate render targets.                                         |
-| [`ShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md)                              | Describes one standalone texture-processing effect and its optional subpasses.                         |
-| [`ShaderSubPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md#shadersubpass)             | Describes one draw inside a pass, including source routing, output routing, and subpass uniforms.      |
+| Component                                                                                                        | Role                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md)       | Owns the fullscreen draw path, swap framebuffers, named targets, shader inputs, and presentation step. |
+| [`CompositeShaderPass`](https://luma.gl/next/docs/api-reference/shaders/shader-pass.md#compositeshaderpass) | Chains existing passes with named intermediate render targets.                                         |
+| [`ShaderPass`](https://luma.gl/next/docs/api-reference/shaders/shader-pass.md)                              | Describes one standalone texture-processing effect and its optional subpasses.                         |
+| [`ShaderSubPass`](https://luma.gl/next/docs/api-reference/shaders/shader-pass.md#shadersubpass)             | Describes one draw inside a pass, including source routing, output routing, and subpass uniforms.      |
 
 Use a plain `ShaderPass` when each stage only needs the original input texture or the previous result. Use a `CompositeShaderPass` when later steps need named intermediate textures such as an extracted highlight texture and its blurred version.
 
@@ -56,7 +60,7 @@ The advanced-effects path has three separate responsibilities:
 2. `ShaderPassRenderer` orders fullscreen effects and owns their internal named and temporal targets.
 3. The application presents the final texture, or passes it to another explicit workflow such as transparency capture and resolve.
 
-On WebGPU, experimental [`GBuffer`](https://luma.gl/next/docs/api-reference/experimental/g-buffer.md) packages the common surface attachments without owning scene traversal or material shading. Multiple render targets (MRT) means one fragment shader writes several color attachments in the same render pass:
+On WebGPU, experimental [`GBuffer`](https://luma.gl/next/docs/api-reference/anari/g-buffer.md) packages the common surface attachments without owning scene traversal or material shading. Multiple render targets (MRT) means one fragment shader writes several color attachments in the same render pass:
 
 | Render-stack value | Producer                             | Consumers                                                                                                                      |
 | ------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -87,9 +91,9 @@ import {
 
   toneMapping
 
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 
-import {GBuffer} from '@luma.gl/experimental';
+import {GBuffer} from '@luma.gl/anari';
 
 
 
@@ -160,7 +164,7 @@ effects.renderToScreen({
 });
 ```
 
-`GBuffer` is intentionally a target and binding contract, not a scene renderer. Experimental [`deferredLighting`](https://luma.gl/next/docs/api-reference/experimental/deferred-lighting.md) consumes two named material extras plus depth and normal-roughness, reconstructs view position, and writes a Cook-Torrance lighting result into the same ordered color chain:
+`GBuffer` is intentionally a target and binding contract, not a scene renderer. Experimental [`deferredLighting`](https://luma.gl/next/docs/api-reference/anari/deferred-lighting.md) consumes two named material extras plus depth and normal-roughness, reconstructs view position, and writes a Cook-Torrance lighting result into the same ordered color chain:
 
 ```
 const renderer = new ShaderPassRenderer(device, {
@@ -195,9 +199,9 @@ More specialized clustered-lighting or visibility-buffer workflows can replace t
 GTAO defaults to its backward-compatible full-color composite. Deferred applications that can isolate ambient light should request the physically accurate ambient-only mode instead:
 
 ```
-import {createGTAOCompositeShaderPass} from '@luma.gl/effects';
+import {createGTAOCompositeShaderPass} from '@luma.gl/engine/effects';
 
-import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/experimental';
+import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/anari';
 
 
 
@@ -294,7 +298,7 @@ Mirror-like materials retain narrow highlights, while rough surfaces accumulate 
 
 This is the higher-fidelity alternative to `createVolumetricFogCompositeShaderPass()`, whose compact height fog does not evaluate the real scene-light storage buffers. Both remain composable ordered composite passes; normally choose one atmospheric implementation rather than stacking both.
 
-Unlike the generic `GBuffer` examples above, clustered volumetric lighting requires more than `gBuffer.getShaderPassBindings()`. Encode a `ClusteredLightGrid` for the current point-light buffer each frame, add `pointLights`, `clusteredLightGrid.getShaderPassBindings()`, depth, and velocity to the renderer bindings, and merge `clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)` into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings. Provide `inverseViewProjectionMatrix` and `previousViewProjectionMatrix` to `clusteredVolumetricTemporal`, plus `inverseProjectionMatrix` to both the temporal and linear-depth history-copy stages. See the [`ClusteredLightGrid` usage guide](https://luma.gl/next/docs/api-reference/experimental/clustered-lighting.md) for the buffer setup and encode sequence.
+Unlike the generic `GBuffer` examples above, clustered volumetric lighting requires more than `gBuffer.getShaderPassBindings()`. Encode a `ClusteredLightGrid` for the current point-light buffer each frame, add `pointLights`, `clusteredLightGrid.getShaderPassBindings()`, depth, and velocity to the renderer bindings, and merge `clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)` into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings. Provide `inverseViewProjectionMatrix` and `previousViewProjectionMatrix` to `clusteredVolumetricTemporal`, plus `inverseProjectionMatrix` to both the temporal and linear-depth history-copy stages. See the [`ClusteredLightGrid` usage guide](https://luma.gl/next/docs/api-reference/anari/clustered-lighting.md) for the buffer setup and encode sequence.
 
 SSAO, GTAO, screen-space global illumination, reflections, and clustered volumetric lighting default to full-resolution intermediate framebuffers. Pass `resolutionScale: 0.5`, for example, to explicitly trade edge quality for fewer shaded pixels and smaller history textures.
 
@@ -332,7 +336,7 @@ Enable optional photographic optics through `lens`: aperture-diffraction starbur
 
 `temporalStability` enables neighborhood-clamped, persistent half-resolution glow history for one additional pass. `temporalReprojection: true` additionally consumes caller-provided `velocityTexture` and `depthTexture` bindings, rejects disocclusions, and stores previous depth in the existing history alpha channel. `previousExposure` corrects history when exposure changes. The default configuration allocates neither history nor lens artifacts. Screen-space diffraction costs eight samples per ray, while each ghost costs one sample or three when chromatic aberration is enabled.
 
-For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/experimental` provides a separate WebGPU implementation. It accepts generated or measured point-spread functions, including independent red, green, and blue kernels; packs those channels into one forward and one inverse FFT schedule; and uses zero-padded guard bands to prevent opposite-edge wraparound. Optional lens artifacts, sampled dirt, and temporal history execute in its existing final compute pass. An optional GPU-resident exposure texture supplies adapted exposure without CPU readback. At 1920 x 1080 with quarter-resolution sampling and the default 12.5% guard band, the FFT uses a 1024 x 512 transform, 48 MiB of complex buffers, and 45 steady-state compute dispatches. Disabling the guard band reduces that configuration to a 512 x 512 transform, 24 MiB, and 43 dispatches while removing edge-wrap protection. Changing the optical kernel adds 21 initialization dispatches for the guarded configuration.
+For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/graph/gpu-effects` provides a separate WebGPU implementation. It accepts generated or measured point-spread functions, including independent red, green, and blue kernels; packs those channels into one forward and one inverse FFT schedule; and uses zero-padded guard bands to prevent opposite-edge wraparound. Optional lens artifacts, sampled dirt, and temporal history execute in its existing final compute pass. An optional GPU-resident exposure texture supplies adapted exposure without CPU readback. At 1920 x 1080 with quarter-resolution sampling and the default 12.5% guard band, the FFT uses a 1024 x 512 transform, 48 MiB of complex buffers, and 45 steady-state compute dispatches. Disabling the guard band reduces that configuration to a 512 x 512 transform, 24 MiB, and 43 dispatches while removing edge-wrap protection. Changing the optical kernel adds 21 initialization dispatches for the guarded configuration.
 
 Keep bloom in linear floating-point scene color before tone mapping. The stock deck.gl `PostProcessEffect` accepts shader-pass modules, but does not execute named-target `CompositeShaderPass` compositions or the WebGPU FFT renderer. Its current intermediate buffers default to `rgba8unorm`, so an integration requiring unclamped HDR highlights must first arrange floating-point scene/postprocessing targets.
 
@@ -365,7 +369,7 @@ This is a default, not a hard rule. A debug view may intentionally bypass earlie
 
 ### Transparency composition[​](#transparency-composition "Direct link to Transparency composition")
 
-Opaque geometry should populate the G-buffer first. [`WBOITRenderer`](https://luma.gl/next/docs/api-reference/experimental/wboit-renderer.md) and [`ABufferRenderer`](https://luma.gl/next/docs/api-reference/experimental/a-buffer-renderer.md) keep transparent geometry capture separate, then expose resolve as ordinary `CompositeShaderPass` steps. Put the chosen resolve composite pass into the same ordered `shaderPasses` array so transparency participates in later effects without creating a second postprocessing system.
+Opaque geometry should populate the G-buffer first. [`WBOITRenderer`](https://luma.gl/next/docs/api-reference/anari/wboit-renderer.md) and [`ABufferRenderer`](https://luma.gl/next/docs/api-reference/anari/a-buffer-renderer.md) keep transparent geometry capture separate, then expose resolve as ordinary `CompositeShaderPass` steps. Put the chosen resolve composite pass into the same ordered `shaderPasses` array so transparency participates in later effects without creating a second postprocessing system.
 
 The [Advanced Effects example](https://luma.gl/next/examples/experimental/advanced-effects) shows the full MRT surface pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug views.
 
@@ -399,7 +403,7 @@ const renderer = new ShaderPassRenderer(device, {
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
 
-For descriptor fields, see [`ShaderPass`](https://luma.gl/next/docs/api-reference/shadertools/shader-pass.md). For execution methods and routing details, see [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md). The current built-in effect catalog is under [Shader Pass Catalog](https://luma.gl/next/docs/api-reference/shadertools/shader-passes/image-processing.md).
+For descriptor fields, see [`ShaderPass`](https://luma.gl/next/docs/api-reference/shaders/shader-pass.md). For execution methods and routing details, see [`ShaderPassRenderer`](https://luma.gl/next/docs/api-reference/engine/passes/shader-pass-renderer.md). The current built-in effect catalog is under [Shader Pass Catalog](https://luma.gl/next/docs/api-reference/shaders/shader-passes/image-processing.md).
 
 ### Analytic height fog[​](#analytic-height-fog "Direct link to Analytic height fog")
 

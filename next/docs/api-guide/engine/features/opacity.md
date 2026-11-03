@@ -22,13 +22,17 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## PBRMaterial reference[​](#pbrmaterial-reference "Direct link to PBRMaterial reference")
 
-`PBRMaterial` from `@luma.gl/experimental` is a typed engine `Material` backed by the shared `pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from `@luma.gl/shadertools`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with `material.setProps({pbrMaterial: {...}})`.
+`PBRMaterial` from `@luma.gl/anari` is a typed engine `Material` backed by the shared `pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from `@luma.gl/shaders`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with `material.setProps({pbrMaterial: {...}})`.
 
 The fields below are optional. Defaults are the shared shader defaults; imported assets can supply other values.
 
@@ -46,24 +50,24 @@ The fields below are optional. Defaults are the shared shader defaults; imported
 
 ### createPBRMaterial[​](#createpbrmaterial "Direct link to createPBRMaterial")
 
-`createPBRMaterial(device, {uniforms, bindings, factory})` from `@luma.gl/experimental` returns a `PBRMaterial`. `uniforms` sets the fields listed above, `bindings` supplies material textures, and the optional `factory` shares a compatible binding schema across materials. The helper derives map-enabled flags from the supplied bindings; explicit uniform values take precedence.
+`createPBRMaterial(device, {uniforms, bindings, factory})` from `@luma.gl/anari` returns a `PBRMaterial`. `uniforms` sets the fields listed above, `bindings` supplies material textures, and the optional `factory` shares a compatible binding schema across materials. The helper derives map-enabled flags from the supplied bindings; explicit uniform values take precedence.
 
 ### MaterialFactory[​](#materialfactory "Direct link to MaterialFactory")
 
-`createPBRMaterialFactory(device)` from `@luma.gl/experimental` creates a reusable engine `MaterialFactory` configured with the `pbrMaterial` shader module. Pass this factory to `createPBRMaterial()` when creating several compatible materials.
+`createPBRMaterialFactory(device)` from `@luma.gl/anari` creates a reusable engine `MaterialFactory` configured with the `pbrMaterial` shader module. Pass this factory to `createPBRMaterial()` when creating several compatible materials.
 
 ### Material[​](#material "Direct link to Material")
 
 `Material` from `@luma.gl/engine` owns material uniforms and texture resources. `setProps({pbrMaterial: {...}})` updates uniform values. Pass the material to a compatible `Model` through its `material` prop; models sharing it observe the same updates. Use `clone({bindings: {...}})` when an appearance needs separate texture resources. Adding a texture or changing a shader feature may require matching defines and a compatible model shader layout.
 
-See the [materials guide](https://luma.gl/next/docs/api-guide/engine/materials.md) and [`pbrMaterial` reference](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/pbr-material.md).
+See the [materials guide](https://luma.gl/next/docs/api-guide/engine/materials.md) and [`pbrMaterial` reference](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md).
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
 import {Model} from '@luma.gl/engine';
 
-import {createPBRMaterial, type PBRMaterial} from '@luma.gl/experimental';
+import {createPBRMaterial, type PBRMaterial} from '@luma.gl/anari';
 
 
 

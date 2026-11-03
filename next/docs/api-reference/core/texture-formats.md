@@ -216,7 +216,11 @@ Hover a preview for upload, format, and memory details.
 
 Initializing device...
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 

@@ -7,7 +7,8 @@
   Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
-import {makeGPUTableFromArrowTable, makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
+import {makeArrowMatrix4x4Vector} from '@luma.gl/graph/arrow';
 import type {
   NumberArray,
   ShaderLayout,
@@ -19,14 +20,15 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   CubeGeometry,
-  DynamicTexture,
   loadImageBitmap,
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {dofCompositeShaderPass} from '@luma.gl/effects';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTable, GPUTableModel, type GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
+import {dofCompositeShaderPass} from '@luma.gl/engine/effects';
+import type {ShaderModule} from '@luma.gl/shaders';
+import {GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
+import {GPUTableModel} from '@luma.gl/engine/tables';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 import {

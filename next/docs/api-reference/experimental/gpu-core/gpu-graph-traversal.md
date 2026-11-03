@@ -20,7 +20,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -52,7 +56,7 @@ Traversal supports focus interactions over an existing graph: show the callers a
 It is not a general shortest-path or ordering API. Use ancestor projection for one canonical parent chain, and use a purpose-built graph algorithm when results require distances, weights, or a deterministic visit order. The bounded breadth-first contract is designed to produce a membership mask for later filtering.
 
 ```
-import {GPUGraphTraversal} from '@luma.gl/gpgpu/gpu-core';
+import {GPUGraphTraversal} from '@luma.gl/graph/gpu-core';
 
 
 

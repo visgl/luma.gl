@@ -32,7 +32,7 @@ Use the workflow when several renderers or examples should share the same fixed 
 Use `GPUMask` and `GPUCompaction` directly when an application needs different boolean semantics, custom outputs, or only one of those stages. The workflow intentionally does not accept arbitrary WGSL callbacks: fixed predicate-mask contracts remain easier to compose, validate, and reuse.
 
 ```
-import {GPUVisibilityWorkflow} from '@luma.gl/gpgpu/gpu-core';
+import {GPUVisibilityWorkflow} from '@luma.gl/graph/gpu-core';
 
 
 

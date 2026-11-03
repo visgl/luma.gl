@@ -4,11 +4,11 @@
 
 From v9.4Experimental API
 
-This page documents the lifecycle of generic GPU table objects in `@luma.gl/experimental/gpu-tables`: ownership, batching, packing, table-backed rendering, transform, compute, and buffer planning. For Apache Arrow column compatibility and preparation helpers, see [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md).
+This page documents the lifecycle of generic GPU table objects in `@luma.gl/graph/gpu-tables`: ownership, batching, packing, table-backed rendering, transform, compute, and buffer planning. For Apache Arrow column compatibility and preparation helpers, see [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md).
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, `GPUTable`, and `GPUSchema` are GPU-side representations for typed table columns and batches. Arrow vectors, record batches, and tables are common construction inputs through `@luma.gl/arrow`; the generic GPU objects do not retain references to those sources after extracting the buffer data and metadata they need.
+`GPUData`, `GPUVector`, `GPUConstant`, `GPURecordBatch`, `GPUTable`, and `GPUSchema` are GPU-side representations for typed table columns and batches. Arrow vectors, record batches, and tables are common construction inputs through `@luma.gl/graph/arrow`; the generic GPU objects do not retain references to those sources after extracting the buffer data and metadata they need.
 
 The object model is batch-preserving by default:
 
@@ -77,7 +77,7 @@ const shaderLayout = {
 
 Compatibility checks decide whether a memory format can feed a shader value. For example, `unorm8x4` can feed `vec4<f32>`, while `uint32x4` cannot feed `vec4<f32>`.
 
-See [GPUSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-schema.md) and [GPUVectorFormat](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md) for the type reference. A model's accepted prepared vector inputs are declared separately with [`GPUInputSchema`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md).
+See [GPUSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-schema.md) and [GPUVectorFormat](https://luma.gl/next/docs/api-reference/graph/gpu-vector-format.md) for the type reference. A model's accepted prepared vector inputs are declared separately with [`GPUInputSchema`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md).
 
 ## Object Responsibilities[​](#object-responsibilities "Direct link to Object Responsibilities")
 
@@ -85,9 +85,9 @@ This page stays at the relationship level. Constructor modes, properties, and me
 
 | Object           | Responsibility                                                                                                | Detailed reference                                                                                         |
 | ---------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `GPUData`        | One GPU buffer plus row/stride metadata and buffer ownership.                                                 | [GPUData](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md)                                  |
-| `GPUVector`      | One logical column over ordered `GPUData[]` chunks.                                                           | [GPUVector](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md)                              |
-| `GPUConstant`    | One table-wide fixed-width logical column value.                                                              | [GPUConstant](https://luma.gl/next/docs/api-reference/gpgpu/gpu-constant.md)                          |
+| `GPUData`        | One GPU buffer plus row/stride metadata and buffer ownership.                                                 | [GPUData](https://luma.gl/next/docs/api-reference/graph/gpu-data.md)                                  |
+| `GPUVector`      | One logical column over ordered `GPUData[]` chunks.                                                           | [GPUVector](https://luma.gl/next/docs/api-reference/graph/gpu-vector.md)                              |
+| `GPUConstant`    | One table-wide fixed-width logical column value.                                                              | [GPUConstant](https://luma.gl/next/docs/api-reference/graph/gpu-constant.md)                          |
 | `GPURecordBatch` | One immutable preserved batch with batch-local data chunks and layout metadata.                               | [GPURecordBatch](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md) |
 | `GPUTable`       | Table-level owner that preserves batches, exposes aggregate vectors, and controls packing/detach/destruction. | [GPUTable](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table.md)              |
 | `GPUSchema`      | Selected-column metadata with `GPUVectorFormat` fields.                                                       | [GPUSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-schema.md)            |
@@ -153,74 +153,11 @@ For preserved indexed batches, call `drawBatches(renderPass)`. Each batch keeps 
 
 ### `TableTransform`[​](#tabletransform "Direct link to tabletransform")
 
-`TableTransform` is the WebGL transform-feedback counterpart. It consumes a generic `GPUTable`, merges the table attribute layouts into the underlying `BufferTransform`, accepts already-created `GPUVector` inputs, and can run one preserved GPU batch at a time. Use `makeGPUTableFromArrowTable()` before construction when the source data starts as an Arrow table:
-
-```
-const transform = new TableTransform(device, {
-
-  vs,
-
-  varyings,
-
-  shaderLayout,
-
-  table: makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout}),
-
-  tableCount: 'vertex'
-
-});
-
-
-
-transform.dispatchBatches({
-
-  outputBuffers: (batch, batchIndex) => makeOutputBuffers(batch, batchIndex)
-
-});
-```
-
-For a compute-like update path, pass `inputVectors` plus `copyOutputToInputVectors`. `outputs` is inferred from the copy map when it is omitted:
-
-```
-const transform = new TableTransform(device, {
-
-  vs,
-
-  shaderLayout,
-
-  inputVectors: {
-
-    particlePositions,
-
-    particleVelocities
-
-  },
-
-  copyOutputToInputVectors: {
-
-    nextParticlePositions: 'particlePositions',
-
-    nextParticleVelocities: 'particleVelocities'
-
-  }
-
-});
-```
-
-Transform feedback writes a dense output stream, so automatic copy-back targets tightly packed, directly bindable GPUVectors. It can not scatter-copy into padded or interleaved rows.
-
-Use `TableTransform` only for attribute-backed WebGL transform feedback. It is not a storage-buffer compute abstraction.
-
-Relevant public types:
-
-| Type                         | Meaning                                                                                              |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `TableTransformProps`        | Construction props, including `table`, `inputVectors`, `copyOutputToInputVectors`, and `tableCount`. |
-| `TableTransformBatchOptions` | `dispatchBatches()` options, including fixed or per-batch `outputBuffers`.                           |
+[TableTransform](https://luma.gl/next/docs/api-reference/engine/tables/table-transform.md) is the WebGL transform-feedback adapter in `@luma.gl/engine/tables`. It consumes graph tables and primitive GPU vectors without changing their ownership or batch structure. Import it from engine; graph does not re-export it.
 
 ### `GPUTableComputation`[​](#gputablecomputation "Direct link to gputablecomputation")
 
-`GPUTableComputation` is the WebGPU compute helper for table vectors exposed as storage bindings. Supply `GPUVector` objects by binding name:
+`GPUTableComputation` delegates to Kernel and accepts assembled WGSL plus explicit resource bindings. Shader assembly and uniform-buffer ownership belong to the caller. It is the WebGPU compute helper for table vectors exposed as storage bindings. Supply `GPUVector` objects by binding name:
 
 ```
 const computation = new GPUTableComputation(device, {
@@ -263,9 +200,9 @@ The object-model point is that planning is metadata-only. The planner does not c
 * [GPU Table Structure](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-structure.md)
 * [GPUTable](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table.md)
 * [GPURecordBatch](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md)
-* [GPUVector](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector.md)
-* [GPUData](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md)
+* [GPUVector](https://luma.gl/next/docs/api-reference/graph/gpu-vector.md)
+* [GPUData](https://luma.gl/next/docs/api-reference/graph/gpu-data.md)
 * [GPUSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-schema.md)
 * [GPUInputSchema](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-input-schema.md)
-* [GPUVectorFormat](https://luma.gl/next/docs/api-reference/gpgpu/gpu-vector-format.md)
+* [GPUVectorFormat](https://luma.gl/next/docs/api-reference/graph/gpu-vector-format.md)
 * [GPUTableBufferPlanner](https://luma.gl/next/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner.md)

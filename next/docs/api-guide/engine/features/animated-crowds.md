@@ -16,7 +16,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -27,7 +31,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 Enable `lod` to select levels by screen coverage. `autoGenerate` can derive index-only levels when authored levels are absent. Inspect `lodStats` for level occupancy and submitted work.
 
 ```
-import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+import {createGLTFAnimatedCrowd} from '@luma.gl/engine/gltf';
 
 
 

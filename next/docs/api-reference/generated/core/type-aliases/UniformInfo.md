@@ -2,7 +2,7 @@
 
 > **UniformInfo** = `object`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L104)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:76
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:104](https://gi
 
 > **arrayLength**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L108)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:80
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:108](https://gi
 
 > **byteOffset**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L109)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:81
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:109](https://gi
 
 > **byteStride**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L110)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:82
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:110](https://gi
 
 > **format**: [`VariableShaderType`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/VariableShaderType.md)
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L106)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:78
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:106](https://gi
 
 > **name**: `string`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L105)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:77
 
 ***
 
@@ -50,4 +50,4 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:105](https://gi
 
 > `optional` **type?**: `string`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L107)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:79

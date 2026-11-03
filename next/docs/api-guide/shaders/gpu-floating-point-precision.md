@@ -1,8 +1,8 @@
 # GPU Floating-Point Precision Techniques
 
-[Precision guide](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)
+[Precision guide](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/next/docs/api-reference/shaders/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/next/docs/api-reference/shaders/shader-modules/fp64-arithmetic.md)
 
-[Precision Guide](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp32](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp32.md)[fp64](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64arithmetic](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)[Mandelbrot & Benchmarks](https://luma.gl/next/examples/experimental/fp64)
+[Precision Guide](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp32](https://luma.gl/next/docs/api-reference/shaders/shader-modules/fp32.md)[fp64](https://luma.gl/next/docs/api-reference/shaders/shader-modules/fp64.md)[fp64arithmetic](https://luma.gl/next/docs/api-reference/shaders/shader-modules/fp64-arithmetic.md)[Mandelbrot & Benchmarks](https://luma.gl/next/examples/experimental/fp64)
 
 "fp64" is often used to mean "more precision than `f32`," but the available techniques do not all implement the same number system. A pair of `f32` values, raw IEEE 754 binary64 bits, fixed-point integers, and native 64-bit floating point have different precision, range, rounding, and portability guarantees.
 
@@ -201,9 +201,9 @@ Do not choose a representation from the label "fp64." Choose it from the failure
 
 ## luma.gl Precision Paths[​](#lumagl-precision-paths "Direct link to luma.gl Precision Paths")
 
-The [`fp64`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64.md) module exposes the full established `fp64f32` function library in GLSL only. It has no WGSL source, so its exponential, logarithmic, and trigonometric functions are not available to WebGPU shaders.
+The [`fp64`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/fp64.md) module exposes the full established `fp64f32` function library in GLSL only. It has no WGSL source, so its exponential, logarithmic, and trigonometric functions are not available to WebGPU shaders.
 
-Its lower-level [`fp64arithmetic`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md) dependency provides the add, subtract, multiply, divide, and square-root helpers in both GLSL and WGSL. Non-Apple WGSL uses the classic floating-point transforms by default. Apple WebGPU uses the integer-controlled implementation automatically, and callers can use `LUMA_FP64_INTEGER_ARITHMETIC` to test or override that choice.
+Its lower-level [`fp64arithmetic`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/fp64-arithmetic.md) dependency provides the add, subtract, multiply, divide, and square-root helpers in both GLSL and WGSL. Non-Apple WGSL uses the classic floating-point transforms by default. Apple WebGPU uses the integer-controlled implementation automatically, and callers can use `LUMA_FP64_INTEGER_ARITHMETIC` to test or override that choice.
 
 WGSL also provides these targeted helpers for `fp64u32` values:
 

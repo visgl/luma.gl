@@ -2,10 +2,10 @@
 
 [Projection](https://luma.gl/next/docs/api-reference/experimental/gpu-project.md)[Geospatial Kernels](https://luma.gl/next/docs/api-reference/experimental/geospatial.md)[DGGS](https://luma.gl/next/docs/api-reference/experimental/gpu-dggs.md)[H3](https://luma.gl/next/docs/api-reference/experimental/gpu-h3.md)[A5](https://luma.gl/next/docs/api-reference/experimental/gpu-a5.md)
 
-`@luma.gl/gpgpu/gpu-a5` brings the same GPU-resident cell-center workflow to A5 indexes. Its API is intentionally identical to the H3 adapter, allowing graph builders to change the grid family without changing buffer layouts or downstream coordinate consumers.
+`@luma.gl/graph/gpu-a5` brings the same GPU-resident cell-center workflow to A5 indexes. Its API is intentionally identical to the H3 adapter, allowing graph builders to change the grid family without changing buffer layouts or downstream coordinate consumers.
 
 ```
-import {GPUA5CellProjection} from '@luma.gl/gpgpu/gpu-a5';
+import {GPUA5CellProjection} from '@luma.gl/graph/gpu-a5';
 
 
 

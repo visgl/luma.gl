@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/experimental/gpu-trace` keeps trace identity, selection, analysis, and most intermediate results on the GPU. It does not prescribe one renderer or take ownership of command submission. Instead, it contributes trace-aware operations to a caller-owned [`GPUCommandGraph`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md), and exposes ordinary graph views that rendering and additional analysis can consume.
+`@luma.gl/graph/gpu-trace` keeps trace identity, selection, analysis, and most intermediate results on the GPU. It does not prescribe one renderer or take ownership of command submission. Instead, it contributes trace-aware operations to a caller-owned [`GPUCommandGraph`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md), and exposes ordinary graph views that rendering and additional analysis can consume.
 
 This page describes the algorithms implemented today. The advanced GPU trace viewer also contains some application-level policies—adaptive density rendering, label admission, dependency display budgets, and framebuffer picking—which are identified separately below.
 

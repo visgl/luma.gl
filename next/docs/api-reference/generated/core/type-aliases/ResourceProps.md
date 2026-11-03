@@ -36,4 +36,4 @@ User provided data stored on this resource
 
 #### Index Signature[​](#index-signature "Direct link to Index Signature")
 
-\[`key`: `string`]: `any`
+\[`key`: `string`]: `unknown`

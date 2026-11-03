@@ -34,7 +34,7 @@ Masks are the common currency between independent GPU decisions. A renderer can 
 Use a mask when downstream work benefits from source-aligned membership. Add [`GPUCompaction`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-compaction.md) or [`GPUVisibilityWorkflow`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md) when the consumer instead needs a dense list and count. `GPUMask` only combines existing decisions—it does not evaluate geometric, temporal, or application-specific predicates itself.
 
 ```
-import {GPUMask} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMask} from '@luma.gl/graph/gpu-core';
 
 
 

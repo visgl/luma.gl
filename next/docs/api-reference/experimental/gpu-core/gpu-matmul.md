@@ -102,7 +102,7 @@ This is the first major difference between GEMM and simpler elementwise GPU oper
 ## Contract[​](#contract "Direct link to Contract")
 
 ```
-import {GPUMatMul} from '@luma.gl/gpgpu/gpu-core';
+import {GPUMatMul} from '@luma.gl/graph/gpu-core';
 
 
 

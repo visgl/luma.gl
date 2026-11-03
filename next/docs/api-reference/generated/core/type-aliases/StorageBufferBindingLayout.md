@@ -2,7 +2,7 @@
 
 > **StorageBufferBindingLayout** = `object`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L113)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:84
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:113](https://gi
 
 > **group**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L118)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:89
 
 Bind group index. Always 0 in WebGL
 
@@ -20,7 +20,7 @@ Bind group index. Always 0 in WebGL
 
 > `optional` **hasDynamicOffset?**: `boolean`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L123)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:94
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:123](https://gi
 
 > **location**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L120)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:91
 
 Binding index within the bind group
 
@@ -38,7 +38,7 @@ Binding index within the bind group
 
 > `optional` **minBindingSize?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L124)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:95
 
 ***
 
@@ -46,7 +46,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:124](https://gi
 
 > **name**: `string`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:116](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L116)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:87
 
 Name of the binding. Used by luma to map bindings by name
 
@@ -56,7 +56,7 @@ Name of the binding. Used by luma to map bindings by name
 
 > **type**: `"storage"` | `"read-only-storage"`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L114)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:85
 
 ***
 
@@ -64,6 +64,6 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:114](https://gi
 
 > `optional` **visibility?**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L122)
+Defined in: modules/shaders/dist/types/shader-layout.d.ts:93
 
 Which shader stages can access this binding

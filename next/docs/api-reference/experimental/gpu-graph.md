@@ -1,29 +1,29 @@
-# GPU Graph
+# GPU Graph Algorithms
 
 [Overview](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md)[Operations](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-operations.md)[Topology](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-topology.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-traversal.md)[Connectivity](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-connectivity.md)[Metrics](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-metrics.md)[Layouts](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-layouts.md)
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/gpgpu/gpu-graph` provides graph-data structures and algorithms that compose inside a caller-owned `GPUCommandGraph`. It keeps adjacency, traversal frontiers, scores, partitions, and layouts GPU-resident so analysis can feed another analysis or a renderer without downloading the graph through JavaScript.
+`@luma.gl/graph/gpu-graph-algorithms` provides graph-data structures and algorithms that compose inside a caller-owned `GPUCommandGraph`. It keeps adjacency, traversal frontiers, scores, partitions, and layouts GPU-resident so analysis can feed another analysis or a renderer without downloading the graph through JavaScript.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-Use GPU Graph for repeated analytics over a graph already stored on the GPU, especially when results will drive filtering, styling, layout, or later graph operations. For a single small graph or an algorithm whose result is immediately needed on the CPU, a CPU graph library may be simpler.
+Use GPU Graph Algorithms for repeated analytics over a graph already stored on the GPU, especially when results will drive filtering, styling, layout, or later graph operations. For a single small graph or an algorithm whose result is immediately needed on the CPU, a CPU graph library may be simpler.
 
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
-import {GPUGraph, GPUGraphPageRank, GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsData, GPUGraphAlgorithmsPageRank, GPUGraphAlgorithmsTopology} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
 const graph = new GPUCommandGraph({device, id: 'graph-analysis'});
 
-const topology = new GPUGraphTopology({device, graph, edges, vertexCount});
+const topology = new GPUGraphAlgorithmsTopology({device, graph, edges, vertexCount});
 
-const pageRank = new GPUGraphPageRank({device, graph, topology});
+const pageRank = new GPUGraphAlgorithmsPageRank({device, graph, topology});
 
 
 
@@ -36,8 +36,8 @@ The application compiles, encodes, submits, and decides whether a bounded result
 
 ## Core concepts and data model[​](#core-concepts-and-data-model "Direct link to Core concepts and data model")
 
-* `GPUGraph` describes canonical vertex and edge identity.
-* `GPUGraphTopology` builds reusable adjacency views for algorithms that need neighbors.
+* `GPUGraphAlgorithmsData` describes canonical vertex and edge identity.
+* `GPUGraphAlgorithmsTopology` builds reusable adjacency views for algorithms that need neighbors.
 * Algorithms publish ordinary graph buffers and bounded status so their outputs compose.
 * Iterative operations expose capacity, convergence, and incomplete-result behavior explicitly.
 * Weighted, directed, and undirected semantics are operation-specific and documented in the operations reference.
@@ -74,13 +74,13 @@ Loading interactive example…
 
 ## Operations and API index[​](#operations-and-api-index "Direct link to Operations and API index")
 
-| Family                       | Operations                                                                                                        |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Graph and topology           | `GPUGraph`, `GPUGraphTopology`, `GPUGraphDegree`                                                                  |
-| Traversal and paths          | `GPUGraphBreadthFirstSearch`, `GPUGraphSingleSourceShortestPath`                                                  |
-| Connectivity and communities | `GPUGraphConnectedComponents`, `GPUGraphCoreNumber`, `GPUGraphLabelPropagation`, `GPUGraphModularityOptimization` |
-| Metrics and ranking          | `GPUGraphLocalClusteringCoefficient`, `GPUGraphModularity`, `GPUGraphPageRank`                                    |
-| Layout                       | `GPUGraphForceLayout`, `GPUGraphSpatialForceLayout`                                                               |
+| Family                       | Operations                                                                                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Graph and topology           | `GPUGraphAlgorithmsData`, `GPUGraphAlgorithmsTopology`, `GPUGraphAlgorithmsDegree`                                                                        |
+| Traversal and paths          | `GPUGraphAlgorithmsBreadthFirstSearch`, `GPUGraphAlgorithmsSingleSourceShortestPath`                                                                      |
+| Connectivity and communities | `GPUGraphAlgorithmsConnectedComponents`, `GPUGraphAlgorithmsCoreNumber`, `GPUGraphAlgorithmsLabelPropagation`, `GPUGraphAlgorithmsModularityOptimization` |
+| Metrics and ranking          | `GPUGraphAlgorithmsLocalClusteringCoefficient`, `GPUGraphAlgorithmsModularity`, `GPUGraphAlgorithmsPageRank`                                              |
+| Layout                       | `GPUGraphAlgorithmsForceLayout`, `GPUGraphAlgorithmsSpatialForceLayout`                                                                                   |
 
 The [operations reference](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-operations.md) documents usage, buffers, execution, capacity, validation, and performance for each family.
 

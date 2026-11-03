@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/experimental/gpu-dataframe` compiles dataframe-style expressions, filters, aggregations, ordering, and joins into a caller-owned `GPUCommandGraph`. It consumes Arrow-independent `GPUTable` and `GPUVector` storage while preserving source chunks and GPU-resident outputs.
+`@luma.gl/graph/gpu-dataframe` compiles dataframe-style expressions, filters, aggregations, ordering, and joins into a caller-owned `GPUCommandGraph`. It consumes Arrow-independent `GPUTable` and `GPUVector` storage while preserving source chunks and GPU-resident outputs.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
@@ -13,9 +13,9 @@ Use GPU Dataframe when columnar data is already on the GPU or when its results w
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
-import {GPUDataFrame} from '@luma.gl/experimental/gpu-dataframe';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 
 
 
@@ -68,7 +68,11 @@ const compiledGraph = graph.compile();
 
 [Open full page](https://luma.gl/next/examples/experimental/gpu-data-analysis)[View source](https://github.com/visgl/luma.gl/tree/master/examples/experimental/gpu-data-analysis)[Inspect graph](https://luma.gl/next/examples/experimental/gpu-data-analysis?panel=graph)
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -95,4 +99,4 @@ See the [operations reference](https://luma.gl/next/docs/api-reference/experimen
 
 * [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md) supplies scheduling and primitives.
 * [GPU Crossfilter](https://luma.gl/next/docs/api-reference/experimental/gpu-crossfilter.md) composes linked interactive selections.
-* [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/next/docs/api-reference/gpgpu/gpu-data.md) defines primitive GPU storage, while [`@luma.gl/experimental/gpu-tables`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md) defines record batches and tables.
+* [`@luma.gl/graph/gpu-data`](https://luma.gl/next/docs/api-reference/graph/gpu-data.md) defines primitive GPU storage, while [`@luma.gl/graph/gpu-tables`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md) defines record batches and tables.

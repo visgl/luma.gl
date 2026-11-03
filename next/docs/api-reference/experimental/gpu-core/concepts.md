@@ -2,6 +2,8 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)[Tutorial](https://luma.gl/next/docs/api-reference/experimental/gpu-core/tutorial.md)[Cookbook](https://luma.gl/next/docs/api-reference/experimental/gpu-core/recipes.md)[Concepts](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md)
 
+This page covers the lower-level `GPUCommandGraph` lifecycle. For named runtime inputs and operation-defined results, start with [Getting started with graphs](https://luma.gl/next/docs/api-reference/graph/getting-started.md). Reusable `GPUGraph.compile(device)` creates a program whose `prepare()` resolves each invocation; the fixed shapes described below apply to the resulting command graph.
+
 ## Overview[​](#overview "Direct link to Overview")
 
 GPU Core separates reusable GPU operations from application lifecycle. Contributors declare logical resources and nodes. Compilation turns those declarations into a validated schedule and allocation plan. Encoding records the compiled plan into a caller-owned command encoder.

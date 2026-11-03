@@ -6,7 +6,13 @@ Add Phong shading to a textured cube using luma.gl's shader module system.
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
 
@@ -41,7 +47,7 @@ import {
 
 } from '@luma.gl/engine';
 
-import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shadertools';
+import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shaders';
 
 import {Matrix4} from '@math.gl/core';
 

@@ -32,7 +32,7 @@ Use `GPUTranspose` when a row-major GPU field must change axis order and the tra
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUTranspose} from '@luma.gl/experimental';
+import {GPUTranspose} from '@luma.gl/graph/gpu-core';
 
 
 

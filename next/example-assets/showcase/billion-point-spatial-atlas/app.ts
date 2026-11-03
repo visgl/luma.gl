@@ -4,7 +4,7 @@
 
 import type {Panel} from '@deck.gl-community/panels';
 import {Buffer, type Device, type RenderBundle, Texture} from '@luma.gl/core';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, ShaderPassRenderer} from '@luma.gl/engine';
 import {
@@ -19,14 +19,14 @@ import {
   GPUReadbackRing,
   type GPUReadbackTicket,
   INDEX_PICKING_READBACK_BYTE_LENGTH
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUGridIndex,
   type GPUGridIndexBounds,
   type GPUGridIndexSize,
   GPUPointSpatialQuery,
   type GPUPointSpatialQueryKind
-} from '@luma.gl/experimental/geospatial';
+} from '@luma.gl/graph/geospatial';
 import {CompactDropdown} from '../../compact-dropdown';
 import {
   ExamplePanelManager,
@@ -2409,6 +2409,7 @@ export default class BillionPointSpatialAtlasAnimationLoopTemplate extends Anima
         this.graphInspectorElement = graphInspectorElement;
         this.graphInspectorPanel = graphInspectorElement
           ? new GPUCommandGraphInspectorPanel(graphInspectorElement, {
+              inspector: this.graphInspector,
               graphLabels: ATLAS_GRAPH_LABELS,
               counterLabels: ATLAS_COUNTER_LABELS
             })

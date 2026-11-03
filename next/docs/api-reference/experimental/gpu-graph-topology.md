@@ -2,18 +2,18 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md)[Operations](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-operations.md)[Topology](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-topology.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-traversal.md)[Connectivity](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-connectivity.md)[Metrics](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-metrics.md)[Layouts](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-layouts.md)
 
-## Describe existing relationships with GPUGraph[​](#describe-existing-relationships-with-gpugraph "Direct link to Describe existing relationships with GPUGraph")
+## Describe existing relationships with GPUGraphAlgorithmsData[​](#describe-existing-relationships-with-gpugraphalgorithmsdata "Direct link to Describe existing relationships with GPUGraphAlgorithmsData")
 
 **Question: Which existing GPU columns describe the people, accounts, services, or documents in this network?**
 
-`GPUGraph` is the ownership-preserving entry point. Construct it when an application already has aligned `GPUVector<'uint32'>` source and target identifiers and knows how many vertices exist, including isolated vertices that never appear in an edge.
+`GPUGraphAlgorithmsData` is the ownership-preserving entry point. Construct it when an application already has aligned `GPUVector<'uint32'>` source and target identifiers and knows how many vertices exist, including isolated vertices that never appear in an edge.
 
 ```
-import {GPUGraph} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsData} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const graph = new GPUGraph({
+const graph = new GPUGraphAlgorithmsData({
 
   vertexCount,
 
@@ -36,20 +36,20 @@ The graph borrows its vectors; it does not allocate a graph buffer, copy or conc
 
 Use this lightweight representation when existing GPU tables or render inputs already describe a network. It is a description, not an upload helper: first create or adapt your GPU vectors through the application or the appropriate data adapter.
 
-## Build reusable adjacency with GPUGraphTopology[​](#build-reusable-adjacency-with-gpugraphtopology "Direct link to Build reusable adjacency with GPUGraphTopology")
+## Build reusable adjacency with GPUGraphAlgorithmsTopology[​](#build-reusable-adjacency-with-gpugraphalgorithmstopology "Direct link to Build reusable adjacency with GPUGraphAlgorithmsTopology")
 
 **Question: Given a particular vertex, which other vertices does it connect to?**
 
-An edge list answers “what are all relationships?” but repeatedly scanning every edge to discover one vertex's neighbors is expensive. `GPUGraphTopology` builds compressed sparse row (CSR) adjacency once so later operations can find each vertex's neighbor interval from adjacent offsets.
+An edge list answers “what are all relationships?” but repeatedly scanning every edge to discover one vertex's neighbors is expensive. `GPUGraphAlgorithmsTopology` builds compressed sparse row (CSR) adjacency once so later operations can find each vertex's neighbor interval from adjacent offsets.
 
 For example, a transaction list might contain millions of transfers while an investigator wants only the accounts directly connected to account 42. Its CSR offset interval identifies that account's neighbors without asking each later analysis to rescan the entire edge list.
 
 ```
-import {GPUGraphTopology} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsTopology} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const topology = new GPUGraphTopology({
+const topology = new GPUGraphAlgorithmsTopology({
 
   graph,
 
@@ -96,18 +96,18 @@ Build reverse adjacency when a directed graph needs incoming-degree queries, inc
 
 Invalid endpoints are excluded and counted. `count` reports the complete number of accepted adjacency entries even if neighbor capacity is insufficient; `overflow` makes truncation explicit. Neighbor order within each vertex is intentionally unspecified.
 
-## Count relationships with GPUGraphDegree[​](#count-relationships-with-gpugraphdegree "Direct link to Count relationships with GPUGraphDegree")
+## Count relationships with GPUGraphAlgorithmsDegree[​](#count-relationships-with-gpugraphalgorithmsdegree "Direct link to Count relationships with GPUGraphAlgorithmsDegree")
 
 **Question: How many direct relationships does each vertex have?**
 
-`GPUGraphDegree` answers the simplest structural question: how many outgoing or incoming relationships does each vertex have? Use it to identify network hubs, size junction markers, detect isolated accounts, or find unusually connected infrastructure and dependency nodes.
+`GPUGraphAlgorithmsDegree` answers the simplest structural question: how many outgoing or incoming relationships does each vertex have? Use it to identify network hubs, size junction markers, detect isolated accounts, or find unusually connected infrastructure and dependency nodes.
 
 ```
-import {GPUGraphDegree} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsDegree} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const degree = new GPUGraphDegree({
+const degree = new GPUGraphAlgorithmsDegree({
 
   topology,
 

@@ -47,7 +47,7 @@ Higher-priority chunks displace lower-priority chunks; equally prioritized chunk
 `SplatHierarchyManager` selects an active frontier from source-owned page metadata. Nodes carry world-space bounds, geometric approximation error, independent source identities, optional content URIs, and caller-supplied asynchronous page decoders:
 
 ```
-import {SplatHierarchyManager} from '@luma.gl/splats';
+import {SplatHierarchyManager} from '@luma.gl/engine/splats';
 
 
 
@@ -103,7 +103,7 @@ Traversal conservatively culls bounding spheres, computes projected screen-space
 Spark RAD hierarchy links belong to individual source rows, not whole source pages. `SplatRADHierarchyManager` preserves this distinction using the original page-local `childCounts` and source-global `childStarts` arrays:
 
 ```
-import {GPUPagedSplatRenderer, SplatRADHierarchyManager} from '@luma.gl/splats';
+import {GPUPagedSplatRenderer, SplatRADHierarchyManager} from '@luma.gl/engine/splats';
 
 
 

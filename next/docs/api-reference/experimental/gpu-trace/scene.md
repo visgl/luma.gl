@@ -6,7 +6,7 @@
 
 `GPUTraceScene` uploads a canonical execution trace once and projects its spans into the existing generic [`GPUScene`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-scene.md) draw database. Timing, lanes, processes, threads, parent relationships, dependency links, and bidirectional adjacency remain GPU-resident beside the scene rather than becoming trace-specific fields inside the shared scene abstraction.
 
-This domain-specific model is exported from [`@luma.gl/experimental/gpu-trace`](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md), not from the generic `@luma.gl/experimental` root. Command scheduling and flat scene storage remain reusable without importing trace schemas.
+This domain-specific model is exported from [`@luma.gl/graph/gpu-trace`](https://luma.gl/next/docs/api-reference/experimental/gpu-trace.md), not from the generic `@luma.gl/graph` root. Command scheduling and flat scene storage remain reusable without importing trace schemas.
 
 The motivation is interactive trace exploration at a scale where rebuilding JavaScript span lists for every pan, filter, expansion, or dependency selection becomes the bottleneck. One stable source-row identity can feed time-range filtering, process/thread layout, ancestor projection, graph traversal, picking, visibility compaction, indirect draw generation, and renderer-owned resource groups without translating identities between those stages.
 
@@ -24,7 +24,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -102,9 +106,9 @@ The trace model owns its canonical source buffers, CSR buffers, scene record buf
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUSceneDrawGeneration} from '@luma.gl/graph/gpu-core';
 
-import {GPUTraceScene} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceScene} from '@luma.gl/graph/gpu-trace';
 
 
 

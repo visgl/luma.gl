@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkwebsite_docusaurus=self.webpackChunkwebsite_docusaurus||[]).push([["19792"],{31987(e,u,s){s.r(u),s.d(u,{default:()=>r,title:()=>a});var t=s(35873);let a="GPU Geometry Surface Lab",r=(0,t.YJ)("geometry")}}]);

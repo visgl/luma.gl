@@ -3,13 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AudioController} from '@luma.gl/engine';
-import {parseGLTFAudio} from '@luma.gl/gltf';
+import {parseGLTFAudio} from '@luma.gl/engine/gltf';
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
-import {Light, LightingProps} from '@luma.gl/shadertools';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+import {Light, LightingProps} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core';
 import {INFO_HTML, GRAPH_INFO_HTML, ENVIRONMENT_INFO_HTML} from './app-ui';
 import {BoxPanelContainer, PanelManager} from '@deck.gl-community/panels';
@@ -315,7 +316,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })();
       canvas.style.opacity = '0.2';
 
-      const gltf = await load(GLTF_AUDIO_PRESETS[this.feature].modelUrl, GLTFLoader);
+      const gltf = await load(GLTF_AUDIO_PRESETS[this.feature].modelUrl, GLTFLoader, {
+        gltf: {excludeExtensions: ['KHR_audio_emitter']}
+      });
       if (this.isFinalized) return;
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {

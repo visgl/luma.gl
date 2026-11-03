@@ -42,7 +42,7 @@ Use `GPUScan` directly if no total count is needed. Use `GPUCompaction` if the o
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUCommandGraph, GPUFlagOffsets} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUFlagOffsets} from '@luma.gl/graph/gpu-core';
 
 
 

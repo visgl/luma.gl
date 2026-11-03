@@ -1,0 +1,358 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-api-reference/generated/engine/classes/DynamicTexture" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Class: DynamicTexture | luma.gl</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicTexture /><meta data-rh=true property=og:locale content=en /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Class: DynamicTexture | luma.gl"/><meta data-rh=true name=description content="Defined in37"/><meta data-rh=true property=og:description content="Defined in37"/><link data-rh=true rel=icon href=/next/favicon.png /><link data-rh=true rel=canonical href=https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicTexture /><link data-rh=true rel=alternate href=https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicTexture hreflang=en /><link data-rh=true rel=alternate href=https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicTexture hreflang=x-default /><link rel=stylesheet href=/next/assets/css/styles.0f47d4c1.css /><script src=/next/assets/js/runtime~main.68de6f2e.js defer></script><script src=/next/assets/js/main.32e77bbe.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-c8a")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"dark"),document.documentElement.setAttribute("data-theme-choice",t||"dark")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><div role=region aria-label="Skip to main content"><a class=skipToContent_oPtH href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/next/><div class=navbar__logo><img src=/next/visgl-logo-dark.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--light_hHel"/><img src=/next/visgl-logo-light.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--dark_yETr"/></div><b class="navbar__title text--truncate">luma.gl</b></a><a class="navbar__item navbar__link" href=/next/examples>Examples</a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/next/docs>Docs</a><a class="navbar__item navbar__link" href=/next/showcase>Showcase</a><a class="navbar__item navbar__link" href=/next/docs/tutorials>Tutorials</a><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item navbar-badge"><a class=navbar-project-badge href=https://www.npmjs.com/package/@luma.gl/core target=_blank rel="noopener noreferrer" aria-label="@luma.gl/core on npm"><img src="https://img.shields.io/npm/dm/@luma.gl/core?label=downloads" alt="Monthly npm downloads for @luma.gl/core" height=20 /><svg class=navbar-project-icon viewBox="0 0 18 7" width=24 height=20 aria-hidden=true focusable=false><path fill=currentColor d="M0 0v6h5v1h4V6h9V0H0zm5 5H4V1h1v4zm4 0H7V1h3v4H9zm8 0h-1V1h1v4zM8 2v2h1V2H8z"/></svg><span>npm</span></a></div><div class="navbar__item navbar-badge"><a class=navbar-project-badge href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" aria-label="luma.gl on GitHub"><img src="https://img.shields.io/github/stars/visgl/luma.gl?style=social" alt="GitHub stars" height=20 /><svg class=navbar-project-icon viewBox="0 0 24 24" width=20 height=20 aria-hidden=true focusable=false><path fill=currentColor d="M12 .297C5.37.297 0 5.67 0 12.297c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.237 1.838 1.237 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.3-5.467-1.334-5.467-5.931 0-1.31.467-2.381 1.236-3.221-.124-.303-.536-1.524.118-3.176 0 0 1.008-.322 3.301 1.23a11.52 11.52 0 0 1 3.003-.404c1.018.005 2.042.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.656 1.652.244 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.628-5.479 5.925.43.372.823 1.102.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><span>GitHub</span></a></div><div class=navbar__item><a href=https://openvisualization.com target=_blank style="content: ''; height: 24px; width: 80px; background-image: url('/openjs-foundation.svg'); background-repeat: no-repeat;  background-size: 80px 24px; display: flex"></a></div><div class="toggle_ki11 colorModeToggle_Hewu"><button class="clean-btn toggleButton_MMFG toggleButtonDisabled_Uw7m" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ lightToggleIcon_lgto"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ darkToggleIcon_U96C"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ systemToggleIcon_E5c0"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_bzqh><div class=dsla-search-wrapper><div class=dsla-search-field data-tags=default,docs-default-current,docs-examples-current></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_MB5r"><div class=docsWrapper__sE8><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_iEvu" type=button></button><div class=docRoot_DfVB><main class="docMainContainer_a9sJ docMainContainerEnhanced_grEJ"><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_Qr34"><div class=docItemContainer_tjFy><article><div class="tocCollapsible_wXna theme-doc-toc-mobile tocMobile_Ojys"><button type=button class="clean-btn tocCollapsibleButton_iI2p">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Class: DynamicTexture</h1></header>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:37</p>
+<p>Dynamic Textures</p>
+<ul>
+<li class="">
+<p>Mipmaps - DynamicTexture can generate mipmaps for textures (WebGPU does not provide built-in mipmap generation).</p>
+</li>
+<li class="">
+<p>Texture initialization and updates - complex textures (2d array textures, cube textures, 3d textures) need multiple images
+<code>DynamicTexture</code> provides an API that makes it easy to provide the required data.</p>
+</li>
+<li class="">
+<p>Texture resizing - Textures are immutable in WebGPU, meaning that they cannot be resized after creation.
+DynamicTexture provides a <code>resize()</code> method that internally creates a new texture with the same parameters
+but a different size.</p>
+</li>
+<li class="">
+<p>Async image data initialization - It is often very convenient to be able to initialize textures with promises
+returned by image or data loading functions, as it allows a callback-free linear style of programming.</p>
+</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=note>Note<a href=#note class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h2>
+<p>GPU Textures are quite complex objects, with many subresources and modes of usage.
+The <code>DynamicTexture</code> class allows luma.gl to provide some support for working with textures
+without accumulating excessive complexity in the core Texture class which is designed as an immutable nature of GPU resource.</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=implements>Implements<a href=#implements class=hash-link aria-label="Direct link to Implements" title="Direct link to Implements" translate=no>​</a></h2>
+<ul>
+<li class=""><a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource><code>TextureBindingSource</code></a></li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=constructors>Constructors<a href=#constructors class=hash-link aria-label="Direct link to Constructors" title="Direct link to Constructors" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=constructor>Constructor<a href=#constructor class=hash-link aria-label="Direct link to Constructor" title="Direct link to Constructor" translate=no>​</a></h3>
+<blockquote>
+<p><strong>new DynamicTexture</strong>(<code>device</code>, <code>props</code>): <code>DynamicTexture</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:67</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters>Parameters<a href=#parameters class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=device>device<a href=#device class=hash-link aria-label="Direct link to device" title="Direct link to device" translate=no>​</a></h5>
+<p><code>Device</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=props>props<a href=#props class=hash-link aria-label="Direct link to props" title="Direct link to props" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/DynamicTextureProps><code>DynamicTextureProps</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns>Returns<a href=#returns class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>DynamicTexture</code></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=properties>Properties<a href=#properties class=hash-link aria-label="Direct link to Properties" title="Direct link to Properties" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=destroyed>destroyed<a href=#destroyed class=hash-link aria-label="Direct link to destroyed" title="Direct link to destroyed" translate=no>​</a></h3>
+<blockquote>
+<p><strong>destroyed</strong>: <code>boolean</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:49</p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=device-1>device<a href=#device-1 class=hash-link aria-label="Direct link to device" title="Direct link to device" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>device</strong>: <code>Device</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:38</p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=generation>generation<a href=#generation class=hash-link aria-label="Direct link to generation" title="Direct link to generation" translate=no>​</a></h3>
+<blockquote>
+<p><strong>generation</strong>: <code>number</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:51</p>
+<p>Monotonic version that increments whenever texture, view, or sampler identity changes.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=implementation-of>Implementation of<a href=#implementation-of class=hash-link aria-label="Direct link to Implementation of" title="Direct link to Implementation of" translate=no>​</a></h4>
+<p><a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource><code>TextureBindingSource</code></a>.<a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource#generation><code>generation</code></a></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=id>id<a href=#id class=hash-link aria-label="Direct link to id" title="Direct link to id" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>id</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:39</p>
+<p>Stable resource identifier used in loading and debug messages.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=implementation-of-1>Implementation of<a href=#implementation-of-1 class=hash-link aria-label="Direct link to Implementation of" title="Direct link to Implementation of" translate=no>​</a></h4>
+<p><a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource><code>TextureBindingSource</code></a>.<a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource#id><code>id</code></a></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=isready>isReady<a href=#isready class=hash-link aria-label="Direct link to isReady" title="Direct link to isReady" translate=no>​</a></h3>
+<blockquote>
+<p><strong>isReady</strong>: <code>boolean</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:48</p>
+<p>Whether the source can resolve a concrete binding for the current draw.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=implementation-of-2>Implementation of<a href=#implementation-of-2 class=hash-link aria-label="Direct link to Implementation of" title="Direct link to Implementation of" translate=no>​</a></h4>
+<p><a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource><code>TextureBindingSource</code></a>.<a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource#isready><code>isReady</code></a></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=props-1>props<a href=#props-1 class=hash-link aria-label="Direct link to props" title="Direct link to props" translate=no>​</a></h3>
+<blockquote>
+<p><strong>props</strong>: <code>Readonly</code>&lt;<code>Required</code>&lt;<a class="" href=/next/docs/api-reference/generated/engine/type-aliases/DynamicTextureProps><code>DynamicTextureProps</code></a>>></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:41</p>
+<p>Props with defaults resolved (except <code>data</code> which is processed separately)</p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=ready>ready<a href=#ready class=hash-link aria-label="Direct link to ready" title="Direct link to ready" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>ready</strong>: <code>Promise</code>&lt;<code>Texture</code>></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:47</p>
+<p>Ready when GPU texture has been created and data (if any) uploaded</p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=updatetimestamp>updateTimestamp<a href=#updatetimestamp class=hash-link aria-label="Direct link to updateTimestamp" title="Direct link to updateTimestamp" translate=no>​</a></h3>
+<blockquote>
+<p><strong>updateTimestamp</strong>: <code>number</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:53</p>
+<p>Last update timestamp for texture content, readiness, or identity changes.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=implementation-of-3>Implementation of<a href=#implementation-of-3 class=hash-link aria-label="Direct link to Implementation of" title="Direct link to Implementation of" translate=no>​</a></h4>
+<p><a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource><code>TextureBindingSource</code></a>.<a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource#updatetimestamp><code>updateTimestamp</code></a></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=defaultprops>defaultProps<a href=#defaultprops class=hash-link aria-label="Direct link to defaultProps" title="Direct link to defaultProps" translate=no>​</a></h3>
+<blockquote>
+<p><code>static</code> <strong>defaultProps</strong>: <code>Required</code>&lt;<a class="" href=/next/docs/api-reference/generated/engine/type-aliases/DynamicTextureProps><code>DynamicTextureProps</code></a>></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:113</p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=accessors>Accessors<a href=#accessors class=hash-link aria-label="Direct link to Accessors" title="Direct link to Accessors" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=tostringtag>[toStringTag]<a href=#tostringtag class=hash-link aria-label="Direct link to [toStringTag]" title="Direct link to [toStringTag]" translate=no>​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=get-signature>Get Signature<a href=#get-signature class=hash-link aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate=no>​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>[toStringTag]</strong>(): <code>string</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:59</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=returns-1>Returns<a href=#returns-1 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h5>
+<p><code>string</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=sampler>sampler<a href=#sampler class=hash-link aria-label="Direct link to sampler" title="Direct link to sampler" translate=no>​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=get-signature-1>Get Signature<a href=#get-signature-1 class=hash-link aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate=no>​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>sampler</strong>(): <code>Sampler</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:57</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=returns-2>Returns<a href=#returns-2 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h5>
+<p><code>Sampler</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=texture>texture<a href=#texture class=hash-link aria-label="Direct link to texture" title="Direct link to texture" translate=no>​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=get-signature-2>Get Signature<a href=#get-signature-2 class=hash-link aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate=no>​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>texture</strong>(): <code>Texture</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:56</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=returns-3>Returns<a href=#returns-3 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h5>
+<p><code>Texture</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=view>view<a href=#view class=hash-link aria-label="Direct link to view" title="Direct link to view" translate=no>​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=get-signature-3>Get Signature<a href=#get-signature-3 class=hash-link aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate=no>​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>view</strong>(): <code>TextureView</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:58</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=returns-4>Returns<a href=#returns-4 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h5>
+<p><code>TextureView</code></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=methods>Methods<a href=#methods class=hash-link aria-label="Direct link to Methods" title="Direct link to Methods" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=destroy>destroy()<a href=#destroy class=hash-link aria-label="Direct link to destroy()" title="Direct link to destroy()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>destroy</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:70</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-5>Returns<a href=#returns-5 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=generatemipmaps>generateMipmaps()<a href=#generatemipmaps class=hash-link aria-label="Direct link to generateMipmaps()" title="Direct link to generateMipmaps()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>generateMipmaps</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:71</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-6>Returns<a href=#returns-6 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=getcubearrayfaceindex>getCubeArrayFaceIndex()<a href=#getcubearrayfaceindex class=hash-link aria-label="Direct link to getCubeArrayFaceIndex()" title="Direct link to getCubeArrayFaceIndex()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>getCubeArrayFaceIndex</strong>(<code>cubeIndex</code>, <code>face</code>): <code>number</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:92</p>
+<p>Convert cube face label to texture slice index. Index can be used with <code>setTexture2DData()</code>.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-1>Parameters<a href=#parameters-1 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=cubeindex>cubeIndex<a href=#cubeindex class=hash-link aria-label="Direct link to cubeIndex" title="Direct link to cubeIndex" translate=no>​</a></h5>
+<p><code>number</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=face>face<a href=#face class=hash-link aria-label="Direct link to face" title="Direct link to face" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/TextureCubeFace><code>TextureCubeFace</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-7>Returns<a href=#returns-7 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>number</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=getcubefaceindex>getCubeFaceIndex()<a href=#getcubefaceindex class=hash-link aria-label="Direct link to getCubeFaceIndex()" title="Direct link to getCubeFaceIndex()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>getCubeFaceIndex</strong>(<code>face</code>): <code>number</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:90</p>
+<p>Convert cube face label to texture slice index. Index can be used with <code>setTexture2DData()</code>.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-2>Parameters<a href=#parameters-2 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=face-1>face<a href=#face-1 class=hash-link aria-label="Direct link to face" title="Direct link to face" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/TextureCubeFace><code>TextureCubeFace</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-8>Returns<a href=#returns-8 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>number</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=initasync>initAsync()<a href=#initasync class=hash-link aria-label="Direct link to initAsync()" title="Direct link to initAsync()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>initAsync</strong>(<code>originalPropsWithAsyncData</code>): <code>Promise</code>&lt;<code>void</code>></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:69</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-3>Parameters<a href=#parameters-3 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=originalpropswithasyncdata>originalPropsWithAsyncData<a href=#originalpropswithasyncdata class=hash-link aria-label="Direct link to originalPropsWithAsyncData" title="Direct link to originalPropsWithAsyncData" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/DynamicTextureProps><code>DynamicTextureProps</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-9>Returns<a href=#returns-9 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Promise</code>&lt;<code>void</code>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-1>Note<a href=#note-1 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Fire and forget; caller can await <code>ready</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=readasync>readAsync()<a href=#readasync class=hash-link aria-label="Direct link to readAsync()" title="Direct link to readAsync()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>readAsync</strong>(<code>options?</code>): <code>Promise</code>&lt;<code>ArrayBuffer</code>></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:80</p>
+<p>Reads texture contents back to CPU memory.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-4>Parameters<a href=#parameters-4 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=options>options?<a href=#options class=hash-link aria-label="Direct link to options?" title="Direct link to options?" translate=no>​</a></h5>
+<p><code>TextureReadOptions</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-10>Returns<a href=#returns-10 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Promise</code>&lt;<code>ArrayBuffer</code>></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=readbuffer>readBuffer()<a href=#readbuffer class=hash-link aria-label="Direct link to readBuffer()" title="Direct link to readBuffer()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>readBuffer</strong>(<code>options?</code>): <code>Promise</code>&lt;<code>Buffer</code>></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:78</p>
+<p>Copies texture contents into a GPU buffer and waits until the copy is complete.
+The caller owns the returned buffer and must destroy it when finished.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-5>Parameters<a href=#parameters-5 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=options-1>options?<a href=#options-1 class=hash-link aria-label="Direct link to options?" title="Direct link to options?" translate=no>​</a></h5>
+<p><code>TextureReadOptions</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-11>Returns<a href=#returns-11 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Promise</code>&lt;<code>Buffer</code>></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=resize>resize()<a href=#resize class=hash-link aria-label="Direct link to resize()" title="Direct link to resize()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>resize</strong>(<code>size</code>): <code>boolean</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:85</p>
+<p>Resize by cloning the underlying immutable texture.
+Does not copy contents; caller may need to re-upload and/or regenerate mips.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-6>Parameters<a href=#parameters-6 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=size>size<a href=#size class=hash-link aria-label="Direct link to size" title="Direct link to size" translate=no>​</a></h5>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=height>height<a href=#height class=hash-link aria-label="Direct link to height" title="Direct link to height" translate=no>​</a></h6>
+<p><code>number</code></p>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=width>width<a href=#width class=hash-link aria-label="Direct link to width" title="Direct link to width" translate=no>​</a></h6>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-12>Returns<a href=#returns-12 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>boolean</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=resolvetexturebinding>resolveTextureBinding()<a href=#resolvetexturebinding class=hash-link aria-label="Direct link to resolveTextureBinding()" title="Direct link to resolveTextureBinding()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>resolveTextureBinding</strong>(<code>_bindingLayout</code>): <code>Texture</code> | <code>null</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:66</p>
+<p>Resolves this ready dynamic texture as an ordinary copied texture binding.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-7>Parameters<a href=#parameters-7 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=_bindinglayout>_bindingLayout<a href=#_bindinglayout class=hash-link aria-label="Direct link to _bindingLayout" title="Direct link to _bindingLayout" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/TextureBindingLayout><code>TextureBindingLayout</code></a></p>
+<p>Reflected texture-like shader slot; DynamicTexture always resolves a copied texture.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-13>Returns<a href=#returns-13 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Texture</code> | <code>null</code></p>
+<p>The copied texture, or <code>null</code> while the source is not ready.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=implementation-of-4>Implementation of<a href=#implementation-of-4 class=hash-link aria-label="Direct link to Implementation of" title="Direct link to Implementation of" translate=no>​</a></h4>
+<p><a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource><code>TextureBindingSource</code></a>.<a class="" href=/next/docs/api-reference/generated/engine/interfaces/TextureBindingSource#resolvetexturebinding><code>resolveTextureBinding</code></a></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setsampler>setSampler()<a href=#setsampler class=hash-link aria-label="Direct link to setSampler()" title="Direct link to setSampler()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setSampler</strong>(<code>sampler?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:73</p>
+<p>Set sampler or create one from props</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-8>Parameters<a href=#parameters-8 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=sampler-1>sampler?<a href=#sampler-1 class=hash-link aria-label="Direct link to sampler?" title="Direct link to sampler?" translate=no>​</a></h5>
+<p><code>Sampler</code> | <code>SamplerProps</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-14>Returns<a href=#returns-14 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settexture1ddata>setTexture1DData()<a href=#settexture1ddata class=hash-link aria-label="Direct link to setTexture1DData()" title="Direct link to setTexture1DData()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTexture1DData</strong>(<code>data</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:94</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-9>Parameters<a href=#parameters-9 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=data>data<a href=#data class=hash-link aria-label="Direct link to data" title="Direct link to data" translate=no>​</a></h5>
+<p><code>TextureSliceData</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-15>Returns<a href=#returns-15 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-2>Note<a href=#note-2 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>experimental: Set multiple mip levels (1D)</p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settexture2ddata>setTexture2DData()<a href=#settexture2ddata class=hash-link aria-label="Direct link to setTexture2DData()" title="Direct link to setTexture2DData()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTexture2DData</strong>(<code>lodData</code>, <code>z?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:96</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-10>Parameters<a href=#parameters-10 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=loddata>lodData<a href=#loddata class=hash-link aria-label="Direct link to lodData" title="Direct link to lodData" translate=no>​</a></h5>
+<p><code>TextureSliceData</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=z>z?<a href=#z class=hash-link aria-label="Direct link to z?" title="Direct link to z?" translate=no>​</a></h5>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-16>Returns<a href=#returns-16 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-3>Note<a href=#note-3 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>experimental: Set multiple mip levels (2D), optionally at <code>z</code>, slice (depth/array level) index</p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settexture3ddata>setTexture3DData()<a href=#settexture3ddata class=hash-link aria-label="Direct link to setTexture3DData()" title="Direct link to setTexture3DData()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTexture3DData</strong>(<code>data</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:98</p>
+<p>3D: multiple depth slices, each may carry multiple mip levels</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-11>Parameters<a href=#parameters-11 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=data-1>data<a href=#data-1 class=hash-link aria-label="Direct link to data" title="Direct link to data" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/Texture3DData><code>Texture3DData</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-17>Returns<a href=#returns-17 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settexturearraydata>setTextureArrayData()<a href=#settexturearraydata class=hash-link aria-label="Direct link to setTextureArrayData()" title="Direct link to setTextureArrayData()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTextureArrayData</strong>(<code>data</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:100</p>
+<p>2D array: multiple layers, each may carry multiple mip levels</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-12>Parameters<a href=#parameters-12 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=data-2>data<a href=#data-2 class=hash-link aria-label="Direct link to data" title="Direct link to data" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/TextureArrayData><code>TextureArrayData</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-18>Returns<a href=#returns-18 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settexturecubearraydata>setTextureCubeArrayData()<a href=#settexturecubearraydata class=hash-link aria-label="Direct link to setTextureCubeArrayData()" title="Direct link to setTextureCubeArrayData()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTextureCubeArrayData</strong>(<code>data</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:104</p>
+<p>Cube array: multiple cubes (faces×layers), each face may carry multiple mips</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-13>Parameters<a href=#parameters-13 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=data-3>data<a href=#data-3 class=hash-link aria-label="Direct link to data" title="Direct link to data" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/TextureCubeArrayData><code>TextureCubeArrayData</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-19>Returns<a href=#returns-19 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settexturecubedata>setTextureCubeData()<a href=#settexturecubedata class=hash-link aria-label="Direct link to setTextureCubeData()" title="Direct link to setTextureCubeData()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTextureCubeData</strong>(<code>data</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:102</p>
+<p>Cube: 6 faces, each may carry multiple mip levels</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-14>Parameters<a href=#parameters-14 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=data-4>data<a href=#data-4 class=hash-link aria-label="Direct link to data" title="Direct link to data" translate=no>​</a></h5>
+<p><a class="" href=/next/docs/api-reference/generated/engine/type-aliases/TextureCubeData><code>TextureCubeData</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-20>Returns<a href=#returns-20 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=tostring>toString()<a href=#tostring class=hash-link aria-label="Direct link to toString()" title="Direct link to toString()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>toString</strong>(): <code>string</code></p>
+</blockquote>
+<p>Defined in: modules/core/dist/dynamic/dynamic-texture/dynamic-texture.d.ts:60</p>
+<p>Returns a string representation of an object.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-21>Returns<a href=#returns-21 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>string</code></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_QeZL"><a href=https://github.com/visgl/luma.gl/tree/master/docs/../docs/api-reference/generated/engine/classes/DynamicTexture.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_bHB7 aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_ydrU"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"></nav></div></div><div class="col col--3"><div class="tableOfContents_XG6w thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#note class="table-of-contents__link toc-highlight">Note</a><li><a href=#implements class="table-of-contents__link toc-highlight">Implements</a><li><a href=#constructors class="table-of-contents__link toc-highlight">Constructors</a><ul><li><a href=#constructor class="table-of-contents__link toc-highlight">Constructor</a></ul><li><a href=#properties class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href=#destroyed class="table-of-contents__link toc-highlight">destroyed</a><li><a href=#device-1 class="table-of-contents__link toc-highlight">device</a><li><a href=#generation class="table-of-contents__link toc-highlight">generation</a><li><a href=#id class="table-of-contents__link toc-highlight">id</a><li><a href=#isready class="table-of-contents__link toc-highlight">isReady</a><li><a href=#props-1 class="table-of-contents__link toc-highlight">props</a><li><a href=#ready class="table-of-contents__link toc-highlight">ready</a><li><a href=#updatetimestamp class="table-of-contents__link toc-highlight">updateTimestamp</a><li><a href=#defaultprops class="table-of-contents__link toc-highlight">defaultProps</a></ul><li><a href=#accessors class="table-of-contents__link toc-highlight">Accessors</a><ul><li><a href=#tostringtag class="table-of-contents__link toc-highlight">[toStringTag]</a><li><a href=#sampler class="table-of-contents__link toc-highlight">sampler</a><li><a href=#texture class="table-of-contents__link toc-highlight">texture</a><li><a href=#view class="table-of-contents__link toc-highlight">view</a></ul><li><a href=#methods class="table-of-contents__link toc-highlight">Methods</a><ul><li><a href=#destroy class="table-of-contents__link toc-highlight">destroy()</a><li><a href=#generatemipmaps class="table-of-contents__link toc-highlight">generateMipmaps()</a><li><a href=#getcubearrayfaceindex class="table-of-contents__link toc-highlight">getCubeArrayFaceIndex()</a><li><a href=#getcubefaceindex class="table-of-contents__link toc-highlight">getCubeFaceIndex()</a><li><a href=#initasync class="table-of-contents__link toc-highlight">initAsync()</a><li><a href=#readasync class="table-of-contents__link toc-highlight">readAsync()</a><li><a href=#readbuffer class="table-of-contents__link toc-highlight">readBuffer()</a><li><a href=#resize class="table-of-contents__link toc-highlight">resize()</a><li><a href=#resolvetexturebinding class="table-of-contents__link toc-highlight">resolveTextureBinding()</a><li><a href=#setsampler class="table-of-contents__link toc-highlight">setSampler()</a><li><a href=#settexture1ddata class="table-of-contents__link toc-highlight">setTexture1DData()</a><li><a href=#settexture2ddata class="table-of-contents__link toc-highlight">setTexture2DData()</a><li><a href=#settexture3ddata class="table-of-contents__link toc-highlight">setTexture3DData()</a><li><a href=#settexturearraydata class="table-of-contents__link toc-highlight">setTextureArrayData()</a><li><a href=#settexturecubearraydata class="table-of-contents__link toc-highlight">setTextureCubeArrayData()</a><li><a href=#settexturecubedata class="table-of-contents__link toc-highlight">setTextureCubeData()</a><li><a href=#tostring class="table-of-contents__link toc-highlight">toString()</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Other vis.gl Libraries</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://deck.gl target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://loaders.gl target=_blank rel="noopener noreferrer" class=footer__link-item>loaders.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/react-map-gl target=_blank rel="noopener noreferrer" class=footer__link-item>react-map-gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/deck.gl-community/ target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl-community<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>More</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://slack-invite.openjsf.org target=_blank rel="noopener noreferrer" class=footer__link-item>Slack workspace<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class=footer__link-item>vis.gl blog on Medium<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright><div class=footer__legal-notice>Copyright <a href=https://openjsf.org>OpenJS Foundation</a> and luma.gl contributors. All rights reserved. The <a href=https://openjsf.org>OpenJS Foundation</a> has registered trademarks and uses trademarks. For a list of trademarks of the <a href=https://openjsf.org>OpenJS Foundation</a>, please see our <a href=https://trademark-policy.openjsf.org/>Trademark Policy</a> and <a href=https://trademark-list.openjsf.org/>Trademark List</a>. Trademarks and logos not indicated on the <a href=https://trademark-list.openjsf.org>list of OpenJS Foundation trademarks</a> are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them.</div><div class=footer__legal-links><a href=https://openjsf.org/>The OpenJS Foundation</a> | <a href=https://ai-coding-assistants-policy.openjsf.org/>AI Coding Assistants Policy</a> | <a href=https://bylaws.openjsf.org/>Bylaws</a> | <a href=https://code-of-conduct.openjsf.org>Code of Conduct</a> | <a href=https://www.linuxfoundation.org/cookies/>Cookie Policy</a> | <a href=https://privacy-policy.openjsf.org/>Privacy Policy</a> | <a href=https://terms-of-use.openjsf.org/>Terms of Use</a> | <a href=https://trademark-list.openjsf.org/>Trademark List</a> | <a href=https://trademark-policy.openjsf.org/>Trademark Policy</a></div></div></div></div></footer></div></body>

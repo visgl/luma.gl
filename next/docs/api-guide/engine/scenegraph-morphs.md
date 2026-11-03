@@ -1,0 +1,55 @@
+# Morph Targets
+
+Morph targets describe vertex-attribute deltas from a mesh's base geometry. luma.gl combines those targets using weights while preserving the existing scene nodes and model resources. Use morphs for expressions and shape changes; use [skins](https://luma.gl/next/docs/api-guide/engine/scenegraph-skins.md) for skeletal transforms. The two deformation mechanisms can be used together.
+
+## Example[​](#example "Direct link to Example")
+
+### Morph animation
+
+[GitHub](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-gltf)Info
+
+InfoSource
+
+Mobile
+
+```
+// Loading source…
+```
+
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
+
+The authored animation changes morph weights. An active animation track can overwrite weights set manually in a subsequent frame.
+
+## Update weights[​](#update-weights "Direct link to Update weights")
+
+```
+import {setMorphWeights} from '@luma.gl/engine';
+
+
+
+// meshNode is a GroupNode with registered morph primitives and target state.
+
+setMorphWeights(meshNode, [0.8, 0.2]);
+```
+
+The function updates registered morph primitives. It does not infer target deltas from an arbitrary mesh or create morph targets from a weights array.
+
+`MorphTargetState` retains the primitive geometry, base attributes, and ordered target deltas. The scene node's `morphMeshes` record identifies the registered mesh groups; each affected `ModelNode` carries its `morphTargets` record. `morphWeights` records the current values. A `morphWeightTransport` record selects existing GPU weight storage when available.
+
+When GPU weight transport exists, updating weights writes the corresponding buffer or texture. The fallback updates existing vertex buffers. Both paths preserve the scene hierarchy; target order must match the weights. See the [morph-target API](https://luma.gl/next/docs/api-reference/engine/animation/morph-targets.md) for lower-level buffer updates.
+
+## Animation and physics[​](#animation-and-physics "Direct link to Animation and physics")
+
+`makeNodeAnimationBinding(meshNode, 'weights')` connects engine tracks to registered morph state. Advance the animation before rendering and avoid competing writers to the same weights.
+
+Visual morphing does not deform rigid collision shapes automatically. Keep collision geometry separate unless the application explicitly updates the physics representation.
+
+## Importing morphs[​](#importing-morphs "Direct link to Importing morphs")
+
+The glTF adapter reads accessors, registers target state, and constructs animation bindings. The engine owns `setMorphWeights()` and runtime deformation updates. See [Animation](https://luma.gl/next/docs/api-guide/engine/animation.md), [Controllers](https://luma.gl/next/docs/api-guide/engine/scene-controllers.md), and [glTF animation conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md).

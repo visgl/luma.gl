@@ -30,7 +30,7 @@ Glass combines transmission, reflection, absorption, surface roughness, and tran
 | Focused raster caustics    | Projects bounded colored glass-lens contributions onto nearby reflective receivers.                                        | Active switches concentrate moving red and green light onto adjacent links and servers.        |
 | Fault-driven distortion    | Modulates refraction and narrow internal filaments only on warm fault-tinted glass.                                        | Congested and failed switches acquire subtle animated optical instability.                     |
 
-[`glassMaterial`](https://luma.gl/next/docs/api-reference/experimental/glass-material.md) provides the transmissive surface model. [`reflectiveMaterial`](https://luma.gl/next/docs/api-reference/experimental/reflective-material.md) provides a lower-cost glossy treatment for links and other non-glass surfaces. Both depend on the shared `opticalLighting` shader module.
+[`glassMaterial`](https://luma.gl/next/docs/api-reference/engine/experimental/glass-material.md) provides the transmissive surface model. [`reflectiveMaterial`](https://luma.gl/next/docs/api-reference/engine/experimental/reflective-material.md) provides a lower-cost glossy treatment for links and other non-glass surfaces. Both depend on the shared `opticalLighting` shader module.
 
 `emissiveMaterial` provides self-illuminated geometry, `opticalPointLights` supplies portable, bounded local lighting, and `opticalCaustics` approximates focused light cast through nearby glass. Emission makes an object bright; point lighting illuminates nearby surfaces; caustics concentrate light around a focusing lens; bloom spreads the brightest pixels in screen space. These effects can be combined independently.
 
@@ -41,7 +41,7 @@ For moving emitters, `emissiveMaterial_getTrailColor(...)` applies a smooth axia
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
 
-import {glassMaterial, glassMaterialPlugin} from '@luma.gl/experimental';
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
 
 
 
@@ -146,7 +146,7 @@ A full migration should first extend the retained scene renderer with per-instan
 `glassTransmissionPlugin` extends `glassMaterialPlugin` without changing the existing glass helper or adding iterative ray tracing. Render outward-facing sphere backfaces into an RGBA texture whose RGB channels contain the encoded world normal and whose alpha channel contains framebuffer depth. The opaque scene depth must remain available as a sampleable depth texture.
 
 ```
-import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/experimental';
+import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/engine/experimental/materials';
 
 
 
@@ -208,15 +208,7 @@ Call `glassTransmission_getColor(...)`, or install `opticalPointLightsPlugin` an
 `opticalCausticsPlugin` installs an independent bounded lens array. Register the module alongside the receiving material, update nearby lens colors from actual scene lights, and add the returned RGB contribution to the receiver's fragment color.
 
 ```
-import {
-
-  MAX_OPTICAL_CAUSTIC_LENSES,
-
-  opticalCaustics,
-
-  opticalCausticsPlugin
-
-} from '@luma.gl/experimental';
+import {MAX_OPTICAL_CAUSTIC_LENSES, opticalCaustics, opticalCausticsPlugin} from '@luma.gl/engine/experimental/materials';
 
 
 

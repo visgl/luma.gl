@@ -2,7 +2,7 @@
 
 [Workflow](https://luma.gl/next/docs/api-guide/engine/transforms.md)[Computation](https://luma.gl/next/docs/api-reference/engine/compute/computation.md)[BufferTransform](https://luma.gl/next/docs/api-reference/engine/compute/buffer-transform.md)[TextureTransform](https://luma.gl/next/docs/api-reference/engine/compute/texture-transform.md)[Swap](https://luma.gl/next/docs/api-reference/engine/compute/swap.md)
 
-`BufferTransform` is the engine wrapper for WebGL transform-feedback workflows. It internally builds a [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) plus a `TransformFeedback` object and uses them to run buffer-to-buffer transforms.
+`BufferTransform` is the engine wrapper for WebGL transform-feedback workflows. It internally builds a [`GPUVectorModel`](https://luma.gl/next/docs/api-reference/engine/model.md) plus a `TransformFeedback` object and uses them to run buffer-to-buffer transforms.
 
 `BufferTransform` is only supported on WebGL devices.
 
@@ -40,14 +40,42 @@ transform.run({
 });
 ```
 
+## GPU vector inputs and outputs[​](#gpu-vector-inputs-and-outputs "Direct link to GPU vector inputs and outputs")
+
+`inputVectors` and `outputVectors` can be supplied at construction or to `run()`. Inputs map to buffer-layout names; outputs map to shader varying names:
+
+```
+const transform = new BufferTransform(device, {
+
+  vs: VERTEX_SHADER,
+
+  bufferLayout: [{name: 'inValue', format: 'float32'}],
+
+  outputs: ['outValue'],
+
+  inputVectors: {inValue: sourceVector},
+
+  outputVectors: {outValue: targetVector}
+
+});
+
+transform.run();
+```
+
+The transform borrows the vectors, preserves chunk byte offsets, and infers vertex count from input row count. Direct vector bindings require at most one chunk per vector; no packing occurs. Output vectors must match the shader outputs and use separate, tightly packed transform-feedback streams. For multi-chunk table workloads, use `TableTransform.dispatchBatches()`. Buffer-valued options are also supported. Vector bindings take precedence when both forms are supplied for the same input or output.
+
 ## Types[​](#types "Direct link to Types")
 
 ### `BufferTransformProps`[​](#buffertransformprops "Direct link to buffertransformprops")
 
 ```
-export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
+export type BufferTransformProps = Omit<GPUVectorModelProps, 'fs'> & {
 
-  fs?: ModelProps['fs'];
+  fs?: GPUVectorModelProps['fs'];
+
+  inputVectors?: GPUVectorModelInputs;
+
+  outputVectors?: GPUVectorModelInputs;
 
   outputs?: string[];
 

@@ -4,7 +4,7 @@
 
 ## Explore the JSON scene playground[​](#explore-the-json-scene-playground "Direct link to Explore the JSON scene playground")
 
-The private ANARI showcase includes a deck.gl-style JSON playground for describing complete scenes without writing rendering code. Start the showcase from the repository root:
+The ANARI showcase includes a deck.gl-style JSON playground for describing complete scenes without writing rendering code. Start the showcase from the repository root:
 
 ```
 yarn workspace luma.gl-examples-showcase-scene start
@@ -16,7 +16,7 @@ Use **GLTF ↓** or **USD ↓** to download the currently valid retained scene. 
 
 Experimental playground format
 
-The JSON format and its optional schema exports are experimental. They are not part of the ANARI C specification and can change with the private `@luma.gl/anari` workspace.
+The JSON format and its optional schema exports are experimental. They are not part of the ANARI C specification and can change with the experimental `@luma.gl/anari` package.
 
 ### Validate scenes with Zod and JSON Schema[​](#validate-scenes-with-zod-and-json-schema "Direct link to Validate scenes with Zod and JSON Schema")
 
@@ -219,7 +219,7 @@ Both orb instances reference the same named surface. The playground retains that
 
 An instance can describe its transform with `position`, `rotation`, and `scale` three-component vectors, or supply a complete 16-element `matrix`. Rotations use radians and are applied in X, Y, Z order. Instances referencing a `surface` directly share an automatically generated group; use an explicit named `group` when multiple surfaces or group-attached lights are required.
 
-Object subtypes match the private package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad` geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot` lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`, `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept `samplesPerPixel`, `maxBounces`, `progressive`, `shadows`, `resolutionScale`, `minimumResolutionScale`, `adaptiveResolution`, `targetFrameTimeMilliseconds`, `temporalReprojection`, and `shadowSamplesPerFrame`.
+Object subtypes match the ANARI package: `triangle`, `sphere`, `cylinder`, `cone`, and `quad` geometry; `matte` and `physicallyBased` materials; `ambient`, `directional`, `point`, and `spot` lights; `perspective` and `orthographic` cameras; and optional renderer presets for `default`, `deferred`, `raytrace`, `debugNormals`, and `debugDepth`. Ray-tracing presets additionally accept `samplesPerPixel`, `maxBounces`, `progressive`, `shadows`, `resolutionScale`, `minimumResolutionScale`, `adaptiveResolution`, `targetFrameTimeMilliseconds`, `temporalReprojection`, and `shadowSamplesPerFrame`.
 
 ### Generate compact triangle meshes and starfields[​](#generate-compact-triangle-meshes-and-starfields "Direct link to Generate compact triangle meshes and starfields")
 
@@ -406,7 +406,7 @@ animation.update(timeSeconds);
 animation.seek(1.5);
 ```
 
-`update()` receives an absolute monotonic time in seconds. The handle shares the engine animation mixer and commits each changed retained object at most once per frame. See [ANARI glTF and keyframe animation](https://luma.gl/next/docs/api-reference/scene/anari-animation.md) and [glTF animation and deformation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md) for complete bindings, interpolation modes, ownership, and playback examples. Local file selection supports standalone `.gltf` and `.glb` assets as well as supported OpenUSD files.
+`update()` receives an absolute monotonic time in seconds. The handle shares the engine animation mixer and commits each changed retained object at most once per frame. See [ANARI glTF and keyframe animation](https://luma.gl/next/docs/api-reference/anari/anari-animation.md) and [glTF animation and deformation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md) for complete bindings, interpolation modes, ownership, and playback examples. Local file selection supports standalone `.gltf` and `.glb` assets as well as supported OpenUSD files.
 
 The example-local `USDLoader` follows the loaders.gl loader contract and is structured for future extraction into an `@loaders.gl/usd` module:
 
@@ -437,5 +437,5 @@ Supported input is ASCII `.usda` / `.usd` plus uncompressed `.usdz` archives who
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
 * [Declarative ANARI rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md)
-* [ANARI API reference](https://luma.gl/next/docs/api-reference/scene.md)
+* [ANARI API reference](https://luma.gl/next/docs/api-reference/anari.md)
 * [Engine programming](https://luma.gl/next/docs/api-guide/engine.md)

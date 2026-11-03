@@ -4,22 +4,22 @@
 
 The luma.gl API enables portable GPU applications on WebGPU or WebGL 2. Choose the highest-level layer that expresses the work clearly, then move down only when the application needs more control.
 
-| If you need to…                                                                      | Start with      |
-| ------------------------------------------------------------------------------------ | --------------- |
-| Render geometry, manage redraws, animate, or pick objects                            | **Engine**      |
-| Create and control buffers, textures, passes, pipelines, and submission              | **Core**        |
-| Compose reusable WGSL/GLSL behavior                                                  | **Shadertools** |
-| Schedule several dependent WebGPU operations with indirect work or transient storage | **GPU Core**    |
+| If you need to…                                                                      | Start with   |
+| ------------------------------------------------------------------------------------ | ------------ |
+| Render geometry, manage redraws, animate, or pick objects                            | **Engine**   |
+| Create and control buffers, textures, passes, pipelines, and submission              | **Core**     |
+| Compose reusable WGSL/GLSL behavior                                                  | **Shaders**  |
+| Schedule several dependent WebGPU operations with indirect work or transient storage | **GPU Core** |
 
 Start with [How luma.gl fits together](https://luma.gl/next/docs/api-guide/luma-layers.md) for one small rendered application viewed through each layer and concrete guidance on when to move up or down.
 
 ## Engine[​](#engine "Direct link to Engine")
 
-The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`. Its [shared animation system](https://luma.gl/next/docs/api-guide/engine/animation.md) adds keyframe tracks, clips, weighted mixing, crossfades, and portable morph-target deformation. Scenegraphs are included, while [glTF loading, physical materials, skeletal animation, and morph animation](https://luma.gl/next/docs/api-reference/gltf.md) live in the format-specific `@luma.gl/gltf` module.
+The engine API provides higher-level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`. Its [shared animation system](https://luma.gl/next/docs/api-guide/engine/animation.md) adds keyframe tracks, clips, weighted mixing, crossfades, and portable morph-target deformation. Scenegraphs are included, while [glTF loading, physical materials, skeletal animation, and morph animation](https://luma.gl/next/docs/api-reference/gltf.md) live in the format-specific `@luma.gl/engine/gltf` module.
 
-The experimental [`SceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md) and [`DeferredSceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md) consume format-independent scene descriptions instead of introducing a second glTF renderer. Their [physical lighting environments](https://luma.gl/next/docs/api-reference/experimental/pbr-environment.md) can be prepared from caller-owned equirectangular textures.
+The experimental [`SceneRenderer`](https://luma.gl/next/docs/api-reference/anari/scene-renderer.md) and [`DeferredSceneRenderer`](https://luma.gl/next/docs/api-reference/anari/deferred-scene-renderer.md) consume format-independent scene descriptions instead of introducing a second glTF renderer. Their [physical lighting environments](https://luma.gl/next/docs/api-reference/anari/pbr-environment.md) can be prepared from caller-owned equirectangular textures.
 
-For an experimental retained, renderer-independent scene contract, see [Declarative Scene Rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md). It introduces the experimental, private `@luma.gl/anari` workspace, scene objects, committed parameters, instancing, physically based lighting, and HDR presentation.
+For an experimental retained, renderer-independent scene contract, see [Declarative Scene Rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md). It introduces the experimental `@luma.gl/anari` package, scene objects, committed parameters, instancing, physically based lighting, and HDR presentation.
 
 ## Core[​](#core "Direct link to Core")
 
@@ -35,7 +35,7 @@ Core responsibilities for any GPU library are to enable applications to perform:
 * [Shader execution / rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md) - Drawing into textures, running compute shaders.
 * [GPU parameter management](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md) - Configuring blending, clipping, depth tests etc.
 
-## Shadertools[​](#shadertools "Direct link to Shadertools")
+## Shaders[​](#shaders "Direct link to Shaders")
 
 The Shader API lets the application use a library of existing shader modules to create new custom shaders. It is also possible for developers to create new reusable shader modules.
 

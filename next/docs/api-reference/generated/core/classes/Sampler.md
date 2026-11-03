@@ -1,6 +1,6 @@
 # Abstract Class: Sampler
 
-Defined in: [modules/core/src/api/adapter/resources/sampler.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L47)
+Defined in: [modules/core/src/api/adapter/resources/sampler.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L19)
 
 Immutable Sampler object
 
@@ -14,7 +14,7 @@ Immutable Sampler object
 
 > **new Sampler**(`device`, `props`): `Sampler`
 
-Defined in: [modules/core/src/api/adapter/resources/sampler.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L67)
+Defined in: [modules/core/src/api/adapter/resources/sampler.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L39)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -124,7 +124,7 @@ User data object, reserved for the application
 
 > `static` **defaultProps**: `Required`<[`SamplerProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SamplerProps.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/sampler.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L48)
+Defined in: [modules/core/src/api/adapter/resources/sampler.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L20)
 
 Default properties for resource
 
@@ -140,7 +140,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/sampler.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L63)
+Defined in: [modules/core/src/api/adapter/resources/sampler.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L35)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 

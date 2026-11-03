@@ -20,7 +20,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -52,7 +56,7 @@ Ancestor projection is useful whenever filtering can hide structural intermediat
 Use [`GPUGraphTraversal`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-graph-traversal.md) instead when the question is which nodes are reachable through arbitrary edges. Projection follows exactly one parent chain per row and finds a representative; it does not select a neighborhood or rewrite the graph.
 
 ```
-import {GPUAncestorProjection} from '@luma.gl/gpgpu/gpu-core';
+import {GPUAncestorProjection} from '@luma.gl/graph/gpu-core';
 
 
 

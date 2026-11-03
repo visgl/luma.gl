@@ -1,6 +1,6 @@
 # GPU-animated crowd performance and LOD
 
-[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Materials](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
 
 [Overview](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Usage](https://luma.gl/next/docs/api-reference/gltf/gltf-crowd-usage.md)[Performance & LOD](https://luma.gl/next/docs/api-reference/gltf/gltf-crowd-performance.md)[API](https://luma.gl/next/docs/api-reference/gltf/gltf-crowd-api.md)
 
@@ -27,7 +27,7 @@ Screen-space actor classification, compact bucket assignment, and mesh decimatio
 Opt in to detail selection when creating the crowd, then provide the current camera and viewport whenever they change:
 
 ```
-import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+import {createGLTFAnimatedCrowd} from '@luma.gl/engine/gltf';
 
 
 
@@ -242,7 +242,7 @@ Automatic crowd generation defaults to `preserveBoundary: false` because product
 For explicit document preparation, use `generateGLTFLODLevels()`:
 
 ```
-import {generateGLTFLODLevels, getGLTFNodeLODs} from '@luma.gl/gltf';
+import {generateGLTFLODLevels, getGLTFNodeLODs} from '@luma.gl/engine/gltf';
 
 
 

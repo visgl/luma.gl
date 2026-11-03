@@ -1,4 +1,4 @@
-# Debugging GPU Command Graphs
+# Debugging GPU Graphs
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -23,6 +23,22 @@ The **GPU Graph** tab uses the example-side `GPUCommandGraphDebugPanel`, which w
 
 CPU time measures command encoding. GPU time measures sampled GPU work. A missing GPU sample is not a zero-duration result. Counter collection is explicit: the inspector stores supplied scalar values and does not read their buffers itself.
 
+## Graph Resources: inspect buffers and textures[​](#graph-resources-inspect-buffers-and-textures "Direct link to Graph Resources: inspect buffers and textures")
+
+Inside the graph inspector, select **Graph Resources** to see the declared buffer ranges and texture views. The resource list sits above a persistent viewer. Select a resource (or focus it and press Enter) to read its current contents; **Refresh selected resource** reads it again. Hovering or focusing a row also shows a quick preview popup. Texture entries include format, extent, mip level, and array layer. Reading a supported color texture also leaves a thumbnail inline in its row. **Refresh texture thumbnails** reads up to 32 listed textures sequentially; additional textures can be inspected individually. Snapshot updates do not trigger readbacks.
+
+Images support R/RG/RGBA 8-bit normalized and 16/32-bit floating-point formats, plus BGRA8. Single-channel textures display as grayscale; RG textures display red/green. Linear colors are converted to sRGB for display; sRGB texture bytes retain their encoded colors. Values are clamped to 0–1 (including HDR and signed values), with transparency shown over a checkerboard. The raw bytes remain unchanged in the numeric viewer. Unsupported image formats still show their bytes when readback is supported. Thumbnails are top-left crops, not full-texture downscales.
+
+Connect a live inspector to the example panel with `{inspector}`. Snapshot-only panels still list resources, but cannot read data. Application renderers must submit their graph command buffers before the UI requests a preview. The data-only inspector exposes the same explicit API:
+
+```
+const preview = await inspector.readResource(compiled.id, nodeId, resourceIndex);
+```
+
+`resourceIndex` addresses the node's declared resources in the inspector snapshot. Reads are on demand, capped at 256 buffer bytes or the top-left 32 × 32 pixels of the first selected mip and layer. Raw bytes are always available for supported formats; float32 and uint32 vector buffers also receive a numeric interpretation. Previews show current allocation contents, not historical inputs or outputs at a particular node. They are not continuously refreshed.
+
+Readback requires `COPY_SRC` on the physical resource. The inspector does not modify resource usage or disable transient reuse. Reused transient allocations, frame/presentation textures, external images, multisampled textures, compressed or packed formats, and depth/stencil textures report an explicit unavailable message. This avoids displaying another logical resource's bytes or issuing invalid GPU copies. Transient and borrowed ownership is unchanged; temporary readback buffers are released after use. See [Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md) for ownership details.
+
 ## GPU Trace: inspect one encoding[​](#gpu-trace-inspect-one-encoding "Direct link to GPU Trace: inspect one encoding")
 
 `GPUTracePanel` displays the latest report as CPU and GPU spans, preserving gaps between nodes. Hover or keyboard-focus a span for node details. Separate CPU and GPU clocks are the default; when correlation is available, **Combined timeline (estimated)** aligns them and shows uncertainty. That alignment is an estimate, not exact CPU/GPU clock synchronization.
@@ -34,7 +50,7 @@ Copy nodes remain CPU-timed. Skipped nodes have no GPU span. Enabling per-node G
 The inspector belongs to the package; the DOM panels are reusable example helpers. In an example, import `GPUCommandGraphInspectorPanel` from `examples/gpu-command-graph-inspector-panel.ts` and `GPUTracePanel` from `examples/gpu-trace-panel.ts`. Include `tracePanel.panel` in the application's panel collection and give the graph panel its own host element.
 
 ```
-import {GPUCommandGraphInspector} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraphInspector} from '@luma.gl/graph/gpu-core';
 
 
 

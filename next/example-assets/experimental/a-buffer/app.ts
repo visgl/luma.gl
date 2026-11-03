@@ -23,8 +23,8 @@ import {
   type WBOITShaderModuleProps,
   wboit,
   wboitPlugin
-} from '@luma.gl/experimental';
-import type {ShaderModule} from '@luma.gl/shadertools';
+} from '@luma.gl/anari';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {Matrix4, radians} from '@math.gl/core';
 import {type SettingsChangeDescriptor, type SettingsSchema} from '@deck.gl-community/panels';
 import {

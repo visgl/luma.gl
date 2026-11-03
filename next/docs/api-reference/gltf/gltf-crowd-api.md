@@ -1,6 +1,6 @@
 # GPU-animated crowd API
 
-[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Materials](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
 
 [Overview](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Usage](https://luma.gl/next/docs/api-reference/gltf/gltf-crowd-usage.md)[Performance & LOD](https://luma.gl/next/docs/api-reference/gltf/gltf-crowd-performance.md)[API](https://luma.gl/next/docs/api-reference/gltf/gltf-crowd-api.md)
 
@@ -118,7 +118,7 @@ import {
 
   type GLTFCrowdPrimitiveGroup
 
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 ```
 
 | API                                                                    | Purpose                                                                                         |

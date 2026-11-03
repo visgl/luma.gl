@@ -1,15 +1,17 @@
 # glTF Asset Interchange
 
-[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Materials](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/next/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/next/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/next/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/next/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md)
 
-`@luma.gl/gltf` owns format-native scene interchange. `exportGLTF()` writes standards-conformant embedded `.gltf` documents or aligned binary `.glb` assets without depending on an application renderer, an ANARI device, or browser-specific GPU resources.
+Asset export is application code. The shared example helper [`examples/gltf/gltf-exporter.ts`](https://github.com/visgl/luma.gl/blob/master/examples/gltf/gltf-exporter.ts) provides `exportGLTF()` and its descriptor types; they are not exports of `@luma.gl/engine/gltf`. The helper writes standards-conformant embedded `.gltf` documents or aligned binary `.glb` assets without depending on an application renderer, an ANARI device, or browser-specific GPU resources.
 
 The same descriptors preserve authored node hierarchies, skins, inverse bind matrices, morph targets, animation clips, material-animation pointers, GPU instancing, variants, cameras, punctual-light extensions, and complete physical material records.
+
+Copy the helper into your application and install `@loaders.gl/core` and `@loaders.gl/scene` to enable its GLB writer. luma.gl modules do not depend on loaders.gl.
 
 ## Export a scene[​](#export-a-scene "Direct link to Export a scene")
 
 ```
-import {exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
+import {exportGLTF, type GLTFExportScene} from './gltf-exporter';
 
 
 

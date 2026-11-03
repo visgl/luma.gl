@@ -16,7 +16,11 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -71,7 +75,7 @@ Alternate materials must remain compatible with the original shader feature layo
 The importer supplies the same engine controller with source variant names and resolved primitive mappings:
 
 ```
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 
 

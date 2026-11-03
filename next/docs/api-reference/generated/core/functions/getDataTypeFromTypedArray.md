@@ -2,7 +2,7 @@
 
 > **getDataTypeFromTypedArray**(`arrayOrType`): `DataType`
 
-Defined in: [modules/core/src/shadertypes/data-types/decode-data-types.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/decode-data-types.ts#L62)
+Defined in: [modules/core/src/shadertypes/data-types/decode-data-types.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/decode-data-types.ts#L52)
 
 Returns the luma.gl scalar data type represented by a typed array or constructor.
 

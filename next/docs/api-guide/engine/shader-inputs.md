@@ -16,7 +16,7 @@ For the descriptor syntax and the TypeScript inference rules behind `uniformType
 
 `ShaderInputs` preserves the nested JavaScript shape of composite uniforms at the module boundary. For example, a module can expose a struct or array-of-structs API while still packing those values into a flat uniform buffer internally.
 
-This is what allows modules like [`lighting`](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/lighting.md) to accept `lights: Light[]` even though the underlying uniform buffer uses a fixed-size trailing array of light structs.
+This is what allows modules like [`lighting`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md) to accept `lights: Light[]` even though the underlying uniform buffer uses a fixed-size trailing array of light structs.
 
 ## Related Pages[​](#related-pages "Direct link to Related Pages")
 

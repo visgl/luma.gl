@@ -10,7 +10,7 @@ Dataset size
 
 16,384 points (16384)
 
-### Live luSpatial: CPU vs. WebGPU
+### Live GPU Spatial: CPU vs. WebGPU
 
 Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU graph, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution.
 

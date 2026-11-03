@@ -4,8 +4,8 @@
 
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import type {ClipShaderPluginProps} from '@luma.gl/shadertools';
-import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import type {ClipShaderPluginProps} from '@luma.gl/shaders';
+import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,

@@ -19,7 +19,7 @@ Each raster `frame.render()` performs the following work:
 11. Optionally run renderer-owned composition such as bloom or deferred lighting.
 12. Return surface, instance, draw-call, and triangle statistics.
 
-The ANARI adapter does not own a second shader or material pipeline. It translates retained objects into the format-independent [`SceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/scene-renderer.md), [`DeferredSceneRenderer`](https://luma.gl/next/docs/api-reference/experimental/deferred-scene-renderer.md), or `RayTracingSceneRenderer` descriptors from `@luma.gl/experimental`. The shared forward runtime uses WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves compatible opaque scenes through the same retained object graph and falls back to forward rendering for unsupported scene features. The WebGPU ray-tracing path instead uses command-graph compute, progressive HDR history, and a fullscreen presentation pass.
+The ANARI adapter does not own a second shader or material pipeline. It translates retained objects into the format-independent [`SceneRenderer`](https://luma.gl/next/docs/api-reference/anari/scene-renderer.md), [`DeferredSceneRenderer`](https://luma.gl/next/docs/api-reference/anari/deferred-scene-renderer.md), or `RayTracingSceneRenderer` descriptors from `@luma.gl/anari`. The shared forward runtime uses WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves compatible opaque scenes through the same retained object graph and falls back to forward rendering for unsupported scene features. The WebGPU ray-tracing path instead uses command-graph compute, progressive HDR history, and a fullscreen presentation pass.
 
 Applications can add another renderer without changing retained scene objects:
 
@@ -39,7 +39,7 @@ const raymarch = anariDevice.newRenderer('customRaymarch');
 frame.setParameter('renderer', raymarch).commitParameters();
 ```
 
-Runtime factories are lazy and device-owned. See [registering renderer runtimes](https://luma.gl/next/docs/api-reference/scene/anari-device.md#registering-renderer-runtimes) for the runtime contract and ownership details.
+Runtime factories are lazy and device-owned. See [registering renderer runtimes](https://luma.gl/next/docs/api-reference/anari/anari-device.md#registering-renderer-runtimes) for the runtime contract and ownership details.
 
 ### Ray-tracing technique background and tradeoffs[​](#ray-tracing-technique-background-and-tradeoffs "Direct link to Ray-tracing technique background and tradeoffs")
 
@@ -136,5 +136,5 @@ Transforms, nonstructural material uniforms, joint palettes, and animated morph 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
 * [Declarative ANARI rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md)
-* [ANARI API reference](https://luma.gl/next/docs/api-reference/scene.md)
+* [ANARI API reference](https://luma.gl/next/docs/api-reference/anari.md)
 * [Engine programming](https://luma.gl/next/docs/api-guide/engine.md)

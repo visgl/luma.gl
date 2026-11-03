@@ -73,7 +73,7 @@ That split keeps the portable GPU API focused:
 
 * `@luma.gl/core` exposes capability detection through `DeviceFeature`.
 * `@luma.gl/core/webgl` and `@luma.gl/core/webgpu` decide whether the active backend has the required DOM-to-texture copy method.
-* `@luma.gl/experimental` owns the `HTMLTexture` copied texture binding source while the browser API is still experimental.
+* `@luma.gl/engine/experimental/textures` owns the `HTMLTexture` copied texture binding source while the browser API is still experimental.
 * engine or deck.gl-level code can build conveniences such as live HTML textures, panel faces on a cube, labels, or world-space UI once the primitive is available.
 
 ## Experimental `HTMLTexture`[​](#experimental-htmltexture "Direct link to experimental-htmltexture")
@@ -83,7 +83,7 @@ That split keeps the portable GPU API focused:
 ```
 import {Model} from '@luma.gl/engine';
 
-import {HTMLTexture} from '@luma.gl/experimental';
+import {HTMLTexture} from '@luma.gl/engine/experimental/textures';
 
 
 

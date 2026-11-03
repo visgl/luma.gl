@@ -32,7 +32,7 @@ Use `GPUConvolution` when source data and results remain on the GPU, particularl
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUConvolution} from '@luma.gl/experimental';
+import {GPUConvolution} from '@luma.gl/graph/gpu-core';
 
 
 

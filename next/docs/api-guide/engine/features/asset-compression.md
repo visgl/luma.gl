@@ -16,7 +16,11 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -25,11 +29,11 @@ Scroll page · Ctrl/⌘ + scroll to interact
 `createScenegraphsFromGLTF()` consumes postprocessed loader output. Use `getGLTFExtensionSupport()` to inspect document capabilities and `strictExtensions: true` to reject unsupported required extensions before GPU scene creation. Compression decoding belongs to the loader; GPU texture upload belongs to the runtime adapter.
 
 ```
-import {createScenegraphsFromGLTF, getGLTFExtensionSupport} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, getGLTFExtensionSupport} from '@luma.gl/engine/gltf';
 
 
 
-// gltf is decoded and postprocessed by @loaders.gl/gltf.
+// gltf is decoded and postprocessed by @loaders.gl/scene/gltf.
 
 for (const capability of getGLTFExtensionSupport(gltf).values()) {
 

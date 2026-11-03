@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/experimental/gpu-raster` provides nodata-aware raster and spatial-field operations that compose through `GPUCommandGraph`. It makes tile ownership, halos, analytical overviews, residency, capacity, and replayable global statistics explicit.
+`@luma.gl/graph/gpu-raster` provides nodata-aware raster and spatial-field operations that compose through `GPUCommandGraph`. It makes tile ownership, halos, analytical overviews, residency, capacity, and replayable global statistics explicit.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
@@ -13,9 +13,9 @@ Use GPU Raster for analytical raster pipelines whose intermediate bands, masks, 
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
-import {GPURasterBand, GPURasterStatistics} from '@luma.gl/experimental/gpu-raster';
+import {GPURasterBand, GPURasterStatistics} from '@luma.gl/graph/gpu-raster';
 
 
 
@@ -72,7 +72,11 @@ Read [GPU Raster concepts](https://luma.gl/next/docs/api-reference/experimental/
 
 Preparing GPU experience**GPURaster: Satellite Raster Lab**Loading synthetic satellite bands and the GPU-native raster-analysis graph.
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 

@@ -24,7 +24,7 @@ AdapterConcrete devicePortable APIApplication
 
 `WebGLDevice`WebGL 2 backend
 
-`nullAdapter`@luma.gl/test-utilstest-only
+`nullAdapter`@luma.gl/core/test-utilstest-only
 
 `NullDevice`test-only device
 

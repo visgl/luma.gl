@@ -1,11 +1,11 @@
 # GPU time series
 
-`@luma.gl/gpgpu/gpu-timeseries` provides WebGPU chart reduction over uniformly sampled, GPU-resident scalar values. It preserves source chunks and produces exact spike envelopes with stable sample identities. See [Signal Room](https://luma.gl/next/examples/experimental/gpu-timeseries) for linked telemetry charts with more than three million real resident samples.
+`@luma.gl/graph/gpu-timeseries` provides WebGPU chart reduction over uniformly sampled, GPU-resident scalar values. It preserves source chunks and produces exact spike envelopes with stable sample identities. See [Signal Room](https://luma.gl/next/examples/experimental/gpu-timeseries) for linked telemetry charts with more than three million real resident samples.
 
 ## GPUTimeSeries[​](#gputimeseries "Direct link to GPUTimeSeries")
 
 ```
-import {GPUTimeSeries, GPUTimeSeriesEnvelope} from '@luma.gl/gpgpu/gpu-timeseries';
+import {GPUTimeSeries, GPUTimeSeriesEnvelope} from '@luma.gl/graph/gpu-timeseries';
 
 
 

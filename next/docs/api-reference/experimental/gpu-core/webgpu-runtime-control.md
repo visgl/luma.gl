@@ -23,7 +23,7 @@ WebGPU has indirect compute dispatch but no executable graph loop or device-side
 
 ## Logical predicate state[​](#logical-predicate-state "Direct link to Logical predicate state")
 
-A `GPUProgram` declares backend-independent scalar state:
+A `GPUGraph` declares backend-independent scalar state:
 
 ```
 const active = program.scalar('active', 'uint32');

@@ -77,7 +77,7 @@ segmentOffsets    [0, 2, 3, 5]
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUCommandGraph, GPUSegmentedLayout} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph, GPUSegmentedLayout} from '@luma.gl/graph/gpu-core';
 
 
 

@@ -1,10 +1,10 @@
-# WebGPU Foundations for GPU Command Graphs
+# WebGPU Foundations for GPU Graphs
 
 ## Overview[​](#overview "Direct link to Overview")
 
-A GPU command graph connects compute, copy, and rendering stages while keeping intermediate data on the GPU. WebGPU supplies the execution and memory primitives; GPU Core supplies the resource model, dependency analysis, and reusable compiled schedule.
+A GPU graph connects compute, copy, and rendering stages while keeping intermediate data on the GPU. WebGPU supplies the execution and memory primitives; GPU Core supplies the resource model, dependency analysis, and reusable compiled schedule.
 
-This page describes command graphs in `@luma.gl/gpgpu/gpu-core`. The separate [GPU Graph module](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md) analyzes graph datasets such as networks of vertices and edges.
+This page describes command graphs in `@luma.gl/graph/gpu-core`. The separate [GPU Graph module](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md) analyzes graph datasets such as networks of vertices and edges.
 
 ## The features that make it possible[​](#the-features-that-make-it-possible "Direct link to The features that make it possible")
 

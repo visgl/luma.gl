@@ -1,7 +1,10 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>GPU Graph × Three.js — Galactic Vortex</title>
+<script>if (new URLSearchParams(location.search).has('embedded')) document.documentElement.dataset.embedded = '';</script>
 <style>
+html[data-embedded] #galaxy-info, html[data-embedded] #simulation-time {display:none;}
+
 *{box-sizing:border-box}body{margin:0;background:#02030b;color:#e8f7ff;font:14px system-ui}
 canvas{display:block;width:100%;height:100%}
 #galaxy-info{position:fixed;inset:16px;z-index:20;pointer-events:none;--menu-background:var(--luma-example-surface);--menu-text:var(--luma-example-text);--button-text:var(--luma-example-text);--menu-border:1px solid var(--luma-example-border);--menu-shadow:var(--luma-example-shadow)}
@@ -15,19 +18,21 @@ h1{margin:0 0 8px;font-size:21px;letter-spacing:-.5px}p{line-height:1.5;color:#b
 #galaxy-info [data-setting-row-for]>label{min-width:0}
 #status{color:#80e6ff;font:12px monospace}#viewport{position:fixed;inset:0}
 #simulation-time{position:fixed;right:24px;bottom:24px;z-index:10;pointer-events:none;text-align:right;text-shadow:0 2px 8px #000;font-variant-numeric:tabular-nums}#simulation-time output{display:block;font-size:24px;font-weight:500}#simulation-time small{color:#b5d3e7;font-size:11px}
-</style>  <script type="module" crossorigin src="/next/standalone-examples/three/assets/gpu-graph-galaxy-Cd8YDRIP.js"></script>
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/shader-type-decoder-BLygFN_M.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/image-types-BAfTQyZr.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/OrbitControls-Cy6_cl7I.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/buffer-layout-utils-DobW9w6a.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/wgsl-interface-scan-DCPEvY2t.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/shader-block-layout-92_aKAG9.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/gpu-vector-chunks-C_IqND_x.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/interop-Jhv9FLlV.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/computation-BazHRsEW.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/get-attribute-from-layouts-62jOaQqD.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/external-texture-Cr5XLoAq.js">
-  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/model-DL_gbJz9.js">
+</style>  <script type="module" crossorigin src="/next/standalone-examples/three/assets/gpu-graph-galaxy-Bv8cnGut.js"></script>
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/render-pipeline-BlTz4W4u.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/buffer-layout-utils-C8lGbEpo.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/get-attribute-from-layouts-CBVF73yC.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/external-texture-Dg_nAbRC.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/texture-Cr6a0-3D.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/wgsl-binding-scan-UOkSB9Qm.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/gpu-vector-chunks-CCN1Uq7J.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/glsl-shader-assembler-sFNrl7cP.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/wgsl-interface-scan-BKs68eeq.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/wgsl-shader-assembler-8yyRFapK.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/shader-block-layout-C6BSj0DR.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/model-BcCcnZs0.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/three.tsl-p_uFXxKD.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/interop-CJl9-cqF.js">
 </head><body><div id="viewport"></div><div id="galaxy-info"></div><section id="hud">
 <h1>Galactic Vortex</h1><p>A luma GPU graph animates the positions and colors of 196,608 stars in buffers rendered directly by Three.js.</p>
 

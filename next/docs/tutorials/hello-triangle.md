@@ -8,7 +8,13 @@ Every rendered world starts somewhere. This live example turns one `Model` into 
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 The canvas displays a red triangle. When both backends are available, switch between WebGPU and WebGL2 above the example to see the same application logic run through either GPU API.
 

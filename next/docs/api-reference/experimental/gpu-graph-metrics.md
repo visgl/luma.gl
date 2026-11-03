@@ -2,20 +2,20 @@
 
 [Overview](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md)[Operations](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-operations.md)[Topology](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-topology.md)[Traversal](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-traversal.md)[Connectivity](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-connectivity.md)[Metrics](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-metrics.md)[Layouts](https://luma.gl/next/docs/api-reference/experimental/gpu-graph-layouts.md)
 
-## Find durable network backbones with GPUGraphCoreNumber[​](#find-durable-network-backbones-with-gpugraphcorenumber "Direct link to Find durable network backbones with GPUGraphCoreNumber")
+## Find durable network backbones with GPUGraphAlgorithmsCoreNumber[​](#find-durable-network-backbones-with-gpugraphalgorithmscorenumber "Direct link to Find durable network backbones with GPUGraphAlgorithmsCoreNumber")
 
 **Question: Which vertices stay connected to a mutually supportive group after peripheral relationships disappear?**
 
-`GPUGraphCoreNumber` separates a genuinely cohesive network backbone from a vertex that merely has many fragile spokes. A vertex belongs to the **k-core** when it remains in a largest subgraph where every remaining vertex has at least `k` other remaining neighbors; its core number is the highest such `k`. An isolated vertex has core number zero.
+`GPUGraphAlgorithmsCoreNumber` separates a genuinely cohesive network backbone from a vertex that merely has many fragile spokes. A vertex belongs to the **k-core** when it remains in a largest subgraph where every remaining vertex has at least `k` other remaining neighbors; its core number is the highest such `k`. An isolated vertex has core number zero.
 
 Consider a popular account with 100 followers who do not follow one another. Its degree is 100, but the account and every follower have core number one: remove the leaves and no mutually supporting dense group remains. A four-person clique instead has core number three for each member. Use core decomposition to find resilient social backbones, tightly sustained fraud rings, interdependent service groups, or the stable center of a citation network. Choose vertex degree for immediate popularity, local clustering for connections among one vertex's neighbors, community labels for a proposed group assignment, and core numbers for repeated structural support.
 
 ```
-import {GPUGraphCoreNumber} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsCoreNumber} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const cores = new GPUGraphCoreNumber({
+const cores = new GPUGraphAlgorithmsCoreNumber({
 
   topology,
 
@@ -42,20 +42,20 @@ Each vertex starts at its distinct weak-neighbor degree. Every bounded round sim
 
 If either required CSR neighbor allocation overflows, every core number and the optional degeneracy become `0xffffffff`, and optional convergence becomes zero. For `K` configured rounds and distinct weak degree `d`, unsorted CSR deduplication and H-index selection require worst-case `O(K × sum(d² × log(d + 1)))` work. The implementation needs `O(V)` graph-owned scratch, plus an optional bounded reduction workspace when reporting degeneracy; large hubs or insufficient round budgets require explicit measurement rather than assumed convergence.
 
-## Measure neighborhood density with GPUGraphLocalClusteringCoefficient[​](#measure-neighborhood-density-with-gpugraphlocalclusteringcoefficient "Direct link to Measure neighborhood density with GPUGraphLocalClusteringCoefficient")
+## Measure neighborhood density with GPUGraphAlgorithmsLocalClusteringCoefficient[​](#measure-neighborhood-density-with-gpugraphalgorithmslocalclusteringcoefficient "Direct link to Measure neighborhood density with GPUGraphAlgorithmsLocalClusteringCoefficient")
 
 **Question: Do this vertex's neighbors actually connect to one another, or do they only share the same central contact?**
 
-`GPUGraphLocalClusteringCoefficient` distinguishes a tightly connected friend circle from a loose hub. A person with ten friends does not necessarily belong to a close community: if those friends also know one another, local clustering is high; if none of them connect, it is zero. Use the coefficient to identify closed friendship circles, mutually connected transaction accounts, strongly interlinked services, or citation neighborhoods with many shared relationships.
+`GPUGraphAlgorithmsLocalClusteringCoefficient` distinguishes a tightly connected friend circle from a loose hub. A person with ten friends does not necessarily belong to a close community: if those friends also know one another, local clustering is high; if none of them connect, it is zero. Use the coefficient to identify closed friendship circles, mutually connected transaction accounts, strongly interlinked services, or citation neighborhoods with many shared relationships.
 
 Choose degree when you only need the number of direct relationships, local clustering when the relationships *among those neighbors* matter, and label propagation when you need one community identifier describing a larger connected region. The coefficient describes each vertex's immediate surroundings; it does not assign community membership or optimize a global clustering objective.
 
 ```
-import {GPUGraphLocalClusteringCoefficient} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsLocalClusteringCoefficient} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const localClustering = new GPUGraphLocalClusteringCoefficient({
+const localClustering = new GPUGraphAlgorithmsLocalClusteringCoefficient({
 
   topology,
 
@@ -76,22 +76,22 @@ The neighbor set is an undirected, or **weak**, neighborhood: either an incoming
 
 The contributor writes all results on the GPU without sorting adjacency, repacking edge columns, allocating a graph-owned scratch buffer, submitting commands, or reading results back. If either required adjacency overflows, or a closure count cannot fit in `uint32`, every affected coefficient fails closed to zero; optional triangle counts become `0xffffffff`. Empty graphs have no output rows. Because source adjacency is intentionally unsorted, exact neighbor deduplication and membership scans can require `O(sum(degree³))` work across all vertices. Dense regions and high-degree hubs can therefore be substantially more expensive than degree or traversal; this is not a claim of constant-time triangle counting, weighted clustering, or global community detection.
 
-## Rank incoming influence with GPUGraphPageRank[​](#rank-incoming-influence-with-gpugraphpagerank "Direct link to Rank incoming influence with GPUGraphPageRank")
+## Rank incoming influence with GPUGraphAlgorithmsPageRank[​](#rank-incoming-influence-with-gpugraphalgorithmspagerank "Direct link to Rank incoming influence with GPUGraphAlgorithmsPageRank")
 
 **Question: Which vertices receive influence from other important vertices?**
 
-`GPUGraphPageRank` estimates vertex importance from the importance flowing through incoming relationships. A citation from an influential paper or a dependency from an important package can matter more than many links from otherwise disconnected vertices.
+`GPUGraphAlgorithmsPageRank` estimates vertex importance from the importance flowing through incoming relationships. A citation from an influential paper or a dependency from an important package can matter more than many links from otherwise disconnected vertices.
 
 Use PageRank when raw degree is not enough: prioritize influential accounts, rank connected documents, identify widely depended-on services, or choose salient vertices for application-owned visualization. The metric is unweighted even when the source topology retains edge-weight columns.
 
 In a directed graph, `paper A -> paper B` contributes influence from A to B. A paper cited by one highly influential source can outrank a paper cited by several obscure sources. Degree would count those citations without asking how influential their sources are; PageRank propagates that additional context through the surrounding network.
 
 ```
-import {GPUGraphPageRank} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUGraphAlgorithmsPageRank} from '@luma.gl/graph/gpu-graph-algorithms';
 
 
 
-const importance = new GPUGraphPageRank({
+const importance = new GPUGraphAlgorithmsPageRank({
 
   topology,
 

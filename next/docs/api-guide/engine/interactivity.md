@@ -2,6 +2,8 @@
 
 [Workflow](https://luma.gl/next/docs/api-guide/engine/interactivity.md)[OrbitControls](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md)[PickingManager](https://luma.gl/next/docs/api-reference/engine/picking-manager.md)
 
+For engine behavior graphs, property adapters, and physics hosts, see [Scenegraph interactivity](https://luma.gl/next/docs/api-guide/engine/scenegraph-interactivity.md). This guide covers the browser-input, camera, and picking layer that supplies selection to those behaviors.
+
 ## Outcome[​](#outcome "Direct link to Outcome")
 
 Interactive rendering has three distinct steps:
@@ -128,4 +130,4 @@ WebGL 2 readback can synchronously stall the pipeline. WebGPU permits better sta
 * [`OrbitControls`](https://luma.gl/next/docs/api-reference/engine/orbit-controls.md)
 * [`PickingManager`](https://luma.gl/next/docs/api-reference/engine/picking-manager.md)
 * [Redraw on demand](https://luma.gl/next/docs/api-guide/engine/redraw.md)
-* [Shadertools picking module](https://luma.gl/next/docs/api-reference/shadertools/shader-modules/picking.md)
+* [Shaders picking module](https://luma.gl/next/docs/api-reference/shaders/shader-modules/picking.md)

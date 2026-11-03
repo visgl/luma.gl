@@ -1,13 +1,13 @@
 # glTF area-light mapping
 
-`parseGLTFAreaLights()` from `@luma.gl/gltf` converts source size/aspect values into width/height bindings for the engine `AreaLightController`. See [scene controllers](https://luma.gl/next/docs/api-guide/engine/scene-controllers.md) for the engine APIs.
+`parseGLTFAreaLights()` from `@luma.gl/engine/gltf` converts source size/aspect values into width/height bindings for the engine `AreaLightController`. See [Scenegraph lights](https://luma.gl/next/docs/api-guide/engine/scenegraph-lights.md) for the engine APIs.
 
 `AreaLightController` extracts visible rectangle and disk lights from the [pinned draft](https://github.com/MiiBond/glTF/tree/e77b27a67d0ee19327f6104aca5d869433b3e367/extensions/2.0/Vendor/EXT_lights_area). Pass its current results to the `areaLighting` shader module after updating the scene's animations:
 
 ```
 import {AreaLightController} from '@luma.gl/engine';
 
-import {parseGLTFAreaLights} from '@luma.gl/gltf';
+import {parseGLTFAreaLights} from '@luma.gl/engine/gltf';
 
 const controller = new AreaLightController(parseGLTFAreaLights({gltf, ...scenegraphs}));
 

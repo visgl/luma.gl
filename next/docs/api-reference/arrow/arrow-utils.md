@@ -4,7 +4,7 @@
 
 From v10Experimental API
 
-This page documents the general-purpose Arrow inspection helpers exported by `@luma.gl/arrow`.
+This page documents the general-purpose Arrow inspection helpers exported by `@luma.gl/graph/arrow`.
 
 These helpers operate on Apache Arrow tables, record batches, vectors, and data chunks before or alongside GPU upload. For shader-facing upload and binding workflows, see [Supported Arrow Types](https://luma.gl/next/docs/api-reference/arrow/supported-arrow-types.md).
 
@@ -26,7 +26,7 @@ Accepted inputs:
 Example:
 
 ```
-import {getArrowPaths} from '@luma.gl/arrow';
+import {getArrowPaths} from '@luma.gl/graph/arrow';
 
 
 
@@ -52,7 +52,7 @@ Behavior:
 Example:
 
 ```
-import {getArrowDataByPath} from '@luma.gl/arrow';
+import {getArrowDataByPath} from '@luma.gl/graph/arrow';
 
 
 
@@ -76,7 +76,7 @@ Behavior:
 Example:
 
 ```
-import {getArrowVectorByPath} from '@luma.gl/arrow';
+import {getArrowVectorByPath} from '@luma.gl/graph/arrow';
 
 
 
@@ -99,7 +99,7 @@ In the current implementation, this helper distinguishes a top-level list from n
 Example:
 
 ```
-import {getArrowListNestingLevel} from '@luma.gl/arrow';
+import {getArrowListNestingLevel} from '@luma.gl/graph/arrow';
 
 
 

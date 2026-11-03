@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/experimental/gpu-trace` is an optional GPU-native execution-trace module. It owns canonical span schemas, process/thread relationships, hierarchy parents, dependency links, filtering policies, linked-span focus, and trace-specific timeline picking without adding those concepts to the generic command graph or flat GPU scene API.
+`@luma.gl/graph/gpu-trace` is an optional GPU-native execution-trace module. It owns canonical span schemas, process/thread relationships, hierarchy parents, dependency links, filtering policies, linked-span focus, and trace-specific timeline picking without adding those concepts to the generic command graph or flat GPU scene API.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
@@ -111,7 +111,7 @@ The generic [`GPUCommandGraph`](https://luma.gl/next/docs/api-reference/experime
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
 import {
 
@@ -131,7 +131,7 @@ import {
 
   getGPUTracePickingShader
 
-} from '@luma.gl/experimental/gpu-trace';
+} from '@luma.gl/graph/gpu-trace';
 ```
 
 ### Canonical spans and dependency links have stable identities[​](#canonical-spans-and-dependency-links-have-stable-identities "Direct link to Canonical spans and dependency links have stable identities")
@@ -207,7 +207,7 @@ The embedded explorer uses the complete trace stack together. The standalone sce
 | `GPU_TRACE_LINK_RECORD_WORD_LENGTH`                                                                                | Number of 32-bit words in one dependency record                                                                              |
 | [`getGPUTracePickingShader`](https://luma.gl/next/docs/api-reference/experimental/gpu-trace/picking.md)       | Capacity-bounded, visible-span-aware timeline picking shader                                                                 |
 
-Trace-specific classes, constants, helpers, and types are exported only from `@luma.gl/experimental/gpu-trace`; they are intentionally absent from the root `@luma.gl/experimental` namespace.
+Trace-specific classes, constants, helpers, and types are exported only from `@luma.gl/graph/gpu-trace`; they are intentionally absent from the root `@luma.gl/graph` namespace.
 
 ## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
 

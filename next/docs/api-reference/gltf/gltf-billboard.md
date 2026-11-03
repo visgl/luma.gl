@@ -1,6 +1,6 @@
 # glTF billboard mapping
 
-`parseGLTFBillboards()` from `@luma.gl/gltf` resolves draft billboard attachments into props for the engine `BillboardController`. See [scene controllers](https://luma.gl/next/docs/api-guide/engine/scene-controllers.md) for the engine APIs.
+`parseGLTFBillboards()` from `@luma.gl/engine/gltf` resolves draft billboard attachments into props for the engine `BillboardController`. See [Scenegraph billboards](https://luma.gl/next/docs/api-guide/engine/scenegraph-billboards.md) for the engine APIs.
 
 Opt-in camera-facing traversal for a **partial, full-axis profile** of the draft [`KHR_billboard` proposal](https://github.com/CesiumGS/glTF/tree/aeb5a437219a33aa757743dc1a5d892e3b8e128a/extensions/2.0/Khronos/KHR_billboard). This profile supports `viewDirection`, `up`, `scaleWithDistance`, `overlay`, and the default/all-axis `rotationAxis`. The registry deliberately does not advertise full required-extension support.
 
@@ -9,7 +9,7 @@ The draft's instruction to zero facing-vector components conflicts with its Y-on
 ```
 import {BillboardController} from '@luma.gl/engine';
 
-import {parseGLTFBillboards} from '@luma.gl/gltf';
+import {parseGLTFBillboards} from '@luma.gl/engine/gltf';
 
 
 

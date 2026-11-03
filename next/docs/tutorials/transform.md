@@ -6,7 +6,13 @@ This tutorial uses `BufferTransform` to update per-instance data on the GPU and 
 
 <!-- -->
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/next/docs/tutorials.md).
 
@@ -35,7 +41,7 @@ import {
 
 } from '@luma.gl/engine';
 
-import {picking} from '@luma.gl/shadertools';
+import {picking} from '@luma.gl/shaders';
 
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 

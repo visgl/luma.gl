@@ -6,7 +6,7 @@
 
 A graph answers questions that individual table rows cannot: which accounts share a transaction, which services depend on a failed service, which people are two introductions apart, which tightly connected groups exist inside a wider network, which route has the lowest actual travel cost, how closely somebody's friends know one another, which network members form a durable structural backbone, whether a proposed community grouping is actually meaningful, how to improve that grouping, and which pages matter because other important pages link to them. Vertices represent those entities; edges represent their relationships.
 
-`@luma.gl/gpgpu/gpu-graph` answers these questions directly on a browser WebGPU device. It describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex degrees, unweighted shortest-path neighborhoods, weighted least-cost routes, weakly connected groups, densely connected communities, per-vertex local clustering, structural core numbers, community modularity scores, explicitly improved community assignments, PageRank importance, and progressive two-dimensional graph layouts into caller-owned GPU buffers. Layout can evaluate every repulsive interaction exactly or explicitly approximate distant groups through a caller-owned uniform grid. Every operation composes with the existing `GPUCommandGraph`.
+`@luma.gl/graph/gpu-graph-algorithms` answers these questions directly on a browser WebGPU device. It describes caller-owned GPU edge columns, builds reusable compressed adjacency, and publishes vertex degrees, unweighted shortest-path neighborhoods, weighted least-cost routes, weakly connected groups, densely connected communities, per-vertex local clustering, structural core numbers, community modularity scores, explicitly improved community assignments, PageRank importance, and progressive two-dimensional graph layouts into caller-owned GPU buffers. Layout can evaluate every repulsive interaction exactly or explicitly approximate distant groups through a caller-owned uniform grid. Every operation composes with the existing `GPUCommandGraph`.
 
 This is an experimental, headless graph analytics API, not a graph database, visualization framework, file importer, or general-purpose dataframe. Applications decide how data reaches the GPU, which results they render, when commands are submitted, and whether anything is read back.
 
@@ -30,7 +30,11 @@ Mobile quality
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -68,7 +72,7 @@ The effect first encodes forward and reverse adjacency, vertex degree, normalize
 
 The deterministic example fixture is uploaded once for each selected graph size. Resizing replaces its resident allocations and rebinds stable node and edge layers to their new buffers. Selecting, pinning, dragging, and changing neighborhood depth write only the necessary interaction controls or coordinates; they do not download graph columns. Every actual vertex remains rendered, including all **1,048,576 vertices** in point mode; only displayed original edges are capped. An explicitly requested native deck.gl pick returns the selected original vertex identifier to JavaScript. Its implementation and transfer size belong to deck.gl; it is separate from the native explorer's custom **8-byte** integer-picking path above.
 
-The reusable graph effect, node and edge layers, and graph integration's deck.gl imports live in the existing private `@deck.gl-community/arrow-layers` adapter. The website-only example consumes those exported symbols without importing `@deck.gl/core` or adding an example package; neither `@luma.gl/experimental` nor its optional graph entry point depends on or imports deck.gl. The example supplies its sampled-layout helper to the private effect as an injected callback, so the package never imports example code or claims that the helper is a new production graph operation.
+The reusable graph effect, node and edge layers, and graph integration's deck.gl imports live in the existing private `@deck.gl-community/arrow-layers` adapter. The website-only example consumes those exported symbols without importing `@deck.gl/core` or adding an example package; neither `@luma.gl/graph` nor its optional graph entry point depends on or imports deck.gl. The example supplies its sampled-layout helper to the private effect as an injected callback, so the package never imports example code or claims that the helper is a new production graph operation.
 
 ## Measure real CPU and WebGPU graph workloads[​](#measure-real-cpu-and-webgpu-graph-workloads "Direct link to Measure real CPU and WebGPU graph workloads")
 
@@ -117,17 +121,17 @@ Benchmark helpers live behind an optional nested entry point so ordinary graph a
 ```
 import {
 
-  makeGPUGraphBenchmarkDataset,
+  makeGPUGraphAlgorithmsBenchmarkDataset,
 
-  runGPUGraphBenchmark
+  runGPUGraphAlgorithmsBenchmark
 
-} from '@luma.gl/gpgpu/gpu-graph/benchmarks';
+} from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
 
 
 
-const dataset = makeGPUGraphBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
+const dataset = makeGPUGraphAlgorithmsBenchmarkDataset({kind: 'scale-free', vertexCount: 128, seed: 42});
 
-const report = await runGPUGraphBenchmark(device, {
+const report = await runGPUGraphAlgorithmsBenchmark(device, {
 
   kind: dataset.kind,
 
@@ -200,22 +204,22 @@ Workload-family coverage is not a claim of official Graphalytics certification, 
 
 ## Choose the right graph operation[​](#choose-the-right-graph-operation "Direct link to Choose the right graph operation")
 
-| Operation                            | Question it answers                                                                        | GPU result                                                                         | Typical bounded work                                                   |
-| ------------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `GPUGraph`                           | Which GPU columns describe the graph?                                                      | Borrowed graph metadata and original chunks                                        | Metadata only; no GPU dispatch                                         |
-| `GPUGraphTopology`                   | Which vertices are adjacent?                                                               | Forward and optional reverse compressed adjacency                                  | `O(V + E)`                                                             |
-| `GPUGraphDegree`                     | How many relationships touch each vertex in one direction?                                 | One `uint32` degree per vertex                                                     | `O(V)` after adjacency exists                                          |
-| `GPUGraphCoreNumber`                 | Which vertices remain inside increasingly cohesive network backbones?                      | One `uint32` core number per vertex and an optional maximum                        | At most `O(K × sum(degree² × log(degree + 1)))` for `K` bounded rounds |
-| `GPUGraphLocalClusteringCoefficient` | How closely are each vertex's neighbors connected to one another?                          | One `float32` coefficient and optional triangle count per vertex                   | At most `O(sum(degree³))` with unsorted adjacency                      |
-| `GPUGraphBreadthFirstSearch`         | Which vertices are within a chosen number of unweighted hops?                              | Distances, deterministic predecessors, and an optional selection mask              | At most `O(D × (V + E))` for `D` compiled hops                         |
-| `GPUGraphSingleSourceShortestPath`   | Which routes have the lowest nonnegative total edge cost from a selected source?           | One `float32` distance and deterministic predecessor per vertex                    | At most `O(K × (V + E))` for `K` bounded relaxations                   |
-| `GPUGraphConnectedComponents`        | Which vertices belong to the same weakly connected group?                                  | One `uint32` component identifier per vertex                                       | At most `O(K × (V + E))` for `K` bounded iterations                    |
-| `GPUGraphLabelPropagation`           | Which densely connected communities exist inside a connected network?                      | One deterministic `uint32` community label per vertex                              | At most `O(K × sum(degree²))` for `K` bounded iterations               |
-| `GPUGraphModularityOptimization`     | Which single-vertex community moves can improve a weighted partition?                      | Improved `uint32` labels, a real `float32` modularity score, and optional statuses | At most `O(K × (V + E + sum(degree²)))` for `K` bounded rounds         |
-| `GPUGraphModularity`                 | Does an existing partition contain more internal relationship weight than chance predicts? | One `float32` partition-quality score and optional per-community contributions     | `O(V + E)`                                                             |
-| `GPUGraphPageRank`                   | Which vertices receive influence from other important vertices?                            | One normalized `float32` score per vertex                                          | `O(K × (V + E))` for `K` iterations                                    |
-| `GPUGraphForceLayout`                | How can related vertices be positioned as a readable network?                              | Directly renderable `float32x2` positions and persistent velocities                | `O(V² + E)` per exact force iteration                                  |
-| `GPUGraphSpatialForceLayout`         | Can distant graph regions be approximated while nearby relationships remain exact?         | The existing renderable layout positions plus explicit uniform-grid diagnostics    | `Θ(V × G + P + E)` per spatial force iteration                         |
+| Operation                                      | Question it answers                                                                        | GPU result                                                                         | Typical bounded work                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `GPUGraphAlgorithmsData`                       | Which GPU columns describe the graph?                                                      | Borrowed graph metadata and original chunks                                        | Metadata only; no GPU dispatch                                         |
+| `GPUGraphAlgorithmsTopology`                   | Which vertices are adjacent?                                                               | Forward and optional reverse compressed adjacency                                  | `O(V + E)`                                                             |
+| `GPUGraphAlgorithmsDegree`                     | How many relationships touch each vertex in one direction?                                 | One `uint32` degree per vertex                                                     | `O(V)` after adjacency exists                                          |
+| `GPUGraphAlgorithmsCoreNumber`                 | Which vertices remain inside increasingly cohesive network backbones?                      | One `uint32` core number per vertex and an optional maximum                        | At most `O(K × sum(degree² × log(degree + 1)))` for `K` bounded rounds |
+| `GPUGraphAlgorithmsLocalClusteringCoefficient` | How closely are each vertex's neighbors connected to one another?                          | One `float32` coefficient and optional triangle count per vertex                   | At most `O(sum(degree³))` with unsorted adjacency                      |
+| `GPUGraphAlgorithmsBreadthFirstSearch`         | Which vertices are within a chosen number of unweighted hops?                              | Distances, deterministic predecessors, and an optional selection mask              | At most `O(D × (V + E))` for `D` compiled hops                         |
+| `GPUGraphAlgorithmsSingleSourceShortestPath`   | Which routes have the lowest nonnegative total edge cost from a selected source?           | One `float32` distance and deterministic predecessor per vertex                    | At most `O(K × (V + E))` for `K` bounded relaxations                   |
+| `GPUGraphAlgorithmsConnectedComponents`        | Which vertices belong to the same weakly connected group?                                  | One `uint32` component identifier per vertex                                       | At most `O(K × (V + E))` for `K` bounded iterations                    |
+| `GPUGraphAlgorithmsLabelPropagation`           | Which densely connected communities exist inside a connected network?                      | One deterministic `uint32` community label per vertex                              | At most `O(K × sum(degree²))` for `K` bounded iterations               |
+| `GPUGraphAlgorithmsModularityOptimization`     | Which single-vertex community moves can improve a weighted partition?                      | Improved `uint32` labels, a real `float32` modularity score, and optional statuses | At most `O(K × (V + E + sum(degree²)))` for `K` bounded rounds         |
+| `GPUGraphAlgorithmsModularity`                 | Does an existing partition contain more internal relationship weight than chance predicts? | One `float32` partition-quality score and optional per-community contributions     | `O(V + E)`                                                             |
+| `GPUGraphAlgorithmsPageRank`                   | Which vertices receive influence from other important vertices?                            | One normalized `float32` score per vertex                                          | `O(K × (V + E))` for `K` iterations                                    |
+| `GPUGraphAlgorithmsForceLayout`                | How can related vertices be positioned as a readable network?                              | Directly renderable `float32x2` positions and persistent velocities                | `O(V² + E)` per exact force iteration                                  |
+| `GPUGraphAlgorithmsSpatialForceLayout`         | Can distant graph regions be approximated while nearby relationships remain exact?         | The existing renderable layout positions plus explicit uniform-grid diagnostics    | `Θ(V × G + P + E)` per spatial force iteration                         |
 
 `V` is the graph's explicit vertex count, `E` is its source-edge count, `G` is the uniform-grid cell count, `P` counts individual interactions in near or insufficiently distant cells, and `sum(degree²)` and `sum(degree³)` add the squared and cubed weak-neighbor counts of every vertex. Undirected adjacency contains both directions for ordinary edges; an undirected self-loop appears once.
 

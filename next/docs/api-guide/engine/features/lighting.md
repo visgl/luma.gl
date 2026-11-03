@@ -16,7 +16,11 @@ Mobile
 // Loading source…
 ```
 
-**Loading example**Preparing GPU resources…
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -25,7 +29,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 The shared `lighting` shader module accepts `LightingProps`. A compatible model receives scene lighting through `model.shaderInputs.setProps({lighting: ...})`. Directional lights use a direction vector; point and spot lights add position and attenuation controls. Lighting is scene-shared state, separate from material state.
 
 ```
-import type {LightingProps} from '@luma.gl/shadertools';
+import type {LightingProps} from '@luma.gl/shaders';
 
 
 
