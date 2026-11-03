@@ -80,6 +80,26 @@ export function getRequiredWebGPULimits(
 }
 
 /**
+ * Returns the limits to request for a feature level.
+ * Only `'max'` and `'compatibility-max'` request adapter-supported limits. `'compatibility'`
+ * and a `'best-available'` request that cannot upgrade to core keep the compatibility default
+ * limits, so a compatibility device behaves the same on every adapter.
+ * @param supportedLimits Limits exposed by the selected WebGPU adapter.
+ * @param featureLevel Requested WebGPU feature level.
+ * @param requiredLimits Explicitly requested limits, which override profile limits.
+ * @returns Limits to forward through `GPUDeviceDescriptor.requiredLimits`.
+ */
+export function getRequestedWebGPULimits(
+  supportedLimits: GPUSupportedLimits,
+  featureLevel: RequestedWebGPUFeatureLevel,
+  requiredLimits: DeviceProps['requiredLimits'] = {}
+): Record<string, number> {
+  const requestsAdapterLimits = featureLevel === 'max' || featureLevel === 'compatibility-max';
+  const adapterLimits = requestsAdapterLimits ? getRequiredWebGPULimits(supportedLimits) : {};
+  return {...adapterLimits, ...requiredLimits};
+}
+
+/**
  * Returns the requested WebGPU feature level, defaulting to the portable core profile.
  * @param props Device creation props.
  * @returns Effective WebGPU feature level to request.
@@ -96,10 +116,7 @@ export function getWebGPUFeatureLevel(props: DeviceProps): RequestedWebGPUFeatur
 export function getWebGPURequestAdapterOptions(props: DeviceProps): GPURequestAdapterOptions {
   const featureLevel = getWebGPUFeatureLevel(props);
   const options: GPURequestAdapterOptions = {
-    featureLevel:
-      featureLevel === 'compatibility' || featureLevel === 'best-available'
-        ? 'compatibility'
-        : 'core'
+    featureLevel: isCompatibilityFeatureLevel(featureLevel) ? 'compatibility' : 'core'
   };
 
   if (props.powerPreference && props.powerPreference !== 'default') {
@@ -126,6 +143,13 @@ export function getRequiredWebGPUFeatures(
 ): GPUFeatureName[] {
   if (featureLevel === 'max') {
     return Array.from(supportedFeatures) as GPUFeatureName[];
+  }
+
+  if (featureLevel === 'compatibility-max') {
+    // Requesting core-features-and-limits would upgrade the device to core validation
+    return Array.from(supportedFeatures).filter(
+      feature => feature !== CORE_FEATURES_AND_LIMITS
+    ) as GPUFeatureName[];
   }
 
   const requiredFeatures: GPUFeatureName[] = [];
@@ -156,14 +180,23 @@ export function getEffectiveWebGPUFeatureLevel(
   requestedFeatureLevel: RequestedWebGPUFeatureLevel,
   deviceFeatures: GPUSupportedFeatures
 ): EffectiveWebGPUFeatureLevel {
-  if (
-    (requestedFeatureLevel === 'compatibility' || requestedFeatureLevel === 'best-available') &&
-    deviceFeatures.has(CORE_FEATURES_AND_LIMITS)
-  ) {
-    return 'core';
+  if (!isCompatibilityFeatureLevel(requestedFeatureLevel)) {
+    return requestedFeatureLevel;
   }
 
-  return requestedFeatureLevel === 'best-available' ? 'compatibility' : requestedFeatureLevel;
+  // Browsers may return a core adapter for a compatibility request
+  return deviceFeatures.has(CORE_FEATURES_AND_LIMITS) ? 'core' : 'compatibility';
+}
+
+/** Returns true for feature levels that request a compatibility adapter. */
+function isCompatibilityFeatureLevel(
+  featureLevel: RequestedWebGPUFeatureLevel
+): featureLevel is 'compatibility' | 'compatibility-max' | 'best-available' {
+  return (
+    featureLevel === 'compatibility' ||
+    featureLevel === 'compatibility-max' ||
+    featureLevel === 'best-available'
+  );
 }
 
 /**
@@ -245,11 +278,11 @@ export class WebGPUAdapter extends Adapter {
       deviceDescriptor.requiredFeatures = requiredFeatures;
     }
 
-    // Explicitly requested limits override the adapter maximums requested by 'max'
-    const requiredLimits = {
-      ...(requestedFeatureLevel === 'max' ? getRequiredWebGPULimits(adapter.limits) : {}),
-      ...props.requiredLimits
-    };
+    const requiredLimits = getRequestedWebGPULimits(
+      adapter.limits,
+      requestedFeatureLevel,
+      props.requiredLimits
+    );
     if (Object.keys(requiredLimits).length > 0) {
       deviceDescriptor.requiredLimits = requiredLimits;
     }

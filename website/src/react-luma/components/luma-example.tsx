@@ -119,6 +119,11 @@ export type LumaExampleProps = React.PropsWithChildren<
     >;
     canvasContextProfile?: CanvasContextProfile;
     xrCompatible?: boolean;
+    /**
+     * On the WebGPU compatibility tab, requests `featureLevel: 'compatibility-max'` so the example
+     * gets adapter limits (for example vertex-stage storage buffers) under compatibility validation.
+     */
+    compatibilityMax?: boolean;
     templateInfoPlacement?: 'header' | 'page';
     headerControls?: React.ReactNode;
   }
@@ -474,16 +479,24 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     ): Promise<Device> => {
       const requiresXRCompatibleDevice =
         props.xrCompatible === true && exampleDeviceType.startsWith('webgpu-');
+      const requiresCompatibilityMaxDevice =
+        props.compatibilityMax === true && exampleDeviceType === 'webgpu-compatibility';
       const usesCustomCanvasContext =
         props.canvasContextProfile !== undefined && props.canvasContextProfile !== 'default';
 
-      if (!requiresXRCompatibleDevice && !usesCustomCanvasContext && sharedDevice) {
+      if (
+        !requiresXRCompatibleDevice &&
+        !requiresCompatibilityMaxDevice &&
+        !usesCustomCanvasContext &&
+        sharedDevice
+      ) {
         return sharedDevice;
       }
 
       try {
         return await createDevice(exampleDeviceType, props.canvasContextProfile, {
-          xrCompatible: requiresXRCompatibleDevice
+          xrCompatible: requiresXRCompatibleDevice,
+          compatibilityMax: requiresCompatibilityMaxDevice
         });
       } catch (error) {
         if (!requiresXRCompatibleDevice) {
@@ -491,11 +504,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         }
 
         logError('XR-compatible WebGPU unavailable; continuing with desktop preview', error);
-        if (!usesCustomCanvasContext && sharedDevice) {
+        if (!requiresCompatibilityMaxDevice && !usesCustomCanvasContext && sharedDevice) {
           return sharedDevice;
         }
 
-        return await createDevice(exampleDeviceType, props.canvasContextProfile);
+        return await createDevice(exampleDeviceType, props.canvasContextProfile, {
+          compatibilityMax: requiresCompatibilityMaxDevice
+        });
       }
     };
 
@@ -555,6 +570,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     device,
     props.canvasContextProfile,
     props.xrCompatible,
+    props.compatibilityMax,
     props.requiredDeviceLimits?.maxColorAttachments,
     props.requiredDeviceLimits?.maxColorAttachmentBytesPerSample,
     requestedDeviceTypesKey,

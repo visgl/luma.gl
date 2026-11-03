@@ -50,8 +50,9 @@ Use `featureLevel` to select a broader feature and limit policy:
 | --- | --- |
 | `'core'` | Default portable WebGPU profile. Optional adapter features are not requested unless listed in `optionalFeatures`. |
 | `'max'` | Requests every feature and maximum limit exposed by the selected adapter. Useful for capability-rich examples, diagnostics, and applications with several optional fast paths. |
-| `'compatibility'` | Requests the WebGPU compatibility profile. |
-| `'best-available'` | Starts with a compatibility adapter and upgrades it to core when supported. |
+| `'compatibility'` | Requests the WebGPU compatibility profile with compatibility default limits, so the device behaves the same on every compatibility adapter. |
+| `'compatibility-max'` | Requests the WebGPU compatibility profile with every feature and maximum limit exposed by the adapter, except the `core-features-and-limits` upgrade. Limits depend on the adapter. |
+| `'best-available'` | Starts with a compatibility adapter and upgrades it to core when supported. Without the upgrade it keeps compatibility default limits. |
 
 `'max'` means “request everything this adapter supports,” not “guarantee every feature defined by
 WebGPU.” Feature-dependent code must still check `device.features`. Targeted libraries generally
