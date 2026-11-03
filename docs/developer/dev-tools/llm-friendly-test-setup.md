@@ -54,6 +54,11 @@ This repo uses `@vis.gl/dev-tools` for shared Vitest wiring and keeps repository
   serially on one Linux and one Apple Silicon worker respectively. Tests that mutate globals or
   exercise browser/device lifecycle belong in the isolated general group. Local commands default
   to all files with isolation enabled, including the full endurance matrix.
+- npm release CI selects `LUMA_TEST_BROWSER_GROUP=release`. This retains ordinary correctness
+  checks, including physics, while excluding the application-scale domino scenario and full
+  endurance qualification listed in `PHYSICS_QUALIFICATION_TEST_PATTERNS`. The ordinary local
+  suite and PR physics group still run the domino assertions unchanged; the dedicated physics
+  workflow runs the full endurance matrix. Simulation qualification does not gate npm publication.
 - Browser coverage uses weighted sharding so known slow GPU specs are spread across the three
   isolated general-browser CI jobs. Benchmark-only specs run with `yarn test-browser-benchmarks` instead of adding
   instrumented browser pages to every pull request. Refresh `SLOW_BROWSER_TEST_WEIGHTS` in
@@ -83,8 +88,8 @@ The full matrix also runs on PRs that change its definitions or scheduling, so t
 is validated before those changes merge. Ordinary implementation PRs run the focused regressions.
 
 Run `yarn test-physics-endurance` to execute the full matrix locally without coverage overhead.
-It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless` and
-release sharding continue to include the full-duration specs. No endurance assertion, simulation
+It selects only the five full-duration specs. Default `yarn test` / `yarn test-headless`
+continue to include the full-duration specs; npm release sharding excludes them. No endurance assertion, simulation
 step, solver, or time-step combination is removed from the full suite.
 
 The nightly job requires WebGPU/WebGL presentation before testing and saves JUnit results and
