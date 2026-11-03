@@ -1,3 +1,5 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import {ShadersDocsTabs} from '@site/src/components/docs/shaders-docs-tabs';
 import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
@@ -330,13 +332,22 @@ shaderAssembler.addShaderHook(
 ); // WGSL
 ```
 
+<Tabs groupId="shader-language">
+<TabItem value="glsl" label="GLSL">
+
 ```glsl
 FILTER_POSITION(gl_Position);
 ```
 
+</TabItem>
+<TabItem value="wgsl" label="WGSL">
+
 ```wgsl
 FILTER_POSITION(&outputs.position);
 ```
+
+</TabItem>
+</Tabs>
 
 The caller supplies the data and updates only shader inputs when the range
 changes:
@@ -376,6 +387,9 @@ bounds must use the same application-defined coordinate system.
 
 Compatible shaders register and call both hooks:
 
+<Tabs groupId="shader-language">
+<TabItem value="glsl" label="GLSL">
+
 ```glsl
 vs:CLIP_POSITION(
   inout vec4 position,
@@ -385,6 +399,9 @@ vs:CLIP_POSITION(
 fs:CLIP_COLOR(inout vec4 color)
 ```
 
+</TabItem>
+<TabItem value="wgsl" label="WGSL">
+
 ```wgsl
 vs:CLIP_POSITION(
   position: ptr<function, vec4<f32>>,
@@ -393,6 +410,9 @@ vs:CLIP_POSITION(
 )
 fs:CLIP_COLOR(color: ptr<function, vec4<f32>>)
 ```
+
+</TabItem>
+</Tabs>
 
 The vertex hook always stores `geometryCoordinates` in the generated inter-stage variable.
 In `instance` mode, an out-of-bounds `instanceCoordinates` value moves the

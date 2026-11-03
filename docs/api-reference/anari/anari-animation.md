@@ -170,11 +170,11 @@ existing mesh vertex data without rebuilding its model.
 Source `JOINTS_0` and `WEIGHTS_0` attributes are also preserved, and programmatic surfaces can
 use `skin: {jointMatrices}`. The showcase importer does not currently create or animate that joint
 palette automatically; complete imported skeletal playback requires application-provided palette
-integration. See [ANARI arrays and geometry](/docs/api-reference/scene/anari-geometry).
+integration. See [ANARI arrays and geometry](/docs/api-reference/anari/anari-geometry).
 
 ## Validation
 
 The optional `@luma.gl/anari/schemas` entry point validates animation nodes, targets, tracks,
 clips, playback settings, parent relationships, retained references, increasing keyframe times,
 and cubic tangent/value/tangent counts. See
-[ANARI scene schemas](/docs/api-reference/scene/anari-schemas).
+[ANARI scene schemas](/docs/api-reference/anari/anari-schemas).

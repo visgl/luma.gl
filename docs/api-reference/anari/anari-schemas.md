@@ -206,5 +206,5 @@ reference checks that cannot be expressed by ordinary JSON Schema alone.
 The [ANARI JSON scenes guide](/docs/api-guide/engine/anari-json-scenes#validate-scenes-with-zod-and-json-schema)
 and [JSON scene playground](/docs/api-guide/engine/anari-json-scenes#explore-the-json-scene-playground)
 show how these schemas integrate with live scene editing. See
-[ANARI animation and glTF integration](/docs/api-reference/scene/anari-animation) for retained
+[ANARI animation and glTF integration](/docs/api-reference/anari/anari-animation) for retained
 playback and optional glTF adapter details.

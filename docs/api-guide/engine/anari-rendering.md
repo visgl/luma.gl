@@ -18,9 +18,9 @@ import {AnariGuideDocsTabs} from '@site/src/components/docs/anari-guide-docs-tab
 
 `@luma.gl/anari` is an experimental retained-mode rendering layer inspired by ANARI. Instead of building pipelines, binding buffers, and issuing individual draw calls, an application describes a world containing geometry, materials, lights, and cameras. A renderer compiles that description into luma.gl models and renders it through either WebGPU or WebGL 2.
 
-This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/anari` API reference](/docs/api-reference/scene).
+This guide explains the complete application workflow, object lifecycle, animation, HDR configuration, batching strategy, and current proof-of-concept limitations. For exact signatures and parameter defaults, see the [`@luma.gl/anari` API reference](/docs/api-reference/anari).
 
-For a function-by-function comparison with the Khronos ANARI 1.1 C API and a conceptual THREE.js migration table, see [ANARI C API and THREE.js Mapping](/docs/api-reference/scene/anari-api-mapping).
+For a function-by-function comparison with the Khronos ANARI 1.1 C API and a conceptual THREE.js migration table, see [ANARI C API and THREE.js Mapping](/docs/api-reference/anari/anari-api-mapping).
 
 :::caution
 This package is ANARI-inspired, not a JavaScript binding for the ANARI C API. It implements a useful subset of ANARI concepts but does not claim Khronos conformance.
@@ -33,7 +33,7 @@ This package is ANARI-inspired, not a JavaScript binding for the ANARI C API. It
 | Create, commit, render, resize, and animate a retained scene | [Build an ANARI scene](/docs/api-guide/engine/anari-first-scene) |
 | Understand forward, deferred, and graph-based ray-tracing renderers | [Renderer architecture](/docs/api-guide/engine/anari-architecture) |
 | Validate, author, generate, animate, and import scene descriptions | [JSON scenes](/docs/api-guide/engine/anari-json-scenes) |
-| Look up exact object, schema, and renderer contracts | [ANARI API reference](/docs/api-reference/scene) |
+| Look up exact object, schema, and renderer contracts | [ANARI API reference](/docs/api-reference/anari) |
 
 ## Run the showcase
 
@@ -60,7 +60,7 @@ Package-level tests demonstrate staged parameters, animated lights, shared-surfa
 zero-copy arrays, and rendering on available graphics backends.
 
 The JSON playground supports click-to-inspect selection with the WebGPU ray-tracing renderer.
-Applications can use [`frame.pick(x, y)`](/docs/api-reference/scene/anari-rendering#pickx-y)
+Applications can use [`frame.pick(x, y)`](/docs/api-reference/anari/anari-rendering#pickx-y)
 to retrieve retained surface/instance identities and world-space hit information. Selected
 marks also receive an inward outline that follows animation and camera movement.
 
@@ -71,11 +71,11 @@ full-output-resolution integer-ID, ray-distance, and world-normal textures, toge
 with a retained placement identity table. Captures are independent caller-owned
 snapshots and must be released with `channels.destroy()`. They perform an additional
 primary-ray traversal without CPU readback. See the
-[frame channel reference](/docs/api-reference/scene/anari-rendering#capturechannels)
+[frame channel reference](/docs/api-reference/anari/anari-rendering#capturechannels)
 for formats, ownership, and coordinate conventions. Ray distance is not projected
 device depth. The experimental `SelectionOutline` overlay consumes exact ID snapshots
 for visible selection boundaries. `projectedDepthTexture` and
-[`DepthTextureCopy`](/docs/api-reference/scene/depth-texture-copy) support
+[`DepthTextureCopy`](/docs/api-reference/anari/depth-texture-copy) support
 depth-tested raster overlays with matching camera and viewport conventions.
 
 ## Current limitations
@@ -98,7 +98,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 - WebGL 2 preserves the same scene API but does not support the WebGPU HDR presentation path.
 - The ANARI device releases its renderer resources but does not destroy the underlying shared luma.gl graphics device.
 
-For exact supported parameters and defaults, continue to the [`@luma.gl/anari` API reference](/docs/api-reference/scene).
+For exact supported parameters and defaults, continue to the [`@luma.gl/anari` API reference](/docs/api-reference/anari).
 
 ## Related pages
 
@@ -122,7 +122,7 @@ is hidden. **Interactive** enables adaptive resolution and temporal reprojection
 **Still / capture** chooses full resolution, four primary samples per frame, and fixed
 quality. Quality changes retain the inspected camera and selection; the disabled
 **Scene settings** entry reports custom JSON parameters. A moving scene will not converge as a still scene would. For application-owned
-controls, use [`getRayTracingQualityPreset`](/docs/api-reference/scene/ray-tracing-quality-presets).
+controls, use [`getRayTracingQualityPreset`](/docs/api-reference/anari/ray-tracing-quality-presets).
 
 For a repeatable baseline capture, start the scene example and run:
 
@@ -166,13 +166,13 @@ roughness, and emissive marks reflected in a glossy floor. `transportMode: 'pbr'
 enables the opaque reflective path; `diffuse` remains the default. The same
 `maxBounces` budget and `samplingSeed` control both modes. Use the Transport and
 Bounces controls for comparison, or pass `--materials --transport pbr --bounces 3`
-to the capture harness. See the [quality reference](/docs/api-reference/scene/ray-tracing-quality-presets)
+to the capture harness. See the [quality reference](/docs/api-reference/anari/ray-tracing-quality-presets)
 for probability weighting, roughness bounds, and remaining material limitations.
 
 ### Bounded ray image export
 
 The lower-level experimental scene renderer exposes
-[`exportRayTracingImage`](/docs/api-reference/scene/scene-renderer#tiled-ray-image-export)
+[`exportRayTracingImage`](/docs/api-reference/anari/scene-renderer#tiled-ray-image-export)
 for fixed-camera RGBA8 tile export. Tiles share global sample coordinates and
 include clipped spatial/history halos, so guided filtering and progressive
 clamping agree at tile seams. The API keeps readback bounded to one tile,

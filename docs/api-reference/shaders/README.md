@@ -88,7 +88,7 @@ the assembled WGSL/GLSL application that Engine submits.
   description="Shader assembly and GPU initialization begin only after activation."
   height={460}
 >
-  <ShaderModulesExample />
+  <ShaderModulesExample embedded />
 </ClientOnlyLiveExample>
 
 ## Core concepts

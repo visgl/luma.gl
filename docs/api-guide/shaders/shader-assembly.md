@@ -4,13 +4,20 @@ import {ShaderLevelDocsTabs} from '@site/src/components/docs/shader-level-docs-t
 
 <ShaderLevelDocsTabs active="shader-assembly" />
 
-While it is possible for luma.gl applications to provide complete WGSL or GLSL
-shaders, a more typical use case is to build up shaders by importing reusable
-shader code.
+A core luma.gl principle is that applications remain in full control of their
+shaders. Unlike traditional 3D engines that often generate shaders on an
+application's behalf, luma.gl lets applications define the main shader control
+flow, including:
 
-Shader assembly is textual composition around application-owned shader source.
-The application still owns entry points, i.e. the shader **main** functions,
-attributes, varyings, and the main control flow.
+- Entry points, i.e. the shader **main** functions
+- Attributes
+- Inter-stage variables (varyings)
+
+## Shader Composition
+
+Applications can provide complete WGSL or GLSL shaders, but a more typical use
+case is to build shaders by composing reusable shader code. Shader assembly is
+textual composition around application-owned shader source.
 
 `@luma.gl/shaders` adds reusable source and extension code before `Model`,
 `Computation`, or a lower-level pipeline compiles the final shader.
@@ -22,7 +29,7 @@ attributes, varyings, and the main control flow.
 | Application shader source | The shader entry points and primary flow. | The WGSL `source` string or GLSL `vs`/`fs` strings supplied by the application. | [`Model`](/docs/api-reference/engine/model) |
 | `ShaderInputs` | Module props, uniforms, and bindings after assembly. | Updating typed module props and explicit resource bindings after source assembly. | [`ShaderInputs`](/docs/api-reference/engine/shader-inputs) |
 | `ShaderModule` | Reusable WGSL/GLSL source, uniform descriptors, bindings, dependencies, and optional injections. | Importing a static shader library such as picking, lighting, projection, or a helper library. | [`ShaderModule`](/docs/api-reference/shaders/shader-module) |
-| `ShaderPlugin` | A reusable primary module, defines, shader-facing vertex inputs, and named injections resolved for one shader language. | Attaching a dynamic, optional shader extension to a `Model` or `Computation`. | [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) |
+| `ShaderPlugin` | A reusable primary module, defines, shader-facing vertex inputs, varyings, hooks, and named injections resolved for one shader language. | Attaching a dynamic, optional shader extension to a `Model` or `Computation`. | [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) |
 | Shader dependency | Module ordering. | Bringing required modules in before a module that calls them. | [`ShaderModule.dependencies`](/docs/api-reference/shaders/shader-module#fields) |
 | Define | Conditional source selection. | Backend or feature switches evaluated before assembly. | [`WGSL Support`](/docs/api-reference/shaders/wgsl-support) |
 | Shader hook | A named callback emitted by the assembler and called by base shader source. | A deliberate extension point such as `OFFSET_POSITION` or `FILTER_COLOR`. | [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler#hooks-and-injections) |
@@ -57,6 +64,16 @@ extension: it can add modules, defines, shader-facing vertex inputs, and
 injections when a `Model` or `Computation` opts into that behavior. Hooks are
 the contract a base shader exposes when attached code must participate in its
 flow.
+
+A plugin can provide GLSL and WGSL implementations of its hooks and injections,
+plus vertex input and inter-stage varying definitions. This is particularly
+useful for portable extensions: unlike GLSL, WGSL cannot add these inputs and
+outputs with global declarations alone. Shader assembly updates the WGSL entry
+point interfaces and assigns locations as needed. The application or extension
+still manages buffers, accessor updates, and its own lifecycle; the plugin
+handles shader composition. For example, deck.gl extensions can use this shared
+composition path for WebGL 2 and WebGPU while retaining their existing lifecycle
+and attribute management.
 
 ## Hooks And Standard Anchors
 

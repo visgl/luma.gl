@@ -8,7 +8,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 resources required by physically based image-based lighting: a roughness-prefiltered specular
 cubemap, a diffuse irradiance cubemap, and an integrated BRDF lookup texture. The shared pipeline
 runs on both WebGPU and WebGL and produces a `PreparedPBREnvironment` accepted directly by
-[`SceneRenderer`](/docs/api-reference/scene/scene-renderer).
+[`SceneRenderer`](/docs/api-reference/anari/scene-renderer).
 
 Environment preparation lives in `@luma.gl/anari`. Canonical PBR shading remains in
 `@luma.gl/shaders`; `@luma.gl/engine/gltf` continues to own its separate loader for already prepared
@@ -238,9 +238,9 @@ Destroys the generated diffuse, specular, and BRDF textures.
 
 ## Related pages
 
-- [`SceneRenderer`](/docs/api-reference/scene/scene-renderer) documents environment
+- [`SceneRenderer`](/docs/api-reference/anari/scene-renderer) documents environment
   binding, roughness-aware shading, and captured opaque-scene transmission.
-- [`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer) documents
+- [`DeferredSceneRenderer`](/docs/api-reference/anari/deferred-scene-renderer) documents
   automatic forward fallback for image-based lighting and transmissive materials.
 - [glTF Materials, Textures, and Lighting](/docs/api-reference/gltf/gltf-materials) documents the
   format-owned loader for already prepared cubemap images.

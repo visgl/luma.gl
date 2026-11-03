@@ -834,17 +834,61 @@ const GPGPU_EXAMPLE_STYLE = `
 
 // Showcase Examples
 
-export const ANARIPlaygroundExample: React.FC = () => {
+export const ANARIPlaygroundExample: React.FC<{embedded?: boolean}> = ({embedded}) => {
   const source = useBaseUrl('/standalone-examples/scene/playground.html');
 
   return (
-    <ExamplePage style={{background: '#070913', minHeight: '720px'}}>
+    <ExamplePage embedded={embedded} embeddedHeight={420} style={{background: '#070913'}}>
       <iframe
         title="ANARI Scene Lab"
         src={source}
         allow="clipboard-write"
         style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}}
       />
+    </ExamplePage>
+  );
+};
+
+/** Embeds the Three.js integration example in documentation. */
+export const ThreeIntegrationDocsExample: React.FC<{integration?: 'graph' | 'engine' | 'core' | 'deck'}> = ({integration = 'core'}) => {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const [runtimeState, setRuntimeState] = useState<'loading' | 'running' | 'failed'>('loading');
+  const [errorMessage, setErrorMessage] = useState('');
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frameRef.current?.contentWindow) return;
+      if (event.data?.type === 'luma-example-ready') setRuntimeState('running');
+      if (event.data?.type === 'luma-example-error') {
+        setErrorMessage(String(event.data.message));
+        setRuntimeState('failed');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+  const path = integration === 'graph' ? 'gpu-graph-galaxy.html' : 'embed.html';
+  const source = useBaseUrl('/standalone-examples/three/' + path);
+  const query = '&integration=' + integration;
+  return (
+    <ExamplePage embedded embeddedHeight={360} runtimeState={runtimeState}>
+      <iframe
+        ref={frameRef}
+        title={`Three.js ${integration} integration example`}
+        onLoad={event => {
+          const frameDocument = event.currentTarget.contentDocument;
+          frameDocument?.addEventListener('wheel', wheelEvent => {
+            if (wheelEvent.ctrlKey || wheelEvent.metaKey) return;
+            wheelEvent.preventDefault();
+            wheelEvent.stopImmediatePropagation();
+            const scale = wheelEvent.deltaMode === 1 ? 16 : wheelEvent.deltaMode === 2 ? window.innerHeight : 1;
+            window.scrollBy({left: wheelEvent.deltaX * scale, top: wheelEvent.deltaY * scale, behavior: 'instant'});
+          }, {capture: true, passive: false});
+        }}
+        src={`${source}?embedded=1${query}`}
+        allow="fullscreen"
+        style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}}
+      />
+      {runtimeState === 'failed' ? <div role="alert" style={{position: 'absolute', inset: 20, color: 'white'}}>{errorMessage}</div> : null}
     </ExamplePage>
   );
 };
@@ -2788,6 +2832,7 @@ export const SlangParticlesExample: React.FC = props => (
 export const SlangShadersExample: React.FC = props => (
   <LumaExample
     id="slang-shaders"
+    infoBoxExtraTabs={[{id: 'settings', label: 'Settings'}, {id: 'shaders', label: 'Shaders'}]}
     directory="tutorials"
     loadTemplate={loadSlangShadersApp}
     config={exampleConfig}

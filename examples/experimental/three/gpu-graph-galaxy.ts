@@ -373,22 +373,28 @@ async function main() {
   renderPipeline.outputNode = sceneColor.add(glow);
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
+  let pixelRatio = window.devicePixelRatio;
   const resize = () => {
-    const width = container.clientWidth,
-      height = container.clientHeight;
+    const width = Math.max(1, container.clientWidth);
+    const height = Math.max(1, container.clientHeight);
+    pixelRatio = window.devicePixelRatio;
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height, false);
-    sceneTarget.setSize(width, height);
+    sceneTarget.setSize(canvas.width, canvas.height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
   };
-  window.addEventListener('resize', resize);
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(container);
   resize();
   status.textContent = `${PARTICLE_COUNT.toLocaleString('en-US')} instances · GPU graph → shared buffers → Three.js`;
   let time = 0,
     previousTimestamp = performance.now(),
     running = true;
+  let isReady = false;
   const animate = (now: number) => {
     if (!running) return;
+    if (window.devicePixelRatio !== pixelRatio) resize();
     const deltaTimeSeconds = Math.min((now - previousTimestamp) / 1000, 0.05);
     previousTimestamp = now;
     const paused = infoBox.settings.paused;
@@ -436,6 +442,10 @@ async function main() {
       [camera.near, camera.far]
     );
     renderPipeline.render();
+    if (!isReady) {
+      isReady = true;
+      window.parent.postMessage({type: 'luma-example-ready'}, window.location.origin);
+    }
     infoBox.update();
     requestAnimationFrame(animate);
   };
@@ -446,7 +456,7 @@ async function main() {
       running = false;
       controls.dispose();
       infoBox.destroy();
-      window.removeEventListener('resize', resize);
+      resizeObserver.disconnect();
       renderPipeline.dispose();
       glow.dispose();
       sceneTarget.dispose();
@@ -469,6 +479,10 @@ async function main() {
   );
 }
 main().catch(error => {
+  window.parent.postMessage(
+    {type: 'luma-example-error', message: String(error)},
+    window.location.origin
+  );
   document.querySelector<HTMLElement>('#status')!.textContent = String(error);
   log.error(error instanceof Error ? error.message : String(error))();
 });

@@ -380,7 +380,7 @@ renderer.render({...options, environment: generatedEnvironment});
 device.submit();
 ```
 
-[`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) integrates all six
+[`PBREnvironmentGenerator`](/docs/api-reference/anari/pbr-environment) integrates all six
 GGX-prefiltered specular faces at every roughness mip, cosine-weighted diffuse irradiance, and a
 split-sum BRDF lookup texture on WebGL or WebGPU.
 
@@ -547,13 +547,13 @@ Releases all renderer-owned frame resources.
 
 ## Related pages
 
-- [`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer) renders
+- [`DeferredSceneRenderer`](/docs/api-reference/anari/deferred-scene-renderer) renders
   compatible opaque/masked metallic-roughness scenes on WebGPU and falls back to this renderer.
-- [`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) generates
+- [`PBREnvironmentGenerator`](/docs/api-reference/anari/pbr-environment) generates
   roughness-prefiltered cubemaps, diffuse irradiance, and BRDF lookup textures.
 - [`pbrMaterial`](/docs/api-reference/shaders/shader-modules/pbr-material) documents canonical
   physically based shader uniforms and bindings.
-- [`GBuffer`](/docs/api-reference/scene/g-buffer) documents the deferred attachment model.
+- [`GBuffer`](/docs/api-reference/anari/g-buffer) documents the deferred attachment model.
 - [`@luma.gl/engine/gltf`](/docs/api-reference/gltf) owns glTF parsing, material interpretation,
   environment-image loading, and animation decoding.
 

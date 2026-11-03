@@ -109,6 +109,7 @@ export type LumaExampleProps = React.PropsWithChildren<
     sourcePath?: string;
     stackBlitz?: boolean;
     infoBoxAppearance?: InfoBoxAppearance;
+    infoBoxExtraTabs?: {id: string; label: string}[];
     container?: string;
     panel?: boolean;
     showHeader?: boolean;
@@ -192,6 +193,7 @@ export type ExampleStageProps = React.PropsWithChildren<{
 type ExampleHeaderProps = React.PropsWithChildren<
   ExampleInfoProps & {
     infoBoxAppearance?: InfoBoxAppearance;
+    infoBoxExtraTabs?: {id: string; label: string}[];
     devices?: DeviceTabSelection[];
     style?: CSSProperties;
   }
@@ -215,7 +217,7 @@ export const ExampleStage: FC<ExampleStageProps> = (props: ExampleStageProps) =>
 );
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
-  const [isImmersive, setIsImmersive] = useState(true);
+  const [isImmersive, setIsImmersive] = useState(!props.embedded);
   const [isNavigationPending, setIsNavigationPending] = useState(false);
   const supportDefinition = useResolvedExampleSupportDefinition(props);
   const runtimeEnvironment = useExampleRuntimeEnvironment();
@@ -228,7 +230,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     : isNavigationPending
       ? 'loading'
       : props.runtimeState || 'running';
-  const embeddedHeight = props.embeddedHeight ?? 560;
+  const embeddedHeight = props.embeddedHeight ?? 420;
   const embeddedStyle: CSSProperties | undefined = props.embedded
     ? {
         height: embeddedHeight,
@@ -251,7 +253,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     <div
       data-luma-example-page=""
       data-luma-embedded-example={props.embedded ? '' : undefined}
-      data-luma-example-immersive={props.embedded ? undefined : String(isImmersive)}
+      data-luma-example-immersive={String(isImmersive)}
       data-luma-example-id={supportDefinition.id || undefined}
       data-luma-example-mobile-mode={supportDefinition.mobileMode}
       data-luma-example-quality-profile={supportDefinition.mobileProfile}
@@ -282,13 +284,13 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
       {runtimeState === 'loading' && !isNavigationPending ? (
         <ExampleLoadingIndicator embedded={props.embedded} />
       ) : null}
-      {!props.embedded ? (
+      {(
         <button
           data-luma-example-fullscreen-toggle=""
           type="button"
           aria-label={isImmersive ? 'Exit fullscreen example' : 'Enter fullscreen example'}
           aria-pressed={isImmersive}
-          title={isImmersive ? 'Exit fullscreen' : 'Enter fullscreen'}
+          data-tooltip={isImmersive ? 'Exit Full Screen' : 'Full Screen'}
           onClick={() => setIsImmersive(previousValue => !previousValue)}
         >
           <svg
@@ -311,7 +313,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
             />
           </svg>
         </button>
-      ) : null}
+      )}
       {props.embedded ? (
         <div className="docs-embedded-example-interaction-hint" aria-hidden="true">
           Scroll page · Ctrl/⌘ + scroll to interact
@@ -351,6 +353,7 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
         sourcePath={props.sourcePath}
         stackBlitz={props.stackBlitz}
         appearance={props.infoBoxAppearance}
+        extraTabs={props.infoBoxExtraTabs}
         style={{pointerEvents: 'auto'}}
       >
         {props.children}
@@ -789,6 +792,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           sourcePath={props.sourcePath}
           stackBlitz={props.stackBlitz}
           infoBoxAppearance={props.infoBoxAppearance}
+          infoBoxExtraTabs={props.infoBoxExtraTabs}
           devices={declaredDevices}
         >
           {props.children}
@@ -1001,16 +1005,22 @@ function ExampleStatusMessage({
 }
 
 export function ExampleLoadingIndicator({embedded}: {embedded?: boolean}): React.JSX.Element {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  useEffect(() => {
+    const start = performance.now();
+    const timer = window.setInterval(() => setElapsedSeconds(Math.floor((performance.now() - start) / 1000)), 250);
+    return () => window.clearInterval(timer);
+  }, []);
   return (
     <div
       className={`luma-example-loading${embedded ? ' luma-example-loading--embedded' : ''}`}
       data-luma-example-status="loading"
       role="status"
-      aria-live="polite"
+      aria-label="Loading example"
+      aria-live="off"
     >
       <span className="luma-example-loading-spinner" aria-hidden="true" />
-      <strong>Loading example</strong>
-      <span>Preparing GPU resources…</span>
+      <span>{elapsedSeconds}s</span>
     </div>
   );
 }

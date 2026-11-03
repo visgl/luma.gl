@@ -7,7 +7,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 `DeferredSceneRenderer` renders compatible physically based scene descriptions through a WebGPU
 G-buffer and a reusable fullscreen deferred-lighting pass. It accepts the same `SceneRenderOptions`
 and returns the same statistics as
-[`SceneRenderer`](/docs/api-reference/scene/scene-renderer).
+[`SceneRenderer`](/docs/api-reference/anari/scene-renderer).
 
 The constructor requires a WebGPU device. A renderer created successfully on WebGPU automatically
 uses its shared forward renderer whenever a scene cannot be represented faithfully by the current
@@ -117,7 +117,7 @@ console.log(clearcoatSceneSupported);
 
 For a compatible scene, the renderer:
 
-1. Retains one [`GBuffer`](/docs/api-reference/scene/g-buffer) per frame identifier and
+1. Retains one [`GBuffer`](/docs/api-reference/anari/g-buffer) per frame identifier and
    resizes its attachments when the render dimensions change.
 2. Reuses `SceneRenderer` surface preparation, PBR material specialization, and instanced model
    batches to draw geometry into scene color, normal/roughness, velocity, and two named material
@@ -126,7 +126,7 @@ For a compatible scene, the renderer:
    inputs; local lights use the existing bounded point-light storage buffer. Spot lights are
    currently approximated as omnidirectional point lights, dropping their authored direction and
    cone angles; use the forward renderer when faithful spot cones are required.
-4. Runs [`deferredLighting`](/docs/api-reference/scene/deferred-lighting) through the
+4. Runs [`deferredLighting`](/docs/api-reference/anari/deferred-lighting) through the
    existing engine `ShaderPassRenderer`, applying exposure and fog in the fullscreen resolve.
 
 The G-buffer, light buffer, deferred shader pass, and lazily created forward-fallback renderer are
@@ -150,7 +150,7 @@ camera state remain caller-owned.
 Deferred rendering currently resolves the shared direct-lighting contract; it does not implement
 deferred image-based lighting, transmission/refraction, advanced physical layers, shadows, or
 order-independent transparency. Generated
-[`PreparedPBREnvironment`](/docs/api-reference/scene/pbr-environment) resources and
+[`PreparedPBREnvironment`](/docs/api-reference/anari/pbr-environment) resources and
 transmissive scenes therefore use the fully featured shared forward path automatically.
 
 ## Methods
@@ -182,13 +182,13 @@ buffer, and the deferred-lighting renderer.
 
 ## Related pages
 
-- [`SceneRenderer`](/docs/api-reference/scene/scene-renderer) documents scene descriptors,
+- [`SceneRenderer`](/docs/api-reference/anari/scene-renderer) documents scene descriptors,
   instancing, physical materials, environment resources, captured scene-color transmission,
   skinning, and morph targets.
-- [Physically Based Environment Lighting](/docs/api-reference/scene/pbr-environment)
+- [Physically Based Environment Lighting](/docs/api-reference/anari/pbr-environment)
   describes portable GGX cubemap, diffuse irradiance, and BRDF-LUT generation.
-- [`GBuffer`](/docs/api-reference/scene/g-buffer) describes reusable attachment ownership.
-- [`deferredLighting`](/docs/api-reference/scene/deferred-lighting) describes the fullscreen
+- [`GBuffer`](/docs/api-reference/anari/g-buffer) describes reusable attachment ownership.
+- [`deferredLighting`](/docs/api-reference/anari/deferred-lighting) describes the fullscreen
   metallic-roughness lighting pass.
-- [`ClusteredLightGrid`](/docs/api-reference/scene/clustered-lighting) documents the
+- [`ClusteredLightGrid`](/docs/api-reference/anari/clustered-lighting) documents the
   separately composable clustered-lighting infrastructure.

@@ -1,3 +1,5 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import {ShadersDocsTabs} from '@site/src/components/docs/shaders-docs-tabs';
 import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
@@ -142,6 +144,9 @@ base shader registers a stage-prefixed hook signature, calls the generated hook
 function, and lets modules or plugin contributions add ordered source by using
 the same stage-prefixed key without the function signature.
 
+<Tabs groupId="shader-language">
+<TabItem value="glsl" label="GLSL">
+
 ```typescript
 glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
@@ -160,8 +165,9 @@ void main() {
 }
 ```
 
-If no module injects into a hook, the generated hook function is a no-op. WGSL
-uses the same flow with WGSL hook signatures and pointer arguments:
+
+</TabItem>
+<TabItem value="wgsl" label="WGSL">
 
 ```typescript
 wgslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
@@ -175,6 +181,12 @@ fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> 
   return shaderPosition;
 }
 ```
+
+</TabItem>
+</Tabs>
+
+If no module injects into a hook, the generated hook function is a no-op.
+WGSL uses pointer arguments for mutable values.
 
 Named hook injections must target a hook registered for the shader stage. WGSL
 ignores module injections for unregistered hooks because module injections may contain

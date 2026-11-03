@@ -65,24 +65,24 @@ The following APIs are owned by `@luma.gl/anari`.
 
 | Module | Use it for |
 | --- | --- |
-| [SceneRenderer](/docs/api-reference/scene/scene-renderer) | Retained physically based forward rendering on WebGPU and WebGL 2. |
-| [DeferredSceneRenderer](/docs/api-reference/scene/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
-| [PBR environments](/docs/api-reference/scene/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
-| [GBuffer](/docs/api-reference/scene/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
-| [Selection outlines](/docs/api-reference/scene/selection-outline) | Visible placement boundaries from exact integer ID textures. |
-| [Deferred lighting](/docs/api-reference/scene/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
-| [Clustered lighting](/docs/api-reference/scene/clustered-lighting) | Compute-binned local lights for deferred shading. |
-| [Shadow maps](/docs/api-reference/scene/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |
+| [SceneRenderer](/docs/api-reference/anari/scene-renderer) | Retained physically based forward rendering on WebGPU and WebGL 2. |
+| [DeferredSceneRenderer](/docs/api-reference/anari/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
+| [PBR environments](/docs/api-reference/anari/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
+| [GBuffer](/docs/api-reference/anari/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
+| [Selection outlines](/docs/api-reference/anari/selection-outline) | Visible placement boundaries from exact integer ID textures. |
+| [Deferred lighting](/docs/api-reference/anari/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
+| [Clustered lighting](/docs/api-reference/anari/clustered-lighting) | Compute-binned local lights for deferred shading. |
+| [Shadow maps](/docs/api-reference/anari/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |
 
 ### Materials and transparency
 
 | Module | Use it for |
 | --- | --- |
-| [A-buffer renderer](/docs/api-reference/scene/a-buffer-renderer) | Accurate bounded per-pixel fragment storage, sorting, and compositing. |
-| [Weighted blended OIT](/docs/api-reference/scene/wboit-renderer) | Portable approximate order-independent transparency without sorting. |
+| [A-buffer renderer](/docs/api-reference/anari/a-buffer-renderer) | Accurate bounded per-pixel fragment storage, sorting, and compositing. |
+| [Weighted blended OIT](/docs/api-reference/anari/wboit-renderer) | Portable approximate order-independent transparency without sorting. |
 | [Glass material](/docs/api-reference/engine/experimental/glass-material) | Screen-space refraction, Fresnel reflection, dispersion, and absorption. |
 | [Reflective material](/docs/api-reference/engine/experimental/reflective-material) | Lightweight glossy environment reflection. |
-| [Spectral caustics](/docs/api-reference/scene/spectral-caustics-renderer) | Geometry-derived multi-wavelength planar caustic lighting. |
+| [Spectral caustics](/docs/api-reference/anari/spectral-caustics-renderer) | Geometry-derived multi-wavelength planar caustic lighting. |
 | [Comparison splitter](/docs/api-reference/engine/experimental/comparison-splitter) | Accessible before-and-after canvas comparisons. |
 
 ### Simulation and immersive input
@@ -119,6 +119,6 @@ specific rather than universal performance claims.
 - [Shaders API](/docs/api-reference/shaders)
 - [Effects API](/docs/api-reference/effects)
 
-[`DepthTextureCopy`](../scene/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
+[`DepthTextureCopy`](../anari/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
 
-[`getRayTracingQualityPreset`](../scene/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.
+[`getRayTracingQualityPreset`](../anari/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.

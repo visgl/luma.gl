@@ -56,6 +56,10 @@ describe('compact example graphics backend selection', () => {
   test('keeps a labeled native picker alongside desktop backend tabs', () => {
     const html = renderDevicePicker();
 
+    expect(html).toContain('data-luma-backend-trigger=""');
+    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('data-luma-backend-badge=""');
     expect(html).toContain('data-luma-device-tabs=""');
     expect(html).toContain('data-luma-device-menu=""');
     expect(html).toContain('data-luma-device-menu-indicator=""');
