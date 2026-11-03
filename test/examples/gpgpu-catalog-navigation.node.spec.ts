@@ -254,28 +254,22 @@ describe('GPGPU example catalog navigation', () => {
     ]);
   });
 
-  test('groups floating-point precision with GPGPU guides while preserving its canonical URL', () => {
+  test('groups floating-point precision with shader guides while preserving its canonical URL', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const generalPurposeGPUGraphming = documentationTableOfContents.find(
+    const officialModules = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' &&
-        entry.type === 'category' &&
-        entry.label === 'Computing on the GPU'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Official Modules'
     );
-    const shaderProgramming = documentationTableOfContents.find(
+    const shaderProgramming = officialModules?.items.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Writing Shaders'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Shaders'
     );
     const precisionGuideIdentifier = 'api-guide/shaders/gpu-floating-point-precision';
 
-    expect(generalPurposeGPUGraphming).toBeDefined();
     expect(shaderProgramming).toBeDefined();
-    expect(readCategoryIdentifiers(generalPurposeGPUGraphming!)).toContain(
-      precisionGuideIdentifier
-    );
-    expect(readCategoryIdentifiers(shaderProgramming!)).not.toContain(precisionGuideIdentifier);
+    expect(readCategoryIdentifiers(shaderProgramming!)).toContain(precisionGuideIdentifier);
     expect(existsSync(path.join(DOCUMENTATION_DIRECTORY, `${precisionGuideIdentifier}.md`))).toBe(
       true
     );

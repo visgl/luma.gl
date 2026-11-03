@@ -122,7 +122,7 @@ export const EXPERIMENTAL_DOCS_TAB_GROUPS: readonly DocsTabGroup<ExperimentalDoc
   {
     id: 'experimental-overview',
     label: 'Experimental overview',
-    tabs: [{id: 'overview', label: 'Overview', href: '/docs/api-reference/experimental'}]
+    tabs: [{id: 'overview', label: 'Overview', href: '/docs/api-reference/graph'}]
   },
   {
     id: 'scene-rendering',
