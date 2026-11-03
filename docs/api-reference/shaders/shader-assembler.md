@@ -52,24 +52,39 @@ for CommonJS. Construct and pass a language-specific assembler; there is no glob
 ## Usage
 
 ```typescript
+import {resolveShaderPlugins, type ShaderPlugin} from '@luma.gl/shaders';
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
+const offsetLeftPlugin: ShaderPlugin = {
+  name: 'offset-left',
+  injections: [{
+    stage: 'vertex',
+    target: 'OFFSET_POSITION',
+    glsl: 'position.x -= 0.5;',
+    wgsl: '(*position).x -= 0.5;'
+  }]
+};
+
 const glslShaderAssembler = new GLSLShaderAssembler();
 glslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
-
+const glslPlugin = resolveShaderPlugins([offsetLeftPlugin], 'glsl');
 const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
   platformInfo: glslPlatformInfo,
   vs: vertexShaderSource,
   fs: fragmentShaderSource,
-  modules: [offsetLeftModule]
+  modules: glslPlugin.modules,
+  pluginInjections: glslPlugin.injections
 });
 
 const wgslShaderAssembler = new WGSLShaderAssembler();
+wgslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}});
+const wgslPlugin = resolveShaderPlugins([offsetLeftPlugin], 'wgsl');
 const assembledWGSLShader = wgslShaderAssembler.assembleWGSLShader({
   platformInfo: wgslPlatformInfo,
   source: wgslShaderSource,
-  modules: [offsetLeftModule]
+  modules: wgslPlugin.modules,
+  pluginInjections: wgslPlugin.injections
 });
 
 const isolatedGLSLShaderAssembler = new GLSLShaderAssembler();
