@@ -75,3 +75,21 @@ it('makeGPUGeometry interleaves cube geometry into one vertex buffer', async () 
 
   gpuGeometry.destroy();
 });
+
+it('makeGPUVectorGeometry owns uploaded interleaved and index buffers', async () => {
+  const {makeGPUVectorGeometry} = await import('@luma.gl/engine');
+  const device = await getWebGLTestDevice();
+  const source = new CubeGeometry({indices: true});
+  const geometry = makeGPUVectorGeometry(device, source);
+  const vertexBuffer = geometry.attributes.geometry.data[0].buffer;
+  const indexBuffer = geometry.indices!.data[0].buffer;
+
+  expect(Object.keys(geometry.attributes)).toEqual(['geometry']);
+  expect(geometry.bufferLayout![0].attributes!.length).toBe(4);
+  expect(geometry.vertexCount).toBe(source.vertexCount);
+  expect(geometry.topology).toBe(source.topology);
+  expect(vertexBuffer.destroyed).toBe(false);
+  geometry.destroy();
+  expect(vertexBuffer.destroyed).toBe(true);
+  expect(indexBuffer.destroyed).toBe(true);
+});
