@@ -15239,6 +15239,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-deck-gpu-spatial-taxi@workspace:examples/deck/gpu-spatial-taxi":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-deck-gpu-spatial-taxi@workspace:examples/deck/gpu-spatial-taxi"
+  dependencies:
+    "@deck.gl-community/gpu-layers": "workspace:*"
+    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
+    "@luma.gl/core": "npm:10.0.0-alpha.8"
+    "@luma.gl/engine": "npm:10.0.0-alpha.8"
+    "@luma.gl/shaders": "npm:10.0.0-alpha.8"
+    maplibre-gl: "npm:^5.20.0"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-deck-hdr-night-lighting@workspace:examples/deck/hdr-night-lighting":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-deck-hdr-night-lighting@workspace:examples/deck/hdr-night-lighting"
@@ -15270,21 +15285,6 @@ __metadata:
     "@math.gl/earth": "npm:5.0.0-beta.4"
     playwright: "npm:^1.58.0"
     pngjs: "npm:^7.0.0"
-    typescript: "npm:^6.0.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-deck-luspatial-taxi@workspace:examples/deck/luspatial-taxi"
-  dependencies:
-    "@deck.gl-community/gpu-layers": "workspace:*"
-    "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch"
-    "@luma.gl/core": "npm:10.0.0-alpha.8"
-    "@luma.gl/engine": "npm:10.0.0-alpha.8"
-    "@luma.gl/shaders": "npm:10.0.0-alpha.8"
-    maplibre-gl: "npm:^5.20.0"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.0"
   languageName: unknown
