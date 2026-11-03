@@ -53,7 +53,7 @@ const loadGPUSceneGraphApp = () => import('../../examples/experimental/gpu-scene
 const loadGPUTraceSceneApp = () => import('../../examples/experimental/gpu-trace-scene/app');
 const loadGPUTraceViewerApp = () => import('../../examples/experimental/gpu-trace-viewer/app');
 const loadGPUGraphExplorerApp = () => import('../../examples/experimental/gpu-graph-explorer/app');
-const loadGPU Volume AlgorithmsVolumeLabApp = () => import('../../examples/experimental/lucim-volume-lab/app');
+const loadGPUVolumeLabApp = () => import('../../examples/experimental/lucim-volume-lab/app');
 const loadGPT2App = () => import('../../examples/experimental/gpt-2/app');
 const loadVideoTextureApp = () => import('../../examples/api/video-texture/app');
 const loadWebXRKaleidoscopeApp = () => import('../../examples/experimental/webxr-kaleidoscope/app');
@@ -1852,13 +1852,13 @@ export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props =
   />
 );
 
-export const GPU Volume AlgorithmsVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
+export const GPUVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="lucim-volume-lab"
     title="GPU Volume Algorithms Volume Lab"
     subtitle="GPU-resident tri-planar volume segmentation"
     directory="experimental"
-    loadTemplate={loadGPU Volume AlgorithmsVolumeLabApp}
+    loadTemplate={loadGPUVolumeLabApp}
     config={exampleConfig}
     devices={['webgpu']}
     {...props}
