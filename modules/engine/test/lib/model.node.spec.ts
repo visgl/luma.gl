@@ -54,7 +54,7 @@ it('Model preserves explicitly supplied custom WGSL shader assemblers', () => {
     name: 'customWGSLModule',
     source: 'const CUSTOM_WGSL_MODULE_MARKER: f32 = 1.0;'
   });
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'CUSTOM_WGSL_MODEL_HOOK',
     stage: 'vertex',
     wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
@@ -92,7 +92,7 @@ it('Model preserves legacy Deck assemblers for both shader languages', () => {
     name: 'legacyGLSLModule',
     vs: 'const float LEGACY_GLSL_MODULE_MARKER = 1.0;'
   });
-  glslShaderAssembler.addShaderHook({
+  glslShaderAssembler.addShaderInjectionTarget({
     name: 'LEGACY_DECK_HOOK',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 position'}
@@ -101,7 +101,7 @@ it('Model preserves legacy Deck assemblers for both shader languages', () => {
     name: 'legacyWGSLModule',
     source: 'const LEGACY_WGSL_MODULE_MARKER: f32 = 1.0;'
   });
-  wgslShaderAssembler.addShaderHook({
+  wgslShaderAssembler.addShaderInjectionTarget({
     name: 'LEGACY_DECK_HOOK',
     stage: 'vertex',
     wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
@@ -111,7 +111,8 @@ it('Model preserves legacy Deck assemblers for both shader languages', () => {
   const legacyShaderAssembler = {
     addDefaultModule: wgslShaderAssembler.addDefaultModule.bind(wgslShaderAssembler),
     removeDefaultModule: wgslShaderAssembler.removeDefaultModule.bind(wgslShaderAssembler),
-    addShaderHook: wgslShaderAssembler.addShaderHook.bind(wgslShaderAssembler),
+    addShaderInjectionTarget:
+      wgslShaderAssembler.addShaderInjectionTarget.bind(wgslShaderAssembler),
     assembleGLSLShaderPair: glslShaderAssembler.assembleGLSLShaderPair.bind(glslShaderAssembler),
     assembleWGSLShader: wgslShaderAssembler.assembleWGSLShader.bind(wgslShaderAssembler)
   };
@@ -177,7 +178,7 @@ it('Model preserves a legacy default shader assembler override for WebGPU', () =
     name: 'legacyDefaultWGSLModule',
     source: 'const LEGACY_DEFAULT_WGSL_MODULE_MARKER: f32 = 1.0;'
   });
-  wgslShaderAssembler.addShaderHook({
+  wgslShaderAssembler.addShaderInjectionTarget({
     name: 'LEGACY_DEFAULT_WGSL_HOOK',
     stage: 'vertex',
     wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
@@ -186,7 +187,8 @@ it('Model preserves a legacy default shader assembler override for WebGPU', () =
   const legacyDefaultShaderAssembler = {
     addDefaultModule: wgslShaderAssembler.addDefaultModule.bind(wgslShaderAssembler),
     removeDefaultModule: wgslShaderAssembler.removeDefaultModule.bind(wgslShaderAssembler),
-    addShaderHook: wgslShaderAssembler.addShaderHook.bind(wgslShaderAssembler),
+    addShaderInjectionTarget:
+      wgslShaderAssembler.addShaderInjectionTarget.bind(wgslShaderAssembler),
     assembleGLSLShaderPair: glslShaderAssembler.assembleGLSLShaderPair.bind(glslShaderAssembler),
     assembleWGSLShader: wgslShaderAssembler.assembleWGSLShader.bind(wgslShaderAssembler)
   };
@@ -231,7 +233,7 @@ it('Model accepts compatible WGSL assemblers from another module instance', () =
     name: 'duplicateWGSLModule',
     source: 'const DUPLICATE_WGSL_MODULE_MARKER: f32 = 1.0;'
   });
-  sourceShaderAssembler.addShaderHook({
+  sourceShaderAssembler.addShaderInjectionTarget({
     name: 'DUPLICATE_WGSL_MODEL_HOOK',
     stage: 'vertex',
     wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
@@ -241,7 +243,8 @@ it('Model accepts compatible WGSL assemblers from another module instance', () =
     shaderLanguage: 'wgsl' as const,
     addDefaultModule: sourceShaderAssembler.addDefaultModule.bind(sourceShaderAssembler),
     removeDefaultModule: sourceShaderAssembler.removeDefaultModule.bind(sourceShaderAssembler),
-    addShaderHook: sourceShaderAssembler.addShaderHook.bind(sourceShaderAssembler),
+    addShaderInjectionTarget:
+      sourceShaderAssembler.addShaderInjectionTarget.bind(sourceShaderAssembler),
     assembleWGSLShader: sourceShaderAssembler.assembleWGSLShader.bind(sourceShaderAssembler)
   };
   expect(

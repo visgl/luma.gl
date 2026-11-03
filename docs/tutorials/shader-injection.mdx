@@ -1,21 +1,21 @@
 import {DeviceTabs} from '@site/src/react-luma';
-import {ShaderHooksExample} from '@site/src/examples';
+import {ShaderInjectionExample} from '@site/src/examples';
 import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 
-# Shader Hooks
+# Shader Injection
 
-<TutorialDocsTabs group="shaders" active="shader-hooks" />
+<TutorialDocsTabs group="shaders" active="shader-injection" />
 
-Shader hooks let plugins inject code into designated points in a shader. This example defines an `OFFSET_POSITION` hook that two plugins use to shift geometry left or right.
+Injection targets identify where plugins can add shader code. This example declares a callable `OFFSET_POSITION` target and attaches two plugins that shift geometry left or right. See the [Shader Injection guide](/docs/api-guide/shaders/shader-injection) for built-in targets and injection syntax.
 
 <DeviceTabs />
-<ShaderHooksExample embedded showHeader={false} showStats={false} />
+<ShaderInjectionExample embedded showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
-Hooks act like named callbacks within shader code. The base vertex shader calls
-`OFFSET_POSITION`, and modules supply implementations that modify the position.
-By attaching different modules to each model, one triangle is nudged left while
+Callable injection targets act like named functions within shader code. The base vertex shader calls
+`OFFSET_POSITION`, and plugins supply injections that modify the position.
+By attaching different plugins to each model, one triangle is nudged left while
 the other is pushed right.
 
 The complete source for this example is shown below:
@@ -91,7 +91,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const shaderAssembler = new GLSLShaderAssembler();
-    shaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
+    shaderAssembler.addShaderInjectionTarget({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
@@ -164,6 +164,4 @@ const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
 animationLoop.start();
 ```
 
-The `ShaderAssembler` gathers hook implementations from attached modules and
-patches them into the base shader at build time. Hooks allow modules to customize
-behavior without modifying original shader sources.
+The `ShaderAssembler` gathers injections from the attached plugins and places them in the declared target when it builds the shader. The base shader calls `OFFSET_POSITION` without depending on either plugin.

@@ -1,5 +1,17 @@
 # Upgrade Guide
 
+### Shader injection target naming
+
+Shader hooks are now called injection targets throughout the public API. Update
+`ShaderHook` to `ShaderInjectionTarget`, `ShaderPlugin.hooks` to
+`ShaderPlugin.injectionTargets`, assembly `hookFunctions` to
+`injectionTargets`, and `addShaderHook()`/`resetShaderInjection()` to
+`addShaderInjectionTarget()`/`resetShaderInjectionTargets()`. The
+`ShaderInjection.target` field and target strings such as `vs:#decl` and
+`fs:FILTER_COLOR` are unchanged. There is no separate public type for the
+`glsl`/`wgsl` signature object; it is part of `ShaderInjectionTarget`.
+
+
 ### Shader hook descriptors
 
 `ShaderAssembler.addShaderHook()` and assembly `hookFunctions` now accept only

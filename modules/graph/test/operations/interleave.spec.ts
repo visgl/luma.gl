@@ -49,7 +49,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     const defaultShaderAssembler = defaultProps.shaderAssembler;
     const contaminatedShaderAssembler =
       deviceType === 'webgpu' ? new WGSLShaderAssembler() : new GLSLShaderAssembler();
-    contaminatedShaderAssembler.addShaderHook({
+    contaminatedShaderAssembler.addShaderInjectionTarget({
       name: 'INVALID_HOOK',
       stage: 'vertex',
       glsl: {parameters: 'inout invalid_type value'},

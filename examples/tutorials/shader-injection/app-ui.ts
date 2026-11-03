@@ -3,6 +3,6 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 /** Presentation for the example shell. */
-export const ShaderHooksInfoHtml = `
-Modifying shader behavior with shader hooks
+export const ShaderInjectionInfoHtml = `
+Modifying shader behavior with injection targets
 `;

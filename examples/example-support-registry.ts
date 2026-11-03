@@ -101,7 +101,7 @@ import support52 from './tutorials/two-cubes/mobile-support';
 import support53 from './tutorials/instanced-cubes/mobile-support';
 import support54 from './tutorials/hello-instancing/mobile-support';
 import support55 from './tutorials/shader-modules/mobile-support';
-import support56 from './tutorials/shader-hooks/mobile-support';
+import support56 from './tutorials/shader-injection/mobile-support';
 import support57 from './tutorials/shader-plugins/mobile-support';
 import slangParticlesSupport from './tutorials/slang-particles/mobile-support';
 import slangShadersSupport from './tutorials/slang-shaders/mobile-support';
@@ -246,7 +246,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'tutorials/instanced-cubes': support53,
   'tutorials/hello-instancing': support54,
   'tutorials/shader-modules': support55,
-  'tutorials/shader-hooks': support56,
+  'tutorials/shader-injection': support56,
   'tutorials/shader-plugins': support57,
   'tutorials/slang-shaders': slangShadersSupport,
   'tutorials/slang-particles': slangParticlesSupport,

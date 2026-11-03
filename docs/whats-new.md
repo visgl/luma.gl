@@ -1,11 +1,11 @@
 # What's New
 
-### Dual-language shader hooks
+### Dual-language shader injection targets
 
-Shader hook descriptors define one stage and name with separate GLSL and WGSL
+Shader injection target descriptors define one stage and name with separate GLSL and WGSL
 parameter syntax, return types, and header/footer source. Register the same descriptor with both
 assemblers; each selects its language implementation. See
-[ShaderAssembler](/docs/api-reference/shaders/shader-assembler#addshaderhookhook-shaderhook-void).
+[ShaderAssembler](/docs/api-reference/shaders/shader-assembler#addshaderinjectiontargettarget-shaderinjectiontarget-void).
 
 ### Reusable graph texture bindings
 

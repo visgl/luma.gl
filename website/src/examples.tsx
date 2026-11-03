@@ -103,7 +103,7 @@ import type {GLTFAudioFeature} from '../../examples/gltf/audio/presets';
 const loadGLTFAudioApp = () => import('../../examples/gltf/audio/app');
 const loadHelloGLTFApp = () => import('../../examples/tutorials/hello-gltf/app');
 const loadLightingApp = () => import('../../examples/tutorials/lighting/app');
-const loadShaderHooksApp = () => import('../../examples/tutorials/shader-hooks/app');
+const loadShaderInjectionApp = () => import('../../examples/tutorials/shader-injection/app');
 const loadShaderPluginsApp = () => import('../../examples/tutorials/shader-plugins/app');
 const loadShaderModulesApp = () => import('../../examples/tutorials/shader-modules/app');
 const loadSlangParticlesApp = () => import('../../examples/tutorials/slang-particles/app');
@@ -2789,11 +2789,11 @@ export const HelloInstancingExample: React.FC = props => (
   />
 );
 
-export const ShaderHooksExample: React.FC = props => (
+export const ShaderInjectionExample: React.FC = props => (
   <LumaExample
-    id="shader-hooks"
+    id="shader-injection"
     directory="tutorials"
-    loadTemplate={loadShaderHooksApp}
+    loadTemplate={loadShaderInjectionApp}
     config={exampleConfig}
     showStats={false}
     stackBlitz

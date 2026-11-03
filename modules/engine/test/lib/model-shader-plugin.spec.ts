@@ -171,7 +171,7 @@ it.each(['webgl', 'webgpu'] as const)('Model#plugin-owned hooks compile on %s', 
       },
       {
         name: 'provider',
-        hooks: [
+        injectionTargets: [
           {name: 'TINT', stage: 'fragment', glsl: {parameters: '\n  inout vec4 color\n'}},
           {
             name: 'TINT',
