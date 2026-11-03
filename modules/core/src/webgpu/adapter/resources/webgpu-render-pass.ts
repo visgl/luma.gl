@@ -112,6 +112,10 @@ export class WebGPURenderPass extends RenderPass {
         this.device.debug();
       });
       this.handle.label = this.props.id;
+      // Match WebGL, which applies initial pass parameters (viewport, scissorRect, ...) on creation
+      if (this.props.parameters) {
+        this.setParameters(this.props.parameters);
+      }
       log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
       log.probe(3, JSON.stringify(renderPassDescriptor, null, 2))();
       log.groupEnd(3)();
