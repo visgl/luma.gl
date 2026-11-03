@@ -47,9 +47,9 @@ const colorHooks: ShaderPlugin = {
   name: 'color-hooks',
   hooks: [{
     stage: 'fragment',
-    target: 'FILTER_COLOR',
-    glsl: '(inout vec4 color)',
-    wgsl: '(color: ptr<function, vec4<f32>>)'
+    name: 'FILTER_COLOR',
+    glsl: {parameters: 'inout vec4 color'},
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
   }]
 };
 ```
@@ -88,17 +88,19 @@ hooks, throw. Injection `order` determines execution order; equal orders preserv
 plugin declaration order. A missing language variant contributes nothing for that
 language. An injection into a missing hook throws rather than silently disappearing.
 
-### String shorthand
+### Injection string shorthand
 
-Object declarations always separate `stage` and the unqualified `target`. String
-forms can retain stage and language prefixes:
+Hook declarations use `ShaderHook` descriptors with `stage`, `name`, and language
+implementations. Each implementation has `parameters`, optional `returnType`, and
+optional `header`/`footer`. Hook strings are not supported. Injection strings can
+retain stage and language prefixes:
 
 ```ts
 const shortTint: ShaderPlugin = {
   name: 'short-tint',
   hooks: [
-    'glsl:fs:FILTER_COLOR(inout vec4 color)',
-    'wgsl:fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)'
+    {name: 'FILTER_COLOR', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}},
+    {name: 'FILTER_COLOR', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}}
   ],
   injections: {
     'glsl:fs:FILTER_COLOR': 'color.r = 0.5;',
@@ -161,7 +163,7 @@ export type ShaderPlugin = {
   name: string;
   module?: ShaderModule<any, any, any>;
   defines?: Record<string, boolean | number>;
-  hooks?: (ShaderPluginHook | string)[];
+  hooks?: ShaderPluginHook[];
   injections?: ShaderPluginInjection[] | Record<string, string>;
   vertexInputs?: Record<string, AttributeShaderType>;
   interStageVariables?: Record<string, ShaderPluginInterStageVariable>;
@@ -174,12 +176,7 @@ export type ShaderPluginInterStageVariable = {
   interpolation?: ShaderPluginInterStageVariableInterpolation;
 };
 
-export type ShaderPluginHook = {
-  stage: 'vertex' | 'fragment';
-  target: string;
-  glsl?: string; // Parameter list
-  wgsl?: string; // Parameter list
-};
+export type ShaderPluginHook = ShaderHook;
 
 export type ShaderPluginInjection = {
   stage: 'vertex' | 'fragment';
@@ -326,10 +323,8 @@ the `filterValues: 'f32'` vertex input and attaches a `filter` shader module wit
 Compatible base shaders register and call the position hook:
 
 ```ts
-shaderAssembler.addShaderHook('vs:FILTER_POSITION(inout vec4 position)'); // GLSL
-shaderAssembler.addShaderHook(
-  'vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)'
-); // WGSL
+shaderAssembler.addShaderHook({name: 'FILTER_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}}); // GLSL
+shaderAssembler.addShaderHook({name: 'FILTER_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}}); // WGSL
 ```
 
 <Tabs groupId="shader-language">

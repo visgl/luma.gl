@@ -70,7 +70,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const shaderAssembler = new GLSLShaderAssembler();
-    shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    shaderAssembler.addShaderHook({
+      name: 'OFFSET_POSITION',
+      stage: 'vertex',
+      glsl: {parameters: 'inout vec4 position'}
+    });
     this.uniformStore = new UniformStore(device, {
       app: {
         uniformTypes: {

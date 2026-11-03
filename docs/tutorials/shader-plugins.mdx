@@ -139,10 +139,8 @@ import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 
 const shaderAssembler = new GLSLShaderAssembler();
 
-shaderAssembler.addShaderHook(
-  'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'
-);
-shaderAssembler.addShaderHook('fs:CLIP_COLOR(inout vec4 color)');
+shaderAssembler.addShaderHook({name: 'CLIP_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates'}});
+shaderAssembler.addShaderHook({name: 'CLIP_COLOR', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}});
 ```
 
 For WGSL, create a `WGSLShaderAssembler` instead. Its hook signatures use

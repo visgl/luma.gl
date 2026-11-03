@@ -354,7 +354,11 @@ void main() { fragmentColor = vec4(1.0); }`,
 
 it('ShaderPlugin#WGSL vertex inputs support direct and struct entry-point inputs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)');
+  shaderAssembler.addShaderHook({
+    name: 'FILTER_POSITION',
+    stage: 'vertex',
+    wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+  });
 
   const assembled = shaderAssembler.assembleWGSLShader({
     platformInfo: WGSL_PLATFORM_INFO,
@@ -448,8 +452,16 @@ it('ShaderPlugin#WGSL vertex inputs support an entry point without parameters', 
 
 it('ShaderPlugin#GLSL interStageVariables generate matched stage interfaces', () => {
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
-  shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(inout vec4 color)');
+  shaderAssembler.addShaderHook({
+    name: 'SET_PLUGIN_VARYINGS',
+    stage: 'vertex',
+    glsl: {parameters: ''}
+  });
+  shaderAssembler.addShaderHook({
+    name: 'USE_PLUGIN_VARYINGS',
+    stage: 'fragment',
+    glsl: {parameters: 'inout vec4 color'}
+  });
   const shaders = shaderAssembler.assembleGLSLShaderPair({
     platformInfo: GLSL_PLATFORM_INFO,
     vs: /* glsl */ `#version 300 es
@@ -547,8 +559,16 @@ struct FragmentInput { @builtin(position) position: vec4<f32>, };
 
 it('ShaderPlugin#WGSL interStageVariables extend named stage structs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:SET_PLUGIN_VARYINGS()');
-  shaderAssembler.addShaderHook('fs:USE_PLUGIN_VARYINGS(color: ptr<function, vec4<f32>>)');
+  shaderAssembler.addShaderHook({
+    name: 'SET_PLUGIN_VARYINGS',
+    stage: 'vertex',
+    wgsl: {parameters: ''}
+  });
+  shaderAssembler.addShaderHook({
+    name: 'USE_PLUGIN_VARYINGS',
+    stage: 'fragment',
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  });
   const source = /* wgsl */ `
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -761,7 +781,13 @@ it('ShaderPlugin#assembly-local hooks do not leak between calls', () => {
   expect(
     assembler.assembleWGSLShader({
       ...props,
-      hookFunctions: ['fs:LOCAL_COLOR(color: ptr<function, vec4<f32>>)']
+      hookFunctions: [
+        {
+          name: 'LOCAL_COLOR',
+          stage: 'fragment',
+          wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+        }
+      ]
     }).source
   ).toContain('*color *= 0.5;');
   expect(() => assembler.assembleWGSLShader(props)).toThrow('Unknown shader hook fs:LOCAL_COLOR');
@@ -769,7 +795,11 @@ it('ShaderPlugin#assembly-local hooks do not leak between calls', () => {
 
 it('ShaderPlugin#GLSL local hooks override registered hooks without mutation', () => {
   const assembler = new GLSLShaderAssembler();
-  assembler.addShaderHook('vs:LOCAL_POSITION(inout vec4 position)', {header: 'position.x += 1.0;'});
+  assembler.addShaderHook({
+    name: 'LOCAL_POSITION',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position', header: 'position.x += 1.0;'}
+  });
   const props = {
     platformInfo: GLSL_PLATFORM_INFO,
     vs: '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
@@ -779,8 +809,9 @@ it('ShaderPlugin#GLSL local hooks override registered hooks without mutation', (
     ...props,
     hookFunctions: [
       {
-        hook: 'vs:LOCAL_POSITION(inout vec4 position)',
-        header: 'position.x += 2.0;'
+        name: 'LOCAL_POSITION',
+        stage: 'vertex',
+        glsl: {parameters: 'inout vec4 position', header: 'position.x += 2.0;'}
       }
     ]
   });
@@ -838,7 +869,11 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
       language === 'wgsl'
         ? (() => {
             const assembler = new WGSLShaderAssembler();
-            assembler.addShaderHook('fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)');
+            assembler.addShaderHook({
+              name: 'FILTER_COLOR',
+              stage: 'fragment',
+              wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+            });
             return assembler.assembleWGSLShader({
               platformInfo: WGSL_PLATFORM_INFO,
               source: WGSL_SOURCE,
@@ -851,7 +886,11 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
           })()
         : (() => {
             const assembler = new GLSLShaderAssembler();
-            assembler.addShaderHook('fs:FILTER_COLOR(inout vec4 color)');
+            assembler.addShaderHook({
+              name: 'FILTER_COLOR',
+              stage: 'fragment',
+              glsl: {parameters: 'inout vec4 color'}
+            });
             return assembler.assembleGLSLShaderPair({
               platformInfo: GLSL_PLATFORM_INFO,
               vs: '#version 300 es\nvoid main() { gl_Position = vec4(0.0); }',
@@ -1023,9 +1062,9 @@ it.each([
     hooks: [
       {
         stage: 'fragment',
-        target: 'FILTER_COLOR',
-        glsl: '(\n  inout vec4 color\n)',
-        wgsl: '(\n  color: ptr<function, vec4<f32>>\n)'
+        name: 'FILTER_COLOR',
+        glsl: {parameters: '\n  inout vec4 color\n'},
+        wgsl: {parameters: '\n  color: ptr<function, vec4<f32>>\n'}
       }
     ]
   };
@@ -1037,7 +1076,9 @@ it.each([
   };
   const resolved = resolveShaderPlugins([consumer, provider, provider], language);
   expect(resolved.hooks).toHaveLength(1);
-  expect(resolved.hooks[0].hook).toContain(language === 'glsl' ? 'inout' : 'ptr<function');
+  expect(resolved.hooks[0][language]?.parameters).toContain(
+    language === 'glsl' ? 'inout' : 'ptr<function'
+  );
   const assembled =
     language === 'glsl'
       ? new GLSLShaderAssembler().assembleGLSLShaderPair({
@@ -1059,7 +1100,10 @@ it.each([
     resolveShaderPlugins(
       [
         provider,
-        {name: 'conflict', hooks: [{stage: 'fragment', target: 'FILTER_COLOR', [language]: '()'}]}
+        {
+          name: 'conflict',
+          hooks: [{stage: 'fragment', name: 'FILTER_COLOR', [language]: {parameters: ''}}]
+        }
       ],
       language
     )
@@ -1069,7 +1113,10 @@ it.each([
 it('ShaderPlugin#qualified shorthand selects language and rejects compact objects', () => {
   const plugin: ShaderPlugin = {
     name: 'short',
-    hooks: ['glsl:fs:TINT(inout vec4 color)', 'wgsl:fs:TINT(color: ptr<function, vec4<f32>>)'],
+    hooks: [
+      {name: 'TINT', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}},
+      {name: 'TINT', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}}
+    ],
     injections: {'glsl:fs:TINT': 'color.r = 1.0;', 'wgsl:fs:TINT': '(*color).r = 1.0;'}
   };
   expect(resolveShaderPlugins([plugin], 'glsl').injections['fs:TINT'][0].injection).toBe(
@@ -1084,10 +1131,18 @@ it('ShaderPlugin#qualified shorthand selects language and rejects compact object
   ).toThrow(/explicit stage/);
 });
 
-it('ShaderPlugin#assembler strings select language and reject provider conflicts', () => {
+it('ShaderPlugin#assembler descriptors select language and reject provider conflicts', () => {
   const assembler = new GLSLShaderAssembler();
-  assembler.addShaderHook('glsl:fs:TINT(inout vec4 color)');
-  assembler.addShaderHook('wgsl:fs:TINT(color: ptr<function, vec4<f32>>)');
+  assembler.addShaderHook({
+    name: 'TINT',
+    stage: 'fragment',
+    glsl: {parameters: 'inout vec4 color'}
+  });
+  assembler.addShaderHook({
+    name: 'TINT',
+    stage: 'fragment',
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  });
   const props = {
     platformInfo: GLSL_PLATFORM_INFO,
     vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
@@ -1097,21 +1152,25 @@ it('ShaderPlugin#assembler strings select language and reject provider conflicts
   expect(source).toContain('void TINT(inout vec4 color)');
   expect(source).not.toContain('ptr<function');
   expect(() =>
-    assembler.assembleGLSLShaderPair({...props, pluginHooks: [{hook: 'fs:TINT()'}]})
+    assembler.assembleGLSLShaderPair({
+      ...props,
+      pluginHooks: [{name: 'TINT', stage: 'fragment', glsl: {parameters: ''}}]
+    })
   ).toThrow(/Conflicting/);
 });
 
 it('ShaderPlugin#matching declarations preserve assembler hook wrappers', () => {
   const assembler = new GLSLShaderAssembler();
-  assembler.addShaderHook('fs:TINT(inout vec4 color)', {
-    header: 'color.r = 0.25;',
-    footer: 'color.b = 0.75;'
+  assembler.addShaderHook({
+    name: 'TINT',
+    stage: 'fragment',
+    glsl: {parameters: 'inout vec4 color', header: 'color.r = 0.25;', footer: 'color.b = 0.75;'}
   });
   const resolved = resolveShaderPlugins(
     [
       {
         name: 'provider',
-        hooks: [{stage: 'fragment', target: 'TINT', glsl: '(inout vec4 color)'}],
+        hooks: [{stage: 'fragment', name: 'TINT', glsl: {parameters: 'inout vec4 color'}}],
         injections: [{stage: 'fragment', target: 'TINT', glsl: 'color.g = 0.5;'}]
       }
     ],

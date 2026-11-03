@@ -26,13 +26,8 @@ export type ShaderPluginTarget = {
   target: string;
 };
 
-/** Hook function declared by a plugin, with parameter signatures per language. */
-export type ShaderPluginHook = ShaderPluginTarget & {
-  /** GLSL parameter list, including parentheses. */
-  glsl?: string;
-  /** WGSL parameter list, including parentheses. */
-  wgsl?: string;
-};
+/** Callable plugin extension point using the same descriptor as assembler registration. */
+export type ShaderPluginHook = ShaderHook;
 
 /** Named shader source injection contributed by a ShaderPlugin. */
 export type ShaderPluginInjection = ShaderPluginTarget & {
@@ -71,8 +66,8 @@ export type ShaderPlugin = {
   defines?: Record<string, boolean | number>;
   /** Named injections as explicit-stage objects or optionally language-qualified string keys. */
   injections?: ShaderPluginInjection[] | Record<string, string>;
-  /** Callable extension points as explicit-stage objects or optionally language-qualified signatures. */
-  hooks?: (ShaderPluginHook | string)[];
+  /** Callable extension points with a shared name and language-specific source. */
+  hooks?: ShaderPluginHook[];
   /** Shader-facing vertex inputs added by this plugin. Buffer ownership remains with the caller. */
   vertexInputs?: Record<string, AttributeShaderType>;
   /** Values transported from the selected vertex entry point to the fragment entry point. */
@@ -198,25 +193,27 @@ function appendShaderPlugin(
   }
 
   for (const hook of plugin.hooks || []) {
-    const declarationSource =
-      typeof hook === 'string' ? selectShaderLanguage(hook, shaderLanguage) : undefined;
-    if (typeof hook === 'string' && declarationSource === undefined) continue;
-    const signature =
-      typeof hook === 'string'
-        ? declarationSource!.slice(declarationSource!.indexOf('('))
-        : hook[shaderLanguage];
-    if (signature === undefined) continue;
-    const target =
-      typeof hook === 'string' ? declarationSource!.split('(')[0] : getShaderPluginTarget(hook);
-    if (!/^(vs|fs):[A-Za-z_][A-Za-z0-9_]*$/.test(target) || !/^\([^]*\)$/.test(signature.trim())) {
+    const implementation = hook[shaderLanguage];
+    if (!implementation) continue;
+    const target = `${hook.stage === 'vertex' ? 'vs' : 'fs'}:${hook.name}`;
+    if (!/^(vs|fs):[A-Za-z_][A-Za-z0-9_]*$/.test(target)) {
       throw new Error(`Invalid ShaderPlugin hook ${target}`);
     }
-    const declaration = {hook: `${target}${signature.trim()}`};
-    const existing = resolved.hooks.find(value => value.hook.split('(')[0] === target);
-    if (existing && existing.hook !== declaration.hook) {
+    const existing = resolved.hooks.find(
+      value => value.stage === hook.stage && value.name === hook.name
+    );
+    const previous = existing?.[shaderLanguage];
+    if (
+      previous &&
+      (previous.parameters !== implementation.parameters ||
+        (previous.returnType || 'void') !== (implementation.returnType || 'void') ||
+        previous.header !== implementation.header ||
+        previous.footer !== implementation.footer)
+    ) {
       throw new Error(`Conflicting ShaderPlugin hook ${target}`);
     }
-    if (!existing) resolved.hooks.push(declaration);
+    if (!existing)
+      resolved.hooks.push({name: hook.name, stage: hook.stage, [shaderLanguage]: implementation});
   }
   const pluginInjections = Array.isArray(plugin.injections)
     ? plugin.injections

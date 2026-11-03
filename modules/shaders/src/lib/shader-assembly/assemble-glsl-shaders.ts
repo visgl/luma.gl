@@ -93,7 +93,7 @@ export function assembleShaderGLSL(
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
     defines?: Record<string, boolean | number>;
-    hookFunctions?: readonly (ShaderHook | string)[];
+    hookFunctions?: readonly ShaderHook[];
     pluginHooks?: readonly ShaderHook[];
     inject?: Record<string, string | ShaderInjection>;
     pluginInjections?: Record<string, ShaderInjection[]>;
