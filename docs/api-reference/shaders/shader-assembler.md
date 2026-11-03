@@ -27,7 +27,7 @@ For WGSL binding relocation and conditionals, see
 <DocumentationContract title="ShaderAssembler" rows={[
   {label: 'Languages', value: 'Separate stateful GLSL and WGSL assembler implementations'},
   {label: 'Dependencies', value: 'Initializes, resolves, de-duplicates, and orders module dependencies'},
-  {label: 'Hooks and injections', value: 'Combines registered hook contracts with ordered module and application injections'},
+  {label: 'Hooks and injections', value: 'Combines registered hook contracts with ordered plugin and application injections'},
   {label: 'Inputs', value: 'Application source, platform information, modules, defines, and injection maps'},
   {label: 'Output', value: 'Assembled source, resolved modules, layout metadata, and combined uniform mapping'},
   {label: 'Cost', value: 'Assemble when source configuration changes, before pipeline creation—not per draw'}
@@ -52,24 +52,39 @@ for CommonJS. Construct and pass a language-specific assembler; there is no glob
 ## Usage
 
 ```typescript
+import {resolveShaderPlugins, type ShaderPlugin} from '@luma.gl/shaders';
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
+const offsetLeftPlugin: ShaderPlugin = {
+  name: 'offset-left',
+  injections: [{
+    stage: 'vertex',
+    target: 'OFFSET_POSITION',
+    glsl: 'position.x -= 0.5;',
+    wgsl: '(*position).x -= 0.5;'
+  }]
+};
+
 const glslShaderAssembler = new GLSLShaderAssembler();
 glslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
-
+const glslPlugin = resolveShaderPlugins([offsetLeftPlugin], 'glsl');
 const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
   platformInfo: glslPlatformInfo,
   vs: vertexShaderSource,
   fs: fragmentShaderSource,
-  modules: [offsetLeftModule]
+  modules: glslPlugin.modules,
+  pluginInjections: glslPlugin.injections
 });
 
 const wgslShaderAssembler = new WGSLShaderAssembler();
+wgslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}});
+const wgslPlugin = resolveShaderPlugins([offsetLeftPlugin], 'wgsl');
 const assembledWGSLShader = wgslShaderAssembler.assembleWGSLShader({
   platformInfo: wgslPlatformInfo,
   source: wgslShaderSource,
-  modules: [offsetLeftModule]
+  modules: wgslPlugin.modules,
+  pluginInjections: wgslPlugin.injections
 });
 
 const isolatedGLSLShaderAssembler = new GLSLShaderAssembler();
@@ -160,8 +175,8 @@ reflection.
 
 Hooks are deliberate extension points called by application shader code. The
 base shader registers a stage-prefixed hook signature, calls the generated hook
-function, and lets modules or plugin contributions add ordered source by using
-the same stage-prefixed key without the function signature.
+function, and lets plugin contributions add ordered source by targeting the
+registered hook name and stage.
 
 <Tabs groupId="shader-language">
 <TabItem value="glsl" label="GLSL">
@@ -169,11 +184,9 @@ the same stage-prefixed key without the function signature.
 ```typescript
 glslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
 
-const offsetLeftModule = {
+const offsetLeftPlugin: ShaderPlugin = {
   name: 'offsetLeft',
-  inject: {
-    'vs:OFFSET_POSITION': 'position.x -= 0.5;'
-  }
+  injections: [{stage: 'vertex', target: 'OFFSET_POSITION', glsl: 'position.x -= 0.5;'}]
 };
 ```
 
@@ -204,12 +217,11 @@ fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> 
 </TabItem>
 </Tabs>
 
-If no module injects into a hook, the generated hook function is a no-op.
+If no plugin injects into a hook, the generated hook function is a no-op.
 WGSL uses pointer arguments for mutable values.
 
-Named hook injections must target a hook registered for the shader stage. WGSL
-ignores module injections for unregistered hooks because module injections may contain
-GLSL-only code.
+Named hook injections must target a hook registered for the shader stage.
+Plugin injections targeting unregistered hooks fail during assembly.
 
 Standard named injections are also available:
 

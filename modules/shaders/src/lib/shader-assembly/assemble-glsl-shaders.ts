@@ -237,23 +237,9 @@ ${getApplicationDefines(allDefines)}
     const moduleSource = getShaderModuleSource(module, stage, log);
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
-
-    const injections = module.instance?.normalizedInjections[stage] || {};
-    for (const key in injections) {
-      const match = /^(v|f)s:#([\w-]+)$/.exec(key);
-      if (match) {
-        const name = match[2];
-        const injectionType = name === 'decl' ? declInjections : mainInjections;
-        injectionType[key] = injectionType[key] || [];
-        injectionType[key].push(injections[key]);
-      } else {
-        hookInjections[key] = hookInjections[key] || [];
-        hookInjections[key].push(injections[key]);
-      }
-    }
   }
 
-  // GLSL module injections are GLSL source, so application, plugin, and module hook targets must exist.
+  // Named hook injections must target a registered hook.
   validateShaderHookInjections(hookFunctionMap, hookInjections, stage);
 
   assembledSource += '// ----- MAIN SHADER SOURCE -------------------------';

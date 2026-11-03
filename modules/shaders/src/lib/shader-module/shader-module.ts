@@ -10,7 +10,7 @@ import {
   getValidatedProperties
 } from '../filters/prop-types';
 import type {ShaderModuleUniformValue, UniformTypes, UniformValue} from '../utils/uniform-types';
-import {ResolvedShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
+import type {ResolvedShaderInjection} from '../shader-assembly/shader-injections';
 
 import type {ShaderBinding as Binding} from '../../types';
 
@@ -83,8 +83,6 @@ export type ShaderModule<
 
   /** Boolean or numeric preprocessor defines contributed by this shader module. */
   defines?: Record<string, boolean | number>;
-  /** Injections */
-  inject?: Record<string, string | {injection: string; order: number}>;
   dependencies?: ShaderModule<any, any>[];
   /** Information on deprecated properties */
   deprecations?: ShaderModuleDeprecation[];
@@ -93,7 +91,7 @@ export type ShaderModule<
   instance?: {
     propValidators?: Record<string, PropValidator>;
     parsedDeprecations: ShaderModuleDeprecation[];
-
+    /** Empty compatibility value for consumers using older shadertools assembly. */
     normalizedInjections: {
       vertex: Record<string, ResolvedShaderInjection>;
       fragment: Record<string, ResolvedShaderInjection>;
@@ -123,16 +121,11 @@ export function initializeShaderModule(module: ShaderModule): void {
 
   initializeShaderModules(module.dependencies || []);
 
-  const {
-    propTypes = {},
-    deprecations = [],
-    // defines = {},
-    inject = {}
-  } = module;
+  const {propTypes = {}, deprecations = []} = module;
 
   const instance: Required<ShaderModule>['instance'] = {
-    normalizedInjections: normalizeInjections(inject),
-    parsedDeprecations: parseDeprecationDefinitions(deprecations)
+    parsedDeprecations: parseDeprecationDefinitions(deprecations),
+    normalizedInjections: {vertex: {}, fragment: {}}
   };
 
   if (propTypes) {

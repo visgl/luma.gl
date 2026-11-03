@@ -55,11 +55,11 @@ Pass this assembler to the model through its `shaderAssembler` prop. The applica
 ## Inject source
 
 ```ts
-const fade = {
+import type {ShaderPlugin} from '@luma.gl/shaders';
+
+const fade: ShaderPlugin = {
   name: 'fade',
-  inject: {
-    'fs:FILTER_COLOR': '(*color).a *= 0.5;'
-  }
+  injections: [{stage: 'fragment', target: 'FILTER_COLOR', wgsl: '(*color).a *= 0.5;'}]
 };
 ```
 

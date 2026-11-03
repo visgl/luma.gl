@@ -28,7 +28,7 @@ A hook has three parts:
 
 1. The assembler registers a stage-prefixed hook signature.
 2. The base shader calls the generated hook function.
-3. A module or plugin injects ordered source into that hook.
+3. A plugin injects ordered source into that hook.
 
 ```typescript
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';

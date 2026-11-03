@@ -10,7 +10,8 @@ import {
   type PlatformInfo,
   type ShaderHook,
   picking,
-  dirlight
+  dirlight,
+  resolveShaderPlugins
 } from '@luma.gl/shaders';
 
 const platformInfo: PlatformInfo = {
@@ -107,17 +108,28 @@ it('ShaderAssembler#hooks', () => {
 
   expect(Boolean(preHookShaders !== assemblyResults), 'Adding hooks changes hash').toBe(true);
 
-  const pickingInjection = {
-    ...picking,
-    instance: undefined,
-    inject: {
-      'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
-      'fs:LUMAGL_fragmentColor': {
-        injection: 'color = picking_filterColor(color);',
-        order: Number.POSITIVE_INFINITY
+  const pickingPlugin = resolveShaderPlugins(
+    [
+      {
+        name: 'picking-injection',
+        module: picking,
+        injections: [
+          {
+            stage: 'vertex',
+            target: 'LUMAGL_pickColor',
+            glsl: 'picking_setPickingColor(color.rgb);'
+          },
+          {
+            stage: 'fragment',
+            target: 'LUMAGL_fragmentColor',
+            glsl: 'color = picking_filterColor(color);',
+            order: Number.POSITIVE_INFINITY
+          }
+        ]
       }
-    }
-  };
+    ],
+    'glsl'
+  );
 
   const noModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
@@ -137,18 +149,19 @@ it('ShaderAssembler#hooks', () => {
 
   expect(
     Boolean(noModuleVs.indexOf('picking_setPickingColor(color.rgb)') === -1),
-    'injection code not included in vertex shader without module'
+    'injection code not included in vertex shader without plugin'
   ).toBe(true);
   expect(
     Boolean(noModuleFs.indexOf('color = picking_filterColor(color)') === -1),
-    'injection code not included in fragment shader without module'
+    'injection code not included in fragment shader without plugin'
   ).toBe(true);
 
   const modulesProgram = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
-    modules: [pickingInjection]
+    modules: pickingPlugin.modules,
+    pluginInjections: pickingPlugin.injections
   });
   const modulesVs = modulesProgram.vs;
   const modulesFs = modulesProgram.fs;
@@ -164,11 +177,11 @@ it('ShaderAssembler#hooks', () => {
 
   expect(
     Boolean(modulesVs.indexOf('picking_setPickingColor(color.rgb)') > -1),
-    'injection code included in vertex shader with module'
+    'injection code included in vertex shader with plugin'
   ).toBe(true);
   expect(
     Boolean(modulesFs.indexOf('color = picking_filterColor(color)') > -1),
-    'injection code included in fragment shader with module'
+    'injection code included in fragment shader with plugin'
   ).toBe(true);
   expect(
     Boolean(modulesFs.indexOf('if (color.a == 0.0) discard;') > -1),
