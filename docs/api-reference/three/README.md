@@ -1,11 +1,11 @@
 ---
-title: Three.js
+title: Three.js 🧪
 ---
 
 import {ThreeIntegrationDocsExample} from '@site/src/examples';
 import {ClientOnlyLiveExample} from '@site/src/components/docs/client-only-live-example';
 
-# Three.js
+# Three.js 🧪
 
 :::caution[Experimental]
 

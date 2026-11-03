@@ -1,5 +1,21 @@
 # Upgrade Guide
 
+## GPU API naming
+
+The remaining experimental Lu-prefixed APIs now use GPU names. Update imports and type references:
+
+| Previous name | New name |
+| --- | --- |
+| `LuSQLContext`, `LuSQLQuery` | `GPUSQLContext`, `GPUSQLQuery` |
+| `LuSQLQueryOptions`, `LuSQLTables` | `GPUSQLQueryOptions`, `GPUSQLTables` |
+| `LuSpatialPointLayer` and associated types | `GPUSpatialPointLayer` and corresponding `GPUSpatial…` types |
+| `LuSpatialGeographicPointQueryEffect` and associated types/helpers | `GPUSpatialGeographicPointQueryEffect` and corresponding `GPUSpatial…` names |
+
+Package import subpaths are unchanged, including `@luma.gl/graph/gpu-sql` and
+`@luma.gl/graph/lucim`. Old-name API aliases are not retained. Projection benchmark
+settings now use `VITE_GPU_PROJECT_*` instead of `VITE_LUPROJ_*`. The spatial taxi
+example route is now `/examples/deck/gpu-spatial-taxi`.
+
 ## PBR directional light direction
 
 `pbrMaterial` now interprets directional light `direction` as the direction light travels, matching Phong and Lambert. Applications that previously reversed directions to compensate for PBR lighting must remove that workaround.
@@ -354,8 +370,8 @@ For information on upgrading to from v8 and earlier releases, see the [Legacy Up
 - The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`,
   `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and
   `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to
-  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `LuSQLContext`
-  and `LuSQLQuery` remain in the module.
+  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `GPUSQLContext`
+  and `GPUSQLQuery` remain in the module.
 - Install loaders.gl packages explicitly in applications that use these integrations.
   Published luma.gl modules no longer install them transitively.
 

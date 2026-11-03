@@ -12,17 +12,17 @@ import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer} from '@luma.gl/core';
 import * as graphRootModule from '@luma.gl/graph';
 import * as luDataFrameModule from '@luma.gl/graph/gpu-dataframe';
-import {GPUDataFrame as LuDataFrame} from '@luma.gl/graph/gpu-dataframe';
+import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import * as sqlModule from '@luma.gl/graph/gpu-sql';
-import {LuSQLContext, LuSQLQuery} from '@luma.gl/graph/gpu-sql';
+import {GPUSQLContext, GPUSQLQuery} from '@luma.gl/graph/gpu-sql';
 import {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
-type LuSQLFixtureColumns = {fare: 'float32'; category: 'uint32'; identifier: 'uint32'};
+type GPUSQLFixtureColumns = {fare: 'float32'; category: 'uint32'; identifier: 'uint32'};
 
-describe('LuSQL immutable GPU dataframe planning', () => {
+describe('GPUSQL immutable GPU dataframe planning', () => {
   test('publishes native SQL without a loaders.gl package dependency', () => {
     const packageJson = JSON.parse(
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
@@ -41,13 +41,13 @@ describe('LuSQL immutable GPU dataframe planning', () => {
     expect(packageJson.dependencies?.['@loaders.gl/sql']).toBeUndefined();
     expect('planGPUDataFrameQuery' in sqlModule).toBe(false);
     expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
-    expect(sqlModule.LuSQLContext).toBe(LuSQLContext);
-    expect('LuSQLContext' in graphRootModule).toBe(false);
-    expect('LuSQLContext' in luDataFrameModule).toBe(false);
+    expect(sqlModule.GPUSQLContext).toBe(GPUSQLContext);
+    expect('GPUSQLContext' in graphRootModule).toBe(false);
+    expect('GPUSQLContext' in luDataFrameModule).toBe(false);
   });
 
   test('lowers loaders.gl predicate syntax, projection, and reusable parameters without GPU work', () => {
-    const {device, frame} = createLuSQLNodeFixture();
+    const {device, frame} = createGPUSQLNodeFixture();
     const createBuffer = vi.spyOn(device, 'createBuffer');
     const submit = vi.spyOn(device, 'submit');
     const predicate = parseSQLPredicate('fare >= :minimum AND category IN (0, 1)', {
@@ -93,14 +93,14 @@ describe('LuSQL immutable GPU dataframe planning', () => {
           length: 2,
           ownsBuffer: true
         }),
-        category: createLuSQLNodeData(device, Uint32Array.of(0, 1), 'uint32')
+        category: createGPUSQLNodeData(device, Uint32Array.of(0, 1), 'uint32')
       },
       fields: [
         {name: 'position', format: 'float32x3', nullable: false},
         {name: 'category', format: 'uint32', nullable: false}
       ]
     });
-    const frame = new LuDataFrame({
+    const frame = new GPUDataFrame({
       table: new GPUTable({batches: [batch]}),
       ownership: 'owned'
     });
@@ -112,17 +112,17 @@ describe('LuSQL immutable GPU dataframe planning', () => {
   });
 
   test('plans projections, named parameters, arithmetic, global ordering, and limits without GPU work', () => {
-    const {device, frame} = createLuSQLNodeFixture();
+    const {device, frame} = createGPUSQLNodeFixture();
     const createBuffer = vi.spyOn(device, 'createBuffer');
     const submit = vi.spyOn(device, 'submit');
-    const context = new LuSQLContext({trips: frame});
+    const context = new GPUSQLContext({trips: frame});
 
     const query = context.query(
       'SELECT fare, fare * 2 AS doubled FROM trips WHERE fare >= :minimum ORDER BY fare DESC NULLS LAST LIMIT 2',
       {parameters: {minimum: 5}}
     );
 
-    expect(query).toBeInstanceOf(LuSQLQuery);
+    expect(query).toBeInstanceOf(GPUSQLQuery);
     expect(Object.isFrozen(query)).toBe(true);
     expect(query.sql).toContain('ORDER BY fare DESC');
     expect(createBuffer).not.toHaveBeenCalled();
@@ -134,18 +134,18 @@ describe('LuSQL immutable GPU dataframe planning', () => {
   });
 
   test('lowers global and dictionary-backed grouped aggregates without GPU allocation', () => {
-    const {device, frame} = createLuSQLNodeFixture();
+    const {device, frame} = createGPUSQLNodeFixture();
     const createBuffer = vi.spyOn(device, 'createBuffer');
-    const context = new LuSQLContext({trips: frame});
+    const context = new GPUSQLContext({trips: frame});
 
     expect(
       context.query('SELECT COUNT(*) AS rows, SUM(fare) AS total, AVG(fare) AS average FROM trips')
-    ).toBeInstanceOf(LuSQLQuery);
+    ).toBeInstanceOf(GPUSQLQuery);
     expect(
       context.query(
         'SELECT category, COUNT(*) AS count, SUM(fare) AS total FROM trips GROUP BY category'
       )
-    ).toBeInstanceOf(LuSQLQuery);
+    ).toBeInstanceOf(GPUSQLQuery);
     expect(createBuffer).not.toHaveBeenCalled();
 
     createBuffer.mockRestore();
@@ -153,9 +153,9 @@ describe('LuSQL immutable GPU dataframe planning', () => {
   });
 
   test('plans inner, left outer, semi, and anti joins against explicit registered GPU tables', () => {
-    const left = createLuSQLNodeFixture();
-    const right = createLuSQLNodeFixture();
-    const context = new LuSQLContext({trips: left.frame, accounts: right.frame});
+    const left = createGPUSQLNodeFixture();
+    const right = createGPUSQLNodeFixture();
+    const context = new GPUSQLContext({trips: left.frame, accounts: right.frame});
     for (const operator of [
       'JOIN',
       'INNER JOIN',
@@ -168,7 +168,7 @@ describe('LuSQL immutable GPU dataframe planning', () => {
         context.query(
           `SELECT source.identifier FROM trips AS source ${operator} accounts AS target ON source.identifier = target.identifier`
         )
-      ).toBeInstanceOf(LuSQLQuery);
+      ).toBeInstanceOf(GPUSQLQuery);
     }
 
     left.frame.destroy();
@@ -176,14 +176,14 @@ describe('LuSQL immutable GPU dataframe planning', () => {
   });
 
   test('preserves nullable predicate precedence and rejects unsupported or ambiguous SQL eagerly', () => {
-    const {frame} = createLuSQLNodeFixture();
-    const context = new LuSQLContext({trips: frame});
+    const {frame} = createGPUSQLNodeFixture();
+    const context = new GPUSQLContext({trips: frame});
 
     expect(
       context.query(
         'SELECT fare FROM trips WHERE fare IS NULL OR NOT (fare < 4 AND fare IS NOT NULL)'
       )
-    ).toBeInstanceOf(LuSQLQuery);
+    ).toBeInstanceOf(GPUSQLQuery);
     expect(() => context.query('DELETE FROM trips')).toThrow(/SELECT/i);
     expect(() => context.query('SELECT missing FROM trips')).toThrow(/exist/i);
     expect(() => context.query('SELECT fare FROM missing')).toThrow(/registered/i);
@@ -200,24 +200,27 @@ describe('LuSQL immutable GPU dataframe planning', () => {
     expect(() => context.query("SELECT fare FROM trips WHERE fare = 'unsafe'")).toThrow(
       /unsupported token/i
     );
-    expect(() => new LuSQLContext({'invalid-name': frame})).toThrow(/valid names/i);
+    expect(() => new GPUSQLContext({'invalid-name': frame})).toThrow(/valid names/i);
 
     frame.destroy();
   });
 });
 
-function createLuSQLNodeFixture(): {device: NullDevice; frame: LuDataFrame<LuSQLFixtureColumns>} {
+function createGPUSQLNodeFixture(): {
+  device: NullDevice;
+  frame: GPUDataFrame<GPUSQLFixtureColumns>;
+} {
   const device = new NullDevice({id: 'ludf-sql-node'});
   const values = {
     fare: Float32Array.of(4, 8, 12),
     category: Uint32Array.of(0, 1, 0),
     identifier: Uint32Array.of(10, 20, 30)
   };
-  const batch = new GPURecordBatch<LuSQLFixtureColumns>({
+  const batch = new GPURecordBatch<GPUSQLFixtureColumns>({
     gpuData: {
-      fare: createLuSQLNodeData(device, values.fare, 'float32'),
-      category: createLuSQLNodeData(device, values.category, 'uint32'),
-      identifier: createLuSQLNodeData(device, values.identifier, 'uint32')
+      fare: createGPUSQLNodeData(device, values.fare, 'float32'),
+      category: createGPUSQLNodeData(device, values.category, 'uint32'),
+      identifier: createGPUSQLNodeData(device, values.identifier, 'uint32')
     },
     fields: [
       {name: 'fare', format: 'float32', nullable: false},
@@ -227,7 +230,7 @@ function createLuSQLNodeFixture(): {device: NullDevice; frame: LuDataFrame<LuSQL
   });
   return {
     device,
-    frame: new LuDataFrame({
+    frame: new GPUDataFrame({
       table: new GPUTable({batches: [batch]}),
       dictionaries: {category: {values: ['economy', 'premium'], ordered: false}},
       ownership: 'owned'
@@ -235,7 +238,7 @@ function createLuSQLNodeFixture(): {device: NullDevice; frame: LuDataFrame<LuSQL
   };
 }
 
-function createLuSQLNodeData<Format extends 'float32' | 'uint32'>(
+function createGPUSQLNodeData<Format extends 'float32' | 'uint32'>(
   device: NullDevice,
   values: Float32Array | Uint32Array,
   format: Format

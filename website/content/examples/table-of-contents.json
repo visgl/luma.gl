@@ -339,8 +339,8 @@
     "items": [
       {
         "type": "doc",
-        "id": "deck/luspatial-taxi",
-        "label": "luProj + luSpatial: Taxi Explorer"
+        "id": "deck/gpu-spatial-taxi",
+        "label": "GPU Project + GPU Spatial: Taxi Explorer"
       },
       {
         "type": "doc",

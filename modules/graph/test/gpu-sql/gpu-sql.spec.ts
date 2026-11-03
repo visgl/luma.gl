@@ -12,19 +12,19 @@ import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUData} from '@luma.gl/graph/gpu-data';
 import {
-  CompiledGPUDataFrameAggregation as CompiledLuDataFrameAggregation,
-  CompiledGPUDataFrameGlobalSort as CompiledLuDataFrameGlobalSort,
-  CompiledGPUDataFrameGroupedAggregation as CompiledLuDataFrameGroupedAggregation,
-  CompiledGPUDataFrameJoin as CompiledLuDataFrameJoin,
-  GPUDataFrame as LuDataFrame
+  CompiledGPUDataFrameAggregation as CompiledGPUDataFrameAggregation,
+  CompiledGPUDataFrameGlobalSort as CompiledGPUDataFrameGlobalSort,
+  CompiledGPUDataFrameGroupedAggregation as CompiledGPUDataFrameGroupedAggregation,
+  CompiledGPUDataFrameJoin as CompiledGPUDataFrameJoin,
+  GPUDataFrame
 } from '@luma.gl/graph/gpu-dataframe';
-import {LuSQLContext} from '@luma.gl/graph/gpu-sql';
+import {GPUSQLContext} from '@luma.gl/graph/gpu-sql';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {expect, it} from 'vitest';
 
-it('LuSQL executes Arrow filters, derived columns, global ordering, and selected Arrow output on WebGPU', async () => {
+it('GPUSQL executes Arrow filters, derived columns, global ordering, and selected Arrow output on WebGPU', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -32,11 +32,11 @@ it('LuSQL executes Arrow filters, derived columns, global ordering, and selected
     return;
   }
 
-  const frame = new LuDataFrame({
-    ...makeGPUAnalyticsTableFromArrowTable(device, createLuSQLArrowTable()),
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
     ownership: 'owned'
   });
-  const context = new LuSQLContext({trips: frame});
+  const context = new GPUSQLContext({trips: frame});
   const filtered = context
     .query('SELECT fare, category FROM trips WHERE fare IS NOT NULL')
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-filter'}));
@@ -48,8 +48,8 @@ it('LuSQL executes Arrow filters, derived columns, global ordering, and selected
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-global-sort'}));
 
   try {
-    expect(Boolean(ordered instanceof CompiledLuDataFrameGlobalSort), '').toBe(true);
-    if (!(ordered instanceof CompiledLuDataFrameGlobalSort))
+    expect(Boolean(ordered instanceof CompiledGPUDataFrameGlobalSort), '').toBe(true);
+    if (!(ordered instanceof CompiledGPUDataFrameGlobalSort))
       throw new Error('Expected global SQL sort');
     const encoder = device.createCommandEncoder({id: 'ludf-sql-arrow-encode'});
     filtered.encode(encoder);
@@ -106,8 +106,8 @@ it('loaders.gl SQL predicates compile into reusable GPU-resident dataframe resul
     return;
   }
 
-  const frame = new LuDataFrame({
-    ...makeGPUAnalyticsTableFromArrowTable(device, createLuSQLArrowTable()),
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
     ownership: 'owned'
   });
   const predicate = parseSQLPredicate('fare >= :minimum AND category IN (0, 1)', {
@@ -178,7 +178,7 @@ it('loaders.gl projection-only plans do not bind arbitrary source columns', asyn
       {name: 'category', format: 'uint32', nullable: false}
     ]
   });
-  const frame = new LuDataFrame({
+  const frame = new GPUDataFrame({
     table: new GPUTable({batches: [batch]}),
     ownership: 'owned'
   });
@@ -207,7 +207,7 @@ it('loaders.gl projection-only plans do not bind arbitrary source columns', asyn
   void 0;
 });
 
-it('LuSQL lowers global and dictionary GROUP BY aggregates into GPU tables and Arrow results', async () => {
+it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and Arrow results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -215,11 +215,11 @@ it('LuSQL lowers global and dictionary GROUP BY aggregates into GPU tables and A
     return;
   }
 
-  const frame = new LuDataFrame({
-    ...makeGPUAnalyticsTableFromArrowTable(device, createLuSQLArrowTable()),
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
     ownership: 'owned'
   });
-  const context = new LuSQLContext({trips: frame});
+  const context = new GPUSQLContext({trips: frame});
   const aggregate = context
     .query(
       'SELECT COUNT(*) AS rows, SUM(fare) AS total, AVG(fare) AS average FROM trips WHERE fare >= 8'
@@ -232,8 +232,8 @@ it('LuSQL lowers global and dictionary GROUP BY aggregates into GPU tables and A
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-grouped'}));
 
   try {
-    expect(Boolean(aggregate instanceof CompiledLuDataFrameAggregation), '').toBe(true);
-    expect(Boolean(grouped instanceof CompiledLuDataFrameGroupedAggregation), '').toBe(true);
+    expect(Boolean(aggregate instanceof CompiledGPUDataFrameAggregation), '').toBe(true);
+    expect(Boolean(grouped instanceof CompiledGPUDataFrameGroupedAggregation), '').toBe(true);
     const encoder = device.createCommandEncoder({id: 'ludf-sql-arrow-aggregate-encode'});
     aggregate.encode(encoder);
     grouped.encode(encoder);
@@ -268,7 +268,7 @@ it('LuSQL lowers global and dictionary GROUP BY aggregates into GPU tables and A
   void 0;
 });
 
-it('LuSQL compiles left and anti joins over separately uploaded Arrow sources without repacking', async () => {
+it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources without repacking', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -276,16 +276,16 @@ it('LuSQL compiles left and anti joins over separately uploaded Arrow sources wi
     return;
   }
 
-  const left = new LuDataFrame({
-    ...makeGPUAnalyticsTableFromArrowTable(device, createLuSQLArrowTable()),
+  const left = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
     ownership: 'owned'
   });
   const rightArrow = arrow.tableFromArrays({identifier: Uint32Array.of(20, 40)});
-  const right = new LuDataFrame({
+  const right = new GPUDataFrame({
     ...makeGPUAnalyticsTableFromArrowTable(device, rightArrow),
     ownership: 'owned'
   });
-  const context = new LuSQLContext({trips: left, accounts: right});
+  const context = new GPUSQLContext({trips: left, accounts: right});
   const joined = context
     .query(
       'SELECT trips.identifier, trips.fare FROM trips LEFT JOIN accounts ON trips.identifier = accounts.identifier'
@@ -298,8 +298,8 @@ it('LuSQL compiles left and anti joins over separately uploaded Arrow sources wi
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-anti-join'}));
 
   try {
-    expect(Boolean(joined instanceof CompiledLuDataFrameJoin), '').toBe(true);
-    expect(Boolean(unmatched instanceof CompiledLuDataFrameJoin), '').toBe(true);
+    expect(Boolean(joined instanceof CompiledGPUDataFrameJoin), '').toBe(true);
+    expect(Boolean(unmatched instanceof CompiledGPUDataFrameJoin), '').toBe(true);
     const encoder = device.createCommandEncoder({id: 'ludf-sql-arrow-joins'});
     joined.encode(encoder);
     unmatched.encode(encoder);
@@ -340,7 +340,7 @@ it('LuSQL compiles left and anti joins over separately uploaded Arrow sources wi
   void 0;
 });
 
-function createLuSQLArrowTable(): arrow.Table {
+function createGPUSQLArrowTable(): arrow.Table {
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 17, true);
   const dictionary = arrow.vectorFromArray(['economy', 'premium'], new arrow.Utf8());
   const fields = [

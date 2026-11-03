@@ -2,7 +2,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 import {ANARIPlaygroundExample} from '@site/src/examples';
 import {ClientOnlyLiveExample} from '@site/src/components/docs/client-only-live-example';
 
-# @luma.gl/anari
+# @luma.gl/anari 🧪
 
 <div className="docs-api-card__logos" role="group" aria-label="ANARI, glTF, and OpenUSD" style={{gap: '1rem'}}>
   <a href="https://www.khronos.org/anari/">

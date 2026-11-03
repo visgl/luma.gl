@@ -129,7 +129,7 @@ import support78 from './arrow/arrow-columns/mobile-support';
 import support79 from './deck/arrow-path-layer/mobile-support';
 import support80 from './deck/arrow-polygon-layer/mobile-support';
 import support81 from './deck/arrow-text-layer/mobile-support';
-import support82 from './deck/luspatial-taxi/mobile-support';
+import support82 from './deck/gpu-spatial-taxi/mobile-support';
 import support83 from './deck/gpu-graph-explorer/mobile-support';
 import support84 from './deck/gpu-culled-trace/mobile-support';
 import support85 from './showcase/spectral-wave-lab/mobile-support';
@@ -278,7 +278,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,
   'deck/arrow-text-layer': support81,
-  'deck/luspatial-taxi': support82,
+  'deck/gpu-spatial-taxi': support82,
   'deck/gpu-graph-explorer': support83,
   'deck/gpu-culled-trace': support84,
   'showcase/spectral-wave-lab': support85,

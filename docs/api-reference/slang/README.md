@@ -1,12 +1,12 @@
 ---
-title: Slang
+title: Slang 🧪
 description: Experimental Slang shader authoring for WebGL 2 and WebGPU, available from luma.gl v10.
 ---
 
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {SlangShadersExample} from '@site/src/examples';
 
-# Slang
+# Slang 🧪
 
 <div style={{margin: '1rem 0'}}>
   <img className="docs-api-card__logo--on-light" src="/img/standards/slang-light.svg" alt="Slang" width="224" height="70" />
@@ -17,12 +17,13 @@ import {SlangShadersExample} from '@site/src/examples';
   <DocumentationBadge tone="version">Since v10</DocumentationBadge>
 </DocumentationBadges>
 
-`@luma.gl/slang` converts a subset of Slang shader source to WGSL or GLSL. It runs in
+`@luma.gl/slang` transpiles a subset of Slang shader source to WGSL or GLSL. It runs in
 browsers and Node.js without runtime dependencies, a native compiler, or WebAssembly.
 
 The package explores a smaller compiler for web applications where download size matters.
-The Slang project also provides a [WebAssembly compiler](https://github.com/shader-slang/slang/blob/master/docs/building.md#webassembly-build)
-with broader language support. See the [bundle size comparison](#bundle-size) for measured sizes.
+Note that the Slang project provides a fully featured [WebAssembly compiler](https://github.com/shader-slang/slang/blob/master/docs/building.md#webassembly-build)
+but its large bundle size can be a barrier for web applications.
+See the [bundle size comparison](#bundle-size) for measured sizes.
 
 <SlangShadersExample embedded embeddedHeight={480} showStats={false} />
 

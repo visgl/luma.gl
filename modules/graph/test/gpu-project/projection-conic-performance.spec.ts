@@ -11,8 +11,8 @@ import type {ProjectionBounds} from '@luma.gl/graph/gpu-project';
 import {makeConicCRS, geographicCRS, getConicOracleDefinition} from './projection-crs-fixtures';
 import {makePerformanceCoordinates, parsePerformanceSweep} from './projection-performance-fixtures';
 
-const rowCounts = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_CONIC_ROWS, [32]);
-const measured = import.meta.env.VITE_LUPROJ_CONIC_ROWS !== undefined;
+const rowCounts = parsePerformanceSweep(import.meta.env.VITE_GPU_PROJECT_CONIC_ROWS, [32]);
+const measured = import.meta.env.VITE_GPU_PROJECT_CONIC_ROWS !== undefined;
 const domains: {id: string; bounds: ProjectionBounds}[] = [
   {id: 'local', bounds: [-72, 41, -71, 42]},
   {id: 'regional', bounds: [-100, 25, -60, 60]}

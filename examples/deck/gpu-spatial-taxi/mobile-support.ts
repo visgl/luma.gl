@@ -5,7 +5,7 @@
 import type {ExampleSupportDefinition} from '../../example-support';
 
 const exampleSupport = {
-  id: 'deck/luspatial-taxi',
+  id: 'deck/gpu-spatial-taxi',
   mobileMode: 'reduced',
   mobileProfile: 'large-data',
   requirements: {backends: ['webgpu']}

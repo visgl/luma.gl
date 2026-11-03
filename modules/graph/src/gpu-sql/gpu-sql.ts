@@ -4,19 +4,19 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by relational SQL semantics.
 
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {GPUDataFrame as LuDataFrame} from '../gpu-dataframe/gpu-data-frame';
-import {GPUDataFrameQuery as LuDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
+import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
+import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
 import {
-  GPUExpression as LuExpression,
+  GPUExpression,
   column,
   literal,
   parameter,
-  type GPUExpressionNode as LuExpressionNode
+  type GPUExpressionNode
 } from '../gpu-dataframe/gpu-expression';
-import type {GPUDataFrameJoinType as LuDataFrameJoinType} from '../gpu-dataframe/gpu-join-query';
+import type {GPUDataFrameJoinType} from '../gpu-dataframe/gpu-join-query';
 import type {
-  CompiledGPUDataFrameQuery as CompiledLuDataFrameQuery,
-  GPUDataFrameQueryParameters as LuDataFrameQueryParameters
+  CompiledGPUDataFrameQuery,
+  GPUDataFrameQueryParameters
 } from '../gpu-dataframe/gpu-query-compiler';
 
 const MAXIMUM_SQL_LENGTH = 65_536;
@@ -24,31 +24,34 @@ const MAXIMUM_SQL_TOKENS = 4_096;
 const MAXIMUM_EXPRESSION_DEPTH = 64;
 
 /** Explicit GPU dataframe registrations; Arrow remains exclusively an adapter boundary. */
-export type LuSQLTables = Readonly<Record<string, LuDataFrame>>;
+export type GPUSQLTables = Readonly<Record<string, GPUDataFrame>>;
 
 /** Defaults for named SQL parameters such as `:minimumFare`; values remain caller-controlled. */
-export type LuSQLQueryOptions = Readonly<{parameters?: LuDataFrameQueryParameters}>;
+export type GPUSQLQueryOptions = Readonly<{parameters?: GPUDataFrameQueryParameters}>;
 
-type LuSQLToken = Readonly<{kind: 'identifier' | 'number' | 'parameter' | 'symbol'; value: string}>;
-type LuSQLSelectItem = Readonly<{
-  expression?: LuExpressionNode;
+type GPUSQLToken = Readonly<{
+  kind: 'identifier' | 'number' | 'parameter' | 'symbol';
+  value: string;
+}>;
+type GPUSQLSelectItem = Readonly<{
+  expression?: GPUExpressionNode;
   aggregate?: 'count' | 'sum' | 'min' | 'max' | 'mean';
   aggregateColumn?: string;
   alias?: string;
   star?: boolean;
 }>;
-type LuSQLStatement = Readonly<{
-  items: readonly LuSQLSelectItem[];
+type GPUSQLStatement = Readonly<{
+  items: readonly GPUSQLSelectItem[];
   table: string;
   alias?: string;
   join?: Readonly<{
-    type: LuDataFrameJoinType;
+    type: GPUDataFrameJoinType;
     table: string;
     alias?: string;
     left: string;
     right: string;
   }>;
-  predicate?: LuExpressionNode;
+  predicate?: GPUExpressionNode;
   groupBy?: string;
   orderBy?: Readonly<{
     column: string;
@@ -58,33 +61,39 @@ type LuSQLStatement = Readonly<{
   limit?: number;
 }>;
 
-type LuSQLCompiledPlan = Readonly<{
-  compile: (graph: GPUCommandGraph<LuDataFrameQueryParameters>) => CompiledLuDataFrameQuery;
+type GPUSQLCompiledPlan = Readonly<{
+  compile: (graph: GPUCommandGraph<GPUDataFrameQueryParameters>) => CompiledGPUDataFrameQuery;
 }>;
 
-type LuSQLAggregationDefinitions = Record<
+type GPUSQLAggregationDefinitions = Record<
   string,
   'count' | {sum: string} | {min: string} | {max: string} | {mean: string}
 >;
 
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
-type LuSQLDynamicQuery = LuSQLCompiledPlan & {
-  predicates: readonly LuExpression<boolean, string>[];
-  filter: (predicate: LuExpression<boolean, string>) => LuSQLDynamicQuery;
-  select: (names: readonly string[]) => LuSQLDynamicQuery;
-  withColumn: (name: string, expression: LuExpression<number | null, string>) => LuSQLDynamicQuery;
+type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
+  predicates: readonly GPUExpression<boolean, string>[];
+  filter: (predicate: GPUExpression<boolean, string>) => GPUSQLDynamicQuery;
+  select: (names: readonly string[]) => GPUSQLDynamicQuery;
+  withColumn: (
+    name: string,
+    expression: GPUExpression<number | null, string>
+  ) => GPUSQLDynamicQuery;
   groupBy: (key: string) => {
-    aggregate: (definitions: LuSQLAggregationDefinitions) => LuSQLCompiledPlan;
+    aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
   };
-  aggregate: (definitions: LuSQLAggregationDefinitions) => LuSQLCompiledPlan;
+  aggregate: (definitions: GPUSQLAggregationDefinitions) => GPUSQLCompiledPlan;
   sortByGlobal: (
     name: string,
     options: {direction: 'ascending' | 'descending'; nulls?: 'first' | 'last'}
-  ) => LuSQLCompiledPlan & {topK: (limit: number) => LuSQLCompiledPlan};
-  innerJoin: (right: LuDataFrame, options: {leftOn: string; rightOn: string}) => LuSQLCompiledPlan;
-  leftJoin: (right: LuDataFrame, options: {leftOn: string; rightOn: string}) => LuSQLCompiledPlan;
-  semiJoin: (right: LuDataFrame, options: {leftOn: string; rightOn: string}) => LuSQLCompiledPlan;
-  antiJoin: (right: LuDataFrame, options: {leftOn: string; rightOn: string}) => LuSQLCompiledPlan;
+  ) => GPUSQLCompiledPlan & {topK: (limit: number) => GPUSQLCompiledPlan};
+  innerJoin: (
+    right: GPUDataFrame,
+    options: {leftOn: string; rightOn: string}
+  ) => GPUSQLCompiledPlan;
+  leftJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
+  semiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
+  antiJoin: (right: GPUDataFrame, options: {leftOn: string; rightOn: string}) => GPUSQLCompiledPlan;
 };
 
 /**
@@ -93,17 +102,17 @@ type LuSQLDynamicQuery = LuSQLCompiledPlan & {
  * Parsing and planning never upload data, submit work, or read GPU buffers. Arrow upload/output
  * remain explicit `@luma.gl/graph/arrow` operations around the shared GPU table execution core.
  */
-export class LuSQLContext {
-  private readonly tables: Readonly<Record<string, LuDataFrame>>;
+export class GPUSQLContext {
+  private readonly tables: Readonly<Record<string, GPUDataFrame>>;
 
-  constructor(tables: LuSQLTables) {
-    const registered: Record<string, LuDataFrame> = {};
+  constructor(tables: GPUSQLTables) {
+    const registered: Record<string, GPUDataFrame> = {};
     for (const [name, table] of Object.entries(tables)) {
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || !(table instanceof LuDataFrame)) {
-        throw new Error('LuSQL requires valid names mapped to existing GPU dataframes');
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || !(table instanceof GPUDataFrame)) {
+        throw new Error('GPUSQL requires valid names mapped to existing GPU dataframes');
       }
       const canonical = name.toLowerCase();
-      if (registered[canonical]) throw new Error(`LuSQL table "${name}" is already registered`);
+      if (registered[canonical]) throw new Error(`GPUSQL table "${name}" is already registered`);
       registered[canonical] = table;
     }
     this.tables = Object.freeze(registered);
@@ -111,56 +120,56 @@ export class LuSQLContext {
   }
 
   /** Parses and validates one immutable SELECT plan without touching registered GPU sources. */
-  query(source: string, options: LuSQLQueryOptions = {}): LuSQLQuery {
-    const parser = new LuSQLParser(source, options.parameters ?? {});
+  query(source: string, options: GPUSQLQueryOptions = {}): GPUSQLQuery {
+    const parser = new GPUSQLParser(source, options.parameters ?? {});
     const statement = parser.parse();
-    return new LuSQLQuery(source, buildLuSQLPlan(this.tables, statement));
+    return new GPUSQLQuery(source, buildGPUSQLPlan(this.tables, statement));
   }
 }
 
 /** Immutable SQL plan lowered directly into existing reusable GPU dataframe command graphs. */
-export class LuSQLQuery {
+export class GPUSQLQuery {
   /** Original application-owned SQL text, retained solely for diagnostics and inspection. */
   readonly sql: string;
-  private readonly plan: LuSQLCompiledPlan;
+  private readonly plan: GPUSQLCompiledPlan;
 
   /** @internal */
-  constructor(sql: string, plan: LuSQLCompiledPlan) {
+  constructor(sql: string, plan: GPUSQLCompiledPlan) {
     this.sql = sql;
     this.plan = plan;
     Object.freeze(this);
   }
 
   /** Compiles existing dataframe operations into the caller-owned GPU command graph. */
-  compile(graph: GPUCommandGraph<LuDataFrameQueryParameters>): CompiledLuDataFrameQuery {
+  compile(graph: GPUCommandGraph<GPUDataFrameQueryParameters>): CompiledGPUDataFrameQuery {
     return this.plan.compile(graph);
   }
 }
 
-function buildLuSQLPlan(
-  tables: Readonly<Record<string, LuDataFrame>>,
-  statement: LuSQLStatement
-): LuSQLCompiledPlan {
+function buildGPUSQLPlan(
+  tables: Readonly<Record<string, GPUDataFrame>>,
+  statement: GPUSQLStatement
+): GPUSQLCompiledPlan {
   const frame = tables[statement.table.toLowerCase()];
-  if (!frame) throw new Error(`LuSQL table "${statement.table}" is not registered`);
-  let query = new LuDataFrameQuery(frame, [], frame.columnNames) as unknown as LuSQLDynamicQuery;
+  if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
+  let query = new GPUDataFrameQuery(frame, [], frame.columnNames) as unknown as GPUSQLDynamicQuery;
   const qualifier = statement.alias ?? statement.table;
-  const resolve = (name: string): string => resolveLuSQLColumn(name, qualifier, frame.columnNames);
+  const resolve = (name: string): string => resolveGPUSQLColumn(name, qualifier, frame.columnNames);
   if (statement.predicate) {
     query = query.filter(
-      new LuExpression<boolean, string>(resolveLuSQLExpression(statement.predicate, resolve))
+      new GPUExpression<boolean, string>(resolveGPUSQLExpression(statement.predicate, resolve))
     );
   }
 
   const aggregates = statement.items.filter(item => item.aggregate);
   if (aggregates.length > 0) {
     if (statement.join || statement.orderBy || statement.limit !== undefined) {
-      throw new Error('LuSQL aggregate queries do not yet support joins, ordering, or limits');
+      throw new Error('GPUSQL aggregate queries do not yet support joins, ordering, or limits');
     }
-    const definitions: LuSQLAggregationDefinitions = {};
+    const definitions: GPUSQLAggregationDefinitions = {};
     for (const item of aggregates) {
       const name = item.alias ?? `${item.aggregate}_${item.aggregateColumn ?? 'all'}`;
-      if (definitions[name]) throw new Error(`LuSQL aggregate alias "${name}" is duplicated`);
+      if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       definitions[name] =
         item.aggregate === 'count'
           ? 'count'
@@ -175,51 +184,51 @@ function buildLuSQLPlan(
       const nonAggregates = statement.items.filter(item => !item.aggregate);
       if (
         nonAggregates.length !== 1 ||
-        resolveLuSQLProjectionName(nonAggregates[0], resolve) !== key
+        resolveGPUSQLProjectionName(nonAggregates[0], resolve) !== key
       ) {
-        throw new Error('LuSQL grouped queries must select their single GROUP BY key');
+        throw new Error('GPUSQL grouped queries must select their single GROUP BY key');
       }
       return query.groupBy(key).aggregate(definitions);
     }
     if (aggregates.length !== statement.items.length) {
-      throw new Error('LuSQL global aggregates cannot mix ordinary source columns');
+      throw new Error('GPUSQL global aggregates cannot mix ordinary source columns');
     }
     return query.aggregate(definitions);
   }
-  if (statement.groupBy) throw new Error('LuSQL GROUP BY requires at least one aggregation');
+  if (statement.groupBy) throw new Error('GPUSQL GROUP BY requires at least one aggregation');
 
   const selected: string[] = [];
   for (const item of statement.items) {
     if (item.star) {
       if (statement.items.length !== 1)
-        throw new Error('LuSQL SELECT * cannot include other columns');
+        throw new Error('GPUSQL SELECT * cannot include other columns');
       selected.push(...frame.columnNames);
       continue;
     }
-    const node = resolveLuSQLExpression(item.expression!, resolve);
+    const node = resolveGPUSQLExpression(item.expression!, resolve);
     const name = item.alias ?? (node.kind === 'column' ? node.name : undefined);
-    if (!name) throw new Error('LuSQL computed SELECT expressions require an explicit AS alias');
-    if (selected.includes(name)) throw new Error(`LuSQL output column "${name}" is duplicated`);
+    if (!name) throw new Error('GPUSQL computed SELECT expressions require an explicit AS alias');
+    if (selected.includes(name)) throw new Error(`GPUSQL output column "${name}" is duplicated`);
     if (node.kind !== 'column' || node.name !== name) {
       if (frame.columnNames.includes(name)) {
-        throw new Error(`LuSQL derived alias "${name}" conflicts with an existing source column`);
+        throw new Error(`GPUSQL derived alias "${name}" conflicts with an existing source column`);
       }
-      query = query.withColumn(name, new LuExpression<number | null, string>(node));
+      query = query.withColumn(name, new GPUExpression<number | null, string>(node));
     }
     selected.push(name);
   }
 
   if (statement.join) {
     if (statement.orderBy || statement.limit !== undefined) {
-      throw new Error('LuSQL joined results do not yet support ORDER BY or LIMIT');
+      throw new Error('GPUSQL joined results do not yet support ORDER BY or LIMIT');
     }
     const right = tables[statement.join.table.toLowerCase()];
-    if (!right) throw new Error(`LuSQL table "${statement.join.table}" is not registered`);
+    if (!right) throw new Error(`GPUSQL table "${statement.join.table}" is not registered`);
     const leftKey = resolve(statement.join.left);
     const rightQualifier = statement.join.alias ?? statement.join.table;
-    const rightKey = resolveLuSQLColumn(statement.join.right, rightQualifier, right.columnNames);
+    const rightKey = resolveGPUSQLColumn(statement.join.right, rightQualifier, right.columnNames);
     if (!selected.includes(leftKey)) {
-      throw new Error('LuSQL joins require the left join key to remain selected');
+      throw new Error('GPUSQL joins require the left join key to remain selected');
     }
     query = query.select(selected);
     const options = {leftOn: leftKey, rightOn: rightKey};
@@ -240,7 +249,7 @@ function buildLuSQLPlan(
       selected.find(name => name.toLowerCase() === statement.orderBy!.column.toLowerCase()) ??
       resolve(statement.orderBy.column);
     if (!selected.includes(orderColumn)) {
-      throw new Error('LuSQL ORDER BY requires the sort column in the SELECT projection');
+      throw new Error('GPUSQL ORDER BY requires the sort column in the SELECT projection');
     }
     const sort = query.select(selected).sortByGlobal(orderColumn, {
       direction: statement.orderBy.direction,
@@ -248,72 +257,72 @@ function buildLuSQLPlan(
     });
     return statement.limit === undefined ? sort : sort.topK(statement.limit);
   }
-  if (statement.limit !== undefined) throw new Error('LuSQL LIMIT currently requires ORDER BY');
+  if (statement.limit !== undefined) throw new Error('GPUSQL LIMIT currently requires ORDER BY');
   if (query.predicates.length === 0) {
     const firstColumn = frame.columnNames[0];
-    if (!firstColumn) throw new Error('LuSQL SELECT requires at least one GPU source column');
+    if (!firstColumn) throw new Error('GPUSQL SELECT requires at least one GPU source column');
     query = query.filter(column(firstColumn).isValid().or(column(firstColumn).isNull()));
   }
   return query.select(selected);
 }
 
-function resolveLuSQLProjectionName(
-  item: LuSQLSelectItem,
+function resolveGPUSQLProjectionName(
+  item: GPUSQLSelectItem,
   resolve: (name: string) => string
 ): string {
   if (item.expression?.kind !== 'column') {
-    throw new Error('LuSQL grouped source expressions must reference the group key directly');
+    throw new Error('GPUSQL grouped source expressions must reference the group key directly');
   }
   return resolve(item.expression.name);
 }
 
-function resolveLuSQLColumn(name: string, qualifier: string, columns: readonly string[]): string {
+function resolveGPUSQLColumn(name: string, qualifier: string, columns: readonly string[]): string {
   const parts = name.split('.');
   if (
     parts.length > 2 ||
     (parts.length === 2 && parts[0].toLowerCase() !== qualifier.toLowerCase())
   ) {
-    throw new Error(`LuSQL column "${name}" has an unknown table qualifier`);
+    throw new Error(`GPUSQL column "${name}" has an unknown table qualifier`);
   }
   const requested = parts[parts.length - 1];
   const matches = columns.filter(candidate => candidate.toLowerCase() === requested.toLowerCase());
-  if (matches.length !== 1) throw new Error(`LuSQL column "${name}" does not exist`);
+  if (matches.length !== 1) throw new Error(`GPUSQL column "${name}" does not exist`);
   return matches[0];
 }
 
-function resolveLuSQLExpression(
-  expression: LuExpressionNode,
+function resolveGPUSQLExpression(
+  expression: GPUExpressionNode,
   resolve: (name: string) => string
-): LuExpressionNode {
+): GPUExpressionNode {
   switch (expression.kind) {
     case 'column':
       return {kind: 'column', name: resolve(expression.name)};
     case 'unary':
-      return {...expression, operand: resolveLuSQLExpression(expression.operand, resolve)};
+      return {...expression, operand: resolveGPUSQLExpression(expression.operand, resolve)};
     case 'binary':
       return {
         ...expression,
-        left: resolveLuSQLExpression(expression.left, resolve),
-        right: resolveLuSQLExpression(expression.right, resolve)
+        left: resolveGPUSQLExpression(expression.left, resolve),
+        right: resolveGPUSQLExpression(expression.right, resolve)
       };
     default:
       return expression;
   }
 }
 
-class LuSQLParser {
-  private readonly tokens: readonly LuSQLToken[];
-  private readonly parameters: LuDataFrameQueryParameters;
+class GPUSQLParser {
+  private readonly tokens: readonly GPUSQLToken[];
+  private readonly parameters: GPUDataFrameQueryParameters;
   private position = 0;
 
-  constructor(source: string, parameters: LuDataFrameQueryParameters) {
-    this.tokens = tokenizeLuSQL(source);
+  constructor(source: string, parameters: GPUDataFrameQueryParameters) {
+    this.tokens = tokenizeGPUSQL(source);
     this.parameters = parameters;
   }
 
-  parse(): LuSQLStatement {
+  parse(): GPUSQLStatement {
     this.expectKeyword('SELECT');
-    const items: LuSQLSelectItem[] = [];
+    const items: GPUSQLSelectItem[] = [];
     do {
       items.push(this.parseSelectItem());
     } while (this.takeSymbol(','));
@@ -326,9 +335,9 @@ class LuSQLParser {
     if (this.takeKeyword('GROUP')) {
       this.expectKeyword('BY');
       groupBy = this.parseIdentifier();
-      if (this.takeSymbol(',')) throw new Error('LuSQL currently supports one GROUP BY column');
+      if (this.takeSymbol(',')) throw new Error('GPUSQL currently supports one GROUP BY column');
     }
-    let orderBy: LuSQLStatement['orderBy'];
+    let orderBy: GPUSQLStatement['orderBy'];
     if (this.takeKeyword('ORDER')) {
       this.expectKeyword('BY');
       const sortColumn = this.parseIdentifier();
@@ -340,22 +349,22 @@ class LuSQLParser {
         nulls = this.takeKeyword('FIRST') ? 'first' : this.expectKeyword('LAST') && 'last';
       }
       orderBy = {column: sortColumn, direction, ...(nulls ? {nulls} : {})};
-      if (this.takeSymbol(',')) throw new Error('LuSQL currently supports one ORDER BY column');
+      if (this.takeSymbol(',')) throw new Error('GPUSQL currently supports one ORDER BY column');
     }
     let limit: number | undefined;
     if (this.takeKeyword('LIMIT')) {
       const token = this.take();
       if (token?.kind !== 'number' || !/^\d+$/.test(token.value)) {
-        throw new Error('LuSQL LIMIT requires a nonnegative integer');
+        throw new Error('GPUSQL LIMIT requires a nonnegative integer');
       }
       limit = Number(token.value);
       if (!Number.isSafeInteger(limit) || limit > 0xffffffff) {
-        throw new Error('LuSQL LIMIT must fit an unsigned 32-bit row count');
+        throw new Error('GPUSQL LIMIT must fit an unsigned 32-bit row count');
       }
     }
     this.takeSymbol(';');
     if (this.peek())
-      throw new Error(`LuSQL does not support unexpected token "${this.peek()!.value}"`);
+      throw new Error(`GPUSQL does not support unexpected token "${this.peek()!.value}"`);
     return {
       items,
       table,
@@ -368,7 +377,7 @@ class LuSQLParser {
     };
   }
 
-  private parseSelectItem(): LuSQLSelectItem {
+  private parseSelectItem(): GPUSQLSelectItem {
     if (this.takeSymbol('*')) return {star: true};
     const token = this.peek();
     if (
@@ -382,13 +391,13 @@ class LuSQLParser {
       const aggregateColumn = this.takeSymbol('*') ? undefined : this.parseIdentifier();
       this.expectSymbol(')');
       if (!aggregateColumn && aggregate !== 'count') {
-        throw new Error('LuSQL only permits COUNT(*) as a wildcard aggregation');
+        throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
       }
       if (aggregateColumn && aggregate === 'count') {
-        throw new Error('LuSQL currently supports COUNT(*) but not nullable COUNT(column)');
+        throw new Error('GPUSQL currently supports COUNT(*) but not nullable COUNT(column)');
       }
       return {
-        aggregate: aggregate === 'avg' ? 'mean' : (aggregate as LuSQLSelectItem['aggregate']),
+        aggregate: aggregate === 'avg' ? 'mean' : (aggregate as GPUSQLSelectItem['aggregate']),
         ...(aggregateColumn ? {aggregateColumn} : {}),
         ...(this.takeKeyword('AS') ? {alias: this.parseIdentifier()} : {})
       };
@@ -400,8 +409,8 @@ class LuSQLParser {
     };
   }
 
-  private parseOptionalJoin(): LuSQLStatement['join'] {
-    let type: LuDataFrameJoinType = 'inner';
+  private parseOptionalJoin(): GPUSQLStatement['join'] {
+    let type: GPUDataFrameJoinType = 'inner';
     if (this.takeKeyword('LEFT')) {
       this.takeKeyword('OUTER');
       type = 'left';
@@ -413,7 +422,7 @@ class LuSQLParser {
       this.takeKeyword('INNER');
     }
     if (!this.takeKeyword('JOIN')) {
-      if (type !== 'inner') throw new Error('LuSQL join modifier must be followed by JOIN');
+      if (type !== 'inner') throw new Error('GPUSQL join modifier must be followed by JOIN');
       return undefined;
     }
     const table = this.parseIdentifier();
@@ -425,9 +434,9 @@ class LuSQLParser {
     return {type, table, ...(alias ? {alias} : {}), left, right};
   }
 
-  private parseExpression(depth: number, minimumPrecedence = 0): LuExpressionNode {
+  private parseExpression(depth: number, minimumPrecedence = 0): GPUExpressionNode {
     if (depth > MAXIMUM_EXPRESSION_DEPTH)
-      throw new Error('LuSQL expression nesting exceeds its safe limit');
+      throw new Error('GPUSQL expression nesting exceeds its safe limit');
     let expression = this.parseUnary(depth + 1);
     while (true) {
       if (minimumPrecedence <= 3 && this.takeKeyword('IS')) {
@@ -441,7 +450,7 @@ class LuSQLParser {
         continue;
       }
       const token = this.peek();
-      const operation = token ? getLuSQLBinaryOperator(token.value) : undefined;
+      const operation = token ? getGPUSQLBinaryOperator(token.value) : undefined;
       if (!operation || operation.precedence < minimumPrecedence) break;
       this.take();
       expression = {
@@ -454,7 +463,7 @@ class LuSQLParser {
     return expression;
   }
 
-  private parseUnary(depth: number): LuExpressionNode {
+  private parseUnary(depth: number): GPUExpressionNode {
     if (this.takeKeyword('NOT')) {
       return {kind: 'unary', operator: 'not', operand: this.parseExpression(depth, 3)};
     }
@@ -467,15 +476,15 @@ class LuSQLParser {
       return expression;
     }
     const token = this.take();
-    if (!token) throw new Error('LuSQL expected an expression');
+    if (!token) throw new Error('GPUSQL expected an expression');
     if (token.kind === 'number') {
       const value = Number(token.value);
-      if (!Number.isFinite(value)) throw new Error('LuSQL numeric literals must be finite');
+      if (!Number.isFinite(value)) throw new Error('GPUSQL numeric literals must be finite');
       return literal(value).node;
     }
     if (token.kind === 'parameter') {
       if (!Object.hasOwn(this.parameters, token.value)) {
-        throw new Error(`LuSQL parameter ":${token.value}" requires an explicit default`);
+        throw new Error(`GPUSQL parameter ":${token.value}" requires an explicit default`);
       }
       return parameter(token.value, this.parameters[token.value]).node;
     }
@@ -485,7 +494,7 @@ class LuSQLParser {
       if (/^FALSE$/i.test(token.value)) return literal(false).node;
       return column(token.value).node;
     }
-    throw new Error(`LuSQL does not support expression token "${token.value}"`);
+    throw new Error(`GPUSQL does not support expression token "${token.value}"`);
   }
 
   private parseOptionalTableAlias(): string | undefined {
@@ -500,12 +509,12 @@ class LuSQLParser {
   private parseIdentifier(): string {
     const token = this.take();
     if (token?.kind !== 'identifier')
-      throw new Error('LuSQL expected a table or column identifier');
+      throw new Error('GPUSQL expected a table or column identifier');
     return token.value;
   }
 
   private expectKeyword(keyword: string): true {
-    if (!this.takeKeyword(keyword)) throw new Error(`LuSQL expected ${keyword}`);
+    if (!this.takeKeyword(keyword)) throw new Error(`GPUSQL expected ${keyword}`);
     return true;
   }
 
@@ -517,7 +526,7 @@ class LuSQLParser {
   }
 
   private expectSymbol(symbol: string): void {
-    if (!this.takeSymbol(symbol)) throw new Error(`LuSQL expected "${symbol}"`);
+    if (!this.takeSymbol(symbol)) throw new Error(`GPUSQL expected "${symbol}"`);
   }
 
   private takeSymbol(symbol: string): boolean {
@@ -527,43 +536,43 @@ class LuSQLParser {
     return true;
   }
 
-  private take(): LuSQLToken | undefined {
+  private take(): GPUSQLToken | undefined {
     const token = this.tokens[this.position];
     if (token) this.position++;
     return token;
   }
 
-  private peek(): LuSQLToken | undefined {
+  private peek(): GPUSQLToken | undefined {
     return this.tokens[this.position];
   }
 }
 
-function tokenizeLuSQL(source: string): LuSQLToken[] {
+function tokenizeGPUSQL(source: string): GPUSQLToken[] {
   if (typeof source !== 'string' || source.length === 0 || source.length > MAXIMUM_SQL_LENGTH) {
-    throw new Error('LuSQL requires a nonempty, safely bounded SELECT statement');
+    throw new Error('GPUSQL requires a nonempty, safely bounded SELECT statement');
   }
   const expression =
     /\s+|(?:--[^\n\r]*)|(?::([A-Za-z_][A-Za-z0-9_]*))|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)|(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(<=|>=|<>|!=|[(),;*+\-/=<>])/gy;
-  const tokens: LuSQLToken[] = [];
+  const tokens: GPUSQLToken[] = [];
   let cursor = 0;
   while (cursor < source.length) {
     expression.lastIndex = cursor;
     const match = expression.exec(source);
-    if (!match) throw new Error(`LuSQL contains an unsupported token at character ${cursor}`);
+    if (!match) throw new Error(`GPUSQL contains an unsupported token at character ${cursor}`);
     cursor = expression.lastIndex;
     if (match[1]) tokens.push({kind: 'parameter', value: match[1]});
     else if (match[2]) tokens.push({kind: 'identifier', value: match[2]});
     else if (match[3]) tokens.push({kind: 'number', value: match[3]});
     else if (match[4]) tokens.push({kind: 'symbol', value: match[4]});
     if (tokens.length > MAXIMUM_SQL_TOKENS)
-      throw new Error('LuSQL statement exceeds its safe token limit');
+      throw new Error('GPUSQL statement exceeds its safe token limit');
   }
   return tokens;
 }
 
-function getLuSQLBinaryOperator(value: string):
+function getGPUSQLBinaryOperator(value: string):
   | Readonly<{
-      operator: Extract<LuExpressionNode, {kind: 'binary'}>['operator'];
+      operator: Extract<GPUExpressionNode, {kind: 'binary'}>['operator'];
       precedence: number;
     }>
   | undefined {

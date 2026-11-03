@@ -4,11 +4,11 @@
 
 import {readFileSync} from 'node:fs';
 import {
-  decodeLuSpatialGeographicPointQueryCounters,
+  decodeGPUSpatialGeographicPointQueryCounters,
   LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS,
   LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_DIAGNOSTIC_BYTE_OFFSETS,
-  LuSpatialGeographicPointQueryEffect,
-  makeLuSpatialGeographicPointQueryInspectorCounters
+  GPUSpatialGeographicPointQueryEffect,
+  makeGPUSpatialGeographicPointQueryInspectorCounters
 } from '@deck.gl-community/gpu-layers/query';
 import type {Device} from '@luma.gl/core';
 import {describe, expect, test} from 'vitest';
@@ -20,7 +20,7 @@ const TEST_QUERY_PROPS = {
   projectionOrigin: [-73.97, 40.75] as const
 };
 
-describe('LuSpatialGeographicPointQueryEffect resource safety', () => {
+describe('GPUSpatialGeographicPointQueryEffect resource safety', () => {
   test('releases every completed effect allocation after a mid-construction failure', () => {
     const destroyedResourceIds: string[] = [];
     let bufferCreateCount = 0;
@@ -35,19 +35,19 @@ describe('LuSpatialGeographicPointQueryEffect resource safety', () => {
         };
       }
     } as unknown as Device;
-    expect(() => new LuSpatialGeographicPointQueryEffect(device, TEST_QUERY_PROPS)).toThrow(
+    expect(() => new GPUSpatialGeographicPointQueryEffect(device, TEST_QUERY_PROPS)).toThrow(
       'injected buffer allocation failure'
     );
     expect(destroyedResourceIds).toEqual([
-      'luspatial-geographic-point-query-effect-projected-positions',
-      'luspatial-geographic-point-query-effect-longitude-latitudes'
+      'gpu-spatial-geographic-point-query-effect-projected-positions',
+      'gpu-spatial-geographic-point-query-effect-longitude-latitudes'
     ]);
   });
 
   test('rejects a negative viewport projection pad before allocating resources', () => {
     expect(
       () =>
-        new LuSpatialGeographicPointQueryEffect({type: 'webgpu'} as Device, {
+        new GPUSpatialGeographicPointQueryEffect({type: 'webgpu'} as Device, {
           ...TEST_QUERY_PROPS,
           viewportProjectionPaddingKilometres: -1
         })
@@ -69,7 +69,7 @@ describe('LuSpatialGeographicPointQueryEffect resource safety', () => {
     ] as const) {
       expect(
         () =>
-          new LuSpatialGeographicPointQueryEffect(device, {
+          new GPUSpatialGeographicPointQueryEffect(device, {
             ...TEST_QUERY_PROPS,
             projectedBounds
           })
@@ -78,7 +78,7 @@ describe('LuSpatialGeographicPointQueryEffect resource safety', () => {
 
     expect(
       () =>
-        new LuSpatialGeographicPointQueryEffect({type: 'webgpu'} as Device, {
+        new GPUSpatialGeographicPointQueryEffect({type: 'webgpu'} as Device, {
           ...TEST_QUERY_PROPS,
           projectedBounds: [1, -1, 0, 1]
         })
@@ -86,7 +86,7 @@ describe('LuSpatialGeographicPointQueryEffect resource safety', () => {
   });
 });
 
-describe('luSpatial geographic point query telemetry', () => {
+describe('GPU Spatial geographic point query telemetry', () => {
   test('decodes aligned GPU diagnostics and publishes a complete inspector sample', () => {
     expect(Object.values(LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_DIAGNOSTIC_BYTE_OFFSETS)).toEqual([
       0, 256, 512, 768
@@ -135,7 +135,7 @@ describe('luSpatial geographic point query telemetry', () => {
       true
     );
 
-    const counters = decodeLuSpatialGeographicPointQueryCounters(
+    const counters = decodeGPUSpatialGeographicPointQueryCounters(
       drawCommandBytes,
       queryDiagnosticBytes,
       {
@@ -151,7 +151,7 @@ describe('luSpatial geographic point query telemetry', () => {
       selectionCandidateCount: 19,
       selectedPointCount: 7
     });
-    expect(makeLuSpatialGeographicPointQueryInspectorCounters(counters)).toEqual({
+    expect(makeGPUSpatialGeographicPointQueryInspectorCounters(counters)).toEqual({
       [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.viewportIntersectedCells]: 12,
       [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.viewportCandidates]: 83,
       [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS.viewportMatches]: 41,
@@ -175,16 +175,16 @@ describe('@deck.gl-community/gpu-layers/query package boundary', () => {
       require: './dist/query/index.cjs'
     });
     expect(readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8')).not.toContain(
-      'LuSpatialGeographicPointQueryEffect'
+      'GPUSpatialGeographicPointQueryEffect'
     );
   });
 
   test('uses the public query graph ID in the Taxi inspector', () => {
     const appUiSource = readFileSync(
-      new URL('../../../examples/deck/luspatial-taxi/app-ui.ts', import.meta.url),
+      new URL('../../../examples/deck/gpu-spatial-taxi/app-ui.ts', import.meta.url),
       'utf8'
     );
     expect(appUiSource).toContain('LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.query');
-    expect(appUiSource).not.toContain("'luspatial-taxi-query-graph'");
+    expect(appUiSource).not.toContain("'gpu-spatial-taxi-query-graph'");
   });
 });

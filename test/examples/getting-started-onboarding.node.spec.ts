@@ -65,7 +65,7 @@ describe('getting-started onboarding', () => {
       ): item is {
         label: string;
         items: Array<string | {label?: string; items?: string[]}>;
-      } => typeof item !== 'string' && item.label === 'Community Guide' && Array.isArray(item.items)
+      } => typeof item !== 'string' && item.label === 'Community' && Array.isArray(item.items)
     );
 
     expect(tutorialTabsSource).toMatch(

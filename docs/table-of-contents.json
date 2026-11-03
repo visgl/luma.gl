@@ -77,7 +77,7 @@
   },
   {
     "type": "category",
-    "label": "Official Modules",
+    "label": "Modules",
     "items": [
       {
         "type": "category",
@@ -151,6 +151,14 @@
               "tutorials/shader-plugins",
               "api-guide/shaders/shader-assembly",
               "api-guide/shaders/writing-customizable-shaders"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "Conventions and portability",
+            "items": [
+              "api-reference/shaders/shader-conventions",
+              "api-reference/shaders/wgsl-support"
             ]
           },
           "api-guide/shaders/writing-portable-shaders",
@@ -362,26 +370,20 @@
             ]
           }
         ]
-      }
-    ]
-  },
-  {
-    "type": "category",
-    "label": "Exploratory Modules",
-    "items": [
+      },
       {
         "type": "link",
-        "label": "ANARI",
+        "label": "ANARI 🧪",
         "href": "/docs/api-reference/anari"
       },
       {
         "type": "link",
-        "label": "Slang",
+        "label": "Slang 🧪",
         "href": "/docs/api-reference/slang"
       },
       {
         "type": "link",
-        "label": "Three",
+        "label": "Three.js 🧪",
         "href": "/docs/api-reference/three"
       }
     ]
@@ -480,30 +482,19 @@
           },
           {
             "type": "category",
-            "label": "webgl-constants",
+            "label": "@luma.gl/core/webgpu",
             "items": [
               {
                 "type": "doc",
-                "id": "api-reference/constants/README",
-                "label": "Overview"
-              }
-            ]
-          },
-          {
-            "type": "category",
-            "label": "test-utils",
-            "items": [
-              {
-                "type": "doc",
-                "id": "api-reference/test-utils/README",
+                "id": "api-reference/webgpu/README",
                 "label": "Overview"
               },
-              "api-reference/test-utils/snapshot-test-runner"
+              "api-reference/webgpu/optional-features"
             ]
           },
           {
             "type": "category",
-            "label": "webgl",
+            "label": "@luma.gl/core/webgl",
             "items": [
               {
                 "type": "doc",
@@ -515,14 +506,25 @@
           },
           {
             "type": "category",
-            "label": "webgpu",
+            "label": "@luma.gl/core/test-utils",
             "items": [
               {
                 "type": "doc",
-                "id": "api-reference/webgpu/README",
+                "id": "api-reference/test-utils/README",
                 "label": "Overview"
               },
-              "api-reference/webgpu/optional-features"
+              "api-reference/test-utils/snapshot-test-runner"
+            ]
+          },
+          {
+            "type": "category",
+            "label": "@luma.gl/core/webgl-constants",
+            "items": [
+              {
+                "type": "doc",
+                "id": "api-reference/constants/README",
+                "label": "Overview"
+              }
             ]
           }
         ]
@@ -545,14 +547,6 @@
               "api-reference/shaders/shader-plugin",
               "api-reference/shaders/shader-assembler",
               "api-reference/shaders/shader-info"
-            ]
-          },
-          {
-            "type": "category",
-            "label": "Conventions and portability",
-            "items": [
-              "api-reference/shaders/shader-conventions",
-              "api-reference/shaders/wgsl-support"
             ]
           },
           {
@@ -1087,6 +1081,22 @@
               "api-reference/experimental/scientific-flow-tracer",
               "api-reference/experimental/volumetric-fire-simulation"
             ]
+          },
+          {
+            "type": "category",
+            "label": "@luma.gl/graph/arrow",
+            "items": [
+              {
+                "type": "doc",
+                "id": "api-reference/arrow/README",
+                "label": "Overview"
+              },
+              "api-reference/arrow/arrow-representations",
+              "api-reference/arrow/arrow-conversion",
+              "api-reference/arrow/supported-arrow-types",
+              "api-reference/arrow/deck-target-api",
+              "api-reference/arrow/arrow-utils"
+            ]
           }
         ]
       },
@@ -1174,7 +1184,7 @@
           },
           {
             "type": "category",
-            "label": "effects",
+            "label": "@luma.gl/engine/effects",
             "items": [
               {
                 "type": "doc",
@@ -1185,7 +1195,7 @@
           },
           {
             "type": "category",
-            "label": "splats (Experimental)",
+            "label": "@luma.gl/engine/splats 🧪",
             "items": [
               {
                 "type": "doc",
@@ -1201,7 +1211,7 @@
           },
           {
             "type": "category",
-            "label": "gltf",
+            "label": "@luma.gl/engine/gltf",
             "items": [
               {
                 "type": "doc",
@@ -1236,12 +1246,12 @@
       },
       {
         "type": "category",
-        "label": "🧪 @luma.gl/anari",
+        "label": "@luma.gl/anari 🧪",
         "items": [
           {
             "type": "doc",
             "id": "api-reference/anari/README",
-            "label": "Overview"
+            "label": "Overview 🧪"
           },
           {
             "type": "category",
@@ -1309,48 +1319,32 @@
       },
       {
         "type": "category",
-        "label": "Arrow adapters",
-        "items": [
-          {
-            "type": "doc",
-            "id": "api-reference/arrow/README",
-            "label": "Overview"
-          },
-          "api-reference/arrow/arrow-representations",
-          "api-reference/arrow/arrow-conversion",
-          "api-reference/arrow/supported-arrow-types",
-          "api-reference/arrow/deck-target-api",
-          "api-reference/arrow/arrow-utils"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "🧪 @luma.gl/three",
-        "items": [
-          {
-            "type": "doc",
-            "id": "api-reference/three/README",
-            "label": "Overview"
-          }
-        ]
-      },
-      {
-        "type": "category",
-        "label": "🧪 @luma.gl/slang",
+        "label": "@luma.gl/slang 🧪",
         "items": [
           {
             "type": "doc",
             "id": "api-reference/slang/README",
-            "label": "Overview"
+            "label": "Overview 🧪"
           },
           "api-reference/slang/reflection"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "@luma.gl/three 🧪",
+        "items": [
+          {
+            "type": "doc",
+            "id": "api-reference/three/README",
+            "label": "Overview 🧪"
+          }
         ]
       }
     ]
   },
   {
     "type": "category",
-    "label": "Community Guide",
+    "label": "Community",
     "items": [
       "community",
       "developer-guide/contributing",
