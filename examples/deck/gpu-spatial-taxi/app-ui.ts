@@ -6,14 +6,14 @@ import type {PickingInfo} from '@deck.gl/core';
 import {
   LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_COUNTER_IDS,
   LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS,
-  type LuSpatialGeographicPointQueryStats
+  type GPUSpatialGeographicPointQueryStats
 } from '@deck.gl-community/gpu-layers/query';
 import {GPUCommandGraphInspectorPanel} from '../../gpu-command-graph-inspector-panel';
 import {GPUTracePanelRenderer} from '../../gpu-trace-panel';
 import {
   getTaxiPoint,
   TAXI_CORPUS_POINT_COUNT,
-  type LuSpatialTaxiData,
+  type GPUSpatialTaxiData,
   type TaxiZonePreset
 } from './taxi-data';
 
@@ -26,7 +26,7 @@ export function createStandaloneContainer(): HTMLDivElement {
   return container;
 }
 
-export function getTooltip(data: LuSpatialTaxiData, info: PickingInfo): {html: string} | null {
+export function getTooltip(data: GPUSpatialTaxiData, info: PickingInfo): {html: string} | null {
   const point = getTaxiPoint(data, info.index);
   if (!point) return null;
   return {
@@ -51,7 +51,7 @@ export type TaxiControlPanel = {
   setCustomZone: () => void;
   setLoadingProgress: (processedPointCount: number, totalPointCount: number) => void;
   updateSourceStatus: (status: {corpusPointCount?: number; message: string}) => void;
-  updateStats: (stats: LuSpatialGeographicPointQueryStats) => void;
+  updateStats: (stats: GPUSpatialGeographicPointQueryStats) => void;
 };
 
 export type TaxiLoadingIndicator = {
@@ -77,7 +77,7 @@ export function createLoadingIndicator(container: HTMLElement): TaxiLoadingIndic
     background: 'radial-gradient(ellipse at center, rgba(3, 12, 19, .82), rgba(2, 6, 9, .48))'
   });
   root.innerHTML = `<div style="width:min(340px,100%);padding:20px 22px;border:1px solid rgba(84,221,243,.25);border-radius:12px;background:rgba(4,11,17,.94);box-shadow:0 18px 54px rgba(0,0,0,.36);color:#e6f6ff;font:12px/1.55 Inter,system-ui,sans-serif">
-    <div style="color:#63eaff;font:700 10px ui-monospace,monospace;letter-spacing:.12em">GPU PROJECT + LUSPATIAL</div>
+    <div style="color:#63eaff;font:700 10px ui-monospace,monospace;letter-spacing:.12em">GPU PROJECT + GPU SPATIAL</div>
     <div data-taxi-loading-status style="margin-top:9px;font-size:14px;font-weight:650">Preparing WebGPU taxi explorer…</div>
     <div data-taxi-loading-progress role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:5px;margin-top:13px;overflow:hidden;border-radius:999px;background:rgba(108,154,177,.22)">
       <div data-taxi-loading-bar style="width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2fc9dd,#6aeeff);transition:width 120ms linear"></div>
@@ -118,7 +118,7 @@ export function createControlPanel(
   callbacks: ControlPanelCallbacks
 ): TaxiControlPanel {
   const root = document.createElement('section');
-  root.setAttribute('aria-label', 'luSpatial taxi controls');
+  root.setAttribute('aria-label', 'GPU Spatial taxi controls');
   Object.assign(root.style, {
     position: 'absolute',
     zIndex: '12',
@@ -139,7 +139,7 @@ export function createControlPanel(
     pointerEvents: 'auto'
   });
   root.innerHTML = `<style>
-    [data-luspatial-card] input {
+    [data-gpu-spatial-card] input {
       width:100%;box-sizing:border-box;color:#e9f6ff;background:#08131c;
       border:1px solid rgba(126,183,211,.26);border-radius:6px;font:11px ui-monospace,monospace;
     }
@@ -181,35 +181,35 @@ export function createControlPanel(
     [data-zone-list]::-webkit-scrollbar {width:4px}
     [data-zone-list]::-webkit-scrollbar-thumb {background:#235b67}
     [data-zone-list]::-webkit-scrollbar-track {background:#071218}
-    [data-luspatial-card] input {accent-color:#36dfff}
-    [data-luspatial-label] {color:#71889c;font:600 9px/1.2 ui-monospace,monospace;letter-spacing:.12em}
-    [data-luspatial-value] {font:600 11px/1.3 ui-monospace,monospace;color:#dff8ff;font-variant-numeric:tabular-nums}
+    [data-gpu-spatial-card] input {accent-color:#36dfff}
+    [data-gpu-spatial-label] {color:#71889c;font:600 9px/1.2 ui-monospace,monospace;letter-spacing:.12em}
+    [data-gpu-spatial-value] {font:600 11px/1.3 ui-monospace,monospace;color:#dff8ff;font-variant-numeric:tabular-nums}
   </style>
-  <div data-luspatial-card>
+  <div data-gpu-spatial-card>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:10px;border-bottom:1px solid rgba(125,180,206,.16)">
-      <div><div style="font:700 16px/1.1 ui-sans-serif,system-ui">luProj + luSpatial</div><div style="margin-top:3px;color:#7890a4">NYC taxi query explorer</div></div>
+      <div><div style="font:700 16px/1.1 ui-sans-serif,system-ui">GPU Project + GPU Spatial</div><div style="margin-top:3px;color:#7890a4">NYC taxi query explorer</div></div>
       <div style="padding:4px 6px;border:1px solid rgba(54,223,255,.28);border-radius:5px;color:#4be4ff;font:700 9px ui-monospace,monospace">DECK.GL · WEBGPU</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-      <div><div data-luspatial-label>CORPUS</div><div data-luspatial-value data-corpus>${formatCount(TAXI_CORPUS_POINT_COUNT)}</div></div>
-      <div><div data-luspatial-label>GPU RESIDENT</div><div data-luspatial-value data-resident>—</div></div>
-      <div><div data-luspatial-label>IN VIEW</div><div data-luspatial-value data-visible>—</div></div>
-      <div><div data-luspatial-label>SELECTED</div><div data-luspatial-value data-selected style="color:#49e3ff">—</div></div>
+      <div><div data-gpu-spatial-label>CORPUS</div><div data-gpu-spatial-value data-corpus>${formatCount(TAXI_CORPUS_POINT_COUNT)}</div></div>
+      <div><div data-gpu-spatial-label>GPU RESIDENT</div><div data-gpu-spatial-value data-resident>—</div></div>
+      <div><div data-gpu-spatial-label>IN VIEW</div><div data-gpu-spatial-value data-visible>—</div></div>
+      <div><div data-gpu-spatial-label>SELECTED</div><div data-gpu-spatial-value data-selected style="color:#49e3ff">—</div></div>
     </div>
     <div data-basemap-warning hidden style="margin-top:9px;color:#e9ba7d;font:9px/1.45 ui-monospace,monospace"></div>
-    <div style="margin-top:12px"><div data-luspatial-label>TAXI ZONE PRESET</div>
+    <div style="margin-top:12px"><div data-gpu-spatial-label>TAXI ZONE PRESET</div>
       <div data-zone-picker>
-        <button data-zone-trigger type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="luspatial-zone-list" aria-label="Taxi zone preset: Manhattan, Midtown Center"><span data-zone-trigger-label>MANHATTAN · MIDTOWN CENTER</span></button>
-        <div data-zone-list id="luspatial-zone-list" role="listbox" aria-label="Taxi zone presets" hidden>
+        <button data-zone-trigger type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="gpu-spatial-zone-list" aria-label="Taxi zone preset: Manhattan, Midtown Center"><span data-zone-trigger-label>MANHATTAN · MIDTOWN CENTER</span></button>
+        <div data-zone-list id="gpu-spatial-zone-list" role="listbox" aria-label="Taxi zone presets" hidden>
           ${zones.map(zone => `<button data-zone-option="${zone.id}" type="button" role="option" tabindex="-1" aria-selected="${zone.id === initialZoneId}"><span>${zone.borough}</span><span>${zone.name}</span></button>`).join('')}
         </div>
       </div>
     </div>
-    <label style="display:block;margin-top:10px"><span style="display:flex;justify-content:space-between"><span data-luspatial-label>QUERY RADIUS</span><strong data-radius-value style="color:#49e3ff;font:600 10px ui-monospace,monospace">0.35 km</strong></span>
+    <label style="display:block;margin-top:10px"><span style="display:flex;justify-content:space-between"><span data-gpu-spatial-label>QUERY RADIUS</span><strong data-radius-value style="color:#49e3ff;font:600 10px ui-monospace,monospace">0.35 km</strong></span>
       <input data-radius aria-label="Query radius in kilometres" type="range" min="0.1" max="3" step="0.05" value="0.35" />
     </label>
     <div style="margin-top:9px;padding:8px;border-radius:6px;background:rgba(32,210,242,.07);border:1px solid rgba(42,218,249,.13)">
-      <div data-luspatial-label>QUERY CENTER</div><div data-coordinate style="margin-top:3px;color:#cdebf4;font:10px/1.4 ui-monospace,monospace">—</div>
+      <div data-gpu-spatial-label>QUERY CENTER</div><div data-coordinate style="margin-top:3px;color:#cdebf4;font:10px/1.4 ui-monospace,monospace">—</div>
     </div>
     <div data-source-status style="margin-top:7px;color:#6f8598;font:9px/1.35 ui-monospace,monospace">DETERMINISTIC GENERATED FIXTURE · NO NETWORK REQUEST</div>
     <div style="display:flex;justify-content:space-between;gap:10px;margin-top:9px;color:#6f8598;font:9px/1.35 ui-monospace,monospace">
@@ -249,7 +249,7 @@ export function createControlPanel(
   const graphInspectorElement = root.querySelector<HTMLElement>('[data-graph-inspector]')!;
   const graphInspectorPanel = new GPUCommandGraphInspectorPanel(graphInspectorElement, {
     graphLabels: {
-      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.build]: 'luProj projection + grid build',
+      [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.build]: 'GPU Project projection + grid build',
       [LU_SPATIAL_GEOGRAPHIC_POINT_QUERY_GRAPH_IDS.query]: 'Viewport + radius queries'
     },
     counterLabels: {

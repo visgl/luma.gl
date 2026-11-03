@@ -45,7 +45,7 @@ export {
   TAXI_PROJECTION_ORIGIN
 } from '../../showcase/billion-point-spatial-atlas/taxi-coordinate-space';
 
-export type LuSpatialTaxiData = {
+export type GPUSpatialTaxiData = {
   pointCount: number;
   corpusPointCount: number;
   longitudeLatitudes: Float32Array;
@@ -57,7 +57,7 @@ export type LuSpatialTaxiData = {
   sourceTelemetry?: TaxiPointSourceTelemetry;
 };
 
-export type LuSpatialTaxiDataGenerationOptions = {
+export type GPUSpatialTaxiDataGenerationOptions = {
   chunkSize?: number;
   onProgress?: (processedPointCount: number, totalPointCount: number) => void;
   signal?: AbortSignal;
@@ -72,7 +72,7 @@ export type TaxiZonePreset = {
 };
 
 /** Builds a longitude/latitude resident window from the atlas' deterministic public fixture. */
-export function makeLuSpatialTaxiData(pointCount = TAXI_POINT_COUNT): LuSpatialTaxiData {
+export function makeGPUSpatialTaxiData(pointCount = TAXI_POINT_COUNT): GPUSpatialTaxiData {
   const longitudeLatitudes = new Float32Array(pointCount * 2);
   const sourceBounds = [Infinity, Infinity, -Infinity, -Infinity];
 
@@ -86,10 +86,10 @@ export function makeLuSpatialTaxiData(pointCount = TAXI_POINT_COUNT): LuSpatialT
 }
 
 /** Generates deterministic taxi rows progressively without monopolizing the browser main thread. */
-export async function makeLuSpatialTaxiDataAsync(
+export async function makeGPUSpatialTaxiDataAsync(
   pointCount = TAXI_POINT_COUNT,
-  options: LuSpatialTaxiDataGenerationOptions = {}
-): Promise<LuSpatialTaxiData> {
+  options: GPUSpatialTaxiDataGenerationOptions = {}
+): Promise<GPUSpatialTaxiData> {
   const {onProgress, signal} = options;
   const chunkSize = Math.max(1, Math.floor(options.chunkSize ?? TAXI_GENERATION_CHUNK_SIZE));
   const longitudeLatitudes = new Float32Array(pointCount * 2);
@@ -140,7 +140,7 @@ function makeTaxiDataFromBounds(
   pointCount: number,
   longitudeLatitudes: Float32Array,
   sourceBounds: number[]
-): LuSpatialTaxiData {
+): GPUSpatialTaxiData {
   const projectionSourceBounds = makeProjectionSourceBounds(sourceBounds);
   const projectedCorners = [
     projectTaxiLongitudeLatitude([sourceBounds[0], sourceBounds[1]]),
@@ -217,9 +217,9 @@ function yieldTaxiGeneration(signal?: AbortSignal): Promise<void> {
  * Packed sources remain coordinate-neutral until this adapter. CRS84 and the browser convention
  * for WGS84/EPSG:4326 are interpreted as X=longitude and Y=latitude.
  */
-export function makeLuSpatialTaxiDataFromResidentWindow(
+export function makeGPUSpatialTaxiDataFromResidentWindow(
   window: TaxiPointResidentWindow
-): LuSpatialTaxiData {
+): GPUSpatialTaxiData {
   assertLongitudeLatitudeTaxiResidentWindow(window);
 
   const sourceBounds = [Infinity, Infinity, -Infinity, -Infinity];
@@ -292,13 +292,13 @@ export function makeTaxiZonePresets(): readonly TaxiZonePreset[] {
 }
 
 export function getTaxiPoint(
-  data: LuSpatialTaxiData,
+  data: GPUSpatialTaxiData,
   pointIndex: number
 ): {
   longitude: number;
   latitude: number;
   sourceRowIndex: number;
-  sourceKind: LuSpatialTaxiData['sourceKind'];
+  sourceKind: GPUSpatialTaxiData['sourceKind'];
 } | null {
   if (!Number.isSafeInteger(pointIndex) || pointIndex < 0 || pointIndex >= data.pointCount) {
     return null;

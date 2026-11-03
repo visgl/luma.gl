@@ -128,7 +128,7 @@ const nodeCoverageNativePatterns = [
   'modules/graph/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
   'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
   'modules/graph/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
-  'modules/graph/test/gpu-sql/lu-sql.node.spec.{ts,js}'
+  'modules/graph/test/gpu-sql/gpu-sql.node.spec.{ts,js}'
 ];
 const nodeCoveragePatterns = [
   ...nodeCoverageIncludePatterns,

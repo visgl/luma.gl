@@ -4,17 +4,17 @@
 
 import {readFileSync} from 'node:fs';
 import type {LayerContext} from '@deck.gl/core';
-import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
+import {GPUSpatialPointLayer} from '@deck.gl-community/gpu-layers';
 import type {Buffer, Device, RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import type {DrawCommandBuffer} from '@luma.gl/graph/gpu-core';
 import {describe, expect, test, vi} from 'vitest';
 
 function makeLayer(
-  overrides: Partial<ConstructorParameters<typeof LuSpatialPointLayer>[0]> = {}
-): LuSpatialPointLayer {
-  return new LuSpatialPointLayer({
-    id: 'test-luspatial-points',
+  overrides: Partial<ConstructorParameters<typeof GPUSpatialPointLayer>[0]> = {}
+): GPUSpatialPointLayer {
+  return new GPUSpatialPointLayer({
+    id: 'test-gpu-spatial-points',
     positions: {} as Buffer,
     pointIds: {} as Buffer,
     drawCommands: {type: 'draw', draw: vi.fn()} as unknown as DrawCommandBuffer,
@@ -22,7 +22,7 @@ function makeLayer(
   });
 }
 
-describe('LuSpatialPointLayer resource lifecycle', () => {
+describe('GPUSpatialPointLayer resource lifecycle', () => {
   test('rejects non-WebGPU devices before allocating resources', () => {
     const createBuffer = vi.fn();
     const layer = makeLayer();
@@ -31,7 +31,7 @@ describe('LuSpatialPointLayer resource lifecycle', () => {
       layer.initializeState({
         device: {type: 'webgl', createBuffer} as unknown as Device
       } as LayerContext)
-    ).toThrow('LuSpatialPointLayer requires WebGPU');
+    ).toThrow('GPUSpatialPointLayer requires WebGPU');
     expect(createBuffer).not.toHaveBeenCalled();
   });
 
@@ -45,7 +45,7 @@ describe('LuSpatialPointLayer resource lifecycle', () => {
       layer.initializeState({
         device: {type: 'webgpu', createBuffer} as unknown as Device
       } as LayerContext)
-    ).toThrow('LuSpatialPointLayer requires non-indexed draw commands');
+    ).toThrow('GPUSpatialPointLayer requires non-indexed draw commands');
     expect(createBuffer).not.toHaveBeenCalled();
   });
 
@@ -84,7 +84,7 @@ describe('LuSpatialPointLayer resource lifecycle', () => {
   });
 });
 
-describe('LuSpatialPointLayer rendering', () => {
+describe('GPUSpatialPointLayer rendering', () => {
   test('accepts a viewport radius accessor during Deck prop validation', () => {
     const layer = makeLayer({radiusScale: () => 1});
 

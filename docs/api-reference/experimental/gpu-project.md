@@ -1037,7 +1037,7 @@ arithmetic differ, so the explicit accuracy budget still governs the comparison.
 The four reproducible fixtures cover Web Mercator, northern/southern UTM, and inverse UTM:
 
 ```sh
-LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_GPU_PROJECT_BENCHMARK_ROWS=65536 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-program-benchmark.spec.ts
 ```
@@ -1099,7 +1099,7 @@ masked/invalid ones. Zero-resolution medians produce `null` rates/speedups.
 Reproduce the UTM/Albers physical-batch sweep (same cubic double-single plan and 1 mm budget):
 
 ```sh
-VITE_LUPROJ_TABLE_ROWS=4096,65536 VITE_LUPROJ_TABLE_BATCH_ROWS=4096,65536 \
+VITE_GPU_PROJECT_TABLE_ROWS=4096,65536 VITE_GPU_PROJECT_TABLE_BATCH_ROWS=4096,65536 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-table-performance.spec.ts
 ```
@@ -1108,7 +1108,7 @@ This compares the current production CPU table adapter's reusable scalar API, no
 possible math.gl API. The separate program benchmark retains flat/bulk CPU baselines. Software
 adapters skip integer-fp64 hardware qualification. No backend-selection threshold is implied.
 
-Set `VITE_LUPROJ_TABLE_LARGE=true` for a 4K, 16K, 64K, 256K, 1M and 4M requested-row sweep with
+Set `VITE_GPU_PROJECT_TABLE_LARGE=true` for a 4K, 16K, 64K, 256K, 1M and 4M requested-row sweep with
 65,536-row physical batches. Each case adds eleven probes; explicit row/batch environment settings
 override this preset. The flat generator avoids allocating millions of coordinate tuples. The
 schema-v2 report and [large-sweep evidence](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/gpu-project-table-performance.md)
@@ -1123,15 +1123,15 @@ scaling without conflating a Float32 precision reduction with a performance impr
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true \
-  VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+  VITE_GPU_PROJECT_SWEEP_ROWS=1024,16384,65536 VITE_GPU_PROJECT_SWEEP_CONSUMERS=1,4 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
 Rows are deterministic; each requested count adds nine valid boundary/seam probes and two invalid
 rows. Each path is validated before two warmups and after five measured submissions. Without
-`VITE_LUPROJ_SWEEP_ROWS`, this opt-in suite uses 32 rows, no warmups, and one measured iteration
-for a quick correctness check. Set `VITE_LUPROJ_SWEEP_GPU_TIMING=true` for a **separate** instrumented
+`VITE_GPU_PROJECT_SWEEP_ROWS`, this opt-in suite uses 32 rows, no warmups, and one measured iteration
+for a quick correctness check. Set `VITE_GPU_PROJECT_SWEEP_GPU_TIMING=true` for a **separate** instrumented
 run. Reports prefixed `PROJECTION_PERFORMANCE_SWEEP` contain the complete JSON distributions,
 device description, patch counts, accuracy and memory results.
 

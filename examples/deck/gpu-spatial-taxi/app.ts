@@ -9,8 +9,8 @@ import {
   type Viewport,
   type ViewStateChangeParameters
 } from '@deck.gl/core';
-import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
-import {LuSpatialGeographicPointQueryEffect} from '@deck.gl-community/gpu-layers/query';
+import {GPUSpatialPointLayer} from '@deck.gl-community/gpu-layers';
+import {GPUSpatialGeographicPointQueryEffect} from '@deck.gl-community/gpu-layers/query';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {loadTaxiPointResidentWindow} from '../../showcase/billion-point-spatial-atlas/taxi-resident-window';
@@ -22,9 +22,9 @@ import {ArrowDeck} from '../arrow-deck';
 import {type DeckExampleDeviceOptions, getDeckExampleProps} from '../deck-example-device';
 import {
   assertLongitudeLatitudeTaxiMetadata,
-  type LuSpatialTaxiData,
-  makeLuSpatialTaxiDataAsync,
-  makeLuSpatialTaxiDataFromResidentWindow,
+  type GPUSpatialTaxiData,
+  makeGPUSpatialTaxiDataAsync,
+  makeGPUSpatialTaxiDataFromResidentWindow,
   makeTaxiZonePresets,
   TAXI_GRID_SIZE,
   TAXI_POINT_COUNT,
@@ -52,7 +52,7 @@ type TaxiViewState = MapViewState & {
   bearing: number;
 };
 
-export type LuSpatialTaxiDeckOptions = DeckExampleDeviceOptions & {
+export type GPUSpatialTaxiDeckOptions = DeckExampleDeviceOptions & {
   /** Caller-supplied source whose ownership transfers to the returned Deck instance. */
   taxiPointSource?: TaxiPointSource;
   /** Packed manifest URL used when `taxiPointSource` is not supplied. */
@@ -61,10 +61,10 @@ export type LuSpatialTaxiDeckOptions = DeckExampleDeviceOptions & {
   residentPointCapacity?: number;
 };
 
-/** Creates the WebGPU-only luSpatial taxi explorer with a synchronized MapLibre basemap. */
+/** Creates the WebGPU-only GPU Spatial taxi explorer with a synchronized MapLibre basemap. */
 export function createGPUSpatialTaxiDeck(
   parent?: HTMLDivElement,
-  options: LuSpatialTaxiDeckOptions = {}
+  options: GPUSpatialTaxiDeckOptions = {}
 ) {
   const {
     taxiPointSource: suppliedTaxiPointSource,
@@ -78,13 +78,13 @@ export function createGPUSpatialTaxiDeck(
     residentPointCapacity > MAX_RESIDENT_POINT_CAPACITY
   ) {
     throw new Error(
-      `luSpatial taxi residentPointCapacity must be between 1 and ${MAX_RESIDENT_POINT_CAPACITY}`
+      `GPU Spatial taxi residentPointCapacity must be between 1 and ${MAX_RESIDENT_POINT_CAPACITY}`
     );
   }
   const ownsContainer = !parent;
   const container = parent ?? createStandaloneContainer();
   const generationController = new AbortController();
-  let taxiData: LuSpatialTaxiData | null = null;
+  let taxiData: GPUSpatialTaxiData | null = null;
   const configuredManifestUrl = suppliedTaxiManifestUrl ?? getConfiguredTaxiManifestUrl();
   const taxiPointSource =
     suppliedTaxiPointSource ??
@@ -102,10 +102,10 @@ export function createGPUSpatialTaxiDeck(
     minZoom: 9,
     maxZoom: 20
   };
-  let queryEffect: LuSpatialGeographicPointQueryEffect | null = null;
+  let queryEffect: GPUSpatialGeographicPointQueryEffect | null = null;
   let latestSelectionCenter: readonly [number, number] = initialZone.center;
-  let stagingQueryEffect: LuSpatialGeographicPointQueryEffect | null = null;
-  let activeLayers: LuSpatialPointLayer[] = [];
+  let stagingQueryEffect: GPUSpatialGeographicPointQueryEffect | null = null;
+  let activeLayers: GPUSpatialPointLayer[] = [];
   let queryRadiusKilometres = 0.35;
   let taxiDataRevision = 0;
 
@@ -200,7 +200,7 @@ export function createGPUSpatialTaxiDeck(
       synchronizeBasemap(map, viewState);
     },
     onLoad: ({deck: loadedDeck, device}) => {
-      if (device.type !== 'webgpu') throw new Error('luSpatial taxi explorer requires WebGPU');
+      if (device.type !== 'webgpu') throw new Error('GPU Spatial taxi explorer requires WebGPU');
       if (!deviceOptions.device) device._enableDebugGPUTime();
       const canvas = device.getDefaultCanvasContext().canvas;
       if (canvas instanceof HTMLCanvasElement) {
@@ -212,16 +212,16 @@ export function createGPUSpatialTaxiDeck(
         });
       }
       const activateTaxiData = (
-        nextTaxiData: LuSpatialTaxiData,
+        nextTaxiData: GPUSpatialTaxiData,
         redrawReason: string
       ): Promise<void> => {
         const previousQueryEffect = queryEffect;
         const previousLayers = activeLayers;
         const nextTaxiDataRevision = taxiDataRevision + 1;
-        let nextQueryEffect: LuSpatialGeographicPointQueryEffect;
+        let nextQueryEffect: GPUSpatialGeographicPointQueryEffect;
         try {
-          nextQueryEffect = new LuSpatialGeographicPointQueryEffect(device, {
-            id: `luspatial-taxi-query-effect-${nextTaxiDataRevision}`,
+          nextQueryEffect = new GPUSpatialGeographicPointQueryEffect(device, {
+            id: `gpu-spatial-taxi-query-effect-${nextTaxiDataRevision}`,
             longitudeLatitudes: nextTaxiData.longitudeLatitudes,
             sourceBounds: nextTaxiData.sourceBounds,
             projectedBounds: nextTaxiData.projectedBounds,
@@ -243,7 +243,7 @@ export function createGPUSpatialTaxiDeck(
         return new Promise<void>((resolve, reject) => {
           let settled = false;
           const readyLayerIndexes = new Set<number>();
-          let stagedLayers: LuSpatialPointLayer[] = [];
+          let stagedLayers: GPUSpatialPointLayer[] = [];
 
           const rejectActivation = (error: Error): void => {
             if (settled) return;
@@ -256,7 +256,7 @@ export function createGPUSpatialTaxiDeck(
                     effects: previousQueryEffect ? [previousQueryEffect] : [],
                     layers: previousLayers
                   });
-                  loadedDeck.redraw('luSpatial taxi source activation rolled back');
+                  loadedDeck.redraw('GPU Spatial taxi source activation rolled back');
                 } catch {
                   // Deck is already tearing down; the effect cleanup below remains idempotent.
                 }
@@ -269,7 +269,7 @@ export function createGPUSpatialTaxiDeck(
           const commitActivation = (): void => {
             if (settled) return;
             if (finalized) {
-              rejectActivation(new Error('luSpatial taxi explorer finalized during activation'));
+              rejectActivation(new Error('GPU Spatial taxi explorer finalized during activation'));
               return;
             }
             try {
@@ -325,7 +325,7 @@ export function createGPUSpatialTaxiDeck(
                 : [nextQueryEffect],
               layers: [...previousLayers, ...stagedLayers]
             });
-            loadedDeck.redraw('luSpatial taxi source activation staged');
+            loadedDeck.redraw('GPU Spatial taxi source activation staged');
           } catch (error) {
             rejectActivation(error instanceof Error ? error : new Error(String(error)));
           }
@@ -333,9 +333,9 @@ export function createGPUSpatialTaxiDeck(
       };
 
       void (async () => {
-        let generatedTaxiData: LuSpatialTaxiData;
+        let generatedTaxiData: GPUSpatialTaxiData;
         try {
-          generatedTaxiData = await makeLuSpatialTaxiDataAsync(
+          generatedTaxiData = await makeGPUSpatialTaxiDataAsync(
             Math.min(residentPointCapacity, TAXI_POINT_COUNT),
             {
               signal: generationController.signal,
@@ -346,8 +346,8 @@ export function createGPUSpatialTaxiDeck(
             }
           );
           generationController.signal.throwIfAborted();
-          loadingIndicator.setStatus('Compiling luProj projection and GPU spatial index…');
-          await activateTaxiData(generatedTaxiData, 'luProj and luSpatial initialized');
+          loadingIndicator.setStatus('Compiling GPU Project projection and GPU spatial index…');
+          await activateTaxiData(generatedTaxiData, 'GPU Project and GPU Spatial initialized');
           loadingIndicator.destroy();
         } catch (error) {
           if (!generationController.signal.aborted && !finalized) {
@@ -377,10 +377,10 @@ export function createGPUSpatialTaxiDeck(
                 });
               }
             });
-            const packedTaxiData = makeLuSpatialTaxiDataFromResidentWindow(residentWindow);
+            const packedTaxiData = makeGPUSpatialTaxiDataFromResidentWindow(residentWindow);
             sourceLoadController.signal.throwIfAborted();
             if (finalized) return;
-            await activateTaxiData(packedTaxiData, 'luSpatial packed taxi source activated');
+            await activateTaxiData(packedTaxiData, 'GPU Spatial packed taxi source activated');
           } catch (error) {
             if (sourceLoadController.signal.aborted || finalized) return;
             controls.updateSourceStatus({
@@ -394,7 +394,7 @@ export function createGPUSpatialTaxiDeck(
     onFinalize: () => {
       finalized = true;
       generationController.abort();
-      sourceLoadController?.abort(new Error('luSpatial taxi explorer finalized'));
+      sourceLoadController?.abort(new Error('GPU Spatial taxi explorer finalized'));
       void closeTaxiPointSource(taxiPointSource);
       resizeObserver.disconnect();
       loadingIndicator.destroy();
@@ -433,8 +433,8 @@ async function closeTaxiPointSource(source: TaxiPointSource | null): Promise<voi
 
 function retirePreviousQueryEffect(
   deck: ArrowDeck<MapView>,
-  previousQueryEffect: LuSpatialGeographicPointQueryEffect | null,
-  nextQueryEffect: LuSpatialGeographicPointQueryEffect,
+  previousQueryEffect: GPUSpatialGeographicPointQueryEffect | null,
+  nextQueryEffect: GPUSpatialGeographicPointQueryEffect,
   shouldSkip: () => boolean
 ): void {
   if (!previousQueryEffect) return;
@@ -442,7 +442,7 @@ function retirePreviousQueryEffect(
     requestAnimationFrame(() => {
       if (shouldSkip()) return;
       deck.setProps({effects: [nextQueryEffect]});
-      deck.redraw('luSpatial previous taxi source retired');
+      deck.redraw('GPU Spatial previous taxi source retired');
     });
   });
 }
@@ -454,13 +454,13 @@ type TaxiLayerStagingOptions = {
 };
 
 function makeTaxiLayers(
-  queryEffect: LuSpatialGeographicPointQueryEffect,
+  queryEffect: GPUSpatialGeographicPointQueryEffect,
   taxiDataRevision: number,
   options: TaxiLayerStagingOptions = {}
-): LuSpatialPointLayer[] {
+): GPUSpatialPointLayer[] {
   return [
-    new LuSpatialPointLayer({
-      id: `luspatial-taxi-context-${taxiDataRevision}`,
+    new GPUSpatialPointLayer({
+      id: `gpu-spatial-taxi-context-${taxiDataRevision}`,
       data: [],
       pickable: true,
       autoHighlight: true,
@@ -478,8 +478,8 @@ function makeTaxiLayers(
         return Boolean(options.onLayerError);
       }
     }),
-    new LuSpatialPointLayer({
-      id: `luspatial-taxi-selection-${taxiDataRevision}`,
+    new GPUSpatialPointLayer({
+      id: `gpu-spatial-taxi-selection-${taxiDataRevision}`,
       data: [],
       pickable: true,
       autoHighlight: true,

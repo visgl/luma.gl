@@ -53,7 +53,7 @@ const loadGPUSceneGraphApp = () => import('../../examples/experimental/gpu-scene
 const loadGPUTraceSceneApp = () => import('../../examples/experimental/gpu-trace-scene/app');
 const loadGPUTraceViewerApp = () => import('../../examples/experimental/gpu-trace-viewer/app');
 const loadGPUGraphExplorerApp = () => import('../../examples/experimental/gpu-graph-explorer/app');
-const loadLuCIMVolumeLabApp = () => import('../../examples/experimental/lucim-volume-lab/app');
+const loadGPU Volume AlgorithmsVolumeLabApp = () => import('../../examples/experimental/lucim-volume-lab/app');
 const loadGPT2App = () => import('../../examples/experimental/gpt-2/app');
 const loadVideoTextureApp = () => import('../../examples/api/video-texture/app');
 const loadWebXRKaleidoscopeApp = () => import('../../examples/experimental/webxr-kaleidoscope/app');
@@ -116,7 +116,7 @@ const loadBillionPointSpatialAtlasExample = () =>
 const loadMillionRowCrossfilterExample = () =>
   import('../../examples/showcase/million-row-crossfilter/app');
 const loadRasterLabExample = () => import('../../examples/showcase/raster-lab/app');
-const loadGPUSpatialTaxiExample = () => import('../../examples/deck/luspatial-taxi/app');
+const loadGPUSpatialTaxiExample = () => import('../../examples/deck/gpu-spatial-taxi/app');
 const loadGPUGraphExplorerDeckExample = () => import('../../examples/deck/gpu-graph-explorer/app');
 const loadFP64Example = () => import('../../examples/experimental/fp64/app');
 const loadGPUSortExample = () => import('../../examples/experimental/gpu-sort/src/app');
@@ -520,7 +520,7 @@ export const DeckGPUSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = (
   if (!module) {
     return (
       <DeferredGPUExampleStatus
-        title="GPU Project + luSpatial Taxi Explorer"
+        title="GPU Project + GPU Spatial Taxi Explorer"
         description="Loading the projection, spatial-query, and interactive map tools."
         errorMessage={errorMessage}
         embedded={embedded}
@@ -535,8 +535,8 @@ export const DeckGPUSpatialTaxiExample: React.FC<DeckArrowLayerExampleProps> = (
       componentProps={{
         createDeck: module.createGPUSpatialTaxiDeck,
         panel: {
-          id: 'luspatial-taxi',
-          title: 'GPU Project + luSpatial Taxi Explorer',
+          id: 'gpu-spatial-taxi',
+          title: 'GPU Project + GPU Spatial Taxi Explorer',
           devices: ['webgpu']
         }
       }}
@@ -1852,13 +1852,13 @@ export const VolumetricFireForgeExample: React.FC<WebsiteExampleProps> = props =
   />
 );
 
-export const LuCIMVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
+export const GPU Volume AlgorithmsVolumeLabExample: React.FC<WebsiteExampleProps> = props => (
   <LumaExample
     id="lucim-volume-lab"
-    title="LuCIM Volume Lab"
+    title="GPU Volume Algorithms Volume Lab"
     subtitle="GPU-resident tri-planar volume segmentation"
     directory="experimental"
-    loadTemplate={loadLuCIMVolumeLabApp}
+    loadTemplate={loadGPU Volume AlgorithmsVolumeLabApp}
     config={exampleConfig}
     devices={['webgpu']}
     {...props}

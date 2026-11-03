@@ -419,7 +419,7 @@ the environment variable selects a representative dataset while ordinary CI
 uses a small smoke-test dataset:
 
 ```sh
-VITE_LUPROJ_BENCHMARK_ROWS=16384 yarn test-headless \
+VITE_GPU_PROJECT_BENCHMARK_ROWS=16384 yarn test-headless \
   modules/graph/test/gpu-project/projection-benchmark.spec.ts --reporter=verbose
 ```
 
@@ -445,7 +445,7 @@ provider is math.gl's JavaScript proj4 adapter, not native C++ PROJ; its old ora
 timing is retained separately from the matched consumer work.
 
 ```sh
-LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_GPU_PROJECT_BENCHMARK_ROWS=65536 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-program-benchmark.spec.ts
 ```
@@ -456,12 +456,12 @@ It reports 1/4-consumer reuse and actual multi-patch costs without changing prec
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true \
-  VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+  VITE_GPU_PROJECT_SWEEP_ROWS=1024,16384,65536 VITE_GPU_PROJECT_SWEEP_CONSUMERS=1,4 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
-This sweep defaults to uninstrumented timing; set `VITE_LUPROJ_SWEEP_GPU_TIMING=true` for a separate
+This sweep defaults to uninstrumented timing; set `VITE_GPU_PROJECT_SWEEP_GPU_TIMING=true` for a separate
 GPU-timestamp run. JSON reports begin with `PROJECTION_PERFORMANCE_SWEEP`. These synthetic workloads
 do not replace production-consumer or cross-vendor evidence.
 

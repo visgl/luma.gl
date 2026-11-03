@@ -1,5 +1,5 @@
 {
-  "name": "luma.gl-examples-deck-luspatial-taxi",
+  "name": "luma.gl-examples-deck-gpu-spatial-taxi",
   "version": "10.0.0-alpha.8",
   "private": true,
   "type": "module",

@@ -43,7 +43,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'deck/scene-buffers',
   'deck/soft-shadows',
   'deck/depth-of-field',
-  'deck/luspatial-taxi',
+  'deck/gpu-spatial-taxi',
   'deck/gpu-culled-trace',
   'deck/pattern-fills',
   'deck/point-glow',

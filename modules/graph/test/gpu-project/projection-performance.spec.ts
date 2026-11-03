@@ -11,9 +11,12 @@ import {
   performanceFixtures
 } from './projection-performance-fixtures';
 
-const rowCounts = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_SWEEP_ROWS, [32]);
-const consumerCounts = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_SWEEP_CONSUMERS, [1, 4]);
-const measured = import.meta.env.VITE_LUPROJ_SWEEP_ROWS !== undefined;
+const rowCounts = parsePerformanceSweep(import.meta.env.VITE_GPU_PROJECT_SWEEP_ROWS, [32]);
+const consumerCounts = parsePerformanceSweep(
+  import.meta.env.VITE_GPU_PROJECT_SWEEP_CONSUMERS,
+  [1, 4]
+);
+const measured = import.meta.env.VITE_GPU_PROJECT_SWEEP_ROWS !== undefined;
 
 for (const fixture of performanceFixtures) {
   for (const rowCount of rowCounts) {
@@ -26,7 +29,7 @@ for (const fixture of performanceFixtures) {
         const report = await runProjectionProgramBenchmark(device, {
           ...makePerformanceOptions(fixture, rowCount, consumerCount),
           // Default to production-like pass coalescing. Optional instrumentation is a separate run.
-          gpuTiming: import.meta.env.VITE_LUPROJ_SWEEP_GPU_TIMING === 'true',
+          gpuTiming: import.meta.env.VITE_GPU_PROJECT_SWEEP_GPU_TIMING === 'true',
           warmupIterations: measured ? 2 : 0,
           measuredIterations: measured ? 5 : 1
         });

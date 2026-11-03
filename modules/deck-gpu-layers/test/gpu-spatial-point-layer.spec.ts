@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Deck, OrthographicView, type Layer} from '@deck.gl/core';
-import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
+import {GPUSpatialPointLayer} from '@deck.gl-community/gpu-layers';
 import {Buffer, type Device} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {DrawCommandBuffer} from '@luma.gl/graph/gpu-core';
@@ -15,7 +15,7 @@ const TEST_VIEWPORT_SIZE = 64;
 const TEST_TIMEOUT_MILLISECONDS = 10_000;
 type TestDeck = Deck<OrthographicView>;
 
-it('LuSpatialPointLayer links and submits a caller-owned indirect draw', async () => {
+it('GPUSpatialPointLayer links and submits a caller-owned indirect draw', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -24,25 +24,25 @@ it('LuSpatialPointLayer links and submits a caller-owned indirect draw', async (
   }
 
   const positions = device.createBuffer({
-    id: 'luspatial-browser-test-positions',
+    id: 'gpu-spatial-browser-test-positions',
     data: new Float32Array([-0.25, -0.25, 0.25, 0.25]),
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const pointIds = device.createBuffer({
-    id: 'luspatial-browser-test-point-ids',
+    id: 'gpu-spatial-browser-test-point-ids',
     data: new Uint32Array([0, 1]),
     usage: Buffer.STORAGE | Buffer.COPY_DST
   });
   const drawCommands = new DrawCommandBuffer(device, {
-    id: 'luspatial-browser-test-draw-commands',
+    id: 'gpu-spatial-browser-test-draw-commands',
     type: 'draw',
     commands: [{vertexCount: 6, instanceCount: 2}]
   });
   const drawSpy = vi.spyOn(drawCommands, 'draw');
   let layerError: Error | null = null;
   let deckError: Error | null = null;
-  const layer = new LuSpatialPointLayer({
-    id: 'luspatial-browser-test-layer',
+  const layer = new GPUSpatialPointLayer({
+    id: 'gpu-spatial-browser-test-layer',
     data: [],
     positions,
     pointIds,
@@ -68,7 +68,7 @@ it('LuSpatialPointLayer links and submits a caller-owned indirect draw', async (
     await waitForPipeline(model);
 
     drawSpy.mockClear();
-    deck.redraw('luSpatial browser smoke');
+    deck.redraw('GPU Spatial browser smoke');
     await waitForIndirectDraw(drawSpy, () => layerError ?? deckError);
 
     expect(model.pipeline.linkStatus, 'the real WebGPU pipeline linked').toBe('success');
@@ -175,7 +175,7 @@ async function waitForIndirectDraw(
   }
   throwIfError(getError());
   if (drawSpy.mock.calls.length === 0) {
-    throw new Error('LuSpatialPointLayer did not submit its indirect draw');
+    throw new Error('GPUSpatialPointLayer did not submit its indirect draw');
   }
 }
 

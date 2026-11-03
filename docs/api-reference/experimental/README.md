@@ -50,7 +50,7 @@ stable Engine models and Shaders passes.
 | [`@luma.gl/graph/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
 | [`@luma.gl/graph/gpu-graph-algorithms`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
 | [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
-| [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
+| [GPU Volume Algorithms](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
 | [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |
 | [GPU DGGS cells](/docs/api-reference/experimental/gpu-dggs) | H3 and A5 cell-center decoding for GPU-resident split-uint64 indexes. |
 | [GPU Trace](/docs/api-reference/experimental/gpu-trace) | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis. |
