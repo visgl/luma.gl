@@ -32,7 +32,7 @@ A **shader module** owns reusable shader code and its data contract: uniform typ
 bindings, a uniform getter, and dependencies. A **shader plugin** packages optional
 assembly contributions around one primary module. A **target** is a function the host
 shader calls at a deliberate extension point. An **injection** supplies statements
-inside that function, or source at a structural anchor.
+inside that function, or source at a built-in target.
 
 The host chooses *where* extension behavior runs. Plugins choose *what* it does.
 Declaring a callable target does not insert a call into your shader: the host must call it.

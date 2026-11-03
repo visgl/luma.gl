@@ -105,6 +105,7 @@ Common assembly props:
 | `modules?: ShaderModule[]` | Shader modules to resolve and add to the assembled source. |
 | `defines?: Record<string, boolean \| number>` | Boolean or numeric preprocessor defines used while assembling shader source. |
 | `injectionTargets?: readonly ShaderInjectionTarget[]` | Callable targets to emit into assembled source. |
+| `pluginInjectionTargets?: readonly ShaderInjectionTarget[]` | Callable targets resolved from plugins. |
 | `inject?: ShaderInjection[] \| Record<string, string \| ResolvedShaderInjection>` | Named target or standard injection source. |
 | `pluginInjections?: Record<string, ResolvedShaderInjection[]>` | Ordered named injections already resolved from `ShaderPlugin` descriptors. |
 | `pluginVertexInputs?: Record<string, AttributeShaderType>` | Render-shader vertex inputs already resolved from `ShaderPlugin` descriptors. |

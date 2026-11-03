@@ -63,7 +63,8 @@ const fade: ShaderPlugin = {
 };
 ```
 
-Prefer callable targets for supported extension contracts; use raw source anchors sparingly.
+Prefer callable targets for supported extension contracts; use built-in targets
+for declarations and small entry-point statements.
 
 ## Compose dependencies
 
