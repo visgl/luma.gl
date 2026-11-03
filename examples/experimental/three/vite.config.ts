@@ -13,6 +13,7 @@ export default defineConfig(({mode}) => ({
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        embed: fileURLToPath(new URL('./embed.html', import.meta.url)),
         'gpu-graph-galaxy': fileURLToPath(new URL('./gpu-graph-galaxy.html', import.meta.url)),
         'host-overlay': fileURLToPath(new URL('./host-overlay.html', import.meta.url))
       }

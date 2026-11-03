@@ -48,7 +48,7 @@ This portable example maps the Engine objects to the Core work they manage.
   description="The example creates no GPU device or animation loop before activation."
   height={420}
 >
-  <HelloTriangleGeometryExample />
+  <HelloTriangleGeometryExample embedded />
 </ClientOnlyLiveExample>
 
 ## Core concepts

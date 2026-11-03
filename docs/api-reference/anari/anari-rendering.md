@@ -193,138 +193,23 @@ type ANARIRendererParameters = {
 
 ### Default renderer
 
-```ts
-const renderer = anariDevice.newRenderer('default', {
-  background: [0.012, 0.016, 0.04, 1],
-  ambientRadiance: 0.16,
-  exposure: 1.5,
-  bloomIntensity: 0.7,
-  bloomThreshold: 0.65,
-  bloomRadius: 8,
-  fogColor: [0.03, 0.04, 0.09],
-  fogDensity: 0.0004
-});
-```
-
-Bloom renders into a temporary frame-sized texture before composing the result to the canvas. The intermediate texture uses the underlying device's preferred presentation format, preserving HDR values when the canvas uses `rgba16float`.
+See the [Forward renderer reference](/docs/api-reference/anari/forward-renderer).
 
 ### Deferred renderer
 
-```ts
-const renderer = anariDevice.newRenderer('deferred', {
-  ambientRadiance: 0.08,
-  background: [0.006, 0.008, 0.018, 1]
-});
-```
-
-`deferred` is a WebGPU-only alternate renderer that writes committed ANARI surfaces into a shared `GBuffer`, then resolves opaque PBR lighting with the experimental `deferredLighting` shader pass. It currently supports base color, normal, metallic-roughness, emissive, and occlusion maps, plus ambient, directional, point, and spot lights. Scenes containing spot lights use the shared forward fallback so their cone attenuation is preserved.
-
-Its compact G-buffer uses four color attachments: HDR scene color (`rgba16float`), normal and
-roughness (`rgba8unorm`), base color and metallic (`rgba8unorm`), and HDR emissive color with
-occlusion (`rgba16float`). WebGPU charges eight render-target bytes for each format, totaling the
-default CORE limit of 32 bytes per sample. No elevated device limits or `featureLevel: 'max'` are
-required. The omitted velocity target previously contained only zeroes; HDR, physically based
-material channels, direct lighting, and emissive output remain intact.
-
-The deferred path is intended as an architecture baseline for richer ANARI renderers. It does not yet include the full Deferred Illumination Lab chain such as clustered light bins, GTAO, SSGI, SSR, velocity history, or bloom.
+See the [Deferred renderer reference](/docs/api-reference/anari/deferred-renderer).
 
 ### Ray-tracing renderer
 
-```ts
-const renderer = anariDevice.newRenderer('raytrace', {
-  background: [0.012, 0.016, 0.04, 1],
-  samplesPerPixel: 1,
-  maxBounces: 1,
-  progressive: true,
-  shadows: true,
-  resolutionScale: 0.5,
-  minimumResolutionScale: 0.25,
-  adaptiveResolution: true,
-  targetFrameTimeMilliseconds: 33.3,
-  temporalReprojection: true,
-  shadowSamplesPerFrame: 1
-});
-
-frame.setParameter('renderer', renderer).commitParameters();
-```
-
-`raytrace` requires WebGPU. The ANARI adapter translates committed scene objects into descriptors
-for the shared `RayTracingSceneRenderer` in `@luma.gl/anari`. Its GPU compute graph derives
-world-space object bounds, Morton-sorts active object/instance leaves into an explicit retained
-permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that hierarchy for
-nearest-hit rays and early-exit hard shadows. Transform-only animation gathers updated bounds
-through the retained permutation and refits without sorting; topology changes and periodic spatial
-refreshes rebuild the Morton order. A topology-only graph Morton-sorts each mesh's triangles into
-GPU-built BLASes, which transform-only updates reuse. It traces transformed analytic spheres and
-triangle meshes, including tessellated quads, cylinders, and cones; evaluates ambient, directional,
-point, and spot lights; and presents the result through a fullscreen pass. An `rgba16float` canvas
-or caller-owned framebuffer preserves HDR radiance; ordinary targets use the same configurable
-tone-mapping and exact sRGB transfer as forward rendering. Scalar metallic-roughness materials use
-GGX distribution, Smith visibility, Schlick Fresnel, and energy-balanced diffuse lighting. The
-trace pass uses exactly eight storage buffers, and every TLAS or BLAS construction pass remains
-within the default WebGPU CORE limit of eight storage buffers.
-
-The default half-resolution internal target traces one quarter as many pixels as the output canvas.
-When adaptive quality is enabled, the renderer can reduce scale to `0.25`, spread interleaved pixel
-coverage across frames, and rotate one shadowed direct light per frame. It approaches the configured
-frame budget using smoothed animation-frame intervals; no GPU timestamp feature is required. The
-fullscreen presentation pass upsamples the internal HDR result.
-
-Progressive history is reprojected through previous camera matrices and stable ANARI instance/group/
-surface identities. Depth and normal validation plus bounded neighborhood color clamping reject
-incompatible history; camera cuts, changed topology/materials, changed light counts, and target
-resizing invalidate it. GPU acceleration updates are encoded only for changed geometry or transforms,
-while camera-only and lighting-only frames reuse the retained TLAS. Transform-only frames use the
-retained-permutation gather/refit graph; topology changes and periodic refreshes use the full Morton
-build graph.
-
-The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
-GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
-not implemented. Skeletal skinning, morph-target displacement, material textures, alpha blending/
-transmission, and advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
-Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
-cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
-so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse
-throughput in `transportMode: 'diffuse'` is base color × 0.96 × (1 − metallic).
-`transportMode: 'pbr'` additionally samples opaque GGX reflection; transmission is not sampled. Misses contribute no indirect radiance: `background` is a display color, not an
-environment light. Ambient lights and fog retain the existing per-hit approximations.
-
-`samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices
-separate samples; unchanged progressive frames converge through the existing bounded history.
-Seed and bounce-budget changes invalidate accumulation. With diffuse bounces enabled,
-geometry, placement, material and light changes reset history even when temporal reprojection
-is enabled: primary-hit metadata cannot validate indirect illumination. Camera movement resets
-history when temporal reprojection is disabled; otherwise it uses the existing primary-hit
-reprojection and camera-cut rejection.
-Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
-and multiple progressive frames for comparison. Small emitters can converge slowly under the default BSDF-only emission gathering.
-Opt-in explicit emitter sampling, opaque GGX transport and spatial denoising are available;
-MIS, transmissive transport, advanced temporal denoising and volumes remain planned.
-
-For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
-and temporal reconstruction policy, see
-[ray-tracing technique background and tradeoffs](/docs/api-guide/engine/anari-architecture#ray-tracing-technique-background-and-tradeoffs).
-
-Applications can also
-[register custom renderer runtimes](/docs/api-reference/scene/anari-device#registering-renderer-runtimes).
+See the [Ray-tracing renderer reference](/docs/api-reference/anari/ray-tracing-renderer).
 
 ### Debug normals
 
-```ts
-const normals = anariDevice.newRenderer('debugNormals');
-frame.setParameter('renderer', normals).commitParameters();
-```
-
-`debugNormals` visualizes world-space surface normals as RGB values. Bloom is disabled automatically in this renderer mode.
+See the [Debug normals renderer reference](/docs/api-reference/anari/debug-normals-renderer).
 
 ### Debug depth
 
-```ts
-const depth = anariDevice.newRenderer('debugDepth');
-frame.setParameter('renderer', depth).commitParameters();
-```
-
-`debugDepth` visualizes scene depth. Bloom is disabled automatically in this renderer mode.
+See the [Debug depth renderer reference](/docs/api-reference/anari/debug-depth-renderer).
 
 ### Updating renderer settings
 
@@ -468,13 +353,13 @@ texture-to-buffer copies.
 Like picking, capture uses the runtime that last rendered the frame. Unrendered or
 destroyed frames and frames last rendered by the built-in raster runtime return `null`.
 Channels use scalar alpha-mask intersection semantics. Texture alpha, blending and transmission remain separate work.
-Use [`DepthTextureCopy`](/docs/api-reference/scene/depth-texture-copy) to transfer
+Use [`DepthTextureCopy`](/docs/api-reference/anari/depth-texture-copy) to transfer
 `projectedDepthTexture` into a color-preserving render pass with a depth attachment before
 drawing raster overlays with matching camera and viewport conventions.
 
 ### Selection outlines
 
-Use [`SelectionOutline`](/docs/api-reference/scene/selection-outline) to draw an
+Use [`SelectionOutline`](/docs/api-reference/anari/selection-outline) to draw an
 inward border over a selected visible placement. Resolve a `pick()` placement ID against
 the current snapshot identity table, rather than reusing an integer ID from an older
 snapshot. The JSON playground performs this lookup each frame while a mark is selected.
@@ -582,7 +467,7 @@ All parameter interfaces, object classes, subtype aliases, object metadata, and 
 `raytrace` accepts `samplingSeed` (uint32, default zero) for deterministic primary and diffuse
 sample rotations. A changed seed resets accumulation; centered picking and hit channels
 are unaffected. Use the same seed and frame count on the same backend for comparisons.
-[`getRayTracingQualityPreset`](/docs/api-reference/scene/ray-tracing-quality-presets)
+[`getRayTracingQualityPreset`](/docs/api-reference/anari/ray-tracing-quality-presets)
 returns explicit interactive/still renderer settings without modifying exposure or seed.
 
 ### Emissive lighting and scalar alpha masks
@@ -592,6 +477,6 @@ both diffuse and PBR transport, including at zero material bounces. It defaults
 to false. Scalar `alphaMode: 'mask'` compares committed opacity against
 `alphaCutoff` for color, secondary/shadow rays, picking and channels. Masked
 emitters are excluded from the sampling table. See the
-[ray quality reference](/docs/api-reference/scene/ray-tracing-quality-presets#explicit-emissive-lighting-and-scalar-masks)
+[ray quality reference](/docs/api-reference/anari/ray-tracing-quality-presets#explicit-emissive-lighting-and-scalar-masks)
 for sampling semantics and current limitations. `emitterSelection: 'power'` enables
 area/luminance-weighted emitter selection; uniform selection remains the default.

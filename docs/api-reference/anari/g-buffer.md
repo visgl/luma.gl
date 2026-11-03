@@ -12,7 +12,7 @@ outlines, TAA, motion blur, depth-aware blur, and related pipelines.
 `GBuffer` owns render targets and semantic bindings. It is not a scene renderer: applications
 still draw geometry, choose clear values, and decide whether additional attachments carry
 lighting, material, picking, or debug data. The separate
-[`deferredLighting`](/docs/api-reference/scene/deferred-lighting) shader-pass pipeline
+[`deferredLighting`](/docs/api-reference/anari/deferred-lighting) shader-pass pipeline
 provides one reusable material-lighting resolve without coupling target ownership to scene
 traversal.
 
@@ -191,10 +191,10 @@ Destroys the framebuffer and every owned texture.
 
 - [Shader Passes](/docs/api-guide/shaders/shader-passes) explains the composable render-stack model
   and effect ordering.
-- [Deferred Lighting](/docs/api-reference/scene/deferred-lighting) defines the material
+- [Deferred Lighting](/docs/api-reference/anari/deferred-lighting) defines the material
   attachment convention and fullscreen lighting resolve.
 - [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) documents routing,
   named targets, runtime bindings, and temporal history.
-- [`WBOITRenderer`](/docs/api-reference/scene/wboit-renderer) and
-  [`ABufferRenderer`](/docs/api-reference/scene/a-buffer-renderer) add transparent geometry
+- [`WBOITRenderer`](/docs/api-reference/anari/wboit-renderer) and
+  [`ABufferRenderer`](/docs/api-reference/anari/a-buffer-renderer) add transparent geometry
   capture and resolve pipelines.

@@ -8,11 +8,13 @@ type ShaderSource = {name: string; code: string};
 export function createShaderViewer(
   host: HTMLElement,
   sources: ShaderSource[],
-  generatedShaders: ShaderSource[]
+  generatedShaders: ShaderSource[],
+  embedded = false
 ): {open: (opener: HTMLButtonElement) => void; destroy: () => void} {
   const panel = document.createElement('div');
   panel.className = 'slang-shader-viewer';
-  panel.hidden = true;
+  panel.hidden = !embedded;
+  if (embedded) panel.dataset.embedded = '';
   panel.setAttribute('role', 'region');
   panel.setAttribute('aria-label', 'Shader viewer');
   panel.innerHTML = `
@@ -21,6 +23,12 @@ export function createShaderViewer(
         flex-direction:column; max-height:calc(100dvh - 24px); box-sizing:border-box; color:#e6edf7; background:#0c1421; border:1px solid #ffffff30;
         border-radius:12px; box-shadow:0 12px 40px #0008; font:13px/1.5 system-ui,sans-serif; }
       .slang-shader-viewer[hidden] { display:none; }
+      .slang-shader-viewer[data-embedded] { position:static; max-height:none; min-height:400px;
+        border:0; border-radius:0; box-shadow:none; background:transparent; }
+      .slang-shader-viewer[data-embedded] header { display:none; }
+      .slang-shader-viewer[data-embedded] .shader-panes { display:flex; flex-direction:column; padding:0; }
+      .slang-shader-viewer[data-embedded] pre { min-height:200px; max-height:300px; }
+      .slang-shader-viewer[data-embedded] footer { padding:12px 0; }
       .slang-shader-viewer header { display:flex; align-items:center; justify-content:space-between;
         gap:12px; padding:12px 16px; border-bottom:1px solid #ffffff20; }
       .slang-shader-viewer h2 { margin:0; font-size:16px; font-weight:500; }

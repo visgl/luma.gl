@@ -7,7 +7,7 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
 </DocumentationBadges>
 
-`ANARIArray` describes shared application data, and `ANARIGeometry` describes one reusable geometric primitive. Geometry becomes visible when paired with a material in an [`ANARISurface`](/docs/api-reference/scene/anari-scene).
+`ANARIArray` describes shared application data, and `ANARIGeometry` describes one reusable geometric primitive. Geometry becomes visible when paired with a material in an [`ANARISurface`](/docs/api-reference/anari/anari-scene).
 
 ## `ANARIArray`
 
@@ -240,7 +240,7 @@ frame.render();
 Position, normal, and tangent target attributes contain XYZ displacements; base tangent W remains
 unchanged. Changing only `morphWeights` updates the existing GPU vertex data instead of rebuilding
 the geometry/model. The optional retained-animation adapter maps glTF node weight tracks to these
-parameters; see [ANARI animation and glTF integration](/docs/api-reference/scene/anari-animation).
+parameters; see [ANARI animation and glTF integration](/docs/api-reference/anari/anari-animation).
 
 ### Sphere geometry
 

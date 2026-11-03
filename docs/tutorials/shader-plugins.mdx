@@ -1,3 +1,5 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import {DeviceTabs} from '@site/src/react-luma';
 import {ShaderPluginsExample} from '@site/src/examples';
 import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
@@ -9,7 +11,7 @@ import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 `ShaderPlugin` packages reusable shader behavior that can be attached to a `Model` or `Computation`. This example renders a grid of triangles from one base shader pair. One plugin adds procedural fill patterns, while `clipShaderPlugin` adds portable whole-instance and per-fragment clipping.
 
 <DeviceTabs />
-<ShaderPluginsExample showHeader={false} showStats={false} templateInfoPlacement="page" />
+<ShaderPluginsExample embedded showHeader={false} showStats={false} templateInfoPlacement="page" />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
@@ -109,17 +111,26 @@ const model = new Model(device, {
 varying. The application supplies each triangle's center and each vertex's
 position to a pair of named hooks:
 
+<Tabs groupId="shader-language">
+<TabItem value="glsl" label="GLSL">
+
 ```glsl
 CLIP_POSITION(gl_Position, triangleCenter, position);
 // ...in the fragment shader, after creating fragColor:
 CLIP_COLOR(fragColor);
 ```
 
+</TabItem>
+<TabItem value="wgsl" label="WGSL">
+
 ```wgsl
 CLIP_POSITION(&output.position, triangleCenter, position);
 // ...in the fragment shader, after creating a mutable color:
 CLIP_COLOR(&color);
 ```
+
+</TabItem>
+</Tabs>
 
 The hook signatures are registered for the active shader language:
 

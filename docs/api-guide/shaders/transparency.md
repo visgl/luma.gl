@@ -16,8 +16,8 @@ and an order-independent transparency renderer does not automatically create rea
 | Weighted-blended OIT | WebGPU and supported WebGL 2 | Order-independent accumulation at bounded memory cost. | Fragment colors and depths are combined approximately. |
 | A-buffer OIT | WebGPU | Per-pixel fragment capture and depth-sorted resolve. | Storage use grows with the configured fragment budget. |
 
-[`WBOITRenderer`](/docs/api-reference/scene/wboit-renderer) provides weighted-blended
-transparency. [`ABufferRenderer`](/docs/api-reference/scene/a-buffer-renderer) provides
+[`WBOITRenderer`](/docs/api-reference/anari/wboit-renderer) provides weighted-blended
+transparency. [`ABufferRenderer`](/docs/api-reference/anari/a-buffer-renderer) provides
 per-pixel linked-list capture and ordered compositing.
 
 When neither OIT path is available, sort transparent objects or instances back to front relative

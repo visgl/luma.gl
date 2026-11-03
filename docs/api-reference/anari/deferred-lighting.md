@@ -123,9 +123,9 @@ across frames. `MAX_DEFERRED_POINT_LIGHTS` is 64 and matches the shader loop bou
 
 ## Related pages
 
-- [`GBuffer`](/docs/api-reference/scene/g-buffer) owns the MRT attachments and standard
+- [`GBuffer`](/docs/api-reference/anari/g-buffer) owns the MRT attachments and standard
   depth, normal, and velocity bindings.
-- [Clustered Lighting](/docs/api-reference/scene/clustered-lighting) reuses the same
+- [Clustered Lighting](/docs/api-reference/anari/clustered-lighting) reuses the same
   material attachments with compute-built light lists for hundreds of local lights.
 - [Shader Passes](/docs/api-guide/shaders/shader-passes) explains the ordered composable render
   stack.

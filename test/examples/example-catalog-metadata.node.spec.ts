@@ -135,7 +135,7 @@ describe('live example catalog metadata', () => {
     expect(websiteExamples).not.toContain('ArrowInstancingExample');
     expect(websiteExamples).not.toContain("from '../../examples/arrow/arrow-instancing/app'");
     expect(websiteConfiguration).toMatch(
-      /from:\s*\[['"]\/examples\/arrow\/arrow-instancing['"]\],\s*to:\s*['"]\/examples\/showcase\/instancing['"]/
+      /['"]from['"]:\s*\[\s*['"]\/examples\/arrow\/arrow-instancing['"]\s*\],\s*['"]to['"]:\s*['"]\/examples\/showcase\/instancing['"]/
     );
   });
 

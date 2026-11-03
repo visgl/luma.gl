@@ -128,7 +128,7 @@ the ordered `previous` color chain.
 
 ## Related pages
 
-- [Deferred Lighting](/docs/api-reference/scene/deferred-lighting) documents the shared
+- [Deferred Lighting](/docs/api-reference/anari/deferred-lighting) documents the shared
   G-buffer material contract and the fixed 64-light baseline resolve.
-- [GBuffer](/docs/api-reference/scene/g-buffer) owns the scene MRT attachments.
+- [GBuffer](/docs/api-reference/anari/g-buffer) owns the scene MRT attachments.
 - [Shader Passes](/docs/api-guide/shaders/shader-passes) explains ordered fullscreen composition.

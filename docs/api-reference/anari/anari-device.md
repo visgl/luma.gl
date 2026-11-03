@@ -102,7 +102,7 @@ newFrame(parameters: ANARIFrameParameters): ANARIFrame;
 
 `newRenderer()` defaults to subtype `default`. Newly created objects immediately commit their initial parameters, so their initial `version` is `1`.
 
-See [arrays and geometry](/docs/api-reference/scene/anari-geometry), [materials and lighting](/docs/api-reference/scene/anari-materials-and-lights), [scene hierarchy](/docs/api-reference/scene/anari-scene), and [cameras, renderers, and frames](/docs/api-reference/scene/anari-rendering) for complete parameter details.
+See [arrays and geometry](/docs/api-reference/anari/anari-geometry), [materials and lighting](/docs/api-reference/anari/anari-materials-and-lights), [scene hierarchy](/docs/api-reference/anari/anari-scene), and [cameras, renderers, and frames](/docs/api-reference/anari/anari-rendering) for complete parameter details.
 
 ## Registering renderer runtimes
 

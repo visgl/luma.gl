@@ -1,22 +1,126 @@
 ---
-title: Three.js adapter prototype
+title: Three.js
 ---
 
-# Three.js adapter prototype
+import {ThreeIntegrationDocsExample} from '@site/src/examples';
+import {ClientOnlyLiveExample} from '@site/src/components/docs/client-only-live-example';
 
-**Status: Exploration**
+# Three.js
 
-:::caution[Exploratory and unconfirmed]
+:::caution[Experimental]
 
-This module is still exploratory and unconfirmed. Its APIs, supported features,
-and integration approach may change. The examples and tests demonstrate selected
-scenarios; they do not establish general compatibility or production readiness.
+This module is currently intended primarily as a proof of concept. Integrations are tested with Three.js **0.185.1**; APIs and supported features may change.
 
 :::
 
-`@luma.gl/three` is a public package with experimental APIs pinned to Three.js
-0.185.1. It accepts actual Three.js scenes and upstream TSL materials, and executes
-GPU work through luma.gl. The package does not promise general Three.js compatibility.
+`@luma.gl/three` explores ways that Three.js applications can integrate with luma.gl:
+
+- Use the luma.gl GPU Graph for GPU computation and share the results directly with Three.js.
+- Mix luma.gl and Three.js rendering in a shared render pass.
+- Use a luma.gl Device as the GPU backend for a Three.js renderer.
+- Use deck.gl in Three.js applications.
+- Add Three.js objects to a deck.gl application.
+
+<ClientOnlyLiveExample height={360}>
+  <ThreeIntegrationDocsExample integration="graph" />
+</ClientOnlyLiveExample>
+
+## Using with Graph
+
+Keep Three.js as your renderer and use luma.gl Graph to compute its geometry data.
+The Galactic Vortex updates star positions and colors in shared GPU buffers,
+avoiding CPU readback and re-upload.
+
+### How the integration works
+
+Graph describes and schedules GPU operations; Three.js displays their results. The
+bridge connects their buffers, so Graph does not need to own the Three.js scene or
+replace its renderer.
+
+1. Create a luma WebGPU Device and initialize Three.js's WebGPURenderer with the same native GPUDevice.
+2. Allocate output buffers with storage and vertex usage for computed geometry attributes.
+3. Build and compile a Graph computation that writes those buffers.
+4. Attach the buffers to Three.js geometry using ThreeBufferBridge.
+5. On each frame, encode and submit the Graph work before rendering the Three.js scene.
+
+The Galactic Vortex follows this pattern for particle positions and colors. Three.js
+still owns the camera, materials, and draw calls. The application controls when the
+graph runs, allowing computation to update independently of scene construction.
+
+See the [Graph overview](/docs/api-reference/graph) for graph APIs and the
+[galaxy source](https://github.com/visgl/luma.gl/blob/master/examples/experimental/three/gpu-graph-galaxy.ts)
+for the complete computation and rendering loop.
+
+### Share buffers with Three.js
+
+`ThreeBufferBridge` from `@luma.gl/three/interop` connects luma buffers to an
+initialized upstream `WebGPURenderer` using the same `GPUDevice`. Call
+`getThreeBufferBridgeSupport(device, renderer)` before attaching. Submit luma
+computations before Three.js renders; both use the device's ordered queue.
+
+The bridge supports packed Float32 vertex and instanced attributes and uint16/uint32
+indices. Interleaved attributes, storage-node attributes, and textures are unsupported.
+CPU bounds, raycasting, and wireframe topology do not automatically reflect GPU updates.
+Dispose consuming geometries before the bridge, and keep borrowed buffers alive until
+consumers and queued work have finished. Recreate the bridge after device loss or replacement.
+
+## Choose an integration
+
+| Goal | Entry point | GPU support |
+| --- | --- | --- |
+| Feed luma GPU computations into an existing Three.js renderer | `@luma.gl/three/interop` | WebGPU |
+| Draw basic Three.js meshes alongside luma models | `@luma.gl/three/objects` → `ThreeMeshAdapter` | WebGPU |
+| Draw a prepared Three.js scene in an application-owned pass | `@luma.gl/three/objects` → `ThreeSceneAdapter` | WebGPU |
+| Render Three.js scenes using luma GPU resources and passes | `@luma.gl/three/backend` → `LumaRenderer` | WebGPU and WebGL2 graphics; WebGPU compute |
+| Add deck.gl layers to an existing Three.js canvas with shared depth | `@luma.gl/three/interleaved` | Native Three.js WebGL2 renderer |
+| Add deck.gl layers above an existing Three.js canvas | `@luma.gl/three/overlay` | Three.js WebGL/WebGPU host; separate WebGL2 overlay |
+| Add Three.js objects to a deck.gl layer list | `@luma.gl/three/deck` | WebGPU |
+
+The deck.gl integrations require the workspace's patched deck.gl **9.4.0** and luma.gl
+**10** stack. These are tested versions, rather than a general compatibility range.
+
+## Other luma.gl integrations
+
+### Using with Engine
+
+Draw Three.js meshes alongside native luma.gl models in a pass owned by your application.
+The example combines an adapted Three.js cube and a luma Model triangle with shared depth.
+
+<ClientOnlyLiveExample height={360} activationLabel="Load mixed objects example">
+  <ThreeIntegrationDocsExample integration="engine" />
+</ClientOnlyLiveExample>
+
+Choose the adapter according to the scene you need:
+
+| Adapter | Capabilities | Preparation and ownership |
+| --- | --- | --- |
+| `ThreeMeshAdapter` | Untextured basic materials, positions, indices, groups, draw ranges, transforms, visibility, and attribute updates. | Synchronize before recording draws. The application owns the pass and submission. |
+| `ThreeSceneAdapter` | Prepared scenes using the backend's supported materials, textures, and directional shadows. | Initialize, prepare environments, then call `prepare(scene, camera)` before opening the destination pass. The application disposes the adapter. |
+
+Both adapters borrow source objects and the device, and own their adapter resources.
+The basic mesh path does not support textures, TSL, PBR, or deformation. Submit draws
+before reusing their uniforms for another camera.
+
+Prepared scene draws preserve the caller's attachments and never clear, end, or submit
+the borrowed pass. This path requires single-sample rendering and display-encoded sRGB
+output without tone mapping. Transmission, lazy environment preparation, postprocessing,
+and nested passes during the borrowed draw are unsupported.
+
+### Using with Core
+
+`LumaRenderer` retains Three.js scene traversal and the upstream Three.js Shading
+Language (TSL) compiler while creating GPU resources and passes through luma.gl.
+The physical-material gallery demonstrates clearcoat, sheen, iridescence, and anisotropy
+under directional and environment lighting. Drag to inspect how the materials respond
+from different angles.
+
+<ClientOnlyLiveExample height={360} activationLabel="Load Three.js renderer example">
+  <ThreeIntegrationDocsExample integration="core" />
+</ClientOnlyLiveExample>
+
+#### Create a renderer
+
+Supply a WebGPU or WebGL2 Device with a canvas context:
 
 ```ts
 import {LumaRenderer} from '@luma.gl/three/backend';
@@ -25,9 +129,11 @@ import {color, uniform} from 'three/tsl';
 
 const renderer = new LumaRenderer({device});
 await renderer.init();
+
 const intensity = uniform(0.8);
 const material = new THREE.MeshBasicNodeMaterial();
 material.colorNode = color('royalblue').mul(intensity);
+
 const scene = new THREE.Scene();
 scene.add(new THREE.Mesh(new THREE.BoxGeometry(), material));
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
@@ -35,358 +141,105 @@ camera.position.z = 4;
 renderer.render(scene, camera);
 ```
 
-Supply a WebGPU or WebGL2 `Device` with a canvas context. The renderer borrows that device;
-`renderer.dispose()` releases its resources, while the caller destroys the device.
-The renderer inherits initialization, rendering, sizing, animation and compute
-methods from Three's common renderer. Import TSL functions from `three/tsl`.
+The renderer manages its passes and submissions. The application owns device creation,
+canvas sizing, camera updates, and frame scheduling. `renderer.dispose()` releases
+adapter resources; the application destroys the borrowed device separately.
 
-The prototype verifies indexed textured meshes, animated TSL uniforms and vertex
-displacement, depth, offscreen rendering, compute buffer readback, resize and
-renderer recreation. Shader bindings retain upstream indices and packed uniform
-bytes. GPU resources and passes use luma core directly.
+#### Materials and rendering support
 
-Run the comparison example with `yarn workspace luma.gl-examples-three start`.
-It displays the same scene on luma.gl and upstream Three.js side by side, using two
-canvases and devices. Orbit, pan and zoom controls on either canvas update both
-cameras; animation uses one shared clock. The comparison uses a system sans-serif font.
-The example is listed in the website's Experimental section. Its backend selector
-recreates both sides with WebGPU or WebGL2, using upstream `forceWebGL` for the latter.
-The backend uses upstream `WGSLNodeBuilder` or `GLSLNodeBuilder` and luma resources
-for the selected device.
+Tested scenes cover textured meshes, TSL uniforms and vertex displacement, morph targets,
+skinning, instancing, directional PCF shadows, and selected physical material features:
+clearcoat, sheen, iridescence, anisotropy, and transmission. These fixtures establish
+coverage for specific scenes rather than general Three.js or glTF compatibility.
 
-The default scene loads the repository's Khronos Lantern glTF asset using upstream
-`GLTFLoader`. It retains the model's `MeshStandardMaterial` and base-color,
-metallic/roughness, normal and emissive textures. A directional light and a procedural
-HDR studio environment illuminate it. Each renderer prepares its own environment
-through upstream `PMREMGenerator` before rendering. The browser test compares output
-with a maximum channel difference of two bytes and a mean difference below 0.25 bytes,
-and checks that both lighting sources affect the result independently.
+Prepare environment maps with `PMREMGenerator` after initializing the renderer and
+before rendering the scene. Keep the generated target alive while its texture is in use.
+Lazy prefiltering inside an active pass and cube-map inputs are unsupported.
 
-Lantern meshes cast directional PCF shadows onto a ground plane. Both panes share
-a shadow toggle (implemented through shadow intensity). The adapter uses depth
-comparison samplers and suspends/resumes parent render passes for Three's nested
-shadow rendering. Tests verify visible ground darkening and moving-light shadow
-updates against upstream with the same two-byte channel tolerance.
+WebGL2 supports graphics through Three.js's GLSL node builder. Compute requires WebGPU;
+WebGL2 transform-feedback compute is not implemented. Floating-point environments also
+require the relevant WebGL2 rendering and filtering extensions.
 
-The selector also includes Animated Morph Cube, Robot Expressive's Walking clip,
-and 64 animated colored boxes in one `InstancedMesh`. Both devices evaluate the
-same absolute animation time. Morph targets use upstream TSL and luma data-array
-textures; skinning and instance matrices/colors retain Three's buffer attributes.
-Browser tests verify the scene features, image changes between two animation times,
-and upstream parity within two byte values per channel. These fixtures follow the
-animation, deformation and instancing priorities in the rendering roadmap; they
-do not establish general glTF animation or crowd-performance compatibility.
+WebGL1, point-light cube shadows, VSM, reversed-depth shadows, postprocessing, XR,
+and advanced GPU features remain outside the tested subset.
 
-Two further comparisons cover physical materials. The gallery uses clearcoat, sheen,
-iridescence and anisotropy; the glass scene uses transmission, roughness, thickness,
-IOR, attenuation and dispersion in front of an opaque colored backdrop. Tests compare
-upstream output with the same image tolerances and check that disabling those features
-changes pixels. The backend captures scene color through a luma framebuffer-to-texture
-copy, generates mipmaps, and resumes rendering with preserved attachments. This is
-tested procedural material coverage, not general glTF extension conformance.
+## Resource ownership
 
-This milestone adds generated texture mipmaps, mipmap samplers, R/RG lookup textures,
-and PMREM passes without depth attachments. Mipmap uploads between scene draws suspend
-the active pass and resume with preserved color and depth attachments.
+Choose one owner for camera state, animation time, and redraws. Sharing a device does
+not automatically synchronize render loops. Prepare scenes before visible or picking
+draws, and request a redraw after scene or animation changes.
 
-WebGL1, point-light cube shadows, VSM, reversed-depth shadows, general PBR,
-postprocessing, XR and advanced GPU features are deferred.
-Prepare PMREM before rendering; lazy prefiltering within an active scene pass and
-cube-map inputs are still unsupported.
-The package README lists supported operations, limitations and maintenance costs.
+Keep borrowed scenes, geometries, materials, buffers, and devices alive while adapters
+use them. Dispose adapter-owned resources before destroying their dependencies.
 
-The glTF, morph/skin/instance animation and physical-material tests compare against
-upstream on both matching backends with the same image tolerances. WebGL2 also
-verifies animated TSL graphics, resize and borrowed-device recreation. Compute is
-explicitly unsupported on WebGL2; its transform-feedback mapping is deferred.
+## Examples and further reference
 
-The backend entry point retains Three's renderer orchestration. The complementary
-`@luma.gl/three/objects` entry exports `ThreeMeshAdapter` for drawing a Three mesh in
-an application-owned luma pass alongside native luma models. Its initial mapping
-supports untextured basic materials, ordinary positions, indices, groups/draw ranges,
-transforms, visibility and attribute-version updates. It borrows source objects and
-the device, and owns its GPU resources. Synchronize before recording draws; submit before reusing uniforms for another camera. Pass
-lifecycle, ordering and submission remain application-owned.
+Run the full comparison harness from the repository root:
 
-The **Mixed Three / luma objects** comparison verifies one pass with an adapted cube
-and a native luma Model triangle, shared-depth occlusion, updates and disposal against
-upstream Three. Textures, TSL, PBR and deformation in this object path remain deferred.
-This separate object adapter currently requires WebGPU; its scene is disabled when
-WebGL2 is selected.
-The package README documents the API, output settings and synchronization boundaries.
-The root `LumaRenderer` export remains available for existing prototype callers.
-
-## Choose an integration
-
-All paths are experimental and tested against Three **0.185.1**; the deck entry
-point additionally requires this workspace's patched deck **9.4.0** and luma **10**.
-These are tested combinations, not a broad version range.
-
-| Application needs | Entry point | Rendering and ownership contract |
-| --- | --- | --- |
-| luma compute feeding an existing Three scene | `@luma.gl/three/interop` | Upstream `WebGPURenderer` renders; caller owns the shared WebGPU device and buffers. |
-| Three materials/TSL rendered through luma resources | `@luma.gl/three/backend` | `LumaRenderer` manages and submits its passes; caller owns the device. WebGPU and WebGL2 graphics; WebGPU compute only. |
-| Simple meshes mixed into a luma pass | `@luma.gl/three/objects` → `ThreeMeshAdapter` | Caller owns the pass and submission; WebGPU, untextured basic materials. |
-| Prepared PBR scene mixed into a luma pass | `@luma.gl/three/objects` → `ThreeSceneAdapter` | Prepare before the pass; draw borrows the pass; caller owns the adapter and source scene. |
-| Three objects mixed with deck layers | `@luma.gl/three/deck` | WebGPU, single-sample deck pass; simple Cartesian meshes or prepared scenes in Cartesian/local Mercator coordinates. |
-
-For every path, choose one owner for camera state, animation time and redraws.
-Sharing a device does not combine render loops or automatically schedule work.
-Keep source objects and borrowed buffers alive until their consumers are disposed.
-The compute bridge does not provide deck picking or make CPU raycasting see GPU data.
-
-## Compute interoperability with upstream Three
-
-`ThreeBufferBridge`, exported from `@luma.gl/three/interop`, borrows packed
-Float32 vertex and instanced attributes and uint16/uint32 index buffers into an
-initialized upstream `WebGPURenderer` on the same `GPUDevice`. Submit luma compute
-before rendering; both engines use the device's ordered queue.
-
-Call `getThreeBufferBridgeSupport(device, renderer)` before attaching to get a
-non-mutating `{supported: true}` or `{supported: false, reason}` result. It checks
-the pinned Three revision, initialization, device identity and required private hooks.
-
-The split-screen **Shared buffer / luma compute** scene compares three wave instances
-using luma-generated positions, triangle indices and instance offsets against upstream
-TSL displacement. Shared geometry buffers use STORAGE plus VERTEX or INDEX only;
-there is no geometry readback or re-upload. GPU tests cover both index widths.
-
-The bridge prevents CPU metadata uploads and destruction of borrowed buffers.
-CPU bounds, raycasting and wireframe topology do not reflect GPU output. Interleaved
-attributes, storage-node attributes and textures remain unsupported. Dispose consuming
-geometries before the bridge; keep buffers and the shared device alive until their
-consumers and queued work finish. Replacement and device loss require explicit
-recreation. See the
-[module README](https://github.com/visgl/luma.gl/blob/master/modules/three/README.md)
-for method signatures, construction and ownership details.
-
-## Three meshes inside deck.gl
-
-`@luma.gl/three/deck` exports `ThreeMeshLayer` for caller-owned Three meshes in a
-deck layer list. It uses deck's WebGPU device, active render pass, color/depth
-attachments and viewport, without constructing another renderer. The example
-mixes a Three cube with a native `ScatterplotLayer` disk, compares against upstream
-Three, and synchronizes controls across both panes. Reversing layer order preserves
-the same depth occlusion.
-
-`synchronizeThreeCamera(camera, viewport, coordinateSystem)` preserves deck's
-full view-projection product, including OrbitView's scale and target offset. It
-folds scale into projection because Three strips camera scale during updates.
-Automatic camera matrix updates are disabled while deck owns the camera.
-
-This optional entry uses the workspace's patched deck 9.4.0/luma 10 stack. The
-current layer is limited to single-sample Cartesian viewports and ordinary,
-untextured `MeshBasicMaterial` meshes. Geospatial projection, picking, extensions,
-layer opacity/parameters and deck origin/model transforms are rejected. Picking occlusion,
-PBR, textures and transparent-object sorting are deferred. Layer finalization
-releases adapter GPU resources and leaves caller meshes, materials and device alive.
-
-## Prepared Three scenes inside deck.gl
-
-`ThreeSceneAdapter` from `@luma.gl/three/objects` reuses the backend and upstream
-TSL compiler to render a prepared scene in a caller-owned WebGPU pass.
-`ThreeSceneLayer` from `@luma.gl/three/deck` synchronizes its camera and records
-those draws in deck's pass, sharing its device, color and depth attachments.
-
-Select **Lantern courtyard inside deck.gl / PBR** to compare the Lantern's original
-`MeshStandardMaterial`, sampled textures, directional PCF shadows and PMREM
-environment against upstream Three.js. Native deck polygon tiles, survey rings,
-animated data columns and markers surround the model. Both panes share orbit, pan,
-zoom, lighting and environment controls; layer order can be reversed to inspect depth.
-
-Initialize the adapter first. Use `adapter.renderer` to prepare PMREM before drawing.
-Call `adapter.prepare(scene, camera)` in deck's `onBeforeRender`, before its pass
-opens, then provide the adapter, scene and camera to `ThreeSceneLayer`. Preparation
-renders a small offscreen target to upload resources and update shadow maps.
-The final draw never clears, ends or submits the borrowed pass. Layer removal does
-not dispose the adapter: the application owns its lifetime and calls `dispose()`
-when finished. Source objects and the device remain borrowed.
-
-This path targets single-sample Cartesian or bounded local-meter Mercator views
-and display-encoded sRGB output with no tone mapping. It uses pinned Three r185 context/output hooks to apply
-color conversion inline, avoiding a second main-color output pass. Preparation adds
-work each frame; this is a compatibility exploration, not a performance guarantee.
-Transmission, lazy PMREM, postprocessing and nested passes during
-the borrowed draw are unsupported. Native deck objects neither cast nor receive the
-Three shadow map. The basic `ThreeMeshLayer` remains a separate, smaller integration.
-
-## Unified GPU picking for prepared scenes
-
-Set `ThreeSceneLayer.pickable` and provide `pickingObjects`, an immutable array of
-`{id: string | number, object: Object3D}` records. Each object is a selectable root;
-rendered descendants resolve to the nearest listed ancestor. Roots and IDs must
-be unique. `info.object` is the original record, so `info.object.id` is the application
-identity and `info.object.object` is its Three root. `info.index` is the current array
-index; preserve application IDs when reordering entries or replacing loaded roots.
-Create a new array when membership changes. Unlisted scene geometry writes depth
-with a zero picking color, so it still occludes objects behind it.
-
-```ts
-const layer = new ThreeSceneLayer({
-  id: 'models', adapter, scene, camera,
-  pickable: true,
-  pickingObjects: [{id: 'vehicle-17', object: vehicleRoot}],
-  onHover: info => showTooltip(info.object?.id),
-  onClick: info => selectObject(info.object?.id)
-});
-const hit = await deck.pickObjectAsync({x, y});
-const visibleObjects = await deck.pickObjectsAsync({x, y, width, height});
+```sh
+yarn workspace luma.gl-examples-three start
 ```
 
-Both queries and deck's hover/click callbacks use the same GPU picking pass as native
-deck layers. ID output bypasses tone mapping and color encoding. It uses the original
-material's alpha-test coverage and vertex processing, including supported skinning,
-morphs and TSL position nodes. Fully transparent fragments are discarded; partially
-transparent surfaces are treated as selectable coverage and write picking depth.
-Native deck geometry and Three geometry occlude each other through the shared pick
-depth attachment, independent of layer order when their normal depth tests apply.
-Only layers included by deck's picking filter participate; non-pickable native layers
-still follow deck's usual exclusion rules. Keep this scene layer pickable if its
-unlisted geometry should act as a picking occluder.
+It provides synchronized luma.gl and upstream Three.js views, scene selection, backend
+switching, and resize/disposal checks. The inline examples above hide this comparison UI.
 
-Prepare the scene before picking, just as before its visible draw. Changing scene
-objects or animation requires requesting a deck redraw so preparation runs again.
-Picking uses the active viewport's synchronized camera, including local Mercator
-origins. It never opens, clears, ends or submits deck's pass, or takes ownership of
-source materials, geometries, scene roots or the device.
+See the [module README](https://github.com/visgl/luma.gl/blob/master/modules/three/README.md)
+for detailed APIs, support probes, low-level picking methods, implementation constraints,
+and acceptance-test coverage.
 
-This version returns root-level IDs. Individual instance IDs, custom
-`fragmentNode` materials, transmission and nested rendering remain unsupported.
-`ThreeMeshLayer` still has its separate non-pickable basic-material contract. The compute buffer bridge into upstream `WebGPURenderer` is independent
-of this prepared-scene path.
+## Using with deck.gl
 
-Low-level callers may use `adapter.drawPicking(scene, camera, pass, getColor,
-parameters?)`. The accessor returns normalized RGBA or `null` to omit an object;
-zero RGBA draws an unselectable occluder. Use a linear `rgba8unorm` attachment for
-byte IDs. Optional pipeline parameters let the caller supply its own layer encoding;
-`ThreeSceneLayer` uses deck's alpha blend constant. Normal and picking draws restore
-renderer hooks, shadow-update flags and pass-local pipeline state after errors.
+Add visualization layers to an existing Three.js application, or place Three.js models
+inside a deck.gl application. Choose the direction that preserves your application’s
+current scene and frame-loop owner.
 
-Browser acceptance tests mix Three roots and native polygons, reverse layer order,
-check alpha holes and TSL-deformed vertices, replace/reorder roots while preserving
-IDs, and query visible objects in a rectangle. Normal PBR/geographic comparison
-tests continue to check color parity and caller ownership.
+### Add deck.gl layers to a Three.js application
 
 
-### Surface coordinates with depth picking
+Keep your existing renderer, camera, controls, and frame loop:
 
-Use `deck.pickObjectAsync({x, y, unproject3D: true})` to obtain a Three hit's
-`info.coordinate` on its rendered surface instead of the viewport's default plane:
+- `ThreeDeckInterleaved` from `@luma.gl/three/interleaved` draws into a native Three.js
+  WebGL2 canvas with shared color and depth buffers. Render opaque Three.js content first,
+  then call the adapter to add deck.gl geometry. Transparent objects across the libraries
+  are not globally sorted.
+- `ThreeDeckOverlay` from `@luma.gl/three/overlay` draws a separate transparent WebGL2
+  canvas above a WebGL or WebGPU Three.js canvas. Camera alignment is shared; depth is not.
 
-```ts
-const hit = await deck.pickObjectAsync({x, y, unproject3D: true});
-if (hit?.layer?.id === 'models' && hit.coordinate) {
-  placeMarker(hit.coordinate);
-}
-```
+Both paths use Cartesian coordinates and an application-owned frame loop. Call their
+support probes before attachment. The overlay leaves pointer input with Three.js controls;
+automatic deck.gl hover and click handling are not routed through the host canvas.
 
-Cartesian viewports return world XYZ in their coordinate units; Mercator viewports return longitude,
-latitude and absolute altitude in meters, including a local-meter layer's coordinate
-origin. These are world coordinates in the viewport's projection, rather than mesh-local positions.
-Depth comes from the same compiled vertex path as picking, including supported TSL
-deformation, skinning and morphs. Alpha-test holes and zero-alpha fragments retain
-their picking coverage. ID selection still uses the shared Three/native depth pass;
-a second pass reconstructs the selected Three layer's surface.
+### Add Three.js objects to a deck.gl application
 
-Depth is stored in a floating-point target without blending, tone mapping or color
-conversion. It is sampled at a device pixel, so returned coordinates have pixel
-quantization and float32 depth precision; a nonzero picking radius can sample a
-nearby pixel. Do not treat the result as an exact CPU triangle intersection. deck
-owns float-target capability checks and fallback behavior. Native layers retain their
-own depth-picking support; this implementation adds the Three path.
+<ClientOnlyLiveExample height={360} activationLabel="Load Lantern courtyard">
+  <ThreeIntegrationDocsExample integration="deck" />
+</ClientOnlyLiveExample>
 
-Low-level callers may use `adapter.drawPickingDepth(scene, camera, pass, getColor)`
-with an `rgba32float` color target and shared depth attachment. The accessor follows
-`drawPicking`: `null` skips a disabled object; unlisted geometry still writes depth.
-The output is `[clipDepth, 0, 0, 1]`, with clip depth in deck's `[-1, 1]` convention.
-Preparation, pass lifecycle and source ownership remain caller-controlled.
+The Lantern courtyard combines a textured Three.js model, lighting, and shadows
+with native deck.gl polygons, markers, and animated columns sharing the same depth buffer.
 
-The geographic example queries Three surface depth on clicks in either pane and
-shows longitude, latitude and altitude. Native building clicks keep ordinary ID
-selection. Delayed coordinate results are invalidated by newer selections, model
-removal and disposal, using the same selection coordinator as ordinary picking.
+`ThreeMeshLayer` draws basic meshes in deck.gl's single-sample Cartesian WebGPU pass.
+Its basic-material path has no picking, textures, PBR, or geographic projection.
 
-### Hover and controlled highlighting
+`ThreeSceneLayer` uses a caller-owned `ThreeSceneAdapter` for prepared scenes. Call
+`adapter.prepare(scene, camera)` in deck.gl's `onBeforeRender`, before the pass opens.
+The layer shares deck.gl's device, attachments, and viewport; removing it leaves the
+adapter and source objects alive.
 
-`ThreeSceneLayer` supports deck's `autoHighlight`, `highlightColor` and
-`highlightedObjectIndex` props for the same roots listed in `pickingObjects`:
+Prepared scenes support Cartesian coordinates and bounded local-meter Mercator scenes.
+For meter offsets, use `COORDINATE_SYSTEM.METER_OFFSETS`, a three-component
+`coordinateOrigin`, and the same origin in `synchronizeThreeCamera` before preparation.
+This local tangent-frame approximation is intended for neighborhood-scale scenes.
+Native deck.gl objects do not cast or receive the Three.js shadow map.
 
-```ts
-new ThreeSceneLayer({
-  id: 'models', adapter, scene, camera,
-  pickable: true,
-  pickingObjects,
-  autoHighlight: true,
-  highlightColor: info => info.object?.id === 'vehicle-17'
-    ? [255, 190, 70, 128] : [80, 180, 255, 128]
-});
-// Controlled selection: use the current array index; -1 suppresses hover highlighting.
-const selected = layer.clone({highlightedObjectIndex: selectedIndex});
-```
+### Picking and highlighting
 
-Mouse leave clears automatic highlighting. An integer `highlightedObjectIndex`
-overrides hover; use `null` to return control to hover. Controlled indices are
-positional, so recompute them from your application ID after replacing/reordering
-`pickingObjects`. A constant RGB color defaults to alpha 255; RGBA alpha controls
-source-over tint strength. A color accessor is evaluated by deck on hover, as for
-native layers; use a constant color for controlled selection.
+Prepared ThreeSceneLayer scenes support deck.gl GPU picking and highlighting. Supply
+unique selectable roots in pickingObjects, enable pickable, and use autoHighlight
+or highlightedObjectIndex for selection feedback. Three.js roots and native deck.gl layers
+share picking depth, subject to deck.gl's picking filter.
 
-The tint is composited over the final display color, after Three's color conversion.
-Premultiplied-alpha materials are converted to straight RGB for the tint and back
-to premultiplied RGB for their existing blend pipeline.
-All rendered descendants of the selected root share it; a nested listed root has
-its own identity. Shared materials and source colors/emissive values remain unchanged.
-Alpha-test holes and fully transparent fragments retain their coverage, normal depth
-and blending still apply, and picking always writes the original IDs. Unselected
-roots and unlisted geometry receive no tint. No additional render pass is opened.
-The separate highlighting shader context preserves normal PBR output when disabled.
-Custom `fragmentNode` materials are unsupported while highlighting is active.
-
-At the lower-level adapter boundary, `drawHighlighted(scene, camera, pass, getColor)`
-accepts normalized display-space RGBA per rendered object; return `null` for no tint.
-It borrows the pass and source scene with the same preparation and ownership rules
-as `draw`. The geographic example enables hover tinting for Lantern roots and native
-buildings in the deck pane; click selection remains synchronized across both panes.
-
-## Geographic placement and selection exploration
-
-Select **Geographic Lanterns + picking** to render three Lantern instances around
-a San Francisco longitude/latitude anchor. Their east/north/up offsets, altitudes,
-scales and headings are expressed in meters. Native deck buildings and ground
-share the WebGPU device and depth attachment. The upstream pane renders matching
-geometry using the same geographic camera transform. Drag or zoom either map
-to control both views; Shift-drag changes bearing/pitch, and two-finger gestures
-zoom or rotate. Click either pane to select and highlight a stable object ID.
-A public `MapController` and `mjolnir.js` event manager on the reference canvas
-share the same controlled `MapViewState` as deck, without another deck device.
-Each Lantern carries a canvas-textured THREE.js nameplate in both render paths.
-The nameplates use standard materials; the Lantern asset keeps its original PBR
-textures, so the material comparison remains meaningful. Nameplate hits select
-their parent Lantern, and the label texture is released with the fixture.
-
-For bounded local scenes, set `ThreeSceneLayer` to
-`COORDINATE_SYSTEM.METER_OFFSETS` with a three-component `coordinateOrigin`.
-Pass that same origin as the fourth argument to `synchronizeThreeCamera` before
-`adapter.prepare`. The camera maps the local meter frame into Mercator common
-space using distance scales at the anchor. Source geometry stays near the origin,
-preserving GPU precision. This is a tangent-frame approximation for neighborhood
-scenes, not globe support or a replacement for deck's nonlinear projection of
-large geographical extents.
-
-The demo uses deck's GPU picking callbacks and async queries for both Lantern roots
-and native buildings. Hovering the deck pane shows the ID; clicking either pane
-selects and highlights the same composed scene. Three building equivalents in the
-reference pane provide visual parity rather than a CPU picking approximation.
-
-`pickThreeObject(camera, [normalizedX, normalizedY], roots)` remains a separate CPU
-ray helper for applications that supply their own occluders. It does not account for
-alpha-test holes, arbitrary GPU deformation or native deck geometry.
-
-**Toggle Lantern models** removes and reinserts the prepared layer, preserving
-the caller's adapter, source geometry and device. Reverse layer order checks shared
-depth. Resolution and recreation controls resize or release the owned resources.
-The geographic fixture keeps lighting and environment settings fixed.
-
-Lanterns and native buildings receive selection IDs and matching highlights. Lantern
-bases are normalized from geometry bounds before applying instance scale, so
-placement altitude describes the model base.
+Use deck.pickObjectAsync with unproject3D for surface coordinates. Individual instance
+IDs, custom fragmentNode materials, and transmission are unsupported in this path.
+See the [module README](https://github.com/visgl/luma.gl/blob/master/modules/three/README.md)
+for picking examples, geographic placement, and ownership details.

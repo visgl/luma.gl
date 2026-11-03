@@ -199,7 +199,7 @@ them. Destroying a renderer does not destroy the physics world whose buffers it 
 - [Scenes and glTF](./scenes-and-gltf.md) explains authored versus evaluated transforms,
   animation ownership, imports and explicit geometry rebuilds.
 - [Joints and mechanisms](./joints-and-mechanisms.md) connects objects into pendulums and driven mechanisms.
-- [SceneRenderer](/docs/api-reference/scene/scene-renderer) documents spot shadows, GPU transform
+- [SceneRenderer](/docs/api-reference/anari/scene-renderer) documents spot shadows, GPU transform
   sources, depth passes and rendering boundaries.
 - [PhysicsController](/docs/api-reference/engine/physics-controller) lists controller commands and lifecycle rules.
 
