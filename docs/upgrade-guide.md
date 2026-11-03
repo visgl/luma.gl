@@ -1,5 +1,34 @@
 # Upgrade Guide
 
+### Shader hook descriptors
+
+`ShaderAssembler.addShaderHook()` and assembly `hookFunctions` now accept only
+`ShaderHook` descriptors. String signatures and the second options argument have
+been removed. Replace `addShaderHook('vs:OFFSET_POSITION(inout vec4 position)',
+{header, footer})` with:
+
+```typescript
+assembler.addShaderHook({
+  name: 'OFFSET_POSITION',
+  stage: 'vertex',
+  glsl: {parameters: 'inout vec4 position', header, footer},
+  wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+});
+```
+
+Plugin `hooks` also accept these descriptors; replace `target` with `name` and
+move each language parameter string into `{parameters}` without parentheses.
+
+The public declarations are `ShaderHook` and `ShaderInjection`, used by both
+application assembly and plugins. Remove imports of `ShaderPluginHook`,
+`ShaderPluginInjection`, `ShaderPluginTarget`, and `ShaderPluginInjectionTarget`.
+The former source/order `ShaderInjection` shape is now `ResolvedShaderInjection`.
+Application `inject` also accepts arrays of the language-aware `ShaderInjection`.
+
+Move header/footer source into its language implementation. Existing injection
+target names stay the same; provide separate `glsl`/`wgsl` bodies on each entry in root-level plugin
+`injections`.
+
 ## GPU API naming
 
 The remaining experimental Lu-prefixed APIs now use GPU names. Update imports and type references:

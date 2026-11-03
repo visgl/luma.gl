@@ -2,51 +2,57 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderInjection} from './shader-injections';
+import type {ResolvedShaderInjection} from './shader-injections';
 
-/**
- * The shader hook mechanism allows the application to create shaders
- * that can be automatically extended by the shader modules the application
- * includes.
- *
- * A shader hook function that shader modules can inject code into.
- * Shaders can call these functions, which will be no-ops by default.
- *
- * If a shader module injects code it will be executed upon the hook
- * function call.
- */
-export type ShaderHook = {
-  /** `vs:` or `fs:` followed by the name and arguments of the function, e.g. `vs:MYHOOK_func(inout vec4 value)`. Hook name without arguments
-  will also be used as the name of the shader hook */
-  hook: string;
-  /** Code always included at the beginning of a hook function */
+/** Language-specific source for a callable shader hook. */
+export type ShaderHookImplementation = {
+  /** Function parameters in the selected shader language, without parentheses. */
+  parameters: string;
+  /** Return type in this language. Omit for a hook that returns no value. */
+  returnType?: string;
+  /** Source included before injected code. */
   header?: string;
-  /** Code always included at the end of a hook function */
+  /** Source included after injected code. */
   footer?: string;
-  /** To Be Documented */
-  signature?: string;
 };
 
-/** Optional source included before or after every injection in a hook function. */
-export type ShaderHookOptions = Pick<ShaderHook, 'header' | 'footer'>;
+/** One logical extension point with independent GLSL and WGSL syntax. */
+export type ShaderHook = {
+  /** Function name shared by both shader languages. */
+  name: string;
+  /** Shader stage that owns the hook. */
+  stage: 'vertex' | 'fragment';
+  /** GLSL implementation. Omit to skip this hook during GLSL assembly. */
+  glsl?: ShaderHookImplementation;
+  /** WGSL implementation. Omit to skip this hook during WGSL assembly. */
+  wgsl?: ShaderHookImplementation;
+};
 
-/** Shader hook declarations grouped by shader stage. */
+/** Language-selected hook ready for source generation. */
+type ResolvedShaderHook = ShaderHookImplementation & {signature: string};
+
+/** Normalized shader hooks per shader */
 export type ShaderHookRegistry = {
-  vertex: Record<string, Required<ShaderHook>>;
-  fragment: Record<string, Required<ShaderHook>>;
+  /** Normalized shader hooks for vertex shader */
+  vertex: Record<string, ResolvedShaderHook>;
+  /** Normalized shader hooks for fragment shader */
+  fragment: Record<string, ResolvedShaderHook>;
 };
 
 /** Generate hook source code */
 export function getShaderHooks(
-  hookFunctions: Record<string, Required<ShaderHook>>,
-  hookInjections: Record<string, ShaderInjection[]>,
+  hookFunctions: Record<string, ResolvedShaderHook>,
+  hookInjections: Record<string, ResolvedShaderInjection[]>,
   shaderLanguage: 'glsl' | 'wgsl' = 'glsl'
 ): string {
   let result = '';
   for (const hookName in hookFunctions) {
     const hookFunction = hookFunctions[hookName];
-    const functionPrefix = shaderLanguage === 'wgsl' ? 'fn' : 'void';
-    result += `${functionPrefix} ${hookFunction.signature} {\n`;
+    const returnType = hookFunction.returnType || 'void';
+    const functionPrefix = shaderLanguage === 'wgsl' ? 'fn' : returnType;
+    const returnSuffix =
+      shaderLanguage === 'wgsl' && returnType !== 'void' ? ` -> ${returnType}` : '';
+    result += `${functionPrefix} ${hookFunction.signature}${returnSuffix} {\n`;
     if (hookFunction.header) {
       result += `  ${hookFunction.header}`;
     }
@@ -66,37 +72,33 @@ export function getShaderHooks(
   return result;
 }
 
-/**
- * Parse string based hook functions and split them per shader stage.
- * A later declaration of the same stage-prefixed hook name replaces an earlier one.
- */
+/** Select language syntax and merge compatible plugin declarations without mutating descriptors. */
 export function normalizeShaderHooks(
-  hookFunctions: readonly (ShaderHook | string)[],
+  hookFunctions: readonly ShaderHook[],
   pluginHooks: readonly ShaderHook[] = [],
-  language?: 'glsl' | 'wgsl'
+  language: 'glsl' | 'wgsl' = 'glsl'
 ): ShaderHookRegistry {
   const result: ShaderHookRegistry = {vertex: {}, fragment: {}};
-
-  for (const hookFunction of hookFunctions) {
-    const text = typeof hookFunction === 'string' ? hookFunction : hookFunction.hook;
-    const qualified = /^(glsl|wgsl):([\s\S]+)$/.exec(text);
-    if (qualified && qualified[1] !== language) continue;
-    addShaderHookToRegistry(
-      result,
-      qualified
-        ? typeof hookFunction === 'string'
-          ? qualified[2]
-          : {...hookFunction, hook: qualified[2]}
-        : hookFunction
-    );
+  for (const hook of hookFunctions) {
+    const implementation = hook[language];
+    if (implementation) {
+      const prefix = hook.stage === 'vertex' ? 'vs' : 'fs';
+      result[hook.stage][`${prefix}:${hook.name}`] = {
+        ...implementation,
+        signature: `${hook.name}(${implementation.parameters})`
+      };
+    }
   }
-
   for (const hook of pluginHooks) {
-    const normalized = normalizeShaderHooks([hook]);
+    const selected = normalizeShaderHooks([hook], [], language);
     for (const stage of ['vertex', 'fragment'] as const) {
-      for (const [name, declaration] of Object.entries(normalized[stage])) {
+      for (const [name, declaration] of Object.entries(selected[stage])) {
         const existing = result[stage][name];
-        if (existing && existing.signature !== declaration.signature) {
+        if (
+          existing &&
+          (existing.signature !== declaration.signature ||
+            (existing.returnType || 'void') !== (declaration.returnType || 'void'))
+        ) {
           throw new Error(`Conflicting ShaderPlugin hook ${name}`);
         }
         result[stage][name] = existing || declaration;
@@ -118,7 +120,7 @@ export function isShaderHookRegistered(registry: ShaderHookRegistry, hookName: s
  */
 export function validateShaderHookInjections(
   registry: ShaderHookRegistry,
-  hookInjections: Record<string, ShaderInjection[]>,
+  hookInjections: Record<string, ResolvedShaderInjection[]>,
   stage?: 'vertex' | 'fragment'
 ): void {
   const stagePrefix = stage === 'vertex' ? 'vs:' : stage === 'fragment' ? 'fs:' : null;
@@ -137,34 +139,5 @@ export function validateShaderHookInjections(
         `Unknown shader hook ${hookName}${pluginNames.length ? ` (plugins: ${pluginNames.join(', ')})` : ''}`
       );
     }
-  }
-}
-
-function addShaderHookToRegistry(
-  registry: ShaderHookRegistry,
-  hookFunction: ShaderHook | string
-): void {
-  const options: ShaderHookOptions = typeof hookFunction === 'string' ? {} : hookFunction;
-  const hook = (typeof hookFunction === 'string' ? hookFunction : hookFunction.hook).trim();
-  const stageSeparatorIndex = hook.indexOf(':');
-  const shaderStage = hook.slice(0, stageSeparatorIndex);
-  const signature = hook.slice(stageSeparatorIndex + 1);
-  const name = hook.split('(')[0].trim();
-  const normalizedHook: Required<ShaderHook> = {
-    hook: name,
-    signature,
-    header: options.header || '',
-    footer: options.footer || ''
-  };
-
-  switch (shaderStage) {
-    case 'vs':
-      registry.vertex[name] = normalizedHook;
-      break;
-    case 'fs':
-      registry.fragment[name] = normalizedHook;
-      break;
-    default:
-      throw new Error(shaderStage);
   }
 }

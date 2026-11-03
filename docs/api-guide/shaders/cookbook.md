@@ -47,9 +47,7 @@ const exposure = {
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
 const assembler = new WGSLShaderAssembler();
-assembler.addShaderHook(
-  'fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)'
-);
+assembler.addShaderHook({name: 'FILTER_COLOR', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}});
 ```
 
 Pass this assembler to the model through its `shaderAssembler` prop. The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated hook is a no-op.

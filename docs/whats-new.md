@@ -1,5 +1,12 @@
 # What's New
 
+### Dual-language shader hooks
+
+Shader hook descriptors define one stage and name with separate GLSL and WGSL
+parameter syntax, return types, and header/footer source. Register the same descriptor with both
+assemblers; each selects its language implementation. See
+[ShaderAssembler](/docs/api-reference/shaders/shader-assembler#addshaderhookhook-shaderhook-void).
+
 ### Reusable graph texture bindings
 
 GPUGraph and WebGPU SimpleGraph accept named texture inputs and operation-produced texture

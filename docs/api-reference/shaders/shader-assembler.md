@@ -56,7 +56,7 @@ import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
 const glslShaderAssembler = new GLSLShaderAssembler();
-glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+glslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
 
 const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
   platformInfo: glslPlatformInfo,
@@ -109,14 +109,33 @@ is already present.
 
 Removes a previously registered default module.
 
-### `addShaderHook(hook: string, options?: ShaderHookOptions): void`
+### `addShaderHook(hook: ShaderHook): void`
 
-Registers a stage-prefixed hook function that modules can inject into. GLSL
-hook signatures use GLSL syntax, for example
-`vs:OFFSET_POSITION(inout vec4 position)`. WGSL hook signatures use WGSL syntax,
-for example `vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)`.
-`options.header` and `options.footer` are emitted at the start and end of the
-generated hook function.
+Registers one logical hook with language-specific source:
+
+```typescript
+const hook: ShaderHook = {
+  name: 'OFFSET_POSITION',
+  stage: 'vertex',
+  glsl: {parameters: 'inout vec4 position'},
+  wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+};
+glslShaderAssembler.addShaderHook(hook);
+wgslShaderAssembler.addShaderHook(hook);
+```
+
+Import `ShaderHook` from `@luma.gl/shaders`. `stage` is `vertex` or `fragment`.
+Each language implementation supplies `parameters` without parentheses and optional
+`header` and `footer` source around injected code. Set `returnType` to a GLSL or
+WGSL type to return a value. Omit it (or use `void`) for a hook with no return value.
+A value-returning hook must provide a default return path in its header/footer.
+WGSL hooks share one function namespace: use distinct names for vertex and fragment hooks. Missing language implementations
+are skipped. Registration and assembly do not modify descriptors.
+
+Injection targets remain `vs:OFFSET_POSITION` and `fs:HOOK_NAME`. Use root-level
+`injections` on ShaderPlugin, with `glsl` and `wgsl` source on each entry, for
+language-specific bodies. Shared hook names do not translate injection source. Shaders still call the hook explicitly,
+using GLSL `inout` arguments or WGSL pointers as appropriate.
 
 ### `resetShaderHooks(): void`
 
@@ -148,7 +167,7 @@ the same stage-prefixed key without the function signature.
 <TabItem value="glsl" label="GLSL">
 
 ```typescript
-glslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+glslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
 
 const offsetLeftModule = {
   name: 'offsetLeft',
@@ -170,7 +189,7 @@ void main() {
 <TabItem value="wgsl" label="WGSL">
 
 ```typescript
-wgslShaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
+wgslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}});
 ```
 
 ```wgsl
@@ -287,3 +306,36 @@ distance-field and material modules run on both backends, with camera and materi
 Slang remains a practical shader-authoring subset with documented limits.
 The adapter must select supported entry points and follow its resource layout
 rules; registering it does not add full Slang compiler compatibility.
+
+
+## Shared injection declarations
+
+`ShaderHook` and `ShaderInjection` describe extension points and source independently
+of where they are registered. Register hooks with `addShaderHook()` or pass them as
+assembly `hookFunctions` or plugin `hooks`. Pass the same `ShaderInjection[]` to
+application-level `inject` or plugin `injections`:
+
+```typescript
+import type {ShaderInjection} from '@luma.gl/shaders';
+
+const injections: ShaderInjection[] = [{
+  stage: 'fragment',
+  target: 'FILTER_COLOR',
+  glsl: 'color.r *= 0.5;',
+  wgsl: '(*color).r *= 0.5;',
+  order: 0
+}];
+
+const shaders = glslShaderAssembler.assembleGLSLShaderPair({
+  platformInfo, vs, fs, inject: injections
+});
+```
+
+Declare and call `FILTER_COLOR` in the host shader. Missing language implementations
+are skipped; injections into undeclared hooks throw. Repeated targets retain all
+injections, sorted by `order` with declaration order breaking ties. Application
+injections follow plugin injections when orders tie.
+
+The existing application injection map also accepts native source or
+`ResolvedShaderInjection` values. `ResolvedShaderInjection` represents selected
+source with an injection order and optional plugin provenance; it has no language variants.

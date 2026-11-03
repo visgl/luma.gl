@@ -219,7 +219,10 @@ it('Computation#plugins assemble WGSL contributions', async () => {
         new Computation(webgpuDevice, {
           source,
           plugins: [
-            {name: 'render-hooks', hooks: [{stage: 'fragment', target: 'TINT', wgsl: '()'}]}
+            {
+              name: 'render-hooks',
+              hooks: [{stage: 'fragment', name: 'TINT', wgsl: {parameters: ''}}]
+            }
           ]
         })
     ).toThrow(/does not support ShaderPlugin render hooks/);

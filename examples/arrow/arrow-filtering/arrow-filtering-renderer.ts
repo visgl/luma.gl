@@ -145,11 +145,12 @@ export class ArrowFilteringRenderer {
       device.info.shadingLanguage === 'wgsl'
         ? new WGSLShaderAssembler()
         : new GLSLShaderAssembler();
-    shaderAssembler.addShaderHook(
-      device.info.shadingLanguage === 'wgsl'
-        ? 'vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)'
-        : 'vs:FILTER_POSITION(inout vec4 position)'
-    );
+    shaderAssembler.addShaderHook({
+      name: 'FILTER_POSITION',
+      stage: 'vertex',
+      glsl: {parameters: 'inout vec4 position'},
+      wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+    });
     this.gpuTable = makeGPUTableFromArrowTable(device, arrowTable, {
       shaderLayout: FILTERING_SHADER_LAYOUT
     });

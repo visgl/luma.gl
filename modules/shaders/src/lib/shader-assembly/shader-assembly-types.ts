@@ -5,7 +5,7 @@
 import {type PlatformInfo} from './platform-info';
 import {type ShaderModule} from '../shader-module/shader-module';
 import {type ShaderHook} from './shader-hooks';
-import {type ShaderInjection} from './shader-injections';
+import {type ShaderInjection, type ResolvedShaderInjection} from './shader-injections';
 import {type AttributeShaderType} from '../../types';
 import {type ResolvedShaderPluginInterStageVariable} from '../shader-plugin';
 
@@ -45,13 +45,13 @@ export type AssembleShaderOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
-  hookFunctions?: readonly (ShaderHook | string)[];
+  hookFunctions?: readonly ShaderHook[];
   /** Hook declarations contributed by resolved plugins. */
   pluginHooks?: readonly ShaderHook[];
   /** Code injections */
-  inject?: Record<string, string | ShaderInjection>;
+  inject?: readonly ShaderInjection[] | Record<string, string | ResolvedShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
-  pluginInjections?: Record<string, ShaderInjection[]>;
+  pluginInjections?: Record<string, ResolvedShaderInjection[]>;
   /** Vertex inputs contributed by ShaderPlugin descriptors. */
   pluginVertexInputs?: Record<string, AttributeShaderType>;
   /** Inter-stage variables contributed by ShaderPlugin descriptors. */
@@ -81,13 +81,13 @@ export type AssembleStageOptions = {
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
   /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
-  hookFunctions?: readonly (ShaderHook | string)[];
+  hookFunctions?: readonly ShaderHook[];
   /** Hook declarations contributed by resolved plugins. */
   pluginHooks?: readonly ShaderHook[];
   /** Code injections */
-  inject?: Record<string, string | ShaderInjection>;
+  inject?: readonly ShaderInjection[] | Record<string, string | ResolvedShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
-  pluginInjections?: Record<string, ShaderInjection[]>;
+  pluginInjections?: Record<string, ResolvedShaderInjection[]>;
   /** Vertex inputs contributed by ShaderPlugin descriptors. */
   pluginVertexInputs?: Record<string, AttributeShaderType>;
   /** Inter-stage variables contributed by ShaderPlugin descriptors. */

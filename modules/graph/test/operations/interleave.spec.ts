@@ -49,11 +49,12 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     const defaultShaderAssembler = defaultProps.shaderAssembler;
     const contaminatedShaderAssembler =
       deviceType === 'webgpu' ? new WGSLShaderAssembler() : new GLSLShaderAssembler();
-    contaminatedShaderAssembler.addShaderHook(
-      deviceType === 'webgpu'
-        ? 'vs:INVALID_WGSL_HOOK(value: ptr<function, invalid_type>)'
-        : 'vs:INVALID_GLSL_HOOK(inout invalid_type value)'
-    );
+    contaminatedShaderAssembler.addShaderHook({
+      name: 'INVALID_HOOK',
+      stage: 'vertex',
+      glsl: {parameters: 'inout invalid_type value'},
+      wgsl: {parameters: 'value: ptr<function, invalid_type>'}
+    });
     defaultProps.shaderAssembler = contaminatedShaderAssembler;
 
     const result = interleave(

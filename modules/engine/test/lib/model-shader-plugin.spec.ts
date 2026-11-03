@@ -172,8 +172,12 @@ it.each(['webgl', 'webgpu'] as const)('Model#plugin-owned hooks compile on %s', 
       {
         name: 'provider',
         hooks: [
-          'glsl:fs:TINT(\n  inout vec4 color\n)',
-          'wgsl:fs:TINT(\n  color: ptr<function, vec4<f32>>\n)'
+          {name: 'TINT', stage: 'fragment', glsl: {parameters: '\n  inout vec4 color\n'}},
+          {
+            name: 'TINT',
+            stage: 'fragment',
+            wgsl: {parameters: '\n  color: ptr<function, vec4<f32>>\n'}
+          }
         ]
       }
     ]

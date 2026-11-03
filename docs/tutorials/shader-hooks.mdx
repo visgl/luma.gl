@@ -94,7 +94,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const shaderAssembler = new GLSLShaderAssembler();
-    shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    shaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 

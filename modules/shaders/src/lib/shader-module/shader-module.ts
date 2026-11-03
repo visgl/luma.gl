@@ -10,7 +10,7 @@ import {
   getValidatedProperties
 } from '../filters/prop-types';
 import type {ShaderModuleUniformValue, UniformTypes, UniformValue} from '../utils/uniform-types';
-import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
+import {ResolvedShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
 import type {ShaderBinding as Binding} from '../../types';
 
@@ -95,8 +95,8 @@ export type ShaderModule<
     parsedDeprecations: ShaderModuleDeprecation[];
 
     normalizedInjections: {
-      vertex: Record<string, ShaderInjection>;
-      fragment: Record<string, ShaderInjection>;
+      vertex: Record<string, ResolvedShaderInjection>;
+      fragment: Record<string, ResolvedShaderInjection>;
     };
   };
 };

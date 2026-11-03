@@ -5,7 +5,7 @@
 import type {ShaderModule} from './shader-module/shader-module';
 import {initializeShaderModules} from './shader-module/shader-module';
 import type {AssembleShaderProps} from './shader-assembly/shader-assembly-types';
-import type {ShaderHook, ShaderHookOptions} from './shader-assembly/shader-hooks';
+import type {ShaderHook} from './shader-assembly/shader-hooks';
 import {assert} from './utils/assert';
 import type {
   ShaderTranspiler,
@@ -24,7 +24,7 @@ export abstract class ShaderAssembler {
   /** Compilers registered by the application, isolated to this assembler. */
   private readonly _shaderTranspilers = new Map<string, ShaderTranspiler>();
   /** Hook functions */
-  protected readonly _hookFunctions: (ShaderHook | string)[] = [];
+  protected readonly _hookFunctions: ShaderHook[] = [];
   /** Shader modules */
   protected _defaultModules: ShaderModule[] = [];
 
@@ -123,11 +123,10 @@ export abstract class ShaderAssembler {
 
   /**
    * Register a shader hook
-   * @param hook Stage-prefixed hook signature, such as `vs:OFFSET_POSITION(inout vec4 position)`.
-   * @param options Optional hook metadata such as always-on header and footer source.
+   * @param hook Shared stage and name with language-specific parameters, return type, and source.
    */
-  addShaderHook(hook: string, options?: ShaderHookOptions): void {
-    this._hookFunctions.push(options ? {...options, hook} : hook);
+  addShaderHook(hook: ShaderHook): void {
+    this._hookFunctions.push(hook);
   }
 
   /**
