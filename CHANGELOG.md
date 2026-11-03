@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-alpha.9
+
+- Move shader injections from ShaderModule to ShaderPlugin and unify GLSL/WGSL hook descriptors and return types.
+- Expose makeGPUVectorGeometry and support independent vector lengths with explicit draw-count inference controls.
+- Add glTF Gaussian splat preparation and rendering, and inline graph texture debugging previews.
+- Apply initial WebGPU render-pass parameters correctly.
+- Finish the Lu-to-GPU naming migration and reorganize guides, API navigation, and shader and Three.js examples.
+- Keep simulation qualification in physics CI while retaining ordinary correctness checks in release tests, and build workspace packages before website publication.
+
 ### v10.0.0-alpha.8
 
 - Add graph texture values and execution bindings, operation-defined results, capacity/count outputs, and shared transfer operations.
