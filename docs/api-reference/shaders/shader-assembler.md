@@ -132,9 +132,9 @@ A value-returning hook must provide a default return path in its header/footer.
 WGSL hooks share one function namespace: use distinct names for vertex and fragment hooks. Missing language implementations
 are skipped. Registration and assembly do not modify descriptors.
 
-Injection targets remain `vs:OFFSET_POSITION` and `fs:HOOK_NAME`. Use ShaderPlugin's
-`glsl.injections` and `wgsl.injections` for language-specific bodies; shared hook
-names do not translate injection source. Shaders still call the hook explicitly,
+Injection targets remain `vs:OFFSET_POSITION` and `fs:HOOK_NAME`. Use root-level
+`injections` on ShaderPlugin, with `glsl` and `wgsl` source on each entry, for
+language-specific bodies. Shared hook names do not translate injection source. Shaders still call the hook explicitly,
 using GLSL `inout` arguments or WGSL pointers as appropriate.
 
 ### `resetShaderHooks(): void`

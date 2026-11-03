@@ -26,8 +26,8 @@ The former source/order `ShaderInjection` shape is now `ResolvedShaderInjection`
 Application `inject` also accepts arrays of the language-aware `ShaderInjection`.
 
 Move header/footer source into its language implementation. Existing injection
-target names stay the same; provide separate GLSL/WGSL injection bodies through
-ShaderPlugin language variants.
+target names stay the same; provide separate `glsl`/`wgsl` bodies on each entry in root-level plugin
+`injections`.
 
 ## GPU API naming
 
