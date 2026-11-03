@@ -183,6 +183,7 @@ export type {
 } from './types/gltf-postprocessed-schema';
 export type {
   GLTFWithBuffers,
+  GLTFGaussianSplatDescriptor,
   GLTFExternalBuffer,
   GLTFTypedArray,
   GLTFImageData
