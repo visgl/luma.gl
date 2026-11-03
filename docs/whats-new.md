@@ -1,5 +1,12 @@
 # What's New
 
+### Shared graph fullscreen shader passes
+
+`GPUShaderPassOperation` describes one fullscreen WGSL draw for both GPUGraph and WebGPU
+SimpleGraph, with named textures, scalar parameters, operation-owned results, and caller-owned
+encoding. See [fullscreen shader passes](./api-reference/graph/gpu-shader-pass-operation.md).
+The evaluator API is unchanged.
+
 ### Reusable graph texture bindings
 
 GPUGraph and WebGPU SimpleGraph accept named texture inputs and operation-produced texture

@@ -741,6 +741,16 @@ export class GPUCommandGraph<Parameters = void> {
     return this.addBuffer(new GraphBufferHandle(this, descriptor, true));
   }
 
+  /** Choose a compiler-owned resource name without treating diagnostic labels as unique. @internal */
+  getUniqueResourceId(label: string): string {
+    let id = label;
+    let suffix = 1;
+    while (this.buffers.has(id) || this.textures.has(id) || this.externalTextures.has(id)) {
+      id = `${label}-${suffix++}`;
+    }
+    return id;
+  }
+
   /**
    * Creates one typed range over a graph buffer.
    *

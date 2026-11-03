@@ -684,6 +684,8 @@ export type {
 } from './gpu-operation-contract';
 
 export {GPUUploadOperation, GPUCopyOperation} from './gpu-transfer-operation';
+export {GPUShaderPassOperation} from './gpu-shader-pass-operation';
+export type {GPUShaderPassOperationProps} from './gpu-shader-pass-operation';
 export type {GPUUploadOperationProps, GPUCopyOperationProps} from './gpu-transfer-operation';
 export {GPUCompactionOperation} from './gpu-compaction-operation';
 export type {GPUCompactionOperationProps} from './gpu-compaction-operation';

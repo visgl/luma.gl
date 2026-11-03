@@ -14,21 +14,23 @@ description: Describe GPU computations, bind data, and compose execution with re
 2. [Inputs, results, and state](./gpu-graph-values.md): types, dimensions, ownership, storage reuse, and caller-owned encoding.
 3. [Expression syntax](./gpu-expression-operation.md): arithmetic, functions, casts, components, and typed rows.
 4. [Upload and copy](./gpu-transfer-operations.md) and [capacity/count results](./gpu-compaction-operation.md): data movement and GPU-sized selection.
-5. [Operation contracts](./gpu-operation.md): extend the graph with explicit logical effects and lowerings.
-6. [Command-graph concepts](/docs/api-reference/experimental/gpu-core/concepts): scheduling and physical resources when implementing a lowering or diagnosing execution.
+5. [Texture values](./gpu-graph-textures.md) and [fullscreen shader passes](./gpu-shader-pass-operation.md): image inputs, operation-owned results, and shared WebGPU effects.
+6. [Operation contracts](./gpu-operation.md): extend the graph with explicit logical effects and lowerings.
+7. [Command-graph concepts](/docs/api-reference/experimental/gpu-core/concepts): scheduling and physical resources when implementing a lowering or diagnosing execution.
 
 ## Choose an interface
 
 | Interface | Use it for | Execution |
 | --- | --- | --- |
 | `GPUGraph` | Named inputs/state and operation-defined results, including custom WebGPU operations | `compile(device)`, then `run(bindings)` or `prepare(bindings)` and caller-owned encoding |
-| `GPUSimpleGraph` reusable expressions | Shared expression, upload, and copy operations on WebGL and WebGPU | `compile(device)`, then `run({inputs, outputTargets})` |
+| `GPUSimpleGraph` reusable operations | Shared numeric operations; texture copies and shader passes on WebGPU | `compile(device)`, then `run({inputs, outputTargets})`; texture-only programs also support `prepare()` |
 | `GPUSimpleGraph` evaluator recipes | Lazy uploads and evaluator operations beyond the shared expression subset | `new GPUSimpleGraph(device)`, then `compile()` and `run()` |
 | `GPUCommandGraph` | Explicit compute, render, and copy passes, textures, and advanced scheduling | Compile fixed resource descriptors, encode into a caller-owned encoder, submit explicitly |
 
 These are related layers, not interchangeable APIs. Full `GPUGraph` execution currently requires
-WebGPU. SimpleGraph does not support full-graph custom lowerings, mutable state, or the prepared
-execution API. Its evaluator recipes also have different result ownership; see its
+WebGPU. SimpleGraph supports prepared texture-copy/shader-pass programs on WebGPU; numeric
+evaluator programs use asynchronous `run()`. It does not support full-graph custom lowerings or
+mutable state. Its evaluator recipes also have different result ownership; see its
 [mode comparison](./gpu-simple-graph.md#choose-an-authoring-mode).
 
 ## How the layers fit

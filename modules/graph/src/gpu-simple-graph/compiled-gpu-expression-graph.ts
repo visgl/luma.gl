@@ -38,12 +38,15 @@ import type {GPUGraphOutputs} from '../gpu-core/gpu-texture-plan';
 
 import {GPUExpressionCastOperation} from './gpu-expression-cast-operation';
 import {GPUExpressionRowOperation} from './gpu-expression-row-operation';
+import {GPUShaderPassOperation} from '../gpu-core/gpu-shader-pass-operation';
+import {GPUShaderPassKernel} from '../gpu-core/gpu-shader-pass-kernel';
 
 /** Reusable expression program implemented through the unchanged evaluator API. */
 export class CompiledGPUSimpleExpressionGraph<
   Outputs extends GPUGraphOutputs = Record<string, GPUVector>
 > {
   private readonly program: GPUExpressionProgram;
+  private readonly shaderPasses = new Map<GPUShaderPassOperation, GPUShaderPassKernel>();
   private running = false;
   private destroyed = false;
 
@@ -64,16 +67,28 @@ export class CompiledGPUSimpleExpressionGraph<
           !(
             operation instanceof GPUExpressionOperation ||
             operation instanceof GPUUploadOperation ||
+            operation instanceof GPUShaderPassOperation ||
             operation instanceof GPUCopyOperation
           )
       )
     )
       throw new Error(
-        'SimpleGraph declarative execution supports expression, upload and copy operations only'
+        'SimpleGraph declarative execution supports expression, upload, copy and shader-pass operations only'
       );
+    try {
+      for (const operation of this.program.operations)
+        if (operation instanceof GPUShaderPassOperation)
+          this.shaderPasses.set(
+            operation,
+            new GPUShaderPassKernel(device, operation, this.program)
+          );
+    } catch (error) {
+      this.destroy();
+      throw error;
+    }
   }
 
-  /** Prepare a straight-line texture-copy program without submitting work. */
+  /** Prepare straight-line texture copies and shader passes without submitting work. */
   prepare(
     supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
@@ -83,13 +98,23 @@ export class CompiledGPUSimpleExpressionGraph<
       !this.program.textures.length ||
       this.program.operations.some(
         operation =>
-          !(operation instanceof GPUCopyOperation) ||
-          !this.program.textures.some(texture => texture.id === operation.input)
+          !(operation instanceof GPUShaderPassOperation) &&
+          (!(operation instanceof GPUCopyOperation) ||
+            !this.program.textures.some(texture => texture.id === operation.input))
       )
     )
-      throw new Error('SimpleGraph prepare currently supports texture-copy programs only');
+      throw new Error(
+        'SimpleGraph prepare currently supports texture-copy and shader-pass programs only'
+      );
     const resolved = this.program.resolveBindings(supplied, options);
     const invocation = this.program.prepare(this.device, resolved.bindings, resolved.options);
+    let shaderPasses;
+    try {
+      shaderPasses = this.prepareShaderPasses(invocation);
+    } catch (error) {
+      invocation.destroy();
+      throw error;
+    }
     let encoded = false;
     let destroyed = false;
     return {
@@ -98,6 +123,10 @@ export class CompiledGPUSimpleExpressionGraph<
         assert(!this.destroyed && !destroyed && !encoded && encoder.device === this.device);
         encoded = true;
         for (const operation of this.program.operations) {
+          if (operation instanceof GPUShaderPassOperation) {
+            shaderPasses.get(operation)!.encode(encoder);
+            continue;
+          }
           assert(operation instanceof GPUCopyOperation);
           encodeTextureCopy(
             encoder,
@@ -109,6 +138,7 @@ export class CompiledGPUSimpleExpressionGraph<
       destroy: (): void => {
         if (destroyed) return;
         destroyed = true;
+        for (const pass of shaderPasses.values()) pass.destroy();
         invocation.finish();
       }
     };
@@ -128,14 +158,23 @@ export class CompiledGPUSimpleExpressionGraph<
     const scalarBuffers = new Set<Buffer>();
     let scope: GPUEvaluationScope | undefined;
     let invocation: ReturnType<GPUExpressionProgram['prepare']> | undefined;
+    let shaderPasses:
+      | ReturnType<CompiledGPUSimpleExpressionGraph['prepareShaderPasses']>
+      | undefined;
     try {
       invocation = this.program.prepare(this.device, bindings, options);
+      shaderPasses = this.prepareShaderPasses(invocation);
       if (this.device.type === 'webgpu') scope = new GPUEvaluationScope(this.device);
       const retain = (evaluator: GPUDataEvaluator): GPUDataEvaluator => {
         evaluators.add(evaluator);
         return evaluator;
       };
       for (const operation of this.program.operations) {
+        if (operation instanceof GPUShaderPassOperation) {
+          assert(scope);
+          shaderPasses.get(operation)!.encode(scope.commandEncoder);
+          continue;
+        }
         if (operation instanceof GPUUploadOperation || operation instanceof GPUCopyOperation) {
           if (
             operation instanceof GPUCopyOperation &&
@@ -364,6 +403,7 @@ export class CompiledGPUSimpleExpressionGraph<
       invocation?.destroy();
       throw error;
     } finally {
+      for (const pass of shaderPasses?.values() ?? []) pass.destroy();
       for (const evaluator of evaluators) evaluator.destroy();
       for (const buffer of scalarBuffers) buffer.destroy();
       this.running = false;
@@ -373,7 +413,21 @@ export class CompiledGPUSimpleExpressionGraph<
   destroy(): void {
     // A running program owns evaluator resources until execution finishes.
     assert(!this.running);
+    for (const kernel of this.shaderPasses.values()) kernel.destroy();
+    this.shaderPasses.clear();
     this.destroyed = true;
+  }
+
+  private prepareShaderPasses(invocation: ReturnType<GPUExpressionProgram['prepare']>) {
+    const passes = new Map<GPUShaderPassOperation, ReturnType<GPUShaderPassKernel['prepare']>>();
+    try {
+      for (const [operation, kernel] of this.shaderPasses)
+        passes.set(operation, kernel.prepare(invocation.textures!.values, invocation.values));
+      return passes;
+    } catch (error) {
+      for (const pass of passes.values()) pass.destroy();
+      throw error;
+    }
   }
 }
 
