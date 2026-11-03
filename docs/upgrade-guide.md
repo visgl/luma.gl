@@ -5,7 +5,7 @@
 Shader hooks are now called injection targets throughout the public API. Update
 `ShaderHook` to `ShaderInjectionTarget`, `ShaderPlugin.hooks` to
 `ShaderPlugin.injectionTargets`, assembly `hookFunctions` to
-`injectionTargets`, and `addShaderHook()`/`resetShaderInjection()` to
+`injectionTargets`, and `addShaderHook()`/`resetShaderHooks()` to
 `addShaderInjectionTarget()`/`resetShaderInjectionTargets()`. The
 `ShaderInjection.target` field and target strings such as `vs:#decl` and
 `fs:FILTER_COLOR` are unchanged. There is no separate public type for the

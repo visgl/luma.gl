@@ -119,7 +119,7 @@ const scalePlugin: ShaderPlugin = {
   injections: [{
     stage: 'vertex', target: 'OFFSET_POSITION', order: -10,
     glsl: 'position.xy *= 2.0;',
-    wgsl: '(*position).xy *= 2.0;'
+    wgsl: '(*position).x *= 2.0; (*position).y *= 2.0;'
   }]
 };
 
