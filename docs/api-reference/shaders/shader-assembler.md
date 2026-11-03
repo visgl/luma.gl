@@ -306,3 +306,36 @@ distance-field and material modules run on both backends, with camera and materi
 Slang remains a practical shader-authoring subset with documented limits.
 The adapter must select supported entry points and follow its resource layout
 rules; registering it does not add full Slang compiler compatibility.
+
+
+## Shared injection declarations
+
+`ShaderHook` and `ShaderInjection` describe extension points and source independently
+of where they are registered. Register hooks with `addShaderHook()` or pass them as
+assembly `hookFunctions` or plugin `hooks`. Pass the same `ShaderInjection[]` to
+application-level `inject` or plugin `injections`:
+
+```typescript
+import type {ShaderInjection} from '@luma.gl/shaders';
+
+const injections: ShaderInjection[] = [{
+  stage: 'fragment',
+  target: 'FILTER_COLOR',
+  glsl: 'color.r *= 0.5;',
+  wgsl: '(*color).r *= 0.5;',
+  order: 0
+}];
+
+const shaders = glslShaderAssembler.assembleGLSLShaderPair({
+  platformInfo, vs, fs, inject: injections
+});
+```
+
+Declare and call `FILTER_COLOR` in the host shader. Missing language implementations
+are skipped; injections into undeclared hooks throw. Repeated targets retain all
+injections, sorted by `order` with declaration order breaking ties. Application
+injections follow plugin injections when orders tie.
+
+The existing application injection map also accepts native source or
+`ResolvedShaderInjection` values. `ResolvedShaderInjection` represents selected
+source with an injection order and optional plugin provenance; it has no language variants.

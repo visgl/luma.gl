@@ -22,7 +22,12 @@ import {
   validateShaderHookInjections,
   getShaderHooks
 } from './shader-hooks';
-import {type ShaderInjection, injectShader} from './shader-injections';
+import {
+  type ShaderInjection,
+  type ResolvedShaderInjection,
+  injectShader,
+  resolveShaderInjections
+} from './shader-injections';
 import {type AttributeShaderType} from '../../types';
 import {type ResolvedShaderPluginInterStageVariable} from '../shader-plugin';
 import {assert} from '../utils/assert';
@@ -95,8 +100,8 @@ export function assembleShaderGLSL(
     defines?: Record<string, boolean | number>;
     hookFunctions?: readonly ShaderHook[];
     pluginHooks?: readonly ShaderHook[];
-    inject?: Record<string, string | ShaderInjection>;
-    pluginInjections?: Record<string, ShaderInjection[]>;
+    inject?: readonly ShaderInjection[] | Record<string, string | ResolvedShaderInjection>;
+    pluginInjections?: Record<string, ResolvedShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;
     pluginInterStageVariables?: Record<string, ResolvedShaderPluginInterStageVariable>;
     prologue?: boolean;
@@ -167,15 +172,24 @@ ${getApplicationDefines(allDefines)}
   const hookFunctionMap = normalizeShaderHooks(hookFunctions, options.pluginHooks, 'glsl');
 
   // Add source of dependent modules in resolved order
-  const hookInjections: Record<string, ShaderInjection[]> = {};
-  const declInjections: Record<string, ShaderInjection[]> = {};
-  const mainInjections: Record<string, ShaderInjection[]> = {};
+  const hookInjections: Record<string, ResolvedShaderInjection[]> = {};
+  const declInjections: Record<string, ResolvedShaderInjection[]> = {};
+  const mainInjections: Record<string, ResolvedShaderInjection[]> = {};
 
   appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
 
-  for (const key in inject) {
-    const injection: ShaderInjection =
-      typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
+  const applicationInjections = Array.isArray(inject)
+    ? resolveShaderInjections(inject, 'glsl')
+    : {};
+  appendInjections(applicationInjections, hookInjections, declInjections, mainInjections);
+  const injectionMap = Array.isArray(inject)
+    ? {}
+    : (inject as Record<string, string | ResolvedShaderInjection>);
+  for (const key in injectionMap) {
+    const injection: ResolvedShaderInjection =
+      typeof injectionMap[key] === 'string'
+        ? {injection: injectionMap[key], order: 0}
+        : injectionMap[key];
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
     if (match) {
       const hash = match[2];

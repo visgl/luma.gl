@@ -33,7 +33,11 @@ import {
   isShaderHookRegistered,
   getShaderHooks
 } from './shader-hooks';
-import {type ShaderInjection, injectShader} from './shader-injections';
+import {
+  type ResolvedShaderInjection,
+  injectShader,
+  resolveShaderInjections
+} from './shader-injections';
 import {checkShaderModuleDeprecations, type ShaderModule} from '../shader-module/shader-module';
 import {
   getWGSLBindingDeclarationMatches,
@@ -162,15 +166,24 @@ export function assembleShaderWGSL(
   const hookFunctionMap = normalizeShaderHooks(hookFunctions, options.pluginHooks, 'wgsl');
 
   // Add source of dependent modules in resolved order
-  const hookInjections: Record<string, ShaderInjection[]> = {};
-  const declInjections: Record<string, ShaderInjection[]> = {};
-  const mainInjections: Record<string, ShaderInjection[]> = {};
+  const hookInjections: Record<string, ResolvedShaderInjection[]> = {};
+  const declInjections: Record<string, ResolvedShaderInjection[]> = {};
+  const mainInjections: Record<string, ResolvedShaderInjection[]> = {};
 
   appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
 
-  for (const key in inject) {
-    const injection: ShaderInjection =
-      typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
+  const applicationInjections = Array.isArray(inject)
+    ? resolveShaderInjections(inject, 'wgsl')
+    : {};
+  appendInjections(applicationInjections, hookInjections, declInjections, mainInjections);
+  const injectionMap = Array.isArray(inject)
+    ? {}
+    : (inject as Record<string, string | ResolvedShaderInjection>);
+  for (const key in injectionMap) {
+    const injection: ResolvedShaderInjection =
+      typeof injectionMap[key] === 'string'
+        ? {injection: injectionMap[key], order: 0}
+        : injectionMap[key];
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
     if (match) {
       const hash = match[2];
@@ -282,8 +295,8 @@ export function assembleShaderWGSL(
 export function appendGeneratedVertexInputInjections(
   declarations: string,
   initialization: string,
-  declarationInjections: Record<string, ShaderInjection[]>,
-  mainInjections: Record<string, ShaderInjection[]>
+  declarationInjections: Record<string, ResolvedShaderInjection[]>,
+  mainInjections: Record<string, ResolvedShaderInjection[]>
 ): void {
   if (declarations) {
     declarationInjections['vs:#decl'] = declarationInjections['vs:#decl'] || [];
@@ -307,8 +320,8 @@ export function appendGeneratedVaryingInjections(
     vertexInitialization: string;
     fragmentInitialization: string;
   },
-  declarationInjections: Record<string, ShaderInjection[]>,
-  mainInjections: Record<string, ShaderInjection[]>
+  declarationInjections: Record<string, ResolvedShaderInjection[]>,
+  mainInjections: Record<string, ResolvedShaderInjection[]>
 ): void {
   if (assembly.declarations) {
     declarationInjections['vs:#decl'] = declarationInjections['vs:#decl'] || [];
@@ -333,7 +346,9 @@ export function appendGeneratedVaryingInjections(
   }
 }
 
-export function getWGSLModuleInjections(module: ShaderModule): Record<string, ShaderInjection> {
+export function getWGSLModuleInjections(
+  module: ShaderModule
+): Record<string, ResolvedShaderInjection> {
   return {
     ...(module.instance?.normalizedInjections.vertex || {}),
     ...(module.instance?.normalizedInjections.fragment || {})
@@ -341,8 +356,8 @@ export function getWGSLModuleInjections(module: ShaderModule): Record<string, Sh
 }
 
 export function getWGSLDeclarationInjections(
-  declarationInjections: Record<string, ShaderInjection[]>
-): Record<string, ShaderInjection[]> {
+  declarationInjections: Record<string, ResolvedShaderInjection[]>
+): Record<string, ResolvedShaderInjection[]> {
   const unifiedDeclarations = [
     ...(declarationInjections['vs:#decl'] || []),
     ...(declarationInjections['fs:#decl'] || [])
@@ -353,7 +368,7 @@ export function getWGSLDeclarationInjections(
 
 export function getWGSLShaderHooks(
   hookFunctionMap: ReturnType<typeof normalizeShaderHooks>,
-  hookInjections: Record<string, ShaderInjection[]>
+  hookInjections: Record<string, ResolvedShaderInjection[]>
 ): string {
   return (
     getShaderHooks(hookFunctionMap.vertex, hookInjections, 'wgsl') +

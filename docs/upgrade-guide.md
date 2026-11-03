@@ -19,6 +19,12 @@ assembler.addShaderHook({
 Plugin `hooks` also accept these descriptors; replace `target` with `name` and
 move each language parameter string into `{parameters}` without parentheses.
 
+The public declarations are `ShaderHook` and `ShaderInjection`, used by both
+application assembly and plugins. Remove imports of `ShaderPluginHook`,
+`ShaderPluginInjection`, `ShaderPluginTarget`, and `ShaderPluginInjectionTarget`.
+The former source/order `ShaderInjection` shape is now `ResolvedShaderInjection`.
+Application `inject` also accepts arrays of the language-aware `ShaderInjection`.
+
 Move header/footer source into its language implementation. Existing injection
 target names stay the same; provide separate GLSL/WGSL injection bodies through
 ShaderPlugin language variants.

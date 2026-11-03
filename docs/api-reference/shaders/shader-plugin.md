@@ -157,14 +157,14 @@ const model = new Model(device, {
 
 ```ts
 import type {AttributeShaderType} from '@luma.gl/core';
-import type {ShaderHook, ShaderInjection, ShaderModule} from '@luma.gl/shaders';
+import type {ShaderHook, ShaderInjection, ResolvedShaderInjection, ShaderModule} from '@luma.gl/shaders';
 
 export type ShaderPlugin = {
   name: string;
   module?: ShaderModule<any, any, any>;
   defines?: Record<string, boolean | number>;
-  hooks?: ShaderPluginHook[];
-  injections?: ShaderPluginInjection[] | Record<string, string>;
+  hooks?: ShaderHook[];
+  injections?: ShaderInjection[] | Record<string, string>;
   vertexInputs?: Record<string, AttributeShaderType>;
   interStageVariables?: Record<string, ShaderPluginInterStageVariable>;
 };
@@ -176,9 +176,7 @@ export type ShaderPluginInterStageVariable = {
   interpolation?: ShaderPluginInterStageVariableInterpolation;
 };
 
-export type ShaderPluginHook = ShaderHook;
-
-export type ShaderPluginInjection = {
+export type ShaderInjection = {
   stage: 'vertex' | 'fragment';
   target: string;
   glsl?: string;
@@ -190,7 +188,7 @@ export type ResolvedShaderPlugins = {
   hooks: ShaderHook[];
   modules: ShaderModule[];
   defines: Record<string, boolean | number>;
-  injections: Record<string, ShaderInjection[]>;
+  injections: Record<string, ResolvedShaderInjection[]>;
   vertexInputs: Record<string, AttributeShaderType>;
   interStageVariables: Record<string, {
     type: AttributeShaderType;

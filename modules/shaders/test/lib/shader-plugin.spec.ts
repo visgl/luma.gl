@@ -10,7 +10,9 @@ import {
   WGSLShaderAssembler,
   type PlatformInfo,
   type ShaderModule,
-  type ShaderPlugin
+  type ShaderPlugin,
+  type ShaderHook,
+  type ShaderInjection
 } from '@luma.gl/shaders';
 
 const SHARED_MODULE: ShaderModule = {name: 'shared-plugin-module'};
@@ -1186,4 +1188,58 @@ it('ShaderPlugin#matching declarations preserve assembler hook wrappers', () => 
   expect(source.indexOf('color.r = 0.25;')).toBeGreaterThan(-1);
   expect(source.indexOf('color.g = 0.5;')).toBeGreaterThan(source.indexOf('color.r = 0.25;'));
   expect(source.indexOf('color.b = 0.75;')).toBeGreaterThan(source.indexOf('color.g = 0.5;'));
+});
+
+it.each([
+  'glsl',
+  'wgsl'
+] as const)('shared hook and injection declarations work globally and in plugins on %s', language => {
+  const hook: ShaderHook = {
+    name: 'TINT',
+    stage: 'fragment',
+    glsl: {parameters: 'inout vec4 color'},
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  };
+  const injections: ShaderInjection[] = [
+    {stage: 'fragment', target: 'TINT', glsl: '// GLSL second', wgsl: '// WGSL second', order: 2},
+    {stage: 'fragment', target: 'TINT', glsl: '// GLSL first', wgsl: '// WGSL first', order: 1}
+  ];
+  const resolved = resolveShaderPlugins([{name: 'shared', hooks: [hook], injections}], language);
+  const assembler = language === 'glsl' ? new GLSLShaderAssembler() : new WGSLShaderAssembler();
+  assembler.addShaderHook(hook);
+  const props = {
+    platformInfo: language === 'glsl' ? GLSL_PLATFORM_INFO : WGSL_PLATFORM_INFO,
+    vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
+    fs: '#version 300 es\nprecision highp float;out vec4 color;void main(){color=vec4(1.0);TINT(color);}',
+    source: WGSL_SOURCE
+  };
+  const assemble = (
+    inject?: readonly ShaderInjection[],
+    pluginInjections?: typeof resolved.injections
+  ) =>
+    assembler instanceof GLSLShaderAssembler
+      ? assembler.assembleGLSLShaderPair({...props, inject, pluginInjections}).fs
+      : assembler.assembleWGSLShader({...props, inject, pluginInjections}).source;
+  const globalSource = assemble(injections);
+  expect(globalSource).toBe(assemble(undefined, resolved.injections));
+  const prefix = language === 'glsl' ? 'GLSL' : 'WGSL';
+  expect(globalSource.indexOf(`${prefix} first`)).toBeLessThan(
+    globalSource.indexOf(`${prefix} second`)
+  );
+  expect(globalSource).not.toContain(language === 'glsl' ? 'WGSL' : 'GLSL');
+  expect(assemble([{stage: 'fragment', target: 'TINT', glsl: '', wgsl: ''}])).not.toContain(
+    `${prefix} first`
+  );
+  expect(
+    assemble([
+      {
+        stage: 'fragment',
+        target: 'NOT_REGISTERED',
+        [language === 'glsl' ? 'wgsl' : 'glsl']: '// inactive'
+      }
+    ])
+  ).not.toContain('inactive');
+  expect(() =>
+    assemble([{stage: 'fragment', target: 'NOT_REGISTERED', [language]: '// active'}])
+  ).toThrow('Unknown shader hook fs:NOT_REGISTERED');
 });

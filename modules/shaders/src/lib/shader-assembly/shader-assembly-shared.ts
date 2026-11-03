@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {DECLARATION_INJECT_MARKER, type ShaderInjection} from './shader-injections';
+import {DECLARATION_INJECT_MARKER, type ResolvedShaderInjection} from './shader-injections';
 import {type ShaderModule} from '../shader-module/shader-module';
 import {assert} from '../utils/assert';
 import {validateShaderModuleUniformLayout} from '../shader-module/shader-module-uniform-layout';
@@ -31,10 +31,10 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
 }
 
 export function appendInjections(
-  injections: Record<string, ShaderInjection[]>,
-  hookInjections: Record<string, ShaderInjection[]>,
-  declInjections: Record<string, ShaderInjection[]>,
-  mainInjections: Record<string, ShaderInjection[]>
+  injections: Record<string, ResolvedShaderInjection[]>,
+  hookInjections: Record<string, ResolvedShaderInjection[]>,
+  declInjections: Record<string, ResolvedShaderInjection[]>,
+  mainInjections: Record<string, ResolvedShaderInjection[]>
 ): void {
   for (const key in injections) {
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);

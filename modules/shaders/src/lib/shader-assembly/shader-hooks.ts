@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderInjection} from './shader-injections';
+import type {ResolvedShaderInjection} from './shader-injections';
 
 /** Language-specific source for a callable shader hook. */
 export type ShaderHookImplementation = {
@@ -42,7 +42,7 @@ export type ShaderHookRegistry = {
 /** Generate hook source code */
 export function getShaderHooks(
   hookFunctions: Record<string, ResolvedShaderHook>,
-  hookInjections: Record<string, ShaderInjection[]>,
+  hookInjections: Record<string, ResolvedShaderInjection[]>,
   shaderLanguage: 'glsl' | 'wgsl' = 'glsl'
 ): string {
   let result = '';
@@ -120,7 +120,7 @@ export function isShaderHookRegistered(registry: ShaderHookRegistry, hookName: s
  */
 export function validateShaderHookInjections(
   registry: ShaderHookRegistry,
-  hookInjections: Record<string, ShaderInjection[]>,
+  hookInjections: Record<string, ResolvedShaderInjection[]>,
   stage?: 'vertex' | 'fragment'
 ): void {
   const stagePrefix = stage === 'vertex' ? 'vs:' : stage === 'fragment' ? 'fs:' : null;

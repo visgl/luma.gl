@@ -22,10 +22,6 @@ export type {
   ResolvedShaderPlugins,
   ResolvedShaderPluginInterStageVariable,
   ShaderPlugin,
-  ShaderPluginHook,
-  ShaderPluginTarget,
-  ShaderPluginInjection,
-  ShaderPluginInjectionTarget,
   ShaderPluginInterStageVariable,
   ShaderPluginInterStageVariableInterpolation
 } from './lib/shader-plugin';
@@ -68,7 +64,10 @@ export {resolveModules as _resolveModules} from './lib/shader-module/shader-modu
 // ShaderAssembler
 export {ShaderAssembler, GLSLShaderAssembler, WGSLShaderAssembler} from './lib/shader-assembler';
 export type {ShaderHook, ShaderHookImplementation} from './lib/shader-assembly/shader-hooks';
-export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
+export type {
+  ShaderInjection,
+  ResolvedShaderInjection
+} from './lib/shader-assembly/shader-injections';
 
 // SHADER HELPERS
 
