@@ -10,6 +10,7 @@ import {
   getValidatedProperties
 } from '../filters/prop-types';
 import type {ShaderModuleUniformValue, UniformTypes, UniformValue} from '../utils/uniform-types';
+import type {ResolvedShaderInjection} from '../shader-assembly/shader-injections';
 
 import type {ShaderBinding as Binding} from '../../types';
 
@@ -90,6 +91,11 @@ export type ShaderModule<
   instance?: {
     propValidators?: Record<string, PropValidator>;
     parsedDeprecations: ShaderModuleDeprecation[];
+    /** Empty compatibility value for consumers using older shadertools assembly. */
+    normalizedInjections: {
+      vertex: Record<string, ResolvedShaderInjection>;
+      fragment: Record<string, ResolvedShaderInjection>;
+    };
   };
 };
 
@@ -118,7 +124,8 @@ export function initializeShaderModule(module: ShaderModule): void {
   const {propTypes = {}, deprecations = []} = module;
 
   const instance: Required<ShaderModule>['instance'] = {
-    parsedDeprecations: parseDeprecationDefinitions(deprecations)
+    parsedDeprecations: parseDeprecationDefinitions(deprecations),
+    normalizedInjections: {vertex: {}, fragment: {}}
   };
 
   if (propTypes) {
