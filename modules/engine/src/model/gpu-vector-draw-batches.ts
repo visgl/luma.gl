@@ -19,7 +19,8 @@ export function drawGPUVectorGroups(
   geometry: GPUVectorBindings,
   attributes: GPUVectorBindings,
   syncBindings: () => void,
-  draw: () => boolean
+  draw: () => boolean,
+  inferDrawCount?: 'instance' | 'vertex' | 'no'
 ): boolean {
   const geometryInputs = geometry.inputs;
   const attributeInputs = attributes.inputs;
@@ -68,16 +69,21 @@ export function drawGPUVectorGroups(
           : attributes.vertexCount !== undefined
             ? attributeOffsets[attributeBatchIndex]
             : 0;
-      model.setVertexCount(
-        Math.max(
-          0,
-          Math.min(
-            geometry.rowCount ?? attributes.vertexCount ?? vertexCount,
-            vertexCount - vertexOffset
+      if (inferDrawCount !== 'no' && inferDrawCount !== 'instance')
+        model.setVertexCount(
+          Math.max(
+            0,
+            Math.min(
+              geometry.rowCount ?? attributes.vertexCount ?? vertexCount,
+              vertexCount - vertexOffset
+            )
           )
-        )
-      );
-      if (attributes.instanceCount !== undefined)
+        );
+      if (
+        inferDrawCount !== 'no' &&
+        inferDrawCount !== 'vertex' &&
+        attributes.instanceCount !== undefined
+      )
         model.setInstanceCount(
           Math.max(
             0,

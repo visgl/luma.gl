@@ -115,8 +115,13 @@ export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindi
   geometry?: GPUVectorGeometry | null;
   /** Supplemental vertex or instance vectors and constants. */
   attributeVectors?: GPUVectorModelAttributes;
-  /** Draw count updated from each vector batch. Defaults to `instance`. */
-  gpuVectorCount?: GPUVectorModelCount;
+  /**
+   * Count inferred from vector rows or each explicit batch. `no` preserves both counts.
+   * @default 'no'
+   */
+  inferDrawCount?: 'instance' | 'vertex' | 'no';
+  /** Require aligned lengths and chunks. False requires inferDrawCount: 'no' and single chunks. */
+  enforceMatchingVectorLengths?: boolean;
   source?: string;
   /** Input language compiled by the application-registered shader assembler transpiler. */
   sourceLanguage?: string;
@@ -228,7 +233,8 @@ export class GPUVectorModel {
 
   static defaultProps: Required<GPUVectorModelProps> = {
     ...RenderPipeline.defaultProps,
-    gpuVectorCount: 'instance',
+    inferDrawCount: 'no',
+    enforceMatchingVectorLengths: true,
     geometry: null,
     attributeVectors: undefined!,
     source: undefined!,
@@ -800,13 +806,22 @@ export class GPUVectorModel {
     bufferLayouts ??=
       this.getExplicitVectorLayouts(vectors) ??
       this.getExplicitVectorLayouts(vectors, this.geometryVectorBindings.sourceLayouts);
-    validateGPUVectorBatchStructure(vectors);
-    if (!this.isInstanced || this.attributeVectorBindings.vertexCount !== undefined)
+    this.validateVectorLengthPolicy();
+    if (this.props.enforceMatchingVectorLengths) validateGPUVectorBatchStructure(vectors);
+    if (
+      this.props.enforceMatchingVectorLengths &&
+      (!this.isInstanced || this.attributeVectorBindings.vertexCount !== undefined)
+    )
       validateGPUVectorBatchStructure([
         ...Object.values(vectors),
         ...Object.values(this.attributeVectorBindings.inputs)
       ]);
-    this.geometryVectorBindings.setInputs(vectors, bufferLayouts, 'vertex');
+    this.geometryVectorBindings.setInputs(
+      vectors,
+      bufferLayouts,
+      'vertex',
+      this.props.enforceMatchingVectorLengths
+    );
     this.claimVectorLayouts(this.geometryVectorBindings);
     this.syncVectorBindings();
     const rowCount = this.geometryVectorBindings.rowCount;
@@ -815,7 +830,8 @@ export class GPUVectorModel {
         this.attributeVectorBindings.vertexCount === undefined ||
         rowCount === this.attributeVectorBindings.vertexCount
     );
-    this.setVertexCount(rowCount ?? this.attributeVectorBindings.vertexCount ?? 0);
+    if (this.props.inferDrawCount !== 'no' && this.props.inferDrawCount !== 'instance')
+      this.setVertexCount(rowCount ?? this.attributeVectorBindings.vertexCount ?? 0);
   }
 
   /** Replaces supplemental vectors; instanced models default these inputs to instance step mode. */
@@ -843,7 +859,8 @@ export class GPUVectorModel {
               layout.attributes?.some(attribute => attribute.attribute === name)
           )?.stepMode ?? vector.bufferLayout?.stepMode) === 'vertex'
       );
-    if (usesVertexRows)
+    this.validateVectorLengthPolicy();
+    if (usesVertexRows && this.props.enforceMatchingVectorLengths)
       validateGPUVectorBatchStructure([
         ...Object.values(this.geometryVectorBindings.inputs),
         ...Object.values(vectors)
@@ -851,14 +868,23 @@ export class GPUVectorModel {
     this.attributeVectorBindings.setInputs(
       vectors,
       bufferLayouts,
-      this.isInstanced ? 'instance' : 'vertex'
+      this.isInstanced ? 'instance' : 'vertex',
+      this.props.enforceMatchingVectorLengths
     );
     this.claimVectorLayouts(this.attributeVectorBindings);
     this.syncVectorBindings();
-    if (this.attributeVectorBindings.instanceCount !== undefined)
+    if (
+      this.props.inferDrawCount !== 'no' &&
+      this.props.inferDrawCount !== 'vertex' &&
+      this.attributeVectorBindings.instanceCount !== undefined
+    )
       this.setInstanceCount(this.attributeVectorBindings.instanceCount);
     const vertexCount = this.attributeVectorBindings.vertexCount;
-    if (vertexCount !== undefined) {
+    if (
+      vertexCount !== undefined &&
+      this.props.inferDrawCount !== 'no' &&
+      this.props.inferDrawCount !== 'instance'
+    ) {
       const geometryRowCount = this.geometryVectorBindings.rowCount;
       // Supplemental vertex columns describe the same rows as the geometry columns.
       assert(geometryRowCount === undefined || geometryRowCount === vertexCount);
@@ -999,7 +1025,8 @@ export class GPUVectorModel {
         this.geometryVectorBindings,
         this.attributeVectorBindings,
         () => this.syncVectorBindings(),
-        () => GPUVectorModel.prototype.draw.call(this, renderPass)
+        () => GPUVectorModel.prototype.draw.call(this, renderPass),
+        this.props.inferDrawCount
       );
       if (success) {
         this._lastDrawTimestamp = this.device.timestamp;
@@ -1112,9 +1139,16 @@ export class GPUVectorModel {
     );
   }
 
+  private validateVectorLengthPolicy(): void {
+    // Independent lengths cannot determine a common draw count.
+    assert(this.props.enforceMatchingVectorLengths !== false || this.props.inferDrawCount === 'no');
+  }
+
   private setBatchDrawCount(
     rowCount: number,
-    count: GPUVectorModelCount = this.props.gpuVectorCount
+    count: GPUVectorModelCount = this.props.inferDrawCount === 'no'
+      ? 'none'
+      : this.props.inferDrawCount
   ): void {
     if (count === 'instance') {
       this.setInstanceCount(rowCount);
@@ -1148,13 +1182,22 @@ export class GPUVectorModel {
       this.getExplicitVectorLayouts(geometry.inputs) ?? geometry.sourceLayouts;
     const attributeLayouts =
       this.getExplicitVectorLayouts(attributes.inputs) ?? attributes.sourceLayouts;
-    geometry.setInputs(geometry.inputs, geometryLayouts, 'vertex');
+    geometry.setInputs(
+      geometry.inputs,
+      geometryLayouts,
+      'vertex',
+      this.props.enforceMatchingVectorLengths
+    );
     attributes.setInputs(
       attributes.inputs,
       attributeLayouts,
-      this.isInstanced ? 'instance' : 'vertex'
+      this.isInstanced ? 'instance' : 'vertex',
+      this.props.enforceMatchingVectorLengths
     );
-    if (!this.isInstanced || attributes.vertexCount !== undefined)
+    if (
+      this.props.enforceMatchingVectorLengths &&
+      (!this.isInstanced || attributes.vertexCount !== undefined)
+    )
       validateGPUVectorBatchStructure([
         ...Object.values(geometry.inputs),
         ...Object.values(attributes.inputs)

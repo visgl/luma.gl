@@ -351,3 +351,14 @@ Sets constant-valued attributes.
 - `Model` integrates with [`ShaderInputs`](/docs/api-reference/engine/shader-inputs), [`PipelineFactory`](/docs/api-reference/core/pipeline-factory), and [`ShaderFactory`](/docs/api-reference/core/shader-factory) by default.
 - `DynamicBuffer` attributes, index buffers, and bindings are resolved before drawing so resized buffers are rebound automatically.
 - `DynamicTexture` and `VideoTexture` bindings are supported directly. `Model.draw()` defers rendering until texture binding sources are ready.
+
+### Draw count inference and independent lengths
+
+`inferDrawCount` accepts `'instance'`, `'vertex'`, or `'no'` and defaults to `'no'`. It selects the
+count updated from vector lengths (or each batch's row count), preserving the
+other count. `'no'` preserves both caller-supplied counts.
+
+`enforceMatchingVectorLengths` defaults to `true`. Set it to `false` together
+with `inferDrawCount: 'no'` to bind attributes with independent lengths and
+single physical chunks. Layout and buffer validation still apply.
+`drawBatches()` always requires matching lengths and chunk boundaries.
