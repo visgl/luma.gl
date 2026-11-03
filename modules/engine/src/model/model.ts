@@ -17,7 +17,7 @@ import {makeGPUVectorGeometryFromGPUGeometry} from '../geometry/gpu-vector-geome
 import {isTextureBindingSource} from '@luma.gl/core/dynamic';
 
 /** Properties for the high-level rendering model. */
-export type ModelProps = Omit<GPUVectorModelProps, 'gpuVectorCount' | 'geometry'> & {
+export type ModelProps = Omit<GPUVectorModelProps, 'geometry'> & {
   /** Geometry adapted into GPU attributes, buffer layouts, topology, and draw counts. */
   geometry?: GPUVectorGeometry | GPUGeometry | Geometry | null;
   /** Material-owned group-3 bindings and uniforms. */
