@@ -116,8 +116,8 @@ export type ModelDrawOptions = {
   parameters?: {
     /** Viewport [x, y, width, height, minDepth?, maxDepth?]. */
     viewport?: NumberArray4 | NumberArray6;
-    /** Scissor rectangle [x, y, width, height]. */
-    scissorRect?: NumberArray4;
+    /** Scissor rectangle [x, y, width, height], or null to disable clipping. */
+    scissorRect?: NumberArray4 | null;
     /** Blend color used by constant blend factors. */
     blendConstant?: NumberArray4;
     /** Value used for stencil comparison and replacement. */
@@ -685,9 +685,24 @@ export class GPUVectorModel {
    */
   draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     if (options?.parameters) {
-      return renderPass.withParameters(options.parameters, () => this._draw(renderPass));
+      return this._withDrawParameters(renderPass, options.parameters, () => this._draw(renderPass));
     }
     return this._draw(renderPass);
+  }
+
+  /** Applies draw overrides around the complete model batch, including failure paths. */
+  protected _withDrawParameters<T>(
+    renderPass: RenderPass,
+    parameters: NonNullable<ModelDrawOptions['parameters']>,
+    draw: () => T
+  ): T {
+    const state = renderPass.getParameters();
+    try {
+      renderPass.setParameters(parameters);
+      return draw();
+    } finally {
+      renderPass.setParameters(state);
+    }
   }
 
   private _draw(renderPass: RenderPass): boolean {

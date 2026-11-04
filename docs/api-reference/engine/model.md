@@ -282,7 +282,7 @@ bindings, and vertex array on that pass before issuing the draw. Returns
 `false` when required resources, such as unresolved texture binding sources,
 are not ready yet.
 
-`options.parameters` accepts `viewport`, `scissorRect`, `blendConstant`, and
+`options.parameters` accepts `viewport`, `scissorRect` (or `null` to disable scissoring), `blendConstant`, and
 `stencilReference`. Supplied values override pass state only for this draw, including
 all internal vector batches. Omitted fields inherit the current pass state. Prior
 values are restored even if drawing throws or resources are not ready. Model defaults

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumericArray, NumberArray4} from '@math.gl/core';
+import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core';
 import type {
   Bindings,
   BindingsByGroup,
@@ -155,7 +155,9 @@ export class WEBGLRenderPass extends RenderPass {
         glParameters.viewport = [...parameters.viewport] as NumberArray4;
       }
     }
-    if (parameters.scissorRect) {
+    if (parameters.scissorRect === null) {
+      glParameters.scissorTest = false;
+    } else if (parameters.scissorRect) {
       glParameters.scissorTest = true;
       glParameters.scissor = [...parameters.scissorRect] as NumberArray4;
     }
@@ -172,16 +174,14 @@ export class WEBGLRenderPass extends RenderPass {
     setGLParameters(this.device.gl, glParameters);
   }
 
-  override withParameters<T>(parameters: RenderPassParameters, callback: () => T): T {
-    const previous = this.glParameters;
-    this.device.pushState();
-    try {
-      this.setParameters(parameters);
-      return callback();
-    } finally {
-      this.glParameters = previous;
-      this.device.popState();
-    }
+  override getParameters(): RenderPassParameters {
+    const get = (parameter: number) => this.device.gl.getParameter(parameter);
+    return {
+      viewport: [...get(GL.VIEWPORT), ...get(GL.DEPTH_RANGE)] as NumberArray6,
+      scissorRect: get(GL.SCISSOR_TEST) ? ([...get(GL.SCISSOR_BOX)] as NumberArray4) : null,
+      blendConstant: [...get(GL.BLEND_COLOR)] as NumberArray4,
+      stencilReference: get(GL.STENCIL_REF) as number
+    };
   }
 
   setPipeline(pipeline: RenderPipeline): void {

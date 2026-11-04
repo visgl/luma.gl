@@ -86,7 +86,7 @@ export class TextStorageModel extends Model {
   /** Draws each generated storage text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     return options?.parameters
-      ? renderPass.withParameters(options.parameters, () =>
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
           this.drawTextStorageModelBatches(renderPass)
         )
       : this.drawTextStorageModelBatches(renderPass);

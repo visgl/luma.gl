@@ -79,7 +79,7 @@ export class TextDictionaryModel extends Model {
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     return options?.parameters
-      ? renderPass.withParameters(options.parameters, () =>
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
           this.drawTextDictionaryModelBatches(renderPass)
         )
       : this.drawTextDictionaryModelBatches(renderPass);
