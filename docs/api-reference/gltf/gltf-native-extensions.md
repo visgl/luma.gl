@@ -463,7 +463,7 @@ false value disables its entire subtree without modifying descendants' local val
 `isScenegraphInteractionEnabled(path, kind)` to check a root-to-hit instance path or
 `getFirstScenegraphInteractionHit(hits, kind)` to skip ineligible hits in nearest-first order.
 Visibility does not affect these flags. STEP animation pointers can change them at runtime.
-`ScenegraphInteractionController` also bubbles selection events and tracks per-controller hover
+`ScenegraphInteractionManager` also bubbles selection events and tracks per-controller hover
 entry and exit across ancestor paths. Call `updateHover` again after a pointer, camera, geometry,
 or flag changes so the host can supply updated hits.
 

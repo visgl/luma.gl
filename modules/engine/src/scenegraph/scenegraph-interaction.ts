@@ -43,7 +43,7 @@ export type ScenegraphInteractionEvent = {
 };
 
 /** Caller-owned hit testing with per-controller hover tracking and subtree event propagation. */
-export class ScenegraphInteractionController {
+export class ScenegraphInteractionManager {
   private readonly hoveredPaths = new Map<number, readonly ScenegraphNode[]>();
   private readonly onEvent: (event: ScenegraphInteractionEvent) => void;
 

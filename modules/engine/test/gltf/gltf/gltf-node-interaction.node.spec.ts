@@ -5,7 +5,7 @@
 import {describe, expect, test} from 'vitest';
 import {
   GroupNode,
-  ScenegraphInteractionController,
+  ScenegraphInteractionManager,
   getFirstScenegraphInteractionHit,
   isScenegraphInteractionEnabled
 } from '@luma.gl/engine';
@@ -36,7 +36,7 @@ describe('scenegraph interaction', () => {
     const first = new GroupNode({id: 'first'});
     const second = new GroupNode({id: 'second'});
     const events: string[] = [];
-    const controller = new ScenegraphInteractionController(event =>
+    const controller = new ScenegraphInteractionManager(event =>
       events.push(
         `${event.type}:${event.target.id}:${event.currentTarget.id}:${event.controllerIndex}`
       )

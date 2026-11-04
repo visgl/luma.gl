@@ -82,7 +82,7 @@ export {ScenegraphNode} from './scenegraph/scenegraph-node';
 export {
   isScenegraphInteractionEnabled,
   getFirstScenegraphInteractionHit,
-  ScenegraphInteractionController
+  ScenegraphInteractionManager
 } from './scenegraph/scenegraph-interaction';
 export type {
   ScenegraphInteractionKind,
