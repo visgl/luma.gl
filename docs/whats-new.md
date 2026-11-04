@@ -4,7 +4,8 @@
 
 Shader hook descriptors define one stage and name with separate GLSL and WGSL
 parameter syntax, return types, and header/footer source. Register the same descriptor with both
-assemblers; each selects its language implementation. See
+assemblers; each selects its language implementation. Vertex and fragment hooks may also
+share a name in WGSL: assembly resolves stage-specific functions and shared helpers. See
 [ShaderAssembler](/docs/api-reference/shaders/shader-assembler#addshaderhookhook-shaderhook-void).
 
 ### Reusable graph texture bindings

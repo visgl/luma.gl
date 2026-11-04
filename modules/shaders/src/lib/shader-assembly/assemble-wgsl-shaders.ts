@@ -5,6 +5,7 @@
 import {type ShaderBindingDebugRow, getShaderBindingDebugRowsFromWGSL} from './wgsl-binding-debug';
 import {type ShaderLayout} from '../../types';
 import {scanWGSLInterface} from './wgsl-interface-scan';
+import {getWGSLHookNames, resolveWGSLHookNames} from './wgsl-hook-names';
 import {
   type AssembleWGSLShaderOptions,
   type GetUniformsFunc,
@@ -254,7 +255,11 @@ export function assembleShaderWGSL(
     {vertex: vertexEntryPoint, fragment: fragmentEntryPoint}
   );
 
-  assembledSource += getWGSLShaderHooks(hookFunctionMap, hookInjections);
+  const hookNames = getWGSLHookNames(
+    hookFunctionMap,
+    assembledSource + applicationRelocation.source
+  );
+  assembledSource += getWGSLShaderHooks(hookFunctionMap, hookInjections, hookNames);
   assembledSource += formatWGSLBindingAssignmentComments(bindingAssignments);
 
   // Add the version directive and actual source of this shader
@@ -265,6 +270,8 @@ export function assembleShaderWGSL(
     vertex: vertexEntryPoint,
     fragment: fragmentEntryPoint
   });
+
+  assembledSource = resolveWGSLHookNames(assembledSource, hookFunctionMap, hookNames);
 
   assertNoUnresolvedAutoBindings(assembledSource);
 
@@ -338,12 +345,21 @@ export function getWGSLDeclarationInjections(
 
 export function getWGSLShaderHooks(
   hookFunctionMap: ReturnType<typeof normalizeShaderHooks>,
-  hookInjections: Record<string, ResolvedShaderInjection[]>
+  hookInjections: Record<string, ResolvedShaderInjection[]>,
+  names = getWGSLHookNames(hookFunctionMap)
 ): string {
-  return (
-    getShaderHooks(hookFunctionMap.vertex, hookInjections, 'wgsl') +
-    getShaderHooks(hookFunctionMap.fragment, hookInjections, 'wgsl')
-  );
+  return (['vertex', 'fragment'] as const)
+    .map(stage => {
+      const hooks = Object.fromEntries(
+        Object.entries(hookFunctionMap[stage]).map(([key, hook]) => {
+          const name = key.slice(3);
+          const emittedName = names.get(name)?.[stage] || name;
+          return [key, {...hook, signature: emittedName + hook.signature.slice(name.length)}];
+        })
+      );
+      return getShaderHooks(hooks, hookInjections, 'wgsl');
+    })
+    .join('');
 }
 
 export function getUsedBindingsByGroupFromApplicationWGSL(

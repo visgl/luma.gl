@@ -144,8 +144,12 @@ Each language implementation supplies `parameters` without parentheses and optio
 `header` and `footer` source around injected code. Set `returnType` to a GLSL or
 WGSL type to return a value. Omit it (or use `void`) for a hook with no return value.
 A value-returning hook must provide a default return path in its header/footer.
-WGSL hooks share one function namespace: use distinct names for vertex and fragment hooks. Missing language implementations
-are skipped. Registration and assembly do not modify descriptors.
+Vertex and fragment hooks may share a public name, including in WGSL. The assembler
+emits private stage-specific function names and resolves calls from each entry point.
+Helpers reached by both stages are specialized when they call a shared-name hook.
+A helper containing such a call must be reachable from a render entry point or hook,
+so its stage can be determined. Injection keys still select the stage (`vs:` or `fs:`).
+Missing language implementations are skipped. Registration and assembly do not modify descriptors.
 
 Injection targets remain `vs:OFFSET_POSITION` and `fs:HOOK_NAME`. Use root-level
 `injections` on ShaderPlugin, with `glsl` and `wgsl` source on each entry, for
