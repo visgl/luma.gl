@@ -268,7 +268,16 @@ export function assembleShaderWGSL(
 
   const targetNames = getWGSLInjectionTargetNames(
     injectionTargetMap,
-    assembledSource + applicationRelocation.source
+    [
+      assembledSource,
+      applicationRelocation.source,
+      ...Object.values(targetInjections)
+        .flat()
+        .map(injection => injection.injection),
+      ...Object.values(mainInjections)
+        .flat()
+        .map(injection => injection.injection)
+    ].join('\n')
   );
   assembledSource += getWGSLShaderInjectionTargets(
     injectionTargetMap,

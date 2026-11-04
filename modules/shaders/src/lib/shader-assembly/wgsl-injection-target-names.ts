@@ -24,7 +24,17 @@ export function getWGSLInjectionTargetNames(
   source = ''
 ): Map<string, Record<Stage, string>> {
   const names = new Map<string, Record<Stage, string>>();
-  const usedNames = new Set(maskWGSLComments(source).match(/\b\w+\b/g));
+  const declarations = Object.values(targets).flatMap(stage =>
+    Object.entries(stage).map(
+      ([key, target]) =>
+        `${key.slice(3)}\n${target.signature}\n${target.header || ''}\n${target.footer || ''}`
+    )
+  );
+  const usedNames = new Set(
+    maskWGSLComments(`${source}\n${declarations.join('\n')}`).match(
+      /[_\p{XID_Start}][\p{XID_Continue}]*/gu
+    )
+  );
   for (const key of Object.keys(targets.vertex)) {
     const name = key.slice(3);
     if (targets.fragment[`fs:${name}`]) {
@@ -47,7 +57,7 @@ export function resolveWGSLInjectionTargetNames(
 
   const masked = maskWGSLComments(source);
   const functions = new Map<string, FunctionRange>();
-  const pattern = /((?:@\w+(?:\([^)]*\))?\s*)*)\bfn\s+(\w+)\s*\(/g;
+  const pattern = /((?:@\w+(?:\([^)]*\))?\s*)*)\bfn\s+([_\p{XID_Start}][\p{XID_Continue}]*)\s*\(/gu;
   for (let match = pattern.exec(masked); match; match = pattern.exec(masked)) {
     const bodyStart = masked.indexOf('{', pattern.lastIndex);
     let end = bodyStart + 1;
@@ -61,7 +71,7 @@ export function resolveWGSLInjectionTargetNames(
     const name = match[2];
     const nameStart = match.index + match[0].lastIndexOf(name);
     const calls = Array.from(
-      masked.slice(bodyStart + 1, end - 1).matchAll(/\b(\w+)\s*\(/g),
+      masked.slice(bodyStart + 1, end - 1).matchAll(/([_\p{XID_Start}][\p{XID_Continue}]*)\s*\(/gu),
       call => call[1]
     );
     functions.set(name, {
@@ -116,7 +126,7 @@ export function resolveWGSLInjectionTargetNames(
   }
 
   const helperNames = new Map<string, Record<Stage, string>>();
-  const usedNames = new Set(masked.match(/\b\w+\b/g));
+  const usedNames = new Set(masked.match(/[_\p{XID_Start}][\p{XID_Continue}]*/gu));
   for (const name of affected) {
     if (functions.get(name)?.stages.size === 2) {
       helperNames.set(name, {
@@ -143,7 +153,7 @@ export function resolveWGSLInjectionTargetNames(
     for (const stage of shaderFunction.stages) {
       let text = source.slice(start, shaderFunction.end);
       const body = masked.slice(shaderFunction.bodyStart + 1, shaderFunction.end - 1);
-      const calls = [...body.matchAll(/\b(\w+)\s*\(/g)];
+      const calls = [...body.matchAll(/([_\p{XID_Start}][\p{XID_Continue}]*)\s*\(/gu)];
       for (const call of calls.reverse()) {
         const offset = shaderFunction.bodyStart + 1 + call.index! - start;
         const replacement = getCallName(call[1], stage);
