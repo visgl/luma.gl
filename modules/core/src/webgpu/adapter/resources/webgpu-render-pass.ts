@@ -37,6 +37,7 @@ export class WebGPURenderPass extends RenderPass {
   readonly framebuffer: WebGPUFramebuffer;
 
   private parameters: Required<RenderPassParameters>;
+  private readonly renderArea: [number, number, number, number];
 
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
@@ -70,6 +71,7 @@ export class WebGPURenderPass extends RenderPass {
     const height = attachment
       ? Math.max(1, Math.floor(attachment.texture.height / mipScale))
       : this.framebuffer.height;
+    this.renderArea = [0, 0, width, height];
     this.parameters = {
       viewport: [0, 0, width, height, 0, 1],
       scissorRect: [0, 0, width, height],
@@ -248,7 +250,8 @@ export class WebGPURenderPass extends RenderPass {
   }
 
   setParameters(parameters: RenderPassParameters): void {
-    const {blendConstant, stencilReference, scissorRect, viewport} = parameters;
+    const {blendConstant, stencilReference, viewport} = parameters;
+    const scissorRect = parameters.scissorRect === null ? this.renderArea : parameters.scissorRect;
     // Copy caller-owned arrays; replacing the record keeps nested snapshots stable.
     this.parameters = {
       viewport: viewport
@@ -284,20 +287,13 @@ export class WebGPURenderPass extends RenderPass {
     }
   }
 
-  override withParameters<T>(parameters: RenderPassParameters, callback: () => T): T {
-    const previous = this.parameters;
-    const restore: RenderPassParameters = {};
-    if (parameters.viewport) restore.viewport = previous.viewport;
-    if (parameters.scissorRect) restore.scissorRect = previous.scissorRect;
-    if (parameters.blendConstant) restore.blendConstant = previous.blendConstant;
-    if (parameters.stencilReference !== undefined)
-      restore.stencilReference = previous.stencilReference;
-    try {
-      this.setParameters(parameters);
-      return callback();
-    } finally {
-      this.setParameters(restore);
-    }
+  override getParameters(): RenderPassParameters {
+    return {
+      viewport: [...this.parameters.viewport],
+      scissorRect: this.parameters.scissorRect ? [...this.parameters.scissorRect] : null,
+      blendConstant: [...this.parameters.blendConstant],
+      stencilReference: this.parameters.stencilReference
+    };
   }
 
   pushDebugGroup(groupLabel: string): void {

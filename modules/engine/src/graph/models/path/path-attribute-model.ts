@@ -254,7 +254,7 @@ export class PathAttributeModel extends GPUTableModel {
   /** Draws each generated path render batch against the supplied render pass. */
   override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     return options?.parameters
-      ? renderPass.withParameters(options.parameters, () =>
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
           this.drawPathAttributeModelBatches(renderPass)
         )
       : this.drawPathAttributeModelBatches(renderPass);

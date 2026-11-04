@@ -168,14 +168,20 @@ Removes a debug group (implementation dependent).
 
 Adds a debug marker (implementation dependent).
 
-### `withParameters(parameters: RenderPassParameters, callback: () => T): T`
+### `getParameters(): RenderPassParameters`
 
-Runs a synchronous callback with temporary `viewport`, `scissorRect`, `blendConstant`,
-and/or `stencilReference` values. Restores prior state in `finally`, including when
-parameter setup or the callback throws. Nested scopes are supported. Set state through
-luma APIs; direct native-handle changes are not tracked. Render bundle encoders reject
-this operation because dynamic state belongs to the executing pass.
+Returns a detached snapshot of the current viewport (including depth range), scissor
+rectangle, blend constant and stencil reference. Mutating returned arrays does not
+change the pass. Restore a snapshot with `setParameters(snapshot)`.
 
-WebGPU tracks copied parameter values, initialized from the attached texture view extent (including its mip level), a
-blend constant of `[0, 0, 0, 0]`, and stencil reference `0`. WebGL uses its existing
-state tracker, preserving inherited state such as a disabled scissor test.
+WebGPU reports values tracked through luma's pass API; native encoder calls bypass
+that tracking. WebGL reads the current context state. Its `WebGLRenderPassParameters`
+snapshot also includes `scissorTest` and `stencilBackReference`, preserving disabled
+scissor bounds and independent front/back stencil references when passed back to
+`setParameters`. Keep these fields when restoring a snapshot. Setting `scissorRect`
+to null disables scissoring on WebGL and resets the rectangle to the full attachment
+extent on WebGPU. Render bundle encoders
+reject snapshots because dynamic parameters belong to their executing render pass.
+
+Use `Model.draw(renderPass, {parameters})` for temporary overrides that are restored
+automatically, including when a draw throws.

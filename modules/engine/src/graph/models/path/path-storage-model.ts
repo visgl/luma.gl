@@ -435,7 +435,7 @@ export class PathStorageModel extends Model {
   /** Draws each generated storage path render batch against the supplied render pass. */
   override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     return options?.parameters
-      ? renderPass.withParameters(options.parameters, () =>
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
           this.drawPathStorageModelBatches(renderPass)
         )
       : this.drawPathStorageModelBatches(renderPass);

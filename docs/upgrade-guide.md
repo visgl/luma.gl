@@ -1,11 +1,18 @@
 # Upgrade Guide
 
+### Scoped model draw parameters
+
+`RenderPass.withParameters()` is removed. Pass temporary dynamic state to
+`Model.draw(renderPass, {parameters})` or `GPUVectorModel.draw()` instead.
+Model drawing snapshots `renderPass.getParameters()` and restores it through
+`setParameters()` even when drawing fails. Custom render-pass backends must implement
+`getParameters()` and return detached parameter values.
+
 ### Render-pass color masks
 
 `RenderPassParameters.colorMask` has been removed. Configure `colorMask` on a
 render pipeline or through `Model.setParameters()` instead; WebGPU color write masks
-are pipeline state. Custom `RenderPass` backends must implement `withParameters()`
-with synchronous scoped restoration.
+are pipeline state.
 
 ### Arrow stream output formats
 

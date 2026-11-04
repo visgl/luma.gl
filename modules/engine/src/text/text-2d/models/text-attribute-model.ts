@@ -103,7 +103,7 @@ export class TextAttributeModel extends GPUTableModel {
   /** Draws each generated glyph render batch against the supplied render pass. */
   override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     return options?.parameters
-      ? renderPass.withParameters(options.parameters, () =>
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
           this.drawTextAttributeModelBatches(renderPass)
         )
       : this.drawTextAttributeModelBatches(renderPass);

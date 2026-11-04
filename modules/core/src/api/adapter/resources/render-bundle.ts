@@ -104,9 +104,9 @@ export abstract class RenderBundleEncoder extends RenderPass {
     throw new Error('RenderBundleEncoder.end() is not supported; call finish() instead');
   }
 
-  /** Dynamic state belongs to the executing pass and cannot be recorded in a bundle. */
-  override withParameters<T>(parameters: RenderPassParameters, _callback: () => T): T {
-    return this.setParameters(parameters);
+  /** Render bundles inherit dynamic state from the executing pass and have no snapshot. */
+  override getParameters(): never {
+    return this.setParameters({});
   }
 
   /**

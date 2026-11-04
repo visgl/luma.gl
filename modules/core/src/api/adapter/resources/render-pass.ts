@@ -126,11 +126,8 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference) */
   abstract setParameters(parameters: RenderPassParameters): void;
 
-  /**
-   * Runs a synchronous callback with temporary dynamic parameters, restoring previous state
-   * even if setup or the callback throws. Native-handle state changes bypass this contract.
-   */
-  abstract withParameters<T>(parameters: RenderPassParameters, callback: () => T): T;
+  /** Returns a detached snapshot of the current dynamic render-pass parameters. */
+  abstract getParameters(): RenderPassParameters;
 
   /** Selects the pipeline used by subsequent binding and draw commands. */
   abstract setPipeline(pipeline: RenderPipeline): void;
