@@ -2,6 +2,13 @@
 
 ## v10.0
 
+### v10.0.0-alpha.10
+
+- Rename shader hooks to injection targets and unify shader injection documentation.
+- Allow shared WGSL injection target names across vertex and fragment stages.
+- Support cancelling Arrow uploads from streams and validate requested GPU output formats.
+- Document automatic recovery from provenance transparency errors and independent npm registry propagation checks.
+
 ### v10.0.0-alpha.9
 
 - Move shader injections from ShaderModule to ShaderPlugin and unify GLSL/WGSL hook descriptors and return types.

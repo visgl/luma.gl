@@ -160,10 +160,19 @@ Repeat for the package set printed by the preflight above. Confirm `beta` points
 provenance attestation. Initial authenticated bootstrap versions may lack OIDC provenance; the
 subsequent workflow-published version must have it.
 
+Capture every public package's dist-tags before publishing so verification can compare all
+previous non-beta tags, including `latest`, rather than just the new `beta` value.
+
 Registry metadata can lag a successful publish, including returning `E404` or the previous
-`beta` tag. Allow propagation time and recheck before deciding publication failed. Retain the
-successful publish log and verify each package independently. A green workflow alone is not proof
-that every version is publicly installable.
+`beta` tag. During alpha.9, ordinary npm queries initially returned 404 after the workflow
+succeeded; packages appeared at different times, and all seven were verified several minutes
+later. Allow at least five minutes for propagation and recheck each package independently.
+This is a diagnostic interval, not a guarantee that registry caches have refreshed.
+
+Retain the successful publish log. Fresh cache-busted registry metadata can help diagnose stale
+responses, but finish with ordinary `npm view --prefer-online` verification of exact versions,
+dist-tags, and provenance. Do not republish or move the tag just because an early query returns
+404. A green workflow alone is not proof that every version is publicly installable.
 
 ## New package names: one-time setup
 
@@ -227,8 +236,25 @@ Keep the same version while completing a failed or partial release. First inspec
 and query npm for every public package to establish which versions actually reached the registry.
 Do not unpublish or attempt to overwrite successful versions.
 
-### Retry unchanged source
+### Allow automatic publishing recovery to finish
 
+The current `@vis.gl/dev-tools` publisher makes up to three publishing attempts with a
+120-second delay between attempts. The release workflow invokes this publisher directly;
+inspect the installed publisher and logs if its behavior changes after a dev-tools upgrade.
+
+Alpha.9 encountered `TLOG_CREATE_ENTRY_ERROR` / HTTP 409 because equivalent provenance entries
+already existed in the transparency log. The built-in second attempt recovered: it skipped the
+already published graph package and published the remaining six packages. The successful log
+therefore listed six newly published packages while the complete release contained seven.
+Verify the full public package set, including packages skipped on a retry.
+
+While the publisher is still running its bounded retries, monitor it rather than starting a
+competing job or deleting the GitHub release. Keep OIDC and provenance enabled. A transparency
+error in an earlier attempt does not establish that the final publication failed.
+
+### Retry unchanged source after automatic recovery is exhausted
+
+Only after the job has failed and registry state has been inspected, use manual recovery.
 For a transient publishing failure, retain successful test jobs and rerun only the publishing job.
 If the workflow already created its GitHub release, delete that incomplete release entry first;
 this does not delete the Git tag or npm packages. The current publisher creates the GitHub release
@@ -274,6 +300,6 @@ not claim skipped packages were rebuilt from a later recovery commit.
 | --- | --- |
 | npm `E422` says `repository.url` does not match provenance | Correct the package manifest to identify `https://github.com/visgl/luma.gl`, verify the packed manifest, and merge before retrying. |
 | A prepublish bundle cannot resolve an internal workspace path | Check the bundle alias against the package export map. Run actual prepublish hooks; a TypeScript build alone does not cover this. |
-| `TLOG_CREATE_ENTRY_ERROR` / HTTP 409 says an equivalent transparency-log entry exists | Inspect which packages published, allow a short backoff, and retry the publishing job. Keep OIDC and provenance enabled. |
+| `TLOG_CREATE_ENTRY_ERROR` / HTTP 409 says an equivalent transparency-log entry exists | Let the built-in bounded retry finish; inspect the final job result and registry. Retry the publisher manually only if automatic recovery is exhausted. Keep OIDC and provenance enabled. |
 | `ERR_INVALID_ARG_TYPE` says the timeout is a string | Remove `npm_config_timeout`. Lerna forwards that untyped environment value as a string, while its HTTP client requires a number. Do not use this variable as a Sigstore workaround. Test any future override through the actual HTTP client, not just a configuration snapshot. |
 | A newly published version returns `E404` or an old dist-tag | Allow registry propagation, compare with publish logs, and recheck exact versions and tags before retrying. |
