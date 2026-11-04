@@ -61,6 +61,8 @@ export type ParseGLTFOptions = {
   useByteColors?: boolean;
   /** Leave Gaussian primitives for a caller-managed splat renderer instead of creating mesh models. */
   excludeGaussianSplatPrimitives?: boolean;
+  /** Resolve supported billboard attachments into an engine controller during scene creation. */
+  billboards?: {allowLegacyYAxis?: boolean} | null;
   /** Reject documents whose required extensions have no complete runtime implementation. */
   strictExtensions?: boolean;
 };
@@ -75,6 +77,7 @@ type ParseGLTFInternalOptions = Required<ParseGLTFOptions> & {
 
 const defaultOptions: Required<ParseGLTFOptions> = {
   properties: null,
+  billboards: null,
   publishedTransforms: null,
   modelOptions: {},
   pbrDebug: false,
