@@ -79,6 +79,16 @@ export {DirectionalLightModel} from './models/directional-light-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
+export {
+  isScenegraphInteractionEnabled,
+  getFirstScenegraphInteractionHit,
+  ScenegraphInteractionController
+} from './scenegraph/scenegraph-interaction';
+export type {
+  ScenegraphInteractionKind,
+  ScenegraphInteractionHit,
+  ScenegraphInteractionEvent
+} from './scenegraph/scenegraph-interaction';
 export type {ScenegraphBounds} from './scenegraph/scenegraph-bounds';
 export type {
   DepthSortedTraversalContext,
