@@ -143,12 +143,20 @@ export function createScenegraphsFromGLTF(
     const geometryMetadata = gltf.scenes[index]?.extensions?.['FB_geometry_metadata'];
     if (geometryMetadata) scene.metadata['fb:geometry'] = geometryMetadata;
   });
+  const meshPackets = new Map<string, Record<string, unknown>>();
+  gltf.meshes.forEach((mesh, index) => {
+    const packet = metadata.get('mesh', index);
+    if (!packet) return;
+    meshPackets.set(mesh.id, packet);
+    const group = gltfMeshIdToNodeMap.get(mesh.id);
+    if (group) group.metadata['xmp'] = packet;
+  });
   gltfNodeIndexToNodeMap.forEach((node, index) => {
     const packet = metadata.get('node', index);
     if (packet) node.metadata['xmp'] = packet;
+    if (!meshPackets.size) return;
     const sourceMesh = gltf.nodes[index]?.mesh;
-    const meshIndex = gltf.meshes.indexOf(sourceMesh!);
-    const meshPacket = metadata.get('mesh', meshIndex);
+    const meshPacket = sourceMesh && meshPackets.get(sourceMesh.id);
     const mesh = node.userData['gltfMesh'];
     if (meshPacket && mesh instanceof GroupNode) mesh.metadata['xmp'] = meshPacket;
   });

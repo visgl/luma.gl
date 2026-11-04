@@ -469,6 +469,7 @@ or flag changes so the host can supply updated hits.
 
 The caller supplies hit testing and instance paths. Interactivity graph event propagation and
 hover lifecycle are not yet integrated; strict required-extension support remains disabled.
+
 ### XMP metadata
 
 `scenegraphs.metadata.get(category, index)` returns the authored `KHR_xmp_json_ld` packet for
@@ -481,8 +482,9 @@ before GPU allocation.
 ### Scene geometry metadata
 
 `FB_geometry_metadata` is exposed on the corresponding scene root as
-`scene.metadata['fb:geometry']`. Its authored counts and `sceneBounds` describe static source
-geometry; runtime `getBounds()` and `sceneBounds` continue to represent the current scenegraph.
+`scene.metadata['fb:geometry']`. Its authored counts and bounds describe static source geometry.
+`scenegraphs.sceneBounds` is a load-time snapshot. Call `scene.getBounds()` for current bounds after
+changing scene transforms.
 
 ```ts
 const result = createScenegraphsFromGLTF(device, gltf);

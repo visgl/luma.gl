@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {readFile} from 'node:fs/promises';
+import {parse} from '@loaders.gl/core';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {describe, expect, test, vi} from 'vitest';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {postProcessGLTF, createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
@@ -75,6 +78,7 @@ describe('glTF XMP scene metadata', () => {
   test('populates scene node and material metadata on shared engine objects', () => {
     const source = makeSource();
     source.scenes[0].nodes = [0];
+    source.meshes.push({primitives: [], extensions: reference});
     source.nodes[0] = {...source.nodes[0], mesh: 0} as any;
     source.images = [];
     source.animations = [];
@@ -83,10 +87,33 @@ describe('glTF XMP scene metadata', () => {
     const result = createScenegraphsFromGLTF(device, gltf, {strictExtensions: true});
     expect(result.scenes[0].metadata.xmp).toBe(packet);
     expect(result.gltfNodeIndexToNodeMap.get(0)?.metadata.xmp).toBe(packet);
-    expect(result.gltfMeshIdToNodeMap.get(gltf.meshes[0].id)?.metadata.xmp).toBe(packet);
+    for (const mesh of gltf.meshes) {
+      expect(result.gltfMeshIdToNodeMap.get(mesh.id)?.metadata.xmp).toBe(packet);
+    }
     expect(result.materials[0].metadata.xmp).toBe(packet);
     result.destroy();
     device.destroy();
+  });
+
+  test('shares mesh metadata between canonical and instanced groups', async () => {
+    const data = await readFile(new URL('../data/SimpleInstancing.glb', import.meta.url));
+    const gltf = postProcessGLTF(await parse(data, GLTFLoader, {gltf: {loadImages: false}}));
+    gltf.extensions = {...gltf.extensions, KHR_xmp_json_ld: {packets: [packet]}};
+    const mesh = gltf.nodes[0].mesh!;
+    mesh.extensions = {...mesh.extensions, ...reference};
+
+    const device = new NullDevice({});
+    const result = createScenegraphsFromGLTF(device, gltf);
+    try {
+      const canonical = result.gltfMeshIdToNodeMap.get(mesh.id)!;
+      const instance = result.gltfNodeIndexToNodeMap.get(0)?.userData['gltfMesh'];
+      expect(instance).not.toBe(canonical);
+      expect(canonical.metadata.xmp).toBe(packet);
+      expect(instance).toMatchObject({metadata: {xmp: packet}});
+    } finally {
+      result.destroy();
+      device.destroy();
+    }
   });
 
   test('populates per-scene FB geometry metadata without replacing live bounds', () => {
