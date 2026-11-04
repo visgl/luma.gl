@@ -776,7 +776,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: GeometryNode](https://luma.gl/docs/api-reference/generated/engine/classes/GeometryNode.md): Defined in12
 - [Class: GPUGeometry](https://luma.gl/docs/api-reference/generated/engine/classes/GPUGeometry.md): Defined in39
 - [Class: GPUVectorGeometry](https://luma.gl/docs/api-reference/generated/engine/classes/GPUVectorGeometry.md): Defined in19
-- [Class: GPUVectorModel](https://luma.gl/docs/api-reference/generated/engine/classes/GPUVectorModel.md): Defined in201
+- [Class: GPUVectorModel](https://luma.gl/docs/api-reference/generated/engine/classes/GPUVectorModel.md): Defined in216
 - [Class: GroupNode](https://luma.gl/docs/api-reference/generated/engine/classes/GroupNode.md): Defined in36
 - [Class: IcoSphereGeometry](https://luma.gl/docs/api-reference/generated/engine/classes/IcoSphereGeometry.md): Defined in96
 - [Class: Interactivity](https://luma.gl/docs/api-reference/generated/engine/classes/Interactivity.md): Defined in128
@@ -937,6 +937,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: MeshSimplificationAttribute](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MeshSimplificationAttribute.md): MeshSimplificationAttribute = object
 - [Type Alias: MeshSimplificationOptions](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MeshSimplificationOptions.md): MeshSimplificationOptions = object
 - [Type Alias: MeshSimplificationResult](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MeshSimplificationResult.md): MeshSimplificationResult = object
+- [Type Alias: ModelDrawOptions](https://luma.gl/docs/api-reference/generated/engine/type-aliases/ModelDrawOptions.md): ModelDrawOptions = object
 - [Type Alias: ModelNodeProps](https://luma.gl/docs/api-reference/generated/engine/type-aliases/ModelNodeProps.md): ModelNodeProps = ScenegraphNodeProps & object
 - [Type Alias: ModelProps](https://luma.gl/docs/api-reference/generated/engine/type-aliases/ModelProps.md): ModelProps = Omit\ & object
 - [Type Alias: MorphTargetAttributes](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MorphTargetAttributes.md): MorphTargetAttributes = object
@@ -1456,12 +1457,12 @@ Explore the primary packages, optional subpaths, and exploratory integrations in
 
 ### upgrade-guide
 
-Arrow stream output formats
+Render-pass color masks
 
-- [Upgrade Guide](https://luma.gl/docs/upgrade-guide.md): Arrow stream output formats
+- [Upgrade Guide](https://luma.gl/docs/upgrade-guide.md): Render-pass color masks
 
 ### whats-new
 
-Cancellable Arrow batch conversion
+Scoped model draw parameters
 
-- [What's New](https://luma.gl/docs/whats-new.md): Cancellable Arrow batch conversion
+- [What's New](https://luma.gl/docs/whats-new.md): Scoped model draw parameters

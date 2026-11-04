@@ -2,7 +2,7 @@
 
 > **GPUVectorModelProps** = `Omit`<`RenderPipelineProps`, `"vs"` | `"fs"` | `"bindings"`> & `object`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L113)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L128)
 
 ## Type Declaration[​](#type-declaration "Direct link to Type Declaration")
 

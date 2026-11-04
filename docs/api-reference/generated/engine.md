@@ -155,6 +155,7 @@
 * [MeshSimplificationAttribute](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MeshSimplificationAttribute.md)
 * [MeshSimplificationOptions](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MeshSimplificationOptions.md)
 * [MeshSimplificationResult](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MeshSimplificationResult.md)
+* [ModelDrawOptions](https://luma.gl/docs/api-reference/generated/engine/type-aliases/ModelDrawOptions.md)
 * [ModelNodeProps](https://luma.gl/docs/api-reference/generated/engine/type-aliases/ModelNodeProps.md)
 * [ModelProps](https://luma.gl/docs/api-reference/generated/engine/type-aliases/ModelProps.md)
 * [MorphTargetAttributes](https://luma.gl/docs/api-reference/generated/engine/type-aliases/MorphTargetAttributes.md)

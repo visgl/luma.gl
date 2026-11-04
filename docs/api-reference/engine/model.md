@@ -273,9 +273,21 @@ Marks the model as needing redraw.
 
 Updates shader inputs and rebuilds the pipeline if necessary, encoding any managed uniform uploads onto the supplied command encoder before the render pass begins.
 
-### `draw(renderPass: RenderPass): boolean`[​](#drawrenderpass-renderpass-boolean "Direct link to drawrenderpass-renderpass-boolean")
+### `draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean`[​](#drawrenderpass-renderpass-options-modeldrawoptions-boolean "Direct link to drawrenderpass-renderpass-options-modeldrawoptions-boolean")
 
 Draws once into the supplied render pass. The model selects its pipeline, bindings, and vertex array on that pass before issuing the draw. Returns `false` when required resources, such as unresolved texture binding sources, are not ready yet.
+
+`options.parameters` accepts `viewport`, `scissorRect`, `blendConstant`, and `stencilReference`. Supplied values override pass state only for this draw, including all internal vector batches. Omitted fields inherit the current pass state. Prior values are restored even if drawing throws or resources are not ready. Model defaults and pipeline parameters are unchanged. `Model` inherits this API from `GPUVectorModel`.
+
+```
+model.draw(renderPass, {
+
+  parameters: {blendConstant: [0.5, 0.5, 0.5, 1], stencilReference: 3}
+
+});
+```
+
+Dynamic overrides cannot be recorded into a render bundle. Set them on the executing render pass instead. Native-handle parameter mutations bypass luma's state tracking.
 
 ### `setGeometry(geometry: GPUVectorGeometry | Geometry | GPUGeometry | null): void`[​](#setgeometrygeometry-gpuvectorgeometry--geometry--gpugeometry--null-void "Direct link to setgeometrygeometry-gpuvectorgeometry--geometry--gpugeometry--null-void")
 

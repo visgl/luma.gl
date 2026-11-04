@@ -168,7 +168,7 @@ Clears all stencil bits
 
 > `static` **defaultProps**: `Required`<[`RenderPassProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPassProps.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L177)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:183](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L183)
 
 Default properties for RenderPass
 
@@ -264,7 +264,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > `abstract` **beginOcclusionQuery**(`queryIndex`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L161)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:167](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L167)
 
 Being an occlusion query. Value will be stored in the occlusionQuerySet at the index. Occlusion queries cannot be nested.
 
@@ -388,7 +388,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > `abstract` **draw**(`options`): `boolean`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L145)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L151)
 
 Issues a draw using the currently selected pipeline, bindings, and vertex array.
 
@@ -408,7 +408,7 @@ Issues a draw using the currently selected pipeline, bindings, and vertex array.
 
 > `abstract` **drawIndexedIndirect**(`indirectBuffer`, `indirectByteOffset?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L151)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L157)
 
 Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.
 
@@ -432,7 +432,7 @@ Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.
 
 > `abstract` **drawIndirect**(`indirectBuffer`, `indirectByteOffset?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L148)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L154)
 
 Issues a non-indexed draw using four uint32 arguments stored in an indirect buffer.
 
@@ -470,7 +470,7 @@ Call when rendering is done in this pass.
 
 > `abstract` **endOcclusionQuery**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:163](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L163)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:169](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L169)
 
 End an occlusion query. Stores result in the index specified in beginOcclusionQuery.
 
@@ -484,7 +484,7 @@ End an occlusion query. Stores result in the index specified in beginOcclusionQu
 
 > `abstract` **executeBundles**(`bundles`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L158)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L164)
 
 Replays reusable draw commands recorded by one or more render bundle encoders.
 
@@ -530,7 +530,7 @@ returns a map of overridden default props
 
 > `abstract` **insertDebugMarker**(`markerLabel`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:170](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L170)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:176](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L176)
 
 Marks a point in a stream of commands with a label
 
@@ -550,7 +550,7 @@ Marks a point in a stream of commands with a label
 
 > `abstract` **popDebugGroup**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:168](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L168)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L174)
 
 Ends the labeled debug group most recently started by pushDebugGroup()
 
@@ -564,7 +564,7 @@ Ends the labeled debug group most recently started by pushDebugGroup()
 
 > `abstract` **pushDebugGroup**(`groupLabel`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L166)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L172)
 
 Begins a labeled debug group containing subsequent commands
 
@@ -584,7 +584,7 @@ Begins a labeled debug group containing subsequent commands
 
 > `abstract` **setBindings**(`bindings`, `options?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L136)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L142)
 
 Replaces the complete binding set used by subsequent draw commands. A pipeline must be selected first so bindings can be resolved against its shader layout.
 
@@ -628,7 +628,7 @@ A few parameters can be changed at any time (viewport, scissorRect, blendColor, 
 
 > `abstract` **setPipeline**(`pipeline`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L130)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L136)
 
 Selects the pipeline used by subsequent binding and draw commands.
 
@@ -648,7 +648,7 @@ Selects the pipeline used by subsequent binding and draw commands.
 
 > `abstract` **setVertexArray**(`vertexArray`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L142)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L148)
 
 Selects the vertex array used by subsequent draw commands.
 
@@ -695,3 +695,33 @@ Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://git
 #### Inherited from[​](#inherited-from-16 "Direct link to Inherited from")
 
 [`Resource`](https://luma.gl/docs/api-reference/generated/core/classes/Resource.md).[`toString`](https://luma.gl/docs/api-reference/generated/core/classes/Resource.md#tostring)
+
+***
+
+### withParameters()[​](#withparameters "Direct link to withParameters()")
+
+> `abstract` **withParameters**<`T`>(`parameters`, `callback`): `T`
+
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L133)
+
+Runs a synchronous callback with temporary dynamic parameters, restoring previous state even if setup or the callback throws. Native-handle state changes bypass this contract.
+
+#### Type Parameters[​](#type-parameters "Direct link to Type Parameters")
+
+##### T[​](#t "Direct link to T")
+
+`T`
+
+#### Parameters[​](#parameters-16 "Direct link to Parameters")
+
+##### parameters[​](#parameters-17 "Direct link to parameters")
+
+[`RenderPassParameters`](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPassParameters.md)
+
+##### callback[​](#callback "Direct link to callback")
+
+() => `T`
+
+#### Returns[​](#returns-27 "Direct link to Returns")
+
+`T`

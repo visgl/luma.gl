@@ -76,7 +76,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 | Property               | Type                                  | Default        | Description                                                                                                   |
 | ---------------------- | ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
 | `framebuffer?`         | `Framebuffer \| null`                 | `null`         | Render target that receives the output of the pass. When omitted, the default canvas framebuffer is used.     |
-| `parameters?`          | `RenderPassParameters`                | `undefined`    | Mutable pipeline parameters such as viewport, scissor rectangle, blend constant and stencil reference.        |
+| `parameters?`          | `RenderPassParameters`                | `undefined`    | Dynamic render-pass parameters such as viewport, scissor rectangle, blend constant and stencil reference.     |
 | `clearColor?`          | `NumberArray4 \| TypedArray \| false` | `[0, 0, 0, 1]` | Color used to clear the default color attachment. Set to `false` to preserve the previous value.              |
 | `clearColors?`         | `(TypedArray \| false)[]`             | `undefined`    | Per-attachment clear values for multiple color attachments. Takes precedence over `clearColor` when provided. |
 | `clearDepth?`          | `number \| false`                     | `1`            | Depth value used when clearing the depth attachment. Set to `false` to preserve the previous depth.           |
@@ -160,3 +160,9 @@ Removes a debug group (implementation dependent).
 ### `insertDebugMarker(markerLabel: string): void`[​](#insertdebugmarkermarkerlabel-string-void "Direct link to insertdebugmarkermarkerlabel-string-void")
 
 Adds a debug marker (implementation dependent).
+
+### `withParameters(parameters: RenderPassParameters, callback: () => T): T`[​](#withparametersparameters-renderpassparameters-callback---t-t "Direct link to withparametersparameters-renderpassparameters-callback---t-t")
+
+Runs a synchronous callback with temporary `viewport`, `scissorRect`, `blendConstant`, and/or `stencilReference` values. Restores prior state in `finally`, including when parameter setup or the callback throws. Nested scopes are supported. Set state through luma APIs; direct native-handle changes are not tracked. Render bundle encoders reject this operation because dynamic state belongs to the executing pass.
+
+WebGPU tracks copied parameter values, initialized from the attached texture view extent (including its mip level), a blend constant of `[0, 0, 0, 0]`, and stencil reference `0`. WebGL uses its existing state tracker, preserving inherited state such as a disabled scissor test.

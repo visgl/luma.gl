@@ -18,16 +18,6 @@ Sets constant blend color and alpha values used with "constant" and "one-minus-c
 
 ***
 
-### colorMask?[​](#colormask "Direct link to colorMask?")
-
-> `optional` **colorMask?**: `number`
-
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:188](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L188)
-
-Bitmask controlling which channels are are written to when drawing/clearing. defaulting to 0xF
-
-***
-
 ### scissorRect?[​](#scissorrect "Direct link to scissorRect?")
 
 > `optional` **scissorRect?**: `NumberArray4`

@@ -2,4 +2,4 @@
 
 > **Parameters** = `_RenderParameters` & [`DepthStencilParameters`](https://luma.gl/docs/api-reference/generated/core/type-aliases/DepthStencilParameters.md) & [`ColorParameters`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ColorParameters.md) & [`MultisampleParameters`](https://luma.gl/docs/api-reference/generated/core/type-aliases/MultisampleParameters.md)
 
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:196](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L196)
+Defined in: [modules/core/src/api/adapter/types/parameters.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L193)

@@ -1,5 +1,9 @@
 # What's New
 
+### Scoped model draw parameters[​](#scoped-model-draw-parameters "Direct link to Scoped model draw parameters")
+
+`GPUVectorModel.draw(renderPass, {parameters})` and inherited `Model.draw()` accept temporary viewport, scissor, blend constant, and stencil reference overrides. Values are restored after all internal batch draws, including on errors. See [Model](https://luma.gl/docs/api-reference/engine/model.md) and [RenderPass](https://luma.gl/docs/api-reference/core/resources/render-pass.md).
+
 ### Cancellable Arrow batch conversion[​](#cancellable-arrow-batch-conversion "Direct link to Cancellable Arrow batch conversion")
 
 Arrow streaming conversion accepts an AbortSignal, validates consistent GPU formats across batches, and releases unyielded results on cancellation or validation failure. Yielded batches remain caller-owned. See [Arrow conversion](https://luma.gl/docs/api-reference/arrow/arrow-conversion.md).
