@@ -109,7 +109,7 @@ const model = new Model(device, {
 
 `clipShaderPlugin` declares `clipCoordinates: vec2<f32>` as a smooth plugin
 varying. The application supplies each triangle's center and each vertex's
-position to a pair of named hooks:
+position to a pair of named injection targets:
 
 <Tabs groupId="shader-language">
 <TabItem value="glsl" label="GLSL">
@@ -132,18 +132,18 @@ CLIP_COLOR(&color);
 </TabItem>
 </Tabs>
 
-The hook signatures are registered for the active shader language:
+The callable target signatures are registered for the active shader language:
 
 ```ts
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 
 const shaderAssembler = new GLSLShaderAssembler();
 
-shaderAssembler.addShaderHook({name: 'CLIP_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates'}});
-shaderAssembler.addShaderHook({name: 'CLIP_COLOR', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}});
+shaderAssembler.addShaderInjectionTarget({name: 'CLIP_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates'}});
+shaderAssembler.addShaderInjectionTarget({name: 'CLIP_COLOR', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}});
 ```
 
-For WGSL, create a `WGSLShaderAssembler` instead. Its hook signatures use
+For WGSL, create a `WGSLShaderAssembler` instead. Its target signatures use
 pointers for the mutable position and color. WGSL
 varying synthesis requires the selected vertex entry point to return a named
 stage-I/O struct and the fragment entry point to consume one named stage-I/O
@@ -172,7 +172,7 @@ The application still owns coordinates and buffers. A future deck.gl adapter
 can connect these declarations to `AttributeManager` without moving deck.gl's
 events, resources, or layer lifecycle into `ShaderPlugin`.
 
-Prefer `ShaderPlugin` as the public composition layer. Shader hooks are the
+Prefer `ShaderPlugin` as the public composition layer. Shader injection targets are the
 lower-level contract a base shader can expose when it wants a named injection
 point. A plugin may target a registered hook such as `vs:OFFSET_POSITION`
 or `fs:FILTER_COLOR` instead of a `#decl` or `#main-*` anchor, but applications

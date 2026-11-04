@@ -1,6 +1,6 @@
 ---
 title: Shaders
-description: Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, uniforms, and rendering passes.
+description: Assemble reusable WGSL and GLSL shader modules, injection targets, injections, plugins, uniforms, and rendering passes.
 ---
 
 import {ShaderModulesExample} from '@site/src/examples';
@@ -16,7 +16,7 @@ import {ShadersDocsTabs} from '@site/src/components/docs/shaders-docs-tabs';
 ## Overview
 
 `@luma.gl/shaders` assembles reusable shader behavior. It resolves module dependencies,
-typed props and bindings, hooks, injections, plugins, and passes into shader source. It does
+typed props and bindings, injection targets, injections, plugins, and passes into shader source. It does
 not create a device or compile shaders itself.
 The generated Shaders API index at `/docs/api-reference/generated/shaders` contains every
 public descriptor, helper, built-in module, and type with source links.
@@ -28,16 +28,16 @@ public descriptor, helper, built-in module, and type with source links.
 | Shader source | Defines entry points and the algorithm the GPU executes | A vertex transform and fragment color calculation |
 | `ShaderModule` | Reuses shader helpers and declares uniforms, bindings, and dependencies | Lighting calculations and material parameters |
 | `ShaderPlugin` | Packages optional assembly behavior around one primary module | Clipping, filtering, or tinting |
-| Hook | Declares a callable extension point in the host shader | `FILTER_COLOR(color)` |
-| Injection | Adds language-specific source to a hook or structural anchor | Multiply the color inside `FILTER_COLOR` |
+| Injection target | Declares a callable extension point in the host shader | `FILTER_COLOR(color)` |
+| Injection | Adds language-specific source to a callable target or built-in target | Multiply the color inside `FILTER_COLOR` |
 | Shader assembler | Resolves dependencies and contributions into shader source | Select WGSL for WebGPU or GLSL for WebGL |
 | `ShaderInputs` | Updates module props and manages their uniform/binding representation | Change a material color between draws |
 | `Model` | Creates a render pipeline, binds resources, and draws | Render geometry with optional plugins |
 
-A host shader computes a value, calls a hook, and uses the modified value. A plugin
-can declare that hook, contribute injections to it, or do both. The assembler
+A host shader computes a value, calls a callable target, and uses the modified value. A plugin
+can declare that target, contribute injections to it, or do both. The assembler
 collects declarations before resolving consumers, selects language variants, and
-emits a no-op function when a declared hook has no injections. Shader code must
+emits a no-op function when a declared target has no injections. Shader code must
 still call the function: assembly does not infer where behavior belongs.
 
 A module and a plugin are complementary. Put reusable math and data contracts in
@@ -46,7 +46,7 @@ Plugin input declarations describe interfaces, while the application retains
 buffer allocation, attribute generation, and cleanup. Neither modules nor plugins
 schedule additional passes.
 
-Start with the [ShaderPlugin guide](/docs/api-reference/shaders/shader-plugin#learn-the-composition-model)
+Start with the [Shader Injection guide](/docs/api-guide/shaders/shader-injection)
 for a provider/consumer example with GLSL and WGSL variants. Then read
 [ShaderModule](/docs/api-reference/shaders/shader-module) for uniform contracts and dependencies, and
 [Shader Assembly](/docs/api-guide/shaders/shader-assembly) for assembly mechanics.
@@ -95,7 +95,7 @@ the assembled WGSL/GLSL application that Engine submits.
 
 <FoundationTerminology module="shaders" />
 
-The learning spine is: modules and dependencies; uniforms and bindings; hooks and injections;
+The learning spine is: modules and dependencies; uniforms and bindings; targets and injections;
 assembly; plugins and passes; portability; then the built-in module and pass catalogs.
 
 ## Feature card
@@ -107,7 +107,7 @@ assembly; plugins and passes; portability; then the built-in module and pass cat
 <FoundationReadingPath module="shaders" />
 
 The [Shaders cookbook](/docs/api-guide/shaders/cookbook) covers authoring modules, exposing
-props, adding hooks, injecting source, composing dependencies, creating plugins, and defining passes.
+props, adding injection targets, injecting source, composing dependencies, creating plugins, and defining passes.
 
 ## API index
 
@@ -121,7 +121,7 @@ from the teaching path; use them after choosing the relevant descriptor family.
 
 - A module may provide WGSL, GLSL, or both. The selected backend requires a compatible source path.
 - Shaders assembles text and metadata; Core adapters perform validation and compilation.
-- Dependency order is deterministic, but conflicting hook or binding contracts remain author errors.
+- Dependency order is deterministic, but conflicting target or binding contracts remain author errors.
 - Plugins should state their source, binding, and backend requirements explicitly.
 
 ## Related modules

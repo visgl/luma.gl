@@ -17,11 +17,11 @@ const fragments: string[] = [];
 
 export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 
-/** Language-specific source inserted at a named shader anchor or hook. */
+/** Language-specific source inserted at a named shader target. */
 export type ShaderInjection = {
   /** Shader stage receiving the injection. */
   stage: 'vertex' | 'fragment';
-  /** Unqualified hook name or structural anchor such as #main-start. */
+  /** Unqualified hook name or built-in target such as #main-start. */
   target: string;
   /** GLSL source. Omit to skip this injection for GLSL assembly. */
   glsl?: string;
@@ -57,7 +57,9 @@ export function resolveShaderInjections(
     }
     const target = `${declaration.stage === 'vertex' ? 'vs' : 'fs'}:${declaration.target}`;
     if (!/^(vs|fs):(?:#(?:decl|main-start|main-end)|[A-Za-z_][A-Za-z0-9_]*)$/.test(target)) {
-      throw new Error(`Shader injection target "${target}" must be a named shader anchor or hook`);
+      throw new Error(
+        `Shader injection target "${target}" must be a named shader injection target`
+      );
     }
     resolved[target] ||= [];
     resolved[target].push({

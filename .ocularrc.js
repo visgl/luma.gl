@@ -99,7 +99,7 @@ const config = {
         'vector-field-lab': '/examples/showcase/vector-field-lab',
         'quantum-state-studio': '/examples/showcase/quantum-state-studio',
         'react-strict-mode': '/examples/integrations/react-strict-mode',
-        'shader-hooks': '/examples/tutorials/shader-hooks',
+        'shader-injection': '/examples/tutorials/shader-injection',
         'shader-modules': '/examples/tutorials/shader-modules',
         'slang-shaders': '/examples/tutorials/slang-shaders',
         'slang-particles': '/examples/tutorials/slang-particles',

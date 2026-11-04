@@ -47,7 +47,7 @@ export function configureArrowTextShaderAssembler<ShaderAssemblerType extends Sh
     return shaderAssembler;
   }
 
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'TEXT_ATTRIBUTE_VERTEX_TRANSFORM',
     stage: 'vertex',
     glsl: {

@@ -11,7 +11,7 @@ source when the feature must run on both backends.
 | --- | --- | --- |
 | Package reusable shader behavior | `ShaderModule` | Source plus typed configuration |
 | Convert props to shader values | `uniformTypes` and `getUniforms()` | Uniforms and bindings for `ShaderInputs` |
-| Declare an extension point | `addShaderHook()` | A stable callable hook |
+| Declare an extension point | `addShaderInjectionTarget()` | A stable callable target |
 | Extend a shader | `inject` | Ordered code at a supported target |
 | Share lower-level behavior | `dependencies` | De-duplicated module ordering |
 | Package optional behavior | `ShaderPlugin` | Modules, inputs, defines, and injections |
@@ -41,16 +41,16 @@ const exposure = {
 
 `ShaderInputs.setProps()` calls `getUniforms()` and separates ordinary values from resource bindings.
 
-## Add a hook
+## Add a callable target
 
 ```ts
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
 const assembler = new WGSLShaderAssembler();
-assembler.addShaderHook({name: 'FILTER_COLOR', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}});
+assembler.addShaderInjectionTarget({name: 'FILTER_COLOR', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}});
 ```
 
-Pass this assembler to the model through its `shaderAssembler` prop. The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated hook is a no-op.
+Pass this assembler to the model through its `shaderAssembler` prop. The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated target is a no-op.
 
 ## Inject source
 
@@ -63,7 +63,8 @@ const fade: ShaderPlugin = {
 };
 ```
 
-Prefer semantic hooks for supported extension contracts; use raw source anchors sparingly.
+Prefer callable targets for supported extension contracts; use built-in targets
+for declarations and small entry-point statements.
 
 ## Compose dependencies
 
@@ -107,5 +108,5 @@ Execute it with Engine’s `ShaderPassRenderer`. Each subpass is a draw and may 
 
 - [Shader programming guide](./)
 - [Shader assembly](./shader-assembly)
-- [Writing customizable shaders](./writing-customizable-shaders)
+- [Shader injection](./shader-injection)
 - [`ShaderModule`](/docs/api-reference/shaders/shader-module)

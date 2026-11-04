@@ -32,7 +32,7 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
 
 export function appendInjections(
   injections: Record<string, ResolvedShaderInjection[]>,
-  hookInjections: Record<string, ResolvedShaderInjection[]>,
+  targetInjections: Record<string, ResolvedShaderInjection[]>,
   declInjections: Record<string, ResolvedShaderInjection[]>,
   mainInjections: Record<string, ResolvedShaderInjection[]>
 ): void {
@@ -45,7 +45,7 @@ export function appendInjections(
         ? name === 'decl'
           ? declInjections
           : mainInjections
-        : hookInjections;
+        : targetInjections;
       injectionType[key] = injectionType[key] || [];
       injectionType[key].push(...injections[key]);
     } else {

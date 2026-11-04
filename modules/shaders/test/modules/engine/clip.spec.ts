@@ -9,11 +9,11 @@ import {
   clipShaderPlugin,
   GLSLShaderAssembler,
   WGSLShaderAssembler,
-  type ShaderHook
+  type ShaderInjectionTarget
 } from '@luma.gl/shaders';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
-const CLIP_HOOKS: ShaderHook[] = [
+const CLIP_HOOKS: ShaderInjectionTarget[] = [
   {
     name: 'RETURN_COLOR',
     stage: 'fragment',
@@ -44,7 +44,7 @@ it('clipShaderPlugin#WebGL2 clips instances and geometry without rebuilding', as
   const device = await getWebGLTestDevice();
   const shaderAssembler = new GLSLShaderAssembler();
   for (const hook of CLIP_HOOKS) {
-    shaderAssembler.addShaderHook(hook);
+    shaderAssembler.addShaderInjectionTarget(hook);
   }
 
   const model = new Model(device, {
@@ -90,7 +90,7 @@ it('clipShaderPlugin#WebGPU clips instances and geometry without rebuilding', as
 
   const shaderAssembler = new WGSLShaderAssembler();
   for (const hook of CLIP_HOOKS) {
-    shaderAssembler.addShaderHook(hook);
+    shaderAssembler.addShaderInjectionTarget(hook);
   }
 
   const model = new Model(device, {

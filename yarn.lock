@@ -16103,9 +16103,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks":
+"luma.gl-examples-shader-injection@workspace:examples/tutorials/shader-injection":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks"
+  resolution: "luma.gl-examples-shader-injection@workspace:examples/tutorials/shader-injection"
   dependencies:
     "@luma.gl/core": "npm:10.0.0-alpha.9"
     "@luma.gl/engine": "npm:10.0.0-alpha.9"

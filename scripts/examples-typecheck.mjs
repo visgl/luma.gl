@@ -81,7 +81,7 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'tutorials/hello-triangle',
   'tutorials/hello-triangle-geometry',
   'tutorials/hello-two-cubes',
-  'tutorials/shader-hooks',
+  'tutorials/shader-injection',
   'tutorials/shader-modules',
   'tutorials/slang-shaders',
   'tutorials/slang-particles',

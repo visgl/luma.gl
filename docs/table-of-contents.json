@@ -147,10 +147,10 @@
             "label": "Shader composition",
             "items": [
               "tutorials/shader-modules",
-              "tutorials/shader-hooks",
+              "tutorials/shader-injection",
               "tutorials/shader-plugins",
               "api-guide/shaders/shader-assembly",
-              "api-guide/shaders/writing-customizable-shaders"
+              "api-guide/shaders/shader-injection"
             ]
           },
           {
