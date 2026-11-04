@@ -449,7 +449,7 @@ unsupported target families instead of creating an independent extension runtime
   shader.
 - Standalone glTF scenegraphs do not own an opaque-scene capture pass; true transmitted scene-color
   refraction is provided by the shared experimental renderer and ANARI facade.
-- Generic `extras`, unsupported vendor metadata, automatic image-based-light extension ingestion,
+- Generic `extras`, vendor metadata outside the explicitly exposed entries, automatic image-based-light extension ingestion,
   and video-texture extensions are not silently presented as supported required features.
 
 For the complete extension-by-extension capability matrix, see
@@ -469,3 +469,35 @@ or flag changes so the host can supply updated hits.
 
 The caller supplies hit testing and instance paths. Interactivity graph event propagation and
 hover lifecycle are not yet integrated; strict required-extension support remains disabled.
+
+### XMP metadata
+
+`scenegraphs.metadata.get(category, index)` returns the authored `KHR_xmp_json_ld` packet for
+`asset`, `scene`, `node`, `mesh`, `material`, `image`, or `animation`. The asset index defaults to
+zero. Packets and their JSON-LD context are retained as supplied; no remote namespace URLs are fetched.
+Shared packet references return the same object. Scene and node objects and material instances also
+expose their packet in `metadata.xmp`; mesh group nodes do the same. Invalid packet indices fail
+before GPU allocation.
+
+### Scene geometry metadata
+
+`FB_geometry_metadata` is exposed on the corresponding scene root as
+`scene.metadata['fb:geometry']`. Its authored counts and bounds describe static source geometry.
+`scenegraphs.sceneBounds` is a load-time snapshot. Call `scene.getBounds()` for current bounds after
+changing scene transforms.
+
+```ts
+const result = createScenegraphsFromGLTF(device, gltf);
+const scene = result.scenes[0];
+const assetXMP = result.metadata.get('asset');
+const sceneXMP = scene.metadata.xmp;
+const geometrySummary = scene.metadata['fb:geometry'];
+// A source node or material can also have its own XMP packet.
+const nodeXMP = result.gltfNodeIndexToNodeMap.get(0)?.metadata.xmp;
+const materialXMP = result.materials[0]?.metadata.xmp;
+```
+
+The XMP packet is the authored JSON object, including namespace context and nested properties;
+no JSON-LD expansion or interpretation of arbitrary vocabularies is performed. `FB_geometry_metadata`
+is a vendor draft and this integration exposes its authored data, rather than computing or verifying
+its counts and bounds.

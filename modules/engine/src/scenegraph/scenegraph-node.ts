@@ -39,6 +39,8 @@ export class ScenegraphNode {
   position = new Vector3();
   rotation = new Vector3();
   scale = new Vector3(1, 1, 1);
+  /** Structured metadata associated with this scene node. */
+  metadata: Record<string, unknown> = {};
   userData: Record<string, unknown> = {};
 
   props: ScenegraphNodeProps = {};

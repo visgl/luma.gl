@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {parseGLTFMetadata} from '../parsers/parse-gltf-metadata';
 import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
 import {Device} from '@luma.gl/core';
 import {
@@ -45,6 +46,8 @@ export type GLTFScenegraphBounds = {
 export type GLTFScenegraphs = {
   /** Opt-in camera-facing scene traversal using resolved runtime node bindings. */
   billboards: BillboardController | null;
+  /** Metadata associated with source asset and scene resources. */
+  metadata: import('@luma.gl/engine').SceneMetadata;
   /** Shared physical joint declarations, separate from skeletal skinning. */
   joints: JointController;
   jointIssues: {code: string; path: string; message: string}[];
@@ -92,6 +95,7 @@ export function createScenegraphsFromGLTF(
   gltf: GLTFPostprocessed,
   options?: ParseGLTFOptions
 ): GLTFScenegraphs {
+  const metadata = parseGLTFMetadata(gltf);
   if (options?.strictExtensions) {
     assertSupportedGLTFExtensions(gltf, device);
   }
@@ -133,6 +137,36 @@ export function createScenegraphsFromGLTF(
         })
       )
     : null;
+  scenes.forEach((scene, index) => {
+    const packet = metadata.get('scene', index);
+    if (packet) scene.metadata['xmp'] = packet;
+    const geometryMetadata = gltf.scenes[index]?.extensions?.['FB_geometry_metadata'];
+    if (geometryMetadata) scene.metadata['fb:geometry'] = geometryMetadata;
+  });
+  const meshPackets = new Map<string, Record<string, unknown>>();
+  gltf.meshes.forEach((mesh, index) => {
+    const packet = metadata.get('mesh', index);
+    if (!packet) return;
+    meshPackets.set(mesh.id, packet);
+    const group = gltfMeshIdToNodeMap.get(mesh.id);
+    if (group) group.metadata['xmp'] = packet;
+  });
+  gltfNodeIndexToNodeMap.forEach((node, index) => {
+    const packet = metadata.get('node', index);
+    if (packet) node.metadata['xmp'] = packet;
+    if (!meshPackets.size) return;
+    const sourceMesh = gltf.nodes[index]?.mesh;
+    const meshPacket = sourceMesh && meshPackets.get(sourceMesh.id);
+    const mesh = node.userData['gltfMesh'];
+    if (meshPacket && mesh instanceof GroupNode) mesh.metadata['xmp'] = meshPacket;
+  });
+  materials.forEach((material, index) => {
+    const packet = metadata.get('material', index);
+    if (packet) {
+      material.metadata['xmp'] = packet;
+      for (const instance of materialInstances.get(index) || []) instance.metadata['xmp'] = packet;
+    }
+  });
 
   const jointDeclarations = parseGLTFJointDeclarations(gltf, gltfNodeIndexToNodeMap);
   const joints = new JointController(jointDeclarations.declarations.map(item => item.joint));
@@ -233,6 +267,7 @@ export function createScenegraphsFromGLTF(
   };
 
   return {
+    metadata,
     scenes,
     materials,
     billboards,
