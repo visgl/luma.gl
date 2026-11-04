@@ -40,6 +40,10 @@ export class NullRenderPass extends RenderPass {
 
   setParameters(parameters: RenderPassParameters = {}): void {}
 
+  override withParameters<T>(_parameters: RenderPassParameters, callback: () => T): T {
+    return callback();
+  }
+
   setPipeline(pipeline: RenderPipeline): void {
     this.pipeline = pipeline;
   }

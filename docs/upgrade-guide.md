@@ -1,5 +1,12 @@
 # Upgrade Guide
 
+### Render-pass color masks
+
+`RenderPassParameters.colorMask` has been removed. Configure `colorMask` on a
+render pipeline or through `Model.setParameters()` instead; WebGPU color write masks
+are pipeline state. Custom `RenderPass` backends must implement `withParameters()`
+with synchronous scoped restoration.
+
 ### Arrow stream output formats
 
 `convertArrowRecordBatchesToGPURecordBatches()` now rejects changes to an output

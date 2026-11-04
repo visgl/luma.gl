@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../model/gpu-vector-model';
 import {
   Buffer,
   Device,
@@ -119,7 +120,7 @@ export class GPUTableModel extends Model {
   }
 
   /** Skips a direct draw while an empty prepared storage range is still bound. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     const firstBatch = this.tableShaderBindings?.batches[0];
     if (
       firstBatch?.numRows === 0 &&
@@ -130,7 +131,7 @@ export class GPUTableModel extends Model {
     ) {
       return true;
     }
-    return super.draw(renderPass);
+    return super.draw(renderPass, options);
   }
 
   /** Replaces the bound GPU table when one is supplied. */

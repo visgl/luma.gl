@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
 import {
   type Buffer,
   type BufferLayout,
@@ -251,7 +252,15 @@ export class PathAttributeModel extends GPUTableModel {
   }
 
   /** Draws each generated path render batch against the supplied render pass. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    return options?.parameters
+      ? renderPass.withParameters(options.parameters, () =>
+          this.drawPathAttributeModelBatches(renderPass)
+        )
+      : this.drawPathAttributeModelBatches(renderPass);
+  }
+
+  private drawPathAttributeModelBatches(renderPass: RenderPass): boolean {
     const tableBatches = this.table?.batches || [];
     if (tableBatches.length > 0 && tableBatches.length !== this.renderBatches.length) {
       throw new Error(

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import type {ModelProps} from '@luma.gl/engine';
 import type {DynamicTexture} from '@luma.gl/core/dynamic';
@@ -100,7 +101,15 @@ export class TextAttributeModel extends GPUTableModel {
   }
 
   /** Draws each generated glyph render batch against the supplied render pass. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    return options?.parameters
+      ? renderPass.withParameters(options.parameters, () =>
+          this.drawTextAttributeModelBatches(renderPass)
+        )
+      : this.drawTextAttributeModelBatches(renderPass);
+  }
+
+  private drawTextAttributeModelBatches(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     try {
       for (const attributeState of this.attributeStates) {

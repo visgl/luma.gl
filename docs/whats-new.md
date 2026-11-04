@@ -1,5 +1,12 @@
 # What's New
 
+### Scoped model draw parameters
+
+`GPUVectorModel.draw(renderPass, {parameters})` and inherited `Model.draw()` accept
+temporary viewport, scissor, blend constant, and stencil reference overrides. Values
+are restored after all internal batch draws, including on errors. See
+[Model](./api-reference/engine/model.md) and [RenderPass](./api-reference/core/resources/render-pass.md).
+
 ### Cancellable Arrow batch conversion
 
 Arrow streaming conversion accepts an AbortSignal, validates consistent GPU formats

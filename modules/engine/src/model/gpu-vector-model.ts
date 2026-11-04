@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type TypedArray} from '@math.gl/core';
+import type {NumberArray4, NumberArray6, TypedArray} from '@math.gl/core';
 import {
   type RenderPipelineProps,
   type RenderPipelineParameters,
@@ -109,6 +109,21 @@ export type ModelBinding = Binding | TextureBindingSource | DynamicBuffer | Dyna
 type ModelBuffer = Buffer | DynamicBuffer;
 /** Shader layout subset needed while resolving texture binding sources. */
 export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
+
+/** Per-draw overrides shared by Model and GPUVectorModel. */
+export type ModelDrawOptions = {
+  /** Dynamic parameters scoped to this draw, including internal vector batches. */
+  parameters?: {
+    /** Viewport [x, y, width, height, minDepth?, maxDepth?]. */
+    viewport?: NumberArray4 | NumberArray6;
+    /** Scissor rectangle [x, y, width, height]. */
+    scissorRect?: NumberArray4;
+    /** Blend color used by constant blend factors. */
+    blendConstant?: NumberArray4;
+    /** Value used for stencil comparison and replacement. */
+    stencilReference?: number;
+  };
+};
 
 export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** GPU-only mesh inputs, indices, and topology. */
@@ -665,9 +680,17 @@ export class GPUVectorModel {
   /**
    * Issue one draw call.
    * @param renderPass - render pass to draw into
+   * @param options - Optional dynamic parameters restored after drawing, including on errors.
    * @returns `true` if the draw call was executed, `false` if resources were not ready.
    */
-  draw(renderPass: RenderPass): boolean {
+  draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    if (options?.parameters) {
+      return renderPass.withParameters(options.parameters, () => this._draw(renderPass));
+    }
+    return this._draw(renderPass);
+  }
+
+  private _draw(renderPass: RenderPass): boolean {
     if (this.indexVector?.length === 0) {
       this._lastDrawTimestamp = this.device.timestamp;
       this._needsRedraw = false;

@@ -36,6 +36,8 @@ export class WebGPURenderPass extends RenderPass {
   readonly handle: GPURenderPassEncoder;
   readonly framebuffer: WebGPUFramebuffer;
 
+  private parameters: Required<RenderPassParameters>;
+
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
 
@@ -57,6 +59,23 @@ export class WebGPURenderPass extends RenderPass {
     this.framebuffer =
       (renderPassProps.framebuffer as WebGPUFramebuffer) ||
       device.getCanvasContext().getCurrentFramebuffer();
+
+    // Existing attachment views determine the native render area, not framebuffer props.
+    const attachment =
+      this.framebuffer.colorAttachments.find(Boolean) || this.framebuffer.depthStencilAttachment;
+    const mipScale = 2 ** (attachment?.props.baseMipLevel ?? 0);
+    const width = attachment
+      ? Math.max(1, Math.floor(attachment.texture.width / mipScale))
+      : this.framebuffer.width;
+    const height = attachment
+      ? Math.max(1, Math.floor(attachment.texture.height / mipScale))
+      : this.framebuffer.height;
+    this.parameters = {
+      viewport: [0, 0, width, height, 0, 1],
+      scissorRect: [0, 0, width, height],
+      blendConstant: [0, 0, 0, 0],
+      stencilReference: 0
+    };
 
     const profiler = getCpuHotspotProfiler(this.device);
     if (profiler) {
@@ -230,6 +249,19 @@ export class WebGPURenderPass extends RenderPass {
 
   setParameters(parameters: RenderPassParameters): void {
     const {blendConstant, stencilReference, scissorRect, viewport} = parameters;
+    // Copy caller-owned arrays; replacing the record keeps nested snapshots stable.
+    this.parameters = {
+      viewport: viewport
+        ? [viewport[0], viewport[1], viewport[2], viewport[3], viewport[4] ?? 0, viewport[5] ?? 1]
+        : this.parameters.viewport,
+      scissorRect: scissorRect
+        ? [scissorRect[0], scissorRect[1], scissorRect[2], scissorRect[3]]
+        : this.parameters.scissorRect,
+      blendConstant: blendConstant
+        ? [blendConstant[0], blendConstant[1], blendConstant[2], blendConstant[3]]
+        : this.parameters.blendConstant,
+      stencilReference: stencilReference ?? this.parameters.stencilReference
+    };
     if (blendConstant) {
       this.handle.setBlendConstant(blendConstant);
     }
@@ -249,6 +281,22 @@ export class WebGPURenderPass extends RenderPass {
         viewport[4] ?? 0,
         viewport[5] ?? 1
       );
+    }
+  }
+
+  override withParameters<T>(parameters: RenderPassParameters, callback: () => T): T {
+    const previous = this.parameters;
+    const restore: RenderPassParameters = {};
+    if (parameters.viewport) restore.viewport = previous.viewport;
+    if (parameters.scissorRect) restore.scissorRect = previous.scissorRect;
+    if (parameters.blendConstant) restore.blendConstant = previous.blendConstant;
+    if (parameters.stencilReference !== undefined)
+      restore.stencilReference = previous.stencilReference;
+    try {
+      this.setParameters(parameters);
+      return callback();
+    } finally {
+      this.setParameters(restore);
     }
   }
 

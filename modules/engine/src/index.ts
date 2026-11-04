@@ -48,6 +48,7 @@ export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
 
+export type {ModelDrawOptions} from './model/gpu-vector-model';
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
 export type {MaterialProps} from './material/material';

@@ -34,8 +34,6 @@ import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 import {getGLDrawMode} from '../helpers/webgl-topology-utils';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 
-const COLOR_CHANNELS: NumberArray4 = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
-
 export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
   readonly handle = null;
@@ -154,30 +152,36 @@ export class WEBGLRenderPass extends RenderPass {
         ];
       } else {
         // WebGL viewports are 4 coordinates (X, Y)
-        glParameters.viewport = parameters.viewport as NumberArray4;
+        glParameters.viewport = [...parameters.viewport] as NumberArray4;
       }
     }
     if (parameters.scissorRect) {
       glParameters.scissorTest = true;
-      glParameters.scissor = parameters.scissorRect;
+      glParameters.scissor = [...parameters.scissorRect] as NumberArray4;
     }
     if (parameters.blendConstant) {
-      glParameters.blendColor = parameters.blendConstant;
+      glParameters.blendColor = [...parameters.blendConstant] as NumberArray4;
     }
     if (parameters.stencilReference !== undefined) {
       glParameters[GL.STENCIL_REF] = parameters.stencilReference;
       glParameters[GL.STENCIL_BACK_REF] = parameters.stencilReference;
     }
 
-    if ('colorMask' in parameters) {
-      glParameters.colorMask = COLOR_CHANNELS.map(channel =>
-        Boolean(channel & (parameters.colorMask as number))
-      );
-    }
-
     this.glParameters = glParameters;
 
     setGLParameters(this.device.gl, glParameters);
+  }
+
+  override withParameters<T>(parameters: RenderPassParameters, callback: () => T): T {
+    const previous = this.glParameters;
+    this.device.pushState();
+    try {
+      this.setParameters(parameters);
+      return callback();
+    } finally {
+      this.glParameters = previous;
+      this.device.popState();
+    }
   }
 
   setPipeline(pipeline: RenderPipeline): void {
