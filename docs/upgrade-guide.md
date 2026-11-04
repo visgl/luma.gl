@@ -1,5 +1,12 @@
 # Upgrade Guide
 
+### Arrow stream output formats
+
+`convertArrowRecordBatchesToGPURecordBatches()` now rejects changes to an output
+column’s GPU format across batches. Supply an explicit output format in the conversion
+schema when source types vary but should share one GPU representation. Previously
+yielded batches remain caller-owned; the rejected batch is destroyed.
+
 ### Shader injection target naming
 
 Shader hooks are now called injection targets throughout the public API. Update

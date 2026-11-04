@@ -1,5 +1,11 @@
 # What's New
 
+### Cancellable Arrow batch conversion
+
+Arrow streaming conversion accepts an AbortSignal, validates consistent GPU formats
+across batches, and releases unyielded results on cancellation or validation failure.
+Yielded batches remain caller-owned. See [Arrow conversion](./api-reference/arrow/arrow-conversion.mdx).
+
 ### Dual-language shader injection targets
 
 Shader injection target descriptors define one stage and name with separate GLSL and WGSL
