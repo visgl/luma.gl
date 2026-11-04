@@ -257,9 +257,10 @@ console.log(scenegraphs.gltfNodeIndexToNodeMap.get(3)?.display);
 console.log(scenegraphs.lights === originalLights); // true
 ```
 
-Changing `node.display` directly affects generic scenegraph traversal, but does not automatically
-refresh a previously parsed punctual-light array. The glTF animation controller handles that
-refresh for source-authored visibility channels.
+The importer resolves punctual lights to scenegraph node paths. The controller reads the live
+transforms and visibility on those paths. After changing a node programmatically, call
+`scenegraphs.punctualLights.update()` to refresh the same light array. A programmatically
+constructed scene can use `PunctualLightController` with its own node paths and light definitions.
 
 ## Typed animation pointers
 
