@@ -175,9 +175,12 @@ rectangle, blend constant and stencil reference. Mutating returned arrays does n
 change the pass. Restore a snapshot with `setParameters(snapshot)`.
 
 WebGPU reports values tracked through luma's pass API; native encoder calls bypass
-that tracking. WebGL reads the current context state. A disabled WebGL scissor is
-represented by `scissorRect: null`; setting null disables scissoring on WebGL and
-resets the rectangle to the full attachment extent on WebGPU. Render bundle encoders
+that tracking. WebGL reads the current context state. Its `WebGLRenderPassParameters`
+snapshot also includes `scissorTest` and `stencilBackReference`, preserving disabled
+scissor bounds and independent front/back stencil references when passed back to
+`setParameters`. Keep these fields when restoring a snapshot. Setting `scissorRect`
+to null disables scissoring on WebGL and resets the rectangle to the full attachment
+extent on WebGPU. Render bundle encoders
 reject snapshots because dynamic parameters belong to their executing render pass.
 
 Use `Model.draw(renderPass, {parameters})` for temporary overrides that are restored

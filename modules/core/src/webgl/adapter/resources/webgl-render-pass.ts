@@ -34,6 +34,14 @@ import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 import {getGLDrawMode} from '../helpers/webgl-topology-utils';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 
+/** WebGL snapshot fields preserve independent stencil faces and disabled scissor bounds. */
+export type WebGLRenderPassParameters = RenderPassParameters & {
+  /** Whether scissorRect is enabled when restoring a snapshot. */
+  scissorTest?: boolean;
+  /** Back-face reference accompanying stencilReference in a snapshot. */
+  stencilBackReference?: number;
+};
+
 export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
   readonly handle = null;
@@ -127,7 +135,7 @@ export class WEBGLRenderPass extends RenderPass {
   /**
    * Maps RenderPass parameters to GL parameters
    */
-  setParameters(parameters: RenderPassParameters = {}): void {
+  setParameters(parameters: WebGLRenderPassParameters = {}): void {
     const glParameters: GLParameters = {...this.glParameters};
 
     // Framebuffers are specified using parameters in WebGL
@@ -143,22 +151,15 @@ export class WEBGLRenderPass extends RenderPass {
 
     // Map the four renderpass parameters to WebGL parameters
     if (parameters.viewport) {
-      // WebGPU viewports are 6 coordinates (X, Y, Z)
-      if (parameters.viewport.length >= 6) {
-        glParameters.viewport = parameters.viewport.slice(0, 4) as NumberArray4;
-        glParameters.depthRange = [
-          parameters.viewport[4] as number,
-          parameters.viewport[5] as number
-        ];
-      } else {
-        // WebGL viewports are 4 coordinates (X, Y)
-        glParameters.viewport = [...parameters.viewport] as NumberArray4;
+      glParameters.viewport = parameters.viewport.slice(0, 4) as NumberArray4;
+      if (parameters.viewport.length === 6) {
+        glParameters.depthRange = parameters.viewport.slice(4) as [number, number];
       }
     }
     if (parameters.scissorRect === null) {
       glParameters.scissorTest = false;
     } else if (parameters.scissorRect) {
-      glParameters.scissorTest = true;
+      glParameters.scissorTest = parameters.scissorTest ?? true;
       glParameters.scissor = [...parameters.scissorRect] as NumberArray4;
     }
     if (parameters.blendConstant) {
@@ -166,7 +167,8 @@ export class WEBGLRenderPass extends RenderPass {
     }
     if (parameters.stencilReference !== undefined) {
       glParameters[GL.STENCIL_REF] = parameters.stencilReference;
-      glParameters[GL.STENCIL_BACK_REF] = parameters.stencilReference;
+      glParameters[GL.STENCIL_BACK_REF] =
+        parameters.stencilBackReference ?? parameters.stencilReference;
     }
 
     this.glParameters = glParameters;
@@ -174,13 +176,15 @@ export class WEBGLRenderPass extends RenderPass {
     setGLParameters(this.device.gl, glParameters);
   }
 
-  override getParameters(): RenderPassParameters {
+  override getParameters(): WebGLRenderPassParameters {
     const get = (parameter: number) => this.device.gl.getParameter(parameter);
     return {
       viewport: [...get(GL.VIEWPORT), ...get(GL.DEPTH_RANGE)] as NumberArray6,
-      scissorRect: get(GL.SCISSOR_TEST) ? ([...get(GL.SCISSOR_BOX)] as NumberArray4) : null,
+      scissorRect: [...get(GL.SCISSOR_BOX)] as NumberArray4,
+      scissorTest: get(GL.SCISSOR_TEST) as boolean,
       blendConstant: [...get(GL.BLEND_COLOR)] as NumberArray4,
-      stencilReference: get(GL.STENCIL_REF) as number
+      stencilReference: get(GL.STENCIL_REF) as number,
+      stencilBackReference: get(GL.STENCIL_BACK_REF) as number
     };
   }
 
@@ -190,7 +194,7 @@ export class WEBGLRenderPass extends RenderPass {
 
   setBindings(bindings: Bindings | BindingsByGroup, _options?: RenderPassBindingOptions): void {
     if (!this.pipeline) {
-      throw new Error('RenderPass.setPipeline() must be called before setBindings()');
+      throw new Error('Call setPipeline() before setBindings()');
     }
     this.bindings = flattenBindingsByGroup(
       normalizeBindingsByGroup(this.pipeline.shaderLayout, bindings)
@@ -206,7 +210,7 @@ export class WEBGLRenderPass extends RenderPass {
     const pipeline = this.pipeline;
     const vertexArray = this.vertexArray;
     if (!pipeline) {
-      throw new Error('RenderPass.setPipeline() must be called before draw()');
+      throw new Error('Call setPipeline() before draw()');
     }
     if (pipeline.shaderLayout.bindings.length > 0 && this.bindingsPipeline !== pipeline) {
       throw new Error('RenderPass.setBindings() must be called after setPipeline() before draw()');
