@@ -201,3 +201,22 @@ test('a programmatic scene uses the same billboard controller without a glTF ass
   expect(entry.node).toBe(leaf);
   expect(entry.modelMatrix.getScale()).toEqual([2, 3, 4]);
 });
+
+test('unsupported billboard definitions are rejected only when billboard traversal is enabled', async () => {
+  const {createScenegraphsFromGLTF, postProcessGLTF} = await import('@luma.gl/engine/gltf');
+  const {NullDevice} = await import('@luma.gl/core/test-utils');
+  const source = postProcessGLTF({
+    json: {
+      asset: {version: '2.0'},
+      nodes: [{extensions: {KHR_billboard: {rotationAxis: ['X']}}}],
+      scenes: [{nodes: [0]}],
+      scene: 0
+    }
+  });
+  const device = new NullDevice({});
+  const scenegraphs = createScenegraphsFromGLTF(device, source);
+  expect(scenegraphs.billboards).toBeNull();
+  expect(() => createScenegraphsFromGLTF(device, source, {billboards: {}})).toThrow();
+  scenegraphs.destroy();
+  device.destroy();
+});

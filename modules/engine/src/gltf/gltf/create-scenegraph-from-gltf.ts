@@ -96,6 +96,23 @@ export function createScenegraphsFromGLTF(
     assertSupportedGLTFExtensions(gltf, device);
   }
 
+  // Validate the optional profile before parseGLTF allocates models, textures, or buffers.
+  if (options?.billboards) {
+    const validationNodes = new Map<number, GroupNode>();
+    gltf.nodes.forEach((node, index) => {
+      if (node.extensions?.['KHR_billboard']) validationNodes.set(index, new GroupNode());
+    });
+    const validation = new BillboardController(
+      parseGLTFBillboards({
+        gltf,
+        scenes: [],
+        gltfNodeIndexToNodeMap: validationNodes,
+        allowLegacyYAxis: options.billboards.allowLegacyYAxis
+      })
+    );
+    validation.destroy();
+  }
+
   const {
     scenes,
     materials,
