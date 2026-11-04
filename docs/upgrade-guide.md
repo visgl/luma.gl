@@ -1,5 +1,12 @@
 # Upgrade Guide
 
+### Render-pass color masks
+
+`RenderPassParameters.colorMask` has been removed. Configure `colorMask` on a
+render pipeline or through `Model.setParameters()` instead; WebGPU color write masks
+are pipeline state. Custom `RenderPass` backends must implement `withParameters()`
+with synchronous scoped restoration.
+
 ### Shader injection target naming
 
 Shader hooks are now called injection targets throughout the public API. Update

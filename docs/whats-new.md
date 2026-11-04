@@ -1,5 +1,12 @@
 # What's New
 
+### Scoped model draw parameters
+
+`GPUVectorModel.draw(renderPass, {parameters})` and inherited `Model.draw()` accept
+temporary viewport, scissor, blend constant, and stencil reference overrides. Values
+are restored after all internal batch draws, including on errors. See
+[Model](./api-reference/engine/model.md) and [RenderPass](./api-reference/core/resources/render-pass.md).
+
 ### Dual-language shader injection targets
 
 Shader injection target descriptors define one stage and name with separate GLSL and WGSL
