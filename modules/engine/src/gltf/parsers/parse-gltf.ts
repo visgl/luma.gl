@@ -305,6 +305,8 @@ function createNodeForGLTFNode(
     children: [],
     matrix: gltfNode.matrix,
     display: gltfNode.extensions?.['KHR_node_visibility']?.visible !== false,
+    selectable: gltfNode.extensions?.['KHR_node_selectability']?.selectable !== false,
+    hoverable: gltfNode.extensions?.['KHR_node_hoverability']?.hoverable !== false,
     position: gltfNode.translation,
     rotation: gltfNode.rotation,
     scale: gltfNode.scale

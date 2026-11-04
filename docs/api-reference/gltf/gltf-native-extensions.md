@@ -454,3 +454,18 @@ unsupported target families instead of creating an independent extension runtime
 
 For the complete extension-by-extension capability matrix, see
 [glTF extension support](/docs/api-reference/gltf/gltf-extensions).
+
+### Node selection and hover flags
+
+The glTF importer populates the generic scenegraph node `selectable` and `hoverable` properties
+from `KHR_node_selectability` and `KHR_node_hoverability`, defaulting each to true. An ancestor's
+false value disables its entire subtree without modifying descendants' local values. Use
+`isScenegraphInteractionEnabled(path, kind)` to check a root-to-hit instance path or
+`getFirstScenegraphInteractionHit(hits, kind)` to skip ineligible hits in nearest-first order.
+Visibility does not affect these flags. STEP animation pointers can change them at runtime.
+`ScenegraphInteractionManager` also bubbles selection events and tracks per-controller hover
+entry and exit across ancestor paths. Call `updateHover` again after a pointer, camera, geometry,
+or flag changes so the host can supply updated hits.
+
+The caller supplies hit testing and instance paths. Interactivity graph event propagation and
+hover lifecycle are not yet integrated; strict required-extension support remains disabled.
