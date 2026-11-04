@@ -11,6 +11,12 @@ export type ScenegraphInteractionKind = 'select' | 'hover';
 export type ScenegraphInteractionHit = {
   /** Root-to-target path, including the hit node; distinguishes shared instances. */
   path: readonly ScenegraphNode[];
+  /** Optional intersection point in world coordinates. */
+  point?: readonly [number, number, number];
+  /** Optional world-space ray origin. */
+  rayOrigin?: readonly [number, number, number];
+  /** Application-specific picking information. */
+  data?: unknown;
 };
 
 /** Returns whether all nodes on an instance path permit the specified action. */
@@ -40,11 +46,14 @@ export type ScenegraphInteractionEvent = {
   currentTarget: ScenegraphNode;
   /** Identifies the pointer or controller. */
   controllerIndex: number;
+  /** The original host hit associated with this event. */
+  hit: ScenegraphInteractionHit;
 };
 
 /** Caller-owned hit testing with per-controller hover tracking and subtree event propagation. */
 export class ScenegraphInteractionManager {
-  private readonly hoveredPaths = new Map<number, readonly ScenegraphNode[]>();
+  private readonly hoveredHits = new Map<number, ScenegraphInteractionHit>();
+  private readonly pendingHover = new Map<number, (ScenegraphInteractionHit | undefined)[]>();
   private readonly onEvent: (event: ScenegraphInteractionEvent) => void;
 
   /** Creates a controller that reports bubbled selection and hover events. */
@@ -53,35 +62,52 @@ export class ScenegraphInteractionManager {
   }
 
   /** Selects the first eligible nearest-first hit and bubbles from target to root. */
-  select(
-    hits: readonly ScenegraphInteractionHit[],
+  select<Hit extends ScenegraphInteractionHit>(
+    hits: readonly Hit[],
     controllerIndex = 0
-  ): ScenegraphNode | undefined {
-    const path = getFirstScenegraphInteractionHit(hits, 'select')?.path;
-    if (!path) return undefined;
-    this.emitPath('select', path, 0, controllerIndex);
-    return path[path.length - 1];
+  ): Hit | undefined {
+    const hit = getFirstScenegraphInteractionHit(hits, 'select');
+    if (!hit) return undefined;
+    this.emitPath('select', hit, 0, controllerIndex);
+    return hit;
   }
 
   /** Updates hover from current hits; call after pointer, camera, object, or flag changes. */
-  updateHover(
-    hits: readonly ScenegraphInteractionHit[],
+  updateHover<Hit extends ScenegraphInteractionHit>(
+    hits: readonly Hit[],
     controllerIndex = 0
-  ): ScenegraphNode | undefined {
-    const previous = this.hoveredPaths.get(controllerIndex) || [];
-    const current = getFirstScenegraphInteractionHit(hits, 'hover')?.path || [];
-    let shared = 0;
-    while (
-      shared < previous.length &&
-      shared < current.length &&
-      previous[shared] === current[shared]
-    )
-      shared++;
-    this.emitPath('hover-out', previous, shared, controllerIndex);
-    this.emitPath('hover-in', current, shared, controllerIndex);
-    if (current.length) this.hoveredPaths.set(controllerIndex, [...current]);
-    else this.hoveredPaths.delete(controllerIndex);
-    return current[current.length - 1];
+  ): Hit | undefined {
+    const hit = getFirstScenegraphInteractionHit(hits, 'hover');
+    const queuedHit = hit ? {...hit, path: [...hit.path]} : undefined;
+    const activeQueue = this.pendingHover.get(controllerIndex);
+    if (activeQueue) {
+      activeQueue.push(queuedHit);
+      return hit;
+    }
+    const queue = [queuedHit];
+    this.pendingHover.set(controllerIndex, queue);
+    try {
+      while (queue.length) {
+        const next = queue.shift();
+        const previous = this.hoveredHits.get(controllerIndex);
+        const previousPath = previous?.path || [];
+        const nextPath = next?.path || [];
+        let shared = 0;
+        while (
+          shared < previousPath.length &&
+          shared < nextPath.length &&
+          previousPath[shared] === nextPath[shared]
+        )
+          shared++;
+        if (next) this.hoveredHits.set(controllerIndex, next);
+        else this.hoveredHits.delete(controllerIndex);
+        if (previous) this.emitPath('hover-out', previous, shared, controllerIndex);
+        if (next) this.emitPath('hover-in', next, shared, controllerIndex);
+      }
+    } finally {
+      this.pendingHover.delete(controllerIndex);
+    }
+    return hit;
   }
 
   /** Emits exits for one controller and drops its tracked hover path. */
@@ -92,13 +118,14 @@ export class ScenegraphInteractionManager {
   /** Emits events from the target towards the first ancestor outside the shared subtree. */
   private emitPath(
     type: ScenegraphInteractionEvent['type'],
-    path: readonly ScenegraphNode[],
+    hit: ScenegraphInteractionHit,
     first: number,
     controllerIndex: number
   ): void {
+    const {path} = hit;
     const target = path[path.length - 1];
     for (let index = path.length - 1; index >= first; index--) {
-      this.onEvent({type, target, currentTarget: path[index], controllerIndex});
+      this.onEvent({type, target, currentTarget: path[index], controllerIndex, hit});
     }
   }
 }

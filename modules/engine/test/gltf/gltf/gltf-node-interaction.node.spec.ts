@@ -56,6 +56,37 @@ describe('scenegraph interaction', () => {
     expect(events.splice(0)).toEqual(['hover-out:first:first:2', 'hover-out:first:root:2']);
   });
 
+  test('retains hit data and publishes hover state before callbacks', () => {
+    const node = new GroupNode({id: 'hit'});
+    const hit = {path: [node], point: [1, 2, 3] as [number, number, number], data: {id: 4}};
+    const events: string[] = [];
+    const manager = new ScenegraphInteractionManager(event => {
+      events.push(event.type);
+      expect(event.hit.data).toEqual({id: 4});
+      if (event.type === 'hover-in') manager.updateHover([hit]);
+    });
+    expect(manager.select([hit])).toBe(hit);
+    expect(manager.updateHover([hit])).toBe(hit);
+    expect(events).toEqual(['select', 'hover-in']);
+  });
+
+  test('queues reentrant hover changes until the current event finishes bubbling', () => {
+    const root = new GroupNode({id: 'root'});
+    const child = new GroupNode({id: 'child'});
+    const events: string[] = [];
+    const manager = new ScenegraphInteractionManager(event => {
+      events.push(`${event.type}:${event.currentTarget.id}`);
+      if (event.type === 'hover-in' && event.currentTarget === child) manager.clearHover();
+    });
+    manager.updateHover([{path: [root, child]}]);
+    expect(events).toEqual([
+      'hover-in:child',
+      'hover-in:root',
+      'hover-out:child',
+      'hover-out:root'
+    ]);
+  });
+
   test('imports flags and animates their local values using STEP pointers', () => {
     const json = {
       asset: {version: '2.0'},
