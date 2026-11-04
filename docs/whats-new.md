@@ -138,6 +138,11 @@ Generated textures have explicit ownership and can share a caller-owned LUT.
 ANARI retains its existing API through compatibility wrappers. See
 [PrefilteredEnvironment](./api-reference/engine/lighting/prefiltered-environment.md).
 
+### Fixed-width Arrow column streams
+
+Column streams preserve row transforms, residual-low values and validity vectors.
+They share cancellation, backpressure and unyielded-result cleanup with generic
+record-batch conversion. See [Arrow conversion](./api-reference/arrow/arrow-conversion.mdx).
 
 ### Scoped model draw parameters
 
