@@ -5,7 +5,7 @@
 import type {GLTFPostprocessed} from '@luma.gl/engine/gltf';
 import {Buffer, Texture} from '@luma.gl/core';
 import {ModelNode} from '@luma.gl/engine';
-import {pbrMaterial, skin} from '@luma.gl/shaders';
+import {pbrMaterial, pbrScene, skin} from '@luma.gl/shaders';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, test} from 'vitest';
@@ -70,16 +70,20 @@ test('emissive strength and sRGB texture affect shared PBR rendering on both bac
   expect(devices.length).toBeGreaterThan(0);
   for (const device of devices) {
     const scene = createScenegraphsFromGLTF(device, makeScene(), {
-      modelOptions: {modules: [pbrMaterial, skin]}
+      modelOptions: {
+        modules: [pbrScene, pbrMaterial, skin],
+        defines: {USE_SCENE_COLOR_MANAGEMENT: true}
+      }
     });
     const nodes: ModelNode[] = [];
     scene.scenes[0].traverse(node => {
       if (node instanceof ModelNode) nodes.push(node);
     });
+    const supportsFloat = device.isTextureFormatRenderable('rgba32float');
     const color = device.createTexture({
       width: 32,
       height: 32,
-      format: 'rgba8unorm',
+      format: supportsFloat ? 'rgba32float' : 'rgba8unorm',
       usage: Texture.RENDER | Texture.COPY_SRC
     });
     const depth = device.createTexture({
@@ -106,7 +110,11 @@ test('emissive strength and sRGB texture affect shared PBR rendering on both bac
           pbrMaterial: {emissiveStrength: strength, emissiveMapEnabled: useTexture}
         });
         node.model.shaderInputs.setProps({
-          lighting: {lights: [], useByteColors: false},
+          lighting: {
+            lights: [{type: 'ambient', color: [0, 0, 0], intensity: 0}],
+            useByteColors: false
+          },
+          pbrScene: {exposure: 1, toneMapMode: 0, outputEncoding: 0},
           pbrProjection: {
             modelMatrix: new Matrix4(),
             modelViewProjectionMatrix: new Matrix4(),
@@ -120,21 +128,20 @@ test('emissive strength and sRGB texture affect shared PBR rendering on both bac
       device.submit();
       color.readBuffer({width: 32, height: 32}, readback);
       const pixels = await readback.readAsync(0, layout.byteLength);
-      return pixels[(16 * 32 + 16) * 4];
+      const offset = 16 * layout.bytesPerRow + 16 * layout.bytesPerPixel;
+      return supportsFloat
+        ? new Float32Array(pixels.buffer, pixels.byteOffset + offset, 1)[0]
+        : pixels[offset] / 255;
     };
     try {
       const zero = await render(0, false);
       const normal = await render(1, false);
-      const high = await render(4, false);
+      const high = await render(supportsFloat ? 20 : 4, false);
       const textured = await render(1, true);
-      expect(zero).toBeLessThan(normal);
-      expect(normal).toBeLessThan(high);
-      expect(textured).toBeGreaterThan(zero);
-      expect(textured).toBeLessThan(normal);
-      // Default output applies a 2.2 display transfer, so compare in linear space.
-      expect(Math.pow(high / normal, 2.2)).toBeCloseTo(4, 0);
-      const textureLinear = Math.pow(textured / normal, 2.2);
-      expect(textureLinear).toBeCloseTo(0.216, 1);
+      expect(zero).toBe(0);
+      expect(normal).toBeCloseTo(0.1, 2);
+      expect(high).toBeCloseTo(supportsFloat ? 2 : 0.4, 2);
+      expect(textured / normal).toBeCloseTo(0.216, 1);
     } finally {
       readback.destroy();
       framebuffer.destroy();
