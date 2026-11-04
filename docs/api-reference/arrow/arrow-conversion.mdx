@@ -346,3 +346,42 @@ Streaming helpers preserve batch and buffer boundaries by creating one immutable
 uploaded into a new `GPUData` with its own buffer, and `GPUTable` aggregate
 vectors expose the logical column through `GPUVector.data[]`.
 instead of merging previous batches into one larger buffer.
+
+## Fixed-width column streams
+
+`convertArrowColumnsToGPUVectors(device, source, columnOptions, {signal})` converts
+an iterable, async iterable, or bare async iterator of Arrow vectors. Each yielded
+result has the same `vector`, optional `residualVector` and `validityVector`, and
+`destroy()` contract as `convertArrowColumnToGPUVector`, plus
+`sourceBatchIndex` and `sourceRowIndexOffset`. Column options retain `format`,
+`color`, `preserveNulls`, `fp64`, and per-row `transform` behavior.
+
+`convertArrowRecordBatchesToGPUColumns(device, source, columns, {signal})` applies
+those options to named fields in each record batch. Each column descriptor adds a
+unique `name` and optional `source` field path. Results contain a `columns` map,
+`length`, `sourceBatchIndex`, `sourceRowIndexOffset`, and an idempotent `destroy()`
+that releases all column outputs, including residual and validity buffers.
+
+```typescript
+import {convertArrowRecordBatchesToGPUColumns} from '@luma.gl/graph/arrow';
+
+for await (const prepared of convertArrowRecordBatchesToGPUColumns(device, batches, [
+  {name: 'position', format: 'float32x3', color: false, preserveNulls: false, fp64: true}
+], {signal})) {
+  try {
+    // Consume prepared.columns.position.vector and its residualVector here.
+  } finally {
+    prepared.destroy();
+  }
+}
+```
+
+Both APIs share the generic record-batch converter's pull-based lifecycle: there is
+no prefetch or implicit batch concatenation. Empty inputs retain their stream
+positions. Output formats and the presence of companion vectors must remain stable;
+a mismatch releases the rejected result. Failure partway through a batch releases
+columns already converted for that batch. Abort interrupts pending reads and requests
+source cleanup without waiting for a stalled iterator's `return()`. Synchronous
+conversion cannot be interrupted mid-call; its result is released if abort is observed
+before yielding. Already yielded results always remain caller-owned, including when
+the consumer breaks out of the loop.

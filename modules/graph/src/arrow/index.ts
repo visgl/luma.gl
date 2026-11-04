@@ -202,3 +202,12 @@ export {
   type ArrowVertexFormatOptions,
   type ArrowBufferLayoutOptions
 } from './gpu/arrow-shader-layout';
+export {
+  convertArrowColumnsToGPUVectors,
+  convertArrowRecordBatchesToGPUColumns,
+  type ArrowColumnConversionSource,
+  type ArrowGPUColumnStreamColumn,
+  type PreparedArrowGPUColumnChunk,
+  type PreparedArrowGPUColumnBatch
+} from './gpu/arrow-column-stream';
+export type {ArrowConversionStreamOptions} from './gpu/arrow-conversion-stream';

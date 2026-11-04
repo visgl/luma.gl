@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {convertArrowStream, validateArrowStreamFormats} from './arrow-conversion-stream';
 import {type Device} from '@luma.gl/core';
 import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField} from '@luma.gl/graph/gpu-tables';
@@ -235,42 +236,35 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
   const formats = new Map<string, string | undefined>();
   let sourceBatchIndex = 0;
   let sourceRowIndexOffset = 0;
-  for await (const recordBatch of iterateRecordBatches(source, signal)) {
-    signal?.throwIfAborted();
-    const batchSchema: ArrowGPUTableConversionSchema = {
-      columns: schema.columns.map(column => {
-        const origin = temporalOrigins.get(column.name);
-        return origin === undefined || column.temporal?.origin !== undefined
-          ? column
-          : {...column, temporal: {...column.temporal, origin}};
-      })
-    };
-    const prepared = await convertArrowRecordBatchToGPURecordBatch(
-      device,
-      recordBatch,
-      batchSchema,
-      {sourceBatchIndex, sourceRowIndexOffset}
-    );
-    try {
-      signal?.throwIfAborted();
-      for (const [name, vector] of Object.entries(prepared.vectors)) {
-        const expected = formats.get(name);
-        if (formats.has(name) && vector.format !== expected) {
-          throw new Error(
-            `Arrow stream column "${name}" format changed: ${expected} -> ${vector.format}`
-          );
-        }
-        formats.set(name, vector.format);
-      }
+  yield* convertArrowStream(
+    source,
+    recordBatch => {
+      const batchSchema: ArrowGPUTableConversionSchema = {
+        columns: schema.columns.map(column => {
+          const origin = temporalOrigins.get(column.name);
+          return origin === undefined || column.temporal?.origin !== undefined
+            ? column
+            : {...column, temporal: {...column.temporal, origin}};
+        })
+      };
+      return convertArrowRecordBatchToGPURecordBatch(device, recordBatch, batchSchema, {
+        sourceBatchIndex,
+        sourceRowIndexOffset
+      });
+    },
+    (prepared, recordBatch) => {
+      validateArrowStreamFormats(
+        formats,
+        Object.fromEntries(
+          Object.entries(prepared.vectors).map(([name, vector]) => [name, vector.format])
+        )
+      );
       captureStreamingTemporalOrigins(recordBatch, schema, prepared.batch, temporalOrigins);
-    } catch (error) {
-      prepared.destroy();
-      throw error;
-    }
-    yield prepared;
-    sourceRowIndexOffset += recordBatch.numRows;
-    sourceBatchIndex++;
-  }
+      sourceRowIndexOffset += recordBatch.numRows;
+      sourceBatchIndex++;
+    },
+    {signal}
+  );
 }
 
 function validateTableConversionSchema(schema: ArrowGPUTableConversionSchema): void {
@@ -350,67 +344,4 @@ function sumConversionCosts(costs: readonly ArrowGPUConversionCost[]): ArrowGPUC
       allocatesGPUStorage: false
     }
   );
-}
-
-/** Pulls one batch at a time, allowing abort to interrupt a stalled next(). */
-async function* iterateRecordBatches(
-  source: ArrowRecordBatchConversionSource,
-  signal?: AbortSignal
-): AsyncGenerator<RecordBatch> {
-  signal?.throwIfAborted();
-  const iterator =
-    Symbol.asyncIterator in source
-      ? source[Symbol.asyncIterator]()
-      : Symbol.iterator in source
-        ? source[Symbol.iterator]()
-        : source;
-  let completed = false;
-  try {
-    for (;;) {
-      const result = await readRecordBatch(iterator, signal);
-      signal?.throwIfAborted();
-      if (result.done) {
-        completed = true;
-        return;
-      }
-      yield result.value;
-    }
-  } finally {
-    if (!completed) {
-      // Async generators may queue return() behind a stalled next(); do not delay abort.
-      const cleanup = Promise.resolve().then(() => iterator.return?.());
-      if (signal?.aborted) void cleanup.catch(() => {});
-      else await cleanup;
-    }
-  }
-}
-
-function readRecordBatch(
-  iterator: Iterator<RecordBatch> | AsyncIterator<RecordBatch>,
-  signal?: AbortSignal
-): Promise<IteratorResult<RecordBatch>> {
-  signal?.throwIfAborted();
-  if (!signal) return Promise.resolve(iterator.next());
-  return new Promise((resolve, reject) => {
-    const abort = () => {
-      signal.removeEventListener('abort', abort);
-      reject(signal.reason);
-    };
-    signal.addEventListener('abort', abort, {once: true});
-    Promise.resolve()
-      .then(() => {
-        signal.throwIfAborted();
-        return iterator.next();
-      })
-      .then(
-        result => {
-          signal.removeEventListener('abort', abort);
-          resolve(result);
-        },
-        error => {
-          signal.removeEventListener('abort', abort);
-          reject(error);
-        }
-      );
-  });
 }
