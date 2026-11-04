@@ -89,6 +89,7 @@ export type {
   ScenegraphInteractionHit,
   ScenegraphInteractionEvent
 } from './scenegraph/scenegraph-interaction';
+export {SceneMetadata} from './scenegraph/scene-metadata';
 export type {ScenegraphBounds} from './scenegraph/scenegraph-bounds';
 export type {
   DepthSortedTraversalContext,

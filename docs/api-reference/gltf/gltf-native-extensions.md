@@ -469,3 +469,11 @@ or flag changes so the host can supply updated hits.
 
 The caller supplies hit testing and instance paths. Interactivity graph event propagation and
 hover lifecycle are not yet integrated; strict required-extension support remains disabled.
+### XMP metadata
+
+`scenegraphs.metadata.get(category, index)` returns the authored `KHR_xmp_json_ld` packet for
+`asset`, `scene`, `node`, `mesh`, `material`, `image`, or `animation`. The asset index defaults to
+zero. Packets and their JSON-LD context are retained as supplied; no remote namespace URLs are fetched.
+Shared packet references return the same object. Scene and node objects and material instances also
+expose their packet in `metadata.xmp`; mesh group nodes do the same. Invalid packet indices fail
+before GPU allocation.
