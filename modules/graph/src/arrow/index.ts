@@ -31,6 +31,7 @@ export {
   convertArrowTableToGPUTable,
   planArrowTableGPUConversion,
   type ArrowRecordBatchConversionSource,
+  type ArrowRecordBatchConversionOptions,
   type ArrowGPUTableConversionColumn,
   type ArrowGPUTableConversionPlan,
   type ArrowGPUTableConversionSchema,
