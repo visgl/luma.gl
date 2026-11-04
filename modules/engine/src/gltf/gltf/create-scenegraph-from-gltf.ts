@@ -140,6 +140,8 @@ export function createScenegraphsFromGLTF(
   scenes.forEach((scene, index) => {
     const packet = metadata.get('scene', index);
     if (packet) scene.metadata['xmp'] = packet;
+    const geometryMetadata = gltf.scenes[index]?.extensions?.['FB_geometry_metadata'];
+    if (geometryMetadata) scene.metadata['fb:geometry'] = geometryMetadata;
   });
   gltfNodeIndexToNodeMap.forEach((node, index) => {
     const packet = metadata.get('node', index);

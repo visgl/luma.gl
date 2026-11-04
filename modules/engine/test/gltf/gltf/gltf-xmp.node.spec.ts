@@ -88,4 +88,36 @@ describe('glTF XMP scene metadata', () => {
     result.destroy();
     device.destroy();
   });
+
+  test('populates per-scene FB geometry metadata without replacing live bounds', () => {
+    const first = {
+      vertexCount: 8,
+      primitiveCount: 12,
+      sceneBounds: {min: [-1, -2, -3], max: [1, 2, 3]}
+    };
+    const second = {
+      vertexCount: 4,
+      primitiveCount: 2,
+      sceneBounds: {min: [0, 0, 0], max: [1, 1, 0]}
+    };
+    const source = {
+      asset: {version: '2.0'},
+      extensionsUsed: ['FB_geometry_metadata', 'KHR_xmp_json_ld'],
+      extensions: {KHR_xmp_json_ld: {packets: [packet]}},
+      scenes: [
+        {nodes: [], extensions: {FB_geometry_metadata: first, ...reference}},
+        {nodes: [], extensions: {FB_geometry_metadata: second}}
+      ],
+      nodes: []
+    };
+    const gltf = postProcessGLTF({json: source, buffers: [], images: []} as any);
+    const device = new NullDevice({});
+    const result = createScenegraphsFromGLTF(device, gltf);
+    expect(result.scenes[0].metadata['fb:geometry']).toBe(first);
+    expect(result.scenes[0].metadata.xmp).toBe(packet);
+    expect(result.scenes[1].metadata['fb:geometry']).toBe(second);
+    expect(result.sceneBounds[0].bounds).toBeNull();
+    result.destroy();
+    device.destroy();
+  });
 });
