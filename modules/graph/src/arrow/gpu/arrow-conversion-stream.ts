@@ -42,7 +42,9 @@ export function validateArrowStreamFormats(
 ): void {
   for (const [name, format] of Object.entries(formats)) {
     if (expected.has(name) && expected.get(name) !== format) {
-      throw new Error(`Arrow stream column "${name}" format changed`);
+      throw new Error(
+        `Arrow stream column "${name}" format changed: ${expected.get(name) ?? 'missing'} -> ${format ?? 'missing'}`
+      );
     }
     expected.set(name, format);
   }
