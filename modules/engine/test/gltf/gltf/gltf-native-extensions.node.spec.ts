@@ -163,7 +163,7 @@ describe('standards-native glTF extension runtime', () => {
     }
   });
 
-  test('refreshes imported punctual lights from live scenegraph transforms', () => {
+  test('refreshes imported punctual lights after programmatic and animated transforms', () => {
     const source = postProcessGLTF({
       json: {
         asset: {version: '2.0'},
@@ -175,6 +175,36 @@ describe('standards-native glTF extension runtime', () => {
         scenes: [{nodes: [0]}]
       }
     });
+    const times = new Float32Array([0, 1]);
+    const positions = new Float32Array([1, 0, 0, 5, 0, 0]);
+    source.accessors = [
+      {
+        id: 'times',
+        componentType: 5126,
+        type: 'SCALAR',
+        count: 2,
+        components: 1,
+        value: times,
+        bufferView: {data: {buffer: times.buffer}}
+      },
+      {
+        id: 'positions',
+        componentType: 5126,
+        type: 'VEC3',
+        count: 2,
+        components: 3,
+        value: positions,
+        bufferView: {data: {buffer: positions.buffer}}
+      }
+    ] as GLTFPostprocessed['accessors'];
+    source.animations = [
+      {
+        id: 'move-light-parent',
+        channels: [{sampler: 0, target: {node: 0, path: 'translation'}}],
+        samplers: [{input: 0, output: 1}]
+      }
+    ] as GLTFPostprocessed['animations'];
+
     const device = new NullDevice({});
     const scenegraphs = createScenegraphsFromGLTF(device, source);
 
@@ -187,6 +217,9 @@ describe('standards-native glTF extension runtime', () => {
       scenegraphs.punctualLights.update();
       expect(scenegraphs.lights).toBe(lights);
       expect(lights[0]).toMatchObject({type: 'point', position: [3, 2, 0]});
+
+      scenegraphs.animator.setTime(750);
+      expect(lights[0]).toMatchObject({type: 'point', position: [4, 2, 0]});
     } finally {
       destroyScenegraphs(device, scenegraphs);
     }
