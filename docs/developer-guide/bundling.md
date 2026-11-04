@@ -11,8 +11,8 @@ Always assess luma.gl's impact using a minified production build of the actual a
 Applications can build directly on luma.gl's portable GPU abstraction without directly using higher-level engine or shader APIs. This configuration consists of:
 
 * [`@luma.gl/core`](https://luma.gl/docs/api-reference/core.md), which defines the portable `Device` and resource APIs;
-* [`@luma.gl/webgpu`](https://luma.gl/docs/api-reference/webgpu.md), which implements the portable subset using WebGPU; and
-* [`@luma.gl/webgl`](https://luma.gl/docs/api-reference/webgl.md), which implements the portable subset using WebGL 2.
+* [`@luma.gl/core/webgpu`](https://luma.gl/docs/api-reference/webgpu.md), which implements the portable subset using WebGPU; and
+* [`@luma.gl/core/webgl`](https://luma.gl/docs/api-reference/webgl.md), which implements the portable subset using WebGL 2.
 
 The backends share a common API where practical, but they do not have identical capabilities. For example, compute pipelines are available only on WebGPU.
 
@@ -21,9 +21,9 @@ For example, an application can prefer WebGPU and fall back to WebGL:
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -38,7 +38,7 @@ const device = await luma.createDevice({
 });
 ```
 
-Import only the adapter or adapters the application can use. A WebGPU-only application should not import `@luma.gl/webgl`, and a WebGL-only application should not import `@luma.gl/webgpu`. See [Installing](https://luma.gl/docs/developer-guide/installing.md#a-minimal-install) for package setup and [WebGPU versus WebGL](https://luma.gl/docs/api-guide/background/webgpu-vs-webgl.md) for backend selection guidance.
+Import only the adapter or adapters the application can use. A WebGPU-only application should not import `@luma.gl/core/webgl`, and a WebGL-only application should not import `@luma.gl/core/webgpu`. See [Installing](https://luma.gl/docs/developer-guide/installing.md#a-minimal-install) for package setup and [WebGPU versus WebGL](https://luma.gl/docs/api-guide/background/webgpu-vs-webgl.md) for backend selection guidance.
 
 ### Portability-layer Bundle Sizes[​](#portability-layer-bundle-sizes "Direct link to Portability-layer Bundle Sizes")
 
@@ -72,10 +72,10 @@ These numbers cover the low-level portability layer only. Shaders, application c
 
 Applications commonly add two first-class libraries above the portability layer:
 
-* [`@luma.gl/shadertools`](https://luma.gl/docs/api-reference/shadertools.md) assembles reusable WGSL and GLSL shader modules, plugins, and passes. It does not compile shaders or call WebGPU or WebGL itself, so it can be used with either the core API or the engine. See the [Shader API guide](https://luma.gl/docs/api-guide/shaders.md).
-* [`@luma.gl/engine`](https://luma.gl/docs/api-reference/engine.md) builds on `@luma.gl/core` and `@luma.gl/shadertools` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and shader-pass rendering.
+* [`@luma.gl/shaders`](https://luma.gl/docs/api-reference/shaders.md) assembles reusable WGSL and GLSL shader modules, plugins, and passes. It does not compile shaders or call WebGPU or WebGL itself, so it can be used with either the core API or the engine. See the [Shader API guide](https://luma.gl/docs/api-guide/shaders.md).
+* [`@luma.gl/engine`](https://luma.gl/docs/api-reference/engine.md) builds on `@luma.gl/core` and `@luma.gl/shaders` to provide `Model`, `AnimationLoop`, geometry, scenegraph, compute, and shader-pass rendering.
 
-Focused packages such as `@luma.gl/effects`, `@luma.gl/gltf`, and `@luma.gl/gpgpu` build on one or more of these layers. Experimental GPU tables and models live under `@luma.gl/experimental`. These packages are not automatically included by the engine. See the [API overview](https://luma.gl/docs/api-guide.md) and [module catalog](https://luma.gl/docs/api-reference.md) for the complete package map.
+Focused packages and subpaths such as `@luma.gl/engine/effects`, `@luma.gl/engine/gltf`, and `@luma.gl/graph/gpu-simple-graph` build on one or more of these layers. GPU tables live under `@luma.gl/graph/gpu-tables`; experimental path/polygon models live under `@luma.gl/engine/models`. These APIs are not automatically included by the engine root. See the [API overview](https://luma.gl/docs/api-guide.md) and [module catalog](https://luma.gl/docs/api-reference.md) for the complete package map.
 
 ### Shader Source Bundling[​](#shader-source-bundling "Direct link to Shader Source Bundling")
 
@@ -87,7 +87,7 @@ luma.gl stores shader source as strings in the JavaScript module graph and does 
 | WebGPU only                    | A unified WGSL string (`source`)                         |
 | WebGPU with a WebGL 2 fallback | Both WGSL and GLSL                                       |
 
-A portable `ShaderModule` commonly references all three strings from one object, and `Model` selects the active fields after creating a device. Tree-shaking can remove a wholly unused shader module, but generally cannot remove the inactive properties of a module object that remains reachable. Importing only one backend therefore removes the other backend implementation, but does not guarantee that the unused shader dialect is removed from portable engine or shadertools code. Shader `defines` are evaluated during shader assembly, after the JavaScript has loaded, and do not reduce transfer size. JavaScript minifiers also do not normally minify the contents of shader strings.
+A portable `ShaderModule` commonly references all three strings from one object, and `Model` selects the active fields after creating a device. Tree-shaking can remove a wholly unused shader module, but generally cannot remove the inactive properties of a module object that remains reachable. Importing only one backend therefore removes the other backend implementation, but does not guarantee that the unused shader dialect is removed from portable engine or shaders code. Shader `defines` are evaluated during shader assembly, after the JavaScript has loaded, and do not reduce transfer size. JavaScript minifiers also do not normally minify the contents of shader strings.
 
 Today, fixed-backend applications can keep their own GLSL and WGSL definitions in separate entry points and import only the matching dialect. Work is ongoing to make this selection configurable at build time for published shader libraries. The [draft deck.gl prototype](https://github.com/visgl/deck.gl/pull/10504) uses a TypeScript transform and a package export condition to produce a WebGL-only artifact with recognized WGSL sources removed. The intended luma.gl design would let bundlers select portable, WebGL-only, or WebGPU-only shader assets without changing application imports.
 
@@ -99,13 +99,13 @@ The August 2026 reference measurements below use the same esbuild, browser targe
 
 A full public-entry fixture retains every runtime export. This makes it a useful broad regression reference, but it is not representative of an application that imports a few named APIs:
 
-| Full public-entry fixture                         | Reference minified | Reference gzip | Reference Brotli |
-| ------------------------------------------------- | ------------------ | -------------- | ---------------- |
-| `@luma.gl/shadertools`, excluding core            | 321.9 KB           | 73.4 KB        | 58.8 KB          |
-| `@luma.gl/engine`, excluding core and shadertools | 163.6 KB           | 45.4 KB        | 38.4 KB          |
-| core + shadertools + engine                       | 582.9 KB           | 145.9 KB       | 121.1 KB         |
+| Full public-entry fixture                     | Reference minified | Reference gzip | Reference Brotli |
+| --------------------------------------------- | ------------------ | -------------- | ---------------- |
+| `@luma.gl/shaders`, excluding core            | 321.9 KB           | 73.4 KB        | 58.8 KB          |
+| `@luma.gl/engine`, excluding core and shaders | 163.6 KB           | 45.4 KB        | 38.4 KB          |
+| core + shaders + engine                       | 582.9 KB           | 145.9 KB       | 121.1 KB         |
 
-The first two rows externalize the named peer packages so that shared code is not counted twice. The combined row adds the separately compressed core, shadertools, and engine fixtures; it is a stable comparison point, not a required chunking strategy.
+The first two rows externalize the named peer packages so that shared code is not counted twice. The combined row adds the separately compressed core, shaders, and engine fixtures; it is a stable comparison point, not a required chunking strategy.
 
 Named-import fixtures demonstrate how tree-shaking changes the result:
 
@@ -139,7 +139,7 @@ Tree-shaking happens across the complete application graph. A source file or npm
 
 ### Dynamic Imports and Backend Chunks[​](#dynamic-imports-and-backend-chunks "Direct link to Dynamic Imports and Backend Chunks")
 
-`type: 'best-available'` selects among loaded adapters at runtime; it is not a build-time signal that lets a bundler remove a backend. luma.gl does contain literal dynamic imports in several places: the WebGL and WebGPU adapters import their concrete device implementations when `create()` runs, and `@luma.gl/gpgpu` imports the operation backend that matches the first asynchronously evaluated device.
+`type: 'best-available'` selects among loaded adapters at runtime; it is not a build-time signal that lets a bundler remove a backend. luma.gl does contain literal dynamic imports in several places: the WebGL and WebGPU adapters import their concrete device implementations when `create()` runs, and `@luma.gl/graph/gpu-simple-graph` imports the operation backend that matches the first asynchronously evaluated device.
 
 A literal `import()` is a possible code-splitting boundary, not automatic code removal. With ESM code splitting enabled, a bundler can emit a separate chunk and fetch it on first use. A single-file build includes the same code in its initial artifact, while shared dependencies may be hoisted or preloaded even in a split build. An async chunk reduces total transfer only for users who never take the path that loads it.
 
@@ -158,7 +158,7 @@ async function loadAdapter(type: 'webgpu' | 'webgl') {
 
   if (type === 'webgpu') {
 
-    const {webgpuAdapter} = await import('@luma.gl/webgpu');
+    const {webgpuAdapter} = await import('@luma.gl/core/webgpu');
 
     return webgpuAdapter;
 
@@ -166,7 +166,7 @@ async function loadAdapter(type: 'webgpu' | 'webgl') {
 
 
 
-  const {webgl2Adapter} = await import('@luma.gl/webgl');
+  const {webgl2Adapter} = await import('@luma.gl/core/webgl');
 
   return webgl2Adapter;
 

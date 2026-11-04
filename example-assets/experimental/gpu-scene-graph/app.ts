@@ -17,8 +17,8 @@ import {
   type GPUReadbackTicket,
   type GPUScene,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
-import {makeGPUSceneFromCPUScene} from '@luma.gl/experimental/gpu-tables';
+} from '@luma.gl/graph/gpu-core';
+import {makeGPUSceneFromCPUScene} from '@luma.gl/graph/gpu-tables';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -256,35 +256,37 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
         };
       }
     });
-    new GPUVisibilityWorkflow({
-      id: 'scene-graph-visible-rows',
-      predicates: [{kind: 'bounds', mask: visibility.view}],
-      output: visibleRows.view,
-      count: visibleCount.view
-    }).addToGraph(graph);
-    new GPUSceneDrawGeneration({
-      id: 'scene-graph-draw-generation',
-      scene: source,
-      visibility: visibility.view,
-      commands: commandViews,
-      requiredCount: requiredCount.view,
-      publishedCount: publishedCount.view,
-      overflow: drawOverflow.view
-    }).addToGraph(graph);
-    new GPUSceneResourceGroups({
-      id: 'scene-graph-resource-groups',
-      scene: source,
-      commands: commandViews,
-      groups: SCENE_GRAPH_GROUPS.map((_, groupIndex) => ({
-        id: groupIndex,
-        firstCommand: groupIndex * SCENE_GRAPH_OBJECTS_PER_GROUP,
-        commandCount: SCENE_GRAPH_OBJECTS_PER_GROUP,
-        geometryId: 0
-      })),
-      counts: groupCounts.view,
-      overflows: groupOverflows.view,
-      overflow: groupOverflow.view
-    }).addToGraph(graph);
+    graph.add([
+      new GPUVisibilityWorkflow({
+        id: 'scene-graph-visible-rows',
+        predicates: [{kind: 'bounds', mask: visibility.view}],
+        output: visibleRows.view,
+        count: visibleCount.view
+      }),
+      new GPUSceneDrawGeneration({
+        id: 'scene-graph-draw-generation',
+        scene: source,
+        visibility: visibility.view,
+        commands: commandViews,
+        requiredCount: requiredCount.view,
+        publishedCount: publishedCount.view,
+        overflow: drawOverflow.view
+      }),
+      new GPUSceneResourceGroups({
+        id: 'scene-graph-resource-groups',
+        scene: source,
+        commands: commandViews,
+        groups: SCENE_GRAPH_GROUPS.map((_, groupIndex) => ({
+          id: groupIndex,
+          firstCommand: groupIndex * SCENE_GRAPH_OBJECTS_PER_GROUP,
+          commandCount: SCENE_GRAPH_OBJECTS_PER_GROUP,
+          geometryId: 0
+        })),
+        counts: groupCounts.view,
+        overflows: groupOverflows.view,
+        overflow: groupOverflow.view
+      })
+    ]);
     graph.addComputePass({
       id: 'scene-graph-picking',
       resources: [
@@ -377,6 +379,7 @@ export default class GPUSceneGraphAnimationLoopTemplate extends AnimationLoopTem
     this.controls = root;
     const host = root.querySelector<HTMLElement>('[data-scene-graph-inspector]')!;
     this.inspectorPanel = new GPUCommandGraphInspectorPanel(host, {
+      inspector: this.graphInspector,
       graphLabels: {[this.resources.compiled.id]: 'Hierarchy → scene → visibility → draw'}
     });
     this.inspectorPanel.update(this.graphInspector.getSnapshot(), this.resources.compiled.id);

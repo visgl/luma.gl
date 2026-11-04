@@ -2,6 +2,8 @@
 
 [Workflow](https://luma.gl/docs/api-guide/engine/interactivity.md)[OrbitControls](https://luma.gl/docs/api-reference/engine/orbit-controls.md)[PickingManager](https://luma.gl/docs/api-reference/engine/picking-manager.md)
 
+For engine behavior graphs, property adapters, and physics hosts, see [Scenegraph interactivity](https://luma.gl/docs/api-guide/engine/scenegraph-interactivity.md). This guide covers the browser-input, camera, and picking layer that supplies selection to those behaviors.
+
 ## Outcome[​](#outcome "Direct link to Outcome")
 
 Interactive rendering has three distinct steps:
@@ -16,7 +18,7 @@ Keeping those steps separate prevents controls, picking, and highlighting from b
 
 Engine provides focused helpers, not an application-wide event system:
 
-* `OrbitControls` converts canvas pointer, pinch, two-finger pan, and wheel input into camera state.
+* `OrbitControls` converts canvas pointer, pinch, optional two-finger roll and pan, and wheel input into camera state.
 * `PickingManager` renders object identity into an offscreen target and reads the identity at a requested pixel.
 * Highlighting remains a normal render concern. Store the hovered or selected identity, pass it to the shader, and render that object differently.
 
@@ -24,7 +26,7 @@ Use browser events or an application framework to decide which canvas receives i
 
 ## Camera interaction[​](#camera-interaction "Direct link to Camera interaction")
 
-`OrbitControls` attaches mouse, wheel, and touch orbit behavior to one HTML canvas. A single finger rotates the camera, two fingers pinch to zoom, and enabling panning lets two fingers move the orbit target. Update the controls before deriving the view matrix, then invalidate the view only when its state changes.
+`OrbitControls` attaches mouse, wheel, and touch orbit behavior to one HTML canvas. A single finger changes yaw and pitch; two fingers pinch to zoom; enabling rotation lets a twist roll the camera up axis; enabling panning lets two fingers move the orbit target. Update the controls before deriving the view matrix, then invalidate the view only when its state changes.
 
 ```
 import {OrbitControls} from '@luma.gl/engine';
@@ -53,7 +55,9 @@ function updateCamera(timeMilliseconds: number): void {
 
   const eyePosition = controls.getEyePosition();
 
-  // Build the view matrix from eyePosition and controls.props.target.
+  const upDirection = controls.getUpDirection();
+
+  // Build the view matrix from eyePosition, controls.props.target, and upDirection.
 
 }
 
@@ -126,4 +130,4 @@ WebGL 2 readback can synchronously stall the pipeline. WebGPU permits better sta
 * [`OrbitControls`](https://luma.gl/docs/api-reference/engine/orbit-controls.md)
 * [`PickingManager`](https://luma.gl/docs/api-reference/engine/picking-manager.md)
 * [Redraw on demand](https://luma.gl/docs/api-guide/engine/redraw.md)
-* [Shadertools picking module](https://luma.gl/docs/api-reference/shadertools/shader-modules/picking.md)
+* [Shaders picking module](https://luma.gl/docs/api-reference/shaders/shader-modules/picking.md)

@@ -15,7 +15,7 @@ For the required and optional `GPUVector` inputs accepted by a model, see [`GPUI
 ```
 import type {VertexFormat} from '@luma.gl/core';
 
-import type {GPUVectorFormat, VertexList} from '@luma.gl/gpgpu/gpu-data';
+import type {FixedSizeList, GPUVectorFormat, VertexList} from '@luma.gl/graph/gpu-data';
 
 
 
@@ -27,7 +27,7 @@ export type GPUField<
 
   Name extends string = string,
 
-  Format extends VertexFormat | VertexList<VertexFormat> = GPUVectorFormat
+  Format extends GPUVectorFormat = GPUVectorFormat
 
 > = {
 
@@ -90,6 +90,22 @@ type PathTable = {
 };
 ```
 
+Fixed-size storage values retain their row cardinality in the column format:
+
+```
+type EmbeddingTable = {
+
+  embedding: FixedSizeList<'float32', 768>;
+
+  sourceId: 'uint32';
+
+  embeddingValidity: 'uint32';
+
+};
+```
+
+Every column has the same logical table row count. The embedding allocation contains 768 Float32 elements per row; its source IDs and optional GPU-validity mask remain independently owned, ordinary row-aligned Uint32 columns.
+
 ## Semantics[​](#semantics "Direct link to Semantics")
 
 `GPUSchema` describes selected GPU-facing columns, not necessarily every source column. A table adapter may read many source columns and publish only the ones that match a `ShaderLayout`, generated geometry plan, or model-specific storage path.
@@ -98,9 +114,11 @@ type PathTable = {
 
 * fixed vectors use core `VertexFormat` strings such as `float32x3`;
 * variable-length vertex lists use `vertex-list<format>`;
+* variable-length non-vertex values use `value-list<format>`;
+* fixed-size storage values use `fixed-size-list<format,size>`;
 * shader values remain in `ShaderLayout`, such as `vec3<f32>` or `vec4<f32>`.
 
-Compatibility between `GPUField.format` and shader values is checked separately with [`isGPUVectorFormatCompatibleWithShaderType()`](https://luma.gl/docs/api-reference/gpgpu/gpu-vector-format.md).
+Compatibility between `GPUField.format` and shader values is checked separately with [`isGPUVectorFormatCompatibleWithShaderType()`](https://luma.gl/docs/api-reference/graph/gpu-vector-format.md).
 
 ### Reserved `indices` Column[​](#reserved-indices-column "Direct link to reserved-indices-column")
 
@@ -118,13 +136,25 @@ The tables-core format is `vertex-list<uint32>`. The vector represents one batch
 
 `GPUSchema` has no behavior that needs identity, inheritance, or lifecycle management. The objects that need lifecycle management are GPU resource owners:
 
-* [`GPUData`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md) owns or borrows one buffer.
-* [`GPUVector`](https://luma.gl/docs/api-reference/gpgpu/gpu-vector.md) owns or borrows ordered `GPUData` chunks.
+* [`GPUData`](https://luma.gl/docs/api-reference/graph/gpu-data.md) owns or borrows one buffer.
+* [`GPUVector`](https://luma.gl/docs/api-reference/graph/gpu-vector.md) owns or borrows ordered `GPUData` chunks.
 * [`GPURecordBatch`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-record-batch.md) owns one batch-local `GPUData` chunk per selected column.
 * [`GPUTable`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-table.md) owns preserved batches.
 
-Keeping schema as plain data lets gpgpu, generated-geometry, and application-specific adapters create schemas without depending on a shared class hierarchy.
+Keeping schema as plain data lets Arrow, gpgpu, generated-geometry, and application-specific adapters create schemas without depending on a shared class hierarchy.
 
-## Source Interop[​](#source-interop "Direct link to Source Interop")
+## Arrow Interop[​](#arrow-interop "Direct link to Arrow Interop")
 
-Source adapters can create `GPUSchema` objects while retaining their source type information as adapter or readback metadata. Tables and record batches expose `GPUSchema` as the canonical GPU schema.
+`@luma.gl/graph/arrow` creates `GPUSchema` objects from selected Arrow fields. Arrow `DataType` values may still be retained on `GPUData` or `GPUVector` as adapter/readback metadata during migration, but tables and record batches expose `GPUSchema` instead of `arrow.Schema`.
+
+For example:
+
+```
+const gpuTable = makeGPUTableFromArrowTable(device, arrowTable, {shaderLayout});
+
+
+
+gpuTable.schema.fields[0].name; // shader/table column name
+
+gpuTable.schema.fields[0].format; // GPUVectorFormat, e.g. 'unorm8x4'
+```

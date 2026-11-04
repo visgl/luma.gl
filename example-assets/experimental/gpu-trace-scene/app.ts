@@ -13,12 +13,12 @@ import {
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GraphDataView
-} from '@luma.gl/gpgpu/gpu-core';
+} from '@luma.gl/graph/gpu-core';
 import {
   GPUTraceInteraction,
   GPUTraceScene,
   getGPUTracePickingShader
-} from '@luma.gl/experimental/gpu-trace';
+} from '@luma.gl/graph/gpu-trace';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -97,7 +97,6 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   private inspectorPanel: GPUCommandGraphInspectorPanel | null = null;
   private controls: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
-  private canvasTouchAction = '';
   private traceDuration = 240;
   private timeMinimum = 0;
   private timeMaximum = 240;
@@ -165,7 +164,6 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
-      this.canvasTouchAction = canvas.style.touchAction;
       canvas.style.touchAction = 'none';
       canvas.addEventListener('click', this.handleClick);
       canvas.addEventListener('wheel', this.handleWheel, {passive: false});
@@ -207,7 +205,6 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
   }
 
   override onFinalize(): void {
-    if (this.canvas) this.canvas.style.touchAction = this.canvasTouchAction;
     this.canvas?.removeEventListener('click', this.handleClick);
     this.canvas?.removeEventListener('wheel', this.handleWheel);
     this.panels.finalize();
@@ -312,20 +309,22 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     const groupCounts = makeUint32('group-counts', new Uint32Array(dataset.groups.length));
     const groupOverflows = makeUint32('group-overflows', new Uint32Array(dataset.groups.length));
     const groupOverflow = makeUint32('group-overflow', new Uint32Array(1));
-    new GPUSceneResourceGroups({
-      id: 'scene-trace-resource-groups',
-      scene: source.scene,
-      commands: commandViews,
-      groups: dataset.groups.map(group => ({
-        id: group.groupIndex,
-        firstCommand: group.firstSpanIndex,
-        commandCount: group.count,
-        geometryId: 0
-      })),
-      counts: groupCounts.view,
-      overflows: groupOverflows.view,
-      overflow: groupOverflow.view
-    }).addToGraph(graph);
+    graph.add(
+      new GPUSceneResourceGroups({
+        id: 'scene-trace-resource-groups',
+        scene: source.scene,
+        commands: commandViews,
+        groups: dataset.groups.map(group => ({
+          id: group.groupIndex,
+          firstCommand: group.firstSpanIndex,
+          commandCount: group.count,
+          geometryId: 0
+        })),
+        counts: groupCounts.view,
+        overflows: groupOverflows.view,
+        overflow: groupOverflow.view
+      })
+    );
 
     const pickRequest = makeUint32('pick-request', new Uint32Array(4));
     const pickResult = makeUint32('pick-result', Uint32Array.of(TRACE_INVALID_SPAN_INDEX));
@@ -463,6 +462,7 @@ export default class GPUTraceSceneAnimationLoopTemplate extends AnimationLoopTem
     this.controls = root;
     const inspectorHost = root.querySelector<HTMLElement>('[data-scene-trace-inspector]')!;
     this.inspectorPanel = new GPUCommandGraphInspectorPanel(inspectorHost, {
+      inspector: this.graphInspector,
       graphLabels: {[this.resources.compiled.id]: 'Scene interaction + picking + draw'}
     });
     this.inspectorPanel.update(this.graphInspector.getSnapshot(), this.resources.compiled.id);

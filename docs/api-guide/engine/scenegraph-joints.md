@@ -1,0 +1,65 @@
+# Physical Joints
+
+A physical joint constrains the relative motion of two attachment frames. luma.gl's `JointController` resolves scenegraph attachment nodes into body-local or world-space frames. A physics adapter turns those resolved frames into solver constraints.
+
+These joints describe constraints. The joint nodes of a [skin](https://luma.gl/docs/api-guide/engine/scenegraph-skins.md) instead supply deformation matrices; a skeletal hierarchy does not create physical joints automatically.
+
+## Example[​](#example "Direct link to Example")
+
+Loading interactive example…
+
+The authored Joint pendulum and Driven hinge assets demonstrate resolved attachments and drives. The simulation requires WebGPU; the engine attachment metadata itself is independent of the renderer and asset format.
+
+## Declare and resolve attachments[​](#declare-and-resolve-attachments "Direct link to Declare and resolve attachments")
+
+```
+import {GroupNode, JointController} from '@luma.gl/engine';
+
+
+
+const fixedAnchor = new GroupNode({id: 'fixed-anchor'});
+
+const movingAnchor = new GroupNode({id: 'moving-anchor'});
+
+const body = new GroupNode({id: 'body', children: [movingAnchor]});
+
+const scene = new GroupNode({children: [fixedAnchor, body]});
+
+const joints = new JointController([{
+
+  first: fixedAnchor,
+
+  second: movingAnchor,
+
+  limits: [{axes: [0, 1, 2], minimum: 0, maximum: 0}],
+
+  collideConnected: false
+
+}]);
+
+
+
+const resolvedJoints = joints.resolve([scene], new Set([body]));
+```
+
+This locks the attachment positions together while leaving rotation free. It resolves the constraint description; it does not allocate a body or advance a simulation.
+
+## Joint properties[​](#joint-properties "Direct link to Joint properties")
+
+| Field              | Meaning                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| `first`, `second`  | Attachment node references within the supplied scene roots.                            |
+| `limits`           | Linear or angular ranges on selected attachment-frame axes.                            |
+| `drives`           | Per-axis position/velocity targets with stiffness, damping, force cap, and drive mode. |
+| `collideConnected` | Collision policy for the connected bodies.                                             |
+| `enabled`          | Whether the declared constraint is enabled.                                            |
+
+Axes `0`, `1`, and `2` are attachment-frame X, Y, and Z. Set `angular: true` for angular limits or drives. Solver support depends on the physics backend; representing a combination does not claim that every combination is qualified for simulation.
+
+Resolution finds the nearest body-owning ancestor of each attachment. Without one, the attachment is fixed in world space and its resolved `body` is `null`. Otherwise its position and orientation are relative to that body's rigid frame. Authored scale contributes to anchor offsets. Attachments must be inside a tree: cycles and repeated node references are rejected.
+
+## Connect to simulation[​](#connect-to-simulation "Direct link to Connect to simulation")
+
+The graph physics adapter's `makeRigidBodyJointsFromScenegraph()` translates resolved frames into body indices and solver rows. A world-fixed attachment needs the adapter's static world body. Preserve the mapping between node references and body indices; node names or glTF indices are not interchangeable with solver indices.
+
+See [Physics integration](https://luma.gl/docs/api-guide/engine/scenegraph-physics.md) for transform ownership, fixed-step ordering, pose publication, and supported mutations. glTF physics conversion supplies these same engine joint declarations after interpreting the source extension fields.

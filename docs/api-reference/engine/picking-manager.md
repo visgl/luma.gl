@@ -72,7 +72,7 @@ device.submit();
 const pickInfo = await pickingManager.updatePickInfo(mousePosition);
 ```
 
-For a complete WebGL color-picking example, including model shaders and visible highlighting, see [GPU picking](https://luma.gl/docs/api-reference/shadertools/shader-modules/gpu-picking.md#usage).
+For a complete WebGL color-picking example, including model shaders and visible highlighting, see [GPU picking](https://luma.gl/docs/api-reference/shaders/shader-modules/gpu-picking.md#usage).
 
 ## Types[​](#types "Direct link to Types")
 

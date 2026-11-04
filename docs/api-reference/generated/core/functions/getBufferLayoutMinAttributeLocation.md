@@ -2,7 +2,7 @@
 
 > **getBufferLayoutMinAttributeLocation**(`bufferLayout`, `shaderLayout`): `number`
 
-Defined in: [modules/core/src/adapter-utils/buffer-layout-utils.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter-utils/buffer-layout-utils.ts#L193)
+Defined in: [modules/core/src/api/adapter-utils/buffer-layout-utils.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter-utils/buffer-layout-utils.ts#L193)
 
 Returns the minimum attribute location referenced by a logical buffer layout.
 

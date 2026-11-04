@@ -2,7 +2,7 @@
 
 > **assertDefined**<`T`>(`value`, `message?`): `T`
 
-Defined in: [modules/core/src/utils/assert.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/utils/assert.ts#L15)
+Defined in: [modules/core/src/api/utils/assert.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/utils/assert.ts#L15)
 
 Throws if value is not defined, narrows type
 

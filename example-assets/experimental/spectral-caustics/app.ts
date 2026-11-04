@@ -14,13 +14,13 @@ import {
   TruncatedConeGeometry,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {
   spectralCaustics,
   SpectralCausticsRenderer,
   type SpectralCausticsProps
-} from '@luma.gl/experimental';
-import type {ShaderModule} from '@luma.gl/shadertools';
+} from '@luma.gl/anari';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {Matrix4, radians, type NumberArray3} from '@math.gl/core';
 
 const NEAR_PLANE = 0.1;
@@ -274,7 +274,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: 'rgba16float', resolutionScale: 0.72}),
+        createBloomCompositeShaderPass({colorFormat: 'rgba16float', resolutionScale: 0.72}),
         toneMapping
       ],
       colorFormat: 'rgba16float'

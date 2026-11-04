@@ -2,4 +2,4 @@
 
 > **CompressedTextureFormat** = `TextureFormatCompressed`
 
-Defined in: [modules/core/src/shadertypes/texture-types/texture-formats.ts:284](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-formats.ts#L284)
+Defined in: modules/shaders/dist/types/texture-formats.d.ts:23

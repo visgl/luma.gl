@@ -1,10 +1,18 @@
 # Shader Modules
 
-[Modules](https://luma.gl/docs/tutorials/shader-modules.md)[Hooks](https://luma.gl/docs/tutorials/shader-hooks.md)[Plugins](https://luma.gl/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/docs/tutorials/lighting.md)
+[Modules](https://luma.gl/docs/tutorials/shader-modules.md)[Injection](https://luma.gl/docs/tutorials/shader-injection.md)[Plugins](https://luma.gl/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/docs/tutorials/lighting.md)
 
 This tutorial shows how to build reusable shader functionality with luma.gl's shader modules. The example below defines a custom `color` module that converts HSV to RGB and adds moving highlight bands to two different models.
 
 <!-- -->
+
+0
+
+<!-- -->
+
+s
+
+Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
@@ -15,7 +23,7 @@ The complete source for this example is shown below:
 The WGSL uses `@binding(auto)`, so shader module bindings are matched by name instead of hard-coded binding numbers.
 
 ```
-import {NumberArray3} from '@math.gl/types';
+import {NumberArray3} from '@math.gl/core';
 
 import {Buffer} from '@luma.gl/core';
 
@@ -33,11 +41,11 @@ import {
 
 } from '@luma.gl/engine';
 
-import {ShaderModule} from '@luma.gl/shadertools';
+import {ShaderModule} from '@luma.gl/shaders';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 

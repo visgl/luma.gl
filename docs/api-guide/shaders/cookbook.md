@@ -1,6 +1,6 @@
-# Shadertools cookbook
+# Shaders cookbook
 
-[Overview](https://luma.gl/docs/api-reference/shadertools.md)[Programming guide](https://luma.gl/docs/api-guide/shaders.md)[Cookbook](https://luma.gl/docs/api-guide/shaders/cookbook.md)
+[Overview](https://luma.gl/docs/api-reference/shaders.md)[Programming guide](https://luma.gl/docs/api-guide/shaders.md)[Cookbook](https://luma.gl/docs/api-guide/shaders/cookbook.md)
 
 These snippets show the smallest useful descriptor or assembly action. Add both WGSL and GLSL source when the feature must run on both backends.
 
@@ -8,7 +8,7 @@ These snippets show the smallest useful descriptor or assembly action. Add both 
 | -------------------------------- | ---------------------------------- | ---------------------------------------- |
 | Package reusable shader behavior | `ShaderModule`                     | Source plus typed configuration          |
 | Convert props to shader values   | `uniformTypes` and `getUniforms()` | Uniforms and bindings for `ShaderInputs` |
-| Declare an extension point       | `addShaderHook()`                  | A stable callable hook                   |
+| Declare an extension point       | `addShaderInjectionTarget()`       | A stable callable target                 |
 | Extend a shader                  | `inject`                           | Ordered code at a supported target       |
 | Share lower-level behavior       | `dependencies`                     | De-duplicated module ordering            |
 | Package optional behavior        | `ShaderPlugin`                     | Modules, inputs, defines, and injections |
@@ -46,37 +46,37 @@ const exposure = {
 
 `ShaderInputs.setProps()` calls `getUniforms()` and separates ordinary values from resource bindings.
 
-## Add a hook[​](#add-a-hook "Direct link to Add a hook")
+## Add a callable target[​](#add-a-callable-target "Direct link to Add a callable target")
 
 ```
-const assembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
-assembler.addShaderHook(
 
-  'fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)'
 
-);
+const assembler = new WGSLShaderAssembler();
+
+assembler.addShaderInjectionTarget({name: 'FILTER_COLOR', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}});
 ```
 
-The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated hook is a no-op.
+Pass this assembler to the model through its `shaderAssembler` prop. The application shader calls `FILTER_COLOR(&color)`. With no contributors, the generated target is a no-op.
 
 ## Inject source[​](#inject-source "Direct link to Inject source")
 
 ```
-const fade = {
+import type {ShaderPlugin} from '@luma.gl/shaders';
+
+
+
+const fade: ShaderPlugin = {
 
   name: 'fade',
 
-  inject: {
-
-    'fs:FILTER_COLOR': '(*color).a *= 0.5;'
-
-  }
+  injections: [{stage: 'fragment', target: 'FILTER_COLOR', wgsl: '(*color).a *= 0.5;'}]
 
 };
 ```
 
-Prefer semantic hooks for supported extension contracts; use raw source anchors sparingly.
+Prefer callable targets for supported extension contracts; use built-in targets for declarations and small entry-point statements.
 
 ## Compose dependencies[​](#compose-dependencies "Direct link to Compose dependencies")
 
@@ -101,11 +101,9 @@ const tintPlugin: ShaderPlugin = {
 
   name: 'tint-plugin',
 
-  modules: [tint],
+  module: tint,
 
-  wgsl: {injections: [{target: 'fs:#main-end', injection: 'color *= tint.color;'}]},
-
-  glsl: {injections: [{target: 'fs:#main-end', injection: 'color *= tint.color;'}]}
+  injections: [{stage: 'fragment', target: '#main-end', glsl: 'color *= tint.color;', wgsl: 'color *= tint.color;'}]
 
 };
 ```
@@ -136,5 +134,5 @@ Execute it with Engine’s `ShaderPassRenderer`. Each subpass is a draw and may 
 
 * [Shader programming guide](https://luma.gl/docs/api-guide/shaders.md)
 * [Shader assembly](https://luma.gl/docs/api-guide/shaders/shader-assembly.md)
-* [Writing customizable shaders](https://luma.gl/docs/api-guide/shaders/writing-customizable-shaders.md)
-* [`ShaderModule`](https://luma.gl/docs/api-reference/shadertools/shader-module.md)
+* [Shader injection](https://luma.gl/docs/api-guide/shaders/shader-injection.md)
+* [`ShaderModule`](https://luma.gl/docs/api-reference/shaders/shader-module.md)

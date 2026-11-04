@@ -20,12 +20,18 @@ Mobile quality
 // Loading source…
 ```
 
+0
+
+<!-- -->
+
+s
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {MLSMPMFluidSimulation} from '@luma.gl/experimental';
+import {MLSMPMFluidSimulation} from '@luma.gl/graph/experimental/simulation';
 
 
 
@@ -166,3 +172,7 @@ simulation.reset(commandEncoder, replacementParticles);
 `destroy()` is idempotent and releases every owned computation and buffer. Accessing `encode()` or `reset()` after destruction throws; application models that borrow `particleBuffer` or `gridBuffer` must stop using them before destruction.
 
 This foundation intentionally solves one bounded two-dimensional domain. It does not provide a particle renderer, scene integration, adaptive particle allocation, obstacles beyond the solid domain boundary, or general three-dimensional material simulation.
+
+## Graph execution and inspection[​](#graph-execution-and-inspection "Direct link to Graph execution and inspection")
+
+`commandGraph` exposes the compiled four-stage substep graph. Its imported particle, grid, and uniform buffers declare their read/write roles explicitly. `lastEncodings` contains one inspection handle per substep from the latest `encode()` call. The caller still submits the command encoder. Resource previews inspect current allocations; they are not retained historical snapshots. Reset clears the last encoding handles.

@@ -2,7 +2,7 @@
 
 > **VariableShaderTypeT**<`T`> = `T` *extends* `VariableShaderTypeAlias` ? `VariableShaderTypeAliasMap`\[`T`] : `T`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-types.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-types.ts#L147)
+Defined in: modules/shaders/dist/types/shader-types.d.ts:96
 
 ## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
 

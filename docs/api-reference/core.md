@@ -10,7 +10,7 @@ The curated pages explain workflows and portability. The [generated API index](h
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-Use Core when you need direct control over GPU memory, formats, bindings, passes, or command submission. Start one layer higher with [Engine](https://luma.gl/docs/api-reference/engine.md) when a `Model` can manage those details. Move one layer higher still to GPU scheduling when several operations need dependency scheduling, transient storage, indirect work, or multi-frame execution.
+Use Core when you need direct control over GPU memory, formats, bindings, passes, or command submission. Start one layer higher with [Engine](https://luma.gl/docs/api-reference/engine.md) when a `Model` can manage those details. Move one layer higher still to [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) when several operations need dependency scheduling, transient storage, indirect work, or multi-frame execution.
 
 ## Live example[​](#live-example "Direct link to Live example")
 
@@ -32,7 +32,7 @@ The example is intentionally dormant until activated. It selects the best availa
 
   The example destroys both Model and Buffer
 
-[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle-geometry)
+[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry)
 
 Loading interactive example…
 
@@ -124,8 +124,14 @@ The [generated <!-- -->Core<!-- --> API index](https://luma.gl/docs/api-referenc
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)
+[Shaders](https://luma.gl/docs/api-reference/shaders.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)[GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
 
 * Move up to [Engine](https://luma.gl/docs/api-reference/engine.md) for managed models and redraw state.
-* Move down to [Shadertools](https://luma.gl/docs/api-reference/shadertools.md) to author reusable shader behavior.
-* Add GPU scheduling for multi-operation scheduling.
+* Move down to [Shaders](https://luma.gl/docs/api-reference/shaders.md) to author reusable shader behavior.
+* Add [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for multi-operation scheduling.
+
+## Optional dynamic resources[​](#optional-dynamic-resources "Direct link to Optional dynamic resources")
+
+`@luma.gl/core/dynamic` provides [DynamicBuffer](https://luma.gl/docs/api-reference/core/dynamic/dynamic-buffer.md) and [DynamicTexture](https://luma.gl/docs/api-reference/core/dynamic/dynamic-texture.md), along with their props, texture data types and binding-source helpers. They wrap ordinary core resources to support replacement, resizing and, for textures, asynchronous initialization and mipmap generation.
+
+Import these conveniences explicitly; the core root does not re-export them. The optional entry point depends only on core internals. Engine and gpgpu retain compatibility exports with identical class identity.

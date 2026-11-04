@@ -30,10 +30,108 @@
 
   Reuse models and honor redraw state instead of rebuilding per frame
 
+## GPUVectorModel base[​](#gpuvectormodel-base "Direct link to GPUVectorModel base")
+
+`Model` extends `GPUVectorModel`, owned and exported by `@luma.gl/engine`. Import GPUVectorModel, GPUVectorGeometry, and their batching helpers from engine; gpgpu/gpu-data provides the GPUData and GPUVector inputs. The base owns the shared rendering state, contiguous vector `setGPUVectors()` API, and aligned vector `drawBatches()` API. Vector byte offsets are preserved. `GPUVectorModel` supports shader assembly, uniforms, and resource bindings. `Model` also adapts `Geometry` and `GPUGeometry` inputs and manages material bindings and uniforms. Vector inputs supply formats, strides, and offsets for layout inference. Explicit layouts can describe packed groups and override inferred bindings. `BufferTransform` and `TextureTransform` use `GPUVectorModel` directly; `TableTransform` inherits that implementation through `BufferTransform`.
+
+## GPU vector geometry and attributes[​](#gpu-vector-geometry-and-attributes "Direct link to GPU vector geometry and attributes")
+
+`GPUVectorModel` accepts GPU vectors and constants. `GPUVectorGeometry` groups borrowed per-vertex columns, an optional contiguous `uint16` or `uint32` index vector (`uint8` on WebGL), and topology. CPU `Geometry` and buffer-based `GPUGeometry` inputs are accepted by `Model`.
+
+```
+import {GPUVectorGeometry, GPUVectorModel} from '@luma.gl/engine';
+
+
+
+const model = new GPUVectorModel(device, {
+
+  ...shaders,
+
+  isInstanced: true,
+
+  geometry: new GPUVectorGeometry({
+
+    attributes: {positions, normals},
+
+    indices,
+
+    topology: 'triangle-list'
+
+  }),
+
+  attributeVectors: {instancePositions, colors}
+
+});
+
+
+
+model.setGeometryVectors({positions, normals});
+
+model.setAttributeVectors({instancePositions, colors});
+```
+
+`setGeometry()` applies topology, geometry vectors, and indices together. The granular `setGeometryVectors()`, `setIndexVector()`, and `setTopology()` methods update them independently. `setAttributeVectors()` replaces supplemental attributes while preserving geometry. Supplemental vectors default to instance step mode on instanced models and vertex step mode otherwise. Constants broadcast without determining draw counts.
+
+Both vector setters accept an optional second `bufferLayouts` argument. The `setGPUAttributes(columns, bufferLayouts)` method applies caller-resolved supplemental layouts, including packed buffers and mixed WebGPU vector/constant bindings. WebGL constants are converted to shader values; WebGPU constants use model-owned vertex buffers. All caller-supplied vectors and buffers remain borrowed.
+
+Omit `bufferLayouts` to infer formats, strides, and offsets from the inputs:
+
+```
+model.setAttributeVectors({positions, colors, radius});
+```
+
+Within each vector input group, inferred constants share one model-owned, zero-stride vertex buffer on WebGPU. WebGL continues to use constant attribute values. Inferred vector views share one layout when every corresponding chunk uses the same buffer, stride, and relative attribute offsets within a row. This recognizes existing interleaved storage without copying it. Separate column allocations remain separate bindings; inference does not interleave or concatenate their data to fit device limits.
+
+Explicit layouts and layouts carried by packed vectors remain authoritative and are not consolidated. Geometry and supplemental attribute groups are consolidated independently.
+
+Geometry vectors must share logical length and chunk boundaries, as must supplemental attribute vectors. Non-instanced models require both groups to share their batch structure. `draw()` renders matching batches together for non-instanced models. Instanced models draw each geometry batch with each instance-stepped attribute batch. Supplemental vertex inputs share the geometry batch structure. Buffer layouts and model draw counts are restored after batched rendering. Indices remain a single contiguous stream shared by geometry batches.
+
+`validateGPUVectorBatchStructure(vectors)`, exported from `@luma.gl/engine` and `@luma.gl/graph/gpu-data`, validates row counts, chunk counts, and per-chunk row counts. It accepts a named map or array of vectors, ignores constants and undefined entries, and neither modifies nor repacks input storage.
+
+### Per-batch uniforms[​](#per-batch-uniforms "Direct link to Per-batch uniforms")
+
+`drawBatches()` invokes `onBatch` before each aligned vector chunk. Set managed shader-input uniforms in the callback to supply batch-local state such as a picking row offset:
+
+```
+model.drawBatches(renderPass, {
+
+  vectors: {positions, colors},
+
+  onBatch: ({rowIndexOffset, rowCount}) => {
+
+    model.shaderInputs.setProps({picking: {indexOffset: rowIndexOffset}});
+
+  }
+
+});
+```
+
+`rowIndexOffset` is cumulative within the supplied vectors; `rowCount` is the current chunk's length. Corresponding vectors must have equal lengths, chunk counts, and per-chunk row counts. This API does not pad, split, concatenate, or realign chunks. As with other `drawBatches()` inputs, configure matching model buffer layouts and initial attribute bindings first.
+
+On WebGPU, the model reserves one buffer for all managed uniform blocks and batches in the call. Each batch binds a distinct `{buffer, offset, size}` range, aligned to the device's `minUniformBufferOffsetAlignment`. The model grows the allocation before drawing when needed, keeps it for reuse, and destroys it with the model. WebGL updates uniforms immediately.
+
+**Slots are reused on every `drawBatches()` call.** Submit previous draws before another call changes their uniform values or requires a larger allocation:
+
+```
+const pass = encoder.beginRenderPass({framebuffer});
+
+model.drawBatches(pass, {vectors, onBatch});
+
+pass.end();
+
+device.submit(encoder.finish());
+
+// The model's batch slots can now be reused with different values.
+```
+
+This matches the proposed GPU layers' per-batch style-buffer pattern. It is not an immutable snapshot across multiple calls before submission. Keep the model alive while pending commands or reusable render bundles reference its buffers. Re-record or stop replaying bundles before changing the slots they reference. Explicit external buffer bindings remain caller-managed. The callback's shader-input values remain set after the call; temporary buffer bindings, attributes, and draw counts are restored, including when a callback throws.
+
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {CubeGeometry, DynamicTexture, Model} from '@luma.gl/engine';
+import {CubeGeometry, Model} from '@luma.gl/engine';
+
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 
 
 
@@ -41,7 +139,7 @@ const dynamicTexture = new DynamicTexture(device, {data: loadImageBitmap(url)});
 
 
 
-const model = new Model(device, {
+const model = await Model.createAsync(device, {
 
   vs: GLSL_VERTEX_SHADER,
 
@@ -81,7 +179,7 @@ renderPass.end();
 | `shaderInputs?`       | `ShaderInputs`                                                                           | Pre-created shader input manager.                                                                                                                                                      |
 | `bindings?`           | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| TextureBindingSource>` | Textures, samplers, uniform buffers, dynamic buffers, and texture binding sources such as `DynamicTexture` and `VideoTexture`.                                                         |
 | `parameters?`         | `RenderPipelineParameters`                                                               | Pipeline parameters baked into the model's pipeline.                                                                                                                                   |
-| `geometry?`           | `Geometry \| GPUGeometry \| null`                                                        | Geometry source for attributes and indices.                                                                                                                                            |
+| `geometry?`           | `GPUVectorGeometry \| Geometry \| GPUGeometry \| null`                                   | Geometry source for attributes and indices.                                                                                                                                            |
 | `isInstanced?`        | `boolean`                                                                                | Optional override for instancing.                                                                                                                                                      |
 | `instanceCount?`      | `number`                                                                                 | Number of instances to draw.                                                                                                                                                           |
 | `vertexCount?`        | `number`                                                                                 | Number of vertices to draw. For indexed models, this is used as the index count when `indexCount` is not provided, including an explicit value of `0`.                                 |
@@ -155,6 +253,10 @@ Application-owned metadata attached to the model.
 
 Creates a render model for one device.
 
+### `Model.createAsync(device: Device, props: ModelProps): Promise<Model>`[​](#modelcreateasyncdevice-device-props-modelprops-promisemodel "Direct link to modelcreateasyncdevice-device-props-modelprops-promisemodel")
+
+Creates the model through the device's asynchronous render-pipeline path and resolves after its pipeline and vertex array are ready. Prefer it during WebGPU loading when multiple independent models can be created with `Promise.all()`. The `new Model(...)` constructor remains the synchronous compatibility path.
+
 ### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
 
 Releases cached pipeline and shader references and destroys the internal uniform store.
@@ -175,7 +277,7 @@ Updates shader inputs and rebuilds the pipeline if necessary, encoding any manag
 
 Draws once into the supplied render pass. The model selects its pipeline, bindings, and vertex array on that pass before issuing the draw. Returns `false` when required resources, such as unresolved texture binding sources, are not ready yet.
 
-### `setGeometry(geometry: Geometry | GPUGeometry | null): void`[​](#setgeometrygeometry-geometry--gpugeometry--null-void "Direct link to setgeometrygeometry-geometry--gpugeometry--null-void")
+### `setGeometry(geometry: GPUVectorGeometry | Geometry | GPUGeometry | null): void`[​](#setgeometrygeometry-gpuvectorgeometry--geometry--gpugeometry--null-void "Direct link to setgeometrygeometry-gpuvectorgeometry--geometry--gpugeometry--null-void")
 
 Replaces the geometry source.
 
@@ -227,6 +329,9 @@ Replaces the index buffer.
 
 Sets buffer-valued attributes.
 
+* `options.disableWarnings` suppresses warnings for buffers without a matching layout or attribute.
+* `options.byteOffsets` maps buffer names to the byte offset where their vertex data starts. Buffers without an entry are bound at offset `0`. Use this for views into a shared buffer; the buffer layout and render pipeline do not change.
+
 ### `setConstantAttributes(attributes: Record<string, TypedArray>, options?): void`[​](#setconstantattributesattributes-recordstring-typedarray-options-void "Direct link to setconstantattributesattributes-recordstring-typedarray-options-void")
 
 Sets constant-valued attributes.
@@ -236,3 +341,9 @@ Sets constant-valued attributes.
 * `Model` integrates with [`ShaderInputs`](https://luma.gl/docs/api-reference/engine/shader-inputs.md), [`PipelineFactory`](https://luma.gl/docs/api-reference/core/pipeline-factory.md), and [`ShaderFactory`](https://luma.gl/docs/api-reference/core/shader-factory.md) by default.
 * `DynamicBuffer` attributes, index buffers, and bindings are resolved before drawing so resized buffers are rebound automatically.
 * `DynamicTexture` and `VideoTexture` bindings are supported directly. `Model.draw()` defers rendering until texture binding sources are ready.
+
+### Draw count inference and independent lengths[​](#draw-count-inference-and-independent-lengths "Direct link to Draw count inference and independent lengths")
+
+`inferDrawCount` accepts `'instance'`, `'vertex'`, or `'no'` and defaults to `'no'`. It selects the count updated from vector lengths (or each batch's row count), preserving the other count. `'no'` preserves both caller-supplied counts.
+
+`enforceMatchingVectorLengths` defaults to `true`. Set it to `false` together with `inferDrawCount: 'no'` to bind attributes with independent lengths and single physical chunks. Layout and buffer validation still apply. `drawBatches()` always requires matching lengths and chunk boundaries.

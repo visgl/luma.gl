@@ -11,7 +11,7 @@ This is a real-time visual-effects solver rather than a general computational-fl
 ```
 import {Texture} from '@luma.gl/core';
 
-import {VolumetricFireSimulation} from '@luma.gl/experimental';
+import {VolumetricFireSimulation} from '@luma.gl/graph/gpu-simulation';
 
 
 
@@ -220,6 +220,6 @@ These boundaries keep memory and work explicit while leaving room for higher-ord
 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
-* GPU Command Graph documents graph ownership, hazard inference, and encoding.
-* [GBuffer](https://luma.gl/docs/api-reference/experimental/g-buffer.md) provides depth, normal, and velocity attachments for depth-aware volume composition.
+* [GPU Command Graph](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-command-graph.md) documents graph ownership, hazard inference, and encoding.
+* [GBuffer](https://luma.gl/docs/api-reference/anari/g-buffer.md) provides depth, normal, and velocity attachments for depth-aware volume composition.
 * [Shader Passes](https://luma.gl/docs/api-guide/shaders/shader-passes.md) describes composable HDR and temporal rendering pipelines that can consume the simulation textures.

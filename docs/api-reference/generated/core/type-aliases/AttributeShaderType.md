@@ -2,7 +2,7 @@
 
 > **AttributeShaderType** = `"i32"` | `"u32"` | `"f32"` | `"f16"` | `` `vec2<${PrimitiveDataType}>` `` | `` `vec3<${PrimitiveDataType}>` `` | `` `vec4<${PrimitiveDataType}>` ``
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-types.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-types.ts#L12)
+Defined in: modules/shaders/dist/types/shader-types.d.ts:7
 
 ## Note[​](#note "Direct link to Note")
 

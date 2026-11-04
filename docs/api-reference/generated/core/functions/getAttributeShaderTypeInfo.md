@@ -2,7 +2,7 @@
 
 > **getAttributeShaderTypeInfo**(`attributeType`): [`AttributeShaderTypeInfo`](https://luma.gl/docs/api-reference/generated/core/type-aliases/AttributeShaderTypeInfo.md)
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L46)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:24
 
 Decodes a vertex type, returning byte length and flags (integer, signed, normalized)
 

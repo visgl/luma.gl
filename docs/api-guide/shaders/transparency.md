@@ -12,7 +12,7 @@ Transparency has two independent concerns: how each surface is shaded and how ov
 | Weighted-blended OIT  | WebGPU and supported WebGL 2 | Order-independent accumulation at bounded memory cost. | Fragment colors and depths are combined approximately.                                     |
 | A-buffer OIT          | WebGPU                       | Per-pixel fragment capture and depth-sorted resolve.   | Storage use grows with the configured fragment budget.                                     |
 
-[`WBOITRenderer`](https://luma.gl/docs/api-reference/experimental/wboit-renderer.md) provides weighted-blended transparency. [`ABufferRenderer`](https://luma.gl/docs/api-reference/experimental/a-buffer-renderer.md) provides per-pixel linked-list capture and ordered compositing.
+[`WBOITRenderer`](https://luma.gl/docs/api-reference/anari/wboit-renderer.md) provides weighted-blended transparency. [`ABufferRenderer`](https://luma.gl/docs/api-reference/anari/a-buffer-renderer.md) provides per-pixel linked-list capture and ordered compositing.
 
 When neither OIT path is available, sort transparent objects or instances back to front relative to the active camera, disable depth writes, and leave opaque-depth testing enabled. Resort whenever the view or object positions change.
 
@@ -43,17 +43,9 @@ Optical materials shade the surface first; the transparency plugin captures the 
 ```
 import {ShaderInputs} from '@luma.gl/engine';
 
-import {
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
 
-  aBuffer,
-
-  aBufferPlugin,
-
-  glassMaterial,
-
-  glassMaterialPlugin
-
-} from '@luma.gl/experimental';
+import {aBuffer, aBufferPlugin} from '@luma.gl/anari';
 
 
 

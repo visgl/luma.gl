@@ -2,7 +2,7 @@
 
 > **AttributeShaderTypeT**<`T`> = `T` *extends* `AttributeShaderTypeAlias` ? `AttributeShaderTypeAliasMap`\[`T`] : `T`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-types.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-types.ts#L143)
+Defined in: modules/shaders/dist/types/shader-types.d.ts:94
 
 ## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
 

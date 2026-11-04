@@ -120,7 +120,7 @@ The most flexible way to enable WebGL API tracing is by typing the following com
 Applications that want browser-console activation must include the optional debug registration entry:
 
 ```
-import '@luma.gl/webgl/debug';
+import '@luma.gl/core/webgl-debug';
 ```
 
 The developer tools script is then loaded dynamically when a device is created with the debug flag set, so the tools can be activated by opening the browser console and typing:
@@ -136,7 +136,7 @@ While usually not recommended, it is also possible to activate the developer too
 ```
 import {luma} from '@luma.gl/core';
 
-import '@luma.gl/webgl/debug';
+import '@luma.gl/core/webgl-debug';
 
 
 
@@ -157,7 +157,7 @@ luma.log.set('debug-spectorjs', true);
 
 And then restarting the application (e.g. via Command-R on MacOS),
 
-You can also enable Spector when creating a device by importing `@luma.gl/webgl/debug` and adding the `debugSpectorJS: true` option.
+You can also enable Spector when creating a device by importing `@luma.gl/core/webgl-debug` and adding the `debugSpectorJS: true` option.
 
 To display Spector.js stats when loaded.
 
@@ -167,4 +167,4 @@ luma.spector.displayUI()
 
 info
 
-Spector.js itself is loaded from a CDN. The optional `@luma.gl/webgl/debug` registration entry keeps the integration code out of normal WebGL application bundles.
+Spector.js itself is loaded from a CDN. The optional `@luma.gl/core/webgl-debug` registration entry keeps the integration code out of normal WebGL application bundles.

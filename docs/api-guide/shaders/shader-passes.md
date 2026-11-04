@@ -1,8 +1,8 @@
 # Shader Passes
 
-[Assembly](https://luma.gl/docs/api-guide/shaders/shader-assembly.md)[Customization](https://luma.gl/docs/api-guide/shaders/writing-customizable-shaders.md)[Portability](https://luma.gl/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
+[Assembly](https://luma.gl/docs/api-guide/shaders/shader-assembly.md)[Injection](https://luma.gl/docs/api-guide/shaders/shader-injection.md)[Portability](https://luma.gl/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/docs/api-guide/shaders/shader-passes.md)
 
-A shader pass is a shader module that can run as a fullscreen texture-processing stage. The pass descriptor lives in `@luma.gl/shadertools`; the renderer that executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
+A shader pass is a shader module that can run as a fullscreen texture-processing stage. The pass descriptor lives in `@luma.gl/shaders`; the renderer that executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
 
 Choose an effect and adjust its parameters to see a shader pass update the source texture live:
 
@@ -18,31 +18,37 @@ Mobile quality
 // Loading source…
 ```
 
+0
+
+<!-- -->
+
+s
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 ## Components[​](#components "Direct link to Components")
 
-| Component                                                                                                | Role                                                                                                   |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md)         | Owns the fullscreen draw path, swap framebuffers, named targets, shader inputs, and presentation step. |
-| [`ShaderPassPipeline`](https://luma.gl/docs/api-reference/shadertools/shader-pass.md#shaderpasspipeline) | Chains existing passes with named intermediate render targets.                                         |
-| [`ShaderPass`](https://luma.gl/docs/api-reference/shadertools/shader-pass.md)                            | Describes one standalone texture-processing effect and its optional subpasses.                         |
-| [`ShaderSubPass`](https://luma.gl/docs/api-reference/shadertools/shader-pass.md#shadersubpass)           | Describes one draw inside a pass, including source routing, output routing, and subpass uniforms.      |
+| Component                                                                                              | Role                                                                                                   |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md)       | Owns the fullscreen draw path, swap framebuffers, named targets, shader inputs, and presentation step. |
+| [`CompositeShaderPass`](https://luma.gl/docs/api-reference/shaders/shader-pass.md#compositeshaderpass) | Chains existing passes with named intermediate render targets.                                         |
+| [`ShaderPass`](https://luma.gl/docs/api-reference/shaders/shader-pass.md)                              | Describes one standalone texture-processing effect and its optional subpasses.                         |
+| [`ShaderSubPass`](https://luma.gl/docs/api-reference/shaders/shader-pass.md#shadersubpass)             | Describes one draw inside a pass, including source routing, output routing, and subpass uniforms.      |
 
-Use a plain `ShaderPass` when each stage only needs the original input texture or the previous result. Use a `ShaderPassPipeline` when later steps need named intermediate textures such as an extracted highlight texture and its blurred version.
+Use a plain `ShaderPass` when each stage only needs the original input texture or the previous result. Use a `CompositeShaderPass` when later steps need named intermediate textures such as an extracted highlight texture and its blurred version.
 
 ## Execution Model[​](#execution-model "Direct link to Execution Model")
 
-`ShaderPassRenderer` receives a source texture, runs each pass or pipeline step, and either returns the final texture or presents it to the current framebuffer. It always exposes two logical texture sources:
+`ShaderPassRenderer` receives a source texture, runs each plain pass or composite-pass step, and either returns the final texture or presents it to the current framebuffer. It always exposes two logical texture sources:
 
 | Source     | Meaning                                                          |
 | ---------- | ---------------------------------------------------------------- |
 | `original` | The texture passed to `renderToTexture()` or `renderToScreen()`. |
 | `previous` | The current output in the shared pass chain.                     |
 
-Pipelines may add named render targets. The renderer validates routing, manages their size, and prevents a subpass from reading and writing the same named target in one draw. Transient targets with non-overlapping lifetimes can set `aliasFor` to reuse an earlier allocation with identical dimensions, format, and sampler; persistent history targets cannot be aliased. Pipelines can also declare an optional WebGPU compute replacement while retaining equivalent fragment steps as the WebGL or unsupported-device fallback.
+Composite passes may add named render targets. The renderer validates routing, manages their size, and prevents a subpass from reading and writing the same named target in one draw. Transient targets with non-overlapping lifetimes can set `aliasFor` to reuse an earlier allocation with identical dimensions, format, and sampler; persistent history targets cannot be aliased. Composite passes can also declare an optional WebGPU compute replacement while retaining equivalent fragment steps as the WebGL or unsupported-device fallback.
 
-Built-in effects consume `previous`, so the `shaderPasses` array has strict ordered-composition semantics even when it mixes plain `ShaderPass` objects and multi-step `ShaderPassPipeline` objects. Route an input from `original` only when an effect intentionally needs to bypass all preceding color processing.
+Built-in effects consume `previous`, so the `shaderPasses` array has strict ordered-composition semantics even when it mixes plain `ShaderPass` objects and multi-step `CompositeShaderPass` objects. Route an input from `original` only when an effect intentionally needs to bypass all preceding color processing.
 
 Scene-aware effects may also sample application-owned depth, normal, or velocity attachments. Color adjustments can be placed anywhere in the chain, but an effect that warps screen coordinates should run after scene-aware effects unless the application applies the same transform to those auxiliary attachments.
 
@@ -54,7 +60,7 @@ The advanced-effects path has three separate responsibilities:
 2. `ShaderPassRenderer` orders fullscreen effects and owns their internal named and temporal targets.
 3. The application presents the final texture, or passes it to another explicit workflow such as transparency capture and resolve.
 
-On WebGPU, experimental [`GBuffer`](https://luma.gl/docs/api-reference/experimental/g-buffer.md) packages the common surface attachments without owning scene traversal or material shading. Multiple render targets (MRT) means one fragment shader writes several color attachments in the same render pass:
+On WebGPU, experimental [`GBuffer`](https://luma.gl/docs/api-reference/anari/g-buffer.md) packages the common surface attachments without owning scene traversal or material shading. Multiple render targets (MRT) means one fragment shader writes several color attachments in the same render pass:
 
 | Render-stack value | Producer                             | Consumers                                                                                                                      |
 | ------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -69,25 +75,25 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 
 import {
 
-  createBloomShaderPassPipeline,
+  createBloomCompositeShaderPass,
 
-  createMotionBlurShaderPassPipeline,
+  createMotionBlurCompositeShaderPass,
 
-  createGTAOShaderPassPipeline,
+  createGTAOCompositeShaderPass,
 
-  createHDRAutoExposureShaderPassPipeline,
+  createHDRAutoExposureCompositeShaderPass,
 
-  createSSGIShaderPassPipeline,
+  createSSGICompositeShaderPass,
 
-  createSSRShaderPassPipeline,
+  createSSRCompositeShaderPass,
 
-  createTAAShaderPassPipeline,
+  createTAACompositeShaderPass,
 
   toneMapping
 
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 
-import {GBuffer} from '@luma.gl/experimental';
+import {GBuffer} from '@luma.gl/anari';
 
 
 
@@ -127,19 +133,19 @@ const effects = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createGTAOShaderPassPipeline(),
+    createGTAOCompositeShaderPass(),
 
-    createSSGIShaderPassPipeline(),
+    createSSGICompositeShaderPass(),
 
-    createSSRShaderPassPipeline(),
+    createSSRCompositeShaderPass(),
 
-    createTAAShaderPassPipeline(),
+    createTAACompositeShaderPass(),
 
-    createMotionBlurShaderPassPipeline(),
+    createMotionBlurCompositeShaderPass(),
 
-    createHDRAutoExposureShaderPassPipeline(),
+    createHDRAutoExposureCompositeShaderPass(),
 
-    createBloomShaderPassPipeline(),
+    createBloomCompositeShaderPass(),
 
     toneMapping
 
@@ -158,7 +164,7 @@ effects.renderToScreen({
 });
 ```
 
-`GBuffer` is intentionally a target and binding contract, not a scene renderer. Experimental [`deferredLighting`](https://luma.gl/docs/api-reference/experimental/deferred-lighting.md) consumes two named material extras plus depth and normal-roughness, reconstructs view position, and writes a Cook-Torrance lighting result into the same ordered color chain:
+`GBuffer` is intentionally a target and binding contract, not a scene renderer. Experimental [`deferredLighting`](https://luma.gl/docs/api-reference/anari/deferred-lighting.md) consumes two named material extras plus depth and normal-roughness, reconstructs view position, and writes a Cook-Torrance lighting result into the same ordered color chain:
 
 ```
 const renderer = new ShaderPassRenderer(device, {
@@ -167,19 +173,19 @@ const renderer = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createDeferredLightingShaderPassPipeline(),
+    createDeferredLightingCompositeShaderPass(),
 
-    createGTAOShaderPassPipeline(),
+    createGTAOCompositeShaderPass(),
 
-    createSSGIShaderPassPipeline(),
+    createSSGICompositeShaderPass(),
 
-    createSSRShaderPassPipeline(),
+    createSSRCompositeShaderPass(),
 
-    createTAAShaderPassPipeline(),
+    createTAACompositeShaderPass(),
 
-    createHDRAutoExposureShaderPassPipeline(),
+    createHDRAutoExposureCompositeShaderPass(),
 
-    createBloomShaderPassPipeline(),
+    createBloomCompositeShaderPass(),
 
     toneMapping
 
@@ -193,15 +199,15 @@ More specialized clustered-lighting or visibility-buffer workflows can replace t
 GTAO defaults to its backward-compatible full-color composite. Deferred applications that can isolate ambient light should request the physically accurate ambient-only mode instead:
 
 ```
-import {createGTAOShaderPassPipeline} from '@luma.gl/effects';
+import {createGTAOCompositeShaderPass} from '@luma.gl/engine/effects';
 
-import {createDeferredAmbientLightingShaderPassPipeline} from '@luma.gl/experimental';
+import {createDeferredAmbientLightingCompositeShaderPass} from '@luma.gl/anari';
 
 
 
 const ambientRenderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [createDeferredAmbientLightingShaderPassPipeline()]
+  shaderPasses: [createDeferredAmbientLightingCompositeShaderPass()]
 
 });
 
@@ -229,9 +235,9 @@ const effects = new ShaderPassRenderer(device, {
 
   shaderPasses: [
 
-    createDeferredLightingShaderPassPipeline(),
+    createDeferredLightingCompositeShaderPass(),
 
-    createGTAOShaderPassPipeline({composition: 'ambient-only'})
+    createGTAOCompositeShaderPass({composition: 'ambient-only'})
 
   ]
 
@@ -248,13 +254,13 @@ effects.renderToScreen({
 });
 ```
 
-Ambient-only composition subtracts `ambientLightingTexture * (1 - visibility)` from the lit scene. Direct light, material emission, and alpha therefore remain unchanged. The separate ambient texture is an explicit application-owned integration boundary; the effect does not depend on hidden cross-pipeline render targets.
+Ambient-only composition subtracts `ambientLightingTexture * (1 - visibility)` from the lit scene. Direct light, material emission, and alpha therefore remain unchanged. The separate ambient texture is an explicit application-owned integration boundary; the effect does not depend on hidden cross-effect render targets.
 
 For side-by-side choices between reflections, ambient occlusion, light assignment, shadows, transparency, blur, and temporal effects, see [Rendering Techniques and Tradeoffs](https://luma.gl/docs/api-guide/shaders/rendering-techniques.md).
 
 ### Screen-space diffuse global illumination[​](#screen-space-diffuse-global-illumination "Direct link to Screen-space diffuse global illumination")
 
-`createSSGIShaderPassPipeline()` gathers already-lit scene radiance from the hemisphere above each visible surface. Its stages mirror the reusable temporal render-stack contract:
+`createSSGICompositeShaderPass()` gathers already-lit scene radiance from the hemisphere above each visible surface. Its stages mirror the reusable temporal render-stack contract:
 
 1. Trace cosine-weighted hemisphere rays through the shared scene depth and view normals.
 2. Reproject indirect-radiance history with velocity and reject perspective-correct depth disocclusions.
@@ -267,7 +273,7 @@ SSGI adds diffuse energy; GTAO removes unavailable ambient energy, while SSR add
 
 ### Screen-space reflection composition[​](#screen-space-reflection-composition "Direct link to Screen-space reflection composition")
 
-`createSSRShaderPassPipeline()` consumes the already-lit `previous` color plus the shared depth, normal/roughness, and velocity attachments. Its six explicit stages demonstrate how a complex effect remains one composable pipeline:
+`createSSRCompositeShaderPass()` consumes the already-lit `previous` color plus the shared depth, normal/roughness, and velocity attachments. Its six explicit stages demonstrate how a complex effect remains one `CompositeShaderPass`:
 
 1. Trace stochastic, roughness-aware reflection rays against the G-buffer depth at configurable resolution, defaulting to full resolution.
 2. Reproject persistent reflection history with screen-space velocity and reject depth disocclusions.
@@ -280,7 +286,7 @@ Mirror-like materials retain narrow highlights, while rough surfaces accumulate 
 
 ### Clustered volumetric lighting[​](#clustered-volumetric-lighting "Direct link to Clustered volumetric lighting")
 
-`createClusteredVolumetricLightingShaderPassPipeline()` turns the same clustered point-light storage buffers used by deferred shading into actual participating-media illumination:
+`createClusteredVolumetricLightingCompositeShaderPass()` turns the same clustered point-light storage buffers used by deferred shading into actual participating-media illumination:
 
 1. March configurable-resolution view rays through exponential world-height density.
 2. Integrate a best-scoring bounded set from the compute-retained cluster candidates plus directional light using an anisotropic phase function; work never falls back to scanning every active light per ray step.
@@ -290,22 +296,22 @@ Mirror-like materials retain narrow highlights, while rough surfaces accumulate 
 6. Denoise the radiance/transmittance result with separable depth-aware blur.
 7. Composite Beer-Lambert extinction and in-scattered light, or expose volume/transmittance diagnostics.
 
-This is the higher-fidelity alternative to `createVolumetricFogShaderPassPipeline()`, whose compact height fog does not evaluate the real scene-light storage buffers. Both remain composable ordered pipelines; normally choose one atmospheric implementation rather than stacking both.
+This is the higher-fidelity alternative to `createVolumetricFogCompositeShaderPass()`, whose compact height fog does not evaluate the real scene-light storage buffers. Both remain composable ordered composite passes; normally choose one atmospheric implementation rather than stacking both.
 
-Unlike the generic `GBuffer` examples above, clustered volumetric lighting requires more than `gBuffer.getShaderPassBindings()`. Encode a `ClusteredLightGrid` for the current point-light buffer each frame, add `pointLights`, `clusteredLightGrid.getShaderPassBindings()`, depth, and velocity to the renderer bindings, and merge `clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)` into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings. Provide `inverseViewProjectionMatrix` and `previousViewProjectionMatrix` to `clusteredVolumetricTemporal`, plus `inverseProjectionMatrix` to both the temporal and linear-depth history-copy stages. See the [`ClusteredLightGrid` usage guide](https://luma.gl/docs/api-reference/experimental/clustered-lighting.md) for the buffer setup and encode sequence.
+Unlike the generic `GBuffer` examples above, clustered volumetric lighting requires more than `gBuffer.getShaderPassBindings()`. Encode a `ClusteredLightGrid` for the current point-light buffer each frame, add `pointLights`, `clusteredLightGrid.getShaderPassBindings()`, depth, and velocity to the renderer bindings, and merge `clusteredLightGrid.getShaderPassUniforms(nearPlane, farPlane)` into the `clusteredVolumetricTrace` uniforms alongside its camera, media, and light settings. Provide `inverseViewProjectionMatrix` and `previousViewProjectionMatrix` to `clusteredVolumetricTemporal`, plus `inverseProjectionMatrix` to both the temporal and linear-depth history-copy stages. See the [`ClusteredLightGrid` usage guide](https://luma.gl/docs/api-reference/anari/clustered-lighting.md) for the buffer setup and encode sequence.
 
 SSAO, GTAO, screen-space global illumination, reflections, and clustered volumetric lighting default to full-resolution intermediate framebuffers. Pass `resolutionScale: 0.5`, for example, to explicitly trade edge quality for fewer shaded pixels and smaller history textures.
 
 ### Adaptive HDR exposure and cinematic bloom[​](#adaptive-hdr-exposure-and-cinematic-bloom "Direct link to Adaptive HDR exposure and cinematic bloom")
 
-`createHDRAutoExposureShaderPassPipeline()` meters and adapts scene brightness entirely on the GPU:
+`createHDRAutoExposureCompositeShaderPass()` meters and adapts scene brightness entirely on the GPU:
 
 1. Extract center-weighted logarithmic luminance from floating-point scene color.
 2. Reduce four successively smaller luminance-pyramid levels into a near-global geometric mean.
 3. Adapt persistent exposure history with independent brightening and darkening response rates.
 4. Apply the adapted exposure to HDR scene color or visualize luminance as a false-color heat map.
 
-Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at half resolution, then progressively filters and reconstructs two to five `rgba16float` pyramid levels. `quality: 'ultra'` reaches one-thirty-second resolution. `resolutionScale` controls the entire pyramid without clamping highlight radiance to 8-bit normalized color. The pipeline supports:
+Pair it with `createBloomCompositeShaderPass()`, which extracts HDR highlights at half resolution, then progressively filters and reconstructs two to five `rgba16float` pyramid levels. `quality: 'ultra'` reaches one-thirty-second resolution. `resolutionScale` controls the entire pyramid without clamping highlight radiance to 8-bit normalized color. The composite pass supports:
 
 * Exposure-aware highlight thresholds, soft knees, isolated-highlight suppression, configurable scatter, tint, and horizontal or vertical anamorphic stretching.
 * Separable Gaussian blur or `blurAlgorithm: 'dual-kawase'`, which reconstructs the downsampled pyramid without the separate Gaussian passes.
@@ -324,15 +330,15 @@ Pair it with `createBloomShaderPassPipeline()`, which extracts HDR highlights at
 | `high`   | 4      | 16 render         | 12 render + 1 compute | 8 render             | 4 render + 1 compute |
 | `ultra`  | 5      | 20 render         | 15 render + 1 compute | 10 render            | 5 render + 1 compute |
 
-These counts describe bloom-pipeline work only; optional lens/history passes and renderer source-seeding or presentation passes are additional.
+These counts describe bloom-composite work only; optional lens/history passes and renderer source-seeding or presentation passes are additional.
 
 Enable optional photographic optics through `lens`: aperture-diffraction starbursts, mirrored chromatic ghosts, and radial halos share one extra half-resolution pass. `lens.dirtIntensity` samples an application-provided `lensDirtTexture` during the existing composite and therefore adds no pass or intermediate render target. Pass that mask through `renderer.renderToScreen({sourceTexture, bindings: {lensDirtTexture}})`.
 
 `temporalStability` enables neighborhood-clamped, persistent half-resolution glow history for one additional pass. `temporalReprojection: true` additionally consumes caller-provided `velocityTexture` and `depthTexture` bindings, rejects disocclusions, and stores previous depth in the existing history alpha channel. `previousExposure` corrects history when exposure changes. The default configuration allocates neither history nor lens artifacts. Screen-space diffraction costs eight samples per ray, while each ghost costs one sample or three when chromatic aberration is enabled.
 
-For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/experimental` provides a separate WebGPU implementation. It accepts generated or measured point-spread functions, including independent red, green, and blue kernels; packs those channels into one forward and one inverse FFT schedule; and uses zero-padded guard bands to prevent opposite-edge wraparound. Optional lens artifacts, sampled dirt, and temporal history execute in its existing final compute pass. An optional GPU-resident exposure texture supplies adapted exposure without CPU readback. At 1920 x 1080 with quarter-resolution sampling and the default 12.5% guard band, the FFT uses a 1024 x 512 transform, 48 MiB of complex buffers, and 45 steady-state compute dispatches. Disabling the guard band reduces that configuration to a 512 x 512 transform, 24 MiB, and 43 dispatches while removing edge-wrap protection. Changing the optical kernel adds 21 initialization dispatches for the guarded configuration.
+For full-kernel optical convolution, `GPUConvolutionBloom` from `@luma.gl/graph/gpu-effects` provides a separate WebGPU implementation. It accepts generated or measured point-spread functions, including independent red, green, and blue kernels; packs those channels into one forward and one inverse FFT schedule; and uses zero-padded guard bands to prevent opposite-edge wraparound. Optional lens artifacts, sampled dirt, and temporal history execute in its existing final compute pass. An optional GPU-resident exposure texture supplies adapted exposure without CPU readback. At 1920 x 1080 with quarter-resolution sampling and the default 12.5% guard band, the FFT uses a 1024 x 512 transform, 48 MiB of complex buffers, and 45 steady-state compute dispatches. Disabling the guard band reduces that configuration to a 512 x 512 transform, 24 MiB, and 43 dispatches while removing edge-wrap protection. Changing the optical kernel adds 21 initialization dispatches for the guarded configuration.
 
-Keep bloom in linear floating-point scene color before tone mapping. The stock deck.gl `PostProcessEffect` accepts shader-pass modules, but does not execute named-target `ShaderPassPipeline` graphs or the WebGPU FFT renderer. Its current intermediate buffers default to `rgba8unorm`, so an integration requiring unclamped HDR highlights must first arrange floating-point scene/postprocessing targets.
+Keep bloom in linear floating-point scene color before tone mapping. The stock deck.gl `PostProcessEffect` accepts shader-pass modules, but does not execute named-target `CompositeShaderPass` compositions or the WebGPU FFT renderer. Its current intermediate buffers default to `rgba8unorm`, so an integration requiring unclamped HDR highlights must first arrange floating-point scene/postprocessing targets.
 
 Related technical references:
 
@@ -351,7 +357,7 @@ Use the HDR order: temporal effects, auto exposure, bloom, then tone mapping.
 | Opaque lighting resolve             | Deferred PBR lighting, contact shadows, other direct-light corrections | These still need unwarped depth, normals, and material terms.                                |
 | Surface effects                     | SSAO/GTAO, SSGI, SSR, outlines, depth-aware blur                       | These consume the original semantic attachments.                                             |
 | Participating media                 | Height fog or clustered volumetric lighting                            | Composite extinction and in-scattering over completed opaque light transport.                |
-| Transparency resolve                | WBOIT or A-buffer resolve pipeline                                     | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
+| Transparency resolve                | WBOIT or A-buffer resolve composite pass                               | Resolve translucent geometry before temporal accumulation when it should participate in TAA. |
 | Temporal effects                    | TAA, then motion blur                                                  | Reproject the composed image before display-space processing.                                |
 | Display effects                     | Auto exposure, bloom, color adjustment, vignette, tone mapping         | These operate on final color and usually do not need scene attachments.                      |
 
@@ -359,11 +365,11 @@ This is a default, not a hard rule. A debug view may intentionally bypass earlie
 
 ### Temporal history and resize[​](#temporal-history-and-resize "Direct link to Temporal history and resize")
 
-Pass pipelines with persistent history targets keep those textures inside `ShaderPassRenderer`. Call `renderer.resetHistory()` after a camera cut, a discontinuous animation jump, or a semantic change in the G-buffer. When the drawing size changes, call both `gBuffer.resize()` and `renderer.resize()`; resizing invalidates history because old pixels no longer describe the same screen locations.
+`CompositeShaderPass` objects with persistent history targets keep those textures inside `ShaderPassRenderer`. Call `renderer.resetHistory()` after a camera cut, a discontinuous animation jump, or a semantic change in the G-buffer. When the drawing size changes, call both `gBuffer.resize()` and `renderer.resize()`; resizing invalidates history because old pixels no longer describe the same screen locations.
 
 ### Transparency composition[​](#transparency-composition "Direct link to Transparency composition")
 
-Opaque geometry should populate the G-buffer first. [`WBOITRenderer`](https://luma.gl/docs/api-reference/experimental/wboit-renderer.md) and [`ABufferRenderer`](https://luma.gl/docs/api-reference/experimental/a-buffer-renderer.md) keep transparent geometry capture separate, then expose resolve as ordinary `ShaderPassPipeline` steps. Put the chosen resolve pipeline into the same ordered `shaderPasses` array so transparency participates in later effects without creating a second postprocessing system.
+Opaque geometry should populate the G-buffer first. [`WBOITRenderer`](https://luma.gl/docs/api-reference/anari/wboit-renderer.md) and [`ABufferRenderer`](https://luma.gl/docs/api-reference/anari/a-buffer-renderer.md) keep transparent geometry capture separate, then expose resolve as ordinary `CompositeShaderPass` steps. Put the chosen resolve composite pass into the same ordered `shaderPasses` array so transparency participates in later effects without creating a second postprocessing system.
 
 The [Advanced Effects example](https://luma.gl/examples/experimental/advanced-effects) shows the full MRT surface pass feeding shadows, SSAO, SSR, fog, outlines, TAA, motion blur, and debug views.
 
@@ -388,7 +394,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
 
-  shaderPasses: [myShaderPass, myShaderPassPipeline]
+  shaderPasses: [myShaderPass, myCompositeShaderPass]
 
 });
 
@@ -397,4 +403,62 @@ const renderer = new ShaderPassRenderer(device, {
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
 
-For descriptor fields, see [`ShaderPass`](https://luma.gl/docs/api-reference/shadertools/shader-pass.md). For execution methods and routing details, see [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md). The current built-in effect catalog is under [Shader Pass Catalog](https://luma.gl/docs/api-reference/shadertools/shader-passes/image-processing.md).
+For descriptor fields, see [`ShaderPass`](https://luma.gl/docs/api-reference/shaders/shader-pass.md). For execution methods and routing details, see [`ShaderPassRenderer`](https://luma.gl/docs/api-reference/engine/passes/shader-pass-renderer.md). The current built-in effect catalog is under [Shader Pass Catalog](https://luma.gl/docs/api-reference/shaders/shader-passes/image-processing.md).
+
+### Analytic height fog[​](#analytic-height-fog "Direct link to Analytic height fog")
+
+`createVolumetricFogCompositeShaderPass({mode: 'height'})` selects an analytic, single-pass height-fog mode in WebGPU or WebGL2. The factory's default remains the existing stylized screen-space fog and its history graph. The analytic mode uses `heightFogFunctions`, the same extinction calculation used by the `heightFog` material shader module, and allocates no history.
+
+```
+const fog = createVolumetricFogCompositeShaderPass({mode: 'height'});
+
+const renderer = new ShaderPassRenderer(device, {shaderPasses: [fog]});
+
+renderer.resize([width, height]);
+
+renderer.renderToScreen({
+
+  sourceTexture: sceneColor,
+
+  bindings: {depthTexture: sceneDepth},
+
+  uniforms: {
+
+    heightFogPass: {
+
+      inverseViewProjectionMatrix,
+
+      cameraPosition,
+
+      upDirection: [0, 0, 1],
+
+      clipDepthRange: device.type === 'webgl' ? [-1, 1] : [0, 1],
+
+      color: [0.53, 0.61, 0.67],
+
+      density: 0.001,
+
+      baseHeight: 0,
+
+      heightFalloff: 0.01,
+
+      backgroundDepth: 1,
+
+      backgroundDistance: 0
+
+    }
+
+  }
+
+});
+```
+
+Supply the inverse matrix that produced the depth buffer, including any projection jitter. It must reconstruct positions in the same local metre-space frame as `cameraPosition`. `clipDepthRange` maps sampled depth zero/one into that matrix's clip-space Z, and must match its actual convention, including when a custom projection differs from backend defaults. `upDirection` is a unit vector; use `[0, 1, 0]` for Y-up scenes. Density and height falloff use inverse metres. Color inputs and fog tint are linear RGB; apply fog before tone mapping.
+
+The default `backgroundDistance: 0` leaves clear-depth pixels unchanged. Set a positive metre distance to fog a sky/background along its viewing ray, including an infinite far projection. Set `backgroundDepth: 0` for a reverse-Z depth clear. Output alpha is preserved, so transparent background pixels remain transparent; put the intended sky color in the source if it must be fogged. The pass has no temporal history to invalidate when cameras or fog parameters change.
+
+Run this pass on opaque color/depth before drawing transparent precipitation; otherwise a transparent foreground fragment would receive fog based on the opaque depth behind it. Transparent materials should use `heightFog` themselves. The analytic medium has a constant tint and a flat up axis; it does not include light scattering, shadowed fog, curved globe atmospheres, or automatic geographic-to-metre conversion. The input depth can come from any opaque renderer, including terrain, without modifying its material shaders.
+
+Set `variation` (0–1), `wispScale` (metres), `velocity` (metres per second), and `time` (seconds) for drifting fog banks. Both the pass and material use the same world-space density field and twelve-segment ray approximation, with no noise texture or history. Keep their parameters and coordinate frames consistent. Set `evolutionSpeed` above zero to deform the wisps internally as time advances. Zero variation uses the original analytic integral; zero velocity and evolution leave static wisps. Small wisps across very long rays can be undersampled.
+
+Visualization City's Height Fog section offers both modes. Riverfront Weather uses the same calculation directly in its building and precipitation materials.

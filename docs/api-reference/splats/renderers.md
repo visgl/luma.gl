@@ -5,7 +5,7 @@
 ## Rendering prepared splats[​](#rendering-prepared-splats "Direct link to Rendering prepared splats")
 
 ```
-import {makeGPUSplatData, SplatRenderer} from '@luma.gl/splats';
+import {makeGPUSplatData, SplatRenderer} from '@luma.gl/engine/splats';
 
 
 
@@ -51,7 +51,7 @@ nextSplatBatch.destroy();
 `GPUSplatGraphRenderer` renders streamed Gaussian captures directly through a WebGPU command graph. The first prepared batch becomes visible without waiting for the entire scene, running a CPU preview, or relinquishing ownership of the original source buffers.
 
 ```
-import {GPUSplatGraphRenderer, type GPUSplatData} from '@luma.gl/splats';
+import {GPUSplatGraphRenderer, type GPUSplatData} from '@luma.gl/engine/splats';
 
 
 
@@ -202,7 +202,7 @@ Reserving the final scene size avoids repeated graph compilation, but the global
 `GPUPagedSplatRenderer` projects independently owned source pages into bounded GPU segments while preserving one globally correct depth order across the entire active frontier:
 
 ```
-import {GPUPagedSplatRenderer} from '@luma.gl/splats';
+import {GPUPagedSplatRenderer} from '@luma.gl/engine/splats';
 
 
 
@@ -233,36 +233,52 @@ if (encoding) webgpuDevice.submit(commandEncoder.finish());
 console.log(renderer.stats.segmentCount, renderer.stats.activeRowCount);
 ```
 
-`activeRows` contains original batch-local row indices; omit it to render every row in one source page. No source page or GPU column is concatenated, rewritten, or transferred to the renderer. Each sparse source segment projects only its selected rows, evaluates degree-one through degree-three directional harmonics, and applies GPU semantic include/exclude selections. Source bindings, including large harmonic columns, are split into legal device-sized ranges while every compute shader stays within the standard eight-storage-binding WebGPU guarantee.
+`activeRows` contains original batch-local row indices; omit it to render every row in one source page. No source page or GPU column is concatenated, rewritten, or transferred to the renderer. For unsplit pages the renderer borrows `activeRows` directly. Keep that array stable until the next `setFrontier` call, and resubmit it after changing its contents. Camera-only updates rewrite camera uniforms without copying or uploading unchanged row indices. Adding or removing source segments can still rebuild the GPU graph; this is not an incremental graph-compilation API. Each sparse source segment projects only its selected rows, evaluates degree-one through degree-three directional harmonics, and applies GPU semantic include/exclude selections. Source bindings, including large harmonic columns, are split into legal device-sized ranges while every compute shader stays within the standard eight-storage-binding WebGPU guarantee.
 
 Set `lodOpacity: true` for Spark RAD sources whose encoding declares coarse-level opacity. The paged renderer then reconstructs authored parent support and nonlinear opacity, preserves Gaussian energy when adding screen-space antialiasing, and converts display-domain RAD colors correctly when presenting to a linear high-dynamic-range target. Ordinary Gaussian batches retain their existing opacity and floating-point color behavior. Use explicit `toneMapping: 'none'` for already display-referred RAD scenes on standard-dynamic-range canvases.
 
 A global GPU radix sort orders compact four-byte source-row references across every page. The sorted permutation is scattered into separate 48-byte projected output segments, and one shared render pass draws those segments in global depth order using GPU-written indirect commands. This preserves transparency ordering even when rows from different pages overlap or interleave in depth; sorting pages independently would not.
 
+The paged renderer sorts 32-bit linear camera-depth keys instead of quantized projected depth, preserving close-surface ordering across wide clipping ranges. Global center-depth sorting remains an approximation for intersecting Gaussians; it does not eliminate every LOD or transparency artifact.
+
 On a device with a 128 MiB storage-binding limit, the previous single-record graph supports at most 2,796,202 active rows; the paged renderer instead supports up to 33,554,432 simultaneously active four-byte global-sort references. Source datasets may be larger because original pages can enter and leave bounded residency. The four-byte global sort still has its own binding limit, and this renderer does not yet provide a dedicated segmented GPU picker or mixed-mesh helper.
 
 `maxProjectedSplatsPerSegment` can tighten the per-segment limit explicitly. `renderer.stats` reports original versus active rows, source/output segment counts, global sort capacity, exact borrowed-source and renderer-owned GPU bytes, and one indirect draw per output segment. The caller owns command submission and every source batch; destroy the renderer before releasing source pages.
 
+### Drawing inside a host-owned render pass[​](#drawing-inside-a-host-owned-render-pass "Direct link to Drawing inside a host-owned render pass")
+
+For composition with a host such as deck.gl, separate compute preparation from drawing:
+
+```
+renderer.setProps({modelViewProjectionMatrix, cameraPosition, viewportSize});
+
+renderer.prepare(commandEncoder); // Projection and sorting; no render pass is opened.
+
+
+
+const renderPass = commandEncoder.beginRenderPass({clearColor: [0, 0, 0, 0]});
+
+// Draw opaque host geometry here if it should occlude splats.
+
+renderer.draw(renderPass);
+
+renderPass.end();
+
+webgpuDevice.submit(commandEncoder.finish());
+```
+
+`prepare(commandEncoder)` returns an encoding only when data, camera, or style changes require compute work. Call it before opening the host pass. `draw(renderPass)` draws the prepared frontier on every host frame, including frames where `prepare()` returns `undefined`. It never clears, ends, or submits the supplied pass. An empty frontier draws nothing, and destroying the renderer still leaves caller-owned source pages intact.
+
+The host pass must use compatible canvas color/depth formats and sample count. Splats use their prepared camera and viewport; the host owns viewport/scissor configuration. They do not write depth. Supply an OpenGL-style clip matrix (`-w <= z <= w`); presentation converts its depth to WebGPU's `0 <= z <= w` range so opaque host geometry and splats share the same depth test. Separate renderer instances do not share a global transparency sort. Standalone callers can continue to use `encode(commandEncoder)` to prepare and open the renderer-owned pass together; do not use both paths for the same frame.
+
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
 * [Gaussian splats overview](https://luma.gl/docs/api-reference/splats.md)
-* [Gaussian Splat Viewer](https://luma.gl/examples/showcase/gaussian-splat-viewer)
-* GPU scheduling
+* [Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats)
+* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
 
-### Drawing in a host render pass[​](#drawing-in-a-host-render-pass "Direct link to Drawing in a host render pass")
+### Projected-depth convention[​](#projected-depth-convention "Direct link to Projected-depth convention")
 
-`GPUPagedSplatRenderer.prepare(commandEncoder)` encodes projection, directional features, global ordering and gathered output without beginning, clearing or ending a presentation pass. Prepare before the host opens its render pass; call `draw(renderPass, parameters?)` inside that pass. The host owns depth/color attachments and submits its command encoder normally. An empty frontier does not clear host color or depth. The existing `encode()` API retains its standalone presentation pass. Optional `RenderPipelineParameters` override the splat defaults for that draw. Attachment formats and resolved parameters select a cached host pipeline; a subsequent draw without overrides restores the defaults. Depth parameters are omitted when the host has no depth attachment.
+For `SplatRenderer`, set `depthConvention: 'reverse'` when the camera projection maps near geometry to larger depth values. The default, `'standard'`, preserves conventional far-to-near projected-depth ordering. This option controls alpha sorting independently of `depthCompare`: reverse-Z callers must also configure their shared depth test (typically `'greater'` or `'greater-equal'`) and clear depth (typically `0`). Changing the convention with `setProps` invalidates cached sorting, including when the camera matrix is unchanged.
 
-```
-renderer.prepare(commandEncoder);
-
-const pass = commandEncoder.beginRenderPass({framebuffer: hostFramebuffer, clearColor: false, clearDepth: false});
-
-renderer.draw(pass);
-
-pass.end();
-```
-
-Each `GPUPagedSplatPage` may provide a `modelViewProjectionMatrix`, source-frame `cameraPosition`, `alphaScale` and RGB `colorScale`. Repeated page data borrows the same immutable source buffers; projection and SH evaluation use each instance's camera and transform. Tint follows source SH and HDR evaluation. Page IDs remain unique across instances. Projection matrices use clip depth in `[-w, w]`; WebGPU presentation converts it to `[0, w]` while preserving global depth keys.
-
-RAD hierarchy managers accept decoded CPU geometry through `SplatRADHierarchyData`, so traversal can run in a worker independently of GPU upload. Retargeting preserves valid coverage during motion, and borrowed residency (`ownsData: false`) does not free source columns shared by other instance selectors.
+This option does not alter `sortMode: 'none'`, the bounded draw-run approximation for densely interleaved source batches, or transparent mesh composition. It does not add reverse-Z support to `GPUSplatGraphRenderer` or `GPUPagedSplatRenderer`.

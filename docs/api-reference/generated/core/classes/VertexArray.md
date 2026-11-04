@@ -1,6 +1,6 @@
 # Abstract Class: VertexArray
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L28)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L28)
 
 Stores attribute bindings. Makes it easy to share a render pipeline and use separate vertex arrays.
 
@@ -18,7 +18,7 @@ Backend-specific attribute accessor metadata is no longer stored in the shared b
 
 > **new VertexArray**(`device`, `props`): `VertexArray`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L52)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L54)
 
 Creates a backend-agnostic vertex-array container.
 
@@ -46,11 +46,21 @@ Vertex-array initialization properties.
 
 ## Properties[​](#properties "Direct link to Properties")
 
+### attributeByteOffsets[​](#attributebyteoffsets "Direct link to attributeByteOffsets")
+
+> **attributeByteOffsets**: `number`\[]
+
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L47)
+
+Byte offsets added to every attribute read from each buffer slot or attribute location.
+
+***
+
 ### attributes[​](#attributes "Direct link to attributes")
 
 > **attributes**: ([`Buffer`](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md) | [`TypedArray`](https://luma.gl/docs/api-reference/generated/core/type-aliases/TypedArray.md) | `null`)\[]
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L45)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L45)
 
 Buffers or constants indexed by backend-defined buffer slot or attribute location.
 
@@ -60,7 +70,7 @@ Buffers or constants indexed by backend-defined buffer slot or attribute locatio
 
 > **destroyed**: `boolean` = `false`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L131)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
 
 Whether this resource has been destroyed
 
@@ -74,7 +84,7 @@ Whether this resource has been destroyed
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
 
 The device that this resource is associated with
 
@@ -88,7 +98,7 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
@@ -102,7 +112,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **id**: `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
 
 props.id, for debugging.
 
@@ -116,7 +126,7 @@ props.id, for debugging.
 
 > **indexBuffer**: [`Buffer`](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md) | `null` = `null`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L43)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L43)
 
 Index buffer
 
@@ -126,7 +136,7 @@ Index buffer
 
 > `readonly` **maxVertexAttributes**: `number`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L40)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L40)
 
 Max number of vertex attributes
 
@@ -136,7 +146,7 @@ Max number of vertex attributes
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
 
 The props that this resource was created with
 
@@ -150,7 +160,7 @@ The props that this resource was created with
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
 
 User data object, reserved for the application
 
@@ -164,7 +174,7 @@ User data object, reserved for the application
 
 > `static` **defaultProps**: `Required`<[`VertexArrayProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/VertexArrayProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L29)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L29)
 
 Default properties for resource
 
@@ -180,7 +190,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L35)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L35)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -198,7 +208,7 @@ Defined in: [modules/core/src/adapter/resources/vertex-array.ts:35](https://gith
 
 > **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
 
 Whether luma.gl may only reference the opaque externally owned resource handle.
 
@@ -218,7 +228,7 @@ Whether luma.gl may only reference the opaque externally owned resource handle.
 
 > **get** **ownsHandle**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
 
 Whether luma.gl created and owns the underlying resource handle.
 
@@ -236,7 +246,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L200)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
 
 Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
 
@@ -260,7 +270,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > `abstract` **bindBeforeRender**(`renderPass`): `void`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L64)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L71)
 
 Applies any backend-specific bindings required before a draw call.
 
@@ -280,7 +290,7 @@ Applies any backend-specific bindings required before a draw call.
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
 
 #### Returns[​](#returns-6 "Direct link to Returns")
 
@@ -300,7 +310,7 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
 
 destroy can be called on any resource to release it before it is garbage collected.
 
@@ -318,7 +328,7 @@ destroy can be called on any resource to release it before it is garbage collect
 
 > **destroyAttachedResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L214)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
 
 Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
 
@@ -342,7 +352,7 @@ Destroys a resource (only if owned), and removes from the owned (auto-destroy) l
 
 > **destroyAttachedResources**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L221)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
 
 Destroy all owned resources. Make sure the resources are no longer needed before calling.
 
@@ -360,7 +370,7 @@ Destroy all owned resources. Make sure the resources are no longer needed before
 
 > **detachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L207)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
 
 Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
 
@@ -384,7 +394,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > **getBufferSlot**(`bufferName`): `number` | `null`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:69](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L69)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:76](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L76)
 
 Returns the backend-defined slot for a logical buffer name, if known.
 
@@ -404,7 +414,7 @@ Returns the backend-defined slot for a logical buffer name, if known.
 
 > **getDrawValidationError**(): `string` | `null`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L74)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L81)
 
 Returns a draw-blocking validation error, or null if this vertex array can be drawn.
 
@@ -418,7 +428,7 @@ Returns a draw-blocking validation error, or null if this vertex array can be dr
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
 
 Combines a map of user props and default props, only including props from defaultProps
 
@@ -436,9 +446,9 @@ returns a map of overridden default props
 
 ### setBuffer()[​](#setbuffer "Direct link to setBuffer()")
 
-> `abstract` **setBuffer**(`bufferSlot`, `buffer`): `void`
+> `abstract` **setBuffer**(`bufferSlot`, `buffer`, `byteOffset?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L61)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L68)
 
 Sets one backend-defined buffer slot or attribute location.
 
@@ -452,6 +462,12 @@ Sets one backend-defined buffer slot or attribute location.
 
 [`Buffer`](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md) | `null`
 
+##### byteOffset?[​](#byteoffset "Direct link to byteOffset?")
+
+`number`
+
+Byte offset added to every attribute read from this buffer, for example when the buffer is shared and the vertex data starts inside it. Defaults to 0.
+
 #### Returns[​](#returns-14 "Direct link to Returns")
 
 `void`
@@ -462,7 +478,7 @@ Sets one backend-defined buffer slot or attribute location.
 
 > **setConstantWebGL**(`location`, `value`): `void`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L81)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L88)
 
 #### Parameters[​](#parameters-7 "Direct link to Parameters")
 
@@ -488,7 +504,7 @@ Set constant attributes (WebGL only)
 
 > `abstract` **setIndexBuffer**(`indices`): `void`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L59)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L62)
 
 Sets the index buffer used for indexed rendering.
 
@@ -508,7 +524,7 @@ Sets the index buffer used for indexed rendering.
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
 
 Compact serialization for assertion diffs and structured debug logs.
 
@@ -526,7 +542,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
 
 #### Returns[​](#returns-18 "Direct link to Returns")
 
@@ -542,7 +558,7 @@ Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.
 
 > `abstract` **unbindAfterRender**(`renderPass`): `void`
 
-Defined in: [modules/core/src/adapter/resources/vertex-array.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/vertex-array.ts#L66)
+Defined in: [modules/core/src/api/adapter/resources/vertex-array.ts:73](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/vertex-array.ts#L73)
 
 Clears any backend-specific bindings after a draw call.
 

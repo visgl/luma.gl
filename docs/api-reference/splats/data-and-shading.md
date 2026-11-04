@@ -4,7 +4,7 @@
 
 ## Source columns and rendering[​](#source-columns-and-rendering "Direct link to Source columns and rendering")
 
-`SplatSource` contains framework-independent, decoded typed arrays. Positions and linear one-standard-deviation scales are packed XYZ `Float32Array` values; rotations are packed `[w, x, y, z]` quaternions; colors are normalized RGBA `Uint8Array` values or linear RGBA `Float32Array` values; and opacities are linear `Float32Array` values. Floating-point colors preserve high-dynamic-range spherical-harmonic DC radiance, including values above one and below zero, until rendering. Prepared GPU columns use the `float32x3`, `float32x4`, `unorm8x4`, and `float32` memory formats provided by [`@luma.gl/gpgpu/gpu-data`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md).
+`SplatSource` contains framework-independent, decoded typed arrays. Positions and linear one-standard-deviation scales are packed XYZ `Float32Array` values; rotations are packed `[w, x, y, z]` quaternions; colors are normalized RGBA `Uint8Array` values or linear RGBA `Float32Array` values; and opacities are linear `Float32Array` values. Floating-point colors preserve high-dynamic-range spherical-harmonic DC radiance, including values above one and below zero, until rendering. Prepared GPU columns use the `float32x3`, `float32x4`, `unorm8x4`, and `float32` memory formats provided by [`@luma.gl/graph/gpu-data`](https://luma.gl/docs/api-reference/graph/gpu-data.md).
 
 `SplatRenderer` supports `none`, `global`, and `tile` depth-ordering modes alongside camera matrix, viewport, radius, opacity, and visibility controls; `GPUSplatGraphRenderer` always uses global GPU ordering. WebGPU uses GPU-ready splat buffers and WGSL; WebGL2 uses an attribute-backed GLSL fallback. Both renderers support higher-order directional radiance, semantic filtering, dedicated GPU picking, and mixed mesh composition through their corresponding interaction helpers. When globally sorted source batches are densely interleaved, `SplatRenderer` bounds draw-call growth by grouping rows into depth-ordered batch runs without changing or repacking their source buffers.
 
@@ -85,5 +85,5 @@ Updates preserve buffer identities, source-batch boundaries, and stable row indi
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
 * [Gaussian splats overview](https://luma.gl/docs/api-reference/splats.md)
-* [Gaussian Splat Viewer](https://luma.gl/examples/showcase/gaussian-splat-viewer)
-* GPU scheduling
+* [Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats)
+* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)

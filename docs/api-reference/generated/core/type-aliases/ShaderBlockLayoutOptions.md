@@ -2,7 +2,7 @@
 
 > **ShaderBlockLayoutOptions** = `object`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L38)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:30
 
 Options for [makeShaderBlockLayout](https://luma.gl/docs/api-reference/generated/core/functions/makeShaderBlockLayout.md).
 
@@ -12,7 +12,7 @@ Options for [makeShaderBlockLayout](https://luma.gl/docs/api-reference/generated
 
 > `optional` **layout?**: `"std140"` | `"wgsl-uniform"` | `"wgsl-storage"`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-block-layout.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-block-layout.ts#L44)
+Defined in: modules/shaders/dist/types/shader-block-layout.d.ts:36
 
 Packing rules to apply when building the layout.
 

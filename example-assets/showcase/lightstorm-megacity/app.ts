@@ -4,10 +4,10 @@
 
 import {Buffer, type Device, type RenderBundle, type TextureFormatColor} from '@luma.gl/core';
 import {
-  createBloomShaderPassPipeline,
-  createSSRShaderPassPipeline,
+  createBloomCompositeShaderPass,
+  createSSRCompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -25,8 +25,8 @@ import {
   GPUVisibilityWorkflow,
   INDEX_PICKING_READBACK_BYTE_LENGTH,
   type CompiledGPUCommandGraph
-} from '@luma.gl/gpgpu/gpu-core';
-import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/experimental';
+} from '@luma.gl/graph/gpu-core';
+import {ClusteredLightGrid, GBuffer, makeDeferredPointLightBufferData} from '@luma.gl/anari';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {ColumnPanel, type Panel} from '@deck.gl-community/panels';
 import {
@@ -59,7 +59,7 @@ import {
 } from './lightstorm-lightning';
 import {LightstormThunderController} from './lightstorm-thunder';
 import {
-  createLightstormDeferredLightingShaderPassPipeline,
+  createLightstormDeferredLightingCompositeShaderPass,
   getLightstormVisibilityShader,
   LIGHTSTORM_LIGHTNING_SHADER,
   LIGHTSTORM_LIGHT_MARKER_SHADER,
@@ -323,16 +323,16 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
     });
     this.deferredLightingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createLightstormDeferredLightingShaderPassPipeline(this.sceneColorFormat),
+        createLightstormDeferredLightingCompositeShaderPass(this.sceneColorFormat),
         ...(this.sceneColorFormat === 'rgba16float'
-          ? [createSSRShaderPassPipeline({resolutionScale: 0.5})]
+          ? [createSSRCompositeShaderPass({resolutionScale: 0.5})]
           : [])
       ],
       colorFormat: this.sceneColorFormat
     });
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: this.sceneColorFormat}),
+        createBloomCompositeShaderPass({colorFormat: this.sceneColorFormat}),
         toneMapping
       ],
       colorFormat: this.sceneColorFormat
@@ -848,12 +848,14 @@ export default class LightstormMegacityAnimationLoopTemplate extends AnimationLo
       }
     });
 
-    new GPUVisibilityWorkflow({
-      id: 'visible-city-records',
-      predicates: [{kind: 'bounds', mask: flags}],
-      output: visibleIdentifierView,
-      count: instanceCount
-    }).addToGraph(graph);
+    graph.add(
+      new GPUVisibilityWorkflow({
+        id: 'visible-city-records',
+        predicates: [{kind: 'bounds', mask: flags}],
+        output: visibleIdentifierView,
+        count: instanceCount
+      })
+    );
 
     graph.addRenderPass({
       id: 'render-visible-city',

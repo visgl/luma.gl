@@ -4,14 +4,14 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`SpectralOceanSimulation` generates a periodic, render-ready deep-water ocean entirely on WebGPU. Construction uploads a deterministic seeded Phillips spectrum. Each step evolves that spectrum with the deep-water dispersion relation, runs normalized inverse transforms for height and X/Z horizontal displacement through `GPUFFT2D`, then derives normals and whitecaps from the displaced surface.
+`SpectralOceanSimulation` generates a periodic, render-ready deep-water ocean entirely on WebGPU. Construction uploads a deterministic seeded Phillips spectrum. Each step evolves that spectrum with the deep-water dispersion relation, runs normalized inverse transforms for height and X/Z horizontal displacement through [`GPUFFT2D`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-fft2d.md), then derives normals and whitecaps from the displaced surface.
 
 The simulation records into an application-owned `CommandEncoder`. It never submits commands, maps buffers, reads results to the CPU, creates a frame loop, or owns scene geometry.
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {SpectralOceanSimulation} from '@luma.gl/experimental';
+import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
 
 
 

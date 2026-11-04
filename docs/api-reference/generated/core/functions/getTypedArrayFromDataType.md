@@ -2,7 +2,7 @@
 
 > **getTypedArrayFromDataType**(`type`): [`TypedArrayConstructor`](https://luma.gl/docs/api-reference/generated/core/type-aliases/TypedArrayConstructor.md)
 
-Defined in: [modules/core/src/shadertypes/data-types/decode-data-types.ts:85](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/decode-data-types.ts#L85)
+Defined in: [modules/core/src/shadertypes/data-types/decode-data-types.ts:75](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/decode-data-types.ts#L75)
 
 Returns the typed array constructor used to represent one luma.gl scalar data type.
 

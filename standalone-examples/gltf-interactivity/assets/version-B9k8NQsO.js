@@ -1,0 +1,1 @@
+var e=`5.0.0-beta.4`;export{e as t};

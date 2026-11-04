@@ -1,8 +1,8 @@
 # GPU Floating-Point Precision Techniques
 
-[Precision guide](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)
+[Precision guide](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp64](https://luma.gl/docs/api-reference/shaders/shader-modules/fp64.md)[fp64 arithmetic](https://luma.gl/docs/api-reference/shaders/shader-modules/fp64-arithmetic.md)
 
-[Precision Guide](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp32](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp32.md)[fp64](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64.md)[fp64arithmetic](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)[Mandelbrot & Benchmarks](https://luma.gl/examples/experimental/fp64)
+[Precision Guide](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md)[fp32](https://luma.gl/docs/api-reference/shaders/shader-modules/fp32.md)[fp64](https://luma.gl/docs/api-reference/shaders/shader-modules/fp64.md)[fp64arithmetic](https://luma.gl/docs/api-reference/shaders/shader-modules/fp64-arithmetic.md)[Mandelbrot & Benchmarks](https://luma.gl/examples/experimental/fp64)
 
 "fp64" is often used to mean "more precision than `f32`," but the available techniques do not all implement the same number system. A pair of `f32` values, raw IEEE 754 binary64 bits, fixed-point integers, and native 64-bit floating point have different precision, range, rounding, and portability guarantees.
 
@@ -10,7 +10,7 @@ That distinction matters on WebGPU. Classic double-single arithmetic can be fast
 
 ## Live Mandelbrot And Compute Benchmark[​](#live-mandelbrot-and-compute-benchmark "Direct link to Live Mandelbrot And Compute Benchmark")
 
-The two Mandelbrot views follow the same deep zoom. The left view uses native `f32`; the right uses luma.gl's `fp64arithmetic` double-single representation. On WebGPU, use the benchmark below the canvases to compare native `f32`, automatic selection, the classic transforms, and the integer-controlled path on the active device.
+The two Mandelbrot views follow the same deep zoom. The left view uses native `f32`; the right uses luma.gl's `fp64arithmetic` double-single representation. On Apple WebGPU, the live FP64 pane uses a hybrid double-single path: integer operations reconstruct the critical high-part residuals while native `f32` accumulates lower-order terms. This is faster than fully integer-controlled arithmetic and more optimizer-resistant than the classic path, but it is not fully reliable. The fully integer-controlled path remains available in the benchmark. On WebGPU, use the benchmark below the canvases to compare native `f32`, automatic selection, the classic transforms, the hybrid path, and the integer-controlled path on the active device.
 
 Optional interactive GPU benchmark**Explore floating-point precision.**&#x43;ompare Mandelbrot rendering and compute precision when you are ready to use your GPU.Launch precision benchmark →
 
@@ -201,9 +201,9 @@ Do not choose a representation from the label "fp64." Choose it from the failure
 
 ## luma.gl Precision Paths[​](#lumagl-precision-paths "Direct link to luma.gl Precision Paths")
 
-The [`fp64`](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64.md) module exposes the full established `fp64f32` function library in GLSL only. It has no WGSL source, so its exponential, logarithmic, and trigonometric functions are not available to WebGPU shaders.
+The [`fp64`](https://luma.gl/docs/api-reference/shaders/shader-modules/fp64.md) module exposes the full established `fp64f32` function library in GLSL only. It has no WGSL source, so its exponential, logarithmic, and trigonometric functions are not available to WebGPU shaders.
 
-Its lower-level [`fp64arithmetic`](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md) dependency provides the add, subtract, multiply, divide, and square-root helpers in both GLSL and WGSL. Non-Apple WGSL uses the classic floating-point transforms by default. Apple WebGPU uses the integer-controlled implementation automatically, and callers can use `LUMA_FP64_INTEGER_ARITHMETIC` to test or override that choice.
+Its lower-level [`fp64arithmetic`](https://luma.gl/docs/api-reference/shaders/shader-modules/fp64-arithmetic.md) dependency provides the add, subtract, multiply, divide, and square-root helpers in both GLSL and WGSL. Non-Apple WGSL uses the classic floating-point transforms by default. Apple WebGPU uses the integer-controlled implementation automatically, and callers can use `LUMA_FP64_INTEGER_ARITHMETIC` to test or override that choice.
 
 WGSL also provides these targeted helpers for `fp64u32` values:
 

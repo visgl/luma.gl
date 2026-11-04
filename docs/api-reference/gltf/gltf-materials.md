@@ -1,15 +1,17 @@
-# glTF Materials, Textures, and Lighting
+# glTF Material Conversion
 
-[Overview](https://luma.gl/docs/api-reference/gltf.md)[Materials](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
 
-`@luma.gl/gltf` translates source glTF material and lighting data into the existing `@luma.gl/shadertools` PBR modules. The same format-owned helpers are reused by retained-scene importers, so sampler, UV, color-space, and extension interpretation stay in one place.
+`@luma.gl/engine/gltf` translates source glTF material and lighting data into the existing `@luma.gl/shaders` PBR modules. The same format-owned helpers are reused by retained-scene importers, so sampler, UV, color-space, and extension interpretation stay in one place.
+
+For shading behavior and feature examples, see [Materials](https://luma.gl/docs/api-guide/engine/materials.md). This page describes how the glTF converter maps source data onto luma.gl materials.
 
 ## Parse a physically based material[​](#parse-a-physically-based-material "Direct link to Parse a physically based material")
 
 `createScenegraphsFromGLTF()` normally builds and caches materials automatically. Applications implementing their own glTF integration can call the underlying parser directly:
 
 ```
-import {parsePBRMaterial} from '@luma.gl/gltf';
+import {parsePBRMaterial} from '@luma.gl/engine/gltf';
 
 
 
@@ -55,7 +57,7 @@ Core metallic-roughness factors and supported extension factors include emissive
 ## Supported texture slots[​](#supported-texture-slots "Direct link to Supported texture slots")
 
 ```
-import {getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
+import {getTextureTransformSlotDefinitions} from '@luma.gl/engine/gltf';
 
 
 
@@ -99,7 +101,7 @@ Color textures must be decoded from sRGB exactly once. Data textures must remain
 `convertGLTFSampler()` normalizes both raw glTF sampler fields and postprocessed loaders.gl sampler parameters:
 
 ```
-import {convertGLTFSampler, convertSamplerToGLTF} from '@luma.gl/gltf';
+import {convertGLTFSampler, convertSamplerToGLTF} from '@luma.gl/engine/gltf';
 
 
 
@@ -141,7 +143,7 @@ The conversion preserves `REPEAT`, `CLAMP_TO_EDGE`, `MIRRORED_REPEAT`, nearest/l
 `createGLTFTexture()` uploads an existing loader-provided image and materializes the mip chain requested by its sampler:
 
 ```
-import {createGLTFTexture} from '@luma.gl/gltf';
+import {createGLTFTexture} from '@luma.gl/engine/gltf';
 
 
 
@@ -183,7 +185,7 @@ import {
 
   resolveTextureTransform
 
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 
 
 
@@ -293,7 +295,7 @@ The canonical shaders apply a local, thickness-aware single-scattering approxima
 ## Punctual lights[​](#punctual-lights "Direct link to Punctual lights")
 
 ```
-import {parseGLTFLights} from '@luma.gl/gltf';
+import {parseGLTFLights} from '@luma.gl/engine/gltf';
 
 
 
@@ -304,14 +306,18 @@ const lights = parseGLTFLights(gltf, {useByteColors: false});
 
 ## Image-based lighting[​](#image-based-lighting "Direct link to Image-based lighting")
 
-`loadPBREnvironment()` loads an already prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
+`loadPBREnvironment()` uses an application-supplied `loadImage` callback to load an already prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```
-import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/engine/gltf';
+
+import {loadImageTexture} from '@loaders.gl/images/load-image';
 
 
 
 const environment = loadPBREnvironment(device, {
+
+  loadImage: loadImageTexture,
 
   brdfLutUrl: '/environment/brdf-lut.png',
 
@@ -330,13 +336,13 @@ const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
 });
 ```
 
-This API loads precomputed resources; it does not convert arbitrary HDR images into prefiltered lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF lookup from an existing equirectangular texture, use the separate [`PBREnvironmentGenerator`](https://luma.gl/docs/api-reference/experimental/pbr-environment.md) owned by `@luma.gl/experimental`.
+This API loads precomputed resources; it does not convert arbitrary HDR images into prefiltered lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF lookup from an existing equirectangular texture, use the separate [`PBREnvironmentGenerator`](https://luma.gl/docs/api-reference/anari/pbr-environment.md) owned by `@luma.gl/anari`.
 
 ## Transmission and rendering-path differences[​](#transmission-and-rendering-path-differences "Direct link to Transmission and rendering-path differences")
 
 Transmission and volume factors/textures are preserved across rendering paths, but physical refraction depends on the renderer:
 
-* The shared [experimental SceneRenderer](https://luma.gl/docs/api-reference/experimental/scene-renderer.md) and retained ANARI path capture the opaque scene and sample it for screen-space refraction with thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment when the device supports rendering and filtering `rgba16float`.
+* The shared [experimental SceneRenderer](https://luma.gl/docs/api-reference/anari/scene-renderer.md) and retained ANARI path capture the opaque scene and sample it for screen-space refraction with thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment when the device supports rendering and filtering `rgba16float`.
 * Standalone models produced by `createScenegraphsFromGLTF()` do not capture scene color and retain the established alpha/attenuation transmission approximation.
 
 Captured transmission is a single screen-space opaque pass, not ray tracing or arbitrary layered refraction. Advanced materials use Charlie-distributed sheen, anisotropic GGX distribution/visibility, spectral thin-film iridescence, and Fresnel-aware clearcoat/base-layer energy compensation. See [glTF extension support](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md) for format-level coverage.

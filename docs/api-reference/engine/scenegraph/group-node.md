@@ -1,6 +1,6 @@
 # GroupNode
 
-[Workflow](https://luma.gl/docs/api-guide/engine/scenegraph.md)[ScenegraphNode](https://luma.gl/docs/api-reference/engine/scenegraph/scenegraph-node.md)[GroupNode](https://luma.gl/docs/api-reference/engine/scenegraph/group-node.md)[ModelNode](https://luma.gl/docs/api-reference/engine/scenegraph/model-node.md)
+[Workflow](https://luma.gl/docs/api-guide/engine/scenegraph.md)[Controllers](https://luma.gl/docs/api-guide/engine/scene-controllers.md)[Physics](https://luma.gl/docs/api-guide/engine/scenegraph-physics.md)[ScenegraphNode](https://luma.gl/docs/api-reference/engine/scenegraph/scenegraph-node.md)[GroupNode](https://luma.gl/docs/api-reference/engine/scenegraph/group-node.md)[ModelNode](https://luma.gl/docs/api-reference/engine/scenegraph/model-node.md)
 
 `GroupNode` extends [`ScenegraphNode`](https://luma.gl/docs/api-reference/engine/scenegraph/scenegraph-node.md) with child-node management and traversal helpers.
 
@@ -87,6 +87,28 @@ Removes one child.
 ### `removeAll(): this`[​](#removeall-this "Direct link to removeall-this")
 
 Clears all children.
+
+### `findNode(path: string): ScenegraphNode | undefined`[​](#findnodepath-string-scenegraphnode--undefined "Direct link to findnodepath-string-scenegraphnode--undefined")
+
+Resolves an exact node ID or hierarchy path to its existing node object. Returns `undefined` when no node matches; throws if the path is ambiguous.
+
+```
+scene.findNode('hinge');                // ID anywhere in the subtree, including scene.
+
+scene.findNode('door/hinge');           // Contiguous suffix of a node's path.
+
+scene.findNode('/room/door/hinge');     // Anchored below scene; omit scene's own ID.
+
+scene.findNode('/');                   // scene itself.
+```
+
+Segments match complete, case-sensitive IDs. Leading ancestors may be omitted in an unanchored path; intermediate ancestors may not. Encode `/` inside an ID as `~1`, and `~` as `~0`. Empty paths, empty segments and invalid escapes throw. Other characters, including dots and asterisks, are literal IDs rather than navigation or wildcard syntax.
+
+### `findNodes(path: string): ScenegraphNode[]`[​](#findnodespath-string-scenegraphnode "Direct link to findnodespath-string-scenegraphnode")
+
+Returns all matches in structural preorder, or an empty array. Uses the same path syntax as `findNode`, includes hidden branches, and can return groups as well as leaves. IDs may be duplicated; use this method when multiple results are intentional.
+
+Both lookup methods inspect the current hierarchy without computing transforms or keeping a cache. They require a tree and reject cycles and repeated node objects. Resolve paths at application setup and retain node references for controllers or repeated frame work.
 
 ### `traverse(visitor, {worldMatrix} = {})`[​](#traversevisitor-worldmatrix-- "Direct link to traversevisitor-worldmatrix--")
 

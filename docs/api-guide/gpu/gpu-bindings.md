@@ -13,7 +13,7 @@ This page explains how to describe grouped bindings in luma.gl and how to pass t
 
 ## Quick Rule[​](#quick-rule "Direct link to Quick Rule")
 
-For WGSL that goes through `Model` or shadertools assembly, prefer `@binding(auto)` and pass bindings by name.
+For WGSL that goes through `Model` or shaders assembly, prefer `@binding(auto)` and pass bindings by name.
 
 ```
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
@@ -369,7 +369,7 @@ At the engine level, `Model` still primarily works with flat bindings. Grouping 
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
 
-import {lighting, pbrMaterial} from '@luma.gl/shadertools';
+import {lighting, pbrMaterial} from '@luma.gl/shaders';
 
 
 
@@ -432,4 +432,4 @@ Here `Model` manages the module uniform buffers internally through `shaderInputs
 * [ShaderLayout](https://luma.gl/docs/api-reference/core/shader-layout.md)
 * [RenderPipeline](https://luma.gl/docs/api-reference/core/resources/render-pipeline.md)
 * [ComputePipeline](https://luma.gl/docs/api-reference/core/resources/compute-pipeline.md)
-* [Shader Module Conventions](https://luma.gl/docs/api-reference/shadertools/shader-conventions.md)
+* [Shader Module Conventions](https://luma.gl/docs/api-reference/shaders/shader-conventions.md)

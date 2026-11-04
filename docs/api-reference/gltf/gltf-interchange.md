@@ -1,15 +1,17 @@
 # glTF Asset Interchange
 
-[Overview](https://luma.gl/docs/api-reference/gltf.md)[Materials](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
 
-`@luma.gl/gltf` owns format-native scene interchange. `exportGLTF()` writes standards-conformant embedded `.gltf` documents or aligned binary `.glb` assets without depending on an application renderer, an ANARI device, or browser-specific GPU resources.
+Asset export is application code. The shared example helper [`examples/gltf/gltf-exporter.ts`](https://github.com/visgl/luma.gl/blob/master/examples/gltf/gltf-exporter.ts) provides `exportGLTF()` and its descriptor types; they are not exports of `@luma.gl/engine/gltf`. The helper writes standards-conformant embedded `.gltf` documents or aligned binary `.glb` assets without depending on an application renderer, an ANARI device, or browser-specific GPU resources.
 
 The same descriptors preserve authored node hierarchies, skins, inverse bind matrices, morph targets, animation clips, material-animation pointers, GPU instancing, variants, cameras, punctual-light extensions, and complete physical material records.
+
+Copy the helper into your application and install `@loaders.gl/core` and `@loaders.gl/scene` to enable its GLB writer. luma.gl modules do not depend on loaders.gl.
 
 ## Export a scene[​](#export-a-scene "Direct link to Export a scene")
 
 ```
-import {exportGLTF, type GLTFExportScene} from '@luma.gl/gltf';
+import {exportGLTF, type GLTFExportScene} from './gltf-exporter';
 
 
 
@@ -268,6 +270,6 @@ Image bytes become data URIs in JSON exports and embedded buffer views in GLB ex
 
 ## Resource ownership[​](#resource-ownership "Direct link to Resource ownership")
 
-All descriptors and typed arrays remain owned by the caller. Export never destroys GPU resources, mutates source arrays, changes material objects, or depends on `@luma.gl/scene`.
+All descriptors and typed arrays remain owned by the caller. Export never destroys GPU resources, mutates source arrays, changes material objects, or depends on `@luma.gl/anari`.
 
 Applications using the optional ANARI playground adapt their retained descriptions into these format-owned descriptors. That adapter preserves animated hierarchy, morph targets, joint attributes, compatible skin descriptions, material pointers, authored samplers, and all supported physical material slots.

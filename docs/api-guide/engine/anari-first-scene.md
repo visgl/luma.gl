@@ -26,26 +26,26 @@ This is particularly useful when an application should expose a stable scene con
 
 ## Install the package[​](#install-the-package "Direct link to Install the package")
 
-`@luma.gl/scene` is published as an experimental package:
+`@luma.gl/anari` is a public package with experimental APIs. Install it with the required luma.gl peers:
 
 ```
-yarn add @luma.gl/scene
+yarn add @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/shaders
 ```
 
-At least one luma.gl backend is required. Use `@luma.gl/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/webgl` when a WebGL 2 fallback is important.
+At least one luma.gl backend is required. Use `@luma.gl/core/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/core/webgl` when a WebGL 2 fallback is important.
 
 ## Create a graphics device[​](#create-a-graphics-device "Direct link to Create a graphics device")
 
 Start with an ordinary luma.gl `Device` and wrap it in `ANARIDevice`:
 
 ```
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 
@@ -83,13 +83,13 @@ Adapter order determines preference: this example uses WebGPU when available and
 The following complete scene adds a metallic sphere, floor, directional light, animated point light, camera, renderer, and animation loop. It assumes a page containing `<canvas></canvas>`.
 
 ```
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 import {Matrix4} from '@math.gl/core';
 
@@ -290,7 +290,7 @@ const renderer = anariDevice.newRenderer('deferred', {
 });
 ```
 
-The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/experimental` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
+The deferred renderer shares ANARI scene traversal, generated geometry, instance transforms, and PBR material textures with the default renderer, then resolves lighting through `@luma.gl/anari` `GBuffer` and `deferredLighting`. This first path is intentionally limited to opaque material channels and direct lights; clustered lighting and screen-space effects remain separate follow-up work.
 
 The compact G-buffer runs within the default WebGPU CORE limit of 32 color-attachment bytes per sample. Its four targets retain HDR scene color (`rgba16float`), normal and roughness (`rgba8unorm`), base color and metallic (`rgba8unorm`), and HDR emissive color with occlusion (`rgba16float`). Each format costs eight render-target bytes under WebGPU accounting, for exactly 32 bytes total. ANARI's previous velocity target contained only zeroes and was never consumed, so omitting it preserves physically based direct lighting, HDR, and emissive response without requesting elevated device limits. Temporal motion-vector effects remain future work.
 
@@ -328,11 +328,11 @@ const renderer = anariDevice.newRenderer('raytrace', {
 frame.setParameter('renderer', renderer).commitParameters();
 ```
 
-The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from `@luma.gl/experimental`. Its WebGPU compute graph derives world-space bounds for transformed analytic spheres and mesh instances, Morton-sorts active object/instance leaves into an explicit retained permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-only animation gathers updated bounds through the retained permutation and refits the TLAS without sorting; topology changes and periodic spatial refreshes rebuild the Morton order. A topology-only graph also Morton-sorts each mesh's triangles into GPU-built BLASes, which transform-only animation reuses. Small mesh permutations and hierarchies sharing packed scene storage are grouped into reusable segmented sort and BVH dispatches instead of opening separate sorting and hierarchy dispatches for every mesh. The instance-bounds pass reads each mesh BLAS root directly, producing a tight transformed local AABB instead of expanding elongated meshes to their enclosing sphere. Small sorts and hierarchy builds execute inside one workgroup; larger sorts use stable four-bit radix passes, and consecutive compute nodes share a command-encoder compute pass when per-node GPU timestamps are not requested. The same `GPUCommandGraph` evaluates direct lights with scalar metallic/roughness GGX shading, progressively accumulates unchanged primary-ray samples, and presents into either the canvas or a caller-owned offscreen framebuffer. The fullscreen presentation matches the actual target format, selected tone-mapping mode, and linear/sRGB output encoding, preserving HDR for floating-point targets. Generated quads, cylinders, and cones use their existing triangle geometry.
+The ANARI adapter passes committed scene descriptors to `RayTracingSceneRenderer` from `@luma.gl/anari`. Its WebGPU compute graph derives world-space bounds for transformed analytic spheres and mesh instances, Morton-sorts active object/instance leaves into an explicit retained permutation, builds and refits a graph-owned complete-binary TLAS, and traverses that hierarchy for nearest-hit primary rays and early-exit shadow rays. Transform-only animation gathers updated bounds through the retained permutation and refits the TLAS without sorting; topology changes and periodic spatial refreshes rebuild the Morton order. A topology-only graph also Morton-sorts each mesh's triangles into GPU-built BLASes, which transform-only animation reuses. Small mesh permutations and hierarchies sharing packed scene storage are grouped into reusable segmented sort and BVH dispatches instead of opening separate sorting and hierarchy dispatches for every mesh. The instance-bounds pass reads each mesh BLAS root directly, producing a tight transformed local AABB instead of expanding elongated meshes to their enclosing sphere. Small sorts and hierarchy builds execute inside one workgroup; larger sorts use stable four-bit radix passes, and consecutive compute nodes share a command-encoder compute pass when per-node GPU timestamps are not requested. The same `GPUCommandGraph` evaluates direct lights with scalar metallic/roughness GGX shading, progressively accumulates unchanged primary-ray samples, and presents into either the canvas or a caller-owned offscreen framebuffer. The fullscreen presentation matches the actual target format, selected tone-mapping mode, and linear/sRGB output encoding, preserving HDR for floating-point targets. Generated quads, cylinders, and cones use their existing triangle geometry.
 
 Ray tracing starts at half the display width and height, reducing its initial pixel workload to one quarter of full resolution. Adaptive quality can lower that scale to `0.25`, interleave sampled pixels across animation frames, and rotate one shadowed direct light per frame to approach the default `33.3` millisecond frame budget. The fullscreen resolve upsamples the retained HDR image. Temporal reprojection follows camera and stable instance motion while rejecting incompatible depth, normal, and color history; camera cuts, topology changes, light-count changes, and resolution changes reset invalid history. Retained color and surface-metadata texture pairs exchange their previous/current graph roles after each successful encoding, eliminating the former four full-image history copies. Interleaved frames carry only their untouched pixels through a small coalesced compute dispatch; full-coverage frames perform no history carry. Set `shadowSamplesPerFrame: 0` to evaluate every direct light in one frame. Adaptive timing uses smoothed animation-frame intervals and does not require GPU timestamp queries. Acceleration updates run only when retained transforms or geometry change, so camera-only and lighting-only frames do not rebuild the TLAS. Transform-only frames use the retained-permutation gather/refit path; topology changes and periodic refreshes run the Morton sort path. The ANARI adapter caches normalized surfaces, materials, lights, and analytic primitives by committed world identity. Categorized topology, transform, material, and light revisions let camera-only frames reuse those descriptors without serializing the entire scene; committed instance changes additionally expose their exact stable placement identities.
 
-The Morton-sorted TLAS indexes objects and instances; surviving meshes traverse GPU-built, Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight storage buffers, while every TLAS or BLAS construction pass stays within the default WebGPU CORE limit of eight storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing. Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced PBR material extensions, indirect bounces, denoising, and volume objects remain unsupported by this renderer. `maxBounces` is reserved for future multi-bounce transport.
+The Morton-sorted TLAS indexes objects and instances; surviving meshes traverse GPU-built, Morton-sorted per-mesh triangle BLASes. The ray-tracing pass uses exactly eight storage buffers, while every TLAS or BLAS construction pass stays within the default WebGPU CORE limit of eight storage buffers without elevated device features. The hierarchy topology is not SAH-optimized or a Karras-style LBVH. This is software ray tracing, not hardware ray tracing or full path tracing. Skeletal skinning, morph-target deformation, material textures, alpha/transmission, more advanced PBR material extensions, specular/transmissive bounces, denoising, and volume objects remain unsupported by this renderer. `maxBounces` enables 0–8 secondary diffuse bounces; the default is zero. Emissive surfaces can illuminate matte receivers through these paths.
 
 ## Understand staging and commits[​](#understand-staging-and-commits "Direct link to Understand staging and commits")
 
@@ -604,7 +604,7 @@ const glass = anariDevice.newMaterial('physicallyBased', {
 });
 ```
 
-The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively resolved. Renderer parameters can also receive the caller-owned [prepared PBR lighting environment](https://luma.gl/docs/api-reference/experimental/pbr-environment.md) for roughness-aware diffuse/specular image-based lighting.
+The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively resolved. Renderer parameters can also receive the caller-owned [prepared PBR lighting environment](https://luma.gl/docs/api-reference/anari/pbr-environment.md) for roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.
 
@@ -789,9 +789,9 @@ HDR requires all three pieces:
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
-import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/core/webgl';
 
 
 
@@ -841,7 +841,7 @@ The user-visible HDR effect depends on the monitor, browser, operating-system di
 The repository showcase uses `AnimationLoopTemplate` to coordinate drawing, resizing, and cleanup:
 
 ```
-import {ANARIDevice} from '@luma.gl/scene';
+import {ANARIDevice} from '@luma.gl/anari';
 
 import {
 
@@ -1009,5 +1009,5 @@ anariDevice.extensions;
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
 * [Declarative ANARI rendering](https://luma.gl/docs/api-guide/engine/anari-rendering.md)
-* [ANARI API reference](https://luma.gl/docs/api-reference/scene.md)
+* [ANARI API reference](https://luma.gl/docs/api-reference/anari.md)
 * [Engine programming](https://luma.gl/docs/api-guide/engine.md)

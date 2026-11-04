@@ -1,6 +1,6 @@
 # GPU-animated glTF crowds
 
-[Overview](https://luma.gl/docs/api-reference/gltf.md)[Materials](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
 
 [Overview](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Usage](https://luma.gl/docs/api-reference/gltf/gltf-crowd-usage.md)[Performance & LOD](https://luma.gl/docs/api-reference/gltf/gltf-crowd-performance.md)[API](https://luma.gl/docs/api-reference/gltf/gltf-crowd-api.md)
 
@@ -42,4 +42,4 @@ The Studio's 100-actor limit is an intentional interactive-demo setting, not a h
 
 * [glTF animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)
 * [glTF materials](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)
-* [Animation Studio](https://luma.gl/examples/showcase/gltf)
+* [Animation Studio](https://luma.gl/examples/gltf/asset-studio)

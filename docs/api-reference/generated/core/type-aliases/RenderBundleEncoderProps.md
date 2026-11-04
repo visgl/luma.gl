@@ -2,7 +2,7 @@
 
 > **RenderBundleEncoderProps** = [`ResourceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
 
-Defined in: [modules/core/src/adapter/resources/render-bundle.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L15)
+Defined in: [modules/core/src/api/adapter/resources/render-bundle.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-bundle.ts#L15)
 
 Properties used to configure a [RenderBundleEncoder](https://luma.gl/docs/api-reference/generated/core/classes/RenderBundleEncoder.md).
 

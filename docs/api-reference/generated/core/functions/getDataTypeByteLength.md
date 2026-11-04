@@ -2,7 +2,7 @@
 
 > **getDataTypeByteLength**(`dataType`): `number`
 
-Defined in: [modules/core/src/shadertypes/data-types/decode-data-types.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/decode-data-types.ts#L103)
+Defined in: [modules/core/src/shadertypes/data-types/decode-data-types.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/decode-data-types.ts#L93)
 
 Returns the byte length of one scalar element for a luma.gl data type.
 

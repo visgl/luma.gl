@@ -1,8 +1,8 @@
 # WebGPU Geospatial Kernels
 
-<!-- -->
+[Projection](https://luma.gl/docs/api-reference/experimental/gpu-project.md)[Geospatial Kernels](https://luma.gl/docs/api-reference/experimental/geospatial.md)[DGGS](https://luma.gl/docs/api-reference/experimental/gpu-dggs.md)[H3](https://luma.gl/docs/api-reference/experimental/gpu-h3.md)[A5](https://luma.gl/docs/api-reference/experimental/gpu-a5.md)
 
-The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-free WebGPU algorithms that add compute nodes to a `GPUCommandGraph`. This first set includes fixed-output projection and distance kernels plus a flat grid index and point-query workflow:
+The `@luma.gl/graph/geospatial` entry point provides small, side-effect-free WebGPU algorithms that add compute nodes to a `GPUCommandGraph`. This first set includes fixed-output projection and distance kernels plus a flat grid index and point-query workflow:
 
 * `GPUSinusoidalProjection`
 * `GPUHaversineDistance`
@@ -16,9 +16,9 @@ The `@luma.gl/experimental/geospatial` entry point provides small, side-effect-f
 These classes structurally implement `GPUCommandGraphContributor`. Calling `addToGraph()` declares work, but does not compile the graph, submit commands, allocate caller-visible outputs, or read results back. Projection and simple pairwise distance kernels accept caller-allocated `GraphDataView` objects or matching `GraphVectorView` objects. The nested-offset point-in-polygon and nearest-linestring APIs, grid index, and point query consume fixed-width flat `GraphDataView` objects in V1.
 
 ```
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
-import {GPUHaversineDistance} from '@luma.gl/experimental/geospatial';
+import {GPUHaversineDistance} from '@luma.gl/graph/geospatial';
 
 
 
@@ -207,9 +207,9 @@ Dataset size
 
 16,384 points (16384)
 
-### Live luSpatial: CPU vs. WebGPU
+### Live GPU Spatial: CPU vs. WebGPU
 
-Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU scan, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution.
+Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU graph, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution.
 
 Run live CPU and WebGPU spatial benchmark
 
@@ -225,7 +225,7 @@ Fixed-output kernels linearize bounded multidimensional WebGPU workgroup dispatc
 
 ## See also[​](#see-also "Direct link to See also")
 
-* GPUCommandGraph
-* GPUGridIndex
+* [GPUCommandGraph](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-command-graph.md)
+* [GPUGridIndex](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-grid-index.md)
 * [GPU floating-point precision](https://luma.gl/docs/api-guide/shaders/gpu-floating-point-precision.md)
-* [`fp64arithmetic`](https://luma.gl/docs/api-reference/shadertools/shader-modules/fp64-arithmetic.md)
+* [`fp64arithmetic`](https://luma.gl/docs/api-reference/shaders/shader-modules/fp64-arithmetic.md)

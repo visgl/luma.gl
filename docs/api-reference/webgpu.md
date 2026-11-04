@@ -4,12 +4,12 @@
 
 This module contains the WebGPU adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
-The `webgpuAdapter` imported from `@luma.gl/webgpu` enables WebGPU devices to be created using `luma.createDevice(props)`: See [`CreateDeviceProps`](https://luma.gl/docs/api-reference/core/luma.md#createdeviceprops) for WebGPU prop options.
+The `webgpuAdapter` imported from `@luma.gl/core/webgpu` enables WebGPU devices to be created using `luma.createDevice(props)`: See [`CreateDeviceProps`](https://luma.gl/docs/api-reference/core/luma.md#createdeviceprops) for WebGPU prop options.
 
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -100,7 +100,7 @@ const device = await luma.createDevice({
 
 This follows the compatibility upgrade flow described by [WebGPU Fundamentals](https://webgpufundamentals.org/webgpu/lessons/webgpu-compatibility-mode.html): luma.gl requests a compatibility adapter, then requires `core-features-and-limits` when that adapter exposes it. For `'best-available'`, `device.info.featureLevel` reports whether the created device is `'core'` or `'compatibility'`.
 
-Read `device.info.featureLevel` to see the effective level. Use `device.limits` when selecting optional paths such as vertex-stage storage buffers. For assembled WGSL, shadertools also exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS`; see [WGSL Support](https://luma.gl/docs/api-reference/shadertools/wgsl-support.md).
+Read `device.info.featureLevel` to see the effective level. Use `device.limits` when selecting optional paths such as vertex-stage storage buffers. For assembled WGSL, shaders also exposes `LUMA_SUPPORTS_VERTEX_STORAGE_BUFFERS`; see [WGSL Support](https://luma.gl/docs/api-reference/shaders/wgsl-support.md).
 
 ## Using for compute only[​](#using-for-compute-only "Direct link to Using for compute only")
 
@@ -109,7 +109,7 @@ If you are only interested in using WebGPU for compute and not for rendering (or
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/core/webgpu';
 
 
 
@@ -127,7 +127,7 @@ const buffer = device.createBuffer(...);
 To use a luma.gl WebGPU `Device` with raw WebGPU calls, the application can access the underlying WebGPU handles (`GPUDevice`, `GPUBuffer`, ...) using the `.handle` properties:
 
 ```
-import type {WebGPUDevice} from '@luma.gl/webgpu`;
+import type {WebGPUDevice} from '@luma.gl/core/webgpu`;
 
 
 

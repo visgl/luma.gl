@@ -4,12 +4,12 @@
 
 From v9.4Experimental API
 
-`GPURecordBatch` represents one immutable preserved GPU batch. It owns one batch-local [`GPUData`](https://luma.gl/docs/api-reference/gpgpu/gpu-data.md) chunk per selected column, [`GPUSchema`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-schema.md) metadata, and buffer-layout metadata.
+`GPURecordBatch` represents one immutable preserved GPU batch. It owns one batch-local [`GPUData`](https://luma.gl/docs/api-reference/graph/gpu-data.md) chunk per selected column, [`GPUSchema`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-schema.md) metadata, and buffer-layout metadata.
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPURecordBatch} from '@luma.gl/experimental/gpu-tables';
+import {GPURecordBatch} from '@luma.gl/graph/gpu-tables';
 
 
 
@@ -25,6 +25,8 @@ const batch = new GPURecordBatch({
 
 });
 ```
+
+When the source is an Arrow `RecordBatch`, prefer [`makeGPURecordBatchFromArrowRecordBatch()`](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md) from `@luma.gl/graph/arrow`.
 
 ## Constructor[​](#constructor "Direct link to Constructor")
 

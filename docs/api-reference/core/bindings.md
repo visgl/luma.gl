@@ -11,7 +11,7 @@ Bindings are the GPU resources that shader code accesses through declared bindin
 
 In luma.gl, bindings are passed by **name** and matched against a [`ShaderLayout`](https://luma.gl/docs/api-reference/core/shader-layout.md).
 
-For WGSL assembled through `Model` or shadertools, the recommended style is to use `@binding(auto)` in the shader and keep JavaScript code focused on binding names rather than numeric binding locations.
+For WGSL assembled through `Model` or shaders, the recommended style is to use `@binding(auto)` in the shader and keep JavaScript code focused on binding names rather than numeric binding locations.
 
 ## Types[​](#types "Direct link to Types")
 

@@ -2,7 +2,7 @@
 
 > **CompilerMessage** = `object`
 
-Defined in: [modules/core/src/adapter/types/compiler-message.ts:6](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/compiler-message.ts#L6)
+Defined in: [modules/core/src/api/adapter/types/compiler-message.ts:6](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/compiler-message.ts#L6)
 
 WebGPU style compiler message
 
@@ -12,7 +12,7 @@ WebGPU style compiler message
 
 > **lineNum**: `number`
 
-Defined in: [modules/core/src/adapter/types/compiler-message.ts:9](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/compiler-message.ts#L9)
+Defined in: [modules/core/src/api/adapter/types/compiler-message.ts:9](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/compiler-message.ts#L9)
 
 ***
 
@@ -20,7 +20,7 @@ Defined in: [modules/core/src/adapter/types/compiler-message.ts:9](https://githu
 
 > **linePos**: `number`
 
-Defined in: [modules/core/src/adapter/types/compiler-message.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/compiler-message.ts#L10)
+Defined in: [modules/core/src/api/adapter/types/compiler-message.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/compiler-message.ts#L10)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [modules/core/src/adapter/types/compiler-message.ts:10](https://gith
 
 > **message**: `string`
 
-Defined in: [modules/core/src/adapter/types/compiler-message.ts:8](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/compiler-message.ts#L8)
+Defined in: [modules/core/src/api/adapter/types/compiler-message.ts:8](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/compiler-message.ts#L8)
 
 ***
 
@@ -36,4 +36,4 @@ Defined in: [modules/core/src/adapter/types/compiler-message.ts:8](https://githu
 
 > **type**: `"error"` | `"warning"` | `"info"`
 
-Defined in: [modules/core/src/adapter/types/compiler-message.ts:7](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/compiler-message.ts#L7)
+Defined in: [modules/core/src/api/adapter/types/compiler-message.ts:7](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/compiler-message.ts#L7)

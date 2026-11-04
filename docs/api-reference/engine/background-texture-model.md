@@ -9,7 +9,9 @@ It is useful for fullscreen background imagery, texture previews, and screen-spa
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {BackgroundTextureModel, DynamicTexture} from '@luma.gl/engine';
+import {BackgroundTextureModel} from '@luma.gl/engine';
+
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 
 
 

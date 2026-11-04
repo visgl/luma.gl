@@ -2,7 +2,7 @@
 
 > **DepthStencilAttachment** = `object`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L79)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L79)
 
 Framebuffer attachments lets the user specify the depth stencil texture that will be used for a RenderPass, together with some additional options for how to clear.
 
@@ -12,7 +12,7 @@ Framebuffer attachments lets the user specify the depth stencil texture that wil
 
 > `optional` **depthClearValue?**: `number`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L86)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L86)
 
 Value to clear depth component to prior to executing the render pass, if depthLoadOp is "clear". 0.0-1.0.
 
@@ -22,7 +22,7 @@ Value to clear depth component to prior to executing the render pass, if depthLo
 
 > `optional` **depthLoadOp?**: `"load"` | `"clear"`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L88)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L88)
 
 Indicates load operation to perform on depth component prior to executing the render pass. Default 'clear'.
 
@@ -32,7 +32,7 @@ Indicates load operation to perform on depth component prior to executing the re
 
 > `optional` **depthReadOnly?**: `boolean`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L92)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L92)
 
 Indicates that the depth component is read only.
 
@@ -42,7 +42,7 @@ Indicates that the depth component is read only.
 
 > `optional` **depthStoreOp?**: `"store"` | `"discard"`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L90)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L90)
 
 Store operation to perform on depth component after executing the render pass. Default: 'store'.
 
@@ -52,7 +52,7 @@ Store operation to perform on depth component after executing the render pass. D
 
 > `optional` **format?**: [`TextureFormatDepthStencil`](https://luma.gl/docs/api-reference/generated/core/type-aliases/TextureFormatDepthStencil.md)
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L83)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L83)
 
 Format of the texture resource. Used to auto create texture if not supplied
 
@@ -62,7 +62,7 @@ Format of the texture resource. Used to auto create texture if not supplied
 
 > `optional` **stencilClearValue?**: `number`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L95)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L95)
 
 Indicates value to clear stencil component to prior to executing the render pass, if stencilLoadOp is "clear".
 
@@ -72,7 +72,7 @@ Indicates value to clear stencil component to prior to executing the render pass
 
 > `optional` **stencilLoadOp?**: `"load"` | `"clear"`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L97)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L97)
 
 Indicates load operation to perform on stencil component prior to executing the render pass. Prefer clearing.
 
@@ -82,7 +82,7 @@ Indicates load operation to perform on stencil component prior to executing the 
 
 > `optional` **stencilReadOnly?**: `boolean`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L101)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L101)
 
 Indicates that the stencil component is read only.
 
@@ -92,7 +92,7 @@ Indicates that the stencil component is read only.
 
 > `optional` **stencilStoreOp?**: `"store"` | `"discard"`
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L99)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L99)
 
 Store operation to perform on stencil component after executing the render pass.
 
@@ -102,6 +102,6 @@ Store operation to perform on stencil component after executing the render pass.
 
 > `optional` **texture?**: [`TextureView`](https://luma.gl/docs/api-reference/generated/core/classes/TextureView.md) | [`Texture`](https://luma.gl/docs/api-reference/generated/core/classes/Texture.md)
 
-Defined in: [modules/core/src/adapter/types/attachments.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/attachments.ts#L81)
+Defined in: [modules/core/src/api/adapter/types/attachments.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/attachments.ts#L81)
 
 Describes the texture subresource that will be output to and read from for this depth/stencil attachment.

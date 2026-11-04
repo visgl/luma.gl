@@ -2,7 +2,7 @@
 
 > **NormalizedDataType** = [`SignedDataType`](https://luma.gl/docs/api-reference/generated/core/type-aliases/SignedDataType.md) | `"unorm8"` | `"snorm8"` | `"unorm16"` | `"snorm16"`
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L34)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L29)
 
 Normalized data types describe signed and unsigned integers as well as floats of varying sizes together with normalization behavior
 

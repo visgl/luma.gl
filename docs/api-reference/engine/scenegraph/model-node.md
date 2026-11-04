@@ -1,6 +1,6 @@
 # ModelNode
 
-[Workflow](https://luma.gl/docs/api-guide/engine/scenegraph.md)[ScenegraphNode](https://luma.gl/docs/api-reference/engine/scenegraph/scenegraph-node.md)[GroupNode](https://luma.gl/docs/api-reference/engine/scenegraph/group-node.md)[ModelNode](https://luma.gl/docs/api-reference/engine/scenegraph/model-node.md)
+[Workflow](https://luma.gl/docs/api-guide/engine/scenegraph.md)[Controllers](https://luma.gl/docs/api-guide/engine/scene-controllers.md)[Physics](https://luma.gl/docs/api-guide/engine/scenegraph-physics.md)[ScenegraphNode](https://luma.gl/docs/api-reference/engine/scenegraph/scenegraph-node.md)[GroupNode](https://luma.gl/docs/api-reference/engine/scenegraph/group-node.md)[ModelNode](https://luma.gl/docs/api-reference/engine/scenegraph/model-node.md)
 
 `ModelNode` extends [`ScenegraphNode`](https://luma.gl/docs/api-reference/engine/scenegraph/scenegraph-node.md) with a [`Model`](https://luma.gl/docs/api-reference/engine/model.md) and optional bounds / managed resources.
 

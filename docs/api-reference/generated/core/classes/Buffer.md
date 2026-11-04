@@ -1,6 +1,6 @@
 # Abstract Class: Buffer
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L29)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L29)
 
 Abstract GPU buffer
 
@@ -14,7 +14,7 @@ Abstract GPU buffer
 
 > **new Buffer**(`device`, `props`): `Buffer`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L60)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L60)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -40,7 +40,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:60](https://github.com
 
 > `abstract` **byteLength**: `number`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L56)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L56)
 
 Length of buffer in bytes
 
@@ -50,7 +50,7 @@ Length of buffer in bytes
 
 > **debugData**: `ArrayBuffer`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:125](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L125)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:125](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L125)
 
 A partial CPU-side copy of the data in this buffer, for debugging purposes
 
@@ -60,7 +60,7 @@ A partial CPU-side copy of the data in this buffer, for debugging purposes
 
 > **destroyed**: `boolean` = `false`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L131)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
 
 Whether this resource has been destroyed
 
@@ -74,7 +74,7 @@ Whether this resource has been destroyed
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
 
 The device that this resource is associated with
 
@@ -88,7 +88,7 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
@@ -102,7 +102,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **id**: `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
 
 props.id, for debugging.
 
@@ -116,7 +116,7 @@ props.id, for debugging.
 
 > `readonly` `optional` **indexType?**: `"uint8"` | `"uint16"` | `"uint32"`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L54)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L54)
 
 For index buffers, whether indices are 8, 16 or 32 bit. Note: uint8 indices are automatically converted to uint16 for WebGPU compatibility
 
@@ -126,7 +126,7 @@ For index buffers, whether indices are 8, 16 or 32 bit. Note: uint8 indices are 
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
 
 The props that this resource was created with
 
@@ -140,7 +140,7 @@ The props that this resource was created with
 
 > **updateTimestamp**: `number`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L58)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L58)
 
 "Time" of last update, can be used to check if redraw is needed
 
@@ -150,7 +150,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:58](https://github.com
 
 > `readonly` **usage**: `number`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L52)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L52)
 
 The usage with which this buffer was created
 
@@ -160,7 +160,7 @@ The usage with which this buffer was created
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
 
 User data object, reserved for the application
 
@@ -174,7 +174,7 @@ User data object, reserved for the application
 
 > `static` **COPY\_DST**: `number` = `0x0008`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L45)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L45)
 
 ***
 
@@ -182,7 +182,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:45](https://github.com
 
 > `static` **COPY\_SRC**: `number` = `0x0004`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L44)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L44)
 
 ***
 
@@ -190,7 +190,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:44](https://github.com
 
 > `static` **DEBUG\_DATA\_MAX\_LENGTH**: `number` = `32`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L122)
 
 Max amount of debug data saved. Two vec4's
 
@@ -200,7 +200,7 @@ Max amount of debug data saved. Two vec4's
 
 > `static` **defaultProps**: `Required`<[`BufferProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/BufferProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L159)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L159)
 
 Default properties for resource
 
@@ -214,7 +214,7 @@ Default properties for resource
 
 > `static` **INDEX**: `number` = `0x0010`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L31)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L31)
 
 Index buffer
 
@@ -224,7 +224,7 @@ Index buffer
 
 > `static` **INDIRECT**: `number` = `0x0100`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L38)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L38)
 
 ***
 
@@ -232,7 +232,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:38](https://github.com
 
 > `static` **MAP\_READ**: `number` = `0x01`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L42)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L42)
 
 ***
 
@@ -240,7 +240,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:42](https://github.com
 
 > `static` **MAP\_WRITE**: `number` = `0x02`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L43)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L43)
 
 ***
 
@@ -248,7 +248,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:43](https://github.com
 
 > `static` **QUERY\_RESOLVE**: `number` = `0x0200`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L39)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L39)
 
 ***
 
@@ -256,7 +256,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:39](https://github.com
 
 > `static` **STORAGE**: `number` = `0x0080`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L37)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L37)
 
 Storage buffer
 
@@ -266,7 +266,7 @@ Storage buffer
 
 > `static` **UNIFORM**: `number` = `0x0040`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L35)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L35)
 
 Uniform buffer
 
@@ -276,7 +276,7 @@ Uniform buffer
 
 > `static` **VERTEX**: `number` = `0x0020`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L33)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L33)
 
 Vertex buffer
 
@@ -288,7 +288,7 @@ Vertex buffer
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L47)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L47)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -306,7 +306,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:47](https://github.com
 
 > **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
 
 Whether luma.gl may only reference the opaque externally owned resource handle.
 
@@ -326,7 +326,7 @@ Whether luma.gl may only reference the opaque externally owned resource handle.
 
 > **get** **ownsHandle**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
 
 Whether luma.gl created and owns the underlying resource handle.
 
@@ -344,7 +344,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L200)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
 
 Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
 
@@ -368,7 +368,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > **clone**(`props`): `Buffer`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L90)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L90)
 
 Create a copy of this Buffer with new byteLength, with same props but of the specified size.
 
@@ -394,7 +394,7 @@ Does not copy contents of the cloned Buffer.
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
 
 #### Returns[​](#returns-6 "Direct link to Returns")
 
@@ -414,7 +414,7 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
 
 destroy can be called on any resource to release it before it is garbage collected.
 
@@ -432,7 +432,7 @@ destroy can be called on any resource to release it before it is garbage collect
 
 > **destroyAttachedResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L214)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
 
 Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
 
@@ -456,7 +456,7 @@ Destroys a resource (only if owned), and removes from the owned (auto-destroy) l
 
 > **destroyAttachedResources**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L221)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
 
 Destroy all owned resources. Make sure the resources are no longer needed before calling.
 
@@ -474,7 +474,7 @@ Destroy all owned resources. Make sure the resources are no longer needed before
 
 > **detachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L207)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
 
 Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
 
@@ -498,7 +498,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
 
 Combines a map of user props and default props, only including props from defaultProps
 
@@ -518,7 +518,7 @@ returns a map of overridden default props
 
 > `abstract` **mapAndReadAsync**<`T`>(`onMapped`, `byteOffset?`, `byteLength?`): `Promise`<`T`>
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L110)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L110)
 
 Maps buffer data to CPU memory. Mapped memory is only accessible in the callback
 
@@ -552,7 +552,7 @@ Maps buffer data to CPU memory. Mapped memory is only accessible in the callback
 
 > `abstract` **mapAndWriteAsync**(`onMapped`, `byteOffset?`, `byteLength?`): `Promise`<`void`>
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:100](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L100)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:100](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L100)
 
 #### Parameters[​](#parameters-6 "Direct link to Parameters")
 
@@ -578,7 +578,7 @@ Defined in: [modules/core/src/adapter/resources/buffer.ts:100](https://github.co
 
 > `abstract` **readAsync**(`byteOffset?`, `byteLength?`): `Promise`<`Uint8Array`<`ArrayBufferLike`>>
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L107)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L107)
 
 Reads data asynchronously, returns a copy of the buffer data
 
@@ -602,7 +602,7 @@ Reads data asynchronously, returns a copy of the buffer data
 
 > `abstract` **readSyncWebGL**(`byteOffset?`, `byteLength?`): `Uint8Array`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:117](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L117)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:117](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L117)
 
 Read data synchronously.
 
@@ -630,7 +630,7 @@ WebGL2 only
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
 
 Compact serialization for assertion diffs and structured debug logs.
 
@@ -648,7 +648,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
 
 #### Returns[​](#returns-17 "Direct link to Returns")
 
@@ -664,7 +664,7 @@ Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.
 
 > `abstract` **write**(`data`, `byteOffset?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/buffer.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/buffer.ts#L95)
+Defined in: [modules/core/src/api/adapter/resources/buffer.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/buffer.ts#L95)
 
 Write data to buffer
 

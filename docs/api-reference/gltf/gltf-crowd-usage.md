@@ -1,6 +1,6 @@
 # GPU-animated crowd usage
 
-[Overview](https://luma.gl/docs/api-reference/gltf.md)[Materials](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
 
 [Overview](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Usage](https://luma.gl/docs/api-reference/gltf/gltf-crowd-usage.md)[Performance & LOD](https://luma.gl/docs/api-reference/gltf/gltf-crowd-performance.md)[API](https://luma.gl/docs/api-reference/gltf/gltf-crowd-api.md)
 
@@ -56,16 +56,18 @@ One postprocessed glTF asset
 
 The asset is parsed once. Each actor receives its own lightweight CPU-side node hierarchy, existing `GLTFAnimator`, format-independent `AnimationMixer`, and source skin controller. Those actor nodes contain no renderable `Model` objects and allocate no duplicate geometry, textures, or materials.
 
-`@luma.gl/gltf` owns glTF-specific crowd orchestration. Generic animation and scenegraph primitives stay in `@luma.gl/engine`, while the portable skinning implementation stays in `@luma.gl/shadertools`. WebGPU and WebGL use the same public crowd and actor APIs.
+`@luma.gl/engine/gltf` owns glTF-specific crowd orchestration. Generic animation and scenegraph primitives stay in `@luma.gl/engine`, while the portable skinning implementation stays in `@luma.gl/shaders`. WebGPU and WebGL use the same public crowd and actor APIs.
 
 ## Create and render a crowd[​](#create-and-render-a-crowd "Direct link to Create and render a crowd")
 
 ```
 import {load} from '@loaders.gl/core';
 
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
-import {createGLTFAnimatedCrowd} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+
+import {createGLTFAnimatedCrowd} from '@luma.gl/engine/gltf';
 
 import {Matrix4} from '@math.gl/core';
 

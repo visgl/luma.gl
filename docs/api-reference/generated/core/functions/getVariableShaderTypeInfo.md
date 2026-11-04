@@ -2,7 +2,7 @@
 
 > **getVariableShaderTypeInfo**(`format`): `VariableShaderTypeInfo`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-type-decoder.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-type-decoder.ts#L34)
+Defined in: modules/shaders/dist/types/shader-type-decoder.d.ts:22
 
 Split a uniform type string into type and components
 

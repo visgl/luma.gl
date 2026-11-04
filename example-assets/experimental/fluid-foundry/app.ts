@@ -18,9 +18,9 @@ import {
   ShaderPassRenderer,
   type AnimationProps
 } from '@luma.gl/engine';
-import {createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
-import {MLSMPMFluidSimulation, type MLSMPMParticle} from '@luma.gl/experimental';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
+import {MLSMPMFluidSimulation, type MLSMPMParticle} from '@luma.gl/graph/experimental/simulation';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {FLUID_FOUNDRY_INFO_HTML} from './app-ui';
 
 const PARTICLE_COUNT = 12_288;
@@ -203,7 +203,7 @@ export default class FluidFoundryAnimationLoopTemplate extends AnimationLoopTemp
     });
     this.postprocessingRenderer = new ShaderPassRenderer(device, {
       shaderPasses: [
-        createBloomShaderPassPipeline({colorFormat: 'rgba16float', resolutionScale: 0.68}),
+        createBloomCompositeShaderPass({colorFormat: 'rgba16float', resolutionScale: 0.68}),
         toneMapping
       ],
       colorFormat: 'rgba16float'

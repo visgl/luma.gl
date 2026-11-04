@@ -2,7 +2,7 @@
 
 > **StructShaderType** = `object`
 
-Defined in: [modules/core/src/shadertypes/shader-types/shader-types.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/shader-types/shader-types.ts#L49)
+Defined in: modules/shaders/dist/types/shader-types.d.ts:18
 
 ## Index Signature[​](#index-signature "Direct link to Index Signature")
 

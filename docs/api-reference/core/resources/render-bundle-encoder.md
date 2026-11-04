@@ -16,6 +16,12 @@ Mobile
 // Loading source…
 ```
 
+0
+
+<!-- -->
+
+s
+
 Scroll page · Ctrl/⌘ + scroll to interact
 
 Render bundles allow expensive CPU-side command recording and validation to be performed once and reused, improving performance when many identical draw calls are repeated frame after frame. A `RenderBundleEncoder` records these reusable commands without beginning a render pass. Calling `finish()` creates an immutable `RenderBundle`, and a normal `RenderPass` replays it with `executeBundles()`.

@@ -2,7 +2,7 @@
 
 > **CreateDeviceProps** = `object` & [`DeviceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/DeviceProps.md)
 
-Defined in: [modules/core/src/adapter/luma.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/luma.ts#L23)
+Defined in: [modules/core/src/api/adapter/luma.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/luma.ts#L23)
 
 Properties for creating a new device
 

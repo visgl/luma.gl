@@ -1,0 +1,1007 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-api-reference/generated/engine/classes/SpotLightModel" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Class: SpotLightModel | luma.gl</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://luma.gl/docs/api-reference/generated/engine/classes/SpotLightModel /><meta data-rh=true property=og:locale content=en /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Class: SpotLightModel | luma.gl"/><meta data-rh=true name=description content="Defined in22"/><meta data-rh=true property=og:description content="Defined in22"/><link data-rh=true rel=icon href=/favicon.png /><link data-rh=true rel=canonical href=https://luma.gl/docs/api-reference/generated/engine/classes/SpotLightModel /><link data-rh=true rel=alternate href=https://luma.gl/docs/api-reference/generated/engine/classes/SpotLightModel hreflang=en /><link data-rh=true rel=alternate href=https://luma.gl/docs/api-reference/generated/engine/classes/SpotLightModel hreflang=x-default /><link rel=stylesheet href=/assets/css/styles.0f47d4c1.css /><script src=/assets/js/runtime~main.a786a18b.js defer></script><script src=/assets/js/main.80cad662.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-afd")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"dark"),document.documentElement.setAttribute("data-theme-choice",t||"dark")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><div role=region aria-label="Skip to main content"><a class=skipToContent_oPtH href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/><div class=navbar__logo><img src=/visgl-logo-dark.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--light_hHel"/><img src=/visgl-logo-light.png alt="vis.gl Logo" class="themedComponent_siVc themedComponent--dark_yETr"/></div><b class="navbar__title text--truncate">luma.gl</b></a><a class="navbar__item navbar__link" href=/examples>Examples</a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/docs>Docs</a><a class="navbar__item navbar__link" href=/showcase>Showcase</a><a class="navbar__item navbar__link" href=/docs/tutorials>Tutorials</a><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item navbar-badge"><a class=navbar-project-badge href=https://www.npmjs.com/package/@luma.gl/core target=_blank rel="noopener noreferrer" aria-label="@luma.gl/core on npm"><img src="https://img.shields.io/npm/dm/@luma.gl/core?label=downloads" alt="Monthly npm downloads for @luma.gl/core" height=20 /><svg class=navbar-project-icon viewBox="0 0 18 7" width=24 height=20 aria-hidden=true focusable=false><path fill=currentColor d="M0 0v6h5v1h4V6h9V0H0zm5 5H4V1h1v4zm4 0H7V1h3v4H9zm8 0h-1V1h1v4zM8 2v2h1V2H8z"/></svg><span>npm</span></a></div><div class="navbar__item navbar-badge"><a class=navbar-project-badge href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" aria-label="luma.gl on GitHub"><img src="https://img.shields.io/github/stars/visgl/luma.gl?style=social" alt="GitHub stars" height=20 /><svg class=navbar-project-icon viewBox="0 0 24 24" width=20 height=20 aria-hidden=true focusable=false><path fill=currentColor d="M12 .297C5.37.297 0 5.67 0 12.297c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.237 1.838 1.237 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.3-5.467-1.334-5.467-5.931 0-1.31.467-2.381 1.236-3.221-.124-.303-.536-1.524.118-3.176 0 0 1.008-.322 3.301 1.23a11.52 11.52 0 0 1 3.003-.404c1.018.005 2.042.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.656 1.652.244 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.628-5.479 5.925.43.372.823 1.102.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><span>GitHub</span></a></div><div class=navbar__item><a href=https://openvisualization.com target=_blank style="content: ''; height: 24px; width: 80px; background-image: url('/openjs-foundation.svg'); background-repeat: no-repeat;  background-size: 80px 24px; display: flex"></a></div><div class="toggle_ki11 colorModeToggle_Hewu"><button class="clean-btn toggleButton_MMFG toggleButtonDisabled_Uw7m" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ lightToggleIcon_lgto"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ darkToggleIcon_U96C"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_k9hJ systemToggleIcon_E5c0"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_bzqh><div class=dsla-search-wrapper><div class=dsla-search-field data-tags=default,docs-default-current,docs-examples-current></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_MB5r"><div class=docsWrapper__sE8><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_iEvu" type=button></button><div class=docRoot_DfVB><main class="docMainContainer_a9sJ docMainContainerEnhanced_grEJ"><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_Qr34"><div class=docItemContainer_tjFy><article><div class="tocCollapsible_wXna theme-doc-toc-mobile tocMobile_Ojys"><button type=button class="clean-btn tocCollapsibleButton_iI2p">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Class: SpotLightModel</h1></header>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/spot-light-model.ts#L22 target=_blank rel="noopener noreferrer" class="">modules/engine/src/models/spot-light-model.ts:22</a></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=extends>Extends<a href=#extends class=hash-link aria-label="Direct link to Extends" title="Direct link to Extends" translate=no>​</a></h2>
+<ul>
+<li class=""><code>BaseLightModel</code>&lt;<a class="" href=/docs/api-reference/generated/engine/type-aliases/SpotLightModelProps><code>SpotLightModelProps</code></a>></li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=constructors>Constructors<a href=#constructors class=hash-link aria-label="Direct link to Constructors" title="Direct link to Constructors" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=constructor>Constructor<a href=#constructor class=hash-link aria-label="Direct link to Constructor" title="Direct link to Constructor" translate=no>​</a></h3>
+<blockquote>
+<p><strong>new SpotLightModel</strong>(<code>device</code>, <code>props</code>): <code>SpotLightModel</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/spot-light-model.ts#L23 target=_blank rel="noopener noreferrer" class="">modules/engine/src/models/spot-light-model.ts:23</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters>Parameters<a href=#parameters class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=device>device<a href=#device class=hash-link aria-label="Direct link to device" title="Direct link to device" translate=no>​</a></h5>
+<p><code>Device</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=props>props<a href=#props class=hash-link aria-label="Direct link to props" title="Direct link to props" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/SpotLightModelProps><code>SpotLightModelProps</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns>Returns<a href=#returns class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>SpotLightModel</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=overrides>Overrides<a href=#overrides class=hash-link aria-label="Direct link to Overrides" title="Direct link to Overrides" translate=no>​</a></h4>
+<p><code>BaseLightModel&lt;SpotLightModelProps>.constructor</code></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=properties>Properties<a href=#properties class=hash-link aria-label="Direct link to Properties" title="Direct link to Properties" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_attributeinfos>_attributeInfos<a href=#_attributeinfos class=hash-link aria-label="Direct link to _attributeInfos" title="Direct link to _attributeInfos" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_attributeInfos</strong>: <code>Record</code>&lt;<code>string</code>, <code>AttributeInfo</code>> = <code>{}</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L347 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:347</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from>Inherited from<a href=#inherited-from class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._attributeInfos</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_gpugeometry>_gpuGeometry<a href=#_gpugeometry class=hash-link aria-label="Direct link to _gpuGeometry" title="Direct link to _gpuGeometry" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_gpuGeometry</strong>: <a class="" href=/docs/api-reference/generated/engine/classes/GPUGeometry><code>GPUGeometry</code></a> | <code>null</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L35 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:35</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-1>Inherited from<a href=#inherited-from-1 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._gpuGeometry</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_lastdrawtimestamp>_lastDrawTimestamp<a href=#_lastdrawtimestamp class=hash-link aria-label="Direct link to _lastDrawTimestamp" title="Direct link to _lastDrawTimestamp" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_lastDrawTimestamp</strong>: <code>number</code> = <code>-1</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L374 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:374</a></p>
+<p>"Time" of last draw. Monotonically increasing timestamp</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-2>Inherited from<a href=#inherited-from-2 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._lastDrawTimestamp</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_lastlogtime>_lastLogTime<a href=#_lastlogtime class=hash-link aria-label="Direct link to _lastLogTime" title="Direct link to _lastLogTime" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_lastLogTime</strong>: <code>number</code> = <code>0</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1679 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1679</a></p>
+<p>Throttle draw call logging</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-3>Inherited from<a href=#inherited-from-3 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._lastLogTime</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_logopen>_logOpen<a href=#_logopen class=hash-link aria-label="Direct link to _logOpen" title="Direct link to _logOpen" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_logOpen</strong>: <code>boolean</code> = <code>false</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1680 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1680</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-4>Inherited from<a href=#inherited-from-4 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._logOpen</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_pipelineneedsupdate>_pipelineNeedsUpdate<a href=#_pipelineneedsupdate class=hash-link aria-label="Direct link to _pipelineNeedsUpdate" title="Direct link to _pipelineNeedsUpdate" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_pipelineNeedsUpdate</strong>: <code>string</code> | <code>false</code> = <code>'newly created'</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L367 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:367</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-5>Inherited from<a href=#inherited-from-5 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._pipelineNeedsUpdate</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_uniformstore>_uniformStore<a href=#_uniformstore class=hash-link aria-label="Direct link to _uniformStore" title="Direct link to _uniformStore" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_uniformStore</strong>: <code>UniformStore</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L345 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:345</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-6>Inherited from<a href=#inherited-from-6 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._uniformStore</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=bindings>bindings<a href=#bindings class=hash-link aria-label="Direct link to bindings" title="Direct link to bindings" translate=no>​</a></h3>
+<blockquote>
+<p><strong>bindings</strong>: <code>Record</code>&lt;<code>string</code>, <code>ModelBinding</code>> = <code>{}</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L326 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:326</a></p>
+<p>Bindings (textures, samplers, uniform buffers)</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-7>Inherited from<a href=#inherited-from-7 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.bindings</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=bufferattributes>bufferAttributes<a href=#bufferattributes class=hash-link aria-label="Direct link to bufferAttributes" title="Direct link to bufferAttributes" translate=no>​</a></h3>
+<blockquote>
+<p><strong>bufferAttributes</strong>: <code>Record</code>&lt;<code>string</code>, <code>Buffer</code>> = <code>{}</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L322 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:322</a></p>
+<p>Buffer-valued attributes</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-8>Inherited from<a href=#inherited-from-8 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.bufferAttributes</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=bufferlayout>bufferLayout<a href=#bufferlayout class=hash-link aria-label="Direct link to bufferLayout" title="Direct link to bufferLayout" translate=no>​</a></h3>
+<blockquote>
+<p><strong>bufferLayout</strong>: <code>BufferLayout</code>[]</p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L302 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:302</a></p>
+<p>Buffer layout</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-9>Inherited from<a href=#inherited-from-9 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.bufferLayout</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=constantattributes>constantAttributes<a href=#constantattributes class=hash-link aria-label="Direct link to constantAttributes" title="Direct link to constantAttributes" translate=no>​</a></h3>
+<blockquote>
+<p><strong>constantAttributes</strong>: <code>Record</code>&lt;<code>string</code>, <code>TypedArray</code>> = <code>{}</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L324 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:324</a></p>
+<p>Constant-valued attributes</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-10>Inherited from<a href=#inherited-from-10 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.constantAttributes</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=device-1>device<a href=#device-1 class=hash-link aria-label="Direct link to device" title="Direct link to device" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>device</strong>: <code>Device</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L275 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:275</a></p>
+<p>Device that created this model</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-11>Inherited from<a href=#inherited-from-11 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.device</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=firstindex>firstIndex<a href=#firstindex class=hash-link aria-label="Direct link to firstIndex" title="Direct link to firstIndex" translate=no>​</a></h3>
+<blockquote>
+<p><strong>firstIndex</strong>: <code>number</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L317 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:317</a></p>
+<p>First index element for WebGPU indexed draws.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-12>Inherited from<a href=#inherited-from-12 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.firstIndex</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=firstvertex>firstVertex<a href=#firstvertex class=hash-link aria-label="Direct link to firstVertex" title="Direct link to firstVertex" translate=no>​</a></h3>
+<blockquote>
+<p><strong>firstVertex</strong>: <code>number</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L315 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:315</a></p>
+<p>First vertex byte offset for WebGL indexed draws or first vertex for non-indexed draws.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-13>Inherited from<a href=#inherited-from-13 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.firstVertex</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=fs>fs<a href=#fs class=hash-link aria-label="Direct link to fs" title="Direct link to fs" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>fs</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L286 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:286</a></p>
+<p>GLSL fragment shader source</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-14>Inherited from<a href=#inherited-from-14 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.fs</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=id>id<a href=#id class=hash-link aria-label="Direct link to id" title="Direct link to id" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>id</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L277 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:277</a></p>
+<p>Application provided identifier</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-15>Inherited from<a href=#inherited-from-15 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.id</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=indexbuffer>indexBuffer<a href=#indexbuffer class=hash-link aria-label="Direct link to indexBuffer" title="Direct link to indexBuffer" translate=no>​</a></h3>
+<blockquote>
+<p><strong>indexBuffer</strong>: <code>Buffer</code> | <code>null</code> = <code>null</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L320 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:320</a></p>
+<p>Index buffer</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-16>Inherited from<a href=#inherited-from-16 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.indexBuffer</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=indexcount>indexCount<a href=#indexcount class=hash-link aria-label="Direct link to indexCount" title="Direct link to indexCount" translate=no>​</a></h3>
+<blockquote>
+<p><strong>indexCount</strong>: <code>number</code> | <code>undefined</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L313 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:313</a></p>
+<p>Indexed draw count override. Undefined uses vertexCount, then the full bound index buffer.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-17>Inherited from<a href=#inherited-from-17 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.indexCount</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=instancecount>instanceCount<a href=#instancecount class=hash-link aria-label="Direct link to instanceCount" title="Direct link to instanceCount" translate=no>​</a></h3>
+<blockquote>
+<p><strong>instanceCount</strong>: <code>number</code> = <code>0</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L309 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:309</a></p>
+<p>instance count. <code>undefined</code> means not instanced</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-18>Inherited from<a href=#inherited-from-18 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.instanceCount</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=isinstanced>isInstanced<a href=#isinstanced class=hash-link aria-label="Direct link to isInstanced" title="Direct link to isInstanced" translate=no>​</a></h3>
+<blockquote>
+<p><strong>isInstanced</strong>: <code>boolean</code> | <code>undefined</code> = <code>undefined</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L307 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:307</a></p>
+<p>Use instanced rendering</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-19>Inherited from<a href=#inherited-from-19 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.isInstanced</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=material>material<a href=#material class=hash-link aria-label="Direct link to material" title="Direct link to material" translate=no>​</a></h3>
+<blockquote>
+<p><strong>material</strong>: <a class="" href=/docs/api-reference/generated/engine/classes/Material><code>Material</code></a>&lt;<code>Partial</code>&lt;<code>Record</code>&lt;<code>string</code>, <code>Record</code>&lt;<code>string</code>, <code>unknown</code>>>>, <code>MaterialBindings</code>> | <code>null</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L34 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:34</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-20>Inherited from<a href=#inherited-from-20 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.material</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-1>parameters<a href=#parameters-1 class=hash-link aria-label="Direct link to parameters" title="Direct link to parameters" translate=no>​</a></h3>
+<blockquote>
+<p><strong>parameters</strong>: <code>RenderPipelineParameters</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L297 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:297</a></p>
+<p>The render pipeline GPU parameters, depth testing etc</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-21>Inherited from<a href=#inherited-from-21 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.parameters</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=pipeline>pipeline<a href=#pipeline class=hash-link aria-label="Direct link to pipeline" title="Direct link to pipeline" translate=no>​</a></h3>
+<blockquote>
+<p><strong>pipeline</strong>: <code>RenderPipeline</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L339 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:339</a></p>
+<p>The underlying GPU "program".</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note>Note<a href=#note class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>May be recreated if parameters change</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-22>Inherited from<a href=#inherited-from-22 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.pipeline</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=pipelinefactory>pipelineFactory<a href=#pipelinefactory class=hash-link aria-label="Direct link to pipelineFactory" title="Direct link to pipelineFactory" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>pipelineFactory</strong>: <code>PipelineFactory</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L288 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:288</a></p>
+<p>Factory used to create render pipelines</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-23>Inherited from<a href=#inherited-from-23 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.pipelineFactory</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=shaderfactory>shaderFactory<a href=#shaderfactory class=hash-link aria-label="Direct link to shaderFactory" title="Direct link to shaderFactory" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>shaderFactory</strong>: <code>ShaderFactory</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L290 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:290</a></p>
+<p>Factory used to create shaders</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-24>Inherited from<a href=#inherited-from-24 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.shaderFactory</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=shaderinputs>shaderInputs<a href=#shaderinputs class=hash-link aria-label="Direct link to shaderInputs" title="Direct link to shaderInputs" translate=no>​</a></h3>
+<blockquote>
+<p><strong>shaderInputs</strong>: <a class="" href=/docs/api-reference/generated/engine/classes/ShaderInputs><code>ShaderInputs</code></a></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L343 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:343</a></p>
+<p>ShaderInputs instance</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-25>Inherited from<a href=#inherited-from-25 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.shaderInputs</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=source>source<a href=#source class=hash-link aria-label="Direct link to source" title="Direct link to source" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>source</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L280 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:280</a></p>
+<p>WGSL shader source when using unified shader</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-26>Inherited from<a href=#inherited-from-26 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.source</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=topology>topology<a href=#topology class=hash-link aria-label="Direct link to topology" title="Direct link to topology" translate=no>​</a></h3>
+<blockquote>
+<p><strong>topology</strong>: <code>PrimitiveTopology</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L300 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:300</a></p>
+<p>The primitive topology</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-27>Inherited from<a href=#inherited-from-27 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.topology</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=transformfeedback>transformFeedback<a href=#transformfeedback class=hash-link aria-label="Direct link to transformFeedback" title="Direct link to transformFeedback" translate=no>​</a></h3>
+<blockquote>
+<p><strong>transformFeedback</strong>: <code>TransformFeedback</code> | <code>null</code> = <code>null</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L336 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:336</a></p>
+<p>TransformFeedback, WebGL 2 only.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-28>Inherited from<a href=#inherited-from-28 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.transformFeedback</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=userdata>userData<a href=#userdata class=hash-link aria-label="Direct link to userData" title="Direct link to userData" translate=no>​</a></h3>
+<blockquote>
+<p><strong>userData</strong>: <code>object</code> = <code>{}</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L292 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:292</a></p>
+<p>User-supplied per-model data</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=index-signature>Index Signature<a href=#index-signature class=hash-link aria-label="Direct link to Index Signature" title="Direct link to Index Signature" translate=no>​</a></h4>
+<p>[<code>key</code>: <code>string</code>]: <code>unknown</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-29>Inherited from<a href=#inherited-from-29 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.userData</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=vertexarray>vertexArray<a href=#vertexarray class=hash-link aria-label="Direct link to vertexArray" title="Direct link to vertexArray" translate=no>​</a></h3>
+<blockquote>
+<p><strong>vertexArray</strong>: <code>VertexArray</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L333 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:333</a></p>
+<p>VertexArray</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-1>Note<a href=#note-1 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>not implemented: if bufferLayout is updated, vertex array has to be rebuilt!</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=todo>Todo<a href=#todo class=hash-link aria-label="Direct link to Todo" title="Direct link to Todo" translate=no>​</a></h4>
+<ul>
+<li class="">allow application to define multiple vertex arrays?</li>
+</ul>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-30>Inherited from<a href=#inherited-from-30 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.vertexArray</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=vertexcount>vertexCount<a href=#vertexcount class=hash-link aria-label="Direct link to vertexCount" title="Direct link to vertexCount" translate=no>​</a></h3>
+<blockquote>
+<p><strong>vertexCount</strong>: <code>number</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L311 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:311</a></p>
+<p>Vertex count</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-31>Inherited from<a href=#inherited-from-31 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.vertexCount</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=vs>vs<a href=#vs class=hash-link aria-label="Direct link to vs" title="Direct link to vs" translate=no>​</a></h3>
+<blockquote>
+<p><code>readonly</code> <strong>vs</strong>: <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L283 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:283</a></p>
+<p>GLSL vertex shader source</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-32>Inherited from<a href=#inherited-from-32 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.vs</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=defaultprops>defaultProps<a href=#defaultprops class=hash-link aria-label="Direct link to defaultProps" title="Direct link to defaultProps" translate=no>​</a></h3>
+<blockquote>
+<p><code>static</code> <strong>defaultProps</strong>: <code>Required</code>&lt;<a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelProps><code>GPUVectorModelProps</code></a>> & <code>object</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L29 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:29</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=type-declaration>Type Declaration<a href=#type-declaration class=hash-link aria-label="Direct link to Type Declaration" title="Direct link to Type Declaration" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=material-1>material<a href=#material-1 class=hash-link aria-label="Direct link to material" title="Direct link to material" translate=no>​</a></h5>
+<blockquote>
+<p><strong>material</strong>: <a class="" href=/docs/api-reference/generated/engine/classes/Material><code>Material</code></a></p>
+</blockquote>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-33>Inherited from<a href=#inherited-from-33 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.defaultProps</code></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=accessors>Accessors<a href=#accessors class=hash-link aria-label="Direct link to Accessors" title="Direct link to Accessors" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=tostringtag>[toStringTag]<a href=#tostringtag class=hash-link aria-label="Direct link to [toStringTag]" title="Direct link to [toStringTag]" translate=no>​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=get-signature>Get Signature<a href=#get-signature class=hash-link aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate=no>​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>[toStringTag]</strong>(): <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L378 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:378</a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=returns-1>Returns<a href=#returns-1 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h5>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-34>Inherited from<a href=#inherited-from-34 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.[toStringTag]</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=sourcegeometry>sourceGeometry<a href=#sourcegeometry class=hash-link aria-label="Direct link to sourceGeometry" title="Direct link to sourceGeometry" translate=no>​</a></h3>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=get-signature-1>Get Signature<a href=#get-signature-1 class=hash-link aria-label="Direct link to Get Signature" title="Direct link to Get Signature" translate=no>​</a></h4>
+<blockquote>
+<p><strong>get</strong> <strong>sourceGeometry</strong>(): <code>Geometry</code> | <a class="" href=/docs/api-reference/generated/engine/classes/GPUVectorGeometry><code>GPUVectorGeometry</code></a> | <a class="" href=/docs/api-reference/generated/engine/classes/GPUGeometry><code>GPUGeometry</code></a> | <code>null</code> | <code>undefined</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L40 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:40</a></p>
+<p>Borrowed source geometry, retained for scene adapters such as physics cooking.</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=returns-2>Returns<a href=#returns-2 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h5>
+<p><code>Geometry</code> | <a class="" href=/docs/api-reference/generated/engine/classes/GPUVectorGeometry><code>GPUVectorGeometry</code></a> | <a class="" href=/docs/api-reference/generated/engine/classes/GPUGeometry><code>GPUGeometry</code></a> | <code>null</code> | <code>undefined</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-35>Inherited from<a href=#inherited-from-35 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.sourceGeometry</code></p>
+<h2 class="anchor anchorTargetStickyNavbar_tleR" id=methods>Methods<a href=#methods class=hash-link aria-label="Direct link to Methods" title="Direct link to Methods" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_arebindingsloading>_areBindingsLoading()<a href=#_arebindingsloading class=hash-link aria-label="Direct link to _areBindingsLoading()" title="Direct link to _areBindingsLoading()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_areBindingsLoading</strong>(): <code>string</code> | <code>false</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L132 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:132</a></p>
+<p>Check that bindings are loaded. Returns id of first binding that is still loading.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-3>Returns<a href=#returns-3 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>string</code> | <code>false</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-36>Inherited from<a href=#inherited-from-36 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._areBindingsLoading</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_getattributedebugtable>_getAttributeDebugTable()<a href=#_getattributedebugtable class=hash-link aria-label="Direct link to _getAttributeDebugTable()" title="Direct link to _getAttributeDebugTable()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_getAttributeDebugTable</strong>(): <code>Record</code>&lt;<code>string</code>, <code>Record</code>&lt;<code>string</code>, <code>unknown</code>>></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1731 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1731</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-4>Returns<a href=#returns-4 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Record</code>&lt;<code>string</code>, <code>Record</code>&lt;<code>string</code>, <code>unknown</code>>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-37>Inherited from<a href=#inherited-from-37 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._getAttributeDebugTable</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_getbindgroupcachekeys>_getBindGroupCacheKeys()<a href=#_getbindgroupcachekeys class=hash-link aria-label="Direct link to _getBindGroupCacheKeys()" title="Direct link to _getBindGroupCacheKeys()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_getBindGroupCacheKeys</strong>(): <code>Partial</code>&lt;<code>Record</code>&lt;<code>number</code>, <code>object</code>>></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L155 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:155</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-5>Returns<a href=#returns-5 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Partial</code>&lt;<code>Record</code>&lt;<code>number</code>, <code>object</code>>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-38>Inherited from<a href=#inherited-from-38 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._getBindGroupCacheKeys</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_getbindgroups>_getBindGroups()<a href=#_getbindgroups class=hash-link aria-label="Direct link to _getBindGroups()" title="Direct link to _getBindGroups()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_getBindGroups</strong>(<code>shaderLayout?</code>, <code>bindings?</code>): <code>BindingsByGroup</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L141 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:141</a></p>
+<p>Groups resolved resource bindings for the current shader layout.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-2>Parameters<a href=#parameters-2 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=shaderlayout>shaderLayout?<a href=#shaderlayout class=hash-link aria-label="Direct link to shaderLayout?" title="Direct link to shaderLayout?" translate=no>​</a></h5>
+<p><code>AnyShaderLayout</code> = <code>...</code></p>
+<p>Reflected bindings used to group logical binding names.</p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=bindings-1>bindings?<a href=#bindings-1 class=hash-link aria-label="Direct link to bindings?" title="Direct link to bindings?" translate=no>​</a></h5>
+<p><code>Record</code>&lt;<code>string</code>, <code>Binding</code>> = <code>...</code></p>
+<p>GPUVectorModel bindings already resolved for this draw preparation.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-6>Returns<a href=#returns-6 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>BindingsByGroup</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-39>Inherited from<a href=#inherited-from-39 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._getBindGroups</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_getbindings>_getBindings()<a href=#_getbindings class=hash-link aria-label="Direct link to _getBindings()" title="Direct link to _getBindings()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_getBindings</strong>(<code>shaderLayout?</code>): <code>Record</code>&lt;<code>string</code>, <code>Binding</code>></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1486 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1486</a></p>
+<p>Resolves ready model bindings for the current shader layout.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-3>Parameters<a href=#parameters-3 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=shaderlayout-1>shaderLayout?<a href=#shaderlayout-1 class=hash-link aria-label="Direct link to shaderLayout?" title="Direct link to shaderLayout?" translate=no>​</a></h5>
+<p><code>AnyShaderLayout</code> = <code>...</code></p>
+<p>Reflected bindings used to select copied or external texture resolution.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-7>Returns<a href=#returns-7 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Record</code>&lt;<code>string</code>, <code>Binding</code>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-40>Inherited from<a href=#inherited-from-40 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._getBindings</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_getbindingsupdatetimestamp>_getBindingsUpdateTimestamp()<a href=#_getbindingsupdatetimestamp class=hash-link aria-label="Direct link to _getBindingsUpdateTimestamp()" title="Direct link to _getBindingsUpdateTimestamp()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_getBindingsUpdateTimestamp</strong>(): <code>number</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L160 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:160</a></p>
+<p>Get the timestamp of the latest updated bound GPU memory resource (buffer/texture).</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-8>Returns<a href=#returns-8 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-41>Inherited from<a href=#inherited-from-41 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._getBindingsUpdateTimestamp</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_getbufferorconstantvalues>_getBufferOrConstantValues()<a href=#_getbufferorconstantvalues class=hash-link aria-label="Direct link to _getBufferOrConstantValues()" title="Direct link to _getBufferOrConstantValues()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_getBufferOrConstantValues</strong>(<code>attribute</code>, <code>dataType</code>): <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1759 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1759</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-4>Parameters<a href=#parameters-4 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=attribute>attribute<a href=#attribute class=hash-link aria-label="Direct link to attribute" title="Direct link to attribute" translate=no>​</a></h5>
+<p><code>TypedArray</code> | <code>Buffer</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=datatype>dataType<a href=#datatype class=hash-link aria-label="Direct link to dataType" title="Direct link to dataType" translate=no>​</a></h5>
+<p><code>any</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-9>Returns<a href=#returns-9 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-42>Inherited from<a href=#inherited-from-42 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._getBufferOrConstantValues</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_logdrawcallend>_logDrawCallEnd()<a href=#_logdrawcallend class=hash-link aria-label="Direct link to _logDrawCallEnd()" title="Direct link to _logDrawCallEnd()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_logDrawCallEnd</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1695 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1695</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-10>Returns<a href=#returns-10 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-43>Inherited from<a href=#inherited-from-43 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._logDrawCallEnd</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_logdrawcallstart>_logDrawCallStart()<a href=#_logdrawcallstart class=hash-link aria-label="Direct link to _logDrawCallStart()" title="Direct link to _logDrawCallStart()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_logDrawCallStart</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1682 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1682</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-11>Returns<a href=#returns-11 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-44>Inherited from<a href=#inherited-from-44 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._logDrawCallStart</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_logframebuffer>_logFramebuffer()<a href=#_logframebuffer class=hash-link aria-label="Direct link to _logFramebuffer()" title="Direct link to _logFramebuffer()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_logFramebuffer</strong>(<code>renderPass</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1716 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1716</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-5>Parameters<a href=#parameters-5 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=renderpass>renderPass<a href=#renderpass class=hash-link aria-label="Direct link to renderPass" title="Direct link to renderPass" translate=no>​</a></h5>
+<p><code>RenderPass</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-12>Returns<a href=#returns-12 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-45>Inherited from<a href=#inherited-from-45 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._logFramebuffer</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_setpipelineneedsupdate>_setPipelineNeedsUpdate()<a href=#_setpipelineneedsupdate class=hash-link aria-label="Direct link to _setPipelineNeedsUpdate()" title="Direct link to _setPipelineNeedsUpdate()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_setPipelineNeedsUpdate</strong>(<code>reason</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1557 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1557</a></p>
+<p>Mark pipeline as needing update</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-6>Parameters<a href=#parameters-6 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=reason>reason<a href=#reason class=hash-link aria-label="Direct link to reason" title="Direct link to reason" translate=no>​</a></h5>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-13>Returns<a href=#returns-13 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-46>Inherited from<a href=#inherited-from-46 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._setPipelineNeedsUpdate</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_updatepipeline>_updatePipeline()<a href=#_updatepipeline class=hash-link aria-label="Direct link to _updatePipeline()" title="Direct link to _updatePipeline()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_updatePipeline</strong>(): <code>RenderPipeline</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1564 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1564</a></p>
+<p>Update pipeline if needed</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-14>Returns<a href=#returns-14 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>RenderPipeline</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-47>Inherited from<a href=#inherited-from-47 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._updatePipeline</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=_updatepipelineasync>_updatePipelineAsync()<a href=#_updatepipelineasync class=hash-link aria-label="Direct link to _updatePipelineAsync()" title="Direct link to _updatePipelineAsync()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>_updatePipelineAsync</strong>(): <code>Promise</code>&lt;<code>RenderPipeline</code>></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1580 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1580</a></p>
+<p>Creates or replaces the render pipeline through the backend's asynchronous compilation path.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-15>Returns<a href=#returns-15 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Promise</code>&lt;<code>RenderPipeline</code>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-48>Inherited from<a href=#inherited-from-48 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel._updatePipelineAsync</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=destroy>destroy()<a href=#destroy class=hash-link aria-label="Direct link to destroy()" title="Direct link to destroy()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>destroy</strong>(): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L151 target=_blank rel="noopener noreferrer" class="">modules/engine/src/models/light-model-utils.ts:151</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-16>Returns<a href=#returns-16 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-49>Inherited from<a href=#inherited-from-49 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.destroy</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=draw>draw()<a href=#draw class=hash-link aria-label="Direct link to draw()" title="Direct link to draw()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>draw</strong>(<code>renderPass</code>): <code>boolean</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L157 target=_blank rel="noopener noreferrer" class="">modules/engine/src/models/light-model-utils.ts:157</a></p>
+<p>Issue one draw call.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-7>Parameters<a href=#parameters-7 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=renderpass-1>renderPass<a href=#renderpass-1 class=hash-link aria-label="Direct link to renderPass" title="Direct link to renderPass" translate=no>​</a></h5>
+<p><code>RenderPass</code></p>
+<p>render pass to draw into</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-17>Returns<a href=#returns-17 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>boolean</code></p>
+<p><code>true</code> if the draw call was executed, <code>false</code> if resources were not ready.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-50>Inherited from<a href=#inherited-from-50 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.draw</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=drawbatches>drawBatches()<a href=#drawbatches class=hash-link aria-label="Direct link to drawBatches()" title="Direct link to drawBatches()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>drawBatches</strong>&lt;<code>Inputs</code>>(<code>renderPass</code>, <code>__namedParameters</code>): <code>boolean</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1044 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1044</a></p>
+<p>Draws each aligned physical chunk without taking ownership of input vectors.
+Each batch uses a separate aligned slot for managed shader-input uniforms set by
+<code>onBatch</code>. Slots are reused on each call: submit previous draws before changing their
+values or growing the allocation. Explicit buffers remain caller-managed. Vector
+lengths and physical chunk boundaries must match.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=type-parameters>Type Parameters<a href=#type-parameters class=hash-link aria-label="Direct link to Type Parameters" title="Direct link to Type Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=inputs>Inputs<a href=#inputs class=hash-link aria-label="Direct link to Inputs" title="Direct link to Inputs" translate=no>​</a></h5>
+<p><code>Inputs</code> <em>extends</em> <a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelInputs><code>GPUVectorModelInputs</code></a> = <a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelInputs><code>GPUVectorModelInputs</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-8>Parameters<a href=#parameters-8 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=renderpass-2>renderPass<a href=#renderpass-2 class=hash-link aria-label="Direct link to renderPass" title="Direct link to renderPass" translate=no>​</a></h5>
+<p><code>RenderPass</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=__namedparameters>__namedParameters<a href=#__namedparameters class=hash-link aria-label="Direct link to __namedParameters" title="Direct link to __namedParameters" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelDrawBatchesOptions><code>GPUVectorModelDrawBatchesOptions</code></a>&lt;<code>Inputs</code>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-18>Returns<a href=#returns-18 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>boolean</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-51>Inherited from<a href=#inherited-from-51 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.drawBatches</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=getbindingdebugtable>getBindingDebugTable()<a href=#getbindingdebugtable class=hash-link aria-label="Direct link to getBindingDebugTable()" title="Direct link to getBindingDebugTable()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>getBindingDebugTable</strong>(): readonly <code>ShaderBindingDebugRow</code>[]</p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L647 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:647</a></p>
+<p>Returns WGSL binding debug rows for the assembled shader. Returns an empty array for GLSL models.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-19>Returns<a href=#returns-19 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p>readonly <code>ShaderBindingDebugRow</code>[]</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-52>Inherited from<a href=#inherited-from-52 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.getBindingDebugTable</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=needsredraw>needsRedraw()<a href=#needsredraw class=hash-link aria-label="Direct link to needsRedraw()" title="Direct link to needsRedraw()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>needsRedraw</strong>(): <code>string</code> | <code>false</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L631 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:631</a></p>
+<p>Query redraw status. Clears the status.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-20>Returns<a href=#returns-20 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>string</code> | <code>false</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-53>Inherited from<a href=#inherited-from-53 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.needsRedraw</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=predraw>predraw()<a href=#predraw class=hash-link aria-label="Direct link to predraw()" title="Direct link to predraw()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>predraw</strong>(<code>commandEncoder</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L657 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:657</a></p>
+<p>Updates uniforms and pipeline state before opening a render pass.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-9>Parameters<a href=#parameters-9 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=commandencoder>commandEncoder<a href=#commandencoder class=hash-link aria-label="Direct link to commandEncoder" title="Direct link to commandEncoder" translate=no>​</a></h5>
+<p><code>CommandEncoder</code></p>
+<p>Encoder that should own any GPU uploads emitted
+during draw preparation.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-21>Returns<a href=#returns-21 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-54>Inherited from<a href=#inherited-from-54 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.predraw</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setattributes>setAttributes()<a href=#setattributes class=hash-link aria-label="Direct link to setAttributes()" title="Direct link to setAttributes()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setAttributes</strong>(<code>buffers</code>, <code>options?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1367 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1367</a></p>
+<p>Sets attributes (buffers)</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-10>Parameters<a href=#parameters-10 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=buffers>buffers<a href=#buffers class=hash-link aria-label="Direct link to buffers" title="Direct link to buffers" translate=no>​</a></h5>
+<p><code>Record</code>&lt;<code>string</code>, <code>ModelBuffer</code>></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=options>options?<a href=#options class=hash-link aria-label="Direct link to options?" title="Direct link to options?" translate=no>​</a></h5>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=byteoffsets>byteOffsets?<a href=#byteoffsets class=hash-link aria-label="Direct link to byteOffsets?" title="Direct link to byteOffsets?" translate=no>​</a></h6>
+<p><code>Record</code>&lt;<code>string</code>, <code>number</code>></p>
+<p>Optional byte offsets, keyed by buffer name, where each buffer's
+vertex data starts. Buffers without an entry are bound at offset 0.</p>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=disablewarnings>disableWarnings?<a href=#disablewarnings class=hash-link aria-label="Direct link to disableWarnings?" title="Direct link to disableWarnings?" translate=no>​</a></h6>
+<p><code>boolean</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-22>Returns<a href=#returns-22 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-2>Note<a href=#note-2 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Overrides any attributes previously set with the same name</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-55>Inherited from<a href=#inherited-from-55 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setAttributes</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setattributevectors>setAttributeVectors()<a href=#setattributevectors class=hash-link aria-label="Direct link to setAttributeVectors()" title="Direct link to setAttributeVectors()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setAttributeVectors</strong>(<code>vectors</code>, <code>bufferLayouts?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L838 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:838</a></p>
+<p>Replaces supplemental vectors; instanced models default these inputs to instance step mode.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-11>Parameters<a href=#parameters-11 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=vectors>vectors<a href=#vectors class=hash-link aria-label="Direct link to vectors" title="Direct link to vectors" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelAttributes><code>GPUVectorModelAttributes</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=bufferlayouts>bufferLayouts?<a href=#bufferlayouts class=hash-link aria-label="Direct link to bufferLayouts?" title="Direct link to bufferLayouts?" translate=no>​</a></h5>
+<p><code>BufferLayout</code>[]</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-23>Returns<a href=#returns-23 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-56>Inherited from<a href=#inherited-from-56 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setAttributeVectors</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setbindings>setBindings()<a href=#setbindings class=hash-link aria-label="Direct link to setBindings()" title="Direct link to setBindings()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setBindings</strong>(<code>bindings</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1326 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1326</a></p>
+<p>Sets bindings (textures, samplers, uniform buffers)</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-12>Parameters<a href=#parameters-12 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=bindings-2>bindings<a href=#bindings-2 class=hash-link aria-label="Direct link to bindings" title="Direct link to bindings" translate=no>​</a></h5>
+<p><code>Record</code>&lt;<code>string</code>, <code>ModelBinding</code>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-24>Returns<a href=#returns-24 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-57>Inherited from<a href=#inherited-from-57 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setBindings</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setbufferlayout>setBufferLayout()<a href=#setbufferlayout class=hash-link aria-label="Direct link to setBufferLayout()" title="Direct link to setBufferLayout()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setBufferLayout</strong>(<code>bufferLayout</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1172 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1172</a></p>
+<p>Updates the buffer layout.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-13>Parameters<a href=#parameters-13 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=bufferlayout-1>bufferLayout<a href=#bufferlayout-1 class=hash-link aria-label="Direct link to bufferLayout" title="Direct link to bufferLayout" translate=no>​</a></h5>
+<p><code>BufferLayout</code>[]</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-25>Returns<a href=#returns-25 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-3>Note<a href=#note-3 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Triggers a pipeline rebuild / pipeline cache fetch</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-58>Inherited from<a href=#inherited-from-58 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setBufferLayout</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setconstantattributes>setConstantAttributes()<a href=#setconstantattributes class=hash-link aria-label="Direct link to setConstantAttributes()" title="Direct link to setConstantAttributes()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setConstantAttributes</strong>(<code>attributes</code>, <code>options?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1453 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1453</a></p>
+<p>Sets constant attributes</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-14>Parameters<a href=#parameters-14 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=attributes>attributes<a href=#attributes class=hash-link aria-label="Direct link to attributes" title="Direct link to attributes" translate=no>​</a></h5>
+<p><code>Record</code>&lt;<code>string</code>, <code>TypedArray</code>></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=options-1>options?<a href=#options-1 class=hash-link aria-label="Direct link to options?" title="Direct link to options?" translate=no>​</a></h5>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=disablewarnings-1>disableWarnings?<a href=#disablewarnings-1 class=hash-link aria-label="Direct link to disableWarnings?" title="Direct link to disableWarnings?" translate=no>​</a></h6>
+<p><code>boolean</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-26>Returns<a href=#returns-26 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-4>Note<a href=#note-4 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Overrides any attributes previously set with the same name
+Constant attributes are only supported in WebGL, not in WebGPU
+Any attribute that is disabled in the current vertex array object
+is read from the context's global constant value for that attribute location.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-59>Inherited from<a href=#inherited-from-59 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setConstantAttributes</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setdrawoffsets>setDrawOffsets()<a href=#setdrawoffsets class=hash-link aria-label="Direct link to setDrawOffsets()" title="Direct link to setDrawOffsets()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setDrawOffsets</strong>(<code>__namedParameters</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1283 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1283</a></p>
+<p>Updates the first indexed/non-indexed draw offsets.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-15>Parameters<a href=#parameters-15 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=__namedparameters-1>__namedParameters<a href=#__namedparameters-1 class=hash-link aria-label="Direct link to __namedParameters" title="Direct link to __namedParameters" translate=no>​</a></h5>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=firstindex-1>firstIndex<a href=#firstindex-1 class=hash-link aria-label="Direct link to firstIndex" title="Direct link to firstIndex" translate=no>​</a></h6>
+<p><code>number</code></p>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=firstvertex-1>firstVertex<a href=#firstvertex-1 class=hash-link aria-label="Direct link to firstVertex" title="Direct link to firstVertex" translate=no>​</a></h6>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-27>Returns<a href=#returns-27 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-60>Inherited from<a href=#inherited-from-60 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setDrawOffsets</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setgeometry>setGeometry()<a href=#setgeometry class=hash-link aria-label="Direct link to setGeometry()" title="Direct link to setGeometry()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setGeometry</strong>(<code>geometry</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L90 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:90</a></p>
+<p>Adapts CPU and legacy buffer geometry into the GPU vector geometry API.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-16>Parameters<a href=#parameters-16 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=geometry>geometry<a href=#geometry class=hash-link aria-label="Direct link to geometry" title="Direct link to geometry" translate=no>​</a></h5>
+<p><code>Geometry</code> | <a class="" href=/docs/api-reference/generated/engine/classes/GPUVectorGeometry><code>GPUVectorGeometry</code></a> | <a class="" href=/docs/api-reference/generated/engine/classes/GPUGeometry><code>GPUGeometry</code></a> | <code>null</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-28>Returns<a href=#returns-28 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-61>Inherited from<a href=#inherited-from-61 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setGeometry</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setgeometryvectors>setGeometryVectors()<a href=#setgeometryvectors class=hash-link aria-label="Direct link to setGeometryVectors()" title="Direct link to setGeometryVectors()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setGeometryVectors</strong>(<code>vectors</code>, <code>bufferLayouts?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L805 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:805</a></p>
+<p>Replaces per-vertex mesh vectors while preserving supplemental attributes.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-17>Parameters<a href=#parameters-17 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=vectors-1>vectors<a href=#vectors-1 class=hash-link aria-label="Direct link to vectors" title="Direct link to vectors" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelAttributes><code>GPUVectorModelAttributes</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=bufferlayouts-1>bufferLayouts?<a href=#bufferlayouts-1 class=hash-link aria-label="Direct link to bufferLayouts?" title="Direct link to bufferLayouts?" translate=no>​</a></h5>
+<p><code>BufferLayout</code>[]</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-29>Returns<a href=#returns-29 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-62>Inherited from<a href=#inherited-from-62 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setGeometryVectors</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setgpuattributes>setGPUAttributes()<a href=#setgpuattributes class=hash-link aria-label="Direct link to setGPUAttributes()" title="Direct link to setGPUAttributes()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setGPUAttributes</strong>(<code>vectors</code>, <code>bufferLayouts</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L891 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:891</a></p>
+<p>Binds typed columns using caller-resolved layouts, including packed groups.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-18>Parameters<a href=#parameters-18 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=vectors-2>vectors<a href=#vectors-2 class=hash-link aria-label="Direct link to vectors" title="Direct link to vectors" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelAttributes><code>GPUVectorModelAttributes</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=bufferlayouts-2>bufferLayouts<a href=#bufferlayouts-2 class=hash-link aria-label="Direct link to bufferLayouts" title="Direct link to bufferLayouts" translate=no>​</a></h5>
+<p><code>BufferLayout</code>[]</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-30>Returns<a href=#returns-30 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-63>Inherited from<a href=#inherited-from-63 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setGPUAttributes</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setgpuvectors>setGPUVectors()<a href=#setgpuvectors class=hash-link aria-label="Direct link to setGPUVectors()" title="Direct link to setGPUVectors()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setGPUVectors</strong>(<code>vectors</code>, <code>options?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1004 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1004</a></p>
+<p>Binds contiguous borrowed vectors; use drawBatches() for multi-chunk inputs.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-19>Parameters<a href=#parameters-19 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=vectors-3>vectors<a href=#vectors-3 class=hash-link aria-label="Direct link to vectors" title="Direct link to vectors" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelInputs><code>GPUVectorModelInputs</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=options-2>options?<a href=#options-2 class=hash-link aria-label="Direct link to options?" title="Direct link to options?" translate=no>​</a></h5>
+<h6 class="anchor anchorTargetStickyNavbar_tleR" id=count>count?<a href=#count class=hash-link aria-label="Direct link to count?" title="Direct link to count?" translate=no>​</a></h6>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelCount><code>GPUVectorModelCount</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-31>Returns<a href=#returns-31 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-64>Inherited from<a href=#inherited-from-64 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setGPUVectors</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setindexbuffer>setIndexBuffer()<a href=#setindexbuffer class=hash-link aria-label="Direct link to setIndexBuffer()" title="Direct link to setIndexBuffer()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setIndexBuffer</strong>(<code>indexBuffer</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1343 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1343</a></p>
+<p>Sets the index buffer</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-20>Parameters<a href=#parameters-20 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=indexbuffer-1>indexBuffer<a href=#indexbuffer-1 class=hash-link aria-label="Direct link to indexBuffer" title="Direct link to indexBuffer" translate=no>​</a></h5>
+<p><code>ModelBuffer</code> | <code>null</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-32>Returns<a href=#returns-32 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=todo-1>Todo<a href=#todo-1 class=hash-link aria-label="Direct link to Todo" title="Direct link to Todo" translate=no>​</a></h4>
+<ul>
+<li class="">how to unset it if we change geometry?</li>
+</ul>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-65>Inherited from<a href=#inherited-from-65 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setIndexBuffer</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setindexcount>setIndexCount()<a href=#setindexcount class=hash-link aria-label="Direct link to setIndexCount()" title="Direct link to setIndexCount()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setIndexCount</strong>(<code>indexCount</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L104 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:104</a></p>
+<p>Updates the indexed draw count override.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-21>Parameters<a href=#parameters-21 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=indexcount-1>indexCount<a href=#indexcount-1 class=hash-link aria-label="Direct link to indexCount" title="Direct link to indexCount" translate=no>​</a></h5>
+<p><code>number</code> | <code>undefined</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-33>Returns<a href=#returns-33 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-66>Inherited from<a href=#inherited-from-66 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setIndexCount</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setindexvector>setIndexVector()<a href=#setindexvector class=hash-link aria-label="Direct link to setIndexVector()" title="Direct link to setIndexVector()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setIndexVector</strong>(<code>vector</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L896 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:896</a></p>
+<p>Replaces the borrowed contiguous uint16/uint32 index vector.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-22>Parameters<a href=#parameters-22 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=vector>vector<a href=#vector class=hash-link aria-label="Direct link to vector" title="Direct link to vector" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelInput><code>GPUVectorModelInput</code></a> | <code>null</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-34>Returns<a href=#returns-34 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-67>Inherited from<a href=#inherited-from-67 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setIndexVector</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setinstancecount>setInstanceCount()<a href=#setinstancecount class=hash-link aria-label="Direct link to setInstanceCount()" title="Direct link to setInstanceCount()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setInstanceCount</strong>(<code>instanceCount</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1256 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1256</a></p>
+<p>Updates the instance count (used in draw calls)</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-23>Parameters<a href=#parameters-23 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=instancecount-1>instanceCount<a href=#instancecount-1 class=hash-link aria-label="Direct link to instanceCount" title="Direct link to instanceCount" translate=no>​</a></h5>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-35>Returns<a href=#returns-35 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-5>Note<a href=#note-5 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Any attributes with stepMode=instance need to be at least this big</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-68>Inherited from<a href=#inherited-from-68 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setInstanceCount</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setmaterial>setMaterial()<a href=#setmaterial class=hash-link aria-label="Direct link to setMaterial()" title="Direct link to setMaterial()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setMaterial</strong>(<code>material</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L109 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:109</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-24>Parameters<a href=#parameters-24 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=material-2>material<a href=#material-2 class=hash-link aria-label="Direct link to material" title="Direct link to material" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/classes/Material><code>Material</code></a>&lt;<code>Partial</code>&lt;<code>Record</code>&lt;<code>string</code>, <code>Record</code>&lt;<code>string</code>, <code>unknown</code>>>>, <code>MaterialBindings</code>> | <code>null</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-36>Returns<a href=#returns-36 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-69>Inherited from<a href=#inherited-from-69 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setMaterial</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setneedsredraw>setNeedsRedraw()<a href=#setneedsredraw class=hash-link aria-label="Direct link to setNeedsRedraw()" title="Direct link to setNeedsRedraw()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setNeedsRedraw</strong>(<code>reason</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L642 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:642</a></p>
+<p>Mark the model as needing a redraw</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-25>Parameters<a href=#parameters-25 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=reason-1>reason<a href=#reason-1 class=hash-link aria-label="Direct link to reason" title="Direct link to reason" translate=no>​</a></h5>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-37>Returns<a href=#returns-37 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-70>Inherited from<a href=#inherited-from-70 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setNeedsRedraw</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setparameters>setParameters()<a href=#setparameters class=hash-link aria-label="Direct link to setParameters()" title="Direct link to setParameters()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setParameters</strong>(<code>parameters</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1239 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1239</a></p>
+<p>Set GPU parameters.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-26>Parameters<a href=#parameters-26 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-27>parameters<a href=#parameters-27 class=hash-link aria-label="Direct link to parameters" title="Direct link to parameters" translate=no>​</a></h5>
+<p><code>RenderPipelineParameters</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-38>Returns<a href=#returns-38 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-6>Note<a href=#note-6 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU.
+On WebGL, parameters are applied at each draw call, so the pipeline is kept.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-71>Inherited from<a href=#inherited-from-71 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setParameters</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setprops>setProps()<a href=#setprops class=hash-link aria-label="Direct link to setProps()" title="Direct link to setProps()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setProps</strong>(<code>props</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L164 target=_blank rel="noopener noreferrer" class="">modules/engine/src/models/light-model-utils.ts:164</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-28>Parameters<a href=#parameters-28 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=props-1>props<a href=#props-1 class=hash-link aria-label="Direct link to props" title="Direct link to props" translate=no>​</a></h5>
+<p><code>Partial</code>&lt;<code>PropsT</code>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-39>Returns<a href=#returns-39 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-72>Inherited from<a href=#inherited-from-72 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setProps</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setshaderinputs>setShaderInputs()<a href=#setshaderinputs class=hash-link aria-label="Direct link to setShaderInputs()" title="Direct link to setShaderInputs()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setShaderInputs</strong>(<code>shaderInputs</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1290 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1290</a></p>
+<p>Set the shader inputs</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-29>Parameters<a href=#parameters-29 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=shaderinputs-1>shaderInputs<a href=#shaderinputs-1 class=hash-link aria-label="Direct link to shaderInputs" title="Direct link to shaderInputs" translate=no>​</a></h5>
+<p><a class="" href=/docs/api-reference/generated/engine/classes/ShaderInputs><code>ShaderInputs</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-40>Returns<a href=#returns-40 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-73>Inherited from<a href=#inherited-from-73 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setShaderInputs</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settopology>setTopology()<a href=#settopology class=hash-link aria-label="Direct link to setTopology()" title="Direct link to setTopology()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTopology</strong>(<code>topology</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1161 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1161</a></p>
+<p>Updates the primitive topology ('triangle-list', 'triangle-strip' etc).</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-30>Parameters<a href=#parameters-30 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=topology-1>topology<a href=#topology-1 class=hash-link aria-label="Direct link to topology" title="Direct link to topology" translate=no>​</a></h5>
+<p><code>PrimitiveTopology</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-41>Returns<a href=#returns-41 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-7>Note<a href=#note-7 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Triggers a pipeline rebuild / pipeline cache fetch on WebGPU</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-74>Inherited from<a href=#inherited-from-74 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setTopology</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=settransformfeedback>setTransformFeedback()<a href=#settransformfeedback class=hash-link aria-label="Direct link to setTransformFeedback()" title="Direct link to setTransformFeedback()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setTransformFeedback</strong>(<code>transformFeedback</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1334 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1334</a></p>
+<p>Updates optional transform feedback. WebGL only.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-31>Parameters<a href=#parameters-31 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=transformfeedback-1>transformFeedback<a href=#transformfeedback-1 class=hash-link aria-label="Direct link to transformFeedback" title="Direct link to transformFeedback" translate=no>​</a></h5>
+<p><code>TransformFeedback</code> | <code>null</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-42>Returns<a href=#returns-42 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-75>Inherited from<a href=#inherited-from-75 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setTransformFeedback</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=setvertexcount>setVertexCount()<a href=#setvertexcount class=hash-link aria-label="Direct link to setVertexCount()" title="Direct link to setVertexCount()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>setVertexCount</strong>(<code>vertexCount</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1270 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:1270</a></p>
+<p>Updates the vertex count (used in draw calls)</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-32>Parameters<a href=#parameters-32 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=vertexcount-1>vertexCount<a href=#vertexcount-1 class=hash-link aria-label="Direct link to vertexCount" title="Direct link to vertexCount" translate=no>​</a></h5>
+<p><code>number</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-43>Returns<a href=#returns-43 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=note-8>Note<a href=#note-8 class=hash-link aria-label="Direct link to Note" title="Direct link to Note" translate=no>​</a></h4>
+<p>Any attributes with stepMode=vertex need to be at least this big</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-76>Inherited from<a href=#inherited-from-76 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.setVertexCount</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=tostring>toString()<a href=#tostring class=hash-link aria-label="Direct link to toString()" title="Direct link to toString()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>toString</strong>(): <code>string</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L382 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:382</a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-44>Returns<a href=#returns-44 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>string</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-77>Inherited from<a href=#inherited-from-77 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.toString</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=updateshaderinputs>updateShaderInputs()<a href=#updateshaderinputs class=hash-link aria-label="Direct link to updateShaderInputs()" title="Direct link to updateShaderInputs()" translate=no>​</a></h3>
+<blockquote>
+<p><strong>updateShaderInputs</strong>(<code>commandEncoder?</code>): <code>void</code></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L118 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/model.ts:118</a></p>
+<p>Flushes current shader-input values into managed uniform buffers and
+resource bindings.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-33>Parameters<a href=#parameters-33 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=commandencoder-1>commandEncoder?<a href=#commandencoder-1 class=hash-link aria-label="Direct link to commandEncoder?" title="Direct link to commandEncoder?" translate=no>​</a></h5>
+<p><code>CommandEncoder</code></p>
+<p>Optional encoder used to order uniform uploads with
+subsequent draw commands.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-45>Returns<a href=#returns-45 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>void</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-78>Inherited from<a href=#inherited-from-78 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.updateShaderInputs</code></p>
+<hr/>
+<h3 class="anchor anchorTargetStickyNavbar_tleR" id=createasync>createAsync()<a href=#createasync class=hash-link aria-label="Direct link to createAsync()" title="Direct link to createAsync()" translate=no>​</a></h3>
+<blockquote>
+<p><code>static</code> <strong>createAsync</strong>&lt;<code>ModelType</code>, <code>Props</code>>(<code>this</code>, <code>device</code>, <code>props</code>): <code>Promise</code>&lt;<code>ModelType</code>></p>
+</blockquote>
+<p>Defined in: <a href=https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L203 target=_blank rel="noopener noreferrer" class="">modules/engine/src/model/gpu-vector-model.ts:203</a></p>
+<p>Creates a model while allowing the backend to compile its render pipeline asynchronously.</p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=type-parameters-1>Type Parameters<a href=#type-parameters-1 class=hash-link aria-label="Direct link to Type Parameters" title="Direct link to Type Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=modeltype>ModelType<a href=#modeltype class=hash-link aria-label="Direct link to ModelType" title="Direct link to ModelType" translate=no>​</a></h5>
+<p><code>ModelType</code> <em>extends</em> <a class="" href=/docs/api-reference/generated/engine/classes/GPUVectorModel><code>GPUVectorModel</code></a></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=props-2>Props<a href=#props-2 class=hash-link aria-label="Direct link to Props" title="Direct link to Props" translate=no>​</a></h5>
+<p><code>Props</code> = <a class="" href=/docs/api-reference/generated/engine/type-aliases/GPUVectorModelProps><code>GPUVectorModelProps</code></a></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=parameters-34>Parameters<a href=#parameters-34 class=hash-link aria-label="Direct link to Parameters" title="Direct link to Parameters" translate=no>​</a></h4>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=this>this<a href=#this class=hash-link aria-label="Direct link to this" title="Direct link to this" translate=no>​</a></h5>
+<p>(<code>device</code>, <code>props</code>) => <code>ModelType</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=device-2>device<a href=#device-2 class=hash-link aria-label="Direct link to device" title="Direct link to device" translate=no>​</a></h5>
+<p><code>Device</code></p>
+<h5 class="anchor anchorTargetStickyNavbar_tleR" id=props-3>props<a href=#props-3 class=hash-link aria-label="Direct link to props" title="Direct link to props" translate=no>​</a></h5>
+<p><code>Props</code></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=returns-46>Returns<a href=#returns-46 class=hash-link aria-label="Direct link to Returns" title="Direct link to Returns" translate=no>​</a></h4>
+<p><code>Promise</code>&lt;<code>ModelType</code>></p>
+<h4 class="anchor anchorTargetStickyNavbar_tleR" id=inherited-from-79>Inherited from<a href=#inherited-from-79 class=hash-link aria-label="Direct link to Inherited from" title="Direct link to Inherited from" translate=no>​</a></h4>
+<p><code>BaseLightModel.createAsync</code></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_QeZL"><a href=https://github.com/visgl/luma.gl/tree/master/docs/../docs/api-reference/generated/engine/classes/SpotLightModel.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_bHB7 aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_ydrU"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"></nav></div></div><div class="col col--3"><div class="tableOfContents_XG6w thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#extends class="table-of-contents__link toc-highlight">Extends</a><li><a href=#constructors class="table-of-contents__link toc-highlight">Constructors</a><ul><li><a href=#constructor class="table-of-contents__link toc-highlight">Constructor</a></ul><li><a href=#properties class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href=#_attributeinfos class="table-of-contents__link toc-highlight">_attributeInfos</a><li><a href=#_gpugeometry class="table-of-contents__link toc-highlight">_gpuGeometry</a><li><a href=#_lastdrawtimestamp class="table-of-contents__link toc-highlight">_lastDrawTimestamp</a><li><a href=#_lastlogtime class="table-of-contents__link toc-highlight">_lastLogTime</a><li><a href=#_logopen class="table-of-contents__link toc-highlight">_logOpen</a><li><a href=#_pipelineneedsupdate class="table-of-contents__link toc-highlight">_pipelineNeedsUpdate</a><li><a href=#_uniformstore class="table-of-contents__link toc-highlight">_uniformStore</a><li><a href=#bindings class="table-of-contents__link toc-highlight">bindings</a><li><a href=#bufferattributes class="table-of-contents__link toc-highlight">bufferAttributes</a><li><a href=#bufferlayout class="table-of-contents__link toc-highlight">bufferLayout</a><li><a href=#constantattributes class="table-of-contents__link toc-highlight">constantAttributes</a><li><a href=#device-1 class="table-of-contents__link toc-highlight">device</a><li><a href=#firstindex class="table-of-contents__link toc-highlight">firstIndex</a><li><a href=#firstvertex class="table-of-contents__link toc-highlight">firstVertex</a><li><a href=#fs class="table-of-contents__link toc-highlight">fs</a><li><a href=#id class="table-of-contents__link toc-highlight">id</a><li><a href=#indexbuffer class="table-of-contents__link toc-highlight">indexBuffer</a><li><a href=#indexcount class="table-of-contents__link toc-highlight">indexCount</a><li><a href=#instancecount class="table-of-contents__link toc-highlight">instanceCount</a><li><a href=#isinstanced class="table-of-contents__link toc-highlight">isInstanced</a><li><a href=#material class="table-of-contents__link toc-highlight">material</a><li><a href=#parameters-1 class="table-of-contents__link toc-highlight">parameters</a><li><a href=#pipeline class="table-of-contents__link toc-highlight">pipeline</a><li><a href=#pipelinefactory class="table-of-contents__link toc-highlight">pipelineFactory</a><li><a href=#shaderfactory class="table-of-contents__link toc-highlight">shaderFactory</a><li><a href=#shaderinputs class="table-of-contents__link toc-highlight">shaderInputs</a><li><a href=#source class="table-of-contents__link toc-highlight">source</a><li><a href=#topology class="table-of-contents__link toc-highlight">topology</a><li><a href=#transformfeedback class="table-of-contents__link toc-highlight">transformFeedback</a><li><a href=#userdata class="table-of-contents__link toc-highlight">userData</a><li><a href=#vertexarray class="table-of-contents__link toc-highlight">vertexArray</a><li><a href=#vertexcount class="table-of-contents__link toc-highlight">vertexCount</a><li><a href=#vs class="table-of-contents__link toc-highlight">vs</a><li><a href=#defaultprops class="table-of-contents__link toc-highlight">defaultProps</a></ul><li><a href=#accessors class="table-of-contents__link toc-highlight">Accessors</a><ul><li><a href=#tostringtag class="table-of-contents__link toc-highlight">[toStringTag]</a><li><a href=#sourcegeometry class="table-of-contents__link toc-highlight">sourceGeometry</a></ul><li><a href=#methods class="table-of-contents__link toc-highlight">Methods</a><ul><li><a href=#_arebindingsloading class="table-of-contents__link toc-highlight">_areBindingsLoading()</a><li><a href=#_getattributedebugtable class="table-of-contents__link toc-highlight">_getAttributeDebugTable()</a><li><a href=#_getbindgroupcachekeys class="table-of-contents__link toc-highlight">_getBindGroupCacheKeys()</a><li><a href=#_getbindgroups class="table-of-contents__link toc-highlight">_getBindGroups()</a><li><a href=#_getbindings class="table-of-contents__link toc-highlight">_getBindings()</a><li><a href=#_getbindingsupdatetimestamp class="table-of-contents__link toc-highlight">_getBindingsUpdateTimestamp()</a><li><a href=#_getbufferorconstantvalues class="table-of-contents__link toc-highlight">_getBufferOrConstantValues()</a><li><a href=#_logdrawcallend class="table-of-contents__link toc-highlight">_logDrawCallEnd()</a><li><a href=#_logdrawcallstart class="table-of-contents__link toc-highlight">_logDrawCallStart()</a><li><a href=#_logframebuffer class="table-of-contents__link toc-highlight">_logFramebuffer()</a><li><a href=#_setpipelineneedsupdate class="table-of-contents__link toc-highlight">_setPipelineNeedsUpdate()</a><li><a href=#_updatepipeline class="table-of-contents__link toc-highlight">_updatePipeline()</a><li><a href=#_updatepipelineasync class="table-of-contents__link toc-highlight">_updatePipelineAsync()</a><li><a href=#destroy class="table-of-contents__link toc-highlight">destroy()</a><li><a href=#draw class="table-of-contents__link toc-highlight">draw()</a><li><a href=#drawbatches class="table-of-contents__link toc-highlight">drawBatches()</a><li><a href=#getbindingdebugtable class="table-of-contents__link toc-highlight">getBindingDebugTable()</a><li><a href=#needsredraw class="table-of-contents__link toc-highlight">needsRedraw()</a><li><a href=#predraw class="table-of-contents__link toc-highlight">predraw()</a><li><a href=#setattributes class="table-of-contents__link toc-highlight">setAttributes()</a><li><a href=#setattributevectors class="table-of-contents__link toc-highlight">setAttributeVectors()</a><li><a href=#setbindings class="table-of-contents__link toc-highlight">setBindings()</a><li><a href=#setbufferlayout class="table-of-contents__link toc-highlight">setBufferLayout()</a><li><a href=#setconstantattributes class="table-of-contents__link toc-highlight">setConstantAttributes()</a><li><a href=#setdrawoffsets class="table-of-contents__link toc-highlight">setDrawOffsets()</a><li><a href=#setgeometry class="table-of-contents__link toc-highlight">setGeometry()</a><li><a href=#setgeometryvectors class="table-of-contents__link toc-highlight">setGeometryVectors()</a><li><a href=#setgpuattributes class="table-of-contents__link toc-highlight">setGPUAttributes()</a><li><a href=#setgpuvectors class="table-of-contents__link toc-highlight">setGPUVectors()</a><li><a href=#setindexbuffer class="table-of-contents__link toc-highlight">setIndexBuffer()</a><li><a href=#setindexcount class="table-of-contents__link toc-highlight">setIndexCount()</a><li><a href=#setindexvector class="table-of-contents__link toc-highlight">setIndexVector()</a><li><a href=#setinstancecount class="table-of-contents__link toc-highlight">setInstanceCount()</a><li><a href=#setmaterial class="table-of-contents__link toc-highlight">setMaterial()</a><li><a href=#setneedsredraw class="table-of-contents__link toc-highlight">setNeedsRedraw()</a><li><a href=#setparameters class="table-of-contents__link toc-highlight">setParameters()</a><li><a href=#setprops class="table-of-contents__link toc-highlight">setProps()</a><li><a href=#setshaderinputs class="table-of-contents__link toc-highlight">setShaderInputs()</a><li><a href=#settopology class="table-of-contents__link toc-highlight">setTopology()</a><li><a href=#settransformfeedback class="table-of-contents__link toc-highlight">setTransformFeedback()</a><li><a href=#setvertexcount class="table-of-contents__link toc-highlight">setVertexCount()</a><li><a href=#tostring class="table-of-contents__link toc-highlight">toString()</a><li><a href=#updateshaderinputs class="table-of-contents__link toc-highlight">updateShaderInputs()</a><li><a href=#createasync class="table-of-contents__link toc-highlight">createAsync()</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Other vis.gl Libraries</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://deck.gl target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://loaders.gl target=_blank rel="noopener noreferrer" class=footer__link-item>loaders.gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/react-map-gl target=_blank rel="noopener noreferrer" class=footer__link-item>react-map-gl<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://visgl.github.io/deck.gl-community/ target=_blank rel="noopener noreferrer" class=footer__link-item>deck.gl-community<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>More</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://slack-invite.openjsf.org target=_blank rel="noopener noreferrer" class=footer__link-item>Slack workspace<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://medium.com/vis-gl target=_blank rel="noopener noreferrer" class=footer__link-item>vis.gl blog on Medium<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/visgl/luma.gl target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_nPrP><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright><div class=footer__legal-notice>Copyright <a href=https://openjsf.org>OpenJS Foundation</a> and luma.gl contributors. All rights reserved. The <a href=https://openjsf.org>OpenJS Foundation</a> has registered trademarks and uses trademarks. For a list of trademarks of the <a href=https://openjsf.org>OpenJS Foundation</a>, please see our <a href=https://trademark-policy.openjsf.org/>Trademark Policy</a> and <a href=https://trademark-list.openjsf.org/>Trademark List</a>. Trademarks and logos not indicated on the <a href=https://trademark-list.openjsf.org>list of OpenJS Foundation trademarks</a> are trademarks™ or registered® trademarks of their respective holders. Use of them does not imply any affiliation with or endorsement by them.</div><div class=footer__legal-links><a href=https://openjsf.org/>The OpenJS Foundation</a> | <a href=https://ai-coding-assistants-policy.openjsf.org/>AI Coding Assistants Policy</a> | <a href=https://bylaws.openjsf.org/>Bylaws</a> | <a href=https://code-of-conduct.openjsf.org>Code of Conduct</a> | <a href=https://www.linuxfoundation.org/cookies/>Cookie Policy</a> | <a href=https://privacy-policy.openjsf.org/>Privacy Policy</a> | <a href=https://terms-of-use.openjsf.org/>Terms of Use</a> | <a href=https://trademark-list.openjsf.org/>Trademark List</a> | <a href=https://trademark-policy.openjsf.org/>Trademark Policy</a></div></div></div></div></footer></div></body>

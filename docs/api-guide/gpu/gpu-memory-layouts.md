@@ -97,7 +97,7 @@ Compute pipelines use storage bindings. They read raw storage values, so normali
 | `Buffer`                                                                   | One buffer per column         | One buffer for several columns                     | One buffer for several column segments         |
 | `BufferLayout`                                                             | `name` plus `format`          | `attributes` with offsets and shared `byteStride`  | Multiple layouts or explicit segment metadata  |
 | `GPUData`                                                                  | One fixed-width format        | `GPUDataStructFormat` with named child views       | Explicit segment views                         |
-| [`GPUDataView`](https://luma.gl/docs/api-reference/gpgpu/gpu-data-view.md) | Contiguous borrowed values    | Strided borrowed child or attribute values         | Contiguous borrowed values at a segment offset |
+| [`GPUDataView`](https://luma.gl/docs/api-reference/graph/gpu-data-view.md) | Contiguous borrowed values    | Strided borrowed child or attribute values         | Contiguous borrowed values at a segment offset |
 | `GPUVector`                                                                | One logical vector format     | Explicit interleaved construction                  | Numeric view plus segment metadata             |
 | `GPURecordBatch`                                                           | Named packed `GPUData` chunks | Named chunks with producer-supplied `BufferLayout` | Named borrowed segment chunks                  |
 | `GPUTable`                                                                 | Multiple vectors              | Interleaved vector contributes multiple attributes | Future table layout can map names to segments  |
@@ -126,6 +126,15 @@ In-place operations require stricter ownership and aliasing rules. They are prac
 | Run compute over raw storage values                              | Packed or segmented                     |
 | Extract one column frequently                                    | Packed or segmented                     |
 
+## Arrow Notes[​](#arrow-notes "Direct link to Arrow Notes")
+
+Arrow is naturally columnar. A normal Arrow column maps cleanly to a packed GPU vector.
+
+Interleaved GPU buffers do not map to a single numeric Arrow column. In luma.gl they are represented as `GPUVector<Binary>` with `bufferLayout` metadata describing the attributes inside each row.
+
+Segmented buffers are still columnar, but the columns share one GPU allocation. They need table-level segment metadata so each column name can resolve to a buffer, byte offset, row count, row stride, and Arrow type.
+
 ## Related References[​](#related-references "Direct link to Related References")
 
 * [GPU Tables](https://luma.gl/docs/api-guide/gpu/gpu-tables.md)
+* [Supported Arrow Types](https://luma.gl/docs/api-reference/arrow/supported-arrow-types.md)

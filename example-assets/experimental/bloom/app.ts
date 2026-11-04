@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Texture, type Device, type Framebuffer, type TextureFormatColor} from '@luma.gl/core';
-import {bloom, createBloomShaderPassPipeline, toneMapping} from '@luma.gl/effects';
+import {bloom, createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {
   AnimationLoopTemplate,
   type AnimationProps,
@@ -11,8 +11,8 @@ import {
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/experimental';
-import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import {getGPUConvolutionBloomSupport, GPUConvolutionBloom} from '@luma.gl/graph/gpu-effects';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 import type {Panel, SettingsSchema, SettingsState} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -71,7 +71,7 @@ type BloomSettings = {
   spectralSpread: number;
   animate: boolean;
 };
-type ShaderPassLike = ShaderPass | ShaderPassPipeline;
+type ShaderPassLike = ShaderPass | CompositeShaderPass;
 
 const DEFAULT_SETTINGS: BloomSettings = {
   technique: 'Multiscale HDR',
@@ -109,7 +109,7 @@ const DEFAULT_SETTINGS: BloomSettings = {
 };
 
 import {BLOOM_BACKGROUND_HTML} from './app-ui';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 const {sceneShaderModule, SCENE_WGSL, SCENE_FRAGMENT_SHADER} = getShaderSources();
 
@@ -246,7 +246,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           .supported)
     ) {
       shaderPasses.push(
-        createBloomShaderPassPipeline({
+        createBloomCompositeShaderPass({
           colorFormat: this.colorFormat,
           threshold: this.settings.threshold,
           exposure: this.settings.exposure,

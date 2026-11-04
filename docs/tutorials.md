@@ -17,7 +17,7 @@ Curious where these fundamentals can take you? [Getting Started](https://luma.gl
 ## Reusable shaders[​](#reusable-shaders "Direct link to Reusable shaders")
 
 * [Shader Modules](https://luma.gl/docs/tutorials/shader-modules.md) package reusable shader code and typed inputs.
-* [Shader Hooks](https://luma.gl/docs/tutorials/shader-hooks.md) expose deliberate extension points.
+* [Shader Injection](https://luma.gl/docs/tutorials/shader-injection.md) shows deliberate extension points.
 * [Shader Plugins](https://luma.gl/docs/tutorials/shader-plugins.md) combine modules, injections, and application configuration.
 
 ## GPU-driven updates[​](#gpu-driven-updates "Direct link to GPU-driven updates")

@@ -2,7 +2,7 @@
 
 [Workflow](https://luma.gl/docs/api-guide/engine/transforms.md)[Computation](https://luma.gl/docs/api-reference/engine/compute/computation.md)[BufferTransform](https://luma.gl/docs/api-reference/engine/compute/buffer-transform.md)[TextureTransform](https://luma.gl/docs/api-reference/engine/compute/texture-transform.md)[Swap](https://luma.gl/docs/api-reference/engine/compute/swap.md)
 
-`TextureTransform` is the engine helper for texture-to-texture transform passes. It builds an internal [`Model`](https://luma.gl/docs/api-reference/engine/model.md), manages a framebuffer for the target texture, and renders into that texture.
+`TextureTransform` is the engine helper for texture-to-texture transform passes. It builds an internal [`GPUVectorModel`](https://luma.gl/docs/api-reference/engine/model.md), manages a framebuffer for the target texture, and renders into that texture.
 
 `TextureTransform` is currently exported but marked deprecated in source.
 
@@ -36,14 +36,20 @@ const transform = new TextureTransform(device, {
 transform.run();
 ```
 
+## GPU vector inputs[​](#gpu-vector-inputs "Direct link to GPU vector inputs")
+
+Supply `inputVectors` at construction or in `run({inputVectors})` to bind borrowed, contiguous GPU vectors by buffer-layout name. Input row count sets vertex count and chunk byte offsets are preserved. Buffer layouts are explicit. Each input vector must have at most one chunk. For multi-chunk inputs, callers must bind and run each chunk separately. The output is `targetTexture`.
+
 ## Types[​](#types "Direct link to Types")
 
 ### `TextureTransformProps`[​](#texturetransformprops "Direct link to texturetransformprops")
 
 ```
-export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
+export type TextureTransformProps = Omit<GPUVectorModelProps, 'fs'> & {
 
-  fs?: ModelProps['fs'];
+  fs?: GPUVectorModelProps['fs'];
+
+  inputVectors?: GPUVectorModelInputs;
 
   inject?: Record<string, string>;
 

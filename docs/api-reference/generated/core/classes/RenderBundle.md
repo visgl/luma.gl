@@ -1,6 +1,6 @@
 # Abstract Class: RenderBundle
 
-Defined in: [modules/core/src/adapter/resources/render-bundle.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L53)
+Defined in: [modules/core/src/api/adapter/resources/render-bundle.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-bundle.ts#L53)
 
 Immutable reusable WebGPU render commands recorded by a [RenderBundleEncoder](https://luma.gl/docs/api-reference/generated/core/classes/RenderBundleEncoder.md).
 
@@ -18,7 +18,7 @@ Applications obtain a render bundle by calling [RenderBundleEncoder.finish](http
 
 > **new RenderBundle**(`device`, `props`): `RenderBundle`
 
-Defined in: [modules/core/src/adapter/resources/render-bundle.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L58)
+Defined in: [modules/core/src/api/adapter/resources/render-bundle.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-bundle.ts#L58)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -44,7 +44,7 @@ Defined in: [modules/core/src/adapter/resources/render-bundle.ts:58](https://git
 
 > **destroyed**: `boolean` = `false`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L131)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
 
 Whether this resource has been destroyed
 
@@ -58,7 +58,7 @@ Whether this resource has been destroyed
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
 
 The device that this resource is associated with
 
@@ -72,7 +72,7 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
@@ -86,7 +86,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **id**: `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
 
 props.id, for debugging.
 
@@ -100,7 +100,7 @@ props.id, for debugging.
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
 
 The props that this resource was created with
 
@@ -114,7 +114,7 @@ The props that this resource was created with
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
 
 User data object, reserved for the application
 
@@ -128,7 +128,7 @@ User data object, reserved for the application
 
 > `static` **defaultProps**: `Required`<[`ResourceProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/render-bundle.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L62)
+Defined in: [modules/core/src/api/adapter/resources/render-bundle.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-bundle.ts#L62)
 
 Default properties for resource
 
@@ -144,7 +144,7 @@ Default properties for resource
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/render-bundle.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-bundle.ts#L54)
+Defined in: [modules/core/src/api/adapter/resources/render-bundle.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-bundle.ts#L54)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -162,7 +162,7 @@ Defined in: [modules/core/src/adapter/resources/render-bundle.ts:54](https://git
 
 > **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
 
 Whether luma.gl may only reference the opaque externally owned resource handle.
 
@@ -182,7 +182,7 @@ Whether luma.gl may only reference the opaque externally owned resource handle.
 
 > **get** **ownsHandle**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
 
 Whether luma.gl created and owns the underlying resource handle.
 
@@ -200,7 +200,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L200)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
 
 Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
 
@@ -224,7 +224,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
 
 #### Returns[​](#returns-5 "Direct link to Returns")
 
@@ -244,7 +244,7 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
 
 destroy can be called on any resource to release it before it is garbage collected.
 
@@ -262,7 +262,7 @@ destroy can be called on any resource to release it before it is garbage collect
 
 > **destroyAttachedResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L214)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
 
 Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
 
@@ -286,7 +286,7 @@ Destroys a resource (only if owned), and removes from the owned (auto-destroy) l
 
 > **destroyAttachedResources**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L221)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
 
 Destroy all owned resources. Make sure the resources are no longer needed before calling.
 
@@ -304,7 +304,7 @@ Destroy all owned resources. Make sure the resources are no longer needed before
 
 > **detachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L207)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
 
 Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
 
@@ -328,7 +328,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
 
 Combines a map of user props and default props, only including props from defaultProps
 
@@ -348,7 +348,7 @@ returns a map of overridden default props
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
 
 Compact serialization for assertion diffs and structured debug logs.
 
@@ -366,7 +366,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
 
 #### Returns[​](#returns-12 "Direct link to Returns")
 

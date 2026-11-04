@@ -1,6 +1,6 @@
 # Abstract Class: RenderPass
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L102)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L102)
 
 A RenderPass instance is a required parameter to all draw calls.
 
@@ -24,7 +24,7 @@ It holds a combination of
 
 > **new RenderPass**(`device`, `props`, `defaultProps?`): `RenderPass`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L114)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L114)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -54,7 +54,7 @@ Defined in: [modules/core/src/adapter/resources/render-pass.ts:114](https://gith
 
 > **destroyed**: `boolean` = `false`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L131)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
 
 Whether this resource has been destroyed
 
@@ -68,7 +68,7 @@ Whether this resource has been destroyed
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
 
 The device that this resource is associated with
 
@@ -82,7 +82,7 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
@@ -96,7 +96,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **id**: `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
 
 props.id, for debugging.
 
@@ -110,7 +110,7 @@ props.id, for debugging.
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
 
 The props that this resource was created with
 
@@ -124,7 +124,7 @@ The props that this resource was created with
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
 
 User data object, reserved for the application
 
@@ -138,7 +138,7 @@ User data object, reserved for the application
 
 > `static` **defaultClearColor**: \[`number`, `number`, `number`, `number`]
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L104)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L104)
 
 TODO - should be \[0, 0, 0, 0], update once deck.gl tests run clean
 
@@ -148,7 +148,7 @@ TODO - should be \[0, 0, 0, 0], update once deck.gl tests run clean
 
 > `static` **defaultClearDepth**: `number` = `1`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L106)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L106)
 
 Depth 1.0 represents the far plance
 
@@ -158,7 +158,7 @@ Depth 1.0 represents the far plance
 
 > `static` **defaultClearStencil**: `number` = `0`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L108)
 
 Clears all stencil bits
 
@@ -168,7 +168,7 @@ Clears all stencil bits
 
 > `static` **defaultProps**: `Required`<[`RenderPassProps`](https://luma.gl/docs/api-reference/generated/core/type-aliases/RenderPassProps.md)>
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L177)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L177)
 
 Default properties for RenderPass
 
@@ -184,7 +184,7 @@ Default properties for RenderPass
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L110)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L110)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -202,7 +202,7 @@ Defined in: [modules/core/src/adapter/resources/render-pass.ts:110](https://gith
 
 > **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
 
 Whether luma.gl may only reference the opaque externally owned resource handle.
 
@@ -222,7 +222,7 @@ Whether luma.gl may only reference the opaque externally owned resource handle.
 
 > **get** **ownsHandle**(): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
 
 Whether luma.gl created and owns the underlying resource handle.
 
@@ -240,7 +240,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L200)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
 
 Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
 
@@ -264,7 +264,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > `abstract` **beginOcclusionQuery**(`queryIndex`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L161)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L161)
 
 Being an occlusion query. Value will be stored in the occlusionQuerySet at the index. Occlusion queries cannot be nested.
 
@@ -284,7 +284,7 @@ Being an occlusion query. Value will be stored in the occlusionQuerySet at the i
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
 
 #### Returns[​](#returns-6 "Direct link to Returns")
 
@@ -304,7 +304,7 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
 
 destroy can be called on any resource to release it before it is garbage collected.
 
@@ -322,7 +322,7 @@ destroy can be called on any resource to release it before it is garbage collect
 
 > **destroyAttachedResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L214)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
 
 Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
 
@@ -346,7 +346,7 @@ Destroys a resource (only if owned), and removes from the owned (auto-destroy) l
 
 > **destroyAttachedResources**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L221)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
 
 Destroy all owned resources. Make sure the resources are no longer needed before calling.
 
@@ -364,7 +364,7 @@ Destroy all owned resources. Make sure the resources are no longer needed before
 
 > **detachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L207)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
 
 Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
 
@@ -388,7 +388,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > `abstract` **draw**(`options`): `boolean`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L145)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L145)
 
 Issues a draw using the currently selected pipeline, bindings, and vertex array.
 
@@ -408,7 +408,7 @@ Issues a draw using the currently selected pipeline, bindings, and vertex array.
 
 > `abstract` **drawIndexedIndirect**(`indirectBuffer`, `indirectByteOffset?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L151)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L151)
 
 Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.
 
@@ -432,7 +432,7 @@ Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.
 
 > `abstract` **drawIndirect**(`indirectBuffer`, `indirectByteOffset?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L148)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L148)
 
 Issues a non-indexed draw using four uint32 arguments stored in an indirect buffer.
 
@@ -456,7 +456,7 @@ Issues a non-indexed draw using four uint32 arguments stored in an indirect buff
 
 > `abstract` **end**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L124)
 
 Call when rendering is done in this pass.
 
@@ -470,7 +470,7 @@ Call when rendering is done in this pass.
 
 > `abstract` **endOcclusionQuery**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:163](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L163)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:163](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L163)
 
 End an occlusion query. Stores result in the index specified in beginOcclusionQuery.
 
@@ -484,7 +484,7 @@ End an occlusion query. Stores result in the index specified in beginOcclusionQu
 
 > `abstract` **executeBundles**(`bundles`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L158)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L158)
 
 Replays reusable draw commands recorded by one or more render bundle encoders.
 
@@ -510,7 +510,7 @@ On backends other than WebGPU.
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
 
 Combines a map of user props and default props, only including props from defaultProps
 
@@ -530,7 +530,7 @@ returns a map of overridden default props
 
 > `abstract` **insertDebugMarker**(`markerLabel`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:170](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L170)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:170](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L170)
 
 Marks a point in a stream of commands with a label
 
@@ -550,7 +550,7 @@ Marks a point in a stream of commands with a label
 
 > `abstract` **popDebugGroup**(): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:168](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L168)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:168](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L168)
 
 Ends the labeled debug group most recently started by pushDebugGroup()
 
@@ -564,7 +564,7 @@ Ends the labeled debug group most recently started by pushDebugGroup()
 
 > `abstract` **pushDebugGroup**(`groupLabel`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L166)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L166)
 
 Begins a labeled debug group containing subsequent commands
 
@@ -584,7 +584,7 @@ Begins a labeled debug group containing subsequent commands
 
 > `abstract` **setBindings**(`bindings`, `options?`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L136)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L136)
 
 Replaces the complete binding set used by subsequent draw commands. A pipeline must be selected first so bindings can be resolved against its shader layout.
 
@@ -608,7 +608,7 @@ Replaces the complete binding set used by subsequent draw commands. A pipeline m
 
 > `abstract` **setParameters**(`parameters`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L127)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L127)
 
 A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference)
 
@@ -628,7 +628,7 @@ A few parameters can be changed at any time (viewport, scissorRect, blendColor, 
 
 > `abstract` **setPipeline**(`pipeline`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L130)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L130)
 
 Selects the pipeline used by subsequent binding and draw commands.
 
@@ -648,7 +648,7 @@ Selects the pipeline used by subsequent binding and draw commands.
 
 > `abstract` **setVertexArray**(`vertexArray`): `void`
 
-Defined in: [modules/core/src/adapter/resources/render-pass.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/render-pass.ts#L142)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L142)
 
 Selects the vertex array used by subsequent draw commands.
 
@@ -668,7 +668,7 @@ Selects the vertex array used by subsequent draw commands.
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
 
 Compact serialization for assertion diffs and structured debug logs.
 
@@ -686,7 +686,7 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/resource.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
 
 #### Returns[​](#returns-26 "Direct link to Returns")
 

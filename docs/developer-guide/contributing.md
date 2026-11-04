@@ -1,46 +1,88 @@
 # Contributing
 
-[Overview](https://luma.gl/docs/developer-guide.md)[Installing](https://luma.gl/docs/developer-guide/installing.md)[Editing](https://luma.gl/docs/developer-guide/editing.md)[Contributing](https://luma.gl/docs/developer-guide/contributing.md)[Documentation](https://luma.gl/docs/developer-guide/documentation.md)
+[Overview](https://luma.gl/docs/developer-guide.md)[Setup](https://luma.gl/docs/developer-guide/installing.md)[Contributing](https://luma.gl/docs/developer-guide/contributing.md)
 
-luma.gl welcomes contributions from the community. Smaller fixes
+Contributions of all sizes are welcome. Learn more about the [luma.gl community](https://luma.gl/docs/community.md), then use this guide to get started.
 
-In order to contribute to luma.gl you need to be able to build and test luma.gl itself.
+## Get started[​](#get-started "Direct link to Get started")
 
-## Development Environment[​](#development-environment "Direct link to Development Environment")
+For a bug or a larger change, start by checking the [issue tracker](https://github.com/visgl/luma.gl/issues) for an existing discussion. A clear description and a small reproducible example help others understand a bug. For an enhancement, describe the problem and your proposed approach so the community can discuss it with you.
 
-To get started developing luma.gl, first you will want to clone the github repository (or your fork of the repository).
+## Set up the repository[​](#set-up-the-repository "Direct link to Set up the repository")
 
 ```
 git clone git@github.com:visgl/luma.gl.git
+
+cd luma.gl
+
+nvm use
+
+yarn install
 ```
 
-Make sure to install all dependencies from the repository root:
-
-`yarn install`
-
-luma.gl's source code is in the `modules/` directory. Development is most easily done by running the examples in development mode, e.g.:
+Source lives in `modules/`. Run a standalone example while editing:
 
 ```
-cd examples/core/instancing
+cd examples/showcase/instancing
 
-yarn
-
-yarn start-local
+yarn start
 ```
 
-Any modifications made to the source or example code will cause the example to rebuild and the page to refresh, making quick iterations on code changes straightforward.
+Vite reloads changes to source and example code. From the repository root, `yarn website:start` runs the complete documentation and example website.
 
-Testing against the full website can be done after the root install by running `yarn website:start`. This full website take longer to build but makes it easier to test against all examples. This can be helpful when making core changes to luma.gl. As with running the examples in development mode, a rebuild and page refresh will be triggered whenever source or website code is updated.
+## Prepare a pull request[​](#prepare-a-pull-request "Direct link to Prepare a pull request")
 
-## Testing[​](#testing "Direct link to Testing")
+Create a branch for your work and open a pull request when it is ready for review. Explain the problem, what you changed, and how you verified it. Link any related issues and include screenshots or examples when they help reviewers understand the result. Review is a collaborative process; questions and follow-up changes are a normal part of it.
 
-Testing is performed on Travis CI and using a precommit hook. Local testing is supported on these environments:
+## Verify a change[​](#verify-a-change "Direct link to Verify a change")
 
-* `yarn test` - runs tests under node using headless.gl and a headless Chrome instance (using [SwiftShader](https://github.com/google/swiftshader)).
-* `yarn test browser` - Tests in your browser, may be helpful to quickly debug test case failures since it autoreloads on changes and gives you full access to your browser's debugger.
+Follow the repository’s `AGENTS.md` and CI requirements. Depending on your change, the main checks include:
 
-When adding new features, please add relevant unit tests to the `test/` directory in the relevant module.
+```
+yarn lint fix
 
-### Helpful Hints[​](#helpful-hints "Direct link to Helpful Hints")
+yarn build
 
-* To only run one test from the suite for debugging purposes, change a call to `test` in the relevant spec to `test.only`. Remember to change this back before committing!
+yarn test
+
+yarn website:build
+```
+
+[Test commands and runtime conventions](https://luma.gl/docs/developer-guide/testing.md) explain Node and browser verification. Add focused tests beside the affected module's tests. Use Vitest for new coverage, and remove temporary `test.only` calls before committing.
+
+## Writing luma.gl documentation[​](#writing-lumagl-documentation "Direct link to Writing luma.gl documentation")
+
+Documentation should help readers choose a layer, complete a workflow, and then look up an exact contract without repeating the same explanation on every page.
+
+### Page contracts[​](#page-contracts "Direct link to Page contracts")
+
+| Page type       | Required progression                                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Module overview | Overview → when to use → quick start or live example → concepts → capabilities → workflows → API index → limits → related modules |
+| Guide           | Outcome and prerequisites → mental model → workflow → example → tradeoffs → mistakes → next steps                                 |
+| API reference   | Role/import → usage → contract → ownership → failures → compatibility → cost → related APIs                                       |
+| Tutorial        | Outcome → prerequisites → live result → incremental implementation → explanation → extension → next lesson                        |
+
+Omit an irrelevant section instead of adding empty boilerplate, but preserve the relative order of the remaining sections.
+
+### Navigation[​](#navigation "Direct link to Navigation")
+
+* The sidebar is the complete hierarchy.
+* Page tabs contain only three to seven immediate peers.
+* Preserve existing routes when splitting a page; turn the old route into an index.
+* Every curated page belongs in `docs/table-of-contents.json` unless it is intentionally internal.
+
+### Examples[​](#examples "Direct link to Examples")
+
+* Prefer short snippets that focus on one decision.
+* Reuse actual example source for longer runnable programs.
+* Activate embedded GPU examples explicitly; do not capture page scrolling before activation.
+* State backend requirements and resource ownership.
+
+### Style and maintenance[​](#style-and-maintenance "Direct link to Style and maintenance")
+
+* Use sentence-case headings and factual language.
+* Link the first unfamiliar term to the [glossary](https://luma.gl/docs/glossary.md).
+* Use local status badges instead of remote images.
+* Put implementation roadmaps in `dev-docs`, not public API pages.
+* Run documentation contract tests and the website build before merging.

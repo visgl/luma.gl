@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`getGPUTracePickingShader` generates a small WebGPU compute shader that resolves a timeline coordinate into the lowest matching visible canonical span row. It belongs to the optional [`@luma.gl/experimental/gpu-trace`](https://luma.gl/docs/api-reference/experimental/gpu-trace.md) submodule because its inputs understand execution-span timing, process/thread lane topology, hierarchy collapse, and trace-specific visibility policies.
+`getGPUTracePickingShader` generates a small WebGPU compute shader that resolves a timeline coordinate into the lowest matching visible canonical span row. It belongs to the optional [`@luma.gl/graph/gpu-trace`](https://luma.gl/docs/api-reference/experimental/gpu-trace.md) submodule because its inputs understand execution-span timing, process/thread lane topology, hierarchy collapse, and trace-specific visibility policies.
 
 The motivating use case is a dense execution timeline whose visible rows move whenever a process or thread expands. A generic screen-space object ID cannot recover the original timeline span without knowing which canonical spans survived filtering and how their original thread lanes were projected into the current display layout. The shader resolves those domain-specific details while keeping dispatch, command submission, result ownership, and asynchronous readback application-owned.
 
@@ -21,6 +21,12 @@ Mobile quality
 ```
 // Loading source…
 ```
+
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -70,7 +76,7 @@ The generated entry point uses 256 invocations per workgroup. Dispatch enough wo
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {getGPUTracePickingShader} from '@luma.gl/experimental/gpu-trace';
+import {getGPUTracePickingShader} from '@luma.gl/graph/gpu-trace';
 
 
 

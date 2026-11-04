@@ -1,60 +1,57 @@
-# luma.gl Documentation
+# Introduction
 
 luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web. It provides one application-facing API with pluggable WebGPU and WebGL2 backends, plus higher-level building blocks for models, animation, shader composition, and GPU data processing.
 
-Start with a live scene, follow the ideas behind a single rendered frame, and choose how much of the GPU you want to control. You can explore the examples and tutorials right here in your browser.
+## Explore the documentation[​](#explore-the-documentation "Direct link to Explore the documentation")
 
-[npm package](https://www.npmjs.com/package/@luma.gl/core)[MIT license](https://github.com/visgl/luma.gl/blob/master/LICENSE)[TypeScript strict mode](https://www.typescriptlang.org/)
+Follow a topic based on what you want to build. Start with the higher-level APIs and use the package reference when you need a specific class, method, or option.
 
-## Choose your starting point[​](#choose-your-starting-point "Direct link to Choose your starting point")
+| Topic                     | Start here                                                                                                                                                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Getting Started           | [Install luma.gl and render your first triangle](https://luma.gl/docs/getting-started.md)                                                                                                                                                                |
+| Creating GPU Resources    | [Create a device](https://luma.gl/docs/api-guide/gpu/gpu-initialization.md), then work with [buffers](https://luma.gl/docs/api-guide/gpu/gpu-buffers.md) and [textures](https://luma.gl/docs/api-guide/gpu/gpu-textures.md)                              |
+| Computing on the GPU      | [Run GPU computations](https://luma.gl/docs/api-guide/gpu/gpgpu.md) and [schedule GPU graphs](https://luma.gl/docs/api-reference/experimental/gpu-core/concepts.md)                                                                                      |
+| Rendering                 | [Build with the engine](https://luma.gl/docs/api-guide/engine.md) or follow the [triangle tutorial](https://luma.gl/docs/tutorials/hello-triangle.md)                                                                                                    |
+| Materials and Lighting    | [Work with materials](https://luma.gl/docs/api-guide/engine/materials.md) and [physically based rendering](https://luma.gl/docs/api-guide/engine/features.md)                                                                                            |
+| Writing Shaders           | [Compose and customize shaders](https://luma.gl/docs/api-guide/shaders.md)                                                                                                                                                                               |
+| Debugging and Performance | [Debug GPU applications](https://luma.gl/docs/developer-guide/debugging.md), [inspect command graphs](https://luma.gl/docs/api-reference/experimental/gpu-core/debugging.md), and [profile execution](https://luma.gl/docs/developer-guide/profiling.md) |
+| API Reference             | [Look up packages and APIs](https://luma.gl/docs/api-reference.md)                                                                                                                                                                                       |
 
-[New to luma.gl**Discover what you can build**Explore living worlds, physical simulations, visual effects, and GPU-powered data directly in your browser.No installation required](https://luma.gl/docs/getting-started.md)[Framework capabilities**Explore the complete feature set**See how GPU-native data, large-scale visualization, compute pipelines, portable rendering, and visual effects fit together.Packages, techniques, and maturity](https://luma.gl/docs/capabilities.md)[Learn**Follow the fundamentals**Build from a triangle to textured geometry, instancing, reusable shaders, and GPU transforms.Live, backend-switchable examples](https://luma.gl/docs/tutorials.md)[See it in action**Explore live GPU examples**Launch interactive scenes for lighting, oceans, fire, Gaussian splats, effects, and data visualization.Interactive examples in your browser](https://luma.gl/examples)[Design and concepts**Browse the API guides**Understand the Engine, portable GPU, and Shader APIs before choosing individual resources.Task-oriented explanations](https://luma.gl/docs/api-guide.md)[Look up details**Use the API reference**Find packages, classes, resource methods, accepted formats, and backend-specific behavior.Organized by npm package](https://luma.gl/docs/api-reference.md)
+## Packages[​](#packages "Direct link to Packages")
 
-When you are ready to turn an idea into your own application, the [Installing guide](https://luma.gl/docs/developer-guide/installing.md) walks through your first project, device adapters, and your first rendered frame.
+Start with `@luma.gl/core` and `@luma.gl/engine`, then add the modules your application needs. WebGPU and WebGL2 adapters are included in core and imported through their own entry points.
+
+Browse the [packages](https://luma.gl/docs/packages.md) to explore primary packages, smaller packages, and exploratory modules.
 
 ## Why luma.gl?[​](#why-lumagl "Direct link to Why luma.gl?")
 
+* **Low Level Access** - luma.gl offers a thin abstraction layer over the underlying graphics API.
 * **Portable GPU API** — write against luma.gl resources and select WebGPU, WebGL2, or both at application startup.
-* **Low-level access without raw-API duplication** — retain explicit buffers, textures, shaders, bindings, passes, and pipelines while sharing most application code.
-* **Engine building blocks** — use `Model`, `AnimationLoop`, geometry, transforms, and scenegraph helpers when raw resource management is unnecessary.
 * **Composable shaders** — package shader functions, typed inputs, hooks, and injections into reusable modules and plugins.
-* **Visualization-scale data** — luma.gl is the rendering foundation for deck.gl and includes dedicated support for GPU-resident tables and compute workflows.
+* **Visualization-scale data** — luma.gl is the rendering foundation for deck.gl and includes dedicated support for GPU tables and Apache Arrow workflows.
 
-## Is luma.gl the right level?[​](#is-lumagl-the-right-level "Direct link to Is luma.gl the right level?")
+## A WebGPU-style API[​](#a-webgpu-style-api "Direct link to A WebGPU-style API")
 
-| Choose                      | When                                                                                                                                  |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **luma.gl**                 | You are building a renderer, GPU compute workflow, visualization framework, or custom GPU feature and want explicit resource control. |
-| [deck.gl](https://deck.gl)  | You need high-level geospatial or large-data visualization layers, picking, cameras, and interaction.                                 |
-| **A complete scene engine** | You need a batteries-included scene engine with an extensive asset and material ecosystem.                                            |
-| Raw WebGPU                  | You need exact control over one backend and do not need luma.gl's portability, lifecycle, or shader tooling.                          |
+Core follows WebGPU resource and command concepts while supporting a WebGL 2 backend. See [Design philosophy](https://luma.gl/docs/api-guide/background/api-design.md) for the design goals.
 
-## Three cooperating APIs[​](#three-cooperating-apis "Direct link to Three cooperating APIs")
+## Three Key APIs[​](#three-key-apis "Direct link to Three Key APIs")
 
-### Engine API[​](#engine-api "Direct link to Engine API")
+### 1. Core API[​](#1-core-api "Direct link to 1. Core API")
+
+The Core API exposes low level GPU resources such as devices, buffers, textures, shaders, bindings, pipelines, and render or compute passes. `@luma.gl/core/webgpu` and `@luma.gl/core/webgl` provide the concrete backends.
+
+### 2. Engine API[​](#2-engine-api "Direct link to 2. Engine API")
 
 The Engine API provides `Model`, `AnimationLoop`, geometry, scenegraph, dynamic texture, and GPU transformation helpers. It is the recommended starting point for applications.
 
-### Portable GPU API[​](#portable-gpu-api "Direct link to Portable GPU API")
+### 3. Shader API[​](#3-shader-api "Direct link to 3. Shader API")
 
-The Core API exposes devices, buffers, textures, shaders, bindings, pipelines, and render or compute passes. `@luma.gl/webgpu` and `@luma.gl/webgl` provide the concrete backends.
+Shaders assembles WGSL and GLSL from reusable shader modules and application-defined hooks. It is used by luma.gl, deck.gl, and custom renderers.
 
-### Shader API[​](#shader-api "Direct link to Shader API")
+## Contributors and credits[​](#contributors-and-credits "Direct link to Contributors and credits")
 
-Shadertools assembles WGSL and GLSL from reusable shader modules and application-defined hooks. It is used by luma.gl, deck.gl, and custom renderers.
+See [Attributions and Credits](https://luma.gl/docs/credits.md) for upstream implementation credits, research citations, and example asset notices.
 
-Explore [how the three APIs fit together](https://luma.gl/docs/api-guide.md) for the complete object model and guidance on choosing the right layer.
+## Next steps[​](#next-steps "Direct link to Next steps")
 
-## Supported environments[​](#supported-environments "Direct link to Supported environments")
-
-luma.gl targets current evergreen browsers. WebGPU feature availability varies by browser and platform; WebGL2 provides the compatibility path for portable rendering. Compute shaders, storage textures, and some advanced features remain WebGPU-only.
-
-Server-side rendering and compute are also possible when the host supplies a compatible GPU implementation. Browser-specific image, canvas, and video APIs may require environment-specific replacements.
-
-## Project and releases[​](#project-and-releases "Direct link to Project and releases")
-
-This documentation follows the current luma.gl development branch. See [What's New](https://luma.gl/docs/whats-new.md) for release-specific features and the [Upgrade Guide](https://luma.gl/docs/upgrade-guide.md) for breaking changes.
-
-luma.gl is an MIT-licensed OpenJS Foundation project governed by the vis.gl community. Use [GitHub Discussions](https://github.com/visgl/luma.gl/discussions) for design and usage questions, and [GitHub Issues](https://github.com/visgl/luma.gl/issues) for confirmed bugs.
-
-Older documentation remains available in the corresponding GitHub release branches: [v9.2](https://github.com/visgl/luma.gl/blob/9.2-release/docs/README.md), [v9.1](https://github.com/visgl/luma.gl/blob/9.1-release/docs/README.md), [v9.0](https://github.com/visgl/luma.gl/blob/9.0-release/docs/README.md), and [v8.5](https://github.com/visgl/luma.gl/blob/8.5-release/docs/README.md).
+Ready for your first `Hello Triangle`? Proceed to [Getting Started](https://luma.gl/docs/getting-started.md).

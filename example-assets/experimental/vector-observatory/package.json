@@ -1,0 +1,23 @@
+{
+  "name": "luma.gl-examples-vector-observatory",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "build:website": "vite build --base ./ --outDir ../../../website/.generated/example-assets/standalone-examples/vector-observatory"
+  },
+  "dependencies": {
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e",
+    "@luma.gl/core": "workspace:*",
+    "@luma.gl/engine": "workspace:*",
+    "@luma.gl/graph": "workspace:*",
+    "@luma.gl/shaders": "workspace:*",
+    "preact": "^10.17.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "vite": "^8.0.0"
+  }
+}

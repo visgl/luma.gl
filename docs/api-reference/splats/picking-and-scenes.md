@@ -7,7 +7,7 @@
 `SplatPicker` renders a dedicated semantic-aware picking pass while borrowing the renderer's existing source batches, visibility state, and sorted GPU draw runs:
 
 ```
-import {SplatPicker} from '@luma.gl/splats';
+import {SplatPicker} from '@luma.gl/engine/splats';
 
 
 
@@ -39,7 +39,7 @@ WebGPU and compatible WebGL devices use integer picking attachments; other WebGL
 For a WebGPU command graph, use `GPUSplatGraphPicker` instead:
 
 ```
-import {GPUSplatGraphPicker} from '@luma.gl/splats';
+import {GPUSplatGraphPicker} from '@luma.gl/engine/splats';
 
 
 
@@ -99,5 +99,5 @@ The graph's current preparation step also records its normal presentation pass. 
 ## Related pages[​](#related-pages "Direct link to Related pages")
 
 * [Gaussian splats overview](https://luma.gl/docs/api-reference/splats.md)
-* [Gaussian Splat Viewer](https://luma.gl/examples/showcase/gaussian-splat-viewer)
-* GPU scheduling
+* [Gaussian splat showcase](https://luma.gl/examples/showcase/gaussian-splats)
+* [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)

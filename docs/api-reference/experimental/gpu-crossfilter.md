@@ -4,7 +4,7 @@
 
 ## Overview[​](#overview "Direct link to Overview")
 
-`@luma.gl/experimental/gpu-crossfilter` coordinates linked selections across GPU-resident maps, scatterplots, histograms, categorical summaries, and application-defined views. Brush one view, update its selection, and encode the same command graph again: source rows, selection masks, aggregations, and stable visible-row identifiers remain on the GPU.
+`@luma.gl/graph/gpu-crossfilter` coordinates linked selections across GPU-resident maps, scatterplots, histograms, categorical summaries, and application-defined views. Brush one view, update its selection, and encode the same command graph again: source rows, selection masks, aggregations, and stable visible-row identifiers remain on the GPU.
 
 GPU Crossfilter is an experimental, renderer-independent WebGPU controller. It does not ship a dashboard framework, dataframe importer, or charting library; applications retain ownership of their source vectors, output buffers, user interface, rendering, command submission, and optional readback.
 
@@ -40,7 +40,7 @@ The embedded [Million-Row Crossfilter Explorer](https://luma.gl/examples/showcas
 
   WebGPU
 
-[Open full page](https://luma.gl/examples/showcase/million-row-crossfilter)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/showcase/million-row-crossfilter)[Inspect graph](https://luma.gl/examples/showcase/million-row-crossfilter?panel=graph)
+[Open full page](https://luma.gl/examples/showcase/million-row-crossfilter)[View source](https://github.com/visgl/luma.gl/tree/master/examples/showcase/million-row-crossfilter)[Inspect graph](https://luma.gl/examples/showcase/million-row-crossfilter?panel=graph)
 
 Optional interactive WebGPU explorer**Explore one million linked GPU-resident rows.**&#x42;rush a map, scatterplot, or histogram and watch every linked view update together.Launch interactive explorer →
 
@@ -49,9 +49,9 @@ Brush the map or scatterplot, adjust a histogram range, and try the preset scena
 ## Quick start[​](#quick-start "Direct link to Quick start")
 
 ```
-import {GPUCommandGraph} from '@luma.gl/gpgpu/gpu-core';
+import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
-import {GPUCrossfilter} from '@luma.gl/experimental/gpu-crossfilter';
+import {GPUCrossfilter} from '@luma.gl/graph/gpu-crossfilter';
 
 
 
@@ -197,8 +197,8 @@ The comparison below reflects the official cuXfilter [26.06 documentation](https
 | GPU data boundary       | cuDF data lives with the Python/CUDA application; charts consume their required results | Uploaded source rows, masks, and aggregates stay on the local GPU; compact display readback is explicit |
 | Scaling model           | Single-GPU cuDF or distributed, multi-GPU Dask-cuDF                                     | One WebGPU device; preserves source chunks without claiming multi-GPU execution                         |
 | Deployment              | Jupyter notebooks, Bokeh-backed applications, and documented multi-user deployments     | A browser application; no Python process or dashboard server is required                                |
-| Project status          | Final RAPIDS release 26.06; subsequently sunset and archived                            | Experimental optional `@luma.gl/experimental/gpu-crossfilter` entry point                               |
+| Project status          | Final RAPIDS release 26.06; subsequently sunset and archived                            | Experimental optional `@luma.gl/graph/gpu-crossfilter` entry point                                      |
 
 The projects solve related interaction problems in different environments. GPUCrossfilter does not provide cuXfilter feature parity, a migration layer, built-in chart integrations, or distributed GPU execution.
 
-See GPU Primitives and Command Graphs for the underlying compute infrastructure and [GPU Coordinate Projection](https://luma.gl/docs/api-reference/experimental/gpu-project.md) for another browser-native GPU data workflow.
+See [GPU Primitives and Command Graphs](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for the underlying compute infrastructure and [GPU Coordinate Projection](https://luma.gl/docs/api-reference/experimental/gpu-project.md) for another browser-native GPU data workflow.

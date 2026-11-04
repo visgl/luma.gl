@@ -2,7 +2,7 @@
 
 [Model](https://luma.gl/docs/api-reference/engine/model.md)[Inputs workflow](https://luma.gl/docs/api-guide/engine/shader-inputs.md)[ShaderInputs](https://luma.gl/docs/api-reference/engine/shader-inputs.md)[Materials](https://luma.gl/docs/api-guide/engine/materials.md)
 
-`ShaderInputs` stores per-module uniform values and binding values for shader modules. It is the glue between engine classes like [`Model`](https://luma.gl/docs/api-reference/engine/model.md) and [`Computation`](https://luma.gl/docs/api-reference/engine/compute/computation.md) and the uniform layouts defined by `@luma.gl/shadertools` modules.
+`ShaderInputs` stores per-module uniform values and binding values for shader modules. It is the glue between engine classes like [`Model`](https://luma.gl/docs/api-reference/engine/model.md) and [`Computation`](https://luma.gl/docs/api-reference/engine/compute/computation.md) and the uniform layouts defined by `@luma.gl/shaders` modules.
 
 **ShaderInputs**
 
@@ -35,7 +35,7 @@
 ```
 import {ShaderInputs} from '@luma.gl/engine';
 
-import {picking} from '@luma.gl/shadertools';
+import {picking} from '@luma.gl/shaders';
 
 
 

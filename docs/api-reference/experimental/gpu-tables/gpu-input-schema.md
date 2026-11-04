@@ -4,7 +4,7 @@
 
 From v9.4Experimental API
 
-`GPUInputSchema` is the runtime contract a model or renderer uses to declare the prepared varying [`GPUVector`](https://luma.gl/docs/api-reference/gpgpu/gpu-vector.md) and constant [`GPUConstant`](https://luma.gl/docs/api-reference/gpgpu/gpu-constant.md) inputs it accepts. Models expose the contract as a static `gpuInputSchema` property so renderers, adapters, validation helpers, and application code can inspect the same declaration.
+`GPUInputSchema` is the runtime contract a model or renderer uses to declare the prepared varying [`GPUVector`](https://luma.gl/docs/api-reference/graph/gpu-vector.md) and constant [`GPUConstant`](https://luma.gl/docs/api-reference/graph/gpu-constant.md) inputs it accepts. Models expose the contract as a static `gpuInputSchema` property so renderers, adapters, validation helpers, and application code can inspect the same declaration.
 
 It is distinct from [`GPUSchema`](https://luma.gl/docs/api-reference/experimental/gpu-tables/gpu-schema.md):
 
@@ -16,7 +16,7 @@ It is distinct from [`GPUSchema`](https://luma.gl/docs/api-reference/experimenta
 ## Types[​](#types "Direct link to Types")
 
 ```
-import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 
 
 
@@ -117,7 +117,7 @@ const matrixInputs = [
 Use `as const satisfies GPUInputSchema` so literal column names and formats remain available to TypeScript while the declaration is checked against the public schema type:
 
 ```
-import type {GPUInputSchema} from '@luma.gl/experimental/gpu-tables';
+import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 
 
 
@@ -189,7 +189,7 @@ The common case is compact: externally supplied inputs omit `internal`. Only gen
 `validateGPUInputVectors()` checks a prepared vector map against a schema:
 
 ```
-import {validateGPUInputVectors} from '@luma.gl/experimental/gpu-tables';
+import {validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
 
 
 
@@ -253,4 +253,4 @@ The built-in table and text models expose schemas for their prepared inputs:
 * `PolygonAttributeModel` and `PolygonStorageModel`;
 * `TextAttributeModel`, `TextStorageModel`, `TextRowIndexedStorageModel`, and `TextDictionaryModel`.
 
-These schemas describe the GPU-facing boundary. Source-specific types and conversion rules remain in application adapters.
+These schemas describe the GPU-facing boundary. Arrow-specific source types and conversion rules remain in `@luma.gl/graph/arrow`.

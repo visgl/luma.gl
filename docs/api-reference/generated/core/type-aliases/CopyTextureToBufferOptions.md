@@ -2,7 +2,7 @@
 
 > **CopyTextureToBufferOptions** = `object`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L37)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L52)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/adapter/resources/command-encoder.ts:37](https://g
 
 > `optional` **aspect?**: `"all"` | `"stencil-only"` | `"depth-only"`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L46)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L61)
 
 Defines which aspects of the texture to copy to/from.
 
@@ -20,7 +20,7 @@ Defines which aspects of the texture to copy to/from.
 
 > `optional` **byteOffset?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L57)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L72)
 
 Offset, in bytes, from the beginning of the buffer to the start of the image data (default 0)
 
@@ -30,7 +30,7 @@ Offset, in bytes, from the beginning of the buffer to the start of the image dat
 
 > `optional` **bytesPerRow?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L62)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L77)
 
 The stride, in bytes, between the beginning of each block row and the subsequent block row. Required if there are multiple block rows (i.e. the copy height or depth is more than one block).
 
@@ -40,7 +40,7 @@ The stride, in bytes, between the beginning of each block row and the subsequent
 
 > `optional` **depthOrArrayLayers?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L51)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L66)
 
 ***
 
@@ -48,7 +48,7 @@ Defined in: [modules/core/src/adapter/resources/command-encoder.ts:51](https://g
 
 > **destinationBuffer**: [`Buffer`](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L55)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:70](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L70)
 
 Destination buffer
 
@@ -58,7 +58,7 @@ Destination buffer
 
 > `optional` **height?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L50)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L65)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/core/src/adapter/resources/command-encoder.ts:50](https://g
 
 > `optional` **mipLevel?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L41)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L56)
 
 Mip-map level of the texture to copy to/from. (Default 0)
 
@@ -76,7 +76,7 @@ Mip-map level of the texture to copy to/from. (Default 0)
 
 > `optional` **origin?**: \[`number`, `number`, `number`]
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L52)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L67)
 
 ***
 
@@ -84,7 +84,7 @@ Defined in: [modules/core/src/adapter/resources/command-encoder.ts:52](https://g
 
 > `optional` **rowsPerImage?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L68)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L83)
 
 Number of block rows per single image of the texture. rowsPerImage × bytesPerRow is the stride, in bytes, between the beginning of each image of data and the subsequent image. Required if there are multiple images (i.e. the copy depth is more than one).
 
@@ -94,7 +94,7 @@ Number of block rows per single image of the texture. rowsPerImage × bytesPerRo
 
 > **sourceTexture**: [`Texture`](https://luma.gl/docs/api-reference/generated/core/classes/Texture.md)
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L39)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L54)
 
 Texture to copy to/from.
 
@@ -104,6 +104,6 @@ Texture to copy to/from.
 
 > `optional` **width?**: `number`
 
-Defined in: [modules/core/src/adapter/resources/command-encoder.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L49)
+Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L64)
 
 Width to copy

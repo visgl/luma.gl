@@ -1,0 +1,355 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "luma.gl physics qualification gallery",
+    "copyright": "Copyright (c) vis.gl contributors"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0,
+        1,
+        2
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 1,
+      "translation": [
+        0,
+        -0.2,
+        0
+      ],
+      "scale": [
+        8,
+        0.3,
+        3
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 2,
+      "translation": [
+        0,
+        0.7,
+        0
+      ],
+      "scale": [
+        1.5,
+        1.5,
+        1.5
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "trigger": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "mesh": 0,
+      "translation": [
+        -3,
+        0.7,
+        0
+      ],
+      "scale": [
+        0.3,
+        0.3,
+        0.3
+      ],
+      "extensions": {
+        "KHR_physics_rigid_bodies": {
+          "motion": {
+            "mass": 1,
+            "gravityFactor": 0,
+            "linearVelocity": [
+              2,
+              0,
+              0
+            ]
+          },
+          "collider": {
+            "geometry": {
+              "shape": 0
+            }
+          }
+        }
+      }
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "data:application/octet-stream;base64,AAAAvwAAAL8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAD8AAAA/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAC/AAAAPwAAAD8AAAC/AAAAPwAAAD8AAAA/AAAAPwAAAL8AAAA/AAAAvwAAAL8AAAC/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAPwAAAL8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAC/AAAAvwAAAL8AAAC/AAAAPwAAAL8AAAC/AAAAPwAAAD8AAAC/AAAAvwAAAD8AAAC/AAAAvwAAAL8AAAA/AAAAPwAAAL8AAAA/AAAAPwAAAD8AAAA/AAAAvwAAAD8AAAA/AACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAvwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgL8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAACAAEAAAADAAIABAAFAAYABAAGAAcACAAKAAkACAALAAoADAANAA4ADAAOAA8AEAASABEAEAATABIAFAAVABYAFAAWABcA",
+      "byteLength": 648
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 288
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 288,
+      "byteLength": 288
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 576,
+      "byteLength": 72
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3",
+      "min": [
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "max": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 24,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 36,
+      "type": "SCALAR"
+    }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.1,
+          0.4,
+          0.8,
+          1
+        ],
+        "metallicFactor": 0.3,
+        "roughnessFactor": 0.3
+      }
+    },
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.15,
+          0.17,
+          0.19,
+          1
+        ],
+        "metallicFactor": 0.1,
+        "roughnessFactor": 0.6
+      }
+    },
+    {
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.9,
+          0.5,
+          0.1,
+          0.25
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6
+      },
+      "alphaMode": "BLEND",
+      "doubleSided": true
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 0
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 1
+        }
+      ]
+    },
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1
+          },
+          "indices": 2,
+          "material": 2
+        }
+      ]
+    }
+  ],
+  "extensionsUsed": [
+    "KHR_physics_rigid_bodies",
+    "KHR_implicit_shapes",
+    "KHR_interactivity"
+  ],
+  "extensions": {
+    "KHR_implicit_shapes": {
+      "shapes": [
+        {
+          "type": "box",
+          "box": {
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        }
+      ]
+    },
+    "KHR_physics_rigid_bodies": {
+      "physicsJoints": []
+    },
+    "KHR_interactivity": {
+      "graphs": [
+        {
+          "types": [
+            {
+              "signature": "int"
+            }
+          ],
+          "events": [
+            {
+              "id": "Entered sensor",
+              "values": {
+                "collider": {
+                  "type": 0
+                }
+              }
+            },
+            {
+              "id": "Exited sensor",
+              "values": {
+                "collider": {
+                  "type": 0
+                }
+              }
+            }
+          ],
+          "declarations": [
+            {
+              "op": "event/rigid_body_triggerEntered",
+              "extension": "KHR_physics_rigid_bodies"
+            },
+            {
+              "op": "event/rigid_body_triggerExited",
+              "extension": "KHR_physics_rigid_bodies"
+            },
+            {
+              "op": "event/send"
+            }
+          ],
+          "nodes": [
+            {
+              "declaration": 0,
+              "configuration": {
+                "nodeIndex": {
+                  "value": [
+                    1
+                  ]
+                }
+              },
+              "flows": {
+                "out": {
+                  "node": 2
+                }
+              }
+            },
+            {
+              "declaration": 1,
+              "configuration": {
+                "nodeIndex": {
+                  "value": [
+                    1
+                  ]
+                }
+              },
+              "flows": {
+                "out": {
+                  "node": 3
+                }
+              }
+            },
+            {
+              "declaration": 2,
+              "configuration": {
+                "event": {
+                  "value": [
+                    0
+                  ]
+                }
+              },
+              "values": {
+                "collider": {
+                  "node": 0,
+                  "socket": "colliderNodeIndex"
+                }
+              }
+            },
+            {
+              "declaration": 2,
+              "configuration": {
+                "event": {
+                  "value": [
+                    1
+                  ]
+                }
+              },
+              "values": {
+                "collider": {
+                  "node": 1,
+                  "socket": "colliderNodeIndex"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

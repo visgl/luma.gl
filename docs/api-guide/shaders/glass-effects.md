@@ -30,7 +30,7 @@ Glass combines transmission, reflection, absorption, surface roughness, and tran
 | Focused raster caustics    | Projects bounded colored glass-lens contributions onto nearby reflective receivers.                                        | Active switches concentrate moving red and green light onto adjacent links and servers.        |
 | Fault-driven distortion    | Modulates refraction and narrow internal filaments only on warm fault-tinted glass.                                        | Congested and failed switches acquire subtle animated optical instability.                     |
 
-[`glassMaterial`](https://luma.gl/docs/api-reference/experimental/glass-material.md) provides the transmissive surface model. [`reflectiveMaterial`](https://luma.gl/docs/api-reference/experimental/reflective-material.md) provides a lower-cost glossy treatment for links and other non-glass surfaces. Both depend on the shared `opticalLighting` shader module.
+[`glassMaterial`](https://luma.gl/docs/api-reference/engine/experimental/glass-material.md) provides the transmissive surface model. [`reflectiveMaterial`](https://luma.gl/docs/api-reference/engine/experimental/reflective-material.md) provides a lower-cost glossy treatment for links and other non-glass surfaces. Both depend on the shared `opticalLighting` shader module.
 
 `emissiveMaterial` provides self-illuminated geometry, `opticalPointLights` supplies portable, bounded local lighting, and `opticalCaustics` approximates focused light cast through nearby glass. Emission makes an object bright; point lighting illuminates nearby surfaces; caustics concentrate light around a focusing lens; bloom spreads the brightest pixels in screen space. These effects can be combined independently.
 
@@ -41,7 +41,7 @@ For moving emitters, `emissiveMaterial_getTrailColor(...)` applies a smooth axia
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
 
-import {glassMaterial, glassMaterialPlugin} from '@luma.gl/experimental';
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
 
 
 
@@ -146,7 +146,7 @@ A full migration should first extend the retained scene renderer with per-instan
 `glassTransmissionPlugin` extends `glassMaterialPlugin` without changing the existing glass helper or adding iterative ray tracing. Render outward-facing sphere backfaces into an RGBA texture whose RGB channels contain the encoded world normal and whose alpha channel contains framebuffer depth. The opaque scene depth must remain available as a sampleable depth texture.
 
 ```
-import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/experimental';
+import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/engine/experimental/materials';
 
 
 
@@ -208,15 +208,7 @@ Call `glassTransmission_getColor(...)`, or install `opticalPointLightsPlugin` an
 `opticalCausticsPlugin` installs an independent bounded lens array. Register the module alongside the receiving material, update nearby lens colors from actual scene lights, and add the returned RGB contribution to the receiver's fragment color.
 
 ```
-import {
-
-  MAX_OPTICAL_CAUSTIC_LENSES,
-
-  opticalCaustics,
-
-  opticalCausticsPlugin
-
-} from '@luma.gl/experimental';
+import {MAX_OPTICAL_CAUSTIC_LENSES, opticalCaustics, opticalCausticsPlugin} from '@luma.gl/engine/experimental/materials';
 
 
 
@@ -253,7 +245,7 @@ See [Transparency](https://luma.gl/docs/api-guide/shaders/transparency.md) for r
 
 Render emissive objects into an `rgba16float` scene attachment when the device supports rendering and filtering that format. Preserve the same color format through transparency resolves so packet cores and specular highlights can exceed display brightness until postprocessing.
 
-Use `bloomShaderPassPipeline` after opaque and translucent composition, followed by filmic `toneMapping`. Keep the bloom threshold above ordinary scene brightness to avoid glowing inactive links or the entire glass silhouette. When floating-point scene color is unavailable, fall back to the preferred display format and reduce the extraction threshold.
+Use `bloomCompositeShaderPass` after opaque and translucent composition, followed by filmic `toneMapping`. Keep the bloom threshold above ordinary scene brightness to avoid glowing inactive links or the entire glass silhouette. When floating-point scene color is unavailable, fall back to the preferred display format and reduce the extraction threshold.
 
 Floating-point scene rendering and HDR display presentation are distinct capabilities. An `rgba16float` intermediate attachment retains bright, saturated packet emission and narrow glass highlights even when the final canvas is standard dynamic range. Extended HDR presentation also requires a compatible WebGPU canvas, display, and extended tone-mapping configuration. Configure the canvas with `colorFormat: 'rgba16float'`, `colorSpace: 'display-p3'`, and `toneMapping: 'extended'`, then set the filmic pass's `maximumLuminance` above one so its final output does not clamp the extended highlight range. Increase emission, local illumination, and reflective highlights gradually within available scene headroom; raise bloom extraction with them and finish with restrained filmic exposure. Multiplying a packet's existing red or green emission preserves its color without introducing pastel white halos. The packet-spraying showcase exposes a compact HDR-range slider next to its visual-style control; its default deliberately keeps display highlights below twice SDR white, while higher settings can reveal the full extended-range presentation. HDR range and packet-core emission remain independent of visual style, so a minimal diagram can retain extended highlights without enabling refraction, bloom, or secondary glass lighting.
 

@@ -4,8 +4,8 @@
 
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
-import type {NumberArray3} from '@math.gl/types';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {NumberArray3} from '@math.gl/core';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {ShaderModulesInfoHtml} from './app-ui';
 
 const {source1, source2, vs1, fs1, vs2, fs2, color} = getShaderSources();

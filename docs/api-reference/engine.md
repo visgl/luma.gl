@@ -8,7 +8,7 @@
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
-Use Engine for most rendered applications. Drop to [Core](https://luma.gl/docs/api-reference/core.md) when you need exact resource or command control. Use [Shadertools](https://luma.gl/docs/api-reference/shadertools.md) to make shader behavior reusable. Add GPU scheduling only when work becomes a scheduled GPU dataflow; a single `Model` does not need a graph.
+Use Engine for most rendered applications. Drop to [Core](https://luma.gl/docs/api-reference/core.md) when you need exact resource or command control. Use [Shaders](https://luma.gl/docs/api-reference/shaders.md) to make shader behavior reusable. Add GPU Core only when work becomes a scheduled GPU dataflow; a single `Model` does not need a graph.
 
 ## Live example[​](#live-example "Direct link to Live example")
 
@@ -30,7 +30,7 @@ This portable example maps the Engine objects to the Core work they manage.
 
   Create once, draw on demand, destroy on finalize
 
-[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/9.4-release/examples/tutorials/hello-triangle-geometry)
+[Open full page](https://luma.gl/examples/tutorials/hello-triangle-geometry)[View source](https://github.com/visgl/luma.gl/tree/master/examples/tutorials/hello-triangle-geometry)
 
 Loading interactive example…
 
@@ -88,7 +88,7 @@ The learning spine is: geometry, shader inputs, models, redraw/frame lifecycle, 
 
 1. [Learn the workflow](https://luma.gl/docs/api-guide/engine.md)Build the mental model before choosing classes.
 2. [Copy a focused recipe](https://luma.gl/docs/api-guide/engine/cookbook.md)Start from a complete, small task.
-3. [Check the complete API](https://luma.gl/docs/api-reference/generated/engine)Confirm exact types, defaults, and ownership.
+3. [Check the complete API](https://luma.gl/docs/api-reference/generated/engine.md)Confirm exact types, defaults, and ownership.
 
 The [Engine cookbook](https://luma.gl/docs/api-guide/engine/cookbook.md) covers rendering, updates, on-demand animation, picking and highlighting, scenes, and shader passes.
 
@@ -103,7 +103,7 @@ Reusable geometry, shader inputs, models, redraw state, interaction, animation, 
 * Picking and scenes
 * Animation, compute, and passes
 
-The [generated <!-- -->Engine<!-- --> API index](https://luma.gl/docs/api-reference/generated/engine) is the exhaustive, source-linked inventory of every public value and TypeScript export. The curated pages explain how the related families fit together.
+The [generated <!-- -->Engine<!-- --> API index](https://luma.gl/docs/api-reference/generated/engine.md) is the exhaustive, source-linked inventory of every public value and TypeScript export. The curated pages explain how the related families fit together.
 
 ## Limits and compatibility[​](#limits-and-compatibility "Direct link to Limits and compatibility")
 
@@ -114,8 +114,8 @@ The [generated <!-- -->Engine<!-- --> API index](https://luma.gl/docs/api-refere
 
 ## Related modules[​](#related-modules "Direct link to Related modules")
 
-[Shadertools](https://luma.gl/docs/api-reference/shadertools.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)
+[Shaders](https://luma.gl/docs/api-reference/shaders.md)[Engine](https://luma.gl/docs/api-reference/engine.md)[Core](https://luma.gl/docs/api-reference/core.md)[GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md)
 
 * Use [Core](https://luma.gl/docs/api-reference/core.md) for direct resource and command control.
-* Use [Shadertools](https://luma.gl/docs/api-reference/shadertools.md) for modules, hooks, and plugins.
-* Use GPU scheduling for scheduled multi-stage GPU work.
+* Use [Shaders](https://luma.gl/docs/api-reference/shaders.md) for modules, hooks, and plugins.
+* Use [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) for scheduled multi-stage GPU work.

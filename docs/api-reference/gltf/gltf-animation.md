@@ -1,17 +1,19 @@
 # glTF Animation and Deformation
 
-[Overview](https://luma.gl/docs/api-reference/gltf.md)[Materials](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
+[Overview](https://luma.gl/docs/api-reference/gltf.md)[Material Conversion](https://luma.gl/docs/api-reference/gltf/gltf-materials.md)[Native Extensions](https://luma.gl/docs/api-reference/gltf/gltf-native-extensions.md)[Animation](https://luma.gl/docs/api-reference/gltf/gltf-animation.md)[Animated Crowd](https://luma.gl/docs/api-reference/gltf/gltf-animated-crowd.md)[Interchange](https://luma.gl/docs/api-reference/gltf/gltf-interchange.md)[Extensions](https://luma.gl/docs/api-reference/gltf/gltf-extensions.md)
 
-`@luma.gl/gltf` interprets glTF animation channels and connects them to the format-independent animation and deformation primitives in `@luma.gl/engine`. It does not introduce a separate animation mixer, interpolation implementation, or skinning shader.
+`@luma.gl/engine/gltf` interprets glTF animation channels and connects them to the format-independent animation and deformation primitives in `@luma.gl/engine`. It does not introduce a separate animation mixer, interpolation implementation, or skinning shader.
 
 ## Load and inspect clips[​](#load-and-inspect-clips "Direct link to Load and inspect clips")
 
 ```
 import {load} from '@loaders.gl/core';
 
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 
-import {createScenegraphsFromGLTF, parseGLTFAnimations} from '@luma.gl/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
+
+import {createScenegraphsFromGLTF, parseGLTFAnimations} from '@luma.gl/engine/gltf';
 
 
 
@@ -33,6 +35,8 @@ console.log(scenegraphs.animator.getAnimations().map(clip => clip.name));
 ```
 
 `parseGLTFAnimations()` owns glTF accessor decoding and pointer interpretation. The returned channels are converted to shared `AnimationTrack`, `AnimationClip`, and `AnimationMixer` objects by `GLTFAnimator`. `scenegraphs.animations` retains the parsed source channels; `scenegraphs.animator` owns their shared runtime actions; `scenegraphs.skins` owns reusable, automatically updated source skin palettes.
+
+`GLTFAnimator` is an import adapter over engine `ScenegraphAnimator`; playback, property updates and texture-transform math are shared with programmatic scenes. See [Scenegraph controllers](https://luma.gl/docs/api-guide/engine/scene-controllers.md) for the runtime architecture, deformation paths and resource ownership.
 
 ## `GLTFAnimator`[​](#gltfanimator "Direct link to gltfanimator")
 
@@ -185,18 +189,18 @@ Extras, structural material switches such as `alphaMode`, `doubleSided`, or `unl
 
 ## Skeletal animation and skinning[​](#skeletal-animation-and-skinning "Direct link to Skeletal animation and skinning")
 
-Parsed geometry preserves the glTF `JOINTS_0` and `WEIGHTS_0` attributes. Authored normalized integer joint weights retain their intended normalized interpretation at the consumer boundary. The existing shared `skin` shader module in `@luma.gl/shadertools` applies joint palettes; its current uniform-array capacity is 64 joints.
+Parsed geometry preserves the glTF `JOINTS_0` and `WEIGHTS_0` attributes. Authored normalized integer joint weights retain their intended normalized interpretation at the consumer boundary. The existing shared `skin` shader module in `@luma.gl/shaders` applies joint palettes; its current uniform-array capacity is 64 joints.
 
-`createScenegraphsFromGLTF()` automatically builds a source-aware `GLTFSkinController`. Each binding maps one authored mesh node to its source skin, animated joints, optional inverse bind matrices, reusable mesh-local joint palette, and existing primitive models:
+For native palette construction, ownership, and update order, see [Skins and skeletal deformation](https://luma.gl/docs/api-guide/engine/scenegraph-skins.md).
+
+`createScenegraphsFromGLTF()` maps source skins into an engine `SkinController`. Each binding maps one resolved mesh node to its animated joints, optional inverse bind matrices, reusable mesh-local joint palette, and existing primitive models:
 
 ```
 for (const binding of scenegraphs.skins.bindings) {
 
   console.log({
 
-    sourceNode: binding.nodeIndex,
-
-    sourceSkin: binding.skinIndex,
+    node: binding.node.id,
 
     jointCount: binding.joints.length,
 
@@ -208,7 +212,7 @@ for (const binding of scenegraphs.skins.bindings) {
 
 
 
-const skinBinding = scenegraphs.skins.getBinding(2);
+const skinBinding = scenegraphs.skins.getBinding(scenegraphs.gltfNodeIndexToNodeMap.get(2));
 
 console.log(skinBinding?.models.length);
 ```
@@ -221,9 +225,9 @@ If application code changes a joint manually outside the animation controller, r
 scenegraphs.skins.update();
 ```
 
-The shared [experimental SceneRenderer](https://luma.gl/docs/api-reference/experimental/scene-renderer.md) consumes the format-independent palette through its surface skin descriptor.
+The shared [experimental SceneRenderer](https://luma.gl/docs/api-reference/anari/scene-renderer.md) consumes the format-independent palette through its surface skin descriptor.
 
-The optional ANARI glTF integration also maps retained source skin bindings to the same generic joint-palette helper and updates its palettes after each animation frame. It remains an optional `@luma.gl/scene/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning shader.
+The optional ANARI glTF integration also maps retained source skin bindings to the same generic joint-palette helper and updates its palettes after each animation frame. It remains an optional `@luma.gl/anari/gltf` adapter: the ANARI core does not own a loader, animation mixer, or skinning shader.
 
 ## Morph targets[​](#morph-targets "Direct link to Morph targets")
 
@@ -231,4 +235,4 @@ Core glTF morph targets preserve authored `POSITION`, `NORMAL`, and `TANGENT` di
 
 Animating a node's `weights` updates the existing vertex buffer rather than replacing the model or rebuilding geometry every frame. Tangent displacement affects XYZ while preserving the base tangent's handedness component. Shared interpolation and buffer updates are implemented by the [engine morph-target utilities](https://luma.gl/docs/api-reference/engine/animation/morph-targets.md).
 
-For retained JSON morph playback, see [ANARI animation and glTF integration](https://luma.gl/docs/api-reference/scene/anari-animation.md).
+For retained JSON morph playback, see [ANARI animation and glTF integration](https://luma.gl/docs/api-reference/anari/anari-animation.md).

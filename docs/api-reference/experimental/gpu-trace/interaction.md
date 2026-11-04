@@ -6,7 +6,7 @@
 
 `GPUTraceInteraction` turns a canonical [`GPUTraceScene`](https://luma.gl/docs/api-reference/experimental/gpu-trace/scene.md) into an interactive, GPU-resident trace exploration pipeline. One caller-owned command graph combines process/thread expansion, scanned row layout, temporal filtering, classification masks, bidirectional dependency focus, ancestor projection, stable visibility compaction, and indirect scene draw generation.
 
-Import this trace-specific workflow from [`@luma.gl/experimental/gpu-trace`](https://luma.gl/docs/api-reference/experimental/gpu-trace.md). Its generic hierarchy, traversal, visibility, command-graph, and indirect-rendering building blocks remain independent of the trace domain.
+Import this trace-specific workflow from [`@luma.gl/graph/gpu-trace`](https://luma.gl/docs/api-reference/experimental/gpu-trace.md). Its generic hierarchy, traversal, visibility, command-graph, and indirect-rendering building blocks remain independent of the trace domain.
 
 The motivating problem is that interactive trace controls change much more frequently than the trace itself. Panning through a distributed execution timeline, collapsing a noisy process, isolating a selected span's upstream dependencies, or hiding low-duration runtime events should update small GPU-resident control buffers instead of scanning millions of JavaScript span objects, reading visibility back to the CPU, rebuilding draw lists, or recompiling graph topology.
 
@@ -23,6 +23,12 @@ Mobile quality
 ```
 // Loading source…
 ```
+
+0
+
+<!-- -->
+
+s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
@@ -49,12 +55,12 @@ Scroll page · Ctrl/⌘ + scroll to interact
 
 The workflow composes existing independent primitives in a fixed order:
 
-1. `GPUHierarchyLayout` converts process/thread expansion states into effective thread heights and scanned offsets.
-2. `GPUGraphTraversal` expands selected canonical span rows over bounded incoming, outgoing, or combined dependency edges.
+1. [`GPUHierarchyLayout`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-hierarchy-layout.md) converts process/thread expansion states into effective thread heights and scanned offsets.
+2. [`GPUGraphTraversal`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-graph-traversal.md) expands selected canonical span rows over bounded incoming, outgoing, or combined dependency edges.
 3. A fixed-contract trace policy evaluates time, duration, classification, hierarchy, and optional linked-span focus into one source-aligned visibility mask.
-4. `GPUVisibilityWorkflow` compacts stable canonical row IDs and publishes an exact visible count.
-5. `GPUAncestorProjection` maps each hidden span to its nearest still-visible canonical parent.
-6. `GPUSceneDrawGeneration` updates explicit renderer-authored indirect draw slots.
+4. [`GPUVisibilityWorkflow`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-visibility-workflow.md) compacts stable canonical row IDs and publishes an exact visible count.
+5. [`GPUAncestorProjection`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-ancestor-projection.md) maps each hidden span to its nearest still-visible canonical parent.
+6. [`GPUSceneDrawGeneration`](https://luma.gl/docs/api-reference/experimental/gpu-core/gpu-scene-draw-generation.md) updates explicit renderer-authored indirect draw slots.
 
 The application owns graph compilation, encoding, submission, and any deliberate readback. None of the interaction stages uploads source spans again or chooses draw commands on the CPU.
 
@@ -119,7 +125,7 @@ This distinction lets one application use compacted rows for labels or picking w
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUTraceInteraction} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceInteraction} from '@luma.gl/graph/gpu-trace';
 
 
 

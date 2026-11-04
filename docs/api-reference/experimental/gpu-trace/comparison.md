@@ -30,7 +30,7 @@ Use this contributor when current and baseline traces already share a stable den
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUTraceComparison} from '@luma.gl/experimental/gpu-trace';
+import {GPUTraceComparison} from '@luma.gl/graph/gpu-trace';
 
 
 
