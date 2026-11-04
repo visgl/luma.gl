@@ -162,3 +162,42 @@ describe('KHR_billboard full-axis profile', () => {
     expect(() => makeController({viewDirection: [0, 1, 0], up: [0, 1, 0]})).toThrow();
   });
 });
+
+test('scene import resolves billboard bindings once and supports source-independent traversal', async () => {
+  const {createScenegraphsFromGLTF, postProcessGLTF} = await import('@luma.gl/engine/gltf');
+  const {NullDevice} = await import('@luma.gl/core/test-utils');
+  const source = postProcessGLTF({
+    json: {
+      asset: {version: '2.0'},
+      nodes: [{scale: [2, 3, 4], extensions: {KHR_billboard: {viewDirection: [0, 0, 1]}}}],
+      scenes: [{nodes: [0]}],
+      scene: 0
+    }
+  });
+  const device = new NullDevice({});
+  const scenegraphs = createScenegraphsFromGLTF(device, source, {billboards: {}});
+  const node = scenegraphs.gltfNodeIndexToNodeMap.get(0)!;
+  const leaf = new ScenegraphNode();
+  node.add(leaf);
+  // Later source mutations cannot change the resolved controller binding.
+  source.nodes[0].extensions!.KHR_billboard.viewDirection[0] = 1;
+  source.nodes[0].extensions!.KHR_billboard.viewDirection[2] = 0;
+  const entry = scenegraphs.billboards!.getDrawEntries({viewMatrix: view()})[0];
+  expect(entry.node).toBe(leaf);
+  expect(new Vector3(0, 0, 1).transformAsVector(entry.modelMatrix).normalize()[2]).toBeCloseTo(1);
+  scenegraphs.destroy();
+  device.destroy();
+});
+
+test('a programmatic scene uses the same billboard controller without a glTF asset', () => {
+  const leaf = new ScenegraphNode();
+  const billboard = new GroupNode({children: [leaf], scale: [2, 3, 4]});
+  const scene = new GroupNode({children: [billboard]});
+  const controller = new BillboardController({
+    scenes: [scene],
+    bindings: [{node: billboard, definition: {viewDirection: [0, 0, 1]}}]
+  });
+  const entry = controller.getDrawEntries({viewMatrix: view()})[0];
+  expect(entry.node).toBe(leaf);
+  expect(entry.modelMatrix.getScale()).toEqual([2, 3, 4]);
+});

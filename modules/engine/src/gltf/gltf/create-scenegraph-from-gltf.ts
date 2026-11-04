@@ -4,7 +4,13 @@
 
 import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
 import {Device} from '@luma.gl/core';
-import {GroupNode, Material, ModelNode, JointController} from '@luma.gl/engine';
+import {
+  GroupNode,
+  Material,
+  ModelNode,
+  JointController,
+  BillboardController
+} from '@luma.gl/engine';
 import {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {Light} from '@luma.gl/shaders';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
@@ -20,6 +26,7 @@ import {
   type GLTFExtensionSupport
 } from './gltf-extension-support';
 import {parseGLTFMaterialVariants} from './gltf-material-variants';
+import {parseGLTFBillboards} from './gltf-billboard';
 
 export type GLTFScenegraphBounds = {
   /** World-space axis-aligned bounds for the scene or model. */
@@ -36,6 +43,8 @@ export type GLTFScenegraphBounds = {
 
 /** Scenegraph bundle returned from a parsed glTF asset. */
 export type GLTFScenegraphs = {
+  /** Opt-in camera-facing scene traversal using resolved runtime node bindings. */
+  billboards: BillboardController | null;
   /** Shared physical joint declarations, separate from skeletal skinning. */
   joints: JointController;
   jointIssues: {code: string; path: string; message: string}[];
@@ -97,6 +106,17 @@ export function createScenegraphsFromGLTF(
     materialInstances
   } = parseGLTF(device, gltf, options);
 
+  const billboards = options?.billboards
+    ? new BillboardController(
+        parseGLTFBillboards({
+          gltf,
+          scenes,
+          gltfNodeIndexToNodeMap,
+          allowLegacyYAxis: options.billboards.allowLegacyYAxis
+        })
+      )
+    : null;
+
   const jointDeclarations = parseGLTFJointDeclarations(gltf, gltfNodeIndexToNodeMap);
   const joints = new JointController(jointDeclarations.declarations.map(item => item.joint));
   const animations = parseGLTFAnimations(gltf);
@@ -153,6 +173,7 @@ export function createScenegraphsFromGLTF(
     }
     destroyed = true;
     skins.destroy();
+    billboards?.destroy();
 
     const groups = new Set<GroupNode>([
       ...scenes,
@@ -197,6 +218,7 @@ export function createScenegraphsFromGLTF(
   return {
     scenes,
     materials,
+    billboards,
     variants,
     joints,
     jointIssues: jointDeclarations.issues,
