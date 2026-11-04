@@ -7,11 +7,18 @@ temporary viewport, scissor, blend constant, and stencil reference overrides. Va
 are restored after all internal batch draws, including on errors. See
 [Model](./api-reference/engine/model.md) and [RenderPass](./api-reference/core/resources/render-pass.md).
 
+### Cancellable Arrow batch conversion
+
+Arrow streaming conversion accepts an AbortSignal, validates consistent GPU formats
+across batches, and releases unyielded results on cancellation or validation failure.
+Yielded batches remain caller-owned. See [Arrow conversion](./api-reference/arrow/arrow-conversion.mdx).
+
 ### Dual-language shader injection targets
 
 Shader injection target descriptors define one stage and name with separate GLSL and WGSL
 parameter syntax, return types, and header/footer source. Register the same descriptor with both
-assemblers; each selects its language implementation. See
+assemblers; each selects its language implementation. Vertex and fragment injection targets may also
+share a name in WGSL: assembly resolves stage-specific functions and shared helpers. See
 [ShaderAssembler](/docs/api-reference/shaders/shader-assembler#addshaderinjectiontargettarget-shaderinjectiontarget-void).
 
 ### Reusable graph texture bindings
