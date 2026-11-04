@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
 import {type Device, type RenderPass} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';
 import {
@@ -83,7 +84,15 @@ export class TextStorageModel extends Model {
   }
 
   /** Draws each generated storage text render batch against the supplied render pass. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    return options?.parameters
+      ? renderPass.withParameters(options.parameters, () =>
+          this.drawTextStorageModelBatches(renderPass)
+        )
+      : this.drawTextStorageModelBatches(renderPass);
+  }
+
+  private drawTextStorageModelBatches(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     for (const storageState of this.storageStates) {
       const stateFirstBatch = getFirstTextStorageBatch(storageState);

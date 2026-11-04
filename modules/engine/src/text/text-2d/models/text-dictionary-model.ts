@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
 import {type Device, type RenderPass} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';
 import {
@@ -76,7 +77,15 @@ export class TextDictionaryModel extends Model {
   }
 
   /** Draws each compressed dictionary text render batch against the supplied render pass. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    return options?.parameters
+      ? renderPass.withParameters(options.parameters, () =>
+          this.drawTextDictionaryModelBatches(renderPass)
+        )
+      : this.drawTextDictionaryModelBatches(renderPass);
+  }
+
+  private drawTextDictionaryModelBatches(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     for (const storageState of this.storageStates) {
       const stateFirstBatch = getFirstTextDictionaryBatch(storageState);

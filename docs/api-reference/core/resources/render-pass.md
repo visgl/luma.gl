@@ -176,6 +176,6 @@ parameter setup or the callback throws. Nested scopes are supported. Set state t
 luma APIs; direct native-handle changes are not tracked. Render bundle encoders reject
 this operation because dynamic state belongs to the executing pass.
 
-WebGPU tracks copied parameter values, initialized from the framebuffer extent, a
+WebGPU tracks copied parameter values, initialized from the attached texture view extent (including its mip level), a
 blend constant of `[0, 0, 0, 0]`, and stencil reference `0`. WebGL uses its existing
 state tracker, preserving inherited state such as a disabled scissor test.

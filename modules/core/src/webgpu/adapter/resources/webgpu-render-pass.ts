@@ -60,10 +60,19 @@ export class WebGPURenderPass extends RenderPass {
       (renderPassProps.framebuffer as WebGPUFramebuffer) ||
       device.getCanvasContext().getCurrentFramebuffer();
 
-    // WebGPU initializes dynamic state from the render area and fixed API defaults.
+    // Existing attachment views determine the native render area, not framebuffer props.
+    const attachment =
+      this.framebuffer.colorAttachments.find(Boolean) || this.framebuffer.depthStencilAttachment;
+    const mipScale = 2 ** (attachment?.props.baseMipLevel ?? 0);
+    const width = attachment
+      ? Math.max(1, Math.floor(attachment.texture.width / mipScale))
+      : this.framebuffer.width;
+    const height = attachment
+      ? Math.max(1, Math.floor(attachment.texture.height / mipScale))
+      : this.framebuffer.height;
     this.parameters = {
-      viewport: [0, 0, this.framebuffer.width, this.framebuffer.height, 0, 1],
-      scissorRect: [0, 0, this.framebuffer.width, this.framebuffer.height],
+      viewport: [0, 0, width, height, 0, 1],
+      scissorRect: [0, 0, width, height],
       blendConstant: [0, 0, 0, 0],
       stencilReference: 0
     };
