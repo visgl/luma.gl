@@ -131,6 +131,10 @@ test('emissive strength and sRGB texture affect shared PBR rendering on both bac
       expect(normal).toBeLessThan(high);
       expect(textured).toBeGreaterThan(zero);
       expect(textured).toBeLessThan(normal);
+      // Default output applies a 2.2 display transfer, so compare in linear space.
+      expect(Math.pow(high / normal, 2.2)).toBeCloseTo(4, 0);
+      const textureLinear = Math.pow(textured / normal, 2.2);
+      expect(textureLinear).toBeCloseTo(0.216, 1);
     } finally {
       readback.destroy();
       framebuffer.destroy();
