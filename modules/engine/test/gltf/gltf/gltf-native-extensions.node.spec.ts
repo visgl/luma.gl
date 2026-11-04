@@ -120,6 +120,7 @@ describe('standards-native glTF extension runtime', () => {
 
       const channel = scenegraphs.animations[0].channels[0];
       const hiddenKeyframe = channel.sampler.output.findIndex(value => value[0] === 0);
+      source.nodes.length = 0;
       expect(hiddenKeyframe).toBeGreaterThanOrEqual(0);
       scenegraphs.animator.setTime(channel.sampler.input[hiddenKeyframe] * 1000);
 
@@ -151,11 +152,41 @@ describe('standards-native glTF extension runtime', () => {
 
       const channel = scenegraphs.animations[0].channels[0];
       const hiddenKeyframe = channel.sampler.output.findIndex(value => value[0] === 0);
+      source.nodes.length = 0;
       scenegraphs.animator.setTime(channel.sampler.input[hiddenKeyframe] * 1000);
 
       expect(scenegraphs.lights).toBe(originalLights);
       expect(scenegraphs.lights).toHaveLength(1);
       expect(scenegraphs.gltfNodeIndexToNodeMap.get(5)?.display).toBe(false);
+    } finally {
+      destroyScenegraphs(device, scenegraphs);
+    }
+  });
+
+  test('refreshes imported punctual lights from live scenegraph transforms', () => {
+    const source = postProcessGLTF({
+      json: {
+        asset: {version: '2.0'},
+        extensions: {KHR_lights_punctual: {lights: [{type: 'point'}]}},
+        nodes: [
+          {children: [1], translation: [1, 0, 0]},
+          {translation: [0, 2, 0], extensions: {KHR_lights_punctual: {light: 0}}}
+        ],
+        scenes: [{nodes: [0]}]
+      }
+    });
+    const device = new NullDevice({});
+    const scenegraphs = createScenegraphsFromGLTF(device, source);
+
+    try {
+      const lights = scenegraphs.lights;
+      expect(lights[0]).toMatchObject({type: 'point', position: [1, 2, 0]});
+
+      const parent = scenegraphs.gltfNodeIndexToNodeMap.get(0)!;
+      parent.setProps({position: [3, 0, 0]});
+      scenegraphs.punctualLights.update();
+      expect(scenegraphs.lights).toBe(lights);
+      expect(lights[0]).toMatchObject({type: 'point', position: [3, 2, 0]});
     } finally {
       destroyScenegraphs(device, scenegraphs);
     }

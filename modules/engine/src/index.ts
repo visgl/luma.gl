@@ -250,6 +250,11 @@ export {
   type BillboardControllerProps
 } from './scenegraph/controllers/billboard-controller';
 export {
+  PunctualLightController,
+  type PunctualLightBinding,
+  type PunctualLightDefinition
+} from './scenegraph/controllers/punctual-light-controller';
+export {
   AreaLightController,
   type AreaLightDefinition,
   type AreaLightBinding,

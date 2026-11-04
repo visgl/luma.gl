@@ -15,7 +15,11 @@ import {
 import {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {Light} from '@luma.gl/shaders';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
-import {parseGLTFLights} from '../parsers/parse-gltf-lights';
+import {bindGLTFPunctualLights} from '../parsers/parse-gltf-lights';
+import {
+  PunctualLightController,
+  type PunctualLightDefinition
+} from '../../scenegraph/controllers/punctual-light-controller';
 import {GLTFAnimator} from './gltf-animator';
 import {parseGLTFSkins} from './gltf-skin';
 import {SkinController, MaterialVariants} from '@luma.gl/engine';
@@ -65,6 +69,8 @@ export type GLTFScenegraphs = {
   animations: GLTFAnimation[];
   /** Parsed punctual lights from the asset. */
   lights: Light[];
+  /** Updates punctual lights after programmatic transform or visibility changes. */
+  punctualLights: PunctualLightController;
   /** Extensions reported by the asset and whether luma.gl supports them. */
   extensionSupport: Map<string, GLTFExtensionSupport>;
   /** Camera-friendly bounds for each scene in `scenes`, in matching order. */
@@ -172,10 +178,12 @@ export function createScenegraphsFromGLTF(
   const joints = new JointController(jointDeclarations.declarations.map(item => item.joint));
   const animations = parseGLTFAnimations(gltf);
   const sourceLights =
-    (gltf as GLTFPostprocessed & {lights?: Record<string, any>[]}).lights ||
-    (gltf.extensions?.['KHR_lights_punctual']?.['lights'] as Record<string, any>[] | undefined) ||
+    (gltf as GLTFPostprocessed & {lights?: PunctualLightDefinition[]}).lights ||
+    (gltf.extensions?.['KHR_lights_punctual']?.['lights'] as
+      | PunctualLightDefinition[]
+      | undefined) ||
     [];
-  const lightDefinitions = sourceLights.map(light => ({
+  const lightDefinitions = sourceLights.map<PunctualLightDefinition>(light => ({
     ...light,
     ...(Array.isArray(light['color']) ? {color: [...light['color']]} : {}),
     ...(light['spot'] ? {spot: {...light['spot']}} : {})
@@ -190,21 +198,16 @@ export function createScenegraphsFromGLTF(
     }
     return runtimeCamera;
   });
-  const lightOptions = {
-    useByteColors: options?.useByteColors ?? true,
-    nodeVisibility: gltfNodeIdToNodeMap,
-    lightDefinitions
-  };
-  const lights = parseGLTFLights(gltf, lightOptions);
-  const refreshLights = () => {
-    lights.splice(0, lights.length, ...parseGLTFLights(gltf, lightOptions));
-  };
+  const lightBindings = bindGLTFPunctualLights(gltf.nodes, gltfNodeIdToNodeMap, lightDefinitions);
+  const punctualLights = new PunctualLightController(lightBindings, options?.useByteColors ?? true);
+  const lights = punctualLights.lights;
+  const refreshLights = () => punctualLights.update();
   const animator = new GLTFAnimator({
-    properties: options?.properties ?? undefined,
     onVisibilityChange: refreshLights,
+    onLightChange: refreshLights,
+    properties: options?.properties ?? undefined,
     cameras,
     lightDefinitions,
-    onLightChange: refreshLights,
     animations,
     gltfNodeIdToNodeMap,
     materials,
@@ -215,7 +218,10 @@ export function createScenegraphsFromGLTF(
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);
   const skins = new SkinController(parseGLTFSkins({device, gltf, scenes, gltfNodeIndexToNodeMap}));
-  animator.setUpdateHandler(() => skins.update());
+  animator.setUpdateHandler(() => {
+    skins.update();
+    if (lightBindings.length) refreshLights();
+  });
 
   let destroyed = false;
   const destroy = (): void => {
@@ -278,6 +284,7 @@ export function createScenegraphsFromGLTF(
     animator,
     animations,
     lights,
+    punctualLights,
     extensionSupport,
     sceneBounds,
     modelBounds,
