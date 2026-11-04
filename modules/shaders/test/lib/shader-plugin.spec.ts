@@ -11,7 +11,7 @@ import {
   type PlatformInfo,
   type ShaderModule,
   type ShaderPlugin,
-  type ShaderHook,
+  type ShaderInjectionTarget,
   type ShaderInjection
 } from '@luma.gl/shaders';
 
@@ -230,7 +230,7 @@ it('ShaderPlugin#rejects raw replacement targets', () => {
         'glsl'
       ),
     'raw replacement targets are rejected'
-  ).toThrow(/must be a named shader anchor or hook/);
+  ).toThrow(/must be a named shader injection target/);
   void 0;
 });
 
@@ -356,7 +356,7 @@ void main() { fragmentColor = vec4(1.0); }`,
 
 it('ShaderPlugin#WGSL vertex inputs support direct and struct entry-point inputs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'FILTER_POSITION',
     stage: 'vertex',
     wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
@@ -454,12 +454,12 @@ it('ShaderPlugin#WGSL vertex inputs support an entry point without parameters', 
 
 it('ShaderPlugin#GLSL interStageVariables generate matched stage interfaces', () => {
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'SET_PLUGIN_VARYINGS',
     stage: 'vertex',
     glsl: {parameters: ''}
   });
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'USE_PLUGIN_VARYINGS',
     stage: 'fragment',
     glsl: {parameters: 'inout vec4 color'}
@@ -561,12 +561,12 @@ struct FragmentInput { @builtin(position) position: vec4<f32>, };
 
 it('ShaderPlugin#WGSL interStageVariables extend named stage structs', () => {
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'SET_PLUGIN_VARYINGS',
     stage: 'vertex',
     wgsl: {parameters: ''}
   });
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'USE_PLUGIN_VARYINGS',
     stage: 'fragment',
     wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
@@ -761,7 +761,7 @@ it('ShaderPlugin#unknown hooks identify the contributing plugin', () => {
       source: WGSL_SOURCE,
       pluginInjections: resolved.injections
     })
-  ).toThrow('Unknown shader hook fs:MISSING_COLOR (plugins: missing-color)');
+  ).toThrow('Unknown shader injection target fs:MISSING_COLOR (plugins: missing-color)');
 });
 
 it('ShaderPlugin#assembly-local hooks do not leak between calls', () => {
@@ -783,7 +783,7 @@ it('ShaderPlugin#assembly-local hooks do not leak between calls', () => {
   expect(
     assembler.assembleWGSLShader({
       ...props,
-      hookFunctions: [
+      injectionTargets: [
         {
           name: 'LOCAL_COLOR',
           stage: 'fragment',
@@ -792,12 +792,14 @@ it('ShaderPlugin#assembly-local hooks do not leak between calls', () => {
       ]
     }).source
   ).toContain('*color *= 0.5;');
-  expect(() => assembler.assembleWGSLShader(props)).toThrow('Unknown shader hook fs:LOCAL_COLOR');
+  expect(() => assembler.assembleWGSLShader(props)).toThrow(
+    'Unknown shader injection target fs:LOCAL_COLOR'
+  );
 });
 
 it('ShaderPlugin#GLSL local hooks override registered hooks without mutation', () => {
   const assembler = new GLSLShaderAssembler();
-  assembler.addShaderHook({
+  assembler.addShaderInjectionTarget({
     name: 'LOCAL_POSITION',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 position', header: 'position.x += 1.0;'}
@@ -809,7 +811,7 @@ it('ShaderPlugin#GLSL local hooks override registered hooks without mutation', (
   };
   const local = assembler.assembleGLSLShaderPair({
     ...props,
-    hookFunctions: [
+    injectionTargets: [
       {
         name: 'LOCAL_POSITION',
         stage: 'vertex',
@@ -871,7 +873,7 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
       language === 'wgsl'
         ? (() => {
             const assembler = new WGSLShaderAssembler();
-            assembler.addShaderHook({
+            assembler.addShaderInjectionTarget({
               name: 'FILTER_COLOR',
               stage: 'fragment',
               wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
@@ -888,7 +890,7 @@ it('ShaderPlugin#equal-order plugin injections retain declaration order on both 
           })()
         : (() => {
             const assembler = new GLSLShaderAssembler();
-            assembler.addShaderHook({
+            assembler.addShaderInjectionTarget({
               name: 'FILTER_COLOR',
               stage: 'fragment',
               glsl: {parameters: 'inout vec4 color'}
@@ -1061,7 +1063,7 @@ it.each([
 ] as const)('ShaderPlugin#language-selected hook providers compose on %s', language => {
   const provider: ShaderPlugin = {
     name: 'hooks',
-    hooks: [
+    injectionTargets: [
       {
         stage: 'fragment',
         name: 'FILTER_COLOR',
@@ -1077,8 +1079,8 @@ it.each([
     ]
   };
   const resolved = resolveShaderPlugins([consumer, provider, provider], language);
-  expect(resolved.hooks).toHaveLength(1);
-  expect(resolved.hooks[0][language]?.parameters).toContain(
+  expect(resolved.injectionTargets).toHaveLength(1);
+  expect(resolved.injectionTargets[0][language]?.parameters).toContain(
     language === 'glsl' ? 'inout' : 'ptr<function'
   );
   const assembled =
@@ -1087,13 +1089,13 @@ it.each([
           platformInfo: GLSL_PLATFORM_INFO,
           vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
           fs: '#version 300 es\nprecision highp float;out vec4 color;void main(){color=vec4(1.0);FILTER_COLOR(color);}',
-          pluginHooks: resolved.hooks,
+          pluginInjectionTargets: resolved.injectionTargets,
           pluginInjections: resolved.injections
         }).fs
       : new WGSLShaderAssembler().assembleWGSLShader({
           platformInfo: WGSL_PLATFORM_INFO,
           source: WGSL_SOURCE,
-          pluginHooks: resolved.hooks,
+          pluginInjectionTargets: resolved.injectionTargets,
           pluginInjections: resolved.injections
         }).source;
   expect(assembled).toContain('FILTER_COLOR(');
@@ -1104,7 +1106,9 @@ it.each([
         provider,
         {
           name: 'conflict',
-          hooks: [{stage: 'fragment', name: 'FILTER_COLOR', [language]: {parameters: ''}}]
+          injectionTargets: [
+            {stage: 'fragment', name: 'FILTER_COLOR', [language]: {parameters: ''}}
+          ]
         }
       ],
       language
@@ -1115,7 +1119,7 @@ it.each([
 it('ShaderPlugin#qualified shorthand selects language and rejects compact objects', () => {
   const plugin: ShaderPlugin = {
     name: 'short',
-    hooks: [
+    injectionTargets: [
       {name: 'TINT', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}},
       {name: 'TINT', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}}
     ],
@@ -1124,7 +1128,7 @@ it('ShaderPlugin#qualified shorthand selects language and rejects compact object
   expect(resolveShaderPlugins([plugin], 'glsl').injections['fs:TINT'][0].injection).toBe(
     'color.r = 1.0;'
   );
-  expect(resolveShaderPlugins([plugin], 'wgsl').hooks).toHaveLength(1);
+  expect(resolveShaderPlugins([plugin], 'wgsl').injectionTargets).toHaveLength(1);
   expect(() =>
     resolveShaderPlugins(
       [{name: 'old', injections: [{target: 'fs:TINT', glsl: ''} as any]}],
@@ -1135,12 +1139,12 @@ it('ShaderPlugin#qualified shorthand selects language and rejects compact object
 
 it('ShaderPlugin#assembler descriptors select language and reject provider conflicts', () => {
   const assembler = new GLSLShaderAssembler();
-  assembler.addShaderHook({
+  assembler.addShaderInjectionTarget({
     name: 'TINT',
     stage: 'fragment',
     glsl: {parameters: 'inout vec4 color'}
   });
-  assembler.addShaderHook({
+  assembler.addShaderInjectionTarget({
     name: 'TINT',
     stage: 'fragment',
     wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
@@ -1156,14 +1160,14 @@ it('ShaderPlugin#assembler descriptors select language and reject provider confl
   expect(() =>
     assembler.assembleGLSLShaderPair({
       ...props,
-      pluginHooks: [{name: 'TINT', stage: 'fragment', glsl: {parameters: ''}}]
+      pluginInjectionTargets: [{name: 'TINT', stage: 'fragment', glsl: {parameters: ''}}]
     })
   ).toThrow(/Conflicting/);
 });
 
 it('ShaderPlugin#matching declarations preserve assembler hook wrappers', () => {
   const assembler = new GLSLShaderAssembler();
-  assembler.addShaderHook({
+  assembler.addShaderInjectionTarget({
     name: 'TINT',
     stage: 'fragment',
     glsl: {parameters: 'inout vec4 color', header: 'color.r = 0.25;', footer: 'color.b = 0.75;'}
@@ -1172,7 +1176,9 @@ it('ShaderPlugin#matching declarations preserve assembler hook wrappers', () => 
     [
       {
         name: 'provider',
-        hooks: [{stage: 'fragment', name: 'TINT', glsl: {parameters: 'inout vec4 color'}}],
+        injectionTargets: [
+          {stage: 'fragment', name: 'TINT', glsl: {parameters: 'inout vec4 color'}}
+        ],
         injections: [{stage: 'fragment', target: 'TINT', glsl: 'color.g = 0.5;'}]
       }
     ],
@@ -1182,7 +1188,7 @@ it('ShaderPlugin#matching declarations preserve assembler hook wrappers', () => 
     platformInfo: GLSL_PLATFORM_INFO,
     vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
     fs: '#version 300 es\nprecision highp float;out vec4 color;void main(){color=vec4(1.0);TINT(color);}',
-    pluginHooks: resolved.hooks,
+    pluginInjectionTargets: resolved.injectionTargets,
     pluginInjections: resolved.injections
   }).fs;
   expect(source.indexOf('color.r = 0.25;')).toBeGreaterThan(-1);
@@ -1194,7 +1200,7 @@ it.each([
   'glsl',
   'wgsl'
 ] as const)('shared hook and injection declarations work globally and in plugins on %s', language => {
-  const hook: ShaderHook = {
+  const hook: ShaderInjectionTarget = {
     name: 'TINT',
     stage: 'fragment',
     glsl: {parameters: 'inout vec4 color'},
@@ -1204,9 +1210,12 @@ it.each([
     {stage: 'fragment', target: 'TINT', glsl: '// GLSL second', wgsl: '// WGSL second', order: 2},
     {stage: 'fragment', target: 'TINT', glsl: '// GLSL first', wgsl: '// WGSL first', order: 1}
   ];
-  const resolved = resolveShaderPlugins([{name: 'shared', hooks: [hook], injections}], language);
+  const resolved = resolveShaderPlugins(
+    [{name: 'shared', injectionTargets: [hook], injections}],
+    language
+  );
   const assembler = language === 'glsl' ? new GLSLShaderAssembler() : new WGSLShaderAssembler();
-  assembler.addShaderHook(hook);
+  assembler.addShaderInjectionTarget(hook);
   const props = {
     platformInfo: language === 'glsl' ? GLSL_PLATFORM_INFO : WGSL_PLATFORM_INFO,
     vs: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
@@ -1241,5 +1250,5 @@ it.each([
   ).not.toContain('inactive');
   expect(() =>
     assemble([{stage: 'fragment', target: 'NOT_REGISTERED', [language]: '// active'}])
-  ).toThrow('Unknown shader hook fs:NOT_REGISTERED');
+  ).toThrow('Unknown shader injection target fs:NOT_REGISTERED');
 });

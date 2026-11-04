@@ -8,7 +8,7 @@ import {
   WGSLShaderAssembler,
   ShaderAssembler,
   type PlatformInfo,
-  type ShaderHook,
+  type ShaderInjectionTarget,
   picking,
   dirlight,
   resolveShaderPlugins
@@ -89,12 +89,12 @@ it('ShaderAssembler#hooks', () => {
 
   const preHookShaders = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'LUMAGL_pickColor',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 color'}
   });
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'LUMAGL_fragmentColor',
     stage: 'fragment',
     glsl: {
@@ -240,12 +240,12 @@ it('ShaderAssembler#hooks', () => {
 
 it('ShaderAssembler#hooks preserves last-registration-wins behavior', () => {
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'REPLACED_HOOK',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 position', header: 'position.x = 1.0;\n'}
   });
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'REPLACED_HOOK',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 position', header: 'position.x = 2.0;\n'}
@@ -259,9 +259,9 @@ it('ShaderAssembler#hooks preserves last-registration-wins behavior', () => {
   void 0;
 });
 
-it('ShaderAssembler#resetShaderHooks removes registered hooks', () => {
+it('ShaderAssembler#resetShaderInjectionTargets removes registered hooks', () => {
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'RESET_HOOK',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 position'}
@@ -272,15 +272,15 @@ it('ShaderAssembler#resetShaderHooks removes registered hooks', () => {
     'void RESET_HOOK'
   );
 
-  shaderAssembler.resetShaderHooks();
+  shaderAssembler.resetShaderInjectionTargets();
   expect(shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs}).vs).not.toContain(
     'void RESET_HOOK'
   );
   expect(() => shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject})).toThrow(
-    'Unknown shader hook vs:RESET_HOOK'
+    'Unknown shader injection target vs:RESET_HOOK'
   );
 
-  shaderAssembler.addShaderHook({
+  shaderAssembler.addShaderInjectionTarget({
     name: 'RESET_HOOK',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 position'}
@@ -363,7 +363,7 @@ it('ShaderAssembler has explicit instance ownership without a global default fac
 });
 
 it('ShaderAssembler#dual-language hook descriptors isolate syntax and preserve ordering', () => {
-  const hook: ShaderHook = Object.freeze({
+  const hook: ShaderInjectionTarget = Object.freeze({
     name: 'FILTER_COLOR',
     stage: 'fragment',
     glsl: Object.freeze({
@@ -377,7 +377,7 @@ it('ShaderAssembler#dual-language hook descriptors isolate syntax and preserve o
       footer: '// WGSL footer\n'
     })
   });
-  const vertexHook: ShaderHook = {
+  const vertexHook: ShaderInjectionTarget = {
     name: 'FILTER_COLOR',
     stage: 'vertex',
     glsl: {parameters: 'inout vec4 color'}
@@ -385,10 +385,18 @@ it('ShaderAssembler#dual-language hook descriptors isolate syntax and preserve o
   const glslAssembler = new GLSLShaderAssembler();
   const wgslAssembler = new WGSLShaderAssembler();
   for (const assembler of [glslAssembler, wgslAssembler]) {
-    assembler.addShaderHook(hook);
-    assembler.addShaderHook(vertexHook);
-    assembler.addShaderHook({name: 'GLSL_ONLY', stage: 'vertex', glsl: {parameters: ''}});
-    assembler.addShaderHook({name: 'WGSL_ONLY', stage: 'vertex', wgsl: {parameters: ''}});
+    assembler.addShaderInjectionTarget(hook);
+    assembler.addShaderInjectionTarget(vertexHook);
+    assembler.addShaderInjectionTarget({
+      name: 'GLSL_ONLY',
+      stage: 'vertex',
+      glsl: {parameters: ''}
+    });
+    assembler.addShaderInjectionTarget({
+      name: 'WGSL_ONLY',
+      stage: 'vertex',
+      wgsl: {parameters: ''}
+    });
   }
   const glsl = glslAssembler.assembleGLSLShaderPair({
     platformInfo,
@@ -435,14 +443,14 @@ it('ShaderAssembler#dual-language hook descriptors isolate syntax and preserve o
 });
 
 it.each(['glsl', 'wgsl'] as const)('ShaderAssembler#return types on %s', language => {
-  const descriptor: ShaderHook = {
+  const descriptor: ShaderInjectionTarget = {
     name: 'GET_COLOR',
     stage: 'fragment',
     glsl: {parameters: 'vec4 color', returnType: 'vec4', footer: 'return color;'},
     wgsl: {parameters: 'color: vec4<f32>', returnType: 'vec4<f32>', footer: 'return color;'}
   };
   const assembler = language === 'glsl' ? new GLSLShaderAssembler() : new WGSLShaderAssembler();
-  assembler.addShaderHook(descriptor);
+  assembler.addShaderInjectionTarget(descriptor);
   const source =
     assembler instanceof GLSLShaderAssembler
       ? assembler.assembleGLSLShaderPair({platformInfo, vs, fs}).fs
@@ -459,14 +467,14 @@ it.each(['glsl', 'wgsl'] as const)('ShaderAssembler#return types on %s', languag
         platformInfo,
         vs,
         fs,
-        pluginHooks: [{...descriptor, glsl: {...descriptor.glsl!, returnType: 'float'}}]
+        pluginInjectionTargets: [{...descriptor, glsl: {...descriptor.glsl!, returnType: 'float'}}]
       });
     } else {
       assembler.assembleWGSLShader({
         platformInfo: wgslPlatformInfo,
         source: wgslSource,
-        pluginHooks: [{...descriptor, wgsl: {...descriptor.wgsl!, returnType: 'f32'}}]
+        pluginInjectionTargets: [{...descriptor, wgsl: {...descriptor.wgsl!, returnType: 'f32'}}]
       });
     }
-  }).toThrow(/Conflicting ShaderPlugin hook fs:GET_COLOR/);
+  }).toThrow(/Conflicting ShaderPlugin injection target fs:GET_COLOR/);
 });

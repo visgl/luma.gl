@@ -90,7 +90,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       device.info.shadingLanguage === 'wgsl'
         ? new WGSLShaderAssembler()
         : new GLSLShaderAssembler();
-    shaderAssembler.addShaderHook({
+    shaderAssembler.addShaderInjectionTarget({
       name: 'CLIP_POSITION',
       stage: 'vertex',
       glsl: {parameters: 'inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates'},
@@ -99,7 +99,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           'position: ptr<function, vec4<f32>>, instanceCoordinates: vec2<f32>, geometryCoordinates: vec2<f32>'
       }
     });
-    shaderAssembler.addShaderHook({
+    shaderAssembler.addShaderInjectionTarget({
       name: 'CLIP_COLOR',
       stage: 'fragment',
       glsl: {parameters: 'inout vec4 color'},

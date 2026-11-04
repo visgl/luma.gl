@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert} from '../utils/assert';
-import type {ShaderHookRegistry} from './shader-hooks';
+import type {ShaderInjectionTargetRegistry} from './shader-injection-targets';
 import {maskWGSLComments} from './wgsl-binding-scan';
 
 type Stage = 'vertex' | 'fragment';
@@ -18,32 +18,32 @@ type FunctionRange = {
   stages: Set<Stage>;
 };
 
-/** Private emitted names for hooks declared in both render stages. */
-export function getWGSLHookNames(
-  hooks: ShaderHookRegistry,
+/** Private emitted names for targets declared in both render stages. */
+export function getWGSLInjectionTargetNames(
+  targets: ShaderInjectionTargetRegistry,
   source = ''
 ): Map<string, Record<Stage, string>> {
   const names = new Map<string, Record<Stage, string>>();
   const usedNames = new Set(maskWGSLComments(source).match(/\b\w+\b/g));
-  for (const key of Object.keys(hooks.vertex)) {
+  for (const key of Object.keys(targets.vertex)) {
     const name = key.slice(3);
-    if (hooks.fragment[`fs:${name}`]) {
+    if (targets.fragment[`fs:${name}`]) {
       names.set(name, {
-        vertex: allocateName(`_luma_vertex_hook_${name}`, usedNames),
-        fragment: allocateName(`_luma_fragment_hook_${name}`, usedNames)
+        vertex: allocateName(`_luma_vertex_target_${name}`, usedNames),
+        fragment: allocateName(`_luma_fragment_target_${name}`, usedNames)
       });
     }
   }
   return names;
 }
 
-/** Resolve public hook calls by stage, specializing helpers shared by both entry points. */
-export function resolveWGSLHookNames(
+/** Resolve public target calls by stage, specializing helpers shared by both entry points. */
+export function resolveWGSLInjectionTargetNames(
   source: string,
-  hooks: ShaderHookRegistry,
-  hookNames = getWGSLHookNames(hooks)
+  targets: ShaderInjectionTargetRegistry,
+  targetNames = getWGSLInjectionTargetNames(targets)
 ): string {
-  if (!hookNames.size) return source;
+  if (!targetNames.size) return source;
 
   const masked = maskWGSLComments(source);
   const functions = new Map<string, FunctionRange>();
@@ -86,17 +86,17 @@ export function resolveWGSLHookNames(
     if (!shaderFunction || shaderFunction.stages.has(stage)) return;
     shaderFunction.stages.add(stage);
     for (const call of shaderFunction.calls) {
-      visit(hookNames.get(call)?.[stage] || call, stage);
+      visit(targetNames.get(call)?.[stage] || call, stage);
     }
   }
   for (const shaderFunction of functions.values()) {
     if (shaderFunction.entryStage) visit(shaderFunction.name, shaderFunction.entryStage);
   }
-  // Hook bodies also have a known stage, including hooks unused by this application.
+  // Target bodies also have a known stage, including targets unused by this application.
   for (const stage of ['vertex', 'fragment'] as const) {
-    for (const key of Object.keys(hooks[stage])) {
+    for (const key of Object.keys(targets[stage])) {
       const name = key.slice(3);
-      visit(hookNames.get(name)?.[stage] || name, stage);
+      visit(targetNames.get(name)?.[stage] || name, stage);
     }
   }
 
@@ -107,7 +107,7 @@ export function resolveWGSLHookNames(
     for (const shaderFunction of functions.values()) {
       if (
         !affected.has(shaderFunction.name) &&
-        shaderFunction.calls.some(call => hookNames.has(call) || affected.has(call))
+        shaderFunction.calls.some(call => targetNames.has(call) || affected.has(call))
       ) {
         affected.add(shaderFunction.name);
         changed = true;
@@ -127,8 +127,8 @@ export function resolveWGSLHookNames(
   }
 
   function getCallName(name: string, stage: Stage): string {
-    const hookName = hookNames.get(name)?.[stage];
-    if (hookName) return hookName;
+    const targetName = targetNames.get(name)?.[stage];
+    if (targetName) return targetName;
     return helperNames.get(name)?.[stage] || name;
   }
 
@@ -136,7 +136,7 @@ export function resolveWGSLHookNames(
   for (const shaderFunction of [...functions.values()].reverse()) {
     if (!affected.has(shaderFunction.name)) continue;
     if (!shaderFunction.stages.size) {
-      throw new Error(`Cannot infer WGSL hook stage in ${shaderFunction.name}`);
+      throw new Error(`Cannot infer WGSL target stage in ${shaderFunction.name}`);
     }
     const variants: string[] = [];
     const start = shaderFunction.start;

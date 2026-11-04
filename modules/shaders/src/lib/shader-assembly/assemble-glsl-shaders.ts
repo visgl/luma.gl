@@ -17,11 +17,11 @@ import {
 import {PlatformInfo} from './platform-info';
 import {type ShaderModule, checkShaderModuleDeprecations} from '../shader-module/shader-module';
 import {
-  type ShaderHook,
-  normalizeShaderHooks,
-  validateShaderHookInjections,
-  getShaderHooks
-} from './shader-hooks';
+  type ShaderInjectionTarget,
+  normalizeShaderInjectionTargets,
+  validateShaderInjectionTargetInjections,
+  getShaderInjectionTargets
+} from './shader-injection-targets';
 import {
   type ShaderInjection,
   type ResolvedShaderInjection,
@@ -98,8 +98,8 @@ export function assembleShaderGLSL(
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
     defines?: Record<string, boolean | number>;
-    hookFunctions?: readonly ShaderHook[];
-    pluginHooks?: readonly ShaderHook[];
+    injectionTargets?: readonly ShaderInjectionTarget[];
+    pluginInjectionTargets?: readonly ShaderInjectionTarget[];
     inject?: readonly ShaderInjection[] | Record<string, string | ResolvedShaderInjection>;
     pluginInjections?: Record<string, ResolvedShaderInjection[]>;
     pluginVertexInputs?: Record<string, AttributeShaderType>;
@@ -114,7 +114,7 @@ export function assembleShaderGLSL(
     language = 'glsl',
     modules,
     defines = {},
-    hookFunctions = [],
+    injectionTargets = [],
     inject = {},
     pluginInjections = {},
     pluginVertexInputs = {},
@@ -169,19 +169,23 @@ ${getApplicationDefines(allDefines)}
       break;
   }
 
-  const hookFunctionMap = normalizeShaderHooks(hookFunctions, options.pluginHooks, 'glsl');
+  const injectionTargetMap = normalizeShaderInjectionTargets(
+    injectionTargets,
+    options.pluginInjectionTargets,
+    'glsl'
+  );
 
   // Add source of dependent modules in resolved order
-  const hookInjections: Record<string, ResolvedShaderInjection[]> = {};
+  const targetInjections: Record<string, ResolvedShaderInjection[]> = {};
   const declInjections: Record<string, ResolvedShaderInjection[]> = {};
   const mainInjections: Record<string, ResolvedShaderInjection[]> = {};
 
-  appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
+  appendInjections(pluginInjections, targetInjections, declInjections, mainInjections);
 
   const applicationInjections = Array.isArray(inject)
     ? resolveShaderInjections(inject, 'glsl')
     : {};
-  appendInjections(applicationInjections, hookInjections, declInjections, mainInjections);
+  appendInjections(applicationInjections, targetInjections, declInjections, mainInjections);
   const injectionMap = Array.isArray(inject)
     ? {}
     : (inject as Record<string, string | ResolvedShaderInjection>);
@@ -201,7 +205,7 @@ ${getApplicationDefines(allDefines)}
           mainInjections[key] = [...(mainInjections[key] || []), injection];
         }
       } else {
-        hookInjections[key] = [...(hookInjections[key] || []), injection];
+        targetInjections[key] = [...(targetInjections[key] || []), injection];
       }
     } else {
       // Regex injection
@@ -240,7 +244,7 @@ ${getApplicationDefines(allDefines)}
   }
 
   // Named hook injections must target a registered hook.
-  validateShaderHookInjections(hookFunctionMap, hookInjections, stage);
+  validateShaderInjectionTargetInjections(injectionTargetMap, targetInjections, stage);
 
   assembledSource += '// ----- MAIN SHADER SOURCE -------------------------';
 
@@ -249,7 +253,7 @@ ${getApplicationDefines(allDefines)}
 
   assembledSource = injectShader(assembledSource, stage, declInjections);
 
-  assembledSource += getShaderHooks(hookFunctionMap[stage], hookInjections);
+  assembledSource += getShaderInjectionTargets(injectionTargetMap[stage], targetInjections);
 
   // Add the version directive and actual source of this shader
   assembledSource += coreSource;

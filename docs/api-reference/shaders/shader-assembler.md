@@ -8,33 +8,32 @@ import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 <ShadersDocsTabs active="shader-assembler" />
 
 `ShaderAssembler` is the abstract base for stateful shader assembly. Its concrete
-subclasses combine application shader source with shaders modules, hook
-functions, and injections before luma.gl creates shader resources:
+subclasses combine application shader source with shader modules, callable injection targets, and injections before luma.gl creates shader resources:
 
 - `GLSLShaderAssembler` assembles GLSL vertex and fragment shaders for WebGL.
 - `WGSLShaderAssembler` assembles unified WGSL shaders for WebGPU.
 
 Applications construct and pass language-specific assemblers. Models and computations create
 owned assemblers when none is supplied; share an instance explicitly when several consumers
-should use the same hooks, modules, or transpilers.
+should use the same injection targets, modules, or transpilers.
 
 For the assembly model, see
 [Shader Assembly](/docs/api-guide/shaders/shader-assembly). For extension design,
-see [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders).
+see [Shader Injection](/docs/api-guide/shaders/shader-injection).
 For WGSL binding relocation and conditionals, see
 [WGSL Support](/docs/api-reference/shaders/wgsl-support).
 
 <DocumentationContract title="ShaderAssembler" rows={[
   {label: 'Languages', value: 'Separate stateful GLSL and WGSL assembler implementations'},
   {label: 'Dependencies', value: 'Initializes, resolves, de-duplicates, and orders module dependencies'},
-  {label: 'Hooks and injections', value: 'Combines registered hook contracts with ordered plugin and application injections'},
+  {label: 'Injection targets and injections', value: 'Combines registered injection target contracts with ordered plugin and application injections'},
   {label: 'Inputs', value: 'Application source, platform information, modules, defines, and injection maps'},
   {label: 'Output', value: 'Assembled source, resolved modules, layout metadata, and combined uniform mapping'},
   {label: 'Cost', value: 'Assemble when source configuration changes, before pipeline creation—not per draw'}
 ]} />
 
 :::warning Common mistake
-Registering hooks on an assembler does not automatically configure other models. Pass the
+Registering targets on an assembler does not automatically configure other models. Pass the
 configured instance through `shaderAssembler` to each model or computation that should use it.
 :::
 
@@ -43,7 +42,7 @@ configured instance through `shaderAssembler` to each model or computation that 
 Import `GLSLShaderAssembler` from `@luma.gl/shaders/glsl` and `WGSLShaderAssembler` from
 `@luma.gl/shaders/wgsl`. The shared `ShaderAssembler` contract can be imported as a type from
 the root or either language entry. Each language entry loads its own assembler and assembly backend;
-shared modules, hooks, uniforms and transpiler contracts retain their existing behavior.
+shared modules, injection targets, uniforms and transpiler contracts retain their existing behavior.
 The WGSL entry also retains `scanWGSLInterface` and exports WGSL binding diagnostics.
 
 Root assembler exports remain available and share constructor identity with the subpaths, including
@@ -67,7 +66,7 @@ const offsetLeftPlugin: ShaderPlugin = {
 };
 
 const glslShaderAssembler = new GLSLShaderAssembler();
-glslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
+glslShaderAssembler.addShaderInjectionTarget({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
 const glslPlugin = resolveShaderPlugins([offsetLeftPlugin], 'glsl');
 const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
   platformInfo: glslPlatformInfo,
@@ -78,7 +77,7 @@ const assembledShaders = glslShaderAssembler.assembleGLSLShaderPair({
 });
 
 const wgslShaderAssembler = new WGSLShaderAssembler();
-wgslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}});
+wgslShaderAssembler.addShaderInjectionTarget({name: 'OFFSET_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}});
 const wgslPlugin = resolveShaderPlugins([offsetLeftPlugin], 'wgsl');
 const assembledWGSLShader = wgslShaderAssembler.assembleWGSLShader({
   platformInfo: wgslPlatformInfo,
@@ -105,9 +104,10 @@ Common assembly props:
 | `fs?: string` | GLSL fragment shader source for `assembleGLSLShaderPair()`. |
 | `modules?: ShaderModule[]` | Shader modules to resolve and add to the assembled source. |
 | `defines?: Record<string, boolean \| number>` | Boolean or numeric preprocessor defines used while assembling shader source. |
-| `hookFunctions?: (ShaderHook \| string)[]` | Hook functions to emit into assembled source. |
-| `inject?: Record<string, string \| ShaderInjection>` | Named hook or standard injection source. |
-| `pluginInjections?: Record<string, ShaderInjection[]>` | Ordered named injections already resolved from `ShaderPlugin` descriptors. |
+| `injectionTargets?: readonly ShaderInjectionTarget[]` | Callable targets to emit into assembled source. |
+| `pluginInjectionTargets?: readonly ShaderInjectionTarget[]` | Callable targets resolved from plugins. |
+| `inject?: ShaderInjection[] \| Record<string, string \| ResolvedShaderInjection>` | Named target or standard injection source. |
+| `pluginInjections?: Record<string, ResolvedShaderInjection[]>` | Ordered named injections already resolved from `ShaderPlugin` descriptors. |
 | `pluginVertexInputs?: Record<string, AttributeShaderType>` | Render-shader vertex inputs already resolved from `ShaderPlugin` descriptors. |
 | `vertexEntryPoint?: string` | WGSL vertex entry point selected by the render pipeline. Defaults to `vertexMain`. |
 | `fragmentEntryPoint?: string` | WGSL fragment entry point selected by the render pipeline. Defaults to `fragmentMain`. |
@@ -124,43 +124,43 @@ is already present.
 
 Removes a previously registered default module.
 
-### `addShaderHook(hook: ShaderHook): void`
+### `addShaderInjectionTarget(target: ShaderInjectionTarget): void`
 
-Registers one logical hook with language-specific source:
+Registers one callable injection target with language-specific source:
 
 ```typescript
-const hook: ShaderHook = {
+const target: ShaderInjectionTarget = {
   name: 'OFFSET_POSITION',
   stage: 'vertex',
   glsl: {parameters: 'inout vec4 position'},
   wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
 };
-glslShaderAssembler.addShaderHook(hook);
-wgslShaderAssembler.addShaderHook(hook);
+glslShaderAssembler.addShaderInjectionTarget(target);
+wgslShaderAssembler.addShaderInjectionTarget(target);
 ```
 
-Import `ShaderHook` from `@luma.gl/shaders`. `stage` is `vertex` or `fragment`.
+Import `ShaderInjectionTarget` from `@luma.gl/shaders`. `stage` is `vertex` or `fragment`.
 Each language implementation supplies `parameters` without parentheses and optional
 `header` and `footer` source around injected code. Set `returnType` to a GLSL or
-WGSL type to return a value. Omit it (or use `void`) for a hook with no return value.
-A value-returning hook must provide a default return path in its header/footer.
-Vertex and fragment hooks may share a public name, including in WGSL. The assembler
+WGSL type to return a value. Omit it (or use `void`) for a target with no return value.
+A value-returning target must provide a default return path in its header/footer.
+Vertex and fragment injection targets may share a public name, including in WGSL. The assembler
 emits private stage-specific function names and resolves calls from each entry point.
-Helpers reached by both stages are specialized when they call a shared-name hook.
-A helper containing such a call must be reachable from a render entry point or hook,
+Helpers reached by both stages are specialized when they call a shared-name target.
+A helper containing such a call must be reachable from a render entry point or target,
 so its stage can be determined. Injection keys still select the stage (`vs:` or `fs:`).
 Missing language implementations are skipped. Registration and assembly do not modify descriptors.
 
-Injection targets remain `vs:OFFSET_POSITION` and `fs:HOOK_NAME`. Use root-level
+Injection targets remain `vs:OFFSET_POSITION` and `fs:TARGET_NAME`. Use root-level
 `injections` on ShaderPlugin, with `glsl` and `wgsl` source on each entry, for
-language-specific bodies. Shared hook names do not translate injection source. Shaders still call the hook explicitly,
+language-specific bodies. Shared target names do not translate injection source. Shaders still call the target explicitly,
 using GLSL `inout` arguments or WGSL pointers as appropriate.
 
-### `resetShaderHooks(): void`
+### `resetShaderInjectionTargets(): void`
 
-Removes every hook registered with `addShaderHook()`. Default modules are not
+Removes every target registered with `addShaderInjectionTarget()`. Default modules are not
 affected. Use this instead of mutating assembler internals when an application
-needs to re-register its hooks.
+needs to re-register its injection targets.
 
 ### `GLSLShaderAssembler.assembleGLSLShaderPair(props: AssembleShaderProps)`
 
@@ -175,18 +175,18 @@ application WGSL, inactive conditional branches are removed, and
 `@binding(auto)` declarations are assigned concrete binding numbers before WebGPU
 reflection.
 
-## Hooks And Injections
+## Injection Targets And Injections
 
-Hooks are deliberate extension points called by application shader code. The
-base shader registers a stage-prefixed hook signature, calls the generated hook
+Callable injection targets are deliberate extension points called by application shader code. The
+base shader registers a stage-prefixed injection target signature, calls the generated target
 function, and lets plugin contributions add ordered source by targeting the
-registered hook name and stage.
+registered target name and stage.
 
 <Tabs groupId="shader-language">
 <TabItem value="glsl" label="GLSL">
 
 ```typescript
-glslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
+glslShaderAssembler.addShaderInjectionTarget({name: 'OFFSET_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}});
 
 const offsetLeftPlugin: ShaderPlugin = {
   name: 'offsetLeft',
@@ -206,7 +206,7 @@ void main() {
 <TabItem value="wgsl" label="WGSL">
 
 ```typescript
-wgslShaderAssembler.addShaderHook({name: 'OFFSET_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}});
+wgslShaderAssembler.addShaderInjectionTarget({name: 'OFFSET_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}});
 ```
 
 ```wgsl
@@ -221,11 +221,11 @@ fn vertexMain(@location(0) position: vec2<f32>) -> @builtin(position) vec4<f32> 
 </TabItem>
 </Tabs>
 
-If no plugin injects into a hook, the generated hook function is a no-op.
+If no plugin injects into a callable target, the generated target function is a no-op.
 WGSL uses pointer arguments for mutable values.
 
-Named hook injections must target a hook registered for the shader stage.
-Plugin injections targeting unregistered hooks fail during assembly.
+Named target injections must target a callable target registered for the shader stage.
+Plugin injections targeting undeclared targets fail during assembly.
 
 Standard named injections are also available:
 
@@ -239,8 +239,8 @@ Standard named injections are also available:
 | `fs:#main-end` | Fragment | Inject at the end of the fragment main function. |
 
 For assembled WGSL, these keys target the matching `@vertex` or `@fragment`
-entry point in the unified source. `ShaderPlugin` accepts only named hook and
-standard anchor targets; lower-level assembler `inject` also preserves the
+entry point in the unified source. `ShaderPlugin` accepts only named target and
+built-in targets; lower-level assembler `inject` also preserves the
 legacy arbitrary text-replacement escape hatch.
 
 ## Application-owned transpilers
@@ -266,7 +266,7 @@ the compiler can select its default entry point. Compiler diagnostics propagate 
 
 Reusable modules can set `{name, sourceLanguage, source}`. Their dependency code
 is combined, once per module name, ahead of the application source before the
-compiler runs. Native modules, hooks, and injections are assembled afterward in
+compiler runs. Native modules, injection targets, and injections are assembled afterward in
 the **target language**. Module uniform getters and other metadata are preserved.
 Foreign modules must use the same language as the application translation unit;
 calling foreign helpers from native application source is not supported.
@@ -326,9 +326,9 @@ rules; registering it does not add full Slang compiler compatibility.
 
 ## Shared injection declarations
 
-`ShaderHook` and `ShaderInjection` describe extension points and source independently
-of where they are registered. Register hooks with `addShaderHook()` or pass them as
-assembly `hookFunctions` or plugin `hooks`. Pass the same `ShaderInjection[]` to
+`ShaderInjectionTarget` and `ShaderInjection` describe extension points and source independently
+of where they are registered. Register targets with `addShaderInjectionTarget()` or pass them as
+assembly `injectionTargets` or plugin `injectionTargets`. Pass the same `ShaderInjection[]` to
 application-level `inject` or plugin `injections`:
 
 ```typescript
@@ -348,7 +348,7 @@ const shaders = glslShaderAssembler.assembleGLSLShaderPair({
 ```
 
 Declare and call `FILTER_COLOR` in the host shader. Missing language implementations
-are skipped; injections into undeclared hooks throw. Repeated targets retain all
+are skipped; injections into undeclared targets throw. Repeated targets retain all
 injections, sorted by `order` with declaration order breaking ties. Application
 injections follow plugin injections when orders tie.
 

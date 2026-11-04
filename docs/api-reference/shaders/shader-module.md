@@ -211,7 +211,7 @@ user's module props to uniforms. This can be achieved using `getUniforms()`:
 
 ## Adding Injections
 
-Use a named [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) for hook or
+Use a named [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) for target or
 anchor injections. A plugin can attach this module through its `module` field and
 select GLSL or WGSL source for each injection.
 

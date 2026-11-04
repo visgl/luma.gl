@@ -221,7 +221,7 @@ it('Computation#plugins assemble WGSL contributions', async () => {
           plugins: [
             {
               name: 'render-hooks',
-              hooks: [{stage: 'fragment', name: 'TINT', wgsl: {parameters: ''}}]
+              injectionTargets: [{stage: 'fragment', name: 'TINT', wgsl: {parameters: ''}}]
             }
           ]
         })

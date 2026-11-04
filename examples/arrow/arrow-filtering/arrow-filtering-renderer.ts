@@ -145,7 +145,7 @@ export class ArrowFilteringRenderer {
       device.info.shadingLanguage === 'wgsl'
         ? new WGSLShaderAssembler()
         : new GLSLShaderAssembler();
-    shaderAssembler.addShaderHook({
+    shaderAssembler.addShaderInjectionTarget({
       name: 'FILTER_POSITION',
       stage: 'vertex',
       glsl: {parameters: 'inout vec4 position'},

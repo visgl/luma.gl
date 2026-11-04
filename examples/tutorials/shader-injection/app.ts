@@ -6,7 +6,7 @@ import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import type {ShaderPlugin} from '@luma.gl/shaders';
-import {ShaderHooksInfoHtml} from './app-ui';
+import {ShaderInjectionInfoHtml} from './app-ui';
 
 // Base vertex and fragment shader code
 const vs = `\
@@ -45,7 +45,7 @@ const offsetRightPlugin: ShaderPlugin = {
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = ShaderHooksInfoHtml;
+  static info = ShaderInjectionInfoHtml;
 
   model1: Model;
   model2: Model;
@@ -67,7 +67,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const shaderAssembler = new GLSLShaderAssembler();
-    shaderAssembler.addShaderHook({
+    shaderAssembler.addShaderInjectionTarget({
       name: 'OFFSET_POSITION',
       stage: 'vertex',
       glsl: {parameters: 'inout vec4 position'}

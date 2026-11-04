@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderHook} from './shader-assembly/shader-hooks';
+import type {ShaderInjectionTarget} from './shader-assembly/shader-injection-targets';
 import {
   resolveShaderInjections,
   type ShaderInjection,
@@ -39,7 +39,7 @@ export type ShaderPlugin = {
   /** Named injections as explicit-stage objects or optionally language-qualified string keys. */
   injections?: ShaderInjection[] | Record<string, string>;
   /** Callable extension points with a shared name and language-specific source. */
-  hooks?: ShaderHook[];
+  injectionTargets?: ShaderInjectionTarget[];
   /** Shader-facing vertex inputs added by this plugin. Buffer ownership remains with the caller. */
   vertexInputs?: Record<string, AttributeShaderType>;
   /** Values transported from the selected vertex entry point to the fragment entry point. */
@@ -50,8 +50,8 @@ export type ShaderPlugin = {
 export type ResolvedShaderPlugins = {
   /** Resolved shader modules in plugin declaration order. */
   modules: ShaderModule[];
-  /** Language-selected hook declarations. */
-  hooks: ShaderHook[];
+  /** Language-selected callable injection target declarations. */
+  injectionTargets: ShaderInjectionTarget[];
   /** Resolved boolean or numeric preprocessor defines. */
   defines: Record<string, boolean | number>;
   /** Resolved named code injections grouped by target. */
@@ -69,7 +69,7 @@ export function resolveShaderPlugins(
 ): ResolvedShaderPlugins {
   const resolved: ResolvedShaderPlugins = {
     modules: [],
-    hooks: [],
+    injectionTargets: [],
     defines: {},
     injections: {},
     vertexInputs: {},
@@ -161,15 +161,15 @@ function appendShaderPlugin(
     resolved.interStageVariables[name] = normalizedVarying;
   }
 
-  for (const hook of plugin.hooks || []) {
-    const implementation = hook[shaderLanguage];
+  for (const injectionTarget of plugin.injectionTargets || []) {
+    const implementation = injectionTarget[shaderLanguage];
     if (!implementation) continue;
-    const target = `${hook.stage === 'vertex' ? 'vs' : 'fs'}:${hook.name}`;
+    const target = `${injectionTarget.stage === 'vertex' ? 'vs' : 'fs'}:${injectionTarget.name}`;
     if (!/^(vs|fs):[A-Za-z_][A-Za-z0-9_]*$/.test(target)) {
-      throw new Error(`Invalid ShaderPlugin hook ${target}`);
+      throw new Error(`Invalid ShaderPlugin injection target ${target}`);
     }
-    const existing = resolved.hooks.find(
-      value => value.stage === hook.stage && value.name === hook.name
+    const existing = resolved.injectionTargets.find(
+      value => value.stage === injectionTarget.stage && value.name === injectionTarget.name
     );
     const previous = existing?.[shaderLanguage];
     if (
@@ -179,10 +179,14 @@ function appendShaderPlugin(
         previous.header !== implementation.header ||
         previous.footer !== implementation.footer)
     ) {
-      throw new Error(`Conflicting ShaderPlugin hook ${target}`);
+      throw new Error(`Conflicting ShaderPlugin injection target ${target}`);
     }
     if (!existing)
-      resolved.hooks.push({name: hook.name, stage: hook.stage, [shaderLanguage]: implementation});
+      resolved.injectionTargets.push({
+        name: injectionTarget.name,
+        stage: injectionTarget.stage,
+        [shaderLanguage]: implementation
+      });
   }
   const pluginInjections = Array.isArray(plugin.injections)
     ? plugin.injections

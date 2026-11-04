@@ -5,7 +5,10 @@
 import {type ShaderBindingDebugRow, getShaderBindingDebugRowsFromWGSL} from './wgsl-binding-debug';
 import {type ShaderLayout} from '../../types';
 import {scanWGSLInterface} from './wgsl-interface-scan';
-import {getWGSLHookNames, resolveWGSLHookNames} from './wgsl-hook-names';
+import {
+  getWGSLInjectionTargetNames,
+  resolveWGSLInjectionTargetNames
+} from './wgsl-injection-target-names';
 import {
   type AssembleWGSLShaderOptions,
   type GetUniformsFunc,
@@ -28,7 +31,11 @@ import {assert} from '../utils/assert';
 import {preprocess} from '../preprocessor/preprocessor';
 import {assembleShaderPluginVertexInputsWGSL} from './shader-plugin-vertex-inputs';
 import {assembleShaderPluginInterStageVariablesWGSL} from './shader-plugin-varyings';
-import {normalizeShaderHooks, validateShaderHookInjections, getShaderHooks} from './shader-hooks';
+import {
+  normalizeShaderInjectionTargets,
+  validateShaderInjectionTargetInjections,
+  getShaderInjectionTargets
+} from './shader-injection-targets';
 import {
   type ResolvedShaderInjection,
   injectShader,
@@ -109,7 +116,7 @@ export function assembleShaderWGSL(
     modules,
     // defines = {},
     defines = {},
-    hookFunctions = [],
+    injectionTargets = [],
     inject = {},
     pluginInjections = {},
     pluginVertexInputs = {},
@@ -159,19 +166,23 @@ export function assembleShaderWGSL(
   // `
   // `;
 
-  const hookFunctionMap = normalizeShaderHooks(hookFunctions, options.pluginHooks, 'wgsl');
+  const injectionTargetMap = normalizeShaderInjectionTargets(
+    injectionTargets,
+    options.pluginInjectionTargets,
+    'wgsl'
+  );
 
   // Add source of dependent modules in resolved order
-  const hookInjections: Record<string, ResolvedShaderInjection[]> = {};
+  const targetInjections: Record<string, ResolvedShaderInjection[]> = {};
   const declInjections: Record<string, ResolvedShaderInjection[]> = {};
   const mainInjections: Record<string, ResolvedShaderInjection[]> = {};
 
-  appendInjections(pluginInjections, hookInjections, declInjections, mainInjections);
+  appendInjections(pluginInjections, targetInjections, declInjections, mainInjections);
 
   const applicationInjections = Array.isArray(inject)
     ? resolveShaderInjections(inject, 'wgsl')
     : {};
-  appendInjections(applicationInjections, hookInjections, declInjections, mainInjections);
+  appendInjections(applicationInjections, targetInjections, declInjections, mainInjections);
   const injectionMap = Array.isArray(inject)
     ? {}
     : (inject as Record<string, string | ResolvedShaderInjection>);
@@ -191,7 +202,7 @@ export function assembleShaderWGSL(
           mainInjections[key] = [...(mainInjections[key] || []), injection];
         }
       } else {
-        hookInjections[key] = [...(hookInjections[key] || []), injection];
+        targetInjections[key] = [...(targetInjections[key] || []), injection];
       }
     } else {
       // Regex injection
@@ -207,7 +218,7 @@ export function assembleShaderWGSL(
   appendGeneratedVaryingInjections(pluginVaryingAssembly, declInjections, mainInjections);
 
   // Application and plugin injections are WGSL-specific, so every named hook they target must exist.
-  validateShaderHookInjections(hookFunctionMap, hookInjections);
+  validateShaderInjectionTargetInjections(injectionTargetMap, targetInjections);
 
   // TODO - hack until shadertool modules support WebGPU
   const modulesToInject = modules.map(module => ({
@@ -255,11 +266,15 @@ export function assembleShaderWGSL(
     {vertex: vertexEntryPoint, fragment: fragmentEntryPoint}
   );
 
-  const hookNames = getWGSLHookNames(
-    hookFunctionMap,
+  const targetNames = getWGSLInjectionTargetNames(
+    injectionTargetMap,
     assembledSource + applicationRelocation.source
   );
-  assembledSource += getWGSLShaderHooks(hookFunctionMap, hookInjections, hookNames);
+  assembledSource += getWGSLShaderInjectionTargets(
+    injectionTargetMap,
+    targetInjections,
+    targetNames
+  );
   assembledSource += formatWGSLBindingAssignmentComments(bindingAssignments);
 
   // Add the version directive and actual source of this shader
@@ -271,7 +286,11 @@ export function assembleShaderWGSL(
     fragment: fragmentEntryPoint
   });
 
-  assembledSource = resolveWGSLHookNames(assembledSource, hookFunctionMap, hookNames);
+  assembledSource = resolveWGSLInjectionTargetNames(
+    assembledSource,
+    injectionTargetMap,
+    targetNames
+  );
 
   assertNoUnresolvedAutoBindings(assembledSource);
 
@@ -343,21 +362,21 @@ export function getWGSLDeclarationInjections(
   return unifiedDeclarations.length ? {'vs:#decl': unifiedDeclarations} : {};
 }
 
-export function getWGSLShaderHooks(
-  hookFunctionMap: ReturnType<typeof normalizeShaderHooks>,
-  hookInjections: Record<string, ResolvedShaderInjection[]>,
-  names = getWGSLHookNames(hookFunctionMap)
+export function getWGSLShaderInjectionTargets(
+  injectionTargetMap: ReturnType<typeof normalizeShaderInjectionTargets>,
+  targetInjections: Record<string, ResolvedShaderInjection[]>,
+  names = getWGSLInjectionTargetNames(injectionTargetMap)
 ): string {
   return (['vertex', 'fragment'] as const)
     .map(stage => {
-      const hooks = Object.fromEntries(
-        Object.entries(hookFunctionMap[stage]).map(([key, hook]) => {
+      const targets = Object.fromEntries(
+        Object.entries(injectionTargetMap[stage]).map(([key, target]) => {
           const name = key.slice(3);
           const emittedName = names.get(name)?.[stage] || name;
-          return [key, {...hook, signature: emittedName + hook.signature.slice(name.length)}];
+          return [key, {...target, signature: emittedName + target.signature.slice(name.length)}];
         })
       );
-      return getShaderHooks(hooks, hookInjections, 'wgsl');
+      return getShaderInjectionTargets(targets, targetInjections, 'wgsl');
     })
     .join('');
 }
