@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-experimental-gpu-parquet-constellation",
-  "version": "10.0.0-alpha.9",
+  "version": "10.0.0-alpha.10",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,10 +12,10 @@
   "dependencies": {
     "@loaders.gl/core": "~5.0.0-beta.4",
     "@loaders.gl/tables": "~5.0.0-beta.4",
-    "@luma.gl/core": "10.0.0-alpha.9",
-    "@luma.gl/engine": "10.0.0-alpha.9",
-    "@luma.gl/graph": "10.0.0-alpha.9",
-    "@luma.gl/shaders": "10.0.0-alpha.9",
+    "@luma.gl/core": "10.0.0-alpha.10",
+    "@luma.gl/engine": "10.0.0-alpha.10",
+    "@luma.gl/graph": "10.0.0-alpha.10",
+    "@luma.gl/shaders": "10.0.0-alpha.10",
     "apache-arrow": "^21.1.0",
     "compress-utils": "^0.8.0"
   },
