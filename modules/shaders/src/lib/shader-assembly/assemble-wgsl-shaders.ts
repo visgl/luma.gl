@@ -6,6 +6,10 @@ import {type ShaderBindingDebugRow, getShaderBindingDebugRowsFromWGSL} from './w
 import {type ShaderLayout} from '../../types';
 import {scanWGSLInterface} from './wgsl-interface-scan';
 import {
+  getWGSLInjectionTargetNames,
+  resolveWGSLInjectionTargetNames
+} from './wgsl-injection-target-names';
+import {
   type AssembleWGSLShaderOptions,
   type GetUniformsFunc,
   type WGSLBindingAssignment,
@@ -262,7 +266,24 @@ export function assembleShaderWGSL(
     {vertex: vertexEntryPoint, fragment: fragmentEntryPoint}
   );
 
-  assembledSource += getWGSLShaderInjectionTargets(injectionTargetMap, targetInjections);
+  const targetNames = getWGSLInjectionTargetNames(
+    injectionTargetMap,
+    [
+      assembledSource,
+      applicationRelocation.source,
+      ...Object.values(targetInjections)
+        .flat()
+        .map(injection => injection.injection),
+      ...Object.values(mainInjections)
+        .flat()
+        .map(injection => injection.injection)
+    ].join('\n')
+  );
+  assembledSource += getWGSLShaderInjectionTargets(
+    injectionTargetMap,
+    targetInjections,
+    targetNames
+  );
   assembledSource += formatWGSLBindingAssignmentComments(bindingAssignments);
 
   // Add the version directive and actual source of this shader
@@ -273,6 +294,12 @@ export function assembleShaderWGSL(
     vertex: vertexEntryPoint,
     fragment: fragmentEntryPoint
   });
+
+  assembledSource = resolveWGSLInjectionTargetNames(
+    assembledSource,
+    injectionTargetMap,
+    targetNames
+  );
 
   assertNoUnresolvedAutoBindings(assembledSource);
 
@@ -346,12 +373,21 @@ export function getWGSLDeclarationInjections(
 
 export function getWGSLShaderInjectionTargets(
   injectionTargetMap: ReturnType<typeof normalizeShaderInjectionTargets>,
-  targetInjections: Record<string, ResolvedShaderInjection[]>
+  targetInjections: Record<string, ResolvedShaderInjection[]>,
+  names = getWGSLInjectionTargetNames(injectionTargetMap)
 ): string {
-  return (
-    getShaderInjectionTargets(injectionTargetMap.vertex, targetInjections, 'wgsl') +
-    getShaderInjectionTargets(injectionTargetMap.fragment, targetInjections, 'wgsl')
-  );
+  return (['vertex', 'fragment'] as const)
+    .map(stage => {
+      const targets = Object.fromEntries(
+        Object.entries(injectionTargetMap[stage]).map(([key, target]) => {
+          const name = key.slice(3);
+          const emittedName = names.get(name)?.[stage] || name;
+          return [key, {...target, signature: emittedName + target.signature.slice(name.length)}];
+        })
+      );
+      return getShaderInjectionTargets(targets, targetInjections, 'wgsl');
+    })
+    .join('');
 }
 
 export function getUsedBindingsByGroupFromApplicationWGSL(

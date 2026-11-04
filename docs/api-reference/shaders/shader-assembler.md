@@ -142,10 +142,14 @@ wgslShaderAssembler.addShaderInjectionTarget(target);
 Import `ShaderInjectionTarget` from `@luma.gl/shaders`. `stage` is `vertex` or `fragment`.
 Each language implementation supplies `parameters` without parentheses and optional
 `header` and `footer` source around injected code. Set `returnType` to a GLSL or
-WGSL type to return a value. Omit it (or use `void`) for a callable target with no return value.
+WGSL type to return a value. Omit it (or use `void`) for a target with no return value.
 A value-returning target must provide a default return path in its header/footer.
-WGSL targets share one function namespace: use distinct names for vertex and fragment injection targets. Missing language implementations
-are skipped. Registration and assembly do not modify descriptors.
+Vertex and fragment injection targets may share a public name, including in WGSL. The assembler
+emits private stage-specific function names and resolves calls from each entry point.
+Helpers reached by both stages are specialized when they call a shared-name target.
+A helper containing such a call must be reachable from a render entry point or target,
+so its stage can be determined. Injection keys still select the stage (`vs:` or `fs:`).
+Missing language implementations are skipped. Registration and assembly do not modify descriptors.
 
 Injection targets remain `vs:OFFSET_POSITION` and `fs:TARGET_NAME`. Use root-level
 `injections` on ShaderPlugin, with `glsl` and `wgsl` source on each entry, for
