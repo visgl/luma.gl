@@ -5,6 +5,7 @@
 import {expect, test} from 'vitest';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
+  GPUGraph,
   GPUCPUOperation,
   GPUUploadOperation,
   GPUExpressionOperation,
@@ -12,11 +13,11 @@ import {
 } from '@luma.gl/graph';
 import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 
-for (const backend of ['webgl', 'webgpu']) {
+for (const backend of ['webgl', 'webgpu', 'webgpu-graph']) {
   test(`GPU producer → dynamic CPU operation → GPU consumer (${backend})`, async ({skip}) => {
     const device = await (backend === 'webgl' ? getWebGLTestDevice() : getWebGPUTestDevice());
     if (!device) return skip();
-    const graph = new GPUSimpleGraph();
+    const graph = backend === 'webgpu-graph' ? new GPUGraph() : new GPUSimpleGraph();
     graph.add(
       new GPUUploadOperation({
         output: 'source',

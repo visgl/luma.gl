@@ -26,7 +26,7 @@ export type GPUCPUOperationProps = {
   }): Record<string, GPUCPUResult> | Promise<Record<string, GPUCPUResult>>;
 };
 
-/** Shared CPU operation intent. Currently executed by reusable, unscoped GPUSimpleGraph. */
+/** Shared CPU operation intent. Executed by reusable, unscoped GPUGraph and GPUSimpleGraph. */
 export class GPUCPUOperation implements GPUOperation {
   readonly type = 'cpu';
   readonly id: string;

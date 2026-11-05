@@ -222,3 +222,27 @@ control-flow declarations remain supported.
 
 Use `graph.compile(device).run(...)` for runtime-sized results. The lower-level
 `GPUGraphCompiler.compile(graph, bindings)` still requires concrete vector dimensions.
+
+
+## CPU operations and execution-sized results
+
+`GPUGraph` accepts the same `GPUCPUOperation` as [SimpleGraph](./gpu-simple-graph.md#cpu-callbacks-and-dynamically-sized-results).
+Callbacks return typed arrays (or explicit chunks), and execution allocates and uploads
+GPUVectors using the returned row counts. Multiple outputs can have different lengths,
+and lengths may change between runs without recompiling the authored graph.
+
+CPU-containing programs use asynchronous `compiled.run()`. GPU stages use the native
+GPUGraph compiler and submit before a CPU callback reads their outputs. Downstream
+stages resolve their dimensions only after the callback completes. The shared CPU executor
+handles readback and uploads; it does not lower CPU work to a GPU command node.
+
+This initial implementation supports straight-line numeric graphs with `addInput()` and
+operation-owned vector results. Textures, state, output targets, and caller-controlled
+`prepare()`/encoding are unsupported. GPU stages and CPU stages execute in authored order;
+intermediates are retained until the invocation finishes. CPU-to-CPU chains currently cross
+the GPU boundary between callbacks. Only one CPU-containing invocation may run at a time
+per compiled graph, and destroying it while a callback is pending is rejected.
+
+Selected results belong to the caller. Failures release invocation-owned intermediates,
+preserve borrowed inputs, and allow subsequent runs. GPU-only programs retain their existing
+preparation, transient allocation, and encoding behavior.

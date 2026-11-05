@@ -4,19 +4,26 @@
 
 import {assert, type Device} from '@luma.gl/core';
 import {GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
-import {GPUGraph} from '../gpu-core/gpu-graph';
-import {gpuGraph} from '../gpu-core/gpu-graph-value';
-import {GPUCPUOperation, type GPUCPUVector, type GPUCPUArray} from '../gpu-core/gpu-cpu-operation';
-import {GPUExpressionProgram, type GPUGraphRunBindings} from '../gpu-core/gpu-expression-plan';
-import {GPUUploadOperation} from '../gpu-core/gpu-transfer-operation';
-import {CompiledGPUSimpleExpressionGraph} from './compiled-gpu-expression-graph';
+import {GPUGraph} from './gpu-graph';
+import {gpuGraph} from './gpu-graph-value';
+import {GPUCPUOperation, type GPUCPUVector, type GPUCPUArray} from './gpu-cpu-operation';
+import {GPUExpressionProgram, type GPUGraphRunBindings} from './gpu-expression-plan';
+import {GPUUploadOperation} from './gpu-transfer-operation';
+import type {GPUGraphExecutionBindings} from './gpu-expression-plan';
+
+/** Backend-specific GPU stage; CPU scheduling is shared by both graph executors. */
+export type GPUCPUStage = {
+  run(bindings: GPUGraphExecutionBindings): Promise<Record<string, GPUVector>>;
+  destroy(): void;
+};
+export type GPUCPUStageCompiler = (source: GPUGraph, outputs?: readonly string[]) => GPUCPUStage;
 
 /** Submission boundaries around CPU callbacks; each GPU stage resolves its shapes independently. */
 export class GPUCPUExecution {
   private readonly stages: (
     | GPUCPUOperation
     | {
-        graph: CompiledGPUSimpleExpressionGraph;
+        graph: GPUCPUStage;
         inputs: readonly string[];
       }
   )[] = [];
@@ -24,7 +31,8 @@ export class GPUCPUExecution {
 
   constructor(
     readonly device: Device,
-    readonly program: GPUExpressionProgram
+    readonly program: GPUExpressionProgram,
+    private readonly compileStage: GPUCPUStageCompiler
   ) {
     // Initial support is for pure numeric, operation-owned results.
     assert(!program.textures.length && !program.vectors.some(value => value.role === 'state'));
@@ -68,7 +76,7 @@ export class GPUCPUExecution {
         for (const name of new Set(inputs)) addInput(graph, name);
         graph.add(operation);
         this.stages.push({
-          graph: new CompiledGPUSimpleExpressionGraph(device, graph, {outputs}),
+          graph: compileStage(graph, outputs),
           inputs
         });
       }
@@ -122,7 +130,7 @@ export class GPUCPUExecution {
             );
             graph.add(upload);
           }
-          const compiled = new CompiledGPUSimpleExpressionGraph(this.device, graph);
+          const compiled = this.compileStage(graph);
           try {
             results = await compiled.run({});
           } finally {
