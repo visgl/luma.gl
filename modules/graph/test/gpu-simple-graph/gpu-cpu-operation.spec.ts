@@ -56,3 +56,34 @@ for (const backend of ['webgl', 'webgpu']) {
     }
   });
 }
+
+for (const backend of ['simple']) {
+  test(`GPU-produced scalar crosses CPU execution stages (${backend})`, async ({skip}) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return skip();
+    const graph = new GPUSimpleGraph();
+    graph.addInput('scale', gpuGraph.scalar('float32'));
+    graph.add(new GPUExpressionOperation({output: 'factor', expression: 'scale * 2'}));
+    graph.add(
+      new GPUCPUOperation({
+        id: 'source',
+        inputs: {},
+        outputs: {source: gpuGraph.vector('float32')},
+        execute: () => ({source: new Float32Array([2, 3])})
+      })
+    );
+    graph.add(new GPUExpressionOperation({output: 'result', expression: 'source * factor'}));
+    const compiled = graph.compile(device);
+    try {
+      const outputs = await compiled.run({inputs: {scale: 3}});
+      try {
+        const bytes = await outputs.result.data[0].buffer.readAsync(0, 8);
+        expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 2))).toEqual([12, 18]);
+      } finally {
+        outputs.result.destroy();
+      }
+    } finally {
+      compiled.destroy();
+    }
+  });
+}

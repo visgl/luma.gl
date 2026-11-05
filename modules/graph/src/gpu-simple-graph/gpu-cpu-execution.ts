@@ -129,9 +129,16 @@ export class GPUCPUExecution {
             compiled.destroy();
           }
         } else {
-          results = await stage.graph.run({
-            inputs: Object.fromEntries(stage.inputs.map(name => [name, values[name]]))
-          });
+          const inputs: Record<string, GPUGraphRunBindings[string]> = Object.create(null);
+          for (const name of stage.inputs) {
+            const value = values[name];
+            // Stage scalar inputs are host numbers, including results produced by an earlier GPU stage.
+            inputs[name] =
+              value instanceof GPUVector && this.program.scalars.some(scalar => scalar.id === name)
+                ? (await readCPUVector(value)).pack()[0]
+                : value;
+          }
+          results = await stage.graph.run({inputs});
         }
         for (const [name, value] of Object.entries(results)) {
           values[name] = value;
