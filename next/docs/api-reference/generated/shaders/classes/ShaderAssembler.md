@@ -35,7 +35,7 @@ Shader language accepted by this assembler.
 
 > **\_getModuleList**(`appModules?`): [`ShaderModule`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderModule.md)\[]
 
-Defined in: [lib/shader-assembler-base.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembler-base.ts#L144)
+Defined in: [lib/shader-assembler-base.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembler-base.ts#L143)
 
 Dedupe and combine with default modules
 
@@ -73,27 +73,21 @@ Shader module to include in later assembly calls.
 
 ***
 
-### addShaderHook()[​](#addshaderhook "Direct link to addShaderHook()")
+### addShaderInjectionTarget()[​](#addshaderinjectiontarget "Direct link to addShaderInjectionTarget()")
 
-> **addShaderHook**(`hook`, `options?`): `void`
+> **addShaderInjectionTarget**(`injectionTarget`): `void`
 
-Defined in: [lib/shader-assembler-base.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembler-base.ts#L129)
+Defined in: [lib/shader-assembler-base.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembler-base.ts#L128)
 
-Register a shader hook
+Register a shader injection target
 
 #### Parameters[​](#parameters-2 "Direct link to Parameters")
 
-##### hook[​](#hook "Direct link to hook")
+##### injectionTarget[​](#injectiontarget "Direct link to injectionTarget")
 
-`string`
+[`ShaderInjectionTarget`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjectionTarget.md)
 
-Stage-prefixed hook signature, such as `vs:OFFSET_POSITION(inout vec4 position)`.
-
-##### options?[​](#options "Direct link to options?")
-
-[`ShaderHookOptions`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderHookOptions.md)
-
-Optional hook metadata such as always-on header and footer source.
+Shared stage and name with language-specific parameters, return type, and source.
 
 #### Returns[​](#returns-3 "Direct link to Returns")
 
@@ -163,13 +157,13 @@ Remove the compiler for one input language.
 
 ***
 
-### resetShaderHooks()[​](#resetshaderhooks "Direct link to resetShaderHooks()")
+### resetShaderInjectionTargets()[​](#resetshaderinjectiontargets "Direct link to resetShaderInjectionTargets()")
 
-> **resetShaderHooks**(): `void`
+> **resetShaderInjectionTargets**(): `void`
 
-Defined in: [lib/shader-assembler-base.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembler-base.ts#L137)
+Defined in: [lib/shader-assembler-base.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembler-base.ts#L136)
 
-Remove all registered shader hooks, for example before re-registering hooks for a new application configuration. Default modules are not affected.
+Remove all registered shader injection targets, for example before re-registering targets for a new application configuration. Default modules are not affected.
 
 #### Returns[​](#returns-7 "Direct link to Returns")
 

@@ -76,7 +76,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 | Property               | Type                                  | Default        | Description                                                                                                   |
 | ---------------------- | ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
 | `framebuffer?`         | `Framebuffer \| null`                 | `null`         | Render target that receives the output of the pass. When omitted, the default canvas framebuffer is used.     |
-| `parameters?`          | `RenderPassParameters`                | `undefined`    | Mutable pipeline parameters such as viewport, scissor rectangle, blend constant and stencil reference.        |
+| `parameters?`          | `RenderPassParameters`                | `undefined`    | Dynamic render-pass parameters such as viewport, scissor rectangle, blend constant and stencil reference.     |
 | `clearColor?`          | `NumberArray4 \| TypedArray \| false` | `[0, 0, 0, 1]` | Color used to clear the default color attachment. Set to `false` to preserve the previous value.              |
 | `clearColors?`         | `(TypedArray \| false)[]`             | `undefined`    | Per-attachment clear values for multiple color attachments. Takes precedence over `clearColor` when provided. |
 | `clearDepth?`          | `number \| false`                     | `1`            | Depth value used when clearing the depth attachment. Set to `false` to preserve the previous depth.           |
@@ -160,3 +160,11 @@ Removes a debug group (implementation dependent).
 ### `insertDebugMarker(markerLabel: string): void`[​](#insertdebugmarkermarkerlabel-string-void "Direct link to insertdebugmarkermarkerlabel-string-void")
 
 Adds a debug marker (implementation dependent).
+
+### `getParameters(): RenderPassParameters`[​](#getparameters-renderpassparameters "Direct link to getparameters-renderpassparameters")
+
+Returns a detached snapshot of the current viewport (including depth range), scissor rectangle, blend constant and stencil reference. Mutating returned arrays does not change the pass. Restore a snapshot with `setParameters(snapshot)`.
+
+WebGPU reports values tracked through luma's pass API; native encoder calls bypass that tracking. WebGL reads the current context state. Its `WebGLRenderPassParameters` snapshot also includes `scissorTest` and `stencilBackReference`, preserving disabled scissor bounds and independent front/back stencil references when passed back to `setParameters`. Keep these fields when restoring a snapshot. Setting `scissorRect` to null disables scissoring on WebGL and resets the rectangle to the full attachment extent on WebGPU. Render bundle encoders reject snapshots because dynamic parameters belong to their executing render pass.
+
+Use `Model.draw(renderPass, {parameters})` for temporary overrides that are restored automatically, including when a draw throws.

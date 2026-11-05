@@ -2,7 +2,7 @@
 
 > **GPUVectorModelProps** = `Omit`<`RenderPipelineProps`, `"vs"` | `"fs"` | `"bindings"`> & `object`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L113)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L128)
 
 ## Type Declaration[​](#type-declaration "Direct link to Type Declaration")
 
@@ -46,6 +46,12 @@ Shader boolean or numeric preprocessor defines that configure shader code.
 
 Some applications intentionally supply unused attributes and bindings, and want to disable warnings
 
+### enforceMatchingVectorLengths?[​](#enforcematchingvectorlengths "Direct link to enforceMatchingVectorLengths?")
+
+> `optional` **enforceMatchingVectorLengths?**: `boolean`
+
+Require aligned lengths and chunks. False requires inferDrawCount: 'no' and single chunks.
+
 ### firstIndex?[​](#firstindex "Direct link to firstIndex?")
 
 > `optional` **firstIndex?**: `number`
@@ -68,12 +74,6 @@ First vertex byte offset for WebGL indexed draws or first vertex for non-indexed
 
 GPU-only mesh inputs, indices, and topology.
 
-### gpuVectorCount?[​](#gpuvectorcount "Direct link to gpuVectorCount?")
-
-> `optional` **gpuVectorCount?**: [`GPUVectorModelCount`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GPUVectorModelCount.md)
-
-Draw count updated from each vector batch. Defaults to `instance`.
-
 ### indexBuffer?[​](#indexbuffer "Direct link to indexBuffer?")
 
 > `optional` **indexBuffer?**: `ModelBuffer` | `null`
@@ -85,6 +85,18 @@ Optional index buffer. Dynamic buffers are rebound when resized.
 > `optional` **indexCount?**: `number`
 
 Optional indexed draw count. Defaults to vertexCount, then the full bound index buffer length.
+
+### inferDrawCount?[​](#inferdrawcount "Direct link to inferDrawCount?")
+
+> `optional` **inferDrawCount?**: `"instance"` | `"vertex"` | `"no"`
+
+Count inferred from vector rows or each explicit batch. `no` preserves both counts.
+
+#### Default[​](#default "Direct link to Default")
+
+```
+'no'
+```
 
 ### instanceCount?[​](#instancecount "Direct link to instanceCount?")
 

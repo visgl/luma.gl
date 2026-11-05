@@ -350,7 +350,7 @@ console.log(scenegraphs.gltfNodeIndexToNodeMap.get(3)?.display);
 console.log(scenegraphs.lights === originalLights); // true
 ```
 
-Changing `node.display` directly affects generic scenegraph traversal, but does not automatically refresh a previously parsed punctual-light array. The glTF animation controller handles that refresh for source-authored visibility channels.
+The importer resolves punctual lights to scenegraph node paths. The controller reads the live transforms and visibility on those paths. After changing a node programmatically, call `scenegraphs.punctualLights.update()` to refresh the same light array. A programmatically constructed scene can use `PunctualLightController` with its own node paths and light definitions.
 
 ## Typed animation pointers[​](#typed-animation-pointers "Direct link to Typed animation pointers")
 
@@ -559,6 +559,40 @@ The core ANARI package does not import glTF. Its optional glTF adapter imports t
 * Material variants do not construct a new shader feature layout when the alternate material adds previously absent texture bindings.
 * Custom `_NAME` instance accessors remain available without being automatically bound to a custom shader.
 * Standalone glTF scenegraphs do not own an opaque-scene capture pass; true transmitted scene-color refraction is provided by the shared experimental renderer and ANARI facade.
-* Generic `extras`, unsupported vendor metadata, automatic image-based-light extension ingestion, and video-texture extensions are not silently presented as supported required features.
+* Generic `extras`, vendor metadata outside the explicitly exposed entries, automatic image-based-light extension ingestion, and video-texture extensions are not silently presented as supported required features.
 
 For the complete extension-by-extension capability matrix, see [glTF extension support](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md).
+
+### Node selection and hover flags[​](#node-selection-and-hover-flags "Direct link to Node selection and hover flags")
+
+The glTF importer populates the generic scenegraph node `selectable` and `hoverable` properties from `KHR_node_selectability` and `KHR_node_hoverability`, defaulting each to true. An ancestor's false value disables its entire subtree without modifying descendants' local values. Use `isScenegraphInteractionEnabled(path, kind)` to check a root-to-hit instance path or `getFirstScenegraphInteractionHit(hits, kind)` to skip ineligible hits in nearest-first order. Visibility does not affect these flags. STEP animation pointers can change them at runtime. `ScenegraphInteractionManager` also bubbles selection events and tracks per-controller hover entry and exit across ancestor paths. Call `updateHover` again after a pointer, camera, geometry, or flag changes so the host can supply updated hits.
+
+The caller supplies hit testing and instance paths. Interactivity graph event propagation and hover lifecycle are not yet integrated; strict required-extension support remains disabled.
+
+### XMP metadata[​](#xmp-metadata "Direct link to XMP metadata")
+
+`scenegraphs.metadata.get(category, index)` returns the authored `KHR_xmp_json_ld` packet for `asset`, `scene`, `node`, `mesh`, `material`, `image`, or `animation`. The asset index defaults to zero. Packets and their JSON-LD context are retained as supplied; no remote namespace URLs are fetched. Shared packet references return the same object. Scene and node objects and material instances also expose their packet in `metadata.xmp`; mesh group nodes do the same. Invalid packet indices fail before GPU allocation.
+
+### Scene geometry metadata[​](#scene-geometry-metadata "Direct link to Scene geometry metadata")
+
+`FB_geometry_metadata` is exposed on the corresponding scene root as `scene.metadata['fb:geometry']`. Its authored counts and bounds describe static source geometry. `scenegraphs.sceneBounds` is a load-time snapshot. Call `scene.getBounds()` for current bounds after changing scene transforms.
+
+```
+const result = createScenegraphsFromGLTF(device, gltf);
+
+const scene = result.scenes[0];
+
+const assetXMP = result.metadata.get('asset');
+
+const sceneXMP = scene.metadata.xmp;
+
+const geometrySummary = scene.metadata['fb:geometry'];
+
+// A source node or material can also have its own XMP packet.
+
+const nodeXMP = result.gltfNodeIndexToNodeMap.get(0)?.metadata.xmp;
+
+const materialXMP = result.materials[0]?.metadata.xmp;
+```
+
+The XMP packet is the authored JSON object, including namespace context and nested properties; no JSON-LD expansion or interpretation of arbitrary vocabularies is performed. `FB_geometry_metadata` is a vendor draft and this integration exposes its authored data, rather than computing or verifying its counts and bounds.

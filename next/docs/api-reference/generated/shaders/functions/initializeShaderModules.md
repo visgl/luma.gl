@@ -2,7 +2,7 @@
 
 > **initializeShaderModules**(`modules`): `void`
 
-Defined in: [lib/shader-module/shader-module.ts:115](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L115)
+Defined in: [lib/shader-module/shader-module.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L113)
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 

@@ -40,7 +40,7 @@ Defined in: [modules/engine/src/models/billboard-texture-model.ts:92](https://gi
 
 > **\_attributeInfos**: `Record`<`string`, `AttributeInfo`> = `{}`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:341](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L341)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:362](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L362)
 
 #### Inherited from[​](#inherited-from "Direct link to Inherited from")
 
@@ -64,7 +64,7 @@ Defined in: [modules/engine/src/model/model.ts:35](https://github.com/visgl/luma
 
 > **\_lastDrawTimestamp**: `number` = `-1`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:368](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L368)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:389](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L389)
 
 "Time" of last draw. Monotonically increasing timestamp
 
@@ -78,7 +78,7 @@ Defined in: [modules/engine/src/model/gpu-vector-model.ts:368](https://github.co
 
 > **\_lastLogTime**: `number` = `0`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1641](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1641)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1717](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1717)
 
 Throttle draw call logging
 
@@ -92,7 +92,7 @@ Throttle draw call logging
 
 > **\_logOpen**: `boolean` = `false`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1642](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1642)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1718](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1718)
 
 #### Inherited from[​](#inherited-from-4 "Direct link to Inherited from")
 
@@ -104,7 +104,7 @@ Defined in: [modules/engine/src/model/gpu-vector-model.ts:1642](https://github.c
 
 > **\_pipelineNeedsUpdate**: `string` | `false` = `'newly created'`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:361](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L361)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:382](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L382)
 
 #### Inherited from[​](#inherited-from-5 "Direct link to Inherited from")
 
@@ -116,7 +116,7 @@ Defined in: [modules/engine/src/model/gpu-vector-model.ts:361](https://github.co
 
 > **\_uniformStore**: `UniformStore`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:339](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L339)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:360](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L360)
 
 #### Inherited from[​](#inherited-from-6 "Direct link to Inherited from")
 
@@ -136,7 +136,7 @@ Defined in: [modules/engine/src/models/billboard-texture-model.ts:89](https://gi
 
 > **bindings**: `Record`<`string`, `ModelBinding`> = `{}`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:320](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L320)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:341](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L341)
 
 Bindings (textures, samplers, uniform buffers)
 
@@ -150,7 +150,7 @@ Bindings (textures, samplers, uniform buffers)
 
 > **bufferAttributes**: `Record`<`string`, `Buffer`> = `{}`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:316](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L316)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:337](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L337)
 
 Buffer-valued attributes
 
@@ -164,7 +164,7 @@ Buffer-valued attributes
 
 > **bufferLayout**: `BufferLayout`\[]
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:296](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L296)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:317](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L317)
 
 Buffer layout
 
@@ -178,7 +178,7 @@ Buffer layout
 
 > **constantAttributes**: `Record`<`string`, `TypedArray`> = `{}`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:318](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L318)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:339](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L339)
 
 Constant-valued attributes
 
@@ -192,7 +192,7 @@ Constant-valued attributes
 
 > `readonly` **device**: `Device`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:269](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L269)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:290](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L290)
 
 Device that created this model
 
@@ -206,7 +206,7 @@ Device that created this model
 
 > **firstIndex**: `number`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:311](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L311)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:332](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L332)
 
 First index element for WebGPU indexed draws.
 
@@ -220,7 +220,7 @@ First index element for WebGPU indexed draws.
 
 > **firstVertex**: `number`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:309](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L309)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:330](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L330)
 
 First vertex byte offset for WebGL indexed draws or first vertex for non-indexed draws.
 
@@ -242,7 +242,7 @@ Defined in: [modules/engine/src/models/billboard-texture-model.ts:90](https://gi
 
 > `readonly` **fs**: `string`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:280](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L280)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:301](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L301)
 
 GLSL fragment shader source
 
@@ -256,7 +256,7 @@ GLSL fragment shader source
 
 > `readonly` **id**: `string`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:271](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L271)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:292](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L292)
 
 Application provided identifier
 
@@ -270,7 +270,7 @@ Application provided identifier
 
 > **indexBuffer**: `Buffer` | `null` = `null`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:314](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L314)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:335](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L335)
 
 Index buffer
 
@@ -284,7 +284,7 @@ Index buffer
 
 > **indexCount**: `number` | `undefined`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:307](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L307)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:328](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L328)
 
 Indexed draw count override. Undefined uses vertexCount, then the full bound index buffer.
 
@@ -298,7 +298,7 @@ Indexed draw count override. Undefined uses vertexCount, then the full bound ind
 
 > **instanceCount**: `number` = `0`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:303](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L303)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:324](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L324)
 
 instance count. `undefined` means not instanced
 
@@ -312,7 +312,7 @@ instance count. `undefined` means not instanced
 
 > **isInstanced**: `boolean` | `undefined` = `undefined`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:301](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L301)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:322](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L322)
 
 Use instanced rendering
 
@@ -338,7 +338,7 @@ Defined in: [modules/engine/src/model/model.ts:34](https://github.com/visgl/luma
 
 > **parameters**: `RenderPipelineParameters`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:291](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L291)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:312](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L312)
 
 The render pipeline GPU parameters, depth testing etc
 
@@ -352,7 +352,7 @@ The render pipeline GPU parameters, depth testing etc
 
 > **pipeline**: `RenderPipeline`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:333](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L333)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:354](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L354)
 
 The underlying GPU "program".
 
@@ -370,7 +370,7 @@ May be recreated if parameters change
 
 > `readonly` **pipelineFactory**: `PipelineFactory`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:282](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L282)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:303](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L303)
 
 Factory used to create render pipelines
 
@@ -384,7 +384,7 @@ Factory used to create render pipelines
 
 > `readonly` **shaderFactory**: `ShaderFactory`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:284](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L284)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:305](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L305)
 
 Factory used to create shaders
 
@@ -398,7 +398,7 @@ Factory used to create shaders
 
 > **shaderInputs**: [`ShaderInputs`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderInputs.md)
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:337](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L337)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:358](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L358)
 
 ShaderInputs instance
 
@@ -412,7 +412,7 @@ ShaderInputs instance
 
 > `readonly` **source**: `string`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:274](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L274)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:295](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L295)
 
 WGSL shader source when using unified shader
 
@@ -426,7 +426,7 @@ WGSL shader source when using unified shader
 
 > **topology**: `PrimitiveTopology`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:294](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L294)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:315](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L315)
 
 The primitive topology
 
@@ -440,7 +440,7 @@ The primitive topology
 
 > **transformFeedback**: `TransformFeedback` | `null` = `null`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:330](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L330)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:351](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L351)
 
 TransformFeedback, WebGL 2 only.
 
@@ -454,7 +454,7 @@ TransformFeedback, WebGL 2 only.
 
 > **userData**: `object` = `{}`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:286](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L286)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:307](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L307)
 
 User-supplied per-model data
 
@@ -472,7 +472,7 @@ User-supplied per-model data
 
 > **vertexArray**: `VertexArray`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:327](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L327)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:348](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L348)
 
 VertexArray
 
@@ -494,7 +494,7 @@ not implemented: if bufferLayout is updated, vertex array has to be rebuilt!
 
 > **vertexCount**: `number`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:305](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L305)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:326](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L326)
 
 Vertex count
 
@@ -508,7 +508,7 @@ Vertex count
 
 > `readonly` **vs**: `string`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:277](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L277)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:298](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L298)
 
 GLSL vertex shader source
 
@@ -542,7 +542,7 @@ Defined in: [modules/engine/src/model/model.ts:29](https://github.com/visgl/luma
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:372](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L372)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:393](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L393)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -596,7 +596,7 @@ Check that bindings are loaded. Returns id of first binding that is still loadin
 
 > **\_getAttributeDebugTable**(): `Record`<`string`, `Record`<`string`, `unknown`>>
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1693](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1693)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1769](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1769)
 
 #### Returns[​](#returns-4 "Direct link to Returns")
 
@@ -660,7 +660,7 @@ GPUVectorModel bindings already resolved for this draw preparation.
 
 > **\_getBindings**(`shaderLayout?`): `Record`<`string`, `Binding`>
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1448](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1448)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1524](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1524)
 
 Resolves ready model bindings for the current shader layout.
 
@@ -704,7 +704,7 @@ Get the timestamp of the latest updated bound GPU memory resource (buffer/textur
 
 > **\_getBufferOrConstantValues**(`attribute`, `dataType`): `string`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1721](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1721)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1797](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1797)
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
@@ -730,7 +730,7 @@ Defined in: [modules/engine/src/model/gpu-vector-model.ts:1721](https://github.c
 
 > **\_logDrawCallEnd**(): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1657](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1657)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1733](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1733)
 
 #### Returns[​](#returns-10 "Direct link to Returns")
 
@@ -746,7 +746,7 @@ Defined in: [modules/engine/src/model/gpu-vector-model.ts:1657](https://github.c
 
 > **\_logDrawCallStart**(): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1644](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1644)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1720](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1720)
 
 #### Returns[​](#returns-11 "Direct link to Returns")
 
@@ -762,7 +762,7 @@ Defined in: [modules/engine/src/model/gpu-vector-model.ts:1644](https://github.c
 
 > **\_logFramebuffer**(`renderPass`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1678](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1678)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1754](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1754)
 
 #### Parameters[​](#parameters-5 "Direct link to Parameters")
 
@@ -784,7 +784,7 @@ Defined in: [modules/engine/src/model/gpu-vector-model.ts:1678](https://github.c
 
 > **\_setPipelineNeedsUpdate**(`reason`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1519](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1519)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1595](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1595)
 
 Mark pipeline as needing update
 
@@ -808,7 +808,7 @@ Mark pipeline as needing update
 
 > **\_updatePipeline**(): `RenderPipeline`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1526](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1526)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1602](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1602)
 
 Update pipeline if needed
 
@@ -826,7 +826,7 @@ Update pipeline if needed
 
 > **\_updatePipelineAsync**(): `Promise`<`RenderPipeline`>
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1542](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1542)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1618](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1618)
 
 Creates or replaces the render pipeline through the backend's asynchronous compilation path.
 
@@ -858,9 +858,9 @@ Defined in: [modules/engine/src/model/model.ts:82](https://github.com/visgl/luma
 
 ### draw()[​](#draw "Direct link to draw()")
 
-> **draw**(`renderPass`): `boolean`
+> **draw**(`renderPass`, `options?`): `boolean`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:664](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L664)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:686](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L686)
 
 Issue one draw call.
 
@@ -871,6 +871,12 @@ Issue one draw call.
 `RenderPass`
 
 render pass to draw into
+
+##### options?[​](#options "Direct link to options?")
+
+[`ModelDrawOptions`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ModelDrawOptions.md)
+
+Optional dynamic parameters restored after drawing, including on errors.
 
 #### Returns[​](#returns-17 "Direct link to Returns")
 
@@ -888,7 +894,7 @@ render pass to draw into
 
 > **drawBatches**<`Inputs`>(`renderPass`, `__namedParameters`): `boolean`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1022](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1022)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1082](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1082)
 
 Draws each aligned physical chunk without taking ownership of input vectors. Each batch uses a separate aligned slot for managed shader-input uniforms set by `onBatch`. Slots are reused on each call: submit previous draws before changing their values or growing the allocation. Explicit buffers remain caller-managed. Vector lengths and physical chunk boundaries must match.
 
@@ -922,7 +928,7 @@ Draws each aligned physical chunk without taking ownership of input vectors. Eac
 
 > **getBindingDebugTable**(): readonly `ShaderBindingDebugRow`\[]
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:641](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L641)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:662](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L662)
 
 Returns WGSL binding debug rows for the assembled shader. Returns an empty array for GLSL models.
 
@@ -940,7 +946,7 @@ readonly `ShaderBindingDebugRow`\[]
 
 > **needsRedraw**(): `string` | `false`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:625](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L625)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:646](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L646)
 
 Query redraw status. Clears the status.
 
@@ -984,7 +990,7 @@ Encoder that should own any GPU uploads emitted during draw preparation.
 
 > **setAttributes**(`buffers`, `options?`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1329](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1329)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1405](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1405)
 
 Sets attributes (buffers)
 
@@ -994,7 +1000,7 @@ Sets attributes (buffers)
 
 `Record`<`string`, `ModelBuffer`>
 
-##### options?[​](#options "Direct link to options?")
+##### options?[​](#options-1 "Direct link to options?")
 
 ###### byteOffsets?[​](#byteoffsets "Direct link to byteOffsets?")
 
@@ -1024,7 +1030,7 @@ Overrides any attributes previously set with the same name
 
 > **setAttributeVectors**(`vectors`, `bufferLayouts?`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:822](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L822)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:876](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L876)
 
 Replaces supplemental vectors; instanced models default these inputs to instance step mode.
 
@@ -1052,7 +1058,7 @@ Replaces supplemental vectors; instanced models default these inputs to instance
 
 > **setBindings**(`bindings`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1288](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1288)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1364](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1364)
 
 Sets bindings (textures, samplers, uniform buffers)
 
@@ -1076,7 +1082,7 @@ Sets bindings (textures, samplers, uniform buffers)
 
 > **setBufferLayout**(`bufferLayout`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1143](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1143)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1210](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1210)
 
 Updates the buffer layout.
 
@@ -1104,7 +1110,7 @@ Triggers a pipeline rebuild / pipeline cache fetch
 
 > **setConstantAttributes**(`attributes`, `options?`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1415](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1415)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1491](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1491)
 
 Sets constant attributes
 
@@ -1114,7 +1120,7 @@ Sets constant attributes
 
 `Record`<`string`, `TypedArray`>
 
-##### options?[​](#options-1 "Direct link to options?")
+##### options?[​](#options-2 "Direct link to options?")
 
 ###### disableWarnings?[​](#disablewarnings-1 "Direct link to disableWarnings?")
 
@@ -1138,7 +1144,7 @@ Overrides any attributes previously set with the same name Constant attributes a
 
 > **setDrawOffsets**(`__namedParameters`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1245](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1245)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1321](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1321)
 
 Updates the first indexed/non-indexed draw offsets.
 
@@ -1192,7 +1198,7 @@ Adapts CPU and legacy buffer geometry into the GPU vector geometry API.
 
 > **setGeometryVectors**(`vectors`, `bufferLayouts?`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:799](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L799)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:843](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L843)
 
 Replaces per-vertex mesh vectors while preserving supplemental attributes.
 
@@ -1220,7 +1226,7 @@ Replaces per-vertex mesh vectors while preserving supplemental attributes.
 
 > **setGPUAttributes**(`vectors`, `bufferLayouts`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:870](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L870)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:929](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L929)
 
 Binds typed columns using caller-resolved layouts, including packed groups.
 
@@ -1248,7 +1254,7 @@ Binds typed columns using caller-resolved layouts, including packed groups.
 
 > **setGPUVectors**(`vectors`, `options?`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:983](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L983)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1042](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1042)
 
 Binds contiguous borrowed vectors; use drawBatches() for multi-chunk inputs.
 
@@ -1258,7 +1264,7 @@ Binds contiguous borrowed vectors; use drawBatches() for multi-chunk inputs.
 
 [`GPUVectorModelInputs`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GPUVectorModelInputs.md)
 
-##### options?[​](#options-2 "Direct link to options?")
+##### options?[​](#options-3 "Direct link to options?")
 
 ###### count?[​](#count "Direct link to count?")
 
@@ -1278,7 +1284,7 @@ Binds contiguous borrowed vectors; use drawBatches() for multi-chunk inputs.
 
 > **setIndexBuffer**(`indexBuffer`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1305](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1305)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1381](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1381)
 
 Sets the index buffer
 
@@ -1330,7 +1336,7 @@ Updates the indexed draw count override.
 
 > **setIndexVector**(`vector`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:875](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L875)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:934](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L934)
 
 Replaces the borrowed contiguous uint16/uint32 index vector.
 
@@ -1354,7 +1360,7 @@ Replaces the borrowed contiguous uint16/uint32 index vector.
 
 > **setInstanceCount**(`instanceCount`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1218](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1218)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1294](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1294)
 
 Updates the instance count (used in draw calls)
 
@@ -1404,7 +1410,7 @@ Defined in: [modules/engine/src/model/model.ts:109](https://github.com/visgl/lum
 
 > **setNeedsRedraw**(`reason`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:636](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L636)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:657](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L657)
 
 Mark the model as needing a redraw
 
@@ -1428,7 +1434,7 @@ Mark the model as needing a redraw
 
 > **setParameters**(`parameters`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1201](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1201)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1277](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1277)
 
 Set GPU parameters.
 
@@ -1476,7 +1482,7 @@ Update the background texture
 
 > **setShaderInputs**(`shaderInputs`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1252](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1252)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1328](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1328)
 
 Set the shader inputs
 
@@ -1500,7 +1506,7 @@ Set the shader inputs
 
 > **setTopology**(`topology`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1132](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1132)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1199](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1199)
 
 Updates the primitive topology ('triangle-list', 'triangle-strip' etc).
 
@@ -1528,7 +1534,7 @@ Triggers a pipeline rebuild / pipeline cache fetch on WebGPU
 
 > **setTransformFeedback**(`transformFeedback`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1296](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1296)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1372](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1372)
 
 Updates optional transform feedback. WebGL only.
 
@@ -1552,7 +1558,7 @@ Updates optional transform feedback. WebGL only.
 
 > **setVertexCount**(`vertexCount`): `void`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:1232](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1232)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:1308](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L1308)
 
 Updates the vertex count (used in draw calls)
 
@@ -1580,7 +1586,7 @@ Any attributes with stepMode=vertex need to be at least this big
 
 > **toString**(): `string`
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:376](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L376)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:397](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L397)
 
 #### Returns[​](#returns-44 "Direct link to Returns")
 
@@ -1640,7 +1646,7 @@ Optional encoder used to order uniform uploads with subsequent draw commands.
 
 > `static` **createAsync**<`ModelType`, `Props`>(`this`, `device`, `props`): `Promise`<`ModelType`>
 
-Defined in: [modules/engine/src/model/gpu-vector-model.ts:198](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L198)
+Defined in: [modules/engine/src/model/gpu-vector-model.ts:218](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/gpu-vector-model.ts#L218)
 
 Creates a model while allowing the backend to compile its render pipeline asynchronously.
 

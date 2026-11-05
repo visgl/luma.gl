@@ -2,7 +2,7 @@
 
 > **ShaderPlugin** = `object`
 
-Defined in: [lib/shader-plugin.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L65)
+Defined in: [lib/shader-plugin.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L32)
 
 Reusable shader assembly descriptor with one portable interface and language-specific source.
 
@@ -12,29 +12,29 @@ Reusable shader assembly descriptor with one portable interface and language-spe
 
 > `optional` **defines?**: `Record`<`string`, `boolean` | `number`>
 
-Defined in: [lib/shader-plugin.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L71)
+Defined in: [lib/shader-plugin.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L38)
 
 Boolean or numeric preprocessor defines added to shader assembly.
 
 ***
 
-### hooks?[​](#hooks "Direct link to hooks?")
+### injections?[​](#injections "Direct link to injections?")
 
-> `optional` **hooks?**: ([`ShaderPluginHook`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginHook.md) | `string`)\[]
+> `optional` **injections?**: [`ShaderInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjection.md)\[] | `Record`<`string`, `string`>
 
-Defined in: [lib/shader-plugin.ts:75](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L75)
+Defined in: [lib/shader-plugin.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L40)
 
-Callable extension points as explicit-stage objects or optionally language-qualified signatures.
+Named injections as explicit-stage objects or optionally language-qualified string keys.
 
 ***
 
-### injections?[​](#injections "Direct link to injections?")
+### injectionTargets?[​](#injectiontargets "Direct link to injectionTargets?")
 
-> `optional` **injections?**: [`ShaderPluginInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInjection.md)\[] | `Record`<`string`, `string`>
+> `optional` **injectionTargets?**: [`ShaderInjectionTarget`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjectionTarget.md)\[]
 
-Defined in: [lib/shader-plugin.ts:73](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L73)
+Defined in: [lib/shader-plugin.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L42)
 
-Named injections as explicit-stage objects or optionally language-qualified string keys.
+Callable extension points with a shared name and language-specific source.
 
 ***
 
@@ -42,7 +42,7 @@ Named injections as explicit-stage objects or optionally language-qualified stri
 
 > `optional` **interStageVariables?**: `Record`<`string`, [`ShaderPluginInterStageVariable`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInterStageVariable.md)>
 
-Defined in: [lib/shader-plugin.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L79)
+Defined in: [lib/shader-plugin.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L46)
 
 Values transported from the selected vertex entry point to the fragment entry point.
 
@@ -52,7 +52,7 @@ Values transported from the selected vertex entry point to the fragment entry po
 
 > `optional` **module?**: [`ShaderModule`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderModule.md)<`any`, `any`, `any`>
 
-Defined in: [lib/shader-plugin.ts:69](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L69)
+Defined in: [lib/shader-plugin.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L36)
 
 Primary shader module. Supporting modules belong in its dependencies; omit for injection-only plugins.
 
@@ -62,7 +62,7 @@ Primary shader module. Supporting modules belong in its dependencies; omit for i
 
 > **name**: `string`
 
-Defined in: [lib/shader-plugin.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L67)
+Defined in: [lib/shader-plugin.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L34)
 
 Stable plugin identifier.
 
@@ -72,6 +72,6 @@ Stable plugin identifier.
 
 > `optional` **vertexInputs?**: `Record`<`string`, `AttributeShaderType`>
 
-Defined in: [lib/shader-plugin.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L77)
+Defined in: [lib/shader-plugin.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L44)
 
 Shader-facing vertex inputs added by this plugin. Buffer ownership remains with the caller.

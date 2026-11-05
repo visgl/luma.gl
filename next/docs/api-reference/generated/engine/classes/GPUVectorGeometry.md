@@ -10,7 +10,7 @@ Reusable GPU-only geometry. Input vectors remain caller-owned.
 
 > **new GPUVectorGeometry**(`props`): `GPUVectorGeometry`
 
-Defined in: [modules/engine/src/geometry/gpu-vector-geometry.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/gpu-vector-geometry.ts#L26)
+Defined in: [modules/engine/src/geometry/gpu-vector-geometry.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/gpu-vector-geometry.ts#L29)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -61,3 +61,17 @@ Defined in: [modules/engine/src/geometry/gpu-vector-geometry.ts:22](https://gith
 > `readonly` `optional` **vertexCount?**: `number`
 
 Defined in: [modules/engine/src/geometry/gpu-vector-geometry.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/gpu-vector-geometry.ts#L23)
+
+## Methods[​](#methods "Direct link to Methods")
+
+### destroy()[​](#destroy "Direct link to destroy()")
+
+> **destroy**(): `void`
+
+Defined in: [modules/engine/src/geometry/gpu-vector-geometry.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/gpu-vector-geometry.ts#L27)
+
+Releases resources owned by uploaded geometry; borrowed vectors remain caller-owned.
+
+#### Returns[​](#returns-1 "Direct link to Returns")
+
+`void`

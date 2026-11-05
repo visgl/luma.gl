@@ -2,30 +2,56 @@
 
 > **ShaderInjection** = `object`
 
-Defined in: [lib/shader-assembly/shader-injections.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L23)
+Defined in: [lib/shader-assembly/shader-injections.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L21)
+
+Language-specific source inserted at a named shader target.
 
 ## Properties[​](#properties "Direct link to Properties")
 
-### injection[​](#injection "Direct link to injection")
+### glsl?[​](#glsl "Direct link to glsl?")
 
-> **injection**: `string`
-
-Defined in: [lib/shader-assembly/shader-injections.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L26)
-
-***
-
-### order[​](#order "Direct link to order")
-
-> **order**: `number`
+> `optional` **glsl?**: `string`
 
 Defined in: [lib/shader-assembly/shader-injections.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L27)
 
+GLSL source. Omit to skip this injection for GLSL assembly.
+
 ***
 
-### pluginName?[​](#pluginname "Direct link to pluginName?")
+### order?[​](#order "Direct link to order?")
 
-> `optional` **pluginName?**: `string`
+> `optional` **order?**: `number`
+
+Defined in: [lib/shader-assembly/shader-injections.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L31)
+
+Relative order at the target; defaults to zero.
+
+***
+
+### stage[​](#stage "Direct link to stage")
+
+> **stage**: `"vertex"` | `"fragment"`
+
+Defined in: [lib/shader-assembly/shader-injections.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L23)
+
+Shader stage receiving the injection.
+
+***
+
+### target[​](#target "Direct link to target")
+
+> **target**: `string`
 
 Defined in: [lib/shader-assembly/shader-injections.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L25)
 
-Plugin responsible for this injection, when supplied by a ShaderPlugin.
+Unqualified hook name or built-in target such as #main-start.
+
+***
+
+### wgsl?[​](#wgsl "Direct link to wgsl?")
+
+> `optional` **wgsl?**: `string`
+
+Defined in: [lib/shader-assembly/shader-injections.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/shader-injections.ts#L29)
+
+WGSL source. Omit to skip this injection for WGSL assembly.

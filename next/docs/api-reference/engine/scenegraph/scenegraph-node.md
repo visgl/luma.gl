@@ -27,6 +27,10 @@ export type ScenegraphNodeProps = {
 
   display?: boolean;
 
+  selectable?: boolean;
+
+  hoverable?: boolean;
+
   matrix?: NumericArray;
 
   position?: NumericArray;
@@ -53,6 +57,10 @@ Current model matrix.
 ### `display`[​](#display "Direct link to display")
 
 Display flag stored on the node.
+
+### `selectable`, `hoverable`[​](#selectable-hoverable "Direct link to selectable-hoverable")
+
+Local interaction eligibility flags, both defaulting to `true`. Any false value on a root-to-hit path disables the corresponding action for that subtree. The flags are independent of `display`.
 
 ### `position`, `rotation`, `scale`[​](#position-rotation-scale "Direct link to position-rotation-scale")
 
@@ -115,3 +123,11 @@ Updates individual components and recomputes the matrix.
 ### `getCoordinateUniforms(viewMatrix, modelMatrix?): {...}`[​](#getcoordinateuniformsviewmatrix-modelmatrix- "Direct link to getcoordinateuniformsviewmatrix-modelmatrix-")
 
 Returns derived matrices useful for shaders.
+
+## ScenegraphInteractionManager[​](#scenegraphinteractionmanager "Direct link to ScenegraphInteractionManager")
+
+`ScenegraphInteractionManager` consumes hit paths supplied by the application; it does not perform ray casting or GPU picking. Each hit contains a root-to-target node path, and hits must be ordered nearest first. A picker that returns only one hit must exclude ineligible objects before picking; otherwise it cannot reveal a farther eligible hit. The manager skips paths disabled by ancestor flags and reports bubbled selection and hover entry/exit events. Hover state is tracked separately by controller index.
+
+`select(hits, controllerIndex?)` returns the first eligible hit and emits selection events from target to root. Events retain the original hit, including optional world-space point, ray origin and application data. `updateHover(hits, controllerIndex?)` emits exits and entries only for the parts of the old and new paths outside their shared ancestor prefix. `clearHover(controllerIndex?)` emits exits and clears that controller. Call `updateHover` after changes to the pointer, camera, geometry, or flags, supplying updated hits.
+
+`isScenegraphInteractionEnabled(path, kind)` and `getFirstScenegraphInteractionHit(hits, kind)` are available separately when an application manages its own events.

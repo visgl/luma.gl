@@ -22,7 +22,7 @@ Material owns bind group `3` resources and uniforms for one material instance.
 
 > **new Material**<`TModuleProps`, `TBindings`>(`device`, `props?`): `Material`<`TModuleProps`, `TBindings`>
 
-Defined in: [modules/engine/src/material/material.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L103)
+Defined in: [modules/engine/src/material/material.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L105)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -44,7 +44,7 @@ Defined in: [modules/engine/src/material/material.ts:103](https://github.com/vis
 
 > `readonly` **bindings**: `Record`<`string`, `MaterialBinding`> = `{}`
 
-Defined in: [modules/engine/src/material/material.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L97)
+Defined in: [modules/engine/src/material/material.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L99)
 
 Internal binding store including uniform buffers and resource bindings.
 
@@ -54,7 +54,7 @@ Internal binding store including uniform buffers and resource bindings.
 
 > `readonly` **device**: `Device`
 
-Defined in: [modules/engine/src/material/material.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L91)
+Defined in: [modules/engine/src/material/material.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L93)
 
 Device that owns the material resources.
 
@@ -64,7 +64,7 @@ Device that owns the material resources.
 
 > `readonly` **factory**: [`MaterialFactory`](https://luma.gl/next/docs/api-reference/generated/engine/classes/MaterialFactory.md)<`TModuleProps`, `TBindings`>
 
-Defined in: [modules/engine/src/material/material.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L93)
+Defined in: [modules/engine/src/material/material.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L95)
 
 Factory that defines the material schema.
 
@@ -80,11 +80,21 @@ Application-provided identifier.
 
 ***
 
+### metadata[​](#metadata "Direct link to metadata")
+
+> **metadata**: `Record`<`string`, `unknown`> = `{}`
+
+Defined in: [modules/engine/src/material/material.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L91)
+
+Structured metadata associated with this material.
+
+***
+
 ### shaderInputs[​](#shaderinputs "Direct link to shaderInputs")
 
 > `readonly` **shaderInputs**: [`ShaderInputs`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderInputs.md)<`TModuleProps`>
 
-Defined in: [modules/engine/src/material/material.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L95)
+Defined in: [modules/engine/src/material/material.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L97)
 
 Shader inputs for the material-owned modules.
 
@@ -94,7 +104,7 @@ Shader inputs for the material-owned modules.
 
 > **clone**(`props?`): `Material`<`TModuleProps`, `TBindings`>
 
-Defined in: [modules/engine/src/material/material.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L141)
+Defined in: [modules/engine/src/material/material.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L143)
 
 Creates a new material variant with optional structural and uniform overrides.
 
@@ -114,7 +124,7 @@ Creates a new material variant with optional structural and uniform overrides.
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/material/material.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L136)
+Defined in: [modules/engine/src/material/material.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L138)
 
 Destroys managed uniform-buffer resources owned by this material.
 
@@ -128,7 +138,7 @@ Destroys managed uniform-buffer resources owned by this material.
 
 > **getBindGroupCacheKey**(`group`): `object` | `null`
 
-Defined in: [modules/engine/src/material/material.ts:248](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L248)
+Defined in: [modules/engine/src/material/material.ts:251](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L251)
 
 Returns the stable bind-group cache token for the requested bind group.
 
@@ -148,7 +158,7 @@ Returns the stable bind-group cache token for the requested bind group.
 
 > **getBindings**(`shaderLayout?`): `Partial`<{ \[K in string | number | symbol]: Binding }> & `Record`<`string`, `Binding`>
 
-Defined in: [modules/engine/src/material/material.ts:209](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L209)
+Defined in: [modules/engine/src/material/material.ts:212](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L212)
 
 Returns resolved bindings, including internal uniform buffers and ready texture sources.
 
@@ -170,7 +180,7 @@ Reflected bindings used to select copied or external texture resolution.
 
 > **getBindingsByGroup**(`shaderLayout?`): `BindingsByGroup`
 
-Defined in: [modules/engine/src/material/material.ts:243](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L243)
+Defined in: [modules/engine/src/material/material.ts:246](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L246)
 
 Packages resolved material bindings into logical bind group `3`.
 
@@ -192,7 +202,7 @@ Reflected bindings used to select copied or external texture resolution.
 
 > **getBindingsUpdateTimestamp**(): `number`
 
-Defined in: [modules/engine/src/material/material.ts:254](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L254)
+Defined in: [modules/engine/src/material/material.ts:257](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L257)
 
 Returns the latest update timestamp across material-owned resources.
 
@@ -206,7 +216,7 @@ Returns the latest update timestamp across material-owned resources.
 
 > **getResourceBindings**(): `Partial`<`TBindings`>
 
-Defined in: [modules/engine/src/material/material.ts:193](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L193)
+Defined in: [modules/engine/src/material/material.ts:196](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L196)
 
 Returns the material-owned resource bindings without internal uniform buffers.
 
@@ -220,7 +230,7 @@ Returns the material-owned resource bindings without internal uniform buffers.
 
 > **ownsBinding**(`bindingName`): `boolean`
 
-Defined in: [modules/engine/src/material/material.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L164)
+Defined in: [modules/engine/src/material/material.ts:167](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L167)
 
 Returns `true` if this material owns the supplied binding name.
 
@@ -240,7 +250,7 @@ Returns `true` if this material owns the supplied binding name.
 
 > **ownsModule**(`moduleName`): `boolean`
 
-Defined in: [modules/engine/src/material/material.ts:169](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L169)
+Defined in: [modules/engine/src/material/material.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L172)
 
 Returns `true` if this material owns the supplied shader module.
 
@@ -260,7 +270,7 @@ Returns `true` if this material owns the supplied shader module.
 
 > **setProps**(`props`): `void`
 
-Defined in: [modules/engine/src/material/material.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L174)
+Defined in: [modules/engine/src/material/material.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L177)
 
 Updates material uniform/module props in place without changing material identity.
 
@@ -280,7 +290,7 @@ Updates material uniform/module props in place without changing material identit
 
 > **updateShaderInputs**(`commandEncoder?`): `void`
 
-Defined in: [modules/engine/src/material/material.ts:184](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L184)
+Defined in: [modules/engine/src/material/material.ts:187](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/material/material.ts#L187)
 
 Updates managed uniform buffers and shader-input-owned bindings.
 

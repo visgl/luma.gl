@@ -2,7 +2,7 @@
 
 > **getShaderModuleUniforms**<`ShaderModuleT`>(`module`, `props?`, `oldUniforms?`): `Record`<`string`, `Binding` | [`ShaderModuleUniformValue`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderModuleUniformValue.md)>
 
-Defined in: [lib/shader-module/shader-module.ts:169](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L169)
+Defined in: [lib/shader-module/shader-module.ts:162](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L162)
 
 Convert module props to uniforms
 

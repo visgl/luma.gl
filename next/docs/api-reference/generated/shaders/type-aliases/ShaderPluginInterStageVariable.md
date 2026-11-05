@@ -2,7 +2,7 @@
 
 > **ShaderPluginInterStageVariable** = `object`
 
-Defined in: [lib/shader-plugin.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L51)
+Defined in: [lib/shader-plugin.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L18)
 
 Cross-stage value contributed by a ShaderPlugin.
 
@@ -12,7 +12,7 @@ Cross-stage value contributed by a ShaderPlugin.
 
 > `optional` **interpolation?**: [`ShaderPluginInterStageVariableInterpolation`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInterStageVariableInterpolation.md)
 
-Defined in: [lib/shader-plugin.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L55)
+Defined in: [lib/shader-plugin.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L22)
 
 Defaults to smooth for floating-point types and flat for integer types.
 
@@ -22,6 +22,6 @@ Defaults to smooth for floating-point types and flat for integer types.
 
 > **type**: `AttributeShaderType`
 
-Defined in: [lib/shader-plugin.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L53)
+Defined in: [lib/shader-plugin.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L20)
 
 Portable scalar or vector shader type.

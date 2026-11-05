@@ -1,6 +1,6 @@
 # Class: ScenegraphNode
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L26)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L30)
 
 ## Extended by[​](#extended-by "Direct link to Extended by")
 
@@ -14,7 +14,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:26](https://github
 
 > **new ScenegraphNode**(`props?`): `ScenegraphNode`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L38)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L48)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -32,7 +32,17 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:38](https://github
 
 > **display**: `boolean` = `true`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L30)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L34)
+
+***
+
+### hoverable[​](#hoverable "Direct link to hoverable")
+
+> **hoverable**: `boolean` = `true`
+
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L38)
+
+Local hover eligibility, independent of visibility.
 
 ***
 
@@ -40,7 +50,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:30](https://github
 
 > `readonly` **id**: `string`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L27)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L31)
 
 ***
 
@@ -48,7 +58,17 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:27](https://github
 
 > **matrix**: `Matrix4`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L28)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L32)
+
+***
+
+### metadata[​](#metadata "Direct link to metadata")
+
+> **metadata**: `Record`<`string`, `unknown`> = `{}`
+
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L43)
+
+Structured metadata associated with this scene node.
 
 ***
 
@@ -56,7 +76,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:28](https://github
 
 > **position**: `Vector3`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L31)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L39)
 
 ***
 
@@ -64,7 +84,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:31](https://github
 
 > **props**: `ScenegraphNodeProps` = `{}`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L36)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L46)
 
 ***
 
@@ -72,7 +92,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:36](https://github
 
 > **rotation**: `Vector3`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L32)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L40)
 
 ***
 
@@ -80,7 +100,17 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:32](https://github
 
 > **scale**: `Vector3`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L33)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L41)
+
+***
+
+### selectable[​](#selectable "Direct link to selectable")
+
+> **selectable**: `boolean` = `true`
+
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L36)
+
+Local selection eligibility, independent of visibility.
 
 ***
 
@@ -88,7 +118,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:33](https://github
 
 > **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L34)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L44)
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -96,7 +126,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:34](https://github
 
 > **\_setScenegraphNodeProps**(`props`): `void`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:195](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L195)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:205](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L205)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 
@@ -114,7 +144,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:195](https://githu
 
 > **delete**(): `void`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L53)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L63)
 
 #### Returns[​](#returns-2 "Direct link to Returns")
 
@@ -130,7 +160,7 @@ use .destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L50)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L60)
 
 #### Returns[​](#returns-3 "Direct link to Returns")
 
@@ -142,7 +172,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:50](https://github
 
 > **getBounds**(): \[`number`\[], `number`\[]] | `null`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L46)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L56)
 
 #### Returns[​](#returns-4 "Direct link to Returns")
 
@@ -154,7 +184,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:46](https://github
 
 > **getCoordinateUniforms**(`viewMatrix`, `modelMatrix?`): `object`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L143)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L153)
 
 #### Parameters[​](#parameters-2 "Direct link to Parameters")
 
@@ -200,7 +230,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:143](https://githu
 
 > **setMatrix**(`matrix`, `copyMatrix?`): `void`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L83)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L93)
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
@@ -222,7 +252,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:83](https://github
 
 > **setMatrixComponents**(`components`): `this`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L91)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L101)
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
@@ -254,7 +284,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:91](https://github
 
 > **setPosition**(`position`): `this`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L65)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:75](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L75)
 
 #### Parameters[​](#parameters-5 "Direct link to Parameters")
 
@@ -272,7 +302,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:65](https://github
 
 > **setProps**(`props`): `this`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L56)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L66)
 
 #### Parameters[​](#parameters-6 "Direct link to Parameters")
 
@@ -290,7 +320,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:56](https://github
 
 > **setRotation**(`rotation`): `this`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L71)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L81)
 
 #### Parameters[​](#parameters-7 "Direct link to Parameters")
 
@@ -308,7 +338,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:71](https://github
 
 > **setScale**(`scale`): `this`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L77)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L87)
 
 #### Parameters[​](#parameters-8 "Direct link to Parameters")
 
@@ -326,7 +356,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:77](https://github
 
 > **toString**(): `string`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L61)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L71)
 
 #### Returns[​](#returns-12 "Direct link to Returns")
 
@@ -338,7 +368,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:61](https://github
 
 > **update**(`__namedParameters?`): `this`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L127)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L137)
 
 #### Parameters[​](#parameters-9 "Direct link to Parameters")
 
@@ -366,7 +396,7 @@ Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:127](https://githu
 
 > **updateMatrix**(): `this`
 
-Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L113)
+Defined in: [modules/engine/src/scenegraph/scenegraph-node.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/scenegraph-node.ts#L123)
 
 #### Returns[​](#returns-14 "Direct link to Returns")
 

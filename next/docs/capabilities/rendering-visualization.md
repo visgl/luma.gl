@@ -54,7 +54,7 @@ This matrix groups luma.gl's portable rendering, scene, asset, effects, and simu
 | WGSL shader assembly            | Available | WebGPU          | `@luma.gl/shaders` | Compose supported WebGPU shader source and typed application bindings.                             |
 | GLSL shader assembly            | Available | WebGL2          | `@luma.gl/shaders` | Compose supported WebGL vertex and fragment shaders.                                               |
 | Typed shader modules            | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Reuse shader modules with explicit source, dependencies, and uniform types.                        |
-| Shader hooks and injections     | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Extend supported applications through composable shader hooks and source injections.               |
+| Shader targets and injections   | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Extend supported applications through composable shader injection targets and source injections.   |
 | Shader plugins                  | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Order reusable shader plugins and validate supported varying relationships.                        |
 | Uniform and binding reflection  | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Coordinate application uniforms, supported bindings, and shader layouts.                           |
 | Color and picking modules       | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Reuse compatible color transforms, clipping, filtering, and picking logic.                         |

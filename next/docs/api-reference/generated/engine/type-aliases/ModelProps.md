@@ -1,6 +1,6 @@
 # Type Alias: ModelProps
 
-> **ModelProps** = `Omit`<[`GPUVectorModelProps`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GPUVectorModelProps.md), `"gpuVectorCount"` | `"geometry"`> & `object`
+> **ModelProps** = `Omit`<[`GPUVectorModelProps`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GPUVectorModelProps.md), `"geometry"`> & `object`
 
 Defined in: [modules/engine/src/model/model.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/model/model.ts#L20)
 

@@ -2,7 +2,7 @@
 
 > **BaseLightModelProps** = `Omit`<[`ModelProps`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ModelProps.md), `"geometry"` | `"modules"` | `"shaderInputs"` | `"source"` | `"vs"` | `"fs"` | `"instanceCount"`> & `object`
 
-Defined in: [modules/engine/src/models/light-model-utils.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L26)
+Defined in: [modules/engine/src/models/light-model-utils.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L27)
 
 ## Type Declaration[​](#type-declaration "Direct link to Type Declaration")
 

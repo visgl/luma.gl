@@ -52,7 +52,33 @@ On WebGPU, directly uploadable numeric casts run through the reusable GPGPU `cas
 
 `planArrowTableGPUConversion()` and `convertArrowTableToGPUTable()` apply the same decisions to an ordered output schema. Each output column names an Arrow source path and its semantic/format contract. The result preserves Arrow record-batch boundaries, source row offsets, field metadata, null metadata, and one owned GPU allocation per output chunk; it never implicitly packs streaming batches.
 
-`convertArrowRecordBatchesToGPURecordBatches()` accepts sync or async record-batch streams and yields independently owned GPU batches. It preserves batch/row source identity and carries the first resolved temporal origin into later batches, so a long timestamp stream does not silently change coordinate systems at each batch.
+`convertArrowRecordBatchesToGPURecordBatches()` accepts sync or async record-batch streams (or bare async iterators) and yields independently owned GPU batches. It preserves batch/row source identity and carries the first resolved temporal origin into later batches, so a long timestamp stream does not silently change coordinate systems at each batch.
+
+Pass an optional fourth argument `{signal}` to cancel pending input reads and stop further conversion. Cancellation does not forcibly stop source I/O or an in-flight GPU conversion. A conversion already underway finishes and its unyielded result is destroyed. Iterator cleanup is requested without waiting for a stalled `next()` on abort. Consumers still own all previously yielded batches.
+
+Each output column must retain the first batch's GPU format. A format change destroys the unyielded batch and throws an error identifying the column and expected/actual formats. Arrow source types may differ if they convert to the same GPU format.
+
+```
+for await (const prepared of convertArrowRecordBatchesToGPURecordBatches(
+
+  device, source, schema, {signal: controller.signal}
+
+)) {
+
+  try {
+
+    await consumeBatch(prepared.batch);
+
+  } finally {
+
+    prepared.destroy();
+
+  }
+
+}
+```
+
+Streaming pulls one input per requested output; it does not prefetch or concatenate batches. Early consumer exit closes the source iterator.
 
 ```
 const prepared = await convertArrowTableToGPUTable(device, arrowTable, {

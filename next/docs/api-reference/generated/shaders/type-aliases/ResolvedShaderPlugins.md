@@ -2,7 +2,7 @@
 
 > **ResolvedShaderPlugins** = `object`
 
-Defined in: [lib/shader-plugin.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L83)
+Defined in: [lib/shader-plugin.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L50)
 
 ShaderPlugin contributions resolved for one shader language.
 
@@ -12,29 +12,29 @@ ShaderPlugin contributions resolved for one shader language.
 
 > **defines**: `Record`<`string`, `boolean` | `number`>
 
-Defined in: [lib/shader-plugin.ts:89](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L89)
+Defined in: [lib/shader-plugin.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L56)
 
 Resolved boolean or numeric preprocessor defines.
 
 ***
 
-### hooks[​](#hooks "Direct link to hooks")
+### injections[​](#injections "Direct link to injections")
 
-> **hooks**: [`ShaderHook`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderHook.md)\[]
+> **injections**: `Record`<`string`, [`ResolvedShaderInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderInjection.md)\[]>
 
-Defined in: [lib/shader-plugin.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L87)
+Defined in: [lib/shader-plugin.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L58)
 
-Language-selected hook declarations.
+Resolved named code injections grouped by target.
 
 ***
 
-### injections[​](#injections "Direct link to injections")
+### injectionTargets[​](#injectiontargets "Direct link to injectionTargets")
 
-> **injections**: `Record`<`string`, [`ShaderInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjection.md)\[]>
+> **injectionTargets**: [`ShaderInjectionTarget`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjectionTarget.md)\[]
 
-Defined in: [lib/shader-plugin.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L91)
+Defined in: [lib/shader-plugin.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L54)
 
-Resolved named code injections grouped by target.
+Language-selected callable injection target declarations.
 
 ***
 
@@ -42,7 +42,7 @@ Resolved named code injections grouped by target.
 
 > **interStageVariables**: `Record`<`string`, [`ResolvedShaderPluginInterStageVariable`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderPluginInterStageVariable.md)>
 
-Defined in: [lib/shader-plugin.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L95)
+Defined in: [lib/shader-plugin.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L62)
 
 Resolved inter-stage variables in plugin declaration order.
 
@@ -52,7 +52,7 @@ Resolved inter-stage variables in plugin declaration order.
 
 > **modules**: [`ShaderModule`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderModule.md)\[]
 
-Defined in: [lib/shader-plugin.ts:85](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L85)
+Defined in: [lib/shader-plugin.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L52)
 
 Resolved shader modules in plugin declaration order.
 
@@ -62,6 +62,6 @@ Resolved shader modules in plugin declaration order.
 
 > **vertexInputs**: `Record`<`string`, `AttributeShaderType`>
 
-Defined in: [lib/shader-plugin.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L93)
+Defined in: [lib/shader-plugin.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L60)
 
 Resolved shader-facing vertex inputs in plugin declaration order.

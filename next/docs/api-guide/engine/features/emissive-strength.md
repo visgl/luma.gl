@@ -106,7 +106,7 @@ Emission is visible without a scene light, but does not illuminate nearby object
 
 ## glTF support[​](#gltf-support "Direct link to glTF support")
 
-`KHR_materials_emissive_strength.emissiveStrength` multiplies core `emissiveFactor` and `emissiveTexture`. When the extension is absent the multiplier is 1. The parser preserves this scalar in `PBRMaterial`; this field does not require `USE_MATERIAL_EXTENSIONS` in the current shader.
+`KHR_materials_emissive_strength.emissiveStrength` multiplies core `emissiveFactor` and `emissiveTexture`. When the extension or its scalar is absent, the multiplier is 1. A value of 0 disables the emissive contribution; values above 1 preserve HDR emission until output color management. The emissive texture is interpreted in sRGB and multiplied in linear space. The glTF specification excludes this extension on materials using `KHR_materials_unlit`. The importer passes the scalar to the shared `PBRMaterial` shader; it does not require `USE_MATERIAL_EXTENSIONS`. A `KHR_animation_pointer` targeting the scalar updates the material and its instances.
 
 See [glTF materials and textures](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md) and the [extension support matrix](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md) for import details.
 

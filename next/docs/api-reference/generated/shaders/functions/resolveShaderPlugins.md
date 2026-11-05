@@ -2,7 +2,7 @@
 
 > **resolveShaderPlugins**(`plugins?`, `shaderLanguage`): [`ResolvedShaderPlugins`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderPlugins.md)
 
-Defined in: [lib/shader-plugin.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L102)
+Defined in: [lib/shader-plugin.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L66)
 
 Resolve plugin interfaces and select injection source for one shader language.
 

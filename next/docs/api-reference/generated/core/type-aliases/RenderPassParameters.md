@@ -18,23 +18,13 @@ Sets constant blend color and alpha values used with "constant" and "one-minus-c
 
 ***
 
-### colorMask?[​](#colormask "Direct link to colorMask?")
-
-> `optional` **colorMask?**: `number`
-
-Defined in: [modules/core/src/api/adapter/types/parameters.ts:188](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L188)
-
-Bitmask controlling which channels are are written to when drawing/clearing. defaulting to 0xF
-
-***
-
 ### scissorRect?[​](#scissorrect "Direct link to scissorRect?")
 
-> `optional` **scissorRect?**: `NumberArray4`
+> `optional` **scissorRect?**: `NumberArray4` | `null`
 
 Defined in: [modules/core/src/api/adapter/types/parameters.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/parameters.ts#L181)
 
-Sets scissor rectangle used during rasterization. Discards fragments outside viewport coords \[x, y, width, height].
+Scissor rectangle \[x, y, width, height], or null to disable clipping to a rectangle.
 
 ***
 

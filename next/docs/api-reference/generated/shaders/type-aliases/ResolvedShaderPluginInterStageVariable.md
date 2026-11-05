@@ -2,7 +2,7 @@
 
 > **ResolvedShaderPluginInterStageVariable** = `object`
 
-Defined in: [lib/shader-plugin.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L59)
+Defined in: [lib/shader-plugin.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L26)
 
 Fully normalized ShaderPlugin inter-stage variable declaration.
 
@@ -12,7 +12,7 @@ Fully normalized ShaderPlugin inter-stage variable declaration.
 
 > **interpolation**: [`ShaderPluginInterStageVariableInterpolation`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInterStageVariableInterpolation.md)
 
-Defined in: [lib/shader-plugin.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L61)
+Defined in: [lib/shader-plugin.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L28)
 
 ***
 
@@ -20,4 +20,4 @@ Defined in: [lib/shader-plugin.ts:61](https://github.com/visgl/luma.gl/blob/mast
 
 > **type**: `AttributeShaderType`
 
-Defined in: [lib/shader-plugin.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L60)
+Defined in: [lib/shader-plugin.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-plugin.ts#L27)

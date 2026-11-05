@@ -74,7 +74,7 @@ Boolean or numeric preprocessor defines contributed by this shader module.
 
 > `optional` **dependencies?**: `ShaderModule`<`any`, `any`>\[]
 
-Defined in: [lib/shader-module/shader-module.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L88)
+Defined in: [lib/shader-module/shader-module.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L86)
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [lib/shader-module/shader-module.ts:88](https://github.com/visgl/lum
 
 > `optional` **deprecations?**: `ShaderModuleDeprecation`\[]
 
-Defined in: [lib/shader-module/shader-module.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L90)
+Defined in: [lib/shader-module/shader-module.ts:88](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L88)
 
 Information on deprecated properties
 
@@ -142,21 +142,11 @@ Exclusive named shader interface provided by this module.
 
 ***
 
-### inject?[​](#inject "Direct link to inject?")
-
-> `optional` **inject?**: `Record`<`string`, `string` | { `injection`: `string`; `order`: `number`; }>
-
-Defined in: [lib/shader-module/shader-module.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L87)
-
-Injections
-
-***
-
 ### instance?[​](#instance "Direct link to instance?")
 
 > `optional` **instance?**: `object`
 
-Defined in: [lib/shader-module/shader-module.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L93)
+Defined in: [lib/shader-module/shader-module.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L91)
 
 The instance field contains information that is generated at run-time
 
@@ -164,13 +154,15 @@ The instance field contains information that is generated at run-time
 
 > **normalizedInjections**: `object`
 
+Empty compatibility value for consumers using older shadertools assembly.
+
 ##### normalizedInjections.fragment[​](#normalizedinjectionsfragment "Direct link to normalizedInjections.fragment")
 
-> **fragment**: `Record`<`string`, [`ShaderInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjection.md)>
+> **fragment**: `Record`<`string`, [`ResolvedShaderInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderInjection.md)>
 
 ##### normalizedInjections.vertex[​](#normalizedinjectionsvertex "Direct link to normalizedInjections.vertex")
 
-> **vertex**: `Record`<`string`, [`ShaderInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjection.md)>
+> **vertex**: `Record`<`string`, [`ResolvedShaderInjection`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderInjection.md)>
 
 #### parsedDeprecations[​](#parseddeprecations "Direct link to parsedDeprecations")
 

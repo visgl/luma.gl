@@ -104,3 +104,9 @@ The defaults above apply except that `arc` defaults to `2 * Math.PI`. The ring l
 ### `RingGeometry`[​](#ringgeometry "Direct link to ringgeometry")
 
 `RingGeometry` constructs a closed annular prism or capped ring segment by assembling shared math.gl lathe/plane meshes. Props are `innerRadius` (`0.5`), `outerRadius` (`1`), `height` (`0.2`), `segments` (`48`), `startAngle` (`0`) and `angle` (`2 * Math.PI`). Zero inner radius creates a disk. Partial sweeps include both radial caps; cap/wall corners have hard normals. The source mesh retains indexed glTF attribute semantics and caller-provided attribute overrides.
+
+## Uploading geometry for GPUVectorModel[​](#uploading-geometry-for-gpuvectormodel "Direct link to Uploading geometry for GPUVectorModel")
+
+`makeGPUVectorGeometry(device, geometry)` converts a CPU `Geometry` into a `GPUVectorGeometry`. It interleaves vertex attributes before upload and preserves attribute layouts, indices, topology, and draw count. Pass the result to `new GPUVectorModel(device, {geometry: gpuGeometry, ...shaderProps})`.
+
+The returned geometry owns its uploaded buffers. Call `gpuGeometry.destroy()` after all models using it have been destroyed or switched to other geometry. `GPUVectorModel` borrows the geometry and does not destroy it. Geometry constructed with `new GPUVectorGeometry(...)` continues to borrow its input vectors.

@@ -1,6 +1,6 @@
 # Shader Passes
 
-[Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Customization](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md)[Portability](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
+[Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md)[Injection](https://luma.gl/next/docs/api-guide/shaders/shader-injection.md)[Portability](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md)[Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md)
 
 A shader pass is a shader module that can run as a fullscreen texture-processing stage. The pass descriptor lives in `@luma.gl/shaders`; the renderer that executes pass chains lives in `@luma.gl/engine` as `ShaderPassRenderer`.
 

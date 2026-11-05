@@ -1,5 +1,17 @@
 # What's New
 
+### Scoped model draw parameters[​](#scoped-model-draw-parameters "Direct link to Scoped model draw parameters")
+
+`GPUVectorModel.draw(renderPass, {parameters})` and inherited `Model.draw()` accept temporary viewport, scissor, blend constant, and stencil reference overrides. Values are restored after all internal batch draws, including on errors. Scoping is owned by engine models; core render passes expose no callback-based parameter wrapper. See [Model](https://luma.gl/next/docs/api-reference/engine/model.md) and [RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md).
+
+### Cancellable Arrow batch conversion[​](#cancellable-arrow-batch-conversion "Direct link to Cancellable Arrow batch conversion")
+
+Arrow streaming conversion accepts an AbortSignal, validates consistent GPU formats across batches, and releases unyielded results on cancellation or validation failure. Yielded batches remain caller-owned. See [Arrow conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md).
+
+### Dual-language shader injection targets[​](#dual-language-shader-injection-targets "Direct link to Dual-language shader injection targets")
+
+Shader injection target descriptors define one stage and name with separate GLSL and WGSL parameter syntax, return types, and header/footer source. Register the same descriptor with both assemblers; each selects its language implementation. Vertex and fragment injection targets may also share a name in WGSL: assembly resolves stage-specific functions and shared helpers. See [ShaderAssembler](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md#addshaderinjectiontargettarget-shaderinjectiontarget-void).
+
 ### Reusable graph texture bindings[​](#reusable-graph-texture-bindings "Direct link to Reusable graph texture bindings")
 
 GPUGraph and WebGPU SimpleGraph accept named texture inputs and operation-produced texture copy results, including selected mip/layer views and borrowed output targets. GPUGraph custom lowerings can also produce textures with execution-sized or scaled extents. See [texture values and execution bindings](https://luma.gl/next/docs/api-reference/graph/gpu-graph-textures.md). Evaluator APIs remain unchanged.
@@ -610,7 +622,6 @@ Release Date: March 31, 2026
 * **Scenegraph materials** - glTF scenegraph creation now returns `materials` aligned with the source glTF `materials` array.
 * **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
 * **PBR material extensions** - the stock `pbrMaterial` shader now implements `KHR_materials_specular`, `KHR_materials_ior`, `KHR_materials_transmission`, `KHR_materials_volume`, `KHR_materials_clearcoat`, `KHR_materials_sheen`, `KHR_materials_iridescence`, and `KHR_materials_anisotropy`, using the parsed glTF extension uniforms and textures.
-* **Emissive materials** - the stock PBR shader now applies `KHR_materials_emissive_strength`, and core `emissiveFactor` values are preserved even when no emissive texture is present.
 * **`KHR_animation_pointer`** - `createScenegraphsFromGLTF()` and `GLTFAnimator` now animate supported node TRS targets, selected material factors, and animated `KHR_texture_transform` offset/rotation/scale targets on stock PBR material texture slots. Structural targets such as animated `texCoord`, morph weights, cameras, and material mode switches remain unsupported.
 * **Extension support docs** - the [`glTF Extension Support`](https://luma.gl/next/docs/api-reference/gltf/gltf-extensions.md) table now documents the current built-in vs parsed-only extension coverage for `@luma.gl/gltf`.
 * **Extension support metadata** - `createScenegraphsFromGLTF()` now exposes an `extensionSupport` map so applications can inspect which extensions a model uses and whether `@luma.gl/gltf` supports them.

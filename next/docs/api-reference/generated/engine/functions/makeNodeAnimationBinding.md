@@ -2,7 +2,7 @@
 
 > **makeNodeAnimationBinding**(`node`, `property`, `options?`): [`AnimationBinding`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/AnimationBinding.md)
 
-Defined in: [modules/engine/src/animation/node-animation-binding.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/node-animation-binding.ts#L12)
+Defined in: [modules/engine/src/animation/node-animation-binding.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/node-animation-binding.ts#L19)
 
 Bind a property once to a node reference; playback does not resolve asset IDs.
 

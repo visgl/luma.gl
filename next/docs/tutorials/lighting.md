@@ -1,6 +1,6 @@
 # Lighting
 
-[Modules](https://luma.gl/next/docs/tutorials/shader-modules.md)[Hooks](https://luma.gl/next/docs/tutorials/shader-hooks.md)[Plugins](https://luma.gl/next/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/next/docs/tutorials/lighting.md)
+[Modules](https://luma.gl/next/docs/tutorials/shader-modules.md)[Injection](https://luma.gl/next/docs/tutorials/shader-injection.md)[Plugins](https://luma.gl/next/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/next/docs/tutorials/lighting.md)
 
 Add Phong shading to a textured cube using luma.gl's shader module system.
 

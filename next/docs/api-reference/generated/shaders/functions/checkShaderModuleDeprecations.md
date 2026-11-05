@@ -2,7 +2,7 @@
 
 > **checkShaderModuleDeprecations**(`shaderModule`, `shaderSource`, `log`): `void`
 
-Defined in: [lib/shader-module/shader-module.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L214)
+Defined in: [lib/shader-module/shader-module.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-module/shader-module.ts#L207)
 
 ## Parameters[​](#parameters "Direct link to Parameters")
 

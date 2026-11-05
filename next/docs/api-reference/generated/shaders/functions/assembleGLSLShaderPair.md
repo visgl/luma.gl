@@ -2,7 +2,7 @@
 
 > **assembleGLSLShaderPair**(`options`): `object`
 
-Defined in: [lib/shader-assembly/assemble-glsl-shaders.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/assemble-glsl-shaders.ts#L47)
+Defined in: [lib/shader-assembly/assemble-glsl-shaders.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/shader-assembly/assemble-glsl-shaders.ts#L52)
 
 Injects dependent shader module sources into pair of main vertex/fragment shader sources for GLSL
 

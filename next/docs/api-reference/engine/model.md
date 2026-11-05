@@ -273,9 +273,21 @@ Marks the model as needing redraw.
 
 Updates shader inputs and rebuilds the pipeline if necessary, encoding any managed uniform uploads onto the supplied command encoder before the render pass begins.
 
-### `draw(renderPass: RenderPass): boolean`[​](#drawrenderpass-renderpass-boolean "Direct link to drawrenderpass-renderpass-boolean")
+### `draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean`[​](#drawrenderpass-renderpass-options-modeldrawoptions-boolean "Direct link to drawrenderpass-renderpass-options-modeldrawoptions-boolean")
 
 Draws once into the supplied render pass. The model selects its pipeline, bindings, and vertex array on that pass before issuing the draw. Returns `false` when required resources, such as unresolved texture binding sources, are not ready yet.
+
+`options.parameters` accepts `viewport`, `scissorRect` (or `null` to disable scissoring), `blendConstant`, and `stencilReference`. Supplied values override pass state only for this draw, including all internal vector batches. Omitted fields inherit the current pass state. Prior values are restored even if drawing throws or resources are not ready. Model defaults and pipeline parameters are unchanged. `Model` inherits this API from `GPUVectorModel`.
+
+```
+model.draw(renderPass, {
+
+  parameters: {blendConstant: [0.5, 0.5, 0.5, 1], stencilReference: 3}
+
+});
+```
+
+Dynamic overrides cannot be recorded into a render bundle. Set them on the executing render pass instead. Native-handle parameter mutations bypass luma's state tracking.
 
 ### `setGeometry(geometry: GPUVectorGeometry | Geometry | GPUGeometry | null): void`[​](#setgeometrygeometry-gpuvectorgeometry--geometry--gpugeometry--null-void "Direct link to setgeometrygeometry-gpuvectorgeometry--geometry--gpugeometry--null-void")
 
@@ -341,3 +353,9 @@ Sets constant-valued attributes.
 * `Model` integrates with [`ShaderInputs`](https://luma.gl/next/docs/api-reference/engine/shader-inputs.md), [`PipelineFactory`](https://luma.gl/next/docs/api-reference/core/pipeline-factory.md), and [`ShaderFactory`](https://luma.gl/next/docs/api-reference/core/shader-factory.md) by default.
 * `DynamicBuffer` attributes, index buffers, and bindings are resolved before drawing so resized buffers are rebound automatically.
 * `DynamicTexture` and `VideoTexture` bindings are supported directly. `Model.draw()` defers rendering until texture binding sources are ready.
+
+### Draw count inference and independent lengths[​](#draw-count-inference-and-independent-lengths "Direct link to Draw count inference and independent lengths")
+
+`inferDrawCount` accepts `'instance'`, `'vertex'`, or `'no'` and defaults to `'no'`. It selects the count updated from vector lengths (or each batch's row count), preserving the other count. `'no'` preserves both caller-supplied counts.
+
+`enforceMatchingVectorLengths` defaults to `true`. Set it to `false` together with `inferDrawCount: 'no'` to bind attributes with independent lengths and single physical chunks. Layout and buffer validation still apply. `drawBatches()` always requires matching lengths and chunk boundaries.

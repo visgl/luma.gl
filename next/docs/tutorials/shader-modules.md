@@ -1,6 +1,6 @@
 # Shader Modules
 
-[Modules](https://luma.gl/next/docs/tutorials/shader-modules.md)[Hooks](https://luma.gl/next/docs/tutorials/shader-hooks.md)[Plugins](https://luma.gl/next/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/next/docs/tutorials/lighting.md)
+[Modules](https://luma.gl/next/docs/tutorials/shader-modules.md)[Injection](https://luma.gl/next/docs/tutorials/shader-injection.md)[Plugins](https://luma.gl/next/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/next/docs/tutorials/lighting.md)
 
 This tutorial shows how to build reusable shader functionality with luma.gl's shader modules. The example below defines a custom `color` module that converts HSV to RGB and adds moving highlight bands to two different models.
 

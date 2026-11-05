@@ -1,5 +1,45 @@
 # Upgrade Guide
 
+### Scoped model draw parameters[​](#scoped-model-draw-parameters "Direct link to Scoped model draw parameters")
+
+`RenderPass.withParameters()` is removed. Pass temporary dynamic state to `Model.draw(renderPass, {parameters})` or `GPUVectorModel.draw()` instead. Model drawing snapshots `renderPass.getParameters()` and restores it through `setParameters()` even when drawing fails. Custom render-pass backends must implement `getParameters()` and return detached parameter values.
+
+### Render-pass color masks[​](#render-pass-color-masks "Direct link to Render-pass color masks")
+
+`RenderPassParameters.colorMask` has been removed. Configure `colorMask` on a render pipeline or through `Model.setParameters()` instead; WebGPU color write masks are pipeline state.
+
+### Arrow stream output formats[​](#arrow-stream-output-formats "Direct link to Arrow stream output formats")
+
+`convertArrowRecordBatchesToGPURecordBatches()` now rejects changes to an output column’s GPU format across batches. Supply an explicit output format in the conversion schema when source types vary but should share one GPU representation. Previously yielded batches remain caller-owned; the rejected batch is destroyed.
+
+### Shader injection target naming[​](#shader-injection-target-naming "Direct link to Shader injection target naming")
+
+Shader hooks are now called injection targets throughout the public API. Update `ShaderHook` to `ShaderInjectionTarget`, `ShaderPlugin.hooks` to `ShaderPlugin.injectionTargets`, assembly `hookFunctions` to `injectionTargets`, and `addShaderHook()`/`resetShaderHooks()` to `addShaderInjectionTarget()`/`resetShaderInjectionTargets()`. The `ShaderInjection.target` field and target strings such as `vs:#decl` and `fs:FILTER_COLOR` are unchanged. There is no separate public type for the `glsl`/`wgsl` signature object; it is part of `ShaderInjectionTarget`.
+
+### Shader hook descriptors[​](#shader-hook-descriptors "Direct link to Shader hook descriptors")
+
+`ShaderAssembler.addShaderHook()` and assembly `hookFunctions` now accept only `ShaderHook` descriptors. String signatures and the second options argument have been removed. Replace `addShaderHook('vs:OFFSET_POSITION(inout vec4 position)', {header, footer})` with:
+
+```
+assembler.addShaderHook({
+
+  name: 'OFFSET_POSITION',
+
+  stage: 'vertex',
+
+  glsl: {parameters: 'inout vec4 position', header, footer},
+
+  wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+
+});
+```
+
+Plugin `hooks` also accept these descriptors; replace `target` with `name` and move each language parameter string into `{parameters}` without parentheses.
+
+The public declarations are `ShaderHook` and `ShaderInjection`, used by both application assembly and plugins. Remove imports of `ShaderPluginHook`, `ShaderPluginInjection`, `ShaderPluginTarget`, and `ShaderPluginInjectionTarget`. The former source/order `ShaderInjection` shape is now `ResolvedShaderInjection`. Application `inject` also accepts arrays of the language-aware `ShaderInjection`.
+
+Move header/footer source into its language implementation. Existing injection target names stay the same; provide separate `glsl`/`wgsl` bodies on each entry in root-level plugin `injections`.
+
 ## GPU API naming[​](#gpu-api-naming "Direct link to GPU API naming")
 
 The remaining experimental Lu-prefixed APIs now use GPU names. Update imports and type references:
@@ -132,8 +172,9 @@ Engine geometry now delegates CPU storage and tessellation to `@math.gl/geometry
 
 **@luma.gl/shaders**
 
+* `ShaderModule.inject` has been removed. Move module-owned hook and anchor injections to a named `ShaderPlugin` with `injections`, and attach the shader module through the plugin's `module` field when source or uniforms are needed. Plugins select GLSL and WGSL injection source explicitly.
 * `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their `ShaderPassPipeline` suffix with `CompositeShaderPass`.
-* Named shader hook injections now throw if their target is not registered. Register the hook for the matching shader stage before injecting into it. WGSL continues to skip unregistered module injections, which may contain GLSL-only code.
+* Named shader hook injections now throw if their target is not registered. Register the hook for the matching shader stage before injecting into it.
 
 **@luma.gl/core/webgpu**
 

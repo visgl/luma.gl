@@ -2,9 +2,9 @@
 
 [ShaderModule](https://luma.gl/next/docs/api-reference/shaders/shader-module.md)[ShaderPlugin](https://luma.gl/next/docs/api-reference/shaders/shader-plugin.md)[Assembler](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md)[Conventions](https://luma.gl/next/docs/api-reference/shaders/shader-conventions.md)
 
-`ShaderModule` is the reusable shader feature descriptor used by `@luma.gl/shaders`. A module may contribute WGSL and/or GLSL source, shader-facing uniform descriptors, resource bindings, dependencies, defines, and ordered injections.
+`ShaderModule` is the reusable shader feature descriptor used by `@luma.gl/shaders`. A module may contribute WGSL and/or GLSL source, shader-facing uniform descriptors, resource bindings, dependencies, and defines.
 
-`ShaderModule`s are used by [`ShaderAssembler`](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md) and engine classes such as [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) and [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md). The assembler resolves dependencies, prepends module source, applies injections, and returns assembled source plus a combined uniform getter.
+`ShaderModule`s are used by [`ShaderAssembler`](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md) and engine classes such as [`Model`](https://luma.gl/next/docs/api-reference/engine/model.md) and [`Computation`](https://luma.gl/next/docs/api-reference/engine/compute/computation.md). The assembler resolves dependencies, prepends module source, and returns assembled source plus a combined uniform getter.
 
 For the composition model, see [Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md).
 
@@ -17,10 +17,6 @@ For the composition model, see [Shader Assembly](https://luma.gl/next/docs/api-g
 * Dependencies
 
   Resolved transitively and de-duplicated in deterministic order
-
-* Hooks and injections
-
-  Named extension contracts and ordered source contributions
 
 * Props and bindings
 
@@ -58,7 +54,7 @@ const model = new Model(device, {
 
 Or pass modules directly to `ShaderAssembler`.
 
-To define a new shader module, create a descriptor that brings together the source, uniforms, injections, and dependencies that belong to one reusable shader feature:
+To define a new shader module, create a descriptor that brings together the source, uniforms, and dependencies that belong to one reusable shader feature:
 
 ```
 import type {ShaderModule} from '@luma.gl/shaders';
@@ -89,8 +85,6 @@ export const myShaderModule = {
 
   },
 
-  inject: {},
-
   dependencies: [],
 
   getUniforms: props => ({intensity: props.intensity})
@@ -98,7 +92,7 @@ export const myShaderModule = {
 } as const satisfies ShaderModule<MyShaderModuleProps>;
 ```
 
-Use `source` for WGSL, `vs` and `fs` for GLSL stage source, or all three when the module supports both backends. `uniformTypes` declares shader-facing layouts; `getUniforms` maps application props to the uniforms and bindings consumed by the shader; `dependencies` brings in other modules first; and `inject` targets hooks or named injection points when the module needs to modify base shader flow.
+Use `source` for WGSL, `vs` and `fs` for GLSL stage source, or all three when the module supports both backends. `uniformTypes` declares shader-facing layouts; `getUniforms` maps application props to the uniforms and bindings consumed by the shader; `dependencies` brings in other modules first.
 
 ## Fields[​](#fields "Direct link to Fields")
 
@@ -152,10 +146,6 @@ Each entry has `name` and `group`. For current bind-group guidance, see [Bind Gr
 This affects module-owned WGSL `@binding(auto)` relocation.
 
 #### `defines` (*Object*) - Constant defines to be injected into shader[​](#defines-object---constant-defines-to-be-injected-into-shader "Direct link to defines-object---constant-defines-to-be-injected-into-shader")
-
-#### `inject` (*Object*) - Injections the module will make into shader hooks or anchors[​](#inject-object---injections-the-module-will-make-into-shader-hooks-or-anchors "Direct link to inject-object---injections-the-module-will-make-into-shader-hooks-or-anchors")
-
-See [`ShaderAssembler`](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md#hooks-and-injections) for hook and standard injection target syntax.
 
 #### `implements` (string, optional)[​](#implements-string-optional "Direct link to implements-string-optional")
 
@@ -228,35 +218,9 @@ The shader module may want to perform more complex logic when mapping the user's
 }
 ```
 
-## Defining Injections[​](#defining-injections "Direct link to Defining Injections")
+## Adding Injections[​](#adding-injections "Direct link to Adding Injections")
 
-A map from hook or standard anchor target to either the injection code string, or an object containing the injection code and an `order` option indicating ordering within the hook function. See [`ShaderAssembler`](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md) for more information on shader hooks and standard anchors.
-
-For example:
-
-```
-const picking = {
-
-  name: 'picking',
-
-  inject: {
-
-    'vs:VERTEX_HOOK_FUNCTION': 'picking_setPickingColor(color.rgb);',
-
-    'fs:FRAGMENT_HOOK_FUNCTION': {
-
-      injection: 'color = picking_filterColor(color);',
-
-      order: Number.POSITIVE_INFINITY
-
-    },
-
-    'fs:#main-end': 'gl_FragColor = picking_filterColor(gl_FragColor);'
-
-  }
-
-};
-```
+Use a named [`ShaderPlugin`](https://luma.gl/next/docs/api-reference/shaders/shader-plugin.md) for target or anchor injections. A plugin can attach this module through its `module` field and select GLSL or WGSL source for each injection.
 
 ## Functions[​](#functions "Direct link to Functions")
 
@@ -266,7 +230,7 @@ const picking = {
 initializeShaderModule(module: ShaderModule): void
 ```
 
-Initializes one module's dependencies, normalized injections, parsed deprecations, prop validators, and default uniforms. Assembly calls this as needed.
+Initializes one module's dependencies, parsed deprecations, prop validators, and default uniforms. Assembly calls this as needed.
 
 #### `initializeShaderModules()`[​](#initializeshadermodules "Direct link to initializeshadermodules")
 

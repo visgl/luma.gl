@@ -69,11 +69,11 @@ Add Phong shading to a textured cube using luma.gl's shader module system.
 
 - [Lighting](https://luma.gl/next/docs/tutorials/lighting.md): Add Phong shading to a textured cube using luma.gl's shader module system.
 
-#### shader-hooks
+#### shader-injection
 
-Shader hooks let shader modules inject code into designated points in a shader. This example defines an OFFSET_POSITION hook that two modules use to shift geometry left or right.
+Injection targets identify where plugins can add shader code. This example declares a callable OFFSET_POSITION target and attaches two plugins that shift geometry left or right. See the Shader Injection guide for built-in targets and injection syntax.
 
-- [Shader Hooks](https://luma.gl/next/docs/tutorials/shader-hooks.md): Shader hooks let shader modules inject code into designated points in a shader. This example defines an OFFSET_POSITION hook that two modules use to shift geometry left or right.
+- [Shader Injection](https://luma.gl/next/docs/tutorials/shader-injection.md): Injection targets identify where plugins can add shader code. This example declares a callable OFFSET_POSITION target and attaches two plugins that shift geometry left or right. See the Shader Injection guide for built-in targets and injection syntax.
 
 #### shader-modules
 
@@ -235,9 +235,9 @@ luma.gl applications must provide the shader source code that will ultimately
 - [GPU Floating-Point Precision Techniques](https://luma.gl/next/docs/api-guide/shaders/gpu-floating-point-precision.md): "fp64" is often used to mean "more precision than f32," but the available
 - [Rendering Techniques and Tradeoffs](https://luma.gl/next/docs/api-guide/shaders/rendering-techniques.md): luma.gl deliberately provides several approaches to similar visual problems. A cheap effect,
 - [Shader Assembly](https://luma.gl/next/docs/api-guide/shaders/shader-assembly.md): A core luma.gl principle is that applications remain in full control of their
+- [Shader Injection](https://luma.gl/next/docs/api-guide/shaders/shader-injection.md): Shader injection lets an application keep control of its shader source while optional
 - [Shader Passes](https://luma.gl/next/docs/api-guide/shaders/shader-passes.md): A shader pass is a shader module that can run as a fullscreen texture-processing
 - [Transparency](https://luma.gl/next/docs/api-guide/shaders/transparency.md): Transparency has two independent concerns: how each surface is shaded and how overlapping
-- [Writing Customizable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-customizable-shaders.md): Customizable shaders keep one readable base shader while allowing optional
 - [Writing Portable Shaders](https://luma.gl/next/docs/api-guide/shaders/writing-portable-shaders.md): luma.gl does not transpile an application shader from WGSL to GLSL or from GLSL
 
 ### api-reference
@@ -776,7 +776,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: GeometryNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/GeometryNode.md): Defined in12
 - [Class: GPUGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUGeometry.md): Defined in39
 - [Class: GPUVectorGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUVectorGeometry.md): Defined in19
-- [Class: GPUVectorModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUVectorModel.md): Defined in196
+- [Class: GPUVectorModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUVectorModel.md): Defined in216
 - [Class: GroupNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/GroupNode.md): Defined in36
 - [Class: IcoSphereGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/IcoSphereGeometry.md): Defined in96
 - [Class: Interactivity](https://luma.gl/next/docs/api-reference/generated/engine/classes/Interactivity.md): Defined in128
@@ -793,9 +793,12 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: PickingManager](https://luma.gl/next/docs/api-reference/generated/engine/classes/PickingManager.md): Defined in105
 - [Class: PlaneGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/PlaneGeometry.md): Defined in153
 - [Class: PointLightModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/PointLightModel.md): Defined in21
+- [Class: PunctualLightController](https://luma.gl/next/docs/api-reference/generated/engine/classes/PunctualLightController.md): Defined in31
 - [Class: RingGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/RingGeometry.md): Defined in25
 - [Class: ScenegraphAnimator<TClip>](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphAnimator.md): Defined in13
-- [Class: ScenegraphNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md): Defined in26
+- [Class: ScenegraphInteractionManager](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphInteractionManager.md): Defined in54
+- [Class: ScenegraphNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md): Defined in30
+- [Class: SceneMetadata](https://luma.gl/next/docs/api-reference/generated/engine/classes/SceneMetadata.md): Defined in6
 - [Class: ShaderInputs<ShaderPropsT>](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderInputs.md): Defined in42
 - [Class: ShaderPassRenderer](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderPassRenderer.md): Defined in89
 - [Class: SkinController](https://luma.gl/next/docs/api-reference/generated/engine/classes/SkinController.md): Defined in33
@@ -818,17 +821,20 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Function: decomposePhysicsTransform()](https://luma.gl/next/docs/api-reference/generated/engine/functions/decomposePhysicsTransform.md): decomposePhysicsTransform(matrix): object
 - [Function: deformPositions()](https://luma.gl/next/docs/api-reference/generated/engine/functions/deformPositions.md): deformPositions(props): Float32Array
 - [Function: evaluateAnimationSampler()](https://luma.gl/next/docs/api-reference/generated/engine/functions/evaluateAnimationSampler.md): evaluateAnimationSampler(time, sampler, valueType?): number[] \| null
+- [Function: getFirstScenegraphInteractionHit()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getFirstScenegraphInteractionHit.md): getFirstScenegraphInteractionHit\(hits, kind): Hit \| undefined
 - [Function: getGPUVectorModelBatches()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getGPUVectorModelBatches.md): getGPUVectorModelBatches\(ownerName, vectors): GPUVectorModelBatch\\["data"\]\[number\]\>[]
 - [Function: getIndexPickingModule()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getIndexPickingModule.md): getIndexPickingModule(device): object
 - [Function: getPlatformInfo()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getPlatformInfo.md): getPlatformInfo(device): PlatformInfo
 - [Function: getTextureTransformDeltaMatrix()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getTextureTransformDeltaMatrix.md): getTextureTransformDeltaMatrix(baseTransform, currentTransform): number[]
 - [Function: getTextureTransformMatrix()](https://luma.gl/next/docs/api-reference/generated/engine/functions/getTextureTransformMatrix.md): getTextureTransformMatrix(transform): number[]
+- [Function: isScenegraphInteractionEnabled()](https://luma.gl/next/docs/api-reference/generated/engine/functions/isScenegraphInteractionEnabled.md): isScenegraphInteractionEnabled(path, kind): boolean
 - [Function: loadImage()](https://luma.gl/next/docs/api-reference/generated/engine/functions/loadImage.md): loadImage(url, opts?): Promise\
 - [Function: loadImageBitmap()](https://luma.gl/next/docs/api-reference/generated/engine/functions/loadImageBitmap.md): loadImageBitmap(url, opts?): Promise\
 - [Function: makeAdapterAnimationBinding()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeAdapterAnimationBinding.md): makeAdapterAnimationBinding(adapter, pointer): AnimationBinding
 - [Function: makeAnimationLoop()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeAnimationLoop.md): makeAnimationLoop(AnimationLoopTemplateCtor, props?): TemplateAnimationLoop
 - [Function: makeEdgeGeometry()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeEdgeGeometry.md): makeEdgeGeometry(geometry, options?): Geometry
 - [Function: makeEdgeGeometryFromGeometries()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeEdgeGeometryFromGeometries.md): makeEdgeGeometryFromGeometries(geometries, options?): Geometry
+- [Function: makeGPUVectorGeometry()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeGPUVectorGeometry.md): makeGPUVectorGeometry(device, geometry): GPUVectorGeometry
 - [Function: makeInterleavedGeometry()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeInterleavedGeometry.md): makeInterleavedGeometry(geometry, options?): Geometry
 - [Function: makeMaterialAnimationBinding()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeMaterialAnimationBinding.md): makeMaterialAnimationBinding(materials, target, id?): AnimationBinding
 - [Function: makeNodeAnimationBinding()](https://luma.gl/next/docs/api-reference/generated/engine/functions/makeNodeAnimationBinding.md): makeNodeAnimationBinding(node, property, options?): AnimationBinding
@@ -936,12 +942,13 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: MeshSimplificationAttribute](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/MeshSimplificationAttribute.md): MeshSimplificationAttribute = object
 - [Type Alias: MeshSimplificationOptions](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/MeshSimplificationOptions.md): MeshSimplificationOptions = object
 - [Type Alias: MeshSimplificationResult](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/MeshSimplificationResult.md): MeshSimplificationResult = object
+- [Type Alias: ModelDrawOptions](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ModelDrawOptions.md): ModelDrawOptions = object
 - [Type Alias: ModelNodeProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ModelNodeProps.md): ModelNodeProps = ScenegraphNodeProps & object
 - [Type Alias: ModelProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ModelProps.md): ModelProps = Omit\ & object
 - [Type Alias: MorphTargetAttributes](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/MorphTargetAttributes.md): MorphTargetAttributes = object
 - [Type Alias: MorphTargetState](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/MorphTargetState.md): MorphTargetState = object
 - [Type Alias: MorphWeightState](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/MorphWeightState.md): MorphWeightState = object
-- [Type Alias: NodeAnimationProperty](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/NodeAnimationProperty.md): NodeAnimationProperty = "translation" \| "rotation" \| "scale" \| "weights" \| "visibility"
+- [Type Alias: NodeAnimationProperty](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/NodeAnimationProperty.md): NodeAnimationProperty = "translation" \| "rotation" \| "scale" \| "weights" \| "visibility" \| "selectable" \| "hoverable"
 - [Type Alias: OrbitControlsProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/OrbitControlsProps.md): OrbitControlsProps = object
 - [Type Alias: OrbitPosition](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/OrbitPosition.md): OrbitPosition = \[number, number, number\]
 - [Type Alias: PBRTextureTransform](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/PBRTextureTransform.md): PBRTextureTransform = object
@@ -956,12 +963,17 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: PlaneGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/PlaneGeometryProps.md): PlaneGeometryProps = object
 - [Type Alias: PointLightModelProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/PointLightModelProps.md): PointLightModelProps = BaseLightModelProps & object
 - [Type Alias: PrimitiveMaterialVariants](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/PrimitiveMaterialVariants.md): PrimitiveMaterialVariants = object
+- [Type Alias: PunctualLightBinding](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/PunctualLightBinding.md): PunctualLightBinding = object
+- [Type Alias: PunctualLightDefinition](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/PunctualLightDefinition.md): PunctualLightDefinition = object
 - [Type Alias: ResolvedPickingBackend](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ResolvedPickingBackend.md): ResolvedPickingBackend = ResolvedPickingMode
 - [Type Alias: ResolvedPickingMode](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ResolvedPickingMode.md): ResolvedPickingMode = Exclude\
 - [Type Alias: ResolvedScenegraphJoint](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ResolvedScenegraphJoint.md): ResolvedScenegraphJoint = object
 - [Type Alias: RingGeometryProps](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/RingGeometryProps.md): RingGeometryProps = object
 - [Type Alias: ScenegraphAnimationClip](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphAnimationClip.md): ScenegraphAnimationClip = AnimationClipController & object
 - [Type Alias: ScenegraphBounds](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphBounds.md): ScenegraphBounds = \[\[number, number, number\], \[number, number, number\]\]
+- [Type Alias: ScenegraphInteractionEvent](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphInteractionEvent.md): ScenegraphInteractionEvent = object
+- [Type Alias: ScenegraphInteractionHit](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphInteractionHit.md): ScenegraphInteractionHit = object
+- [Type Alias: ScenegraphInteractionKind](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphInteractionKind.md): ScenegraphInteractionKind = "select" \| "hover"
 - [Type Alias: ScenegraphJoint](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphJoint.md): ScenegraphJoint = object
 - [Type Alias: ScenegraphJointAttachment](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphJointAttachment.md): ScenegraphJointAttachment = object
 - [Type Alias: ScenegraphJointDrive](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/ScenegraphJointDrive.md): ScenegraphJointDrive = object
@@ -1098,6 +1110,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: PointLight](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/PointLight.md): PointLight = object
 - [Type Alias: PrecipitationProps](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/PrecipitationProps.md): PrecipitationProps = Partial\
 - [Type Alias: PrecipitationUniforms](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/PrecipitationUniforms.md): PrecipitationUniforms = object
+- [Type Alias: ResolvedShaderInjection](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderInjection.md): ResolvedShaderInjection = object
 - [Type Alias: ResolvedShaderPluginInterStageVariable](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderPluginInterStageVariable.md): ResolvedShaderPluginInterStageVariable = object
 - [Type Alias: ResolvedShaderPlugins](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ResolvedShaderPlugins.md): ResolvedShaderPlugins = object
 - [Type Alias: RiverWaterMaterialProps](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/RiverWaterMaterialProps.md): RiverWaterMaterialProps = object
@@ -1105,9 +1118,8 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: ScanWGSLInterfaceOptions](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ScanWGSLInterfaceOptions.md): ScanWGSLInterfaceOptions = object
 - [Type Alias: ShaderBindingDebugRow](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderBindingDebugRow.md): ShaderBindingDebugRow = object
 - [Type Alias: ShaderGenerationOptions](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderGenerationOptions.md): ShaderGenerationOptions = GLSLGenerationOptions \| WGSLGenerationOptions
-- [Type Alias: ShaderHook](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderHook.md): ShaderHook = object
-- [Type Alias: ShaderHookOptions](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderHookOptions.md): ShaderHookOptions = Pick\
 - [Type Alias: ShaderInjection](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjection.md): ShaderInjection = object
+- [Type Alias: ShaderInjectionTarget](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderInjectionTarget.md): ShaderInjectionTarget = object
 - [Type Alias: ShaderModule<PropsT, UniformsT, BindingsT>](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderModule.md): ShaderModule\ = object
 - [Type Alias: ShaderModuleUniformLayoutStage](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderModuleUniformLayoutStage.md): ShaderModuleUniformLayoutStage = "vertex" \| "fragment" \| "wgsl"
 - [Type Alias: ShaderModuleUniformLayoutValidationResult](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderModuleUniformLayoutValidationResult.md): ShaderModuleUniformLayoutValidationResult = object
@@ -1116,12 +1128,8 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Type Alias: ShaderPassInputSource<TargetNameT>](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPassInputSource.md): ShaderPassInputSource\ = "original" \| "previous" \| TargetNameT
 - [Type Alias: ShaderPassRenderTarget](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPassRenderTarget.md): ShaderPassRenderTarget = object
 - [Type Alias: ShaderPlugin](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPlugin.md): ShaderPlugin = object
-- [Type Alias: ShaderPluginHook](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginHook.md): ShaderPluginHook = ShaderPluginTarget & object
-- [Type Alias: ShaderPluginInjection](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInjection.md): ShaderPluginInjection = ShaderPluginTarget & object
-- [Type Alias: ShaderPluginInjectionTarget](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInjectionTarget.md): ShaderPluginInjectionTarget = "vs#main-start" \| "vs#decl" \| "fs#main-end" \| ` vs$ `
 - [Type Alias: ShaderPluginInterStageVariable](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInterStageVariable.md): ShaderPluginInterStageVariable = object
 - [Type Alias: ShaderPluginInterStageVariableInterpolation](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginInterStageVariableInterpolation.md): ShaderPluginInterStageVariableInterpolation = "smooth" \| "flat"
-- [Type Alias: ShaderPluginTarget](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderPluginTarget.md): ShaderPluginTarget = object
 - [Type Alias: ShaderSubPass<UniformsT, BindingNameT, RenderTargetNameT>](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderSubPass.md): ShaderSubPass\ = object
 - [Type Alias: ShaderTranspileProps](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderTranspileProps.md): ShaderTranspileProps = object
 - [Type Alias: ShaderTranspiler](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShaderTranspiler.md): ShaderTranspiler = object
@@ -1245,9 +1253,9 @@ Describe GPU computations, bind data, and compose execution with rendering.
 
 #### shaders
 
-Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, uniforms, and rendering passes.
+Assemble reusable WGSL and GLSL shader modules, injection targets, injections, plugins, uniforms, and rendering passes.
 
-- [Shaders](https://luma.gl/next/docs/api-reference/shaders.md): Assemble reusable WGSL and GLSL shader modules, hooks, injections, plugins, uniforms, and rendering passes.
+- [Shaders](https://luma.gl/next/docs/api-reference/shaders.md): Assemble reusable WGSL and GLSL shader modules, injection targets, injections, plugins, uniforms, and rendering passes.
 - [ShaderAssembler](https://luma.gl/next/docs/api-reference/shaders/shader-assembler.md): ShaderAssembler is the abstract base for stateful shader assembly. Its concrete
 - [Shader Module Conventions](https://luma.gl/next/docs/api-reference/shaders/shader-conventions.md): Uniform Blocks
 - [Shader Parsing](https://luma.gl/next/docs/api-reference/shaders/shader-info.md): It is sometimes useful to be able to inspect shader source code
@@ -1459,12 +1467,12 @@ Explore the primary packages, optional subpaths, and exploratory integrations in
 
 ### upgrade-guide
 
-GPU API naming
+Scoped model draw parameters
 
-- [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md): GPU API naming
+- [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md): Scoped model draw parameters
 
 ### whats-new
 
-Reusable graph texture bindings
+Scoped model draw parameters
 
-- [What's New](https://luma.gl/next/docs/whats-new.md): Reusable graph texture bindings
+- [What's New](https://luma.gl/next/docs/whats-new.md): Scoped model draw parameters

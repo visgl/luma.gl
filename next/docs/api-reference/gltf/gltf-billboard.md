@@ -6,6 +6,20 @@ Opt-in camera-facing traversal for a **partial, full-axis profile** of the draft
 
 The draft's instruction to zero facing-vector components conflicts with its Y-only rotation example. This implementation rejects constrained-axis configurations until that ambiguity is resolved. The original [Khronos BillboardDemo](https://github.com/KhronosGroup/glTF-External-Reference/tree/d15ddd159493698a1c1ce2fab448abbfde56c312/demo/Models/BillboardDemo) uses an older lowercase `rotationAxis: "y"` spelling. Pass `allowLegacyYAxis: true` to accept that specific compatibility profile and preserve upright Y-axis rotation. Current draft array-constrained configurations remain rejected. The source model requires CC BY 4.0 and Apache 2.0 attribution and contains a 67.9 MB geometry buffer.
 
+Pass `billboards: {}` when creating a glTF scenegraph to resolve the attachments once and get the engine controller on `scenegraphs.billboards`. Pass `billboards: {allowLegacyYAxis: true}` for the legacy profile described above. The controller uses the resolved scenegraph nodes and does not read the original glTF nodes during traversal. `scenegraphs.destroy()` disposes the controller. For programmatically created scenes, construct `BillboardController` directly with scene roots and node bindings; no glTF document is needed.
+
+```
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
+
+
+
+const scenegraphs = createScenegraphsFromGLTF(device, gltf, {billboards: {}});
+
+const billboards = scenegraphs.billboards!;
+```
+
+Alternatively, construct a controller separately using `parseGLTFBillboards`:
+
 ```
 import {BillboardController} from '@luma.gl/engine';
 
