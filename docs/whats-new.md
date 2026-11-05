@@ -1,5 +1,11 @@
 # What's New
 
+### Fixed-width Arrow column streams
+
+Column streams preserve row transforms, residual-low values and validity vectors.
+They share cancellation, backpressure and unyielded-result cleanup with generic
+record-batch conversion. See [Arrow conversion](./api-reference/arrow/arrow-conversion.mdx).
+
 ### Scoped model draw parameters
 
 `GPUVectorModel.draw(renderPass, {parameters})` and inherited `Model.draw()` accept
