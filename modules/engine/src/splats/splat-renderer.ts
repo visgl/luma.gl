@@ -8,7 +8,9 @@ import {
   type CompareFunction,
   type CommandEncoder,
   type Device,
-  type RenderPass
+  type RenderPass,
+  type Texture,
+  type TextureView
 } from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
 import {GPUData} from '@luma.gl/graph/gpu-data';
@@ -34,6 +36,8 @@ import {
   SPLAT_STORAGE_SHADER_LAYOUT,
   SPLAT_STORAGE_WGSL_SHADER,
   SPLAT_VS_GLSL,
+  getSplatDepthIntervalShaderLayout,
+  getSplatDepthIntervalWGSLShader,
   splatUniforms,
   type SplatUniforms
 } from './splat-shaders';
@@ -56,6 +60,10 @@ export type SplatRendererProps = {
   sortMode?: SplatSortMode;
   /** Projected-depth convention for alpha ordering, independent of depthCompare. Defaults to standard. */
   depthConvention?: 'standard' | 'reverse';
+  /** WebGPU only. Fixed render-target sample count for opt-in depth-interval filtering. */
+  depthIntervalSamples?: number;
+  /** Bound depth and side for a depth-interval draw; the texture remains caller-owned. */
+  depthInterval?: SplatDepthInterval;
   /** Minimum fragment opacity retained after Gaussian attenuation. */
   alphaCutoff?: number;
   /** Alias for {@link alphaCutoff} when integrating opacity-threshold controls. */
@@ -82,6 +90,12 @@ export type SplatRendererProps = {
   depthCompare?: CompareFunction;
   /** Whether transparent splats update the shared mesh depth buffer. Defaults to `false`. */
   depthWriteEnabled?: boolean;
+};
+
+/** The two comparisons partition every sample, including samples exactly on the bound. */
+export type SplatDepthInterval = {
+  bound: Texture | TextureView;
+  compare: 'greater' | 'less-equal';
 };
 
 /** Application-owned opaque or transparent mesh compatible with an existing render pass. */
@@ -127,6 +141,7 @@ type ResolvedSplatRendererProps = {
   semanticFilter?: SplatSemanticFilter;
   sortMode: SplatSortMode;
   depthConvention: 'standard' | 'reverse';
+  depthIntervalSamples?: number;
   alphaCutoff: number;
   screenSizeCutoffPixels: number;
   gaussianSupportRadius: number;
@@ -233,6 +248,11 @@ export class SplatRenderer {
   private usesFloatWebGLColors = false;
   private hasExplicitToneMapping = false;
   private isDestroyed = false;
+  private depthIntervalBindings?: {
+    splatDepthBound: Texture | TextureView;
+    splatDepthCompare: Buffer;
+  };
+  private depthIntervalCompareBuffers?: Record<SplatDepthInterval['compare'], Buffer>;
 
   /** Creates a renderer over optionally supplied caller-owned Gaussian source batches. */
   constructor(device: Device, props: SplatRendererProps = {}) {
@@ -245,6 +265,7 @@ export class SplatRenderer {
       semanticFilter: props.semanticFilter,
       sortMode: props.sortMode ?? 'global',
       depthConvention: props.depthConvention ?? 'standard',
+      depthIntervalSamples: props.depthIntervalSamples,
       alphaCutoff: props.alphaCutoff ?? props.opacityThreshold ?? 1 / 255,
       screenSizeCutoffPixels: props.screenSizeCutoffPixels ?? 0,
       gaussianSupportRadius: props.gaussianSupportRadius ?? 3,
@@ -258,11 +279,40 @@ export class SplatRenderer {
       depthWriteEnabled: props.depthWriteEnabled ?? false
     };
     this.hasExplicitToneMapping = props.toneMapping !== undefined;
+    if (props.depthInterval) {
+      this.setDepthInterval(props.depthInterval);
+    }
     this.updateShaderInputs();
     for (const batch of normalizeSplatBatches(props.data)) {
       this.appendData(batch);
     }
     this.update();
+  }
+
+  /** Selects the caller-owned bound and side for subsequent depth-interval draws. */
+  setDepthInterval(interval: SplatDepthInterval): void {
+    // A depth interval requires the WebGPU shader variant selected at construction.
+    if (this.device.type !== 'webgpu' || this.props.depthIntervalSamples === undefined) {
+      throw new Error('Depth interval requires a WebGPU renderer with depthIntervalSamples');
+    }
+    if (!this.depthIntervalCompareBuffers) {
+      this.depthIntervalCompareBuffers = {
+        greater: this.device.createBuffer({
+          id: 'splat-depth-interval-greater',
+          data: new Uint32Array([1, 0, 0, 0]),
+          usage: Buffer.UNIFORM
+        }),
+        'less-equal': this.device.createBuffer({
+          id: 'splat-depth-interval-less-equal',
+          data: new Uint32Array(4),
+          usage: Buffer.UNIFORM
+        })
+      };
+    }
+    this.depthIntervalBindings = {
+      splatDepthBound: interval.bound,
+      splatDepthCompare: this.depthIntervalCompareBuffers[interval.compare]
+    };
   }
 
   /** Current source rows, visibility, batch identity, and GPU allocation diagnostics. */
@@ -312,6 +362,15 @@ export class SplatRenderer {
 
   /** Updates camera, sorting, visibility, and styling controls in place. */
   setProps(props: Partial<SplatRendererProps>): void {
+    if (
+      props.depthIntervalSamples !== undefined &&
+      props.depthIntervalSamples !== this.props.depthIntervalSamples
+    ) {
+      throw new Error('depthIntervalSamples is fixed at construction');
+    }
+    if (props.depthInterval) {
+      this.setDepthInterval(props.depthInterval);
+    }
     if (props.data !== undefined) {
       const replacementBatches = normalizeSplatBatches(props.data);
       const matchesRetainedBatches =
@@ -550,6 +609,10 @@ export class SplatRenderer {
     this.placeholderSphericalHarmonicsBuffer?.destroy();
     this.placeholderSphericalHarmonicsBuffer = undefined;
     this.shaderInputs.destroy();
+    this.depthIntervalCompareBuffers?.greater.destroy();
+    this.depthIntervalCompareBuffers?.['less-equal'].destroy();
+    this.depthIntervalCompareBuffers = undefined;
+    this.depthIntervalBindings = undefined;
     this.isDestroyed = true;
   }
 
@@ -571,10 +634,18 @@ export class SplatRenderer {
     }
     return new GPUTableModel(this.device, {
       id: 'gaussian-splat-renderer',
-      source: isWebGPU ? SPLAT_STORAGE_WGSL_SHADER : SPLAT_ATTRIBUTE_WGSL_SHADER,
+      source: isWebGPU
+        ? this.props.depthIntervalSamples === undefined
+          ? SPLAT_STORAGE_WGSL_SHADER
+          : getSplatDepthIntervalWGSLShader(this.props.depthIntervalSamples)
+        : SPLAT_ATTRIBUTE_WGSL_SHADER,
       vs: SPLAT_VS_GLSL,
       fs: SPLAT_FS_GLSL,
-      shaderLayout: isWebGPU ? SPLAT_STORAGE_SHADER_LAYOUT : SPLAT_ATTRIBUTE_SHADER_LAYOUT,
+      shaderLayout: isWebGPU
+        ? this.props.depthIntervalSamples === undefined
+          ? SPLAT_STORAGE_SHADER_LAYOUT
+          : getSplatDepthIntervalShaderLayout(this.props.depthIntervalSamples)
+        : SPLAT_ATTRIBUTE_SHADER_LAYOUT,
       modules: [splatUniforms],
       shaderInputs: this.shaderInputs,
       table,
@@ -913,6 +984,9 @@ export class SplatRenderer {
     if (!this.model || !this.table) {
       return false;
     }
+    if (this.props.depthIntervalSamples !== undefined && !this.depthIntervalBindings) {
+      return false;
+    }
     let drawSuccess = true;
     for (const run of this.drawRuns) {
       const batch = this.table.batches[run.batchIndex];
@@ -931,6 +1005,9 @@ export class SplatRenderer {
           this.batches[run.batchIndex].sphericalHarmonics?.data[0]?.buffer ??
           this.placeholderSphericalHarmonicsBuffer!
       });
+      if (this.depthIntervalBindings) {
+        this.model.setBindings(this.depthIntervalBindings);
+      }
       this.model.setInstanceCount(run.rowIndices.length);
       drawSuccess = this.model.draw(renderPass) && drawSuccess;
     }

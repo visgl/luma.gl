@@ -18,6 +18,16 @@ and in-place row updates. Both rendering paths evaluate view-dependent radiance 
 classes. `SplatPicker` and `GPUSplatGraphPicker` resolve original source rows; their corresponding
 mixed-scene helpers compose splats with caller-owned depth-tested meshes.
 
+For WebGPU scenes with transparent meshes, construct `SplatRenderer` with
+`depthIntervalSamples` equal to the render target's sample count. Before each
+draw, call `setDepthInterval({bound, compare})`, where `bound` is a caller-owned
+depth texture or view with the same sample count and dimensions. `greater` keeps
+samples whose splat depth is strictly greater than the bound; `less-equal` keeps
+the complement, including equality. Draw the two sides in the order needed for
+the scene's `depthConvention` (`standard` or `reverse`). The renderer never owns
+or clears the bound. Without `depthIntervalSamples`, it uses the existing shader
+and bindings, with no depth-texture lookup.
+
 `SplatHierarchyManager` traverses frustum-culled, foveated source hierarchies while preserving
 coarse parent fallback and bounded asynchronous loading. `SplatRADHierarchyManager` follows
 Spark's authored per-row global child links, retaining mixed source-page leaves and parent
