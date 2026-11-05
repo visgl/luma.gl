@@ -145,3 +145,53 @@ describe('GPUCPUOperation', () => {
     device.destroy();
   });
 });
+
+it('enforces graph-declared CPU output lengths and chunk boundaries', async () => {
+  const device = new NullDevice({});
+  let chunks = [new Float32Array(3)];
+  const graph = new GPUSimpleGraph();
+  graph.vector('result', 'float32', 2, {chunkLengths: [1, 1]});
+  graph.add(
+    new GPUCPUOperation({
+      id: 'source',
+      inputs: {},
+      outputs: {result: gpuGraph.vector('float32')},
+      execute: () => ({result: {chunks: chunks.map(values => ({values}))}})
+    })
+  );
+  const compiled = graph.compile(device, {outputs: ['result']});
+  try {
+    await expect(compiled.run({})).rejects.toThrow();
+    chunks = [new Float32Array(2)];
+    await expect(compiled.run({})).rejects.toThrow();
+    chunks = [new Float32Array(1), new Float32Array(1)];
+    const outputs = await compiled.run({});
+    expect(outputs.result.data.map(chunk => chunk.length)).toEqual([1, 1]);
+    outputs.result.destroy();
+  } finally {
+    compiled.destroy();
+    device.destroy();
+  }
+});
+
+it('preserves graph-declared output constraints in GPU stages after CPU work', async () => {
+  const device = new NullDevice({});
+  const graph = new GPUSimpleGraph();
+  graph.vector('result', 'float32', 2);
+  graph.add(
+    new GPUCPUOperation({
+      id: 'source',
+      inputs: {},
+      outputs: {source: gpuGraph.vector('float32')},
+      execute: () => ({source: new Float32Array(3)})
+    })
+  );
+  graph.add(new GPUExpressionOperation({output: 'result', expression: 'source * 2'}));
+  const compiled = graph.compile(device, {outputs: ['result']});
+  try {
+    await expect(compiled.run({})).rejects.toThrow();
+  } finally {
+    compiled.destroy();
+    device.destroy();
+  }
+});
