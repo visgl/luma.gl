@@ -178,3 +178,56 @@ GPGPU expressions. Semantic scalar literals/arithmetic and vector multiply-add c
 to work unchanged. The full GPUCommandGraph semantic operations and GPGPU operation implementations
 are unchanged. Dynamic rebinding, texture/render operations, and transient resource planning
 remain outside this first pass.
+
+## CPU callbacks and dynamically sized results
+
+Reusable SimpleGraph programs accept `GPUCPUOperation`, imported from `@luma.gl/graph`.
+The operation API is shared with graph authoring, but CPU execution is currently supported
+only by `new GPUSimpleGraph().compile(device)`, not `GPUGraph` or evaluator recipes.
+
+```typescript
+import {GPUCPUOperation, GPUExpressionOperation, gpuGraph} from '@luma.gl/graph';
+import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
+
+const graph = new GPUSimpleGraph();
+graph.addInput('positions', gpuGraph.vector('float32x2'));
+graph.add(new GPUCPUOperation({
+  id: 'tessellate',
+  inputs: {positions: 'positions'},
+  outputs: {
+    meshPositions: gpuGraph.vector('float32x2'),
+    meshIndices: gpuGraph.vector('uint32')
+  },
+  async execute({inputs}) {
+    const positions = inputs.positions;
+    if (typeof positions === 'number') throw new Error('Expected vector');
+    const mesh = await tessellate(positions.pack()); // Application-provided CPU algorithm.
+    return {meshPositions: mesh.positions, meshIndices: mesh.indices};
+  }
+}));
+graph.add(new GPUExpressionOperation({output: 'scaled', expression: 'meshPositions * 2'}));
+const compiled = graph.compile(device, {outputs: ['scaled', 'meshIndices']});
+const results = await compiled.run({inputs: {positions: positionsVector}});
+```
+
+Callbacks receive numeric scalars or CPU vector snapshots with `format`, `length`, and
+`chunks`. Each chunk has `values` and `length`. Readback preserves source chunks;
+`pack()` explicitly combines them into a new array. Treat input arrays as read-only.
+
+Each named output returns a packed `Float32Array`, `Uint32Array`, or `Int32Array`, or
+`{chunks: [{values: typedArray}, ...]}` to specify chunk boundaries. Array types must match
+formats. Complete rows are required: six float32 components in `float32x2` represent
+three rows. Empty arrays are supported. Optional descriptor `length` and `chunkLengths`
+constraints are checked. Formats are fixed at compilation; lengths can change on every run.
+Only the portable 32-bit numeric formats with one to four components are supported.
+
+The executor awaits the callback, allocates correctly sized GPUVectors, and uploads the
+arrays. Do not mutate returned arrays until `run()` settles. CPU callbacks can delegate to
+workers through promises; closures are not automatically moved to workers. CPU-to-CPU
+chains currently upload and read back between callbacks; lazy CPU residency is not implemented.
+
+CPU boundaries submit preceding GPU work before readback. These programs do not support
+`prepare()`, caller-controlled scopes, textures, state, or `outputTargets`. Use `addInput()`
+for external inputs. Every authored operation executes in order on each run, without caching.
+Selected results transfer to the caller; intermediates are released after the run, including
+on failure. Inputs remain borrowed. A failed callback does not prevent a later run.
