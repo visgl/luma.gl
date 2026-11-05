@@ -74,6 +74,11 @@ export class GPUCPUExecution {
           .map(use => (typeof use.value === 'string' ? use.value : use.value.id));
         const graph = new GPUGraph();
         for (const name of new Set(inputs)) addInput(graph, name);
+        for (const name of new Set(outputs)) {
+          const vector = program.vectors.find(value => value.id === name);
+          if (vector)
+            graph.vector(name, vector.format, vector.length, {chunkLengths: vector.chunkLengths});
+        }
         graph.add(operation);
         this.stages.push({
           graph: compileStage(graph, outputs),
@@ -109,7 +114,9 @@ export class GPUCPUExecution {
           const outputs = await stage.execute({inputs});
           assert(Object.keys(outputs).length === Object.keys(stage.outputs).length);
           const graph = new GPUGraph();
-          for (const [name, descriptor] of Object.entries(stage.outputs)) {
+          for (const name of Object.keys(stage.outputs)) {
+            // The resolved declaration includes constraints supplied through graph.vector().
+            const descriptor = this.program.vectors.find(vector => vector.id === name)!;
             const result = outputs[name];
             assert(result);
             const arrays = 'chunks' in result ? result.chunks.map(chunk => chunk.values) : [result];
