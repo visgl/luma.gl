@@ -460,6 +460,6 @@ Plugin contributions are collected in plugin declaration order, selecting each
 injection's source for the active language. Target injections execute in
 ascending `order`; equal-order plugin injections retain declaration order.
 
-Legacy application injections append to plugin injections at the same target
-instead of replacing them. Module injections follow application injections;
-explicit `order` values take precedence over collection order.
+Application injections supplied through the assembler's `inject` option follow
+plugin injections at the same target when their `order` values are equal.
+Explicit `order` values take precedence over collection order.

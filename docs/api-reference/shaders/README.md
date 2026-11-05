@@ -26,8 +26,9 @@ public descriptor, helper, built-in module, and type with source links.
 | Concept | Responsibility | Example |
 | --- | --- | --- |
 | Shader source | Defines entry points and the algorithm the GPU executes | A vertex transform and fragment color calculation |
-| `ShaderModule` | Reuses shader helpers and declares uniforms, bindings, and dependencies | Lighting calculations and material parameters |
-| `ShaderPlugin` | Packages optional assembly behavior around one primary module | Clipping, filtering, or tinting |
+| `ShaderModule` | Packages GLSL or WGSL source, uniforms, bindings, and dependencies | Lighting calculations and material parameters |
+| `ShaderPlugin` | Contributes injection targets, injections, vertex inputs, and inter-stage variables, with an optional module | Clipping, filtering, or tinting |
+| [`ShaderPass`](/docs/api-reference/shaders/shader-pass) | Describes a texture processing effect that Engine executes | Blur or tone mapping |
 | Injection target | Declares a callable extension point in the host shader | `FILTER_COLOR(color)` |
 | Injection | Adds language-specific source to a callable target or built-in target | Multiply the color inside `FILTER_COLOR` |
 | Shader assembler | Resolves dependencies and contributions into shader source | Select WGSL for WebGPU or GLSL for WebGL |
@@ -40,11 +41,18 @@ collects declarations before resolving consumers, selects language variants, and
 emits a no-op function when a declared target has no injections. Shader code must
 still call the function: assembly does not infer where behavior belongs.
 
-A module and a plugin are complementary. Put reusable math and data contracts in
-a module; use a plugin to connect optional behavior to a host's extension points.
-Plugin input declarations describe interfaces, while the application retains
-buffer allocation, attribute generation, and cleanup. Neither modules nor plugins
-schedule additional passes.
+A `ShaderPlugin` can attach a `ShaderModule` through its `module` field and use
+`injections` to call the module's functions at a named target or built-in anchor.
+An injection can supply GLSL and WGSL variants so the same plugin works on WebGL
+and WebGPU.
+
+In GLSL, attributes and varyings can be declared at global scope. WGSL includes
+them in the shader entry points' input and output interfaces. When a plugin
+declares vertex inputs or inter-stage variables, the assembler extends those
+interfaces and assigns available locations. The application still creates and
+updates the vertex buffers. For example, deck.gl's brushing extension supplies
+the target-position attribute data while the shader plugin adds the vertex
+input and passes visibility to the fragment shader.
 
 Start with the [Shader Injection guide](/docs/api-guide/shaders/shader-injection)
 for a provider/consumer example with GLSL and WGSL variants. Then read
