@@ -1148,3 +1148,7 @@ and lifetime contract.
 
 Reusable graphs accept CPUVector inputs and `outputLocations` for CPU results. CPU chains
 stay resident on the CPU, with uploads and readbacks cached per invocation when needed.
+
+Arrow↔CPUVector numeric/list adapters preserve chunk and validity metadata. Explicit CPU↔GPU
+transfers carry list offsets and validity; CPU projection and simple-ring tessellation helpers
+reuse math.gl and the existing polygon preparation pipeline.
