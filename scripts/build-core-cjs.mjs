@@ -274,3 +274,15 @@ for (const backend of ['cpu', 'webgl', 'webgpu']) {
   assert.equal(typeof (await import(entry)).interleave, 'function');
 }
 process.stdout.write('Verified SimpleGraph evaluator identity and backend entries.\n');
+
+// The optional lighting entry must preserve constructor identity within each module system.
+const lightingApi = require('@luma.gl/engine/lighting');
+const lightingEsm = await import('../modules/engine/dist/lighting/index.js');
+const lightingImplementation = require('../modules/engine/dist/lighting/prefiltered-environment.cjs');
+const lightingImplementationEsm = await import('../modules/engine/dist/lighting/prefiltered-environment.js');
+for (const name of ['PrefilteredEnvironment', 'PrefilteredEnvironmentGenerator', 'createPrefilteredEnvironment']) {
+  assert.equal(typeof lightingApi[name], 'function');
+  assert.equal(lightingApi[name], lightingImplementation[name]);
+  assert.equal(lightingEsm[name], lightingImplementationEsm[name]);
+}
+process.stdout.write('Verified optional lighting subpath identities.\n');

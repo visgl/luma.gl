@@ -2,6 +2,15 @@
 
 Reusable `GPUSimpleGraph` supports shared `GPUCPUOperation` callbacks with asynchronous CPU processing and dynamically sized, executor-allocated GPUVector outputs. See [CPU callbacks](./api-reference/graph/gpu-simple-graph.md#cpu-callbacks-and-dynamically-sized-results).
 
+### Reusable environment lighting
+
+The optional `@luma.gl/engine/lighting` entry point prepares GGX specular cubemaps,
+normalized diffuse irradiance, and split-sum BRDF lookups on WebGL and WebGPU.
+Generated textures have explicit ownership and can share a caller-owned LUT.
+ANARI retains its existing API through compatibility wrappers. See
+[PrefilteredEnvironment](./api-reference/engine/lighting/prefiltered-environment.md).
+
+
 ### Scoped model draw parameters
 
 `GPUVectorModel.draw(renderPass, {parameters})` and inherited `Model.draw()` accept

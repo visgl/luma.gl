@@ -16089,6 +16089,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-prefiltered-environment@workspace:examples/api/prefiltered-environment":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-prefiltered-environment@workspace:examples/api/prefiltered-environment"
+  dependencies:
+    "@luma.gl/core": "npm:10.0.0-alpha.10"
+    "@luma.gl/engine": "npm:10.0.0-alpha.10"
+    "@luma.gl/shaders": "npm:10.0.0-alpha.10"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-render-bundles@workspace:examples/api/render-bundles":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-render-bundles@workspace:examples/api/render-bundles"
