@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 //
 // GPUCommandGraph -> borrowed GPU buffers -> upstream Three.js WebGPURenderer.
-// Three 0.185.1 is intentionally pinned: the bridge uses private renderer hooks.
+// Three 0.187.0 is intentionally pinned: the bridge uses private renderer hooks.
 import {Buffer, luma, log} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Computation} from '@luma.gl/engine';

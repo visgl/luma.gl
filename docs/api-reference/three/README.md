@@ -9,7 +9,7 @@ import {ClientOnlyLiveExample} from '@site/src/components/docs/client-only-live-
 
 :::caution[Experimental]
 
-This module is currently intended primarily as a proof of concept. Integrations are tested with Three.js **0.185.1**; APIs and supported features may change.
+The compute buffer bridge has a version-pinned support contract for Three.js **0.187.0**. The custom renderer and deck integrations remain experimental; APIs and supported features may change.
 
 :::
 
@@ -52,6 +52,36 @@ See the [Graph overview](/docs/api-reference/graph) for graph APIs and the
 for the complete computation and rendering loop.
 
 ### Share buffers with Three.js
+
+### Streamed dataset example
+
+Run `yarn workspace luma.gl-examples-three start` and open `/streamed.html`.
+Deterministic synthetic batches arrive every second; Append adds a batch immediately.
+Each batch of x/value pairs is uploaded once. A luma compute shader
+produces a logarithmic scatterplot layout, and upstream Three renders those same
+GPU buffers. The latest 12 batches are retained independently; older batches are explicitly removed. Reset disposes all
+geometry and borrowed bindings before releasing buffers and recreating the bridge.
+Canvas resizing changes the render target without reallocating the data.
+
+The source is [streamed-layout.ts](https://github.com/visgl/luma.gl/blob/master/examples/experimental/three/streamed-layout.ts).
+Applications can feed `append()` from an async stream; source uploads are expected,
+but computed positions are never read back or re-uploaded. The example performs
+layout, not compaction, and preserves one draw per batch.
+
+### Supported compute-to-render contract
+
+The buffer bridge supports Three.js r187 (`three@0.187.0`) on WebGPU with the
+standard drawing pipeline. It is a version-pinned integration: upgrade Three and
+this adapter together. The custom luma renderer backend remains experimental.
+
+Submit completed luma compute commands before calling `renderer.render()`. Both
+use the same device queue, so queue ordering makes the writes visible without a
+CPU readback or an `onSubmittedWorkDone()` wait on every frame. End all compute
+passes before submitting. The application owns buffer allocation and lifetime.
+
+Meshlet and visibility-buffer drawing pipelines are outside this contract: their
+geometry preprocessing cannot infer positions or topology from the bridge's
+metadata-only CPU arrays. Use the standard pipeline for GPU-generated geometry.
 
 `ThreeBufferBridge` from `@luma.gl/three/interop` connects luma buffers to an
 initialized upstream `WebGPURenderer` using the same `GPUDevice`. Call
@@ -243,3 +273,7 @@ Use deck.pickObjectAsync with unproject3D for surface coordinates. Individual in
 IDs, custom fragmentNode materials, and transmission are unsupported in this path.
 See the [module README](https://github.com/visgl/luma.gl/blob/master/modules/three/README.md)
 for picking examples, geographic placement, and ownership details.
+
+The r187 buffer bridge supports `StandardDrawingPipeline`. Meshlet and visibility-buffer
+drawing pipelines perform additional geometry processing and are unsupported; the support
+probe rejects them. Do not change the drawing pipeline while a bridge is attached.
