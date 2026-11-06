@@ -140,12 +140,17 @@ export async function resolveLoadedPBREnvironment(
   environment: PBREnvironment,
   options: PBRLightingEnvironmentOptions = {}
 ): Promise<PBRLightingEnvironment> {
-  const [diffuseTexture, specularTexture, brdfLUTTexture] = await Promise.all([
+  await Promise.all([
     environment.diffuseEnvSampler.ready,
     environment.specularEnvSampler.ready,
     environment.brdfLutTexture.ready
   ]);
-  const lightingEnvironment = {diffuseTexture, specularTexture, brdfLUTTexture, ...options};
+  const lightingEnvironment = {
+    diffuseTexture: environment.diffuseEnvSampler.texture,
+    specularTexture: environment.specularEnvSampler.texture,
+    brdfLUTTexture: environment.brdfLutTexture.texture,
+    ...options
+  };
   getPBREnvironmentBindings(lightingEnvironment);
   return lightingEnvironment;
 }

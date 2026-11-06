@@ -78,6 +78,13 @@ test('loaded environment resolution waits for all textures and keeps dynamic own
   expect(lighting.diffuseTexture).toBe(environment.diffuseEnvSampler.texture);
   expect(lighting.brdfLUTTexture).toBe(environment.brdfLutTexture.texture);
   expect(lighting.intensity).toBe(0.5);
+  const initialLookup = lighting.brdfLUTTexture;
+  environment.brdfLutTexture.resize({width: 4, height: 4});
+  expect(initialLookup.destroyed).toBe(true);
+  const refreshed = await resolveLoadedPBREnvironment(environment);
+  expect(refreshed.brdfLUTTexture).toBe(environment.brdfLutTexture.texture);
+  expect(refreshed.brdfLUTTexture).not.toBe(initialLookup);
+  expect(getPBREnvironmentBindings(refreshed).pbr_brdfLUT).toBe(refreshed.brdfLUTTexture);
   for (const texture of Object.values(environment)) expect(texture.destroyed).toBe(false);
   for (const texture of Object.values(environment)) texture.destroy();
   await expect(resolveLoadedPBREnvironment(environment)).rejects.toThrow();
