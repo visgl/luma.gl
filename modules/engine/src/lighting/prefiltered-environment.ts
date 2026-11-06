@@ -56,7 +56,7 @@ export class PrefilteredEnvironment {
     this.ownsBrdfLUTTexture = ownsBrdfLUTTexture;
   }
 
-  /** Bind directly to the shared IBL shader module without an ANARI scene. */
+  /** Returns the texture bindings declared by the IBL shader module. */
   getBindings() {
     return {
       pbr_diffuseEnvSampler: this.textures.diffuseTexture,
