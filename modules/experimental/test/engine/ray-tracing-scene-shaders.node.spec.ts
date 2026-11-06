@@ -19,7 +19,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(272);
+    expect(reflection.uniforms[0].size).toBe(288);
     expect(reflection.uniforms[0].members?.map(({name, offset}) => ({name, offset}))).toEqual([
       {name: 'inverseViewProjection', offset: 0},
       {name: 'cameraPosition', offset: 64},
@@ -31,7 +31,8 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'displayPhase', offset: 160},
       {name: 'temporal', offset: 176},
       {name: 'previousViewProjection', offset: 192},
-      {name: 'previousCameraPosition', offset: 256}
+      {name: 'previousCameraPosition', offset: 256},
+      {name: 'transport', offset: 272}
     ]);
     expect(reflection.storage.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
@@ -63,7 +64,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(272);
+    expect(reflection.uniforms[0].size).toBe(288);
     expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'historyImage', binding: 1},
       {name: 'historyMetadata', binding: 2}
@@ -121,7 +122,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(272);
+    expect(reflection.uniforms[0].size).toBe(288);
     expect(storageBuffers.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
       {name: 'triangles', binding: 2},
@@ -575,13 +576,13 @@ describe('graph-accelerated ray tracing shaders', () => {
       'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
     );
     const jitteredRayIndex = mainSource.indexOf('let ray = makeCameraRay(pixel, sampleIndex)');
-    const tracedHitIndex = mainSource.indexOf('let hit = intersectScene(ray, RAY_INFINITY)');
+    const tracedHitIndex = mainSource.indexOf('traceDiffusePath(ray, seed)');
 
     expect(guideHitIndex).toBeGreaterThan(0);
     expect(loopIndex).toBeGreaterThan(guideHitIndex);
     expect(jitteredRayIndex).toBeGreaterThan(loopIndex);
     expect(tracedHitIndex).toBeGreaterThan(jitteredRayIndex);
-    expect(mainSource.match(/intersectScene\(/g)).toHaveLength(2);
+    expect(mainSource.match(/intersectScene\(/g)).toHaveLength(1);
   });
 
   test('reprojects bilinear per-instance radiance and rejects invalid history', () => {

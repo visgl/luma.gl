@@ -44,7 +44,7 @@ const PRIMITIVE_FLOAT_COUNT = 68;
 const TRIANGLE_FLOAT_COUNT = 24;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 68;
+const UNIFORM_FLOAT_COUNT = 72;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -464,7 +464,7 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   cameraProjection?: 'perspective' | 'orthographic';
   /** Number of primary-ray samples per pixel in one encoded frame. */
   samplesPerPixel?: number;
-  /** Reserved future path-tracing bounce budget. */
+  /** Maximum diffuse indirect bounces, clamped to 0–8. Defaults to zero. */
   maxBounces?: number;
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
@@ -827,7 +827,7 @@ export class RayTracingSceneRenderer {
           resources.triangleCount = primitiveData.triangleCount;
           if (transformChanged) {
             scheduleTransformAccelerationUpdate(resources);
-            if (!(options.temporalReprojection ?? true)) {
+            if ((options.maxBounces ?? 0) > 0 || !(options.temporalReprojection ?? true)) {
               resources.historyNeedsReset = true;
             }
           } else if (primitiveChanged) {
@@ -837,7 +837,7 @@ export class RayTracingSceneRenderer {
           updateSparsePrimitiveTransforms(resources, sparseTransformInstanceIds ?? []);
           if (transformChanged) {
             scheduleTransformAccelerationUpdate(resources);
-            if (!(options.temporalReprojection ?? true)) {
+            if ((options.maxBounces ?? 0) > 0 || !(options.temporalReprojection ?? true)) {
               resources.historyNeedsReset = true;
             }
           }
@@ -846,7 +846,11 @@ export class RayTracingSceneRenderer {
           const lightCountChanged = resources.lightCount !== lights.length;
           resources.lightBuffer.write(lightData);
           resources.lightCount = lights.length;
-          if (lightCountChanged || !(options.temporalReprojection ?? true)) {
+          if (
+            (options.maxBounces ?? 0) > 0 ||
+            lightCountChanged ||
+            !(options.temporalReprojection ?? true)
+          ) {
             resources.historyNeedsReset = true;
           }
         }
@@ -3436,6 +3440,7 @@ function makeUniformData(props: {
   data.set(props.previousViewProjection, 48);
   data.set(props.previousCameraPosition, 64);
   data[67] = (props.options.progressive ?? true) ? 1 : 0;
+  unsignedData[68] = Math.min(8, Math.max(0, Math.floor(props.options.maxBounces ?? 0)));
   return data;
 }
 

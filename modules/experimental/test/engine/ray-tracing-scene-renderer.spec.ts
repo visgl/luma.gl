@@ -181,6 +181,7 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
       {type: 'point', position: [0, 1, 2], intensity: 6}
     ],
     samplesPerPixel: 2,
+    maxBounces: 2,
     progressive: true,
     shadows: true,
     adaptiveResolution: false,

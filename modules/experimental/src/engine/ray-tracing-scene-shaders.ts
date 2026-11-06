@@ -15,6 +15,7 @@ struct RayTracingUniforms {
   temporal: vec4<f32>,
   previousViewProjection: mat4x4<f32>,
   previousCameraPosition: vec4<f32>,
+  transport: vec4<u32>,
 };
 
 struct RayPrimitive {
@@ -795,6 +796,38 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
   return result;
 }
 
+// Cosine-weighted sampling cancels the Lambertian cosine / PI factor.
+fn traceDiffusePath(primaryRay: Ray, seed: u32) -> vec3<f32> {
+  var ray = primaryRay;
+  var throughput = vec3<f32>(1.0);
+  var radiance = vec3<f32>(0.0);
+  for (var bounce = 0u; bounce <= uniforms.transport.x; bounce++) {
+    let hit = intersectScene(ray, RAY_INFINITY);
+    if (hit.distance >= RAY_INFINITY) {
+      // Background is a camera backdrop, not an environment light.
+      if (bounce == 0u) { radiance += uniforms.background.rgb; }
+      break;
+    }
+    radiance += throughput * evaluateDirectLighting(ray, hit);
+    if (bounce == uniforms.transport.x) { break; }
+    let primitive = primitives[hit.primitiveIndex];
+    let normal = faceForward(hit.normal, ray.direction, hit.normal);
+    let radiusSquared = makeRandom(seed + bounce * 719u + 37u);
+    let angle = makeRandom(seed + bounce * 719u + 193u) * 2.0 * PI;
+    let helper = select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(1.0, 0.0, 0.0), abs(normal.z) > 0.9);
+    let tangent = normalize(cross(helper, normal));
+    let direction = normalize(tangent * sqrt(radiusSquared) * cos(angle) +
+      cross(normal, tangent) * sqrt(radiusSquared) * sin(angle) + normal * sqrt(1.0 - radiusSquared));
+    let halfDirection = normalize(direction - ray.direction);
+    let fresnel = 0.04 + 0.96 * pow(1.0 - max(dot(direction, halfDirection), 0.0), 5.0);
+    throughput *= primitive.baseColor.rgb * 0.96 * (1.0 - fresnel) *
+      (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
+    if (max(throughput.x, max(throughput.y, throughput.z)) <= 0.0) { break; }
+    ray = Ray(ray.origin + ray.direction * hit.distance + normal * 0.002, direction);
+  }
+  return radiance;
+}
+
 fn rejectHistoricalRaySample() -> HistoricalRaySample {
   return HistoricalRaySample(vec3<f32>(0.0), 0.0, false);
 }
@@ -1040,12 +1073,9 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
   var accumulatedColor = vec3<f32>(0.0);
   for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++) {
     let ray = makeCameraRay(pixel, sampleIndex);
-    let hit = intersectScene(ray, RAY_INFINITY);
-    var color = uniforms.background.rgb;
-    if (hit.distance < RAY_INFINITY) {
-      color = evaluateDirectLighting(ray, hit);
-    }
-    accumulatedColor += color;
+    let seed = (pixel.y * uniforms.dimensions.x + pixel.x) * 1973u +
+      uniforms.acceleration.w * 26699u + sampleIndex * 104729u;
+    accumulatedColor += traceDiffusePath(ray, seed);
   }
 
   var color = accumulatedColor / f32(sampleCount) * uniforms.settings.x;

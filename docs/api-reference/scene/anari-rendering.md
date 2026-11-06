@@ -129,7 +129,7 @@ type ANARIRendererParameters = {
 | `toneMapMode` | Target-dependent | `0` disables tone mapping, `1` selects Reinhard, `2` selects Khronos PBR Neutral, and `3` selects ACES. Floating-point targets default to `0`; normalized targets default to `2`. |
 | `outputColorSpace` | Target-dependent | Explicitly selects `'linear'` or `'srgb'` output. Floating-point and hardware-sRGB targets default to linear output; other normalized targets default to software sRGB encoding. |
 | `samplesPerPixel` | `1` | Primary-ray samples per frame in the `raytrace` renderer. |
-| `maxBounces` | Not applied | Reserved ray-tracing bounce limit; the current implementation evaluates direct lighting only. |
+| `maxBounces` | `0` | Additional diffuse indirect bounces, clamped to 0–8; zero preserves direct lighting. |
 | `progressive` | `true` | Accumulate ray-traced samples across unchanged frames. |
 | `shadows` | `true` | Trace hard shadow rays toward direct lights in the `raytrace` renderer. |
 | `resolutionScale` | `0.5` | Initial ray-tracing width and height as a fraction of the display resolution. |
@@ -235,8 +235,10 @@ The Morton-sorted TLAS accelerates object and instance selection, while intersec
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Skeletal skinning, morph-target displacement, material textures, alpha/
 transmission, and advanced PBR material extensions remain on the forward/deferred renderer paths.
-Indirect multi-bounce path tracing, denoising, and volumes are also unsupported. `maxBounces` is
-accepted for forward compatibility but does not enable indirect bounces.
+Diffuse indirect transport is enabled with `maxBounces`. Paths gather direct lighting and
+emission at each hit using cosine-weighted hemisphere sampling. Background colors remain camera
+backdrops rather than environment illumination. Specular indirect transport, denoising, and
+volumes remain unsupported. Geometry and light changes reset indirect accumulation.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction policy, see
