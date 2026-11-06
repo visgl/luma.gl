@@ -46,7 +46,8 @@ Supply `pbrProjection` uniforms through `model.shaderInputs`:
 - `modelViewProjectionMatrix`: projection × view × model.
 - `camera`: world-space camera position.
 
-Transforms must be nonsingular. Instancing uses `HAS_INSTANCING` and four per-instance
+Use the backend's clip-depth convention: [-1, 1] for WebGL, [0, 1] for WebGPU.
+The factory does not convert supplied projection matrices. Transforms must be nonsingular. Instancing uses `HAS_INSTANCING` and four per-instance
 `float32x4` attributes named `instanceModelMatrixCol0` through `instanceModelMatrixCol3`.
 Instance transforms are applied before the model transform, including their inverse-transpose
 normal transforms. Reflected model, instance, and skin transforms also preserve tangent-frame
@@ -80,7 +81,7 @@ depth writes, double-sided culling, and draw order with ordinary model/render-pa
 These are caller policies rather than implicit scene management.
 
 The [environment example](/examples/api/prefiltered-environment) renders a grid of native
-PBR sphere models with shared environment lighting and explicit SDR fallback.
+PBR sphere models with orbit/pan/zoom controls, shared environment lighting, and explicit SDR fallback.
 
 ## Specialized shader passes
 
@@ -95,3 +96,5 @@ Use `ModelProps.source` to supply composed WGSL and `vs`/`fs` for custom GLSL. H
 WGSL composition facility; they do not translate a custom pass into GLSL. The default
 entry points remain free of adapter resources. Existing retained scene adapters compose their
 specialized transforms and picking/shadow passes separately.
+
+The example uses the shared InfoBox panels for its description, HDR/SDR status, and camera reset, and is available in the website API gallery.

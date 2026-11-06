@@ -16093,6 +16093,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-prefiltered-environment@workspace:examples/api/prefiltered-environment"
   dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
     "@luma.gl/core": "npm:10.0.0-alpha.10"
     "@luma.gl/engine": "npm:10.0.0-alpha.10"
     "@luma.gl/shaders": "npm:10.0.0-alpha.10"

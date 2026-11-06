@@ -34,6 +34,7 @@ const exampleConfig = {};
 
 const loadAnimationApp = () => import('../../examples/api/animation/app');
 const loadBlendingApp = () => import('../../examples/api/blending/app');
+const loadPrefilteredEnvironmentApp = () => import('../../examples/api/prefiltered-environment/app');
 const loadCubemapApp = () => import('../../examples/api/cubemap/app');
 const loadArrowDggsPolygonsApp = () => import('../../examples/arrow/arrow-dggs-polygons/app');
 const loadArrowColumnRendererApp = () => import('../../examples/arrow/arrow-columns/app');
@@ -2545,6 +2546,18 @@ export const RenderBundlesExample: React.FC<WebsiteExampleProps> = props => (
     config={exampleConfig}
     devices={['webgpu']}
     showStats
+    {...props}
+  />
+);
+
+export const PrefilteredEnvironmentExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="prefiltered-environment"
+    title="Prefiltered Environment"
+    directory="api"
+    loadTemplate={loadPrefilteredEnvironmentApp}
+    config={exampleConfig}
+    devices={['webgl2', 'webgpu']}
     {...props}
   />
 );

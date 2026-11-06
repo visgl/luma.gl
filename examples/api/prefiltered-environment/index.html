@@ -2,32 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="luma-example-id" content="api/prefiltered-environment" />
+    <meta name="luma-example-backends" content="webgpu,webgl2" />
+    <meta name="luma-example-mobile" content="full" />
+    <meta name="luma-example-mobile-profile" content="standard" />
     <title>Prefiltered environment · luma.gl</title>
     <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="../../example-infobox.css" />
     <style>
-      body {margin: 24px; background: #101418; color: #e5e7eb; font: 16px system-ui;}
-      canvas {width: min(100%, 1000px); aspect-ratio: 5 / 3;}
+      html, body {width: 100%; height: 100%; margin: 0; overflow: hidden; background: #101418;}
+      canvas {display: block; width: 100vw !important; height: 100vh !important; touch-action: none;}
+      aside.luma-example-infobox--overlay {left: auto; right: 12px; width: 300px;}
     </style>
   </head>
   <body>
-    <h1>Prefiltered environment</h1>
-    <p>Roughness increases left to right. Metalness increases bottom to top.</p>
-    <canvas id="environment" width="1000" height="600"></canvas>
+    <aside class="luma-example-infobox luma-example-infobox--overlay" aria-label="Prefiltered environment" data-info-box-appearance="cinematic">
+      <h1>Prefiltered environment</h1>
+      <div id="example-panel-host" data-example-panel-host></div>
+    </aside>
     <script type="module">
-      import {luma} from '@luma.gl/core';
-      import {makeAnimationLoop} from '@luma.gl/engine';
-      import {webgpuAdapter} from '@luma.gl/core/webgpu';
-      import {webgl2Adapter} from '@luma.gl/core/webgl';
-      import AnimationLoopTemplate from './app.ts';
-
-      const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
-        device: luma.createDevice({
-          type: new URLSearchParams(location.search).get('backend') || 'best-available',
-          adapters: [webgpuAdapter, webgl2Adapter],
-          createCanvasContext: {canvas: 'environment'}
-        })
-      });
-      animationLoop.start();
+      import {installStandaloneExampleSupport} from '../../example-support.ts';
+      const exampleSupport = await installStandaloneExampleSupport();
+      if (exampleSupport.supported) {
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {webgl2Adapter}, {default: AnimationLoopTemplate}] = await Promise.all([
+          import('@luma.gl/core'),
+          import('@luma.gl/engine'),
+          import('@luma.gl/core/webgpu'),
+          import('@luma.gl/core/webgl'),
+          import('./app.ts')
+        ]);
+        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+          device: luma.createDevice({
+            type: new URLSearchParams(location.search).get('backend') || 'best-available',
+            adapters: [webgpuAdapter, webgl2Adapter],
+            createCanvasContext: true
+          })
+        });
+        animationLoop.start().catch(exampleSupport.reportFailed);
+      }
     </script>
   </body>
 </html>

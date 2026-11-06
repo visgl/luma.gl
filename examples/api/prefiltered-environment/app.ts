@@ -5,6 +5,7 @@ import type {Texture} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   SphereGeometry,
+  OrbitControls,
   type Model,
   type AnimationProps
 } from '@luma.gl/engine';
@@ -20,15 +21,21 @@ import {
   type PrefilteredEnvironment
 } from '@luma.gl/engine/lighting';
 import {toHalfFloat} from '@luma.gl/shaders';
+import {ExamplePanelManager, makeExamplePanelHostHtml} from '../../example-panels';
+import {makeEnvironmentPanel} from './app-ui';
 
 /** An engine-only IBL consumer: roughness increases across columns, metalness across rows. */
 export default class EnvironmentExample extends AnimationLoopTemplate {
-  static info =
-    '<p>Environment lighting: roughness increases left to right; metalness increases bottom to top. A procedural HDR sky lights all spheres.</p>';
+  static info = makeExamplePanelHostHtml();
   readonly environment: PrefilteredEnvironment;
   readonly source: Texture;
   readonly surfaces: {model: Model; material: PBRMaterial; modelMatrix: Matrix4}[] = [];
-  private statusElement?: HTMLElement;
+  readonly panels: ExamplePanelManager;
+  private orbitControls: OrbitControls | null = null;
+  private readonly resetCamera = () => {
+    this.orbitControls?.setProps({target: [0, 0, 0]});
+    this.orbitControls?.reset();
+  };
 
   constructor({device}: AnimationProps) {
     super();
@@ -103,20 +110,44 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
         });
       }
     }
-    if (format === 'rgba8unorm') {
-      const canvas = device.getDefaultCanvasContext().canvas;
-      if (canvas instanceof HTMLCanvasElement) {
-        this.statusElement = document.createElement('p');
-        this.statusElement.textContent =
-          'SDR mode: HDR filtering is unavailable on this device. The example is running with bright environment values clipped to the SDR range.';
-        canvas.insertAdjacentElement('beforebegin', this.statusElement);
-      }
+    this.panels = new ExamplePanelManager({
+      panel: makeEnvironmentPanel({
+        backend: device.type,
+        highDynamicRange: format === 'rgba16float',
+        onResetCamera: this.resetCamera
+      })
+    });
+    this.panels.mount();
+  }
+
+  async onInitialize({canvas}: AnimationProps): Promise<void> {
+    if (canvas instanceof HTMLCanvasElement) {
+      this.orbitControls = new OrbitControls(canvas, {
+        target: [0, 0, 0],
+        distance: 12,
+        yaw: 0,
+        pitch: 0,
+        minDistance: 4,
+        maxDistance: 35,
+        enableRotate: true,
+        enablePan: true
+      });
     }
   }
 
-  onRender({device, aspect}: AnimationProps) {
-    const view = new Matrix4().lookAt({eye: [0, 0, 12], center: [0, 0, 0], up: [0, 1, 0]});
+  onRender({device, aspect, time}: AnimationProps) {
+    this.orbitControls?.update(time);
+    const camera: [number, number, number] = this.orbitControls?.getEyePosition() ?? [0, 0, 12];
+    const view = new Matrix4().lookAt({
+      eye: camera,
+      center: this.orbitControls?.props.target ?? [0, 0, 0],
+      up: this.orbitControls?.getUpDirection() ?? [0, 1, 0]
+    });
     const projection = new Matrix4().perspective({fovy: Math.PI / 4, aspect, near: 0.1, far: 100});
+    if (device.type === 'webgpu') {
+      // Convert math.gl's OpenGL clip depth to WebGPU's [0, 1] range.
+      projection.multiplyLeft(new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]));
+    }
     const renderPass = device.beginRenderPass({clearColor: [0.02, 0.02, 0.02, 1], clearDepth: 1});
     for (const {model, modelMatrix} of this.surfaces) {
       model.shaderInputs.setProps({
@@ -126,7 +157,7 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
           modelViewProjectionMatrix: new Matrix4(projection)
             .multiplyRight(view)
             .multiplyRight(modelMatrix),
-          camera: [0, 0, 12]
+          camera
         },
         pbrScene: {
           ...getPBREnvironmentUniforms(this.environment.textures),
@@ -140,7 +171,8 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
   }
 
   onFinalize() {
-    this.statusElement?.remove();
+    this.panels.finalize();
+    this.orbitControls?.destroy();
     for (const {model, material} of this.surfaces) {
       model.destroy();
       material.destroy();
