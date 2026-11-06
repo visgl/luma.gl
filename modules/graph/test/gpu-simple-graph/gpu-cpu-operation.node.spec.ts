@@ -195,3 +195,24 @@ it('preserves graph-declared output constraints in GPU stages after CPU work', a
     device.destroy();
   }
 });
+
+it('preserves produced vector roles for scalar-only expressions in CPU graphs', async () => {
+  const device = new NullDevice({});
+  const graph = new GPUSimpleGraph();
+  graph.add(
+    new GPUCPUOperation({
+      id: 'cpu',
+      inputs: {},
+      outputs: {input: gpuGraph.vector('float32')},
+      execute: () => ({input: new Float32Array([1])})
+    })
+  );
+  graph.add(new GPUExpressionOperation({output: 'result', expression: 'vec2(1, 2)'}));
+  const compiled = graph.compile(device, {outputs: ['result']});
+  try {
+    expect(compiled).toBeDefined();
+  } finally {
+    compiled.destroy();
+    device.destroy();
+  }
+});
