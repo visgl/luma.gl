@@ -110,9 +110,9 @@ fn vertexMain(inputs: PBRModelVertexInputs) -> PBRModelFragmentInputs {
 #ifdef HAS_SKIN
   let skinMatrix = getSkinMatrix(inputs.WEIGHTS_0, inputs.JOINTS_0);
   position = skinMatrix * position;
-  normal = normalize((skinMatrix * vec4f(normal, 0.0)).xyz);
+  normal = normalize(getPBRInstanceNormalMatrix(mat3x3f(skinMatrix[0].xyz, skinMatrix[1].xyz, skinMatrix[2].xyz)) * normal);
 #ifdef HAS_TANGENTS
-  tangent = vec4f(normalize((skinMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w);
+  tangent = vec4f(normalize((skinMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w * sign(determinant(mat3x3f(skinMatrix[0].xyz, skinMatrix[1].xyz, skinMatrix[2].xyz))));
 #endif
 #endif
 
@@ -129,13 +129,13 @@ ${hooks.instanceTransform ?? ''}  position = instanceMatrix * position;
   ));
   normal = normalize(instanceNormalMatrix * normal);
 #ifdef HAS_TANGENTS
-  tangent = vec4f(normalize((instanceMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w);
+  tangent = vec4f(normalize((instanceMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w * sign(determinant(mat3x3f(instanceMatrix[0].xyz, instanceMatrix[1].xyz, instanceMatrix[2].xyz))));
 #endif
 #endif
   let worldPosition = pbrProjection.modelMatrix * position;
   normal = normalize((pbrProjection.normalMatrix * vec4f(normal, 0.0)).xyz);
 #ifdef HAS_TANGENTS
-  tangent = vec4f(normalize((pbrProjection.modelMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w);
+  tangent = vec4f(normalize((pbrProjection.modelMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w * sign(determinant(mat3x3f(pbrProjection.modelMatrix[0].xyz, pbrProjection.modelMatrix[1].xyz, pbrProjection.modelMatrix[2].xyz))));
 #endif
   outputs.position = pbrProjection.modelViewProjectionMatrix * position;
 ${hooks.vertexOutput ?? ''}
@@ -248,8 +248,8 @@ void main(void) {
 #ifdef HAS_SKIN
   mat4 skinMatrix = getSkinMatrix(WEIGHTS_0, JOINTS_0);
   position = skinMatrix * position;
-  normal = skinMatrix * normal;
-  tangent = vec4((skinMatrix * vec4(tangent.xyz, 0.0)).xyz, tangent.w);
+  normal = vec4(transpose(inverse(mat3(skinMatrix))) * normal.xyz, 0.0);
+  tangent = vec4((skinMatrix * vec4(tangent.xyz, 0.0)).xyz, tangent.w * sign(determinant(mat3(skinMatrix))));
 #endif
 
 #ifdef HAS_INSTANCING
@@ -261,9 +261,10 @@ void main(void) {
   );
   position = instanceMatrix * position;
   normal = vec4(normalize(transpose(inverse(mat3(instanceMatrix))) * normal.xyz), 0.0);
-  tangent = vec4(normalize(mat3(instanceMatrix) * tangent.xyz), tangent.w);
+  tangent = vec4(normalize(mat3(instanceMatrix) * tangent.xyz), tangent.w * sign(determinant(mat3(instanceMatrix))));
 #endif
 
+  tangent.w *= sign(determinant(mat3(pbrProjection.modelMatrix)));
   pbr_setPositionNormalTangentUV(
     position,
     normal,

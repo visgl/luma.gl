@@ -49,7 +49,8 @@ Supply `pbrProjection` uniforms through `model.shaderInputs`:
 Transforms must be nonsingular. Instancing uses `HAS_INSTANCING` and four per-instance
 `float32x4` attributes named `instanceModelMatrixCol0` through `instanceModelMatrixCol3`.
 Instance transforms are applied before the model transform, including their inverse-transpose
-normal transforms. Set the instance count and instance buffer layouts explicitly.
+normal transforms. Reflected model, instance, and skin transforms also preserve tangent-frame
+handedness. Set the instance count and instance buffer layouts explicitly.
 
 When `HAS_SKIN` is enabled, the factory includes the `skin` module. Supply its joint palette
 through `skin.jointMatrices`. The default portable path supports the skin module's uniform

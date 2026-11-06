@@ -11,6 +11,7 @@ import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {
   createPBRMaterial,
   createPBRModel,
+  getPBRModelWGSL,
   createPrefilteredEnvironment,
   getPBREnvironmentBindings,
   getPBREnvironmentUniforms
@@ -85,7 +86,7 @@ test('standalone normal transforms agree for ordinary and instanced reflected no
         try {
           if (skinned)
             model.shaderInputs.setProps({
-              skin: {jointMatrices: new Matrix4().translate([0.1, 0, 0])}
+              skin: {jointMatrices: new Matrix4().translate([0.1, 0, 0]).scale([-0.8, 0.7, 0.5])}
             });
           model.shaderInputs.setProps({
             pbrProjection: {
@@ -102,7 +103,11 @@ test('standalone normal transforms agree for ordinary and instanced reflected no
           device.submit();
           texture.readBuffer({x: 16, y: 16, width: 1, height: 1}, buffer);
           const pixels = await buffer.readAsync();
-          const normal = instanced ? [-1 / 0.4, 1 / 0.42, 1 / 0.5] : [-2, 1 / 0.6, 1];
+          const normal = skinned
+            ? [1 / 0.4, 1 / 0.42, 1 / 0.5]
+            : instanced
+              ? [-1 / 0.4, 1 / 0.42, 1 / 0.5]
+              : [-2, 1 / 0.6, 1];
           const length = Math.hypot(...normal);
           normal.forEach((value, channel) =>
             expect(
@@ -249,6 +254,85 @@ test('standalone PBR models consume generated linear environment lighting', asyn
       texture.destroy();
       environment.destroy();
       source.destroy();
+    }
+  }
+});
+
+test('mirrored model and instance transforms preserve tangent-frame handedness', async context => {
+  const devices = await getDevices();
+  if (!devices.length) return context.skip('No rendering device');
+  for (const device of devices) {
+    const geometry = new Geometry({
+      attributes: {
+        POSITION: {size: 3, value: new Float32Array([-1, -1, 0, 1, -1, 0, 0, 1, 0])},
+        NORMAL: {size: 3, value: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])},
+        TANGENT: {size: 4, value: new Float32Array([1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1])}
+      }
+    });
+    const material = createPBRMaterial(device);
+    const texture = device.createTexture({
+      width: 16,
+      height: 16,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({colorAttachments: [texture]});
+    const readback = device.createBuffer({
+      byteLength: 256,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    try {
+      for (const instanceScale of [0.7, -0.7]) {
+        const instanceMatrix = new Matrix4().scale([instanceScale, 0.7, 1]);
+        const names = [0, 1, 2, 3].map(column => `instanceModelMatrixCol${column}`);
+        const buffers = names.map((name, column) =>
+          device.createBuffer({
+            data: new Float32Array(instanceMatrix.slice(column * 4, column * 4 + 4)),
+            usage: Buffer.VERTEX
+          })
+        );
+        const model = createPBRModel(device, {
+          geometry,
+          material,
+          source: getPBRModelWGSL({
+            fragmentBody:
+              'return vec4f(normalize(fragmentInputs.pbr_vTBN * vec3f(0, 1, 0)) * 0.5 + vec3f(0.5), 1);'
+          }),
+          fs: '#version 300 es\nout vec4 fragmentColor;\nvoid main() {fragmentColor = vec4(normalize(pbr_vTBN * vec3(0, 1, 0)) * 0.5 + 0.5, 1);}',
+          defines: {HAS_INSTANCING: true},
+          attributes: Object.fromEntries(names.map((name, index) => [name, buffers[index]])),
+          bufferLayout: names.map(name => ({name, format: 'float32x4', stepMode: 'instance'})),
+          colorAttachmentFormats: ['rgba8unorm'],
+          parameters: {depthWriteEnabled: false, cullMode: 'none'}
+        });
+        try {
+          const modelMatrix = new Matrix4().scale([-0.5, 0.5, 1]);
+          model.shaderInputs.setProps({
+            pbrProjection: {
+              modelMatrix,
+              normalMatrix: new Matrix4(modelMatrix).invert().transpose(),
+              modelViewProjectionMatrix: modelMatrix,
+              camera: [0, 0, 1]
+            }
+          });
+          const pass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1]});
+          pass.setParameters({viewport: [0, 0, 16, 16]});
+          model.draw(pass);
+          pass.end();
+          device.submit();
+          texture.readBuffer({x: 8, y: 8, width: 1, height: 1}, readback);
+          const pixels = await readback.readAsync();
+          expect(pixels[1], `${device.type} instance scale ${instanceScale}`).toBeGreaterThan(250);
+        } finally {
+          model.destroy();
+          for (const buffer of buffers) buffer.destroy();
+        }
+      }
+    } finally {
+      material.destroy();
+      readback.destroy();
+      framebuffer.destroy();
+      texture.destroy();
     }
   }
 });
