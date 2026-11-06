@@ -143,6 +143,11 @@
       "import": "./dist/gpu-project/geoarrow.js",
       "require": "./dist/gpu-project/geoarrow.cjs"
     },
+    "./gpu-project/graph": {
+      "types": "./dist/gpu-project/graph.d.ts",
+      "import": "./dist/gpu-project/graph.js",
+      "require": "./dist/gpu-project/graph.cjs"
+    },
     "./gpu-project/crs": {
       "types": "./dist/gpu-project/crs.d.ts",
       "import": "./dist/gpu-project/crs.js",
