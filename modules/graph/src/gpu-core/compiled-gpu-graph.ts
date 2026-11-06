@@ -29,6 +29,7 @@ import {GPUCPUExecution} from './gpu-cpu-execution';
 /** Reusable WebGPU program. Returned output vectors belong to the caller. */
 export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, GPUVector>> {
   private readonly program: GPUExpressionProgram;
+  private readonly stageLowerings: readonly GPUOperationLowering[];
   private readonly compiler: GPUGraphCompiler;
   private readonly kernels = new Map<GPUExpressionOperation, GPUExpressionKernel>();
   private destroyed = false;
@@ -45,6 +46,7 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
     if (device.type !== 'webgpu') throw new Error('GPUGraph execution requires WebGPU');
     this.program = new GPUExpressionProgram(source, options);
     this.outputLocations = options.outputLocations ?? {};
+    this.stageLowerings = lowerings ?? options.lowerings ?? [];
     this.compiler = new GPUGraphCompiler(device, [
       ...(lowerings ?? options.lowerings ?? []),
       {
@@ -80,16 +82,18 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
   ): Promise<Outputs> {
     assert(!this.destroyed && !this.runningCPU);
     const suppliedInputs = 'inputs' in supplied ? supplied.inputs : supplied;
-    if (
-      !this.cpuExecution &&
-      Object.values(suppliedInputs ?? {}).some(value => value instanceof CPUVector)
-    )
+    const useCPU =
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu') ||
+      Object.values(suppliedInputs ?? {}).some(value => value instanceof CPUVector);
+    if (!this.cpuExecution && useCPU)
       this.cpuExecution = new GPUCPUExecution(
         this.device,
         this.program,
-        (source, outputs) => new CompiledGPUGraph(this.device, source, {outputs})
+        (source, outputs) =>
+          new CompiledGPUGraph(this.device, source, {outputs}, this.stageLowerings)
       );
-    if (this.cpuExecution) {
+    if (useCPU && this.cpuExecution) {
       const resolved = this.program.resolveBindings(supplied, options);
       // Dynamic CPU outputs are owned by the invocation, not caller-provided targets.
       assert(

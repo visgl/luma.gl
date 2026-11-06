@@ -128,6 +128,8 @@ export class GPUCPUExecution {
           .finish();
       }
       if (value instanceof CPUVector) {
+        // List and validity metadata cannot be represented by portable callback rows yet.
+        assert(value.data.every(chunk => !chunk.nullBitmap && !chunk.valueOffsets));
         assert(value.format === declaration.format);
         const vector = this.program.vectors.find(vector => vector.id === declaration.id);
         assert(vector && (vector.length === undefined || vector.length === value.length));
@@ -232,6 +234,7 @@ export class GPUCPUExecution {
           results = await stage.graph.run({inputs});
         }
         for (const [name, value] of Object.entries(results)) {
+          cpu.delete(name);
           values[name] = value;
           owned.add(value);
         }

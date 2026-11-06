@@ -127,3 +127,40 @@ test('CPU input uploads once for multiple GPU consumers', async () => {
     device.destroy();
   }
 });
+
+test('rejects unsupported CPU validity metadata before callbacks execute', async () => {
+  const device = new NullDevice({});
+  const execute = vi.fn(() => ({result: new Float32Array([1])}));
+  const graph = new GPUSimpleGraph();
+  graph.addInput('source', gpuGraph.vector('float32'));
+  graph.add(
+    new GPUCPUOperation({
+      id: 'copy',
+      inputs: {source: 'source'},
+      outputs: {result: gpuGraph.vector('float32')},
+      execute
+    })
+  );
+  const compiled = graph.compile<Record<string, CPUVector>>(device, {
+    outputs: ['result'],
+    outputLocations: {result: 'cpu'}
+  });
+  const source = new CPUVector({
+    format: 'float32',
+    data: [
+      new CPUData({
+        buffer: new Float32Array([1]),
+        format: 'float32',
+        length: 1,
+        nullBitmap: new Uint8Array([0])
+      })
+    ]
+  });
+  try {
+    await expect(compiled.run({inputs: {source}})).rejects.toThrow();
+    expect(execute).not.toHaveBeenCalled();
+  } finally {
+    compiled.destroy();
+    device.destroy();
+  }
+});

@@ -239,8 +239,7 @@ handles readback and uploads; it does not lower CPU work to a GPU command node.
 This initial implementation supports straight-line numeric graphs with `addInput()` and
 operation-owned vector results. Textures, state, output targets, and caller-controlled
 `prepare()`/encoding are unsupported. GPU stages and CPU stages execute in authored order;
-intermediates are retained until the invocation finishes. CPU-to-CPU chains currently cross
-the GPU boundary between callbacks. Only one CPU-containing invocation may run at a time
+intermediates are retained until the invocation finishes. CPU-to-CPU chains retain CPU results without transfers. Only one CPU-containing invocation may run at a time
 per compiled graph, and destroying it while a callback is pending is rejected.
 
 Selected results belong to the caller. Failures release invocation-owned intermediates,

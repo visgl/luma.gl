@@ -139,18 +139,19 @@ export class CompiledGPUSimpleExpressionGraph<
     const resolvedBindings = this.program.resolveBindings(supplied, options);
     const bindings = resolvedBindings.bindings;
     options = resolvedBindings.options;
-    this.running = true;
     const suppliedInputs = 'inputs' in supplied ? supplied.inputs : supplied;
-    if (
-      !this.cpuExecution &&
-      Object.values(suppliedInputs ?? {}).some(value => value instanceof CPUVector)
-    )
+    const useCPU =
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu') ||
+      Object.values(suppliedInputs ?? {}).some(value => value instanceof CPUVector);
+    if (!this.cpuExecution && useCPU)
       this.cpuExecution = new GPUCPUExecution(
         this.device,
         this.program,
         (source, outputs) => new CompiledGPUSimpleExpressionGraph(this.device, source, {outputs})
       );
-    if (this.cpuExecution) {
+    this.running = true;
+    if (useCPU && this.cpuExecution) {
       try {
         // Dynamic CPU results cannot be prepared into caller-owned storage yet.
         assert(!options.outputTargets || Object.keys(options.outputTargets).length === 0);

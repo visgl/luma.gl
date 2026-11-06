@@ -221,10 +221,8 @@ three rows. Empty arrays are supported. Optional descriptor `length` and `chunkL
 constraints are checked. Formats are fixed at compilation; lengths can change on every run.
 Only the portable 32-bit numeric formats with one to four components are supported.
 
-The executor awaits the callback, allocates correctly sized GPUVectors, and uploads the
-arrays. Do not mutate returned arrays until `run()` settles. CPU callbacks can delegate to
-workers through promises; closures are not automatically moved to workers. CPU-to-CPU
-chains currently upload and read back between callbacks; lazy CPU residency is not implemented.
+The executor awaits the callback and retains CPU results until a GPU consumer or selected GPU output requires upload. Do not mutate returned arrays until `run()` settles. CPU callbacks can delegate to
+workers through promises; closures are not automatically moved to workers. CPU-to-CPU chains retain their results in CPU memory without GPU transfers.
 
 CPU boundaries submit preceding GPU work before readback. These programs do not support
 `prepare()`, caller-controlled scopes, textures, state, or `outputTargets`. Use `addInput()`
