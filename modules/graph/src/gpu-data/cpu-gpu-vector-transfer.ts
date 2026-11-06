@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, type BufferProps} from '@luma.gl/core';
+import {assert, Buffer, type Device, type BufferProps} from '@luma.gl/core';
 import {CPUData} from './cpu-data';
 import {CPUVector} from './cpu-vector';
 import {GPUData} from './gpu-data';
@@ -19,6 +19,17 @@ export function makeGPUVectorFromCPUVector<T extends GPUVectorFormat>(
   try {
     for (const chunk of vector.data) {
       const info = getGPUVectorFormatInfo(vector.format);
+      const inferredIndexType =
+        info.elementFormat === 'uint32'
+          ? 'uint32'
+          : info.elementFormat === 'uint16'
+            ? 'uint16'
+            : undefined;
+      // Index usage must match stored elements; raw bytes must never trigger device conversion.
+      if ((options.usage ?? 0) & Buffer.INDEX)
+        assert(
+          inferredIndexType && (!options.indexType || options.indexType === inferredIndexType)
+        );
       const count = info.vertexList || info.valueList ? chunk.valueLength : chunk.length;
       const bytes = new Uint8Array(count * info.byteLength);
       for (let index = 0; index < count; index++)
@@ -40,7 +51,9 @@ export function makeGPUVectorFromCPUVector<T extends GPUVectorFormat>(
               Buffer.STORAGE |
               Buffer.VERTEX |
               (options.usage ?? 0),
-            indexType: options.indexType
+            indexType:
+              options.indexType ??
+              ((options.usage ?? 0) & Buffer.INDEX ? inferredIndexType : undefined)
           }),
           format: vector.format,
           length: chunk.length,

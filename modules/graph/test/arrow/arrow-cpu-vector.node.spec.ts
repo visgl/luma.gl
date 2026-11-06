@@ -75,8 +75,7 @@ test('single-level coordinate lists project and tessellate through CPU vectors',
   expect(mesh.positions.data[0].valueOffsets?.length).toBe(3);
   const device = new NullDevice({});
   const gpu = makeGPUVectorFromCPUVector(device, mesh.indices, {
-    usage: Buffer.INDEX,
-    indexType: 'uint32'
+    usage: Buffer.INDEX
   });
   try {
     expect(gpu.data[0].buffer.usage & Buffer.INDEX).toBeTruthy();
