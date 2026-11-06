@@ -6,15 +6,16 @@ import {getNullTestDevice} from '@luma.gl/core/test-utils';
 import type {Device, Texture} from '@luma.gl/core';
 import {PrefilteredEnvironment, PrefilteredEnvironmentGenerator} from '@luma.gl/engine/lighting';
 
-function makeTexture() {
-  return {destroy: vi.fn()} as unknown as Texture;
+const textureDevice = {};
+function makeTexture(dimension = 'cube') {
+  return {destroy: vi.fn(), device: textureDevice, dimension} as unknown as Texture;
 }
 
 test('environment releases only owned textures once', () => {
   const textures = {
     diffuseTexture: makeTexture(),
     specularTexture: makeTexture(),
-    brdfLUTTexture: makeTexture()
+    brdfLUTTexture: makeTexture('2d')
   };
   const environment = new PrefilteredEnvironment(textures, false);
   expect(environment.getBindings().pbr_specularEnvSampler).toBe(textures.specularTexture);

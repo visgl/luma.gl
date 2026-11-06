@@ -72,6 +72,7 @@ export {
 } from './parsers/parse-pbr-material';
 export {
   loadPBREnvironment,
+  resolveLoadedPBREnvironment,
   type PBREnvironment,
   type PBREnvironmentProps
 } from './pbr/pbr-environment';

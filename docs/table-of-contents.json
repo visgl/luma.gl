@@ -1120,6 +1120,8 @@
               "api-reference/engine/animation-loop-template",
               "api-reference/engine/clip-space",
               "api-reference/engine/background-texture-model",
+              "api-reference/engine/lighting/pbr-material",
+              "api-reference/engine/lighting/pbr-environment",
               "api-reference/engine/lighting/prefiltered-environment",
               "api-reference/engine/text/README",
               "api-reference/engine/text-3d"

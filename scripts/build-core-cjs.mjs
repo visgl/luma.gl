@@ -286,3 +286,15 @@ for (const name of ['PrefilteredEnvironment', 'PrefilteredEnvironmentGenerator',
   assert.equal(lightingEsm[name], lightingImplementationEsm[name]);
 }
 process.stdout.write('Verified optional lighting subpath identities.\n');
+
+const lightingMaterialApi = require('../modules/engine/dist/lighting/pbr-material.cjs');
+const lightingMaterialEsm = await import('../modules/engine/dist/lighting/pbr-material.js');
+const compatibleMaterialApi = require('../modules/anari/dist/engine/pbr-material.cjs');
+const compatibleMaterialEsm = await import('../modules/anari/dist/engine/pbr-material.js');
+for (const name of ['createPBRMaterial', 'createPBRMaterialFactory', 'getPBRMaterialMapUniforms']) {
+  assert.equal(lightingApi[name], lightingMaterialApi[name]);
+  assert.equal(lightingEsm[name], lightingMaterialEsm[name]);
+  assert.equal(compatibleMaterialApi[name], lightingApi[name]);
+  assert.equal(compatibleMaterialEsm[name], lightingEsm[name]);
+}
+process.stdout.write('Verified PBR material compatibility export identities.\n');
