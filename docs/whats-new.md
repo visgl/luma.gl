@@ -1,5 +1,14 @@
 # What's New
 
+### Reusable PBR materials and environment bindings
+
+`@luma.gl/engine/lighting` exposes typed PBR material factories and borrowed environment
+bindings for generated and precomputed lighting. The glTF entry point can resolve loaded
+environment textures after upload; material and environment resources retain explicit
+ownership. Existing ANARI material exports remain compatible. See
+[PBR materials](./api-reference/engine/lighting/pbr-material.md) and
+[environment bindings](./api-reference/engine/lighting/pbr-environment.md).
+
 ### Three r187 compute interoperability
 
 `@luma.gl/three` targets Three 0.187.0. The shared-device buffer bridge supports

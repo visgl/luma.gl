@@ -10,6 +10,7 @@ import {
   type TextureFormatColor,
   type TextureView
 } from '@luma.gl/core';
+import {getPBREnvironmentBindings} from './pbr-environment';
 import {ClipSpace} from '../models/clip-space';
 import {ShaderInputs} from '../shader-inputs';
 import {
@@ -58,11 +59,7 @@ export class PrefilteredEnvironment {
 
   /** Returns the texture bindings declared by the IBL shader module. */
   getBindings() {
-    return {
-      pbr_diffuseEnvSampler: this.textures.diffuseTexture,
-      pbr_specularEnvSampler: this.textures.specularTexture,
-      pbr_brdfLUT: this.textures.brdfLUTTexture
-    };
+    return getPBREnvironmentBindings(this.textures);
   }
 
   destroy(): void {

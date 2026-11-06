@@ -4,6 +4,11 @@
 
 import {Device, SamplerProps} from '@luma.gl/core';
 import {
+  getPBREnvironmentBindings,
+  type PBRLightingEnvironment,
+  type PBRLightingEnvironmentOptions
+} from '../../lighting/pbr-environment';
+import {
   DynamicTexture,
   type Texture2DData,
   type TextureCubeData,
@@ -75,7 +80,8 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
     sampler: {
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
-      minFilter: 'linear', // [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR,
+      minFilter: 'linear',
+      mipmapFilter: 'linear',
       magFilter: 'linear'
     } as const satisfies SamplerProps
   });
@@ -127,4 +133,19 @@ function makeCube(
     sampler,
     data
   });
+}
+
+/** Resolves a loaded environment into borrowed lighting resources after every upload completes. */
+export async function resolveLoadedPBREnvironment(
+  environment: PBREnvironment,
+  options: PBRLightingEnvironmentOptions = {}
+): Promise<PBRLightingEnvironment> {
+  const [diffuseTexture, specularTexture, brdfLUTTexture] = await Promise.all([
+    environment.diffuseEnvSampler.ready,
+    environment.specularEnvSampler.ready,
+    environment.brdfLutTexture.ready
+  ]);
+  const lightingEnvironment = {diffuseTexture, specularTexture, brdfLUTTexture, ...options};
+  getPBREnvironmentBindings(lightingEnvironment);
+  return lightingEnvironment;
 }

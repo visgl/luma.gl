@@ -12,3 +12,12 @@ export type {
   PrefilteredEnvironmentTextures
 } from './prefiltered-environment';
 export {createAreaLightLTCTextures} from './ltc-textures';
+
+export {
+  createPBRMaterial,
+  createPBRMaterialFactory,
+  getPBRMaterialMapUniforms
+} from './pbr-material';
+export type {CreatePBRMaterialOptions, PBRMaterial, PBRMaterialResources} from './pbr-material';
+export {getPBREnvironmentBindings, getPBREnvironmentUniforms} from './pbr-environment';
+export type {PBRLightingEnvironment, PBRLightingEnvironmentOptions} from './pbr-environment';
