@@ -14,7 +14,7 @@ import {
   type ArithmeticOp,
   type ArithmeticArgument
 } from './operations/arithmetic-operation';
-import {GPUVector} from '@luma.gl/graph/gpu-data';
+import {CPUVector, GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from '../gpu-core/gpu-graph';
 import {
   GPUExpressionOperation,
@@ -47,7 +47,8 @@ export class CompiledGPUSimpleExpressionGraph<
   Outputs extends GPUGraphOutputs = Record<string, GPUVector>
 > {
   private readonly program: GPUExpressionProgram;
-  private readonly cpuExecution?: GPUCPUExecution;
+  private cpuExecution?: GPUCPUExecution;
+  private readonly outputLocations: Readonly<Record<string, 'cpu' | 'gpu'>>;
   private running = false;
   private destroyed = false;
 
@@ -58,6 +59,7 @@ export class CompiledGPUSimpleExpressionGraph<
   ) {
     if (options.lowerings) throw new Error('Custom lowerings require GPUGraph');
     this.program = new GPUExpressionProgram(source, options);
+    this.outputLocations = options.outputLocations ?? {};
     if (this.program.textures.length && device.type !== 'webgpu')
       throw new Error('SimpleGraph texture execution requires WebGPU');
     if (this.program.vectors.some(value => value.role === 'state'))
@@ -76,7 +78,10 @@ export class CompiledGPUSimpleExpressionGraph<
       throw new Error(
         'SimpleGraph declarative execution supports expression, CPU, upload and copy operations only'
       );
-    if (this.program.operations.some(operation => operation instanceof GPUCPUOperation))
+    if (
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu')
+    )
       this.cpuExecution = new GPUCPUExecution(
         device,
         this.program,
@@ -134,12 +139,23 @@ export class CompiledGPUSimpleExpressionGraph<
     const resolvedBindings = this.program.resolveBindings(supplied, options);
     const bindings = resolvedBindings.bindings;
     options = resolvedBindings.options;
+    const suppliedInputs = 'inputs' in supplied ? supplied.inputs : supplied;
+    const useCPU =
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu') ||
+      Object.values(suppliedInputs ?? {}).some(value => value instanceof CPUVector);
+    if (!this.cpuExecution && useCPU)
+      this.cpuExecution = new GPUCPUExecution(
+        this.device,
+        this.program,
+        (source, outputs) => new CompiledGPUSimpleExpressionGraph(this.device, source, {outputs})
+      );
     this.running = true;
-    if (this.cpuExecution) {
+    if (useCPU && this.cpuExecution) {
       try {
         // Dynamic CPU results cannot be prepared into caller-owned storage yet.
         assert(!options.outputTargets || Object.keys(options.outputTargets).length === 0);
-        return (await this.cpuExecution.run(bindings)) as Outputs;
+        return (await this.cpuExecution.run(bindings, this.outputLocations)) as Outputs;
       } finally {
         this.running = false;
       }

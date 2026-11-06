@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, type CommandEncoder, type Device} from '@luma.gl/core';
-import {GPUVector} from '@luma.gl/graph/gpu-data';
+import {CPUVector, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   getTextureBindingInfo,
   type GPUGraphTextureBinding,
@@ -29,11 +29,13 @@ import {GPUCPUExecution} from './gpu-cpu-execution';
 /** Reusable WebGPU program. Returned output vectors belong to the caller. */
 export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, GPUVector>> {
   private readonly program: GPUExpressionProgram;
+  private readonly stageLowerings: readonly GPUOperationLowering[];
   private readonly compiler: GPUGraphCompiler;
   private readonly kernels = new Map<GPUExpressionOperation, GPUExpressionKernel>();
   private destroyed = false;
   private runningCPU = false;
-  private readonly cpuExecution?: GPUCPUExecution;
+  private cpuExecution?: GPUCPUExecution;
+  private readonly outputLocations: Readonly<Record<string, 'cpu' | 'gpu'>>;
 
   constructor(
     readonly device: Device,
@@ -43,6 +45,8 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
   ) {
     if (device.type !== 'webgpu') throw new Error('GPUGraph execution requires WebGPU');
     this.program = new GPUExpressionProgram(source, options);
+    this.outputLocations = options.outputLocations ?? {};
+    this.stageLowerings = lowerings ?? options.lowerings ?? [];
     this.compiler = new GPUGraphCompiler(device, [
       ...(lowerings ?? options.lowerings ?? []),
       {
@@ -51,7 +55,10 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
           this.kernels.get(operation)!.lower(context)
       }
     ]);
-    if (this.program.operations.some(operation => operation instanceof GPUCPUOperation)) {
+    if (
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu')
+    ) {
       this.cpuExecution = new GPUCPUExecution(
         device,
         this.program,
@@ -74,7 +81,19 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
     options: GPUGraphRunOptions = {}
   ): Promise<Outputs> {
     assert(!this.destroyed && !this.runningCPU);
-    if (this.cpuExecution) {
+    const suppliedInputs = 'inputs' in supplied ? supplied.inputs : supplied;
+    const useCPU =
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu') ||
+      Object.values(suppliedInputs ?? {}).some(value => value instanceof CPUVector);
+    if (!this.cpuExecution && useCPU)
+      this.cpuExecution = new GPUCPUExecution(
+        this.device,
+        this.program,
+        (source, outputs) =>
+          new CompiledGPUGraph(this.device, source, {outputs}, this.stageLowerings)
+      );
+    if (useCPU && this.cpuExecution) {
       const resolved = this.program.resolveBindings(supplied, options);
       // Dynamic CPU outputs are owned by the invocation, not caller-provided targets.
       assert(
@@ -82,7 +101,7 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
       );
       this.runningCPU = true;
       try {
-        return (await this.cpuExecution.run(resolved.bindings)) as Outputs;
+        return (await this.cpuExecution.run(resolved.bindings, this.outputLocations)) as Outputs;
       } finally {
         this.runningCPU = false;
       }
@@ -110,7 +129,10 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
   ): PreparedGPUGraphExecution<Outputs> {
     // A destroyed compiled program cannot encode further work.
     assert(!this.destroyed);
-    if (this.cpuExecution)
+    if (
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu')
+    )
       throw new Error('CPU operations require asynchronous run(), not prepare()');
     const resolvedBindings = this.program.resolveBindings(supplied, options);
     const bindings = resolvedBindings.bindings;

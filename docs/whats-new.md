@@ -1145,3 +1145,6 @@ and lifetime contract.
 
 `CPUProjectionOperation` provides math.gl CPU projection in reusable graphs. `CPUData` and
 `CPUVector` provide Arrow-independent borrowed CPU chunks using existing GPU memory formats.
+
+Reusable graphs accept CPUVector inputs and `outputLocations` for CPU results. CPU chains
+stay resident on the CPU, with uploads and readbacks cached per invocation when needed.

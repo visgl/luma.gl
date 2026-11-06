@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {CPUVector} from '../gpu-data/cpu-vector';
 import {assert, Texture, TextureView, type Device, type TextureViewProps} from '@luma.gl/core';
 import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUGraphTexture, GPUGraphTextureDescriptor} from './gpu-graph-value';
@@ -10,7 +11,7 @@ import {getGPUOperationValueName} from './gpu-operation-contract';
 import type {GraphTextureUsage, GraphTextureViewProps} from './gpu-command-graph';
 
 export type GPUGraphTextureBinding = Texture | TextureView;
-export type GPUGraphOutput = GPUVector | GPUGraphTextureBinding;
+export type GPUGraphOutput = CPUVector | GPUVector | GPUGraphTextureBinding;
 export type GPUGraphOutputs = Record<string, GPUGraphOutput>;
 
 /** Selected view geometry, without creating another view. @internal */
@@ -109,7 +110,7 @@ export class GPUTextureInvocation {
     device: Device,
     declarations: readonly GPUGraphTexture[],
     contracts: readonly GPUOperationContract[],
-    bindings: Readonly<Record<string, GPUVector | number | GPUGraphTextureBinding>>,
+    bindings: Readonly<Record<string, GPUVector | CPUVector | number | GPUGraphTextureBinding>>,
     targets: Readonly<Record<string, GPUGraphOutput>>
   ) {
     const usages = new Map<string, number>();
