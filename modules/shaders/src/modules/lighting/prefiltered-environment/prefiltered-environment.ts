@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Texture} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shaders';
+import type {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 export type PBREnvironmentFilterUniforms = {
   face: number;
@@ -13,11 +12,12 @@ export type PBREnvironmentFilterUniforms = {
   sourceEncoding: number;
 };
 
-export type PBREnvironmentFilterBindings = {
-  pbrEnvironmentSource: Texture;
+export type PBREnvironmentFilterBindings<TextureT = unknown> = {
+  pbrEnvironmentSource: TextureT;
 };
 
-export type PBREnvironmentFilterProps = PBREnvironmentFilterUniforms & PBREnvironmentFilterBindings;
+export type PBREnvironmentFilterProps<TextureT = unknown> = PBREnvironmentFilterUniforms &
+  PBREnvironmentFilterBindings<TextureT>;
 
 const GLSL_UNIFORMS = /* glsl */ `\
 layout(std140) uniform pbrEnvironmentFilterUniforms {
@@ -357,12 +357,14 @@ fn integrateEnvironmentDirection(normal: vec3f, sampleCount: u32) -> vec3f {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  // ClipSpace UVs increase upward; WebGPU texture rows increase downward.
+  let textureCoordinate = vec2f(inputs.uv.x, 1.0 - inputs.uv.y);
   let sampleCount = u32(max(pbrEnvironmentFilter.sampleCount, 1));
   if (pbrEnvironmentFilter.mode == 2) {
-    return vec4f(integrateEnvironmentBRDF(inputs.uv, sampleCount), 0.0, 1.0);
+    return vec4f(integrateEnvironmentBRDF(textureCoordinate, sampleCount), 0.0, 1.0);
   }
 
-  let direction = getEnvironmentFaceDirection(pbrEnvironmentFilter.face, inputs.uv);
+  let direction = getEnvironmentFaceDirection(pbrEnvironmentFilter.face, textureCoordinate);
   return vec4f(integrateEnvironmentDirection(direction, sampleCount), 1.0);
 }
 `;

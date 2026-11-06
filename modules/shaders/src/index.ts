@@ -257,3 +257,14 @@ export {
   type AreaLight,
   type AreaLightingProps
 } from './modules/lighting/area-lighting/area-lighting';
+
+export {
+  pbrEnvironmentFilter,
+  PBR_ENVIRONMENT_FRAGMENT_GLSL,
+  PBR_ENVIRONMENT_FRAGMENT_WGSL
+} from './modules/lighting/prefiltered-environment/prefiltered-environment';
+export type {
+  PBREnvironmentFilterProps,
+  PBREnvironmentFilterUniforms,
+  PBREnvironmentFilterBindings
+} from './modules/lighting/prefiltered-environment/prefiltered-environment';

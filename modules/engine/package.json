@@ -105,6 +105,11 @@
       "types": "./dist/arrow/index.d.ts",
       "import": "./dist/arrow/index.js",
       "require": "./dist/arrow/index.cjs"
+    },
+    "./lighting": {
+      "types": "./dist/lighting/index.d.ts",
+      "import": "./dist/lighting/index.js",
+      "require": "./dist/lighting/index.cjs"
     }
   },
   "files": [
