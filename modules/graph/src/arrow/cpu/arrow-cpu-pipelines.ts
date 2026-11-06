@@ -32,11 +32,21 @@ export async function projectCPUVector(
         new Uint8Array(chunk.buffer, chunk.byteOffset + index * chunk.byteStride, info.byteLength),
         index * info.byteLength
       );
-    for (let row = 0; row < chunk.length; row++) {
-      if (chunk.nullBitmap && !(chunk.nullBitmap[row >> 3] & (1 << (row & 7)))) continue;
-      if (variable) assert(chunk.valueOffsets);
-      const start = variable ? chunk.valueOffsets![row] : row;
-      const end = variable ? chunk.valueOffsets![row + 1] : row + 1;
+    if (variable) assert(chunk.valueOffsets);
+    let row = 0;
+    while (row < chunk.length) {
+      if (chunk.nullBitmap && !(chunk.nullBitmap[row >> 3] & (1 << (row & 7)))) {
+        row++;
+        continue;
+      }
+      const firstRow = row++;
+      while (
+        row < chunk.length &&
+        (!chunk.nullBitmap || chunk.nullBitmap[row >> 3] & (1 << (row & 7)))
+      )
+        row++;
+      const start = variable ? chunk.valueOffsets![firstRow] : firstRow;
+      const end = variable ? chunk.valueOffsets![row] : row;
       if (end > start)
         values.set(
           await projection.projectFlat(

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 import * as arrow from 'apache-arrow';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {
@@ -99,4 +99,24 @@ test('Float16 values round-trip without decoding their stored bits', () => {
   const result = makeArrowVectorFromCPUVector(makeCPUVectorFromArrow(source));
   expect(result.type.toString()).toBe(source.type.toString());
   expect(Array.from(result)).toEqual(Array.from(source));
+});
+
+test('projects a point chunk in one batched call', async () => {
+  const type = new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false));
+  const source = makeCPUVectorFromArrow(
+    arrow.vectorFromArray(
+      [
+        [1, 2],
+        [3, 4],
+        [5, 6]
+      ],
+      type
+    )
+  );
+  const projectFlat = vi.fn(
+    <T extends number[] | Float32Array | Float64Array>(values: T) => values
+  );
+  await projectCPUVector(source, {projectFlat});
+  expect(projectFlat).toHaveBeenCalledTimes(1);
+  expect(projectFlat.mock.calls[0][0].length).toBe(6);
 });
