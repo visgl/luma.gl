@@ -39,11 +39,15 @@ import type {GPUGraphOutputs} from '../gpu-core/gpu-texture-plan';
 import {GPUExpressionCastOperation} from './gpu-expression-cast-operation';
 import {GPUExpressionRowOperation} from './gpu-expression-row-operation';
 
+import {GPUCPUOperation} from '../gpu-core/gpu-cpu-operation';
+import {GPUCPUExecution} from './gpu-cpu-execution';
+
 /** Reusable expression program implemented through the unchanged evaluator API. */
 export class CompiledGPUSimpleExpressionGraph<
   Outputs extends GPUGraphOutputs = Record<string, GPUVector>
 > {
   private readonly program: GPUExpressionProgram;
+  private readonly cpuExecution?: GPUCPUExecution;
   private running = false;
   private destroyed = false;
 
@@ -62,6 +66,7 @@ export class CompiledGPUSimpleExpressionGraph<
       this.program.operations.some(
         operation =>
           !(
+            operation instanceof GPUCPUOperation ||
             operation instanceof GPUExpressionOperation ||
             operation instanceof GPUUploadOperation ||
             operation instanceof GPUCopyOperation
@@ -69,8 +74,10 @@ export class CompiledGPUSimpleExpressionGraph<
       )
     )
       throw new Error(
-        'SimpleGraph declarative execution supports expression, upload and copy operations only'
+        'SimpleGraph declarative execution supports expression, CPU, upload and copy operations only'
       );
+    if (this.program.operations.some(operation => operation instanceof GPUCPUOperation))
+      this.cpuExecution = new GPUCPUExecution(device, this.program);
   }
 
   /** Prepare a straight-line texture-copy program without submitting work. */
@@ -124,6 +131,15 @@ export class CompiledGPUSimpleExpressionGraph<
     const bindings = resolvedBindings.bindings;
     options = resolvedBindings.options;
     this.running = true;
+    if (this.cpuExecution) {
+      try {
+        // Dynamic CPU results cannot be prepared into caller-owned storage yet.
+        assert(!options.outputTargets || Object.keys(options.outputTargets).length === 0);
+        return (await this.cpuExecution.run(bindings)) as Outputs;
+      } finally {
+        this.running = false;
+      }
+    }
     const evaluators = new Set<GPUDataEvaluator>();
     const scalarBuffers = new Set<Buffer>();
     let scope: GPUEvaluationScope | undefined;
@@ -373,6 +389,7 @@ export class CompiledGPUSimpleExpressionGraph<
   destroy(): void {
     // A running program owns evaluator resources until execution finishes.
     assert(!this.running);
+    this.cpuExecution?.destroy();
     this.destroyed = true;
   }
 }

@@ -690,3 +690,11 @@ export type {GPUCompactionOperationProps} from './gpu-compaction-operation';
 
 export type {GPUGraphTextureDescriptor, GPUGraphTextureExtent} from './gpu-graph-value';
 export type {GPUGraphTextureBinding, GPUGraphOutput, GPUGraphOutputs} from './gpu-texture-plan';
+
+export {GPUCPUOperation} from './gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from './gpu-cpu-operation';
