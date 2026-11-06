@@ -1,5 +1,14 @@
 # What's New
 
+### Standalone PBR models
+
+`@luma.gl/engine/lighting` exposes `createPBRModel` for native and loaded geometry, with
+shared PBR materials, explicit transforms, skinning, instancing, and environment lighting.
+The environment example now renders native sphere models. Instance/model normal transforms
+are consistent across WebGL and WebGPU, including nonuniform scales. Retained scene adapters
+compose their own transforms and picking/shadow passes with the shared mesh shaders. See
+[standalone PBR models](./api-reference/engine/lighting/pbr-model.md).
+
 ### Reusable PBR materials and environment bindings
 
 `@luma.gl/engine/lighting` exposes typed PBR material factories and borrowed environment

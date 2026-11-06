@@ -41,7 +41,7 @@ void pbr_setPositionNormalTangentUV(
   vec3 bitangentW = cross(normalW, tangentW) * tangent.w;
   pbr_vTBN = mat3(tangentW, bitangentW, normalW);
 #else // HAS_TANGENTS != 1
-  pbr_vNormal = normalize(vec3(pbrProjection.modelMatrix * vec4(normal.xyz, 0.0)));
+  pbr_vNormal = normalize(vec3(pbrProjection.normalMatrix * vec4(normal.xyz, 0.0)));
 #endif
 #endif
 

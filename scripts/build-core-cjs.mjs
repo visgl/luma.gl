@@ -298,3 +298,11 @@ for (const name of ['createPBRMaterial', 'createPBRMaterialFactory', 'getPBRMate
   assert.equal(compatibleMaterialEsm[name], lightingEsm[name]);
 }
 process.stdout.write('Verified PBR material compatibility export identities.\n');
+
+const lightingModelApi = require('../modules/engine/dist/lighting/pbr-model.cjs');
+const lightingModelEsm = await import('../modules/engine/dist/lighting/pbr-model.js');
+for (const name of ['createPBRModel', 'getPBRGeometryDefines', 'getPBRTextureDefines', 'getPBRModelWGSL', 'PBR_MODEL_WGSL_SHADER']) {
+  assert.equal(lightingApi[name], lightingModelApi[name]);
+  assert.equal(lightingEsm[name], lightingModelEsm[name]);
+}
+process.stdout.write('Verified standalone PBR model subpath identities.\n');
