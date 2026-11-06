@@ -212,3 +212,4 @@ export {
   tessellateCPUVectorPolygons,
   tessellateGeoArrowColumnToCPUVectors
 } from './cpu/arrow-cpu-pipelines';
+export {projectArrowCoordinates} from './cpu/arrow-coordinate-projection';

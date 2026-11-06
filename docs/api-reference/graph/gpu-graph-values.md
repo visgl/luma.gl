@@ -304,3 +304,19 @@ sliced-offset, separated or nullable-child layouts are rejected rather than flat
 including polygon holes and multipolygons, and forwards resource limits. It calls math.gl
 without Apache Arrow or renderer color preparation. Math.gl still materializes geometry rows
 internally. Full geometry nesting remains in GeoArrow descriptors rather than CPUVector.
+
+## Layer-facing coordinate projection graph
+
+`CoordinateProjectionGraph` from `@luma.gl/graph/gpu-project/graph` is a reusable point
+coordinate pipeline. Construct it with a device and `{format: 'float32x2' | 'float32x3',
+projection}` using a prepared math.gl transform. `run(cpuVectorOrGPUVector)` borrows its input
+and returns `{positions, destroy()}`. Every invocation owns an independent projected GPUVector;
+release it after rendering consumers finish. Destroying the compiled graph does not release
+previously returned results. The layer can reuse the graph for data updates, including changes
+in row count and chunking. Construct a new graph when its projection changes.
+
+`projectArrowCoordinates(graph, arrowVector)` from `@luma.gl/graph/arrow` adapts Arrow coordinate
+chunks into this same graph. GPUVector-native layers call `graph.run()` directly. Both paths
+share CPU projection, lazy transfer, validation, and result ownership. This first layer-facing
+API supports non-null packed numeric point rows. Filter null points and expand/handle list
+geometry explicitly before this boundary; path/polygon graph operations remain follow-up work.
