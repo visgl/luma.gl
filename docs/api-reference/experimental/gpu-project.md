@@ -1230,3 +1230,7 @@ See [WebGPU Geospatial Kernels](/docs/api-reference/experimental/geospatial),
 [GPU spatial query benchmarks](/docs/api-reference/experimental/gpu-core/gpu-spatial-query-benchmark),
 and [GPU floating-point precision](/docs/api-guide/shaders/gpu-floating-point-precision) for related
 GPU execution and precision techniques.
+
+`CPUProjectionOperation` runs a prepared math.gl projection on CPU coordinate chunks in
+GPUGraph or GPUSimpleGraph, with executor-managed readback and upload. See
+[CPU coordinate projection](/docs/api-reference/graph/gpu-simple-graph#cpu-coordinate-projection).

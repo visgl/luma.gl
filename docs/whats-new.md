@@ -1142,3 +1142,6 @@ engine-owned WebGPU uniform buffer for each batch. Set picking offsets or other 
 submitted calls and grows it when needed. Matching chunk boundaries are still required.
 See [Per-batch uniforms](./api-reference/engine/model.md#per-batch-uniforms) for the submission
 and lifetime contract.
+
+`CPUProjectionOperation` provides math.gl CPU projection in reusable graphs. `CPUData` and
+`CPUVector` provide Arrow-independent borrowed CPU chunks using existing GPU memory formats.

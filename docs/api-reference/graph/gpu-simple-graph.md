@@ -231,3 +231,22 @@ CPU boundaries submit preceding GPU work before readback. These programs do not 
 for external inputs. Every authored operation executes in order on each run, without caching.
 Selected results transfer to the caller; intermediates are released after the run, including
 on failure. Inputs remain borrowed. A failed callback does not prevent a later run.
+
+## CPU coordinate projection
+
+`CPUProjectionOperation` from `@luma.gl/graph/gpu-project` accepts `{id, input, output,
+format, projection}`. Supply `float32x2` or `float32x3` and a prepared projection from
+`projectionEngine.createProjectionAsync()` in `@math.gl/geospatial/projection`.
+The operation preserves row counts and chunk boundaries, copies input arrays before
+projection, and lets the executor upload the results. Forward projection follows the
+prepared transform's axis and height conventions. Prepare a reversed CRS pair for inverse
+projection. Input and output storage use Float32 precision. Projection errors reject the run.
+
+`CPUData` and `CPUVector`, exported by `@luma.gl/graph/gpu-data`, provide borrowed CPU
+storage with the same memory format strings as GPUVector. CPUData accepts a buffer or view,
+format, length, and optional byte layout, flattened value count, list offsets, and validity
+bitmap. Byte offsets are relative to the supplied view; the stored byteOffset is absolute
+within its underlying buffer. CPUVector contains ordered CPUData chunks. Construction does
+not copy payloads or combine chunks; mutations of borrowed memory remain visible. CPU memory
+is garbage-collected and has no destroy method. These storage types do not yet integrate with
+graph bindings, automatic transfers, nested lists, or Arrow schemas.
