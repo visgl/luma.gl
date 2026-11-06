@@ -29,6 +29,8 @@ source.destroy();
 ```
 
 See the standalone [roughness/metalness grid example](https://github.com/visgl/luma.gl/tree/master/examples/api/prefiltered-environment).
+The example selects HDR output when available, or explicitly selects SDR output and displays
+a notice when floating-point rendering or filtering is unavailable.
 
 ## Options
 

@@ -13,19 +13,18 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
   readonly environment: PrefilteredEnvironment;
   readonly source: Texture;
   readonly model: ClipSpace;
+  private statusElement?: HTMLElement;
 
   constructor({device}: AnimationProps) {
     super();
     const capabilities = device.getTextureFormatCapabilities('rgba16float');
-    if (!capabilities.render || !capabilities.filter) {
-      // makeAnimationLoop displays initialization errors beside the canvas.
-      throw new Error(
-        'This HDR example requires renderable, filterable rgba16float textures. Try a WebGPU-capable browser or device.'
-      );
-    }
+    const format = capabilities.render && capabilities.filter ? 'rgba16float' : 'rgba8unorm';
     const width = 128;
     const height = 64;
-    const data = new Uint16Array(width * height * 4);
+    const data =
+      format === 'rgba16float'
+        ? new Uint16Array(width * height * 4)
+        : new Uint8Array(width * height * 4);
     for (let row = 0; row < height; row++) {
       for (let column = 0; column < width; column++) {
         const latitude = (row + 0.5) / height;
@@ -33,13 +32,20 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
         const light = 8 * Math.exp(-((longitude - 0.65) ** 2 + (latitude - 0.3) ** 2) / 0.003);
         const sky = 1 - latitude;
         const color = [0.1 + 0.3 * sky + light, 0.12 + 0.5 * sky + light, 0.16 + sky + light, 1];
-        data.set(color.map(toHalfFloat), (row * width + column) * 4);
+        data.set(
+          color.map(value =>
+            format === 'rgba16float'
+              ? toHalfFloat(value)
+              : Math.round(Math.min(1, Math.max(0, value)) * 255)
+          ),
+          (row * width + column) * 4
+        );
       }
     }
     this.source = device.createTexture({
       width,
       height,
-      format: 'rgba16float',
+      format,
       data,
       sampler: {
         minFilter: 'linear',
@@ -50,6 +56,7 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
     });
     this.environment = createPrefilteredEnvironment(device, {
       source: this.source,
+      format,
       size: 32,
       sampleCount: 128
     });
@@ -62,6 +69,15 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
       bindings: this.environment.getBindings(),
       parameters: {depthWriteEnabled: false}
     });
+    if (format === 'rgba8unorm') {
+      const canvas = device.getDefaultCanvasContext().canvas;
+      if (canvas instanceof HTMLCanvasElement) {
+        this.statusElement = document.createElement('p');
+        this.statusElement.textContent =
+          'SDR mode: HDR filtering is unavailable on this device. The example is running with bright environment values clipped to the SDR range.';
+        canvas.insertAdjacentElement('beforebegin', this.statusElement);
+      }
+    }
   }
 
   onRender({device}: AnimationProps) {
@@ -74,6 +90,7 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
   }
 
   onFinalize() {
+    this.statusElement?.remove();
     this.model.destroy();
     this.environment.destroy();
     this.source.destroy();
