@@ -1,6 +1,6 @@
 # What's New
 
-Reusable `GPUSimpleGraph` supports shared `GPUCPUOperation` callbacks with asynchronous CPU processing and dynamically sized, executor-allocated GPUVector outputs. See [CPU callbacks](./api-reference/graph/gpu-simple-graph.md#cpu-callbacks-and-dynamically-sized-results).
+Reusable `GPUGraph` and `GPUSimpleGraph` support shared `GPUCPUOperation` callbacks with asynchronous CPU processing and dynamically sized, executor-allocated GPUVector outputs. See [CPU callbacks](./api-reference/graph/gpu-simple-graph.md#cpu-callbacks-and-dynamically-sized-results).
 
 ### Reusable environment lighting
 
