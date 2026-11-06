@@ -16,6 +16,13 @@ export default class EnvironmentExample extends AnimationLoopTemplate {
 
   constructor({device}: AnimationProps) {
     super();
+    const capabilities = device.getTextureFormatCapabilities('rgba16float');
+    if (!capabilities.render || !capabilities.filter) {
+      // makeAnimationLoop displays initialization errors beside the canvas.
+      throw new Error(
+        'This HDR example requires renderable, filterable rgba16float textures. Try a WebGPU-capable browser or device.'
+      );
+    }
     const width = 128;
     const height = 64;
     const data = new Uint16Array(width * height * 4);

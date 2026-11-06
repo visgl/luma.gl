@@ -140,7 +140,7 @@ test('direction-coded equirectangular input preserves cube face orientation', as
       size: 3,
       irradianceSize: 1,
       brdfLUTSize: 4,
-      sampleCount: 32
+      sampleCount: 512
     });
     try {
       for (let face = 0; face < 6; face++) {
@@ -171,9 +171,22 @@ test('direction-coded equirectangular input preserves cube face orientation', as
           ).toBeLessThan(0.03);
         });
       }
-      const lookup = await readPixel(environment.textures.brdfLUTTexture);
-      expect(lookup[0]).toBeGreaterThan(0);
-      expect(lookup[0] + lookup[1]).toBeLessThanOrEqual(1.01);
+      // Independent double-precision hemispherical midpoint quadrature (2048 x 2048),
+      // with NdotV = 0.625 and Schlick-GGX k = roughness squared / 2.
+      // Row zero is roughness 0.875; row three is roughness 0.125.
+      const referenceRows = [
+        {row: 0, values: [0.473788, 0.002119]},
+        {row: 3, values: [0.982822, 0.007529]}
+      ];
+      for (const {row, values} of referenceRows) {
+        const lookup = await readPixel(environment.textures.brdfLUTTexture, 0, 0, 2, row);
+        values.forEach((value, channel) => {
+          expect(
+            Math.abs(lookup[channel] - value),
+            `${device.type} BRDF row ${row}:${channel}`
+          ).toBeLessThan(0.015);
+        });
+      }
     } finally {
       environment.destroy();
       generator.destroy();
