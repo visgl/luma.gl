@@ -21,3 +21,12 @@ export {
 export type {CreatePBRMaterialOptions, PBRMaterial, PBRMaterialResources} from './pbr-material';
 export {getPBREnvironmentBindings, getPBREnvironmentUniforms} from './pbr-environment';
 export type {PBRLightingEnvironment, PBRLightingEnvironmentOptions} from './pbr-environment';
+
+export {
+  createPBRModel,
+  getPBRGeometryDefines,
+  getPBRTextureDefines,
+  getPBRModelWGSL,
+  PBR_MODEL_WGSL_SHADER
+} from './pbr-model';
+export type {CreatePBRModelOptions, PBRModelShaderHooks} from './pbr-model';
