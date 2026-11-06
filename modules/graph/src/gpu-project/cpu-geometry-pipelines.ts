@@ -18,6 +18,7 @@ export async function projectCPUVector(
   vector: CPUVector,
   projection: Pick<Projection, 'projectFlat'>
 ): Promise<CPUVector> {
+  const {name, format} = vector;
   vector = makeCPUVectorFromGeoArrowColumn(makeGeoArrowColumnFromCPUVector(vector));
   const info = getGPUVectorFormatInfo(vector.format);
   assert(
@@ -63,7 +64,7 @@ export async function projectCPUVector(
     data.push(
       new CPUData({
         buffer: values,
-        format: vector.format,
+        format,
         length: chunk.length,
         valueLength: chunk.valueLength,
         valueOffsets: chunk.valueOffsets?.slice(),
@@ -71,7 +72,7 @@ export async function projectCPUVector(
       })
     );
   }
-  return new CPUVector({name: vector.name, format: vector.format, data});
+  return new CPUVector({name, format, data});
 }
 
 /** Tessellate one simple polygon ring per list row, preserving source chunks and row identities. */

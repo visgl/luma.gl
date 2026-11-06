@@ -172,3 +172,28 @@ test('direct GeoArrow tessellation handles polygon holes without Apache Arrow co
   expect(result.positions.valueLength).toBe(8);
   expect(result.indices.valueLength).toBe(24);
 });
+
+test('projection preserves value-list format and vector name', async () => {
+  const {CPUData} = await import('@luma.gl/graph/gpu-data');
+  const source = new CPUVector({
+    name: 'named-paths',
+    format: 'value-list<float32x2>',
+    data: [
+      new CPUData({
+        format: 'value-list<float32x2>',
+        buffer: new Float32Array([1, 2, 3, 4]),
+        length: 1,
+        valueLength: 2,
+        valueOffsets: new Int32Array([0, 2])
+      })
+    ]
+  });
+  const projection = await projectionEngine.createProjectionAsync({
+    from: 'EPSG:4326',
+    to: 'EPSG:3857'
+  });
+  const result = await projectCPUVector(source, projection);
+  expect(result.name).toBe(source.name);
+  expect(result.format).toBe(source.format);
+  expect(result.data[0].format).toBe(source.format);
+});
