@@ -138,6 +138,11 @@
       "import": "./dist/gpu-project/benchmarks.js",
       "require": "./dist/gpu-project/benchmarks.cjs"
     },
+    "./gpu-project/geoarrow": {
+      "types": "./dist/gpu-project/geoarrow.d.ts",
+      "import": "./dist/gpu-project/geoarrow.js",
+      "require": "./dist/gpu-project/geoarrow.cjs"
+    },
     "./gpu-project/crs": {
       "types": "./dist/gpu-project/crs.d.ts",
       "import": "./dist/gpu-project/crs.js",

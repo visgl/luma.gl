@@ -202,3 +202,13 @@ export {
   type ArrowVertexFormatOptions,
   type ArrowBufferLayoutOptions
 } from './gpu/arrow-shader-layout';
+
+export {
+  makeCPUVectorFromArrow,
+  makeArrowVectorFromCPUVector
+} from './cpu/arrow-cpu-vector-adapters';
+export {
+  projectCPUVector,
+  tessellateCPUVectorPolygons,
+  tessellateGeoArrowColumnToCPUVectors
+} from './cpu/arrow-cpu-pipelines';
