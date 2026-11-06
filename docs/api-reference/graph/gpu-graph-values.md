@@ -289,3 +289,6 @@ existing math.gl-backed Arrow tessellator. It returns vertex-list positions, ind
 row IDs, preserving input chunks and null polygon rows. Holes and multipolygons require the
 existing nested GeoArrow pipeline. The mesh can be uploaded through the explicit transfer
 helper for use by polygon GPU models.
+
+For polygon indices, upload with `{usage: Buffer.INDEX, indexType: 'uint32'}` as the third
+argument to `makeGPUVectorFromCPUVector`.

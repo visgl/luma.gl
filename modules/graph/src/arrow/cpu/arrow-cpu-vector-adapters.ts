@@ -36,6 +36,14 @@ export function makeCPUVectorFromArrow(vector: Vector, options: {name?: string} 
   const format = getGPUVectorFormatFromArrowDataType(vector.type);
   const info = getGPUVectorFormatInfo(format);
   const data = vector.data.map(chunk => {
+    // CPUData stores parent validity only; reject nullable nested elements rather than dropping it.
+    const validateChildren = (data: Data): void => {
+      for (const child of data.children) {
+        assert(child.nullCount === 0);
+        validateChildren(child);
+      }
+    };
+    validateChildren(chunk);
     const metadata = getArrowGPUDataReadbackMetadata(chunk);
     if (metadata?.kind === 'fixed-size-list') assert(!metadata.childNullCount);
     const variable = DataType.isList(chunk.type);

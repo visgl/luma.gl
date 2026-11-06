@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Buffer} from '@luma.gl/core';
 import {expect, test} from 'vitest';
 import * as arrow from 'apache-arrow';
 import {NullDevice} from '@luma.gl/core/test-utils';
@@ -73,8 +74,13 @@ test('single-level coordinate lists project and tessellate through CPU vectors',
   expect(mesh.indices.valueLength).toBe(6);
   expect(mesh.positions.data[0].valueOffsets?.length).toBe(3);
   const device = new NullDevice({});
-  const gpu = makeGPUVectorFromCPUVector(device, mesh.indices);
+  const gpu = makeGPUVectorFromCPUVector(device, mesh.indices, {
+    usage: Buffer.INDEX,
+    indexType: 'uint32'
+  });
   try {
+    expect(gpu.data[0].buffer.usage & Buffer.INDEX).toBeTruthy();
+    expect(gpu.data[0].buffer.indexType).toBe('uint32');
     const returned = await makeCPUVectorFromGPUVector(gpu);
     expect(returned.data[0].valueOffsets).toEqual(mesh.indices.data[0].valueOffsets);
     expect(returned.data[0].nullBitmap).toEqual(mesh.indices.data[0].nullBitmap);
@@ -82,4 +88,9 @@ test('single-level coordinate lists project and tessellate through CPU vectors',
     gpu.destroy();
     device.destroy();
   }
+});
+
+test('rejects nullable list elements instead of discarding child validity', () => {
+  const type = new arrow.List(new arrow.Field('item', new arrow.Float32(), true));
+  expect(() => makeCPUVectorFromArrow(arrow.vectorFromArray([[1, null, 3]], type))).toThrow();
 });

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, type Device} from '@luma.gl/core';
+import {Buffer, type Device, type BufferProps} from '@luma.gl/core';
 import {CPUData} from './cpu-data';
 import {CPUVector} from './cpu-vector';
 import {GPUData} from './gpu-data';
@@ -12,7 +12,8 @@ import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format'
 /** Explicit upload preserving chunk-local list offsets and validity metadata. */
 export function makeGPUVectorFromCPUVector<T extends GPUVectorFormat>(
   device: Device,
-  vector: CPUVector<T>
+  vector: CPUVector<T>,
+  options: Pick<BufferProps, 'usage' | 'indexType'> = {}
 ): GPUVector<T> {
   const data: GPUData<T>[] = [];
   try {
@@ -33,7 +34,13 @@ export function makeGPUVectorFromCPUVector<T extends GPUVectorFormat>(
         new GPUData({
           buffer: device.createBuffer({
             data: bytes.length ? bytes : new Uint8Array(4),
-            usage: Buffer.COPY_SRC | Buffer.COPY_DST | Buffer.STORAGE | Buffer.VERTEX
+            usage:
+              Buffer.COPY_SRC |
+              Buffer.COPY_DST |
+              Buffer.STORAGE |
+              Buffer.VERTEX |
+              (options.usage ?? 0),
+            indexType: options.indexType
           }),
           format: vector.format,
           length: chunk.length,
