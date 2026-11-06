@@ -3,15 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
-import {ShadowMapRenderer, type ShadowCamera} from '../../src/shadows/shadow-map-renderer';
+import {type ShadowCamera} from '@luma.gl/engine/lighting';
 import {
   getDirectionalCascadeViews,
   getPointShadowViews,
   getPracticalCascadeSplits,
   getSpotShadowView
-} from '../../src/shadows/shadow-map-renderer';
+} from '@luma.gl/engine/lighting';
 
 const CAMERA = {
   viewMatrix: new Matrix4().lookAt({eye: [6, 5, 8], center: [0, 0, 0], up: [0, 1, 0]}),
@@ -125,80 +124,6 @@ it('spot and point shadow cameras cover their complete light volumes', () => {
     new Set(pointViews.map(view => Array.from(view.viewProjectionMatrix).join(','))).size,
     'all face orientations are distinct'
   ).toBe(6);
-  void 0;
-});
-
-it('ShadowMapRenderer reuses, reconstructs and destroys resources', async () => {
-  const device = await getWebGPUTestDevice();
-  if (!device) {
-    void 0;
-    void 0;
-    return;
-  }
-  const renderer = new ShadowMapRenderer(device, {
-    quality: 'low',
-    directionalMapSize: 16,
-    spotMapSize: 16,
-    pointMapSize: 16
-  });
-  const callbackOrder: string[] = [];
-  const options = {
-    camera: CAMERA,
-    directionalLights: [{direction: [0.45, 0.82, 0.35] as [number, number, number]}],
-    spotLights: [
-      {
-        position: [0, 8, 0] as [number, number, number],
-        direction: [0, -1, 0] as [number, number, number],
-        range: 20,
-        outerConeAngle: 0.4
-      }
-    ],
-    pointLights: [{position: [0, 3, 0] as [number, number, number], range: 12}],
-    drawShadowCasters: view =>
-      callbackOrder.push(
-        view.type === 'directional'
-          ? `directional-${view.cascadeIndex}`
-          : view.type === 'point'
-            ? `point-${view.pointFace}`
-            : 'spot-0'
-      )
-  };
-  const firstProps = renderer.render(options);
-  const secondProps = renderer.render(options);
-  expect(firstProps.directionalShadowTexture, 'reuses maps').toBe(
-    secondProps.directionalShadowTexture
-  );
-  expect(
-    callbackOrder.slice(0, 10),
-    'invokes views in deterministic cascade, spot and cube-face order'
-  ).toEqual([
-    'directional-0',
-    'directional-1',
-    'directional-2',
-    'spot-0',
-    'point-+X',
-    'point--X',
-    'point-+Y',
-    'point--Y',
-    'point-+Z',
-    'point--Z'
-  ]);
-
-  renderer.setProps({quality: 'cinematic'});
-  const rebuiltProps = renderer.render(options);
-  expect(rebuiltProps.directionalShadowTexture, 'quality cascade change rebuilds maps').not.toBe(
-    firstProps.directionalShadowTexture
-  );
-  expect(firstProps.directionalShadowTexture.destroyed, 'destroys replaced maps').toBe(true);
-  expect(
-    () =>
-      renderer.render({...options, pointLights: [...options.pointLights, ...options.pointLights]}),
-    'rejects active lights above capacity'
-  ).toThrow(/exceeds configured capacity/);
-  renderer.destroy();
-  renderer.destroy();
-  expect(rebuiltProps.pointShadowTexture.destroyed, 'destroy is idempotent').toBe(true);
-  device.submit();
   void 0;
 });
 

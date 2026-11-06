@@ -30,3 +30,24 @@ export {
   PBR_MODEL_WGSL_SHADER
 } from './pbr-model';
 export type {CreatePBRModelOptions, PBRModelShaderHooks} from './pbr-model';
+
+export {
+  ShadowMapRenderer,
+  getDirectionalCascadeViews,
+  getPointShadowViews,
+  getPracticalCascadeSplits,
+  getSpotShadowView
+} from './shadow-map-renderer';
+export type {
+  DirectionalShadowLight,
+  PointShadowFace,
+  PointShadowLight,
+  ShadowCamera,
+  ShadowMapRendererProps,
+  ShadowRenderOptions,
+  ShadowRenderView,
+  ShadowShaderProps,
+  SpotShadowLight
+} from './shadow-map-renderer';
+export {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
+export type {ShadowQualitySettings} from './shadow-quality';

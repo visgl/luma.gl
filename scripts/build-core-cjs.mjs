@@ -306,3 +306,28 @@ for (const name of ['createPBRModel', 'getPBRGeometryDefines', 'getPBRTextureDef
   assert.equal(lightingEsm[name], lightingModelEsm[name]);
 }
 process.stdout.write('Verified standalone PBR model subpath identities.\n');
+
+// Shadow resources and sampling share one implementation across compatibility facades.
+const shadowRendererApi = require('../modules/engine/dist/lighting/shadow-map-renderer.cjs');
+const shadowRendererEsm = await import('../modules/engine/dist/lighting/shadow-map-renderer.js');
+const compatibleShadowApi = require('../modules/anari/dist/shadows/shadow-map-renderer.cjs');
+const compatibleShadowEsm = await import('../modules/anari/dist/shadows/shadow-map-renderer.js');
+const renderersApi = require('../modules/anari/dist/renderers.cjs');
+const renderersEsm = await import('../modules/anari/dist/renderers.js');
+for (const name of ['ShadowMapRenderer', 'getPracticalCascadeSplits', 'getDirectionalCascadeViews', 'getSpotShadowView', 'getPointShadowViews']) {
+  assert.equal(lightingApi[name], shadowRendererApi[name]);
+  assert.equal(lightingEsm[name], shadowRendererEsm[name]);
+  assert.equal(compatibleShadowApi[name], lightingApi[name]);
+  assert.equal(compatibleShadowEsm[name], lightingEsm[name]);
+}
+assert.equal(renderersApi.ShadowMapRenderer, lightingApi.ShadowMapRenderer);
+assert.equal(renderersEsm.ShadowMapRenderer, lightingEsm.ShadowMapRenderer);
+const shaderShadowApi = require('../modules/shaders/dist/modules/lighting/shadow/shadow.cjs');
+const shaderShadowEsm = await import('../modules/shaders/dist/modules/lighting/shadow/shadow.js');
+const shadersEsm = await import('../modules/shaders/dist/index.js');
+assert.equal(shadersApi.shadow, shaderShadowApi.shadow);
+assert.equal(shadersEsm.shadow, shaderShadowEsm.shadow);
+assert.equal(renderersApi.shadow, shadersApi.shadow);
+assert.equal(renderersEsm.shadow, shadersEsm.shadow);
+assert.equal('ShadowMapRenderer' in engineApi, false);
+process.stdout.write('Verified shadow primitive and compatibility export identities.\n');
