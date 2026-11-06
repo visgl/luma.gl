@@ -69,7 +69,14 @@ export class GPUCPUExecution {
         for (const name of new Set(outputs)) {
           const vector = program.vectors.find(value => value.id === name);
           if (vector)
-            graph.vector(name, vector.format, vector.length, {chunkLengths: vector.chunkLengths});
+            graph.addDeclaration(
+              name,
+              gpuGraph.vector(vector.format, {
+                length: vector.length,
+                chunkLengths: vector.chunkLengths
+              }),
+              'value'
+            );
         }
         graph.add(operation);
         this.stages.push({
