@@ -9,19 +9,27 @@ import {makeGPUSplatData, SplatRenderer, type SplatDepthInterval} from '@luma.gl
 
 // Regression: https://github.com/LTplus-AG/ifc-lite/issues/8813
 // The two interval draws partition the same samples as an unfiltered draw.
-for (const samples of [1, 4]) {
+for (const [samples, perSampleDepth] of [
+  [1, false],
+  [4, false],
+  [4, true]
+] as const) {
   for (const depthConvention of ['standard', 'reverse'] as const) {
-    it(`partitions ${samples} sample splats with ${depthConvention} depth`, async () => {
+    it(`partitions ${samples} sample splats with ${depthConvention} depth${perSampleDepth ? ' and per-sample bounds' : ''}`, async () => {
       const devices = await getTestDevices(['webgpu']);
       expect(devices.length, 'requires real WebGPU execution').toBeGreaterThan(0);
       for (const device of devices) {
         const size = 32;
         const data = makeGPUSplatData(device, {
-          positions: new Float32Array([0, 0, 0.25, 0, 0, 0.75]),
-          scales: new Float32Array([0.3, 0.3, 0.3, 0.3, 0.3, 0.3]),
-          rotations: new Float32Array([1, 0, 0, 0, 1, 0, 0, 0]),
-          colors: new Uint8Array([255, 0, 0, 255, 0, 0, 255, 255]),
-          opacities: new Float32Array([0.75, 0.75])
+          positions: new Float32Array(perSampleDepth ? [0, 0, 0.5] : [0, 0, 0.25, 0, 0, 0.75]),
+          scales: new Float32Array(
+            perSampleDepth ? [0.3, 0.3, 0.3] : [0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+          ),
+          rotations: new Float32Array(perSampleDepth ? [1, 0, 0, 0] : [1, 0, 0, 0, 1, 0, 0, 0]),
+          colors: new Uint8Array(
+            perSampleDepth ? [255, 0, 0, 255] : [255, 0, 0, 255, 0, 0, 255, 255]
+          ),
+          opacities: new Float32Array(perSampleDepth ? [0.75] : [0.75, 0.75])
         });
         const bound = device.createTexture({
           width: size,
@@ -71,9 +79,9 @@ for (const samples of [1, 4]) {
         };
         const baseline = new SplatRenderer(device, commonProps);
         const filtered = new SplatRenderer(device, {...commonProps, depthIntervalSamples: samples});
-        for (const renderer of [baseline, filtered]) {
-          renderer.model?.setParameters({...renderer.model.parameters, sampleCount: samples});
-        }
+        // The unfiltered renderer has no sample-count prop; the filtered renderer must set its own.
+        baseline.model?.setParameters({...baseline.model.parameters, sampleCount: samples});
+        expect(filtered.model?.parameters.sampleCount).toBe(samples);
         const layout = color.computeMemoryLayout({width: size, height: size});
         const readback = device.createBuffer({
           byteLength: layout.byteLength,
@@ -109,17 +117,56 @@ for (const samples of [1, 4]) {
           pass.end();
         };
         try {
-          const clearBound = device.beginRenderPass({
-            framebuffer: boundFramebuffer,
-            clearDepth: 0.5
-          });
-          clearBound.end();
+          if (perSampleDepth) {
+            // A different pipeline mask writes each sample's depth independently. Samples 1 and 3
+            // equal the splat depth and must belong to the less-equal interval.
+            for (const [sampleIndex, depth] of [0.25, 0.5, 0.75, 0.5].entries()) {
+              const shader = device.createShader({
+                stage: 'vertex',
+                source: `@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+                  let x = select(-1.0, 3.0, index == 1u);
+                  let y = select(-1.0, 3.0, index == 2u);
+                  return vec4f(x, y, ${depth}, 1.0);
+                }`
+              });
+              const pipeline = device.createRenderPipeline({
+                vs: shader,
+                fs: null,
+                colorAttachmentFormats: [],
+                depthStencilAttachmentFormat: 'depth32float',
+                parameters: {
+                  sampleCount: 4,
+                  sampleMask: 1 << sampleIndex,
+                  depthWriteEnabled: true,
+                  depthCompare: 'always'
+                }
+              });
+              const pass = device.beginRenderPass({
+                framebuffer: boundFramebuffer,
+                clearDepth: sampleIndex === 0 ? 1 : false
+              });
+              pass.setPipeline(pipeline);
+              pass.draw({vertexCount: 3});
+              pass.end();
+              device.submit();
+              pipeline.destroy();
+              shader.destroy();
+            }
+          } else {
+            const clearBound = device.beginRenderPass({
+              framebuffer: boundFramebuffer,
+              clearDepth: 0.5
+            });
+            clearBound.end();
+          }
           device.submit();
 
           draw(baseline);
           const unsplit = await readCenter();
           expect(unsplit[0]).toBeGreaterThan(0);
-          expect(unsplit[2]).toBeGreaterThan(0);
+          if (!perSampleDepth) {
+            expect(unsplit[2]).toBeGreaterThan(0);
+          }
 
           const sides =
             depthConvention === 'standard'
@@ -128,6 +175,13 @@ for (const samples of [1, 4]) {
           draw(filtered, [sides[0]]);
           const first = await readCenter();
           expect(first).not.toEqual(unsplit);
+          if (perSampleDepth) {
+            const firstFraction = depthConvention === 'standard' ? 1 / 4 : 3 / 4;
+            expect(Math.abs(first[0] - unsplit[0] * firstFraction)).toBeLessThanOrEqual(2);
+            draw(filtered, [sides[1]]);
+            const second = await readCenter();
+            expect(Math.abs(second[0] - unsplit[0] * (1 - firstFraction))).toBeLessThanOrEqual(2);
+          }
           draw(filtered, sides);
           const split = await readCenter();
           for (let channel = 0; channel < 4; channel++) {

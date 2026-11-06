@@ -671,6 +671,9 @@ export class SplatRenderer {
       vertexCount: 4,
       topology: 'triangle-strip',
       parameters: {
+        ...(!isWebGPU || this.props.depthIntervalSamples === undefined
+          ? {}
+          : {sampleCount: this.props.depthIntervalSamples}),
         depthWriteEnabled: this.props.depthWriteEnabled,
         depthCompare: this.props.depthCompare,
         blend: true,
