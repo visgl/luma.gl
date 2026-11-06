@@ -207,4 +207,8 @@ export {
   makeCPUVectorFromArrow,
   makeArrowVectorFromCPUVector
 } from './cpu/arrow-cpu-vector-adapters';
-export {projectCPUVector, tessellateCPUVectorPolygons} from './cpu/arrow-cpu-pipelines';
+export {
+  projectCPUVector,
+  tessellateCPUVectorPolygons,
+  tessellateGeoArrowColumnToCPUVectors
+} from './cpu/arrow-cpu-pipelines';

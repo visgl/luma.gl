@@ -120,3 +120,55 @@ test('projects a point chunk in one batched call', async () => {
   expect(projectFlat).toHaveBeenCalledTimes(1);
   expect(projectFlat.mock.calls[0][0].length).toBe(6);
 });
+
+test('direct GeoArrow adapters borrow coordinate buffers and preserve topology', async () => {
+  const {makeGeoArrowColumnFromCPUVector, makeCPUVectorFromGeoArrowColumn} = await import(
+    '@luma.gl/graph/gpu-project/geoarrow'
+  );
+  const source = makeCPUVectorFromArrow(
+    arrow.vectorFromArray(
+      [
+        [1, 2],
+        [3, 4]
+      ],
+      new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false))
+    )
+  );
+  const column = makeGeoArrowColumnFromCPUVector(source);
+  const returned = makeCPUVectorFromGeoArrowColumn(column);
+  expect(returned.data[0].buffer).toBe(source.data[0].buffer);
+  expect(returned.data[0].byteOffset).toBe(source.data[0].byteOffset);
+  expect(returned.length).toBe(source.length);
+});
+
+test('direct GeoArrow tessellation handles polygon holes without Apache Arrow conversion', async () => {
+  const {makeGeoArrowColumnFromGeometryRows} = await import('@math.gl/geospatial/geoarrow');
+  const {tessellateGeoArrowColumnToCPUVectors} = await import('@luma.gl/graph/arrow');
+  const column = makeGeoArrowColumnFromGeometryRows(
+    [
+      {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [4, 0],
+            [4, 4],
+            [0, 4],
+            [0, 0]
+          ],
+          [
+            [1, 1],
+            [1, 2],
+            [2, 2],
+            [2, 1],
+            [1, 1]
+          ]
+        ]
+      }
+    ],
+    {encoding: 'geoarrow.polygon'}
+  );
+  const result = tessellateGeoArrowColumnToCPUVectors(column);
+  expect(result.positions.valueLength).toBe(8);
+  expect(result.indices.valueLength).toBe(24);
+});

@@ -292,3 +292,15 @@ helper for use by polygon GPU models.
 
 For polygon indices, upload with `{usage: Buffer.INDEX, indexType: 'uint32'}` as the third
 argument to `makeGPUVectorFromCPUVector`.
+
+The CPU geometry helpers are also available from `@luma.gl/graph/gpu-project/geoarrow` without
+loading Apache Arrow. `makeGeoArrowColumnFromCPUVector` borrows packed Float32 coordinates,
+validity and list offsets directly into math.gl descriptors; strided data is packed.
+`makeCPUVectorFromGeoArrowColumn` borrows normalized interleaved Float32 point/linestring/
+multipoint descriptors. Explicit dimensions distinguish XYZ from XYM. Unsupported nested,
+sliced-offset, separated or nullable-child layouts are rejected rather than flattened.
+
+`tessellateGeoArrowColumnToCPUVectors(column, options)` accepts full math.gl GeoArrow columns,
+including polygon holes and multipolygons, and forwards resource limits. It calls math.gl
+without Apache Arrow or renderer color preparation. Math.gl still materializes geometry rows
+internally. Full geometry nesting remains in GeoArrow descriptors rather than CPUVector.
