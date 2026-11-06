@@ -32,7 +32,14 @@ test('Arrow and GPU coordinates share a reusable graph with independent result o
   const bytes = await second.positions.data[0].buffer.readAsync(0, 16);
   expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 4))).toEqual([4, 8, 12, 16]);
   graph.destroy();
-  expect(first.positions.length).toBe(2);
+  const retained = await first.positions.data[0].buffer.readAsync(0, 16);
+  expect(Array.from(new Float32Array(retained.buffer, retained.byteOffset, 4))).toEqual([
+    2, 4, 6, 8
+  ]);
+  const retainedSecond = await second.positions.data[0].buffer.readAsync(0, 16);
+  expect(Array.from(new Float32Array(retainedSecond.buffer, retainedSecond.byteOffset, 4))).toEqual(
+    [4, 8, 12, 16]
+  );
   first.destroy();
   second.destroy();
   device.destroy();
