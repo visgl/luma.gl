@@ -63,3 +63,68 @@ test('CPU projection matches math.gl and preserves source arrays and chunks', as
   expect(output.chunks[1].values.length).toBe(0);
   expect(values).toEqual(new Float32Array([0, 0, 10, 20]));
 });
+
+test('three-component projection follows scalar height semantics', async () => {
+  const projection = await projectionEngine.createProjectionAsync({
+    from: 'EPSG:4326',
+    to: 'EPSG:3857'
+  });
+  const values = new Float32Array([10, 20, 123, -30, 40, 456]);
+  const operation = new CPUProjectionOperation({
+    id: 'project',
+    input: 'source',
+    output: 'result',
+    format: 'float32x3',
+    projection
+  });
+  const result = await operation.execute({
+    inputs: {
+      positions: {
+        format: 'float32x3',
+        length: 2,
+        chunks: [{values, length: 2}],
+        pack: () => values.slice()
+      }
+    }
+  });
+  const output = result.result;
+  if (!('chunks' in output)) throw new Error('Expected chunks');
+  const expected = new Float32Array([
+    ...projection.project([10, 20, 123]),
+    ...projection.project([-30, 40, 456])
+  ]);
+  expect(output.chunks[0].values).toEqual(expected);
+  expect(values).toEqual(new Float32Array([10, 20, 123, -30, 40, 456]));
+});
+
+test('awaits asynchronous projection and uses its returned array', async () => {
+  const values = new Float32Array([1, 2]);
+  const operation = new CPUProjectionOperation({
+    id: 'project',
+    input: 'source',
+    output: 'result',
+    format: 'float32x2',
+    projection: {
+      async projectFlat(coordinates) {
+        await Promise.resolve();
+        const output = coordinates.slice();
+        output[0] = 9;
+        return output;
+      }
+    }
+  });
+  const result = await operation.execute({
+    inputs: {
+      positions: {
+        format: 'float32x2',
+        length: 1,
+        chunks: [{values, length: 1}],
+        pack: () => values.slice()
+      }
+    }
+  });
+  const output = result.result;
+  if (!('chunks' in output)) throw new Error('Expected chunks');
+  expect(Array.from(output.chunks[0].values)).toEqual([9, 2]);
+  expect(Array.from(values)).toEqual([1, 2]);
+});
