@@ -662,7 +662,7 @@ export class LumaBackend extends Backend {
     }
     this.renderPass?.end();
     this.renderPass = null;
-    for (const texture of this.renderContext.textures || []) {
+    for (const texture of this.renderContext?.textures || []) {
       if (texture.generateMipmaps && texture.mipmapsAutoUpdate) this.generateMipmaps(texture);
     }
     this.renderContext = this.renderContextStack.pop() || null;
