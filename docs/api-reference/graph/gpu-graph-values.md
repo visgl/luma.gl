@@ -246,3 +246,23 @@ per compiled graph, and destroying it while a callback is pending is rejected.
 Selected results belong to the caller. Failures release invocation-owned intermediates,
 preserve borrowed inputs, and allow subsequent runs. GPU-only programs retain their existing
 preparation, transient allocation, and encoding behavior.
+
+## CPUVector bindings and lazy transfers
+
+Reusable numeric GPUGraph and GPUSimpleGraph programs accept `CPUVector` inputs alongside
+GPUVector inputs. Declarations keep the same `gpuGraph.vector()` format and shape contract.
+Use `compile(device, {outputs: ['result'], outputLocations: {result: 'cpu'}})` to return a
+CPUVector; omitted locations return GPUVectors. With CPU outputs, specify the result type
+through the existing compile generic, for example `compile<{result: CPUVector}>(...)`.
+
+CPU callback results remain in CPU memory until a GPU consumer or GPU output needs them.
+GPU results are read back only for CPU consumers or CPU outputs. Each invocation caches both
+representations, sharing an upload or readback across branches. Caches do not survive a run.
+CPU input buffers are borrowed and must remain unchanged until the run settles. Callback
+input arrays remain read-only snapshots; array-returning callbacks remain compatible.
+
+This first version supports portable float32, sint32 and uint32 rows with one to four
+components. Chunk boundaries are preserved and strided CPU inputs are packed explicitly by
+the executor. Nested lists, validity metadata, textures, state, output targets, and caller-owned
+encoding are outside the CPU residency path. Returned CPU vectors retain their arrays without
+requiring destroy(); returned GPU vectors follow the usual caller-owned lifetime.
