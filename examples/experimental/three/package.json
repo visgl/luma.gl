@@ -19,10 +19,10 @@
     "@luma.gl/three": "workspace:*",
     "mjolnir.js": "^3.1.1",
     "preact": "^10.17.0",
-    "three": "0.185.1"
+    "three": "0.187.0"
   },
   "devDependencies": {
-    "@types/three": "0.185.0",
+    "@types/three": "0.187.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.0"
   }

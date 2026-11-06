@@ -58,12 +58,12 @@
   },
   "peerDependencies": {
     "@deck.gl/core": "9.4.0",
-    "three": "0.185.1"
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@deck.gl/core": "patch:@deck.gl/core@npm%3A9.4.0#~/.yarn/patches/@deck.gl-core-npm-9.4.0-707f3fb147.patch",
-    "@types/three": "0.185.0",
-    "three": "0.185.1"
+    "@types/three": "0.187.0",
+    "three": "0.187.0"
   },
   "peerDependenciesMeta": {
     "@deck.gl/core": {

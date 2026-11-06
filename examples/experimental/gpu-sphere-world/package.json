@@ -17,10 +17,10 @@
     "@luma.gl/shaders": "10.0.0-alpha.10",
     "@math.gl/core": "5.0.0-beta.4",
     "preact": "^10.17.0",
-    "three": "0.185.1"
+    "three": "0.187.0"
   },
   "devDependencies": {
-    "@types/three": "0.185.0",
+    "@types/three": "0.187.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.0"
   }

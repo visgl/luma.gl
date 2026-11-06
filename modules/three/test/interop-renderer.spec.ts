@@ -190,8 +190,8 @@ test.each(['uint16', 'uint32'] as const)(
       renderer.setRenderTarget(target);
       renderer.render(scene, camera);
       const pixels = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 32, 32);
-      // Readback rows are aligned to 256 bytes by the upstream WebGPU backend.
-      const center = 16 * 256 + 16 * 4;
+      // r187 returns tightly packed readback rows.
+      const center = (16 * 32 + 16) * 4;
       expect(pixels[center]).toBe(255);
       expect(pixels[center + 1]).toBe(0);
       expect(pixels[center + 3]).toBe(255);
