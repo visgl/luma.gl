@@ -56,7 +56,7 @@ test('streamed layout preserves batches and renders computed positions without t
       renderer.render(reference, camera);
       const expected = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 64, 64);
       expect(Array.from(actual)).toEqual(Array.from(expected));
-      expect(actual.some(value => value !== 0)).toBe(true);
+      expect(actual.some((value, index) => index % 4 !== 3 && value !== 0)).toBe(true);
       expect(write.mock.calls.some(([buffer]) => buffer === batch.positions.handle)).toBe(false);
       expect(map).not.toHaveBeenCalled();
     }

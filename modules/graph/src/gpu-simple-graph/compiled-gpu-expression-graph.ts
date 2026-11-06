@@ -40,7 +40,7 @@ import {GPUExpressionCastOperation} from './gpu-expression-cast-operation';
 import {GPUExpressionRowOperation} from './gpu-expression-row-operation';
 
 import {GPUCPUOperation} from '../gpu-core/gpu-cpu-operation';
-import {GPUCPUExecution} from './gpu-cpu-execution';
+import {GPUCPUExecution} from '../gpu-core/gpu-cpu-execution';
 
 /** Reusable expression program implemented through the unchanged evaluator API. */
 export class CompiledGPUSimpleExpressionGraph<
@@ -77,7 +77,11 @@ export class CompiledGPUSimpleExpressionGraph<
         'SimpleGraph declarative execution supports expression, CPU, upload and copy operations only'
       );
     if (this.program.operations.some(operation => operation instanceof GPUCPUOperation))
-      this.cpuExecution = new GPUCPUExecution(device, this.program);
+      this.cpuExecution = new GPUCPUExecution(
+        device,
+        this.program,
+        (source, outputs) => new CompiledGPUSimpleExpressionGraph(device, source, {outputs})
+      );
   }
 
   /** Prepare a straight-line texture-copy program without submitting work. */

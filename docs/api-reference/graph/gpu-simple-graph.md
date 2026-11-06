@@ -182,8 +182,8 @@ remain outside this first pass.
 ## CPU callbacks and dynamically sized results
 
 Reusable SimpleGraph programs accept `GPUCPUOperation`, imported from `@luma.gl/graph`.
-The operation API is shared with graph authoring, but CPU execution is currently supported
-only by `new GPUSimpleGraph().compile(device)`, not `GPUGraph` or evaluator recipes.
+The same operation also runs in `GPUGraph` on WebGPU. SimpleGraph supports CPU execution
+through `new GPUSimpleGraph().compile(device)`; evaluator recipes are not supported.
 
 ```typescript
 import {GPUCPUOperation, GPUExpressionOperation, gpuGraph} from '@luma.gl/graph';

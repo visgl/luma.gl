@@ -23,6 +23,8 @@ import {
   type GPUGraphRunOptions
 } from './gpu-expression-plan';
 import {GPUExpressionKernel} from './gpu-expression-kernel';
+import {GPUCPUOperation} from './gpu-cpu-operation';
+import {GPUCPUExecution} from './gpu-cpu-execution';
 
 /** Reusable WebGPU program. Returned output vectors belong to the caller. */
 export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, GPUVector>> {
@@ -30,6 +32,8 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
   private readonly compiler: GPUGraphCompiler;
   private readonly kernels = new Map<GPUExpressionOperation, GPUExpressionKernel>();
   private destroyed = false;
+  private runningCPU = false;
+  private readonly cpuExecution?: GPUCPUExecution;
 
   constructor(
     readonly device: Device,
@@ -47,6 +51,15 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
           this.kernels.get(operation)!.lower(context)
       }
     ]);
+    if (this.program.operations.some(operation => operation instanceof GPUCPUOperation)) {
+      this.cpuExecution = new GPUCPUExecution(
+        device,
+        this.program,
+        (source, outputs) =>
+          new CompiledGPUGraph(device, source, {outputs}, lowerings ?? options.lowerings)
+      );
+      return;
+    }
     try {
       for (const plan of this.program.expressions)
         this.kernels.set(plan.operation, new GPUExpressionKernel(device, this.program, plan));
@@ -60,6 +73,20 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
     supplied: GPUGraphRunBindings | GPUGraphExecutionBindings,
     options: GPUGraphRunOptions = {}
   ): Promise<Outputs> {
+    assert(!this.destroyed && !this.runningCPU);
+    if (this.cpuExecution) {
+      const resolved = this.program.resolveBindings(supplied, options);
+      // Dynamic CPU outputs are owned by the invocation, not caller-provided targets.
+      assert(
+        !resolved.options.outputTargets || Object.keys(resolved.options.outputTargets).length === 0
+      );
+      this.runningCPU = true;
+      try {
+        return (await this.cpuExecution.run(resolved.bindings)) as Outputs;
+      } finally {
+        this.runningCPU = false;
+      }
+    }
     const execution = this.prepare(supplied, options);
     let encoder: CommandEncoder | undefined;
     try {
@@ -83,6 +110,8 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
   ): PreparedGPUGraphExecution<Outputs> {
     // A destroyed compiled program cannot encode further work.
     assert(!this.destroyed);
+    if (this.cpuExecution)
+      throw new Error('CPU operations require asynchronous run(), not prepare()');
     const resolvedBindings = this.program.resolveBindings(supplied, options);
     const bindings = resolvedBindings.bindings;
     options = resolvedBindings.options;
@@ -179,6 +208,9 @@ export class CompiledGPUGraph<Outputs extends GPUGraphOutputs = Record<string, G
   }
 
   destroy(): void {
+    // CPU callbacks may still be awaiting input readback or producing output arrays.
+    assert(!this.runningCPU);
+    this.cpuExecution?.destroy();
     for (const kernel of this.kernels.values()) kernel.destroy();
     this.kernels.clear();
     this.destroyed = true;
