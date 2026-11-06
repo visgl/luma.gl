@@ -93,3 +93,10 @@ test('rejects nullable list elements instead of discarding child validity', () =
   const type = new arrow.List(new arrow.Field('item', new arrow.Float32(), true));
   expect(() => makeCPUVectorFromArrow(arrow.vectorFromArray([[1, null, 3]], type))).toThrow();
 });
+
+test('Float16 values round-trip without decoding their stored bits', () => {
+  const source = arrow.vectorFromArray([1, 2, null, -3], new arrow.Float16());
+  const result = makeArrowVectorFromCPUVector(makeCPUVectorFromArrow(source));
+  expect(result.type.toString()).toBe(source.type.toString());
+  expect(Array.from(result)).toEqual(Array.from(source));
+});

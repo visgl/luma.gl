@@ -11,6 +11,7 @@ import {
   Field,
   FixedSizeList,
   List,
+  Float16,
   Float32,
   Int32,
   Uint32,
@@ -70,22 +71,24 @@ export function makeCPUVectorFromArrow(vector: Vector, options: {name?: string} 
 export function makeArrowVectorFromCPUVector(vector: CPUVector): Vector {
   const info = getGPUVectorFormatInfo(vector.format);
   const scalar =
-    info.signedDataType === 'float32'
-      ? new Float32()
-      : info.signedDataType === 'sint32'
-        ? new Int32()
-        : info.signedDataType === 'uint32'
-          ? new Uint32()
-          : info.signedDataType === 'sint16'
-            ? new Int16()
-            : info.signedDataType === 'uint16'
-              ? new Uint16()
-              : info.signedDataType === 'sint8'
-                ? new Int8()
-                : new Uint8();
+    info.signedDataType === 'float16'
+      ? new Float16()
+      : info.signedDataType === 'float32'
+        ? new Float32()
+        : info.signedDataType === 'sint32'
+          ? new Int32()
+          : info.signedDataType === 'uint32'
+            ? new Uint32()
+            : info.signedDataType === 'sint16'
+              ? new Int16()
+              : info.signedDataType === 'uint16'
+                ? new Uint16()
+                : info.signedDataType === 'sint8'
+                  ? new Int8()
+                  : new Uint8();
   assert(
     !info.normalized &&
-      ['float32', 'sint32', 'uint32', 'sint16', 'uint16', 'sint8', 'uint8'].includes(
+      ['float16', 'float32', 'sint32', 'uint32', 'sint16', 'uint16', 'sint8', 'uint8'].includes(
         info.signedDataType
       )
   );
