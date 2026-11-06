@@ -206,3 +206,11 @@ export type {
   GPUGraphOutput,
   GPUGraphOutputs
 } from './gpu-core/gpu-texture-plan';
+
+export {GPUCPUOperation} from './gpu-core/gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from './gpu-core/gpu-cpu-operation';
