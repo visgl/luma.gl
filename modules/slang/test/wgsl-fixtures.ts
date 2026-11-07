@@ -65,3 +65,9 @@ const N=1;
   switch key {case CASE:{amount=f32(min(N,2u))*0.25;}default:{amount=0.0;}}
   return vec4f(f32(FORWARD)*0.1,amount,values[0],1.0);
 }`;
+
+export const WGSL_INTEGER_SIGN_SHADER = `${WGSL_RENDER_SHADER.split('@fragment')[0]}
+@fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  let signed=sign(vec3i(-1,0,1));
+  return vec4f(vec3f(signed)*0.5+vec3f(0.5),f32(sign(1i)));
+}`;

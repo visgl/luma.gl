@@ -329,3 +329,14 @@ it('wgsl#bounds total expansion before allocating nested arrays for GLSL 450', (
     )
   ).toThrow(WGSLTranspileError);
 });
+
+it.each([
+  'var VALUE=2;',
+  'let VALUE=2;'
+])('wgsl#constant validation uses the innermost binding: %s', declaration => {
+  expect(() =>
+    transpileWGSL(
+      `const VALUE=1;@fragment fn main()->@location(0) vec4f {${declaration}const INVALID=VALUE;return vec4f(f32(INVALID));}`
+    )
+  ).toThrow(WGSLTranspileError);
+});

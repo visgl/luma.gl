@@ -727,16 +727,7 @@ export function analyzeWGSL(
     return {name: 'float4'};
   }
   function checkConstant(expression: Expression): void {
-    if (
-      expression.kind === 'identifier' &&
-      ![...scopes].reverse().some(scope => scope.get(expression.value)?.constant) &&
-      !program.declarations.some(
-        declaration =>
-          declaration.kind === 'variable' &&
-          declaration.name === expression.value &&
-          declaration.modifiers.includes('const')
-      )
-    )
+    if (expression.kind === 'identifier' && !lookup(expression.value, expression).constant)
       fail('Initializer requires a constant expression', expression);
     if (
       expression.kind === 'call' &&
