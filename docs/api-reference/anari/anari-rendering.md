@@ -106,10 +106,10 @@ implements that feature. Registered custom renderers define their own support.
 | Perspective and orthographic cameras | Yes | Yes | Yes | Yes |
 | Retained meshes and instancing | Yes | Yes | Triangle meshes; analytic spheres | Yes |
 | Matte and scalar metallic-roughness materials | Yes | Yes | Yes; diffuse or opaque GGX transport | Diagnostic output |
-| Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | No | Shared raster surface inputs; diagnostic output |
+| Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | Base color, emissive, metallic-roughness and transmission; UV0/UV1 transforms | Shared raster surface inputs; diagnostic output |
 | Alpha masking | Scalar and texture alpha | Scalar and texture alpha | Scalar alpha only, including shadows and queries | Shared raster mask behavior |
 | Alpha blending | Yes; sorted forward draws | Fallback | No | Shared raster blend behavior |
-| Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | No | Diagnostic output, not physical transport |
+| Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | Smooth dielectric transmission in PBR paths; other extensions unsupported | Diagnostic output, not physical transport |
 | Skeletal skinning and morph targets | Yes | Yes through shared raster geometry | No | Yes through shared raster geometry |
 | Ambient, directional and point lights | Yes | Yes; one directional and up to 64 point lights, otherwise fallback | Yes | No lighting; normals or depth |
 | Spot lights | Yes | Fallback | Yes | No lighting |
@@ -117,7 +117,7 @@ implements that feature. Registered custom renderers define their own support.
 | Emissive surface appearance | Yes | Yes | Yes | Diagnostic output |
 | Emissive geometry illuminates other surfaces | No | No | Opt-in `emitterSampling`; also secondary emission gathering | No |
 | Ray-traced direct-light shadows | No | No | Yes | No |
-| Indirect diffuse and specular transport | No | No | Opt-in diffuse or opaque PBR bounces, up to 8; no MIS | No |
+| Indirect diffuse and specular transport | No | No | Opt-in diffuse or PBR bounces with smooth dielectrics, up to 8; no MIS | No |
 | Progressive sampling and adaptive ray resolution | No | No | Yes | No |
 | Temporal antialiasing / history | Raster temporal AA on WebGPU | Raster temporal AA | Progressive history and primary-hit reprojection; indirect/PBR changes can reset history | No temporal AA |
 | Guided spatial denoising | No | No | Yes, optional | No |

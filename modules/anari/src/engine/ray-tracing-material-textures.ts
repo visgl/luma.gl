@@ -34,17 +34,18 @@ export function getRayMaterialTextures(surfaces: readonly SceneSurface[]): Textu
   return textures;
 }
 
-/** Include borrowed texture/sampler identities and shader-specialized UV metadata. */
+/** Only shader-baked map selection and UV metadata require recompilation. */
 export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[]): string {
+  const textures = getRayMaterialTextures(surfaces);
   return JSON.stringify(
     surfaces.map(surface => [
       surface.id,
-      surface.material.version,
-      surface.material.uniforms,
-      MATERIAL_MAPS.map(([, binding]) => {
-        const texture = surface.material.bindings?.[binding];
-        return texture instanceof Texture ? [texture.id, texture.sampler.id] : null;
-      })
+      MATERIAL_MAPS.map(([name, binding]) => [
+        textures.findIndex(texture => texture === surface.material.bindings?.[binding]),
+        surface.material.uniforms?.[`${name}MapEnabled`],
+        surface.material.uniforms?.[`${name}UVSet`],
+        surface.material.uniforms?.[`${name}UVTransform`]
+      ])
     ])
   );
 }

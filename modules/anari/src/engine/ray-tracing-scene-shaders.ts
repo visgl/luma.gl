@@ -765,7 +765,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
   let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance) *
     (1.0 - metallic) / PI;
   let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0);
-  let opaqueWeight = select(1.0, 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic), uniforms.sampling.w > 0u);
+  let opaqueWeight = select(1.0, 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic), uniforms.sampling.w > 0u && uniforms.sampling.y > 0u);
   var result = select(vec3<f32>(0.0), primitive.emissive.rgb, includeEmission);
   let directLightCount = u32(max(uniforms.temporal.y, 0.0));
   let boundedDirectLightCount = max(directLightCount, 1u);
@@ -982,6 +982,12 @@ fn getHistoricalRaySample(
 ) -> HistoricalRaySample {
   if (uniforms.settings.y <= 0.0) {
     return rejectHistoricalRaySample();
+  }
+
+  // Unchanged static progressive samples must average without per-sample clipping.
+  if (uniforms.temporal.w <= 0.5) {
+    let previous = textureLoad(historyImage, vec2<i32>(pixel), 0);
+    return HistoricalRaySample(previous.rgb, previous.a, previous.a > 0.0);
   }
 
   var historySamplePosition = vec2<f32>(pixel);
@@ -1278,8 +1284,9 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
   var response = clamp(receiver.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * 0.96 *
     (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)) * normalLight / PI;
   if (uniforms.sampling.w > 0u) {
-    response = evaluatePBRResponse(ray, hit, direction) *
-      (1.0 - clamp(receiver.material.y, 0.0, 1.0) * (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)));
+    response = evaluatePBRResponse(ray, hit, direction) * select(1.0,
+      1.0 - clamp(receiver.material.y, 0.0, 1.0) * (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)),
+      uniforms.sampling.y > 0u);
   }
   let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
   let shadedEmitter = getShadedPrimitive(RayHit(0.0, lightNormal, primitiveIndex, true, emitterCoordinates, emitterSecondaryCoordinates));

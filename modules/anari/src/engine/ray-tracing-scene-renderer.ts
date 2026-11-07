@@ -663,6 +663,9 @@ type RayTracingFrameResources = {
   geometryLayouts: Map<string, RayTracingGeometryLayout>;
   retainedSurfaces: readonly SceneSurface[];
   materialTextureRevision: string;
+  materialTextures: Texture[];
+  materialSamplers: Texture['sampler'][];
+  materialContentRevision: string;
   previousTransforms: Map<string, Matrix4>;
   primitivePlacements: Map<string, RayTracingPrimitivePlacement>;
   pickIdentities: readonly RayTracingPickIdentity[];
@@ -1038,10 +1041,28 @@ export class RayTracingSceneRenderer {
     }
 
     const materialTextureRevision = getRayMaterialTextureRevision(options.surfaces);
-    if (materialTextureRevision !== resources.materialTextureRevision) {
+    const materialTextures = getRayMaterialTextures(options.surfaces);
+    const materialContentRevision = JSON.stringify(
+      options.surfaces.map(surface => surface.material.version)
+    );
+    if (materialContentRevision !== resources.materialContentRevision) {
+      resources.materialContentRevision = materialContentRevision;
+      resources.historyNeedsReset = true;
+    }
+    if (
+      materialTextureRevision !== resources.materialTextureRevision ||
+      materialTextures.length !== resources.materialTextures.length ||
+      materialTextures.some(
+        (texture, index) =>
+          texture !== resources.materialTextures[index] ||
+          texture.sampler !== resources.materialSamplers[index]
+      )
+    ) {
       resources.retainedSurfaces = options.surfaces;
       this.recreateTraceGraph(options.id, resources, presentation);
       resources.materialTextureRevision = materialTextureRevision;
+      resources.materialTextures = materialTextures;
+      resources.materialSamplers = materialTextures.map(texture => texture.sampler);
       resources.historyNeedsReset = true;
     }
 
@@ -1634,6 +1655,11 @@ export class RayTracingSceneRenderer {
       geometryLayouts: props.topology.geometryLayouts,
       retainedSurfaces: props.surfaces,
       materialTextureRevision: getRayMaterialTextureRevision(props.surfaces),
+      materialTextures: getRayMaterialTextures(props.surfaces),
+      materialSamplers: getRayMaterialTextures(props.surfaces).map(texture => texture.sampler),
+      materialContentRevision: JSON.stringify(
+        props.surfaces.map(surface => surface.material.version)
+      ),
       previousTransforms: props.primitiveData.previousTransforms,
       primitivePlacements: props.primitiveData.placements,
       pickIdentities: props.primitiveData.pickIdentities,
