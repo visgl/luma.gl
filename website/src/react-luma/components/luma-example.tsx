@@ -218,6 +218,7 @@ export const ExampleStage: FC<ExampleStageProps> = (props: ExampleStageProps) =>
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
   const [isImmersive, setIsImmersive] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isNavigationPending, setIsNavigationPending] = useState(false);
   const supportDefinition = useResolvedExampleSupportDefinition(props);
   const runtimeEnvironment = useExampleRuntimeEnvironment();
@@ -249,9 +250,59 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isImmersive) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const previousFocus = document.activeElement;
+    const previousRootOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsImmersive(false);
+      }
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(element => element.getClientRects().length > 0);
+      const firstControl = controls[0];
+      const lastControl = controls[controls.length - 1];
+      if (
+        event.shiftKey &&
+        (document.activeElement === firstControl || !container.contains(document.activeElement))
+      ) {
+        event.preventDefault();
+        lastControl?.focus();
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === lastControl || !container.contains(document.activeElement))
+      ) {
+        event.preventDefault();
+        firstControl?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    container
+      .querySelector<HTMLElement>('[data-luma-example-fullscreen-toggle]')
+      ?.focus({preventScroll: true});
+    return () => {
+      document.documentElement.style.overflow = previousRootOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus({preventScroll: true});
+    };
+  }, [isImmersive]);
+
   return (
     <div
+      ref={containerRef}
+      role={isImmersive ? 'dialog' : undefined}
+      aria-modal={isImmersive ? true : undefined}
+      aria-label={isImmersive ? 'Expanded example' : undefined}
       data-luma-example-page=""
+      data-luma-example-content-sized={embeddedHeight === 'auto' ? '' : undefined}
       data-luma-embedded-example={props.embedded ? '' : undefined}
       data-luma-example-immersive={String(isImmersive)}
       data-luma-example-id={supportDefinition.id || undefined}

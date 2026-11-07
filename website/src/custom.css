@@ -4570,7 +4570,7 @@ html[data-theme="dark"] .markdown .luma-onboarding {
     min-height: 44px;
   }
 
-  .docs-embedded-example[data-luma-embedded-example]:not([data-luma-example-immersive='true']) {
+  .docs-embedded-example[data-luma-embedded-example]:not([data-luma-example-content-sized]):not([data-luma-example-immersive='true']) {
     height: min(420px, calc(100dvh - var(--ifm-navbar-height) - 24px)) !important;
     min-height: min(420px, calc(100dvh - var(--ifm-navbar-height) - 24px)) !important;
   }
@@ -4607,4 +4607,21 @@ body:has([data-luma-example-page][data-luma-example-immersive='true']) .theme-ba
 [data-luma-example-page] [data-luma-example-fullscreen-toggle] {
   scroll-margin-block: calc(var(--ifm-navbar-height) + 16px);
   z-index: 50;
+}
+
+@media screen and (max-width: 700px), screen and (max-height: 500px) and (pointer: coarse) {
+  .luma-example-page[data-luma-example-immersive='false'] [data-luma-info-box-collapsed='false'] {
+    top: calc(var(--ifm-navbar-height) + 8px + env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(100dvh - var(--ifm-navbar-height) - 16px - env(safe-area-inset-top, 0px)) !important;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 996px) {
+  #__docusaurus {
+    min-height: 100dvh;
+  }
+
+  main .container {
+    min-height: calc(100dvh - var(--ifm-navbar-height));
+  }
 }
