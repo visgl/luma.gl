@@ -61,3 +61,23 @@ Dependency-graph tests reject WGSL parser/analyzer imports from the Slang bundle
 parser/lexer/registry/interface/operation adapters from the WGSL bundle. These are complete
 compiler bundles, rather than incremental frontend-only sizes. Both targets remain available
 inside the shared backend; this tranche separates source frontends, not per-target backends.
+
+
+## WGSL rendering and language extensions (tranches 5–6)
+
+WGSL analysis now lowers uniform buffers and 2D sampling into existing resource metadata and
+canonical texture operations. It compares natural WGSL byte layouts against std140 before
+emission; no source buffers are implicitly repacked. Matrices retain WGSL column semantics via
+an explicit matrix-multiply operation. Fixed array constructors, bitcasts, eager select and
+texture dimensions have typed syntax nodes. A source evaluation-order flag makes the shared
+backend capture WGSL operands before later arguments can mutate their inputs. Slang semantics
+and frontend adapters remain separate.
+
+| Browser entry point | Minified bytes | Gzip bytes | Gzip increase over tranches 3–4 |
+| --- | ---: | ---: | ---: |
+| Slang only | 112616 | 32052 | 514 (1.6%) |
+| WGSL only | 127189 | 36428 | 5293 (17.0%) |
+| Both frontends | 145304 | 42405 | 5428 (14.7%) |
+
+These are full compiler bundles measured with the same esbuild/gzip settings above. Tight
+standalone and combined budgets, plus frontend dependency-graph assertions, remain test gates.

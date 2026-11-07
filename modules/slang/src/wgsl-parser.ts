@@ -62,9 +62,10 @@ export function parseWGSL(source: string, sourceName: string): Program {
     }
     const identifier = /^[A-Za-z_][A-Za-z_0-9]*/.exec(remaining);
     const number = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?[iuf]?/.exec(remaining);
-    const symbol = /^(?:->|==|!=|<=|>=|&&|\|\||\+=|-=|\*=|\/=|[{}()[\];:,.@+\-*/%!=<>~&|^])/.exec(
-      remaining
-    );
+    const symbol =
+      /^(?:->|<<=|>>=|<<|>>|\+\+|--|%=|&=|\|=|\^=|==|!=|<=|>=|&&|\|\||\+=|-=|\*=|\/=|[{}()[\];:,.@+\-*/%!=<>~&|^])/.exec(
+        remaining
+      );
     const match = identifier || number || symbol;
     if (!match) fail('Unsupported WGSL token', {offset, line, column, text: '', kind: 'end'});
     tokens.push({
@@ -86,6 +87,18 @@ export function parseWGSL(source: string, sourceName: string): Program {
   };
   const match = (text: string) => (peek().text === text ? (position++, true) : false);
   function expect(text: string): Token {
+    if (text === '>' && ['>=', '>>', '>>='].includes(peek().text)) {
+      const token = peek();
+      const consumed = {...token, text: '>'};
+      tokens.splice(position, 1, consumed, {
+        ...token,
+        text: token.text.slice(1),
+        offset: token.offset + 1,
+        column: token.column + 1
+      });
+      position++;
+      return consumed;
+    }
     if (peek().text !== text) fail(`Expected ${text}`);
     return take();
   }
@@ -100,6 +113,7 @@ export function parseWGSL(source: string, sourceName: string): Program {
         'let',
         'var',
         'const',
+        'alias',
         'override',
         'if',
         'else',
@@ -121,8 +135,20 @@ export function parseWGSL(source: string, sourceName: string): Program {
   }
   const scalars: Record<string, string> = {f32: 'float', i32: 'int', u32: 'uint', bool: 'bool'};
   const names = new Set<string>();
+  const aliases = new Map<string, Token>();
+  const resolvingAliases = new Set<string>();
   function parseType(): SlangType {
     const token = identifier();
+    if (aliases.has(token.text)) {
+      if (resolvingAliases.has(token.text)) fail('Recursive type alias', token);
+      const savedToken = peek();
+      resolvingAliases.add(token.text);
+      position = tokens.indexOf(aliases.get(token.text)!);
+      const type = parseType();
+      resolvingAliases.delete(token.text);
+      position = tokens.indexOf(savedToken);
+      return type;
+    }
     if (Object.hasOwn(scalars, token.text)) return {name: scalars[token.text]};
     const vector = /^vec([2-4])([fiub])?$/.exec(token.text);
     if (vector) {
@@ -138,6 +164,35 @@ export function parseWGSL(source: string, sourceName: string): Program {
         fail('Vectors require a supported scalar type', token);
       return {name: scalar + vector[1]};
     }
+    const matrix = /^mat([2-4])x([2-4])(f)?$/.exec(token.text);
+    if (matrix) {
+      if (!matrix[3]) {
+        expect('<');
+        if (parseType().name !== 'float') fail('Matrices require f32', token);
+        expect('>');
+      }
+      return {name: `float${matrix[1]}x${matrix[2]}`};
+    }
+    if (token.text === 'array') {
+      expect('<');
+      const element = parseType();
+      expect(',');
+      const count = take();
+      const type: SlangType = {name: 'array', element};
+      if (count.kind === 'number' && /^\d+u?$/.test(count.text))
+        type.length = Number(count.text.replace(/u$/, ''));
+      else if (count.kind === 'identifier') type.lengthName = count.text;
+      else fail('Fixed arrays require an integer count or named constant', count);
+      expect('>');
+      return type;
+    }
+    if (token.text === 'texture_2d') {
+      expect('<');
+      if (parseType().name !== 'float') fail('Only texture_2d<f32> is supported', token);
+      expect('>');
+      return {name: 'Texture2D', element: {name: 'float4'}};
+    }
+    if (token.text === 'sampler') return {name: 'SamplerState'};
     if (names.has(token.text)) return {name: token.text};
     return fail(`Unsupported WGSL type ${token.text}`, token);
   }
@@ -152,7 +207,11 @@ export function parseWGSL(source: string, sourceName: string): Program {
         } while (match(','));
         expect(')');
       }
-      if (!['vertex', 'fragment', 'location', 'builtin', 'interpolate'].includes(token.text))
+      if (
+        !['vertex', 'fragment', 'location', 'builtin', 'interpolate', 'group', 'binding'].includes(
+          token.text
+        )
+      )
         fail(`Unsupported WGSL attribute ${token.text}`, token);
       result.push({name: token.text, arguments: argumentsList, location: token});
     }
@@ -223,11 +282,13 @@ export function parseWGSL(source: string, sourceName: string): Program {
     '>': 7,
     '<=': 7,
     '>=': 7,
-    '+': 8,
-    '-': 8,
-    '*': 9,
-    '/': 9,
-    '%': 9
+    '<<': 8,
+    '>>': 8,
+    '+': 9,
+    '-': 9,
+    '*': 10,
+    '/': 10,
+    '%': 10
   };
   function expression(minimum = 0): Expression {
     const token = take();
@@ -240,7 +301,7 @@ export function parseWGSL(source: string, sourceName: string): Program {
         ...token,
         kind: 'unary',
         operator: token.text,
-        operand: expression(10),
+        operand: expression(11),
         postfix: false
       };
     else if (token.kind === 'number') result = {...token, kind: 'number', value: token.text};
@@ -248,12 +309,56 @@ export function parseWGSL(source: string, sourceName: string): Program {
       result = {...token, kind: 'boolean', value: token.text};
     else if (token.kind === 'identifier') {
       let name = token.text;
-      if (Object.hasOwn(scalars, name) || /^vec[2-4](?:[fiub])?$/.test(name)) {
+      if (name === 'bitcast') {
+        expect('<');
+        const type = parseType();
+        expect('>');
+        expect('(');
+        const operand = expression();
+        expect(')');
+        result = {...token, kind: 'bitcast', type, operand};
+      } else if (name === 'array') {
         position--;
-        name = parseType().name;
+        const type = parseType();
+        expect('(');
+        const elements: Expression[] = [];
+        if (!match(')')) {
+          do {
+            elements.push(expression());
+          } while (match(',') && peek().text !== ')');
+          expect(')');
+        }
+        result = {...token, kind: 'construct', type, elements};
+      } else {
+        if (
+          Object.hasOwn(scalars, name) ||
+          /^vec[2-4](?:[fiub])?$/.test(name) ||
+          /^mat[2-4]x[2-4]f?$/.test(name) ||
+          aliases.has(name)
+        ) {
+          position--;
+          const type = parseType();
+          if (type.name === 'array') {
+            expect('(');
+            const elements: Expression[] = [];
+            if (!match(')')) {
+              do {
+                elements.push(expression());
+              } while (match(',') && peek().text !== ')');
+              expect(')');
+            }
+            result = {...token, kind: 'construct', type, elements};
+            // Continue through postfix parsing with the full array type.
+            return parsePostfix(result, token, minimum);
+          }
+          name = type.name;
+        }
+        result = {...token, kind: 'identifier', value: name};
       }
-      result = {...token, kind: 'identifier', value: name};
     } else return fail('Expected an expression', token);
+    return parsePostfix(result, token, minimum);
+  }
+  function parsePostfix(result: Expression, token: Token, minimum: number): Expression {
     for (;;) {
       if (match('(')) {
         const argumentsList: Expression[] = [];
@@ -264,6 +369,10 @@ export function parseWGSL(source: string, sourceName: string): Program {
           expect(')');
         }
         result = {...token, kind: 'call', callee: result, arguments: argumentsList};
+      } else if (match('[')) {
+        const index = expression();
+        expect(']');
+        result = {...token, kind: 'index', object: result, index};
       } else if (match('.'))
         result = {...token, kind: 'member', object: result, member: identifier().text};
       else {
@@ -282,52 +391,180 @@ export function parseWGSL(source: string, sourceName: string): Program {
     }
     return result;
   }
+  const assignments = ['=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>='];
+  function localDeclaration(first: Token): Variable {
+    const name = identifier();
+    const type = match(':') ? parseType() : {name: '$inferred'};
+    const initializer = match('=') ? expression() : undefined;
+    if (!initializer && (first.text !== 'var' || type.name === '$inferred'))
+      fail('Declaration requires an initializer', first);
+    return {
+      ...variable(name, type),
+      modifiers: first.text === 'var' ? [] : [first.text],
+      initializer
+    };
+  }
+  function update(): Expression {
+    const first = peek();
+    let value = expression();
+    if (assignments.includes(peek().text)) {
+      const operator = take().text;
+      value = {...first, kind: 'binary', operator, left: value, right: expression()};
+    } else if (['++', '--'].includes(peek().text))
+      value = {...first, kind: 'unary', operator: take().text, operand: value, postfix: true};
+    return value;
+  }
+  function statement(): Statement {
+    const first = take();
+    switch (first.text) {
+      case '{':
+        position--;
+        return block();
+      case ';':
+        return {...first, kind: 'empty'};
+      case 'return': {
+        const value = peek().text === ';' ? undefined : expression();
+        expect(';');
+        return {...first, kind: 'return', expression: value};
+      }
+      case 'var':
+      case 'let':
+      case 'const': {
+        const declaration = localDeclaration(first);
+        expect(';');
+        return {...first, kind: 'variable', variable: declaration};
+      }
+      case 'if': {
+        const condition = expression();
+        const consequent = block();
+        let alternate: Statement | undefined;
+        if (match('else')) alternate = peek().text === 'if' ? statement() : block();
+        return {...first, kind: 'if', condition, consequent, alternate};
+      }
+      case 'while': {
+        const condition = expression();
+        return {...first, kind: 'while', condition, body: block()};
+      }
+      case 'for': {
+        expect('(');
+        let initializer: Statement | undefined;
+        if (peek().text !== ';') {
+          const token = peek();
+          initializer = ['var', 'let', 'const'].includes(token.text)
+            ? (take(), {...token, kind: 'variable', variable: localDeclaration(token)})
+            : {...token, kind: 'expression', expression: update()};
+        }
+        expect(';');
+        const condition = peek().text === ';' ? undefined : expression();
+        expect(';');
+        const advance = peek().text === ')' ? undefined : update();
+        expect(')');
+        return {...first, kind: 'for', initializer, condition, update: advance, body: block()};
+      }
+      case 'switch': {
+        const selector = expression();
+        expect('{');
+        const clauses: import('./ast').SwitchClause[] = [];
+        while (!match('}')) {
+          const label = take();
+          const labels: (Expression | null)[] = [];
+          if (label.text === 'default') labels.push(null);
+          else if (label.text === 'case') {
+            do {
+              labels.push(match('default') ? null : expression());
+            } while (match(','));
+          } else fail('Expected case or default', label);
+          match(':');
+          const body = block();
+          clauses.push({
+            ...label,
+            labels,
+            statements: body.kind === 'block' ? body.statements : []
+          });
+        }
+        return {...first, kind: 'switch', selector, clauses};
+      }
+      case 'break':
+      case 'continue':
+      case 'discard':
+        expect(';');
+        return {...first, kind: first.text};
+      case 'loop':
+        return fail('loop/continuing requires the next language tranche', first);
+      default:
+        position--;
+        const value = update();
+        expect(';');
+        return {...first, kind: 'expression', expression: value};
+    }
+  }
   function block(): Statement {
     const token = expect('{');
     const statements: Statement[] = [];
     while (!match('}')) {
       if (peek().kind === 'end') fail('Unterminated block');
-      const first = take();
-      if (first.text === 'return') {
-        const value = peek().text === ';' ? undefined : expression();
-        expect(';');
-        statements.push({...first, kind: 'return', expression: value});
-      } else if (first.text === 'let' || first.text === 'var') {
-        const name = identifier();
-        const type = match(':') ? parseType() : {name: '$inferred'};
-        const initializer = match('=') ? expression() : undefined;
-        if (!initializer && (first.text === 'let' || type.name === '$inferred'))
-          fail('Declaration requires an initializer', first);
-        expect(';');
-        const declaration = variable(name, type);
-        declaration.modifiers = first.text === 'let' ? ['let'] : [];
-        declaration.initializer = initializer;
-        statements.push({...first, kind: 'variable', variable: declaration});
-      } else if (first.text === '{') {
-        position--;
-        statements.push(block());
-      } else {
-        position--;
-        let value = expression();
-        if (['=', '+=', '-=', '*=', '/='].includes(peek().text)) {
-          const operator = take().text;
-          value = {...first, kind: 'binary', operator, left: value, right: expression()};
-        }
-        expect(';');
-        statements.push({...first, kind: 'expression', expression: value});
-      }
+      statements.push(statement());
     }
     return {...token, kind: 'block', statements};
   }
   // Discover struct names before parsing signatures, without interpreting their contents.
   tokens.forEach((token, index) => {
     if (token.text === 'struct') names.add(tokens[index + 1]?.text);
+    if (token.text === 'alias') {
+      const name = tokens[index + 1]?.text;
+      if (aliases.has(name) || names.has(name)) fail('Duplicate type declaration', token);
+      aliases.set(name, tokens[index + 3]);
+    }
   });
-  const program: Program = {declarations: [], clipSpace: 'webgpu'};
+  const program: Program = {
+    declarations: [],
+    clipSpace: 'webgpu',
+    evaluationOrder: 'left-to-right'
+  };
   while (peek().kind !== 'end') {
     const metadata = attributes();
     const token = take();
-    if (token.text === 'struct') {
+    if (token.text === 'alias') {
+      const name = identifier();
+      expect('=');
+      parseType();
+      expect(';');
+      if (metadata.length) fail('Alias attributes are unsupported', name);
+    } else if (['var', 'const'].includes(token.text)) {
+      let addressSpace = 'private';
+      if (token.text === 'var' && match('<')) {
+        addressSpace = identifier().text;
+        expect('>');
+      }
+      if (!['private', 'uniform'].includes(addressSpace))
+        fail('Unsupported WGSL address space', token);
+      const declaration = localDeclaration(token);
+      if (aliases.has(declaration.name)) fail('Duplicate declaration', token);
+      if (addressSpace === 'uniform') {
+        declaration.type = {name: 'ConstantBuffer', element: declaration.type};
+      }
+      const handle = ['Texture2D', 'SamplerState'].includes(declaration.type.name);
+      if (addressSpace === 'uniform' || handle) {
+        const group = metadata.find(attribute => attribute.name === 'group');
+        const binding = metadata.find(attribute => attribute.name === 'binding');
+        if (
+          metadata.length !== 2 ||
+          !group ||
+          !binding ||
+          ![...group.arguments, ...binding.arguments].every(value => /^\d+$/.test(value)) ||
+          group.arguments.length !== 1 ||
+          binding.arguments.length !== 1
+        )
+          fail('Resources require one group and binding', token);
+        declaration.binding = {
+          group: Number(group.arguments[0]),
+          binding: Number(binding.arguments[0])
+        };
+      } else if (metadata.length)
+        fail('Private variables and constants cannot have binding attributes', token);
+      expect(';');
+      program.declarations.push(declaration);
+    } else if (token.text === 'struct') {
       if (metadata.length) fail('Struct attributes are unsupported', token);
       const name = identifier();
       expect('{');
@@ -347,6 +584,7 @@ export function parseWGSL(source: string, sourceName: string): Program {
       program.declarations.push(structure);
     } else if (token.text === 'fn') {
       const name = identifier();
+      if (aliases.has(name.text)) fail('Duplicate declaration', name);
       expect('(');
       const parameters: Variable[] = [];
       if (!match(')')) {

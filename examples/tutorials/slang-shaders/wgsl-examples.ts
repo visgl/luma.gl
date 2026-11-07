@@ -51,6 +51,51 @@ fn tint(color: vec3f, amount: f32) -> vec3f {
   return result;
 }
 `
+  },
+  {
+    name: 'WGSL · uniform matrix and tint',
+    wgsl: true,
+    code: `${VERTEX_SOURCE}
+struct Settings { transform: mat4x4f, tint: vec4f, }
+@group(0) @binding(0) var<uniform> settings: Settings;
+@fragment fn fragmentMain(@location(0) color: vec3f) -> @location(0) vec4f {
+  return settings.transform * vec4f(color, 1.0) * settings.tint;
+}`
+  },
+  {
+    name: 'WGSL · sampled checker texture',
+    wgsl: true,
+    code: `${VERTEX_SOURCE}
+@group(0) @binding(1) var image: texture_2d<f32>;
+@group(0) @binding(2) var filtering: sampler;
+@fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  let size=vec2f(textureDimensions(image));
+  let sampled=textureSampleLevel(image,filtering,color.xy * 3.0,0.0);
+  let loaded=textureLoad(image,vec2i(0),0);
+  return mix(sampled,loaded,1.0 / size.x) * vec4f(color * 0.5 + vec3f(0.5),1.0);
+}`
+  },
+  {
+    name: 'WGSL · arrays and control flow',
+    wgsl: true,
+    code: `${VERTEX_SOURCE}
+const COUNT=3;
+alias Palette=array<vec3f,COUNT>;
+fn paletteColor(palette:Palette,index:i32)->vec3f {return palette[index];}
+@fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  let palette=Palette(vec3f(0.9,0.2,0.1),vec3f(0.1,0.8,0.4),vec3f(0.2,0.3,0.9));
+  var result=vec3f(0.0);
+  for(var index=0;index<COUNT;index++) {
+    if(color[index]<0.15) {continue;}
+    result+=paletteColor(palette,index) * color[index];
+  }
+  var count=0;
+  while(count<2) {result+=vec3f(0.025);count++;}
+  switch count {case 1: {result=vec3f(0.0);} default: {result=clamp(result,vec3f(0.0),vec3f(1.0));}}
+  let mask=select(vec3f(0.8),vec3f(1.0),color>vec3f(0.3));
+  let one=bitcast<f32>(bitcast<u32>(1.0));
+  return vec4f(result * mask,one);
+}`
   }
 ];
 
@@ -67,11 +112,15 @@ export function renderWGSLExample(
   const program = context.createProgram()!;
   const buffer = context.createBuffer()!;
   const shaders: WebGLShader[] = [];
+  const uniformBuffers: WebGLBuffer[] = [];
+  const textures: WebGLTexture[] = [];
   const destroy = () => {
     context.bindBuffer(context.ARRAY_BUFFER, null);
     context.useProgram(null);
     shaders.forEach(shader => context.deleteShader(shader));
     context.deleteBuffer(buffer);
+    uniformBuffers.forEach(value => context.deleteBuffer(value));
+    textures.forEach(value => context.deleteTexture(value));
     context.deleteProgram(program);
   };
   try {
@@ -94,6 +143,51 @@ export function renderWGSLExample(
     if (!context.getProgramParameter(program, context.LINK_STATUS))
       throw new Error(context.getProgramInfoLog(program) || 'Shader linking failed');
     context.useProgram(program);
+    const bindings = new Map(
+      compiled
+        .flatMap(result => result.reflection.bindings)
+        .map(binding => [binding.shaderName, binding])
+    );
+    for (const binding of bindings.values()) {
+      if (binding.kind === 'uniform') {
+        const uniformBuffer = context.createBuffer()!;
+        uniformBuffers.push(uniformBuffer);
+        context.bindBuffer(context.UNIFORM_BUFFER, uniformBuffer);
+        // WGSL column-major mat4 followed by tint; the compiler verifies the std140 offsets.
+        context.bufferData(
+          context.UNIFORM_BUFFER,
+          new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0.7, 0.9, 1, 1]),
+          context.STATIC_DRAW
+        );
+        const block = context.getUniformBlockIndex(program, binding.blockName!);
+        if (block !== context.INVALID_INDEX) {
+          context.uniformBlockBinding(program, block, binding.binding);
+          context.bindBufferBase(context.UNIFORM_BUFFER, binding.binding, uniformBuffer);
+        }
+      } else if (binding.kind === 'texture') {
+        const texture = context.createTexture()!;
+        textures.push(texture);
+        context.activeTexture(context.TEXTURE0 + textures.length - 1);
+        context.bindTexture(context.TEXTURE_2D, texture);
+        context.texImage2D(
+          context.TEXTURE_2D,
+          0,
+          context.RGBA8,
+          2,
+          2,
+          0,
+          context.RGBA,
+          context.UNSIGNED_BYTE,
+          new Uint8Array([255, 180, 80, 255, 30, 90, 220, 255, 30, 90, 220, 255, 255, 180, 80, 255])
+        );
+        context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.NEAREST);
+        context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, context.NEAREST);
+        context.uniform1i(
+          context.getUniformLocation(program, binding.shaderName),
+          textures.length - 1
+        );
+      }
+    }
     context.bindBuffer(context.ARRAY_BUFFER, buffer);
     context.bufferData(
       context.ARRAY_BUFFER,
