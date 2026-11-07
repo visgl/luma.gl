@@ -91,13 +91,18 @@ try {
                 (await example.getAttribute('data-luma-example-content-sized')) !== null;
               if (!contentSized)
                 assert(rectangle.height <= height, 'example must fit the phone viewport');
-              if (contentSized)
+              if (contentSized) {
+                await page.waitForFunction(() => {
+                  const element = document.querySelector('[data-luma-example-content-sized]');
+                  return element && element.scrollHeight <= element.clientHeight + 1;
+                });
                 assert(
                   await example.evaluate(
                     element => element.scrollHeight <= element.clientHeight + 1
                   ),
                   'content-sized examples must not clip their contents'
                 );
+              }
               assert.equal(await example.getAttribute('data-luma-example-immersive'), 'false');
               const toggle = example.locator('[data-luma-example-fullscreen-toggle]');
               await toggle.scrollIntoViewIfNeeded();
@@ -131,6 +136,39 @@ try {
                     .getByRole('textbox', {name: 'Scene editor'})
                     .evaluate(input => input.ownerDocument.activeElement === input),
                   'keyboard users must reach controls inside the iframe'
+                );
+              }
+              const backendTrigger = example.locator('[data-luma-backend-trigger]');
+              if ((await backendTrigger.count()) && (await backendTrigger.isVisible())) {
+                await backendTrigger.click();
+                const backendMenu = example.getByRole('menu', {name: 'Graphics backend options'});
+                await backendMenu.waitFor({state: 'visible'});
+                await page.keyboard.press('Escape');
+                await backendMenu.waitFor({state: 'hidden'});
+                assert.equal(
+                  await example.getAttribute('data-luma-example-immersive'),
+                  'true',
+                  'closing the menu must preserve expanded mode'
+                );
+                assert(
+                  await backendTrigger.evaluate(element => element === document.activeElement),
+                  'closing the menu must restore its trigger focus'
+                );
+                await backendTrigger.click();
+                await backendMenu.waitFor({state: 'visible'});
+                const menuItemCount = await backendMenu.locator('button:not(:disabled)').count();
+                for (
+                  let step = 0;
+                  step <= menuItemCount && (await backendMenu.isVisible());
+                  step++
+                ) {
+                  await page.keyboard.press('Tab');
+                }
+                await backendMenu.waitFor({state: 'hidden'});
+                assert.equal(
+                  await example.getAttribute('data-luma-example-immersive'),
+                  'true',
+                  'leaving the menu must preserve expanded mode'
                 );
               }
               await page.setViewportSize({width: height, height: width});
@@ -168,6 +206,11 @@ try {
             );
           }
           assert.deepEqual(errors, [], 'no uncaught runtime errors');
+        } catch (error) {
+          await page
+            .screenshot({path: `${outputDirectory}/${browserName}-${orientation}-failure.png`})
+            .catch(() => {});
+          throw error;
         } finally {
           await context.close();
         }

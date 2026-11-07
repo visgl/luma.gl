@@ -96,17 +96,9 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
         setIsMenuOpen(false);
       }
     };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsMenuOpen(false);
-        menuRef.current?.querySelector<HTMLButtonElement>('[data-luma-backend-trigger]')?.focus();
-      }
-    };
     document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
     };
   }, [isMenuOpen]);
 
@@ -144,7 +136,22 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
           ))}
         </Tabs>
       </div>
-      <div ref={menuRef} data-luma-backend-dropdown="">
+      <div
+        ref={menuRef}
+        data-luma-backend-dropdown=""
+        onBlur={event => {
+          if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
+            setIsMenuOpen(false);
+          }
+        }}
+        onKeyDown={event => {
+          if (!isMenuOpen || event.key !== 'Escape') return;
+          event.preventDefault();
+          event.stopPropagation();
+          setIsMenuOpen(false);
+          menuRef.current?.querySelector<HTMLButtonElement>('[data-luma-backend-trigger]')?.focus();
+        }}
+      >
         <button
           type="button"
           data-luma-backend-trigger=""

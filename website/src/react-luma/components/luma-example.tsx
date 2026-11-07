@@ -258,7 +258,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     const previousRootOverflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = 'hidden';
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
         event.preventDefault();
         setIsImmersive(false);
       }
