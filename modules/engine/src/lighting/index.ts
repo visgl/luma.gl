@@ -25,6 +25,7 @@ export type {PBRLightingEnvironment, PBRLightingEnvironmentOptions} from './pbr-
 export {
   createPBRModel,
   createPBRShadowModel,
+  createPBRSurfaceModel,
   getPBRGeometryDefines,
   getPBRTextureDefines,
   getPBRModelWGSL,
@@ -52,3 +53,10 @@ export type {
 } from './shadow-map-renderer';
 export {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 export type {ShadowQualitySettings} from './shadow-quality';
+
+export {PBRSurfacePass} from './pbr-surface-pass';
+export type {
+  PBRSurfacePassProps,
+  PBRSurfaceRenderOptions,
+  PBRSurfaceRenderView
+} from './pbr-surface-pass';

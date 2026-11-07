@@ -1124,6 +1124,7 @@
               "api-reference/engine/lighting/pbr-model",
               "api-reference/engine/lighting/shadow-map-renderer",
               "api-reference/engine/lighting/pbr-shadows",
+              "api-reference/engine/lighting/pbr-surface-pass",
               "api-reference/engine/lighting/pbr-material",
               "api-reference/engine/lighting/pbr-environment",
               "api-reference/engine/lighting/prefiltered-environment",

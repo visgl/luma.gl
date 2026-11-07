@@ -4,7 +4,7 @@
 import type {Device} from '@luma.gl/core';
 import type {Material} from '../material/material';
 import {Model, type ModelProps} from '../model/model';
-import {pbrMaterial, pbrScene, pbrShadow, skin} from '@luma.gl/shaders';
+import {pbrMaterial, pbrScene, pbrShadow, pbrSurface, skin} from '@luma.gl/shaders';
 
 /** Optional WGSL extensions for adapters building specialized mesh passes. */
 export type PBRModelShaderHooks = {
@@ -152,7 +152,7 @@ ${hooks.vertexOutput ?? ''}
 
 ${hooks.fragmentDeclarations ?? ''}
 @fragment
-fn fragmentMain(inputs: PBRModelFragmentInputs)
+fn fragmentMain(inputs: PBRModelFragmentInputs, @builtin(front_facing) frontFacing: bool)
 ${
   hooks.fragmentReturnType ??
   `#ifndef PBR_SHADOW_PASS
@@ -160,6 +160,9 @@ ${
 #endif`
 }
 {
+#ifdef DOUBLE_SIDED
+  pbr_frontFacing = frontFacing;
+#endif
   fragmentInputs.pbr_vPosition = inputs.pbrPosition;
   fragmentInputs.pbr_vUV0 = inputs.pbrUV0;
   fragmentInputs.pbr_vUV1 = inputs.pbrUV1;
@@ -174,6 +177,10 @@ ${
   `
 #ifdef PBR_SHADOW_PASS
   pbr_discardMaskedFragment(inputs.pbrColor);
+#else
+#ifdef PBR_SURFACE_PASS
+  pbr_discardMaskedFragment(inputs.pbrColor);
+  return pbrSurface_getColor();
 #else
 #ifdef DEBUG_NORMALS
   return vec4f(normalize(inputs.pbrNormal) * 0.5 + vec3f(0.5), 1.0);
@@ -190,6 +197,7 @@ ${
   return pbrShadow_filterColor(inputs.pbrColor, inputs.pbrPosition, shadowNormal);
 #else
   return pbr_filterColor(inputs.pbrColor);
+#endif
 #endif
 #endif
 #endif
@@ -308,6 +316,10 @@ void main(void) {
 #ifdef PBR_SHADOW_PASS
   pbr_discardMaskedFragment(sceneVertexColor);
 #else
+#ifdef PBR_SURFACE_PASS
+  pbr_discardMaskedFragment(sceneVertexColor);
+  fragmentColor = pbrSurface_getColor();
+#else
 #ifdef DEBUG_NORMALS
 #ifdef HAS_TANGENTS
   fragmentColor = vec4(normalize(pbr_vTBN[2]) * 0.5 + 0.5, 1.0);
@@ -339,6 +351,7 @@ void main(void) {
 #endif
 #endif
 #endif
+#endif
 }
 `;
 
@@ -357,6 +370,7 @@ export function createPBRModel(device: Device, options: CreatePBRModelOptions): 
     pbrScene,
     pbrMaterial,
     ...(receiveShadows ? [pbrShadow] : []),
+    ...(options.defines?.['PBR_SURFACE_PASS'] ? [pbrSurface] : []),
     ...(options.modules || [])
   ];
   const modules = shaderModules.filter(
@@ -409,6 +423,18 @@ export function createPBRShadowModel(device: Device, options: CreatePBRModelOpti
     ...options,
     receiveShadows: false,
     defines: {...options.defines, PBR_SHADOW_PASS: true},
+    parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', ...options.parameters}
+  });
+}
+
+/** Creates a camera-space depth/normal model with the shared PBR vertex and alpha-cutout paths. */
+export function createPBRSurfaceModel(device: Device, options: CreatePBRModelOptions): Model {
+  return createPBRModel(device, {
+    colorAttachmentFormats: ['rgba8unorm'],
+    depthStencilAttachmentFormat: 'depth32float',
+    ...options,
+    receiveShadows: false,
+    defines: {...options.defines, PBR_SHADOW_PASS: false, PBR_SURFACE_PASS: true},
     parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', ...options.parameters}
   });
 }
