@@ -34,7 +34,7 @@ for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
         NORMAL: {size: 3, value: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1])}
       }
     });
-    const material = createPBRMaterial(device);
+    const material = createPBRMaterial(device, {uniforms: {metallicRoughnessValues: [0, 1]}});
     const ground = createPBRSurfaceModel(device, {
       geometry,
       material,
@@ -123,6 +123,85 @@ for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
         blocked.pixel[0],
         `${device.type} an asymmetric raised occluder creates contact visibility`
       ).toBeLessThan(clear.pixel[0] - 20);
+      // Exercise the actual traced mask through PBR receiving in an offset viewport.
+      const receiver = createPBRModel(device, {
+        geometry,
+        material,
+        receiveContactShadows: true,
+        defines: {USE_LIGHTS: true},
+        colorAttachmentFormats: ['rgba8unorm'],
+        parameters: {depthWriteEnabled: false, cullMode: 'none'}
+      });
+      const receiverColor = device.createTexture({
+        width: 80,
+        height: 88,
+        format: 'rgba8unorm',
+        usage: Texture.RENDER | Texture.COPY_SRC
+      });
+      const receiverFramebuffer = device.createFramebuffer({colorAttachments: [receiverColor]});
+      const imageReadback = device.createBuffer({
+        byteLength: 64 * 256,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+      try {
+        receiver.shaderInputs.setProps({
+          pbrProjection: {
+            modelMatrix: matrices[0],
+            normalMatrix: new Matrix4(),
+            modelViewProjectionMatrix: new Matrix4(projection)
+              .multiplyRight(view)
+              .multiplyRight(matrices[0]),
+            camera: [0, 0, 4]
+          },
+          lighting: {
+            useByteColors: false,
+            lights: [{type: 'directional', direction: [-0.7, -0.4, -0.6], color: [1, 1, 1]}]
+          },
+          pbrContactShadow: {contactShadowTexture: blocked.mask, viewport: [7, 11, 64, 64]}
+        });
+        blocked.mask.readBuffer({x: 0, y: 0, width: 64, height: 64}, imageReadback);
+        device.submit();
+        const visibility = new Uint8Array(await imageReadback.readAsync());
+        async function readReceiver(enabled: boolean) {
+          receiver.shaderInputs.setProps({pbrContactShadow: {enabled}});
+          const pass = device.beginRenderPass({
+            framebuffer: receiverFramebuffer,
+            clearColor: [0, 0, 0, 1]
+          });
+          pass.setParameters({viewport: [7, 11, 64, 64]});
+          receiver.draw(pass);
+          pass.end();
+          device.submit();
+          receiverColor.readBuffer({x: 7, y: 11, width: 64, height: 64}, imageReadback);
+          device.submit();
+          return new Uint8Array(await imageReadback.readAsync());
+        }
+        const litImage = await readReceiver(false);
+        const shadowImage = await readReceiver(true);
+        let shadowedPixels = 0;
+        let clearPixels = 0;
+        for (let vertical = 8; vertical < 56; vertical++) {
+          for (let horizontal = 8; horizontal < 56; horizontal++) {
+            if (Math.abs(horizontal - 32) < 4 || Math.abs(vertical - 32) < 4) continue;
+            const offset = (vertical * 64 + horizontal) * 4;
+            const attenuation = litImage[offset] - shadowImage[offset];
+            if (visibility[offset] < 190) {
+              expect(attenuation, `shadow at ${horizontal},${vertical}`).toBeGreaterThan(10);
+              shadowedPixels++;
+            } else if (visibility[offset] === 255) {
+              expect(attenuation, `clear at ${horizontal},${vertical}`).toBeLessThanOrEqual(1);
+              clearPixels++;
+            }
+          }
+        }
+        expect(shadowedPixels).toBeGreaterThan(5);
+        expect(clearPixels).toBeGreaterThan(100);
+      } finally {
+        receiver.destroy();
+        receiverFramebuffer.destroy();
+        receiverColor.destroy();
+        imageReadback.destroy();
+      }
       projection = new Matrix4().perspective({fovy: Math.PI / 3, aspect: 1, near: 0.1, far: 10});
       if (device.type === 'webgpu')
         projection.multiplyLeft(new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]));
