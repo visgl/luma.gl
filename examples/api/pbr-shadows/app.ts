@@ -296,7 +296,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
       });
     if (device.type === 'webgpu')
       projection.multiplyLeft(new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]));
-    const [width, height] = canvasContext.getPixelSize();
+    const [width, height] = canvasContext.getDrawingBufferSize();
     const useContacts =
       this.receiveShadows && this.lightType === 'directional' && this.shadowMode !== 'maps';
     let contactTexture = this.unoccluded;
