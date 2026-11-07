@@ -31,6 +31,9 @@ it.each([
   } else {
     expect(inputs).not.toContain('modules/slang/src/luma.ts');
     if (name === 'wgsl') {
+      expect(inputs).toContain('modules/slang/src/wgsl-body-parser.ts');
+      expect(inputs).not.toContain('modules/slang/src/wgsl-declaration-parser.ts');
+      expect(inputs).not.toContain('modules/slang/src/syntax-skip.ts');
       for (const source of [
         'index',
         'parser',

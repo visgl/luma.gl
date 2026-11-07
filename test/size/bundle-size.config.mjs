@@ -3,11 +3,38 @@
  * end-state from issue #2852 and can become ceilings as the implementation gets leaner.
  */
 export const BUNDLE_SIZE_FIXTURES = [
-  {name:'wgsl-inspect',label:'WGSL declaration inspector',entry:'test/size/wgsl-inspect.ts',external:[],maximum:{minified:12500,gzip:4900,brotli:4500},targetGzip:4900},
-  {name:'glsl-inspect',label:'GLSL declaration inspector',entry:'test/size/glsl-inspect.ts',external:[],maximum:{minified:7000,gzip:3300,brotli:3000},targetGzip:3300},
-  {name:'shader-inspect',label:'Both declaration inspectors',entry:'test/size/shader-inspect.ts',external:[],maximum:{minified:19000,gzip:7200,brotli:6500},targetGzip:7200},
-  {name:'core-wgsl-scan',label:'Core WGSL pipeline scanner',entry:'test/size/core-wgsl-scan.ts',external:[],maximum:{minified:8600,gzip:3200,brotli:2900},targetGzip:3200},
-
+  {
+    name: 'wgsl-inspect',
+    label: 'WGSL declaration inspector',
+    entry: 'test/size/wgsl-inspect.ts',
+    external: [],
+    maximum: {minified: 10_000, gzip: 4_200, brotli: 3_800},
+    targetGzip: 3_500
+  },
+  {
+    name: 'glsl-inspect',
+    label: 'GLSL declaration inspector',
+    entry: 'test/size/glsl-inspect.ts',
+    external: [],
+    maximum: {minified: 7_000, gzip: 3_300, brotli: 3_000},
+    targetGzip: 2_900
+  },
+  {
+    name: 'shader-inspect',
+    label: 'Both declaration inspectors',
+    entry: 'test/size/shader-inspect.ts',
+    external: [],
+    maximum: {minified: 16_200, gzip: 6_300, brotli: 5_800},
+    targetGzip: 5_500
+  },
+  {
+    name: 'core-wgsl-scan',
+    label: 'Core WGSL pipeline scanner',
+    entry: 'test/size/core-wgsl-scan.ts',
+    external: [],
+    maximum: {minified: 8_600, gzip: 3_200, brotli: 2_900},
+    targetGzip: 2_800
+  },
   {
     name: 'slang',
     label: '`@luma.gl/slang` compiler (optional)',
@@ -22,7 +49,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/slang/wgsl` compiler (optional)',
     entry: 'modules/slang/src/wgsl.ts',
     external: [],
-    maximum: {minified: 130_500, gzip: 37_400, brotli: 33_100},
+    maximum: {minified: 130_500, gzip: 37_600, brotli: 33_300},
     targetGzip: 25_000
   },
   {

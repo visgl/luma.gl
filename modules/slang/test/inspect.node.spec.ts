@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {WGSL_EXAMPLES} from '../../../examples/tutorials/slang-shaders/wgsl-examples';
+import {parseWGSL} from '../src/wgsl-parser';
+import {createWGSLInspection} from '../src/wgsl-inspect';
 import {expect, it} from 'vitest';
 import {inspectWGSL, inspectGLSL, ShaderInspectionError} from '../src/inspect';
 import {scanWGSLInterface} from '../../core/src/wgsl';
@@ -180,4 +183,66 @@ it('inspectGLSL#accepts commented version directives, null directives and multis
     {kind: 'opaque', name: 'uimage2DMSArray'}
   ]);
   expect(() => inspectGLSL('#123')).toThrow(ShaderInspectionError);
+});
+
+it('inspectWGSL#small and full parsers share declaration/type metadata', () => {
+  for (const example of WGSL_EXAMPLES) {
+    const sourceName = 'shared.wgsl';
+    const full = createWGSLInspection(parseWGSL(example.code, sourceName), sourceName);
+    expect(inspectWGSL(example.code, {sourceName})).toEqual(full);
+  }
+});
+it('inspectWGSL#skips balanced bodies and initializer expressions without importing the full grammar', () => {
+  const result = inspectWGSL(
+    `const VALUE=bitcast<u32>(1.0); @fragment fn main()->@location(0) vec4f {var value=0.0;loop {value+=1.0;if(value>2.0){break;}}return vec4f(value);}`
+  );
+  expect(result.globals[0]).toMatchObject({name: 'VALUE', type: {kind: 'inferred'}});
+  expect(result.entryPoints[0]).toMatchObject({name: 'main', stage: 'fragment'});
+  expect(() => parseWGSL('fn main(){loop {break;}}', 'full.wgsl')).toThrow(ShaderInspectionError);
+});
+it.each([
+  'fn main(){if(true] {}}',
+  'fn main(){let values=array<f32,2>(1.0,2.0);',
+  'const VALUE=;'
+])('inspectWGSL#small parser rejects unbalanced or empty syntax: %s', source => {
+  expect(() => inspectWGSL(source, {sourceName: 'invalid.wgsl'})).toThrow(ShaderInspectionError);
+});
+
+it('inspectGLSL#shares array parsing for type and declarator dimensions', () => {
+  const result = inspectGLSL(
+    '#version 450\nstruct Item {float[2] values[3];};float[2] values;vec4[4] helper(vec4[4] positions){return positions;}'
+  );
+  expect(result.globals[0].type).toEqual({
+    kind: 'array',
+    length: 2,
+    element: {kind: 'scalar', scalar: 'f32'}
+  });
+  expect(result.structures[0].members[0].type).toMatchObject({
+    kind: 'array',
+    length: 3,
+    element: {kind: 'array', length: 2}
+  });
+  expect(result.functions[0].parameters[0].type).toMatchObject({kind: 'array', length: 4});
+  expect(result.functions[0].returnType).toMatchObject({kind: 'array', length: 4});
+});
+it('inspectGLSL#accepts unsigned decimal layout/array literals and keeps local struct names local', () => {
+  const result = inspectGLSL('layout(location=0u,binding=1U) uniform vec4 values[2U];');
+  expect(result.globals[0]).toMatchObject({
+    binding: {binding: 1},
+    interface: {location: 0},
+    type: {kind: 'array', length: 2}
+  });
+  expect(() => inspectGLSL('void helper(){struct Local {float value;};} Local invalid;')).toThrow(
+    ShaderInspectionError
+  );
+});
+
+it('inspectGLSL#uses one literal reader for hexadecimal, octal and unsigned dimensions/layouts', () => {
+  const result = inspectGLSL('layout(location=010,binding=0x2U) uniform vec4 values[0x3u];');
+  expect(result.globals[0]).toMatchObject({
+    interface: {location: 8},
+    binding: {binding: 2},
+    type: {kind: 'array', length: 3}
+  });
+  expect(() => inspectGLSL('uniform float values[08];')).toThrow(ShaderInspectionError);
 });

@@ -36,21 +36,26 @@ report `{kind: 'opaque', name: ...}`. No expression type is guessed or inferred 
 
 Variables retain qualifiers, interface attributes and explicit resource bindings. GLSL blocks
 also include their block name, optional instance name and members. GLSL layout qualifiers are
-preserved as source strings/flags, not calculated byte offsets. WGSL resource groups are explicit;
+returned as normalized decimal strings/flags (unsigned suffixes are removed), not calculated byte offsets. WGSL resource groups are explicit;
 a GLSL binding has no group unless a `set` qualifier is present. Functions retain parameters,
 return types and whether a body exists. WGSL entry points retain stage attributes; GLSL `main`
 definitions are entry points, with a stage only when the caller supplies `stage`.
 
-`inspectWGSL()` reuses the parser for the [documented WGSL authoring subset](./wgsl.md), including
-function-body syntax. It does not run semantic analysis, materialize constants, reject layouts
+`inspectWGSL()` shares the lexer, module declarations, types and attributes with the
+[full WGSL frontend](./wgsl.md), and balances/skips function bodies and initializers. It does not
+include the full expression/statement grammar. It does not run semantic analysis, materialize constants, reject layouts
 that differ from GLSL std140, or require an entry point. Aliases are expanded into their declared
-types. Compute/storage/pointers and other syntax outside that subset still raise a diagnostic.
+types. Compute/storage/pointers in declarations and other unsupported declarations still raise a
+diagnostic. Balanced bodies may contain constructs the full compiler does not yet support.
 
 `inspectGLSL()` implements a basic GLSL declaration parser that produces this intermediate
 representation directly. It supports 32-bit scalars/vectors, float matrices, structs, explicit
 literal-sized or unsized arrays, uniforms, interface/storage blocks, sampler/image handle types,
 precision/interpolation/storage qualifiers, layout qualifiers, prototypes and function definitions.
-Function bodies and initializers are balanced and skipped, rather than parsed into expression or
+Integer layout values and dimensions share one literal reader for decimal, hexadecimal and octal
+forms, with optional unsigned suffixes.
+Type-level and declarator-level array dimensions are supported, including parameters and return
+types. Function bodies and initializers are balanced and skipped, rather than parsed into expression or
 statement IR. Initializer values and implicit builtins are not reflected. Function overloads and
 prototypes are returned separately in source order. This is not yet a GLSL transpiler frontend.
 
@@ -73,7 +78,7 @@ appropriate runtime path for deriving a pipeline layout; this API does not repla
 | Result | Pipeline `ShaderLayout` | Module declaration IR | Same declaration IR |
 | Entry points | Selected vertex attributes | All vertex/fragment entries | All `main` definitions; caller supplies stage |
 | Functions/struct members | Scanned as needed for pipeline layout | Exposed with locations/types | Exposed with locations/types |
-| Bodies | Skipped | Parsed with WGSL subset parser | Balanced and skipped |
+| Bodies | Skipped | Balanced and skipped | Balanced and skipped |
 | Resources | Broader WebGPU bindings, including storage/compute use | Current rendering subset | GLSL uniforms/interface/storage blocks and handles |
 | Ambiguity/unsupported input | Returns `null` for an explicit-layout fallback | Source diagnostic | Source diagnostic |
 | Semantic/type validation | No full validation | No semantic analysis | No semantic analysis |
@@ -89,15 +94,40 @@ API through the public inspection barrel:
 
 | Retained API | Minified bytes | Gzip bytes |
 | --- | ---: | ---: |
-| `inspectWGSL()` | 12241 | 4711 |
-| `inspectGLSL()` | 6671 | 3055 |
+| `inspectWGSL()` | 9816 | 4038 |
+| `inspectGLSL()` | 6710 | 3149 |
 | Core `scanWGSLInterface()` | 8312 | 3003 |
-| Both inspectors | 18667 | 6898 |
+| Both inspectors | 15860 | 6136 |
 
-The WGSL inspector costs about 1.7 KB gzip more than the runtime scanner. The GLSL inspector is
-smaller because it skips function bodies, while WGSL reuses the compiler's fuller parser. Both
-inspectors together share diagnostics and type-only metadata; neither imports semantic analysis,
-layout lowering, the Slang parser/registry or code generation.
+The WGSL inspector costs about 1.0 KB gzip more than the runtime scanner. Compared with using
+its full syntax parser, the declaration reader reduces WGSL inspection from 4,711 to 4,038 gzip
+bytes (14.3%). Both inspectors together fall from 6,898 to 6,136 bytes (11.0%). GLSL was already a
+declaration-only parser; its small size increase includes type-level arrays and unsigned literal
+support added during review. Neither inspector imports semantic analysis, layout lowering, the
+Slang parser/registry or code generation.
+
+## Shared small and full readers
+
+The WGSL lexer and declaration/type grammar are implemented once. The declaration parser receives
+a reader factory: the compiler supplies the full expression/statement parser; inspection supplies
+small balanced syntax skippers. The full frontend never imports the skippers, and inspection never
+imports the full body parser. Both small WGSL and GLSL readers reuse the same delimiter skipper;
+GLSL also reuses the tokenizer used by the full Slang frontend. A full GLSL expression/statement
+frontend is not implemented yet.
+
+```mermaid
+flowchart LR
+  Lexer[WGSL lexer] --> Declarations[Shared declarations and types]
+  Full[Full expression and statement readers] --> Declarations
+  Small[Small balanced skippers] --> Declarations
+  Declarations --> Compile[WGSL analysis and GLSL emission]
+  Declarations --> Inspect[inspectWGSL metadata]
+  Small --> GLSL[inspectGLSL declarations]
+```
+
+Tests compare full and small WGSL declaration metadata for every runnable sample, and dependency
+graph tests ensure body readers/skippers stay in their respective bundles. After the split the
+full WGSL compiler remains about 37.4 KB gzip; the Slang-only compiler stays unchanged at 32.1 KB.
 
 The scanner fixture measures its source implementation directly (the core re-export adds no
 retained code), avoiding dependence on built workspace packages. Reproduce all measurements with

@@ -43,6 +43,10 @@ it.each([
   if (name === 'wgsl-inspect') {
     expect(included).not.toContain('modules/slang/src/glsl-inspect.ts');
     expect(included).not.toContain('modules/slang/src/lexer.ts');
+    expect(included).not.toContain('modules/slang/src/wgsl-parser.ts');
+    expect(included).not.toContain('modules/slang/src/wgsl-body-parser.ts');
+    expect(included).toContain('modules/slang/src/wgsl-declarations.ts');
+    expect(included).toContain('modules/slang/src/wgsl-lexer.ts');
   }
   if (name === 'glsl-inspect') expect(included).not.toContain('modules/slang/src/wgsl-parser.ts');
 });

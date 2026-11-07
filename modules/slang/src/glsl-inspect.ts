@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {skipSyntaxBlock, skipSyntaxExpression} from './syntax-skip';
 import {tokenizeSlang} from './lexer';
 import {SlangTranspileError} from './diagnostics';
 import type {Token} from './ast';
@@ -93,9 +94,10 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
   const globals: ShaderInspection['globals'] = [];
   const functions: InspectionFunction[] = [];
   const structureNames = new Set<string>();
-  for (let index = 0; index < tokens.length - 1; index++)
-    if (tokens[index].text === 'struct') structureNames.add(tokens[index + 1].text);
   function parseType(): InspectionType {
+    return arrayType(parseBaseType());
+  }
+  function parseBaseType(): InspectionType {
     const token = identifier();
     const name = token.text;
     if (name === 'void') return {kind: 'void'};
@@ -127,6 +129,14 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
       return {kind: 'opaque', name};
     return fail(`Unsupported GLSL type ${name}`, token);
   }
+  function parseInteger(token: Token): number {
+    const literal = token.text.replace(/[uU]$/, '');
+    if (token.kind !== 'number' || !/^(?:0[xX][0-9a-fA-F]+|[1-9][0-9]*|0[0-7]*)$/.test(literal))
+      fail('Expected an integer literal', token);
+    const value = /^0[0-7]+$/.test(literal) ? Number.parseInt(literal, 8) : Number(literal);
+    if (!Number.isSafeInteger(value)) fail('Integer literal exceeds supported precision', token);
+    return value;
+  }
   type Metadata = {qualifiers: string[]; layout: Record<string, string | true>};
   function metadata(): Metadata {
     const qualifiers: string[] = [];
@@ -139,9 +149,7 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
           if (Object.hasOwn(layout, key.text)) fail('Duplicate layout qualifier', key);
           if (match('=')) {
             const value = take();
-            if (value.kind !== 'number' || !/^\d+$/.test(value.text))
-              fail('Layout values require decimal integer literals', value);
-            layout[key.text] = value.text;
+            layout[key.text] = String(parseInteger(value));
           } else layout[key.text] = true;
         } while (match(','));
         expect(')');
@@ -156,10 +164,8 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
       let length: number | undefined;
       if (peek().text !== ']') {
         const count = take();
-        if (count.kind !== 'number' || !/^\d+u?$/.test(count.text))
-          fail('Array lengths require decimal integer literals', count);
-        length = Number(count.text.replace(/u$/, ''));
-        if (!Number.isSafeInteger(length) || length < 1) fail('Invalid array length', count);
+        length = parseInteger(count);
+        if (length < 1) fail('Invalid array length', count);
       }
       expect(']');
       dimensions.push(length);
@@ -204,21 +210,9 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
       };
     return result;
   }
+  const cursor = {peek, take, expect, fail};
   function skipInitializer(): void {
-    if (!match('=')) return;
-    const stack: string[] = [];
-    let values = 0;
-    while (peek().kind !== 'end') {
-      const token = peek();
-      if (!stack.length && [',', ';'].includes(token.text)) break;
-      if (['(', '[', '{'].includes(token.text))
-        stack.push({'(': ')', '[': ']', '{': '}'}[token.text]!);
-      else if ([')', ']', '}'].includes(token.text) && stack.pop() !== token.text)
-        fail('Unbalanced initializer', token);
-      take();
-      values++;
-    }
-    if (stack.length || !values) fail('Incomplete initializer');
+    if (match('=')) skipSyntaxExpression(cursor, [',', ';']);
   }
   function fields(): InspectionVariable[] {
     expect('{');
@@ -237,17 +231,6 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
       fail('Duplicate block member');
     return members;
   }
-  function skipBody(): void {
-    expect('{');
-    let depth = 1;
-    while (depth) {
-      const token = take();
-      if (!token || token.kind === 'end')
-        fail('Unterminated function body', tokens[tokens.length - 1]);
-      if (token.text === '{') depth++;
-      if (token.text === '}') depth--;
-    }
-  }
   while (peek().kind !== 'end') {
     if (match(';')) continue;
     if (match('precision')) {
@@ -260,6 +243,7 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
     if (match('struct')) {
       const name = identifier();
       const members = fields();
+      structureNames.add(name.text);
       structures.push({name: name.text, members, location: location(name)});
       if (!match(';')) {
         do {
@@ -304,7 +288,7 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
         expect(')');
       }
       const hasBody = peek().text === '{';
-      if (hasBody) skipBody();
+      if (hasBody) skipSyntaxBlock(cursor);
       else expect(';');
       functions.push({
         name: name.text,

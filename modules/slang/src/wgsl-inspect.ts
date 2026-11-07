@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {parseWGSL} from './wgsl-parser';
+import {parseWGSLDeclarationModule} from './wgsl-declaration-parser';
 import {lowerSlangType} from './slang-types';
-import type {SlangType, Variable} from './ast';
+import type {Program, SlangType, Variable} from './ast';
 import type {
   InspectionType,
   InspectionVariable,
@@ -14,7 +14,11 @@ import type {
 /** Inspect the documented WGSL authoring subset without analysis or target code generation. */
 export function inspectWGSL(source: string, options: InspectShaderOptions = {}): ShaderInspection {
   const sourceName = options.sourceName || 'shader.wgsl';
-  const program = parseWGSL(source, sourceName);
+  return createWGSLInspection(parseWGSLDeclarationModule(source, sourceName), sourceName);
+}
+
+/** Shared metadata projection, independent of whether function syntax was parsed or skipped. */
+export function createWGSLInspection(program: Program, sourceName: string): ShaderInspection {
   function type(value: SlangType): InspectionType {
     if (value.structure) return {kind: 'struct', name: value.name};
     if (value.name === '$inferred') return {kind: 'inferred'};
