@@ -388,6 +388,14 @@
         pointer-events: none;
       }
 
+      #scene-refinement-statistic { flex: 0 0 22ch; }
+      #scene-refinement-progress {
+        width: 100%; height: 5px; margin-top: 7px;
+        accent-color: #a594ff;
+      }
+      #scene-refinement-progress::-webkit-progress-bar { background: rgba(180, 170, 255, 0.14); border-radius: 4px; }
+      #scene-refinement-progress::-webkit-progress-value { background: #a594ff; border-radius: 4px; }
+
       .preview-heading {
         top: 24px;
         right: 26px;
@@ -775,6 +783,11 @@
               <div id="scene-ray-tracing-frame-statistic" hidden>
                 <div class="statistic-label">RAY FRAME</div>
                 <div id="scene-ray-tracing-frame" class="statistic-value">—</div>
+              </div>
+              <div id="scene-refinement-statistic" hidden title="Sample accumulation toward the configured history target; reaching it does not guarantee a noise-free image.">
+                <div class="statistic-label">REFINEMENT TARGET</div>
+                <div id="scene-refinement-value" class="statistic-value">0%</div>
+                <progress id="scene-refinement-progress" max="100" value="0" aria-label="Refinement sample target"></progress>
               </div>
               <div id="scene-ray-memory-statistic" hidden>
                 <div class="statistic-label">OWNED GPU MEMORY</div>

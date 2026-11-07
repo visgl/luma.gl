@@ -186,6 +186,19 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     };
     options.surfaces[0].material.bindings = {pbr_metallicRoughnessSampler: replacement};
     expect(await readPixel()).toEqual(scalarMaterial);
+    // A diffuse receiver inside glass must not turn a camera backdrop into a light.
+    options.surfaces = [surface, glass];
+    options.surfaces[0].material.bindings = {};
+    options.surfaces[0].material.uniforms = {
+      baseColorFactor: [1, 1, 1, 1],
+      metallicRoughnessValues: [0, 1]
+    };
+    options.surfaces[1].material.bindings = {};
+    options.primitives = {glass: {type: 'sphere', radius: 6}};
+    options.lights = [];
+    options.background = [0.8, 0.2, 0.05, 1];
+    options.maxBounces = 3;
+    expect(await readPixel()).toEqual([0, 0, 0]);
   } finally {
     renderer.destroy();
     framebuffer.destroy();
@@ -194,4 +207,5 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     replacement.destroy();
     device.destroy();
   }
-});
+  // Software WebGPU CI compiles several complete traversal/material pipelines here.
+}, 180_000);

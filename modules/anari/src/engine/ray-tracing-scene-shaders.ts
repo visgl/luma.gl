@@ -1304,12 +1304,14 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   var hit = primaryHit;
   var radiance = evaluateDirectLighting(ray, hit, true);
   var throughput = vec3<f32>(1.0);
+  var dielectricOnly = true;
   let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
   radiance += evaluateEmitterLighting(ray, hit, pathSeed);
   for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
+    dielectricOnly = dielectricOnly && sample.delta;
     throughput *= sample.weight;
     if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) { break; }
     let normal = select(hit.normal, -hit.normal, dot(hit.normal, ray.direction) > 0.0);
@@ -1319,7 +1321,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     if (hit.distance >= RAY_INFINITY) {
       // A camera backdrop remains visible through smooth dielectric paths without
       // turning it into diffuse environment illumination.
-      if (sample.delta) { radiance += throughput * uniforms.background.rgb; }
+      if (dielectricOnly) { radiance += throughput * uniforms.background.rgb; }
       break;
     }
     radiance += throughput * (evaluateDirectLighting(ray, hit, sample.delta || uniforms.emitters.y == 0u) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u)));
