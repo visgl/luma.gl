@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
+import type {Device, Texture} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   CubeGeometry,
@@ -14,6 +14,9 @@ import {
 } from '@luma.gl/engine';
 import {
   createPBRModel,
+  createPBRSurfaceModel,
+  PBRSurfacePass,
+  ContactShadowPass,
   createPBRShadowModel,
   createPBRMaterial,
   createPBRMaterialFactory,
@@ -35,6 +38,7 @@ type Surface = {
   geometry: Geometry;
   material: PBRMaterial;
   model: Model;
+  surfaceModel: Model;
   matrix: Matrix4;
   castsShadow: boolean;
 };
@@ -43,12 +47,19 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
   readonly device: Device;
   readonly shadows: ShadowMapRenderer;
+  readonly surfacePass: PBRSurfacePass;
+  private contacts: ContactShadowPass;
+  private readonly unoccluded: Texture;
   readonly surfaces: Surface[] = [];
   readonly settings: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
   private readonly casters = new Map<string, Model[]>();
   private controls: OrbitControls | null = null;
-  private lightType: 'spot' | 'directional' | 'point' = 'spot';
+  private lightType: 'spot' | 'directional' | 'point' = 'directional';
+  private shadowMode: 'maps' | 'contacts' | 'both' = 'both';
+  private shadowQuality: 'low' | 'balanced' | 'cinematic' = 'balanced';
+  private contactDistance = 1.2;
+  private contactThickness = 0.08;
   private receiveShadows = true;
   private animate = true;
   private normalBias = 0.025;
@@ -67,6 +78,13 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
       directionalMapSize: 1024,
       spotMapSize: 1024,
       pointMapSize: 512
+    });
+    this.surfacePass = new PBRSurfacePass(device, {width: 1, height: 1});
+    this.contacts = new ContactShadowPass(device);
+    this.unoccluded = device.createTexture({
+      width: 1,
+      height: 1,
+      data: new Uint8Array([255, 255, 255, 255])
     });
     const factory = createPBRMaterialFactory(device);
     const objects: {
@@ -107,6 +125,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         geometry: object.geometry,
         material,
         receiveShadows: true,
+        receiveContactShadows: true,
         defines: {USE_LIGHTS: true},
         parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', cullMode: 'none'}
       });
@@ -114,6 +133,11 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         geometry: object.geometry,
         material,
         model,
+        surfaceModel: createPBRSurfaceModel(device, {
+          geometry: object.geometry,
+          material,
+          parameters: {cullMode: 'none'}
+        }),
         matrix: object.matrix,
         castsShadow: object.castsShadow
       });
@@ -124,6 +148,9 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
       settings: {
         lightType: this.lightType,
         quality: 'balanced',
+        shadowMode: this.shadowMode,
+        contactDistance: this.contactDistance,
+        contactThickness: this.contactThickness,
         receiveShadows: this.receiveShadows,
         animate: this.animate,
         normalBias: this.normalBias
@@ -135,6 +162,16 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
           values.lightType === 'point'
         )
           this.lightType = values.lightType;
+        if (
+          values.shadowMode === 'maps' ||
+          values.shadowMode === 'contacts' ||
+          values.shadowMode === 'both'
+        )
+          this.shadowMode = values.shadowMode;
+        if (typeof values.contactDistance === 'number')
+          this.contactDistance = values.contactDistance;
+        if (typeof values.contactThickness === 'number')
+          this.contactThickness = values.contactThickness;
         if (typeof values.receiveShadows === 'boolean') this.receiveShadows = values.receiveShadows;
         if (typeof values.animate === 'boolean') this.animate = values.animate;
         if (typeof values.normalBias === 'number') this.normalBias = values.normalBias;
@@ -142,8 +179,14 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
           values.quality === 'low' ||
           values.quality === 'balanced' ||
           values.quality === 'cinematic'
-        )
-          this.shadows.setProps({quality: values.quality});
+        ) {
+          if (values.quality !== this.shadowQuality) {
+            this.shadowQuality = values.quality;
+            this.shadows.setProps({quality: values.quality});
+            this.contacts.destroy();
+            this.contacts = new ContactShadowPass(device, {quality: values.quality});
+          }
+        }
       }
     });
     this.panels = new ExamplePanelManager({
@@ -166,11 +209,14 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
       });
   }
 
-  onRender({device, aspect, time}: AnimationProps) {
+  onRender({device, canvasContext, aspect, time}: AnimationProps) {
     this.controls?.update(time);
     if (this.animate)
       this.angle += Math.min(0.05, Math.max(0, (time - this.previousTime) / 1000)) * 0.5;
     this.previousTime = time;
+    this.surfaces[1].matrix = new Matrix4()
+      .translate([-1.4, 0.95 + 0.65 * (1 - Math.cos(this.angle * 3)), 0])
+      .scale([0.95, 0.95, 0.95]);
     this.surfaces[2].matrix = new Matrix4()
       .translate([1.4, 1.5 + 0.25 * Math.sin(this.angle), 0])
       .rotateY(this.angle)
@@ -250,6 +296,46 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
       });
     if (device.type === 'webgpu')
       projection.multiplyLeft(new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]));
+    const [width, height] = canvasContext.getPixelSize();
+    const useContacts =
+      this.receiveShadows && this.lightType === 'directional' && this.shadowMode !== 'maps';
+    let contactTexture = this.unoccluded;
+    if (useContacts) {
+      this.surfacePass.resize({width, height});
+      for (const surface of this.surfaces) {
+        surface.surfaceModel.shaderInputs.setProps({
+          pbrProjection: {
+            modelMatrix: surface.matrix,
+            normalMatrix: new Matrix4(surface.matrix).invert().transpose(),
+            modelViewProjectionMatrix: new Matrix4(projection)
+              .multiplyRight(view)
+              .multiplyRight(surface.matrix),
+            camera
+          },
+          pbrSurface: {viewMatrix: view}
+        });
+      }
+      this.surfacePass.render({
+        drawSurfaces: target => {
+          for (const surface of this.surfaces) surface.surfaceModel.draw(target.renderPass);
+        }
+      });
+      const lightDirectionView = view.transform([
+        -coneDirection[0],
+        -coneDirection[1],
+        -coneDirection[2],
+        0
+      ]);
+      contactTexture = this.contacts.render({
+        depthTexture: this.surfacePass.depthTexture,
+        normalTexture: this.surfacePass.normalTexture,
+        projectionMatrix: projection,
+        lightDirectionView: [lightDirectionView[0], lightDirectionView[1], lightDirectionView[2]],
+        maxDistance: this.contactDistance,
+        thickness: this.contactThickness,
+        normalBias: 0.01
+      });
+    }
     const pass = device.beginRenderPass({clearColor: [0.025, 0.035, 0.055, 1], clearDepth: 1});
     for (const surface of this.surfaces) {
       surface.model.shaderInputs.setProps({
@@ -263,7 +349,15 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         },
         lighting: {lights, useByteColors: false},
         shadow: shadowProps,
-        pbrShadow: {viewMatrix: view, enabled: this.receiveShadows},
+        pbrShadow: {
+          viewMatrix: view,
+          enabled: this.receiveShadows && this.shadowMode !== 'contacts'
+        },
+        pbrContactShadow: {
+          contactShadowTexture: contactTexture,
+          viewport: [0, 0, width, height],
+          enabled: useContacts
+        },
         pbrScene: {toneMapMode: 2, outputEncoding: 1}
       });
       surface.model.draw(pass);
@@ -308,8 +402,12 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
     for (const models of this.casters.values()) for (const model of models) model.destroy();
     for (const surface of this.surfaces) {
       surface.model.destroy();
+      surface.surfaceModel.destroy();
       surface.material.destroy();
     }
     this.shadows.destroy();
+    this.contacts.destroy();
+    this.surfacePass.destroy();
+    this.unoccluded.destroy();
   }
 }
