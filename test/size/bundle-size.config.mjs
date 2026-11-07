@@ -3,6 +3,11 @@
  * end-state from issue #2852 and can become ceilings as the implementation gets leaner.
  */
 export const BUNDLE_SIZE_FIXTURES = [
+  {name:'wgsl-inspect',label:'WGSL declaration inspector',entry:'test/size/wgsl-inspect.ts',external:[],maximum:{minified:12500,gzip:4900,brotli:4500},targetGzip:4900},
+  {name:'glsl-inspect',label:'GLSL declaration inspector',entry:'test/size/glsl-inspect.ts',external:[],maximum:{minified:7000,gzip:3300,brotli:3000},targetGzip:3300},
+  {name:'shader-inspect',label:'Both declaration inspectors',entry:'test/size/shader-inspect.ts',external:[],maximum:{minified:19000,gzip:7200,brotli:6500},targetGzip:7200},
+  {name:'core-wgsl-scan',label:'Core WGSL pipeline scanner',entry:'test/size/core-wgsl-scan.ts',external:[],maximum:{minified:8600,gzip:3200,brotli:2900},targetGzip:3200},
+
   {
     name: 'slang',
     label: '`@luma.gl/slang` compiler (optional)',

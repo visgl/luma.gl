@@ -273,3 +273,6 @@ subset, and actual application download sizes depend on bundling and compression
 
 The separate [`@luma.gl/slang/wgsl` frontend](./wgsl.md) supports a small WGSL rendering subset
 using the shared compiler backend. Slang-only applications do not import its parser or analyzer.
+
+
+For source declaration metadata without code generation, see [Shader inspection](./inspect.md).
