@@ -65,3 +65,10 @@ export {createContactShadowCompositeShaderPass} from './contact-shadow-composite
 
 export {ContactShadowPass} from './contact-shadow-pass';
 export type {ContactShadowPassProps, ContactShadowRenderOptions} from './contact-shadow-pass';
+
+export {AmbientOcclusionPass} from './ambient-occlusion-pass';
+export type {
+  AmbientOcclusionMode,
+  AmbientOcclusionPassProps,
+  AmbientOcclusionRenderOptions
+} from './ambient-occlusion-pass';
