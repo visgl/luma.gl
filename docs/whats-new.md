@@ -1,5 +1,12 @@
 # What's New
 
+### Reusable shadow primitives
+
+`@luma.gl/engine/lighting` exposes shadow-map resources, light cameras, and quality
+settings; `@luma.gl/shaders` exposes portable shadow sampling. Applications retain caster
+selection and draw policy. See
+[ShadowMapRenderer](./api-reference/engine/lighting/shadow-map-renderer.md).
+
 ### Standalone PBR models
 
 `@luma.gl/engine/lighting` exposes `createPBRModel` for native and loaded geometry, with

@@ -48,8 +48,8 @@ import {
   type SpotShadowLight,
   type ShadowRenderView,
   type ShadowShaderProps
-} from '../shadows/shadow-map-renderer';
-import {shadow} from '../shadows/shadow';
+} from '@luma.gl/engine/lighting';
+import {shadow} from '@luma.gl/shaders';
 
 /** Pipeline-level alpha representation for one retained physically based scene material. */
 export type SceneAlphaMode = 'OPAQUE' | 'MASK' | 'BLEND';
