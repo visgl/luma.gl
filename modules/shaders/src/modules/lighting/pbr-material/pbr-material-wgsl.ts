@@ -1268,7 +1268,7 @@ fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
 }
 
 // Visibility for the first four spotlights; environment and other lights are unaffected.
-fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f) -> vec4<f32> {
+fn pbr_filterColorWithShadows(vertexColor: vec4<f32>, directionalVisibility: f32, pointVisibility: vec4f, spotVisibility: vec4f) -> vec4<f32> {
   let baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   let metallicRoughnessUV = getMaterialUV(
     pbrMaterial.metallicRoughnessUVSet,
@@ -1469,7 +1469,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
       for (var i = 0; i < lighting.directionalLightCount; i++) {
         if (i < lighting.directionalLightCount) {
           PBRInfo_setDirectionalLight(&pbrInfo, -lighting_getDirectionalLight(i).direction);
-          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
+          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color * select(1.0, clamp(directionalVisibility, 0.0, 1.0), i == 0));
         }
       }
 
@@ -1480,7 +1480,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
             lighting_getPointLight(i),
             distance(lighting_getPointLight(i).position, fragmentInputs.pbr_vPosition)
           );
-          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color * select(1.0, clamp(pointVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation);
         }
       }
 
@@ -1831,7 +1831,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
         PBRInfo_setDirectionalLight(&pbrInfo, -lighting_getDirectionalLight(i).direction);
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getDirectionalLight(i).color,
+          lighting_getDirectionalLight(i).color * select(1.0, clamp(directionalVisibility, 0.0, 1.0), i == 0),
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1842,7 +1842,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getDirectionalLight(i).color,
+          lighting_getDirectionalLight(i).color * select(1.0, clamp(directionalVisibility, 0.0, 1.0), i == 0),
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -1861,7 +1861,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
         );
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getPointLight(i).color / attenuation,
+          lighting_getPointLight(i).color * select(1.0, clamp(pointVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation,
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1872,7 +1872,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getPointLight(i).color / attenuation,
+          lighting_getPointLight(i).color * select(1.0, clamp(pointVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation,
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -2035,6 +2035,21 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
   let alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
   #endif
   return vec4<f32>(applySceneColorManagement(color), alpha);
+}
+
+// Depth-only passes use the same base-color alpha, vertex color and UV transform.
+fn pbr_discardMaskedFragment(vertexColor: vec4f) {
+#ifdef ALPHA_CUTOFF
+  var alpha = pbrMaterial.baseColorFactor.a * vertexColor.a;
+#ifdef HAS_BASECOLORMAP
+  alpha *= textureSample(pbr_baseColorSampler, pbr_baseColorSamplerSampler, getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform)).a;
+#endif
+  if (alpha < pbrMaterial.alphaCutoff) {discard;}
+#endif
+}
+
+fn pbr_filterColorWithSpotShadows(vertexColor: vec4f, spotVisibility: vec4f) -> vec4f {
+  return pbr_filterColorWithShadows(vertexColor, 1.0, vec4f(1.0), spotVisibility);
 }
 
 fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {

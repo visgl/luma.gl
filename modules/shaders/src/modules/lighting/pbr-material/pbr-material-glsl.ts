@@ -1047,7 +1047,7 @@ vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor) {
 }
 
 // Visibility for the first four spotlights; environment and other lights are unaffected.
-vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
+vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, vec4 pointVisibility, vec4 spotVisibility)
 {
   vec2 baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   vec2 metallicRoughnessUV = getMaterialUV(
@@ -1250,7 +1250,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
       for(int i = 0; i < lighting.directionalLightCount; i++) {
         if (i < lighting.directionalLightCount) {
           PBRInfo_setDirectionalLight(pbrInfo, -lighting_getDirectionalLight(i).direction);
-          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
+          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color * (i == 0 ? clamp(directionalVisibility, 0.0, 1.0) : 1.0));
         }
       }
 
@@ -1258,7 +1258,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
         if (i < lighting.pointLightCount) {
           PBRInfo_setPointLight(pbrInfo, lighting_getPointLight(i));
           float attenuation = getPointLightAttenuation(lighting_getPointLight(i), distance(lighting_getPointLight(i).position, pbr_vPosition));
-          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color * (i < 4 ? clamp(pointVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation);
         }
       }
 
@@ -1540,7 +1540,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
         PBRInfo_setDirectionalLight(pbrInfo, -lighting_getDirectionalLight(i).direction);
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getDirectionalLight(i).color,
+          lighting_getDirectionalLight(i).color * (i == 0 ? clamp(directionalVisibility, 0.0, 1.0) : 1.0),
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1551,7 +1551,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getDirectionalLight(i).color,
+          lighting_getDirectionalLight(i).color * (i == 0 ? clamp(directionalVisibility, 0.0, 1.0) : 1.0),
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -1567,7 +1567,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
         float attenuation = getPointLightAttenuation(lighting_getPointLight(i), distance(lighting_getPointLight(i).position, pbr_vPosition));
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getPointLight(i).color / attenuation,
+          lighting_getPointLight(i).color * (i < 4 ? clamp(pointVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation,
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1578,7 +1578,7 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getPointLight(i).color / attenuation,
+          lighting_getPointLight(i).color * (i < 4 ? clamp(pointVisibility[min(i, 3)], 0.0, 1.0) : 1.0) / attenuation,
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -1740,6 +1740,21 @@ vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility)
   float alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
 #endif
   return vec4(applySceneColorManagement(color), alpha);
+}
+
+// Depth-only passes use the same base-color alpha, vertex color and UV transform.
+void pbr_discardMaskedFragment(vec4 vertexColor) {
+#ifdef ALPHA_CUTOFF
+  float alpha = pbrMaterial.baseColorFactor.a * vertexColor.a;
+#ifdef HAS_BASECOLORMAP
+  alpha *= texture(pbr_baseColorSampler, getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform)).a;
+#endif
+  if (alpha < pbrMaterial.alphaCutoff) {discard;}
+#endif
+}
+
+vec4 pbr_filterColorWithSpotShadows(vec4 vertexColor, vec4 spotVisibility) {
+  return pbr_filterColorWithShadows(vertexColor, 1.0, vec4(1.0), spotVisibility);
 }
 
 vec4 pbr_filterColor(vec4 vertexColor) {
