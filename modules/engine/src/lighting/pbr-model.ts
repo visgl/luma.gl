@@ -185,7 +185,7 @@ ${
 #ifdef HAS_NORMALS
   let shadowNormal = inputs.pbrNormal;
 #else
-  let shadowNormal = normalize(cross(dpdx(inputs.pbrPosition), dpdy(inputs.pbrPosition)));
+  let shadowNormal = normalize(cross(dpdy(inputs.pbrPosition), dpdx(inputs.pbrPosition)));
 #endif
   return pbrShadow_filterColor(inputs.pbrColor, inputs.pbrPosition, shadowNormal);
 #else

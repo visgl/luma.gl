@@ -123,11 +123,11 @@ for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
       pbrShadow: {viewMatrix: view},
       pbrScene: getPBREnvironmentUniforms(environment.textures)
     });
-    async function readCenter(enabled: boolean) {
-      receiver.shaderInputs.setProps({pbrShadow: {enabled}});
+    async function readCenter(enabled: boolean, model: Model = receiver) {
+      model.shaderInputs.setProps({pbrShadow: {enabled}});
       const pass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1]});
       pass.setParameters({viewport: [0, 0, 32, 32]});
-      receiver.draw(pass);
+      model.draw(pass);
       pass.end();
       device.submit();
       color.readBuffer({x: 16, y: 16, width: 1, height: 1}, readback);
@@ -304,6 +304,86 @@ for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
       expect(await readCenter(true), 'transformed alpha-cutout casts no shadow').toEqual(
         await readCenter(false)
       );
+      const selfCaster = createPBRShadowModel(device, {
+        geometry: receiver.sourceGeometry,
+        material: receiverMaterial,
+        parameters: {cullMode: 'none'}
+      });
+      const noNormalReceiver = createPBRModel(device, {
+        geometry: receiver.sourceGeometry,
+        material: receiverMaterial,
+        receiveShadows: true,
+        defines: {HAS_NORMALS: false, USE_LIGHTS: true},
+        colorAttachmentFormats: ['rgba8unorm'],
+        parameters: {depthWriteEnabled: false, cullMode: 'none'}
+      });
+      try {
+        const selfShadowProps = shadows.render({
+          camera: {viewMatrix: view, projectionMatrix: projection, near: 0.1, far: 10},
+          spotLights: [
+            {
+              position: [0, 0, 4],
+              direction: [0, 0, -1],
+              range: 8,
+              outerConeAngle: 0.6,
+              normalBias: 0.05,
+              depthBias: 0,
+              depthBiasSlopeScale: 0,
+              sourceRadius: 0
+            }
+          ],
+          prepareShadowCasters: lightView => {
+            selfCaster.shaderInputs.setProps({
+              pbrProjection: {
+                modelMatrix: receiverMatrix,
+                normalMatrix: new Matrix4(receiverMatrix).invert().transpose(),
+                modelViewProjectionMatrix: new Matrix4(
+                  lightView.viewProjectionMatrix
+                ).multiplyRight(receiverMatrix),
+                camera: [0, 0, 4]
+              }
+            });
+            selfCaster.setParameters({...lightView.rasterParameters, cullMode: 'none'});
+          },
+          drawShadowCasters: lightView => selfCaster.draw(lightView.renderPass)
+        });
+        noNormalReceiver.shaderInputs.setProps({
+          pbrProjection: {
+            modelMatrix: receiverMatrix,
+            normalMatrix: new Matrix4(receiverMatrix).invert().transpose(),
+            modelViewProjectionMatrix: new Matrix4(receiverProjection)
+              .multiplyRight(view)
+              .multiplyRight(receiverMatrix),
+            camera: [0, 0, 6]
+          },
+          shadow: selfShadowProps,
+          pbrShadow: {viewMatrix: view},
+          lighting: {
+            useByteColors: false,
+            lights: [
+              {
+                type: 'spot',
+                position: [0, 0, 4],
+                direction: [0, 0, -1],
+                color: [1, 1, 1],
+                attenuation: [1, 0, 0],
+                outerConeAngle: 0.6,
+                innerConeAngle: 0.3
+              }
+            ]
+          }
+        });
+        const selfShadowed = await readCenter(true, noNormalReceiver);
+        const selfLit = await readCenter(false, noNormalReceiver);
+        expect(selfLit[0], 'a receiver without normals is illuminated').toBeGreaterThan(20);
+        expect(
+          selfShadowed,
+          'derivative normal bias keeps the receiver from shadowing itself'
+        ).toEqual(selfLit);
+      } finally {
+        selfCaster.destroy();
+        noNormalReceiver.destroy();
+      }
     } finally {
       for (const caster of casters.values()) caster.destroy();
       receiver.destroy();
