@@ -703,11 +703,15 @@ export class ShaderEmitter {
     if (elements.length > types.length)
       this.fail('Initializer list has the wrong element count', expression);
     const values = types.map((type, index) =>
-      elements[index] ? this.coerceExpression(elements[index], type) : this.getZeroValue(type)
+      elements[index]
+        ? this.program.evaluationOrder && this.currentFunction
+          ? this.captureTypedValue(this.coerceExpression(elements[index], type), type)
+          : this.coerceExpression(elements[index], type)
+        : this.getZeroValue(type)
     );
     const constructorName =
       !this.isWGSL && expected.name === 'array'
-        ? `${this.getTypeName(expected.element!)}[${expected.length}]`
+        ? this.getDeclaration(expected, '', expression).replace(' ', '')
         : this.getTypeName(expected);
     return `${constructorName}(${values.join(', ')})`;
   }
@@ -717,7 +721,7 @@ export class ShaderEmitter {
     if (structure)
       return `${this.getTypeName(type)}(${structure.fields.map(field => this.getZeroValue(field.type)).join(', ')})`;
     if (type.name === 'array')
-      return `${this.getTypeName(type.element!)}[${type.length}](${Array.from({length: type.length!}, () => this.getZeroValue(type.element!)).join(', ')})`;
+      return `${this.getDeclaration(type, '', this.entry.location).replace(' ', '')}(${Array.from({length: type.length!}, () => this.getZeroValue(type.element!)).join(', ')})`;
     return `${this.getTypeName(type)}(${type.name.startsWith('bool') ? 'false' : type.name.startsWith('uint') ? '0u' : type.name.startsWith('float') ? '0.0' : '0'})`;
   }
   private getUniformAccess(expression: Expression): {type: SlangType; code: string} | undefined {
@@ -779,6 +783,34 @@ export class ShaderEmitter {
     if (this.isWGSL && this.isAtomicValue(expression))
       return `atomicLoad(&${this.freezeLvalue(expression)})`;
     switch (expression.kind) {
+      case 'texture-dimensions': {
+        const texture = this.getTexture(expression.texture);
+        return `uvec2(textureSize(${texture.code}, int(${this.emitExpression(expression.level)})))`;
+      }
+      case 'select': {
+        const values = expression.arguments.map(argument =>
+          this.captureTypedValue(this.emitExpression(argument), this.getExpressionType(argument))
+        );
+        const type = this.getExpressionType(expression);
+        const condition = this.getExpressionType(expression.arguments[2]);
+        if (condition.name === 'bool') return `(${values[2]} ? ${values[1]} : ${values[0]})`;
+        return `${this.getTypeName(type)}(${Array.from({length: Number(condition.name.slice(-1))}, (_, index) => `(${values[2]}[${index}] ? ${values[1]}[${index}] : ${values[0]}[${index}])`).join(', ')})`;
+      }
+      case 'construct':
+        return this.emitInitializer(
+          {...expression, kind: 'initializer', elements: expression.elements},
+          expression.type
+        );
+      case 'bitcast': {
+        const source = this.getExpressionType(expression.operand);
+        const target = expression.type;
+        const value = this.emitExpression(expression.operand);
+        if (source.name.startsWith('float') && !target.name.startsWith('float'))
+          return `${target.name.startsWith('uint') ? 'floatBitsToUint' : 'floatBitsToInt'}(${value})`;
+        if (target.name.startsWith('float') && !source.name.startsWith('float'))
+          return `${source.name.startsWith('uint') ? 'uintBitsToFloat' : 'intBitsToFloat'}(${value})`;
+        return `${this.getTypeName(target)}(${value})`;
+      }
       case 'initializer':
         this.fail('Initializer lists require a declared value type', expression);
       case 'identifier':
@@ -913,19 +945,26 @@ export class ShaderEmitter {
           );
         }
         this.checkBinaryTypes(expression, leftType, rightType);
-        if (this.isWGSL && ['&&', '||'].includes(expression.operator)) {
+        if (
+          this.currentFunction &&
+          (this.isWGSL || this.program.evaluationOrder) &&
+          ['&&', '||'].includes(expression.operator)
+        ) {
           const left = this.coerceExpression(expression.left, {name: 'bool'});
           const right = this.captureExpression(() =>
             this.coerceExpression(expression.right, {name: 'bool'})
           );
           const temporary = this.createTemporary();
           this.expressionPrelude.push(
-            `var ${temporary}: bool = ${left};`,
+            this.isWGSL ? `var ${temporary}: bool = ${left};` : `bool ${temporary} = ${left};`,
             `if (${expression.operator === '&&' ? temporary : `!${temporary}`}) {\n${[...right.statements, `${temporary} = ${right.code};`].join('\n')}\n}`
           );
           return temporary;
         }
-        let left = this.captureValue(this.emitExpression(expression.left));
+        let left =
+          this.program.evaluationOrder && this.currentFunction
+            ? this.captureTypedValue(this.emitExpression(expression.left), leftType)
+            : this.captureValue(this.emitExpression(expression.left));
         let right = this.emitExpression(expression.right);
         return this.emitBinaryValue(expression, leftType, rightType, left, right);
       }
@@ -968,7 +1007,7 @@ export class ShaderEmitter {
         if (expression.arguments.length !== structure.fields.length) {
           this.fail('A structure constructor requires one argument per field', expression);
         }
-        return `${this.getTypeName({name})}(${expression.arguments.map((argument, index) => this.captureValue(this.coerceExpression(argument, structure.fields[index].type))).join(', ')})`;
+        return `${this.getTypeName({name})}(${expression.arguments.map((argument, index) => (this.program.evaluationOrder && this.currentFunction ? this.captureTypedValue(this.coerceExpression(argument, structure.fields[index].type), structure.fields[index].type) : this.captureValue(this.coerceExpression(argument, structure.fields[index].type)))).join(', ')})`;
       }
       const matrix = /^float([2-4])x([2-4])$/.exec(name);
       const vector = /^(float|int|uint|bool)([2-4])$/.exec(name);
@@ -995,7 +1034,7 @@ export class ShaderEmitter {
               /^(float|int|uint)[2-4]$/.test(type.name) && Number(type.name.slice(-1)) === columns
           )
         )
-          return `${this.getTypeName({name})}(${expression.arguments.map(argument => this.emitCast(argument, {name: `float${columns}`})).join(', ')})`;
+          return `${this.getTypeName({name})}(${expression.arguments.map(argument => (this.program.evaluationOrder && this.currentFunction ? this.captureTypedValue(this.emitCast(argument, {name: `float${columns}`}), {name: `float${columns}`}) : this.emitCast(argument, {name: `float${columns}`}))).join(', ')})`;
         if (types.length !== rows * columns || types.some(type => !this.isScalar(type)))
           this.fail(
             'Matrix constructors require a scalar, matching matrix, row vectors, or all scalar elements',
@@ -1018,9 +1057,11 @@ export class ShaderEmitter {
           const type = this.getExpressionType(argument);
           const argumentVector = /^(float|int|uint|bool)([2-4])$/.exec(type.name);
           width += argumentVector ? Number(argumentVector[2]) : 1;
-          return this.emitCast(argument, {
-            name: vector[1] + (argumentVector ? argumentVector[2] : '')
-          });
+          const target = {name: vector[1] + (argumentVector ? argumentVector[2] : '')};
+          const value = this.emitCast(argument, target);
+          return this.program.evaluationOrder && this.currentFunction
+            ? this.captureTypedValue(value, target)
+            : value;
         });
         if (width !== Number(vector[2]) && !(expression.arguments.length === 1 && width === 1)) {
           this.fail('Vector constructor has the wrong component count', expression);
@@ -1086,7 +1127,11 @@ export class ShaderEmitter {
       ? this.getFloatIntrinsicType(expression)
       : undefined;
     const argumentsList = expression.arguments.map((argument, index) => {
-      const value = this.captureValue(this.emitExpression(argument));
+      const emitted = this.emitExpression(argument);
+      const value =
+        this.program.evaluationOrder && this.currentFunction
+          ? this.captureTypedValue(emitted, argumentTypes[index])
+          : this.captureValue(emitted);
       return floatType
         ? this.coerceCode(
             value,
@@ -1131,7 +1176,14 @@ export class ShaderEmitter {
         );
       }
     }
-    return `${emitIntrinsicName(expression.operation, this.options.target) || name}(${argumentsList.join(', ')})`;
+    const intrinsic =
+      this.program.clipSpace === 'webgpu' && name === 'round'
+        ? 'roundEven'
+        : emitIntrinsicName(expression.operation, this.options.target) || name;
+    const result = `${intrinsic}(${argumentsList.join(', ')})`;
+    return this.program.clipSpace === 'webgpu' && expression.operation === 'derivative-y'
+      ? `(-${result})`
+      : result;
   }
   private isAtomicValue(expression: Expression): boolean {
     if (!['identifier', 'index'].includes(expression.kind)) return false;
@@ -1375,11 +1427,19 @@ export class ShaderEmitter {
       ? code
       : `(${code}).${'xyzw'.slice(0, layout.components)}`;
   }
+  private emitOrderedValue(expression: Expression, type: SlangType): string {
+    const code = this.coerceExpression(expression, type);
+    return this.program.evaluationOrder
+      ? this.captureTypedValue(code, type)
+      : this.captureValue(code);
+  }
   private captureTypedValue(code: string, type: SlangType): string {
     if (!this.currentFunction) return code;
     if (this.isWGSL) return this.captureValue(code);
     const temporary = this.createTemporary();
-    this.expressionPrelude.push(`${this.getTypeName(type)} ${temporary} = ${code};`);
+    this.expressionPrelude.push(
+      `${this.getDeclaration(type, temporary, this.entry.location)} = ${code};`
+    );
     return temporary;
   }
   private emitResourceSelection(
@@ -1732,9 +1792,9 @@ export class ShaderEmitter {
       this.fail('Texture sampling has the wrong sampler type', expression);
     const sampler = this.emitExpression(expression.arguments[0]);
     const width = getTextureCoordinateWidth(layout);
-    const coordinates = this.captureValue(
-      this.coerceExpression(expression.arguments[1], {name: `float${width === 1 ? '' : width}`})
-    );
+    const coordinates = this.emitOrderedValue(expression.arguments[1], {
+      name: `float${width === 1 ? '' : width}`
+    });
     const layered = layout.dimension === '2d-array' || layout.dimension === 'cube-array';
     const position =
       this.isWGSL && layered
@@ -1746,15 +1806,13 @@ export class ShaderEmitter {
       extra = expression.arguments
         .slice(2)
         .map(argument =>
-          this.captureValue(
-            this.coerceExpression(argument, {
-              name: `float${gradientWidth === 1 ? '' : gradientWidth}`
-            })
-          )
+          this.emitOrderedValue(argument, {
+            name: `float${gradientWidth === 1 ? '' : gradientWidth}`
+          })
         )
         .join(', ');
     } else if (expression.arguments[2])
-      extra = this.captureValue(this.coerceExpression(expression.arguments[2], {name: 'float'}));
+      extra = this.emitOrderedValue(expression.arguments[2], {name: 'float'});
     const component = {Gather: 0, GatherRed: 0, GatherGreen: 1, GatherBlue: 2, GatherAlpha: 3}[
       method as 'Gather'
     ];
@@ -1823,6 +1881,7 @@ export class ShaderEmitter {
     left: SlangType,
     right: SlangType
   ): void {
+    if (expression.valueType) return;
     getBinaryType(expression, left, right, (message, location) => this.fail(message, location));
   }
   private emitBinaryValue(
@@ -1832,9 +1891,12 @@ export class ShaderEmitter {
     left: string,
     right: string
   ): string {
-    const result = getBinaryType(expression, leftType, rightType, (message, location) =>
-      this.fail(message, location)
-    );
+    if (expression.operation === 'matrix-multiply') return `(${left} * ${right})`;
+    const result =
+      expression.valueType ||
+      getBinaryType(expression, leftType, rightType, (message, location) =>
+        this.fail(message, location)
+      );
     const operator = expression.operator;
     const common = this.getCommonType([expression.left, expression.right]);
     const shape = getNumericShape(common)!;
@@ -1849,6 +1911,8 @@ export class ShaderEmitter {
         },
         expression.right
       );
+      if (expression.operation === 'shift-left' || expression.operation === 'shift-right')
+        right = `(${right} & ${this.getTypeName(rightType)}(31u))`;
       return `(${left} ${operator} ${right})`;
     }
     if (shape.columns > 1) {
@@ -1921,7 +1985,12 @@ export class ShaderEmitter {
           const temporary = this.createTemporary();
           this.expressionPrelude.push(`let ${temporary} = ${value};`);
           argumentsList.push(temporary);
-        } else argumentsList.push(value);
+        } else
+          argumentsList.push(
+            this.program.evaluationOrder && this.currentFunction
+              ? this.captureTypedValue(value, parameter.type)
+              : value
+          );
         continue;
       }
       this.checkWritable(argument);
@@ -2030,9 +2099,11 @@ export class ShaderEmitter {
       }
       const binary = {...expression, operator: expression.operator.slice(0, -1)};
       const rightType = this.getExpressionType(expression.right);
-      const resultType = getBinaryType(binary, leftType, rightType, (message, location) =>
-        this.fail(message, location)
-      );
+      const resultType =
+        expression.valueType ||
+        getBinaryType(binary, leftType, rightType, (message, location) =>
+          this.fail(message, location)
+        );
       const leftValue =
         this.isWGSL && this.isAtomicValue(expression.left)
           ? `atomicLoad(&${destination})`

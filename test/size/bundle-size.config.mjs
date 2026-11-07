@@ -8,8 +8,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/slang` compiler (optional)',
     entry: 'modules/slang/src/index.ts',
     external: [],
-    // Shared typed expression analysis adds ~0.8 KB gzip; WGSL frontend code stays separate.
-    maximum: {minified: 111_000, gzip: 31_800, brotli: 28_000},
+    // WGSL ordering and typed operation emission add ~0.5 KB gzip; frontends stay separate.
+    maximum: {minified: 113_500, gzip: 32_400, brotli: 28_700},
     targetGzip: 25_000
   },
   {
@@ -17,7 +17,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/slang/wgsl` compiler (optional)',
     entry: 'modules/slang/src/wgsl.ts',
     external: [],
-    maximum: {minified: 110_000, gzip: 31_500, brotli: 28_000},
+    maximum: {minified: 130_500, gzip: 37_400, brotli: 33_100},
     targetGzip: 25_000
   },
   {

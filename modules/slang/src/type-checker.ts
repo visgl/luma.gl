@@ -106,7 +106,11 @@ export function getIntegerConstant(
   lookup: (name: string) => number | undefined,
   getType: (expression: Expression) => SlangType
 ): number | undefined {
-  const value = evaluateIntegerConstant(expression, lookup, getType);
+  const materialized = expression.constantValue;
+  const value =
+    materialized !== undefined && /^-?\d+u?$/.test(materialized)
+      ? Number(materialized.replace(/u$/, ''))
+      : evaluateIntegerConstant(expression, lookup, getType);
   return value === undefined
     ? undefined
     : getType(expression).name === 'uint'

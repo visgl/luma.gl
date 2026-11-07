@@ -5,6 +5,7 @@ import type {
   Expression,
   Program,
   ShaderFunction,
+  Variable,
   SlangType,
   SourceLocation,
   Statement
@@ -12,10 +13,17 @@ import type {
 import type {InterfaceLowerer} from './expression-analysis';
 import {SlangTranspileError} from './diagnostics';
 import {visitSyntaxChildren} from './syntax';
+import {getIntegerConstant} from './type-checker';
+import {checkWGSLUniformLayout} from './wgsl-layout';
+import {resolveWGSLBuiltin} from './wgsl-builtins';
 import {lowerSlangType} from './slang-types';
 
 /** Validate the bounded WGSL value subset before shared code generation. */
-export function analyzeWGSL(program: Program, sourceName: string): void {
+export function analyzeWGSL(
+  program: Program,
+  sourceName: string,
+  options: {glslVersion?: '300 es' | '450'} = {}
+): void {
   const fail: (message: string, location: SourceLocation) => never = (message, location) => {
     throw new SlangTranspileError(message, location, sourceName);
   };
@@ -50,23 +58,74 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     const structure = structures.get(name);
     if (!structure) return;
     const visited = new Set(ancestors).add(name);
-    structure.fields.forEach(field => checkStructure(field.type.name, visited));
+    structure.fields.forEach(field => {
+      let type = field.type;
+      while (type.element) type = type.element;
+      checkStructure(type.name, visited);
+    });
     completed.add(name);
   }
   structures.forEach(structure => checkStructure(structure.name));
-  type Binding = {type: SlangType; mutable: boolean};
+  type Binding = {
+    type: SlangType;
+    mutable: boolean;
+    abstractValue?: Expression;
+    integerConstant?: number;
+    constant?: boolean;
+  };
   let scopes: Map<string, Binding>[] = [];
   function lookup(name: string, location: SourceLocation): Binding {
     for (const scope of [...scopes].reverse()) {
       const binding = scope.get(name);
       if (binding) return binding;
     }
+    const declaration = constantDeclarations.get(name);
+    if (declaration) {
+      prepareConstant(declaration);
+      return globals.get(name)!;
+    }
     return fail(`Unknown identifier ${name}`, location);
   }
-  const same = (left: SlangType, right: SlangType) => left.name === right.name;
+  const same = (left: SlangType, right: SlangType): boolean =>
+    left.name === right.name &&
+    left.length === right.length &&
+    (!left.element || Boolean(right.element && same(left.element, right.element)));
+  const globals = new Map<string, Binding>();
+  const constants = new Map<string, Expression>();
+  const constantDeclarations = new Map(
+    program.declarations
+      .filter(
+        (value): value is Variable => value.kind === 'variable' && value.modifiers.includes('const')
+      )
+      .map(value => [value.name, value])
+  );
+  const preparingConstants = new Set<string>();
+  const orderedConstants: Variable[] = [];
+  const constantStack = new Set<string>();
+  for (const declaration of program.declarations)
+    if (
+      declaration.kind === 'variable' &&
+      declaration.modifiers.includes('const') &&
+      declaration.type.name === '$inferred' &&
+      declaration.initializer
+    )
+      constants.set(declaration.name, declaration.initializer);
   function evaluateAbstract(
     expression: Expression
   ): {value: number; floating: boolean} | undefined {
+    if (expression.kind === 'identifier') {
+      const binding = [...scopes]
+        .reverse()
+        .map(scope => scope.get(expression.value))
+        .find(Boolean);
+      const value = binding ? binding.abstractValue : constants.get(expression.value);
+      if (!value) return undefined;
+      if (constantStack.has(expression.value)) fail('Recursive constant', expression);
+      constantStack.add(expression.value);
+      const result = evaluateAbstract(value);
+      constantStack.delete(expression.value);
+      return result;
+    }
     if (expression.kind === 'number' && !/[iuf]$/.test(expression.value)) {
       const value = Number(expression.value);
       const floating = /[.eE]/.test(expression.value);
@@ -102,8 +161,19 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     return {value, floating};
   }
   function resolve(expression: Expression, expected?: SlangType): SlangType {
-    if (expression.kind === 'binary') {
-      if (['==', '!=', '<', '<=', '>', '>='].includes(expression.operator)) {
+    if (expression.valueType) {
+      if (expected && !same(expression.valueType, expected))
+        fail('WGSL types must match', expression);
+      return expression.valueType;
+    }
+    if (
+      expression.kind === 'binary' ||
+      (expression.kind === 'identifier' && evaluateAbstract(expression))
+    ) {
+      if (
+        expression.kind === 'binary' &&
+        ['==', '!=', '<', '<=', '>', '>='].includes(expression.operator)
+      ) {
         const left = evaluateAbstract(expression.left);
         const right = evaluateAbstract(expression.right);
         if (left && right) {
@@ -148,6 +218,52 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     }
     let type: SlangType;
     switch (expression.kind) {
+      case 'construct': {
+        checkType(expression.type, expression);
+        if (expression.type.name !== 'array') fail('Expected array constructor', expression);
+        if (!expression.elements.length)
+          expression.elements = Array.from({length: expression.type.length!}, () =>
+            zero(expression.type.element!, expression)
+          );
+        if (expression.elements.length !== expression.type.length)
+          fail('Array constructor element count mismatch', expression);
+        expression.elements.forEach(element => resolve(element, expression.type.element));
+        type = expression.type;
+        break;
+      }
+      case 'bitcast': {
+        const actual = resolve(expression.operand);
+        type = expression.type;
+        const source = /^(float|int|uint)([2-4])?$/.exec(actual.name);
+        const target = /^(float|int|uint)([2-4])?$/.exec(type.name);
+        if (!source || !target || source[2] !== target[2])
+          fail('bitcast requires equal-width numeric values', expression);
+        break;
+      }
+      case 'index': {
+        const object = resolve(expression.object);
+        const index = resolve(expression.index);
+        if (!['int', 'uint'].includes(index.name))
+          fail('Index must be an integer scalar', expression);
+        const matrix = /^float([2-4])x([2-4])$/.exec(object.name);
+        const vector = /^(float|int|uint|bool)([2-4])$/.exec(object.name);
+        type =
+          object.name === 'array'
+            ? object.element!
+            : matrix
+              ? {name: 'float' + matrix[2]}
+              : vector
+                ? {name: vector[1]}
+                : fail('Value is not indexable', expression);
+        const count = object.length ?? Number(matrix?.[1] ?? vector?.[2]);
+        const constant =
+          expression.index.kind === 'number'
+            ? {value: Number(expression.index.value.replace(/[iu]$/, ''))}
+            : evaluateAbstract(expression.index);
+        if (constant && (constant.value < 0 || constant.value >= count))
+          fail('Index outside declared length', expression);
+        break;
+      }
       case 'number': {
         const suffix = /[iuf]$/.exec(expression.value)?.[0];
         const floating = /[.eE]/.test(expression.value);
@@ -229,6 +345,12 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
           break;
         }
         type = resolve(expression.operand, expected);
+        if (['++', '--'].includes(expression.operator)) {
+          checkMutable(expression.operand);
+          if (!['int', 'uint'].includes(type.name))
+            fail('Increment requires an integer scalar', expression);
+          break;
+        }
         if (
           expression.operator === '!'
             ? !/^bool[2-4]?$/.test(type.name)
@@ -240,12 +362,9 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         break;
       }
       case 'binary': {
-        const assignment = ['=', '+=', '-=', '*=', '/='].includes(expression.operator);
+        const assignment = /^(?:=|[+*\/%&|^\-]=|<<=|>>=)$/.test(expression.operator);
         if (assignment) {
-          let root = expression.left;
-          while (root.kind === 'member') root = root.object;
-          if (root.kind !== 'identifier' || !lookup(root.value, root).mutable)
-            fail('Assignment requires a mutable local', expression);
+          checkMutable(expression.left);
           if (
             expression.left.kind === 'member' &&
             new Set(expression.left.member).size !== expression.left.member.length &&
@@ -259,8 +378,8 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         let left: SlangType;
         let right: SlangType;
         const scalarContext = (type: SlangType | undefined): SlangType | undefined =>
-          type && /^(float|int|uint)[2-4]?$/.test(type.name)
-            ? {name: type.name.replace(/[2-4]$/, '')}
+          type && /^(float|int|uint)(?:[2-4](?:x[2-4])?)?$/.test(type.name)
+            ? {name: type.name.replace(/[2-4](?:x[2-4])?$/, '')}
             : undefined;
         const leftAbstract = evaluateAbstract(expression.left);
         const rightAbstract = evaluateAbstract(expression.right);
@@ -272,7 +391,56 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
             expression.left,
             leftAbstract ? scalarContext(operandExpected) : undefined
           );
-          right = resolve(expression.right, rightAbstract ? scalarContext(left) : undefined);
+          right = resolve(
+            expression.right,
+            rightAbstract
+              ? ['<<', '>>', '<<=', '>>='].includes(expression.operator)
+                ? {name: 'uint'}
+                : scalarContext(left)
+              : undefined
+          );
+        }
+        const leftMatrix = /^float([2-4])x([2-4])$/.exec(left.name);
+        const rightMatrix = /^float([2-4])x([2-4])$/.exec(right.name);
+        if (leftMatrix || rightMatrix) {
+          const operator = expression.operator.replace(/=$/, '');
+          if (operator === '*') {
+            if (leftMatrix && rightMatrix && leftMatrix[1] === rightMatrix[2])
+              type = {name: `float${rightMatrix[1]}x${leftMatrix[2]}`};
+            else if (leftMatrix && right.name === `float${leftMatrix[1]}`)
+              type = {name: `float${leftMatrix[2]}`};
+            else if (rightMatrix && left.name === `float${rightMatrix[2]}`)
+              type = {name: `float${rightMatrix[1]}`};
+            else if (leftMatrix && right.name === 'float') type = left;
+            else if (rightMatrix && left.name === 'float') type = right;
+            else fail('Matrix multiplication dimensions do not match', expression);
+            expression.operation = 'matrix-multiply';
+          } else if (['+', '-'].includes(operator) && same(left, right)) type = left;
+          else if (expression.operator === '=' && same(left, right)) type = left;
+          else fail('Unsupported matrix operation', expression);
+          if (assignment && !same(left, type)) fail('Assignment type mismatch', expression);
+          break;
+        }
+        if (expression.operator === '=' && same(left, right)) {
+          type = left;
+          break;
+        }
+        if (['<<', '>>', '<<=', '>>='].includes(expression.operator)) {
+          if (
+            !/^(int|uint)[2-4]?$/.test(left.name) ||
+            right.name !== 'uint' + (/[2-4]$/.exec(left.name)?.[0] || '')
+          )
+            fail('Shifts require integer values and matching u32 counts', expression);
+          if (
+            expression.right.kind === 'number' &&
+            Number(expression.right.value.replace(/u$/, '')) >= 32
+          )
+            fail('Constant shift count must be below 32', expression.right);
+          expression.operation = expression.operator.startsWith('<<')
+            ? 'shift-left'
+            : 'shift-right';
+          type = left;
+          break;
         }
         const leftVector = /^(float|int|uint)[2-4]$/.test(left.name);
         const rightVector = /^(float|int|uint)[2-4]$/.test(right.name);
@@ -287,7 +455,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
           fail('WGSL operands require matching types', expression);
         if (assignment && !leftVector && rightVector)
           fail('Assignment result must match its destination', expression);
-        if (['/', '/=', '%'].includes(expression.operator) && /^(int|uint)/.test(left.name))
+        if (['/', '/=', '%', '%='].includes(expression.operator) && /^(int|uint)/.test(left.name))
           fail('Integer division and remainder are outside the initial subset', expression);
         if (['&&', '||'].includes(expression.operator)) {
           if (left.name !== 'bool') fail('Logical operands must be bool', expression);
@@ -302,7 +470,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         )
           fail('Unsupported binary operands', expression);
         if (
-          ['&', '|', '^', '%'].includes(expression.operator) &&
+          ['&', '|', '^', '%', '&=', '|=', '^=', '%='].includes(expression.operator) &&
           !/^(int|uint)[2-4]?$/.test(left.name)
         )
           fail('Integer operands required', expression);
@@ -317,6 +485,38 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         if (expression.callee.kind !== 'identifier')
           fail('Calls require a function or constructor', expression);
         const name = expression.callee.value;
+        if (name.startsWith('texture')) {
+          type = textureCall(expression, name);
+          break;
+        }
+        const builtin = resolveWGSLBuiltin(expression, resolve, fail, evaluateAbstract);
+        if (builtin) {
+          type = builtin;
+          break;
+        }
+        const matrix = /^float([2-4])x([2-4])$/.exec(name);
+        if (matrix) {
+          if (!expression.arguments.length)
+            expression.arguments = Array.from({length: Number(matrix[1]) * Number(matrix[2])}, () =>
+              zero({name: 'float'}, expression)
+            );
+          const types = expression.arguments.map(argument =>
+            resolve(argument, evaluateAbstract(argument) ? {name: 'float'} : undefined)
+          );
+          if (
+            !(
+              (types.length === 1 && types[0].name === name) ||
+              (types.length === Number(matrix[1]) &&
+                types.every(type => type.name === 'float' + matrix[2])) ||
+              (types.length === Number(matrix[1]) * Number(matrix[2]) &&
+                types.every(type => type.name === 'float'))
+            )
+          )
+            fail('Matrix constructor requires matching columns or all scalar elements', expression);
+          type = {name};
+          expression.resolvedCall = {kind: 'constructor', type};
+          break;
+        }
         const declaration = functions.get(name);
         const structure = structures.get(name);
         if (declaration) {
@@ -340,7 +540,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
           const numeric = /^(float|int|uint|bool)([2-4])?$/.exec(name);
           if (!numeric) fail(`Unsupported WGSL function ${name}`, expression);
           if (!expression.arguments.length)
-            fail('Zero-argument constructors are outside the initial subset', expression);
+            expression.arguments = [zero({name: numeric[1]}, expression)];
           const scalar = {name: numeric[1]};
           let width = 0;
           expression.arguments.forEach(argument => {
@@ -351,7 +551,11 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
               fail('Float-to-integer conversion is outside the initial subset', argument);
             if ((numeric[1] === 'bool' || shape[1] === 'bool') && numeric[1] !== shape[1])
               fail('Boolean conversions are outside the initial subset', argument);
-            if (numeric[2] && shape[1] !== numeric[1])
+            if (
+              numeric[2] &&
+              shape[1] !== numeric[1] &&
+              !(expression.arguments.length === 1 && shape[2] === numeric[2])
+            )
               fail('Vector components require matching scalar types', argument);
             width += Number(shape[2] || 1);
           });
@@ -388,6 +592,23 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         callee: {...location, kind: 'identifier', value: type.name},
         arguments: structure.fields.map(field => zero(field.type, location))
       };
+    if (type.name === 'array')
+      return {
+        ...location,
+        kind: 'construct',
+        type,
+        elements: Array.from({length: type.length!}, () => zero(type.element!, location))
+      };
+    const matrix = /^float([2-4])x([2-4])$/.exec(type.name);
+    if (matrix)
+      return {
+        ...location,
+        kind: 'call',
+        callee: {...location, kind: 'identifier', value: type.name},
+        arguments: Array.from({length: Number(matrix[1]) * Number(matrix[2])}, () =>
+          zero({name: 'float'}, location)
+        )
+      };
     if (type.name === 'bool') return {...location, kind: 'boolean', value: 'false'};
     if (/^(float|int|uint|bool)[2-4]$/.test(type.name))
       return {
@@ -402,6 +623,138 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
       value: type.name === 'uint' ? '0u' : type.name === 'float' ? '0.0' : '0'
     };
   }
+  function checkMutable(expression: Expression): void {
+    let root = expression;
+    while (root.kind === 'member' || root.kind === 'index') root = root.object;
+    if (root.kind !== 'identifier' || !lookup(root.value, root).mutable)
+      fail('Assignment requires a mutable variable', expression);
+  }
+  function checkType(type: SlangType, location: SourceLocation): number {
+    if (type.lengthName) {
+      const expression = constants.get(type.lengthName);
+      const value = expression && evaluateAbstract(expression);
+      const count =
+        value && !value.floating ? value.value : lookup(type.lengthName, location).integerConstant;
+      if (count === undefined) fail('Array count requires an integer constant', location);
+      type.length = count;
+      delete type.lengthName;
+    }
+    if (
+      type.name === 'array' &&
+      (!Number.isInteger(type.length) || type.length! < 1 || type.length! > 65536)
+    )
+      fail('Array length must be between 1 and 65536', location);
+    if (type.name === 'array' && type.element?.name === 'array' && options.glslVersion !== '450')
+      fail('Nested arrays require GLSL 450', location);
+    const structure = structures.get(type.name);
+    const shape = /^(?:float|int|uint|bool)([2-4])?(?:x([2-4]))?$/.exec(type.name);
+    const count =
+      type.name === 'array'
+        ? type.length! * checkType(type.element!, location)
+        : structure
+          ? structure.fields.reduce((sum, field) => sum + checkType(field.type, field.location), 0)
+          : type.element
+            ? checkType(type.element, location)
+            : Number(shape?.[1] || 1) * Number(shape?.[2] || 1);
+    if (count > 65536) fail('Aggregate exceeds the supported expanded value size', location);
+    return count;
+  }
+  function integerConstant(expression: Expression): number | undefined {
+    return getIntegerConstant(
+      expression,
+      name => lookup(name, expression).integerConstant,
+      value => resolve(value)
+    );
+  }
+  function textureCall(expression: Expression & {kind: 'call'}, name: string): SlangType {
+    const argumentsList = expression.arguments;
+    const texture = argumentsList[0];
+    if (!texture || resolve(texture).name !== 'Texture2D')
+      fail('Texture operation requires texture_2d<f32>', expression);
+    if (name === 'textureDimensions') {
+      if (argumentsList.length < 1 || argumentsList.length > 2)
+        fail('textureDimensions argument count mismatch', expression);
+      const level = argumentsList[1] || zero({name: 'int'}, expression);
+      if (!['int', 'uint'].includes(resolve(level).name)) fail('Mip level must be integer', level);
+      Object.assign(expression, {kind: 'texture-dimensions', texture, level});
+      return {name: 'uint2'};
+    }
+    if (name === 'textureLoad') {
+      if (argumentsList.length !== 3) fail('textureLoad argument count mismatch', expression);
+      resolve(argumentsList[1], {name: 'int2'});
+      const level = argumentsList[2];
+      if (!['int', 'uint'].includes(resolve(level).name)) fail('Mip level must be integer', level);
+      const converted: Expression = {
+        ...level,
+        kind: 'cast',
+        type: {name: 'int'},
+        operand: level,
+        valueType: {name: 'int'}
+      };
+      const coordinate: Expression = {
+        ...expression,
+        kind: 'call',
+        callee: {...expression, kind: 'identifier', value: 'int3'},
+        arguments: [argumentsList[1], converted],
+        resolvedCall: {kind: 'constructor', type: {name: 'int3'}},
+        valueType: {name: 'int3'}
+      };
+      expression.callee = {...expression, kind: 'member', object: texture, member: 'Load'};
+      expression.arguments = [coordinate];
+      expression.operation = 'texture-load';
+      return {name: 'float4'};
+    }
+    const method = {
+      textureSample: 'Sample',
+      textureSampleLevel: 'SampleLevel',
+      textureSampleGrad: 'SampleGrad'
+    }[name];
+    const count = name === 'textureSample' ? 3 : name === 'textureSampleLevel' ? 4 : 5;
+    if (!method || argumentsList.length !== count)
+      fail('Unsupported texture operation or argument count', expression);
+    resolve(argumentsList[1], {name: 'SamplerState'});
+    resolve(argumentsList[2], {name: 'float2'});
+    for (const argument of argumentsList.slice(3))
+      resolve(argument, {name: name === 'textureSampleGrad' ? 'float2' : 'float'});
+    expression.callee = {...expression, kind: 'member', object: texture, member: method};
+    expression.arguments = argumentsList.slice(1);
+    expression.operation =
+      name === 'textureSample'
+        ? 'texture-sample'
+        : name === 'textureSampleLevel'
+          ? 'texture-sample-level'
+          : 'texture-sample-gradient';
+    return {name: 'float4'};
+  }
+  function checkConstant(expression: Expression): void {
+    if (expression.kind === 'identifier' && !lookup(expression.value, expression).constant)
+      fail('Initializer requires a constant expression', expression);
+    if (
+      expression.kind === 'call' &&
+      (expression.callee.kind !== 'identifier' ||
+        functions.has(expression.callee.value) ||
+        expression.callee.value.startsWith('texture') ||
+        ['dpdx', 'dpdy', 'fwidth'].includes(expression.callee.value))
+    )
+      fail('Initializer requires a constant expression', expression);
+    if (expression.kind === 'call') expression.arguments.forEach(checkConstant);
+    else if (expression.kind === 'binary') {
+      checkConstant(expression.left);
+      checkConstant(expression.right);
+    } else if (
+      expression.kind === 'unary' ||
+      expression.kind === 'cast' ||
+      expression.kind === 'bitcast'
+    )
+      checkConstant(expression.operand);
+    else if (expression.kind === 'construct') expression.elements.forEach(checkConstant);
+    else if (expression.kind === 'member' || expression.kind === 'index') {
+      checkConstant(expression.object);
+      if (expression.kind === 'index') checkConstant(expression.index);
+    }
+  }
+  let loopDepth = 0;
+  let switchDepth = 0;
   function statement(node: Statement, returnType: SlangType): void {
     if (node.kind === 'block') {
       scopes.push(new Map());
@@ -410,28 +763,190 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     } else if (node.kind === 'variable') {
       const variable = node.variable;
       if (scopes.at(-1)!.has(variable.name)) fail('Duplicate local', variable.location);
+      checkType(variable.type, variable.location);
       variable.initializer ||= zero(variable.type, variable.location);
+      const evaluatedConstant =
+        variable.modifiers.includes('const') && variable.type.name === '$inferred'
+          ? evaluateAbstract(variable.initializer)
+          : undefined;
+      const abstractValue: Expression | undefined = evaluatedConstant
+        ? {
+            ...variable.initializer,
+            kind: 'number',
+            value:
+              String(evaluatedConstant.value) +
+              (evaluatedConstant.floating && Number.isInteger(evaluatedConstant.value) ? '.0' : '')
+          }
+        : undefined;
+      if (variable.modifiers.includes('const')) checkConstant(variable.initializer);
       variable.type = resolve(
         variable.initializer,
         variable.type.name === '$inferred' ? undefined : variable.type
       );
-      scopes
-        .at(-1)!
-        .set(variable.name, {type: variable.type, mutable: !variable.modifiers.includes('let')});
+      scopes.at(-1)!.set(variable.name, {
+        type: variable.type,
+        constant: variable.modifiers.includes('const'),
+        integerConstant:
+          variable.modifiers.includes('const') && ['int', 'uint'].includes(variable.type.name)
+            ? integerConstant(variable.initializer)
+            : undefined,
+        abstractValue,
+        mutable: !variable.modifiers.some(modifier => ['let', 'const'].includes(modifier))
+      });
     } else if (node.kind === 'return') {
       if (node.expression) resolve(node.expression, returnType);
       else if (returnType.name !== 'void') fail('Return value required', node);
     } else if (node.kind === 'expression') {
       if (
         node.expression.kind !== 'call' &&
-        !(
-          node.expression.kind === 'binary' &&
-          ['=', '+=', '-=', '*=', '/='].includes(node.expression.operator)
-        )
+        !(node.expression.kind === 'binary' && /=$/.test(node.expression.operator)) &&
+        !(node.expression.kind === 'unary' && ['++', '--'].includes(node.expression.operator))
       )
         fail('Invalid expression statement', node);
       resolve(node.expression);
-    } else fail('Unsupported WGSL statement', node);
+    } else if (node.kind === 'if') {
+      resolve(node.condition, {name: 'bool'});
+      statement(node.consequent, returnType);
+      if (node.alternate) statement(node.alternate, returnType);
+    } else if (node.kind === 'for' || node.kind === 'while') {
+      scopes.push(new Map());
+      loopDepth++;
+      if (node.kind === 'for' && node.initializer) statement(node.initializer, returnType);
+      if (node.condition) resolve(node.condition, {name: 'bool'});
+      statement(node.body, returnType);
+      if (node.kind === 'for' && node.update) resolve(node.update);
+      loopDepth--;
+      scopes.pop();
+    } else if (node.kind === 'switch') {
+      const type = resolve(node.selector);
+      if (!['int', 'uint'].includes(type.name)) fail('Switch selector must be integer', node);
+      switchDepth++;
+      let defaults = 0;
+      const labels = new Set<string>();
+      for (const clause of node.clauses) {
+        for (const label of clause.labels) {
+          if (label === null) {
+            defaults++;
+            continue;
+          }
+          resolve(label, type);
+          const value = integerConstant(label);
+          if (value === undefined) fail('Switch labels require integer constants', label);
+          const key = String(value);
+          if (labels.has(key)) fail('Duplicate switch label', label);
+          labels.add(key);
+        }
+        scopes.push(new Map());
+        clause.statements.forEach(child => statement(child, returnType));
+        scopes.pop();
+        clause.statements.push({
+          offset: clause.offset,
+          line: clause.line,
+          column: clause.column,
+          kind: 'break'
+        });
+      }
+      if (defaults !== 1) fail('Switch requires exactly one default', node);
+      switchDepth--;
+    } else if (node.kind === 'break') {
+      if (!loopDepth && !switchDepth) fail('break requires a loop or switch', node);
+    } else if (node.kind === 'continue') {
+      if (!loopDepth) fail('continue requires a loop', node);
+    } else if (!['discard', 'empty'].includes(node.kind)) fail('Unsupported WGSL statement', node);
+  }
+  const bindings = new Set<string>();
+  function analyzeGlobal(declaration: Variable): void {
+    checkType(declaration.type, declaration.location);
+    if (declaration.binding) {
+      const key = `${declaration.binding.group}:${declaration.binding.binding}`;
+      if (bindings.has(key)) fail('Duplicate resource binding', declaration.location);
+      bindings.add(key);
+      if (declaration.initializer) fail('Resources cannot have initializers', declaration.location);
+      if (declaration.type.name === 'ConstantBuffer') {
+        if (!structures.has(declaration.type.element!.name))
+          fail('Uniform buffers require a structure', declaration.location);
+        checkWGSLUniformLayout(
+          declaration.type.element!,
+          structures,
+          declaration.location,
+          sourceName
+        );
+      }
+      globals.set(declaration.name, {
+        type:
+          declaration.type.name === 'ConstantBuffer' ? declaration.type.element! : declaration.type,
+        mutable: false
+      });
+    } else {
+      if (!declaration.modifiers.includes('const')) declaration.modifiers.push('static');
+      scopes = [globals];
+      declaration.initializer ||= zero(declaration.type, declaration.location);
+      checkConstant(declaration.initializer);
+      const originalConstant = constants.get(declaration.name);
+      declaration.type = resolve(
+        structuredClone(declaration.initializer),
+        declaration.type.name === '$inferred' ? undefined : declaration.type
+      );
+      if (originalConstant && evaluateAbstract(originalConstant)) {
+        declaration.initializer = structuredClone(originalConstant);
+        resolve(declaration.initializer, declaration.type);
+      } else resolve(declaration.initializer, declaration.type);
+      const abstractConstant = originalConstant && evaluateAbstract(originalConstant);
+      globals.set(declaration.name, {
+        abstractValue: abstractConstant
+          ? {
+              ...originalConstant!,
+              kind: 'number',
+              value:
+                String(abstractConstant.value) +
+                (abstractConstant.floating && Number.isInteger(abstractConstant.value) ? '.0' : '')
+            }
+          : undefined,
+        constant: declaration.modifiers.includes('const'),
+        integerConstant:
+          declaration.modifiers.includes('const') && ['int', 'uint'].includes(declaration.type.name)
+            ? integerConstant(declaration.initializer)
+            : undefined,
+        type: declaration.type,
+        mutable: !declaration.modifiers.includes('const')
+      });
+    }
+  }
+  function prepareConstant(declaration: Variable): void {
+    if (globals.has(declaration.name)) return;
+    if (preparingConstants.has(declaration.name)) fail('Recursive constant', declaration.location);
+    preparingConstants.add(declaration.name);
+    analyzeGlobal(declaration);
+    preparingConstants.delete(declaration.name);
+    orderedConstants.push(declaration);
+  }
+  scopes = [globals];
+  for (const declaration of program.declarations)
+    if (declaration.kind === 'struct')
+      declaration.fields.forEach(field => checkType(field.type, field.location));
+  for (const declaration of program.declarations)
+    if (declaration.kind === 'variable') {
+      if (declaration.modifiers.includes('const')) prepareConstant(declaration);
+      else analyzeGlobal(declaration);
+    }
+  // GLSL global constant initializers require their dependencies to be declared first.
+  program.declarations = [
+    ...orderedConstants,
+    ...program.declarations.filter(
+      declaration => declaration.kind !== 'variable' || !declaration.modifiers.includes('const')
+    )
+  ];
+  // Resolve every signature before calls in any body are checked.
+  for (const declaration of functions.values()) {
+    checkType(declaration.type, declaration.location);
+    declaration.parameters.forEach(parameter => {
+      checkType(parameter.type, parameter.location);
+      if (['Texture2D', 'SamplerState', 'ConstantBuffer'].includes(parameter.type.name))
+        fail(
+          'Resource parameters are outside this subset; use module bindings',
+          parameter.location
+        );
+    });
   }
   for (const declaration of functions.values()) {
     const stage = declaration.attributes[0]?.arguments[0];
@@ -462,6 +977,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     )
       fail('Duplicate parameter', declaration.location);
     scopes = [
+      globals,
       new Map(
         declaration.parameters.map(parameter => [
           parameter.name,

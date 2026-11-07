@@ -7,7 +7,7 @@ export type Token = SourceLocation & {
   text: string;
   kind: 'identifier' | 'number' | 'string' | 'symbol' | 'end';
 };
-export type SlangType = {name: string; element?: SlangType; length?: number};
+export type SlangType = {name: string; element?: SlangType; length?: number; lengthName?: string};
 export type Attribute = {name: string; arguments: string[]; location: SourceLocation};
 export type Variable = {
   kind: 'variable';
@@ -44,6 +44,7 @@ export type Program = {
   declarations: (Structure | ShaderFunction | Variable)[];
   /** Source clip-space convention, independent of target syntax. */
   clipSpace?: 'webgpu';
+  evaluationOrder?: 'left-to-right';
   publicNames?: ReadonlyMap<string, string>;
   nativeModules?: {
     name: string;
@@ -72,6 +73,10 @@ export type Expression = SourceLocation & {
     | {kind: 'conditional'; condition: Expression; consequent: Expression; alternate: Expression}
     | {kind: 'initializer'; elements: Expression[]}
     | {kind: 'cast'; type: SlangType; operand: Expression}
+    | {kind: 'bitcast'; type: SlangType; operand: Expression}
+    | {kind: 'construct'; type: SlangType; elements: Expression[]}
+    | {kind: 'select'; arguments: Expression[]}
+    | {kind: 'texture-dimensions'; texture: Expression; level: Expression}
   );
 export type SwitchClause = SourceLocation & {
   labels: (Expression | null)[];

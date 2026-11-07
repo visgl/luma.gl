@@ -97,6 +97,10 @@ export function resolveExpressionType(
   context: ExpressionContext
 ): SlangType {
   switch (expression.kind) {
+    case 'select':
+      return context.getExpressionType(expression.arguments[0]);
+    case 'texture-dimensions':
+      return {name: 'uint2'};
     case 'initializer':
       context.fail('Initializer lists require a declared value type', expression);
     case 'identifier': {
@@ -107,6 +111,8 @@ export function resolveExpressionType(
       return getLiteralType(expression, (message, location) => context.fail(message, location));
     case 'boolean':
       return {name: 'bool'};
+    case 'construct':
+    case 'bitcast':
     case 'cast':
       return expression.type;
     case 'unary': {

@@ -22,7 +22,7 @@ export function transpileWGSL(
 ): WGSLTranspileResult {
   const sourceName = options.sourceName || 'shader.wgsl';
   const program = parseWGSL(source, sourceName);
-  analyzeWGSL(program, sourceName);
+  analyzeWGSL(program, sourceName, options);
   return new ShaderEmitter(
     program,
     {...options, sourceName, target: 'glsl'},
