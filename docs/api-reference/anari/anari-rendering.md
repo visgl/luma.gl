@@ -480,3 +480,27 @@ emitters are excluded from the sampling table. See the
 [ray quality reference](/docs/api-reference/anari/ray-tracing-quality-presets#explicit-emissive-lighting-and-scalar-masks)
 for sampling semantics and current limitations. `emitterSelection: 'power'` enables
 area/luminance-weighted emitter selection; uniform selection remains the default.
+
+### Ray material textures and smooth dielectrics
+
+The ray renderer samples base-color, emissive, metallic/roughness, and transmission maps.
+Each map uses its canonical PBR UV transform and UV-set selector (`TEXCOORD_0` or
+`TEXCOORD_1`). Analytic spheres synthesize longitude/latitude UV0. Texture formats control
+color decoding: use sRGB formats for color maps and linear formats for data maps. Sampling
+uses explicit mip level zero inside divergent ray traversal and honors the texture's sampler.
+At most fourteen distinct material textures may be bound to one frame with CORE limits.
+Textures are borrowed and must remain alive until their submitted GPU work finishes.
+
+Replacing textures or samplers, changing UV metadata, or changing a material version rebuilds
+material bindings and resets accumulation. After updating texture contents in place, increment
+the material version to invalidate accumulated lighting.
+
+With `transportMode: 'pbr'` and positive `maxBounces`, `transmissionFactor` and `ior` enable
+smooth dielectric continuation with Fresnel reflection, refraction, total internal reflection,
+and radiance transport scaling. Use closed meshes with outward winding for entry/exit IOR
+handling. Rough transmission, nested dielectric media, absorption, normal maps, and other
+extension maps are not implemented. Shadow rays remain opaque and alpha masking remains
+scalar; textured alpha cutouts and alpha blending are not supported by this path.
+
+The **Indirect Light Study** playground preset provides a fixed-camera emissive scene with
+three diffuse bounces. Set `maxBounces` to zero to compare direct-only rendering.
