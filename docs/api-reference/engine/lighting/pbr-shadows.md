@@ -100,3 +100,7 @@ The [PBR Shadows example](/examples/api/pbr-shadows) demonstrates a sphere and a
 casting onto an upward-facing ground plane, with light selection, quality/bias controls,
 shadow receiving, orbit controls, and camera reset. The example creates separate caster
 models for each light view so point faces and directional cascades retain their own uniforms.
+
+For short screen-space refinement of the first directional light, use
+[contact shadows](./contact-shadows.md). Their PBR visibility combines with map visibility
+without changing other lights or indirect illumination.

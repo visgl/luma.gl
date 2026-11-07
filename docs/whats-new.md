@@ -1,5 +1,13 @@
 # What's New
 
+### Reusable directional contact shadows
+
+`ContactShadowPass` traces and filters portable screen-space visibility from camera depth
+and view-space normals. Standalone PBR models can receive this visibility on their first
+directional light, combining it with shadow maps while preserving other lights, IBL, and
+emission. See [directional contact shadows](./api-reference/engine/lighting/contact-shadows.md).
+
+
 ### Reusable PBR surface prepasses
 
 `@luma.gl/engine/lighting` exposes camera depth and view-space normal targets through

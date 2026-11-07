@@ -346,3 +346,19 @@ assert.equal(shadersApi.pbrSurface, require('../modules/shaders/dist/modules/lig
 assert.equal(shadersEsm.pbrSurface, (await import('../modules/shaders/dist/modules/lighting/pbr-surface/pbr-surface.js')).pbrSurface);
 for (const name of ['PBRSurfacePass', 'createPBRSurfaceModel']) assert.equal(name in engineApi, false);
 process.stdout.write('Verified PBR surface prepass optional-subpath identities.\n');
+
+const contactPassApi = require('../modules/engine/dist/lighting/contact-shadow-pass.cjs');
+const contactPassEsm = await import('../modules/engine/dist/lighting/contact-shadow-pass.js');
+assert.equal(lightingApi.ContactShadowPass, contactPassApi.ContactShadowPass);
+assert.equal(lightingEsm.ContactShadowPass, contactPassEsm.ContactShadowPass);
+const compatibleContactApi = require('../modules/anari/dist/shadows/contact-shadow.cjs');
+const compatibleContactEsm = await import('../modules/anari/dist/shadows/contact-shadow.js');
+assert.equal(compatibleContactApi.createContactShadowCompositeShaderPass, lightingApi.createContactShadowCompositeShaderPass);
+assert.equal(compatibleContactEsm.createContactShadowCompositeShaderPass, lightingEsm.createContactShadowCompositeShaderPass);
+for (const name of ['contactShadowTrace','contactShadowBilateralBlur','contactShadowComposite','pbrContactShadow']) {
+  const path = name === 'pbrContactShadow' ? 'pbr-contact-shadow/pbr-contact-shadow' : 'contact-shadow/contact-shadow';
+  assert.equal(shadersApi[name], require(`../modules/shaders/dist/modules/lighting/${path}.cjs`)[name]);
+  assert.equal(shadersEsm[name], (await import(`../modules/shaders/dist/modules/lighting/${path}.js`))[name]);
+}
+assert.equal('ContactShadowPass' in engineApi, false);
+process.stdout.write('Verified contact shadow optional-subpath and compatibility identities.\n');

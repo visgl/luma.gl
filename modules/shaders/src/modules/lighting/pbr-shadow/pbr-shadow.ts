@@ -40,7 +40,7 @@ struct PBRShadowUniforms {
   enabled: i32,
 };
 @group(0) @binding(auto) var<uniform> pbrShadow: PBRShadowUniforms;
-fn pbrShadow_filterColor(vertexColor: vec4f, worldPosition: vec3f, worldNormal: vec3f) -> vec4f {
+fn pbrShadow_filterColorWithDirectionalContact(vertexColor: vec4f, worldPosition: vec3f, worldNormal: vec3f, contactVisibility: f32) -> vec4f {
   var directionalVisibility = 1.0;
   var pointVisibility = vec4f(1.0);
   var spotVisibility = vec4f(1.0);
@@ -53,14 +53,18 @@ fn pbrShadow_filterColor(vertexColor: vec4f, worldPosition: vec3f, worldNormal: 
       spotVisibility[index] = shadow_getSpotFactor(index, worldPosition, normal);
     }
   }
-  return pbr_filterColorWithShadows(vertexColor, directionalVisibility, pointVisibility, spotVisibility);
+  return pbr_filterColorWithShadows(vertexColor, min(directionalVisibility, contactVisibility), pointVisibility, spotVisibility);
+}
+fn pbrShadow_filterColor(vertexColor: vec4f, worldPosition: vec3f, worldNormal: vec3f) -> vec4f {
+  return pbrShadow_filterColorWithDirectionalContact(vertexColor, worldPosition, worldNormal, 1.0);
 }`,
+
   fs: /* glsl */ `
 layout(std140) uniform pbrShadowUniforms {
   mat4 viewMatrix;
   int enabled;
 } pbrShadow;
-vec4 pbrShadow_filterColor(vec4 vertexColor, vec3 worldPosition, vec3 worldNormal) {
+vec4 pbrShadow_filterColorWithDirectionalContact(vec4 vertexColor, vec3 worldPosition, vec3 worldNormal, float contactVisibility) {
   float directionalVisibility = 1.0;
   vec4 pointVisibility = vec4(1.0);
   vec4 spotVisibility = vec4(1.0);
@@ -73,6 +77,9 @@ vec4 pbrShadow_filterColor(vec4 vertexColor, vec3 worldPosition, vec3 worldNorma
       spotVisibility[index] = shadow_getSpotFactor(index, worldPosition, normal);
     }
   }
-  return pbr_filterColorWithShadows(vertexColor, directionalVisibility, pointVisibility, spotVisibility);
+  return pbr_filterColorWithShadows(vertexColor, min(directionalVisibility, contactVisibility), pointVisibility, spotVisibility);
+ }
+vec4 pbrShadow_filterColor(vec4 vertexColor, vec3 worldPosition, vec3 worldNormal) {
+  return pbrShadow_filterColorWithDirectionalContact(vertexColor, worldPosition, worldNormal, 1.0);
 }`
 };

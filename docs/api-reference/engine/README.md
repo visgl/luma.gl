@@ -92,6 +92,7 @@ animation, picking and highlighting, scenes, and shader passes.
 - Use [Shaders](/docs/api-reference/shaders) for modules, hooks, and plugins.
 - Use [GPU Core](/docs/api-reference/experimental/gpu-core) for scheduled multi-stage GPU work.
 
+- Use [directional contact shadows](./lighting/contact-shadows.md) for short screen-space visibility refinement.
 - Use [PBR surface prepasses](./lighting/pbr-surface-pass.md) for reusable camera depth and view-space normal textures.
 - Use [PBR shadows](./lighting/pbr-shadows.md) to cast and receive shadows with standalone mesh models.
 - Use [ShadowMapRenderer](./lighting/shadow-map-renderer.md) to record caller-owned shadow caster draws and share depth resources with receiver shaders.
