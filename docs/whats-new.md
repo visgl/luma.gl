@@ -1,5 +1,10 @@
 # What's New
 
+### Reusable clustered light lists
+
+`@luma.gl/engine/lighting` now exposes `ClusteredLightGrid` for WebGPU renderers, with explicit point-light layout, deterministic overflow and borrowed inputs. Existing ANARI exports remain compatible. See [ClusteredLightGrid](./api-reference/engine/lighting/clustered-light-grid.md).
+
+
 ### Reusable directional contact shadows
 
 `ContactShadowPass` traces and filters portable screen-space visibility from camera depth

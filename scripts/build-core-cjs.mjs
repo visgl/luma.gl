@@ -362,3 +362,16 @@ for (const name of ['contactShadowTrace','contactShadowBilateralBlur','contactSh
 }
 assert.equal('ContactShadowPass' in engineApi, false);
 process.stdout.write('Verified contact shadow optional-subpath and compatibility identities.\n');
+
+const clusterApi = require('../modules/engine/dist/lighting/clustered-light-grid.cjs');
+const clusterEsm = await import('../modules/engine/dist/lighting/clustered-light-grid.js');
+const compatibleClusterApi = require('../modules/anari/dist/rendering/clustered-lighting.cjs');
+const compatibleClusterEsm = await import('../modules/anari/dist/rendering/clustered-lighting.js');
+for (const name of ['ClusteredLightGrid', 'MAX_CLUSTERED_POINT_LIGHTS', 'DEFAULT_CLUSTER_DIMENSIONS', 'DEFAULT_MAX_LIGHTS_PER_CLUSTER']) {
+  assert.equal(lightingApi[name], clusterApi[name]);
+  assert.equal(lightingEsm[name], clusterEsm[name]);
+  assert.equal(compatibleClusterApi[name], lightingApi[name]);
+  assert.equal(compatibleClusterEsm[name], lightingEsm[name]);
+}
+assert.equal('ClusteredLightGrid' in engineApi, false);
+process.stdout.write('Verified clustered light grid compatibility identities.\n');
