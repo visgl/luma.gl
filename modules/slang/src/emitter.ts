@@ -946,6 +946,7 @@ export class ShaderEmitter {
         }
         this.checkBinaryTypes(expression, leftType, rightType);
         if (
+          this.currentFunction &&
           (this.isWGSL || this.program.evaluationOrder) &&
           ['&&', '||'].includes(expression.operator)
         ) {

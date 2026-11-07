@@ -936,6 +936,18 @@ export function analyzeWGSL(
       declaration => declaration.kind !== 'variable' || !declaration.modifiers.includes('const')
     )
   ];
+  // Resolve every signature before calls in any body are checked.
+  for (const declaration of functions.values()) {
+    checkType(declaration.type, declaration.location);
+    declaration.parameters.forEach(parameter => {
+      checkType(parameter.type, parameter.location);
+      if (['Texture2D', 'SamplerState', 'ConstantBuffer'].includes(parameter.type.name))
+        fail(
+          'Resource parameters are outside this subset; use module bindings',
+          parameter.location
+        );
+    });
+  }
   for (const declaration of functions.values()) {
     const stage = declaration.attributes[0]?.arguments[0];
     if (
@@ -964,15 +976,6 @@ export function analyzeWGSL(
       declaration.parameters.length
     )
       fail('Duplicate parameter', declaration.location);
-    checkType(declaration.type, declaration.location);
-    declaration.parameters.forEach(parameter => {
-      checkType(parameter.type, parameter.location);
-      if (['Texture2D', 'SamplerState', 'ConstantBuffer'].includes(parameter.type.name))
-        fail(
-          'Resource parameters are outside this subset; use module bindings',
-          parameter.location
-        );
-    });
     scopes = [
       globals,
       new Map(

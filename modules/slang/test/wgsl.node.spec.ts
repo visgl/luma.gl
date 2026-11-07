@@ -340,3 +340,18 @@ it.each([
     )
   ).toThrow(WGSLTranspileError);
 });
+
+it('wgsl#resolves named array counts in all signatures before checking caller bodies', () => {
+  expect(() =>
+    transpileWGSL(
+      `const COUNT=2;fn first(values:array<f32,2>)->f32 {return later(values);} fn later(values:array<f32,COUNT>)->f32 {return values[0];} @fragment fn main()->@location(0) vec4f {return vec4f(first(array<f32,2>(0.2,0.3)));}`
+    )
+  ).not.toThrow();
+});
+it('wgsl#keeps module boolean constant expressions inline', () => {
+  const result = transpileWGSL(
+    'const ENABLED=true && false;const OTHER=ENABLED || true;@fragment fn main()->@location(0) vec4f {return select(vec4f(0.0),vec4f(1.0),OTHER);}'
+  );
+  expect(result.code).toContain('const bool _slang_ENABLED = (true && false);');
+  expect(result.code).toContain('const bool _slang_OTHER = (_slang_ENABLED || true);');
+});

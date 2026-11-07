@@ -71,3 +71,14 @@ export const WGSL_INTEGER_SIGN_SHADER = `${WGSL_RENDER_SHADER.split('@fragment')
   let signed=sign(vec3i(-1,0,1));
   return vec4f(vec3f(signed)*0.5+vec3f(0.5),f32(sign(1i)));
 }`;
+
+export const WGSL_ARRAY_LOGIC_SHADER = `${WGSL_RENDER_SHADER.split('@fragment')[0]}
+const COUNT=2;
+const ENABLED=true && false;
+fn first(values:array<f32,2>)->f32 {return later(values);}
+fn later(values:array<f32,COUNT>)->f32 {return values[0];}
+@fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  let original=array<f32,2>(0.2,0.3);var copied=original;copied=original;
+  var value=1i;var count=1u;let shifted=value << count;
+  return vec4f(first(copied),f32(shifted)*0.1,select(0.3,0.4,ENABLED),1.0);
+}`;

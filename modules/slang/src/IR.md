@@ -75,9 +75,9 @@ and frontend adapters remain separate.
 
 | Browser entry point | Minified bytes | Gzip bytes | Gzip increase over tranches 3–4 |
 | --- | ---: | ---: | ---: |
-| Slang only | 112840 | 32120 | 582 (1.8%) |
-| WGSL only | 129354 | 37082 | 5947 (19.1%) |
-| Both frontends | 147466 | 43018 | 6041 (16.3%) |
+| Slang only | 112862 | 32126 | 588 (1.9%) |
+| WGSL only | 129400 | 37095 | 5960 (19.1%) |
+| Both frontends | 147512 | 43031 | 6054 (16.4%) |
 
 These are full compiler bundles measured with the same esbuild/gzip settings above. Tight
 standalone and combined budgets, plus frontend dependency-graph assertions, remain test gates.
