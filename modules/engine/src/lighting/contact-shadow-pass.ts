@@ -16,7 +16,7 @@ export type ContactShadowPassProps = {quality?: 'low' | 'balanced' | 'cinematic'
 export type ContactShadowRenderOptions = Partial<
   Omit<ContactTraceUniforms, 'projectionMatrix' | 'inverseProjectionMatrix' | 'lightDirectionView'>
 > & {
-  projectionMatrix: Readonly<NumberArray16>;
+  projectionMatrix: Readonly<Matrix4 | NumberArray16>;
   lightDirectionView: Readonly<NumberArray3>;
   depthTexture: Texture;
   normalTexture: Texture;
