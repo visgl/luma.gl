@@ -155,3 +155,29 @@ it('inspectWGSL#reports unsupported language constructs rather than partial meta
     ShaderInspectionError
   );
 });
+
+it('inspectWGSL#distinguishes user struct names from compiler resource names', () => {
+  for (const name of ['ConstantBuffer', 'Texture2D', 'SamplerState', 'float2']) {
+    const result = inspectWGSL(`struct ${name} {value:f32,} var<private> item:${name};`);
+    expect(result.globals[0].type).toEqual({kind: 'struct', name});
+    expect(result.globals[0].addressSpace).toBe('private');
+  }
+  const result = inspectWGSL(
+    'struct ConstantBuffer {value:vec4f,} @group(0) @binding(0) var<uniform> item:ConstantBuffer;'
+  );
+  expect(result.globals[0]).toMatchObject({
+    type: {kind: 'struct', name: 'ConstantBuffer'},
+    addressSpace: 'uniform'
+  });
+});
+it('inspectGLSL#accepts commented version directives, null directives and multisampled array handles', () => {
+  const result = inspectGLSL(
+    '#version /* profile */ 300 es // trailing comment\n#\nuniform sampler2DMSArray samples;uniform uimage2DMSArray images;'
+  );
+  expect(result.version).toBe('300 es');
+  expect(result.globals.map(value => value.type)).toEqual([
+    {kind: 'opaque', name: 'sampler2DMSArray'},
+    {kind: 'opaque', name: 'uimage2DMSArray'}
+  ]);
+  expect(() => inspectGLSL('#123')).toThrow(ShaderInspectionError);
+});

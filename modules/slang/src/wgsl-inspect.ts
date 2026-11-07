@@ -16,6 +16,7 @@ export function inspectWGSL(source: string, options: InspectShaderOptions = {}):
   const sourceName = options.sourceName || 'shader.wgsl';
   const program = parseWGSL(source, sourceName);
   function type(value: SlangType): InspectionType {
+    if (value.structure) return {kind: 'struct', name: value.name};
     if (value.name === '$inferred') return {kind: 'inferred'};
     if (value.name === 'array')
       return {
@@ -51,7 +52,7 @@ export function inspectWGSL(source: string, options: InspectShaderOptions = {}):
       globals.push({
         ...variable(declaration),
         addressSpace:
-          declaration.type.name === 'ConstantBuffer'
+          declaration.type.name === 'ConstantBuffer' && !declaration.type.structure
             ? 'uniform'
             : declaration.binding
               ? 'handle'

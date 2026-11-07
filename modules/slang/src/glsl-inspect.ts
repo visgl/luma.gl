@@ -48,28 +48,30 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
     return {offset, line: lines.length, column: lines.at(-1)!.length + 1, sourceName};
   };
   // Matching whole comments first prevents directives inside comments from being interpreted.
-  const prepared = source.replace(
-    /\/\/[^\n]*|\/\*[\s\S]*?\*\/|^[ \t]*#[^\n]*/gm,
-    (text, offset: number) => {
-      if (!text.trimStart().startsWith('#')) return text;
-      const directive = /^\s*#\s*(\w+)\s*(.*)$/.exec(text)!;
-      if (directive[1] === 'version') {
-        if (version || !/^\d+(?:\s+(?:es|core|compatibility))?\s*$/.test(directive[2]))
-          throw new SlangTranspileError(
-            'Invalid or duplicate GLSL version directive',
-            sourceLocation(offset),
-            sourceName
-          );
-        version = directive[2].trim();
-      } else if (directive[1] !== 'extension')
+  const masked = source.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, text =>
+    text.replace(/[^\n]/g, ' ')
+  );
+  const prepared = masked.replace(/^[ \t]*#[^\n]*/gm, (text, offset: number) => {
+    if (/^\s*#\s*$/.test(text)) return text.replace(/[^\n]/g, ' ');
+    const directive = /^\s*#\s*([A-Za-z_][A-Za-z0-9_]*)\s*(.*)$/.exec(text);
+    if (!directive)
+      throw new SlangTranspileError('Invalid GLSL directive', sourceLocation(offset), sourceName);
+    if (directive[1] === 'version') {
+      if (version || !/^\d+(?:\s+(?:es|core|compatibility))?\s*$/.test(directive[2]))
         throw new SlangTranspileError(
-          'GLSL inspection requires preprocessed source; only version and extension directives are accepted',
+          'Invalid or duplicate GLSL version directive',
           sourceLocation(offset),
           sourceName
         );
-      return text.replace(/[^\n]/g, ' ');
-    }
-  );
+      version = directive[2].trim();
+    } else if (directive[1] !== 'extension')
+      throw new SlangTranspileError(
+        'GLSL inspection requires preprocessed source; only version and extension directives are accepted',
+        sourceLocation(offset),
+        sourceName
+      );
+    return text.replace(/[^\n]/g, ' ');
+  });
   const tokens = tokenizeSlang(prepared, sourceName);
   let position = 0;
   const peek = () => tokens[position];
@@ -118,7 +120,7 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
       };
     if (structureNames.has(name)) return {kind: 'struct', name};
     if (
-      /^(?:[iu]?sampler|[iu]?image)(?:1D|2D|3D|Cube|Buffer|2DRect)(?:Array)?(?:MS)?(?:Shadow)?$/.test(
+      /^(?:[iu]?sampler|[iu]?image)(?:1D(?:Array)?|2D(?:Array|MS(?:Array)?|Rect)?|3D|Cube(?:Array)?|Buffer)(?:Shadow)?$/.test(
         name
       )
     )

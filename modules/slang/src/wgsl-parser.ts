@@ -193,7 +193,7 @@ export function parseWGSL(source: string, sourceName: string): Program {
       return {name: 'Texture2D', element: {name: 'float4'}};
     }
     if (token.text === 'sampler') return {name: 'SamplerState'};
-    if (names.has(token.text)) return {name: token.text};
+    if (names.has(token.text)) return {name: token.text, structure: true};
     return fail(`Unsupported WGSL type ${token.text}`, token);
   }
   function attributes(): Attribute[] {
@@ -543,7 +543,9 @@ export function parseWGSL(source: string, sourceName: string): Program {
       if (addressSpace === 'uniform') {
         declaration.type = {name: 'ConstantBuffer', element: declaration.type};
       }
-      const handle = ['Texture2D', 'SamplerState'].includes(declaration.type.name);
+      const handle =
+        !declaration.type.structure &&
+        ['Texture2D', 'SamplerState'].includes(declaration.type.name);
       if (addressSpace === 'uniform' || handle) {
         const group = metadata.find(attribute => attribute.name === 'group');
         const binding = metadata.find(attribute => attribute.name === 'binding');

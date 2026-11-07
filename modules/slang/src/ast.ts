@@ -7,7 +7,13 @@ export type Token = SourceLocation & {
   text: string;
   kind: 'identifier' | 'number' | 'string' | 'symbol' | 'end';
 };
-export type SlangType = {name: string; element?: SlangType; length?: number; lengthName?: string};
+export type SlangType = {
+  structure?: true;
+  name: string;
+  element?: SlangType;
+  length?: number;
+  lengthName?: string;
+};
 export type Attribute = {name: string; arguments: string[]; location: SourceLocation};
 export type Variable = {
   kind: 'variable';

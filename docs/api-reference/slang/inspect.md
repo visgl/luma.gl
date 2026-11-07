@@ -89,10 +89,10 @@ API through the public inspection barrel:
 
 | Retained API | Minified bytes | Gzip bytes |
 | --- | ---: | ---: |
-| `inspectWGSL()` | 12150 | 4679 |
-| `inspectGLSL()` | 6527 | 3026 |
+| `inspectWGSL()` | 12241 | 4711 |
+| `inspectGLSL()` | 6671 | 3055 |
 | Core `scanWGSLInterface()` | 8312 | 3003 |
-| Both inspectors | 18432 | 6866 |
+| Both inspectors | 18667 | 6898 |
 
 The WGSL inspector costs about 1.7 KB gzip more than the runtime scanner. The GLSL inspector is
 smaller because it skips function bodies, while WGSL reuses the compiler's fuller parser. Both
