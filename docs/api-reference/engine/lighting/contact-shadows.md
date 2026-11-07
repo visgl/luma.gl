@@ -35,6 +35,8 @@ receiver.shaderInputs.setProps({
 // Record receiver draws, then submit through the application as usual.
 ```
 
+The [PBR Shadows example](/examples/api/pbr-shadows) compares shadow maps, contact shadows, and both with a bouncing sphere, animated cube, ground plane, and orbit controls.
+
 ## Camera and input contract
 
 Inputs must be same-device, single-sample textures of the same camera and physical

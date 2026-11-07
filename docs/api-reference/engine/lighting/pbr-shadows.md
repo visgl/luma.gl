@@ -96,9 +96,9 @@ Record caster views before receiver draws and submit through the application as 
 After resizing maps or changing capacities/quality, get fresh `shadow` props and rebind
 receivers before drawing. Submit earlier work before replacing or destroying resources.
 
-The [PBR Shadows example](/examples/api/pbr-shadows) demonstrates a sphere and animated cube
+The [PBR Shadows example](/examples/api/pbr-shadows) demonstrates a bouncing sphere and animated cube
 casting onto an upward-facing ground plane, with light selection, quality/bias controls,
-shadow receiving, orbit controls, and camera reset. The example creates separate caster
+shadow receiving, orbit controls, and camera reset. Its shadow-technique selector compares maps, directional contact shadows, and both in the same scene. Contact-only mode leaves point and spot lights unshadowed. The example creates separate caster
 models for each light view so point faces and directional cascades retain their own uniforms.
 
 For short screen-space refinement of the first directional light, use
