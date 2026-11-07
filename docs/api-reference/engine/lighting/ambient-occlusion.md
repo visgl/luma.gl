@@ -25,6 +25,10 @@ None records no draws and returns an owned 1×1 white texture. The application c
 as unoccluded visibility at any viewport size. This fallback does not silently change a
 requested evaluation algorithm.
 
+Active evaluation uses `ShaderPassRenderer`, which currently requires a canvas context on
+the device at construction even when rendering to offscreen textures. Mode `none` does not
+construct that renderer.
+
 ## Render
 
 ```typescript
@@ -44,7 +48,7 @@ WebGPU's [0,1] clip range and clears to one. View-space unit normals are encoded
 
 | Control | SSAO | GTAO |
 | --- | --- | --- |
-| `projectionMatrix` | Same camera; perspective only | Backend-native perspective or orthographic; inverse computed internally |
+| `projectionMatrix` | Same camera; perspective only | WebGPU perspective projection; inverse computed internally |
 | `near`, `far` | Required camera depth-linearization bounds | Accepted for a uniform camera contract; evaluator uses projection instead |
 | `radius` | Default 7 pixels | Default 2.2 scene units in view space |
 | `bias` | Default 0.03 | Default 0.04 |
@@ -52,6 +56,8 @@ WebGPU's [0,1] clip range and clears to one. View-space unit normals are encoded
 
 Evaluation runs at the configured scale, followed by horizontal and vertical depth-aware
 blur. Visibility is stored in RGB of `rgba8unorm`, with alpha one; white is unoccluded.
+Both evaluators currently assume a perspective camera; inverse reconstruction alone does not make GTAO sampling orthographic-safe.
+
 These passes have no history, temporal accumulation, velocity input, or automatic submission.
 GTAO uses a deterministic frame seed. Existing temporal GTAO composition remains available
 through `@luma.gl/engine/effects` for workflows supplying motion vectors and history.

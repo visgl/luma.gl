@@ -46,7 +46,7 @@ several strong approximations of the same crease.
 | --- | --- | --- | --- |
 | None | `'none'` | The scene already reads clearly, authored lighting is sufficient, or the backend lacks AO support. | Returns a constant unoccluded texture and records no AO draws. |
 | Cheap | `'ssao'` | You want a modest contact/crease cue with a smaller evaluation budget. | 12 nearby depth samples followed by two depth-aware blur passes. Perspective camera only; radius is in pixels. |
-| Good | `'gtao'` | Nearby surfaces need a more convincing horizon-based visibility estimate. | Four slices, six samples per side, followed by the same two blur passes. Perspective and orthographic cameras; radius is in view-space scene units. |
+| Good | `'gtao'` | Nearby surfaces need a more convincing horizon-based visibility estimate. | Four slices, six samples per side, followed by the same two blur passes. Perspective camera only; radius is in view-space scene units. |
 
 These labels are quality choices, not a guarantee that one option always meets a frame-time
 budget. `AmbientOcclusionPass` defaults to GTAO at half resolution. Half resolution reduces
