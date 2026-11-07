@@ -28,6 +28,11 @@
       "types": "./dist/luma.d.ts",
       "import": "./dist/luma.js",
       "require": "./dist/luma.cjs"
+    },
+    "./wgsl": {
+      "types": "./dist/wgsl.d.ts",
+      "import": "./dist/wgsl.js",
+      "require": "./dist/wgsl.cjs"
     }
   },
   "files": [

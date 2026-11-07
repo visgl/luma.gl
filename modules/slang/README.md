@@ -419,3 +419,11 @@ non-host-shareable WGSL bool uniform fields. Its numeric ABI and results are com
 packed bytes; separate GPU tests cover this transpiler's bool legalization. These fixtures verify
 specific supported cases, not full Slang compatibility.
 
+
+## Experimental WGSL input
+
+Import `transpileWGSL` from `@luma.gl/slang/wgsl` to compile the initial WGSL vertex/fragment
+subset to GLSL. This separate entry point shares code generation with Slang while excluding its
+parser and registry. Root Slang imports exclude the WGSL frontend. See the
+[WGSL frontend guide](https://luma.gl/docs/api-reference/slang/wgsl) for supported syntax,
+coordinate conventions, diagnostics and deferred features.

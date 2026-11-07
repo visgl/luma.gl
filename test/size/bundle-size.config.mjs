@@ -8,8 +8,16 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/slang` compiler (optional)',
     entry: 'modules/slang/src/index.ts',
     external: [],
-    // Named imports and native contracts add 2.1 KB gzip; retain a tight regression ceiling.
-    maximum: {minified: 108_000, gzip: 31_000, brotli: 27_500},
+    // Shared typed expression analysis adds ~0.8 KB gzip; WGSL frontend code stays separate.
+    maximum: {minified: 111_000, gzip: 31_800, brotli: 28_000},
+    targetGzip: 25_000
+  },
+  {
+    name: 'wgsl',
+    label: '`@luma.gl/slang/wgsl` compiler (optional)',
+    entry: 'modules/slang/src/wgsl.ts',
+    external: [],
+    maximum: {minified: 109_000, gzip: 31_300, brotli: 28_000},
     targetGzip: 25_000
   },
   {

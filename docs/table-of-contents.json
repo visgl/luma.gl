@@ -1335,7 +1335,8 @@
             "id": "api-reference/slang/README",
             "label": "Overview 🧪"
           },
-          "api-reference/slang/reflection"
+          "api-reference/slang/reflection",
+          "api-reference/slang/wgsl"
         ]
       },
       {
