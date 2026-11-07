@@ -246,3 +246,30 @@ it('inspectGLSL#uses one literal reader for hexadecimal, octal and unsigned dime
   });
   expect(() => inspectGLSL('uniform float values[08];')).toThrow(ShaderInspectionError);
 });
+
+it('inspectGLSL#classifies prefix and declarator handle arrays consistently', () => {
+  const result = inspectGLSL(
+    'uniform sampler2D[2] first;uniform sampler2D second[2];uniform float[2] values;'
+  );
+  expect(result.globals[0].type).toEqual(result.globals[1].type);
+  expect(result.globals.map(value => value.addressSpace)).toEqual(['handle', 'handle', 'uniform']);
+});
+it.each([
+  'precision',
+  'precision highp',
+  'layout(binding=',
+  'uniform',
+  'float value[',
+  'struct Item {float',
+  'void main('
+])('inspectGLSL#partly typed declarations retain source diagnostics: %s', source => {
+  expect(() => inspectGLSL(source, {sourceName: 'editor.glsl'})).toThrow(ShaderInspectionError);
+  try {
+    inspectGLSL(source, {sourceName: 'editor.glsl'});
+  } catch (error) {
+    expect((error as ShaderInspectionError).diagnostics[0]).toMatchObject({
+      sourceName: 'editor.glsl',
+      offset: expect.any(Number)
+    });
+  }
+});

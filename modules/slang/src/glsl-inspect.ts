@@ -75,8 +75,12 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
   });
   const tokens = tokenizeSlang(prepared, sourceName);
   let position = 0;
-  const peek = () => tokens[position];
-  const take = () => tokens[position++];
+  const peek = () => tokens[position] || tokens[tokens.length - 1];
+  const take = () => {
+    const token = peek();
+    position++;
+    return token;
+  };
   const match = (text: string) => (peek().text === text ? (position++, true) : false);
   const fail = (message: string, token = peek()): never => {
     throw new SlangTranspileError(message, token, sourceName);
@@ -183,8 +187,11 @@ export function inspectGLSL(source: string, options: InspectGLSLOptions = {}): S
       qualifiers: [...qualifiers]
     };
     if (qualifiers.includes('buffer')) result.addressSpace = 'storage';
-    else if (qualifiers.includes('uniform'))
-      result.addressSpace = type.kind === 'opaque' ? 'handle' : 'uniform';
+    else if (qualifiers.includes('uniform')) {
+      let element = result.type;
+      while (element.kind === 'array') element = element.element;
+      result.addressSpace = element.kind === 'opaque' ? 'handle' : 'uniform';
+    }
     if (Object.keys(layout).length) result.layout = {...layout};
     if (typeof layout['binding'] === 'string')
       result.binding = {

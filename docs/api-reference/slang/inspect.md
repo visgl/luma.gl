@@ -95,13 +95,13 @@ API through the public inspection barrel:
 | Retained API | Minified bytes | Gzip bytes |
 | --- | ---: | ---: |
 | `inspectWGSL()` | 9816 | 4038 |
-| `inspectGLSL()` | 6710 | 3149 |
+| `inspectGLSL()` | 6800 | 3186 |
 | Core `scanWGSLInterface()` | 8312 | 3003 |
-| Both inspectors | 15860 | 6136 |
+| Both inspectors | 15950 | 6174 |
 
 The WGSL inspector costs about 1.0 KB gzip more than the runtime scanner. Compared with using
 its full syntax parser, the declaration reader reduces WGSL inspection from 4,711 to 4,038 gzip
-bytes (14.3%). Both inspectors together fall from 6,898 to 6,136 bytes (11.0%). GLSL was already a
+bytes (14.3%). Both inspectors together fall from 6,898 to 6,174 bytes (10.5%). GLSL was already a
 declaration-only parser; its small size increase includes type-level arrays and unsigned literal
 support added during review. Neither inspector imports semantic analysis, layout lowering, the
 Slang parser/registry or code generation.
