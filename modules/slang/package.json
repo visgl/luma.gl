@@ -33,6 +33,11 @@
       "types": "./dist/wgsl.d.ts",
       "import": "./dist/wgsl.js",
       "require": "./dist/wgsl.cjs"
+    },
+    "./inspect": {
+      "types": "./dist/inspect.d.ts",
+      "import": "./dist/inspect.js",
+      "require": "./dist/inspect.cjs"
     }
   },
   "files": [
