@@ -4,7 +4,14 @@
 import type {Device} from '@luma.gl/core';
 import type {Material} from '../material/material';
 import {Model, type ModelProps} from '../model/model';
-import {pbrMaterial, pbrScene, pbrShadow, pbrSurface, skin} from '@luma.gl/shaders';
+import {
+  pbrMaterial,
+  pbrScene,
+  pbrShadow,
+  pbrSurface,
+  pbrContactShadow,
+  skin
+} from '@luma.gl/shaders';
 
 /** Optional WGSL extensions for adapters building specialized mesh passes. */
 export type PBRModelShaderHooks = {
@@ -194,9 +201,17 @@ ${
 #else
   let shadowNormal = normalize(cross(dpdy(inputs.pbrPosition), dpdx(inputs.pbrPosition)));
 #endif
+#ifdef PBR_RECEIVE_CONTACT_SHADOWS
+  return pbrShadow_filterColorWithDirectionalContact(inputs.pbrColor, inputs.pbrPosition, shadowNormal, pbrContactShadow_getFactor(inputs.position.xy));
+#else
   return pbrShadow_filterColor(inputs.pbrColor, inputs.pbrPosition, shadowNormal);
+#endif
+#else
+#ifdef PBR_RECEIVE_CONTACT_SHADOWS
+  return pbrContactShadow_filterColor(inputs.pbrColor, inputs.position.xy);
 #else
   return pbr_filterColor(inputs.pbrColor);
+#endif
 #endif
 #endif
 #endif
@@ -344,9 +359,17 @@ void main(void) {
 #else
   vec3 shadowNormal = normalize(cross(dFdx(pbr_vPosition), dFdy(pbr_vPosition)));
 #endif
+#ifdef PBR_RECEIVE_CONTACT_SHADOWS
+  fragmentColor = pbrShadow_filterColorWithDirectionalContact(sceneVertexColor, pbr_vPosition, shadowNormal, pbrContactShadow_getFactor(gl_FragCoord.xy));
+#else
   fragmentColor = pbrShadow_filterColor(sceneVertexColor, pbr_vPosition, shadowNormal);
+#endif
+#else
+#ifdef PBR_RECEIVE_CONTACT_SHADOWS
+  fragmentColor = pbrContactShadow_filterColor(sceneVertexColor, gl_FragCoord.xy);
 #else
   fragmentColor = pbr_filterColor(sceneVertexColor);
+#endif
 #endif
 #endif
 #endif
@@ -361,15 +384,18 @@ export type CreatePBRModelOptions = ModelProps & {
   material: Material;
   /** Include shadow sampling for directional, point and spot direct lights. */
   receiveShadows?: boolean;
+  /** Include screen-space visibility for the first directional light. */
+  receiveContactShadows?: boolean;
 };
 
 /** Creates a standalone WebGPU/WebGL PBR model with a borrowed material. */
 export function createPBRModel(device: Device, options: CreatePBRModelOptions): Model {
-  const {receiveShadows = false, ...modelOptions} = options;
+  const {receiveShadows = false, receiveContactShadows = false, ...modelOptions} = options;
   const shaderModules = [
     pbrScene,
     pbrMaterial,
     ...(receiveShadows ? [pbrShadow] : []),
+    ...(receiveContactShadows ? [pbrContactShadow] : []),
     ...(options.defines?.['PBR_SURFACE_PASS'] ? [pbrSurface] : []),
     ...(options.modules || [])
   ];
@@ -392,6 +418,7 @@ export function createPBRModel(device: Device, options: CreatePBRModelOptions): 
     defines: {
       USE_SCENE_COLOR_MANAGEMENT: true,
       PBR_RECEIVE_SHADOWS: receiveShadows,
+      PBR_RECEIVE_CONTACT_SHADOWS: receiveContactShadows,
       ...geometryDefines,
       ...getPBRTextureDefines(options.material.getResourceBindings()),
       ...options.defines
@@ -422,6 +449,7 @@ export function createPBRShadowModel(device: Device, options: CreatePBRModelOpti
     depthStencilAttachmentFormat: 'depth32float',
     ...options,
     receiveShadows: false,
+    receiveContactShadows: false,
     defines: {...options.defines, PBR_SHADOW_PASS: true},
     parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', ...options.parameters}
   });
@@ -434,6 +462,7 @@ export function createPBRSurfaceModel(device: Device, options: CreatePBRModelOpt
     depthStencilAttachmentFormat: 'depth32float',
     ...options,
     receiveShadows: false,
+    receiveContactShadows: false,
     defines: {...options.defines, PBR_SHADOW_PASS: false, PBR_SURFACE_PASS: true},
     parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', ...options.parameters}
   });

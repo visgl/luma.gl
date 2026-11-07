@@ -286,3 +286,18 @@ export type {PBRShadowProps, PBRShadowUniforms} from './modules/lighting/pbr-sha
 
 export {pbrSurface} from './modules/lighting/pbr-surface/pbr-surface';
 export type {PBRSurfaceProps, PBRSurfaceUniforms} from './modules/lighting/pbr-surface/pbr-surface';
+
+export {
+  contactShadowTrace,
+  contactShadowBilateralBlur,
+  contactShadowComposite
+} from './modules/lighting/contact-shadow/contact-shadow';
+export type {
+  ContactTraceUniforms,
+  ContactBlurUniforms,
+  ContactShadowBindings,
+  ContactShadowProps
+} from './modules/lighting/contact-shadow/contact-shadow';
+
+export {pbrContactShadow} from './modules/lighting/pbr-contact-shadow/pbr-contact-shadow';
+export type {PBRContactShadowProps} from './modules/lighting/pbr-contact-shadow/pbr-contact-shadow';

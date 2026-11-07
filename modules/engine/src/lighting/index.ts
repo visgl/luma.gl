@@ -60,3 +60,8 @@ export type {
   PBRSurfaceRenderOptions,
   PBRSurfaceRenderView
 } from './pbr-surface-pass';
+
+export {createContactShadowCompositeShaderPass} from './contact-shadow-composite';
+
+export {ContactShadowPass} from './contact-shadow-pass';
+export type {ContactShadowPassProps, ContactShadowRenderOptions} from './contact-shadow-pass';
