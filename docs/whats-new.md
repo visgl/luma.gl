@@ -1,5 +1,9 @@
 # What's New
 
+`AmbientOcclusionPass` reuses SSAO/GTAO evaluation for standalone PBR ambient visibility.
+The existing PBR Shadows example compares none/cheap/good AO alongside contact and map shadows.
+See the [lighting effects guide](./api-guide/engine/lighting-effects.md).
+
 ### Reusable directional contact shadows
 
 `ContactShadowPass` traces and filters portable screen-space visibility from camera depth
