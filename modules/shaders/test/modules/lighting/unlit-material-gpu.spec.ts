@@ -59,24 +59,25 @@ for (const backend of ['webgpu', 'webgl'] as const) {
       fs: 'uniform sampler2D surfaceTexture;',
       bindingLayout: [{name: 'surfaceTexture', group: 0}]
     };
-    const renderer = makeShaderModuleRenderer(
-      device,
-      [unlitMaterial, textureModule],
-      `@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+    let renderer: ReturnType<typeof makeShaderModuleRenderer> | undefined;
+    try {
+      renderer = makeShaderModuleRenderer(
+        device,
+        [unlitMaterial, textureModule],
+        `@fragment fn fragmentMain() -> @location(0) vec4<f32> {
         return unlitMaterial_getColor(textureLoad(surfaceTexture, vec2<i32>(0), 0));
       }`,
-      `void main() {
+        `void main() {
         fragmentColor = unlitMaterial_getColor(texelFetch(surfaceTexture, ivec2(0), 0));
       }`
-    );
-    try {
+      );
       renderer.model.setBindings({surfaceTexture: texture});
       const pixels = await renderer.read();
       [64, 128, 192, 96].forEach((value, index) =>
         expect(pixels[index]).toBeCloseTo(value / 255, 5)
       );
     } finally {
-      renderer.destroy();
+      renderer?.destroy();
       texture.destroy();
     }
   });
