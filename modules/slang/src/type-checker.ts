@@ -1,12 +1,25 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {lowerSlangType} from './slang-types';
+
 import type {Expression, SlangType, SourceLocation, Statement} from './ast';
 
 type Fail = (message: string, location: SourceLocation) => never;
 export function getNumericShape(type: SlangType) {
-  const shape = /^(float|int|uint|bool)([2-4])?(?:x([2-4]))?$/.exec(type.name);
-  return shape && {scalar: shape[1], width: Number(shape[2] || 1), columns: Number(shape[3] || 1)};
+  const normalized = lowerSlangType(type);
+  if (normalized.kind !== 'scalar' && normalized.kind !== 'vector' && normalized.kind !== 'matrix')
+    return null;
+  return {
+    scalar: {f32: 'float', i32: 'int', u32: 'uint', bool: 'bool'}[normalized.scalar],
+    width:
+      normalized.kind === 'matrix'
+        ? normalized.columns
+        : normalized.kind === 'vector'
+          ? normalized.width
+          : 1,
+    columns: normalized.kind === 'matrix' ? normalized.rows : 1
+  };
 }
 export function getCommonNumericType(
   types: SlangType[],
