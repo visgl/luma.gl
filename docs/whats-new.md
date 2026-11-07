@@ -1,5 +1,9 @@
 # What's New
 
+### Reusable clustered light lists
+
+`@luma.gl/engine/lighting` now exposes `ClusteredLightGrid` for WebGPU renderers, with explicit point-light layout, deterministic overflow and borrowed inputs. Existing ANARI exports remain compatible. See [ClusteredLightGrid](./api-reference/engine/lighting/clustered-light-grid.md).
+
 `AmbientOcclusionPass` reuses SSAO/GTAO evaluation for standalone PBR ambient visibility.
 The existing PBR Shadows example compares none/cheap/good AO alongside contact and map shadows.
 See the [lighting effects guide](./api-guide/engine/lighting-effects.md).

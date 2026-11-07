@@ -66,6 +66,20 @@ export {createContactShadowCompositeShaderPass} from './contact-shadow-composite
 export {ContactShadowPass} from './contact-shadow-pass';
 export type {ContactShadowPassProps, ContactShadowRenderOptions} from './contact-shadow-pass';
 
+export {
+  ClusteredLightGrid,
+  CLUSTERED_POINT_LIGHT_LAYOUT,
+  MAX_CLUSTERED_POINT_LIGHTS,
+  DEFAULT_CLUSTER_DIMENSIONS,
+  DEFAULT_MAX_LIGHTS_PER_CLUSTER
+} from './clustered-light-grid';
+export type {
+  ClusteredLightGridProps,
+  ClusteredLightGridEncodeOptions,
+  ClusteredLightGridBindings,
+  ClusteredLightGridUniforms,
+  ClusteredLightGridShaderPassUniforms
+} from './clustered-light-grid';
 export {AmbientOcclusionPass} from './ambient-occlusion-pass';
 export type {
   AmbientOcclusionMode,

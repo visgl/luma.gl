@@ -34,6 +34,7 @@ import {
   ExampleSettingsPanelManager,
   makeExamplePanelHostHtml
 } from '../../example-panels';
+import {ClusterGridPreview} from './cluster-grid-preview';
 import {makeShadowPanel, makeShadowSettingsSchema} from './app-ui';
 
 type Surface = {
@@ -66,6 +67,8 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   private contactThickness = 0.08;
   private receiveShadows = true;
   private animate = true;
+  private showClusters = false;
+  private clusterPreview: ClusterGridPreview | null = null;
   private normalBias = 0.025;
   private angle = 0;
   private previousTime = 0;
@@ -160,6 +163,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         contactThickness: this.contactThickness,
         receiveShadows: this.receiveShadows,
         animate: this.animate,
+        showClusters: false,
         normalBias: this.normalBias
       },
       onSettingsChange: values => {
@@ -193,6 +197,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         if (typeof values.contactThickness === 'number')
           this.contactThickness = values.contactThickness;
         if (typeof values.receiveShadows === 'boolean') this.receiveShadows = values.receiveShadows;
+        if (typeof values.showClusters === 'boolean') this.showClusters = values.showClusters;
         if (typeof values.animate === 'boolean') this.animate = values.animate;
         if (typeof values.normalBias === 'number') this.normalBias = values.normalBias;
         if (
@@ -249,6 +254,18 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
       up: this.controls?.getUpDirection() ?? [0, 1, 0]
     });
     const projection = new Matrix4().perspective({fovy: Math.PI / 4, aspect, near: 0.1, far: 40});
+    if (this.showClusters && device.type === 'webgpu') {
+      this.clusterPreview ??= new ClusterGridPreview(device);
+      this.clusterPreview.encode(device, view, projection, time);
+      const pass = device.beginRenderPass({
+        framebuffer: canvasContext.getCurrentFramebuffer(),
+        clearColor: [0, 0, 0, 1],
+        clearDepth: 1
+      });
+      this.clusterPreview.draw(pass);
+      pass.end();
+      return;
+    }
     const position: [number, number, number] = [3, 7, 4];
     const direction: [number, number, number] = [-3, -7, -4];
     const length = Math.hypot(...direction);
@@ -433,6 +450,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   }
 
   onFinalize() {
+    this.clusterPreview?.destroy();
     this.controls?.destroy();
     this.panels.finalize();
     this.settings.finalize();
