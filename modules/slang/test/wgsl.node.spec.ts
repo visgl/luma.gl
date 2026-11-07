@@ -169,3 +169,9 @@ it.each([
   const source = `fn produce() -> u32 { return 1 | 2; } fn accept(value: u32) -> u32 { return value; } @fragment fn main() -> @location(0) vec4f { ${declaration} return vec4f(f32(bits)); }`;
   expect(() => transpileWGSL(source)).not.toThrow();
 });
+
+it('wgsl#keeps ordinary prototype-named structs and functions distinct from scalar types', () => {
+  const source =
+    'struct toString { value: f32, } fn constructor(value: f32) -> f32 { return value; } @fragment fn main() -> @location(0) vec4f { var record: toString; record.value = constructor(1.0); return vec4f(record.value); }';
+  expect(transpileWGSL(source).code).toContain('_slang_type_toString');
+});

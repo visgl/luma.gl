@@ -123,7 +123,7 @@ export function parseWGSL(source: string, sourceName: string): Program {
   const names = new Set<string>();
   function parseType(): SlangType {
     const token = identifier();
-    if (scalars[token.text]) return {name: scalars[token.text]};
+    if (Object.hasOwn(scalars, token.text)) return {name: scalars[token.text]};
     const vector = /^vec([2-4])([fiub])?$/.exec(token.text);
     if (vector) {
       let scalar = vector[2]
@@ -248,7 +248,7 @@ export function parseWGSL(source: string, sourceName: string): Program {
       result = {...token, kind: 'boolean', value: token.text};
     else if (token.kind === 'identifier') {
       let name = token.text;
-      if (scalars[name] || /^vec[2-4](?:[fiub])?$/.test(name)) {
+      if (Object.hasOwn(scalars, name) || /^vec[2-4](?:[fiub])?$/.test(name)) {
         position--;
         name = parseType().name;
       }
