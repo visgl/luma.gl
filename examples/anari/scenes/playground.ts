@@ -66,6 +66,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private refinementChangedTime = 0;
   private refinementRenderTime = 0;
   private refinementSamples = 0;
+  private refinementPending = false;
 
   constructor({device}: AnimationProps) {
     super();
@@ -200,6 +201,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
   override onRender({device, width, height, time}: AnimationProps): void {
     const scene = this.scene;
+    if (this.refinementPending) return;
     if (this.captureFrameLimit && this.renderedFrameCount >= this.captureFrameLimit) return;
     if (!scene) {
       return;
@@ -226,9 +228,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
     // Bound stationary refinement in the static lighting demonstration.
     if (
-      ['CHART LIGHTING', 'INDIRECT LIGHT STUDY', 'ANTIQUE CAMERA · RAY STUDY'].includes(
-        scene.name
-      ) &&
+      this.isStaticRefinementScene(scene.name) &&
       this.rendererSubtype === 'raytrace' &&
       !this.captureFrameLimit
     ) {
@@ -323,18 +323,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       if (rayTracing && progressive) {
         const targetSamples =
           scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
-        const samples = Math.min(rayTracing.accumulatedSamples, targetSamples);
-        const percentage = Math.min(100, Math.floor((samples / Math.max(targetSamples, 1)) * 100));
-        const progress = getRequiredElement('scene-refinement-progress', HTMLProgressElement);
-        progress.value = percentage;
-        progress.setAttribute(
-          'aria-valuetext',
-          `${percentage}% — ${samples} of ${targetSamples} samples per pixel`
-        );
-        setElementText(
-          'scene-refinement-value',
-          `${percentage}% · ${samples} / ${targetSamples} spp`
-        );
+        if (!this.isStaticRefinementScene(scene.name)) {
+          this.updateRefinementProgress(rayTracing.accumulatedSamples, targetSamples);
+        }
       }
       const memoryTelemetry = document.getElementById('scene-ray-memory-statistic');
       if (memoryTelemetry) memoryTelemetry.hidden = !rayTracing?.memory;
@@ -355,6 +346,48 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       this.lastStatisticsUpdate = elapsedSeconds;
     }
+    if (
+      statistics.rayTracing &&
+      this.isStaticRefinementScene(scene.name) &&
+      !this.captureFrameLimit
+    ) {
+      // Bound queued work and report completed samples instead of encoded batches.
+      device.submit();
+      const fence = device.createFence();
+      this.refinementPending = true;
+      const samples = statistics.rayTracing.accumulatedSamples;
+      const target = scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
+      void fence.signaled
+        .then(
+          () => {
+            if (this.scene === scene) this.updateRefinementProgress(samples, target);
+          },
+          () => {
+            if (this.scene === scene)
+              setElementText('scene-refinement-value', 'GPU work interrupted');
+          }
+        )
+        .finally(() => {
+          fence.destroy();
+          this.refinementPending = false;
+        });
+    }
+  }
+
+  private isStaticRefinementScene(name: string): boolean {
+    return ['CHART LIGHTING', 'INDIRECT LIGHT STUDY', 'ANTIQUE CAMERA · RAY STUDY'].includes(name);
+  }
+
+  private updateRefinementProgress(accumulatedSamples: number, targetSamples: number): void {
+    const samples = Math.min(accumulatedSamples, targetSamples);
+    const percentage = Math.min(100, Math.floor((samples / Math.max(targetSamples, 1)) * 100));
+    const progress = getRequiredElement('scene-refinement-progress', HTMLProgressElement);
+    progress.value = percentage;
+    progress.setAttribute(
+      'aria-valuetext',
+      `${percentage}% — ${samples} of ${targetSamples} samples per pixel`
+    );
+    setElementText('scene-refinement-value', `${percentage}% · ${samples} / ${targetSamples} spp`);
   }
 
   override onFinalize(): void {
