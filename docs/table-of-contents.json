@@ -1337,7 +1337,8 @@
             "label": "Overview 🧪"
           },
           "api-reference/slang/reflection",
-          "api-reference/slang/wgsl"
+          "api-reference/slang/wgsl",
+          "api-reference/slang/inspect"
         ]
       },
       {
