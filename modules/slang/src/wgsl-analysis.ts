@@ -270,11 +270,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         } else {
           left = resolve(
             expression.left,
-            leftAbstract
-              ? rightAbstract
-                ? {name: leftAbstract.floating || rightAbstract.floating ? 'float' : 'int'}
-                : scalarContext(operandExpected)
-              : undefined
+            leftAbstract ? scalarContext(operandExpected) : undefined
           );
           right = resolve(expression.right, rightAbstract ? scalarContext(left) : undefined);
         }

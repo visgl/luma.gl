@@ -158,3 +158,14 @@ it('wgsl#diagnostics do not retain cyclic resolved function references', () => {
     });
   }
 });
+
+it.each([
+  'let bits: u32 = 1 | 2;',
+  'let bits: u32 = produce();',
+  'let bits: u32 = accept(1 & 2);',
+  'let bits: u32 = u32(1 ^ 2);',
+  'let bits: u32 = 2147483648 | 1;'
+])('wgsl#preserves unsigned context for abstract bitwise operands: %s', declaration => {
+  const source = `fn produce() -> u32 { return 1 | 2; } fn accept(value: u32) -> u32 { return value; } @fragment fn main() -> @location(0) vec4f { ${declaration} return vec4f(f32(bits)); }`;
+  expect(() => transpileWGSL(source)).not.toThrow();
+});

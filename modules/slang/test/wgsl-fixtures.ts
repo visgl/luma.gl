@@ -28,5 +28,5 @@ export const WGSL_CONSTANT_SHADER = WGSL_RENDER_SHADER.replace(
 
 export const WGSL_DIVISION_SHADER = WGSL_RENDER_SHADER.replace(
   'let result = makeColor(color);\n  return result;',
-  'var value = vec3f(1.0, 2.0, 4.0); value /= 2.0; let reciprocal = 2.0 / value; let large: f32 = 1e21 + 0.0; return vec4f(reciprocal * 0.1, large / 1e21);'
+  'var value = vec3f(1.0, 2.0, 4.0); value /= 2.0; let reciprocal = 2.0 / value; let large: f32 = 1e21 + 0.0; let bits: u32 = 1 | 2; return vec4f(reciprocal * 0.1, (large / 1e21) * f32(bits) / 3.0);'
 );
