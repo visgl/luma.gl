@@ -86,8 +86,14 @@ it.each(['int2x3', 'bool3x3', 'floatx3'])('rejects unsupported matrix value type
   expect(emitNumericType(lowerSlangType({name}), 'glsl')).toBeUndefined();
 });
 
-it.each(['glsl', 'wgsl'] as const)('keeps named uniform structs containing Texture as uniforms in %s', target => {
-  const shader = transpileSlang('struct TextureInfo { float scale; }; uniform TextureInfo settings; [shader("fragment")] float4 main() : SV_Target { return float4(settings.scale); }', {target});
+it.each([
+  'glsl',
+  'wgsl'
+] as const)('keeps named uniform structs containing Texture as uniforms in %s', target => {
+  const shader = transpileSlang(
+    'struct TextureInfo { float scale; }; uniform TextureInfo settings; [shader("fragment")] float4 main() : SV_Target { return float4(settings.scale); }',
+    {target}
+  );
   expect(shader.reflection.bindings[0].kind).toBe('uniform');
   expect(shader.code).not.toContain('var<handle>');
   if (target === 'wgsl') expect(shader.code).toContain('var<uniform>');
