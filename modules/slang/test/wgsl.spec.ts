@@ -3,9 +3,13 @@
 
 import {expect, it} from 'vitest';
 import {transpileWGSL} from '../src/wgsl';
-import {WGSL_RENDER_SHADER} from './wgsl-fixtures';
+import {WGSL_RENDER_SHADER, WGSL_CONSTANT_SHADER, WGSL_DIVISION_SHADER} from './wgsl-fixtures';
 
-it('wgsl#renders an interpolated triangle with generated GLSL and matches WebGPU', async () => {
+it.each([
+  WGSL_RENDER_SHADER,
+  WGSL_CONSTANT_SHADER,
+  WGSL_DIVISION_SHADER
+])('wgsl#rendered GLSL matches WebGPU source execution: %s', async source => {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 1;
   const context = canvas.getContext('webgl2', {antialias: false})!;
@@ -19,7 +23,7 @@ it('wgsl#renders an interpolated triangle with generated GLSL and matches WebGPU
       ['vertexMain', context.VERTEX_SHADER],
       ['fragmentMain', context.FRAGMENT_SHADER]
     ] as const) {
-      const result = transpileWGSL(WGSL_RENDER_SHADER, {entryPoint});
+      const result = transpileWGSL(source, {entryPoint});
       const shader = context.createShader(stage)!;
       shaders.push(shader);
       context.shaderSource(shader, result.code);
@@ -46,13 +50,13 @@ it('wgsl#renders an interpolated triangle with generated GLSL and matches WebGPU
     context.drawArrays(context.TRIANGLES, 0, 3);
     const actual = new Uint8Array(4);
     context.readPixels(0, 0, 1, 1, context.RGBA, context.UNSIGNED_BYTE, actual);
-    expect(Array.from(actual)).toEqual([64, 64, 128, 255]);
+    if (source === WGSL_RENDER_SHADER) expect(Array.from(actual)).toEqual([64, 64, 128, 255]);
 
     const adapter = await navigator.gpu.requestAdapter();
     expect(adapter).not.toBeNull();
     const device = await adapter!.requestDevice();
     try {
-      const module = device.createShaderModule({code: WGSL_RENDER_SHADER});
+      const module = device.createShaderModule({code: source});
       const information = await module.getCompilationInfo();
       expect(information.messages.filter(message => message.type === 'error')).toEqual([]);
       const pipeline = device.createRenderPipeline({

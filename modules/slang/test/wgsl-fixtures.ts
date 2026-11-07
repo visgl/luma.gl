@@ -20,3 +20,13 @@ fn makeColor(color: vec3<f32>) -> vec4<f32> {
   return result;
 }
 `;
+
+export const WGSL_CONSTANT_SHADER = WGSL_RENDER_SHADER.replace(
+  'let result = makeColor(color);\n  return result;',
+  'return vec4f(1 / 2, 16777217 - 16777216, (2147483647 + 1) - 2147483647, 1.0);'
+);
+
+export const WGSL_DIVISION_SHADER = WGSL_RENDER_SHADER.replace(
+  'let result = makeColor(color);\n  return result;',
+  'var value = vec3f(1.0, 2.0, 4.0); value /= 2.0; let reciprocal = 2.0 / value; let large: f32 = 1e21 + 0.0; return vec4f(reciprocal * 0.1, large / 1e21);'
+);

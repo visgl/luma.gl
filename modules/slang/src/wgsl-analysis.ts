@@ -67,8 +67,13 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
   function evaluateAbstract(
     expression: Expression
   ): {value: number; floating: boolean} | undefined {
-    if (expression.kind === 'number' && !/[iuf]$/.test(expression.value))
-      return {value: Number(expression.value), floating: /[.eE]/.test(expression.value)};
+    if (expression.kind === 'number' && !/[iuf]$/.test(expression.value)) {
+      const value = Number(expression.value);
+      const floating = /[.eE]/.test(expression.value);
+      if (!Number.isFinite(value) || (!floating && !Number.isSafeInteger(value)))
+        fail('Abstract literal is outside the supported precision', expression);
+      return {value, floating};
+    }
     if (expression.kind === 'unary' && expression.operator === '-') {
       const operand = evaluateAbstract(expression.operand);
       return operand && {...operand, value: -operand.value};
@@ -98,14 +103,38 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
   }
   function resolve(expression: Expression, expected?: SlangType): SlangType {
     if (expression.kind === 'binary') {
+      if (['==', '!=', '<', '<=', '>', '>='].includes(expression.operator)) {
+        const left = evaluateAbstract(expression.left);
+        const right = evaluateAbstract(expression.right);
+        if (left && right) {
+          const result =
+            expression.operator === '=='
+              ? left.value === right.value
+              : expression.operator === '!='
+                ? left.value !== right.value
+                : expression.operator === '<'
+                  ? left.value < right.value
+                  : expression.operator === '<='
+                    ? left.value <= right.value
+                    : expression.operator === '>'
+                      ? left.value > right.value
+                      : left.value >= right.value;
+          const type = {name: 'bool'};
+          if (expected && expected.name !== 'bool')
+            fail('Comparison requires a boolean context', expression);
+          expression.valueType = type;
+          expression.resolvedType = {kind: 'scalar', scalar: 'bool'};
+          expression.constantValue = String(result);
+          return type;
+        }
+      }
       const constant = evaluateAbstract(expression);
       if (constant) {
+        const representation = String(constant.value);
         const literal: Expression = {
           ...expression,
           kind: 'number',
-          value:
-            String(constant.value) +
-            (constant.floating && Number.isInteger(constant.value) ? '.0' : '')
+          value: representation + (constant.floating && !/[.eE]/.test(representation) ? '.0' : '')
         };
         const type = resolve(literal, expected);
         expression.valueType = type;
@@ -241,7 +270,11 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         } else {
           left = resolve(
             expression.left,
-            leftAbstract ? scalarContext(operandExpected) : undefined
+            leftAbstract
+              ? rightAbstract
+                ? {name: leftAbstract.floating || rightAbstract.floating ? 'float' : 'int'}
+                : scalarContext(operandExpected)
+              : undefined
           );
           right = resolve(expression.right, rightAbstract ? scalarContext(left) : undefined);
         }
@@ -250,7 +283,8 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         const scaling =
           (expression.operator === '*' ||
             expression.operator === '*=' ||
-            (expression.operator === '/' && leftVector)) &&
+            expression.operator === '/' ||
+            expression.operator === '/=') &&
           leftVector !== rightVector &&
           left.name.replace(/[2-4]$/, '') === right.name.replace(/[2-4]$/, '');
         if (!same(left, right) && !scaling)

@@ -52,11 +52,11 @@ After typed expression analysis and the separate WGSL frontend:
 | Browser entry point | Minified bytes | Gzip bytes |
 | --- | ---: | ---: |
 | Slang only (`index.ts`) | 110334 | 31530 |
-| WGSL only (`wgsl.ts`) | 108174 | 31007 |
-| Both frontends | 126286 | 36838 |
+| WGSL only (`wgsl.ts`) | 108821 | 31131 |
+| Both frontends | 126933 | 36971 |
 
 The Slang-only increase over the merged metadata baseline is 804 gzip bytes (2.62%). The two
-frontends together cost about 5.3 KB gzip above Slang alone, because code generation is shared.
+frontends together cost about 5.4 KB gzip above Slang alone, because code generation is shared.
 Dependency-graph tests reject WGSL parser/analyzer imports from the Slang bundle and Slang
 parser/lexer/registry/interface/operation adapters from the WGSL bundle. These are complete
 compiler bundles, rather than incremental frontend-only sizes. Both targets remain available

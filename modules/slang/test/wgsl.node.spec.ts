@@ -108,3 +108,37 @@ it('wgsl#materializes abstract subexpressions against concrete operands and supp
   expect(shader.code).toContain('3u');
   expect(shader.code).toContain('vec3(0.5) * vec3');
 });
+
+it('wgsl#supports scalar/vector division and vector compound division', () => {
+  expect(() =>
+    transpileWGSL(
+      '@fragment fn main() -> @location(0) vec4f { var value = vec3f(1.0); value /= 2.0; let reciprocal = 2.0 / value; return vec4f(reciprocal, 1.0); }'
+    )
+  ).not.toThrow();
+});
+
+it('wgsl#formats folded exponent constants as valid floating literals', () => {
+  const result = transpileWGSL(
+    '@fragment fn main() -> @location(0) vec4f { let value: f32 = 1e21 + 0.0; return vec4f(value / 1e21); }'
+  );
+  expect(result.code).toContain('1e+21');
+  expect(result.code).not.toContain('1e+21.0');
+});
+
+it.each([
+  '1 == 1.0',
+  '1.0 == 1'
+])('wgsl#uses a common abstract type for comparisons: %s', comparison => {
+  expect(() =>
+    transpileWGSL(
+      `fn compare() -> bool { return ${comparison}; } @fragment fn main() -> @location(0) vec4f { return vec4f(1.0); }`
+    )
+  ).not.toThrow();
+});
+
+it('wgsl#compares abstract floats before f32 rounding', () => {
+  const result = transpileWGSL(
+    'fn compare() -> bool { return 100000000001.0 != 100000000000.0; } @fragment fn main() -> @location(0) vec4f { let compared = compare(); return vec4f(1.0); }'
+  );
+  expect(result.code).toContain('return true;');
+});
