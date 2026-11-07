@@ -8,7 +8,9 @@ import {
   WGSL_RENDER_SHADER,
   WGSL_CONSTANT_SHADER,
   WGSL_DIVISION_SHADER,
-  WGSL_ORDER_SHADER
+  WGSL_ORDER_SHADER,
+  WGSL_TEXTURE_ORDER_SHADER,
+  WGSL_LANGUAGE_CONSTANT_SHADER
 } from './wgsl-fixtures';
 
 it.each([
@@ -16,6 +18,8 @@ it.each([
   WGSL_CONSTANT_SHADER,
   WGSL_DIVISION_SHADER,
   WGSL_ORDER_SHADER,
+  WGSL_TEXTURE_ORDER_SHADER,
+  WGSL_LANGUAGE_CONSTANT_SHADER,
   ...WGSL_EXAMPLES.slice(3).map(example => example.code)
 ])('wgsl#rendered GLSL matches WebGPU source execution: %s', async source => {
   const canvas = document.createElement('canvas');

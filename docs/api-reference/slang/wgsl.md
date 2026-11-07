@@ -44,7 +44,8 @@ line, column and offset. Use source maps to map destination compiler errors back
 - Structs, aliases, helper functions, fixed arrays (1–65536 elements) and `mat2x2f` through
   `mat4x4f`, including non-square matrices. Matrix constructor arguments are columns, and `*`
   performs WGSL matrix multiplication. Arrays require explicit element types and counts; counts
-  may name an abstract integer module constant.
+  may name an integer module constant. Aggregates are limited to 65,536 expanded scalar
+  components; nested arrays require GLSL 450.
 - Local `let`, `const` and `var`, module constants and private variables, explicit types and ordinary inference, nested blocks, assignments,
   returns, field access, swizzles, arithmetic, comparisons and logical/bitwise operations.
 - Contextual materialization of numeric literals and bounded abstract constant arithmetic.
@@ -92,7 +93,7 @@ Storage resources, compute, general pointers, runtime-sized arrays, array return
 constructors, overrides, `loop`/`continuing`, extensions, hexadecimal literals and explicit
 layout attributes are not implemented. Runtime integer division/remainder, floating remainder
 and float-to-integer conversion remain rejected pending their WGSL edge-case lowering.
-Constant evaluation is bounded arithmetic rather than the full WGSL constant-expression language;
+Typed module constants resolve in dependency order. Constant evaluation is bounded arithmetic rather than the full WGSL constant-expression language;
 uncontextualized inferred constants must fit their default i32/f32 materialization.
 
 This is a documented authoring subset, not a full WGSL conformance validator. Compile generated

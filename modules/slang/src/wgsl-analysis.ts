@@ -5,6 +5,7 @@ import type {
   Expression,
   Program,
   ShaderFunction,
+  Variable,
   SlangType,
   SourceLocation,
   Statement
@@ -12,12 +13,17 @@ import type {
 import type {InterfaceLowerer} from './expression-analysis';
 import {SlangTranspileError} from './diagnostics';
 import {visitSyntaxChildren} from './syntax';
+import {getIntegerConstant} from './type-checker';
 import {checkWGSLUniformLayout} from './wgsl-layout';
 import {resolveWGSLBuiltin} from './wgsl-builtins';
 import {lowerSlangType} from './slang-types';
 
 /** Validate the bounded WGSL value subset before shared code generation. */
-export function analyzeWGSL(program: Program, sourceName: string): void {
+export function analyzeWGSL(
+  program: Program,
+  sourceName: string,
+  options: {glslVersion?: '300 es' | '450'} = {}
+): void {
   const fail: (message: string, location: SourceLocation) => never = (message, location) => {
     throw new SlangTranspileError(message, location, sourceName);
   };
@@ -60,12 +66,23 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     completed.add(name);
   }
   structures.forEach(structure => checkStructure(structure.name));
-  type Binding = {type: SlangType; mutable: boolean; abstractValue?: Expression};
+  type Binding = {
+    type: SlangType;
+    mutable: boolean;
+    abstractValue?: Expression;
+    integerConstant?: number;
+    constant?: boolean;
+  };
   let scopes: Map<string, Binding>[] = [];
   function lookup(name: string, location: SourceLocation): Binding {
     for (const scope of [...scopes].reverse()) {
       const binding = scope.get(name);
       if (binding) return binding;
+    }
+    const declaration = constantDeclarations.get(name);
+    if (declaration) {
+      prepareConstant(declaration);
+      return globals.get(name)!;
     }
     return fail(`Unknown identifier ${name}`, location);
   }
@@ -75,6 +92,15 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     (!left.element || Boolean(right.element && same(left.element, right.element)));
   const globals = new Map<string, Binding>();
   const constants = new Map<string, Expression>();
+  const constantDeclarations = new Map(
+    program.declarations
+      .filter(
+        (value): value is Variable => value.kind === 'variable' && value.modifiers.includes('const')
+      )
+      .map(value => [value.name, value])
+  );
+  const preparingConstants = new Set<string>();
+  const orderedConstants: Variable[] = [];
   const constantStack = new Set<string>();
   for (const declaration of program.declarations)
     if (
@@ -230,7 +256,10 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
                 ? {name: vector[1]}
                 : fail('Value is not indexable', expression);
         const count = object.length ?? Number(matrix?.[1] ?? vector?.[2]);
-        const constant = evaluateAbstract(expression.index);
+        const constant =
+          expression.index.kind === 'number'
+            ? {value: Number(expression.index.value.replace(/[iu]$/, ''))}
+            : evaluateAbstract(expression.index);
         if (constant && (constant.value < 0 || constant.value >= count))
           fail('Index outside declared length', expression);
         break;
@@ -349,8 +378,8 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
         let left: SlangType;
         let right: SlangType;
         const scalarContext = (type: SlangType | undefined): SlangType | undefined =>
-          type && /^(float|int|uint)[2-4]?$/.test(type.name)
-            ? {name: type.name.replace(/[2-4]$/, '')}
+          type && /^(float|int|uint)(?:[2-4](?:x[2-4])?)?$/.test(type.name)
+            ? {name: type.name.replace(/[2-4](?:x[2-4])?$/, '')}
             : undefined;
         const leftAbstract = evaluateAbstract(expression.left);
         const rightAbstract = evaluateAbstract(expression.right);
@@ -402,6 +431,14 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
             right.name !== 'uint' + (/[2-4]$/.exec(left.name)?.[0] || '')
           )
             fail('Shifts require integer values and matching u32 counts', expression);
+          if (
+            expression.right.kind === 'number' &&
+            Number(expression.right.value.replace(/u$/, '')) >= 32
+          )
+            fail('Constant shift count must be below 32', expression.right);
+          expression.operation = expression.operator.startsWith('<<')
+            ? 'shift-left'
+            : 'shift-right';
           type = left;
           break;
         }
@@ -452,7 +489,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
           type = textureCall(expression, name);
           break;
         }
-        const builtin = resolveWGSLBuiltin(expression, resolve, fail);
+        const builtin = resolveWGSLBuiltin(expression, resolve, fail, evaluateAbstract);
         if (builtin) {
           type = builtin;
           break;
@@ -592,12 +629,14 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     if (root.kind !== 'identifier' || !lookup(root.value, root).mutable)
       fail('Assignment requires a mutable variable', expression);
   }
-  function checkType(type: SlangType, location: SourceLocation): void {
+  function checkType(type: SlangType, location: SourceLocation): number {
     if (type.lengthName) {
-      const value = constants.get(type.lengthName);
-      const count = value && evaluateAbstract(value);
-      if (!count || count.floating) fail('Array count requires an integer constant', location);
-      type.length = count.value;
+      const expression = constants.get(type.lengthName);
+      const value = expression && evaluateAbstract(expression);
+      const count =
+        value && !value.floating ? value.value : lookup(type.lengthName, location).integerConstant;
+      if (count === undefined) fail('Array count requires an integer constant', location);
+      type.length = count;
       delete type.lengthName;
     }
     if (
@@ -605,7 +644,27 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
       (!Number.isInteger(type.length) || type.length! < 1 || type.length! > 65536)
     )
       fail('Array length must be between 1 and 65536', location);
-    if (type.element) checkType(type.element, location);
+    if (type.name === 'array' && type.element?.name === 'array' && options.glslVersion !== '450')
+      fail('Nested arrays require GLSL 450', location);
+    const structure = structures.get(type.name);
+    const shape = /^(?:float|int|uint|bool)([2-4])?(?:x([2-4]))?$/.exec(type.name);
+    const count =
+      type.name === 'array'
+        ? type.length! * checkType(type.element!, location)
+        : structure
+          ? structure.fields.reduce((sum, field) => sum + checkType(field.type, field.location), 0)
+          : type.element
+            ? checkType(type.element, location)
+            : Number(shape?.[1] || 1) * Number(shape?.[2] || 1);
+    if (count > 65536) fail('Aggregate exceeds the supported expanded value size', location);
+    return count;
+  }
+  function integerConstant(expression: Expression): number | undefined {
+    return getIntegerConstant(
+      expression,
+      name => lookup(name, expression).integerConstant,
+      value => resolve(value)
+    );
   }
   function textureCall(expression: Expression & {kind: 'call'}, name: string): SlangType {
     const argumentsList = expression.arguments;
@@ -670,7 +729,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
   function checkConstant(expression: Expression): void {
     if (
       expression.kind === 'identifier' &&
-      !constants.has(expression.value) &&
+      ![...scopes].reverse().some(scope => scope.get(expression.value)?.constant) &&
       !program.declarations.some(
         declaration =>
           declaration.kind === 'variable' &&
@@ -683,7 +742,8 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
       expression.kind === 'call' &&
       (expression.callee.kind !== 'identifier' ||
         functions.has(expression.callee.value) ||
-        expression.callee.value.startsWith('texture'))
+        expression.callee.value.startsWith('texture') ||
+        ['dpdx', 'dpdy', 'fwidth'].includes(expression.callee.value))
     )
       fail('Initializer requires a constant expression', expression);
     if (expression.kind === 'call') expression.arguments.forEach(checkConstant);
@@ -727,12 +787,18 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
               (evaluatedConstant.floating && Number.isInteger(evaluatedConstant.value) ? '.0' : '')
           }
         : undefined;
+      if (variable.modifiers.includes('const')) checkConstant(variable.initializer);
       variable.type = resolve(
         variable.initializer,
         variable.type.name === '$inferred' ? undefined : variable.type
       );
       scopes.at(-1)!.set(variable.name, {
         type: variable.type,
+        constant: variable.modifiers.includes('const'),
+        integerConstant:
+          variable.modifiers.includes('const') && ['int', 'uint'].includes(variable.type.name)
+            ? integerConstant(variable.initializer)
+            : undefined,
         abstractValue,
         mutable: !variable.modifiers.some(modifier => ['let', 'const'].includes(modifier))
       });
@@ -772,10 +838,10 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
             defaults++;
             continue;
           }
-          const value = evaluateAbstract(label);
-          if (!value || value.floating) fail('Switch labels require integer constants', label);
           resolve(label, type);
-          const key = String(value.value);
+          const value = integerConstant(label);
+          if (value === undefined) fail('Switch labels require integer constants', label);
+          const key = String(value);
           if (labels.has(key)) fail('Duplicate switch label', label);
           labels.add(key);
         }
@@ -798,10 +864,7 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
     } else if (!['discard', 'empty'].includes(node.kind)) fail('Unsupported WGSL statement', node);
   }
   const bindings = new Set<string>();
-  for (const declaration of program.declarations) {
-    if (declaration.kind === 'struct')
-      declaration.fields.forEach(field => checkType(field.type, field.location));
-    if (declaration.kind !== 'variable') continue;
+  function analyzeGlobal(declaration: Variable): void {
     checkType(declaration.type, declaration.location);
     if (declaration.binding) {
       const key = `${declaration.binding.group}:${declaration.binding.binding}`;
@@ -848,11 +911,40 @@ export function analyzeWGSL(program: Program, sourceName: string): void {
                 (abstractConstant.floating && Number.isInteger(abstractConstant.value) ? '.0' : '')
             }
           : undefined,
+        constant: declaration.modifiers.includes('const'),
+        integerConstant:
+          declaration.modifiers.includes('const') && ['int', 'uint'].includes(declaration.type.name)
+            ? integerConstant(declaration.initializer)
+            : undefined,
         type: declaration.type,
         mutable: !declaration.modifiers.includes('const')
       });
     }
   }
+  function prepareConstant(declaration: Variable): void {
+    if (globals.has(declaration.name)) return;
+    if (preparingConstants.has(declaration.name)) fail('Recursive constant', declaration.location);
+    preparingConstants.add(declaration.name);
+    analyzeGlobal(declaration);
+    preparingConstants.delete(declaration.name);
+    orderedConstants.push(declaration);
+  }
+  scopes = [globals];
+  for (const declaration of program.declarations)
+    if (declaration.kind === 'struct')
+      declaration.fields.forEach(field => checkType(field.type, field.location));
+  for (const declaration of program.declarations)
+    if (declaration.kind === 'variable') {
+      if (declaration.modifiers.includes('const')) prepareConstant(declaration);
+      else analyzeGlobal(declaration);
+    }
+  // GLSL global constant initializers require their dependencies to be declared first.
+  program.declarations = [
+    ...orderedConstants,
+    ...program.declarations.filter(
+      declaration => declaration.kind !== 'variable' || !declaration.modifiers.includes('const')
+    )
+  ];
   for (const declaration of functions.values()) {
     const stage = declaration.attributes[0]?.arguments[0];
     if (

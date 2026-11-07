@@ -36,10 +36,32 @@ var<private> calls:i32;
 fn next()->f32 {calls++;return f32(calls) * 0.1;}
 fn pair(first:f32, second:f32)->f32 {return first * 2.0 + second;}
 @fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  var shift=32u;let bits=1u << shift;
   let chosen=select(next(),next(),false);
   let ordered=pair(next(),next());
   let shortCircuit=false && next()>0.0;
   let matrix=mat2x3f(vec3f(1.0,0.0,0.0),vec3f(0.0,1.0,0.0));
   let result=matrix * vec2f(chosen,ordered);
-  return vec4f(result.xy,f32(calls) * 0.1,1.0);
+  return vec4f(result.xy,f32(calls) * 0.1,f32(bits));
+}`;
+
+export const WGSL_TEXTURE_ORDER_SHADER = `${WGSL_RENDER_SHADER.split('@fragment')[0]}
+@group(0) @binding(1) var image:texture_2d<f32>;
+@group(0) @binding(2) var filtering:sampler;
+var<private> coordinates:vec2f;
+fn gradient()->vec2f {coordinates=vec2f(0.75,0.25);return vec2f(0.0);}
+@fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  coordinates=vec2f(0.25);
+  return textureSampleGrad(image,filtering,coordinates,gradient(),vec2f(0.0));
+}`;
+
+export const WGSL_LANGUAGE_CONSTANT_SHADER = `${WGSL_RENDER_SHADER.split('@fragment')[0]}
+const FORWARD=BASE+1;
+const BASE:i32=2;
+const CASE:u32=1u;
+const N=1;
+@fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  var key=1u;var amount=0.0;let values=array<f32,BASE>(0.2,0.4);
+  switch key {case CASE:{amount=f32(min(N,2u))*0.25;}default:{amount=0.0;}}
+  return vec4f(f32(FORWARD)*0.1,amount,values[0],1.0);
 }`;

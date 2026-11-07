@@ -267,10 +267,65 @@ it('wgsl#local names shadow abstract module constants', () => {
   expect(result.code).toContain('return _slang_VALUE;');
 });
 
-it('wgsl#reuses aliases with nested generic closing tokens', () => {
+it('wgsl#reuses nested aliases on GLSL 450 and rejects them on GLSL ES 300', () => {
+  const source = `alias Nested=array<array<f32,2>,2>; @fragment fn main()->@location(0) vec4f {var first:Nested;var second:Nested;return vec4f(first[0][0]+second[1][1]);}`;
+  expect(() => transpileWGSL(source, {glslVersion: '450'})).not.toThrow();
+  expect(() => transpileWGSL(source)).toThrow(WGSLTranspileError);
+});
+
+it('wgsl#materializes abstract scalars against matrix operands', () => {
   expect(() =>
     transpileWGSL(
-      `alias Nested=array<array<f32,2>,2>; @fragment fn main()->@location(0) vec4f {var first:Nested;var second:Nested;return vec4f(first[0][0]+second[1][1]);}`
+      '@fragment fn main()->@location(0) vec4f {let matrix=mat2x2f(vec2f(1.0),vec2f(0.0));let result=(matrix * 2) * vec2f(0.25);return vec4f(result,0.0,1.0);}'
     )
   ).not.toThrow();
+});
+it('wgsl#rejects literal unsigned out-of-bounds array indices', () => {
+  expect(() =>
+    transpileWGSL(
+      '@fragment fn main()->@location(0) vec4f {var values:array<f32,2>;return vec4f(values[2u]);}'
+    )
+  ).toThrow(WGSLTranspileError);
+});
+
+it('wgsl#masks runtime shift counts and rejects oversized literal counts', () => {
+  const result = transpileWGSL(
+    '@fragment fn main()->@location(0) vec4f {var count=32u;let bits=1u << count;return vec4f(f32(bits));}'
+  );
+  expect(result.code).toContain('31u');
+  expect(() =>
+    transpileWGSL(
+      '@fragment fn main()->@location(0) vec4f {let bits=1u << 32u;return vec4f(f32(bits));}'
+    )
+  ).toThrow(WGSLTranspileError);
+});
+
+it('wgsl#orders typed constant dependencies and reuses abstract constants in builtin overloads', () => {
+  const result = transpileWGSL(
+    `const B=A+1;const A:i32=3;const N=1; @fragment fn main()->@location(0) vec4f {let value=min(N,2u);var values:array<f32,A>;switch value {case 1u:{return vec4f(f32(B));} default:{return vec4f(values[0]);}}}`
+  );
+  expect(result.code.indexOf('const int _slang_A')).toBeLessThan(
+    result.code.indexOf('const int _slang_B')
+  );
+  expect(result.code).toContain('case 1u:');
+});
+it('wgsl#accepts typed local switch constants and rejects constant dependency cycles', () => {
+  expect(() =>
+    transpileWGSL(
+      '@fragment fn main()->@location(0) vec4f {const CASE:i32=1;var key=1;switch key {case CASE:{return vec4f(1.0);}default:{return vec4f(0.0);}}}'
+    )
+  ).not.toThrow();
+  expect(() =>
+    transpileWGSL(
+      'const A:i32=B;const B:i32=A;@fragment fn main()->@location(0) vec4f {return vec4f(f32(A));}'
+    )
+  ).toThrow(WGSLTranspileError);
+});
+it('wgsl#bounds total expansion before allocating nested arrays for GLSL 450', () => {
+  expect(() =>
+    transpileWGSL(
+      '@fragment fn main()->@location(0) vec4f {var values:array<array<f32,65536>,65536>;return vec4f(0.0);}',
+      {glslVersion: '450'}
+    )
+  ).toThrow(WGSLTranspileError);
 });

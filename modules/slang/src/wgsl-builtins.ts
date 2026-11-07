@@ -52,7 +52,8 @@ const SPELLINGS: Record<string, string> = {
 export function resolveWGSLBuiltin(
   expression: Expression & {kind: 'call'},
   resolve: Resolve,
-  fail: Fail
+  fail: Fail,
+  getAbstract: (expression: Expression) => {value: number; floating: boolean} | undefined
 ): SlangType | undefined {
   if (expression.callee.kind !== 'identifier') return undefined;
   const name = expression.callee.value;
@@ -66,27 +67,12 @@ export function resolveWGSLBuiltin(
           : 0;
   if (!count) return undefined;
   if (expression.arguments.length !== count) fail('Builtin argument count mismatch', expression);
-  const abstract = (value: Expression): boolean =>
-    value.kind === 'number'
-      ? !/[iuf]$/.test(value.value)
-      : value.kind === 'unary'
-        ? abstract(value.operand)
-        : value.kind === 'binary'
-          ? abstract(value.left) && abstract(value.right)
-          : false;
+  const abstract = (value: Expression) => getAbstract(value) !== undefined;
   const values = name === 'select' ? expression.arguments.slice(0, 2) : expression.arguments;
   const concrete = values.find(argument => !abstract(argument));
-  const floating = (value: Expression): boolean =>
-    value.kind === 'number'
-      ? /[.eEf]/.test(value.value)
-      : value.kind === 'unary'
-        ? floating(value.operand)
-        : value.kind === 'binary'
-          ? floating(value.left) || floating(value.right)
-          : false;
   const context = concrete
     ? resolve(concrete)
-    : values.some(floating)
+    : values.some(value => getAbstract(value)?.floating)
       ? {name: 'float'}
       : undefined;
   const types: SlangType[] = expression.arguments.map((argument, index) =>

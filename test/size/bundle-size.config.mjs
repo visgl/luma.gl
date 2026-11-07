@@ -17,7 +17,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/slang/wgsl` compiler (optional)',
     entry: 'modules/slang/src/wgsl.ts',
     external: [],
-    maximum: {minified: 128_500, gzip: 36_800, brotli: 32_500},
+    maximum: {minified: 130_500, gzip: 37_400, brotli: 33_100},
     targetGzip: 25_000
   },
   {

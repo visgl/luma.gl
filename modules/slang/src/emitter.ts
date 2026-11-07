@@ -1426,6 +1426,12 @@ export class ShaderEmitter {
       ? code
       : `(${code}).${'xyzw'.slice(0, layout.components)}`;
   }
+  private emitOrderedValue(expression: Expression, type: SlangType): string {
+    const code = this.coerceExpression(expression, type);
+    return this.program.evaluationOrder
+      ? this.captureTypedValue(code, type)
+      : this.captureValue(code);
+  }
   private captureTypedValue(code: string, type: SlangType): string {
     if (!this.currentFunction) return code;
     if (this.isWGSL) return this.captureValue(code);
@@ -1785,9 +1791,9 @@ export class ShaderEmitter {
       this.fail('Texture sampling has the wrong sampler type', expression);
     const sampler = this.emitExpression(expression.arguments[0]);
     const width = getTextureCoordinateWidth(layout);
-    const coordinates = this.captureValue(
-      this.coerceExpression(expression.arguments[1], {name: `float${width === 1 ? '' : width}`})
-    );
+    const coordinates = this.emitOrderedValue(expression.arguments[1], {
+      name: `float${width === 1 ? '' : width}`
+    });
     const layered = layout.dimension === '2d-array' || layout.dimension === 'cube-array';
     const position =
       this.isWGSL && layered
@@ -1799,15 +1805,13 @@ export class ShaderEmitter {
       extra = expression.arguments
         .slice(2)
         .map(argument =>
-          this.captureValue(
-            this.coerceExpression(argument, {
-              name: `float${gradientWidth === 1 ? '' : gradientWidth}`
-            })
-          )
+          this.emitOrderedValue(argument, {
+            name: `float${gradientWidth === 1 ? '' : gradientWidth}`
+          })
         )
         .join(', ');
     } else if (expression.arguments[2])
-      extra = this.captureValue(this.coerceExpression(expression.arguments[2], {name: 'float'}));
+      extra = this.emitOrderedValue(expression.arguments[2], {name: 'float'});
     const component = {Gather: 0, GatherRed: 0, GatherGreen: 1, GatherBlue: 2, GatherAlpha: 3}[
       method as 'Gather'
     ];
@@ -1906,6 +1910,8 @@ export class ShaderEmitter {
         },
         expression.right
       );
+      if (expression.operation === 'shift-left' || expression.operation === 'shift-right')
+        right = `(${right} & ${this.getTypeName(rightType)}(31u))`;
       return `(${left} ${operator} ${right})`;
     }
     if (shape.columns > 1) {
