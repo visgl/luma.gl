@@ -55,7 +55,8 @@
     "playwright:install": "playwright install chromium webkit",
     "metrics": "./scripts/metrics.sh && ocular-metrics",
     "build-webgl-constants": "esbuild modules/core/src/webgl-constants/index.ts --bundle --format=cjs --outfile=modules/core/dist/webgl-constants/index.cjs",
-    "test-package-layering": "node scripts/verify-package-layering.mjs"
+    "test-package-layering": "node scripts/verify-package-layering.mjs",
+    "website:test-iphone": "node ./scripts/playwright/iphone-layout-smoke.mjs"
   },
   "devDependencies": {
     "@babel/core": "^7.28.3",
