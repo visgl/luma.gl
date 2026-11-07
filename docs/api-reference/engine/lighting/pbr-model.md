@@ -83,6 +83,13 @@ These are caller policies rather than implicit scene management.
 The [environment example](/examples/api/prefiltered-environment) renders a grid of native
 PBR sphere models with orbit/pan/zoom controls, shared environment lighting, and explicit SDR fallback.
 
+## Camera surface prepass
+
+Use `createPBRSurfaceModel` and `PBRSurfacePass` to render camera depth and encoded
+view-space normals through the shared vertex and alpha-cutout paths. See
+[PBR surface prepasses](./pbr-surface-pass.md) for output formats, optional mapped normals,
+projection conventions, resizing, and ownership.
+
 ## Shadows
 
 Set `receiveShadows: true` and bind shadow-map props plus the receiver view matrix.

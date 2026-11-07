@@ -282,3 +282,6 @@ export type {
 
 export {pbrShadow} from './modules/lighting/pbr-shadow/pbr-shadow';
 export type {PBRShadowProps, PBRShadowUniforms} from './modules/lighting/pbr-shadow/pbr-shadow';
+
+export {pbrSurface} from './modules/lighting/pbr-surface/pbr-surface';
+export type {PBRSurfaceProps, PBRSurfaceUniforms} from './modules/lighting/pbr-surface/pbr-surface';

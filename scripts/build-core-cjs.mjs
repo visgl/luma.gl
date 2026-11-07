@@ -335,3 +335,14 @@ process.stdout.write('Verified shadow primitive and compatibility export identit
 assert.equal(shadersApi.pbrShadow, require('../modules/shaders/dist/modules/lighting/pbr-shadow/pbr-shadow.cjs').pbrShadow);
 assert.equal(shadersEsm.pbrShadow, (await import('../modules/shaders/dist/modules/lighting/pbr-shadow/pbr-shadow.js')).pbrShadow);
 assert.equal('createPBRShadowModel' in engineApi, false);
+
+const surfacePassApi = require('../modules/engine/dist/lighting/pbr-surface-pass.cjs');
+const surfacePassEsm = await import('../modules/engine/dist/lighting/pbr-surface-pass.js');
+assert.equal(lightingApi.PBRSurfacePass, surfacePassApi.PBRSurfacePass);
+assert.equal(lightingEsm.PBRSurfacePass, surfacePassEsm.PBRSurfacePass);
+assert.equal(lightingApi.createPBRSurfaceModel, lightingModelApi.createPBRSurfaceModel);
+assert.equal(lightingEsm.createPBRSurfaceModel, lightingModelEsm.createPBRSurfaceModel);
+assert.equal(shadersApi.pbrSurface, require('../modules/shaders/dist/modules/lighting/pbr-surface/pbr-surface.cjs').pbrSurface);
+assert.equal(shadersEsm.pbrSurface, (await import('../modules/shaders/dist/modules/lighting/pbr-surface/pbr-surface.js')).pbrSurface);
+for (const name of ['PBRSurfacePass', 'createPBRSurfaceModel']) assert.equal(name in engineApi, false);
+process.stdout.write('Verified PBR surface prepass optional-subpath identities.\n');

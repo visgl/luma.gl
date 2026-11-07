@@ -1,5 +1,13 @@
 # What's New
 
+### Reusable PBR surface prepasses
+
+`@luma.gl/engine/lighting` exposes camera depth and view-space normal targets through
+`PBRSurfacePass` and `createPBRSurfaceModel`. Native meshes retain skinning, instancing,
+alpha cutouts, and optional material normal maps on WebGPU and WebGL2. See
+[PBR surface prepasses](./api-reference/engine/lighting/pbr-surface-pass.md).
+
+
 ### Standalone PBR shadows
 
 Standalone PBR models can cast and receive directional, spot, and point shadows on WebGL2
