@@ -80,3 +80,9 @@ export type {
   ClusteredLightGridUniforms,
   ClusteredLightGridShaderPassUniforms
 } from './clustered-light-grid';
+export {AmbientOcclusionPass} from './ambient-occlusion-pass';
+export type {
+  AmbientOcclusionMode,
+  AmbientOcclusionPassProps,
+  AmbientOcclusionRenderOptions
+} from './ambient-occlusion-pass';

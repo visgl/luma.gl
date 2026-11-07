@@ -101,3 +101,4 @@ animation, picking and highlighting, scenes, and shader passes.
 - Use [PrefilteredEnvironment](./lighting/prefiltered-environment.md) for reusable image-based lighting.
 
 - Use [ClusteredLightGrid](./lighting/clustered-light-grid.md) to build WebGPU light candidate lists.
+For choosing and combining environments, shadows, and AO, see the [lighting effects guide](../../api-guide/engine/lighting-effects.md).

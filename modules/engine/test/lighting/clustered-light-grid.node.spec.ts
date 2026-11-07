@@ -27,6 +27,7 @@ it('cluster-only imports remove unrelated lighting implementations', async () =>
     format: 'esm',
     platform: 'browser',
     minify: true,
+    metafile: true,
     external: [
       '@luma.gl/core',
       '@luma.gl/core/*',
@@ -37,13 +38,14 @@ it('cluster-only imports remove unrelated lighting implementations', async () =>
       'probe.gl'
     ]
   });
-  const source = result.outputFiles[0].text;
-  for (const symbol of [
-    'clusteredDeferredLighting',
-    'pbrEnvironmentFilter',
-    'ContactShadowPass',
-    'AmbientOcclusionPass',
-    'LTC_MAT'
-  ])
-    expect(source).not.toContain(symbol);
+  const contributedFiles = Object.values(result.metafile!.outputs).flatMap(output =>
+    Object.entries(output.inputs)
+      .filter(([, contribution]) => contribution.bytesInOutput > 0)
+      .map(([path]) => path)
+  );
+  for (const path of contributedFiles) {
+    expect(path).not.toMatch(
+      /modules\/anari\/|prefiltered-environment|ltc-textures|contact-shadow|ambient-occlusion/
+    );
+  }
 });

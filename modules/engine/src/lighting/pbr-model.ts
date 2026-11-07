@@ -10,6 +10,7 @@ import {
   pbrShadow,
   pbrSurface,
   pbrContactShadow,
+  pbrAmbientOcclusion,
   skin
 } from '@luma.gl/shaders';
 
@@ -195,6 +196,9 @@ ${
 #ifdef DEBUG_DEPTH
   return vec4f(vec3f(inputs.position.z), 1.0);
 #else
+#ifdef PBR_RECEIVE_AMBIENT_OCCLUSION
+  pbrAmbientOcclusion_setFactor(inputs.position.xy);
+#endif
 #ifdef PBR_RECEIVE_SHADOWS
 #ifdef HAS_NORMALS
   let shadowNormal = inputs.pbrNormal;
@@ -349,6 +353,9 @@ void main(void) {
 #ifdef DEBUG_DEPTH
   fragmentColor = vec4(vec3(gl_FragCoord.z), 1.0);
 #else
+#ifdef PBR_RECEIVE_AMBIENT_OCCLUSION
+  pbrAmbientOcclusion_setFactor(gl_FragCoord.xy);
+#endif
 #ifdef PBR_RECEIVE_SHADOWS
 #ifdef HAS_NORMALS
 #ifdef HAS_TANGENTS
@@ -386,16 +393,24 @@ export type CreatePBRModelOptions = ModelProps & {
   receiveShadows?: boolean;
   /** Include screen-space visibility for the first directional light. */
   receiveContactShadows?: boolean;
+  /** Attenuate indirect lighting using screen-space ambient visibility. */
+  receiveAmbientOcclusion?: boolean;
 };
 
 /** Creates a standalone WebGPU/WebGL PBR model with a borrowed material. */
 export function createPBRModel(device: Device, options: CreatePBRModelOptions): Model {
-  const {receiveShadows = false, receiveContactShadows = false, ...modelOptions} = options;
+  const {
+    receiveShadows = false,
+    receiveContactShadows = false,
+    receiveAmbientOcclusion = false,
+    ...modelOptions
+  } = options;
   const shaderModules = [
     pbrScene,
     pbrMaterial,
     ...(receiveShadows ? [pbrShadow] : []),
     ...(receiveContactShadows ? [pbrContactShadow] : []),
+    ...(receiveAmbientOcclusion ? [pbrAmbientOcclusion] : []),
     ...(options.defines?.['PBR_SURFACE_PASS'] ? [pbrSurface] : []),
     ...(options.modules || [])
   ];
@@ -419,6 +434,7 @@ export function createPBRModel(device: Device, options: CreatePBRModelOptions): 
       USE_SCENE_COLOR_MANAGEMENT: true,
       PBR_RECEIVE_SHADOWS: receiveShadows,
       PBR_RECEIVE_CONTACT_SHADOWS: receiveContactShadows,
+      PBR_RECEIVE_AMBIENT_OCCLUSION: receiveAmbientOcclusion,
       ...geometryDefines,
       ...getPBRTextureDefines(options.material.getResourceBindings()),
       ...options.defines
@@ -450,6 +466,7 @@ export function createPBRShadowModel(device: Device, options: CreatePBRModelOpti
     ...options,
     receiveShadows: false,
     receiveContactShadows: false,
+    receiveAmbientOcclusion: false,
     defines: {...options.defines, PBR_SHADOW_PASS: true},
     parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', ...options.parameters}
   });
@@ -463,6 +480,7 @@ export function createPBRSurfaceModel(device: Device, options: CreatePBRModelOpt
     ...options,
     receiveShadows: false,
     receiveContactShadows: false,
+    receiveAmbientOcclusion: false,
     defines: {...options.defines, PBR_SHADOW_PASS: false, PBR_SURFACE_PASS: true},
     parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', ...options.parameters}
   });

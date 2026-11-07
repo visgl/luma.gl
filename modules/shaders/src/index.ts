@@ -303,3 +303,5 @@ export {pbrContactShadow} from './modules/lighting/pbr-contact-shadow/pbr-contac
 export type {PBRContactShadowProps} from './modules/lighting/pbr-contact-shadow/pbr-contact-shadow';
 
 export {clusteredLightGrid} from './modules/lighting/clustered-light-grid/clustered-light-grid';
+export {pbrAmbientOcclusion} from './modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion';
+export type {PBRAmbientOcclusionProps} from './modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion';

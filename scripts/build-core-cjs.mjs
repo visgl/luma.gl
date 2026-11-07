@@ -375,3 +375,9 @@ for (const name of ['ClusteredLightGrid', 'MAX_CLUSTERED_POINT_LIGHTS', 'DEFAULT
 }
 assert.equal('ClusteredLightGrid' in engineApi, false);
 process.stdout.write('Verified clustered light grid compatibility identities.\n');
+assert.equal(lightingApi.AmbientOcclusionPass, require('../modules/engine/dist/lighting/ambient-occlusion-pass.cjs').AmbientOcclusionPass);
+assert.equal(lightingEsm.AmbientOcclusionPass, (await import('../modules/engine/dist/lighting/ambient-occlusion-pass.js')).AmbientOcclusionPass);
+assert.equal(shadersApi.pbrAmbientOcclusion, require('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.cjs').pbrAmbientOcclusion);
+assert.equal(shadersEsm.pbrAmbientOcclusion, (await import('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.js')).pbrAmbientOcclusion);
+assert.equal('AmbientOcclusionPass' in engineApi, false);
+process.stdout.write('Verified ambient visibility optional-subpath identities.\n');
