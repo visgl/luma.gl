@@ -106,6 +106,26 @@ declaration-only parser; its small size increase includes type-level arrays and 
 support added during review. Neither inspector imports semantic analysis, layout lowering, the
 Slang parser/registry or code generation.
 
+## Comparison with standalone syntax parsers
+
+The syntax-only bundles retain the named internal parser entry rather than an inspector or
+transpiler. They exclude metadata projection, semantic analysis and code generation:
+
+| Syntax/scanner entry | Minified bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Existing core WGSL scanner | 8312 | 3003 |
+| Existing Slang syntax parser | 10506 | 3509 |
+| Original full WGSL syntax parser (before this PR) | 10320 | 4047 |
+| New small WGSL declaration parser | 7918 | 3398 |
+| New full WGSL syntax parser | 10808 | 4329 |
+
+The small WGSL parser is 16.0% smaller gzip than the original full parser, and 21.5% smaller than
+the new full reader. Sharing adds 282 bytes to the standalone full syntax entry (about 0.3 KB to
+the entire WGSL compiler). Core's scanner remains smaller and returns a different pipeline-layout
+contract. GLSL's declaration parser already produces inspection IR directly, so its syntax and
+inspection measurements are the same. Current syntax entries are included in the reproducible
+bundle report; the original WGSL row is the pre-refactor baseline.
+
 ## Shared small and full readers
 
 The WGSL lexer and declaration/type grammar are implemented once. The declaration parser receives

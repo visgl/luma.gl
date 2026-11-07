@@ -36,6 +36,30 @@ export const BUNDLE_SIZE_FIXTURES = [
     targetGzip: 2_800
   },
   {
+    name: 'slang-syntax',
+    label: 'Existing Slang syntax parser',
+    entry: 'test/size/slang-syntax.ts',
+    external: [],
+    maximum: {minified: 10_800, gzip: 3_700, brotli: 3_400},
+    targetGzip: 3_700
+  },
+  {
+    name: 'wgsl-syntax',
+    label: 'Full WGSL syntax parser',
+    entry: 'test/size/wgsl-syntax.ts',
+    external: [],
+    maximum: {minified: 11_200, gzip: 4_500, brotli: 4_200},
+    targetGzip: 4_500
+  },
+  {
+    name: 'wgsl-declaration-syntax',
+    label: 'Small WGSL declaration parser',
+    entry: 'test/size/wgsl-declaration-syntax.ts',
+    external: [],
+    maximum: {minified: 8_200, gzip: 3_600, brotli: 3_300},
+    targetGzip: 3_600
+  },
+  {
     name: 'slang',
     label: '`@luma.gl/slang` compiler (optional)',
     entry: 'modules/slang/src/index.ts',
