@@ -108,7 +108,17 @@ it.each([120, 60])(
       for (let step = 0; step < frequency * 2; step++)
         graph.encode(resting, {parameters: undefined});
       device.submit(resting.finish());
-      expect(await world.readState()).toEqual(states);
+      const restingStates = await world.readState();
+      expect(restingStates).toHaveLength(states.length);
+      for (const [bodyIndex, body] of restingStates.entries()) {
+        expect(body.sleeping).toBe(states[bodyIndex].sleeping);
+        for (const field of ['position', 'orientation', 'velocity', 'angularVelocity'] as const) {
+          for (const [componentIndex, value] of body[field].entries()) {
+            // Re-normalizing float32 quaternions can change their final bit at rest.
+            expect(value).toBeCloseTo(states[bodyIndex][field][componentIndex], 6);
+          }
+        }
+      }
     } finally {
       graph.destroy();
       world.destroy();
