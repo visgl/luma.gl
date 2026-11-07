@@ -201,7 +201,7 @@ for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
           USE_IBL: true,
           USE_SCENE_ENVIRONMENT: true,
           USE_TEX_LOD: true,
-          HAS_CLEARCOAT: extended
+          USE_MATERIAL_EXTENSIONS: extended
         },
         bindings: getPBREnvironmentBindings(environment.textures),
         colorAttachmentFormats: ['rgba8unorm'],
