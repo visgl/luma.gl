@@ -4,7 +4,7 @@
 import type {Device} from '@luma.gl/core';
 import type {Material} from '../material/material';
 import {Model, type ModelProps} from '../model/model';
-import {pbrMaterial, pbrScene, skin} from '@luma.gl/shaders';
+import {pbrMaterial, pbrScene, pbrShadow, skin} from '@luma.gl/shaders';
 
 /** Optional WGSL extensions for adapters building specialized mesh passes. */
 export type PBRModelShaderHooks = {
@@ -153,7 +153,12 @@ ${hooks.vertexOutput ?? ''}
 ${hooks.fragmentDeclarations ?? ''}
 @fragment
 fn fragmentMain(inputs: PBRModelFragmentInputs)
-${hooks.fragmentReturnType ?? '-> @location(0) vec4f'}
+${
+  hooks.fragmentReturnType ??
+  `#ifndef PBR_SHADOW_PASS
+-> @location(0) vec4f
+#endif`
+}
 {
   fragmentInputs.pbr_vPosition = inputs.pbrPosition;
   fragmentInputs.pbr_vUV0 = inputs.pbrUV0;
@@ -167,13 +172,26 @@ ${hooks.fragmentReturnType ?? '-> @location(0) vec4f'}
 ${
   hooks.fragmentBody ??
   `
+#ifdef PBR_SHADOW_PASS
+  pbr_discardMaskedFragment(inputs.pbrColor);
+#else
 #ifdef DEBUG_NORMALS
   return vec4f(normalize(inputs.pbrNormal) * 0.5 + vec3f(0.5), 1.0);
 #else
 #ifdef DEBUG_DEPTH
   return vec4f(vec3f(inputs.position.z), 1.0);
 #else
+#ifdef PBR_RECEIVE_SHADOWS
+#ifdef HAS_NORMALS
+  let shadowNormal = inputs.pbrNormal;
+#else
+  let shadowNormal = normalize(cross(dpdy(inputs.pbrPosition), dpdx(inputs.pbrPosition)));
+#endif
+  return pbrShadow_filterColor(inputs.pbrColor, inputs.pbrPosition, shadowNormal);
+#else
   return pbr_filterColor(inputs.pbrColor);
+#endif
+#endif
 #endif
 #endif
 `
@@ -273,14 +291,23 @@ void main(void) {
     secondTextureCoordinates
   );
   gl_Position = pbrProjection.modelViewProjectionMatrix * position;
+#ifdef PBR_SHADOW_PASS
+  // ShadowMapRenderer light projections use [0, 1] depth on both backends.
+  gl_Position.z = gl_Position.z * 2.0 - gl_Position.w;
+#endif
 }
 `;
 
 const PBR_FRAGMENT_SHADER = /* glsl */ `#version 300 es
 in vec4 sceneVertexColor;
+#ifndef PBR_SHADOW_PASS
 out vec4 fragmentColor;
+#endif
 
 void main(void) {
+#ifdef PBR_SHADOW_PASS
+  pbr_discardMaskedFragment(sceneVertexColor);
+#else
 #ifdef DEBUG_NORMALS
 #ifdef HAS_TANGENTS
   fragmentColor = vec4(normalize(pbr_vTBN[2]) * 0.5 + 0.5, 1.0);
@@ -295,7 +322,21 @@ void main(void) {
 #ifdef DEBUG_DEPTH
   fragmentColor = vec4(vec3(gl_FragCoord.z), 1.0);
 #else
+#ifdef PBR_RECEIVE_SHADOWS
+#ifdef HAS_NORMALS
+#ifdef HAS_TANGENTS
+  vec3 shadowNormal = pbr_vTBN[2];
+#else
+  vec3 shadowNormal = pbr_vNormal;
+#endif
+#else
+  vec3 shadowNormal = normalize(cross(dFdx(pbr_vPosition), dFdy(pbr_vPosition)));
+#endif
+  fragmentColor = pbrShadow_filterColor(sceneVertexColor, pbr_vPosition, shadowNormal);
+#else
   fragmentColor = pbr_filterColor(sceneVertexColor);
+#endif
+#endif
 #endif
 #endif
 }
@@ -305,11 +346,19 @@ void main(void) {
 export type CreatePBRModelOptions = ModelProps & {
   /** Shared PBR material that owns the canonical material binding group. */
   material: Material;
+  /** Include shadow sampling for directional, point and spot direct lights. */
+  receiveShadows?: boolean;
 };
 
 /** Creates a standalone WebGPU/WebGL PBR model with a borrowed material. */
 export function createPBRModel(device: Device, options: CreatePBRModelOptions): Model {
-  const shaderModules = [pbrScene, pbrMaterial, ...(options.modules || [])];
+  const {receiveShadows = false, ...modelOptions} = options;
+  const shaderModules = [
+    pbrScene,
+    pbrMaterial,
+    ...(receiveShadows ? [pbrShadow] : []),
+    ...(options.modules || [])
+  ];
   const modules = shaderModules.filter(
     (module, moduleIndex) =>
       shaderModules.findIndex(candidate => candidate.name === module.name) === moduleIndex
@@ -324,10 +373,11 @@ export function createPBRModel(device: Device, options: CreatePBRModelOptions): 
     source: PBR_MODEL_WGSL_SHADER,
     vs: PBR_VERTEX_SHADER,
     fs: PBR_FRAGMENT_SHADER,
-    ...options,
+    ...modelOptions,
     modules,
     defines: {
       USE_SCENE_COLOR_MANAGEMENT: true,
+      PBR_RECEIVE_SHADOWS: receiveShadows,
       ...geometryDefines,
       ...getPBRTextureDefines(options.material.getResourceBindings()),
       ...options.defines
@@ -346,6 +396,21 @@ export function createPBRModel(device: Device, options: CreatePBRModelOptions): 
     });
   }
   return model;
+}
+
+/** Creates a depth-only caster sharing PBR geometry, transforms, skinning and alpha cutouts.
+ * Supply the zero-to-one light projection returned by ShadowMapRenderer on both backends.
+ * The material is borrowed; caster and visible models may share it.
+ */
+export function createPBRShadowModel(device: Device, options: CreatePBRModelOptions): Model {
+  return createPBRModel(device, {
+    colorAttachmentFormats: [],
+    depthStencilAttachmentFormat: 'depth32float',
+    ...options,
+    receiveShadows: false,
+    defines: {...options.defines, PBR_SHADOW_PASS: true},
+    parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', ...options.parameters}
+  });
 }
 
 /** Returns shader features implied by canonical CPU geometry attributes. */

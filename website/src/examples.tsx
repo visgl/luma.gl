@@ -34,6 +34,7 @@ const exampleConfig = {};
 
 const loadAnimationApp = () => import('../../examples/api/animation/app');
 const loadBlendingApp = () => import('../../examples/api/blending/app');
+const loadPBRShadowsApp = () => import('../../examples/api/pbr-shadows/app');
 const loadPrefilteredEnvironmentApp = () => import('../../examples/api/prefiltered-environment/app');
 const loadCubemapApp = () => import('../../examples/api/cubemap/app');
 const loadArrowDggsPolygonsApp = () => import('../../examples/arrow/arrow-dggs-polygons/app');
@@ -2560,6 +2561,10 @@ export const PrefilteredEnvironmentExample: React.FC<WebsiteExampleProps> = prop
     devices={['webgl2', 'webgpu']}
     {...props}
   />
+);
+
+export const PBRShadowsExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample id="pbr-shadows" title="PBR Shadows" directory="api" loadTemplate={loadPBRShadowsApp} config={exampleConfig} devices={['webgl2','webgpu']} {...props} />
 );
 
 // Integration Examples

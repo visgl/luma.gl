@@ -83,6 +83,13 @@ These are caller policies rather than implicit scene management.
 The [environment example](/examples/api/prefiltered-environment) renders a grid of native
 PBR sphere models with orbit/pan/zoom controls, shared environment lighting, and explicit SDR fallback.
 
+## Shadows
+
+Set `receiveShadows: true` and bind shadow-map props plus the receiver view matrix.
+Use `createPBRShadowModel` for depth-only caster models with the same vertex transforms
+and alpha cutouts. See [PBR shadows](./pbr-shadows.md) for per-view uniforms, light-slot
+alignment, ownership, and the ground-plane example.
+
 ## Specialized shader passes
 
 `PBR_MODEL_WGSL_SHADER` contains the standalone entry points. `getPBRModelWGSL(hooks)` builds

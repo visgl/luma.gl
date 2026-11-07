@@ -89,6 +89,7 @@ const config = {
         'hello-triangle': '/examples/tutorials/hello-triangle',
         globe: '/examples/showcase/globe',
         instancing: '/examples/showcase/instancing',
+        'pbr-shadows': '/examples/api/pbr-shadows',
         'prefiltered-environment': '/examples/api/prefiltered-environment',
         'render-bundles': '/examples/api/render-bundles',
         'instanced-cubes': '/examples/tutorials/instanced-cubes',

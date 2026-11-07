@@ -268,3 +268,17 @@ export type {
   PBREnvironmentFilterUniforms,
   PBREnvironmentFilterBindings
 } from './modules/lighting/prefiltered-environment/prefiltered-environment';
+
+export {shadow} from './modules/lighting/shadow/shadow';
+export type {ShadowBindings, ShadowUniforms} from './modules/lighting/shadow/shadow';
+export type {
+  DirectionalShadowLight,
+  SpotShadowLight,
+  PointShadowLight,
+  ShadowProps,
+  ShadowTexture,
+  ShadowBiasProps
+} from './modules/lighting/shadow/shadow-types';
+
+export {pbrShadow} from './modules/lighting/pbr-shadow/pbr-shadow';
+export type {PBRShadowProps, PBRShadowUniforms} from './modules/lighting/pbr-shadow/pbr-shadow';

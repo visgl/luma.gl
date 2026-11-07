@@ -92,6 +92,8 @@ animation, picking and highlighting, scenes, and shader passes.
 - Use [Shaders](/docs/api-reference/shaders) for modules, hooks, and plugins.
 - Use [GPU Core](/docs/api-reference/experimental/gpu-core) for scheduled multi-stage GPU work.
 
+- Use [PBR shadows](./lighting/pbr-shadows.md) to cast and receive shadows with standalone mesh models.
+- Use [ShadowMapRenderer](./lighting/shadow-map-renderer.md) to record caller-owned shadow caster draws and share depth resources with receiver shaders.
 - Use [standalone PBR models](./lighting/pbr-model.md) to render native or loaded meshes with explicit transforms and lighting.
 - Use [PBR materials](./lighting/pbr-material.md) and [environment bindings](./lighting/pbr-environment.md) for shared physical materials and lighting resources.
 - Use [PrefilteredEnvironment](./lighting/prefiltered-environment.md) for reusable image-based lighting.
