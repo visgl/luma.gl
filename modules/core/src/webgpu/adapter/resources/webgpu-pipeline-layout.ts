@@ -40,7 +40,11 @@ export class WebGPUPipelineLayout extends PipelineLayout {
   }
 
   override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
     // WebGPUPipelineLayout has no destroy method.
+    this.destroyResource();
     // @ts-expect-error
     this.handle = null;
   }
