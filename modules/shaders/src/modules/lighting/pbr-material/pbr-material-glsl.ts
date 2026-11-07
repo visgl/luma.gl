@@ -1047,6 +1047,8 @@ vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor) {
 }
 
 // Visibility for the first four spotlights; environment and other lights are unaffected.
+float pbr_ambientVisibility = 1.0;
+
 vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, vec4 pointVisibility, vec4 spotVisibility)
 {
   vec2 baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
@@ -1143,7 +1145,7 @@ vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, v
     color.rgb = baseColor.rgb;
 #ifdef HAS_LIGHTMAP
     if (pbrMaterial.lightmapMapEnabled) {
-      color *= lightmapIrradiance / M_PI;
+      color *= lightmapIrradiance / M_PI * pbr_ambientVisibility;
 #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled) {
         float ao = texture(pbr_occlusionSampler, occlusionUV).r;
@@ -1245,7 +1247,7 @@ vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, v
 
 #ifdef USE_LIGHTS
       PBRInfo_setAmbientLight(pbrInfo);
-      color += calculateFinalColor(pbrInfo, lighting.ambientColor);
+      color += calculateFinalColor(pbrInfo, lighting.ambientColor * pbr_ambientVisibility);
 
       for(int i = 0; i < lighting.directionalLightCount; i++) {
         if (i < lighting.directionalLightCount) {
@@ -1284,6 +1286,7 @@ vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, v
       }
 #endif
 
+vec3 indirectBaseColor = color;
 #ifdef USE_IBL
       if (pbrMaterial.IBLenabled) {
         color += getIBLContribution(pbrInfo, n, reflection);
@@ -1292,6 +1295,7 @@ vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, v
 
       // The pinned KHR_lightmap draft explicitly defines c_diff = (1 - metallic) * baseColor.
       color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
+      color = indirectBaseColor + (color - indirectBaseColor) * pbr_ambientVisibility;
 
 #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled) {
@@ -1524,7 +1528,7 @@ vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, v
     PBRInfo_setAmbientLight(pbrInfo);
     color += calculateMaterialLightColor(
       pbrInfo,
-      lighting.ambientColor,
+      lighting.ambientColor * pbr_ambientVisibility,
       clearcoatNormal,
       clearcoatFactor,
       clearcoatRoughness,
@@ -1647,6 +1651,7 @@ vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, v
       }
 #endif
 
+    vec3 indirectBaseColor = color;
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
     if (pbrMaterial.IBLenabled) {
@@ -1680,6 +1685,8 @@ vec4 pbr_filterColorWithShadows(vec4 vertexColor, float directionalVisibility, v
     color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
       (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
 #endif
+
+    color = indirectBaseColor + (color - indirectBaseColor) * pbr_ambientVisibility;
 
  // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSIONMAP

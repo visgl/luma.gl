@@ -20,7 +20,7 @@ export function makeShadowPanel(
       makeHtmlCustomPanel({
         id: 'pbr-shadows-info',
         title: 'Info',
-        html: `<p>Standalone PBR meshes cast and receive shadows on a ground plane. Native models share materials with depth-only casters; no scene renderer is involved.</p><p>Switch between a spotlight, directional cascades, and a point light with six shadow faces. Compare shadow maps, contact shadows, or both as the sphere bounces: short contact shadows fade with separation, while map shadows remain visible. Contact shadows apply only to the directional light; spot and point lights use maps, and contact-only mode leaves them unshadowed. Short screen-space contact rays cannot see hidden or offscreen occluders. Shadow receiving affects direct light while ambient light remains visible.</p><p>Backend: <strong>${backend === 'webgpu' ? 'WebGPU' : 'WebGL2'}</strong>.</p><p>Drag to orbit · Scroll or pinch to zoom · Shift-drag to pan.</p>`
+        html: `<p>Standalone PBR meshes cast and receive shadows on a ground plane. Native models share materials with depth-only casters; no scene renderer is involved.</p><p>Switch between a spotlight, directional cascades, and a point light with six shadow faces. Compare shadow maps, contact shadows, or both as the sphere bounces: short contact shadows fade with separation, while map shadows remain visible. Contact shadows apply only to the directional light; spot and point lights use maps, and contact-only mode leaves them unshadowed. Short screen-space contact rays cannot see hidden or offscreen occluders. Ambient occlusion reduces indirect light in creases: SSAO means Screen-Space Ambient Occlusion; GTAO means Ground-Truth Ambient Occlusion. Shadow receiving affects direct light while ambient light remains visible.</p><p>${backend === 'webgpu' ? 'Choose no AO, cheap SSAO, or higher-quality GTAO. These visibility passes do not accumulate temporal history.' : 'AO evaluation requires WebGPU; this backend runs without AO.'}</p><p>Backend: <strong>${backend === 'webgpu' ? 'WebGPU' : 'WebGL2'}</strong>.</p><p>Drag to orbit · Scroll or pinch to zoom · Shift-drag to pan.</p>`
       }),
       new ColumnPanel({
         id: 'pbr-shadows-controls',
@@ -43,7 +43,7 @@ export function makeShadowPanel(
   });
 }
 
-export function makeShadowSettingsSchema(): SettingsSchema {
+export function makeShadowSettingsSchema(supportsAmbientOcclusion = false): SettingsSchema {
   return {
     title: 'Lighting',
     sections: [
@@ -72,6 +72,21 @@ export function makeShadowSettingsSchema(): SettingsSchema {
               {label: 'Low', value: 'low'},
               {label: 'Balanced', value: 'balanced'},
               {label: 'Cinematic', value: 'cinematic'}
+            ]
+          },
+          {
+            name: 'ambientOcclusionMode',
+            label: 'Ambient occlusion',
+            type: 'select',
+            persist: 'none',
+            options: [
+              {label: 'None', value: 'none'},
+              ...(supportsAmbientOcclusion
+                ? [
+                    {label: 'Cheap — SSAO', value: 'ssao'},
+                    {label: 'Good — GTAO', value: 'gtao'}
+                  ]
+                : [])
             ]
           },
           {

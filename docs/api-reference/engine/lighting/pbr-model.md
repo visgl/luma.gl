@@ -112,3 +112,11 @@ entry points remain free of adapter resources. Existing retained scene adapters 
 specialized transforms and picking/shadow passes separately.
 
 The example uses the shared InfoBox panels for its description, HDR/SDR status, and camera reset, and is available in the website API gallery.
+
+## Ambient visibility
+
+Set `receiveAmbientOcclusion: true` and bind `pbrAmbientOcclusion` props to attenuate ambient,
+environment and lightmap illumination without changing direct lighting or emission.
+[Ambient occlusion](./ambient-occlusion.md) documents the mask/viewport contract; the
+[lighting effects guide](../../../api-guide/engine/lighting-effects.md) explains how it
+combines with contact shadows, shadow maps and environment lighting.

@@ -99,3 +99,5 @@ animation, picking and highlighting, scenes, and shader passes.
 - Use [standalone PBR models](./lighting/pbr-model.md) to render native or loaded meshes with explicit transforms and lighting.
 - Use [PBR materials](./lighting/pbr-material.md) and [environment bindings](./lighting/pbr-environment.md) for shared physical materials and lighting resources.
 - Use [PrefilteredEnvironment](./lighting/prefiltered-environment.md) for reusable image-based lighting.
+
+For choosing and combining environments, shadows, and AO, see the [lighting effects guide](../../api-guide/engine/lighting-effects.md).
