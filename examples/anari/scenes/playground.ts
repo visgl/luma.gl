@@ -67,6 +67,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private refinementRenderTime = 0;
   private refinementSamples = 0;
   private refinementPending = false;
+  private refinementGeneration = 0;
 
   constructor({device}: AnimationProps) {
     super();
@@ -201,7 +202,6 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
   override onRender({device, width, height, time}: AnimationProps): void {
     const scene = this.scene;
-    if (this.refinementPending) return;
     if (this.captureFrameLimit && this.renderedFrameCount >= this.captureFrameLimit) return;
     if (!scene) {
       return;
@@ -246,7 +246,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         this.refinementSignature = signature;
         this.refinementChangedTime = time;
         this.refinementSamples = 0;
+        this.updateRefinementProgress(
+          0,
+          scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64
+        );
       }
+      // Update camera/scene state even while the previous batch is still executing.
+      if (this.refinementPending) return;
       const renderer = scene.frame.getParameter('renderer');
       const historyLimit = renderer?.getParameter('historySampleLimit') ?? 64;
       const stationary = time - this.refinementChangedTime > 250;
@@ -323,7 +329,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       if (rayTracing && progressive) {
         const targetSamples =
           scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
-        if (!this.isStaticRefinementScene(scene.name)) {
+        if (!this.isStaticRefinementScene(scene.name) || this.captureFrameLimit) {
           this.updateRefinementProgress(rayTracing.accumulatedSamples, targetSamples);
         }
       }
@@ -355,21 +361,28 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       device.submit();
       const fence = device.createFence();
       this.refinementPending = true;
+      const generation = this.refinementGeneration;
+      const signature = this.refinementSignature;
       const samples = statistics.rayTracing.accumulatedSamples;
       const target = scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
       void fence.signaled
         .then(
           () => {
-            if (this.scene === scene) this.updateRefinementProgress(samples, target);
+            if (
+              this.scene === scene &&
+              generation === this.refinementGeneration &&
+              signature === this.refinementSignature
+            )
+              this.updateRefinementProgress(samples, target);
           },
           () => {
-            if (this.scene === scene)
+            if (this.scene === scene && generation === this.refinementGeneration)
               setElementText('scene-refinement-value', 'GPU work interrupted');
           }
         )
         .finally(() => {
           fence.destroy();
-          this.refinementPending = false;
+          if (generation === this.refinementGeneration) this.refinementPending = false;
         });
     }
   }
@@ -391,6 +404,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   }
 
   override onFinalize(): void {
+    this.refinementGeneration++;
+    this.refinementPending = false;
     if (this.pendingApply !== null) {
       window.clearTimeout(this.pendingApply);
     }
@@ -905,6 +920,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         renderer?.setParameters(this.getTemporalAntialiasingParameters()).commitParameters();
       }
       const previousScene = this.scene;
+      this.refinementGeneration++;
+      this.refinementPending = false;
       this.scene = nextScene;
       this.renderedFrameCount = 0;
       this.selectedPlacementId = null;
