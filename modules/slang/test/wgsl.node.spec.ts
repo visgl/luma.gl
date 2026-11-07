@@ -142,3 +142,19 @@ it('wgsl#compares abstract floats before f32 rounding', () => {
   );
   expect(result.code).toContain('return true;');
 });
+
+it('wgsl#diagnostics do not retain cyclic resolved function references', () => {
+  const source =
+    'fn recurse(value: f32) -> f32 { return recurse(value); } @fragment fn main() -> @location(0) vec4f { let invalid: i32 = recurse(1.0); return vec4f(1.0); }';
+  try {
+    transpileWGSL(source);
+    throw new Error('Expected a source diagnostic');
+  } catch (error) {
+    expect(error).toBeInstanceOf(WGSLTranspileError);
+    expect(() => JSON.stringify((error as WGSLTranspileError).diagnostics)).not.toThrow();
+    expect((error as WGSLTranspileError).diagnostics[0]).toMatchObject({
+      sourceName: 'shader.wgsl',
+      line: 1
+    });
+  }
+});
