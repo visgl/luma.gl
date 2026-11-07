@@ -208,6 +208,7 @@
       "api/multi-canvas",
       "api/cubemap",
       "api/prefiltered-environment",
+      "api/pbr-shadows",
       "api/texture-3d",
       {
         "type": "doc",

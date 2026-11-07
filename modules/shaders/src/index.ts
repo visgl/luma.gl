@@ -279,3 +279,6 @@ export type {
   ShadowTexture,
   ShadowBiasProps
 } from './modules/lighting/shadow/shadow-types';
+
+export {pbrShadow} from './modules/lighting/pbr-shadow/pbr-shadow';
+export type {PBRShadowProps, PBRShadowUniforms} from './modules/lighting/pbr-shadow/pbr-shadow';

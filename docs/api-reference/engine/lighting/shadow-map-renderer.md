@@ -89,6 +89,6 @@ and emission should retain their own contributions. The module uses bind group 2
 WebGPU, depth texture arrays and comparison sampling, with cube arrays for point lights.
 WebGL2 uses depth arrays, manual comparisons, and six array layers per point light.
 
-This primitive does not automatically add shadows to `createPBRModel`. A reusable PBR
-caster specialization and direct-light integration are separate work. Contact shadows,
+Use [PBR shadows](./pbr-shadows.md) for a shared depth-only caster and standalone PBR
+receiver integration. Contact shadows,
 scene traversal, and automatic caster selection are outside this API.

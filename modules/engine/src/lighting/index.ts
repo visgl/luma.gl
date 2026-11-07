@@ -24,6 +24,7 @@ export type {PBRLightingEnvironment, PBRLightingEnvironmentOptions} from './pbr-
 
 export {
   createPBRModel,
+  createPBRShadowModel,
   getPBRGeometryDefines,
   getPBRTextureDefines,
   getPBRModelWGSL,

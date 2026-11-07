@@ -1,5 +1,14 @@
 # What's New
 
+### Standalone PBR shadows
+
+Standalone PBR models can cast and receive directional, spot, and point shadows on WebGL2
+and WebGPU. `createPBRShadowModel` shares transforms and alpha cutouts with visible meshes;
+`receiveShadows` applies per-light visibility while preserving ambient light, IBL, and
+emission. The [PBR Shadows example](/examples/api/pbr-shadows) includes a ground plane,
+light and quality controls, and orbit navigation. See [PBR shadows](./api-reference/engine/lighting/pbr-shadows.md).
+
+
 ### Reusable shadow primitives
 
 `@luma.gl/engine/lighting` exposes shadow-map resources, light cameras, and quality

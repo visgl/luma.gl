@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import pbrShadowsSupport from './api/pbr-shadows/mobile-support';
 import prefilteredEnvironmentSupport from './api/prefiltered-environment/mobile-support';
 import gltfBillboardSupport from './gltf/features/mobile-support';
 import gltfAudioSupport from './gltf/audio/mobile-support';
@@ -284,6 +285,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'deck/gpu-culled-trace': support84,
   'showcase/spectral-wave-lab': support85,
   'api/texture-compressed': standaloneSupport0,
+  'api/pbr-shadows': pbrShadowsSupport,
   'api/prefiltered-environment': prefilteredEnvironmentSupport,
   'integrations/hello-react': standaloneSupport1,
   'showcase/algebraic-varieties': standaloneSupport2,
