@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {isSlangTexture} from './textures';
+
 import type {Expression, SlangType} from './ast';
 
 export const ATOMICS: Record<string, string> = {
@@ -40,7 +42,7 @@ export function lowerSlangResource(
   textureAccess?: 'read' | 'write' | 'read_write'
 ): import('./ir').ShaderResource {
   const storage = type.name.endsWith('StructuredBuffer') || isByteAddressBuffer(type);
-  const texture = /Texture/.test(type.name);
+  const texture = isSlangTexture(type);
   const sampler = type.name === 'SamplerState' || type.name === 'SamplerComparisonState';
   return {
     ...binding,

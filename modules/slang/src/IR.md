@@ -29,8 +29,8 @@ Measured using esbuild with bundling, minification and ESM output, then gzip lev
 | Slang compiler | Minified bytes | Gzip bytes |
 | --- | ---: | ---: |
 | Before | 106768 | 30338 |
-| After | 107795 | 30708 |
-| Increase | 1027 | 370 |
+| After | 107777 | 30726 |
+| Increase | 1009 | 388 |
 
 Keep the existing standalone compiler and luma integration bundle tests active. Shared code must
 remain free of frontend imports so adding a WGSL entry point does not pull its parser into Slang
