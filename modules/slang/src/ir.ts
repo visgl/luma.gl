@@ -30,6 +30,7 @@ export type ShaderResource = {
 /** Source spellings resolve to these operations before target-specific emission. */
 export type ShaderOperation =
   | 'convert'
+  | 'matrix-multiply'
   | 'mix'
   | 'fract'
   | 'inverse-sqrt'

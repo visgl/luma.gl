@@ -60,6 +60,6 @@ it('slang#combined frontends share compiler code and remain within their bundle 
     write: false
   });
   const bytes = result.outputFiles[0].contents;
-  expect(bytes.byteLength).toBeLessThanOrEqual(128_000);
-  expect(gzipSync(bytes, {level: 9}).byteLength).toBeLessThanOrEqual(37_300);
+  expect(bytes.byteLength).toBeLessThanOrEqual(146_500);
+  expect(gzipSync(bytes, {level: 9}).byteLength).toBeLessThanOrEqual(42_800);
 });

@@ -30,3 +30,16 @@ export const WGSL_DIVISION_SHADER = WGSL_RENDER_SHADER.replace(
   'let result = makeColor(color);\n  return result;',
   'var value = vec3f(1.0, 2.0, 4.0); value /= 2.0; let reciprocal = 2.0 / value; let large: f32 = 1e21 + 0.0; let bits: u32 = 1 | 2; return vec4f(reciprocal * 0.1, (large / 1e21) * f32(bits) / 3.0);'
 );
+
+export const WGSL_ORDER_SHADER = `${WGSL_RENDER_SHADER.split('@fragment')[0]}
+var<private> calls:i32;
+fn next()->f32 {calls++;return f32(calls) * 0.1;}
+fn pair(first:f32, second:f32)->f32 {return first * 2.0 + second;}
+@fragment fn fragmentMain(@location(0) color:vec3f)->@location(0) vec4f {
+  let chosen=select(next(),next(),false);
+  let ordered=pair(next(),next());
+  let shortCircuit=false && next()>0.0;
+  let matrix=mat2x3f(vec3f(1.0,0.0,0.0),vec3f(0.0,1.0,0.0));
+  let result=matrix * vec2f(chosen,ordered);
+  return vec4f(result.xy,f32(calls) * 0.1,1.0);
+}`;
