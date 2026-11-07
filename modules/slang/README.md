@@ -427,3 +427,11 @@ subset to GLSL. This separate entry point shares code generation with Slang whil
 parser and registry. Root Slang imports exclude the WGSL frontend. See the
 [WGSL frontend guide](https://luma.gl/docs/api-reference/slang/wgsl) for supported syntax,
 coordinate conventions, diagnostics and deferred features.
+
+
+## Shader inspection
+
+Import `inspectWGSL` or `inspectGLSL` from `@luma.gl/slang/inspect` for shared declaration metadata
+without code generation. The parsers remain independently tree-shakable. See the
+[inspection guide](https://luma.gl/docs/api-reference/slang/inspect) for the supported subsets,
+source locations, comparison with core's runtime WGSL scanner, and bundle measurements.
