@@ -1316,7 +1316,12 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     let position = ray.origin + ray.direction * hit.distance;
     ray = Ray(position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
     hit = intersectScene(ray, RAY_INFINITY);
-    if (hit.distance >= RAY_INFINITY) { break; }
+    if (hit.distance >= RAY_INFINITY) {
+      // A camera backdrop remains visible through smooth dielectric paths without
+      // turning it into diffuse environment illumination.
+      if (sample.delta) { radiance += throughput * uniforms.background.rgb; }
+      break;
+    }
     radiance += throughput * (evaluateDirectLighting(ray, hit, sample.delta || uniforms.emitters.y == 0u) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u)));
   }
   return radiance;
