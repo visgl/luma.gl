@@ -19,7 +19,20 @@ try {
       !process.env.MOBILE_EXAMPLE_BROWSERS.split(',').includes(browserName)
     )
       continue;
-    const browser = await browserType.launch({headless: true});
+    const browser = await browserType.launch({
+      headless: true,
+      ...(browserName === 'chromium'
+        ? {
+            args: [
+              '--enable-unsafe-webgpu',
+              '--ignore-gpu-blocklist',
+              ...(process.env.CI && process.platform === 'linux'
+                ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+                : [])
+            ]
+          }
+        : {})
+    });
     try {
       for (const [orientation, width, height] of [
         ['portrait', 390, 844],
@@ -40,7 +53,8 @@ try {
             '/docs',
             '/docs/tutorials/shader-injection',
             '/examples/tutorials/hello-triangle',
-            '/docs/api-reference/core/canvas-context'
+            '/docs/api-reference/core/canvas-context',
+            '/docs/api-reference/anari'
           ]) {
             await page.goto(`${baseUrl}${route}`, {waitUntil: 'domcontentloaded', timeout: 120000});
             await page.locator('html[data-has-hydrated="true"]').waitFor();
@@ -59,6 +73,17 @@ try {
               await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
               'page must not overflow horizontally'
             );
+            if (route.endsWith('/anari')) {
+              // Exercise the real wrapper's keyboard behavior independently of GPU startup.
+              await page.route('**/standalone-examples/scene/playground.html', request =>
+                request.fulfill({
+                  contentType: 'text/html',
+                  body: '<!doctype html><html><body><label>Scene editor <input aria-label="Scene editor"></label><button>Apply</button></body></html>'
+                })
+              );
+              await page.getByRole('button', {name: 'Load scene playground'}).click();
+              await page.frameLocator('iframe[title="ANARI Scene Lab"]').locator('body').waitFor();
+            }
             const example = page.locator('[data-luma-example-page]').first();
             if (await example.count()) {
               const rectangle = await example.boundingBox();
@@ -86,10 +111,28 @@ try {
                 'expanded view must fill dynamic viewport'
               );
               await page.keyboard.press('Tab');
+              if (await example.locator('iframe').count()) {
+                assert(
+                  await example
+                    .locator('iframe')
+                    .evaluate(frame => document.activeElement === frame),
+                  'Tab must enter the expanded iframe'
+                );
+              }
               assert(
                 await example.evaluate(element => element.contains(document.activeElement)),
                 'expanded focus must stay inside the example'
               );
+              if (route.endsWith('/anari')) {
+                await page.keyboard.press('Tab');
+                assert(
+                  await page
+                    .frameLocator('iframe')
+                    .getByRole('textbox', {name: 'Scene editor'})
+                    .evaluate(input => input.ownerDocument.activeElement === input),
+                  'keyboard users must reach controls inside the iframe'
+                );
+              }
               await page.setViewportSize({width: height, height: width});
               await page.waitForFunction(
                 expectedHeight =>
@@ -120,7 +163,9 @@ try {
             await page.screenshot({
               path: `${outputDirectory}/${browserName}-${orientation}-${route.split('/').at(-1)}.png`
             });
-            console.log(`PASS ${browserName} ${orientation} ${route}`);
+            console.log(
+              `PASS ${browserName} ${orientation} ${route}${route.endsWith('/anari') ? ' (iframe keyboard fixture)' : ''}`
+            );
           }
           assert.deepEqual(errors, [], 'no uncaught runtime errors');
         } finally {

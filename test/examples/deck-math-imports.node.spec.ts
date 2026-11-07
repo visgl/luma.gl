@@ -4,6 +4,9 @@
 
 import {expect, it, vi} from 'vitest';
 
+// Other example tests mock Deck while Node workers reuse the module graph.
+vi.hoisted(() => vi.resetModules());
+
 it('constructs deck viewports with public math.gl 5 imports', async () => {
   const {FirstPersonViewport, OrbitViewport, OrthographicViewport, WebMercatorViewport} =
     await vi.importActual<typeof import('@deck.gl/core')>('@deck.gl/core');

@@ -257,15 +257,18 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     const previousFocus = document.activeElement;
     const previousRootOverflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = 'hidden';
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
         setIsImmersive(false);
       }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      handleEscape(event);
       if (event.key !== 'Tab') return;
       const controls = Array.from(
         container.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), iframe, [tabindex]:not([tabindex="-1"])'
         )
       ).filter(element => element.getClientRects().length > 0);
       const firstControl = controls[0];
@@ -284,6 +287,20 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
         firstControl?.focus();
       }
     };
+    const frameCleanups = Array.from(container.querySelectorAll('iframe')).map(frame => {
+      let frameDocument: Document | null = null;
+      const attachFrame = () => {
+        frameDocument?.removeEventListener('keydown', handleEscape);
+        frameDocument = frame.contentDocument;
+        frameDocument?.addEventListener('keydown', handleEscape);
+      };
+      frame.addEventListener('load', attachFrame);
+      attachFrame();
+      return () => {
+        frame.removeEventListener('load', attachFrame);
+        frameDocument?.removeEventListener('keydown', handleEscape);
+      };
+    });
     document.addEventListener('keydown', handleKeyDown);
     container
       .querySelector<HTMLElement>('[data-luma-example-fullscreen-toggle]')
@@ -291,6 +308,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     return () => {
       document.documentElement.style.overflow = previousRootOverflow;
       document.removeEventListener('keydown', handleKeyDown);
+      frameCleanups.forEach(cleanup => cleanup());
       if (previousFocus instanceof HTMLElement) previousFocus.focus({preventScroll: true});
     };
   }, [isImmersive]);
