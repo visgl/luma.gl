@@ -44,7 +44,8 @@ for (const resolutionScale of [undefined, 1]) {
       const view = new Matrix4().lookAt({eye: [0, 0, 4], center: [0, 0, 0]});
       const matrices = [
         new Matrix4().scale([6, 6, 1]),
-        new Matrix4().translate([0.65, 0.35, 0.25]).scale([0.5, 0.5, 1])
+        // Keep the occluder wider than the half-resolution blur footprint on software GPUs.
+        new Matrix4().translate([0.65, 0.35, 0.25])
       ];
       models.forEach((model, index) =>
         model.shaderInputs.setProps({
@@ -96,6 +97,7 @@ for (const resolutionScale of [undefined, 1]) {
         function getOcclusionCenter(clearImage: Uint8Array, blockedImage: Uint8Array) {
           const rowBytes = Math.ceil((surface.width * 4) / 256) * 256;
           let affected = 0;
+          let maximumDifference = 0;
           let weight = 0;
           let horizontalSum = 0;
           let verticalSum = 0;
@@ -103,13 +105,17 @@ for (const resolutionScale of [undefined, 1]) {
             for (let horizontal = 5; horizontal < surface.width - 5; horizontal++) {
               const offset = vertical * rowBytes + horizontal * 4;
               const difference = Math.max(0, clearImage[offset] - blockedImage[offset]);
+              maximumDifference = Math.max(maximumDifference, difference);
               if (difference > 10) affected++;
               weight += difference;
               horizontalSum += (difference * (horizontal + 0.5)) / surface.width;
               verticalSum += (difference * (vertical + 0.5)) / surface.height;
             }
           }
-          expect(affected).toBeGreaterThan(5);
+          expect(
+            affected,
+            `${mode} ${surface.width}x${surface.height}, scale=${resolutionScale ?? 'default'}, maximum difference=${maximumDifference}`
+          ).toBeGreaterThan(5);
           return [horizontalSum / weight, verticalSum / weight];
         }
         const originalCenter = getOcclusionCenter(clear, blocked);
