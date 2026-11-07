@@ -362,3 +362,10 @@ for (const name of ['contactShadowTrace','contactShadowBilateralBlur','contactSh
 }
 assert.equal('ContactShadowPass' in engineApi, false);
 process.stdout.write('Verified contact shadow optional-subpath and compatibility identities.\n');
+
+assert.equal(lightingApi.AmbientOcclusionPass, require('../modules/engine/dist/lighting/ambient-occlusion-pass.cjs').AmbientOcclusionPass);
+assert.equal(lightingEsm.AmbientOcclusionPass, (await import('../modules/engine/dist/lighting/ambient-occlusion-pass.js')).AmbientOcclusionPass);
+assert.equal(shadersApi.pbrAmbientOcclusion, require('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.cjs').pbrAmbientOcclusion);
+assert.equal(shadersEsm.pbrAmbientOcclusion, (await import('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.js')).pbrAmbientOcclusion);
+assert.equal('AmbientOcclusionPass' in engineApi, false);
+process.stdout.write('Verified ambient visibility optional-subpath identities.\n');

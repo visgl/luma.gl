@@ -17,6 +17,8 @@ import {
   createPBRSurfaceModel,
   PBRSurfacePass,
   ContactShadowPass,
+  AmbientOcclusionPass,
+  type AmbientOcclusionMode,
   createPBRShadowModel,
   createPBRMaterial,
   createPBRMaterialFactory,
@@ -49,6 +51,8 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   readonly shadows: ShadowMapRenderer;
   readonly surfacePass: PBRSurfacePass;
   private contacts: ContactShadowPass;
+  private ambientOcclusion: AmbientOcclusionPass;
+  private ambientOcclusionMode: AmbientOcclusionMode = 'none';
   private readonly unoccluded: Texture;
   readonly surfaces: Surface[] = [];
   readonly settings: ExampleSettingsPanelManager;
@@ -81,6 +85,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
     });
     this.surfacePass = new PBRSurfacePass(device, {width: 1, height: 1});
     this.contacts = new ContactShadowPass(device);
+    this.ambientOcclusion = new AmbientOcclusionPass(device, {mode: 'none'});
     this.unoccluded = device.createTexture({
       width: 1,
       height: 1,
@@ -126,6 +131,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         material,
         receiveShadows: true,
         receiveContactShadows: true,
+        receiveAmbientOcclusion: true,
         defines: {USE_LIGHTS: true},
         parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', cullMode: 'none'}
       });
@@ -144,11 +150,12 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
     }
     this.settings = new ExampleSettingsPanelManager({
       id: 'pbr-shadows-settings',
-      schema: makeShadowSettingsSchema(),
+      schema: makeShadowSettingsSchema(device.type === 'webgpu'),
       settings: {
         lightType: this.lightType,
         quality: 'balanced',
         shadowMode: this.shadowMode,
+        ambientOcclusionMode: this.ambientOcclusionMode,
         contactDistance: this.contactDistance,
         contactThickness: this.contactThickness,
         receiveShadows: this.receiveShadows,
@@ -156,6 +163,19 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         normalBias: this.normalBias
       },
       onSettingsChange: values => {
+        if (
+          device.type === 'webgpu' &&
+          (values.ambientOcclusionMode === 'none' ||
+            values.ambientOcclusionMode === 'ssao' ||
+            values.ambientOcclusionMode === 'gtao') &&
+          values.ambientOcclusionMode !== this.ambientOcclusionMode
+        ) {
+          this.ambientOcclusionMode = values.ambientOcclusionMode;
+          this.ambientOcclusion.destroy();
+          this.ambientOcclusion = new AmbientOcclusionPass(device, {
+            mode: this.ambientOcclusionMode
+          });
+        }
         if (
           values.lightType === 'spot' ||
           values.lightType === 'directional' ||
@@ -300,7 +320,8 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
     const useContacts =
       this.receiveShadows && this.lightType === 'directional' && this.shadowMode !== 'maps';
     let contactTexture = this.unoccluded;
-    if (useContacts) {
+    const useAmbientOcclusion = this.ambientOcclusionMode !== 'none';
+    if (useContacts || useAmbientOcclusion) {
       this.surfacePass.resize({width, height});
       for (const surface of this.surfaces) {
         surface.surfaceModel.shaderInputs.setProps({
@@ -320,6 +341,8 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
           for (const surface of this.surfaces) surface.surfaceModel.draw(target.renderPass);
         }
       });
+    }
+    if (useContacts) {
       const lightDirectionView = view.transform([
         -coneDirection[0],
         -coneDirection[1],
@@ -336,6 +359,15 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         normalBias: 0.01
       });
     }
+    const ambientOcclusionTexture = useAmbientOcclusion
+      ? this.ambientOcclusion.render({
+          depthTexture: this.surfacePass.depthTexture,
+          normalTexture: this.surfacePass.normalTexture,
+          projectionMatrix: projection,
+          near: 0.1,
+          far: 40
+        })
+      : this.unoccluded;
     const pass = device.beginRenderPass({clearColor: [0.025, 0.035, 0.055, 1], clearDepth: 1});
     for (const surface of this.surfaces) {
       surface.model.shaderInputs.setProps({
@@ -357,6 +389,11 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
           contactShadowTexture: contactTexture,
           viewport: [0, 0, width, height],
           enabled: useContacts
+        },
+        pbrAmbientOcclusion: {
+          ambientOcclusionTexture,
+          viewport: [0, 0, width, height],
+          enabled: useAmbientOcclusion
         },
         pbrScene: {toneMapMode: 2, outputEncoding: 1}
       });
@@ -407,6 +444,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
     }
     this.shadows.destroy();
     this.contacts.destroy();
+    this.ambientOcclusion.destroy();
     this.surfacePass.destroy();
     this.unoccluded.destroy();
   }
