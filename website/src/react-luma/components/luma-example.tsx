@@ -217,7 +217,7 @@ export const ExampleStage: FC<ExampleStageProps> = (props: ExampleStageProps) =>
 );
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
-  const [isImmersive, setIsImmersive] = useState(!props.embedded);
+  const [isImmersive, setIsImmersive] = useState(false);
   const [isNavigationPending, setIsNavigationPending] = useState(false);
   const supportDefinition = useResolvedExampleSupportDefinition(props);
   const runtimeEnvironment = useExampleRuntimeEnvironment();
