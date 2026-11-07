@@ -268,3 +268,8 @@ WASM and JavaScript files separately; gzip sizes were measured locally at level 
 The Slang release ZIP is 10.45 MB and includes additional files. These are
 not equivalent implementations: the TypeScript compiler supports a smaller Slang
 subset, and actual application download sizes depend on bundling and compression.
+
+## WGSL input
+
+The separate [`@luma.gl/slang/wgsl` frontend](./wgsl.md) supports a small WGSL rendering subset
+using the shared compiler backend. Slang-only applications do not import its parser or analyzer.

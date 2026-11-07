@@ -15,6 +15,7 @@ export type ShaderType =
 export type ShaderInterface = {
   builtin?: string;
   location?: number;
+  interpolationSpecified?: boolean;
   interpolation: 'flat' | 'linear' | 'perspective';
   sampling: 'center' | 'centroid' | 'sample';
 };
@@ -25,3 +26,23 @@ export type ShaderResource = {
   group: number;
   binding: number;
 };
+
+/** Source spellings resolve to these operations before target-specific emission. */
+export type ShaderOperation =
+  | 'convert'
+  | 'mix'
+  | 'fract'
+  | 'inverse-sqrt'
+  | 'derivative-x'
+  | 'derivative-y'
+  | 'atan2'
+  | 'texture-sample'
+  | 'texture-sample-level'
+  | 'texture-sample-gradient'
+  | 'texture-sample-bias'
+  | 'texture-sample-compare'
+  | 'texture-sample-compare-level'
+  | 'texture-load'
+  | 'texture-dimensions'
+  | 'texture-gather'
+  | 'texture-gather-compare';

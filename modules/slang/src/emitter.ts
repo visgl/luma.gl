@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {visitSyntaxChildren} from './syntax';
+import {emitIntrinsicName} from './operations';
 import {emitNumericType} from './ir-types';
 import {lowerSlangType} from './slang-types';
-import {lowerSlangInterface} from './slang-interface';
-import type {ShaderInterface} from './ir';
+
+import type {ShaderOperation, ShaderInterface} from './ir';
+import type {InterfaceLowerer} from './expression-analysis';
+import {resolveExpressionType, INTRINSICS} from './expression-analysis';
 
 import type {
   Expression,
@@ -34,15 +38,14 @@ import {
   getTextureCoordinateWidth
 } from './textures';
 import {
-  getNumericShape,
-  getLiteralType,
-  getCommonNumericType,
   getBinaryType,
+  getNumericShape,
+  getCommonNumericType,
   getIntegerConstant,
   returnsValue
 } from './type-checker';
 import {UniformEmitter} from './uniform-emitter';
-import {getSlangParameterDirection, getSlangTypeSignature} from './modules';
+import {getSlangParameterDirection, getSlangTypeSignature} from './signatures';
 import {markSlangSource, mapSlangSource} from './source-map';
 import type {
   SlangExport,
@@ -72,58 +75,6 @@ type InterfaceLeaf = {
   reflection: SlangInterfaceVariable;
 };
 const SCALARS: Record<string, string> = {float: 'f32', int: 'i32', uint: 'u32', bool: 'bool'};
-const INTRINSICS: Record<string, number[]> = {
-  abs: [1],
-  acos: [1],
-  asin: [1],
-  atan: [1],
-  atan2: [2],
-  ceil: [1],
-  clamp: [3],
-  cos: [1],
-  cosh: [1],
-  cross: [2],
-  degrees: [1],
-  distance: [2],
-  dot: [2],
-  exp: [1],
-  exp2: [1],
-  floor: [1],
-  fract: [1],
-  frac: [1],
-  fwidth: [1],
-  length: [1],
-  lerp: [3],
-  log: [1],
-  log2: [1],
-  max: [2],
-  min: [2],
-  normalize: [1],
-  pow: [2],
-  radians: [1],
-  reflect: [2],
-  refract: [3],
-  round: [1],
-  rsqrt: [1],
-  saturate: [1],
-  sign: [1],
-  sin: [1],
-  sinh: [1],
-  smoothstep: [3],
-  sqrt: [1],
-  step: [2],
-  tan: [1],
-  tanh: [1],
-  transpose: [1],
-  trunc: [1],
-  all: [1],
-  any: [1],
-  ddx: [1],
-  ddy: [1],
-  mul: [2],
-  GroupMemoryBarrierWithGroupSync: [0]
-};
-
 const GLSL_BUILTINS: Record<string, string> = {
   position: 'gl_Position',
   vertex_index: 'gl_VertexID',
@@ -136,7 +87,7 @@ const GLSL_BUILTINS: Record<string, string> = {
   local_invocation_index: 'gl_LocalInvocationIndex'
 };
 
-export class SlangEmitter {
+export class ShaderEmitter {
   private structures = new Map<string, Structure>();
   private functions = new Map<string, ShaderFunction>();
   private overloads = new Map<string, ShaderFunction[]>();
@@ -171,9 +122,27 @@ export class SlangEmitter {
   private combinedTextures = new Map<string, {texture: string; sampler: string; code: string}>();
   private atomicGlobals = new Set<string>();
 
+  private expressionContext = {
+    fail: this.fail.bind(this),
+    findSymbol: this.findSymbol.bind(this),
+    getExpressionType: this.getExpressionType.bind(this),
+    matchType: this.matchType.bind(this),
+    getCommonType: this.getCommonType.bind(this),
+    resolveFunction: this.resolveFunction.bind(this),
+    isValueType: this.isValueType.bind(this),
+    checkMultiplyArguments: this.checkMultiplyArguments.bind(this),
+    isScalar: this.isScalar.bind(this),
+    isFloatIntrinsic: this.isFloatIntrinsic.bind(this),
+    getFloatIntrinsicType: this.getFloatIntrinsicType.bind(this),
+    structures: this.structures,
+    overloads: this.overloads
+  };
+
   constructor(
     private program: Program,
     private options: SlangTranspileOptions,
+    private lowerInterface: InterfaceLowerer,
+    private lowerOperation: (expression: Expression) => ShaderOperation | undefined,
     private discoveringTextureUsage = false
   ) {
     const inspectNames = (value: unknown): void => {
@@ -202,7 +171,7 @@ export class SlangEmitter {
           }
         }
       }
-      Object.values(value).forEach(inspectNames);
+      visitSyntaxChildren(value, inspectNames);
     };
     inspectNames(program);
     const names = new Set<string>();
@@ -486,206 +455,10 @@ export class SlangEmitter {
     scope.set(variable.name, {type: variable.type, code, writable});
   }
   private getExpressionType(expression: Expression): SlangType {
-    switch (expression.kind) {
-      case 'initializer':
-        this.fail('Initializer lists require a declared value type', expression);
-      case 'identifier': {
-        const type = this.findSymbol(expression.value, expression).type;
-        return type.name === 'ConstantBuffer' ? type.element! : type;
-      }
-      case 'number':
-        return getLiteralType(expression, (message, location) => this.fail(message, location));
-      case 'boolean':
-        return {name: 'bool'};
-      case 'cast':
-        return expression.type;
-      case 'unary': {
-        if (
-          expression.operator === '-' &&
-          expression.operand.kind === 'number' &&
-          expression.operand.value === '2147483648'
-        )
-          return {name: 'int'};
-        const type = this.getExpressionType(expression.operand);
-        if (expression.operator === '!' && !/^bool([2-4])?$/.test(type.name))
-          this.fail('Logical negation requires a boolean value', expression);
-        if (expression.operator === '~' && !/^(int|uint)([2-4])?$/.test(type.name))
-          this.fail('Bitwise negation requires an integer value', expression);
-        if (
-          ['+', '-'].includes(expression.operator) &&
-          !/^(float|int|uint)([2-4](x[2-4])?)?$/.test(type.name)
-        )
-          this.fail('Numeric negation requires a numeric value', expression);
-        return type;
-      }
-      case 'binary': {
-        const left = this.getExpressionType(expression.left);
-        const right = this.getExpressionType(expression.right);
-        return expression.operator.endsWith('=') &&
-          !['==', '!=', '<=', '>='].includes(expression.operator)
-          ? left
-          : getBinaryType(expression, left, right, (message, location) =>
-              this.fail(message, location)
-            );
-      }
-      case 'conditional': {
-        const consequent = this.getExpressionType(expression.consequent);
-        const alternate = this.getExpressionType(expression.alternate);
-        if (this.matchType(consequent, alternate)) return consequent;
-        if (
-          /^(float|int|uint)([2-4])?$/.test(consequent.name) &&
-          /^(float|int|uint)([2-4])?$/.test(alternate.name)
-        ) {
-          const consequentWidth = /[2-4]$/.exec(consequent.name)?.[0];
-          const alternateWidth = /[2-4]$/.exec(alternate.name)?.[0];
-          if (consequentWidth && alternateWidth && consequentWidth !== alternateWidth)
-            this.fail('Conditional branches have incompatible vector widths', expression);
-          return this.getCommonType([expression.consequent, expression.alternate]);
-        }
-        this.fail('Conditional branches have incompatible types', expression);
-      }
-      case 'member': {
-        const object = this.getExpressionType(expression.object);
-        const structure = this.structures.get(
-          object.name === 'ConstantBuffer' ? object.element!.name : object.name
-        );
-        if (structure) {
-          const field = structure.fields.find(variable => variable.name === expression.member);
-          if (!field) {
-            this.fail(`Unknown field ${expression.member}`, expression);
-          }
-          return field.type;
-        }
-        const vector = /^(float|int|uint|bool)([2-4])$/.exec(object.name);
-        if (vector && /^[xyzwrgba]{1,4}$/.test(expression.member)) {
-          const indices = 'xyzw';
-          const colors = 'rgba';
-          if (
-            [...expression.member].some(
-              character =>
-                Math.max(indices.indexOf(character), colors.indexOf(character)) >= Number(vector[2])
-            )
-          ) {
-            this.fail('Swizzle is outside the vector width', expression);
-          }
-          if (/[xyzw]/.test(expression.member) && /[rgba]/.test(expression.member)) {
-            this.fail('Swizzle cannot mix component sets', expression);
-          }
-          return {name: vector[1] + (expression.member.length > 1 ? expression.member.length : '')};
-        }
-        this.fail(`Unsupported member ${expression.member} on ${object.name}`, expression);
-      }
-      case 'index': {
-        const object = this.getExpressionType(expression.object);
-        if (object.element) {
-          return object.element;
-        }
-        const vector = /^(float|int|uint|bool)[2-4]$/.exec(object.name);
-        if (vector) {
-          return {name: vector[1]};
-        }
-        const matrix = /^float[2-4]x([2-4])$/.exec(object.name);
-        if (matrix) {
-          return {name: `float${matrix[1]}`};
-        }
-        this.fail(`Cannot index ${object.name}`, expression);
-      }
-      case 'call': {
-        if (expression.callee.kind === 'member') {
-          const resource = this.getExpressionType(expression.callee.object);
-          if (isByteAddressBuffer(resource)) {
-            if (
-              ['GetDimensions', 'Store', 'Store2', 'Store3', 'Store4'].includes(
-                expression.callee.member
-              ) ||
-              ATOMICS[expression.callee.member]
-            )
-              return {name: 'void'};
-            if (/^Load[2-4]?$/.test(expression.callee.member))
-              return {name: 'uint' + expression.callee.member.slice(4)};
-          }
-          if (isSlangTexture(resource)) {
-            if (expression.callee.member === 'GetDimensions') return {name: 'void'};
-            if (expression.callee.member.startsWith('Gather'))
-              return {
-                name:
-                  (expression.callee.member === 'GatherCmp'
-                    ? 'float'
-                    : resource.element!.name.replace(/[2-4]$/, '')) + '4'
-              };
-            return ['SampleCmp', 'SampleCmpLevelZero'].includes(expression.callee.member)
-              ? {name: 'float'}
-              : resource.element!;
-          }
-          this.fail('Unsupported resource method', expression);
-        }
-        if (expression.callee.kind !== 'identifier') {
-          this.fail('Unsupported function expression', expression);
-        }
-        const name = expression.callee.value;
-        if (this.overloads.has(name)) {
-          return this.resolveFunction(name, expression.arguments, expression).type;
-        }
-        if (INTRINSICS[name] && !INTRINSICS[name].includes(expression.arguments.length)) {
-          this.fail(`Wrong number of arguments for ${name}`, expression);
-        }
-        if (this.isValueType(name)) {
-          return {name};
-        }
-        if (['dot', 'length', 'distance'].includes(name)) {
-          return {name: 'float'};
-        }
-        if (['all', 'any'].includes(name)) {
-          return {name: 'bool'};
-        }
-        if (BARRIERS[name] || ATOMICS[name]) {
-          return {name: 'void'};
-        }
-        if (['asfloat', 'asint', 'asuint'].includes(name)) {
-          const argumentType = this.getExpressionType(expression.arguments[0]);
-          return {name: name.slice(2) + (/[2-4]$/.exec(argumentType.name)?.[0] || '')};
-        }
-        if (name === 'transpose') {
-          const matrix = /^float([2-4])x([2-4])$/.exec(
-            this.getExpressionType(expression.arguments[0]).name
-          );
-          if (!matrix) {
-            this.fail('transpose requires a matrix', expression);
-          }
-          return {name: `float${matrix[2]}x${matrix[1]}`};
-        }
-        if (name === 'mul') {
-          this.checkMultiplyArguments(expression);
-          const left = this.getExpressionType(expression.arguments[0]);
-          const right = this.getExpressionType(expression.arguments[1]);
-          const leftMatrix = /^float([2-4])x([2-4])$/.exec(left.name);
-          const rightMatrix = /^float([2-4])x([2-4])$/.exec(right.name);
-          if (leftMatrix && rightMatrix) {
-            return {name: `float${leftMatrix[1]}x${rightMatrix[2]}`};
-          }
-          if (leftMatrix) {
-            return {name: `float${leftMatrix[1]}`};
-          }
-          if (rightMatrix) {
-            return {name: `float${rightMatrix[2]}`};
-          }
-          if (!this.isScalar(left) && !this.isScalar(right)) {
-            return {name: 'float'};
-          }
-          return this.isScalar(left) ? right : left;
-        }
-        if (!INTRINSICS[name]) {
-          this.fail(`Unsupported function ${name}`, expression);
-        }
-        if (['clamp', 'min', 'max', 'lerp', 'step', 'smoothstep', 'pow', 'atan2'].includes(name)) {
-          return this.isFloatIntrinsic(name)
-            ? this.getFloatIntrinsicType(expression)
-            : this.getCommonType(expression.arguments);
-        }
-        if (this.isFloatIntrinsic(name)) return this.getFloatIntrinsicType(expression);
-        return this.getExpressionType(expression.arguments[0]);
-      }
-    }
+    const type = expression.valueType || resolveExpressionType(expression, this.expressionContext);
+    expression.resolvedType = lowerSlangType(type);
+    expression.operation ||= this.lowerOperation(expression);
+    return type;
   }
   private isFloatIntrinsic(name: string): boolean {
     return ![
@@ -1000,6 +773,7 @@ export class SlangEmitter {
     this.fail('Assignment requires a writable variable', expression);
   }
   private emitExpression(expression: Expression): string {
+    if (expression.constantValue !== undefined) return expression.constantValue;
     const uniform = this.getUniformAccess(expression);
     if (uniform) return this.uniformEmitter.readValue(uniform.type, uniform.code);
     if (this.isWGSL && this.isAtomicValue(expression))
@@ -1169,9 +943,13 @@ export class SlangEmitter {
       this.fail('Unsupported function expression', expression);
     }
     const name = callee.value;
-    const declaration = this.overloads.has(name)
-      ? this.resolveFunction(name, expression.arguments, expression)
-      : undefined;
+    this.getExpressionType(expression);
+    const declaration =
+      expression.resolvedCall?.kind === 'function'
+        ? expression.resolvedCall.declaration
+        : this.overloads.has(name)
+          ? this.resolveFunction(name, expression.arguments, expression)
+          : undefined;
     if (declaration) {
       if (expression.arguments.length !== declaration.parameters.length) {
         this.fail(`Wrong number of arguments for ${name}`, expression);
@@ -1184,7 +962,7 @@ export class SlangEmitter {
       }
       return this.emitFunctionCall(expression, declaration);
     }
-    if (this.isValueType(name)) {
+    if (expression.resolvedCall?.kind === 'constructor') {
       const structure = this.structures.get(name);
       if (structure) {
         if (expression.arguments.length !== structure.fields.length) {
@@ -1340,9 +1118,6 @@ export class SlangEmitter {
       }
       return this.isWGSL ? 'workgroupBarrier()' : 'barrier()';
     }
-    const mappings: Record<string, string> = this.isWGSL
-      ? {lerp: 'mix', frac: 'fract', rsqrt: 'inverseSqrt', ddx: 'dpdx', ddy: 'dpdy'}
-      : {lerp: 'mix', frac: 'fract', rsqrt: 'inversesqrt', ddx: 'dFdx', ddy: 'dFdy', atan2: 'atan'};
     const expected = floatType ?? this.getCommonType(expression.arguments);
     if (['clamp', 'min', 'max', 'lerp', 'step', 'smoothstep', 'pow', 'atan2'].includes(name)) {
       for (let index = 0; index < argumentsList.length; index++) {
@@ -1356,7 +1131,7 @@ export class SlangEmitter {
         );
       }
     }
-    return `${mappings[name] || name}(${argumentsList.join(', ')})`;
+    return `${emitIntrinsicName(expression.operation, this.options.target) || name}(${argumentsList.join(', ')})`;
   }
   private isAtomicValue(expression: Expression): boolean {
     if (!['identifier', 'index'].includes(expression.kind)) return false;
@@ -1511,7 +1286,7 @@ export class SlangEmitter {
       if (!value || typeof value !== 'object') return;
       const node = value as Expression;
       if (node.kind === 'call') callback(node);
-      Object.values(value).forEach(child => visit(child, callback));
+      visitSyntaxChildren(value, child => visit(child, callback));
     };
     for (const key of reachable)
       visit(this.functions.get(key)!.body, expression => {
@@ -1560,7 +1335,7 @@ export class SlangEmitter {
         );
       if (node.kind === 'binary' && ['&&', '||'].includes(node.operator) && containsBarrier(value))
         this.fail('Synchronization barriers cannot be short-circuited', node);
-      Object.values(value).forEach(inspect);
+      visitSyntaxChildren(value, inspect);
     };
     for (const key of synchronized) {
       const body = this.functions.get(key)!.body;
@@ -1574,7 +1349,7 @@ export class SlangEmitter {
             'Early returns in functions with synchronization barriers are outside this subset',
             node
           );
-        Object.values(value).forEach(findReturn);
+        visitSyntaxChildren(value, findReturn);
       };
       statements.forEach((statement, index) => {
         if (index !== statements.length - 1 || statement.kind !== 'return') findReturn(statement);
@@ -1823,7 +1598,7 @@ export class SlangEmitter {
             }
           }
       }
-      Object.values(value).forEach(visit);
+      visitSyntaxChildren(value, visit);
     };
     visit(this.program);
   }
@@ -1895,7 +1670,9 @@ export class SlangEmitter {
     }
     const {code, layout} = this.getTexture(callee.object);
     const method = callee.member;
-    if (method === 'GetDimensions') return this.emitTextureDimensions(expression);
+    this.getExpressionType(expression);
+    if (expression.operation === 'texture-dimensions')
+      return this.emitTextureDimensions(expression);
     if (this.discoveringTextureUsage) {
       const root = getExpressionRoot(callee.object);
       if (root.kind === 'identifier') {
@@ -1913,7 +1690,11 @@ export class SlangEmitter {
         true,
         expression.arguments[1]
       );
-    const comparison = ['SampleCmp', 'SampleCmpLevelZero', 'GatherCmp'].includes(method);
+    const comparison = [
+      'texture-sample-compare',
+      'texture-sample-compare-level',
+      'texture-gather-compare'
+    ].includes(expression.operation || '');
     const gather = /^Gather(Red|Green|Blue|Alpha|Cmp)?$/.test(method);
     const gradient = method === 'SampleGrad';
     const count = gradient ? 4 : method === 'Sample' || (gather && !comparison) ? 2 : 3;
@@ -2849,18 +2630,26 @@ export class SlangEmitter {
       );
     }
     if (!variable.semantic) {
-      this.fail('Entry point values require a semantic', variable.location);
+      this.fail(
+        this.program.clipSpace === 'webgpu'
+          ? 'Entry point values require a builtin or location'
+          : 'Entry point values require a semantic',
+        variable.location
+      );
     }
     if (
       variable.type.element ||
       /^float[2-4]x[2-4]$/.test(variable.type.name) ||
       variable.type.name.startsWith('bool')
     ) {
-      if (variable.semantic.toUpperCase() !== 'SV_ISFRONTFACE') {
+      if (
+        variable.interface?.builtin !== 'front_facing' &&
+        variable.semantic.toUpperCase() !== 'SV_ISFRONTFACE'
+      ) {
         this.fail('Entry point leaves must be numeric scalars or vectors', variable.location);
       }
     }
-    const interfaceMetadata = lowerSlangInterface(
+    const interfaceMetadata = this.lowerInterface(
       variable,
       this.stage,
       direction,
@@ -2930,6 +2719,7 @@ export class SlangEmitter {
           name: 'result',
           type: this.entry.type,
           semantic: this.entry.semantic,
+          interface: this.entry.interface,
           attributes: [],
           modifiers: [],
           location: this.entry.location
@@ -2942,7 +2732,12 @@ export class SlangEmitter {
       this.stage === 'vertex' &&
       !this.outputs.some(leaf => leaf.reflection.builtin === 'position')
     ) {
-      this.fail('Vertex entry points must return SV_Position', this.entry.location);
+      this.fail(
+        this.program.clipSpace === 'webgpu'
+          ? 'Vertex entry points require a position builtin'
+          : 'Vertex entry points must return SV_Position',
+        this.entry.location
+      );
     }
     this.reflection.inputs = this.inputs.map(leaf => leaf.reflection);
     this.reflection.outputs = this.outputs.map(leaf => leaf.reflection);
@@ -3095,6 +2890,12 @@ export class SlangEmitter {
         `${this.isWGSL ? `_slang_output.${leaf.field}` : this.getGLSLInterfaceName(leaf, 'out')} = ${source};`
       );
     }
+    if (!this.isWGSL && this.program.clipSpace === 'webgpu' && this.stage === 'vertex') {
+      body.push(
+        'gl_Position.y = -gl_Position.y;',
+        'gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;'
+      );
+    }
     if (this.isWGSL && this.outputs.length) body.push('return _slang_output;');
     const workgroup = this.reflection.workgroupSize;
     if (workgroup && !this.isWGSL) {
@@ -3220,7 +3021,13 @@ export class SlangEmitter {
   }
   discoverTextureUsage(): {comparison: Set<string>; ordinary: Set<string>} {
     if (!this.hasComparisonCalls) return {comparison: new Set(), ordinary: new Set()};
-    const discovery = new SlangEmitter(this.program, this.options, true);
+    const discovery = new ShaderEmitter(
+      this.program,
+      this.options,
+      this.lowerInterface,
+      this.lowerOperation,
+      true
+    );
     discovery.emitProgramParts();
     return {comparison: discovery.comparisonTextures, ordinary: discovery.ordinaryTextures};
   }

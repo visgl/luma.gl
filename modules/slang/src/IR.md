@@ -18,8 +18,17 @@ Source semantics remain available for public Slang reflection and diagnostics.
 resource declaration and reflection generation. Texture format discovery and physical buffer
 layout remain separate from these logical resource properties.
 
-These are the first two stages of the shared representation migration. Expressions and statements
-still use the existing Slang AST; their typed lowering belongs to the next tranche. The shared
+Expressions retain structured syntax and source locations, with resolved value types, explicit
+cast nodes, resolved function/constructor references and canonical intrinsic/texture operations.
+`expression-analysis.ts` owns shared expression type resolution; the emitter supplies symbol,
+overload and resource context. `signatures.ts` keeps signature helpers independent of registry
+parsing. Slang operation/interface adapters are injected by its entry point.
+
+The WGSL entry point parses and checks its own value subset, materializes abstract constants,
+inserts zero initialization and resolves function calls before code generation. It shares the
+emitter and numeric/resource infrastructure, but imports neither Slang parsing nor registry code.
+Syntax walkers skip resolved call references so semantic graph edges are not traversed as syntax.
+Backend capability checks and target-specific resource expansion remain in the emitter. The
 representation is internal and is not a stable public compiler API.
 
 ## Size baseline
@@ -35,3 +44,20 @@ Measured using esbuild with bundling, minification and ESM output, then gzip lev
 Keep the existing standalone compiler and luma integration bundle tests active. Shared code must
 remain free of frontend imports so adding a WGSL entry point does not pull its parser into Slang
 applications or the Slang parser into WGSL applications.
+
+## WGSL frontend bundle measurements
+
+After typed expression analysis and the separate WGSL frontend:
+
+| Browser entry point | Minified bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Slang only (`index.ts`) | 110373 | 31538 |
+| WGSL only (`wgsl.ts`) | 108842 | 31135 |
+| Both frontends | 126954 | 36977 |
+
+The Slang-only increase over the merged metadata baseline is 812 gzip bytes (2.64%). The two
+frontends together cost about 5.4 KB gzip above Slang alone, because code generation is shared.
+Dependency-graph tests reject WGSL parser/analyzer imports from the Slang bundle and Slang
+parser/lexer/registry/interface/operation adapters from the WGSL bundle. These are complete
+compiler bundles, rather than incremental frontend-only sizes. Both targets remain available
+inside the shared backend; this tranche separates source frontends, not per-target backends.
