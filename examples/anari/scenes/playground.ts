@@ -26,7 +26,12 @@ import {
   makePlaygroundRenderer
 } from './playground-renderer';
 import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
-import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
+import {
+  loadAntiqueCameraRayStudy,
+  loadSceneFile,
+  loadSceneSample,
+  SCENE_SAMPLES
+} from './usd-samples';
 
 export default class ANARIPlayground extends AnimationLoopTemplate {
   static info = '';
@@ -221,7 +226,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
     // Bound stationary refinement in the static lighting demonstration.
     if (
-      scene.name === 'CHART LIGHTING' &&
+      ['CHART LIGHTING', 'INDIRECT LIGHT STUDY', 'ANTIQUE CAMERA · RAY STUDY'].includes(
+        scene.name
+      ) &&
       this.rendererSubtype === 'raytrace' &&
       !this.captureFrameLimit
     ) {
@@ -309,6 +316,25 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       if (frameTelemetry) {
         frameTelemetry.hidden = !rayTracing;
+      }
+      const refinementTelemetry = document.getElementById('scene-refinement-statistic');
+      const progressive = scene.frame.getParameter('renderer')?.getParameter('progressive') ?? true;
+      if (refinementTelemetry) refinementTelemetry.hidden = !rayTracing || !progressive;
+      if (rayTracing && progressive) {
+        const targetSamples =
+          scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
+        const samples = Math.min(rayTracing.accumulatedSamples, targetSamples);
+        const percentage = Math.min(100, Math.floor((samples / Math.max(targetSamples, 1)) * 100));
+        const progress = getRequiredElement('scene-refinement-progress', HTMLProgressElement);
+        progress.value = percentage;
+        progress.setAttribute(
+          'aria-valuetext',
+          `${percentage}% — ${samples} of ${targetSamples} samples per pixel`
+        );
+        setElementText(
+          'scene-refinement-value',
+          `${percentage}% · ${samples} / ${targetSamples} spp`
+        );
       }
       const memoryTelemetry = document.getElementById('scene-ray-memory-statistic');
       if (memoryTelemetry) memoryTelemetry.hidden = !rayTracing?.memory;
@@ -493,6 +519,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       button.addEventListener('click', () => this.selectPreset(presetIndex));
       presetList.appendChild(button);
     }
+
+    const cameraStudyButton = document.createElement('button');
+    cameraStudyButton.type = 'button';
+    cameraStudyButton.className = 'preset-button';
+    cameraStudyButton.textContent = 'Antique Camera · Ray Study';
+    cameraStudyButton.addEventListener('click', () => {
+      void this.importScene(loadAntiqueCameraRayStudy());
+    });
+    presetList.appendChild(cameraStudyButton);
 
     const usdSelector = getRequiredElement('usd-scene-selector', HTMLSelectElement);
     for (const sample of SCENE_SAMPLES) {

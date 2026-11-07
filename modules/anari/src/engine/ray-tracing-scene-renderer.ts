@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  getRayMaterialTextures,
+  getRayMaterialTextureShader,
+  getRayMaterialTextureRevision
+} from './ray-tracing-material-textures';
 import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
@@ -46,7 +51,7 @@ import type {
 } from './scene-renderer';
 
 const PRIMITIVE_FLOAT_COUNT = 72;
-const TRIANGLE_FLOAT_COUNT = 24;
+const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
 const UNIFORM_FLOAT_COUNT = 80;
@@ -248,6 +253,7 @@ struct RayTriangle {
   firstNormal: vec4<f32>,
   secondNormal: vec4<f32>,
   thirdNormal: vec4<f32>,
+  secondaryCoordinates: array<vec4<f32>, 2>,
 };
 
 @group(0) @binding(0) var<storage, read> triangles: array<RayTriangle>;
@@ -656,6 +662,10 @@ type RayTracingFrameResources = {
   renderRevision: string;
   geometryLayouts: Map<string, RayTracingGeometryLayout>;
   retainedSurfaces: readonly SceneSurface[];
+  materialTextureRevision: string;
+  materialTextures: Texture[];
+  materialSamplers: Texture['sampler'][];
+  materialContentRevision: string;
   previousTransforms: Map<string, Matrix4>;
   primitivePlacements: Map<string, RayTracingPrimitivePlacement>;
   pickIdentities: readonly RayTracingPickIdentity[];
@@ -1028,6 +1038,32 @@ export class RayTracingSceneRenderer {
       );
     } else if (!areRayTracingPresentationOptionsEqual(resources.presentation, presentation)) {
       this.recreateTraceGraph(options.id, resources, presentation);
+    }
+
+    const materialTextureRevision = getRayMaterialTextureRevision(options.surfaces);
+    const materialTextures = getRayMaterialTextures(options.surfaces);
+    const materialContentRevision = JSON.stringify(
+      options.surfaces.map(surface => surface.material.version)
+    );
+    if (materialContentRevision !== resources.materialContentRevision) {
+      resources.materialContentRevision = materialContentRevision;
+      resources.historyNeedsReset = true;
+    }
+    if (
+      materialTextureRevision !== resources.materialTextureRevision ||
+      materialTextures.length !== resources.materialTextures.length ||
+      materialTextures.some(
+        (texture, index) =>
+          texture !== resources.materialTextures[index] ||
+          texture.sampler !== resources.materialSamplers[index]
+      )
+    ) {
+      resources.retainedSurfaces = options.surfaces;
+      this.recreateTraceGraph(options.id, resources, presentation);
+      resources.materialTextureRevision = materialTextureRevision;
+      resources.materialTextures = materialTextures;
+      resources.materialSamplers = materialTextures.map(texture => texture.sampler);
+      resources.historyNeedsReset = true;
     }
 
     const progressive = options.progressive ?? true;
@@ -1558,6 +1594,7 @@ export class RayTracingSceneRenderer {
       bvhOverflowBuffer
     });
     const traceGraph = this.createTraceGraph({
+      surfaces: props.surfaces,
       frameIdentifier,
       internalWidth: internalDimensions.width,
       internalHeight: internalDimensions.height,
@@ -1617,6 +1654,12 @@ export class RayTracingSceneRenderer {
       renderRevision: '',
       geometryLayouts: props.topology.geometryLayouts,
       retainedSurfaces: props.surfaces,
+      materialTextureRevision: getRayMaterialTextureRevision(props.surfaces),
+      materialTextures: getRayMaterialTextures(props.surfaces),
+      materialSamplers: getRayMaterialTextures(props.surfaces).map(texture => texture.sampler),
+      materialContentRevision: JSON.stringify(
+        props.surfaces.map(surface => surface.material.version)
+      ),
       previousTransforms: props.primitiveData.previousTransforms,
       primitivePlacements: props.primitiveData.placements,
       pickIdentities: props.primitiveData.pickIdentities,
@@ -1664,6 +1707,7 @@ export class RayTracingSceneRenderer {
       internalHeight
     );
     resources.traceGraph = this.createTraceGraph({
+      surfaces: resources.retainedSurfaces,
       frameIdentifier,
       internalWidth,
       internalHeight,
@@ -1695,6 +1739,7 @@ export class RayTracingSceneRenderer {
     presentation: RayTracingPresentationOptions
   ): void {
     const traceGraph = this.createTraceGraph({
+      surfaces: resources.retainedSurfaces,
       frameIdentifier,
       internalWidth: resources.internalWidth,
       internalHeight: resources.internalHeight,
@@ -2837,6 +2882,7 @@ export class RayTracingSceneRenderer {
   }
 
   private createTraceGraph(props: {
+    surfaces: readonly SceneSurface[];
     frameIdentifier: string;
     internalWidth: number;
     internalHeight: number;
@@ -2856,6 +2902,21 @@ export class RayTracingSceneRenderer {
     const graph = new GPUCommandGraph<RayTracingTraceGraphParameters>(this.device, {
       id: `scene-${props.frameIdentifier}-ray-tracing-trace`
     });
+    const materialTextures = getRayMaterialTextures(props.surfaces);
+    const materialViews = materialTextures.map((texture, index) =>
+      graph.createTextureView(
+        graph.importTexture(
+          {
+            id: `material-texture-${index}`,
+            format: texture.format,
+            width: texture.width,
+            height: texture.height,
+            usage: Texture.SAMPLE
+          },
+          texture
+        )
+      )
+    );
     const uniforms = graph.importBuffer(
       {
         id: 'uniforms',
@@ -3053,6 +3114,7 @@ export class RayTracingSceneRenderer {
     graph.addComputePass({
       id: `${props.frameIdentifier}-trace-rays`,
       resources: [
+        ...materialViews.map(texture => ({texture, usage: 'sampled' as const})),
         {buffer: uniforms, usage: 'uniform'},
         {buffer: primitives, usage: 'storage-read'},
         {buffer: triangles, usage: 'storage-read'},
@@ -3070,9 +3132,23 @@ export class RayTracingSceneRenderer {
       compile: ({device}) => {
         const computation = new Computation(device, {
           id: `${props.frameIdentifier}-ray-tracing-computation`,
-          source: RAY_TRACING_SCENE_SHADER,
+          source: getRayMaterialTextureShader(RAY_TRACING_SCENE_SHADER, props.surfaces),
           shaderLayout: {
             bindings: [
+              ...materialTextures.flatMap((texture, index) => [
+                {
+                  name: `materialTexture${index}`,
+                  type: 'texture' as const,
+                  group: 1,
+                  location: index * 2
+                },
+                {
+                  name: `materialSampler${index}`,
+                  type: 'sampler' as const,
+                  group: 1,
+                  location: index * 2 + 1
+                }
+              ]),
               {name: 'uniforms', type: 'uniform', group: 0, location: 0},
               {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
               {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
@@ -3118,6 +3194,12 @@ export class RayTracingSceneRenderer {
         return {
           encode: ({computePass, getBuffer, getTextureView, parameters}) => {
             computation.setBindings({
+              ...Object.fromEntries(
+                materialViews.flatMap((view, index) => [
+                  [`materialTexture${index}`, getTextureView(view)],
+                  [`materialSampler${index}`, materialTextures[index].sampler]
+                ])
+              ),
               uniforms: getBuffer(uniforms),
               primitives: getBuffer(primitives),
               triangles: getBuffer(triangles),
@@ -3615,6 +3697,9 @@ function makePrimitiveData(
       primitiveValues.set(previousTransform, primitiveOffset + 52);
       primitiveValues[primitiveOffset + 68] =
         surface.material.alphaMode === 'MASK' ? (materialUniforms?.alphaCutoff ?? 0.5) : -1;
+      primitiveValues[primitiveOffset + 69] = materialUniforms?.transmissionFactor ?? 0;
+      primitiveValues[primitiveOffset + 70] = materialUniforms?.ior ?? 1.5;
+      primitiveValues[primitiveOffset + 71] = surfaceIndex;
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,
@@ -3680,6 +3765,7 @@ function compileRayGeometry(
   const engineGeometry = surface.geometry;
   const positions = engineGeometry.attributes['POSITION']?.value;
   const normals = engineGeometry.attributes['NORMAL']?.value;
+  const coordinates = engineGeometry.attributes['TEXCOORD_0']?.value;
   if (!positions || !normals) {
     throw new Error('Ray tracing scene geometry requires positions and normals.');
   }
@@ -3696,7 +3782,7 @@ function compileRayGeometry(
         Number(positions[positionIndex]),
         Number(positions[positionIndex + 1]),
         Number(positions[positionIndex + 2]),
-        0
+        Number(coordinates?.[(positionIndex / 3) * 2] ?? 0)
       );
     }
     for (let cornerIndex = 0; cornerIndex < 3; cornerIndex++) {
@@ -3706,9 +3792,19 @@ function compileRayGeometry(
         Number(normals[normalIndex]),
         Number(normals[normalIndex + 1]),
         Number(normals[normalIndex + 2]),
-        0
+        Number(coordinates?.[(normalIndex / 3) * 2 + 1] ?? 0)
       );
     }
+    const secondaryCoordinates = engineGeometry.attributes['TEXCOORD_1']?.value;
+    for (let cornerIndex = 0; cornerIndex < 3; cornerIndex++) {
+      const coordinateIndex =
+        Number(indices?.[vertexIndex + cornerIndex] ?? vertexIndex + cornerIndex) * 2;
+      triangleValues.push(
+        Number(secondaryCoordinates?.[coordinateIndex] ?? 0),
+        Number(secondaryCoordinates?.[coordinateIndex + 1] ?? 0)
+      );
+    }
+    triangleValues.push(0, 0);
   }
 
   const compiledGeometry: CompiledRayGeometry = {
