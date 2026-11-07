@@ -8,6 +8,14 @@ and WebGPU. `createPBRShadowModel` shares transforms and alpha cutouts with visi
 emission. The [PBR Shadows example](/examples/api/pbr-shadows) includes a ground plane,
 light and quality controls, and orbit navigation. See [PBR shadows](./api-reference/engine/lighting/pbr-shadows.md).
 
+### Dedicated unlit material
+
+`@luma.gl/shaders` now exports `unlitMaterial` for surfaces that preserve RGBA
+without lighting dependencies, material uniforms, or light loops. GLSL and WGSL
+support both direct RGBA evaluation and the common Phong/Gouraud RGB entry point.
+Existing lit materials retain their runtime `unlit` flag. See the
+[Materials guide](./api-guide/engine/materials.md) and
+[API reference](./api-reference/shaders/shader-modules/unlit-material.md).
 
 ### Reusable shadow primitives
 

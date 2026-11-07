@@ -43,6 +43,10 @@ the experimental `@luma.gl/anari` package, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
 
+The [Materials guide](/docs/api-guide/engine/materials) compares Unlit, Lambert,
+Phong, Gouraud, and PBR shading and explains when to use a dedicated unlit shader
+versus a material's runtime `unlit` flag.
+
 ## Core
 
 The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications.

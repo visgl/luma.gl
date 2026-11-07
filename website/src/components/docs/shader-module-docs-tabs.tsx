@@ -16,6 +16,7 @@ export type ShaderModuleDocsTabId =
   | 'fp64-example'
   | 'lighting'
   | 'dirlight'
+  | 'unlit-material'
   | 'lambert-material'
   | 'gouraud-material'
   | 'phong-material'
@@ -45,6 +46,7 @@ const SHADER_MODULE_DOCS_TABS: Record<ShaderModuleDocsTabGroupId, ShaderModuleDo
     }
   ],
   lighting: [
+    {id: 'unlit-material', label: 'unlitMaterial', href: '/docs/api-reference/shaders/shader-modules/unlit-material'},
     {id: 'lighting', label: 'lighting', href: '/docs/api-reference/shaders/shader-modules/lighting'},
     {id: 'dirlight', label: 'dirlight', href: '/docs/api-reference/shaders/shader-modules/dirlight'},
     {
