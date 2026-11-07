@@ -168,6 +168,7 @@ export {lighting} from './modules/lighting/lights/lighting';
 export type {IBLBindings} from './modules/lighting/ibl/ibl';
 export {ibl} from './modules/lighting/ibl/ibl';
 export {dirlight} from './modules/lighting/no-material/dirlight';
+export {unlitMaterial} from './modules/lighting/unlit-material/unlit-material';
 export type {LambertMaterialProps} from './modules/lighting/lambert-material/lambert-material';
 export {lambertMaterial} from './modules/lighting/lambert-material/lambert-material';
 export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gouraud-material';

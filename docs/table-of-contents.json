@@ -572,6 +572,7 @@
                 "label": "Lighting and materials",
                 "items": [
                   "api-reference/shaders/shader-modules/dirlight",
+                  "api-reference/shaders/shader-modules/unlit-material",
                   "api-reference/shaders/shader-modules/lambert-material",
                   "api-reference/shaders/shader-modules/lighting",
                   "api-reference/shaders/shader-modules/pbr-material",
