@@ -11,7 +11,8 @@ export function lowerSlangType(type: SlangType): ShaderType {
   if (type.name === 'array' && type.element)
     return {kind: 'array', element: lowerSlangType(type.element), length: type.length};
   const numeric = /^(float|int|uint|bool)([2-4])?(?:x([2-4]))?$/.exec(type.name);
-  if (!numeric) return {kind: 'struct', name: type.name};
+  if (!numeric || (numeric[3] && (numeric[1] !== 'float' || !numeric[2])))
+    return {kind: 'struct', name: type.name};
   const scalar = SCALARS[numeric[1]];
   if (numeric[3])
     return {kind: 'matrix', scalar: 'f32', columns: Number(numeric[2]), rows: Number(numeric[3])};

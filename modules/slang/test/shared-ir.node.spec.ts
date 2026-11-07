@@ -81,3 +81,7 @@ it('keeps shared target type emission independent of frontend code', async () =>
   });
   expect(Object.keys(result.metafile!.inputs)).toEqual(['modules/slang/src/ir-types.ts']);
 });
+
+it.each(['int2x3', 'bool3x3', 'floatx3'])('rejects unsupported matrix value types: %s', name => {
+  expect(emitNumericType(lowerSlangType({name}), 'glsl')).toBeUndefined();
+});
