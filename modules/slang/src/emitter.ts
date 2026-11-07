@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {emitNumericType} from './ir-types';
+import {lowerSlangType} from './slang-types';
+import {lowerSlangInterface} from './slang-interface';
+import type {ShaderInterface} from './ir';
+
 import type {
   Expression,
   Program,
@@ -12,6 +17,7 @@ import type {
   Variable
 } from './ast';
 import {
+  lowerSlangResource,
   ATOMICS,
   BARRIERS,
   isByteAddressBuffer,
@@ -59,6 +65,7 @@ type Symbol = {
   integerConstant?: number;
 };
 type InterfaceLeaf = {
+  interface: ShaderInterface;
   variable: Variable;
   path: string[];
   field: string;
@@ -116,46 +123,17 @@ const INTRINSICS: Record<string, number[]> = {
   mul: [2],
   GroupMemoryBarrierWithGroupSync: [0]
 };
-const BUILTINS: Record<string, {wgsl: string; glsl: string; stages: string[]; type: string}> = {
-  SV_POSITION: {
-    wgsl: 'position',
-    glsl: 'gl_Position',
-    stages: ['vertex:out', 'fragment:in'],
-    type: 'float4'
-  },
-  SV_VERTEXID: {wgsl: 'vertex_index', glsl: 'gl_VertexID', stages: ['vertex:in'], type: 'uint'},
-  SV_INSTANCEID: {
-    wgsl: 'instance_index',
-    glsl: 'gl_InstanceID',
-    stages: ['vertex:in'],
-    type: 'uint'
-  },
-  SV_ISFRONTFACE: {
-    wgsl: 'front_facing',
-    glsl: 'gl_FrontFacing',
-    stages: ['fragment:in'],
-    type: 'bool'
-  },
-  SV_DEPTH: {wgsl: 'frag_depth', glsl: 'gl_FragDepth', stages: ['fragment:out'], type: 'float'},
-  SV_DISPATCHTHREADID: {
-    wgsl: 'global_invocation_id',
-    glsl: 'gl_GlobalInvocationID',
-    stages: ['compute:in'],
-    type: 'uint3'
-  },
-  SV_GROUPID: {wgsl: 'workgroup_id', glsl: 'gl_WorkGroupID', stages: ['compute:in'], type: 'uint3'},
-  SV_GROUPTHREADID: {
-    wgsl: 'local_invocation_id',
-    glsl: 'gl_LocalInvocationID',
-    stages: ['compute:in'],
-    type: 'uint3'
-  },
-  SV_GROUPINDEX: {
-    wgsl: 'local_invocation_index',
-    glsl: 'gl_LocalInvocationIndex',
-    stages: ['compute:in'],
-    type: 'uint'
-  }
+
+const GLSL_BUILTINS: Record<string, string> = {
+  position: 'gl_Position',
+  vertex_index: 'gl_VertexID',
+  instance_index: 'gl_InstanceID',
+  front_facing: 'gl_FrontFacing',
+  frag_depth: 'gl_FragDepth',
+  global_invocation_id: 'gl_GlobalInvocationID',
+  workgroup_id: 'gl_WorkGroupID',
+  local_invocation_id: 'gl_LocalInvocationID',
+  local_invocation_index: 'gl_LocalInvocationIndex'
 };
 
 export class SlangEmitter {
@@ -465,20 +443,8 @@ export class SlangEmitter {
     if (type.element) {
       this.fail(`Unsupported value type ${type.name}`, location);
     }
-    if (SCALARS[type.name]) {
-      return this.isWGSL ? SCALARS[type.name] : type.name;
-    }
-    const vector = /^(float|int|uint|bool)([2-4])$/.exec(type.name);
-    if (vector) {
-      return this.isWGSL
-        ? `vec${vector[2]}<${SCALARS[vector[1]]}>`
-        : `${{float: '', int: 'i', uint: 'u', bool: 'b'}[vector[1]]}vec${vector[2]}`;
-    }
-    const matrix = /^float([2-4])x([2-4])$/.exec(type.name);
-    // Slang matrix indexing is by row. Represent rows as target columns and reverse mul.
-    if (matrix) {
-      return this.isWGSL ? `mat${matrix[1]}x${matrix[2]}<f32>` : `mat${matrix[1]}x${matrix[2]}`;
-    }
+    const numericType = emitNumericType(lowerSlangType(type), this.options.target);
+    if (numericType) return numericType;
     if (this.structures.has(type.name)) {
       return this.program.publicNames?.get(type.name) || `_slang_type_${type.name}`;
     }
@@ -2735,8 +2701,8 @@ export class SlangEmitter {
         variable.location
       );
     if (textureLayout) this.textureLayouts.set(name, textureLayout);
-    const access =
-      textureLayout?.access ?? (variable.type.name.startsWith('RW') ? 'read_write' : 'read');
+    const resource = lowerSlangResource(variable.type, binding, textureLayout?.access);
+    const access = resource.access;
     if (!texture && variable.attributes.some(attribute => attribute.name === 'format'))
       this.fail('format requires a storage texture', variable.location);
     if (textureLayout?.format && !this.isWGSL && this.glslVersion !== '450')
@@ -2785,7 +2751,7 @@ export class SlangEmitter {
       name: variable.name,
       shaderName: name,
       ...binding,
-      kind: storage ? 'storage' : texture ? 'texture' : sampler ? 'sampler' : 'uniform',
+      kind: resource.kind,
       access,
       visibility: 0,
       ...(sampler
@@ -2813,12 +2779,12 @@ export class SlangEmitter {
     if (this.isWGSL) {
       const prefix = `@group(${binding.group}) @binding(${binding.binding})`;
       if (storage) {
-        return `${prefix} var<storage, ${access}> ${name}: array<${this.scopes[0].get(variable.name)!.atomic ? `atomic<${this.getTypeName(variable.type.element!, variable.location)}>` : this.getTypeName(variable.type.element!, variable.location)}>;`;
+        return `${prefix} var<${resource.addressSpace}, ${access}> ${name}: array<${this.scopes[0].get(variable.name)!.atomic ? `atomic<${this.getTypeName(variable.type.element!, variable.location)}>` : this.getTypeName(variable.type.element!, variable.location)}>;`;
       }
       if (texture || sampler) {
         return `${prefix} var ${name}: ${texture ? getWGSLTextureType(textureLayout!) : variable.type.name === 'SamplerComparisonState' ? 'sampler_comparison' : 'sampler'};`;
       }
-      return `${prefix} var<uniform> ${name}: ${this.uniformEmitter.getTypeName(valueType!)};`;
+      return `${prefix} var<${resource.addressSpace}> ${name}: ${this.uniformEmitter.getTypeName(valueType!)};`;
     }
     if (storage) {
       if (this.glslVersion !== '450') {
@@ -2894,33 +2860,21 @@ export class SlangEmitter {
         this.fail('Entry point leaves must be numeric scalars or vectors', variable.location);
       }
     }
-    const semantic = variable.semantic.toUpperCase();
-    const builtin = BUILTINS[semantic];
+    const interfaceMetadata = lowerSlangInterface(
+      variable,
+      this.stage,
+      direction,
+      this.locations,
+      message => this.fail(message, variable.location)
+    );
+    const builtin = interfaceMetadata.builtin;
     const reflection: SlangInterfaceVariable = {
       name: path.join('.'),
       semantic: variable.semantic,
       shaderName: `_slang_${direction}_${(direction === 'in' ? this.inputs : this.outputs).length}`,
-      type: variable.type.name
+      type: variable.type.name,
+      ...(builtin ? {builtin} : {location: interfaceMetadata.location})
     };
-    if (builtin) {
-      if (!builtin.stages.includes(`${this.stage}:${direction}`)) {
-        this.fail(`Invalid ${variable.semantic} for ${this.stage} ${direction}`, variable.location);
-      }
-      if (variable.type.name !== builtin.type) {
-        this.fail(`${variable.semantic} requires ${builtin.type}`, variable.location);
-      }
-      reflection.builtin = builtin.wgsl;
-    } else if (/^SV_TARGET\d*$/.test(semantic)) {
-      if (this.stage !== 'fragment' || direction !== 'out') {
-        this.fail('SV_Target requires fragment output', variable.location);
-      }
-      reflection.location = Number(semantic.slice(9) || 0);
-    } else {
-      if (semantic.startsWith('SV_') || this.stage === 'compute') {
-        this.fail(`Unsupported semantic ${variable.semantic}`, variable.location);
-      }
-      reflection.location = this.locations.get(semantic)!;
-    }
     this.getTypeName(variable.type, variable.location);
     const leaves = direction === 'in' ? this.inputs : this.outputs;
     if (
@@ -2933,6 +2887,7 @@ export class SlangEmitter {
       this.fail('Duplicate entry point semantic location or builtin', variable.location);
     }
     const leaf: InterfaceLeaf = {
+      interface: interfaceMetadata,
       variable,
       path,
       field: `_slang_${direction}_${leaves.length}`,
@@ -3021,18 +2976,8 @@ export class SlangEmitter {
       (this.stage === 'fragment' && direction === 'in') ||
       (this.stage === 'vertex' && direction === 'out');
     if (interpolated) {
-      const modifiers = leaf.variable.modifiers;
-      const mode =
-        modifiers.includes('nointerpolation') || /^(int|uint)/.test(leaf.variable.type.name)
-          ? 'flat'
-          : modifiers.includes('noperspective')
-            ? 'linear'
-            : 'perspective';
-      const sampling = modifiers.includes('centroid')
-        ? 'centroid'
-        : modifiers.includes('sample')
-          ? 'sample'
-          : 'center';
+      const mode = leaf.interface.interpolation;
+      const sampling = leaf.interface.sampling;
       attribute += mode === 'flat' ? ' @interpolate(flat)' : ` @interpolate(${mode}, ${sampling})`;
     }
     return attribute;
@@ -3060,9 +3005,7 @@ export class SlangEmitter {
             const interpolated =
               (this.stage === 'fragment' && direction === 'in') ||
               (this.stage === 'vertex' && direction === 'out');
-            const flat =
-              leaf.variable.modifiers.includes('nointerpolation') ||
-              /^(int|uint)/.test(leaf.variable.type.name);
+            const flat = leaf.interface.interpolation === 'flat';
             // GLSL ES 3.00 cannot assign explicit locations to varying interfaces.
             const location =
               this.glslVersion === '450' ||
@@ -3070,31 +3013,35 @@ export class SlangEmitter {
               (this.stage === 'fragment' && direction === 'out')
                 ? `layout(location = ${leaf.reflection.location}) `
                 : '';
-            const modifiers = leaf.variable.modifiers;
+            const interfaceMetadata = leaf.interface;
             if (
               interpolated &&
               !flat &&
               this.glslVersion === '300 es' &&
-              modifiers.includes('noperspective')
+              interfaceMetadata.interpolation === 'linear'
             ) {
               this.fail('noperspective interpolation requires GLSL 450', leaf.variable.location);
             }
-            if (interpolated && this.glslVersion === '300 es' && modifiers.includes('sample')) {
+            if (
+              interpolated &&
+              this.glslVersion === '300 es' &&
+              interfaceMetadata.sampling === 'sample'
+            ) {
               this.fail('sample interpolation requires GLSL 450', leaf.variable.location);
             }
             const interpolation = !interpolated
               ? ''
               : flat
                 ? 'flat '
-                : modifiers.includes('noperspective')
+                : interfaceMetadata.interpolation === 'linear'
                   ? 'noperspective '
                   : '';
             const sampling =
               !interpolated || flat
                 ? ''
-                : modifiers.includes('centroid')
+                : interfaceMetadata.sampling === 'centroid'
                   ? 'centroid '
-                  : modifiers.includes('sample')
+                  : interfaceMetadata.sampling === 'sample'
                     ? 'sample '
                     : '';
             pieces.push(
@@ -3116,10 +3063,7 @@ export class SlangEmitter {
         let value = this.isWGSL
           ? `_slang_input.${leaf.field}`
           : this.getGLSLInterfaceName(leaf, 'in');
-        if (
-          !this.isWGSL &&
-          ['SV_VERTEXID', 'SV_INSTANCEID'].includes(leaf.variable.semantic!.toUpperCase())
-        ) {
+        if (!this.isWGSL && ['vertex_index', 'instance_index'].includes(leaf.interface.builtin!)) {
           value = `uint(${value})`;
         }
         body.push(`${name}${this.getMemberPath(parameter.type, leaf.path.slice(1))} = ${value};`);
@@ -3166,10 +3110,10 @@ export class SlangEmitter {
   }
   private getGLSLInterfaceName(leaf: InterfaceLeaf, direction: 'in' | 'out'): string {
     if (leaf.reflection.builtin) {
-      if (leaf.variable.semantic!.toUpperCase() === 'SV_POSITION' && direction === 'in') {
+      if (leaf.interface.builtin === 'position' && direction === 'in') {
         return 'gl_FragCoord';
       }
-      return BUILTINS[leaf.variable.semantic!.toUpperCase()].glsl;
+      return GLSL_BUILTINS[leaf.interface.builtin!];
     }
     const varying =
       (this.stage === 'vertex' && direction === 'out') ||

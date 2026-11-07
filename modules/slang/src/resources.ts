@@ -32,3 +32,20 @@ export function getExpressionRoot(expression: Expression): Expression {
     expression = expression.object;
   return expression;
 }
+
+/** Normalize resource ownership and access independently of target declarations. */
+export function lowerSlangResource(
+  type: SlangType,
+  binding: {group: number; binding: number},
+  textureAccess?: 'read' | 'write' | 'read_write'
+): import('./ir').ShaderResource {
+  const storage = type.name.endsWith('StructuredBuffer') || isByteAddressBuffer(type);
+  const texture = /Texture/.test(type.name);
+  const sampler = type.name === 'SamplerState' || type.name === 'SamplerComparisonState';
+  return {
+    ...binding,
+    kind: storage ? 'storage' : texture ? 'texture' : sampler ? 'sampler' : 'uniform',
+    addressSpace: storage ? 'storage' : texture || sampler ? 'handle' : 'uniform',
+    access: textureAccess ?? (type.name.startsWith('RW') ? 'read_write' : 'read')
+  };
+}

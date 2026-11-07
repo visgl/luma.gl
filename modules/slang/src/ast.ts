@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export type SourceLocation = {offset: number; line: number; column: number; sourceName?: string};
+import type {SourceLocation} from './ir';
+export type {SourceLocation} from './ir';
 export type Token = SourceLocation & {
   text: string;
   kind: 'identifier' | 'number' | 'string' | 'symbol' | 'end';
