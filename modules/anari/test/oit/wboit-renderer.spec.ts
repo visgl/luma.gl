@@ -23,7 +23,7 @@ import {getTestDevice, getTestDevices} from '@luma.gl/core/test-utils';
 
 it('wboit module exposes portable capture helpers', () => {
   expect(wboitPlugin.name, 'plugin has stable name').toBe('wboit');
-  expect(wboitPlugin.modules, 'plugin installs the portable shader module').toEqual([wboit]);
+  expect(wboitPlugin.module, 'plugin installs the portable shader module').toEqual(wboit);
   expect(wboit.source || '', 'WGSL helper is present').toMatch(/wboit_captureStraightColor/);
   expect(wboit.fs || '', 'GLSL helper is present').toMatch(/wboit_captureStraightColor/);
   expect(wboit.getUniforms?.({pass: 'accumulation'}), 'selects accumulation').toEqual({

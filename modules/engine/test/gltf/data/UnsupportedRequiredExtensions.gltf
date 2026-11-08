@@ -8,24 +8,34 @@
     }
   },
   "scene": 0,
-  "scenes": [{"nodes": []}],
+  "scenes": [
+    {
+      "nodes": []
+    }
+  ],
   "nodes": [],
   "extensionsUsed": [
     "EXT_lights_image_based",
     "EXT_texture_avif",
     "EXT_texture_video",
+    "KHR_gaussian_splatting",
     "KHR_implicit_shapes",
+    "KHR_interactivity",
+    "KHR_node_hoverability",
+    "KHR_node_selectability",
     "KHR_physics_rigid_bodies",
-    "KHR_xmp",
-    "KHR_xmp_json_ld"
+    "KHR_xmp"
   ],
   "extensionsRequired": [
     "EXT_lights_image_based",
     "EXT_texture_avif",
     "EXT_texture_video",
+    "KHR_gaussian_splatting",
     "KHR_implicit_shapes",
+    "KHR_interactivity",
+    "KHR_node_hoverability",
+    "KHR_node_selectability",
     "KHR_physics_rigid_bodies",
-    "KHR_xmp",
-    "KHR_xmp_json_ld"
+    "KHR_xmp"
   ]
 }

@@ -230,5 +230,5 @@ export const opticalCaustics = {
 /** Explicitly installs bounded focusing lenses for nearby reflective receiver surfaces. */
 export const opticalCausticsPlugin = {
   name: 'opticalCaustics',
-  modules: [opticalCaustics as ShaderModule]
+  module: opticalCaustics as ShaderModule
 } as const satisfies ShaderPlugin;

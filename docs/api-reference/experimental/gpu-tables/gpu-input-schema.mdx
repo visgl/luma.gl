@@ -11,8 +11,8 @@ import {GPUTablesDocsTabs} from '@site/src/components/docs/gpu-tables-docs-tabs'
 </DocumentationBadges>
 
 `GPUInputSchema` is the runtime contract a model or renderer uses to declare the
-prepared varying [`GPUVector`](/docs/api-reference/gpgpu/gpu-vector) and constant
-[`GPUConstant`](/docs/api-reference/gpgpu/gpu-constant) inputs it accepts.
+prepared varying [`GPUVector`](/docs/api-reference/graph/gpu-vector) and constant
+[`GPUConstant`](/docs/api-reference/graph/gpu-constant) inputs it accepts.
 Models expose the contract as a static `gpuInputSchema` property so renderers,
 adapters, validation helpers, and application code can inspect the same
 declaration.
@@ -27,7 +27,7 @@ It is distinct from [`GPUSchema`](/docs/api-reference/experimental/gpu-tables/gp
 ## Types
 
 ```ts
-import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUConstant, GPUVector, GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 
 export type GPUInputKind = 'positions' | 'colors' | 'scalars' | 'matrices' | 'text' | 'time';
 

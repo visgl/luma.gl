@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
-import {type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {type VertexList} from '@luma.gl/graph/gpu-data';
 import {planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
 import {
   Bool,
@@ -24,22 +24,22 @@ import {
   makeVector
 } from 'apache-arrow';
 import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
-import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from '@luma.gl/gpgpu/arrow';
-import {expandArrowVector} from '@luma.gl/gpgpu/arrow';
+import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from '@luma.gl/graph/arrow';
+import {expandArrowVector} from '@luma.gl/graph/arrow';
 import {
   getArrowDataBufferSource,
   getArrowVariableLengthAttributeDataBufferSource,
   getArrowVectorBufferSource
-} from '@luma.gl/gpgpu/_internal/arrow';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/_internal/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {closeArrowPaths} from '../transforms/close-arrow-paths';
-import {type ArrowTemporalColumnType} from '@luma.gl/gpgpu/arrow';
+import {type ArrowTemporalColumnType} from '@luma.gl/graph/arrow';
 import {
   isInstanceArrowType,
   isVariableLengthAttributeArrowType
-} from '@luma.gl/gpgpu/_internal/arrow';
-import {type NumericArrowType} from '@luma.gl/gpgpu/arrow';
-import {type ArrowVertexFormatOptions} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/_internal/arrow';
+import {type NumericArrowType} from '@luma.gl/graph/arrow';
+import {type ArrowVertexFormatOptions} from '@luma.gl/graph/arrow';
 import type {
   PathAttributeModelProps,
   PathAttributeModelState,

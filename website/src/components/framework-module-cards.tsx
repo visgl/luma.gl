@@ -61,7 +61,7 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
     description:
       'Describe declarative 3D scenes with glTF and OpenUSD, then switch renderers without rebuilding the world.',
     capabilities: ['glTF', 'OpenUSD', 'Renderers'],
-    documentationPath: 'docs/api-reference/scene'
+    documentationPath: 'docs/api-reference/anari'
   },
   {
     id: 'splats',
@@ -76,12 +76,12 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
   {
     id: 'gpgpu',
     title: 'GPGPU',
-    packageName: '@luma.gl/gpgpu',
+    packageName: '@luma.gl/graph/gpu-simple-graph',
     label: 'GPU compute + rendering',
     description:
       'Connect reusable compute modules and rendering in a single GPU-native pipeline, without moving data back to the CPU.',
     capabilities: ['GPU graphs', 'Compute modules', 'Zero readback'],
-    documentationPath: 'docs/api-reference/gpgpu'
+    documentationPath: 'docs/api-reference/graph/gpu-evaluation'
   }
 ];
 

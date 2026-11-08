@@ -36,7 +36,7 @@ export class WGSLShaderAssembler extends ShaderAssembler {
     entryPoints: ShaderTranspilerEntryPoints;
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
-    const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
+    const injectionTargets = [...this._injectionTargets, ...(props.injectionTargets || [])];
     const translated = this._transpileShader(
       props,
       modules,
@@ -65,7 +65,7 @@ export class WGSLShaderAssembler extends ShaderAssembler {
       defines,
       _bindingRegistry: this._wgslBindingRegistry,
       modules: translated.modules,
-      hookFunctions
+      injectionTargets
     });
     // WGSL does not have built-in preprocessing support (just compile time constants)
     const preprocessedSource =

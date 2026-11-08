@@ -15,7 +15,7 @@ import {
   type GPUDataFrameJoinOptions,
   type GPUDataFrameLookupOptions
 } from '@luma.gl/graph/gpu-dataframe';
-import {GPUConstant, GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, GPUData} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,

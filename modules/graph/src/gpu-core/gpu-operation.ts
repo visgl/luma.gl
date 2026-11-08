@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUCommandNode, GPUNode} from './gpu-command-node';
+import type {GPUOperationContract} from './gpu-operation-contract';
 import type {GPUCommandGraph} from './gpu-command-graph';
 
 export interface GPUGraphPrimitive {
@@ -36,6 +37,8 @@ export interface GPUOperation {
   readonly id: string;
   readonly type: string;
   readonly metadata?: GPUOperationMetadata;
+  /** Logical reads, writes and output shapes for reusable-program planning. */
+  readonly contract?: GPUOperationContract;
 }
 
 /** Semantic operations and concrete execution primitives accepted by GPUGraph. */

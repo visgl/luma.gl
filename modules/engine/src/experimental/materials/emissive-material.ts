@@ -116,5 +116,5 @@ export const emissiveMaterial = {
 /** Installs portable emissive shading and shared optical-lighting helpers. */
 export const emissiveMaterialPlugin = {
   name: 'emissiveMaterial',
-  modules: [emissiveMaterial as ShaderModule]
+  module: emissiveMaterial as ShaderModule
 } as const satisfies ShaderPlugin;

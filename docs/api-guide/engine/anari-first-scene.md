@@ -456,7 +456,7 @@ const glass = anariDevice.newMaterial('physicallyBased', {
 
 The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively
 resolved. Renderer parameters can also receive the caller-owned
-[prepared PBR lighting environment](/docs/api-reference/scene/pbr-environment) for
+[prepared PBR lighting environment](/docs/api-reference/anari/pbr-environment) for
 roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.
@@ -732,5 +732,5 @@ anariDevice.extensions;
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

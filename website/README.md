@@ -8,7 +8,11 @@ Run these commands from the repository root.
 
 ```
 $ yarn install
+$ yarn build
 ```
+
+Build the workspace packages before starting or building the website. The standalone
+examples use compiled workspace exports. Rerun `yarn build` after changing those packages.
 
 ### Local Development
 

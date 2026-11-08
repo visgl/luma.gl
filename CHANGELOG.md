@@ -2,6 +2,41 @@
 
 ## v10.0
 
+### v10.0.0-alpha.10
+
+- Rename shader hooks to injection targets and unify shader injection documentation.
+- Allow shared WGSL injection target names across vertex and fragment stages.
+- Support cancelling Arrow uploads from streams and validate requested GPU output formats.
+- Document automatic recovery from provenance transparency errors and independent npm registry propagation checks.
+
+### v10.0.0-alpha.9
+
+- Move shader injections from ShaderModule to ShaderPlugin and unify GLSL/WGSL hook descriptors and return types.
+- Expose makeGPUVectorGeometry and support independent vector lengths with explicit draw-count inference controls.
+- Add glTF Gaussian splat preparation and rendering, and inline graph texture debugging previews.
+- Apply initial WebGPU render-pass parameters correctly.
+- Finish the Lu-to-GPU naming migration and reorganize guides, API navigation, and shader and Three.js examples.
+- Keep simulation qualification in physics CI while retaining ordinary correctness checks in release tests, and build workspace packages before website publication.
+
+### v10.0.0-alpha.8
+
+- Add graph texture values and execution bindings, operation-defined results, capacity/count outputs, and shared transfer operations.
+- Support caller-owned graph encoding and reuse intermediate storage across graph execution.
+- Add path-based scenegraph lookup and physics controllers, integrate GPU physics rendering with engine PBR, and expand physics examples and guides.
+- Isolate per-batch uniforms in aligned buffer ranges and consolidate inferred vector buffer layouts.
+- Make shader, fence, and vertex-array destruction idempotent; support reverse-Z splat alpha ordering and improve glTF extension capability diagnostics.
+- Add portable ShaderPlugin hooks, align PBR directional lighting with Phong and Lambert, and add ocean velocity sampling with a geographic RK2 reference.
+- Upgrade math.gl and loaders.gl to beta.4, use the consolidated math.gl expression parser, and accept the standard ETC1 texture-format spelling while preserving its legacy alias.
+
+### v10.0.0-alpha.7
+
+- Consolidate GPU execution, data, and table APIs into graph subpaths and expose explicit package exports.
+- Add logical GPU operation contracts, typed graph rows, component access, row constructors, casts, and row-local expression functions.
+- Support transformed Arrow GPU columns and align graph declarations with expression execution.
+- Simplify ShaderPlugin language contributions and primary modules, preserve plugin composition, and improve scoped hooks, conflict reporting, and portability.
+- Fix model resource cleanup, WebGL device-loss reporting and lifecycle coverage, external canvas resizing, and storage-texture capability reporting.
+- Strengthen opaque GPU and glTF metadata types and upgrade math.gl and loaders.gl to beta.2 and dev-tools to beta.3.
+
 ### v10.0.0-alpha.6
 
 - Consolidate glTF, splats, text, and effects APIs into engine subpaths and move test devices to core/test-utils.

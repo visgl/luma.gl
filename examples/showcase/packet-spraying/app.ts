@@ -317,7 +317,7 @@ const ADDITIVE_PARAMETERS = {
 
 const networkNodePickingPlugin = {
   name: 'networkNodePicking',
-  modules: [colorPicking as ShaderModule]
+  module: colorPicking as ShaderModule
 } as const satisfies ShaderPlugin;
 
 class InstancedMesh<

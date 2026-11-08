@@ -6,10 +6,15 @@ import {expect, it} from 'vitest';
 import {resolve} from 'node:path';
 import typescript from 'typescript';
 import {Buffer} from '@luma.gl/core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUSimpleGraph, GPUSimpleGraphValue} from '@luma.gl/graph/gpu-simple-graph';
-import {GPUGraph, GPUGraphScalarLiteral, GPUGraphVectorMADD} from '@luma.gl/graph/gpu-core';
+import {
+  GPUGraph,
+  GPUGraphScalarLiteral,
+  GPUGraphVectorMADD,
+  GPURenderOperation
+} from '@luma.gl/graph/gpu-core';
 
 it('checks render parameter requirements through direct, array, and composite additions', () => {
   const fixture = resolve('modules/graph/test/gpu-simple-graph/fixtures/parameters.type-test.ts');
@@ -62,3 +67,11 @@ for (const uploadFirst of [true, false]) {
     }
   });
 }
+
+it('does not silently discard render recipes through reusable-expression compilation', () => {
+  const device = new NullDevice({});
+  const graph = new GPUSimpleGraph(device);
+  graph.addRenderOperation(new GPURenderOperation({id: 'render-only', createNodes: () => []}));
+  expect(() => graph.compile(device)).toThrow();
+  device.destroy();
+});

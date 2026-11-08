@@ -4,8 +4,8 @@
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Buffer, type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
-import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {Kernel} from '../execution/compute/kernel';
+import {getGPUVectorFormatInfo, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from './gpu-command-graph';
 import {
   doGraphDataViewsOverlap,

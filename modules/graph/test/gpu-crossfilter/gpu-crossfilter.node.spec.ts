@@ -13,11 +13,11 @@ import {
   GPUCrossfilterSelection,
   type GPUCrossfilterScalarFormat
 } from '@luma.gl/graph/gpu-crossfilter';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
-const LUX_FILTER_RUNTIME_EXPORTS = ['GPUCrossfilter', 'GPUCrossfilterSelection'] as const;
+const GPU_CROSSFILTER_RUNTIME_EXPORTS = ['GPUCrossfilter', 'GPUCrossfilterSelection'] as const;
 
 describe('@luma.gl/graph/gpu-crossfilter package boundary', () => {
   test('publishes one side-effect-free conditional experimental subpath', () => {
@@ -39,7 +39,7 @@ describe('@luma.gl/graph/gpu-crossfilter package boundary', () => {
   });
 
   test('keeps linked-filter runtime exports on their optional subpath', () => {
-    for (const exportName of LUX_FILTER_RUNTIME_EXPORTS) {
+    for (const exportName of GPU_CROSSFILTER_RUNTIME_EXPORTS) {
       expect(typeof gpuCrossfilterModule[exportName]).toBe('function');
       expect(exportName in graphRootModule).toBe(false);
     }

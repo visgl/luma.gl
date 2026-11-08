@@ -51,9 +51,17 @@ export class GPUVectorBindings {
   setInputs(
     columns: GPUVectorModelAttributes,
     explicitLayouts: BufferLayout[] | undefined,
-    stepMode: 'vertex' | 'instance'
+    stepMode: 'vertex' | 'instance',
+    enforceMatchingVectorLengths = true
   ): void {
-    validateGPUVectorBatchStructure(columns);
+    if (enforceMatchingVectorLengths) {
+      validateGPUVectorBatchStructure(columns);
+    } else {
+      // Independent attributes currently require contiguous storage.
+      for (const column of Object.values(columns)) {
+        if (column && !isConstant(column)) assert(column.data.length === 1);
+      }
+    }
     this.claimedNames.clear();
     this.inputs = columns;
     this.sourceLayouts = explicitLayouts;
@@ -66,32 +74,28 @@ export class GPUVectorBindings {
       Object.entries(columns).flatMap<BufferLayout>(([name, column]) =>
         column && !isConstant(column) && column.bufferLayout ? [{...column.bufferLayout, name}] : []
       );
-    const layouts: BufferLayout[] = [
-      ...providedLayouts,
-      ...Object.entries(columns).flatMap<BufferLayout>(([name, column]) => {
-        if (
-          !column ||
-          providedLayouts.some(
-            layout =>
-              layout.name === name ||
-              layout.attributes?.some(attribute => attribute.attribute === name)
-          )
+    const inferredLayouts = Object.entries(columns).flatMap<BufferLayout>(([name, column]) => {
+      if (
+        !column ||
+        providedLayouts.some(
+          layout =>
+            layout.name === name ||
+            layout.attributes?.some(attribute => attribute.attribute === name)
         )
-          return [];
-        assert(column.format);
-        const format = column.format as VertexFormat;
-        const byteStride = isConstant(column) ? 0 : column.byteStride;
-        return [
-          {name, stepMode, byteStride, attributes: [{attribute: name, format, byteOffset: 0}]}
-        ];
-      })
-    ];
+      )
+        return [];
+      assert(column.format);
+      const format = column.format as VertexFormat;
+      const byteStride = isConstant(column) ? 0 : column.byteStride;
+      return [{name, stepMode, byteStride, attributes: [{attribute: name, format, byteOffset: 0}]}];
+    });
+    const layouts = [...providedLayouts, ...consolidateInferredLayouts(columns, inferredLayouts)];
     for (const [name, column] of Object.entries(columns)) {
       if (!column) continue;
       // Inputs must describe a typed vector or a typed constant, never raw buffers or arrays.
       if (!isConstant(column) && !Array.isArray(column.data))
         throw new TypeError(`Expected a GPU vector or constant for ${name}`);
-      if (!isConstant(column)) {
+      if (!isConstant(column) && enforceMatchingVectorLengths) {
         const layout = layouts.find(
           layout =>
             layout.name === name ||
@@ -273,4 +277,66 @@ function getShaderConstant(column: GPUVectorModelConstant): TypedArray {
   if (information.integer)
     return information.signed ? new Int32Array(values) : new Uint32Array(values);
   return new Float32Array(values);
+}
+
+/** Consolidates inferred views without changing stored bytes or caller-owned layouts. */
+function consolidateInferredLayouts(
+  columns: GPUVectorModelAttributes,
+  layouts: BufferLayout[]
+): BufferLayout[] {
+  const result: BufferLayout[] = [];
+  let constantLayout: BufferLayout | undefined;
+  let constantByteLength = 0;
+  // Start with the lowest offset so shared views have nonnegative attribute offsets.
+  const sortedLayouts = [...layouts].sort((left, right) => {
+    const leftColumn = columns[left.name];
+    const rightColumn = columns[right.name];
+    return (
+      (leftColumn && !isConstant(leftColumn) ? (leftColumn.data[0]?.byteOffset ?? 0) : 0) -
+      (rightColumn && !isConstant(rightColumn) ? (rightColumn.data[0]?.byteOffset ?? 0) : 0)
+    );
+  });
+  for (const layout of sortedLayouts) {
+    const column = columns[layout.name]!;
+    const attribute = layout.attributes![0];
+    if (isConstant(column)) {
+      if (!constantLayout) {
+        constantLayout = {...layout, attributes: []};
+        result.push(constantLayout);
+      }
+      const alignment = Math.min(4, column.byteLength);
+      constantByteLength = Math.ceil(constantByteLength / alignment) * alignment;
+      constantLayout.attributes!.push({...attribute, byteOffset: constantByteLength});
+      constantByteLength += column.byteLength;
+      continue;
+    }
+    const sharedLayout = result.find(candidate => {
+      const primary = columns[candidate.name];
+      if (!primary || isConstant(primary) || !primary.data.length || !column.data.length)
+        return false;
+      const offset = column.data[0].byteOffset - primary.data[0].byteOffset;
+      return (
+        candidate.stepMode === layout.stepMode &&
+        candidate.byteStride === layout.byteStride &&
+        offset >= 0 &&
+        offset + column.rowByteLength <= column.byteStride &&
+        column.data.every((chunk, index) => {
+          const primaryChunk = primary.data[index];
+          return (
+            chunk.buffer === primaryChunk.buffer &&
+            chunk.byteStride === primaryChunk.byteStride &&
+            chunk.byteOffset - primaryChunk.byteOffset === offset
+          );
+        })
+      );
+    });
+    if (sharedLayout) {
+      const primary = columns[sharedLayout.name] as GPUVectorModelInput;
+      sharedLayout.attributes!.push({
+        ...attribute,
+        byteOffset: column.data[0].byteOffset - primary.data[0].byteOffset
+      });
+    } else result.push({...layout, attributes: [...layout.attributes!]});
+  }
+  return result;
 }

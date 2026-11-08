@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ShaderModule} from '../../../lib/shader-module/shader-module';
+import {ShaderModule} from '../../shader-module/shader-module';
 import {capitalize} from '../utils/capitalize';
 
 export type WGSLGenerationOptions = {

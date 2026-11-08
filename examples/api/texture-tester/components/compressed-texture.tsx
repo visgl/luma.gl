@@ -5,13 +5,9 @@
 import * as React from 'react';
 
 import {load, registerLoaders, selectLoader, fetchFile, type LoaderOptions} from '@loaders.gl/core';
-import {
-  BASIS_EXTERNAL_LIBRARIES,
-  BasisLoader,
-  CRUNCH_EXTERNAL_LIBRARIES,
-  CompressedTextureLoader,
-  CrunchWorkerLoader
-} from '@loaders.gl/textures';
+import {BasisLoader, CompressedTextureLoader, CrunchWorkerLoader} from '@loaders.gl/images';
+import {BASIS_EXTERNAL_LIBRARIES} from '@loaders.gl/images/basis-module-loader';
+import {CRUNCH_EXTERNAL_LIBRARIES} from '@loaders.gl/images/crunch-module-loader';
 import type {GPUTextureFormat} from '@loaders.gl/core/schema';
 import {ImageLoader, type ImageType} from '@loaders.gl/images';
 
@@ -27,38 +23,38 @@ import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {type TextureSource} from '../textures-data';
 
 const TEXTURES_BASE_URL =
-  'https://raw.githubusercontent.com/visgl/loaders.gl/master/modules/textures/test/data/';
+  'https://raw.githubusercontent.com/visgl/loaders.gl/v5.0.0-beta.2/modules/images/test/textures/data/';
 const BASIS_TRANSCODER_JS_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_transcoder.js',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/basis_transcoder.js',
   import.meta.url
 ).href;
 const BASIS_TRANSCODER_WASM_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_transcoder.wasm',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/basis_transcoder.wasm',
   import.meta.url
 ).href;
 const BASIS_ENCODER_JS_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_encoder.js',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/basis_encoder.js',
   import.meta.url
 ).href;
 const BASIS_ENCODER_WASM_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_encoder.wasm',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/basis_encoder.wasm',
   import.meta.url
 ).href;
 const CRUNCH_JS_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/crunch.js',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/crunch.js',
   import.meta.url
 ).href;
 
 const BASIS_TRANSCODER_MODULE_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_transcoder.mjs',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/basis_transcoder.mjs',
   import.meta.url
 ).href;
 const BASIS_ENCODER_MODULE_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_encoder.mjs',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/basis_encoder.mjs',
   import.meta.url
 ).href;
 const CRUNCH_MODULE_URL = new URL(
-  '../../../../node_modules/@loaders.gl/textures/dist/libs/crunch.mjs',
+  '../../../../node_modules/@loaders.gl/images/dist/libs/crunch.mjs',
   import.meta.url
 ).href;
 

@@ -268,7 +268,7 @@ prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```ts
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/engine/gltf';
-import {loadImageTexture} from '@loaders.gl/textures';
+import {loadImageTexture} from '@loaders.gl/images/load-image';
 
 const environment = loadPBREnvironment(device, {
   loadImage: loadImageTexture,
@@ -285,7 +285,7 @@ const scenegraphs = createScenegraphsFromGLTF(device, gltf, {
 This API loads precomputed resources; it does not convert arbitrary HDR images into prefiltered
 lighting environments. To generate irradiance, roughness-prefiltered reflection mips, and a BRDF
 lookup from an existing equirectangular texture, use the separate
-[`PBREnvironmentGenerator`](/docs/api-reference/scene/pbr-environment) owned by
+[`PBREnvironmentGenerator`](/docs/api-reference/anari/pbr-environment) owned by
 `@luma.gl/anari`.
 
 ## Transmission and rendering-path differences
@@ -293,7 +293,7 @@ lookup from an existing equirectangular texture, use the separate
 Transmission and volume factors/textures are preserved across rendering paths, but physical
 refraction depends on the renderer:
 
-- The shared [experimental SceneRenderer](/docs/api-reference/scene/scene-renderer) and
+- The shared [experimental SceneRenderer](/docs/api-reference/anari/scene-renderer) and
   retained ANARI path capture the opaque scene and sample it for screen-space refraction with
   thickness, attenuation, index of refraction, wavelength-dependent chromatic dispersion, and
   roughness-aware response. Opaque scene color stays linear and uses an HDR capture attachment

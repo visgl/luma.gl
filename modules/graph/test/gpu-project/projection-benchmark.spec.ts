@@ -15,7 +15,7 @@ it('runGPUProjectionBenchmark compares CPU baselines and synchronized WebGPU pat
     return;
   }
 
-  const configuredRows = import.meta.env.VITE_LUPROJ_BENCHMARK_ROWS;
+  const configuredRows = import.meta.env.VITE_GPU_PROJECT_BENCHMARK_ROWS;
   const coordinateCount = configuredRows ? Number(configuredRows) : 64;
   const benchmarkReport = await runGPUProjectionBenchmark(device, {
     projection: createWebMercatorProjection(),

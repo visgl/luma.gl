@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {getIndexPickingModule} from '@luma.gl/engine';
-import {GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, type VertexList} from '@luma.gl/graph/gpu-data';
 import {
   PolygonAttributeModel,
   createPolygonShaderInputs,

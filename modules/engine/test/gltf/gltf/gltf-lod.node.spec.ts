@@ -33,6 +33,17 @@ describe('authored and automatically generated glTF node levels of detail', () =
     expect(getGLTFNodeLODs(gltf, gltf.nodes[1])).toBeNull();
   });
 
+  test.each([
+    null,
+    42,
+    'metadata',
+    ['metadata']
+  ])('handles valid non-object extras when resolving authored LODs', async extras => {
+    const gltf = await loadGLTF(new URL('../data/SimpleSkinLOD.gltf', import.meta.url));
+    gltf.nodes[0].extras = extras;
+    expect(getGLTFNodeLODs(gltf, 0)).toHaveLength(3);
+  });
+
   test('resolves the unmodified Babylon three-level interoperability reference', async () => {
     const gltf = await loadGLTF(new URL('../data/msft-lod.gltf', import.meta.url));
     const levels = getGLTFNodeLODs(gltf, 2)!;

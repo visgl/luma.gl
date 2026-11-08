@@ -20,7 +20,7 @@ import {
   type ArrowUtf8TextInputVector,
   type ArrowTextRendererDataBatchUpdate
 } from '@luma.gl/engine/arrow';
-import {getArrowVectorByteLength, makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {getArrowVectorByteLength, makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import type {RenderPass} from '@luma.gl/core';
 import type {Model} from '@luma.gl/engine';
 import {

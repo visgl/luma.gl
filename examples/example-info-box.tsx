@@ -45,6 +45,7 @@ export type InfoBoxAppearance = Extract<ExamplePanelAppearance, 'cinematic' | 'l
 export type InfoBoxProps = React.PropsWithChildren<
   ExampleInfoProps & {
     html?: string;
+    extraTabs?: {id: string; label: string}[];
     /** Visual treatment shared by the InfoBox chrome and its panel content. */
     appearance?: InfoBoxAppearance;
     panel?: Panel;
@@ -135,7 +136,7 @@ export function InfoBoxView(props: InfoBoxViewProps) {
       isInfoBoxCollapsedByDefault ||
       (typeof window !== 'undefined' && window.matchMedia(MOBILE_EXAMPLE_MEDIA_QUERY).matches)
   );
-  const [activeTab, setActiveTab] = useState<'info' | 'source'>('info');
+  const [activeTab, setActiveTab] = useState<string>(() => props.extraTabs?.[0]?.id || 'info');
   const [activeSourcePath, setActiveSourcePath] = useState('');
   const [infoBoxSize, setInfoBoxSize] = useState<InfoBoxSize | null>(null);
   const [infoBoxSizeBounds, setInfoBoxSizeBounds] = useState<InfoBoxSizeBounds | null>(null);
@@ -515,7 +516,7 @@ export function InfoBoxView(props: InfoBoxViewProps) {
           overflowY: 'auto'
         }}
       >
-        {sourcePaths.length > 0 && !hasPanelTabs ? (
+        {(sourcePaths.length > 0 || props.extraTabs?.length) && !hasPanelTabs ? (
           <div
             role="tablist"
             aria-label="Example information"
@@ -527,39 +528,52 @@ export function InfoBoxView(props: InfoBoxViewProps) {
               borderBottom: `1px solid var(--luma-example-border, ${theme.border})`
             }}
           >
-            {(['info', 'source'] as const).map(tab => (
+            {[
+              ...(props.extraTabs || []),
+              {id: 'info', label: 'Info'},
+              ...(sourcePaths.length ? [{id: 'source', label: 'Source'}] : [])
+            ].map(tab => (
               <button
                 data-luma-example-chrome-action=""
-                key={tab}
+                key={tab.id}
                 type="button"
                 role="tab"
-                aria-selected={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
+                aria-selected={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
                 style={{
                   border:
-                    activeTab === tab
+                    activeTab === tab.id
                       ? `1px solid var(--luma-example-accent, ${theme.accent})`
                       : `1px solid var(--luma-example-border, ${theme.border})`,
                   borderRadius: 7,
                   padding: '5px 10px',
                   background:
-                    activeTab === tab
+                    activeTab === tab.id
                       ? `color-mix(in srgb, var(--luma-example-accent, ${theme.accent}) 15%, var(--luma-example-surface-raised, ${theme.surfaceRaised}))`
                       : `var(--luma-example-surface-raised, ${theme.surfaceRaised})`,
                   color:
-                    activeTab === tab
+                    activeTab === tab.id
                       ? `var(--luma-example-accent, ${theme.accent})`
                       : `var(--luma-example-text-muted, ${theme.textMuted})`,
                   cursor: 'pointer',
                   fontSize: 11,
-                  fontWeight: activeTab === tab ? 700 : 500
+                  fontWeight: activeTab === tab.id ? 700 : 500
                 }}
               >
-                {tab === 'info' ? 'Info' : 'Source'}
+                {tab.label}
               </button>
             ))}
           </div>
         ) : null}
+        {props.extraTabs?.map(tab => (
+          <div
+            key={tab.id}
+            data-luma-example-extra-tab={tab.id}
+            hidden={activeTab !== tab.id}
+            aria-hidden={activeTab !== tab.id}
+            style={{minWidth: 0, minHeight: 0, flex: '1 1 auto', overflow: 'auto'}}
+          />
+        ))}
         <div
           ref={infoContentRef}
           data-luma-example-info-content=""

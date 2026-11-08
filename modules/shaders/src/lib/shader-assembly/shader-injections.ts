@@ -17,27 +17,73 @@ const fragments: string[] = [];
 
 export const DECLARATION_INJECT_MARKER = '__LUMA_INJECT_DECLARATIONS__';
 
-/**
- *
- */
+/** Language-specific source inserted at a named shader target. */
 export type ShaderInjection = {
+  /** Shader stage receiving the injection. */
+  stage: 'vertex' | 'fragment';
+  /** Unqualified hook name or built-in target such as #main-start. */
+  target: string;
+  /** GLSL source. Omit to skip this injection for GLSL assembly. */
+  glsl?: string;
+  /** WGSL source. Omit to skip this injection for WGSL assembly. */
+  wgsl?: string;
+  /** Relative order at the target; defaults to zero. */
+  order?: number;
+};
+
+/** Language-selected source and ordering used internally during shader assembly. */
+export type ResolvedShaderInjection = {
+  /** Plugin responsible for this injection, when supplied by a ShaderPlugin. */
+  pluginName?: string;
   injection: string;
   order: number;
 };
+
+/** Select language-specific injections while retaining repeated targets and declaration order. */
+export function resolveShaderInjections(
+  declarations: readonly ShaderInjection[],
+  language: 'glsl' | 'wgsl',
+  pluginName?: string
+): Record<string, ResolvedShaderInjection[]> {
+  const resolved: Record<string, ResolvedShaderInjection[]> = {};
+  for (const declaration of declarations) {
+    const source = declaration[language];
+    if (source === undefined) continue;
+    if (
+      (declaration.stage !== 'vertex' && declaration.stage !== 'fragment') ||
+      declaration.target.includes(':')
+    ) {
+      throw new Error('Shader injection targets require an explicit stage and unqualified target');
+    }
+    const target = `${declaration.stage === 'vertex' ? 'vs' : 'fs'}:${declaration.target}`;
+    if (!/^(vs|fs):(?:#(?:decl|main-start|main-end)|[A-Za-z_][A-Za-z0-9_]*)$/.test(target)) {
+      throw new Error(
+        `Shader injection target "${target}" must be a named shader injection target`
+      );
+    }
+    resolved[target] ||= [];
+    resolved[target].push({
+      injection: source,
+      order: declaration.order ?? 0,
+      ...(pluginName ? {pluginName} : {})
+    });
+  }
+  return resolved;
+}
 
 /**
  *  ShaderInjections, parsed and split per shader
  */
 export type ShaderInjections = {
-  vertex: Record<string, ShaderInjection>;
-  fragment: Record<string, ShaderInjection>;
+  vertex: Record<string, ResolvedShaderInjection>;
+  fragment: Record<string, ResolvedShaderInjection>;
 };
 
 /**
  *
  */
 export function normalizeInjections(
-  injections: Record<string, string | ShaderInjection>
+  injections: Record<string, string | ResolvedShaderInjection>
 ): ShaderInjections {
   const result: ShaderInjections = {vertex: {}, fragment: {}};
 
@@ -82,7 +128,7 @@ function getHookStage(hook: string): 'vertex' | 'fragment' {
 export function injectShader(
   source: string,
   stage: 'vertex' | 'fragment',
-  inject: Record<string, ShaderInjection[]>,
+  inject: Record<string, ResolvedShaderInjection[]>,
   injectStandardStubs = false,
   language: 'glsl' | 'wgsl' = 'glsl',
   entryPoints: {vertex?: string; fragment?: string} = {}
@@ -91,7 +137,9 @@ export function injectShader(
 
   for (const key in inject) {
     const fragmentData = inject[key];
-    fragmentData.sort((a: ShaderInjection, b: ShaderInjection): number => a.order - b.order);
+    fragmentData.sort(
+      (a: ResolvedShaderInjection, b: ResolvedShaderInjection): number => a.order - b.order
+    );
     fragments.length = fragmentData.length;
     for (let i = 0, len = fragmentData.length; i < len; ++i) {
       fragments[i] = fragmentData[i].injection;

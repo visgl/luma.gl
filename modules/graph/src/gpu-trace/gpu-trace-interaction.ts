@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
 import type {DrawCommandBufferView} from '@luma.gl/graph/gpu-core';
 import {GPUAncestorProjection} from '@luma.gl/graph/gpu-core';
 import {GPUCommandGraph, type GraphBufferUse, type GraphDataView} from '@luma.gl/graph/gpu-core';

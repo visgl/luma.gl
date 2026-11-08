@@ -284,5 +284,5 @@ export const opticalPointLights = {
 /** Explicitly installs bounded point lights and enables illuminated material helpers. */
 export const opticalPointLightsPlugin = {
   name: 'opticalPointLights',
-  modules: [opticalPointLights as ShaderModule]
+  module: opticalPointLights as ShaderModule
 } as const satisfies ShaderPlugin;

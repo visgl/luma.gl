@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {Buffer, assert, type ShaderLayout} from '@luma.gl/core';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUVectorGeometry, GPUVectorModel} from '../../src';
 
 const SHADER_LAYOUT: ShaderLayout = {
@@ -97,9 +97,23 @@ for (const backend of ['webgl', 'webgpu'] as const) {
     const model = new GPUVectorModel(device, {
       ...(backend === 'webgpu' ? {source: SOURCE} : {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER}),
       shaderLayout: SHADER_LAYOUT,
+      inferDrawCount: 'instance',
+      vertexCount: 4,
       isInstanced: true,
       geometry: new GPUVectorGeometry({attributes: {positions}, topology: 'triangle-strip'})
     });
+    const framebuffer = device.createFramebuffer({
+      width: 4,
+      height: 4,
+      colorAttachments: ['rgba8unorm']
+    });
+    model.setAttributeVectors({instancePositions, instancePositions64Low: low, colors});
+    // Geometry, varying instances, and all constants need only three layouts.
+    expect(model.bufferLayout).toHaveLength(3);
+    const inferredPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+    expect(model.draw(inferredPass)).toBe(true);
+    inferredPass.end();
+    device.submit();
     model.setGPUAttributes({instancePositions, instancePositions64Low: low, colors}, layouts);
     expect(model.vertexCount).toBe(4);
     expect(model.instanceCount).toBe(2);
@@ -121,7 +135,7 @@ for (const backend of ['webgl', 'webgpu'] as const) {
         new Float32Array([128 / 255, 64 / 255, 1, 1])
       );
     }
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
+    const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
     expect(model.draw(renderPass)).toBe(true);
     renderPass.end();
     device.submit();
@@ -161,7 +175,7 @@ for (const backend of ['webgl', 'webgpu'] as const) {
       {instancePositions: chunkedPositions, instancePositions64Low: low, colors},
       layouts
     );
-    const batchPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
+    const batchPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
     const instanceCounts: (number | undefined)[] = [];
     const draw = batchPass.draw.bind(batchPass);
     batchPass.draw = options => {
@@ -175,6 +189,7 @@ for (const backend of ['webgl', 'webgpu'] as const) {
     batchPass.end();
     device.submit();
     model.destroy();
+    framebuffer.destroy();
     for (const buffer of [geometryBuffer, instanceBuffer, packedBuffer]) {
       expect(buffer.destroyed).toBe(false);
       buffer.destroy();

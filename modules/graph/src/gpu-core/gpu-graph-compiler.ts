@@ -2,12 +2,23 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {lowerGPUUpload, lowerGPUCopy, lowerGPUTextureCopy} from './gpu-transfer-lowering';
+import {GPUUploadOperation, GPUCopyOperation} from './gpu-transfer-operation';
+import {GPUCompactionOperation} from './gpu-compaction-operation';
+import {GPUCompaction} from './gpu-compaction';
+
 import type {TextureFormat} from '@luma.gl/core';
-import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph';
+import {getTextureBindingInfo, getBoundTextureViewProps} from './gpu-texture-plan';
+import type {
+  GraphBufferHandle,
+  GraphTextureHandle,
+  GraphImportedTexture
+} from './gpu-command-graph';
 import {GPUGraphTextureView, type GPUGraphTexture} from './gpu-graph-value';
 
-import {type Device} from '@luma.gl/core';
-import type {GPUVectorInput} from '@luma.gl/gpgpu/gpu-data';
+import {assert, Buffer, TextureView, type Device} from '@luma.gl/core';
+import {getGPUVectorFormatInfo, type GPUVectorInput} from '@luma.gl/graph/gpu-data';
+import type {GPUGraphVectorFormat} from './gpu-graph-value';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
 import {
   addGPUCommandNodes,
@@ -45,16 +56,18 @@ import {
   type GPUOperationPredicate
 } from './gpu-control-flow-operation';
 import {
-  GPUOperationLoweringRegistry,
+  type GPUOperationLowering,
   type GPUOperationLoweringDecision,
   type GPUGraphBackendCapabilities
 } from './gpu-graph-lowering';
+import {resolveGPUGraphDeclarations} from './gpu-graph-declarations';
 import {validateGPUGraph, type GPUGraphValidationReport} from './gpu-graph-validation';
 import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
 import type {GPUGraph} from './gpu-graph';
 export type GPUGraphBindings = {
+  scalars?: Readonly<Record<string, number>>;
   vectors?: Readonly<Record<string, GPUVectorInput>>;
-  textures?: Readonly<Record<string, GraphImportedTexture>>;
+  textures?: Readonly<Record<string, GraphImportedTexture | TextureView>>;
 };
 export type GPUGraphLoweredNode = {
   nodeId: string;
@@ -84,14 +97,18 @@ type LoweringState = {
   vectors: Map<string, GraphVectorView>;
   textures: Map<string, GraphTextureHandle>;
   textureValues: readonly GPUGraphTexture[];
+  textureViews: ReadonlyMap<string, TextureView>;
   predicateConjunctions: Map<string, GPUScalar<'uint32'>>;
   commandNodeIds: Set<string>;
+  transientResultNames: ReadonlySet<string>;
+  retainedBuffers: readonly GraphBufferHandle[];
 };
 export class GPUGraphCompiler<Parameters = void> {
   readonly device: Device;
   readonly capabilities: GPUGraphBackendCapabilities;
-  readonly lowerings = new GPUOperationLoweringRegistry<Parameters>();
-  constructor(device: Device) {
+  readonly lowerings: readonly GPUOperationLowering<Parameters>[];
+  private compactionIndex = 0;
+  constructor(device: Device, lowerings: readonly GPUOperationLowering<Parameters>[] = []) {
     this.device = device;
     this.capabilities = Object.freeze({
       backend: 'webgpu',
@@ -99,9 +116,49 @@ export class GPUGraphCompiler<Parameters = void> {
       nativeLoops: false,
       childGraphs: false
     });
-    this.registerCoreLowerings();
+    const combined = [...this.createCoreLowerings(), ...lowerings];
+    const types = new Set<string>();
+    for (const lowering of combined) {
+      if (!lowering.type || types.has(lowering.type))
+        throw new Error(`Duplicate or empty lowering type: ${lowering.type}`);
+      types.add(lowering.type);
+    }
+    this.lowerings = Object.freeze(
+      combined.map(lowering =>
+        Object.freeze({type: lowering.type, lower: lowering.lower.bind(lowering)})
+      )
+    );
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
+    this.compactionIndex = 0;
+    // Bound external partitions must be available when resolving shape-inheriting results.
+    program = program.clone();
+    for (const vector of program.vectors) {
+      const binding = bindings.vectors?.[vector.id];
+      if (!vector.external || !binding || vector.chunkLengths) continue;
+      const data = 'data' in binding ? binding.data : 'buffer' in binding ? [binding] : binding;
+      program.constrainResult(vector, {
+        type: 'vector',
+        format: vector.format,
+        chunkLengths: data.map(chunk => chunk.length)
+      });
+    }
+    program = resolveGPUGraphDeclarations(program);
+    const transferUsages = new Map<string, number>();
+    const addTransferUsage = (name: string, usage: number): void => {
+      transferUsages.set(name, (transferUsages.get(name) ?? 0) | usage);
+    };
+    const collectTransferUsages = (operation: GPUGraphOperation): void => {
+      if (operation instanceof GPUCompositeOperation)
+        operation.operations.forEach(collectTransferUsages);
+      else if (operation instanceof GPUUploadOperation)
+        addTransferUsage(operation.output, Buffer.COPY_DST);
+      else if (operation instanceof GPUCopyOperation) {
+        addTransferUsage(operation.input, Buffer.COPY_SRC);
+        addTransferUsage(operation.output, Buffer.COPY_DST);
+      }
+    };
+    program.operations.forEach(collectTransferUsages);
     const validation = validateGPUGraph(program, bindings);
     if (!validation.valid)
       throw new Error(
@@ -116,8 +173,40 @@ export class GPUGraphCompiler<Parameters = void> {
     const scalars = new Map<string, GPUScalar>();
     for (const scalar of program.scalars)
       scalars.set(scalar.id, createGPUScalar(graph, scalar.id, scalar.format));
+    for (const [name, value] of Object.entries(bindings.scalars ?? {})) {
+      const scalar = scalars.get(name);
+      if (!scalar) throw new Error(`Undeclared scalar binding ${name}`);
+      const view = scalar.view;
+      graph.addCopyPass({
+        id: `${name}-binding`,
+        resources: [{buffer: view, usage: 'copy-destination'}],
+        compile: ({device}) => {
+          const data =
+            scalar.format === 'float32'
+              ? new Float32Array([value])
+              : scalar.format === 'uint32'
+                ? new Uint32Array([value])
+                : new Int32Array([value]);
+          const buffer = device.createBuffer({data, usage: Buffer.COPY_SRC});
+          return {
+            encode: ({commandEncoder, getBuffer}) =>
+              commandEncoder.copyBufferToBuffer({
+                sourceBuffer: buffer,
+                destinationBuffer: getBuffer(view),
+                destinationOffset: view.byteOffset,
+                size: 4
+              }),
+            destroy: () => buffer.destroy()
+          };
+        }
+      });
+    }
     const vectors = new Map<string, GraphVectorView>();
     for (const vector of program.vectors) {
+      if (vector.length === undefined)
+        throw new Error(
+          `${vector.id}: bind dynamic dimensions through program.compile(device).run(bindings)`
+        );
       let resolved: GraphVectorView;
       if (vector.external) {
         const binding = bindings.vectors![vector.id];
@@ -142,34 +231,67 @@ export class GPUGraphCompiler<Parameters = void> {
         }
       } else {
         const chunkLengths =
-          vector.chunkLengths ?? getTransientChunkLengths(vector.length, this.device);
+          vector.chunkLengths ??
+          getTransientChunkLengths(
+            vector.length,
+            this.device,
+            getGPUVectorFormatInfo(vector.format).byteLength
+          );
         const data = chunkLengths.map((length, index) =>
           createTransientView(
             graph,
             chunkLengths.length === 1 ? vector.id : `${vector.id}-chunk-${index}`,
             vector.format,
-            length
+            length,
+            vector.role === 'value'
+              ? Buffer.STORAGE | Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
+              : Buffer.STORAGE | (transferUsages.get(vector.id) ?? 0)
           )
         );
+        const formatInfo = getGPUVectorFormatInfo(vector.format);
         resolved = new GraphVectorView({
           id: vector.id,
           name: vector.id,
           format: vector.format,
           length: vector.length,
           valueLength: vector.length,
-          stride: 1,
-          byteStride: 4,
-          rowByteLength: 4,
+          stride: formatInfo.components,
+          byteStride: formatInfo.byteLength,
+          rowByteLength: formatInfo.byteLength,
           data
         });
       }
       vectors.set(vector.id, resolved);
     }
     const textures = new Map<string, GraphTextureHandle>();
+    const textureViews = new Map<string, TextureView>();
     for (const texture of program.textures) {
+      // Reusable declarations must have execution-resolved dimensions before low-level lowering.
+      assert(texture.width !== undefined && texture.height !== undefined);
+      let binding = bindings.textures?.[texture.id];
+      let descriptor = {...texture, width: texture.width, height: texture.height};
+      if (binding instanceof TextureView) {
+        const info = getTextureBindingInfo(binding);
+        assert(
+          info.format === texture.format &&
+            info.width === texture.width &&
+            info.height === texture.height
+        );
+        textureViews.set(texture.id, binding);
+        binding = info.texture;
+        descriptor = {
+          ...descriptor,
+          dimension: binding.dimension,
+          width: binding.width,
+          height: binding.height,
+          depth: binding.depth,
+          mipLevels: binding.mipLevels,
+          samples: binding.samples
+        };
+      }
       const handle = texture.external
-        ? graph.importTexture(texture, bindings.textures?.[texture.id])
-        : graph.createTransientTexture(texture);
+        ? graph.importTexture(descriptor, binding)
+        : graph.createTransientTexture(descriptor);
       textures.set(texture.id, handle);
     }
     const state: LoweringState = {
@@ -181,8 +303,15 @@ export class GPUGraphCompiler<Parameters = void> {
       vectors,
       textures,
       textureValues: program.textures,
+      textureViews,
       predicateConjunctions: new Map(),
-      commandNodeIds: new Set()
+      commandNodeIds: new Set(),
+      transientResultNames: new Set(
+        program.vectors
+          .filter(vector => vector.role === 'value' && !vector.external)
+          .map(vector => vector.id)
+      ),
+      retainedBuffers: []
     };
     for (const operation of program.operations) this.lower(graph, operation, state);
     return Object.freeze({
@@ -203,126 +332,170 @@ export class GPUGraphCompiler<Parameters = void> {
       })
     });
   }
-  protected registerCoreLowerings(): void {
-    this.lowerings.register<GPUGraphScalarLiteral>('scalar-literal', (o, c) => {
-      const e = new GPUScalarLiteral({
-        id: o.id,
-        output: c.resolveScalar(o.props.output),
-        value: o.props.value
-      });
-      this.emitProducer(c.graph, e, [[1, 1, 1]]);
-      c.recordDecision({
-        operationId: o.id,
-        operationType: o.type,
-        lowering: 'webgpu-scalar-literal',
-        reason: 'host-known literal lowers to one compute command node'
-      });
-    });
-    this.lowerings.register<GPUGraphScalarOperation>('scalar-operation', (o, c) => {
-      const e = new GPUScalarCompute({
-        id: o.id,
-        operation: o.operation,
-        left: c.resolveScalar(o.left),
-        right: o.right ? c.resolveScalar(o.right) : undefined,
-        output: c.resolveScalar(o.output)
-      });
-      this.emitProducer(c.graph, e, [[1, 1, 1]]);
-      c.recordDecision({
-        operationId: o.id,
-        operationType: o.type,
-        lowering: 'webgpu-scalar-kernel',
-        reason: 'scalar operation lowers to one compute command node'
-      });
-    });
-    this.lowerings.register<GPUGraphVectorMADD>('vector-madd', (o, c) => {
-      const p = o.props,
-        e = new GPUVectorScalarMADD({
-          id: o.id,
-          input: c.resolveVector(p.input),
-          scale: c.resolveScalar(p.scale),
-          addend: c.resolveVector(p.addend),
-          output: c.resolveVector(p.output)
-        });
-      this.emitProducer(c.graph, e);
-      c.recordDecision({
-        operationId: o.id,
-        operationType: o.type,
-        lowering: 'webgpu-vector-madd',
-        reason: 'dense float32 MADD lowers through explicit command nodes'
-      });
-    });
-    this.lowerings.register<GPUGraphDotProduct>('dot-product', (o, c) => {
-      const p = o.props,
-        e = new GPUDotProductScalar({
-          id: o.id,
-          left: c.resolveVector(p.left),
-          right: c.resolveVector(p.right),
-          output: c.resolveScalar(p.output)
-        });
-      this.emitProducer(c.graph, e);
-      c.recordDecision({
-        operationId: o.id,
-        operationType: o.type,
-        lowering: 'webgpu-hierarchical-dot',
-        reason: 'chunk dot products use bounded hierarchical reductions into the scalar arena'
-      });
-    });
-    this.lowerings.register<GPUGraphSpMV>('spmv', (o, c) => {
-      const p = o.props,
-        m = p.matrix,
-        e = new GPUAdaptiveSpMV({
-          id: o.id,
-          rowOffsets: c.resolveVector(m.rowOffsets),
-          columnIndices: c.resolveVector(m.columnIndices),
-          values: c.resolveVector(m.values),
-          vector: c.resolveVector(p.vector),
-          output: c.resolveVector(p.output),
-          columns: m.columns,
-          statistics: m.statistics,
-          strategy: p.strategy
-        });
-      const d = e.getStrategy(c.graph);
-      this.emitProducer(c.graph, e);
-      c.recordDecision({
-        operationId: o.id,
-        operationType: o.type,
-        lowering: `webgpu-spmv:${d.id}`,
-        reason: d.reason
-      });
-    });
-    this.lowerings.register<GPUConditionalOperation>('conditional', (o, c) => {
-      c.recordDecision({
-        operationId: o.id,
-        operationType: o.type,
-        lowering: 'gpu-indirect-gate',
-        reason: 'WebGPU realizes runtime predicates with zero/nonzero indirect dispatch'
-      });
-      for (const child of o.operations) c.lowerConditional(o.predicate, child);
-    });
-    this.lowerings.register<GPULoopOperation>('loop', (o, c) => {
-      if (!o.predicate || o.lowering === 'unroll') {
-        c.recordDecision({
-          operationId: o.id,
-          operationType: o.type,
-          lowering: 'bounded-unroll',
-          reason: o.predicate ? 'explicit unroll preference' : 'loop has no runtime predicate'
-        });
-        for (let i = 0; i < o.maximumIterations; i++)
-          for (const child of o.operations) c.lower(child);
-        return;
+  protected createCoreLowerings(): GPUOperationLowering<Parameters>[] {
+    return [
+      {type: 'vector-upload', lower: lowerGPUUpload},
+      {type: 'vector-copy', lower: lowerGPUCopy},
+      {
+        type: 'compaction',
+        lower: (operation: GPUCompactionOperation, context) => {
+          const {input, flags, output, count} = operation.props;
+          context.graph.add(
+            new GPUCompaction({
+              // Unrolled iterations need distinct scratch resources as well as distinct nodes.
+              id: `${operation.id}-${this.compactionIndex++}`,
+              input: context.resolveVector<'uint32'>(input),
+              flags: context.resolveVector<'uint32'>(flags),
+              output: context.resolveVector<'uint32'>(output),
+              count: context.resolveScalar<'uint32'>(count).view
+            })
+          );
+        }
+      },
+      {
+        type: 'scalar-literal',
+        lower: (operation: GPUGraphScalarLiteral, context) => {
+          const e = new GPUScalarLiteral({
+            id: operation.id,
+            output: context.resolveScalar(operation.props.output),
+            value: operation.props.value
+          });
+          this.emitProducer(context.graph, e, [[1, 1, 1]]);
+          context.recordDecision({
+            operationId: operation.id,
+            operationType: operation.type,
+            lowering: 'webgpu-scalar-literal',
+            reason: 'host-known literal lowers to one compute command node'
+          });
+        }
+      },
+      {
+        type: 'scalar-operation',
+        lower: (operation: GPUGraphScalarOperation, context) => {
+          const e = new GPUScalarCompute({
+            id: operation.id,
+            operation: operation.operation,
+            left: context.resolveScalar(operation.left),
+            right: operation.right ? context.resolveScalar(operation.right) : undefined,
+            output: context.resolveScalar(operation.output)
+          });
+          this.emitProducer(context.graph, e, [[1, 1, 1]]);
+          context.recordDecision({
+            operationId: operation.id,
+            operationType: operation.type,
+            lowering: 'webgpu-scalar-kernel',
+            reason: 'scalar operation lowers to one compute command node'
+          });
+        }
+      },
+      {
+        type: 'vector-madd',
+        lower: (operation: GPUGraphVectorMADD, context) => {
+          const p = operation.props,
+            e = new GPUVectorScalarMADD({
+              id: operation.id,
+              input: context.resolveVector(p.input),
+              scale: context.resolveScalar(p.scale),
+              addend: context.resolveVector(p.addend),
+              output: context.resolveVector(p.output)
+            });
+          this.emitProducer(context.graph, e);
+          context.recordDecision({
+            operationId: operation.id,
+            operationType: operation.type,
+            lowering: 'webgpu-vector-madd',
+            reason: 'dense float32 MADD lowers through explicit command nodes'
+          });
+        }
+      },
+      {
+        type: 'dot-product',
+        lower: (operation: GPUGraphDotProduct, context) => {
+          const p = operation.props,
+            e = new GPUDotProductScalar({
+              id: operation.id,
+              left: context.resolveVector(p.left),
+              right: context.resolveVector(p.right),
+              output: context.resolveScalar(p.output)
+            });
+          this.emitProducer(context.graph, e);
+          context.recordDecision({
+            operationId: operation.id,
+            operationType: operation.type,
+            lowering: 'webgpu-hierarchical-dot',
+            reason: 'chunk dot products use bounded hierarchical reductions into the scalar arena'
+          });
+        }
+      },
+      {
+        type: 'spmv',
+        lower: (operation: GPUGraphSpMV, context) => {
+          const p = operation.props,
+            m = p.matrix,
+            e = new GPUAdaptiveSpMV({
+              id: operation.id,
+              rowOffsets: context.resolveVector(m.rowOffsets),
+              columnIndices: context.resolveVector(m.columnIndices),
+              values: context.resolveVector(m.values),
+              vector: context.resolveVector(p.vector),
+              output: context.resolveVector(p.output),
+              columns: m.columns,
+              statistics: m.statistics,
+              strategy: p.strategy
+            });
+          const d = e.getStrategy(context.graph);
+          this.emitProducer(context.graph, e);
+          context.recordDecision({
+            operationId: operation.id,
+            operationType: operation.type,
+            lowering: `webgpu-spmv:${d.id}`,
+            reason: d.reason
+          });
+        }
+      },
+      {
+        type: 'conditional',
+        lower: (operation: GPUConditionalOperation, context) => {
+          context.recordDecision({
+            operationId: operation.id,
+            operationType: operation.type,
+            lowering: 'gpu-indirect-gate',
+            reason: 'WebGPU realizes runtime predicates with zero/nonzero indirect dispatch'
+          });
+          for (const child of operation.operations)
+            context.lowerConditional(operation.predicate, child);
+        }
+      },
+      {
+        type: 'loop',
+        lower: (operation: GPULoopOperation, context) => {
+          if (!operation.predicate || operation.lowering === 'unroll') {
+            context.recordDecision({
+              operationId: operation.id,
+              operationType: operation.type,
+              lowering: 'bounded-unroll',
+              reason: operation.predicate
+                ? 'explicit unroll preference'
+                : 'loop has no runtime predicate'
+            });
+            for (let i = 0; i < operation.maximumIterations; i++)
+              for (const child of operation.operations) context.lower(child);
+            return;
+          }
+          context.recordDecision({
+            operationId: operation.id,
+            operationType: operation.type,
+            lowering: 'gpu-gated-bounded-sequence',
+            reason: 'WebGPU has indirect dispatch but no native graph loop'
+          });
+          for (let i = 0; i < operation.maximumIterations; i++) {
+            const gated = i >= operation.minimumIterations;
+            for (const child of operation.operations)
+              gated ? context.lowerConditional(operation.predicate, child) : context.lower(child);
+          }
+        }
       }
-      c.recordDecision({
-        operationId: o.id,
-        operationType: o.type,
-        lowering: 'gpu-gated-bounded-sequence',
-        reason: 'WebGPU has indirect dispatch but no native graph loop'
-      });
-      for (let i = 0; i < o.maximumIterations; i++) {
-        const gated = i >= o.minimumIterations;
-        for (const child of o.operations)
-          gated ? c.lowerConditional(o.predicate, child) : c.lower(child);
-      }
-    });
+    ];
   }
   protected lower(
     graph: GPUCommandLoweringGraph<Parameters>,
@@ -334,6 +507,16 @@ export class GPUGraphCompiler<Parameters = void> {
         ? operation.id
         : (operation.constructor?.name ?? 'command-node-producer');
     state.path.push(id);
+    const previousRetainedBuffers = state.retainedBuffers;
+    const retainedBuffers = [...previousRetainedBuffers];
+    if (isGPUOperation(operation)) {
+      for (const use of operation.contract?.values ?? []) {
+        const name = typeof use.value === 'string' ? use.value : use.value.id;
+        if (state.transientResultNames.has(name))
+          for (const chunk of state.vectors.get(name)!.data) retainedBuffers.push(chunk.buffer);
+      }
+    }
+    state.retainedBuffers = retainedBuffers;
     try {
       if (operation instanceof GPUCompositeOperation && operation.type === 'composite') {
         state.decisions.push({
@@ -346,10 +529,15 @@ export class GPUGraphCompiler<Parameters = void> {
         return;
       }
       if (isGPUOperation(operation)) {
-        const lowerer = this.lowerings.get(operation.type);
+        for (const feature of operation.contract?.requiredFeatures ?? [])
+          if (!this.device.features.has(feature)) throw new Error(`${id} requires ${feature}`);
+        const lowerer = this.lowerings.find(lowering => lowering.type === operation.type)?.lower;
         if (lowerer) {
           const invoke = () =>
-            lowerer(operation, {
+            (operation instanceof GPUCopyOperation &&
+              state.textureValues.some(value => value.id === operation.input)
+              ? (lowerGPUTextureCopy as typeof lowerer)
+              : lowerer)(operation, {
               graph,
               capabilities: this.capabilities,
               lower: child => this.lower(graph, child, state),
@@ -367,7 +555,13 @@ export class GPUGraphCompiler<Parameters = void> {
               resolveTextureView: value => {
                 const texture = value instanceof GPUGraphTextureView ? value.texture : value;
                 const props = value instanceof GPUGraphTextureView ? value.props : {};
-                return graph.createTextureView(this.resolveTexture(texture, state), props);
+                const binding = state.textureViews.get(
+                  typeof texture === 'string' ? texture : texture.id
+                );
+                return graph.createTextureView(
+                  this.resolveTexture(texture, state),
+                  binding ? getBoundTextureViewProps(binding, props) : props
+                );
               },
               recordDecision: d => state.decisions.push(d)
             });
@@ -389,6 +583,7 @@ export class GPUGraphCompiler<Parameters = void> {
       }
       throw new Error(`GPUGraph operation "${id}" has no WebGPU lowering`);
     } finally {
+      state.retainedBuffers = previousRetainedBuffers;
       state.path.pop();
     }
   }
@@ -436,7 +631,7 @@ export class GPUGraphCompiler<Parameters = void> {
             nodeType: decorated.type,
             operationPath: [...state.path]
           });
-          return decorated;
+          return {...decorated, retainedBuffers: state.retainedBuffers};
         }, callback)
     );
   }
@@ -445,7 +640,10 @@ export class GPUGraphCompiler<Parameters = void> {
     node: any,
     state: LoweringState
   ): any {
-    node = this.makeCommandNodeIdUnique(node, state);
+    node = {
+      ...this.makeCommandNodeIdUnique(node, state),
+      retainedBuffers: state.retainedBuffers
+    };
     if (state.path.length)
       state.nodes.push({nodeId: node.id, nodeType: 'compute', operationPath: [...state.path]});
     if (!state.predicates.length) return node;
@@ -508,37 +706,53 @@ export class GPUGraphCompiler<Parameters = void> {
     return {...node, id};
   }
   private resolveTexture<Format extends TextureFormat>(
-    texture: GPUGraphTexture<Format>,
+    texture: GPUGraphTexture<Format> | string,
     state: LoweringState
   ): GraphTextureHandle<Format> {
-    if (!state.textureValues.includes(texture))
-      throw new Error(`Undeclared program texture "${texture.id}"`);
+    const name = typeof texture === 'string' ? texture : texture.id;
+    if (
+      typeof texture === 'string'
+        ? !state.textures.has(name)
+        : !state.textureValues.includes(texture)
+    )
+      throw new Error(`Undeclared program texture "${name}"`);
     // The map erases formats; identity validation above preserves the declared texture's format.
-    return state.textures.get(texture.id)! as GraphTextureHandle<Format>;
+    return state.textures.get(name)! as GraphTextureHandle<Format>;
   }
 
   private resolveScalar<T extends 'float32' | 'uint32' | 'sint32'>(
-    s: GPUGraphScalar<T>,
+    scalar: GPUGraphScalar<T> | string,
     state: LoweringState
   ): GPUScalar<T> {
-    const r = state.scalars.get(s.id);
-    if (!r || r.format !== s.format)
-      throw new Error(`GPUGraph scalar "${s.id}" is not part of compilation`);
-    return r as GPUScalar<T>;
+    const name = typeof scalar === 'string' ? scalar : scalar.id;
+    const resolved = state.scalars.get(name);
+    if (!resolved || (typeof scalar !== 'string' && resolved.format !== scalar.format))
+      throw new Error(`GPUGraph scalar "${name}" is not part of compilation`);
+    return resolved as GPUScalar<T>;
   }
-  private resolveVector<T extends 'float32' | 'uint32' | 'sint32'>(
-    v: GPUGraphVector<T>,
+  private resolveVector<T extends GPUGraphVectorFormat>(
+    vector: GPUGraphVector<T> | string,
     state: LoweringState
   ): GraphVectorView<T> {
-    const r = state.vectors.get(v.id);
-    if (!r || r.format !== v.format || r.length !== v.length)
-      throw new Error(`GPUGraph vector "${v.id}" is not part of compilation`);
-    return r as GraphVectorView<T>;
+    const name = typeof vector === 'string' ? vector : vector.id;
+    const resolved = state.vectors.get(name);
+    if (
+      !resolved ||
+      (typeof vector !== 'string' &&
+        (resolved.format !== vector.format ||
+          (vector.length !== undefined && resolved.length !== vector.length)))
+    )
+      throw new Error(`GPUGraph vector "${name}" is not part of compilation`);
+    return resolved as GraphVectorView<T>;
   }
 }
 
-function getTransientChunkLengths(length: number, device: Device): readonly number[] {
-  const maximumLength = Math.floor(device.limits.maxStorageBufferBindingSize / 4);
+function getTransientChunkLengths(
+  length: number,
+  device: Device,
+  rowByteLength: number
+): readonly number[] {
+  const maximumLength = Math.floor(device.limits.maxStorageBufferBindingSize / rowByteLength);
   if (maximumLength < 1 || length <= maximumLength) return [length];
   const lengths: number[] = [];
   for (let offset = 0; offset < length; offset += maximumLength) {

@@ -11,9 +11,9 @@ import {
   prepareArrowTextInputFromData,
   resolveArrowPickInfo
 } from '@luma.gl/engine/arrow';
-import {makeArrowFixedSizeListVector, readArrowGPUVectorAsync} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector, readArrowGPUVectorAsync} from '@luma.gl/graph/arrow';
 import {Buffer} from '@luma.gl/core';
-import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUData} from '@luma.gl/graph/gpu-data';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {

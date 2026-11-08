@@ -3,8 +3,16 @@
 
 import {expect, test, vi} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
-import {BufferAttribute, type WebGPURenderer} from 'three/webgpu';
+import {BufferAttribute, REVISION, type WebGPURenderer} from 'three/webgpu';
+import {MeshletDrawingPipeline} from 'three/addons/pipelines/MeshletDrawingPipeline.js';
+import {VisibilityBufferDrawingPipeline} from 'three/addons/pipelines/VisibilityBufferDrawingPipeline.js';
 import {getThreeBufferBridgeSupport, ThreeBufferBridge} from '../src/interop';
+
+test('bridge compatibility contract targets Three r187', () => {
+  expect(REVISION).toBe('187');
+  const {device, renderer} = createFixture();
+  expect(getThreeBufferBridgeSupport(device, renderer)).toEqual({supported: true});
+});
 
 function createFixture() {
   const device = {type: 'webgpu', handle: {}} as unknown as Device;
@@ -187,4 +195,13 @@ test('bridge borrows instance attributes and validates their complete element co
   backend.destroyAttribute(attribute);
   bridge.dispose();
   expect(buffer.destroy).not.toHaveBeenCalled();
+});
+
+test('bridge rejects r187 meshlet and visibility drawing pipelines', () => {
+  const {device, renderer} = createFixture();
+  for (const pipeline of [new MeshletDrawingPipeline(), new VisibilityBufferDrawingPipeline()]) {
+    renderer.drawingPipeline = pipeline;
+    expect(getThreeBufferBridgeSupport(device, renderer)).toMatchObject({supported: false});
+    expect(() => new ThreeBufferBridge(device, renderer)).toThrow('StandardDrawingPipeline');
+  }
 });

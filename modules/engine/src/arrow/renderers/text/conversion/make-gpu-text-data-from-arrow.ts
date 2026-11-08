@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {GPUTextData, GPUTextResources, GPUTextStrategy} from '@luma.gl/engine/text';
 import {createGPUTextData, supportsGpuTextExpansion} from '@luma.gl/engine/text-experimental';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {DataType, Vector} from 'apache-arrow';
 import {supportsVertexStorageBuffers} from '../../arrow-renderer-utils';
 import type {

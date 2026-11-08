@@ -5,9 +5,9 @@
 import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
-import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant} from '@luma.gl/graph/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, type GPURecordBatchSourceInfo} from './gpu-record-batch';
 import {GPU_TABLE_INDEX_COLUMN_NAME, isGPUTableIndexColumnName} from './gpu-schema';
 import {
@@ -16,7 +16,7 @@ import {
   isFixedSizeListGPUVectorFormat,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 
 type GPUVectorMap<T extends GPUTypeMap = GPUTypeMap> = {
   [Name in keyof T & string]: GPUVector<T[Name]>;

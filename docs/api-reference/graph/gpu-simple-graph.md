@@ -1,13 +1,34 @@
 # GPUSimpleGraph
 
-`@luma.gl/graph/gpu-simple-graph` provides graph composition around existing GPGPU
-operations on WebGL and WebGPU. The existing operations, expression fusion, and
-materialization logic remain the implementation. Evaluator objects are a compatibility
-interface; upload, copy, execution, and output storage can be expressed through the graph.
+`@luma.gl/graph/gpu-simple-graph` provides portable expression and transfer execution and the lazy evaluator
+API on WebGL and WebGPU. Evaluator operations and their fusion/caching behavior remain available.
 
-## Author expressions with graph values
+## Choose an authoring mode
 
-New code can use graph values instead of constructing or managing evaluators:
+| Mode | Authoring and compilation | Result ownership |
+| --- | --- | --- |
+| Reusable named operations | `new GPUSimpleGraph()`, `addInput()`, shared expression/upload/copy operations, `compile(device)` | Allocated results returned by `run()` belong to the caller |
+| Evaluator-backed recipes | `new GPUSimpleGraph(device)`, `addValue()` or upload/copy operations, `compile()` | Generated recipe results belong to the compiled graph |
+
+Use reusable expressions when supplying new input vectors on each run. Use evaluator recipes
+for the broader evaluator operation set and lazy materialization. Do not mix the modes in one
+graph. The reusable path rejects state and custom full-graph lowerings; the evaluator path
+rejects declaration-based inputs/state. `GPUGraph` has a separate WebGPU execution implementation.
+
+## Reusable declaration-based expressions
+
+Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))`
+to declare external inputs, add a
+[`GPUExpressionOperation`](./gpu-expression-operation.md), and call `compile(device)`.
+Expressions and shared [upload/copy operations](./gpu-transfer-operations.md) infer their results; callers need not declare intermediates.
+Supply actual inputs with `compiled.run({inputs})`. Vector lengths can change between runs.
+See [Graph inputs, results, and state](./gpu-graph-values.md); state execution remains full-graph only.
+The expression reference documents the shared interface with `GPUGraph`, supported syntax,
+and caller-owned output results. The evaluator-based APIs below remain available unchanged.
+
+## Evaluator-backed graph values
+
+Evaluator recipes can use graph values instead of directly constructing evaluators:
 
 ```typescript
 import {
@@ -53,11 +74,13 @@ graph.addValue('scaled', chunks);
 Use `new GPUSimpleGraphValueOperation({id, value})` when composing with operation arrays
 or shared composite groups. `compiled.outputs` and `addEvaluator()` remain compatibility
 interfaces for existing evaluator users; new consumers use the GPUVectors returned by `run()`.
-No GPGPU exports are removed or deprecated in this first phase. Replacing evaluator input
-layouts, full GPUGraph lowering of evaluator recipes, and migration of legacy table-viewer
-readback adapters remain follow-ups.
+Evaluator exports remain supported. Evaluator recipes can invalidate changed input contents
+and rebind render resources without rebuilding; changing evaluator input layouts still requires
+a new compilation. Use reusable expression mode for per-run named input bindings.
 
-## Upload and copy
+## Evaluator recipe upload and copy
+
+For reusable `compile(device)` graphs, use the shared [GPUUploadOperation and GPUCopyOperation](./gpu-transfer-operations.md). The following operations belong to the older evaluator recipe mode.
 
 ```typescript
 import {
@@ -117,7 +140,7 @@ finish. Overlapping writes to shared targets are the caller's responsibility.
 ## Scoped execution on WebGPU
 
 ```typescript
-import {GPUEvaluationScope} from '@luma.gl/gpgpu';
+import {GPUEvaluationScope} from '@luma.gl/graph/gpu-simple-graph';
 
 const scope = new GPUEvaluationScope(device);
 try {
@@ -159,6 +182,11 @@ are unchanged. Render operations use the shared graph resource planner described
 evaluator storage and operation selection retain their existing implementation.
 
 ## Shared render operations
+
+These passes use evaluator recipe mode: construct `new GPUSimpleGraph(device)` and call
+`compile()` without a device argument. Reusable `compile(device)` expression graphs keep their
+existing CPU/GPU input, transfer and execution contracts. Render primitives can also contribute
+their passes to `GPUCommandGraph`.
 
 `GPURenderOperation` (from `@luma.gl/graph/gpu-core`) contributes ordinary graph render
 nodes. Add it to a SimpleGraph with `graph.add(operation)`, or add the same operation
@@ -214,8 +242,8 @@ rejected because WebGL sampler bindings cannot represent those texture views. Re
 attachments may still select supported individual mip levels and layers.
 
 Before the first synchronous evaluator run, eagerly register its backend, for example
-`await backendRegistry.add('webgl', import('@luma.gl/gpgpu/operations/webgl'))` using
-`backendRegistry` from `@luma.gl/gpgpu`. Synchronous execution cannot wait for lazy
+`await backendRegistry.add('webgl', import('@luma.gl/graph/gpu-simple-graph/webgl'))` using
+`backendRegistry` from `@luma.gl/graph/gpu-simple-graph`. Synchronous execution cannot wait for lazy
 backend imports. Render-only graphs do not need evaluator backend registration.
 
 ## Input invalidation
@@ -281,3 +309,73 @@ skipped-pass results survive reuse by other passes.
 
 The same parameterized `GPURenderOperation` can be added to a compatible full WebGPU
 graph. No deck.gl migration is part of this API change.
+
+## CPU callbacks and dynamically sized results
+
+Reusable SimpleGraph programs accept `GPUCPUOperation`, imported from `@luma.gl/graph`.
+The same operation also runs in `GPUGraph` on WebGPU. SimpleGraph supports CPU execution
+through `new GPUSimpleGraph().compile(device)`; evaluator recipes are not supported.
+
+```typescript
+import {GPUCPUOperation, GPUExpressionOperation, gpuGraph} from '@luma.gl/graph';
+import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
+
+const graph = new GPUSimpleGraph();
+graph.addInput('positions', gpuGraph.vector('float32x2'));
+graph.add(new GPUCPUOperation({
+  id: 'tessellate',
+  inputs: {positions: 'positions'},
+  outputs: {
+    meshPositions: gpuGraph.vector('float32x2'),
+    meshIndices: gpuGraph.vector('uint32')
+  },
+  async execute({inputs}) {
+    const positions = inputs.positions;
+    if (typeof positions === 'number') throw new Error('Expected vector');
+    const mesh = await tessellate(positions.pack()); // Application-provided CPU algorithm.
+    return {meshPositions: mesh.positions, meshIndices: mesh.indices};
+  }
+}));
+graph.add(new GPUExpressionOperation({output: 'scaled', expression: 'meshPositions * 2'}));
+const compiled = graph.compile(device, {outputs: ['scaled', 'meshIndices']});
+const results = await compiled.run({inputs: {positions: positionsVector}});
+```
+
+Callbacks receive numeric scalars or CPU vector snapshots with `format`, `length`, and
+`chunks`. Each chunk has `values` and `length`. Readback preserves source chunks;
+`pack()` explicitly combines them into a new array. Treat input arrays as read-only.
+
+Each named output returns a packed `Float32Array`, `Uint32Array`, or `Int32Array`, or
+`{chunks: [{values: typedArray}, ...]}` to specify chunk boundaries. Array types must match
+formats. Complete rows are required: six float32 components in `float32x2` represent
+three rows. Empty arrays are supported. Optional descriptor `length` and `chunkLengths`
+constraints are checked. Formats are fixed at compilation; lengths can change on every run.
+Only the portable 32-bit numeric formats with one to four components are supported.
+
+The executor awaits the callback and retains CPU results until a GPU consumer or selected GPU output requires upload. Do not mutate returned arrays until `run()` settles. CPU callbacks can delegate to
+workers through promises; closures are not automatically moved to workers. CPU-to-CPU chains retain their results in CPU memory without GPU transfers.
+
+CPU boundaries submit preceding GPU work before readback. These programs do not support
+`prepare()`, caller-controlled scopes, textures, state, or `outputTargets`. Use `addInput()`
+for external inputs. Every authored operation executes in order on each run, without caching.
+Selected results transfer to the caller; intermediates are released after the run, including
+on failure. Inputs remain borrowed. A failed callback does not prevent a later run.
+
+## CPU coordinate projection
+
+`CPUProjectionOperation` from `@luma.gl/graph/gpu-project` accepts `{id, input, output,
+format, projection}`. Supply `float32x2` or `float32x3` and a prepared projection from
+`projectionEngine.createProjectionAsync()` in `@math.gl/geospatial/projection`.
+The operation preserves row counts and chunk boundaries, copies input arrays before
+projection, and lets the executor upload the results. Forward projection follows the
+prepared transform's axis and height conventions. Prepare a reversed CRS pair for inverse
+projection. Input and output storage use Float32 precision. Projection errors reject the run.
+
+`CPUData` and `CPUVector`, exported by `@luma.gl/graph/gpu-data`, provide borrowed CPU
+storage with the same memory format strings as GPUVector. CPUData accepts a buffer or view,
+format, length, and optional byte layout, flattened value count, list offsets, and validity
+bitmap. Byte offsets are relative to the supplied view; the stored byteOffset is absolute
+within its underlying buffer. CPUVector contains ordered CPUData chunks. Construction does
+not copy payloads or combine chunks; mutations of borrowed memory remain visible. CPU memory
+is garbage-collected and has no destroy method. These storage types do not yet integrate with
+graph bindings, automatic transfers, nested lists, or Arrow schemas.

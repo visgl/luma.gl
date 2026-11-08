@@ -23,7 +23,7 @@ import {
   getGPUVectorFormatInfo,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 import {
   compileGPUCommandGraph,
   compileGPUCommandGraphAsync,

@@ -4,8 +4,8 @@
 
 import {expect, it, vi} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
-import {GPUDataEvaluator, GPUEvaluationScope} from '@luma.gl/gpgpu';
-import {GPUData, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUDataEvaluator, GPUEvaluationScope} from '@luma.gl/graph/gpu-simple-graph';
+import {GPUData, type GPUVector} from '@luma.gl/graph/gpu-data';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPURenderOperation} from '@luma.gl/graph/gpu-core';
 import {

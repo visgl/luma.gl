@@ -8,7 +8,7 @@ import {
   type ArrowPolygonInputType,
   type ArrowPolygonSourceVectors
 } from '@luma.gl/graph/_internal/arrow';
-import {getArrowPaths, getArrowVectorByPath} from '@luma.gl/gpgpu/arrow';
+import {getArrowPaths, getArrowVectorByPath} from '@luma.gl/graph/arrow';
 
 /** Raw Arrow table or record batch accepted by polygon source mapping helpers. */
 export type ArrowPolygonSourceData = Table | RecordBatch;

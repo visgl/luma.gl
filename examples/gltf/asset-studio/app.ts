@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {loadImageTexture} from '@loaders.gl/textures';
+import {loadImageTexture} from '@loaders.gl/images/load-image';
 import {RenderPass, log} from '@luma.gl/core';
 import {type AnimationLoopMode, AnimationProps, ClipSpace} from '@luma.gl/engine';
 import {loadPBREnvironment, type PBREnvironment} from '@luma.gl/engine/gltf';

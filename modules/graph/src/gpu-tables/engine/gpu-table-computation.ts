@@ -3,13 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Binding, type ComputePass, Device} from '@luma.gl/core';
-import {Kernel, type KernelProps} from '@luma.gl/gpgpu';
+import {Kernel, type KernelProps} from '../../execution/compute/kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   isFixedSizeListGPUVectorFormat,
   type GPUData,
   type GPUVector
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 
 /** Metadata supplied to one GPU table computation batch dispatch. */
 export type GPUTableComputationBatch = {

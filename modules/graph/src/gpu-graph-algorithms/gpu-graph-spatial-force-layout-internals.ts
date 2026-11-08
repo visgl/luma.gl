@@ -5,7 +5,7 @@
 
 import {addGPUCommandNodes} from '@luma.gl/graph/gpu-core';
 import {type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
 import type {GPUCommandGraph, GraphBufferUse, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,

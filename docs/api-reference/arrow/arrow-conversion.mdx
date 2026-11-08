@@ -14,7 +14,7 @@ passes, ownership, reasons, and lossy-conversion warnings before any GPU resourc
 is allocated.
 
 ```ts
-import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/gpgpu/arrow';
+import {convertArrowToGPUVector, planArrowGPUConversion} from '@luma.gl/graph/arrow';
 
 const plan = planArrowGPUConversion(device, sourceVector, {
   semantic: 'color',
@@ -65,9 +65,35 @@ boundaries, source row offsets, field metadata, null metadata, and one owned GPU
 allocation per output chunk; it never implicitly packs streaming batches.
 
 `convertArrowRecordBatchesToGPURecordBatches()` accepts sync or async record-batch
-streams and yields independently owned GPU batches. It preserves batch/row source
+streams (or bare async iterators) and yields independently owned GPU batches. It preserves batch/row source
 identity and carries the first resolved temporal origin into later batches, so a
 long timestamp stream does not silently change coordinate systems at each batch.
+
+Pass an optional fourth argument `{signal}` to cancel pending input reads and stop
+further conversion. Cancellation does not forcibly stop source I/O or an in-flight
+GPU conversion. A conversion already underway finishes and its unyielded result is
+destroyed. Iterator cleanup is requested without waiting for a stalled `next()` on
+abort. Consumers still own all previously yielded batches.
+
+Each output column must retain the first batch's GPU format. A format change destroys
+the unyielded batch and throws an error identifying the column and expected/actual
+formats. Arrow source types may differ if they convert to the same GPU format.
+
+```ts
+for await (const prepared of convertArrowRecordBatchesToGPURecordBatches(
+  device, source, schema, {signal: controller.signal}
+)) {
+  try {
+    await consumeBatch(prepared.batch);
+  } finally {
+    prepared.destroy();
+  }
+}
+```
+
+Streaming pulls one input per requested output; it does not prefetch or concatenate
+batches. Early consumer exit closes the source iterator.
+
 
 ```ts
 const prepared = await convertArrowTableToGPUTable(device, arrowTable, {
@@ -294,7 +320,7 @@ or fallback-vector generation.
 Use a simple Arrow input schema for direct one-column uploads. Keep model-family
 adapters for cross-column conversions such as path normalization, polygon
 tessellation, temporal conversion, and text glyph preparation. Do not make
-`@luma.gl/gpgpu` or `@luma.gl/graph` depend on Apache Arrow to describe those policies.
+`@luma.gl/graph/gpu-simple-graph` or `@luma.gl/graph` depend on Apache Arrow to describe those policies.
 
 
 ## BufferLayouts
@@ -303,7 +329,7 @@ The module can derive GPU `BufferLayout` entries from Arrow schemas and create p
 and experimental table objects from compatible Arrow columns through
 `makeGPUDataFromArrowData()`, `makeGPUVectorFromArrow()`, `makeGPURecordBatchFromArrowRecordBatch()`, and
 `makeGPUTableFromArrowTable()`. Primitive storage is documented in the
-[GPGPU data reference](/docs/api-reference/gpgpu/gpu-data), while the higher-level object model is
+[GPGPU data reference](/docs/api-reference/graph/gpu-data), while the higher-level object model is
 documented in [Experimental GPU Tables](/docs/api-reference/experimental/gpu-tables) and
 [GPU Table Structure](/docs/api-reference/experimental/gpu-tables/gpu-table-structure).
 

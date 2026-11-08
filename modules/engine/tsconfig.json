@@ -19,9 +19,6 @@
       "path": "../shaders"
     },
     {
-      "path": "../gpgpu"
-    },
-    {
       "path": "../graph"
     }
   ]

@@ -18,7 +18,7 @@ import {
   getViewBinding,
   getViewElementOffset
 } from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   getBoundedDispatchLayout,
@@ -1356,6 +1356,11 @@ it('GPUCompaction handles empty, none, all, alternating, and random masks', asyn
       values: Uint32Array.from([10, 20, 30, 40, 50]),
       flags: Uint32Array.from([1, 0, 1, 0, 1])
     },
+    {
+      name: 'nonbinary',
+      values: Uint32Array.from([10, 20, 30, 40]),
+      flags: Uint32Array.from([0, 2, 255, 0xffffffff])
+    },
     {name: 'random', values: randomValues, flags: randomFlags}
   ];
 
@@ -1401,8 +1406,8 @@ it('GPUCompaction preserves GPUVector topology while selecting across chunks', a
   ).toBe(false);
   expect(
     result.logicalTransientBufferCount,
-    'zero-length offset chunks share one transient backing view'
-  ).toBe(5);
+    'offset and normalized-mask vectors each share their zero-length backing view'
+  ).toBe(8);
 });
 
 it('GPUCompaction aligns independently partitioned inputs and output capacity', async () => {

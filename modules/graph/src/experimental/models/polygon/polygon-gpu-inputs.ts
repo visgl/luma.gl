@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPURecordBatchSourceInfo} from '@luma.gl/graph/gpu-tables';
-import type {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import type {VertexList} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUConstant} from '@luma.gl/graph/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import type {VertexList} from '@luma.gl/graph/gpu-data';
 import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
 
 /** Prepared generated GPU inputs consumed by filled polygon models. */

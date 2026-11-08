@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type Device} from '@luma.gl/core';
-import {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField} from '@luma.gl/graph/gpu-tables';
 import {RecordBatch, Table} from 'apache-arrow';
-import {getArrowFieldByPath} from '@luma.gl/gpgpu/_internal/arrow';
-import {getArrowVectorByPath} from '@luma.gl/gpgpu/arrow';
-import {getArrowTemporalVectorInfo, TEMPORAL_ORIGIN_METADATA_KEY} from '@luma.gl/gpgpu/arrow';
+import {getArrowFieldByPath} from '@luma.gl/graph/_internal/arrow';
+import {getArrowVectorByPath} from '@luma.gl/graph/arrow';
+import {getArrowTemporalVectorInfo, TEMPORAL_ORIGIN_METADATA_KEY} from '@luma.gl/graph/arrow';
 import {
   ArrowGPUConversionCost,
   ArrowGPUConversionOptions,
@@ -16,7 +16,7 @@ import {
   PreparedArrowGPUVector,
   planArrowGPUConversion,
   convertArrowToGPUVector
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 
 /** One named source-to-target mapping in an Arrow table conversion schema. */
 export type ArrowGPUTableConversionColumn = ArrowGPUConversionOptions & {
@@ -59,7 +59,16 @@ export type PreparedArrowGPUTable = {
 };
 
 /** Iterable Arrow record-batch source accepted by streaming conversion. */
-export type ArrowRecordBatchConversionSource = Iterable<RecordBatch> | AsyncIterable<RecordBatch>;
+export type ArrowRecordBatchConversionSource =
+  | Iterable<RecordBatch>
+  | AsyncIterable<RecordBatch>
+  | AsyncIterator<RecordBatch>;
+
+/** Controls cancellation of incremental Arrow conversion. */
+export type ArrowRecordBatchConversionOptions = {
+  /** Stops pending reads and further conversion. Already yielded batches remain caller-owned. */
+  signal?: AbortSignal;
+};
 
 /** One independently owned GPU record batch produced from an Arrow stream. */
 export type PreparedArrowGPURecordBatch = {
@@ -213,16 +222,21 @@ export async function convertArrowRecordBatchToGPURecordBatch(
  *
  * Temporal columns reuse the first prepared origin in later batches unless the schema supplies an
  * explicit origin. Consumers own each yielded batch and should destroy it after use.
+ * Output GPU formats must match the first batch. Cancellation or validation failure destroys
+ * unyielded results; an in-flight conversion finishes before its result can be released.
  */
 export async function* convertArrowRecordBatchesToGPURecordBatches(
   device: Device,
   source: ArrowRecordBatchConversionSource,
-  schema: ArrowGPUTableConversionSchema
+  schema: ArrowGPUTableConversionSchema,
+  {signal}: ArrowRecordBatchConversionOptions = {}
 ): AsyncGenerator<PreparedArrowGPURecordBatch> {
   const temporalOrigins = new Map<string, number | bigint>();
+  const formats = new Map<string, string | undefined>();
   let sourceBatchIndex = 0;
   let sourceRowIndexOffset = 0;
-  for await (const recordBatch of source) {
+  for await (const recordBatch of iterateRecordBatches(source, signal)) {
+    signal?.throwIfAborted();
     const batchSchema: ArrowGPUTableConversionSchema = {
       columns: schema.columns.map(column => {
         const origin = temporalOrigins.get(column.name);
@@ -237,7 +251,22 @@ export async function* convertArrowRecordBatchesToGPURecordBatches(
       batchSchema,
       {sourceBatchIndex, sourceRowIndexOffset}
     );
-    captureStreamingTemporalOrigins(recordBatch, schema, prepared.batch, temporalOrigins);
+    try {
+      signal?.throwIfAborted();
+      for (const [name, vector] of Object.entries(prepared.vectors)) {
+        const expected = formats.get(name);
+        if (formats.has(name) && vector.format !== expected) {
+          throw new Error(
+            `Arrow stream column "${name}" format changed: ${expected} -> ${vector.format}`
+          );
+        }
+        formats.set(name, vector.format);
+      }
+      captureStreamingTemporalOrigins(recordBatch, schema, prepared.batch, temporalOrigins);
+    } catch (error) {
+      prepared.destroy();
+      throw error;
+    }
     yield prepared;
     sourceRowIndexOffset += recordBatch.numRows;
     sourceBatchIndex++;
@@ -321,4 +350,67 @@ function sumConversionCosts(costs: readonly ArrowGPUConversionCost[]): ArrowGPUC
       allocatesGPUStorage: false
     }
   );
+}
+
+/** Pulls one batch at a time, allowing abort to interrupt a stalled next(). */
+async function* iterateRecordBatches(
+  source: ArrowRecordBatchConversionSource,
+  signal?: AbortSignal
+): AsyncGenerator<RecordBatch> {
+  signal?.throwIfAborted();
+  const iterator =
+    Symbol.asyncIterator in source
+      ? source[Symbol.asyncIterator]()
+      : Symbol.iterator in source
+        ? source[Symbol.iterator]()
+        : source;
+  let completed = false;
+  try {
+    for (;;) {
+      const result = await readRecordBatch(iterator, signal);
+      signal?.throwIfAborted();
+      if (result.done) {
+        completed = true;
+        return;
+      }
+      yield result.value;
+    }
+  } finally {
+    if (!completed) {
+      // Async generators may queue return() behind a stalled next(); do not delay abort.
+      const cleanup = Promise.resolve().then(() => iterator.return?.());
+      if (signal?.aborted) void cleanup.catch(() => {});
+      else await cleanup;
+    }
+  }
+}
+
+function readRecordBatch(
+  iterator: Iterator<RecordBatch> | AsyncIterator<RecordBatch>,
+  signal?: AbortSignal
+): Promise<IteratorResult<RecordBatch>> {
+  signal?.throwIfAborted();
+  if (!signal) return Promise.resolve(iterator.next());
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener('abort', abort);
+      reject(signal.reason);
+    };
+    signal.addEventListener('abort', abort, {once: true});
+    Promise.resolve()
+      .then(() => {
+        signal.throwIfAborted();
+        return iterator.next();
+      })
+      .then(
+        result => {
+          signal.removeEventListener('abort', abort);
+          resolve(result);
+        },
+        error => {
+          signal.removeEventListener('abort', abort);
+          reject(error);
+        }
+      );
+  });
 }

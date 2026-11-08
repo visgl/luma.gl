@@ -48,7 +48,8 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       status: 'Experimental'
     },
     {
-      name: 'gpgpu',
+      name: 'graph/gpu-simple-graph',
+      reference: 'graph/gpu-evaluation',
       description: 'GPU data primitives and immediate compute operations without CPU readback.',
       image: 'experimental/gpu-data-analysis'
     },
@@ -64,7 +65,7 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
       image: 'gltf/asset-studio'
     },
     {
-      name: 'gpgpu/arrow',
+      name: 'graph/arrow',
       reference: 'arrow',
       description: 'Convert Arrow vectors, tables and rendering data through optional /arrow subpaths.',
       image: 'arrow/arrow-points',

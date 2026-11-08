@@ -11,7 +11,7 @@ import {
   parameter,
   type GPUDataFrameDerivedColumnFormatForExpression
 } from '@luma.gl/graph/gpu-dataframe';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,

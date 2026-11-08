@@ -1,9 +1,7 @@
 import {defineConfig} from 'vite';
 
 const alias = {
-  '@luma.gl/gpgpu/_internal/arrow': `${__dirname}/../../../modules/gpgpu/src/arrow/internal.ts`,
   '@luma.gl/graph/_internal/arrow': `${__dirname}/../../../modules/graph/src/arrow/internal.ts`,
-  '@luma.gl/gpgpu/arrow': `${__dirname}/../../../modules/gpgpu/src/arrow`,
   '@luma.gl/graph/arrow': `${__dirname}/../../../modules/graph/src/arrow`,
   '@luma.gl/engine/arrow': `${__dirname}/../../../modules/engine/src/arrow`,
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
@@ -16,6 +14,10 @@ const alias = {
   '@luma.gl/engine/text': `${__dirname}/../../../modules/engine/src/text`,
   '@luma.gl/engine/effects': `${__dirname}/../../../modules/engine/src/effects`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
+  '@luma.gl/graph/_internal': `${__dirname}/../../../modules/graph/src/execution`,
+  '@luma.gl/graph/gpu-simple-graph/cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
+  '@luma.gl/graph/gpu-simple-graph/webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
+  '@luma.gl/graph/gpu-simple-graph/webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
   '@luma.gl/graph': `${__dirname}/../../../modules/graph/src`,
   '@luma.gl/shaders': `${__dirname}/../../../modules/shaders/src`,
   '@luma.gl/core/test-utils': `${__dirname}/../../../modules/core/src/test-utils`,

@@ -313,3 +313,17 @@ do not use both paths for the same frame.
 - [Gaussian splats overview](/docs/api-reference/splats)
 - [Gaussian splat showcase](/examples/showcase/gaussian-splats)
 - [GPU Core](/docs/api-reference/experimental/gpu-core)
+
+### Projected-depth convention
+
+For `SplatRenderer`, set `depthConvention: 'reverse'` when the camera projection
+maps near geometry to larger depth values. The default, `'standard'`, preserves
+conventional far-to-near projected-depth ordering. This option controls alpha
+sorting independently of `depthCompare`: reverse-Z callers must also configure
+their shared depth test (typically `'greater'` or `'greater-equal'`) and clear
+depth (typically `0`). Changing the convention with `setProps` invalidates
+cached sorting, including when the camera matrix is unchanged.
+
+This option does not alter `sortMode: 'none'`, the bounded draw-run approximation
+for densely interleaved source batches, or transparent mesh composition. It
+does not add reverse-Z support to `GPUSplatGraphRenderer` or `GPUPagedSplatRenderer`.

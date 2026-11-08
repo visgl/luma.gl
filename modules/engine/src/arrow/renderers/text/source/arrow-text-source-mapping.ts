@@ -4,7 +4,7 @@
 
 import {RecordBatch, Table, Vector} from 'apache-arrow';
 import {isArrowUtf8TextInputVector, type ArrowUtf8TextInputVector} from '../conversion/arrow-text';
-import {getArrowPaths, getArrowVectorByPath} from '@luma.gl/gpgpu/arrow';
+import {getArrowPaths, getArrowVectorByPath} from '@luma.gl/graph/arrow';
 
 /** Raw Arrow table or record batch accepted by text source mapping helpers. */
 export type ArrowTextSourceData = Table | RecordBatch;

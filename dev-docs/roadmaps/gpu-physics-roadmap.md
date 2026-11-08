@@ -133,7 +133,7 @@ and its stacked prerequisites; it does not imply that these PRs have landed. Spa
 Salvage establishes a real consumer of public contact events and queries. It does
 not close G5: its query kernels scan colliders, its event kernel scans the pair
 cache, and docking samples overlap rather than maintaining simulation-step triggers.
-The [feature cards](../../docs/api-reference/gpgpu/gpu-physics.md#feature-cards)
+The [feature cards](../../docs/api-reference/graph/gpu-physics.md#feature-cards)
 distinguish usable APIs from remaining qualification work.
 
 Keep G1–G12 stable: these identifiers already connect documentation, fixtures and

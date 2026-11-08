@@ -50,9 +50,9 @@ export class TextureTransform {
   readonly sampler: Sampler;
 
   currentIndex = 0;
-  samplerTextureMap: Record<string, any> | null = null;
+  samplerTextureMap: Record<string, unknown> | null = null;
   bindings: TextureBinding[] = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
-  resources: Record<string, any> = {}; // resources to be deleted
+  resources: Record<string, unknown> = {}; // resources to be deleted
 
   constructor(device: Device, props: TextureTransformProps) {
     this.device = device;

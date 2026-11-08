@@ -100,50 +100,40 @@ fn clip_isInBounds(coordinates: vec2<f32>) -> bool {
 /** Coordinate-system-neutral instance and geometry clipping. */
 export const clipShaderPlugin: ShaderPlugin = {
   name: 'clip',
-  modules: [clipShaderModule],
-  varyings: {
+  module: clipShaderModule,
+  interStageVariables: {
     clipCoordinates: {type: 'vec2<f32>', interpolation: 'smooth'}
   },
-  glsl: {
-    injections: [
-      {
-        target: 'vs:CLIP_POSITION',
-        injection: `\
+  injections: [
+    {
+      stage: 'vertex',
+      target: 'CLIP_POSITION',
+      glsl: `\
 clipCoordinates = geometryCoordinates;
 if (clipState.enabled != 0 && clipState.mode == ${CLIP_MODE_INSTANCE} &&
     !clip_isInBounds(instanceCoordinates)) {
   position = vec4(2.0, 2.0, 2.0, 1.0);
-}`
-      },
-      {
-        target: 'fs:CLIP_COLOR',
-        injection: `\
-if (clipState.enabled != 0 && clipState.mode == ${CLIP_MODE_GEOMETRY} &&
-    !clip_isInBounds(clipCoordinates)) {
-  discard;
-}`
-      }
-    ]
-  },
-  wgsl: {
-    injections: [
-      {
-        target: 'vs:CLIP_POSITION',
-        injection: `\
+}`,
+      wgsl: `\
 clipCoordinates = geometryCoordinates;
 if (clipUniforms.enabled != 0 && clipUniforms.mode == ${CLIP_MODE_INSTANCE} &&
     !clip_isInBounds(instanceCoordinates)) {
   *position = vec4<f32>(2.0, 2.0, 2.0, 1.0);
 }`
-      },
-      {
-        target: 'fs:CLIP_COLOR',
-        injection: `\
+    },
+    {
+      stage: 'fragment',
+      target: 'CLIP_COLOR',
+      glsl: `\
+if (clipState.enabled != 0 && clipState.mode == ${CLIP_MODE_GEOMETRY} &&
+    !clip_isInBounds(clipCoordinates)) {
+  discard;
+}`,
+      wgsl: `\
 if (clipUniforms.enabled != 0 && clipUniforms.mode == ${CLIP_MODE_GEOMETRY} &&
     !clip_isInBounds(clipCoordinates)) {
   discard;
 }`
-      }
-    ]
-  }
+    }
+  ]
 };

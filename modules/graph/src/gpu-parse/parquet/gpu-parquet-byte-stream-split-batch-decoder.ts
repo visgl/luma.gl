@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Binding, Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../../execution/compute/kernel';
 import {
   GPUCommandGraph,
   GPU_LZ_BYTE_BATCH_JOB_WORDS,

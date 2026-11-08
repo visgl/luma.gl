@@ -3,10 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device} from '@luma.gl/core';
-import {createArrowComputeKernel} from '@luma.gl/gpgpu/_internal/arrow';
+import {createArrowComputeKernel} from '@luma.gl/graph/_internal/arrow';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {dggs} from '@luma.gl/shaders';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   Data,
   DataType,
@@ -18,8 +18,8 @@ import {
   Utf8,
   Vector
 } from 'apache-arrow';
-import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
-import {getArrowUtf8DataBufferSource} from '@luma.gl/gpgpu/_internal/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
+import {getArrowUtf8DataBufferSource} from '@luma.gl/graph/_internal/arrow';
 
 type DggsCellPathCoordinateType = List<FixedSizeList<Float32>>;
 export type DggsCellPathCoordinateFormat = 'float32' | 'fp64-split';

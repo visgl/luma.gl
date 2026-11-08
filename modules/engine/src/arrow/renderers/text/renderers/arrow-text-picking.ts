@@ -9,7 +9,7 @@ import {
   supportsArrowIndexPicking
 } from '../../../arrow-picking';
 import {indexPicking, Model, type PickingManager, type ShaderInputs} from '@luma.gl/engine';
-import {getGPUDataBuffersForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataBuffersForLayout} from '@luma.gl/graph/gpu-data';
 import {type GPUTable} from '@luma.gl/graph/gpu-tables';
 import {
   TextAttributeModel,

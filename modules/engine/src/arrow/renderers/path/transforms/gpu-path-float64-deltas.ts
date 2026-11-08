@@ -3,12 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {createArrowComputeKernel} from '@luma.gl/gpgpu/_internal/arrow';
+import {createArrowComputeKernel} from '@luma.gl/graph/_internal/arrow';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
-import {GPUData, GPUVector, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type VertexList} from '@luma.gl/graph/gpu-data';
 import {Data, DataType, Field, FixedSizeList, Float32, Float64, List, Vector} from 'apache-arrow';
-import {getArrowVariableLengthAttributeDataBufferSource} from '@luma.gl/gpgpu/_internal/arrow';
+import {getArrowVariableLengthAttributeDataBufferSource} from '@luma.gl/graph/_internal/arrow';
 
 type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
 type ArrowPathFloat64CoordinateType = List<FixedSizeList<Float64>>;

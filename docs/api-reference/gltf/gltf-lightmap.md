@@ -38,7 +38,7 @@ outside this tested profile. The support registry retains `loader-only` status s
 strict required-extension loading does not claim complete draft conformance.
 
 ```tsx
-<GLTFFeatureExample feature="lightmap" />
+<GLTFFeatureExample feature="lightmap" embedded />
 ```
 
 The standalone shared viewer accepts `?feature=lightmap&backend=webgl` or
