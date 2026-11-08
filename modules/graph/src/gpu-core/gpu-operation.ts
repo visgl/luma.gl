@@ -46,30 +46,32 @@ export type GPUGraphOperation =
 export type GPUOperationLike = GPUGraphOperation | readonly GPUOperationLike[];
 
 /** Semantic hierarchy. Grouping never implies synchronization or a command-graph child graph. */
-export class GPUCompositeOperation implements GPUOperation {
+export class GPUCompositeOperation<Operation extends GPUGraphOperation = GPUGraphOperation>
+  implements GPUOperation
+{
   readonly id: string;
   readonly type: string = 'composite';
-  readonly operations: readonly GPUGraphOperation[];
+  readonly operations: readonly Operation[];
   readonly metadata?: GPUOperationMetadata;
 
   constructor(
     props:
-      | readonly GPUGraphOperation[]
+      | readonly Operation[]
       | {
           id?: string;
-          operations: readonly GPUGraphOperation[];
+          operations: readonly Operation[];
           metadata?: GPUOperationMetadata;
         }
   ) {
     const normalized: {
       id?: string;
-      operations: readonly GPUGraphOperation[];
+      operations: readonly Operation[];
       metadata?: GPUOperationMetadata;
     } = Array.isArray(props)
-      ? {operations: props as readonly GPUGraphOperation[]}
+      ? {operations: props as readonly Operation[]}
       : (props as {
           id?: string;
-          operations: readonly GPUGraphOperation[];
+          operations: readonly Operation[];
           metadata?: GPUOperationMetadata;
         });
     this.id = normalized.id ?? 'gpu-composite-operation';

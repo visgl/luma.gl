@@ -180,7 +180,7 @@ describe('GPUSimpleGraph semantic composition', () => {
     expect(Array.from(await output.readValue())).toEqual([12]);
     expect(graph.capabilities).toEqual({
       callerControlledSubmission: false,
-      dynamicBindings: false,
+      dynamicBindings: true,
       transientAllocation: true
     });
     output.destroy();
