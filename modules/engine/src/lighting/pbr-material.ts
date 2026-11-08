@@ -64,6 +64,7 @@ export function getPBRMaterialMapUniforms(
   return {
     baseColorMapEnabled: Boolean(bindings.pbr_baseColorSampler),
     normalMapEnabled: Boolean(bindings.pbr_normalSampler),
+    lightmapMapEnabled: Boolean(bindings.pbr_lightmapSampler),
     emissiveMapEnabled: Boolean(bindings.pbr_emissiveSampler),
     metallicRoughnessMapEnabled: Boolean(bindings.pbr_metallicRoughnessSampler),
     occlusionMapEnabled: Boolean(bindings.pbr_occlusionSampler),

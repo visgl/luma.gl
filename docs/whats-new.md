@@ -1,5 +1,10 @@
 # What's New
 
+### Standalone PBR lightmaps
+
+PBR material and model factories now infer lightmap flags from `pbr_lightmapSampler`. See [baked lightmaps](./api-reference/engine/lighting/pbr-material.md#baked-lightmaps) for irradiance, UV and ownership conventions.
+
+
 ### Reusable clustered light lists
 
 `@luma.gl/engine/lighting` now exposes `ClusteredLightGrid` for WebGPU renderers, with explicit point-light layout, deterministic overflow and borrowed inputs. Existing ANARI exports remain compatible. See [ClusteredLightGrid](./api-reference/engine/lighting/clustered-light-grid.md).

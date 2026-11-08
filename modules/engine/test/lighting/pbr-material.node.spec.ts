@@ -55,3 +55,20 @@ test('PBR materials resolve deferred texture replacement without owning the sour
   expect(texture.destroyed).toBe(false);
   texture.destroy();
 });
+
+test('PBR lightmaps infer flags, allow explicit disable and borrow resources', async () => {
+  const device = await getNullTestDevice();
+  const texture = device.createTexture({width: 1, height: 1});
+  const enabled = createPBRMaterial(device, {bindings: {pbr_lightmapSampler: texture}});
+  const disabled = createPBRMaterial(device, {
+    bindings: {pbr_lightmapSampler: texture},
+    uniforms: {lightmapMapEnabled: false}
+  });
+  expect(enabled.shaderInputs.getUniformValues().pbrMaterial.lightmapMapEnabled).toBe(true);
+  expect(disabled.shaderInputs.getUniformValues().pbrMaterial.lightmapMapEnabled).toBe(false);
+  expect(getPBRMaterialMapUniforms({}).lightmapMapEnabled).toBe(false);
+  enabled.destroy();
+  disabled.destroy();
+  expect(texture.destroyed).toBe(false);
+  texture.destroy();
+});
