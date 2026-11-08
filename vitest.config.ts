@@ -215,6 +215,9 @@ const vitestConfig = getVitestConfig({
         // Istanbul transforms use substantial memory. Bound the focused coverage pass so it is
         // stable on GitHub's two-core runners without changing the fast default Node command.
         ...(runNodeCoverage ? {maxWorkers: 2} : {}),
+        ...(process.env.LUMA_TEST_NODE_MAX_WORKERS
+          ? {maxWorkers: Number(process.env.LUMA_TEST_NODE_MAX_WORKERS)}
+          : {}),
         include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
         exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
       }

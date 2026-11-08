@@ -2921,6 +2921,7 @@ html[data-theme="dark"] .docusaurus-highlight-code-line {
   z-index: calc(var(--ifm-z-index-fixed, 200) + 1) !important;
   width: 100vw !important;
   height: 100vh !important;
+  height: 100dvh !important;
   min-height: 0 !important;
   margin: 0 !important;
   border-radius: 0 !important;
@@ -4547,4 +4548,80 @@ html[data-theme="dark"] .markdown .luma-onboarding {
 [data-luma-backend-option]:focus-visible {
   outline: 2px solid var(--luma-example-accent, #38bdf8);
   outline-offset: 2px;
+}
+
+/* Phone layouts include landscape: reserve space for navigation and keep controls tappable. */
+@media (pointer: coarse) and (max-width: 996px) {
+  .navbar__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    margin-right: 0.5rem;
+  }
+
+  .navbar__inner .navbar-badge {
+    display: none;
+  }
+
+  .navbar__inner [class*='colorModeToggle'] button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .docs-embedded-example[data-luma-embedded-example]:not([data-luma-example-content-sized]):not([data-luma-example-immersive='true']) {
+    height: min(420px, calc(100dvh - var(--ifm-navbar-height) - 24px)) !important;
+    min-height: min(420px, calc(100dvh - var(--ifm-navbar-height) - 24px)) !important;
+  }
+
+  [data-luma-example-page] [data-luma-example-chrome-action],
+  [data-luma-example-page] [role='tab'] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 996px) {
+  .luma-example-page:not([data-luma-embedded-example]):not([data-luma-example-immersive="true"]) {
+    height: calc(100dvh - var(--ifm-navbar-height)) !important;
+    min-height: 0 !important;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 996px) {
+  [data-luma-example-page] button[aria-label='Expand info box'],
+  [data-luma-example-page] button[aria-label='Collapse info box'] {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+}
+
+/* Expanded embeds must sit above site chrome, including while GPU startup is pending. */
+body:has([data-luma-example-page][data-luma-example-immersive='true']) .navbar,
+body:has([data-luma-example-page][data-luma-example-immersive='true']) .theme-back-to-top-button {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-luma-example-page] [data-luma-example-fullscreen-toggle] {
+  scroll-margin-block: calc(var(--ifm-navbar-height) + 16px);
+  z-index: 50;
+}
+
+@media screen and (max-width: 700px), screen and (max-height: 500px) and (pointer: coarse) {
+  .luma-example-page[data-luma-example-immersive='false'] [data-luma-info-box-collapsed='false'] {
+    top: calc(var(--ifm-navbar-height) + 8px + env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(100dvh - var(--ifm-navbar-height) - 16px - env(safe-area-inset-top, 0px)) !important;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 996px) {
+  #__docusaurus {
+    min-height: 100dvh;
+  }
+
+  main .container {
+    min-height: calc(100dvh - var(--ifm-navbar-height));
+  }
 }
