@@ -53,6 +53,7 @@ export class LightmapPreview {
     this.model = createPBRModel(device, {
       geometry,
       material: this.material,
+      defines: {USE_LIGHTS: true},
       parameters: {depthWriteEnabled: false, cullMode: 'none'}
     });
   }
@@ -130,6 +131,7 @@ export class LightmapPreview {
       clearColor: [0.04, 0.04, 0.04, 1],
       clearDepth: 1
     });
+    pass.setParameters({viewport: [0, 0, framebuffer.width, framebuffer.height]});
     this.model.draw(pass);
     pass.end();
     for (const label of document.querySelectorAll('[data-bake-samples]'))

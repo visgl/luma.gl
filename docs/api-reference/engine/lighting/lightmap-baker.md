@@ -47,7 +47,7 @@ an extended emitter over successive updates. The baker does not jitter lights au
 ## Accumulation and recording
 
 `update(options)` records one sample and returns `{lightmapTexture}`. `sampleCount` increases
-only after the draw callback completes. Sample n receives weight 1/(n+1). The first sample
+only after the draw callback completes. Sample n receives weight 1/(n+1). History uses unfiltered rgba32float storage; preview/export conversion uses the selected output format, so half-float rounding does not discard late history updates. The first sample
 replaces cleared history. Callback failures end the render pass and leave previous accumulation
 and count intact. Submit pending commands before retrying a failed sample.
 
@@ -82,7 +82,7 @@ preview. `destroy()` is idempotent and releases only baker-owned resources.
 `textures.lightmapTexture`. Submit the copy before consuming its result or destroying/replacing its source. The
 result survives baker destruction and owns its texture until `result.destroy()`.
 
-Both backends require renderable/filterable float targets. Default format is `rgba16float`;
+Both backends require renderable rgba32float history and renderable/filterable float output targets. Default format is `rgba16float`;
 `rgba32float` is accepted only when supported. Unsupported capabilities fail explicitly, with
 no SDR fallback. Match bake model color attachment formats when overriding the baker format.
 

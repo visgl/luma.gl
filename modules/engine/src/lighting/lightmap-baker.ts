@@ -32,7 +32,7 @@ export type LightmapBakeOptions = {
   dilationSteps?: number;
 };
 
-type Target = {texture: Texture; framebuffer: Framebuffer};
+type Target = {texture: Texture; framebuffer: Framebuffer; format: TextureFormatColor};
 
 /** Owns an independent linear irradiance texture, including alpha chart coverage. */
 export class LightmapBakeResult {
@@ -54,9 +54,9 @@ export class LightmapBaker {
   readonly device: Device;
   readonly format: TextureFormatColor;
   private targets: Target[] = [];
-  private filters: ClipSpace[] = [];
+  private filters = new Map<number, ClipSpace>();
   private activeIndex = 1;
-  private previewIndex = 1;
+  private previewIndex = 3;
   private destroyed = false;
   private needsClear = true;
   private samples = 0;
@@ -71,6 +71,8 @@ export class LightmapBaker {
         capabilities.render &&
         capabilities.filter
     );
+    // Accumulation uses unfiltered float32 history so small late samples survive rounding.
+    assert(device.getTextureFormatCapabilities('rgba32float').render);
     this.resize(props);
   }
   get width(): number {
@@ -105,7 +107,13 @@ export class LightmapBaker {
     const targets: Target[] = [];
     try {
       for (let index = 0; index < 5; index++)
-        targets.push(this.createTarget(props.width, props.height));
+        targets.push(
+          this.createTarget(
+            props.width,
+            props.height,
+            index === 1 || index === 2 ? 'rgba32float' : this.format
+          )
+        );
     } catch (error) {
       for (const target of targets) this.destroyTarget(target);
       throw error;
@@ -113,7 +121,7 @@ export class LightmapBaker {
     for (const target of this.targets) this.destroyTarget(target);
     this.targets = targets;
     this.activeIndex = 1;
-    this.previewIndex = 1;
+    this.previewIndex = 3;
     this.reset();
   }
 
@@ -172,10 +180,18 @@ export class LightmapBaker {
       1 / (this.samples + 1)
     );
     this.activeIndex = nextIndex;
-    this.previewIndex = nextIndex;
     this.samples++;
+    this.filter(
+      17,
+      2,
+      this.targets[nextIndex].texture,
+      this.targets[nextIndex].texture,
+      this.targets[3],
+      1
+    );
+    this.previewIndex = 3;
     for (let step = 0; step < steps; step++) {
-      const destinationIndex = step % 2 === 0 ? 3 : 4;
+      const destinationIndex = step % 2 === 0 ? 4 : 3;
       this.filter(
         step + 1,
         1,
@@ -212,19 +228,30 @@ export class LightmapBaker {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    for (const filter of this.filters) filter.destroy();
+    for (const filter of this.filters.values()) filter.destroy();
     for (const target of this.targets) this.destroyTarget(target);
   }
-  private createTarget(width: number, height: number): Target {
+  private createTarget(
+    width: number,
+    height: number,
+    format: TextureFormatColor = this.format
+  ): Target {
     const texture = this.device.createTexture({
       width,
       height,
-      format: this.format,
+      format,
       usage: Texture.RENDER_ATTACHMENT | Texture.SAMPLE | Texture.COPY_SRC | Texture.COPY_DST,
-      sampler: {minFilter: 'linear', magFilter: 'linear'}
+      sampler:
+        format === 'rgba32float'
+          ? {minFilter: 'nearest', magFilter: 'nearest'}
+          : {minFilter: 'linear', magFilter: 'linear'}
     });
     try {
-      return {texture, framebuffer: this.device.createFramebuffer({colorAttachments: [texture]})};
+      return {
+        texture,
+        format,
+        framebuffer: this.device.createFramebuffer({width, height, colorAttachments: [texture]})
+      };
     } catch (error) {
       texture.destroy();
       throw error;
@@ -242,15 +269,18 @@ export class LightmapBaker {
     target: Target,
     weight: number
   ): void {
-    this.filters[index] ??= new ClipSpace(this.device, {
-      modules: [lightmapFilter],
-      source:
-        '@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {return lightmapFilter_getColor(vec2i(inputs.Position.xy));}',
-      fs: '#version 300 es\nout vec4 fragmentColor;\nvoid main() {fragmentColor = lightmapFilter_getColor(ivec2(gl_FragCoord.xy));}',
-      colorAttachmentFormats: [this.format],
-      parameters: {depthWriteEnabled: false}
-    });
-    const model = this.filters[index];
+    let model = this.filters.get(index);
+    if (!model) {
+      model = new ClipSpace(this.device, {
+        modules: [lightmapFilter],
+        source:
+          '@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {return lightmapFilter_getColor(vec2i(inputs.Position.xy));}',
+        fs: '#version 300 es\nout vec4 fragmentColor;\nvoid main() {fragmentColor = lightmapFilter_getColor(ivec2(gl_FragCoord.xy));}',
+        colorAttachmentFormats: [target.format],
+        parameters: {depthWriteEnabled: false}
+      });
+      this.filters.set(index, model);
+    }
     model.setBindings({currentTexture: current, previousTexture: previous, chartTexture: previous});
     model.shaderInputs.setProps({lightmapFilter: {weight, mode}});
     // Uniform preparation must precede the render pass.

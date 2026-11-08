@@ -269,3 +269,89 @@ test('bake models honor alpha cutouts and directional shadow maps', async contex
     }
   }
 });
+
+test('standard example renders live lighting and freezes baked pixels', async context => {
+  const devices = await getDevices();
+  if (!devices.length) return context.skip('No GPU');
+  const {LightmapPreview} = await import('../../../../examples/api/pbr-shadows/lightmap-preview');
+  for (const device of devices) {
+    const preview = new LightmapPreview(device);
+    const texture = device.createTexture({
+      width: 32,
+      height: 32,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 32,
+      height: 32,
+      colorAttachments: [texture]
+    });
+    const buffer = device.createBuffer({byteLength: 256, usage: Buffer.COPY_DST | Buffer.MAP_READ});
+    async function render(mode: 'live' | 'baking' | 'baked', time: number) {
+      preview.render(framebuffer, mode, time);
+      device.submit();
+      texture.readBuffer({x: 16, y: 16, width: 1, height: 1}, buffer);
+      return Array.from((await buffer.readAsync()).slice(0, 4));
+    }
+    try {
+      const live = await render('live', 0);
+      expect(live[0] + live[1] + live[2], device.type).toBeGreaterThan(50);
+      const baking = await render('baking', 150);
+      expect(baking[0] + baking[1] + baking[2], device.type).toBeGreaterThan(50);
+      await render('baked', 300);
+      const frozen = await render('baked', 1000);
+      expect(await render('baked', 2000)).toEqual(frozen);
+      preview.reset();
+      expect(preview.baker.sampleCount).toBe(0);
+      await render('baked', 3000);
+      expect(preview.baker.sampleCount).toBe(1);
+    } finally {
+      preview.destroy();
+      framebuffer.destroy();
+      texture.destroy();
+      buffer.destroy();
+    }
+  }
+});
+
+test('long default bakes retain later samples in float32 history', {
+  timeout: 180000
+}, async context => {
+  const devices = await getDevices();
+  if (!devices.length) return context.skip('No GPU');
+  const {ClipSpace} = await import('@luma.gl/engine');
+  for (const device of devices) {
+    const baker = new LightmapBaker(device, {width: 1, height: 1});
+    const samples = [1, 2].map(
+      value =>
+        new ClipSpace(device, {
+          colorAttachmentFormats: ['rgba16float'],
+          parameters: {depthWriteEnabled: false},
+          source: `@fragment fn fragmentMain() -> @location(0) vec4f {return vec4f(${value}.0,0.0,0.0,1.0);}`,
+          fs: `#version 300 es\nout vec4 fragmentColor;\nvoid main(){fragmentColor=vec4(${value}.0,0.0,0.0,1.0);}`
+        })
+    );
+    try {
+      for (let index = 0; index < 8192; index++) {
+        const model = samples[index < 4096 ? 0 : 1];
+        baker.update({
+          drawSample: ({renderPass}) => {
+            model.draw(renderPass);
+          }
+        });
+        device.submit();
+        // Periodically drain the queue; do not retain thousands of pending GPU submissions.
+        if (index % 256 === 255) await readPixel(device, baker.textures.lightmapTexture);
+      }
+      expect(baker.sampleCount).toBe(8192);
+      expect((await readPixel(device, baker.textures.lightmapTexture))[0], device.type).toBeCloseTo(
+        1.5,
+        2
+      );
+    } finally {
+      samples.forEach(model => model.destroy());
+      baker.destroy();
+    }
+  }
+});
