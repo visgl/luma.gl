@@ -10,7 +10,7 @@ import {
   tessellateGeoArrowPolygons,
   type GeoArrowColumn,
   type TessellateGeoArrowPolygonsOptions
-} from '@math.gl/geospatial/geoarrow';
+} from '@math.gl/arrow/geoarrow-utils';
 import {makeGeoArrowColumnFromCPUVector, makeCPUVectorFromGeoArrowColumn} from './cpu-geoarrow';
 
 /** Project Float32 coordinates while retaining single-level row topology and null rows. */

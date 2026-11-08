@@ -142,7 +142,7 @@ test('direct GeoArrow adapters borrow coordinate buffers and preserve topology',
 });
 
 test('direct GeoArrow tessellation handles polygon holes without Apache Arrow conversion', async () => {
-  const {makeGeoArrowColumnFromGeometryRows} = await import('@math.gl/geospatial/geoarrow');
+  const {makeGeoArrowColumnFromGeometryRows} = await import('@math.gl/arrow/geoarrow-utils');
   const {tessellateGeoArrowColumnToCPUVectors} = await import('@luma.gl/graph/arrow');
   const column = makeGeoArrowColumnFromGeometryRows(
     [

@@ -369,11 +369,12 @@ Target Release Date: Q3, 2026
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
-- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.4 grouped
-  packages and loaders.gl 5.0.0-beta.4 grouped packages. Arrow adapters expose
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.5 grouped
+  packages and loaders.gl 5.0.0-beta.5 grouped packages. Arrow adapters expose
   `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
   for native GeoArrow chunks and rows without copying coordinate buffers. Views
-  borrow source storage; keep it alive and do not mutate or detach it while in use.
+  use math.gl’s shared adapter, including field extension metadata and canonical
+  union IDs. Views borrow source storage; keep it alive and do not mutate or detach it while in use.
 
 
 - **Engine scene controllers** - Skinning, material variants, billboards, area lights, spatial audio, and interactivity use reusable engine APIs; glTF parsers map source data into those APIs. See [scene controllers](/docs/api-guide/engine/scene-controllers).

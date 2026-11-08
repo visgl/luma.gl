@@ -169,18 +169,32 @@ loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.g
 options. This keeps encoded clip loading under the controller's active-scene and
 resource ownership rules, and preserves luma.gl's support for legacy draft attachments.
 
+### GeoArrow adapter validation and union IDs
+
+Arrow conversion now delegates to math.gl's shared adapter. For ambiguous list nesting,
+supply an explicit `encoding` or an Arrow `field` with GeoArrow extension metadata.
+For `convertGeoArrowTableToInterleaved`, select unannotated geometry columns with
+`geometryColumn`/`geometryColumns` and supply their `encoding` in the same options.
+Name three-component coordinate children `xyz` or `xym`, or supply `dimension`
+when adapting a vector directly. A `coordinateLayout` option must match physical
+storage; use the explicit interleaving conversion to change layouts.
+
+New dense-union output uses canonical GeoArrow IDs: XY point/line/polygon use
+1/2/3; XYZ adds 10, XYM adds 20, and XYZM adds 30. Read child fields and union
+metadata instead of relying on luma.gl's former sequential child IDs.
+
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.4. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.5. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
-`@math.gl/polygon` becomes `@math.gl/geometry`, and CRS, projection, and
-GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
+`@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection
+imports move under `@math.gl/geospatial`. GeoArrow imports move to `@math.gl/arrow`. Sun imports move to
 `@math.gl/earth/sun`. Install the package root when using these subpaths.
 
 The beta also removes alpha subpaths: import array types and `mat4`/`vec2`/`vec3`/`vec4`
 from `@math.gl/core`, parametric geometry and polygon helpers from `@math.gl/geometry`,
 DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from
-`@math.gl/geospatial/geoarrow`. TypeScript projects using `Float16Array` must include
+`@math.gl/arrow/geoarrow-utils`. TypeScript projects using `Float16Array` must include
 `ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
 
 
