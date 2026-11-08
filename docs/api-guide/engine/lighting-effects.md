@@ -150,3 +150,11 @@ visibility passes intentionally contain no stale history.
 - [PBR shadow receiving](../../api-reference/engine/lighting/pbr-shadows.md) and [contact shadows](../../api-reference/engine/lighting/contact-shadows.md).
 - [Ambient visibility](../../api-reference/engine/lighting/ambient-occlusion.md).
 - [SSAO composite](../../api-reference/shaders/shader-passes/ssao.mdx) and [GTAO composite](../../api-reference/shaders/shader-passes/gtao.mdx).
+
+## Baked diffuse lighting
+
+Use [LightmapBaker](../../api-reference/engine/lighting/lightmap-baker.md) for static,
+UV-unwrapped surfaces. Record sampled lighting and shadow maps in texture space, accumulate
+irradiance, then bind the result to PBR materials. Reset after bake inputs change.
+Baked light can include direct illumination: disable corresponding live contributions to
+avoid counting them twice. Baking does not replace dynamic-object lighting or screen-space effects.

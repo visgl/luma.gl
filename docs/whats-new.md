@@ -1,5 +1,10 @@
 # What's New
 
+### Progressive lightmap baking
+
+The optional lighting entry now exposes UV-space diffuse bake models, progressive irradiance accumulation, chart-safe dilation and independent result copies. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
+
+
 ### Standalone PBR lightmaps
 
 PBR material and model factories now infer lightmap flags from `pbr_lightmapSampler`. See [baked lightmaps](./api-reference/engine/lighting/pbr-material.md#baked-lightmaps) for irradiance, UV and ownership conventions.

@@ -34,6 +34,7 @@ import {
   ExampleSettingsPanelManager,
   makeExamplePanelHostHtml
 } from '../../example-panels';
+import {LightmapPreview} from './lightmap-preview';
 import {ClusterGridPreview} from './cluster-grid-preview';
 import {makeShadowPanel, makeShadowSettingsSchema} from './app-ui';
 
@@ -68,6 +69,8 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   private receiveShadows = true;
   private animate = true;
   private showClusters = false;
+  private bakeMode: 'off' | 'live' | 'baking' | 'baked' = 'off';
+  private lightmapPreview: LightmapPreview | null = null;
   private clusterPreview: ClusterGridPreview | null = null;
   private normalBias = 0.025;
   private angle = 0;
@@ -164,9 +167,18 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
         receiveShadows: this.receiveShadows,
         animate: this.animate,
         showClusters: false,
+        bakeMode: 'off',
         normalBias: this.normalBias
       },
       onSettingsChange: values => {
+        if (
+          values.bakeMode === 'off' ||
+          values.bakeMode === 'live' ||
+          values.bakeMode === 'baking' ||
+          values.bakeMode === 'baked'
+        )
+          this.bakeMode = values.bakeMode;
+
         if (
           device.type === 'webgpu' &&
           (values.ambientOcclusionMode === 'none' ||
@@ -215,7 +227,9 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
       }
     });
     this.panels = new ExamplePanelManager({
-      panel: makeShadowPanel(this.settings, device.type, this.resetCamera)
+      panel: makeShadowPanel(this.settings, device.type, this.resetCamera, () =>
+        this.lightmapPreview?.reset()
+      )
     });
     this.panels.mount();
   }
@@ -235,6 +249,11 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   }
 
   onRender({device, canvasContext, aspect, time}: AnimationProps) {
+    if (this.bakeMode !== 'off') {
+      this.lightmapPreview ??= new LightmapPreview(device);
+      this.lightmapPreview.render(canvasContext.getCurrentFramebuffer(), this.bakeMode, time);
+      return;
+    }
     this.controls?.update(time);
     if (this.animate)
       this.angle += Math.min(0.05, Math.max(0, (time - this.previousTime) / 1000)) * 0.5;
@@ -450,6 +469,7 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   }
 
   onFinalize() {
+    this.lightmapPreview?.destroy();
     this.clusterPreview?.destroy();
     this.controls?.destroy();
     this.panels.finalize();

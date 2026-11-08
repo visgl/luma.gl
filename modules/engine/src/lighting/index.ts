@@ -86,3 +86,13 @@ export type {
   AmbientOcclusionPassProps,
   AmbientOcclusionRenderOptions
 } from './ambient-occlusion-pass';
+
+export {createPBRLightmapModel} from './pbr-model';
+export type {CreatePBRLightmapModelOptions} from './pbr-model';
+export {LightmapBaker, LightmapBakeResult} from './lightmap-baker';
+export type {
+  LightmapBakerProps,
+  LightmapBakeOptions,
+  LightmapBakeView,
+  LightmapTextures
+} from './lightmap-baker';
