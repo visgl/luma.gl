@@ -273,6 +273,16 @@ export class LightmapBaker {
     if (!model) {
       model = new ClipSpace(this.device, {
         modules: [lightmapFilter],
+        shaderLayout: {
+          attributes: [],
+          bindings: ['currentTexture', 'previousTexture', 'chartTexture'].map((name, index) => ({
+            name,
+            type: 'texture',
+            group: 0,
+            location: index + 101,
+            sampleType: 'unfilterable-float'
+          }))
+        },
         source:
           '@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {return lightmapFilter_getColor(vec2i(inputs.Position.xy));}',
         fs: '#version 300 es\nout vec4 fragmentColor;\nvoid main() {fragmentColor = lightmapFilter_getColor(ivec2(gl_FragCoord.xy));}',

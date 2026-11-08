@@ -9,7 +9,7 @@ import {LightmapBaker, createPBRMaterial, createPBRLightmapModel} from '@luma.gl
 
 async function getDevices() {
   const webgl = await getWebGLTestDevice();
-  return [...(await getTestDevices(['webgpu'])), ...(webgl ? [webgl] : [])];
+  return [...(await getTestDevices(['webgpu-core', 'webgpu'])), ...(webgl ? [webgl] : [])];
 }
 
 test('progressive irradiance averages samples, resets and copies owned results on both backends', async context => {
