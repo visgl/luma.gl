@@ -73,3 +73,6 @@ export {CPUData, type CPUDataProps} from './cpu-data';
 export {CPUVector, type CPUVectorProps} from './cpu-vector';
 
 export {makeGPUVectorFromCPUVector, makeCPUVectorFromGPUVector} from './cpu-gpu-vector-transfer';
+
+export {convertCPUColors, resolveColorOutputFormat} from './color-conversion';
+export type {ColorOutputFormat, ColorConversionOptions} from './color-conversion';
