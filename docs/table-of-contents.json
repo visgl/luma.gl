@@ -695,6 +695,7 @@
           "api-reference/graph/gpu-graph-values",
           "api-reference/graph/data-flow",
           "api-reference/graph/gpu-graph-textures",
+          "api-reference/graph/gpu-shader-pass-operation",
           "api-reference/graph/gpu-expression-operation",
           "api-reference/graph/gpu-transfer-operations",
           "api-reference/graph/gpu-compaction-operation",

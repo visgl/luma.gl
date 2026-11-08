@@ -77,7 +77,7 @@ test('compaction declares capacity and GPU count independently', () => {
   );
   const device = new NullDevice({});
   try {
-    expect(() => simple.compile(device)).toThrow('supports expression, CPU, upload and copy');
+    expect(() => simple.compile(device)).toThrow('SimpleGraph declarative execution supports');
   } finally {
     device.destroy();
   }

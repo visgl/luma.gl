@@ -6,6 +6,7 @@ import {Buffer, Texture, TextureView, type Device} from '@luma.gl/core';
 import {CPUVector, GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from './gpu-graph';
 import {GPUCopyOperation} from './gpu-transfer-operation';
+import {GPUShaderPassOperation} from './gpu-shader-pass-operation';
 import {validateTextureCopy} from './gpu-texture-copy';
 import {
   GPUTextureInvocation,
@@ -89,6 +90,11 @@ export class GPUExpressionProgram {
         operation.operations.forEach(flatten);
       else {
         if (operation instanceof GPUCompositeOperation) {
+          const containsShaderPass = (child: GPUGraphOperation): boolean =>
+            child instanceof GPUShaderPassOperation ||
+            (child instanceof GPUCompositeOperation && child.operations.some(containsShaderPass));
+          if (operation.operations.some(containsShaderPass))
+            throw new Error('Shader-pass operations inside control flow are not supported');
           const containsExpression = (child: GPUGraphOperation): boolean =>
             child instanceof GPUExpressionOperation ||
             (child instanceof GPUCompositeOperation && child.operations.some(containsExpression));

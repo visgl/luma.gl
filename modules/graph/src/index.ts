@@ -193,6 +193,8 @@ export type {
 } from './gpu-core/gpu-operation-contract';
 
 export {GPUUploadOperation, GPUCopyOperation} from './gpu-core/gpu-transfer-operation';
+export {GPUShaderPassOperation} from './gpu-core/gpu-shader-pass-operation';
+export type {GPUShaderPassOperationProps} from './gpu-core/gpu-shader-pass-operation';
 export type {
   GPUUploadOperationProps,
   GPUCopyOperationProps

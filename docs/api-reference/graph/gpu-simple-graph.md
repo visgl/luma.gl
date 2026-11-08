@@ -21,6 +21,9 @@ Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(..
 to declare external inputs, add a
 [`GPUExpressionOperation`](./gpu-expression-operation.md), and call `compile(device)`.
 Expressions and shared [upload/copy operations](./gpu-transfer-operations.md) infer their results; callers need not declare intermediates.
+On WebGPU, reusable programs also support [texture bindings](./gpu-graph-textures.md) and
+[fullscreen shader passes](./gpu-shader-pass-operation.md). Texture-copy/shader-pass programs
+support synchronous `prepare()` and caller-owned encoding; mixed evaluator programs use `run()`.
 Supply actual inputs with `compiled.run({inputs})`. Vector lengths can change between runs.
 See [Graph inputs, results, and state](./gpu-graph-values.md); state execution remains full-graph only.
 The expression reference documents the shared interface with `GPUGraph`, supported syntax,
@@ -177,9 +180,10 @@ semantic groups; fused evaluator dependencies can differ from that authored tree
 
 Existing `GPUSimpleGraphOperation` and `addEvaluator()` remain available for wrapping
 GPGPU expressions. Semantic scalar literals/arithmetic and vector multiply-add continue
-to work unchanged. The full GPUGraph semantic operations and GPGPU operation implementations
-are unchanged. Render operations use the shared graph resource planner described below;
-evaluator storage and operation selection retain their existing implementation.
+to work unchanged. The full GPUCommandGraph semantic operations and GPGPU operation implementations
+are unchanged. The reusable named-operation mode above provides dynamic bindings and WebGPU
+texture operations; these do not extend evaluator recipe semantics. Transient texture reuse
+remains separate work.
 
 ## Shared render operations
 
