@@ -2,6 +2,17 @@
 
 ## v10.0
 
+### v10.0.0-alpha.11
+
+- Upgrade loaders.gl and math.gl to beta.5, reuse shared GeoArrow adapters, support explicit table encodings, and emit canonical GeoArrow union IDs.
+- Add CPU vector storage, lazy CPU/GPU transfers, shared CPU graph operations, and Arrow and GeoArrow geometry pipelines.
+- Share SimpleGraph render operations, input invalidation, per-run bindings, and coordinate projection across deck.gl adapters.
+- Expose standalone PBR materials, models, environment prefiltering, shadow primitives, camera prepasses, contact shadows, ambient visibility, and clustered light lists; infer lightmap receiving flags.
+- Add an unlit material, shared shader types and interface metadata, and lightweight WGSL and GLSL inspection parsers with expanded WGSL support.
+- Add ANARI ray material textures and dielectric transport, and support Three.js r187 with streamed compute rendering.
+- Expose scene geometry and XMP metadata, scenegraph interactions, billboard bindings, and runtime punctual lights; qualify emissive strength rendering and animation.
+- Scope model draw parameters through render-pass snapshots, keep empty font atlases uploadable, and improve mobile documentation and example navigation.
+
 ### v10.0.0-alpha.10
 
 - Rename shader hooks to injection targets and unify shader injection documentation.
