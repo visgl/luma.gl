@@ -43,6 +43,8 @@ export type GeoArrowNativeEncoding =
 export type GeoArrowSerializedEncoding = 'geoarrow.wkb' | 'geoarrow.wkt';
 
 export type GeoArrowInterleaveOptions = {
+  /** Encoding for explicitly selected columns without GeoArrow extension metadata. */
+  encoding?: GeoArrowNativeEncoding;
   /** Optional single geometry column to convert. Defaults to native GeoArrow metadata columns. */
   geometryColumn?: string;
   /** Optional geometry columns to convert. Defaults to native GeoArrow metadata columns. */
@@ -110,7 +112,7 @@ export function convertGeoArrowTableToInterleaved<T extends TypeMap>(
     }
     const encoding = getFieldEncoding(field) as GeoArrowNativeEncoding | null;
     const column = makeGeoArrowColumnFromArrowVector(vector, {
-      encoding: encoding ?? undefined,
+      encoding: encoding ?? options.encoding,
       metadata: getFieldExtensionMetadata(field)
     });
     const interleavedColumn = interleaveGeoArrowCoordinates(column);

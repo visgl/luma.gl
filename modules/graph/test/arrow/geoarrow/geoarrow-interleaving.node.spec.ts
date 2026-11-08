@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 import {expect, it} from 'vitest';
 import {
   convertGeoArrowTableToInterleaved,
+  convertGeoArrowTableToInterleavedAsync,
   convertGeoArrowVectorToInterleaved
 } from '@luma.gl/graph/arrow';
 import * as arrow from 'apache-arrow';
@@ -104,3 +105,31 @@ function isVectorLike(value: unknown): value is {length: number; get: (index: nu
     typeof (value as {get?: unknown}).get === 'function'
   );
 }
+
+it('table interleaving accepts explicit encodings for unannotated selected columns', async () => {
+  for (const encoding of ['geoarrow.linestring', 'geoarrow.polygon'] as const) {
+    const fixture =
+      encoding === 'geoarrow.linestring' ? 'example_linestring.arrows' : 'example_polygon.arrows';
+    const annotatedTable = loadGeoArrowFixture(fixture);
+    const geometry = annotatedTable.getChild('geometry')!;
+    const table = new arrow.Table({geometry});
+    const expected = convertGeoArrowTableToInterleaved(annotatedTable).getChild('geometry')!;
+    const converted = convertGeoArrowTableToInterleaved(table, {
+      geometryColumn: 'geometry',
+      encoding
+    });
+    const convertedAsync = await convertGeoArrowTableToInterleavedAsync(table, {
+      geometryColumns: ['geometry'],
+      encoding
+    });
+    for (const result of [converted, convertedAsync]) {
+      expect(result.getChild('geometry')!.type.toString()).toBe(expected.type.toString());
+      expect(getVectorRows(result.getChild('geometry')!)).toEqual(getVectorRows(expected));
+    }
+    // Existing extension metadata is authoritative over the fallback option.
+    const annotatedResult = convertGeoArrowTableToInterleaved(annotatedTable, {
+      encoding: 'geoarrow.point'
+    });
+    expect(getVectorRows(annotatedResult.getChild('geometry')!)).toEqual(getVectorRows(expected));
+  }
+});

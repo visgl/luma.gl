@@ -173,6 +173,8 @@ resource ownership rules, and preserves luma.gl's support for legacy draft attac
 
 Arrow conversion now delegates to math.gl's shared adapter. For ambiguous list nesting,
 supply an explicit `encoding` or an Arrow `field` with GeoArrow extension metadata.
+For `convertGeoArrowTableToInterleaved`, select unannotated geometry columns with
+`geometryColumn`/`geometryColumns` and supply their `encoding` in the same options.
 Name three-component coordinate children `xyz` or `xym`, or supply `dimension`
 when adapting a vector directly. A `coordinateLayout` option must match physical
 storage; use the explicit interleaving conversion to change layouts.
