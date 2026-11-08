@@ -12,8 +12,8 @@ import {
   type GeoArrowDimension,
   type GeoArrowEncoding,
   type GeoArrowSerialized
-} from '@math.gl/geospatial/geoarrow';
-import {decodeGeoArrowWKB, decodeGeoArrowWKT} from '@math.gl/geospatial/geoarrow';
+} from '@math.gl/arrow/geoarrow-utils';
+import {decodeGeoArrowWKB, decodeGeoArrowWKT} from '@math.gl/arrow/geoarrow-utils';
 import {
   Data,
   DataType,

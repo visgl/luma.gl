@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {parse} from '@math.gl/core';
+import {parse} from '@math.gl/core/expressions';
 import {GPUGraph, GPUExpressionOperation} from '@luma.gl/graph';
 import {GPUExpressionProgram} from '../../src/gpu-core/gpu-expression-plan';
 import {parseGPUExpression} from '../../src/gpu-core/gpu-expression-operation';
