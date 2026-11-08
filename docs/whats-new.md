@@ -1,11 +1,9 @@
 # What's New
 
-### Shared graph fullscreen shader passes
+### Standalone PBR lightmaps
 
-`GPUShaderPassOperation` describes one fullscreen WGSL draw for both GPUGraph and WebGPU
-SimpleGraph, with named textures, scalar parameters, operation-owned results, and caller-owned
-encoding. See [fullscreen shader passes](./api-reference/graph/gpu-shader-pass-operation.md).
-The evaluator API is unchanged.
+PBR material and model factories now infer lightmap flags from `pbr_lightmapSampler`. See [baked lightmaps](./api-reference/engine/lighting/pbr-material.md#baked-lightmaps) for irradiance, UV and ownership conventions.
+
 
 ### Reusable clustered light lists
 
@@ -121,6 +119,13 @@ copy results, including selected mip/layer views and borrowed output targets. GP
 lowerings can also produce textures with execution-sized or scaled extents. See
 [texture values and execution bindings](./api-reference/graph/gpu-graph-textures.md).
 Evaluator APIs remain unchanged.
+
+### Shared graph fullscreen shader passes
+
+`GPUShaderPassOperation` describes one fullscreen WGSL draw for both GPUGraph and WebGPU
+SimpleGraph, with named textures, scalar parameters, operation-owned results, and caller-owned
+encoding. See [fullscreen shader passes](./api-reference/graph/gpu-shader-pass-operation.md).
+The evaluator API is unchanged.
 
 ### Retained scenegraph physics rendering
 

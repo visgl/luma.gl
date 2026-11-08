@@ -507,6 +507,7 @@ export function getPBRTextureDefines(bindings: Record<string, unknown>): Record<
   return {
     HAS_BASECOLORMAP: Boolean(bindings['pbr_baseColorSampler']),
     HAS_NORMALMAP: Boolean(bindings['pbr_normalSampler']),
+    HAS_LIGHTMAP: Boolean(bindings['pbr_lightmapSampler']),
     HAS_EMISSIVEMAP: Boolean(bindings['pbr_emissiveSampler']),
     HAS_METALROUGHNESSMAP: Boolean(bindings['pbr_metallicRoughnessSampler']),
     HAS_OCCLUSIONMAP: Boolean(bindings['pbr_occlusionSampler']),
