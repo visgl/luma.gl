@@ -177,15 +177,12 @@ export type MultisampleParameters = {
 export type RenderPassParameters = {
   /** Linear map from normalized device coordinates to viewport coordinates [x, y, width, height, minDepth, maxDepth] */
   viewport?: NumberArray4 | NumberArray6;
-  /** Sets scissor rectangle used during rasterization. Discards fragments outside viewport coords [x, y, width, height]. */
-  scissorRect?: NumberArray4;
+  /** Scissor rectangle [x, y, width, height], or null to disable clipping to a rectangle. */
+  scissorRect?: NumberArray4 | null;
   /** Sets constant blend color and alpha values used with "constant" and "one-minus-constant" blend factors. */
   blendConstant?: NumberArray4;
   /** Stencil operation "replace" sets the value to stencilReference */
   stencilReference?: number; // GPUStencilValue
-
-  /** Bitmask controlling which channels are are written to when drawing/clearing. defaulting to 0xF */
-  colorMask?: number;
 };
 
 export type RenderPipelineParameters = RasterizationParameters &

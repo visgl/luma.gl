@@ -297,7 +297,7 @@ it('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct
   expect(
     () => canonicalRenderPass.setBindings({BlockA: bufferA}),
     'pass bindings require an active pipeline'
-  ).toThrow(/setPipeline.*must be called before setBindings/);
+  ).toThrow('Call setPipeline() before setBindings()');
   canonicalRenderPass.setPipeline(renderPipeline);
   canonicalRenderPass.setBindings({BlockA: bufferA, BlockB: bufferB, BlockC: bufferC});
   canonicalRenderPass.setVertexArray(vertexArray);

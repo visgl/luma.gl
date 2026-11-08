@@ -72,6 +72,7 @@ export {
 } from './parsers/parse-pbr-material';
 export {
   loadPBREnvironment,
+  resolveLoadedPBREnvironment,
   type PBREnvironment,
   type PBREnvironmentProps
 } from './pbr/pbr-environment';
@@ -183,6 +184,7 @@ export type {
 } from './types/gltf-postprocessed-schema';
 export type {
   GLTFWithBuffers,
+  GLTFGaussianSplatDescriptor,
   GLTFExternalBuffer,
   GLTFTypedArray,
   GLTFImageData

@@ -18,6 +18,8 @@ description: Describe GPU computations, bind data, and compose execution with re
 6. [Operation contracts](./gpu-operation.md): extend the graph with explicit logical effects and lowerings.
 7. [Command-graph concepts](/docs/api-reference/experimental/gpu-core/concepts): scheduling and physical resources when implementing a lowering or diagnosing execution.
 
+Read [CPU and GPU data flow](./data-flow.md) for residency, transfer diagrams, Arrow/GeoArrow adapters, and layer preparation.
+
 ## Choose an interface
 
 | Interface | Use it for | Execution |

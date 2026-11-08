@@ -7,7 +7,7 @@ import {ExperimentalDocsTabs} from '@site/src/components/docs/experimental-docs-
 ## Overview
 
 `@luma.gl/graph/gpu-sql` provides a bounded SQL frontend for
-[`GPUDataFrame`](/docs/api-reference/experimental/gpu-dataframe). `LuSQLContext` registers
+[`GPUDataFrame`](/docs/api-reference/experimental/gpu-dataframe). `GPUSQLContext` registers
 existing GPU dataframes by name and lowers supported statements into the same immutable GPU
 dataframe planner. Planning does not upload, submit, allocate query output, or read GPU buffers.
 

@@ -31,6 +31,7 @@ export {
   convertArrowTableToGPUTable,
   planArrowTableGPUConversion,
   type ArrowRecordBatchConversionSource,
+  type ArrowRecordBatchConversionOptions,
   type ArrowGPUTableConversionColumn,
   type ArrowGPUTableConversionPlan,
   type ArrowGPUTableConversionSchema,
@@ -201,3 +202,14 @@ export {
   type ArrowVertexFormatOptions,
   type ArrowBufferLayoutOptions
 } from './gpu/arrow-shader-layout';
+
+export {
+  makeCPUVectorFromArrow,
+  makeArrowVectorFromCPUVector
+} from './cpu/arrow-cpu-vector-adapters';
+export {
+  projectCPUVector,
+  tessellateCPUVectorPolygons,
+  tessellateGeoArrowColumnToCPUVectors
+} from './cpu/arrow-cpu-pipelines';
+export {projectArrowCoordinates} from './cpu/arrow-coordinate-projection';

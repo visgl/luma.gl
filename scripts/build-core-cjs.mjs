@@ -275,3 +275,110 @@ for (const backend of ['cpu', 'webgl', 'webgpu']) {
   assert.equal(typeof (await import(entry)).interleave, 'function');
 }
 process.stdout.write('Verified SimpleGraph evaluator identity and backend entries.\n');
+
+// The optional lighting entry must preserve constructor identity within each module system.
+const lightingApi = require('@luma.gl/engine/lighting');
+const lightingEsm = await import('../modules/engine/dist/lighting/index.js');
+const lightingImplementation = require('../modules/engine/dist/lighting/prefiltered-environment.cjs');
+const lightingImplementationEsm = await import('../modules/engine/dist/lighting/prefiltered-environment.js');
+for (const name of ['PrefilteredEnvironment', 'PrefilteredEnvironmentGenerator', 'createPrefilteredEnvironment']) {
+  assert.equal(typeof lightingApi[name], 'function');
+  assert.equal(lightingApi[name], lightingImplementation[name]);
+  assert.equal(lightingEsm[name], lightingImplementationEsm[name]);
+}
+process.stdout.write('Verified optional lighting subpath identities.\n');
+
+const lightingMaterialApi = require('../modules/engine/dist/lighting/pbr-material.cjs');
+const lightingMaterialEsm = await import('../modules/engine/dist/lighting/pbr-material.js');
+const compatibleMaterialApi = require('../modules/anari/dist/engine/pbr-material.cjs');
+const compatibleMaterialEsm = await import('../modules/anari/dist/engine/pbr-material.js');
+for (const name of ['createPBRMaterial', 'createPBRMaterialFactory', 'getPBRMaterialMapUniforms']) {
+  assert.equal(lightingApi[name], lightingMaterialApi[name]);
+  assert.equal(lightingEsm[name], lightingMaterialEsm[name]);
+  assert.equal(compatibleMaterialApi[name], lightingApi[name]);
+  assert.equal(compatibleMaterialEsm[name], lightingEsm[name]);
+}
+process.stdout.write('Verified PBR material compatibility export identities.\n');
+
+const lightingModelApi = require('../modules/engine/dist/lighting/pbr-model.cjs');
+const lightingModelEsm = await import('../modules/engine/dist/lighting/pbr-model.js');
+for (const name of ['createPBRModel', 'createPBRShadowModel', 'getPBRGeometryDefines', 'getPBRTextureDefines', 'getPBRModelWGSL', 'PBR_MODEL_WGSL_SHADER']) {
+  assert.equal(lightingApi[name], lightingModelApi[name]);
+  assert.equal(lightingEsm[name], lightingModelEsm[name]);
+}
+process.stdout.write('Verified standalone PBR model subpath identities.\n');
+
+// Shadow resources and sampling share one implementation across compatibility facades.
+const shadowRendererApi = require('../modules/engine/dist/lighting/shadow-map-renderer.cjs');
+const shadowRendererEsm = await import('../modules/engine/dist/lighting/shadow-map-renderer.js');
+const compatibleShadowApi = require('../modules/anari/dist/shadows/shadow-map-renderer.cjs');
+const compatibleShadowEsm = await import('../modules/anari/dist/shadows/shadow-map-renderer.js');
+const renderersApi = require('../modules/anari/dist/renderers.cjs');
+const renderersEsm = await import('../modules/anari/dist/renderers.js');
+for (const name of ['ShadowMapRenderer', 'getPracticalCascadeSplits', 'getDirectionalCascadeViews', 'getSpotShadowView', 'getPointShadowViews']) {
+  assert.equal(lightingApi[name], shadowRendererApi[name]);
+  assert.equal(lightingEsm[name], shadowRendererEsm[name]);
+  assert.equal(compatibleShadowApi[name], lightingApi[name]);
+  assert.equal(compatibleShadowEsm[name], lightingEsm[name]);
+}
+assert.equal(renderersApi.ShadowMapRenderer, lightingApi.ShadowMapRenderer);
+assert.equal(renderersEsm.ShadowMapRenderer, lightingEsm.ShadowMapRenderer);
+const shaderShadowApi = require('../modules/shaders/dist/modules/lighting/shadow/shadow.cjs');
+const shaderShadowEsm = await import('../modules/shaders/dist/modules/lighting/shadow/shadow.js');
+const shadersEsm = await import('../modules/shaders/dist/index.js');
+assert.equal(shadersApi.shadow, shaderShadowApi.shadow);
+assert.equal(shadersEsm.shadow, shaderShadowEsm.shadow);
+assert.equal(renderersApi.shadow, shadersApi.shadow);
+assert.equal(renderersEsm.shadow, shadersEsm.shadow);
+assert.equal('ShadowMapRenderer' in engineApi, false);
+process.stdout.write('Verified shadow primitive and compatibility export identities.\n');
+
+assert.equal(shadersApi.pbrShadow, require('../modules/shaders/dist/modules/lighting/pbr-shadow/pbr-shadow.cjs').pbrShadow);
+assert.equal(shadersEsm.pbrShadow, (await import('../modules/shaders/dist/modules/lighting/pbr-shadow/pbr-shadow.js')).pbrShadow);
+assert.equal('createPBRShadowModel' in engineApi, false);
+
+const surfacePassApi = require('../modules/engine/dist/lighting/pbr-surface-pass.cjs');
+const surfacePassEsm = await import('../modules/engine/dist/lighting/pbr-surface-pass.js');
+assert.equal(lightingApi.PBRSurfacePass, surfacePassApi.PBRSurfacePass);
+assert.equal(lightingEsm.PBRSurfacePass, surfacePassEsm.PBRSurfacePass);
+assert.equal(lightingApi.createPBRSurfaceModel, lightingModelApi.createPBRSurfaceModel);
+assert.equal(lightingEsm.createPBRSurfaceModel, lightingModelEsm.createPBRSurfaceModel);
+assert.equal(shadersApi.pbrSurface, require('../modules/shaders/dist/modules/lighting/pbr-surface/pbr-surface.cjs').pbrSurface);
+assert.equal(shadersEsm.pbrSurface, (await import('../modules/shaders/dist/modules/lighting/pbr-surface/pbr-surface.js')).pbrSurface);
+for (const name of ['PBRSurfacePass', 'createPBRSurfaceModel']) assert.equal(name in engineApi, false);
+process.stdout.write('Verified PBR surface prepass optional-subpath identities.\n');
+
+const contactPassApi = require('../modules/engine/dist/lighting/contact-shadow-pass.cjs');
+const contactPassEsm = await import('../modules/engine/dist/lighting/contact-shadow-pass.js');
+assert.equal(lightingApi.ContactShadowPass, contactPassApi.ContactShadowPass);
+assert.equal(lightingEsm.ContactShadowPass, contactPassEsm.ContactShadowPass);
+const compatibleContactApi = require('../modules/anari/dist/shadows/contact-shadow.cjs');
+const compatibleContactEsm = await import('../modules/anari/dist/shadows/contact-shadow.js');
+assert.equal(compatibleContactApi.createContactShadowCompositeShaderPass, lightingApi.createContactShadowCompositeShaderPass);
+assert.equal(compatibleContactEsm.createContactShadowCompositeShaderPass, lightingEsm.createContactShadowCompositeShaderPass);
+for (const name of ['contactShadowTrace','contactShadowBilateralBlur','contactShadowComposite','pbrContactShadow']) {
+  const path = name === 'pbrContactShadow' ? 'pbr-contact-shadow/pbr-contact-shadow' : 'contact-shadow/contact-shadow';
+  assert.equal(shadersApi[name], require(`../modules/shaders/dist/modules/lighting/${path}.cjs`)[name]);
+  assert.equal(shadersEsm[name], (await import(`../modules/shaders/dist/modules/lighting/${path}.js`))[name]);
+}
+assert.equal('ContactShadowPass' in engineApi, false);
+process.stdout.write('Verified contact shadow optional-subpath and compatibility identities.\n');
+
+const clusterApi = require('../modules/engine/dist/lighting/clustered-light-grid.cjs');
+const clusterEsm = await import('../modules/engine/dist/lighting/clustered-light-grid.js');
+const compatibleClusterApi = require('../modules/anari/dist/rendering/clustered-lighting.cjs');
+const compatibleClusterEsm = await import('../modules/anari/dist/rendering/clustered-lighting.js');
+for (const name of ['ClusteredLightGrid', 'MAX_CLUSTERED_POINT_LIGHTS', 'DEFAULT_CLUSTER_DIMENSIONS', 'DEFAULT_MAX_LIGHTS_PER_CLUSTER']) {
+  assert.equal(lightingApi[name], clusterApi[name]);
+  assert.equal(lightingEsm[name], clusterEsm[name]);
+  assert.equal(compatibleClusterApi[name], lightingApi[name]);
+  assert.equal(compatibleClusterEsm[name], lightingEsm[name]);
+}
+assert.equal('ClusteredLightGrid' in engineApi, false);
+process.stdout.write('Verified clustered light grid compatibility identities.\n');
+assert.equal(lightingApi.AmbientOcclusionPass, require('../modules/engine/dist/lighting/ambient-occlusion-pass.cjs').AmbientOcclusionPass);
+assert.equal(lightingEsm.AmbientOcclusionPass, (await import('../modules/engine/dist/lighting/ambient-occlusion-pass.js')).AmbientOcclusionPass);
+assert.equal(shadersApi.pbrAmbientOcclusion, require('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.cjs').pbrAmbientOcclusion);
+assert.equal(shadersEsm.pbrAmbientOcclusion, (await import('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.js')).pbrAmbientOcclusion);
+assert.equal('AmbientOcclusionPass' in engineApi, false);
+process.stdout.write('Verified ambient visibility optional-subpath identities.\n');

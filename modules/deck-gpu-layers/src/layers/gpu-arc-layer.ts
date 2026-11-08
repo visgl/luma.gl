@@ -191,6 +191,7 @@ export class GPUArcLayer extends Layer<GPUArcLayerProps> {
       ...this.getShaders({modules: [project32, picking], source: GPU_ARC_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
+      inferDrawCount: 'instance',
       isInstanced: true,
       vertexCount: Math.max(1, this.props.numSegments ?? 32) * 6,
       instanceCount: 0,

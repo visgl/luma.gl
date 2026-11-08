@@ -24,8 +24,7 @@
     "KHR_node_hoverability",
     "KHR_node_selectability",
     "KHR_physics_rigid_bodies",
-    "KHR_xmp",
-    "KHR_xmp_json_ld"
+    "KHR_xmp"
   ],
   "extensionsRequired": [
     "EXT_lights_image_based",
@@ -37,7 +36,6 @@
     "KHR_node_hoverability",
     "KHR_node_selectability",
     "KHR_physics_rigid_bodies",
-    "KHR_xmp",
-    "KHR_xmp_json_ld"
+    "KHR_xmp"
   ]
 }

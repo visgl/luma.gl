@@ -14,7 +14,7 @@ import {
   type ArithmeticOp,
   type ArithmeticArgument
 } from './operations/arithmetic-operation';
-import {GPUVector} from '@luma.gl/graph/gpu-data';
+import {CPUVector, GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from '../gpu-core/gpu-graph';
 import {
   GPUExpressionOperation,
@@ -41,12 +41,17 @@ import {GPUExpressionRowOperation} from './gpu-expression-row-operation';
 import {GPUShaderPassOperation} from '../gpu-core/gpu-shader-pass-operation';
 import {GPUShaderPassKernel} from '../gpu-core/gpu-shader-pass-kernel';
 
+import {GPUCPUOperation} from '../gpu-core/gpu-cpu-operation';
+import {GPUCPUExecution} from '../gpu-core/gpu-cpu-execution';
+
 /** Reusable expression program implemented through the unchanged evaluator API. */
 export class CompiledGPUSimpleExpressionGraph<
   Outputs extends GPUGraphOutputs = Record<string, GPUVector>
 > {
   private readonly program: GPUExpressionProgram;
   private readonly shaderPasses = new Map<GPUShaderPassOperation, GPUShaderPassKernel>();
+  private cpuExecution?: GPUCPUExecution;
+  private readonly outputLocations: Readonly<Record<string, 'cpu' | 'gpu'>>;
   private running = false;
   private destroyed = false;
 
@@ -57,6 +62,7 @@ export class CompiledGPUSimpleExpressionGraph<
   ) {
     if (options.lowerings) throw new Error('Custom lowerings require GPUGraph');
     this.program = new GPUExpressionProgram(source, options);
+    this.outputLocations = options.outputLocations ?? {};
     if (this.program.textures.length && device.type !== 'webgpu')
       throw new Error('SimpleGraph texture execution requires WebGPU');
     if (this.program.vectors.some(value => value.role === 'state'))
@@ -65,6 +71,7 @@ export class CompiledGPUSimpleExpressionGraph<
       this.program.operations.some(
         operation =>
           !(
+            operation instanceof GPUCPUOperation ||
             operation instanceof GPUExpressionOperation ||
             operation instanceof GPUUploadOperation ||
             operation instanceof GPUShaderPassOperation ||
@@ -73,7 +80,16 @@ export class CompiledGPUSimpleExpressionGraph<
       )
     )
       throw new Error(
-        'SimpleGraph declarative execution supports expression, upload, copy and shader-pass operations only'
+        'SimpleGraph declarative execution supports expression, CPU, upload, copy and shader-pass operations only'
+      );
+    if (
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu')
+    )
+      this.cpuExecution = new GPUCPUExecution(
+        device,
+        this.program,
+        (source, outputs) => new CompiledGPUSimpleExpressionGraph(device, source, {outputs})
       );
     try {
       for (const operation of this.program.operations)
@@ -153,7 +169,27 @@ export class CompiledGPUSimpleExpressionGraph<
     const resolvedBindings = this.program.resolveBindings(supplied, options);
     const bindings = resolvedBindings.bindings;
     options = resolvedBindings.options;
+    const suppliedInputs = 'inputs' in supplied ? supplied.inputs : supplied;
+    const useCPU =
+      this.program.operations.some(operation => operation instanceof GPUCPUOperation) ||
+      Object.values(this.outputLocations).includes('cpu') ||
+      Object.values(suppliedInputs ?? {}).some(value => value instanceof CPUVector);
+    if (!this.cpuExecution && useCPU)
+      this.cpuExecution = new GPUCPUExecution(
+        this.device,
+        this.program,
+        (source, outputs) => new CompiledGPUSimpleExpressionGraph(this.device, source, {outputs})
+      );
     this.running = true;
+    if (useCPU && this.cpuExecution) {
+      try {
+        // Dynamic CPU results cannot be prepared into caller-owned storage yet.
+        assert(!options.outputTargets || Object.keys(options.outputTargets).length === 0);
+        return (await this.cpuExecution.run(bindings, this.outputLocations)) as Outputs;
+      } finally {
+        this.running = false;
+      }
+    }
     const evaluators = new Set<GPUDataEvaluator>();
     const scalarBuffers = new Set<Buffer>();
     let scope: GPUEvaluationScope | undefined;
@@ -413,6 +449,7 @@ export class CompiledGPUSimpleExpressionGraph<
   destroy(): void {
     // A running program owns evaluator resources until execution finishes.
     assert(!this.running);
+    this.cpuExecution?.destroy();
     for (const kernel of this.shaderPasses.values()) kernel.destroy();
     this.shaderPasses.clear();
     this.destroyed = true;

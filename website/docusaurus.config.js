@@ -48,146 +48,213 @@ const config = getDocusaurusConfig({
       '@docusaurus/plugin-client-redirects',
       {
         redirects: [
-          {from: ['/docs/api-reference/gpgpu'], to: '/docs/api-reference/graph/gpu-evaluation'},
-          {from: ['/docs/api-reference/gpgpu/clean-evaluate'], to: '/docs/api-reference/graph/clean-evaluate'},
-          {from: ['/docs/api-reference/gpgpu/custom-operation'], to: '/docs/api-reference/graph/custom-operation'},
-          {from: ['/docs/api-reference/gpgpu/gpu-constant'], to: '/docs/api-reference/graph/gpu-constant'},
-          {from: ['/docs/api-reference/gpgpu/gpu-data-evaluator'], to: '/docs/api-reference/graph/gpu-data-evaluator'},
-          {from: ['/docs/api-reference/gpgpu/gpu-data-view'], to: '/docs/api-reference/graph/gpu-data-view'},
-          {from: ['/docs/api-reference/gpgpu/gpu-data'], to: '/docs/api-reference/graph/gpu-data'},
-          {from: ['/docs/api-reference/gpgpu/gpu-geometry'], to: '/docs/api-reference/graph/gpu-geometry'},
-          {from: ['/docs/api-reference/gpgpu/gpu-parse'], to: '/docs/api-reference/graph/gpu-parse'},
-          {from: ['/docs/api-reference/gpgpu/gpu-physics-collision-coverage'], to: '/docs/api-reference/graph/gpu-physics-collision-coverage'},
-          {from: ['/docs/api-reference/gpgpu/gpu-physics'], to: '/docs/api-reference/graph/gpu-physics'},
-          {from: ['/docs/api-reference/gpgpu/gpu-pointcloud'], to: '/docs/api-reference/graph/gpu-pointcloud'},
-          {from: ['/docs/api-reference/gpgpu/gpu-rigid-body-world'], to: '/docs/api-reference/graph/gpu-rigid-body-world'},
-          {from: ['/docs/api-reference/gpgpu/gpu-sphere-world'], to: '/docs/api-reference/graph/gpu-sphere-world'},
-          {from: ['/docs/api-reference/gpgpu/gpu-vector-format'], to: '/docs/api-reference/graph/gpu-vector-format'},
-          {from: ['/docs/api-reference/gpgpu/gpu-vector-search'], to: '/docs/api-reference/graph/gpu-vector-search'},
-          {from: ['/docs/api-reference/gpgpu/gpu-vector'], to: '/docs/api-reference/graph/gpu-vector'},
-          {from: ['/docs/api-reference/gpgpu/kernel'], to: '/docs/api-reference/graph/kernel'},
-          {from: ['/docs/api-reference/gpgpu/operations'], to: '/docs/api-reference/graph/operations'},
-          {from: ['/docs/api-reference/gpgpu/render-kernel'], to: '/docs/api-reference/graph/render-kernel'},
-
-          {from: ['/docs/api-reference/text'], to: '/docs/api-reference/engine/text'},
-          {"from":["/docs/api-reference/experimental/a-buffer-renderer"],"to":"/docs/api-reference/scene/a-buffer-renderer"},
-          {"from":["/docs/api-reference/experimental/clustered-lighting"],"to":"/docs/api-reference/scene/clustered-lighting"},
-          {"from":["/docs/api-reference/experimental/deferred-lighting"],"to":"/docs/api-reference/scene/deferred-lighting"},
-          {"from":["/docs/api-reference/experimental/deferred-scene-renderer"],"to":"/docs/api-reference/scene/deferred-scene-renderer"},
-          {"from":["/docs/api-reference/experimental/depth-texture-copy"],"to":"/docs/api-reference/scene/depth-texture-copy"},
-          {"from":["/docs/api-reference/experimental/g-buffer"],"to":"/docs/api-reference/scene/g-buffer"},
-          {"from":["/docs/api-reference/experimental/pbr-environment"],"to":"/docs/api-reference/scene/pbr-environment"},
-          {"from":["/docs/api-reference/experimental/ray-tracing-quality-presets"],"to":"/docs/api-reference/scene/ray-tracing-quality-presets"},
-          {"from":["/docs/api-reference/experimental/scene-renderer"],"to":"/docs/api-reference/scene/scene-renderer"},
-          {"from":["/docs/api-reference/experimental/selection-outline"],"to":"/docs/api-reference/scene/selection-outline"},
-          {"from":["/docs/api-reference/experimental/shadow-map-renderer"],"to":"/docs/api-reference/scene/shadow-map-renderer"},
-          {"from":["/docs/api-reference/experimental/spectral-caustics-renderer"],"to":"/docs/api-reference/scene/spectral-caustics-renderer"},
-          {"from":["/docs/api-reference/experimental/wboit-renderer"],"to":"/docs/api-reference/scene/wboit-renderer"},
-          {"from":["/docs/api-reference/experimental/comparison-splitter"],"to":"/docs/api-reference/engine/experimental/comparison-splitter"},
-          {"from":["/docs/api-reference/experimental/glass-material"],"to":"/docs/api-reference/engine/experimental/glass-material"},
-          {"from":["/docs/api-reference/experimental/reflective-material"],"to":"/docs/api-reference/engine/experimental/reflective-material"},
-          {"from":["/docs/api-reference/experimental/webxr"],"to":"/docs/api-reference/engine/experimental/webxr"},
-          {"from":["/docs/api-reference/experimental/webxr/webxr-camera-texture"],"to":"/docs/api-reference/engine/experimental/webxr/webxr-camera-texture"},
-          {"from":["/docs/api-reference/experimental/webxr/webxr-manager"],"to":"/docs/api-reference/engine/experimental/webxr/webxr-manager"},
+          {from: ["/docs/api-guide/shaders/writing-customizable-shaders"], to: "/docs/api-guide/shaders/shader-injection"},
+          {from: ["/docs/tutorials/shader-hooks"], to: "/docs/tutorials/shader-injection"},
+          {from: ["/examples/tutorials/shader-hooks"], to: "/examples/tutorials/shader-injection"},
           {
-            from: ['/docs/api-reference/gpu-graph'],
-            to: '/docs/api-reference/graph'
-          },
-          {
-            from: ['/examples/showcase/crossfilter-supremacy'],
-            to: '/examples/showcase/million-row-crossfilter'
-          },
-          {
-            from: ['/examples/arrow/arrow-path-model'],
-            to: '/examples/arrow/arrow-lines'
-          },
-          {
-            from: ['/examples/arrow/arrow-instancing'],
-            to: '/examples/showcase/instancing'
-          },
-          {
-            from: ['/examples/experimental/video-texture'],
-            to: '/examples/api/video-texture'
-          },
-          {
-            from: [
-              '/docs/api-reference/tables/gpu-table-object-model',
-              '/docs/api-reference/experimental/gpu-tables/gpu-table-object-model'
+            "from": [
+              "/docs/developer-guide/editing"
             ],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle'
+            "to": "/docs/developer-guide/installing"
           },
           {
-            from: ['/docs/api-reference/tables'],
-            to: '/docs/api-reference/experimental/gpu-tables'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-constant'],
-            to: '/docs/api-reference/graph/gpu-constant'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-data'],
-            to: '/docs/api-reference/graph/gpu-data'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-data-view'],
-            to: '/docs/api-reference/graph/gpu-data-view'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-vector'],
-            to: '/docs/api-reference/graph/gpu-vector'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-vector-format'],
-            to: '/docs/api-reference/graph/gpu-vector-format'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-table'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-table'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-record-batch'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-record-batch'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-schema'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-schema'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-input-schema'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-input-schema'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-table-structure'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-structure'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-table-lifecycle'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-lifecycle'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-table-shader-bindings'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-shader-bindings'
-          },
-          {
-            from: ['/docs/api-reference/tables/gpu-table-buffer-planner'],
-            to: '/docs/api-reference/experimental/gpu-tables/gpu-table-buffer-planner'
-          },
-          {
-            from: [
-              '/docs/api-guide/gpu/arrow-table-columns',
-              '/docs/api-reference/arrow/arrow-table-columns',
-              '/docs/api-reference/arrow/arrow-type-mapping',
-              '/docs/api-reference/tables/gpu-tables'
+            "from": [
+              "/docs/developer-guide/documentation"
             ],
-            to: '/docs/api-reference/arrow/supported-arrow-types'
+            "to": "/docs/developer-guide/contributing"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu"
+            ],
+            "to": "/docs/api-reference/graph/gpu-evaluation"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/clean-evaluate"
+            ],
+            "to": "/docs/api-reference/graph/clean-evaluate"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/custom-operation"
+            ],
+            "to": "/docs/api-reference/graph/custom-operation"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/gpu-constant"
+            ],
+            "to": "/docs/api-reference/graph/gpu-constant"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/gpu-data-evaluator"
+            ],
+            "to": "/docs/api-reference/graph/gpu-data-evaluator"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/gpu-data-view"
+            ],
+            "to": "/docs/api-reference/graph/gpu-data-view"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/gpu-data"
+            ],
+            "to": "/docs/api-reference/graph/gpu-data"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/gpu-vector-format"
+            ],
+            "to": "/docs/api-reference/graph/gpu-vector-format"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/gpu-vector"
+            ],
+            "to": "/docs/api-reference/graph/gpu-vector"
+          },
+          {
+            "from": [
+              "/docs/api-reference/gpgpu/operations"
+            ],
+            "to": "/docs/api-reference/graph/operations"
+          },
+          {
+            "from": [
+              "/docs/api-reference/text"
+            ],
+            "to": "/docs/api-reference/engine/text"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/a-buffer-renderer"
+            ],
+            "to": "/docs/api-reference/anari/a-buffer-renderer"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/clustered-lighting"
+            ],
+            "to": "/docs/api-reference/anari/clustered-lighting"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/deferred-lighting"
+            ],
+            "to": "/docs/api-reference/anari/deferred-lighting"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/deferred-scene-renderer"
+            ],
+            "to": "/docs/api-reference/anari/deferred-scene-renderer"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/g-buffer"
+            ],
+            "to": "/docs/api-reference/anari/g-buffer"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/pbr-environment"
+            ],
+            "to": "/docs/api-reference/anari/pbr-environment"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/scene-renderer"
+            ],
+            "to": "/docs/api-reference/anari/scene-renderer"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/shadow-map-renderer"
+            ],
+            "to": "/docs/api-reference/anari/shadow-map-renderer"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/spectral-caustics-renderer"
+            ],
+            "to": "/docs/api-reference/anari/spectral-caustics-renderer"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/wboit-renderer"
+            ],
+            "to": "/docs/api-reference/anari/wboit-renderer"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/comparison-splitter"
+            ],
+            "to": "/docs/api-reference/engine/experimental/comparison-splitter"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/glass-material"
+            ],
+            "to": "/docs/api-reference/engine/experimental/glass-material"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/reflective-material"
+            ],
+            "to": "/docs/api-reference/engine/experimental/reflective-material"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/webxr"
+            ],
+            "to": "/docs/api-reference/engine/experimental/webxr"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/webxr/webxr-camera-texture"
+            ],
+            "to": "/docs/api-reference/engine/experimental/webxr/webxr-camera-texture"
+          },
+          {
+            "from": [
+              "/docs/api-reference/experimental/webxr/webxr-manager"
+            ],
+            "to": "/docs/api-reference/engine/experimental/webxr/webxr-manager"
+          },
+          {
+            "from": [
+              "/examples/showcase/crossfilter-supremacy"
+            ],
+            "to": "/examples/showcase/million-row-crossfilter"
+          },
+          {
+            "from": [
+              "/examples/arrow/arrow-path-model"
+            ],
+            "to": "/examples/arrow/arrow-lines"
+          },
+          {
+            "from": [
+              "/examples/arrow/arrow-instancing"
+            ],
+            "to": "/examples/showcase/instancing"
+          },
+          {
+            "from": [
+              "/examples/experimental/video-texture"
+            ],
+            "to": "/examples/api/video-texture"
           }
         ],
         createRedirects(existingPath) {
-          if (existingPath.startsWith('/docs/api-reference/shaders')) {
-            return [existingPath.replace('/docs/api-reference/shaders', '/docs/api-reference/shadertools')];
-          }
-          if (existingPath.startsWith('/docs/api-reference/generated/shaders')) {
-            return [existingPath.replace('/docs/api-reference/generated/shaders', '/docs/api-reference/generated/shadertools')];
+          const legacyShaderRoutes = new Set(["/docs/api-reference/shadertools","/docs/api-reference/shadertools/shader-assembler","/docs/api-reference/shadertools/shader-conventions","/docs/api-reference/shadertools/shader-info","/docs/api-reference/shadertools/shader-module","/docs/api-reference/shadertools/shader-modules/dggs","/docs/api-reference/shadertools/shader-modules/dirlight","/docs/api-reference/shadertools/shader-modules/float-colors","/docs/api-reference/shadertools/shader-modules/fp32","/docs/api-reference/shadertools/shader-modules/fp64-arithmetic","/docs/api-reference/shadertools/shader-modules/fp64","/docs/api-reference/shadertools/shader-modules/gouraud-material","/docs/api-reference/shadertools/shader-modules/gpu-picking","/docs/api-reference/shadertools/shader-modules/lambert-material","/docs/api-reference/shadertools/shader-modules/lighting","/docs/api-reference/shadertools/shader-modules/pbr-material","/docs/api-reference/shadertools/shader-modules/phong-material","/docs/api-reference/shadertools/shader-modules/picking","/docs/api-reference/shadertools/shader-modules/project","/docs/api-reference/shadertools/shader-modules/random","/docs/api-reference/shadertools/shader-modules/skin","/docs/api-reference/shadertools/shader-pass","/docs/api-reference/shadertools/shader-passes/bloom","/docs/api-reference/shadertools/shader-passes/brightness-contrast","/docs/api-reference/shadertools/shader-passes/bulge-pinch","/docs/api-reference/shadertools/shader-passes/camera-reprojection-antialiasing","/docs/api-reference/shadertools/shader-passes/clustered-volumetric-lighting","/docs/api-reference/shadertools/shader-passes/color-halftone","/docs/api-reference/shadertools/shader-passes/denoise","/docs/api-reference/shadertools/shader-passes/depth-aware-blur","/docs/api-reference/shadertools/shader-passes/depth-of-field","/docs/api-reference/shadertools/shader-passes/dot-screen","/docs/api-reference/shadertools/shader-passes/edge-work","/docs/api-reference/shadertools/shader-passes/fxaa","/docs/api-reference/shadertools/shader-passes/gaussian-blur","/docs/api-reference/shadertools/shader-passes/gtao","/docs/api-reference/shadertools/shader-passes/hdr-auto-exposure","/docs/api-reference/shadertools/shader-passes/hexagonal-pixelate","/docs/api-reference/shadertools/shader-passes/hue-saturation","/docs/api-reference/shadertools/shader-passes/image-processing","/docs/api-reference/shadertools/shader-passes/ink","/docs/api-reference/shadertools/shader-passes/magnify","/docs/api-reference/shadertools/shader-passes/motion-blur","/docs/api-reference/shadertools/shader-passes/noise","/docs/api-reference/shadertools/shader-passes/outlines","/docs/api-reference/shadertools/shader-passes/persistence","/docs/api-reference/shadertools/shader-passes/screen-space-global-illumination","/docs/api-reference/shadertools/shader-passes/screen-space-reflections","/docs/api-reference/shadertools/shader-passes/sepia","/docs/api-reference/shadertools/shader-passes/ssao","/docs/api-reference/shadertools/shader-passes/swirl","/docs/api-reference/shadertools/shader-passes/temporal-antialiasing","/docs/api-reference/shadertools/shader-passes/tilt-shift","/docs/api-reference/shadertools/shader-passes/tone-mapping","/docs/api-reference/shadertools/shader-passes/triangle-blur","/docs/api-reference/shadertools/shader-passes/vibrance","/docs/api-reference/shadertools/shader-passes/vignette","/docs/api-reference/shadertools/shader-passes/volumetric-fog","/docs/api-reference/shadertools/shader-passes/zoom-blur","/docs/api-reference/shadertools/shader-plugin","/docs/api-reference/shadertools/wgsl-support"]);
+          const oldShaderPath = existingPath.replace('/docs/api-reference/shaders', '/docs/api-reference/shadertools');
+          if (existingPath.startsWith('/docs/api-reference/shaders') && legacyShaderRoutes.has(oldShaderPath)) {
+            return [oldShaderPath];
           }
           // docs/examples/tutorials/*/api-reference <= /docs/tutorials
           if (existingPath.includes('/docs/examples/tutorials/')) {
@@ -223,6 +290,30 @@ module.exports = {
   baseUrl: websiteBaseUrl,
   themeConfig: {
     ...baseConfig.themeConfig,
+    colorMode: {defaultMode: 'dark', disableSwitch: false, respectPrefersColorScheme: false},
+    navbar: {
+      ...baseConfig.themeConfig.navbar,
+      items: baseConfig.themeConfig.navbar.items.flatMap(item =>
+        item.href === 'https://github.com/visgl/luma.gl'
+          ? [
+              {
+                type: 'html',
+                position: 'right',
+                className: 'navbar-badge',
+                value: '<a class="navbar-project-badge" href="https://www.npmjs.com/package/@luma.gl/core" target="_blank" rel="noopener noreferrer" aria-label="@luma.gl/core on npm"><img src="https://img.shields.io/npm/dm/@luma.gl/core?label=downloads" alt="Monthly npm downloads for @luma.gl/core" height="20" /><svg class="navbar-project-icon" viewBox="0 0 18 7" width="24" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0 0v6h5v1h4V6h9V0H0zm5 5H4V1h1v4zm4 0H7V1h3v4H9zm8 0h-1V1h1v4zM8 2v2h1V2H8z" /></svg><span>npm</span></a>'
+              },
+              {
+                type: 'html',
+                position: 'right',
+                className: 'navbar-badge',
+                value: '<a class="navbar-project-badge" href="https://github.com/visgl/luma.gl" target="_blank" rel="noopener noreferrer" aria-label="luma.gl on GitHub"><img src="https://img.shields.io/github/stars/visgl/luma.gl?style=social" alt="GitHub stars" height="20" /><svg class="navbar-project-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .297C5.37.297 0 5.67 0 12.297c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.237 1.838 1.237 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.3-5.467-1.334-5.467-5.931 0-1.31.467-2.381 1.236-3.221-.124-.303-.536-1.524.118-3.176 0 0 1.008-.322 3.301 1.23a11.52 11.52 0 0 1 3.003-.404c1.018.005 2.042.138 3.003.404 2.291-1.552 3.297-1.23 3.297-1.23.656 1.652.244 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.628-5.479 5.925.43.372.823 1.102.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg><span>GitHub</span></a>'
+              }
+            ]
+          : item.type === 'html' && item.value?.includes('openvisualization.org')
+            ? [{...item, value: item.value.replace('https://openvisualization.org', 'https://openvisualization.com')}]
+            : [item]
+      )
+    },
     footer: baseConfig.themeConfig?.footer
       ? {
           ...baseConfig.themeConfig.footer,

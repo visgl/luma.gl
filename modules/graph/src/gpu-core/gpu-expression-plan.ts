@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture, TextureView, type Device} from '@luma.gl/core';
-import {GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
+import {CPUVector, GPUData, GPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import type {GPUGraph} from './gpu-graph';
 import {GPUCopyOperation} from './gpu-transfer-operation';
 import {GPUShaderPassOperation} from './gpu-shader-pass-operation';
@@ -38,7 +38,7 @@ import {
 } from './gpu-operation-contract';
 
 export type GPUGraphRunBindings = Readonly<
-  Record<string, GPUVector | number | GPUGraphTextureBinding>
+  Record<string, GPUVector | CPUVector | number | GPUGraphTextureBinding>
 >;
 export type GPUGraphExecutionBindings = {
   inputs?: GPUGraphRunBindings;
@@ -47,6 +47,7 @@ export type GPUGraphExecutionBindings = {
 };
 export type GPUGraphCompileOptions = {
   outputs?: readonly string[];
+  outputLocations?: Readonly<Record<string, 'cpu' | 'gpu'>>;
   lowerings?: readonly GPUOperationLowering[];
 };
 export type GPUGraphRunOptions = {outputTargets?: Readonly<Record<string, GPUGraphOutput>>};
@@ -265,6 +266,7 @@ export class GPUExpressionProgram {
           value !== undefined &&
           typeof value === 'object' &&
           !(value instanceof GPUVector) &&
+          !(value instanceof CPUVector) &&
           !(value instanceof Texture) &&
           !(value instanceof TextureView)
       );
@@ -278,7 +280,7 @@ export class GPUExpressionProgram {
       if (!['inputs', 'state', 'outputTargets'].includes(name))
         throw new Error(`Unknown execution option ${name}`);
     const execution = supplied as GPUGraphExecutionBindings;
-    const bindings: Record<string, GPUVector | number | GPUGraphTextureBinding> =
+    const bindings: Record<string, GPUVector | CPUVector | number | GPUGraphTextureBinding> =
       Object.create(null);
     for (const [role, group] of [
       ['input', execution.inputs],

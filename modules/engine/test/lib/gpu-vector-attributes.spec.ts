@@ -97,6 +97,8 @@ for (const backend of ['webgl', 'webgpu'] as const) {
     const model = new GPUVectorModel(device, {
       ...(backend === 'webgpu' ? {source: SOURCE} : {vs: VERTEX_SHADER, fs: FRAGMENT_SHADER}),
       shaderLayout: SHADER_LAYOUT,
+      inferDrawCount: 'instance',
+      vertexCount: 4,
       isInstanced: true,
       geometry: new GPUVectorGeometry({attributes: {positions}, topology: 'triangle-strip'})
     });

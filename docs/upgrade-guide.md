@@ -1,5 +1,83 @@
 # Upgrade Guide
 
+### Scoped model draw parameters
+
+`RenderPass.withParameters()` is removed. Pass temporary dynamic state to
+`Model.draw(renderPass, {parameters})` or `GPUVectorModel.draw()` instead.
+Model drawing snapshots `renderPass.getParameters()` and restores it through
+`setParameters()` even when drawing fails. Custom render-pass backends must implement
+`getParameters()` and return detached parameter values.
+
+### Render-pass color masks
+
+`RenderPassParameters.colorMask` has been removed. Configure `colorMask` on a
+render pipeline or through `Model.setParameters()` instead; WebGPU color write masks
+are pipeline state.
+
+### Arrow stream output formats
+
+`convertArrowRecordBatchesToGPURecordBatches()` now rejects changes to an output
+column’s GPU format across batches. Supply an explicit output format in the conversion
+schema when source types vary but should share one GPU representation. Previously
+yielded batches remain caller-owned; the rejected batch is destroyed.
+
+### Shader injection target naming
+
+Shader hooks are now called injection targets throughout the public API. Update
+`ShaderHook` to `ShaderInjectionTarget`, `ShaderPlugin.hooks` to
+`ShaderPlugin.injectionTargets`, assembly `hookFunctions` to
+`injectionTargets`, and `addShaderHook()`/`resetShaderHooks()` to
+`addShaderInjectionTarget()`/`resetShaderInjectionTargets()`. The
+`ShaderInjection.target` field and target strings such as `vs:#decl` and
+`fs:FILTER_COLOR` are unchanged. There is no separate public type for the
+`glsl`/`wgsl` signature object; it is part of `ShaderInjectionTarget`.
+
+
+### Shader hook descriptors
+
+`ShaderAssembler.addShaderHook()` and assembly `hookFunctions` now accept only
+`ShaderHook` descriptors. String signatures and the second options argument have
+been removed. Replace `addShaderHook('vs:OFFSET_POSITION(inout vec4 position)',
+{header, footer})` with:
+
+```typescript
+assembler.addShaderHook({
+  name: 'OFFSET_POSITION',
+  stage: 'vertex',
+  glsl: {parameters: 'inout vec4 position', header, footer},
+  wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+});
+```
+
+Plugin `hooks` also accept these descriptors; replace `target` with `name` and
+move each language parameter string into `{parameters}` without parentheses.
+
+The public declarations are `ShaderHook` and `ShaderInjection`, used by both
+application assembly and plugins. Remove imports of `ShaderPluginHook`,
+`ShaderPluginInjection`, `ShaderPluginTarget`, and `ShaderPluginInjectionTarget`.
+The former source/order `ShaderInjection` shape is now `ResolvedShaderInjection`.
+Application `inject` also accepts arrays of the language-aware `ShaderInjection`.
+
+Move header/footer source into its language implementation. Existing injection
+target names stay the same; provide separate `glsl`/`wgsl` bodies on each entry in root-level plugin
+`injections`.
+
+## GPU API naming
+
+The remaining experimental Lu-prefixed APIs now use GPU names. Update imports and type references:
+
+| Previous name | New name |
+| --- | --- |
+| `LuSQLContext`, `LuSQLQuery` | `GPUSQLContext`, `GPUSQLQuery` |
+| `LuSQLQueryOptions`, `LuSQLTables` | `GPUSQLQueryOptions`, `GPUSQLTables` |
+| `LuSpatialPointLayer` and associated types | `GPUSpatialPointLayer` and corresponding `GPUSpatial…` types |
+| `LuSpatialGeographicPointQueryEffect` and associated types/helpers | `GPUSpatialGeographicPointQueryEffect` and corresponding `GPUSpatial…` names |
+
+Package import subpaths are unchanged, including `@luma.gl/graph/gpu-sql` and
+`@luma.gl/graph/lucim`. Old-name API aliases are not retained. Projection benchmark
+settings now use `VITE_GPU_PROJECT_*` instead of `VITE_LUPROJ_*`. The spatial taxi
+example route is now `/examples/deck/gpu-spatial-taxi`.
+
 ## PBR directional light direction
 
 `pbrMaterial` now interprets directional light `direction` as the direction light travels, matching Phong and Lambert. Applications that previously reversed directions to compensate for PBR lighting must remove that workaround.
@@ -91,18 +169,32 @@ loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.g
 options. This keeps encoded clip loading under the controller's active-scene and
 resource ownership rules, and preserves luma.gl's support for legacy draft attachments.
 
+### GeoArrow adapter validation and union IDs
+
+Arrow conversion now delegates to math.gl's shared adapter. For ambiguous list nesting,
+supply an explicit `encoding` or an Arrow `field` with GeoArrow extension metadata.
+For `convertGeoArrowTableToInterleaved`, select unannotated geometry columns with
+`geometryColumn`/`geometryColumns` and supply their `encoding` in the same options.
+Name three-component coordinate children `xyz` or `xym`, or supply `dimension`
+when adapting a vector directly. A `coordinateLayout` option must match physical
+storage; use the explicit interleaving conversion to change layouts.
+
+New dense-union output uses canonical GeoArrow IDs: XY point/line/polygon use
+1/2/3; XYZ adds 10, XYM adds 20, and XYZM adds 30. Read child fields and union
+metadata instead of relying on luma.gl's former sequential child IDs.
+
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.4. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.5. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
-`@math.gl/polygon` becomes `@math.gl/geometry`, and CRS, projection, and
-GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
+`@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection
+imports move under `@math.gl/geospatial`. GeoArrow imports move to `@math.gl/arrow`. Sun imports move to
 `@math.gl/earth/sun`. Install the package root when using these subpaths.
 
 The beta also removes alpha subpaths: import array types and `mat4`/`vec2`/`vec3`/`vec4`
 from `@math.gl/core`, parametric geometry and polygon helpers from `@math.gl/geometry`,
 DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from
-`@math.gl/geospatial/geoarrow`. TypeScript projects using `Float16Array` must include
+`@math.gl/arrow/geoarrow-utils`. TypeScript projects using `Float16Array` must include
 `ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
 
 
@@ -183,13 +275,13 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 
 **@luma.gl/shaders**
 
+- `ShaderModule.inject` has been removed. Move module-owned hook and anchor injections to a named `ShaderPlugin` with `injections`, and attach the shader module through the plugin's `module` field when source or uniforms are needed. Plugins select GLSL and WGSL injection source explicitly.
 - `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 - Named shader hook injections now throw if their target is not registered. Register the hook
-  for the matching shader stage before injecting into it. WGSL continues to skip unregistered
-  module injections, which may contain GLSL-only code.
+  for the matching shader stage before injecting into it.
 
 **@luma.gl/core/webgpu**
 
@@ -354,8 +446,8 @@ For information on upgrading to from v8 and earlier releases, see the [Legacy Up
 - The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`,
   `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and
   `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to
-  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `LuSQLContext`
-  and `LuSQLQuery` remain in the module.
+  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `GPUSQLContext`
+  and `GPUSQLQuery` remain in the module.
 - Install loaders.gl packages explicitly in applications that use these integrations.
   Published luma.gl modules no longer install them transitively.
 

@@ -33,7 +33,7 @@ describe('glTF reference ledger', () => {
       extension => extension.supported
     );
 
-    expect(supportedEntries).toHaveLength(27);
+    expect(supportedEntries).toHaveLength(28);
     expect(
       supportedEntries
         .filter(extension => !extension.positiveFixture)

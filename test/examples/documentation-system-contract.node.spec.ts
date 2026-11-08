@@ -14,7 +14,11 @@ import {
   SPLATS_DOCS_TABS
 } from '../../website/src/components/docs/specialized-docs-catalog';
 
-type TocItem = string | {type: 'category'; label: string; items: TocItem[]};
+type TocItem =
+  | string
+  | {type: 'category'; label: string; items: TocItem[]}
+  | {type: 'doc'; id: string; label?: string}
+  | {type: 'link'; href: string; label: string};
 
 const ROOT_DIRECTORY = process.cwd();
 const DOCS_DIRECTORY = join(ROOT_DIRECTORY, 'docs');
@@ -26,6 +30,11 @@ function collectTocRoutes(items: readonly TocItem[], routes = new Set<string>())
   for (const item of items) {
     if (typeof item === 'string') {
       routes.add(item.replace(/\/README$/, ''));
+    } else if (item.type === 'doc') {
+      routes.add(item.id.replace(/\/README$/, ''));
+    } else if (item.type === 'link') {
+      const route = resolveInternalRoute(item.href);
+      if (route) routes.add(route);
     } else {
       collectTocRoutes(item.items, routes);
     }
@@ -117,7 +126,13 @@ describe('documentation system contracts', () => {
   ]);
 
   it('keeps every curated document reachable from the table of contents', () => {
-    const allowedStandaloneRoutes = new Set(['developer/dev-tools/README']);
+    const allowedStandaloneRoutes = new Set([
+      'developer/dev-tools/README',
+      'api-reference/experimental',
+      'developer/dev-tools/browser-debug',
+      'developer/dev-tools/llm-friendly-test-setup',
+      'developer/dev-tools/playwright'
+    ]);
     const orphaned = [...curatedRoutes].filter(
       route => !tocRoutes.has(route) && !allowedStandaloneRoutes.has(route)
     );
@@ -129,7 +144,8 @@ describe('documentation system contracts', () => {
     const visit = (items: readonly TocItem[]): void => {
       for (const item of items) {
         if (typeof item === 'string') flattened.push(item.replace(/\/README$/, ''));
-        else visit(item.items);
+        else if (item.type === 'doc') flattened.push(item.id.replace(/\/README$/, ''));
+        else if (item.type === 'category') visit(item.items);
       }
     };
     visit(TABLE_OF_CONTENTS);

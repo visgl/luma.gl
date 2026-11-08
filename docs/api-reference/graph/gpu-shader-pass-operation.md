@@ -128,3 +128,8 @@ unchanged. It does not adapt shader-module `ShaderPass`/`CompositeShaderPass` de
 engine effects yet. Separately supplied effects, scoped composition, automatic cross-effect
 sharing, texture pooling, temporal state, blending, depth attachments, multisampling, integer
 textures, and control-flow nesting are separate work.
+
+CPU callback/residency scheduling currently supports numeric programs only. A graph combining
+texture passes with CPU operations, CPUVector input bindings, or CPU output locations is rejected;
+this refresh preserves that boundary. Supplied CPU scalar numbers and GPU-produced scalar
+parameters remain supported as described above.

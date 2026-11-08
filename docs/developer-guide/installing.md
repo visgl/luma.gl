@@ -1,6 +1,6 @@
 import {DeveloperDocsTabs} from '@site/src/components/docs/developer-docs-tabs';
 
-# Installing
+# Setup
 
 <DeveloperDocsTabs active="installing" />
 
@@ -97,6 +97,15 @@ pnpm dev
 
 You should see a dark canvas. luma.gl creates the best available device, begins a render
 pass each frame, and presents the result to the page.
+
+## Editing shaders
+
+For practical reasons, luma.gl stores GLSL and WGSL shader source inline in strings
+rather than in separate files. This simplifies cross-platform bundling, but shader
+code may lack syntax highlighting. To add highlighting in Visual Studio Code, install the
+[GLSL Literal](https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal)
+and [WGSL Literal](https://marketplace.visualstudio.com/items?itemName=ggsimm.wgsl-literal)
+extensions.
 
 ## How Backend Selection Works
 

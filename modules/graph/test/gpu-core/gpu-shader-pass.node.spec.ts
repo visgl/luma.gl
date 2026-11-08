@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUGraph, GPUShaderPassOperation, gpuGraph} from '@luma.gl/graph';
+import {GPUGraph, GPUCPUOperation, GPUShaderPassOperation, gpuGraph} from '@luma.gl/graph';
 import {GPUSimpleGraph} from '@luma.gl/graph/gpu-simple-graph';
 
 const fragmentSource =
@@ -101,3 +101,33 @@ test('SimpleGraph shader passes reject WebGL without changing evaluator executio
   expect(() => graph.compile(device)).toThrow('texture execution requires WebGPU');
   device.destroy();
 });
+
+for (const simple of [false, true]) {
+  test(`CPU callback/texture mixtures retain their numeric-only boundary (${simple})`, () => {
+    const device = new NullDevice({});
+    Object.defineProperty(device, 'type', {value: 'webgpu'});
+    const allocate = vi.spyOn(device, 'createBuffer');
+    const render = vi.spyOn(device, 'createRenderPipeline');
+    try {
+      const graph = simple ? new GPUSimpleGraph() : new GPUGraph();
+      graph.add(
+        new GPUCPUOperation({
+          id: 'cpu',
+          inputs: {},
+          outputs: {values: gpuGraph.vector('float32')},
+          execute: () => ({values: new Float32Array([1])})
+        })
+      );
+      graph.add(
+        new GPUShaderPassOperation({fragmentSource, inputs: {}, output: 'result', outputDescriptor})
+      );
+      expect(() => graph.compile(device)).toThrow();
+      expect(allocate).not.toHaveBeenCalled();
+      expect(render).not.toHaveBeenCalled();
+    } finally {
+      allocate.mockRestore();
+      render.mockRestore();
+      device.destroy();
+    }
+  });
+}

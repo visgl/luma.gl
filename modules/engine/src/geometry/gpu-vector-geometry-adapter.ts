@@ -2,10 +2,28 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {Device} from '@luma.gl/core';
+import type {Geometry} from '@math.gl/geometry';
 import {vertexFormatDecoder} from '@luma.gl/core';
 import type {GPUVectorModelInput} from '../model/gpu-vector-model-batches';
-import {GPUGeometry} from './gpu-geometry';
+import {GPUGeometry, makeGPUGeometry} from './gpu-geometry';
 import {GPUVectorGeometry} from './gpu-vector-geometry';
+
+/**
+ * Interleaves and uploads CPU geometry for use with GPUVectorModel.
+ * The returned geometry owns its uploaded buffers; call destroy() after all models stop using it.
+ */
+export function makeGPUVectorGeometry(device: Device, geometry: Geometry): GPUVectorGeometry {
+  const gpuGeometry = makeGPUGeometry(device, geometry);
+  try {
+    const vectorGeometry = makeGPUVectorGeometryFromGPUGeometry(gpuGeometry);
+    vectorGeometry.destroy = () => gpuGeometry.destroy();
+    return vectorGeometry;
+  } catch (error) {
+    gpuGeometry.destroy();
+    throw error;
+  }
+}
 
 /** Borrows legacy geometry storage as typed vector views for Model's input adapter. */
 export function makeGPUVectorGeometryFromGPUGeometry(geometry: GPUGeometry): GPUVectorGeometry {

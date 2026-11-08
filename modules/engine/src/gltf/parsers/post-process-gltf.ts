@@ -140,6 +140,7 @@ class GLTFPostProcessor {
 
     this.json = this._resolveTree(gltf.json);
     this.json.buffers = this.buffers;
+    this.json.gaussianSplatPrimitives = gltf.gaussianSplatPrimitives;
 
     return this.json;
   }

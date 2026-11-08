@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "10.0.0-alpha.7",
+  "version": "10.0.0-alpha.10",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -138,6 +138,16 @@
       "import": "./dist/gpu-project/benchmarks.js",
       "require": "./dist/gpu-project/benchmarks.cjs"
     },
+    "./gpu-project/geoarrow": {
+      "types": "./dist/gpu-project/geoarrow.d.ts",
+      "import": "./dist/gpu-project/geoarrow.js",
+      "require": "./dist/gpu-project/geoarrow.cjs"
+    },
+    "./gpu-project/graph": {
+      "types": "./dist/gpu-project/graph.d.ts",
+      "import": "./dist/gpu-project/graph.js",
+      "require": "./dist/gpu-project/graph.cjs"
+    },
     "./gpu-project/crs": {
       "types": "./dist/gpu-project/crs.d.ts",
       "import": "./dist/gpu-project/crs.js",
@@ -230,8 +240,8 @@
     }
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.7",
-    "@luma.gl/shaders": "~10.0.0-alpha.7",
+    "@luma.gl/core": "~10.0.0-alpha.10",
+    "@luma.gl/shaders": "~10.0.0-alpha.10",
     "apache-arrow": ">=17.0.0"
   },
   "peerDependenciesMeta": {
@@ -240,8 +250,9 @@
     }
   },
   "dependencies": {
-    "@math.gl/core": "~5.0.0-beta.4",
-    "@math.gl/geospatial": "~5.0.0-beta.4",
+    "@math.gl/arrow": "~5.0.0-beta.5",
+    "@math.gl/core": "~5.0.0-beta.5",
+    "@math.gl/geospatial": "~5.0.0-beta.5",
     "probe.gl": "^5.0.0"
   }
 }

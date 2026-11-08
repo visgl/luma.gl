@@ -1,7 +1,10 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>GPU Graph × Three.js — Galactic Vortex</title>
+<script>if (new URLSearchParams(location.search).has('embedded')) document.documentElement.dataset.embedded = '';</script>
 <style>
+html[data-embedded] #galaxy-info, html[data-embedded] #simulation-time {display:none;}
+
 *{box-sizing:border-box}body{margin:0;background:#02030b;color:#e8f7ff;font:14px system-ui}
 canvas{display:block;width:100%;height:100%}
 #galaxy-info{position:fixed;inset:16px;z-index:20;pointer-events:none;--menu-background:var(--luma-example-surface);--menu-text:var(--luma-example-text);--button-text:var(--luma-example-text);--menu-border:1px solid var(--luma-example-border);--menu-shadow:var(--luma-example-shadow)}

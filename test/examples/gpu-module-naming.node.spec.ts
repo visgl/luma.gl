@@ -11,6 +11,7 @@ import * as gpuCore from '@luma.gl/graph/gpu-core';
 import * as gpuData from '@luma.gl/graph/gpu-data';
 import * as gpuCrossfilter from '@luma.gl/graph/gpu-crossfilter';
 import * as gpuDataframe from '@luma.gl/graph/gpu-dataframe';
+import * as gpuSQL from '@luma.gl/graph/gpu-sql';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import * as gpuVectorSearch from '@luma.gl/graph/gpu-vector-search';
 import * as gpuProject from '@luma.gl/graph/gpu-project';
@@ -60,6 +61,12 @@ const UNPUBLISHED_WORKING_NAMES = [
 ] as const;
 
 describe('experimental GPU module naming', () => {
+  test('exports canonical GPU SQL names without Lu compatibility aliases', () => {
+    expect(gpuSQL.GPUSQLContext.name).toBe('GPUSQLContext');
+    expect(gpuSQL.GPUSQLQuery.name).toBe('GPUSQLQuery');
+    expect(Object.keys(gpuSQL).filter(name => /^Lu/.test(name))).toEqual([]);
+    expect(Object.keys(gpuDataframe).filter(name => /^Lu/.test(name))).toEqual([]);
+  });
   test('distinguishes semantic graphs, command graphs, and graph analytics', () => {
     expect(executionGraph.GPUGraph).toBe(gpuCore.GPUGraph);
     expect(gpuCore.GPUGraph).not.toBe(gpuCore.GPUCommandGraph);

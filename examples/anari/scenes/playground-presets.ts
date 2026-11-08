@@ -29,7 +29,8 @@ export const PLAYGROUND_PRESETS: readonly PlaygroundPreset[] = [
   {label: 'Chart Diffuse', scene: makeChartDiffuseScene()},
   {label: 'Chart Materials', scene: makeChartMaterialsScene()},
   {label: 'Chart Shapes', scene: makeChartShapesScene()},
-  {label: 'Chart Lighting', scene: makeChartLightingScene()}
+  {label: 'Chart Lighting', scene: makeChartLightingScene()},
+  {label: 'Indirect Light Study', scene: makeIndirectLightStudy()}
 ];
 
 function makeChromaticAtlas(): ANARIJSONScene {
@@ -615,4 +616,67 @@ function makeSpectrumColor(hue: number, saturation: number, value: number): ANAR
 
 function roundNumber(value: number): number {
   return Number(value.toFixed(4));
+}
+
+/** Static diffuse scene for comparing zero and three indirect bounces. */
+function makeIndirectLightStudy(): ANARIJSONScene {
+  return {
+    version: 1,
+    name: 'INDIRECT LIGHT STUDY',
+    description:
+      'Static diffuse spheres and an emissive source. Compare maxBounces 0 and 3; allow samples to accumulate.',
+    camera: {
+      '@@type': 'perspective',
+      position: [0, 3, 8],
+      target: [0, 1, 0],
+      fovy: Math.PI / 4,
+      near: 0.05,
+      far: 100
+    },
+    renderer: {
+      '@@type': 'raytrace',
+      background: [0, 0, 0, 1],
+      ambientRadiance: 0,
+      maxBounces: 3,
+      emitterSampling: true,
+      emitterSelection: 'power',
+      historySampleLimit: 256,
+      samplesPerPixel: 8,
+      progressive: true,
+      temporalReprojection: false,
+      adaptiveResolution: false,
+      resolutionScale: 1,
+      exposure: 1,
+      fogDensity: 0
+    },
+    geometries: {
+      sphere: {'@@type': 'sphere', radius: 1, segments: 32},
+      floor: {'@@type': 'quad', width: 10, height: 10}
+    },
+    materials: {
+      white: {'@@type': 'physicallyBased', baseColor: [0.8, 0.8, 0.8], metallic: 0, roughness: 1},
+      red: {'@@type': 'physicallyBased', baseColor: [0.85, 0.04, 0.02], metallic: 0, roughness: 1},
+      emitter: {
+        '@@type': 'physicallyBased',
+        baseColor: [0, 0, 0],
+        emissive: [1, 0.8, 0.55],
+        emissiveStrength: 8,
+        metallic: 0,
+        roughness: 1
+      }
+    },
+    surfaces: {
+      floor: {geometry: 'floor', material: 'white'},
+      white: {geometry: 'sphere', material: 'white'},
+      red: {geometry: 'sphere', material: 'red'},
+      emitter: {geometry: 'sphere', material: 'emitter'}
+    },
+    instances: [
+      {'@@id': 'floor', surface: 'floor'},
+      {'@@id': 'white', surface: 'white', position: [1.1, 1, 0]},
+      {'@@id': 'red', surface: 'red', position: [-1.1, 1, 0]},
+      {'@@id': 'emitter', surface: 'emitter', position: [0, 3.5, -1], scale: [0.8, 0.8, 0.8]}
+    ],
+    lights: []
+  };
 }

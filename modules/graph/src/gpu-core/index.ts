@@ -653,6 +653,8 @@ export type {
 export type {GPUResourcePreview} from './gpu-resource-preview';
 
 export type {GPUIndexPickInfo} from './gpu-index-picking-target';
+export {GPURenderOperation} from './gpu-render-operation';
+export type {GPURenderOperationResources} from './gpu-render-operation';
 
 export {GPUExpressionOperation} from './gpu-expression-operation';
 export type {GPUExpressionOperationProps, GPUExpressionAST} from './gpu-expression-operation';
@@ -692,3 +694,11 @@ export type {GPUCompactionOperationProps} from './gpu-compaction-operation';
 
 export type {GPUGraphTextureDescriptor, GPUGraphTextureExtent} from './gpu-graph-value';
 export type {GPUGraphTextureBinding, GPUGraphOutput, GPUGraphOutputs} from './gpu-texture-plan';
+
+export {GPUCPUOperation} from './gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from './gpu-cpu-operation';

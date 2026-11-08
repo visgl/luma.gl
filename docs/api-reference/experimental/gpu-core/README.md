@@ -276,3 +276,5 @@ views, imported and transient ownership, hazard tracking, history, resizing, and
 GPUVectors and scalar values, including new vector lengths, on each execution.
 See the [expression operation reference](/docs/api-reference/graph/gpu-expression-operation)
 for declarations, supported operators, output ownership, and SimpleGraph compatibility.
+
+`GPUCPUOperation` describes shared CPU callbacks with dynamic vector results. Both GPUGraph and [GPUSimpleGraph](/docs/api-reference/graph/gpu-simple-graph#cpu-callbacks-and-dynamically-sized-results) execute these callbacks through asynchronous `run()`.
