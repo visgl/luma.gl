@@ -496,7 +496,9 @@ function getArrowDataValueLength(data: Data): number {
   return Math.max(0, lastValueOffset - firstValueOffset);
 }
 
-function makeArrowGPUValidityBitmap(validity: Uint32Array | undefined): Uint8Array | undefined {
+export function makeArrowGPUValidityBitmap(
+  validity: Uint32Array | undefined
+): Uint8Array | undefined {
   if (!validity) {
     return undefined;
   }

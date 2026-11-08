@@ -10,10 +10,17 @@ import type {ConvertColorsInputs} from '../convert-colors';
 export const convertColors: OperationHandler<ConvertColorsInputs> = async ({inputs, target}) => {
   const {source, inputFormat, outputFormat} = inputs;
   const values = await source.ensureCPUValue();
+  const format =
+    source.format ??
+    (inputFormat === 'uint8x3'
+      ? 'uint8x3-webgl'
+      : inputFormat === 'float16x3'
+        ? 'uint16x3-webgl'
+        : inputFormat);
   const converted = convertCPUColorData(
     new CPUData({
       buffer: values,
-      format: source.format!,
+      format,
       length: source.length,
       byteOffset: source.offset,
       byteStride: source.stride

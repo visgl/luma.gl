@@ -104,6 +104,8 @@ for (const format of ['float16x4', 'float32x4'] as const) {
     );
     const output = await convertArrowColors(device, source, {format});
     try {
+      expect(output.stride).toBe(4);
+      expect(output.data[0].stride).toBe(4);
       const bytes = await output.data[0].buffer.readAsync();
       expect(
         format === 'float16x4'

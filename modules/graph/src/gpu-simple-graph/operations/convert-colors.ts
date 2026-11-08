@@ -8,6 +8,7 @@ import {
   type GPUDataEvaluatorInput
 } from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
+import type {ColorOutputFormat} from '../../gpu-data/color-conversion';
 
 export type ColorInputFormat =
   | 'uint8x3'
@@ -17,7 +18,6 @@ export type ColorInputFormat =
   | 'float32x3'
   | 'float32x4';
 
-import type {ColorOutputFormat} from '../../gpu-data/color-conversion';
 export type {ColorOutputFormat} from '../../gpu-data/color-conversion';
 
 export type ConvertColorsProps = {

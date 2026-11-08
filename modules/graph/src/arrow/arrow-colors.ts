@@ -21,8 +21,12 @@ import {
   type GPUVectorBufferProps
 } from '@luma.gl/graph/gpu-data';
 import {DataType, Field, FixedSizeList, Float16, Float32, Uint8, Vector} from 'apache-arrow';
-import {makeGPUVectorFromArrow, readArrowGPUVectorAsync} from './gpu/arrow-gpu-vector-adapters';
-import {getArrowDataBufferSource, getArrowGPUDataReadbackMetadata} from './gpu/arrow-gpu-data';
+import {
+  makeArrowGPUValidityBitmap,
+  makeGPUVectorFromArrow,
+  readArrowGPUVectorAsync
+} from './gpu/arrow-gpu-vector-adapters';
+import {getArrowDataBufferSource, getArrowFixedSizeListRowValidity} from './gpu/arrow-gpu-data';
 import type {GPUDataReadbackMetadata} from './gpu/arrow-gpu-data';
 import type {AttributeArrowType} from './arrow-utils/arrow-types';
 import type {Data} from 'apache-arrow';
@@ -74,7 +78,7 @@ export async function convertColors(
     props
   );
   const outputType = getColorArrowType(format);
-  const stride = getGPUVectorFormatInfo(format).byteLength;
+  const byteStride = getGPUVectorFormatInfo(format).byteLength;
   if (props.format === 'preserve' && colors.format === format) {
     return new GPUVector<ColorOutputFormat>({
       type: 'data',
@@ -114,10 +118,10 @@ export async function convertColors(
         dataType: outputType,
         format,
         length: chunk.length,
-        stride,
+        stride: 4,
         byteOffset: chunk.byteOffset,
-        byteStride: stride,
-        rowByteLength: stride,
+        byteStride,
+        rowByteLength: byteStride,
         ownsBuffer: true,
         nullBitmap: readbackMetadata?.nullBitmap,
         readbackMetadata
@@ -213,7 +217,7 @@ export async function convertArrowColors(
             buffer: getArrowDataBufferSource(chunk as Data<AttributeArrowType>),
             format: sourceFormat,
             length: chunk.length,
-            nullBitmap: getArrowGPUDataReadbackMetadata(chunk)?.nullBitmap
+            nullBitmap: makeArrowGPUValidityBitmap(getArrowFixedSizeListRowValidity(chunk))
           })
       )
     });

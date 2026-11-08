@@ -17,7 +17,7 @@ import {
   readArrowGPUVectorAsync,
   getArrowFixedSizeListValues
 } from '@luma.gl/graph/arrow';
-import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
+import {GPUDataEvaluator, convertColorData, backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
 import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
 
 backendRegistry.add('null', cpuBackend);
@@ -252,4 +252,48 @@ test('binary16 storage handles subnormals, signed zero, infinities and overflow 
   expect(Array.from(new Uint16Array(result.data[0].buffer))).toEqual([
     1, 0, 0x8001, 0x8000, 0x7bff, 0x7c00, 0xfc00, 0x7c00, 0xfc00, 0x7e00, 0x3c00, 0x3c00
   ]);
+});
+
+test('CPU color conversion folds null channels into invalid output rows like the GPU path', async () => {
+  const device = new NullDevice({});
+  const source = arrow.vectorFromArray(
+    [
+      [1, null, 0.5, 1],
+      [2, 3, 4, 1]
+    ],
+    new arrow.FixedSizeList(4, new arrow.Field('value', new arrow.Float32(), true))
+  );
+  for (const format of ['unorm8x4', 'float16x4', 'float32x4'] as const) {
+    const result = await convertArrowColors(device, source, {format});
+    const readback = await readArrowGPUVectorAsync(result);
+    expect(readback.isValid(0)).toBe(false);
+    expect(readback.isValid(1)).toBe(true);
+    result.destroy();
+  }
+  device.destroy();
+});
+
+test('array-backed and constant colors derive storage formats on CPU, including RGB aliases', async () => {
+  const device = new NullDevice({});
+  const sources = [
+    GPUDataEvaluator.fromArray(new Float32Array([1, 0.5, 0]), {size: 3}),
+    GPUDataEvaluator.fromConstant([1, 0.5, 0]),
+    GPUDataEvaluator.fromArray(new Uint8Array([255, 128, 0]), {size: 3}),
+    GPUDataEvaluator.fromArray(new Uint16Array([0x3c00, 0x3800, 0]), {size: 3, type: 'float16'})
+  ];
+  for (let index = 0; index < sources.length; index++) {
+    const source = sources[index];
+    expect(source.format).toBeUndefined();
+    const output = convertColorData(source, {format: 'float32x4'});
+    await output.evaluate(device);
+    expect(Array.from(await output.readValue())).toEqual([
+      1,
+      index === 2 ? Math.fround(128 / 255) : 0.5,
+      0,
+      1
+    ]);
+    output.destroy();
+    source.destroy();
+  }
+  device.destroy();
 });
