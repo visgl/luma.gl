@@ -305,3 +305,7 @@ export type {PBRContactShadowProps} from './modules/lighting/pbr-contact-shadow/
 export {clusteredLightGrid} from './modules/lighting/clustered-light-grid/clustered-light-grid';
 export {pbrAmbientOcclusion} from './modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion';
 export type {PBRAmbientOcclusionProps} from './modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion';
+
+export {lightmapBake} from './modules/lighting/lightmap/lightmap';
+export type {LightmapBakeUniforms} from './modules/lighting/lightmap/lightmap';
+export {lightmapFilter} from './modules/lighting/lightmap/lightmap-filter';

@@ -382,3 +382,14 @@ assert.equal(shadersApi.pbrAmbientOcclusion, require('../modules/shaders/dist/mo
 assert.equal(shadersEsm.pbrAmbientOcclusion, (await import('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.js')).pbrAmbientOcclusion);
 assert.equal('AmbientOcclusionPass' in engineApi, false);
 process.stdout.write('Verified ambient visibility optional-subpath identities.\n');
+
+const bakeApi = require('../modules/engine/dist/lighting/lightmap-baker.cjs');
+const bakeEsm = await import('../modules/engine/dist/lighting/lightmap-baker.js');
+for (const name of ['LightmapBaker', 'LightmapBakeResult']) {
+  assert.equal(lightingApi[name], bakeApi[name]);
+  assert.equal(lightingEsm[name], bakeEsm[name]);
+  assert.equal(name in engineApi, false);
+}
+assert.equal(lightingApi.createPBRLightmapModel, lightingModelApi.createPBRLightmapModel);
+assert.equal(lightingEsm.createPBRLightmapModel, lightingModelEsm.createPBRLightmapModel);
+process.stdout.write('Verified lightmap baking optional-subpath identities.\n');

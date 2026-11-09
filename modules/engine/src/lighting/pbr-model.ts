@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
+import {assert, type Device} from '@luma.gl/core';
 import type {Material} from '../material/material';
 import {Model, type ModelProps} from '../model/model';
 import {
   pbrMaterial,
+  lightmapBake,
   pbrScene,
   pbrShadow,
   pbrSurface,
@@ -146,6 +147,10 @@ ${hooks.instanceTransform ?? ''}  position = instanceMatrix * position;
   tangent = vec4f(normalize((pbrProjection.modelMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w * sign(determinant(mat3x3f(pbrProjection.modelMatrix[0].xyz, pbrProjection.modelMatrix[1].xyz, pbrProjection.modelMatrix[2].xyz))));
 #endif
   outputs.position = pbrProjection.modelViewProjectionMatrix * position;
+#ifdef PBR_LIGHTMAP_PASS
+  let atlasUV = (lightmapBake.uvTransform * vec3f(select(textureCoordinates, secondTextureCoordinates, lightmapBake.uvSet == 1), 1.0)).xy;
+  outputs.position = vec4f(atlasUV.x * 2.0 - 1.0, 1.0 - atlasUV.y * 2.0, 0.0, 1.0);
+#endif
 ${hooks.vertexOutput ?? ''}
   outputs.pbrPosition = worldPosition.xyz / worldPosition.w;
   outputs.pbrUV0 = textureCoordinates;
@@ -183,6 +188,24 @@ ${
 ${
   hooks.fragmentBody ??
   `
+#ifdef PBR_LIGHTMAP_PASS
+  pbr_discardMaskedFragment(inputs.pbrColor);
+  var directionalVisibility = 1.0;
+  var pointVisibility = vec4f(1.0);
+  var spotVisibility = vec4f(1.0);
+  let normal = normalize(inputs.pbrNormal);
+#ifdef PBR_RECEIVE_SHADOWS
+  if (pbrShadow.enabled != 0) {
+  let viewDepth = -(pbrShadow.viewMatrix * vec4f(inputs.pbrPosition, 1.0)).z;
+  directionalVisibility = shadow_getDirectionalFactor(inputs.pbrPosition, normal, viewDepth);
+  for (var index = 0; index < 4; index++) {
+    pointVisibility[index] = shadow_getPointFactor(index, inputs.pbrPosition, normal);
+    spotVisibility[index] = shadow_getSpotFactor(index, inputs.pbrPosition, normal);
+  }
+  }
+#endif
+  return vec4f(lightmap_getIrradiance(inputs.pbrPosition, normal, directionalVisibility, pointVisibility, spotVisibility), lightmapBake.chartId);
+#else
 #ifdef PBR_SHADOW_PASS
   pbr_discardMaskedFragment(inputs.pbrColor);
 #else
@@ -215,6 +238,7 @@ ${
   return pbrContactShadow_filterColor(inputs.pbrColor, inputs.position.xy);
 #else
   return pbr_filterColor(inputs.pbrColor);
+#endif
 #endif
 #endif
 #endif
@@ -318,6 +342,10 @@ void main(void) {
     secondTextureCoordinates
   );
   gl_Position = pbrProjection.modelViewProjectionMatrix * position;
+#ifdef PBR_LIGHTMAP_PASS
+  vec2 atlasUV = (lightmapBake.uvTransform * vec3(lightmapBake.uvSet == 1 ? secondTextureCoordinates : textureCoordinates, 1.0)).xy;
+  gl_Position = vec4(atlasUV * 2.0 - 1.0, 0.0, 1.0);
+#endif
 #ifdef PBR_SHADOW_PASS
   // ShadowMapRenderer light projections use [0, 1] depth on both backends.
   gl_Position.z = gl_Position.z * 2.0 - gl_Position.w;
@@ -332,6 +360,28 @@ out vec4 fragmentColor;
 #endif
 
 void main(void) {
+#ifdef PBR_LIGHTMAP_PASS
+  pbr_discardMaskedFragment(sceneVertexColor);
+#ifdef HAS_TANGENTS
+  vec3 normal = normalize(pbr_vTBN[2]);
+#else
+  vec3 normal = normalize(pbr_vNormal);
+#endif
+  float directionalVisibility = 1.0;
+  vec4 pointVisibility = vec4(1.0);
+  vec4 spotVisibility = vec4(1.0);
+#ifdef PBR_RECEIVE_SHADOWS
+  if (pbrShadow.enabled != 0) {
+  float viewDepth = -(pbrShadow.viewMatrix * vec4(pbr_vPosition, 1.0)).z;
+  directionalVisibility = shadow_getDirectionalFactor(pbr_vPosition, normal, viewDepth);
+  for (int index = 0; index < 4; index++) {
+    pointVisibility[index] = shadow_getPointFactor(index, pbr_vPosition, normal);
+    spotVisibility[index] = shadow_getSpotFactor(index, pbr_vPosition, normal);
+  }
+  }
+#endif
+  fragmentColor = vec4(lightmap_getIrradiance(pbr_vPosition, normal, directionalVisibility, pointVisibility, spotVisibility), lightmapBake.chartId);
+#else
 #ifdef PBR_SHADOW_PASS
   pbr_discardMaskedFragment(sceneVertexColor);
 #else
@@ -376,6 +426,7 @@ void main(void) {
   fragmentColor = pbrContactShadow_filterColor(sceneVertexColor, gl_FragCoord.xy);
 #else
   fragmentColor = pbr_filterColor(sceneVertexColor);
+#endif
 #endif
 #endif
 #endif
@@ -528,4 +579,30 @@ export function getPBRTextureDefines(bindings: Record<string, unknown>): Record<
     HAS_DIFFUSETRANSMISSIONCOLORMAP: Boolean(bindings['pbr_diffuseTransmissionColorSampler']),
     HAS_MULTISCATTERCOLORMAP: Boolean(bindings['pbr_multiscatterColorSampler'])
   };
+}
+
+/** Options for a UV-space diffuse irradiance model. Supply normals and nonoverlapping atlas UVs. */
+export type CreatePBRLightmapModelOptions = CreatePBRModelOptions;
+
+/** Creates a borrowed-material bake model; output is linear irradiance E with chart ID in alpha. */
+export function createPBRLightmapModel(
+  device: Device,
+  options: CreatePBRLightmapModelOptions
+): Model {
+  const features = {...getPBRGeometryDefines(options.geometry), ...options.defines};
+  // Bake surfaces require geometric normals and the selected atlas UV attributes.
+  assert(features['HAS_NORMALS'] && (features['HAS_UV'] || features['HAS_UV_1']));
+  return createPBRModel(device, {
+    colorAttachmentFormats: ['rgba16float'],
+    ...options,
+    modules: [lightmapBake, ...(options.modules || [])],
+    receiveContactShadows: false,
+    receiveAmbientOcclusion: false,
+    defines: {...options.defines, HAS_LIGHTMAP: false, USE_IBL: false, PBR_LIGHTMAP_PASS: true},
+    parameters: {
+      ...options.parameters,
+      depthWriteEnabled: false,
+      cullMode: 'none'
+    }
+  });
 }
