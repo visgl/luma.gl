@@ -16071,6 +16071,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-lightmap-baking@workspace:examples/api/lightmap-baking":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-lightmap-baking@workspace:examples/api/lightmap-baking"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@luma.gl/core": "npm:10.0.0-alpha.11"
+    "@luma.gl/engine": "npm:10.0.0-alpha.11"
+    "@luma.gl/shaders": "npm:10.0.0-alpha.11"
+    "@math.gl/core": "npm:5.0.0-beta.5"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-multi-canvas@workspace:examples/api/multi-canvas":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-multi-canvas@workspace:examples/api/multi-canvas"

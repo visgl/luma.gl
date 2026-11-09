@@ -209,6 +209,7 @@
       "api/cubemap",
       "api/prefiltered-environment",
       "api/pbr-shadows",
+      "api/lightmap-baking",
       "api/texture-3d",
       {
         "type": "doc",

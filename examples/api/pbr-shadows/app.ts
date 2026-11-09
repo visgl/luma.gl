@@ -251,7 +251,13 @@ export default class PBRShadowExample extends AnimationLoopTemplate {
   onRender({device, canvasContext, aspect, time}: AnimationProps) {
     if (this.bakeMode !== 'off') {
       this.lightmapPreview ??= new LightmapPreview(device);
-      this.lightmapPreview.render(canvasContext.getCurrentFramebuffer(), this.bakeMode, time);
+      this.controls?.update(time);
+      this.lightmapPreview.render(
+        canvasContext.getCurrentFramebuffer(),
+        this.bakeMode,
+        time,
+        this.controls?.getEyePosition()
+      );
       return;
     }
     this.controls?.update(time);

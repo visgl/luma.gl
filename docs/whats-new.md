@@ -1,5 +1,10 @@
 # What's New
 
+### Static lightmap workflows
+
+A dedicated two-room [Lightmap Baking example](/examples/api/lightmap-baking) demonstrates fixed colored
+lights, shadowed environment sampling, and portable HDR export/reload. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
+
 ### Lighting workflow hardening
 
 Combined PBR receiving and shared-frame regressions now cover visibility, baked results, resize,

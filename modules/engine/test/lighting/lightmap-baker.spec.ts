@@ -282,26 +282,51 @@ test('standard example renders live lighting and freezes baked pixels', async co
       format: 'rgba8unorm',
       usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
     });
+    const depth = device.createTexture({
+      width: 32,
+      height: 32,
+      format: 'depth24plus',
+      usage: Texture.RENDER_ATTACHMENT
+    });
     const framebuffer = device.createFramebuffer({
       width: 32,
       height: 32,
-      colorAttachments: [texture]
+      colorAttachments: [texture],
+      depthStencilAttachment: depth
     });
-    const buffer = device.createBuffer({byteLength: 256, usage: Buffer.COPY_DST | Buffer.MAP_READ});
+    const buffer = device.createBuffer({
+      byteLength: 256 * 32,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
     async function render(mode: 'live' | 'baking' | 'baked', time: number) {
       preview.render(framebuffer, mode, time);
       device.submit();
-      texture.readBuffer({x: 16, y: 16, width: 1, height: 1}, buffer);
-      return Array.from((await buffer.readAsync()).slice(0, 4));
+      texture.readBuffer({x: 0, y: 0, width: 32, height: 32}, buffer);
+      return Array.from(await buffer.readAsync());
     }
     try {
+      const initialBake = await render('baking', 0);
+      expect(
+        Math.max(...initialBake.filter((_, index) => index % 4 < 3)),
+        device.type
+      ).toBeGreaterThan(80);
       const live = await render('live', 0);
-      expect(live[0] + live[1] + live[2], device.type).toBeGreaterThan(50);
+      expect(Math.max(...live.filter((_, index) => index % 4 < 3)), device.type).toBeGreaterThan(
+        80
+      );
+      expect(await render('live', 2000)).toEqual(live);
       const baking = await render('baking', 150);
-      expect(baking[0] + baking[1] + baking[2], device.type).toBeGreaterThan(50);
+      expect(Math.max(...baking.filter((_, index) => index % 4 < 3)), device.type).toBeGreaterThan(
+        80
+      );
       await render('baked', 300);
       const frozen = await render('baked', 1000);
       expect(await render('baked', 2000)).toEqual(frozen);
+      const exported = await preview.exportData();
+      preview.reset();
+      preview.loadData(exported);
+      expect(await render('baked', 2100)).toEqual(frozen);
+      expect(await preview.exportData()).toEqual(exported);
       preview.reset();
       expect(preview.baker.sampleCount).toBe(0);
       await render('baked', 3000);
@@ -310,6 +335,7 @@ test('standard example renders live lighting and freezes baked pixels', async co
       preview.destroy();
       framebuffer.destroy();
       texture.destroy();
+      depth.destroy();
       buffer.destroy();
     }
   }
