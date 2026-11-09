@@ -90,7 +90,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     entry: 'modules/core/src/index.ts',
     external: [],
     // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
-    maximum: {minified: 102_000, gzip: 28_600, brotli: 25_100},
+    // Decoder caches + scratch normalization together measure 102,869 B / 28,813 B gzip.
+    maximum: {minified: 103_000, gzip: 28_900, brotli: 25_400},
     targetGzip: 24_000
   },
   {
@@ -113,7 +114,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    maximum: {minified: 242_250, gzip: 68_100, brotli: 59_000},
+    // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
+    maximum: {minified: 243_400, gzip: 68_500, brotli: 59_300},
     targetGzip: 54_000
   },
   {

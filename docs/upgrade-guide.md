@@ -1,5 +1,12 @@
 # Upgrade Guide
 
+### Readonly shadertype metadata
+
+Texture, vertex-format, scalar-data-type, and shader-type decoders now return shared,
+readonly metadata. Results are frozen, including texture `bitsPerChannel` tuples.
+Copy metadata before modifying it; copy nested tuples separately when needed.
+Device-dependent texture capabilities and computed memory layouts remain caller-owned.
+
 ### Scoped model draw parameters
 
 `RenderPass.withParameters()` is removed. Pass temporary dynamic state to

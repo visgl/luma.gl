@@ -31,17 +31,17 @@ export type NormalizedDataType = SignedDataType | 'unorm8' | 'snorm8' | 'unorm16
 /** Returns information about a signed or normalized DataType */
 export type DataTypeInfo<T extends NormalizedDataType = NormalizedDataType> = {
   /** The corresponding data type without normalization */
-  signedType: SignedDataTypeT<T>;
+  readonly signedType: SignedDataTypeT<T>;
   /** The primitive data type (what the shader sees) */
-  primitiveType: PrimitiveDataTypeT<T>;
+  readonly primitiveType: PrimitiveDataTypeT<T>;
   /** @type number - Length in bytes of the data type */
-  byteLength: DataTypeByteLengthT<T>;
+  readonly byteLength: DataTypeByteLengthT<T>;
   /** @type boolean - indicating whether the data type is normalized */
-  normalized: DataTypeIsNormalizedT<T>;
+  readonly normalized: DataTypeIsNormalizedT<T>;
   /** @type boolean - indicating whether the data type is integer */
-  integer: DataTypeIsIntegerT<T>;
+  readonly integer: DataTypeIsIntegerT<T>;
   /** @type boolean - indicating whether the data type is signed */
-  signed: DataTypeIsSignedT<T>;
+  readonly signed: DataTypeIsSignedT<T>;
 };
 
 /** @type the primitive data type seen by the shader */
