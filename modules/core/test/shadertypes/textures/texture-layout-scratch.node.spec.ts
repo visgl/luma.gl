@@ -26,6 +26,10 @@ it('overwrites every layout field when reusing output across formats and alignme
   });
   const packed = {format: 'rgb10a2unorm' as const, width: 3, height: 2, depth: 1, byteAlignment: 8};
   expect(textureFormatDecoder.computeMemoryLayout(packed, result)).toBe(result);
+  expect(result).toEqual(textureFormatDecoder.computeMemoryLayout(packed));
+  // Packed byte sizes continue to follow existing format metadata.
+  const color = {...packed, format: 'rgba8unorm' as const};
+  textureFormatDecoder.computeMemoryLayout(color, result);
   expect(result).toEqual({
     bytesPerPixel: 4,
     bytesPerRow: 16,
@@ -34,7 +38,7 @@ it('overwrites every layout field when reusing output across formats and alignme
     bytesPerImage: 32,
     byteLength: 32
   });
-  expect(textureFormatDecoder.computeMemoryLayout(packed)).not.toBe(result);
+  expect(textureFormatDecoder.computeMemoryLayout(color)).not.toBe(result);
 });
 
 it('texture layout scratch is reentrant and never escapes as a default result', async () => {
