@@ -99,7 +99,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/core/webgl` backend',
     entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
-    maximum: {minified: 141_000, gzip: 39_750, brotli: 34_250},
+    // Unpack fast path trades ~0.6 KB minified for fewer upload allocations.
+    maximum: {minified: 141_750, gzip: 40_000, brotli: 34_200},
     targetGzip: 30_000
   },
   {
@@ -115,7 +116,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
     // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
-    maximum: {minified: 243_400, gzip: 68_750, brotli: 59_300},
+    maximum: {minified: 244_200, gzip: 69_000, brotli: 59_600},
     targetGzip: 54_000
   },
   {

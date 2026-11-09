@@ -416,7 +416,7 @@ Textures that will be read back through `readBuffer()` or `copyTextureToBuffer()
 
 Compared to the deprecated `readDataAsync()` helper, `readBuffer()` exposes the linear buffer layout directly. On WebGPU, that means the returned layout follows buffer-copy alignment rules rather than tightly packed CPU upload rules.
 
-If you need a matching layout, call `texture.computeMemoryLayout()` for the same region. On WebGPU, the returned `bytesPerRow` is padded for buffer copies, typically to a multiple of `256`.
+If you need a matching layout, call `texture.computeMemoryLayout()` for the same region. To reuse caller-owned output storage, pass a `TextureMemoryLayout` as the second argument: `texture.computeMemoryLayout(options, result)`. Every layout field is overwritten, and the supplied object is returned. Omitting it returns a fresh layout. The same optional result argument is supported by `textureFormatDecoder.computeMemoryLayout(options, result)`. On WebGPU, the returned `bytesPerRow` is padded for buffer copies, typically to a multiple of `256`.
 
 ### `readDataAsync()`
 
