@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {BufferLayout, VertexFormat} from '@luma.gl/core';
-import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUData} from '@luma.gl/graph/gpu-data';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
 import {isGPUTableIndexColumnName} from './gpu-schema';
 import {
@@ -11,7 +11,7 @@ import {
   isFixedSizeListGPUVectorFormat,
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 
 /** Batch-local GPU data keyed by selected table column name. */
 export type GPUDataMap<T extends GPUTypeMap = GPUTypeMap> = {

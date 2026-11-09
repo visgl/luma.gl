@@ -101,14 +101,14 @@ yarn test-headless --no-coverage \
 Then collect uninstrumented, production-like samples (two warmups, five measurements):
 
 ```sh
-VITE_LUPROJ_REVISION=<commit-or-described-working-tree> \
-VITE_LUPROJ_ROUTING_ROWS=4096,65536,262144 \
-VITE_LUPROJ_ROUTING_CONSUMERS=1,4 \
+VITE_GPU_PROJECT_REVISION=<commit-or-described-working-tree> \
+VITE_GPU_PROJECT_ROUTING_ROWS=4096,65536,262144 \
+VITE_GPU_PROJECT_ROUTING_CONSUMERS=1,4 \
 yarn test-browser-benchmarks --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-routing-performance.spec.ts
 ```
 
-For a **separate** instrumented kernel capture, add `VITE_LUPROJ_ROUTING_GPU_TIMING=true`.
+For a **separate** instrumented kernel capture, add `VITE_GPU_PROJECT_ROUTING_GPU_TIMING=true`.
 Timestamp support is reported, never assumed; instrumentation changes pass coalescing and those
 reports are not eligible for production cost selection. Omit the row environment variable for a
 small smoke run that emits no performance records. Software/fallback adapters are skipped, not

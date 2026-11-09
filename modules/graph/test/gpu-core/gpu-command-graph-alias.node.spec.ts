@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {DynamicBuffer} from '@luma.gl/engine';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
@@ -11,8 +11,8 @@ import {
   type GraphDataView,
   type GraphImportedBuffer
 } from '@luma.gl/graph/gpu-core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {GPUData} from '@luma.gl/graph/gpu-data';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 type GraphAliasFixture = {

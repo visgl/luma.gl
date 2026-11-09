@@ -140,4 +140,4 @@ luma.gl does not currently provide a general CPU ray-intersection system.
 - [`OrbitControls`](/docs/api-reference/engine/orbit-controls)
 - [`PickingManager`](/docs/api-reference/engine/picking-manager)
 - [Redraw on demand](/docs/api-guide/engine/redraw)
-- [Shadertools picking module](/docs/api-reference/shadertools/shader-modules/picking)
+- [Shaders picking module](/docs/api-reference/shaders/shader-modules/picking)

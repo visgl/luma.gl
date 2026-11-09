@@ -4,7 +4,7 @@
 
 import {describe, expect, test} from 'vitest';
 import {Matrix4, radians} from '@math.gl/core';
-import {toHalfFloat} from '@luma.gl/shadertools';
+import {toHalfFloat} from '@luma.gl/shaders';
 import {
   getTempestOceanMinimumCameraHeight,
   getTempestOceanSunDirection,

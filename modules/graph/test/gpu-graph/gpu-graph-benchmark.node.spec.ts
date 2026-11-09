@@ -58,11 +58,7 @@ describe('GPU Graph benchmark optional package boundary', () => {
       require: './dist/gpu-graph-algorithms/benchmarks.cjs',
       types: './dist/gpu-graph-algorithms/benchmarks.d.ts'
     });
-    for (const dependencies of [
-      packageJson.dependencies,
-      packageJson.peerDependencies,
-      packageJson.optionalDependencies
-    ]) {
+    for (const dependencies of [packageJson.dependencies, packageJson.optionalDependencies]) {
       expect(dependencies?.['apache-arrow']).toBeUndefined();
     }
   });

@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {splitUniformsAndBindings} from '@luma.gl/engine/model/split-uniforms-and-bindings';
+import {
+  isUniformValue,
+  splitUniformsAndBindings
+} from '@luma.gl/engine/model/split-uniforms-and-bindings';
 import {expect, it} from 'vitest';
 
 export function registerSplitUniformsAndBindingsTests(): void {
@@ -21,6 +24,29 @@ export function registerSplitUniformsAndBindingsTests(): void {
       'boolean',
       'number'
     ]);
+  });
+
+  it('routes numeric arrays as uniforms and preserves resource bindings', () => {
+    const mixed: Parameters<typeof splitUniformsAndBindings>[0] = {
+      empty: [],
+      floatSamples: new Float32Array([1, 2, 3]),
+      integerSamples: new Uint16Array([4, 5, 6]),
+      dataView: new DataView(new ArrayBuffer(8)) as any,
+      stringArray: ['texture'] as any,
+      texture: {texture: true} as any
+    };
+    const {uniforms, bindings} = splitUniformsAndBindings(mixed);
+
+    expect(Object.keys(uniforms)).toEqual(['empty', 'floatSamples', 'integerSamples']);
+    expect(Object.keys(bindings)).toEqual(['dataView', 'stringArray', 'texture']);
+    for (const name of ['empty', 'floatSamples', 'integerSamples']) {
+      expect(isUniformValue(mixed[name])).toBe(true);
+      expect(uniforms[name]).toBe(mixed[name]);
+    }
+    for (const name of ['dataView', 'stringArray', 'texture']) {
+      expect(isUniformValue(mixed[name])).toBe(false);
+      expect(bindings[name]).toBe(mixed[name]);
+    }
   });
 
   it('splitUniformsAndBindings respects declared struct uniforms', () => {

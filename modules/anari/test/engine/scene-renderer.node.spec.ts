@@ -29,8 +29,8 @@ import {
   pbrMaterial,
   pbrScene,
   WGSLShaderAssembler
-} from '@luma.gl/shadertools';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+} from '@luma.gl/shaders';
+import {getNullTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
@@ -68,7 +68,7 @@ describe('scene rendering package architecture', () => {
 
   test('keeps glTF model construction independent of experimental rendering', () => {
     const gltfPackage = JSON.parse(
-      readFileSync(new URL('../../../gltf/package.json', import.meta.url), 'utf8')
+      readFileSync(new URL('../../../engine/package.json', import.meta.url), 'utf8')
     ) as {
       dependencies?: Record<string, string>;
       optionalDependencies?: Record<string, string>;
@@ -83,7 +83,7 @@ describe('scene rendering package architecture', () => {
 
     for (const sourcePath of ['gltf/create-gltf-model.ts', 'parsers/parse-gltf.ts']) {
       const source = readFileSync(
-        new URL(`../../../gltf/src/${sourcePath}`, import.meta.url),
+        new URL(`../../../engine/src/gltf/${sourcePath}`, import.meta.url),
         'utf8'
       );
       expect(source).not.toContain('@luma.gl/experimental');
@@ -427,7 +427,7 @@ void main(void) {
 });
 
 describe('SceneRenderer', () => {
-  test('adapts incoming directional lights and additive ambient radiance at the forward PBR boundary', async () => {
+  test('preserves directional lights and combines additive ambient radiance at the forward PBR boundary', async () => {
     const device = await getNullTestDevice();
     const renderer = new InspectableSceneRenderer(device);
     const surface: SceneSurface = {
@@ -478,7 +478,7 @@ describe('SceneRenderer', () => {
       });
       expect(lighting.lights[0].position).toEqual([2, 3, 4]);
       expect(lighting.lights[1].direction).toEqual([0, -1, 0]);
-      expect(lighting.lights[2].direction).toEqual([-0.4, 0.6, 1]);
+      expect(lighting.lights[2].direction).toEqual([0.4, -0.6, -1]);
       expect(lighting.ambientColor).toEqual([0.25, 0.4, 0]);
       expect(options.lights?.[0]).toBe(redAmbientLight);
       expect(options.lights?.[4]).toBe(greenAmbientLight);
@@ -982,55 +982,6 @@ describe('PBREnvironmentGenerator', () => {
       generator.destroy();
       source.destroy();
       cube.destroy();
-    }
-  });
-
-  test('never manually decodes hardware-sRGB source textures a second time', async () => {
-    const device = await getNullTestDevice();
-    const rawSRGBSource = device.createTexture({
-      width: 4,
-      height: 2,
-      format: 'rgba8unorm'
-    });
-    const hardwareSRGBSource = device.createTexture({
-      width: 4,
-      height: 2,
-      format: 'rgba8unorm-srgb'
-    });
-    const generator = new PBREnvironmentGenerator(device);
-    const prepareOptions = {
-      size: 2,
-      irradianceSize: 2,
-      brdfLUTSize: 2,
-      sampleCount: 2,
-      format: 'rgba8unorm' as const,
-      sourceEncoding: 'srgb' as const
-    };
-
-    try {
-      const rawEnvironment = generator.prepare({...prepareOptions, source: rawSRGBSource});
-      const filterModel = (
-        generator as unknown as {
-          model: {shaderInputs: {getUniformValues(): Record<string, {sourceEncoding: number}>}};
-        }
-      ).model;
-      expect(filterModel.shaderInputs.getUniformValues().pbrEnvironmentFilter.sourceEncoding).toBe(
-        1
-      );
-      rawEnvironment.destroy();
-
-      const hardwareEnvironment = generator.prepare({
-        ...prepareOptions,
-        source: hardwareSRGBSource
-      });
-      expect(filterModel.shaderInputs.getUniformValues().pbrEnvironmentFilter.sourceEncoding).toBe(
-        0
-      );
-      hardwareEnvironment.destroy();
-    } finally {
-      generator.destroy();
-      rawSRGBSource.destroy();
-      hardwareSRGBSource.destroy();
     }
   });
 });

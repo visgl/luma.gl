@@ -88,7 +88,7 @@ export type ResourceProps = {
    */
   _isHandleBorrowed?: boolean;
   /** User provided data stored on this resource  */
-  userData?: {[key: string]: any};
+  userData?: {[key: string]: unknown};
 };
 
 /**

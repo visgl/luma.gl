@@ -1,5 +1,5 @@
 import {expect, it} from 'vitest';
-import {createTestContext} from '@luma.gl/test-utils';
+import {createTestContext} from '@luma.gl/core/test-utils';
 
 import {GL} from '@luma.gl/core/webgl-constants';
 import {Framebuffer, getKey} from '@luma.gl/core/webgl';

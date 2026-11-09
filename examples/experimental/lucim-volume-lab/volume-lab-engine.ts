@@ -25,7 +25,7 @@ export type VolumeLabAnalysisStatus = {
   regionOverflow: boolean;
 };
 
-/** Owns the synthetic volume buffers and one reusable LuCIM segmentation graph. */
+/** Owns the synthetic volume buffers and one reusable GPU Volume Algorithms segmentation graph. */
 export class VolumeLabEngine {
   readonly device: Device;
   readonly dataset: VolumeLabDataset;
@@ -58,7 +58,7 @@ export class VolumeLabEngine {
 
   constructor(device: Device, dataset: VolumeLabDataset) {
     if (device.type !== 'webgpu') {
-      throw new Error('LuCIM Volume Lab requires WebGPU');
+      throw new Error('GPU Volume Algorithms Volume Lab requires WebGPU');
     }
     this.device = device;
     this.dataset = dataset;

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer} from '@luma.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
 export type ABufferResolveCompositeShaderPassOptions = {
   /** Maximum captured fragments sorted for one pixel. */

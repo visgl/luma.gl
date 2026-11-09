@@ -16,4 +16,4 @@ import {HTMLTexture} from '@luma.gl/engine/experimental/textures';
 import {WebXRManager} from '@luma.gl/engine/experimental/webxr';
 ```
 
-These APIs remain experimental. Scene renderers, shadows, transparency, and scene composition are owned by [`@luma.gl/anari`](/docs/api-reference/scene). GPU graph algorithms and graph-based simulations remain in [`@luma.gl/graph`](/docs/api-reference/graph).
+These APIs remain experimental. Scene renderers, shadows, transparency, and scene composition are owned by [`@luma.gl/anari`](/docs/api-reference/anari). GPU graph algorithms and graph-based simulations remain in [`@luma.gl/graph`](/docs/api-reference/graph).

@@ -48,6 +48,7 @@ export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 export type {OrbitControlsProps, OrbitPosition} from './controls/orbit-controls';
 export {OrbitControls} from './controls/orbit-controls';
 
+export type {ModelDrawOptions} from './model/gpu-vector-model';
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
 export type {MaterialProps} from './material/material';
@@ -78,6 +79,17 @@ export {DirectionalLightModel} from './models/directional-light-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
+export {
+  isScenegraphInteractionEnabled,
+  getFirstScenegraphInteractionHit,
+  ScenegraphInteractionManager
+} from './scenegraph/scenegraph-interaction';
+export type {
+  ScenegraphInteractionKind,
+  ScenegraphInteractionHit,
+  ScenegraphInteractionEvent
+} from './scenegraph/scenegraph-interaction';
+export {SceneMetadata} from './scenegraph/scene-metadata';
 export type {ScenegraphBounds} from './scenegraph/scenegraph-bounds';
 export type {
   DepthSortedTraversalContext,
@@ -85,6 +97,12 @@ export type {
   GroupNodeProps
 } from './scenegraph/group-node';
 export {GroupNode} from './scenegraph/group-node';
+export {GeometryNode, type GeometryNodeProps} from './scenegraph/geometry-node';
+export type {
+  ScenegraphTransformSource,
+  ScenegraphTransformFrame,
+  ScenegraphTransformBinding
+} from './scenegraph/transform-source';
 export type {ModelNodeProps} from './scenegraph/model-node';
 export {ModelNode} from './scenegraph/model-node';
 
@@ -183,18 +201,6 @@ export {SwapFramebuffers} from './compute/swap';
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
 export {getPlatformInfo} from './utils/get-platform-info';
-export type {
-  KernelProps,
-  KernelDispatchOptions,
-  KernelDispatchIndirectOptions
-} from './compute/kernel';
-export {Kernel} from './compute/kernel';
-export type {
-  RenderKernelProps,
-  RenderKernelDrawOptions,
-  RenderKernelIndirectDrawOptions
-} from './compute/render-kernel';
-export {RenderKernel} from './compute/render-kernel';
 
 export type {
   PickInfo,
@@ -244,6 +250,11 @@ export {
   type BillboardControllerProps
 } from './scenegraph/controllers/billboard-controller';
 export {
+  PunctualLightController,
+  type PunctualLightBinding,
+  type PunctualLightDefinition
+} from './scenegraph/controllers/punctual-light-controller';
+export {
   AreaLightController,
   type AreaLightDefinition,
   type AreaLightBinding,
@@ -282,7 +293,7 @@ export {
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
 export {legacyColorPicking} from './modules/picking/legacy-color-picking';
 
-import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+import {DynamicTexture, type DynamicTextureProps} from '@luma.gl/core/dynamic';
 /** @deprecated use DynamicTexture */
 export const AsyncTexture = DynamicTexture;
 /** @deprecated use DynamicTextureProps */
@@ -358,3 +369,7 @@ export {
 export {makeAdapterAnimationBinding} from './animation/property-animation-binding';
 
 export {deformPositions} from './animation/deform-positions';
+
+export {createAreaLightLTCTextures} from './lighting/ltc-textures';
+
+export {makeGPUVectorGeometry} from './geometry/gpu-vector-geometry-adapter';

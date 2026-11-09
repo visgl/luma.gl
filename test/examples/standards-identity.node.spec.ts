@@ -87,7 +87,7 @@ describe('standards identity and accessible module branding', () => {
   });
 
   test('presents ANARI as the primary scene mark with smaller glTF and OpenUSD format marks', () => {
-    const sceneCard = readModuleCard('/docs/api-reference/scene');
+    const sceneCard = readModuleCard('/docs/api-reference/anari');
 
     expect(readCardLogos(sceneCard)).toEqual(['ANARI', 'glTF', 'OpenUSD']);
     expect(readLogoClasses(sceneCard, 'ANARI')).toContain('docs-api-card__logo--primary');
@@ -122,7 +122,7 @@ describe('standards identity and accessible module branding', () => {
 
     for (const route of [
       '/docs/api-reference/core',
-      '/docs/api-reference/scene',
+      '/docs/api-reference/anari',
       '/docs/api-reference/gltf'
     ]) {
       expect(readModuleCard(route)).not.toMatch(/<a\b/);

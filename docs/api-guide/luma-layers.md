@@ -16,7 +16,7 @@ scheduling.
 
 Consider a colored triangle whose color behavior is reusable:
 
-1. **Shadertools** defines the color module, its typed props, dependencies, and WGSL/GLSL source.
+1. **Shaders** defines the color module, its typed props, dependencies, and WGSL/GLSL source.
 2. **Engine** gives `Model` the geometry and `ShaderInputs`, creates compatible bindings, and
    tracks whether another draw is needed.
 3. **Core** owns the buffer, shader and pipeline resources, render pass, command encoding,
@@ -28,7 +28,7 @@ Consider a colored triangle whose color behavior is reusable:
 
 | If you need… | Start with… | Move when… |
 | --- | --- | --- |
-| Reusable hooks, injections, or shader dependencies | Shadertools | Engine must bind inputs and draw |
+| Reusable hooks, injections, or shader dependencies | Shaders | Engine must bind inputs and draw |
 | Geometry, models, redraw, picking, animation, or passes | Engine | Core-level resource control is necessary |
 | Buffers, textures, pipelines, passes, and submission | Core | Several GPU operations need shared scheduling |
 | Hazards, transient aliasing, indirect work, or frame budgets | GPU Core | A single pass or model is simpler without a graph |
@@ -44,11 +44,11 @@ GPU Core is not mysterious machinery. A few WebGPU capabilities make the design 
 - **Compute shaders** make scans, compaction, sorting, indexing, and aggregation first-class GPU work.
 
 GPU Core names and composes those capabilities. WebGL applications can still use Core, Engine,
-and Shadertools without adopting the graph layer.
+and Shaders without adopting the graph layer.
 
 ## Where to continue
 
-- [Shadertools overview](/docs/api-reference/shadertools)
+- [Shaders overview](/docs/api-reference/shaders)
 - [Engine overview](/docs/api-reference/engine)
 - [Core overview](/docs/api-reference/core)
 - [GPU Core tutorial](/docs/api-reference/experimental/gpu-core/tutorial)

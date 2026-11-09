@@ -8,7 +8,7 @@ this folder after installing and building the workspace. The example is also bui
 triangles. Compare these with the complete triangle mesh, or adjust the crease angle. The default
 view has 40 buildings and 480 architectural edges.
 
-`sketchStroke` in shadertools provides grain, width variation, centerline variation, antialiasing,
+`sketchStroke` in shaders provides grain, width variation, centerline variation, antialiasing,
 and endpoint extension. It has no Deck dependency. The shader takes normalized along-segment
 coordinates and a signed transverse distance in pixels. Seeds belong to the feature geometry,
 so layer replacement and data reordering do not re-randomize the marks.

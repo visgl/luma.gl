@@ -33,9 +33,31 @@ The root exposes execution graph scheduling, compilation, encoding, inspection, 
 - `gpu-effects`
 - `lucim`
 
-GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`. Graph algorithms use the separate `gpu-graph-algorithms` subpath.
+GPU data primitives live in `@luma.gl/graph/gpu-data`. Evaluators and immediate expression operations live alongside GPUSimpleGraph in `@luma.gl/graph/gpu-simple-graph`. Graph algorithms use the separate `gpu-graph-algorithms` subpath.
 
 `GPUGraph` describes application operations and logical values. `GPUGraphCompiler`
 lowers those operations to a `GPUCommandGraph`, which schedules concrete GPU passes
 and resources. `CompiledGPUCommandGraph` encodes the resulting commands. The existing
 compiler remains WebGPU-only; `GPUSimpleGraph` is the separate portable evaluator API.
+
+## Package layering
+
+Engine depends on graph; graph depends on core and shaders.
+Graph never imports engine, including in public resource types. Both GPUGraph
+and GPUSimpleGraph use the shared graph execution/resource primitives. GPUGraph remains
+WebGPU-focused; this layering does not add WebGL algorithm fallbacks.
+
+Engine-specific integration is available through `@luma.gl/engine/physics` (scenegraph
+physics), `@luma.gl/engine/tables` (table models and geometry), and
+`@luma.gl/engine/models` (specialized path/polygon rendering). GPU data processing remains
+in graph. Shared effect lowering must use graph execution primitives instead of importing engine
+models or renderers.
+
+`yarn test-package-layering` checks source, built code, public declarations, and package
+dependencies. It also runs as part of the package build.
+
+## Optional Arrow adapters
+
+`@luma.gl/graph/arrow` provides table conversion, analytics, GeoArrow and DGGS preparation.
+Install the optional `apache-arrow` peer to use this entry. Generic package roots do not load Arrow.
+See the [Arrow adapter reference](../../docs/api-reference/arrow/README.mdx) for ownership, streaming and package boundaries.

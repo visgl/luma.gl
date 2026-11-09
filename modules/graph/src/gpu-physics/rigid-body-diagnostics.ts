@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import type {
   GPUCommandGraph,
   GPUCommandGraphComputeExecutable,
@@ -130,9 +136,10 @@ fn accumulate(index:u32,value:u32){
     },
     bindings: Object.fromEntries(bindings.map(({name, buffer}) => [name, buffer]))
   };
-  const executable = (computation: Computation): GPUCommandGraphComputeExecutable<Parameters> => ({
-    encode: ({computePass}) => computation.dispatch(computePass, 1),
-    destroy: () => computation.destroy()
+  const executable = (computation: BoundKernel): GPUCommandGraphComputeExecutable<Parameters> => ({
+    encode: ({computePass}) =>
+      computation.kernel.dispatch(computePass, {bindings: computation.bindings, x: 1}),
+    destroy: () => computation.kernel.destroy()
   });
   graph.addComputePass({
     id,
@@ -142,7 +149,7 @@ fn accumulate(index:u32,value:u32){
       buffer: resource,
       usage: index === 0 ? ('storage-read-write' as const) : ('storage-read' as const)
     })),
-    compile: ({device}) => executable(new Computation(device, properties)),
-    compileAsync: async ({device}) => executable(await Computation.createAsync(device, properties))
+    compile: ({device}) => executable(createBoundKernel(device, properties)),
+    compileAsync: async ({device}) => executable(await createBoundKernelAsync(device, properties))
   });
 }

@@ -6,12 +6,12 @@ import type {AnimationProps, ScenegraphNode} from '@luma.gl/engine';
 import {
   ScenegraphPhysicsSession,
   type ScenegraphPhysicsSessionCapture
-} from '@luma.gl/graph/gpu-physics';
+} from '@luma.gl/engine/physics';
 import {
   makeGLTFPhysicsScene,
   parseGLTFPhysics,
   snapshotGLTFPhysicsScene
-} from '@luma.gl/gltf/physics';
+} from '@luma.gl/engine/gltf-physics';
 import PhysicsApp from '../physics/app';
 import {showError} from '../physics/app-ui';
 

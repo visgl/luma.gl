@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {GBuffer} from '@luma.gl/anari';
-import {getTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GBuffer rejects non-WebGPU devices', async () => {
   const device = await getTestDevice('null');

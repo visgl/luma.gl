@@ -31,4 +31,4 @@ Returns:
 
 ## Remarks
 
-- The `@loaders.gl/textures` module provides a range of more capable texture loaders for additional compressed and super-compressed texture formats, texture cubes, composite textures etc.
+- The `@loaders.gl/images` module provides a range of more capable texture loaders for additional compressed and super-compressed texture formats, texture cubes, composite textures etc.

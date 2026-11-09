@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {isSlangTexture} from './textures';
+
 import type {Expression, SlangType} from './ast';
 
 export const ATOMICS: Record<string, string> = {
@@ -31,4 +33,21 @@ export function getExpressionRoot(expression: Expression): Expression {
   while (expression.kind === 'index' || expression.kind === 'member')
     expression = expression.object;
   return expression;
+}
+
+/** Normalize resource ownership and access independently of target declarations. */
+export function lowerSlangResource(
+  type: SlangType,
+  binding: {group: number; binding: number},
+  textureAccess?: 'read' | 'write' | 'read_write'
+): import('./ir').ShaderResource {
+  const storage = type.name.endsWith('StructuredBuffer') || isByteAddressBuffer(type);
+  const texture = isSlangTexture(type);
+  const sampler = type.name === 'SamplerState' || type.name === 'SamplerComparisonState';
+  return {
+    ...binding,
+    kind: storage ? 'storage' : texture ? 'texture' : sampler ? 'sampler' : 'uniform',
+    addressSpace: storage ? 'storage' : texture || sampler ? 'handle' : 'uniform',
+    access: textureAccess ?? (type.name.startsWith('RW') ? 'read_write' : 'read')
+  };
 }

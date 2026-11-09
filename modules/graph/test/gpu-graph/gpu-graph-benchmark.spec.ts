@@ -11,7 +11,7 @@ import {
   type GPUGraphAlgorithmsBenchmarkDistribution,
   type GPUGraphAlgorithmsBenchmarkReport
 } from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 
 const BENCHMARK_ALGORITHMS: GPUGraphAlgorithmsBenchmarkAlgorithm[] = [

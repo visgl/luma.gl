@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {summarizeGPUWorkgroupScanBenchmarkSamples as summarizeSamples} from '@luma.gl/graph/gpu-core';
 import {GPUAdaptiveSpMV} from '../../src/gpu-core/gpu-adaptive-spmv';
 import {BatchConformanceFixture} from './batch-conformance-utils';

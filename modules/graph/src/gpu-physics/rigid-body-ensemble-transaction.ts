@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import type {GPUCommandGraph, GraphBufferHandle} from '../gpu-core/gpu-command-graph';
 
@@ -64,12 +70,17 @@ export function addEnsembleCheckpoint<GraphParameters>(
       },
       bindings: Object.fromEntries(inputs.map(input => [input.name, input.buffer]))
     };
-    const executable = (computation: Computation) => ({
-      encode: ({computePass}: {computePass: Parameters<Computation['dispatch']>[0]}) => {
-        if (indirect) computation.dispatchIndirect(computePass, ensemble.buffer, 16);
-        else computation.dispatch(computePass, 1);
+    const executable = (computation: BoundKernel) => ({
+      encode: ({computePass}: {computePass: Parameters<BoundKernel['kernel']['dispatch']>[0]}) => {
+        if (indirect)
+          computation.kernel.dispatchIndirect(computePass, {
+            bindings: computation.bindings,
+            indirectBuffer: ensemble.buffer,
+            indirectOffset: 16
+          });
+        else computation.kernel.dispatch(computePass, {bindings: computation.bindings, x: 1});
       },
-      destroy: () => computation.destroy()
+      destroy: () => computation.kernel.destroy()
     });
     graph.addComputePass({
       id: properties.id,
@@ -81,8 +92,8 @@ export function addEnsembleCheckpoint<GraphParameters>(
         })),
         ...(indirect ? [{buffer: ensemble.resource, usage: 'indirect' as const}] : [])
       ],
-      compile: () => executable(new Computation(graph.device, properties)),
-      compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
+      compile: () => executable(createBoundKernel(graph.device, properties)),
+      compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
     });
   };
   const bodyAddress = `let work=invocation.x;if(work>=ensemble[0]*${bodiesPerInstance}u){return;}

@@ -1,6 +1,6 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 
-# LuCIM GPU Volume Algorithms
+# GPU Volume Algorithms GPU Volume Algorithms
 
 <DocumentationBadges>
   <DocumentationBadge tone="version">From v10</DocumentationBadge>
@@ -10,9 +10,9 @@ import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs
 
 `@luma.gl/graph/lucim` contributes three-dimensional image-processing algorithms to a
 caller-owned [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph).
-LuCIM is inspired by [RAPIDS cuCIM](https://docs.rapids.ai/api/cucim/stable/) and its GPU-accelerated
+GPU Volume Algorithms is inspired by [RAPIDS cuCIM](https://docs.rapids.ai/api/cucim/stable/) and its GPU-accelerated
 n-dimensional image-processing categories. It is not a JavaScript port or an API-compatibility
-layer: cuCIM targets CUDA arrays and a scikit-image-compatible Python surface, while LuCIM targets
+layer: cuCIM targets CUDA arrays and a scikit-image-compatible Python surface, while GPU Volume Algorithms targets
 portable browser WebGPU, explicit graph resources, and application-owned command submission.
 
 ## Implemented tranches
@@ -50,7 +50,7 @@ index grid and never silently resample or reorient it.
 
 ## Composing a pipeline
 
-The application creates and imports every persistent input and output. LuCIM contributors declare
+The application creates and imports every persistent input and output. GPU Volume Algorithms contributors declare
 the nodes and any bounded transient scratch:
 
 ```ts
@@ -160,7 +160,7 @@ capacity sets `overflow` and is not folded into another region.
 
 ## Boundaries and next tranches
 
-This first LuCIM slice intentionally does not claim cuCIM feature parity. Candidate later tranches
+This first GPU Volume Algorithms slice intentionally does not claim cuCIM feature parity. Candidate later tranches
 include separable Gaussian/rank filters, Euclidean distance transforms, watershed and contour
 surfaces, multiscale registration, chunked/halo-aware out-of-core volumes, and dense component-label
 compaction. Those algorithms require separate numerical, storage, or capacity contracts and are
@@ -171,7 +171,7 @@ and readback remain application responsibilities.
 
 ## Try the Volume Lab
 
-The [LuCIM Volume Lab](/examples/experimental/lucim-volume-lab) runs the implemented tranches over a
+The [GPU Volume Algorithms Volume Lab](/examples/experimental/lucim-volume-lab) runs the implemented tranches over a
 deterministic, non-diagnostic CT-like phantom. Its synchronized axial, coronal, and sagittal views
 sample resident source, mask, and sparse-label buffers directly. Threshold changes update one GPU
 scalar and reuse the compiled graph; only convergence, iteration, and overflow status are read back.

@@ -82,9 +82,11 @@ fn parallelSolvePair(index:u32)->u32 {
  if(index>=atomicLoad(&parallelState.diagnostics[3])){return PAIR_CAPACITY;}
  return parallelState.solvePairs[index];
 }
+// Parent IDs strictly decrease. A connected chain can require up to BODY_COUNT links
+// before compression completes; a fixed 64-link cap rejects valid larger islands.
 fn parallelRoot(body:u32)->u32 {
  var current=body;
- for(var iteration=0u;iteration<64u;iteration++){
+ for(var iteration=0u;iteration<max(64u,BODY_COUNT);iteration++){
   let parent=atomicLoad(&parallelState.roots[current]);
   if(parent==current){return current;}
   let grandparent=atomicLoad(&parallelState.roots[parent]);
@@ -119,7 +121,7 @@ fn parallelRoot(body:u32)->u32 {
  let pair=parallelPair(invocation.x);if(pair>=PAIR_CAPACITY||manifolds[pair].count==0u||!colliderScheduled(manifolds[pair].first)){return;}
  let first=colliderBody(getFirstCollider(pair));let second=colliderBody(getSecondCollider(pair));
  if(!dynamic(first)||!dynamic(second)){return;}
- for(var iteration=0u;iteration<64u;iteration++){
+ for(var iteration=0u;iteration<max(64u,BODY_COUNT);iteration++){
   let firstRoot=parallelRoot(first);let secondRoot=parallelRoot(second);
   if(firstRoot==secondRoot){return;}
   let larger=max(firstRoot,secondRoot);let smaller=min(firstRoot,secondRoot);

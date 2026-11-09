@@ -76,7 +76,7 @@ describe('GPUVolume physical and ownership contract', () => {
   });
 });
 
-describe('LuCIM tranche contracts and graph composition', () => {
+describe('GPU Volume Algorithms tranche contracts and graph composition', () => {
   test('exposes stable threshold, morphology, and component defaults', () => {
     const graph = makeRecordingGraph('lucim-defaults');
     const source = makeChannel(graph, 'source', 'float32', 8);

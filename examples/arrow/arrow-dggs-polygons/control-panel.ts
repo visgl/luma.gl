@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {DggsCellEncoding} from '@luma.gl/arrow';
+import {type DggsCellEncoding} from '@luma.gl/graph/arrow';
 import {
   type Panel,
   type SettingsChangeDescriptor,

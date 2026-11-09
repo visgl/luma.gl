@@ -5,6 +5,11 @@
 import {luma, Buffer} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Model} from '@luma.gl/engine';
+import {createPBRModel, shadow} from '@luma.gl/anari';
+import {RigidBodyShadows, LAB_SPOTLIGHT} from './rigid-body-shadows';
+import {makeRigidBodyVertexShader, rigidBodyPose} from './rigid-body-shaders';
+import {createLabMaterial} from './lab-material';
+import {DominoAudio} from './domino-audio';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import {PerspectiveCamera} from 'three';
@@ -12,24 +17,49 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {Matrix4} from '@math.gl/core';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makeMechanism} from './mechanisms';
+import {WRECKING_BALL_PHYSICS, WRECKING_BALL_TIME_STEP} from './wrecking-ball';
 import {CradleScene} from './cradle-scene';
+import {WreckingBallScene} from './wrecking-ball-scene';
 import {createRigidBodyPanel} from './info-box';
 import {
   makeRigidBodyScene,
   getRigidBodySceneGravity,
   isRigidBodyScene,
-  RIGID_BODY_SCENES
+  RIGID_BODY_SCENES,
+  DOMINO_PHYSICS
 } from './scenes';
 
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const scene = document.querySelector<HTMLSelectElement>('#scene')!;
+const initialScene =
+  document.body.dataset.scene ?? new URLSearchParams(window.location.search).get('scene');
+if (initialScene && isRigidBodyScene(initialScene)) scene.value = initialScene;
+const isWreckingBallExample = document.body.dataset.scene === 'wreckingBall';
 const solver = document.querySelector<HTMLSelectElement>('#solver')!;
 const iterations = document.querySelector<HTMLSelectElement>('#iterations')!;
+const dominoAudio = new DominoAudio();
+const sound = document.querySelector<HTMLInputElement>('#sound')!;
+sound.onchange = () => {
+  dominoAudio.enabled = sound.checked;
+  dominoAudio.unlock();
+};
+canvas.addEventListener('pointerdown', () => dominoAudio.unlock());
 const autoPlay = document.querySelector<HTMLInputElement>('#auto-play')!;
 const playbackStatus = document.querySelector<HTMLOutputElement>('#playback-status')!;
 const diagnostics = new GPUGraphDiagnostics({traceTitle: 'GPU Graph Timeline'});
-const panel = createRigidBodyPanel(diagnostics);
+const panel = createRigidBodyPanel(
+  diagnostics,
+  isWreckingBallExample ? 'Wrecking Ball' : 'Rigid Body Lab',
+  isWreckingBallExample ? 'GPU physics · 204 blocks and a heavy pendulum' : undefined
+);
+if (isWreckingBallExample) {
+  scene.hidden = true;
+  sound.closest('label')!.style.display = 'none';
+  autoPlay.closest('label')!.style.display = 'none';
+  document.querySelector<HTMLButtonElement>('#push')!.hidden = true;
+  solver.disabled = true;
+}
 const controlsButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
 try {
   let failure: Error | null = null;
@@ -47,32 +77,41 @@ try {
   });
   const camera = new PerspectiveCamera(45, 1, 0.1, 200);
   camera.up.set(0, 0, 1);
-  camera.position.set(11, -16, 12);
+  if (scene.value === 'wreckingBall') camera.position.set(24, -30, 22);
+  else camera.position.set(13, -19, 19);
   const controls = new OrbitControls(camera, canvas);
-  controls.target.set(0, 0, 2);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.5;
+  controls.addEventListener('start', () => {
+    controls.autoRotate = false;
+  });
+  let lastOrbitTime = performance.now();
+  controls.target.set(
+    scene.value === 'wreckingBall' ? -2 : 0,
+    0,
+    scene.value === 'wreckingBall' ? 4 : 2
+  );
   controls.update();
   const cameraBuffer = device.createBuffer({
     id: 'rigid-body-camera',
     byteLength: 64,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
-  const cameraPositionBuffer = device.createBuffer({
-    id: 'rigid-body-camera-position',
-    byteLength: 16,
-    usage: Buffer.UNIFORM | Buffer.COPY_DST
-  });
+
   let previousSceneName: string | null = null;
   async function createScene() {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
     if (sceneName !== previousSceneName) {
-      iterations.value = sceneName === 'cradle' ? '8' : '32';
+      iterations.value = sceneName === 'cradle' ? '8' : sceneName === 'wreckingBall' ? '16' : '32';
+      if (sceneName === 'dominoSpiral' || sceneName === 'wreckingBall') solver.value = 'parallel';
       previousSceneName = sceneName;
     }
     const mechanism = makeMechanism(sceneName);
     const bodies = mechanism?.bodies ?? makeRigidBodyScene(sceneName);
-    if (mechanism) solver.value = 'ordered';
+    if (mechanism && sceneName !== 'wreckingBall') solver.value = 'ordered';
     const world = new GPURigidBodyWorld({
       bodies,
+      publishPoses: sceneName === 'cradle' || sceneName === 'wreckingBall',
       publicationBounds:
         sceneName === 'cradle'
           ? bodies.map(body => {
@@ -87,9 +126,20 @@ try {
             })
           : undefined,
       joints: mechanism?.joints,
+      ...(sceneName === 'dominoSpiral'
+        ? {...DOMINO_PHYSICS, eventCapacity: 512, impactImpulseThreshold: 0.15}
+        : {}),
+      ...(sceneName === 'wreckingBall' ? WRECKING_BALL_PHYSICS : {}),
       failurePolicy: 'rollback',
       // Resolve the cradle's closely spaced elastic impacts before the next pair closes.
-      timeStep: sceneName === 'cradle' ? 1 / 480 : 1 / 120,
+      timeStep:
+        sceneName === 'cradle'
+          ? 1 / 480
+          : sceneName === 'wreckingBall'
+            ? WRECKING_BALL_TIME_STEP
+            : sceneName === 'dominoSpiral'
+              ? 1 / 60
+              : 1 / 120,
       ...(sceneName === 'cradle'
         ? {restitutionThreshold: 0.05, linearDamping: 0.08, angularDamping: 0.12}
         : {}),
@@ -109,7 +159,7 @@ try {
     const meshVerticesData: number[] = [];
     const longitudeSegments = sceneName === 'cradle' ? 64 : 16;
     const latitudeSegments = sceneName === 'cradle' ? 32 : 12;
-    let vertexCount = longitudeSegments * latitudeSegments * 6;
+    let vertexCount = sceneName === 'dominoSpiral' ? 36 : longitudeSegments * latitudeSegments * 6;
     const shapes = device.createBuffer({
       data: new Float32Array(
         bodies.flatMap(body => {
@@ -141,84 +191,107 @@ try {
       data: new Float32Array(meshVerticesData.length ? meshVerticesData : [0, 0, 0, 0]),
       usage: Buffer.STORAGE
     });
-    const model =
-      sceneName === 'cradle'
-        ? null
-        : new Model(device, {
-            id: 'rigid-body-shapes',
-            source: `
-@group(0) @binding(0) var<uniform> matrix: mat4x4f;
-@group(0) @binding(1) var<storage,read> positions: array<vec4f>;
-@group(0) @binding(2) var<storage,read> orientations: array<vec4f>;
-@group(0) @binding(3) var<storage,read> shapes: array<vec4f>;
-@group(0) @binding(4) var<storage,read> sleepStates: array<vec4f>;
-@group(0) @binding(5) var<storage,read> meshVertices: array<vec4f>;
-@group(0) @binding(6) var<uniform> cameraPosition:vec4f;
-struct Output {@builtin(position) position: vec4f, @location(0) normal: vec3f, @location(1) color: vec3f, @location(2) localNormal: vec3f, @location(3) @interpolate(flat) sphere: f32, @location(4) worldPosition: vec3f, @location(5) @interpolate(flat) body: u32}
-fn rotate(rotation: vec4f, vector: vec3f)->vec3f {return vector+2.0*cross(rotation.xyz,cross(rotation.xyz,vector)+rotation.w*vector);}
-@vertex fn vertexMain(@builtin(vertex_index) vertex: u32,@builtin(instance_index) body: u32)->Output {
- let corners=array<vec2f,6>(vec2f(0,0),vec2f(1,0),vec2f(0,1),vec2f(0,1),vec2f(1,0),vec2f(1,1));
- let corner=corners[vertex%6u];var point=vec3f(0);var normal=vec3f(0);
- if(shapes[body].w==3.0) {
-  if(vertex<u32(shapes[body].y)) {
-   let first=u32(shapes[body].x)+(vertex/3u)*3u;
-   point=meshVertices[u32(shapes[body].x)+vertex].xyz;
-   normal=normalize(cross(meshVertices[first+1u].xyz-meshVertices[first].xyz,meshVertices[first+2u].xyz-meshVertices[first].xyz));
-  } else {normal=vec3f(0,0,1);}
- } else if(shapes[body].w==0.0) {
-  let tile=vertex/6u;let longitude=(f32(tile%${longitudeSegments}u)+corner.x)*6.2831853/${longitudeSegments}.0;let latitude=(f32(tile/${longitudeSegments}u)+corner.y)*3.14159265/${latitudeSegments}.0;
-  normal=vec3f(cos(longitude)*sin(latitude),sin(longitude)*sin(latitude),cos(latitude));point=normal*shapes[body].x;
- } else {
-  let face=(vertex/6u)%6u;let axis=face/2u;let direction=select(-1.0,1.0,face%2u==0u);normal[axis]=direction;point[axis]=direction;
-  point[(axis+1u)%3u]=corner.x*2.0-1.0;point[(axis+2u)%3u]=corner.y*2.0-1.0;point*=shapes[body].xyz;
-  // Remaining sphere tessellation vertices collapse for boxes.
-  if(vertex>=36u) {point=vec3f(0);}
- }
- var output:Output;output.worldPosition=positions[body].xyz+rotate(orientations[body],point);output.body=body;
- output.position=matrix*vec4f(output.worldPosition,1);
- output.localNormal=normal;output.sphere=1.0-shapes[body].w;output.normal=rotate(orientations[body],normal);output.color=select(vec3f(0.28+0.45*fract(f32(body)*0.27),0.48+0.25*fract(f32(body)*0.39),0.42+0.25*fract(f32(body)*0.17)),vec3f(0.68,0.73,0.67),(shapes[body].w==2.0||(shapes[body].w==3.0&&shapes[body].z>0.5)));output.color=mix(output.color,vec3f(0.55),select(0.0,0.7,sleepStates[body].y>0.5));return output;
+    const retainedScene = sceneName === 'cradle' || sceneName === 'wreckingBall';
+    const surface = retainedScene ? null : createLabMaterial(device, bodies, sceneName);
+    const model = retainedScene
+      ? null
+      : createPBRModel(device, {
+          id: 'rigid-body-shapes',
+          material: surface!.material,
+          defines: {
+            HAS_NORMALS: true,
+            HAS_TANGENTS: true,
+            HAS_UV: true,
+            HAS_UV_1: true,
+            USE_LIGHTS: true,
+            USE_IBL: true,
+            USE_SCENE_ENVIRONMENT: true,
+            USE_TEX_LOD: true,
+            USE_SCENE_COLOR_MANAGEMENT: true
+          },
+          modules: [rigidBodyPose, shadow],
+          source: `
+${makeRigidBodyVertexShader(sceneName, bodies.length, longitudeSegments, latitudeSegments)}
+fn grainHash(point:vec2f)->f32{return fract(sin(dot(point,vec2f(127.1,311.7)))*43758.5453);}
+fn surfaceGrain(point:vec2f)->f32{
+ let cell=floor(point);let fraction=fract(point);let weight=fraction*fraction*(3.0-2.0*fraction);
+ return mix(mix(grainHash(cell),grainHash(cell+vec2f(1,0)),weight.x),mix(grainHash(cell+vec2f(0,1)),grainHash(cell+vec2f(1,1)),weight.x),weight.y);
 }
 @fragment fn fragmentMain(input:Output)->@location(0) vec4f {
+ let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);
+ var colorValue=input.color*band;
 
- let band=select(1.0,0.3,input.sphere>0.5&&abs(input.localNormal.z)<0.13);return vec4f(input.color*band*(0.35+0.65*max(0.0,dot(normalize(input.normal),normalize(vec3f(-0.5,-0.7,1))))),1);}
+ ${
+   sceneName === 'dominoSpiral'
+     ? `
+
+ let distanceToPip=min(length(input.localPoint.yz-vec2f(0,0.38)),length(input.localPoint.yz+vec2f(0,0.38)));
+ let edge=max(fwidth(distanceToPip),0.001);
+ let grain=surfaceGrain((input.localPoint.xy+input.localPoint.z*vec2f(0.73,0.29))*75.0);
+ var color=vec3f(0.20,0.23,0.24)*(0.94+grain*0.12);
+
+ if(input.body>0u){
+  color=vec3f(0.018,0.022,0.028)*(0.87+grain*0.26);
+
+  if(abs(input.localNormal.x)>0.9){
+   let pip=1.0-smoothstep(0.085-edge,0.085+edge,distanceToPip);
+   let divider=(1.0-smoothstep(0.006,0.013,abs(input.localPoint.z)))*select(0.0,1.0,abs(input.localPoint.y)<0.27);
+   color=mix(color,vec3f(0.85,0.83,0.77),max(pip,divider*0.65));
+  }
+ }
+
+ colorValue=color;
+
+ `
+     : ''
+ }
+ let normal=normalize(input.normal);
+ let reference=select(vec3f(0,0,1),vec3f(0,1,0),abs(normal.z)>0.9);
+ let tangent=normalize(cross(reference,normal));
+ fragmentInputs.pbr_vPosition=input.worldPosition;
+ fragmentInputs.pbr_vNormal=normal;
+ fragmentInputs.pbr_vTBN=mat3x3f(tangent,cross(normal,tangent),normal);
+ fragmentInputs.pbr_vUV0=input.localPoint.xy;
+ fragmentInputs.pbr_vUV1=vec2f((f32(input.body)+0.5)/${bodies.length}.0,0.5);
+ let visibility=shadow_getSpotFactor(0,input.worldPosition,normal);
+ return pbr_filterColorWithSpotShadows(vec4f(colorValue,1),vec4f(visibility,1,1,1));}
 `,
-            vertexCount,
-            instanceCount: bodies.length,
-            parameters: {
-              depthWriteEnabled: true,
-              depthCompare: 'less-equal',
-              depthFormat: 'depth24plus'
-            },
-            bindings: {
-              matrix: cameraBuffer,
-              cameraPosition: cameraPositionBuffer,
-              positions: world.positions!,
-              orientations: world.orientations!,
-              shapes,
-              meshVertices,
-              sleepStates: world.sleepStates!
-            },
-            shaderLayout: {
-              attributes: [],
-              bindings: [
-                {name: 'matrix', group: 0, location: 0, type: 'uniform'},
-                {name: 'cameraPosition', group: 0, location: 6, type: 'uniform'},
-                ...['positions', 'orientations', 'shapes', 'sleepStates', 'meshVertices'].map(
-                  (name, index) => ({
-                    name,
-                    group: 0,
-                    location: index + 1,
-                    type: 'read-only-storage' as const,
-                    visibility: name === 'positions' ? 3 : 1
-                  })
-                )
-              ]
-            }
-          });
+          vertexCount,
+          instanceCount: bodies.length,
+          parameters: {
+            depthWriteEnabled: true,
+            depthCompare: 'less-equal',
+            depthFormat: 'depth24plus'
+          },
+          bindings: {
+            positions: world.positions!,
+            orientations: world.orientations!,
+            shapes,
+            meshVertices,
+            sleepStates: world.sleepStates!
+          }
+        });
+    if (model && surface)
+      model.shaderInputs.setProps({
+        lighting: {
+          lights: [{type: 'ambient', color: [160, 190, 230], intensity: 0.15}, LAB_SPOTLIGHT]
+        },
+        ibl: {
+          pbr_diffuseEnvSampler: surface.environment.diffuseTexture,
+          pbr_specularEnvSampler: surface.environment.specularTexture,
+          pbr_brdfLUT: surface.environment.brdfLUTTexture
+        },
+        pbrScene: {
+          environmentIntensity: 0.7,
+          environmentRotation: 0,
+          environmentMipCount: surface.environment.specularTexture.mipLevels,
+          toneMapMode: 1
+        }
+      });
     // Distance joints have no physical rods; thin cylinders visualize their centered attachments.
     const tethers = mechanism?.joints.filter(joint => joint.type === 'distance') ?? [];
     const tether =
-      sceneName !== 'cradle' && tethers.length > 0
+      !retainedScene && tethers.length > 0
         ? new Model(device, {
             id: 'mechanism-tethers',
             source: `
@@ -256,16 +329,36 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
           })
         : null;
     return {
+      shadows: retainedScene
+        ? null
+        : new RigidBodyShadows(
+            device,
+            {
+              positions: world.positions!,
+              orientations: world.orientations!,
+              shapes,
+              sleepStates: world.sleepStates!,
+              meshVertices
+            },
+            makeRigidBodyVertexShader(
+              sceneName,
+              bodies.length,
+              longitudeSegments,
+              latitudeSegments,
+              true
+            ),
+            {
+              vertexCount,
+              instanceCount: bodies.length
+            }
+          ),
+      surface,
       cradle:
         sceneName === 'cradle'
-          ? new CradleScene(
-              device,
-              world.positions!,
-              world.orientations!,
-              world.poseMatrices!,
-              mechanism!.frame!
-            )
-          : null,
+          ? new CradleScene(device, world, mechanism!.frame!)
+          : sceneName === 'wreckingBall'
+            ? new WreckingBallScene(device, world, bodies)
+            : null,
       world,
       graph,
       model,
@@ -278,18 +371,24 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     };
   }
   let resources = await createScene();
-  let paused = false;
+  let paused = isWreckingBallExample;
   let loading = false;
   let alive = true;
   let previous = performance.now();
   let accumulator = 0;
   let submitted: Promise<void> | null = null;
   let snapshot: Promise<void> | null = null;
+  let audioRead: Promise<void> | null = null;
+  let lastAudioRead = 0;
   let pushing: Promise<void> | null = null;
   let rebuilding: Promise<typeof resources> | null = null;
   let lastSample = 0;
   let animation = 0;
   let elapsedSimulation = 0;
+  let previousSampleSimulation = 0;
+  let previousSampleWall = performance.now();
+  let simulationRate = 0;
+  const frameWorkSamples: number[] = [];
   let playbackStartedAt = 0;
   let quietSince: number | null = null;
   let advanceAt: number | null = null;
@@ -302,9 +401,11 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
   };
   autoPlay.onchange = restartPlayback;
   const destroy = (target: typeof resources) => {
+    target.shadows?.destroy();
     target.cradle?.destroy();
     target.tether?.destroy();
     target.model?.destroy();
+    target.surface?.destroy();
     target.graph.destroy();
     target.world.destroy();
     target.shapes.destroy();
@@ -319,7 +420,8 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     });
     scene.disabled = solver.disabled = iterations.disabled = true;
     try {
-      await Promise.all([snapshot, pushing, submitted]);
+      await Promise.all([snapshot, audioRead, pushing, submitted]);
+      dominoAudio.reset();
       if (!alive) return;
       rebuilding = createScene();
       const replacement = await rebuilding;
@@ -331,14 +433,28 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       diagnostics.clear();
       destroy(resources);
       resources = replacement;
-      if (changedScene)
-        camera.position.set(
-          resources.sceneName === 'mixed' ? 24 : 11,
-          resources.sceneName === 'mixed' ? -30 : -16,
-          resources.sceneName === 'mixed' ? 25 : 12
-        );
+      if (changedScene) {
+        if (resources.sceneName === 'wreckingBall') {
+          camera.position.set(24, -30, 22);
+          controls.target.set(-2, 0, 4);
+        } else {
+          camera.position.set(
+            resources.sceneName === 'mixed' ? 24 : 11,
+            resources.sceneName === 'mixed' ? -30 : -16,
+            resources.sceneName === 'mixed' ? 25 : resources.sceneName === 'dominoSpiral' ? 19 : 12
+          );
+          controls.target.set(0, 0, 2);
+        }
+      }
+      if (isWreckingBallExample) {
+        paused = true;
+        document.querySelector<HTMLButtonElement>('#pause')!.textContent = 'Release ball';
+      }
       accumulator = 0;
       elapsedSimulation = 0;
+      frameWorkSamples.length = 0;
+      previousSampleSimulation = 0;
+      previousSampleWall = performance.now();
       restartPlayback();
     } catch (error) {
       failure = error instanceof Error ? error : new Error(String(error));
@@ -348,7 +464,8 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       controlsButtons.forEach(button => {
         button.disabled = false;
       });
-      scene.disabled = solver.disabled = iterations.disabled = false;
+      scene.disabled = iterations.disabled = false;
+      solver.disabled = isWreckingBallExample;
     }
   }
   document.querySelector<HTMLButtonElement>('#reset')!.onclick = reset;
@@ -356,6 +473,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
   solver.onchange = reset;
   iterations.onchange = reset;
   const pauseButton = document.querySelector<HTMLButtonElement>('#pause')!;
+  if (isWreckingBallExample) pauseButton.textContent = 'Release ball';
   pauseButton.onclick = () => {
     paused = !paused;
     restartPlayback();
@@ -419,10 +537,17 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       animation = requestAnimationFrame(frame);
       return;
     }
+    const frameWorkStarted = performance.now();
+    const measureFrame = !paused && !loading;
     const elapsed = Math.min(0.05, (now - previous) / 1000);
     previous = now;
     if (!loading && !paused && advanceAt === null) {
-      accumulator = Math.min(accumulator + elapsed, 4 / 120);
+      accumulator = Math.min(
+        accumulator + elapsed,
+        resources.sceneName === 'dominoSpiral' || resources.sceneName === 'wreckingBall'
+          ? 4 / 60
+          : 4 / 120
+      );
       const encoder = device.createCommandEncoder();
       while (accumulator >= resources.world.timeStep) {
         diagnostics.encode(resources.graph, encoder, {parameters: undefined});
@@ -433,7 +558,8 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     }
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
-    controls.update();
+    controls.update(Math.min(0.1, (now - lastOrbitTime) / 1000));
+    lastOrbitTime = now;
     camera.updateMatrixWorld();
     const matrix = new Matrix4(camera.projectionMatrix.elements).multiplyRight(
       camera.matrixWorldInverse.elements
@@ -442,7 +568,10 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     const depth = new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1]);
     depth.multiplyRight(matrix);
     cameraBuffer.write(new Float32Array(depth));
-    cameraPositionBuffer.write(new Float32Array([...camera.position.toArray(), 1]));
+    resources.model?.shaderInputs.setProps({
+      rigidBodyPose: {matrix: depth},
+      pbrProjection: {camera: camera.position.toArray()}
+    });
     if (resources.cradle) {
       const projection = new Matrix4([
         1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
@@ -453,6 +582,17 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
         camera.position.z
       ]);
     } else {
+      if (resources.shadows) {
+        const projection = new Matrix4([
+          1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
+        ]).multiplyRight(camera.projectionMatrix.elements);
+        resources.model!.shaderInputs.setProps({
+          shadow: resources.shadows.render(
+            new Matrix4(camera.matrixWorldInverse.elements),
+            projection
+          )
+        });
+      }
       const pass = device.beginRenderPass({clearColor: [0.9, 0.92, 0.89, 1], clearDepth: 1});
       resources.model?.draw(pass);
       resources.tether?.draw(pass);
@@ -461,6 +601,12 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     device.submit();
     const fence = device.createFence();
     submitted = fence.signaled
+      .then(() => {
+        if (measureFrame && resources.sceneName === 'wreckingBall') {
+          frameWorkSamples.push(performance.now() - frameWorkStarted);
+          if (frameWorkSamples.length > 180) frameWorkSamples.shift();
+        }
+      })
       .catch(error => {
         failure = error;
       })
@@ -468,6 +614,27 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
         fence.destroy();
         submitted = null;
       });
+    if (
+      !loading &&
+      !audioRead &&
+      dominoAudio.enabled &&
+      resources.sceneName === 'dominoSpiral' &&
+      now - lastAudioRead > 50
+    ) {
+      lastAudioRead = now;
+      const target = resources;
+      const generation = dominoAudio.generation;
+      audioRead = target.world
+        .readContactEvents()
+        .then(batch => {
+          if (alive && target === resources)
+            dominoAudio.play(batch.events, target.world.timeStep, batch.step, generation);
+        })
+        .catch(() => {})
+        .finally(() => {
+          audioRead = null;
+        });
+    }
     if (!loading && !snapshot && now - lastSample > 500) {
       lastSample = now;
       const target = resources;
@@ -478,6 +645,11 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       ])
         .then(([counters, states]) => {
           if (!alive || target !== resources) return;
+          simulationRate =
+            (sampledSimulationTime - previousSampleSimulation) /
+            Math.max(0.001, (now - previousSampleWall) / 1000);
+          previousSampleSimulation = sampledSimulationTime;
+          previousSampleWall = now;
           if (autoPlay.checked && !counters.complete) {
             autoPlay.checked = false;
             restartPlayback();
@@ -509,7 +681,14 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
             }
           }
           const memory = target.capacity;
-          status.value = `${counters.complete ? '' : 'INCOMPLETE SIMULATION · '}${target.bodies.filter(body => body.mass !== 0).length} moving bodies · ${target.world.solver} solver\n${elapsedSimulation.toFixed(1)} s simulated · ${target.graph.stats.nodeOrder.length} graph nodes\n${counters.maximumCandidatePairs} peak candidate pairs · ${counters.maximumCandidateTests} peak candidate tests\n${counters.incompleteSteps} incomplete steps / ${counters.steps} total · ${(memory.ownedBufferBytes / 1048576).toFixed(2)} MiB world buffers`;
+          const sortedWork = [...frameWorkSamples].sort((first, second) => first - second);
+          const frameWork = sortedWork[Math.max(0, Math.ceil(sortedWork.length * 0.95) - 1)];
+          const performanceSummary =
+            target.sceneName === 'wreckingBall' && sortedWork.length >= 30
+              ? `\n${frameWork.toFixed(1)} ms p95 frame work · ${Math.max(0, (1 - frameWork / (1000 / 60)) * 100).toFixed(0)}% margin at 60 fps`
+              : '';
+
+          status.value = `${counters.complete ? '' : 'INCOMPLETE SIMULATION · '}${target.bodies.filter(body => body.mass !== 0).length} moving bodies · ${target.world.solver} solver\n${elapsedSimulation.toFixed(1)} s simulated · ${(simulationRate * 100).toFixed(0)}% real time · ${target.graph.stats.nodeOrder.length} graph nodes\n${counters.maximumCandidatePairs} peak candidate pairs · ${counters.maximumCandidateTests} peak candidate tests\n${counters.incompleteSteps} incomplete steps / ${counters.steps} total · ${(memory.ownedBufferBytes / 1048576).toFixed(2)} MiB world buffers${performanceSummary}`;
         })
         .catch(error => {
           failure = error;
@@ -527,11 +706,11 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       alive = false;
       cancelAnimationFrame(animation);
       controls.dispose();
-      void Promise.allSettled([snapshot, pushing, rebuilding, submitted]).then(() => {
+      void Promise.allSettled([snapshot, audioRead, pushing, rebuilding, submitted]).then(() => {
         destroy(resources);
         panel.destroy();
-        cameraPositionBuffer.destroy();
         cameraBuffer.destroy();
+        dominoAudio.destroy();
         device.destroy();
       });
     },

@@ -2,16 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {
-  ArrowTextRenderer,
-  createArrowTextShaderInputs,
-  makeArrowFixedSizeListVector
-} from '@luma.gl/arrow';
+import {ArrowTextRenderer, createArrowTextShaderInputs} from '@luma.gl/engine/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import type {CommandEncoder, Device, RenderPass} from '@luma.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {measureFontAtlasText, type FontAtlas, type TextGlyphLayout} from '@luma.gl/text';
-import type {TextAttributeModel} from '@luma.gl/text/experimental';
-import type {Text3DBounds} from '@luma.gl/text/text-3d';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
+import {measureFontAtlasText, type FontAtlas, type TextGlyphLayout} from '@luma.gl/engine/text';
+import type {TextAttributeModel} from '@luma.gl/engine/text-experimental';
+import type {Text3DBounds} from '@luma.gl/engine/text-3d';
 import * as arrow from 'apache-arrow';
 import {
   IDENTITY_MATRIX,
@@ -122,7 +119,7 @@ export class AtlasTextRenderer implements TextSpaceCrawlRenderer {
     const {fontAtlas, textRows} = props;
     const glyphWorldScale = TARGET_CRAWL_LINE_HEIGHT / fontAtlas.lineHeight;
     const textTable = makeAtlasTextTable(textRows, fontAtlas);
-    const crawlApp = getCrawlAppModule(device);
+    const crawlApp = getCrawlAppPlugin();
     const shaderInputs = createArrowTextShaderInputs();
     const textRenderer = await ArrowTextRenderer.create(device, {
       id: 'atlas-text-crawl',
@@ -133,7 +130,8 @@ export class AtlasTextRenderer implements TextSpaceCrawlRenderer {
       model: 'attribute',
       fontAtlas,
       modelProps: {
-        modules: [crawlApp],
+        modules: [app],
+        plugins: [crawlApp],
         shaderInputs
       }
     });
@@ -280,13 +278,17 @@ function extendBounds(bounds: Text3DBounds, point: [number, number, number]): vo
   }
 }
 
-function getCrawlAppModule(device: Device): ShaderModule {
+function getCrawlAppPlugin(): ShaderPlugin {
   return {
-    ...app,
-    inject: {
-      'vs:TEXT_ATTRIBUTE_VERTEX_TRANSFORM':
-        device.type === 'webgpu' ? WGSL_CRAWL_VERTEX_INJECTION : GLSL_CRAWL_VERTEX_INJECTION
-    }
+    name: 'crawl-app',
+    injections: [
+      {
+        stage: 'vertex',
+        target: 'TEXT_ATTRIBUTE_VERTEX_TRANSFORM',
+        glsl: GLSL_CRAWL_VERTEX_INJECTION,
+        wgsl: WGSL_CRAWL_VERTEX_INJECTION
+      }
+    ]
   };
 }
 

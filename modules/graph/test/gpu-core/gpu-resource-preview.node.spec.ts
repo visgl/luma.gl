@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture} from '@luma.gl/core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {readGPUResourcePreview} from '../../src/gpu-core/gpu-resource-preview';
 import {expect, test, vi} from 'vitest';
 

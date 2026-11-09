@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {CommandEncoder, RenderPass} from '@luma.gl/core';
-import type {Text3DBounds} from '@luma.gl/text/text-3d';
+import type {Text3DBounds} from '@luma.gl/engine/text-3d';
 import type {Matrix4, NumberArray4, NumberArray16} from '@math.gl/core';
 
 /** Frame uniforms shared by the atlas and extruded crawl renderers. */

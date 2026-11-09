@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/arrow';
+import {makeArrowFixedSizeListVector, makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
 import {parseSQLPredicate} from '@loaders.gl/sql';
 import {Buffer, luma, type Device} from '@luma.gl/core';
 import {mountStreamingPanel} from './streaming-panel';
@@ -22,7 +22,7 @@ import {
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
 import {planGPUDataFrameQuery} from './loaders-sql-query';
-import {type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import * as arrow from 'apache-arrow';

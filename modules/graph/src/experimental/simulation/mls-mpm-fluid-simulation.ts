@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type BoundKernel, createBoundKernel} from '../../gpu-core/utils/bound-kernel';
+
 import {Buffer, type CommandEncoder, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import {
   GPUCommandGraph,
   type CompiledGPUCommandGraph,
@@ -227,10 +229,10 @@ export class MLSMPMFluidSimulation {
   private readonly particleBuffers: readonly [Buffer, Buffer];
   private readonly uniformBuffer: Buffer;
   private readonly initialParticleData: Float32Array;
-  private readonly clearGridComputation: Computation;
-  private readonly particleToGridComputation: Computation;
-  private readonly updateGridComputation: Computation;
-  private readonly gridToParticleComputation: Computation;
+  private readonly clearGridComputation: BoundKernel;
+  private readonly particleToGridComputation: BoundKernel;
+  private readonly updateGridComputation: BoundKernel;
+  private readonly gridToParticleComputation: BoundKernel;
   private readonly staticStats: Omit<
     MLSMPMFluidSimulationStats,
     'encodeCount' | 'stepCount' | 'lastSubstepCount' | 'lastSubstepDeltaTime'
@@ -266,7 +268,7 @@ export class MLSMPMFluidSimulation {
     const gridCellCount = this.gridSize[0] * this.gridSize[1];
     const gridBufferByteLength = gridCellCount * MLS_MPM_FLUID_GRID_CELL_BYTE_LENGTH;
     const ownedBuffers: Buffer[] = [];
-    const ownedComputations: Computation[] = [];
+    const ownedComputations: BoundKernel[] = [];
     try {
       const particleBufferA = device.createBuffer({
         id: `${this.id}-particles-a`,
@@ -293,25 +295,25 @@ export class MLSMPMFluidSimulation {
       });
       ownedBuffers.push(uniformBuffer);
 
-      const clearGridComputation = new Computation(device, {
+      const clearGridComputation = createBoundKernel(device, {
         id: `${this.id}-clear-grid`,
         source: MLS_MPM_FLUID_CLEAR_GRID_SHADER,
         shaderLayout: {bindings: MLS_MPM_FLUID_CLEAR_GRID_BINDINGS}
       });
       ownedComputations.push(clearGridComputation);
-      const particleToGridComputation = new Computation(device, {
+      const particleToGridComputation = createBoundKernel(device, {
         id: `${this.id}-particle-to-grid`,
         source: MLS_MPM_FLUID_PARTICLE_TO_GRID_SHADER,
         shaderLayout: {bindings: MLS_MPM_FLUID_PARTICLE_TO_GRID_BINDINGS}
       });
       ownedComputations.push(particleToGridComputation);
-      const updateGridComputation = new Computation(device, {
+      const updateGridComputation = createBoundKernel(device, {
         id: `${this.id}-update-grid`,
         source: MLS_MPM_FLUID_UPDATE_GRID_SHADER,
         shaderLayout: {bindings: MLS_MPM_FLUID_UPDATE_GRID_BINDINGS}
       });
       ownedComputations.push(updateGridComputation);
-      const gridToParticleComputation = new Computation(device, {
+      const gridToParticleComputation = createBoundKernel(device, {
         id: `${this.id}-grid-to-particle`,
         source: MLS_MPM_FLUID_GRID_TO_PARTICLE_SHADER,
         shaderLayout: {bindings: MLS_MPM_FLUID_GRID_TO_PARTICLE_BINDINGS}
@@ -325,12 +327,15 @@ export class MLSMPMFluidSimulation {
       this.particleToGridComputation = particleToGridComputation;
       this.updateGridComputation = updateGridComputation;
       this.gridToParticleComputation = gridToParticleComputation;
-      this.clearGridComputation.setBindings({grid: this.gridBuffer});
-      this.updateGridComputation.setBindings({grid: this.gridBuffer, uniforms: this.uniformBuffer});
+      Object.assign(this.clearGridComputation.bindings, {grid: this.gridBuffer});
+      Object.assign(this.updateGridComputation.bindings, {
+        grid: this.gridBuffer,
+        uniforms: this.uniformBuffer
+      });
       this.commandGraph = this.createCommandGraph(particleBufferByteLength, gridBufferByteLength);
     } catch (error) {
       for (const computation of ownedComputations.reverse()) {
-        computation.destroy();
+        computation.kernel.destroy();
       }
       for (const buffer of ownedBuffers.reverse()) {
         buffer.destroy();
@@ -414,10 +419,6 @@ export class MLSMPMFluidSimulation {
     this.device.writeBufferViaCommandEncoder(commandEncoder, this.uniformBuffer, uniformData);
 
     this.setParticleTransferBindings(this.currentParticleBufferIndex);
-    this.clearGridComputation.predraw(commandEncoder);
-    this.particleToGridComputation.predraw(commandEncoder);
-    this.updateGridComputation.predraw(commandEncoder);
-    this.gridToParticleComputation.predraw(commandEncoder);
 
     let nextParticleBufferIndex = this.currentParticleBufferIndex;
     const encodings: GPUCommandGraphEncoding[] = [];
@@ -475,10 +476,10 @@ export class MLSMPMFluidSimulation {
     }
     this.commandGraph.destroy();
     this.mostRecentEncodings = [];
-    this.gridToParticleComputation.destroy();
-    this.updateGridComputation.destroy();
-    this.particleToGridComputation.destroy();
-    this.clearGridComputation.destroy();
+    this.gridToParticleComputation.kernel.destroy();
+    this.updateGridComputation.kernel.destroy();
+    this.particleToGridComputation.kernel.destroy();
+    this.clearGridComputation.kernel.destroy();
     this.uniformBuffer.destroy();
     this.gridBuffer.destroy();
     this.particleBuffers[1].destroy();
@@ -525,7 +526,10 @@ export class MLSMPMFluidSimulation {
       workload: makeWorkload('ClearMLSMPMGrid', gridWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
-          this.clearGridComputation.dispatch(computePass, gridWorkgroupCount);
+          this.clearGridComputation.kernel.dispatch(computePass, {
+            bindings: this.clearGridComputation.bindings,
+            x: gridWorkgroupCount
+          });
         }
       })
     });
@@ -540,7 +544,10 @@ export class MLSMPMFluidSimulation {
       workload: makeWorkload('ScatterMLSMPMParticles', particleWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
-          this.particleToGridComputation.dispatch(computePass, particleWorkgroupCount);
+          this.particleToGridComputation.kernel.dispatch(computePass, {
+            bindings: this.particleToGridComputation.bindings,
+            x: particleWorkgroupCount
+          });
         }
       })
     });
@@ -554,7 +561,10 @@ export class MLSMPMFluidSimulation {
       workload: makeWorkload('UpdateMLSMPMGrid', gridWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
-          this.updateGridComputation.dispatch(computePass, gridWorkgroupCount);
+          this.updateGridComputation.kernel.dispatch(computePass, {
+            bindings: this.updateGridComputation.bindings,
+            x: gridWorkgroupCount
+          });
         }
       })
     });
@@ -570,7 +580,10 @@ export class MLSMPMFluidSimulation {
       workload: makeWorkload('AdvectMLSMPMParticles', particleWorkgroupCount),
       compile: () => ({
         encode: ({computePass}) => {
-          this.gridToParticleComputation.dispatch(computePass, particleWorkgroupCount);
+          this.gridToParticleComputation.kernel.dispatch(computePass, {
+            bindings: this.gridToParticleComputation.bindings,
+            x: particleWorkgroupCount
+          });
         }
       })
     });
@@ -586,12 +599,12 @@ export class MLSMPMFluidSimulation {
   private setParticleTransferBindings(inputParticleBufferIndex: number): void {
     const inputParticleBuffer = this.particleBuffers[inputParticleBufferIndex];
     const outputParticleBuffer = this.particleBuffers[1 - inputParticleBufferIndex];
-    this.particleToGridComputation.setBindings({
+    Object.assign(this.particleToGridComputation.bindings, {
       particlesInput: inputParticleBuffer,
       grid: this.gridBuffer,
       uniforms: this.uniformBuffer
     });
-    this.gridToParticleComputation.setBindings({
+    Object.assign(this.gridToParticleComputation.bindings, {
       particlesInput: inputParticleBuffer,
       grid: this.gridBuffer,
       particlesOutput: outputParticleBuffer,

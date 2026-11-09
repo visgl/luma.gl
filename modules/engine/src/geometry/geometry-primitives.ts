@@ -15,10 +15,7 @@ import {
   type IcoSphereGeometryProps,
   type TruncatedConeGeometryProps
 } from '@math.gl/geometry';
-import {
-  TorusGeometry as MathTorusGeometry,
-  type TorusGeometryProps
-} from '@math.gl/geometry/parametric';
+import {TorusGeometry as MathTorusGeometry, type TorusGeometryProps} from '@math.gl/geometry';
 import {Geometry} from './geometry';
 
 export type {TorusGeometryProps};

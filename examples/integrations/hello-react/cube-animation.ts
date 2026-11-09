@@ -5,7 +5,7 @@
 import type {NumberArray} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
 import type {AnimationProps} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core';
 
 const WGSL_SHADER = /* WGSL */ `\
