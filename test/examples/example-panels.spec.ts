@@ -1081,8 +1081,9 @@ describe('standalone infobox panels', () => {
       expect(button.getAttribute('aria-expanded')).toBe('false');
       button.click();
       await vi.waitFor(() => expect(button.getAttribute('aria-expanded')).toBe('true'));
-      expect(input.checkVisibility()).toBe(true);
-      expect(input.value).toBe('retained');
+      const refreshedInput = host.querySelector<HTMLInputElement>('input')!;
+      expect(refreshedInput.checkVisibility()).toBe(true);
+      expect(refreshedInput.value).toBe('retained');
       expect(button.textContent).toContain(title);
     } finally {
       manager.finalize();
