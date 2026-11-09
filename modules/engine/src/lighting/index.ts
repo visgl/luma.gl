@@ -96,3 +96,12 @@ export type {
   LightmapBakeView,
   LightmapTextures
 } from './lightmap-baker';
+export {
+  readLightmapData,
+  createLightmapFromData,
+  encodeLightmapData,
+  decodeLightmapData
+} from './lightmap-data';
+export type {LightmapData} from './lightmap-data';
+export {sampleLightmapEnvironment} from './lightmap-environment';
+export type {LightmapEnvironment, LightmapEnvironmentSample} from './lightmap-environment';

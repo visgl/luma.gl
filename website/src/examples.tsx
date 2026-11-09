@@ -34,6 +34,7 @@ const exampleConfig = {};
 
 const loadAnimationApp = () => import('../../examples/api/animation/app');
 const loadBlendingApp = () => import('../../examples/api/blending/app');
+const loadLightmapBakingApp = () => import('../../examples/api/lightmap-baking/app');
 const loadPBRShadowsApp = () => import('../../examples/api/pbr-shadows/app');
 const loadPrefilteredEnvironmentApp = () => import('../../examples/api/prefiltered-environment/app');
 const loadCubemapApp = () => import('../../examples/api/cubemap/app');
@@ -3043,3 +3044,15 @@ export const GPUPoolExample: React.FC = () => {
     <iframe title="Pool" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
   </ExamplePage>;
 };
+
+export const LightmapBakingExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="lightmap-baking"
+    title="Lightmap Baking"
+    directory="api"
+    loadTemplate={loadLightmapBakingApp}
+    config={exampleConfig}
+    devices={['webgl2', 'webgpu']}
+    {...props}
+  />
+);

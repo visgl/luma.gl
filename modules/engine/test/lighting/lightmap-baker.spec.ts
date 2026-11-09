@@ -4,7 +4,7 @@
 import {expect, test, vi} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {Geometry} from '@luma.gl/engine';
+import {Geometry, type AnimationProps} from '@luma.gl/engine';
 import {LightmapBaker, createPBRMaterial, createPBRLightmapModel} from '@luma.gl/engine/lighting';
 
 async function getDevices() {
@@ -275,33 +275,68 @@ test('standard example renders live lighting and freezes baked pixels', async co
   if (!devices.length) return context.skip('No GPU');
   const {LightmapPreview} = await import('../../../../examples/api/pbr-shadows/lightmap-preview');
   for (const device of devices) {
-    const preview = new LightmapPreview(device);
+    const preview = new LightmapPreview(device, 'preview');
     const texture = device.createTexture({
       width: 32,
       height: 32,
       format: 'rgba8unorm',
       usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
     });
+    const depth = device.createTexture({
+      width: 32,
+      height: 32,
+      format: 'depth24plus',
+      usage: Texture.RENDER_ATTACHMENT
+    });
     const framebuffer = device.createFramebuffer({
       width: 32,
       height: 32,
-      colorAttachments: [texture]
+      colorAttachments: [texture],
+      depthStencilAttachment: depth
     });
-    const buffer = device.createBuffer({byteLength: 256, usage: Buffer.COPY_DST | Buffer.MAP_READ});
+    const buffer = device.createBuffer({
+      byteLength: 256 * 32,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
     async function render(mode: 'live' | 'baking' | 'baked', time: number) {
       preview.render(framebuffer, mode, time);
       device.submit();
-      texture.readBuffer({x: 16, y: 16, width: 1, height: 1}, buffer);
-      return Array.from((await buffer.readAsync()).slice(0, 4));
+      texture.readBuffer({x: 0, y: 0, width: 32, height: 32}, buffer);
+      return Array.from(await buffer.readAsync());
     }
     try {
+      const initialBake = await render('baking', 0);
+      expect(
+        Math.max(...initialBake.filter((_, index) => index % 4 < 3)),
+        device.type
+      ).toBeGreaterThan(80);
+      const directBake = await preview.exportData();
+      const litFloor = directBake.data[(26 * 256 + 9) * 4];
+      const blockedFloor = directBake.data[(28 * 256 + 18) * 4];
+      expect(litFloor, device.type).toBeGreaterThan(0.1);
+      expect(blockedFloor).toBeLessThan(litFloor * 0.04);
       const live = await render('live', 0);
-      expect(live[0] + live[1] + live[2], device.type).toBeGreaterThan(50);
+      expect(Math.max(...live.filter((_, index) => index % 4 < 3)), device.type).toBeGreaterThan(
+        80
+      );
+      expect(await render('live', 2000)).toEqual(live);
       const baking = await render('baking', 150);
-      expect(baking[0] + baking[1] + baking[2], device.type).toBeGreaterThan(50);
+      expect(Math.max(...baking.filter((_, index) => index % 4 < 3)), device.type).toBeGreaterThan(
+        80
+      );
       await render('baked', 300);
       const frozen = await render('baked', 1000);
       expect(await render('baked', 2000)).toEqual(frozen);
+      const exported = await preview.exportData();
+      // Each two-texel gutter is filled only from its own chart, including atlas corners.
+      expect(exported.data[3]).toBe(1);
+      expect(exported.data[31 * 4 + 3]).toBe(1);
+      expect(exported.data[32 * 4 + 3]).toBe(2);
+      expect(exported.data[(64 * 256 + 128) * 4 + 3]).toBe(21);
+      preview.reset();
+      preview.loadData(exported);
+      expect(await render('baked', 2100)).toEqual(frozen);
+      expect(await preview.exportData()).toEqual(exported);
       preview.reset();
       expect(preview.baker.sampleCount).toBe(0);
       await render('baked', 3000);
@@ -310,6 +345,7 @@ test('standard example renders live lighting and freezes baked pixels', async co
       preview.destroy();
       framebuffer.destroy();
       texture.destroy();
+      depth.destroy();
       buffer.destroy();
     }
   }
@@ -353,5 +389,33 @@ test('long default bakes retain later samples in float32 history', {
       samples.forEach(model => model.destroy());
       baker.destroy();
     }
+  }
+});
+
+test('lightmap example explains unsupported float render targets before allocating GPU resources', async context => {
+  const devices = await getDevices();
+  if (!devices.length) return context.skip('No GPU');
+  const {default: LightmapExample} = await import('../../../../examples/api/lightmap-baking/app');
+  const device = devices[0];
+  const getCapabilities = device.getTextureFormatCapabilities.bind(device);
+  const capabilities = vi
+    .spyOn(device, 'getTextureFormatCapabilities')
+    .mockImplementation(format => ({...getCapabilities(format), render: false}));
+  const createTexture = vi.spyOn(device, 'createTexture');
+  const host = document.createElement('div');
+  host.id = 'example-panel-host';
+  document.body.append(host);
+  let example: InstanceType<typeof LightmapExample> | undefined;
+  try {
+    example = new LightmapExample({device} as AnimationProps);
+    expect(createTexture).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(host.textContent).toContain('Lightmap baking requires renderable float32 textures')
+    );
+  } finally {
+    example?.onFinalize();
+    host.remove();
+    capabilities.mockRestore();
+    createTexture.mockRestore();
   }
 });

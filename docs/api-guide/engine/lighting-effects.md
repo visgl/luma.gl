@@ -159,6 +159,16 @@ irradiance, then bind the result to PBR materials. Reset after bake inputs chang
 Baked light can include direct illumination: disable corresponding live contributions to
 avoid counting them twice. Baking does not replace dynamic-object lighting or screen-space effects.
 
+The [Lightmap Baking example](/examples/api/lightmap-baking) keeps two connected rooms,
+colored objects and warm/cool lights static while the camera orbits. It combines punctual-light
+samples with `sampleLightmapEnvironment` directional samples, including shadow visibility.
+This captures direct environment illumination, not multi-bounce color bleeding.
+
+Use `readLightmapData` and `encodeLightmapData` for explicit HDR export; reload with
+`decodeLightmapData` and `createLightmapFromData`. The returned result owns its GPU texture;
+CPU data and the matching geometry/UV layout remain application-owned. Exported irradiance is
+linear, without tone mapping. Changing the lights marks the example bake stale until reset.
+
 
 ## Frame and resource lifecycle
 

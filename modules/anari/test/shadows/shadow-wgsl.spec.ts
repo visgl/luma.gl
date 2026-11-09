@@ -177,7 +177,7 @@ void main() {
       ],
       pointLights: [{position: [0, 3, 0], range: 12}],
       drawShadowCasters: view => {
-        caster.setParameters(view.rasterParameters);
+        caster.setParameters({...view.rasterParameters, cullMode: 'none'});
         caster.draw(view.renderPass);
         casterDrawCount++;
       }

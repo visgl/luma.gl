@@ -229,7 +229,9 @@ export class ShadowMapRenderer {
       });
     });
 
-    const pointViews = pointLights.flatMap(light => getPointShadowViews(resolvePointLight(light)));
+    const pointViews = pointLights.flatMap(light =>
+      getPointShadowViews(resolvePointLight(light), this.device.type === 'webgpu')
+    );
     pointLights.forEach((inputLight, lightIndex) => {
       const light = resolvePointLight(inputLight);
       for (let faceIndex = 0; faceIndex < POINT_FACE_COUNT; faceIndex++) {
@@ -305,7 +307,9 @@ export class ShadowMapRenderer {
       depthCompare: 'less-equal',
       depthBias: options.light.depthBias,
       depthBiasSlopeScale: options.light.depthBiasSlopeScale,
-      cullMode: 'back'
+      cullMode: 'back',
+      // Cube sampling uses top-left texel coordinates on WebGPU; its face projection flips Y.
+      frontFace: options.type === 'point' && this.device.type === 'webgpu' ? 'cw' : 'ccw'
     } satisfies RenderPipelineParameters);
     const context = {
       framebuffer: options.framebuffer,
@@ -479,7 +483,10 @@ export function getSpotShadowView(light: Required<SpotShadowLight>): ComputedSha
 }
 
 /** Computes the six canonical cameras used by one cube-array point shadow. */
-export function getPointShadowViews(light: Required<PointShadowLight>): ComputedShadowView[] {
+export function getPointShadowViews(
+  light: Required<PointShadowLight>,
+  invertY = false
+): ComputedShadowView[] {
   const projectionMatrix = new Matrix4(OPENGL_TO_WEBGPU_MATRIX).multiplyRight(
     new Matrix4().perspective({
       fovy: radians(90),
@@ -488,6 +495,8 @@ export function getPointShadowViews(light: Required<PointShadowLight>): Computed
       far: light.range
     })
   );
+  // WebGPU cube lookups use the same face axes as GL but a top-left texture origin.
+  if (invertY) projectionMatrix.multiplyLeft(new Matrix4().scale([1, -1, 1]));
   return POINT_FACE_ORIENTATIONS.map((orientation): ComputedShadowView => {
     const viewMatrix = new Matrix4().lookAt({
       eye: light.position,

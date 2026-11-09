@@ -40,7 +40,7 @@ Alpha in bake targets is chart coverage, not material opacity.
 
 Ambient, directional, point and spot lights use the shared lighting inputs. Optional shadow
 maps attenuate matching direct lights; directional cascades use the supplied receiver view
-matrix. Area lights, environment integration, normal-map perturbations, multi-bounce GI and
+matrix. Area lights, automatic environment integration, normal-map perturbations, multi-bounce GI and
 baked specular are outside this implementation. Supply sampled punctual lights to approximate
 an extended emitter over successive updates. The baker does not jitter lights automatically.
 
@@ -86,5 +86,45 @@ Both backends require renderable rgba32float history and renderable/filterable f
 `rgba32float` is accepted only when supported. Unsupported capabilities fail explicitly, with
 no SDR fallback. Match bake model color attachment formats when overriding the baker format.
 
-The [PBR Shadows example](/examples/api/pbr-shadows) includes Live/Baking/Baked modes with a
-fixed-UV plane, sample count and reset control. File encoding/export remains application supplied.
+The [Lightmap Baking example](/examples/api/lightmap-baking) includes Live/Baking/Baked modes,
+sample count, reset and HDR export/reload controls.
+
+
+## Environment sampling
+
+`sampleLightmapEnvironment(environment, sampleIndex, sampleCount)` produces a directional light
+sample from caller-owned, linear RGB equirectangular radiance. Row zero is the north pole;
+longitude zero points along +X and increases toward +Z. The fixed-budget sequence samples uniform
+solid angle, weights radiance by `4π`, and leaves the cosine term to the bake shader. Use
+`lighting.useByteColors: false`. Constant radiance L converges to irradiance πL on an unoccluded plane.
+
+Use `directionToLight` to prepare a directional shadow map before drawing each sample; use the
+returned `light` for the bake model's lighting props. Shadow visibility is evaluated by the existing
+bake model. The sampler borrows CPU pixels and allocates no GPU resources. Choose the sample budget
+before starting; changing it or changing radiance requires resetting accumulation. Uniform sampling
+can converge slowly around small bright emitters. This is direct environment illumination, without
+interreflection, importance sampling, image decoding or automatic sky updates.
+
+## Portable HDR results
+
+- `readLightmapData(texture, uvSet = 1)` explicitly submits pending work and performs asynchronous
+  readback of a float16/float32 texture into independent float32 RGBA CPU data. Call it outside open
+  render/compute passes. Keep the source alive until the promise resolves.
+- `encodeLightmapData(data)` returns an independent binary `ArrayBuffer`; `decodeLightmapData(buffer)`
+  returns an independent CPU copy. The LML1 container stores dimensions, UV set, linear irradiance E
+  and chart coverage in alpha. Values receive no tone mapping or color conversion.
+- `createLightmapFromData(device, data, format = 'rgba16float')` returns an owned `LightmapBakeResult`.
+  Half-float upload rounds values and rejects nonfinite/out-of-range values instead of saturating HDR.
+  Explicit float32 output requires float32 filtering support. CPU input remains caller-owned.
+
+LML1 consists of four little-endian uint32 words (magic `0x314c4d4c`, width, height, UV set), followed
+by tightly packed little-endian float32 RGBA. Rows follow increasing texture V, starting at V=0.
+It is a luma-specific transport format, not an EXR or Radiance HDR image. Geometry, chart transforms,
+scene identity and bake settings remain application metadata; reloading requires matching UVs.
+
+The [Lightmap Baking example](/examples/api/lightmap-baking) uses two static rooms connected by a
+doorway, warm/cool lights and colored objects. The solid divider intersects the floor and back wall. The example uses a 1024×512 atlas and 1024px point/cascaded-directional shadow maps; no light probes are involved. It offers progressive baking, a frozen result, explicit
+stale/reset behavior, chart-owned gutter padding, export and reload. Unsupported float-rendering devices receive an explanatory message before bake resources are allocated. Live mode uses direct shadowed lights with unoccluded ambient
+as a reference; baked mode adds shadowed environment illumination and disables duplicate live diffuse
+lighting. Camera movement does not alter the bake. Materials provide object color at receiving time;
+this workflow does not simulate multi-bounce color bleeding.
