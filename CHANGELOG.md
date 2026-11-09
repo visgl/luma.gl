@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-alpha.12
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.6 across active packages and examples.
+- Add shared graph fullscreen shader passes and progressive diffuse lightmap baking.
+- Add static lightmap baking and HDR reuse workflows, and harden standalone lighting integration and resource lifetimes.
+- Cache readonly shader type metadata, reuse texture normalization scratch options, avoid temporary texture memory layouts, and skip redundant WebGL unpack-state scopes.
+- Improve mobile focus behavior and GitHub badges on the website.
+- Add merge-queue validation while retaining full physics qualification on pull requests.
+
 ### v10.0.0-alpha.11
 
 - Upgrade loaders.gl and math.gl to beta.5, reuse shared GeoArrow adapters, support explicit table encodings, and emit canonical GeoArrow union IDs.
