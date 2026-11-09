@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {GPURigidBodyWorld} from '../../src/gpu-physics';
 
@@ -232,7 +232,7 @@ it('scales animated analytic child colliders without moving their dynamic parent
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip('WebGPU unavailable');
   const {GroupNode} = await import('@luma.gl/engine');
-  const {ScenegraphPhysicsMotion} = await import('../../src/gpu-physics');
+  const {ScenegraphPhysicsMotion} = await import('@luma.gl/engine/physics');
   const child = new GroupNode();
   const root = new GroupNode({children: [child]});
   const world = new GPURigidBodyWorld({

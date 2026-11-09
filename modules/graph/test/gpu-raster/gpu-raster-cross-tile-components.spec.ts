@@ -13,7 +13,7 @@ import {
   type GPURasterPixelBounds,
   type GPURasterRegionMeasurementOutputs
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 type ScalarFormat = 'uint32' | 'float32';
@@ -77,7 +77,7 @@ type CrossFixture = {
 
 const GUARD_VALUE = 4000000001;
 
-it('LuRaster global dense IDs use true monolithic row-major roots and merge weighted cross-tile partials', async () => {
+it('GPU Raster global dense IDs use true monolithic row-major roots and merge weighted cross-tile partials', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -199,7 +199,7 @@ it('LuRaster global dense IDs use true monolithic row-major roots and merge weig
   void 0;
 });
 
-it('LuRaster four-tile diagonal seam junctions respect connectivity, nodata barriers, and bounded IDs', async () => {
+it('GPU Raster four-tile diagonal seam junctions respect connectivity, nodata barriers, and bounded IDs', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -303,7 +303,7 @@ it('LuRaster four-tile diagonal seam junctions respect connectivity, nodata barr
   void 0;
 });
 
-it('LuRaster cross-tile replay fail-closes upstream and union convergence and saturates merged unsigned populations', async () => {
+it('GPU Raster cross-tile replay fail-closes upstream and union convergence and saturates merged unsigned populations', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;

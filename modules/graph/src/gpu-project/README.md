@@ -277,7 +277,7 @@ adaptive stage reports unknown composed error because provider sensitivity and p
 are not established. Estimates exclude input/native/output rounding and are never certified bounds.
 
 The optional `@luma.gl/graph/gpu-project/crs` subpath uses public math.gl 5 APIs. Install
-`@math.gl/geospatial` version `~5.0.0-alpha.19` as its optional peer to use:
+`@math.gl/geospatial` version `~5.0.0-beta.1` as its optional peer to use:
 
 - `planProjectionPipeline({pipeline})`: parse a PROJ string or accept math.gl's AST, then lower
   signed 2D axis swaps, horizontal unit conversions, diagonal affine transforms, and stage inversion.
@@ -347,7 +347,7 @@ supported units/parameters, error semantics, and planning limitations.
 const shader = projection.getShader({namespace: 'map'});
 const parameterWords = projection.packParameters();
 // Upload parameterWords to a storage buffer bound under shader.bindingName.
-// Include shader.source in a Model/Computation shader, with shader.modules and shader.defines.
+// Assemble shader.source with shader.modules and shader.defines before creating a Kernel.
 // The generated callable for this example is:
 // projection_map_project(position: vec4u, inputValidity: u32)
 // It returns a struct with .position: vec4f and .valid: u32.
@@ -419,7 +419,7 @@ the environment variable selects a representative dataset while ordinary CI
 uses a small smoke-test dataset:
 
 ```sh
-VITE_LUPROJ_BENCHMARK_ROWS=16384 yarn test-headless \
+VITE_GPU_PROJECT_BENCHMARK_ROWS=16384 yarn test-headless \
   modules/graph/test/gpu-project/projection-benchmark.spec.ts --reporter=verbose
 ```
 
@@ -445,7 +445,7 @@ provider is math.gl's JavaScript proj4 adapter, not native C++ PROJ; its old ora
 timing is retained separately from the matched consumer work.
 
 ```sh
-LUMA_TEST_BROWSER_BENCHMARKS=true VITE_LUPROJ_BENCHMARK_ROWS=65536 \
+LUMA_TEST_BROWSER_BENCHMARKS=true VITE_GPU_PROJECT_BENCHMARK_ROWS=65536 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-program-benchmark.spec.ts
 ```
@@ -456,12 +456,12 @@ It reports 1/4-consumer reuse and actual multi-patch costs without changing prec
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true \
-  VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+  VITE_GPU_PROJECT_SWEEP_ROWS=1024,16384,65536 VITE_GPU_PROJECT_SWEEP_CONSUMERS=1,4 \
   yarn test-headless --no-coverage --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
-This sweep defaults to uninstrumented timing; set `VITE_LUPROJ_SWEEP_GPU_TIMING=true` for a separate
+This sweep defaults to uninstrumented timing; set `VITE_GPU_PROJECT_SWEEP_GPU_TIMING=true` for a separate
 GPU-timestamp run. JSON reports begin with `PROJECTION_PERFORMANCE_SWEEP`. These synthetic workloads
 do not replace production-consumer or cross-vendor evidence.
 

@@ -41,6 +41,10 @@ import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
 import {convertGLDataTypeToDataType} from '../converters/shader-formats';
 
+// Each active upload owns its scratch object, including during nested calls.
+const textureWriteOptionsPool: Required<TextureWriteOptions>[] = [];
+const emptyTextureWriteOptions: TextureWriteOptions = Object.freeze({});
+
 /**
  * WebGL... the texture API from hell... hopefully made simpler
  */
@@ -358,132 +362,139 @@ export class WEBGLTexture extends Texture {
     );
   }
 
-  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
-    this._assertWritable('write buffer data into');
-    const options = this._normalizeTextureWriteOptions(options_);
-    const {width, height, depthOrArrayLayers, mipLevel, byteOffset, x, y, z} = options;
-    const {glFormat, glType, compressed} = this;
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
+  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = emptyTextureWriteOptions) {
+    const scratchOptions = textureWriteOptionsPool.pop() || ({} as Required<TextureWriteOptions>);
+    try {
+      this._assertWritable('write buffer data into');
+      const options = this._normalizeTextureWriteOptions(options_, scratchOptions);
+      const {width, height, depthOrArrayLayers, mipLevel, byteOffset, x, y, z} = options;
+      const {glFormat, glType, compressed} = this;
+      const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
-    if (compressed) {
-      throw new Error('writeBuffer for compressed textures is not implemented in WebGL');
-    }
-
-    const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
-    const unpackRowLength = bytesPerPixel ? options.bytesPerRow / bytesPerPixel : undefined;
-    const glParameters: GLValueParameters = {
-      [GL.UNPACK_ALIGNMENT]: this.byteAlignment,
-      ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
-      [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
-    };
-
-    this.gl.bindTexture(this.glTarget, this.handle);
-    this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
-
-    withGLParameters(this.gl, glParameters, () => {
-      switch (this.dimension) {
-        case '2d':
-        case 'cube':
-          this.gl.texSubImage2D(
-            glTarget,
-            mipLevel,
-            x,
-            y,
-            width,
-            height,
-            glFormat,
-            glType,
-            byteOffset
-          );
-          break;
-        case '2d-array':
-        case '3d':
-          this.gl.texSubImage3D(
-            glTarget,
-            mipLevel,
-            x,
-            y,
-            z,
-            width,
-            height,
-            depthOrArrayLayers,
-            glFormat,
-            glType,
-            byteOffset
-          );
-          break;
-        default:
+      if (compressed) {
+        throw new Error('writeBuffer for compressed textures is not implemented in WebGL');
       }
-    });
 
-    this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
-    this.gl.bindTexture(this.glTarget, null);
+      const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
+      const unpackRowLength = bytesPerPixel ? options.bytesPerRow / bytesPerPixel : undefined;
+      const glParameters: GLValueParameters = {
+        [GL.UNPACK_ALIGNMENT]: this.byteAlignment,
+        ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
+        [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
+      };
+
+      this.gl.bindTexture(this.glTarget, this.handle);
+      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
+
+      withGLParameters(this.gl, glParameters, () => {
+        switch (this.dimension) {
+          case '2d':
+          case 'cube':
+            this.gl.texSubImage2D(
+              glTarget,
+              mipLevel,
+              x,
+              y,
+              width,
+              height,
+              glFormat,
+              glType,
+              byteOffset
+            );
+            break;
+          case '2d-array':
+          case '3d':
+            this.gl.texSubImage3D(
+              glTarget,
+              mipLevel,
+              x,
+              y,
+              z,
+              width,
+              height,
+              depthOrArrayLayers,
+              glFormat,
+              glType,
+              byteOffset
+            );
+            break;
+          default:
+        }
+      });
+
+      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+      this.gl.bindTexture(this.glTarget, null);
+    } finally {
+      textureWriteOptionsPool.push(scratchOptions);
+    }
   }
 
   writeData(
     data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
-    options_: TextureWriteOptions = {}
+    options_: TextureWriteOptions = emptyTextureWriteOptions
   ): void {
-    this._assertWritable('write data into');
-    const options = this._normalizeTextureWriteOptions(options_);
+    const scratchOptions = textureWriteOptionsPool.pop() || ({} as Required<TextureWriteOptions>);
+    try {
+      this._assertWritable('write data into');
+      const options = this._normalizeTextureWriteOptions(options_, scratchOptions);
 
-    const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
-    const {width, height, depthOrArrayLayers, mipLevel, x, y, z, byteOffset} = options;
-    const {glFormat, glType, compressed} = this;
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
+      const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
+      const {width, height, depthOrArrayLayers, mipLevel, x, y, z, byteOffset} = options;
+      const {glFormat, glType, compressed} = this;
+      const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
-    let unpackRowLength: number | undefined;
-    if (!compressed) {
-      const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
-      if (bytesPerPixel) {
-        unpackRowLength = options.bytesPerRow / bytesPerPixel;
-      }
-    }
-
-    const glParameters: GLValueParameters = !this.compressed
-      ? {
-          [GL.UNPACK_ALIGNMENT]: this.byteAlignment,
-          ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
-          [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
+      let unpackRowLength: number | undefined;
+      if (!compressed) {
+        const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
+        if (bytesPerPixel) {
+          unpackRowLength = options.bytesPerRow / bytesPerPixel;
         }
-      : {};
-    const sourceElementOffset = getWebGLTextureSourceElementOffset(typedArray, byteOffset);
-    const compressedData = compressed ? getArrayBufferView(typedArray, byteOffset) : typedArray;
-    const mipLevelSize = this._getMipLevelSize(mipLevel);
-    const isFullMipUpload =
-      x === 0 &&
-      y === 0 &&
-      z === 0 &&
-      width === mipLevelSize.width &&
-      height === mipLevelSize.height &&
-      depthOrArrayLayers === mipLevelSize.depthOrArrayLayers;
+      }
 
-    this.gl.bindTexture(this.glTarget, this.handle);
-    this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+      const glParameters: GLValueParameters = !this.compressed
+        ? {
+            [GL.UNPACK_ALIGNMENT]: this.byteAlignment,
+            ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
+            [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
+          }
+        : {};
+      const sourceElementOffset = getWebGLTextureSourceElementOffset(typedArray, byteOffset);
+      const compressedData = compressed ? getArrayBufferView(typedArray, byteOffset) : typedArray;
+      const mipLevelSize = this._getMipLevelSize(mipLevel);
+      const isFullMipUpload =
+        x === 0 &&
+        y === 0 &&
+        z === 0 &&
+        width === mipLevelSize.width &&
+        height === mipLevelSize.height &&
+        depthOrArrayLayers === mipLevelSize.depthOrArrayLayers;
 
-    withGLParameters(this.gl, glParameters, () => {
-      switch (this.dimension) {
-        case '2d':
-        case 'cube':
-          if (compressed) {
-            if (isFullMipUpload) {
-              // biome-ignore format: preserve layout
-              this.gl.compressedTexImage2D(glTarget, mipLevel, glFormat, width, height, 0, compressedData);
+      this.gl.bindTexture(this.glTarget, this.handle);
+      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+
+      withGLParameters(this.gl, glParameters, () => {
+        switch (this.dimension) {
+          case '2d':
+          case 'cube':
+            if (compressed) {
+              if (isFullMipUpload) {
+                // biome-ignore format: preserve layout
+                this.gl.compressedTexImage2D(glTarget, mipLevel, glFormat, width, height, 0, compressedData);
+              } else {
+                // biome-ignore format: preserve layout
+                this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, compressedData);
+              }
             } else {
               // biome-ignore format: preserve layout
-              this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, compressedData);
+              this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, sourceElementOffset);
             }
-          } else {
-            // biome-ignore format: preserve layout
-            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, sourceElementOffset);
-          }
-          break;
-        case '2d-array':
-        case '3d':
-          if (compressed) {
-            if (isFullMipUpload) {
-              // biome-ignore format: preserve layout
-              this.gl.compressedTexImage3D(
+            break;
+          case '2d-array':
+          case '3d':
+            if (compressed) {
+              if (isFullMipUpload) {
+                // biome-ignore format: preserve layout
+                this.gl.compressedTexImage3D(
                 glTarget,
                 mipLevel,
                 glFormat,
@@ -493,9 +504,9 @@ export class WEBGLTexture extends Texture {
                 0,
                 compressedData
               );
-            } else {
-              // biome-ignore format: preserve layout
-              this.gl.compressedTexSubImage3D(
+              } else {
+                // biome-ignore format: preserve layout
+                this.gl.compressedTexSubImage3D(
                 glTarget,
                 mipLevel,
                 x,
@@ -507,18 +518,21 @@ export class WEBGLTexture extends Texture {
                 glFormat,
                 compressedData
               );
+              }
+            } else {
+              // biome-ignore format: preserve layout
+              this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, glType, typedArray, sourceElementOffset);
             }
-          } else {
-            // biome-ignore format: preserve layout
-            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, glType, typedArray, sourceElementOffset);
-          }
-          break;
-        default:
-        // Can never happen in WebGL
-      }
-    });
+            break;
+          default:
+          // Can never happen in WebGL
+        }
+      });
 
-    this.gl.bindTexture(this.glTarget, null);
+      this.gl.bindTexture(this.glTarget, null);
+    } finally {
+      textureWriteOptionsPool.push(scratchOptions);
+    }
   }
 
   // IMPLEMENTATION SPECIFIC

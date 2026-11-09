@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {createBoundKernel} from '../../../../gpu-core/utils/bound-kernel';
+
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import type {GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
 
 /** Stable resource naming options shared by GPU path expansion helpers. */
@@ -295,7 +297,7 @@ export function dispatchGpuPathExpansionCompute(
     segmentCount: number;
   }
 ): void {
-  const computation = new Computation(device, {
+  const computation = createBoundKernel(device, {
     id: `${options.id || 'gpu-expanded-path-model'}-compute`,
     source: GPU_PATH_EXPANSION_COMPUTE_SOURCE,
     shaderLayout: GPU_PATH_EXPANSION_COMPUTE_SHADER_LAYOUT,
@@ -308,9 +310,12 @@ export function dispatchGpuPathExpansionCompute(
   });
   if (state.rowCount > 0 && state.segmentCount > 0) {
     const computePass = device.beginComputePass({});
-    computation.dispatch(computePass, Math.ceil(state.rowCount / 64));
+    computation.kernel.dispatch(computePass, {
+      bindings: computation.bindings,
+      x: Math.ceil(state.rowCount / 64)
+    });
     computePass.end();
     device.submit();
   }
-  computation.destroy();
+  computation.kernel.destroy();
 }

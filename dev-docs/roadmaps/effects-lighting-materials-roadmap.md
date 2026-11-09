@@ -45,7 +45,7 @@ Current `master` already provides:
   with one instanced draw per compatible source primitive.
 - Source-faithful glTF/GLB export, including arbitrary preserved extension records and pointer
   animation channels.
-- An existing `@luma.gl/splats` adapter for the `KHR_gaussian_splatting` release candidate,
+- An existing `@luma.gl/engine/splats` adapter for the `KHR_gaussian_splatting` release candidate,
   spherical-harmonic data, feature identities, and optional caller-owned SPZ decoding.
 
 However, ordinary skinning still has a **64-joint uniform-palette limit**; ordinary morph animation
@@ -71,7 +71,7 @@ remain separate work.
   scattering is a useful approximation, not a random-walk or full subsurface-transport claim.
 - Decoding data, constructing GPU resources, executing shaders, exporting an extension, and
   progressively streaming it are distinct capabilities. Describe and document them separately.
-- `@luma.gl/splats` already owns Gaussian decoding/rendering. The outstanding glTF gap is optional
+- `@luma.gl/engine/splats` already owns Gaussian decoding/rendering. The outstanding glTF gap is optional
   scene routing and extension discovery, not implementing another splat adapter.
 - Generated LOD vertex budgets count **submitted index references**, not unique vertices, exact
   shader invocations, GPU bytes, or an authorization to silently cull actors.
@@ -80,7 +80,7 @@ remain separate work.
 
 ### Tranche 0 — Establish a reference asset, image, and feature ledger
 
-**Priority:** P0. **Owners:** `@luma.gl/gltf`, `@luma.gl/shadertools`, shared test infrastructure.
+**Priority:** P0. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/shaders`, shared test infrastructure.
 
 **Status:** In progress. [PR #3087](https://github.com/visgl/luma.gl/pull/3087) landed the executable
 ledger: it derives extension coverage from the runtime registry, pins the Khronos Sample Assets and
@@ -110,7 +110,7 @@ certification.
 
 ### Tranche 1 — Land the existing authored/generated crowd LOD work
 
-**Priority:** P0. **Owners:** `@luma.gl/gltf`, `@luma.gl/engine`.
+**Priority:** P0. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/engine`.
 
 **Status:** Completed on `master` by [PR #3039](https://github.com/visgl/luma.gl/pull/3039) and its
 stacked dependency [PR #3044](https://github.com/visgl/luma.gl/pull/3044).
@@ -128,7 +128,7 @@ fixtures, budgets never silently cull actors, and public capability rows reflect
 
 ### Tranche 1A — Refresh the Animation Studio and curated asset experience
 
-**Priority:** P1. **Owners:** `@luma.gl/gltf`, showcase infrastructure, retained scene adapters.
+**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, showcase infrastructure, retained scene adapters.
 
 **Starting point:** [draft PR #2995](https://github.com/visgl/luma.gl/pull/2995) is still open but is
 based on an obsolete `master`, currently cannot merge, and predates the landed ledger, panel system,
@@ -154,7 +154,7 @@ license/provenance tests, focused WebGPU/WebGL2 coverage, user documentation, an
 
 ### Tranche 2 — Close real glTF codec and primitive compatibility gaps
 
-**Priority:** P0. **Owners:** upstream `@loaders.gl/gltf`, `@luma.gl/gltf`.
+**Priority:** P0. **Owners:** upstream `@loaders.gl/gltf`, `@luma.gl/engine/gltf`.
 
 **Status:** In progress. [PR #3106](https://github.com/visgl/luma.gl/pull/3106) normalizes
 WebGL-only `LINE_LOOP` and `TRIANGLE_FAN` modes into portable indexed list topologies without
@@ -182,7 +182,7 @@ space, mips, and ownership.
 
 ### Tranche 3 — Make reference-grade PBR consistent across rendering paths
 
-**Priority:** P0. **Owners:** `@luma.gl/shadertools`, `@luma.gl/engine`, `@luma.gl/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/shaders`, `@luma.gl/engine`, `@luma.gl/engine/gltf`.
 
 - Share a single feature-specialized PBR contract across standalone glTF, experimental scene
   rendering, and retained scenes instead of maintaining divergent approximations.
@@ -202,7 +202,7 @@ not labeled physically complete.
 
 ### Tranche 4 — Raise ordinary skinning beyond the 64-joint ceiling
 
-**Priority:** P0. **Owners:** `@luma.gl/shadertools`, `@luma.gl/engine`, `@luma.gl/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/shaders`, `@luma.gl/engine`, `@luma.gl/engine/gltf`.
 
 - Reuse the existing WebGPU storage-buffer and WebGL2 floating-point texture palette patterns
   already exercised by animated crowds.
@@ -218,7 +218,7 @@ runtime is introduced.
 
 ### Tranche 5 — Move morph deformation and per-instance weights onto the GPU
 
-**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shadertools`, `@luma.gl/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shaders`, `@luma.gl/engine/gltf`.
 
 - Keep immutable POSITION/NORMAL/TANGENT bases and deltas resident on the GPU.
 - Support a portable vertex-shader path plus an optional WebGPU compute deformation path for
@@ -234,7 +234,7 @@ WebGPU and WebGL2; no per-frame CPU geometry upload occurs on the accelerated pa
 
 ### Tranche 6 — Sample character clips on the GPU
 
-**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shadertools`, `@luma.gl/gltf`.
+**Priority:** P0. **Owners:** `@luma.gl/engine`, `@luma.gl/shaders`, `@luma.gl/engine/gltf`.
 
 - Introduce optional reusable animation/joint atlases with per-actor clip, time, phase, playback
   speed, interpolation, and blend parameters.
@@ -266,7 +266,7 @@ retargeting map.
 
 ### Tranche 8 — Import authored environments and photometric lights
 
-**Priority:** P1. **Owners:** `@luma.gl/gltf`, `@luma.gl/shadertools`, retained scene adapters.
+**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/shaders`, retained scene adapters.
 
 - Map `EXT_lights_image_based` into the existing environment/IBL resources instead of introducing a
   parallel environment representation.
@@ -280,7 +280,7 @@ intensity, and animated parameters in standalone and retained-scene paths.
 
 ### Tranche 9 — Add real progressive node/material LOD and bounded residency
 
-**Priority:** P1. **Owners:** `@luma.gl/gltf`, shared loaders, generic engine resource ownership.
+**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, shared loaders, generic engine resource ownership.
 
 - Build on the landed node-LOD metadata rather than reimplementing #3039.
 - Support lowest-detail-first fetching for vendor-authored node **and** material levels, explicit
@@ -298,7 +298,7 @@ WebGL2 and WebGPU retain compatible visible results.
 ### Tranche 10 — Graduate GPU-driven visibility, LOD, and budgeted draws
 
 **Priority:** P1. **Owners:** existing `@luma.gl/graph/experimental` GPU primitives, engine draw APIs,
-`@luma.gl/gltf` adapters.
+`@luma.gl/engine/gltf` adapters.
 
 - Reuse existing `GPUScene`, visibility/compaction primitives, and `DrawCommandBuffer` rather than
   inventing another scene scheduler.
@@ -316,10 +316,10 @@ behavior.
 
 ### Tranche 11 — Route existing Gaussian splats through glTF scenes
 
-**Priority:** P1. **Owners:** `@luma.gl/gltf`, existing `@luma.gl/splats` optional integration.
+**Priority:** P1. **Owners:** `@luma.gl/engine/gltf`, existing `@luma.gl/engine/splats` optional integration.
 
 - Add a loader/runtime extension hook that recognizes `KHR_gaussian_splatting` and delegates to
-  the **already shipped** `@luma.gl/splats` accessor and SPZ integration.
+  the **already shipped** `@luma.gl/engine/splats` accessor and SPZ integration.
 - Compose ordinary PBR meshes, authored splat primitives, cameras, semantic feature IDs, and
   transparent ordering in one compatible scene without forcing a hard `gltf -> splats` dependency.
 - Report release-candidate support only when the optional bridge exists and any decoder required
@@ -331,7 +331,7 @@ preserved.
 
 ### Tranche 12 — Complete production asset interchange and optional authoring
 
-**Priority:** P2. **Owners:** `@luma.gl/gltf`, optional upstream codec/authoring adapters.
+**Priority:** P2. **Owners:** `@luma.gl/engine/gltf`, optional upstream codec/authoring adapters.
 
 - Extend existing source-faithful export with direct retained-scene extraction and explicit
   extension hooks; preserve variants, typed animation pointers, node visibility, generated LOD,
@@ -347,7 +347,7 @@ ownership.
 
 ### Tranche 13 — Add maturity-aware advanced extensions and authoring tools
 
-**Priority:** P2. **Owners:** `@luma.gl/gltf`, `@luma.gl/engine`, optional scene integrations.
+**Priority:** P2. **Owners:** `@luma.gl/engine/gltf`, `@luma.gl/engine`, optional scene integrations.
 
 - Represent standards maturity, optional decoder availability, backend restrictions, loader-only
   support, and export support separately in the extension registry and viewer.

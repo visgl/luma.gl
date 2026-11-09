@@ -4,7 +4,7 @@
 
 import type {Device, Texture} from '@luma.gl/core';
 import {AnimationLoopTemplate, ShaderPassRenderer, type AnimationProps} from '@luma.gl/engine';
-import type {ShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass} from '@luma.gl/shaders';
 import type {
   Panel,
   SettingDescriptor,

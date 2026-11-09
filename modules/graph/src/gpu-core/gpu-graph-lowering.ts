@@ -10,6 +10,7 @@ import type {GPUScalar} from './gpu-scalar';
 import type {
   GPUGraphScalar,
   GPUGraphVector,
+  GPUGraphVectorFormat,
   GPUGraphTexture,
   GPUGraphTextureView
 } from './gpu-graph-value';
@@ -33,16 +34,16 @@ export type GPUOperationLoweringContext<Parameters = void> = {
   lower: (operation: GPUGraphOperation) => void;
   lowerConditional: (predicate: GPUOperationPredicate, operation: GPUGraphOperation) => void;
   resolveScalar: <T extends 'float32' | 'uint32' | 'sint32'>(
-    scalar: GPUGraphScalar<T>
+    scalar: GPUGraphScalar<T> | string
   ) => GPUScalar<T>;
-  resolveVector: <T extends 'float32' | 'uint32' | 'sint32'>(
-    vector: GPUGraphVector<T>
+  resolveVector: <T extends GPUGraphVectorFormat>(
+    vector: GPUGraphVector<T> | string
   ) => GraphVectorView<T>;
   resolveTexture: <Format extends TextureFormat>(
-    texture: GPUGraphTexture<Format>
+    texture: GPUGraphTexture<Format> | string
   ) => GraphTextureHandle<Format>;
   resolveTextureView: <Format extends TextureFormat>(
-    texture: GPUGraphTexture<Format> | GPUGraphTextureView<Format>
+    texture: GPUGraphTexture<Format> | GPUGraphTextureView<Format> | string
   ) => GraphTextureView<Format>;
   recordDecision: (decision: GPUOperationLoweringDecision) => void;
 };
@@ -50,19 +51,11 @@ export type GPUOperationLowerer<
   Parameters = void,
   Operation extends GPUOperation = GPUOperation
 > = (operation: Operation, context: GPUOperationLoweringContext<Parameters>) => void;
-export class GPUOperationLoweringRegistry<Parameters = void> {
-  private readonly lowerers = new Map<string, GPUOperationLowerer<Parameters>>();
-  register<Operation extends GPUOperation>(
-    operationType: string,
-    lowerer: GPUOperationLowerer<Parameters, Operation>
-  ): this {
-    if (!operationType) throw new Error('GPU operation lowering type is required');
-    if (this.lowerers.has(operationType))
-      throw new Error(`GPU operation lowering for "${operationType}" is already registered`);
-    this.lowerers.set(operationType, lowerer as GPUOperationLowerer<Parameters>);
-    return this;
-  }
-  get(operationType: string): GPUOperationLowerer<Parameters> | undefined {
-    return this.lowerers.get(operationType);
-  }
-}
+/** Immutable compilation input; compose sets with ordinary array spread. */
+export type GPUOperationLowering<
+  Parameters = void,
+  Operation extends GPUOperation = GPUOperation
+> = Readonly<{
+  type: string;
+  lower(operation: Operation, context: GPUOperationLoweringContext<Parameters>): void;
+}>;

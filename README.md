@@ -72,3 +72,5 @@ While generic enough to be used for general 3D rendering, luma.gl's mandate is p
 # Installation, Running Examples etc
 
 For details, please refer to the extensive [online website](https://luma.gl).
+
+See [Attributions and Credits](https://luma.gl/docs/credits) for upstream sources, research citations, and example asset credits.

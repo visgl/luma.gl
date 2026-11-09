@@ -70,7 +70,7 @@ Activation has an explicit coordinate gate. A version-2 manifest must declare
 X=longitude, Y=latitude. A missing, unknown, or projected CRS is rejected before upload. An invalid
 manifest, failed request, decode error, or rejected CRS leaves the deterministic generated fixture
 active (or retains the last good resident window) and reports the reason in the status area instead
-of blanking the visualization. The deck.gl luSpatial example applies the same gate and fallback.
+of blanking the visualization. The deck.gl GPU Spatial example applies the same gate and fallback.
 
 Source telemetry is literal rather than an estimate: **corpus total** comes from the manifest,
 **downloaded** counts the response bytes and requests for the manifest plus fetched shards,

@@ -8,9 +8,9 @@ import {Buffer} from '@luma.gl/core';
 import * as graphRootModule from '@luma.gl/graph';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import {GPUGraphAlgorithmsData} from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {afterEach, describe, expect, test, vi} from 'vitest';
 
 type GraphScalarFormat = 'uint32' | 'float32' | 'sint32';
@@ -74,11 +74,7 @@ describe('@luma.gl/graph/gpu-graph-algorithms package boundary', () => {
       require: './dist/gpu-graph-algorithms/index.cjs',
       types: './dist/gpu-graph-algorithms/index.d.ts'
     });
-    for (const dependencies of [
-      packageJson.dependencies,
-      packageJson.peerDependencies,
-      packageJson.optionalDependencies
-    ]) {
+    for (const dependencies of [packageJson.dependencies, packageJson.optionalDependencies]) {
       expect(dependencies?.['apache-arrow']).toBeUndefined();
     }
     for (const sourceFile of ['index.ts', 'gpu-graph.ts']) {

@@ -4,7 +4,7 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {NumberArray3} from '@math.gl/core';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 /** W3C D65 XYZ-to-linear-sRGB matrix in row-major order. */
 export const D65_XYZ_TO_LINEAR_SRGB_MATRIX = [

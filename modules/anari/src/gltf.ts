@@ -17,7 +17,7 @@ import {
   type GLTFScenegraphs,
   getTextureTransformMatrix,
   type PBRTextureTransform
-} from '@luma.gl/gltf';
+} from '@luma.gl/engine/gltf';
 import {Matrix4, type NumberArray9} from '@math.gl/core';
 import type {
   ANARICamera,

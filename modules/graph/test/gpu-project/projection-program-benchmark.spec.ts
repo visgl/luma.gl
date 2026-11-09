@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {planCRSProjection} from '@luma.gl/graph/gpu-project/crs';
 import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
@@ -57,7 +57,7 @@ for (const fixture of fixtures) {
     if (!device) return;
     if (device.info.gpu === 'software' || device.info.gpuType === 'cpu' || device.info.fallback)
       context.skip();
-    const configuredRows = import.meta.env.VITE_LUPROJ_BENCHMARK_ROWS;
+    const configuredRows = import.meta.env.VITE_GPU_PROJECT_BENCHMARK_ROWS;
     const rowCount = configuredRows ? Number(configuredRows) : 32;
     const bounds = fixture.bounds;
     const coordinates: ProjectionCoordinates[] = Array.from({length: rowCount}, (_value, index) => [

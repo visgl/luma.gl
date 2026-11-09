@@ -311,12 +311,12 @@ does not acquire an automatic inverse.
 
 ## Package boundaries
 
-- `@luma.gl/shadertools` owns reusable arithmetic and, after API review, generally useful WGSL
+- `@luma.gl/shaders` owns reusable arithmetic and, after API review, generally useful WGSL
   operation modules.
-- `@luma.gl/gpgpu` owns primitive GPU data formats and the graph-safe execution machinery after
+- `@luma.gl/graph/gpu-simple-graph` owns primitive GPU data formats and the graph-safe execution machinery after
   graduation.
 - `@luma.gl/graph/gpu-project` owns the evolving program, planners, adaptive compiler,
   projection catalog, and optional math.gl adapters.
 - `@math.gl/geospatial/crs` and `@math.gl/geospatial/projection` remain optional CPU-side definition/resolution/oracle
   dependencies. They do not enter the low-level GPU execution package.
-- Arrow upload, conversion, and readback remain in `@luma.gl/arrow`.
+- Arrow upload, conversion, and readback remain in `@luma.gl/graph/arrow`.

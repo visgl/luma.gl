@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer, type CommandEncoder, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import {
   getGPUFFT2DSupport,
   GPUFFT2D,
@@ -141,8 +143,8 @@ type SpectralOceanSimulationResources = {
   displacementBuffer: Buffer;
   normalFoamBuffer: Buffer;
   uniformBuffer: Buffer;
-  evolutionComputation: Computation;
-  assemblyComputation: Computation;
+  evolutionComputation: BoundKernel;
+  assemblyComputation: BoundKernel;
   fft: CompiledGPUCommandGraph;
 };
 
@@ -239,14 +241,13 @@ export class SpectralOceanSimulation {
       })
     );
 
-    this.resources.evolutionComputation.predraw(commandEncoder);
     const evolutionPass = commandEncoder.beginComputePass({id: `${this.id}-evolve`});
-    this.resources.evolutionComputation.dispatch(
-      evolutionPass,
-      this.stats.workgroupCount[0],
-      this.stats.workgroupCount[1],
-      this.stats.workgroupCount[2]
-    );
+    this.resources.evolutionComputation.kernel.dispatch(evolutionPass, {
+      bindings: this.resources.evolutionComputation.bindings,
+      x: this.stats.workgroupCount[0],
+      y: this.stats.workgroupCount[1],
+      z: this.stats.workgroupCount[2]
+    });
     evolutionPass.end();
 
     this.resources.fft.encode(commandEncoder, {
@@ -271,14 +272,13 @@ export class SpectralOceanSimulation {
       }
     });
 
-    this.resources.assemblyComputation.predraw(commandEncoder);
     const assemblyPass = commandEncoder.beginComputePass({id: `${this.id}-assemble`});
-    this.resources.assemblyComputation.dispatch(
-      assemblyPass,
-      this.stats.workgroupCount[0],
-      this.stats.workgroupCount[1],
-      this.stats.workgroupCount[2]
-    );
+    this.resources.assemblyComputation.kernel.dispatch(assemblyPass, {
+      bindings: this.resources.assemblyComputation.bindings,
+      x: this.stats.workgroupCount[0],
+      y: this.stats.workgroupCount[1],
+      z: this.stats.workgroupCount[2]
+    });
     assemblyPass.end();
     return this.outputs;
   }
@@ -422,6 +422,10 @@ function createSpectralOceanSimulationResources(
     return resource;
   };
 
+  const ownKernel = (resource: BoundKernel): BoundKernel => {
+    own(resource.kernel);
+    return resource;
+  };
   try {
     const initialSpectrumBuffer = own(
       device.createBuffer({
@@ -470,8 +474,8 @@ function createSpectralOceanSimulationResources(
       })
     );
 
-    const evolutionComputation = own(
-      new Computation(device, {
+    const evolutionComputation = ownKernel(
+      createBoundKernel(device, {
         id: `${props.id}-evolution`,
         source: SPECTRAL_OCEAN_EVOLUTION_SHADER,
         shaderLayout: {
@@ -492,8 +496,8 @@ function createSpectralOceanSimulationResources(
         }
       })
     );
-    const assemblyComputation = own(
-      new Computation(device, {
+    const assemblyComputation = ownKernel(
+      createBoundKernel(device, {
         id: `${props.id}-assembly`,
         source: SPECTRAL_OCEAN_ASSEMBLY_SHADER,
         shaderLayout: {
@@ -580,8 +584,8 @@ function destroySpectralOceanSimulationResources(
   resources: SpectralOceanSimulationResources
 ): void {
   resources.fft.destroy();
-  resources.assemblyComputation.destroy();
-  resources.evolutionComputation.destroy();
+  resources.assemblyComputation.kernel.destroy();
+  resources.evolutionComputation.kernel.destroy();
   resources.uniformBuffer.destroy();
   resources.normalFoamBuffer.destroy();
   resources.displacementBuffer.destroy();

@@ -4,8 +4,8 @@
 
 import {Buffer, type Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {fromHalfFloat} from '@luma.gl/shadertools';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {fromHalfFloat} from '@luma.gl/shaders';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import TempestOceanAnimationLoopTemplate from '../../examples/showcase/tempest-ocean/app';
 

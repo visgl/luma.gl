@@ -13,16 +13,17 @@ import {
   type ShaderLayout,
   type Texture
 } from '@luma.gl/core';
-import {DynamicBuffer, Model, type TextureBindingSource} from '@luma.gl/engine';
+import {Model} from '@luma.gl/engine';
+import {DynamicBuffer, type TextureBindingSource} from '@luma.gl/core/dynamic';
 import {ShaderInputs} from '../../src/shader-inputs';
 import {
   getNullTestDevice,
   getWebGLTestDevice,
   getWebGPUTestDevice,
   getTestDevices
-} from '@luma.gl/test-utils';
-import {skin} from '@luma.gl/shadertools';
-import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
+} from '@luma.gl/core/test-utils';
+import {skin} from '@luma.gl/shaders';
+import {pbrProjection} from '../../../shaders/src/modules/lighting/pbr-material/pbr-projection';
 
 const stats = luma.stats.get('GPU Resource Counts');
 
@@ -1105,10 +1106,8 @@ it('Model#plugins assemble backend contributions', async () => {
     plugins: [
       {
         name: 'glsl-model-plugin',
-        modules: [pluginModule],
-        glsl: {
-          injections: [{target: 'fs:#decl', injection: 'float pluginMarker = 1.0;'}]
-        }
+        module: pluginModule,
+        injections: [{stage: 'fragment', target: '#decl', glsl: 'float pluginMarker = 1.0;'}]
       }
     ]
   });
@@ -1131,9 +1130,9 @@ it('Model#plugins assemble backend contributions', async () => {
       plugins: [
         {
           name: 'wgsl-model-plugin',
-          wgsl: {
-            injections: [{target: 'fs:#decl', injection: 'const PLUGIN_MARKER: f32 = 1.0;'}]
-          }
+          injections: [
+            {stage: 'fragment', target: '#decl', wgsl: 'const PLUGIN_MARKER: f32 = 1.0;'}
+          ]
         }
       ]
     });
@@ -1155,7 +1154,7 @@ function isSoftwareBackedDevice(device: Device): boolean {
 }
 
 /*
-import {dirlight, picking} from '@luma.gl/shadertools';
+import {dirlight, picking} from '@luma.gl/shaders';
 
 const VS_300 = glsl`#version 300 es
 
@@ -1190,11 +1189,11 @@ test('PipelineFactory#hooks', (t) => {
 
   const preHookPipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 
-  pipelineFactory.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
-  pipelineFactory.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
+  pipelineFactory.addShaderInjectionTarget({name: 'LUMAGL_pickColor', stage: 'vertex', glsl: {parameters: 'inout vec4 color'}});
+  pipelineFactory.addShaderInjectionTarget({name: 'LUMAGL_fragmentColor', stage: 'fragment', glsl: {parameters: 'inout vec4 color',
     header: 'if (color.a == 0.0) discard;\n',
     footer: 'color.a *= 1.2;\n'
-  });
+  }});
 
   const postHookPipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
 

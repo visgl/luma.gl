@@ -14,8 +14,8 @@ import {
   makeGPUSplatData,
   type GPUSplatData,
   type SplatHierarchyView
-} from '@luma.gl/splats';
-import {NullDevice} from '@luma.gl/test-utils';
+} from '@luma.gl/engine/splats';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   default as GaussianSplatsAnimationLoopTemplate,
   getGaussianSplatExecutionMode
@@ -1303,7 +1303,7 @@ describe('published Gaussian splat viewer', () => {
 
     const receivedPages: GPUSplatData[] = [];
     const device = new NullDevice({});
-    const arrow = await import('@luma.gl/arrow');
+    const arrow = await import('@luma.gl/engine/arrow');
     for await (const page of arrow.makeGPUSplatDataFromArrowStream(
       device,
       loadLocalGaussianSplatArrowSources(configuration!)
@@ -1372,6 +1372,16 @@ describe('published Gaussian splat viewer', () => {
       sceneId: 'fixture',
       expectedSplatCount: 1_000,
       sourceUrl: '/@fs/checkouts/loaders.gl/modules/ply/test/data/gaussian/train-1000.ply'
+    });
+  });
+
+  test('loads the embedded glTF showcase without the optional loader bundle', () => {
+    installViewerWindow('?scene=gltf-fixture', {__lumaGaussianSplatsLoaderBundleUrl: undefined});
+    expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
+      sceneId: 'gltf-fixture',
+      sourceFormat: 'GLB',
+      expectedSplatCount: 256,
+      up: [0, 1, 0]
     });
   });
 

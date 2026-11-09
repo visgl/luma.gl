@@ -37,7 +37,7 @@ type SpatialBenchmarkResult = {
   resultCount: number;
 };
 
-/** Compares real luSpatial scan and indexed queries against one equivalent CPU predicate. */
+/** Compares real GPU Spatial scan and indexed queries against one equivalent CPU predicate. */
 export function SpatialBenchmark(): ReactNode {
   const selectedDevice = useStore(store => store.presentationDevice);
   const [pointCount, setPointCount] = useState<number>(DEFAULT_POINT_COUNT);
@@ -68,7 +68,7 @@ export function SpatialBenchmark(): ReactNode {
       </label>
 
       <LiveBenchmarkPanel
-        title="Live luSpatial: CPU vs. WebGPU"
+        title="Live GPU Spatial: CPU vs. WebGPU"
         description="Run the same bounds predicate and compact matching point IDs on your CPU, an unindexed WebGPU graph, and a reusable WebGPU grid index. GPU timings include command encoding, submission, and completed execution."
         onRun={async () => {
           const device =

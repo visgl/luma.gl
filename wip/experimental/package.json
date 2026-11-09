@@ -44,9 +44,7 @@
     "@math.gl/core": "4.0.0-alpha.4",
     "earcut": "^2.0.6"
   },
-  "devDependencies": {
-    "@luma.gl/test-utils": "~9.3.0"
-  },
+  "devDependencies": {},
   "peerDependencies": {
     "@loaders.gl/gltf": "~5.0.0-alpha.5",
     "@loaders.gl/images": "~5.0.0-alpha.5"

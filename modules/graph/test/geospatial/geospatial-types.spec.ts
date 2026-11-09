@@ -132,13 +132,13 @@ export function checkGeospatialDistanceTypes(
     output: classifications
   };
 
-  // @ts-expect-error point-in-polygon classifications require a uint32 output.
   const invalidPolygonOutput: GPUPairwisePointInPolygonProps = {
     points: float32Positions,
     polygonPositions: float32Positions,
     geometryOffsets: offsets,
     polygonOffsets: offsets,
     ringOffsets: offsets,
+    // @ts-expect-error point-in-polygon classifications require a uint32 output.
     output: float32Distances
   };
 

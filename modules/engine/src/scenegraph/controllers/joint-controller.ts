@@ -8,24 +8,15 @@ import {GroupNode} from '../group-node';
 import {decomposePhysicsTransform} from '../physics-transforms';
 
 /** Shared physical constraint metadata. Skinning joints do not imply these constraints. */
-export type ScenegraphJointLimit = {
-  angular?: boolean;
-  axes: readonly number[];
-  minimum?: number;
-  maximum?: number;
-  stiffness?: number;
-  damping?: number;
-};
-export type ScenegraphJointDrive = {
-  angular?: boolean;
-  axis: number;
-  mode?: 'force' | 'acceleration';
-  positionTarget?: number;
-  velocityTarget?: number;
-  stiffness?: number;
-  damping?: number;
-  maximumForce?: number;
-};
+import type {
+  GPURigidBodyJointLimit as ScenegraphJointLimit,
+  GPURigidBodyJointDrive as ScenegraphJointDrive
+} from '@luma.gl/graph/gpu-physics';
+export type {
+  GPURigidBodyJointLimit as ScenegraphJointLimit,
+  GPURigidBodyJointDrive as ScenegraphJointDrive
+} from '@luma.gl/graph/gpu-physics';
+
 export type ScenegraphJoint = {
   first: ScenegraphNode;
   second: ScenegraphNode;

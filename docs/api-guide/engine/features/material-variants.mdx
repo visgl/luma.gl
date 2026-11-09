@@ -48,7 +48,7 @@ Alternate materials must remain compatible with the original shader feature layo
 The importer supplies the same engine controller with source variant names and resolved primitive mappings:
 
 ```ts
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 const scenegraphs = createScenegraphsFromGLTF(device, gltf);
 const variantName = scenegraphs.variants.names[0];

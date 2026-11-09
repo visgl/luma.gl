@@ -1,0 +1,131 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "godot-gsplat minimal sample"
+  },
+  "extensionsUsed": [
+    "KHR_gaussian_splatting"
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [0]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "MinimalGsplatNode",
+      "mesh": 0
+    }
+  ],
+  "meshes": [
+    {
+      "name": "MinimalGsplatMesh",
+      "primitives": [
+        {
+          "mode": 0,
+          "attributes": {
+            "POSITION": 0,
+            "KHR_gaussian_splatting:ROTATION": 1,
+            "KHR_gaussian_splatting:SCALE": 2,
+            "KHR_gaussian_splatting:OPACITY": 3,
+            "KHR_gaussian_splatting:SH_DEGREE_0_COEF_0": 4,
+            "COLOR_0": 5
+          },
+          "extensions": {
+            "KHR_gaussian_splatting": {
+              "kernel": "ellipse",
+              "colorSpace": "lin_rec709_display",
+              "projection": "perspective",
+              "sortingMethod": "cameraDistance"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 1,
+      "type": "VEC3",
+      "min": [0.0, 0.0, 0.0],
+      "max": [0.0, 0.0, 0.0]
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 1,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 1,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 3,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 1,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 1,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 5,
+      "byteOffset": 0,
+      "componentType": 5126,
+      "count": 1,
+      "type": "VEC4"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 12
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 12,
+      "byteLength": 16
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 28,
+      "byteLength": 12
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 40,
+      "byteLength": 4
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 44,
+      "byteLength": 12
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 56,
+      "byteLength": 16
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 72,
+      "uri": "minimal_point.bin"
+    }
+  ]
+}

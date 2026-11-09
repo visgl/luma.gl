@@ -6,7 +6,7 @@ import {type Device, type Framebuffer, Texture} from '@luma.gl/core';
 import {
   bloomCompositeShaderPass,
   createCameraReprojectionTAACompositeShaderPass
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {ShaderPassRenderer} from '@luma.gl/engine';
 import {DeferredSceneRenderer, SceneRenderer, type SceneRenderOptions} from './renderers';
 import {Matrix4, type NumericArray} from '@math.gl/core';

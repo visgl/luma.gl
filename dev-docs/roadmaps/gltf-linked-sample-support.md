@@ -22,7 +22,7 @@ the implementation status and remaining generalization limits are summarized her
 - [Physics samples](https://github.com/eoineoineoin/glTF_Physics/tree/9dc61cb3474ff9a51f58d3592f79d5c9e572056a/samples), revision `9dc61cb3474ff9a51f58d3592f79d5c9e572056a`.
 - [Interactivity samples](https://github.com/KhronosGroup/glTF-Test-Assets-Interactivity/tree/926bec45dfbe052bad4013ab5852ed2f4042bff5), revision `926bec45dfbe052bad4013ab5852ed2f4042bff5`.
 - The importer separately pins the physics and implicit-shapes draft profiles in
-  `modules/gltf/src/physics/README.md`. The sample revision and schema revision are
+  `modules/engine/src/gltf/physics/README.md`. The sample revision and schema revision are
   distinct; matching extension names do not establish schema compatibility.
 
 ## Coverage and missing work

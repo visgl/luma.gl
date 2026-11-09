@@ -46,3 +46,9 @@ The bounded 96-step ray marcher prioritizes interactive performance over exact g
 High twist can soften small surface details; reflection doubles ray work on floor pixels.
 The compiler is an experimental package available from luma.gl v10. See the
 [compiler limits](../../../modules/slang/README.md) for the supported authoring subset.
+
+The source selector also includes three runnable **WGSL** samples: an interpolated triangle,
+color-channel arithmetic, and typed helper functions. Selecting one compiles its WGSL to GLSL
+ES 300, shows the generated vertex/fragment shaders, and draws a preview using WebGL 2. The
+preview uses WebGL 2 even when the sculpture is running on WebGPU. These samples use the
+initial frontend subset and require no uniform buffers or textures.

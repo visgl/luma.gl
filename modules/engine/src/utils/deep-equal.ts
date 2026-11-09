@@ -10,7 +10,7 @@
  * @param depth Depth to which to recurse in nested Objects/Arrays. Use 0 (default) for shallow comparison, -1 for infinite depth
  */
 /* eslint-disable complexity */
-export function deepEqual(a: any, b: any, depth: number): boolean {
+export function deepEqual(a: unknown, b: unknown, depth: number): boolean {
   if (a === b) {
     return true;
   }
@@ -32,6 +32,8 @@ export function deepEqual(a: any, b: any, depth: number): boolean {
     return false;
   }
   if (typeof a === 'object' && typeof b === 'object') {
+    const aObject = a as Record<string, unknown>;
+    const bObject = b as Record<string, unknown>;
     const aKeys = Object.keys(a);
     const bKeys = Object.keys(b);
     if (aKeys.length !== bKeys.length) {
@@ -41,7 +43,7 @@ export function deepEqual(a: any, b: any, depth: number): boolean {
       if (!b.hasOwnProperty(key)) {
         return false;
       }
-      if (!deepEqual(a[key], b[key], depth - 1)) {
+      if (!deepEqual(aObject[key], bObject[key], depth - 1)) {
         return false;
       }
     }

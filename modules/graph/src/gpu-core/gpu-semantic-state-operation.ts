@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {GPUOperationContract} from './gpu-operation-contract';
 import type {GPUOperation} from './gpu-operation';
 import type {GPUGraphScalar, GPUGraphScalarFormat} from './gpu-graph-value';
 
@@ -9,6 +10,9 @@ import type {GPUGraphScalar, GPUGraphScalarFormat} from './gpu-graph-value';
 export class GPUGraphScalarLiteral<T extends GPUGraphScalarFormat = GPUGraphScalarFormat>
   implements GPUOperation
 {
+  get contract(): GPUOperationContract {
+    return {values: [{value: this.props.output, access: 'write'}]};
+  }
   readonly type = 'scalar-literal';
   readonly id: string;
   constructor(readonly props: {id?: string; output: GPUGraphScalar<T>; value: number}) {

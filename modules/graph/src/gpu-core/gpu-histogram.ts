@@ -6,7 +6,7 @@ import {alignGraphVectorViews} from './graph-vector-view-utils';
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '../execution/compute/kernel';
 import {
   GPUCommandGraph,
   GraphVectorView,

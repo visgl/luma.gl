@@ -1,67 +1,45 @@
 ---
 title: Test utilities
-description: Configure luma.gl tests, browser and device environments, snapshot workflows, and resource-leak checks.
+description: GPU test devices, null resources, and test helpers from core/test-utils.
 ---
 
-import {TestUtilsDocsTabs} from '@site/src/components/docs/test-utils-docs-tabs';
+# Test utilities
 
-# Overview
-
-<TestUtilsDocsTabs active="overview" />
-
-`@luma.gl/test-utils` contains GPU-aware helpers for testing luma.gl applications and comparing
-rendered output. It is intended for test code, not application bundles.
-
-## When to use it
-
-Use this package when a test needs a configured luma.gl device, deterministic animation-loop
-execution, framebuffer readback, or image snapshot comparison. Use ordinary Vitest assertions for
-CPU-only logic that does not require a device.
-
-## Quick start
+Import test devices and resource helpers from `@luma.gl/core/test-utils`. This optional entry
+registers the WebGL and WebGPU adapters without importing engine or graph, or creating a device eagerly.
+It is intended for tests, and is not exported by the core package root.
 
 ```ts
-import {SnapshotTestRunner} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 
-const runner = new SnapshotTestRunner({
-  width: 800,
-  height: 600,
-  onTest: async ({device, renderPass}) => {
-    model.draw(renderPass);
-  }
-});
+const device = await getWebGPUTestDevice();
+if (device) {
+  // Encode, submit, and read back GPU work using the normal Device API.
+}
 
-await runner.run();
+const nullDevice = new NullDevice({});
+// Use the null backend for CPU-side validation without a browser GPU.
+nullDevice.destroy();
 ```
 
-See [`SnapshotTestRunner`](/docs/api-reference/test-utils/snapshot-test-runner) for its complete
-configuration and lifecycle.
+## Exports
 
-## Test environments
+- `getTestDevices`, `getTestDevice`, `getWebGLTestDevice`, `getPresentationWebGLTestDevice`,
+  `getWebGPUTestDevice`, `getWebGPUTestDevices`, and `getNullTestDevice` provide cached test devices.
+- `NullDevice`, `NullAdapter`, and `nullAdapter` provide the null backend.
+- `checkType`, `deepCopy`, `getResourceCounts`, and `getLeakedResources` support test assertions.
 
-| Environment | Use it for |
-| --- | --- |
-| Node | Pure data, layout, shader assembly, and validation tests that do not create a browser GPU device. |
-| Browser | Interactive WebGPU or WebGL 2 behavior with a real canvas and browser diagnostics. |
-| Headless browser | Repeatable rendering and image comparison in automation. |
+Use Vitest and the repository Playwright utilities for browser execution and image comparisons.
+See [Testing](/docs/developer-guide/testing) and
+[browser automation](/docs/developer/dev-tools/playwright).
 
-The repository-level commands are documented in the [Testing guide](/docs/developer-guide/testing).
+## Compatibility
 
-## Snapshot workflow
+The `@luma.gl/test-utils` package has been removed. Replace both its root and `/device` imports
+with `@luma.gl/core/test-utils`.
+The deprecated synchronous `createTestDevice` and `webglDevice` exports remain available from
+`@luma.gl/core/test-utils-legacy`. Prefer asynchronous device helpers.
 
-1. Render a deterministic frame at a fixed viewport and device-pixel ratio.
-2. Read the requested attachment only after command submission completes.
-3. Compare against a reviewed reference image with an explicit tolerance.
-4. Record backend, feature level, and adapter details when results are backend-sensitive.
-
-## Limits and compatibility
-
-Image snapshots can vary across GPU vendors and browser implementations. Prefer semantic assertions
-for algorithms and reserve pixel comparisons for stable presentation behavior. WebGPU-only tests
-must report that requirement rather than silently falling back to WebGL 2.
-
-## Related pages
-
-- [Testing luma.gl applications](/docs/developer-guide/testing)
-- [Debugging](/docs/developer-guide/debugging)
-- [Browser automation support](/docs/developer/dev-tools/playwright)
+The legacy `SnapshotTestRunner` and `PerformanceTestRunner` are no longer public APIs.
+There is no `@luma.gl/engine/test-utils` entry: device helpers need only core, and the historical
+animation-loop runners are retained solely for the repository's old render/performance harness.

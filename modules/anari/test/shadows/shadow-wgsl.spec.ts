@@ -5,10 +5,10 @@
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4, radians} from '@math.gl/core';
 import {WgslReflect} from 'wgsl_reflect';
-import {WGSLShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
+import {WGSLShaderAssembler} from '../../../shaders/src/lib/shader-assembler';
 import {getFragmentShaderForRenderPass} from '../../../engine/src/passes/get-fragment-shader';
 import {textureTransform} from '../../../engine/src/passes/texture-transform-module';
 import {
@@ -16,8 +16,8 @@ import {
   contactShadowComposite,
   contactShadowTrace
 } from '../../src/shadows/contact-shadow';
-import {shadow} from '../../src/shadows/shadow';
-import {ShadowMapRenderer} from '../../src/shadows/shadow-map-renderer';
+import {shadow} from '@luma.gl/shaders';
+import {ShadowMapRenderer} from '@luma.gl/engine/lighting';
 
 const PLATFORM_INFO = {
   type: 'webgpu' as const,
@@ -177,7 +177,7 @@ void main() {
       ],
       pointLights: [{position: [0, 3, 0], range: 12}],
       drawShadowCasters: view => {
-        caster.setParameters(view.rasterParameters);
+        caster.setParameters({...view.rasterParameters, cullMode: 'none'});
         caster.draw(view.renderPass);
         casterDrawCount++;
       }

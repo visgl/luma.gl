@@ -85,12 +85,7 @@ export type {
 } from './gpu-rigid-body-world';
 
 export type {GPURigidBodyBounds} from './rigid-body-publication';
-export {
-  PhysicsGeometryNode,
-  makePhysicsScenegraph,
-  type PhysicsGeometryNodeProps,
-  type PhysicsScenegraphSnapshot
-} from './physics-scenegraph';
+
 export {
   GPURigidBodyCommandJournal,
   applyRigidBodyCommand,
@@ -105,23 +100,8 @@ export {
   type GPURigidBodyRecoveryOptions,
   type GPURigidBodyRecoveryResult
 } from './rigid-body-recovery';
-export {makeRigidBodyJointsFromScenegraph} from './scenegraph-joints';
-export {ScenegraphPhysicsBehaviors} from './scenegraph-behaviors';
-export type {ScenegraphPhysicsBehaviorProps} from './scenegraph-behaviors';
-export {ScenegraphPhysicsMotion, type ScenegraphPhysicsColliderTarget} from './scenegraph-motion';
-
-export {ScenegraphPhysicsProperties, type PhysicsPropertyTarget} from './scenegraph-properties';
-export {
-  ScenegraphPhysicsInstance,
-  type ScenegraphPhysicsDefinition,
-  type ScenegraphPhysicsCapture
-} from './scenegraph-instance';
 
 export {scaleRigidBodyShape} from './scale-shape';
-export {ScenegraphPhysicsPublication} from './scenegraph-publication';
-export type {ScenegraphPhysicsRenderBinding} from './scenegraph-publication';
-export {ScenegraphPhysicsSession} from './scenegraph-session';
-export type {ScenegraphPhysicsScene, ScenegraphPhysicsSessionCapture} from './scenegraph-session';
 
 export {GPUPhysicsBatch} from './gpu-physics-batch';
 export type {
@@ -131,3 +111,8 @@ export type {
 } from './gpu-physics-batch';
 
 export {GPUPhysicsEnsemble, type GPUPhysicsEnsembleProps} from './gpu-physics-ensemble';
+
+export type {GPURigidBodyJointLimit, GPURigidBodyJointDrive} from './joint-types';
+
+export {rotateRigidBodyVector, normalizeRigidBodyRotation} from './rigid-body-properties';
+export type {GPURigidBodyGeneralConstraint} from './rigid-body-general-joints';

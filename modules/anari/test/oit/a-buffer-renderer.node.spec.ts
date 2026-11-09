@@ -13,12 +13,11 @@ import {
   getABufferSlicePlan,
   getABufferSupport
 } from '@luma.gl/anari';
-import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('aBuffer plugin exposes the WGSL module only', () => {
   expect(aBufferPlugin.name, 'plugin has stable name').toBe('aBuffer');
-  expect(aBufferPlugin.wgsl?.modules, 'plugin adds A-buffer WGSL module').toEqual([aBuffer]);
-  expect(aBufferPlugin.glsl, 'plugin does not advertise GLSL support').toBe(undefined);
+  expect(aBufferPlugin.module, 'plugin adds A-buffer WGSL module').toEqual(aBuffer);
   expect(aBuffer.source, 'zero-initialized head pointers represent empty pixels').toMatch(
     /A_BUFFER_EMPTY_FRAGMENT_POINTER: u32 = 0u/
   );

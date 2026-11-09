@@ -17,7 +17,7 @@ The layer owns its uploaded mesh and model. Changing width, caps, joins, or path
 geometry and releases the old buffers. Changing dashes, pencil grain, or glow intensity only updates uniforms. Changing appearance rebuilds
 the envelope geometry and blend configuration. Deck supplies the
 device, frame loop, projection, picking uniforms, and render pass. The adapter is local to this
-example; the reusable CPU geometry and shader module live in engine and shadertools respectively.
+example; the reusable CPU geometry and shader module live in engine and shaders respectively.
 
 `yarn workspace luma.gl-examples-deck-styled-paths build` checks types and builds standalone assets.
 `test:visual` runs both renderers and checks stable redraw, dash phase and toggles, geometry changes,

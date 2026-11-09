@@ -4,8 +4,8 @@
 
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
-import type {ClipShaderPluginProps} from '@luma.gl/shadertools';
-import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shadertools';
+import type {ClipShaderPluginProps} from '@luma.gl/shaders';
+import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -90,17 +90,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       device.info.shadingLanguage === 'wgsl'
         ? new WGSLShaderAssembler()
         : new GLSLShaderAssembler();
-    if (device.info.shadingLanguage === 'wgsl') {
-      shaderAssembler.addShaderHook(
-        'vs:CLIP_POSITION(position: ptr<function, vec4<f32>>, instanceCoordinates: vec2<f32>, geometryCoordinates: vec2<f32>)'
-      );
-      shaderAssembler.addShaderHook('fs:CLIP_COLOR(color: ptr<function, vec4<f32>>)');
-    } else {
-      shaderAssembler.addShaderHook(
-        'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'
-      );
-      shaderAssembler.addShaderHook('fs:CLIP_COLOR(inout vec4 color)');
-    }
+    shaderAssembler.addShaderInjectionTarget({
+      name: 'CLIP_POSITION',
+      stage: 'vertex',
+      glsl: {parameters: 'inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates'},
+      wgsl: {
+        parameters:
+          'position: ptr<function, vec4<f32>>, instanceCoordinates: vec2<f32>, geometryCoordinates: vec2<f32>'
+      }
+    });
+    shaderAssembler.addShaderInjectionTarget({
+      name: 'CLIP_COLOR',
+      stage: 'fragment',
+      glsl: {parameters: 'inout vec4 color'},
+      wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+    });
 
     this.model = new Model(device, {
       id: 'fill-pattern-triangles',

@@ -88,6 +88,9 @@ jobs:
       - name: Install website dependencies
         run: yarn install --immutable
 
+      - name: Build workspace packages
+        run: yarn build
+
       - name: Synchronize website example assets
         run: node website/scripts/sync-example-assets.mjs
 

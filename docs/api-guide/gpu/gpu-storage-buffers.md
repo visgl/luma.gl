@@ -89,7 +89,7 @@ the shader.
 
 ## Columnar Arrow Data
 
-`@luma.gl/arrow` can upload numeric Arrow columns through `GPUVector`, preserve
+`@luma.gl/graph/arrow` can upload numeric Arrow columns through `GPUVector`, preserve
 them in `GPUTable`, and bind selected columns as storage buffers when the shader
 layout declares `storage` or `read-only-storage` inputs.
 

@@ -1,0 +1,18 @@
+---
+title: Newton's Cradle
+description: A suspended row of steel balls transfers momentum through GPU-simulated contacts.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: intermediate
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [physics, compute]
+---
+
+import {GPURigidBodyWorldExample} from '@site/src/examples';
+
+<GPURigidBodyWorldExample scene="cradle" title="Newton's Cradle" />
+
+Reset restores the starting body positions while preserving your camera. Open Settings for
+lab controls, or inspect GPU Graph and GPU Graph Timeline to see the simulation stages.

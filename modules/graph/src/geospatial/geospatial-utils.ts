@@ -3,15 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
-import {type Binding, type Buffer, type Device} from '@luma.gl/core';
-import {Computation, DynamicBuffer, getPlatformInfo} from '@luma.gl/engine';
-import {
-  fp64arithmetic,
-  ShaderAssembler,
-  type ShaderModule,
-  type WGSLShaderAssembler
-} from '@luma.gl/shadertools';
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {UniformStore, type Binding, type Buffer, type Device} from '@luma.gl/core';
+import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
+import {Kernel} from '../execution/compute/kernel';
+import {getPlatformInfo} from '../execution/utils/get-platform-info';
+import {DynamicBuffer} from '@luma.gl/core/dynamic';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   GPUCommandGraph,
   type GraphVectorView,
@@ -453,54 +452,61 @@ export function addGeospatialPass<Parameters>(
       // Classic arithmetic reads the fp64arithmetic uniforms. The entry point uses them
       // statically, so the automatic pipeline layout always includes the uniform binding.
       const source = classic ? addFP64UniformUse(props.source) : props.source;
-      const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('wgsl');
-      const computation = new Computation(device, {
-        id: props.id,
-        source,
-        modules,
-        defines,
-        shaderAssembler,
-        shaderLayout: {
-          bindings: [
-            ...Object.keys(props.bindings).map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            })),
-            ...(classic
-              ? [getFP64UniformBinding(device, shaderAssembler, source, modules, defines)]
-              : [])
-          ]
-        }
-      });
-      if (classic) {
-        // The pass dispatches without predraw(), so upload the constant fp64 uniforms once.
-        computation.updateShaderInputs();
-      }
+      const shaderAssembler = new WGSLShaderAssembler();
+      const kernel = new Kernel(
+        device,
+        assembleComputeKernel(device, {
+          id: props.id,
+          source,
+          modules,
+          defines,
+          shaderAssembler,
+          shaderLayout: {
+            bindings: [
+              ...Object.keys(props.bindings).map((name, location) => ({
+                name,
+                type: 'storage' as const,
+                group: 0,
+                location
+              })),
+              ...(classic
+                ? [getFP64UniformBinding(device, shaderAssembler, source, modules, defines)]
+                : [])
+            ]
+          }
+        })
+      );
+      const uniforms = classic ? new UniformStore(device, {fp64arithmetic}) : null;
+      const uniformBindings: Record<string, Binding> = uniforms
+        ? {[fp64arithmetic.name]: uniforms.getManagedUniformBuffer(fp64arithmetic.name)}
+        : {};
+      // Allocate the managed buffer before uploading the arithmetic constants.
+      uniforms?.setUniforms({fp64arithmetic: fp64arithmetic.defaultUniforms!});
       return {
         encode: ({computePass, getBuffer}) => {
           const bindings: Record<string, Binding> = {};
           for (const [name, view] of Object.entries(props.bindings)) {
             bindings[name] = getViewBinding(view, getBuffer);
           }
-          computation.setBindings(bindings);
-          computation.dispatch(
-            computePass,
-            props.dispatchLayout.x,
-            props.dispatchLayout.y,
-            props.dispatchLayout.z
-          );
+          const kernelBindings = {...uniformBindings, ...bindings};
+          kernel.dispatch(computePass, {
+            bindings: kernelBindings,
+            x: props.dispatchLayout.x,
+            y: props.dispatchLayout.y,
+            z: props.dispatchLayout.z
+          });
         },
-        destroy: () => computation.destroy()
+        destroy: () => {
+          kernel.destroy();
+          uniforms?.destroy();
+        }
       };
     }
   });
 }
 
 /**
- * Returns the fp64arithmetic uniform binding of a kernel, as the assembler the Computation uses
- * assigns it. The binding location comes from that assembler's registry, so it matches.
+ * Returns the fp64arithmetic uniform binding of a kernel, as assigned by the shader assembler. The binding location comes from that assembler's registry, so it matches.
  */
 function getFP64UniformBinding(
   device: Device,
