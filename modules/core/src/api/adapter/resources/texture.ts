@@ -716,12 +716,6 @@ export abstract class Texture extends Resource<TextureProps> {
     return result;
   }
 
-  protected static _omitUndefined<T extends object>(options: T): Partial<T> {
-    return Object.fromEntries(
-      Object.entries(options).filter(([, value]) => value !== undefined)
-    ) as Partial<T>;
-  }
-
   static override defaultProps: Required<TextureProps> = {
     ...Resource.defaultProps,
     data: null,
@@ -792,20 +786,6 @@ export abstract class Texture extends Resource<TextureProps> {
   };
 
   protected static defaultTextureReadOptions: Required<TextureReadOptions> = {
-    x: 0,
-    y: 0,
-    z: 0,
-    width: undefined!,
-    height: undefined!,
-    depthOrArrayLayers: 1,
-    mipLevel: 0,
-    aspect: 'all'
-  };
-
-  protected static defaultTextureWriteOptions: Required<TextureWriteOptions> = {
-    byteOffset: 0,
-    bytesPerRow: undefined!,
-    rowsPerImage: undefined!,
     x: 0,
     y: 0,
     z: 0,
