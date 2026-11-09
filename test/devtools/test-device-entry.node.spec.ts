@@ -35,17 +35,31 @@ test('device-only helpers do not load engine, graph, or eager legacy devices', a
   expect(heavyweightInputs).toEqual([]);
 });
 
-test('CI browser shards cover the matrix range using its actual job count', () => {
+test.each([
+  'pull_request',
+  'push',
+  'merge_group'
+])('CI browser shards cover the matrix range for %s', eventName => {
   const workflow = parse(
     readFileSync(new URL('../../.github/workflows/test.yml', import.meta.url), 'utf8')
   );
   const job: {
-    strategy: {matrix: {include: {group: string; runner: string; shard: string}[]}};
+    strategy: {matrix: {include: string}};
     steps: {name: string; run?: string}[];
   } = workflow.jobs.browser_coverage;
-  const entries = job.strategy.matrix.include;
-  expect([...new Set(entries.map(entry => entry.group))]).toEqual([...BROWSER_TEST_GROUPS]);
-  for (const group of BROWSER_TEST_GROUPS) {
+  // Match the supported expression shape so an unrecognized routing change fails closed.
+  const expression = job.strategy.matrix.include.match(
+    /^\$\{\{\s*fromJSON\(github\.event_name == 'merge_group' &&\s*'([^']+)' \|\|\s*'([^']+)'\)\s*\}\}$/
+  );
+  expect(expression).not.toBeNull();
+  const entries: {group: string; runner: string; shard: string}[] = JSON.parse(
+    expression![eventName === 'merge_group' ? 1 : 2]
+  );
+  const expectedGroups = BROWSER_TEST_GROUPS.filter(
+    group => eventName !== 'merge_group' || group !== 'physics'
+  );
+  expect([...new Set(entries.map(entry => entry.group))]).toEqual(expectedGroups);
+  for (const group of expectedGroups) {
     const shards = entries.filter(entry => entry.group === group).map(entry => entry.shard);
     expect(shards.map(shard => shard.split('/').map(Number))).toEqual(
       Array.from({length: shards.length}, (_, index) => [index + 1, shards.length])
@@ -55,6 +69,8 @@ test('CI browser shards cover the matrix range using its actual job count', () =
     step => step.name === 'Run headless tests and generate coverage'
   )?.run;
   expect(command).toContain('--shard=${{ matrix.shard }}');
+  expect(workflow.on.merge_group.types).toEqual(['checks_requested']);
+  expect(workflow.jobs.test.needs).toContain('browser_coverage');
 });
 
 test('browser group selection fails closed on unknown values', () => {
