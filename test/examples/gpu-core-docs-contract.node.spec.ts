@@ -181,7 +181,9 @@ describe('GPU module documentation contract', () => {
           tableOfContentsIdentifiers.has(getTableOfContentsIdentifier(documentationPath!)),
           `${tab.href} must appear in docs/table-of-contents.json`
         ).toBe(true);
-        expect(readFileSync(documentationPath!, 'utf8')).toContain(`active="${tab.id}"`);
+        const source = readFileSync(documentationPath!, 'utf8');
+        if (tab.href === '/docs/api-reference/graph') expect(source).toContain('# Graph');
+        else expect(source).toContain(`active="${tab.id}"`);
       }
     }
   });

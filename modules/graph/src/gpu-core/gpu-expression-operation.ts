@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {parse, type Expression} from '@math.gl/expressions';
+import {parse, type Expression} from '@math.gl/core/expressions';
 import {getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
-import type {GPUGraphVectorFormat} from './gpu-graph-value';
+import {gpuGraph, type GPUGraphVectorFormat} from './gpu-graph-value';
 import type {GPUOperationContract} from './gpu-operation-contract';
 import type {GPUOperation} from './gpu-operation';
 
@@ -21,7 +21,28 @@ export type GPUExpressionOperationProps = {
 /** A named, backend-independent numeric expression. Parsing and validation happen at compilation. */
 export class GPUExpressionOperation implements GPUOperation {
   get contract(): GPUOperationContract {
+    const expression = parseGPUExpression(this.expression);
+    const references = getGPUExpressionReferences(expression);
     return {
+      outputs: ({getValue}) => {
+        const inputs = references.map(name => {
+          const value = getValue(name);
+          if (value.type === 'texture') throw new Error('Numeric expressions cannot read textures');
+          return [name, value] as const;
+        });
+        const format = getGPUExpressionFormat(
+          expression,
+          new Map(inputs.map(([name, value]) => [name, value.format]))
+        );
+        const vector = inputs.some(([, value]) => value.type === 'vector');
+        // A multi-component constant is a one-row vector, not a scalar.
+        return {
+          [this.output]:
+            vector || !isGPUExpressionFormat(format)
+              ? gpuGraph.vector(format, vector ? {} : {length: 1})
+              : gpuGraph.scalar(format)
+        };
+      },
       values: [
         ...getGPUExpressionReferences(parseGPUExpression(this.expression)).map(value => ({
           value,

@@ -122,15 +122,35 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
   },
   EXT_mesh_features: {
     supportLevel: 'loader-only',
-    standardStatus: 'ratified',
+    standardStatus: 'unknown',
     comment:
       'Feature identifiers are decoded by loaders.gl; automatic rendering and picking are application-owned.'
   },
   EXT_structural_metadata: {
     supportLevel: 'loader-only',
-    standardStatus: 'ratified',
+    standardStatus: 'unknown',
     comment:
       'Structural metadata is decoded by loaders.gl; automatic rendering and querying are application-owned.'
+  },
+  KHR_gaussian_splatting: {
+    supportLevel: 'none',
+    standardStatus: 'ratified',
+    comment: 'A splat adapter exists, but ordinary glTF scene creation does not integrate it.'
+  },
+  KHR_interactivity: {
+    supportLevel: 'none',
+    standardStatus: 'ratified',
+    comment: 'The subset interpreter is not integrated into ordinary glTF scene creation.'
+  },
+  KHR_node_selectability: {
+    supportLevel: 'none',
+    standardStatus: 'ratified',
+    comment: 'Authored selection semantics are not wired into scene picking.'
+  },
+  KHR_node_hoverability: {
+    supportLevel: 'none',
+    standardStatus: 'ratified',
+    comment: 'Authored hover semantics are not wired into pointer dispatch.'
   },
   KHR_lights_punctual: {
     supportLevel: 'built-in',
@@ -166,9 +186,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
   },
   EXT_texture_avif: {
     supportLevel: 'none',
-    standardStatus: 'ratified',
+    standardStatus: 'unknown',
     comment:
-      'The image loader can decode supported AVIF images, but GLTFLoader does not select EXT_texture_avif sources.'
+      'Source selection depends on the loaders.gl version and decoder; luma.gl does not independently resolve AVIF sources.'
   },
   KHR_materials_specular: {
     supportLevel: 'built-in',
@@ -276,9 +296,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment: 'Metadata payloads remain in the loaded glTF, but luma.gl does not interpret them.'
   },
   KHR_xmp_json_ld: {
-    supportLevel: 'none',
+    supportLevel: 'parsed-and-wired',
     standardStatus: 'ratified',
-    comment: 'Metadata is preserved in the glTF, but luma.gl does not interpret it.'
+    comment: 'XMP packet references are available through scene metadata.'
   },
   EXT_lights_image_based: {
     supportLevel: 'none',
@@ -389,7 +409,9 @@ export function assertSupportedGLTFExtensions(gltf: GLTFPostprocessed, device?: 
     throw new Error(
       `Unsupported required glTF extensions: ${unsupportedExtensions
         .map(extension => extension.extensionName)
-        .join(', ')}`
+        .join(', ')}. ${unsupportedExtensions
+        .map(extension => `${extension.extensionName}: ${extension.comment}`)
+        .join(' ')}`
     );
   }
 }

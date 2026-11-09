@@ -16,8 +16,8 @@ import {
   contactShadowComposite,
   contactShadowTrace
 } from '../../src/shadows/contact-shadow';
-import {shadow} from '../../src/shadows/shadow';
-import {ShadowMapRenderer} from '../../src/shadows/shadow-map-renderer';
+import {shadow} from '@luma.gl/shaders';
+import {ShadowMapRenderer} from '@luma.gl/engine/lighting';
 
 const PLATFORM_INFO = {
   type: 'webgpu' as const,
@@ -177,7 +177,7 @@ void main() {
       ],
       pointLights: [{position: [0, 3, 0], range: 12}],
       drawShadowCasters: view => {
-        caster.setParameters(view.rasterParameters);
+        caster.setParameters({...view.rasterParameters, cullMode: 'none'});
         caster.draw(view.renderPass);
         casterDrawCount++;
       }

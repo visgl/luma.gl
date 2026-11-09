@@ -290,7 +290,10 @@ clears them. `complete` is also true before the first step, so verify `steps` wh
 checking execution. Complete execution means no reported work loss; it does not
 certify numerical accuracy, conformance or performance.
 
-**Incomplete work does not roll back the step.** Stop accepting results, correct
+**Under the default report policy, incomplete work does not roll back the step.**
+With `failurePolicy: 'rollback'`, failed steps restore the last accepted state while
+lifetime diagnostics retain the failure; see [rejected steps](#rejected-steps-and-recovery).
+Stop accepting incomplete results, correct
 capacity, geometry or traversal settings, create a replacement world and replay from
 known valid initial/checkpoint state. Increasing capacity after a bad step cannot
 restore already-lost contact impulses. There is no automatic resize/retry mechanism.
@@ -562,7 +565,7 @@ separate qualification work.
 Tests cover coupled tangent response, static friction, moving supports, eight-box
 stacks, sparse discovery, capacity overflow and recovery by replay. These are bounded
 fixtures with tolerances, not qualification for arbitrary scenes. General rigid-body
-CCD, parallel joint solving, joint breakage, solid mesh containment and cross-device bitwise
+CCD, dynamic-to-dynamic parallel joint solving, joint breakage, solid mesh containment and cross-device bitwise
 reproducibility remain outside the current contract.
 
 See the [background guide](/docs/api-guide/gpu/gpu-physics),
@@ -847,3 +850,16 @@ captures are not portable glTF exports. Rebind borrowed render buffers after res
 instance edits or steps reject; `destroy()` waits for the callback. Do not nest
 instance operations inside the callback. Direct borrowed-world operations are not
 tracked automatically.
+
+### Anchored pendulums with parallel contacts
+
+The parallel solver supports up to 64 distance joints when each joint has a static anchor.
+A small serial joint sweep alternates with each parallel contact iteration on the GPU, sharing
+the existing persistent joint impulses. This supports pendulums striking large contact piles
+without moving all block contacts to the ordered reference solver. Joint frames and distance
+springs use the same definitions as the ordered solver. Dynamic-to-dynamic joints, moving
+anchors, hinges, sliders, fixed and general joints still require the ordered solver.
+
+The [Wrecking Ball example](/examples/experimental/wrecking-ball) combines a heavy pendulum
+with 204 blocks. Release starts the simulation; Reset reconstructs the authored positions and
+pauses the ball while preserving the camera.

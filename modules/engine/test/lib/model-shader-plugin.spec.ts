@@ -44,7 +44,8 @@ for (const backend of ['webgl', 'webgpu'] as const) {
           name: 'declaration-provider',
           injections: [
             {
-              target: 'fs:#decl',
+              stage: 'fragment',
+              target: '#decl',
               glsl: 'float pluginValue() { return 1.0; }',
               wgsl: 'fn pluginValue() -> f32 { return 1.0; }'
             }
@@ -102,7 +103,8 @@ struct VertexOutput {
           interStageVariables: {pluginValue: {type: integer ? 'u32' : 'f32'}},
           injections: [
             {
-              target: 'vs:#main-start',
+              stage: 'vertex',
+              target: '#main-start',
               wgsl: `
 #if PLUGIN_VALUE == 1
 pluginValue = ${integer ? 'u32' : 'f32'}(1);
@@ -139,7 +141,44 @@ it('Model#GLSL module helpers can access plugin inputs and interStageVariables',
           vs: 'void writePluginValue() { pluginValue = pluginInput; }',
           fs: 'vec4 readPluginValue() { return vec4(pluginValue); }'
         },
-        injections: [{target: 'vs:#main-start', glsl: 'writePluginValue();'}]
+        injections: [{stage: 'vertex', target: '#main-start', glsl: 'writePluginValue();'}]
+      }
+    ]
+  });
+  try {
+    expect(model.pipeline).toBeTruthy();
+  } finally {
+    model.destroy();
+  }
+});
+
+it.each(['webgl', 'webgpu'] as const)('Model#plugin-owned hooks compile on %s', async backend => {
+  const device = backend === 'webgl' ? await getWebGLTestDevice() : await getWebGPUTestDevice();
+  if (!device) return;
+  const model = await Model.createAsync(device, {
+    vs: DUMMY_VS,
+    fs: DUMMY_FS.replace('fragColor = vec4(1.0);', 'fragColor = vec4(1.0); TINT(fragColor);'),
+    source: DUMMY_WGSL.replace(
+      'return vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0);',
+      'var color = vec4<f32>(1.0); TINT(&color); return color;'
+    ),
+    plugins: [
+      {
+        name: 'consumer',
+        injections: [
+          {stage: 'fragment', target: 'TINT', glsl: 'color.r = 0.5;', wgsl: '(*color).r = 0.5;'}
+        ]
+      },
+      {
+        name: 'provider',
+        injectionTargets: [
+          {name: 'TINT', stage: 'fragment', glsl: {parameters: '\n  inout vec4 color\n'}},
+          {
+            name: 'TINT',
+            stage: 'fragment',
+            wgsl: {parameters: '\n  color: ptr<function, vec4<f32>>\n'}
+          }
+        ]
       }
     ]
   });

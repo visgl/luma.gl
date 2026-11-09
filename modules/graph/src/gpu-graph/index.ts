@@ -59,3 +59,26 @@ export type {
   GPUOperationVectorShape
 } from '../gpu-core/gpu-operation-contract';
 export type {GPUOperation} from '../gpu-core/gpu-operation';
+
+export {gpuGraph} from '../gpu-core/gpu-graph-value';
+export type {
+  GPUGraphScalarDescriptor,
+  GPUGraphVectorDescriptor,
+  GPUGraphValueDescriptor,
+  GPUGraphValueRole
+} from '../gpu-core/gpu-graph-value';
+export type {GPUGraphExecutionBindings} from '../gpu-core/gpu-expression-plan';
+export type {
+  GPUOperationOutputDeclarations,
+  GPUOperationContractContext
+} from '../gpu-core/gpu-operation-contract';
+
+export {CompiledGPUGraph, PreparedGPUGraphExecution} from '../gpu-core/compiled-gpu-graph';
+
+export {GPUCPUOperation} from '../gpu-core/gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from '../gpu-core/gpu-cpu-operation';

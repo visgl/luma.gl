@@ -5,8 +5,37 @@
 import {expect, it} from 'vitest';
 import {Buffer, Device, Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {clipShaderPlugin, GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
+import {
+  clipShaderPlugin,
+  GLSLShaderAssembler,
+  WGSLShaderAssembler,
+  type ShaderInjectionTarget
+} from '@luma.gl/shaders';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+
+const CLIP_HOOKS: ShaderInjectionTarget[] = [
+  {
+    name: 'RETURN_COLOR',
+    stage: 'fragment',
+    glsl: {parameters: 'vec4 color', returnType: 'vec4', footer: 'return color;'},
+    wgsl: {parameters: 'color: vec4<f32>', returnType: 'vec4<f32>', footer: 'return color;'}
+  },
+  {
+    name: 'CLIP_POSITION',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates'},
+    wgsl: {
+      parameters:
+        'position: ptr<function, vec4<f32>>, instanceCoordinates: vec2<f32>, geometryCoordinates: vec2<f32>'
+    }
+  },
+  {
+    name: 'CLIP_COLOR',
+    stage: 'fragment',
+    glsl: {parameters: 'inout vec4 color'},
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  }
+];
 
 const WIDTH = 4;
 const HEIGHT = 4;
@@ -14,10 +43,9 @@ const HEIGHT = 4;
 it('clipShaderPlugin#WebGL2 clips instances and geometry without rebuilding', async () => {
   const device = await getWebGLTestDevice();
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook(
-    'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'
-  );
-  shaderAssembler.addShaderHook('fs:CLIP_COLOR(inout vec4 color)');
+  for (const hook of CLIP_HOOKS) {
+    shaderAssembler.addShaderInjectionTarget(hook);
+  }
 
   const model = new Model(device, {
     id: 'clip-shader-plugin-webgl-test',
@@ -41,6 +69,7 @@ out vec4 fragmentColor;
 void main() {
   fragmentColor = vec4(1.0, 0.0, 0.0, 1.0);
   CLIP_COLOR(fragmentColor);
+  fragmentColor = RETURN_COLOR(fragmentColor);
 }`,
     shaderAssembler,
     plugins: [clipShaderPlugin]
@@ -60,10 +89,9 @@ it('clipShaderPlugin#WebGPU clips instances and geometry without rebuilding', as
   }
 
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook(
-    'vs:CLIP_POSITION(position: ptr<function, vec4<f32>>, instanceCoordinates: vec2<f32>, geometryCoordinates: vec2<f32>)'
-  );
-  shaderAssembler.addShaderHook('fs:CLIP_COLOR(color: ptr<function, vec4<f32>>)');
+  for (const hook of CLIP_HOOKS) {
+    shaderAssembler.addShaderInjectionTarget(hook);
+  }
 
   const model = new Model(device, {
     id: 'clip-shader-plugin-webgpu-test',
@@ -96,7 +124,7 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
   var color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
   CLIP_COLOR(&color);
-  return color;
+  return RETURN_COLOR(color);
 }
 `,
     shaderAssembler,

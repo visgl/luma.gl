@@ -152,11 +152,25 @@ function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapab
 
 // HELPER - FORMAT INFO
 
-/**
- * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
- */
+const textureFormatInfoCache = new Map<TextureFormat, TextureFormatInfo>();
+type MutableTextureFormatInfo = {
+  -readonly [Key in keyof TextureFormatInfo]: TextureFormatInfo[Key];
+};
+
+/** Returns shared, immutable metadata for a texture format. */
 export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
-  let formatInfo: TextureFormatInfo = getTextureFormatInfoUsingTable(format);
+  let formatInfo = textureFormatInfoCache.get(format);
+  if (!formatInfo) {
+    const decoded = decodeTextureFormatInfo(format);
+    decoded.bitsPerChannel = Object.freeze([...decoded.bitsPerChannel]);
+    formatInfo = Object.freeze(decoded);
+    textureFormatInfoCache.set(format, formatInfo);
+  }
+  return formatInfo;
+}
+
+function decodeTextureFormatInfo(format: TextureFormat): MutableTextureFormatInfo {
+  let formatInfo: MutableTextureFormatInfo = getTextureFormatInfoUsingTable(format);
 
   if (textureFormatDecoder.isCompressed(format)) {
     formatInfo.channels = 'rgb';

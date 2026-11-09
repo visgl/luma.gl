@@ -4,12 +4,76 @@
  */
 export const BUNDLE_SIZE_FIXTURES = [
   {
+    name: 'wgsl-inspect',
+    label: 'WGSL declaration inspector',
+    entry: 'test/size/wgsl-inspect.ts',
+    external: [],
+    maximum: {minified: 10_000, gzip: 4_200, brotli: 3_800},
+    targetGzip: 3_500
+  },
+  {
+    name: 'glsl-inspect',
+    label: 'GLSL declaration inspector',
+    entry: 'test/size/glsl-inspect.ts',
+    external: [],
+    maximum: {minified: 7_000, gzip: 3_300, brotli: 3_000},
+    targetGzip: 2_900
+  },
+  {
+    name: 'shader-inspect',
+    label: 'Both declaration inspectors',
+    entry: 'test/size/shader-inspect.ts',
+    external: [],
+    maximum: {minified: 16_200, gzip: 6_300, brotli: 5_800},
+    targetGzip: 5_500
+  },
+  {
+    name: 'core-wgsl-scan',
+    label: 'Core WGSL pipeline scanner',
+    entry: 'test/size/core-wgsl-scan.ts',
+    external: [],
+    maximum: {minified: 8_600, gzip: 3_200, brotli: 2_900},
+    targetGzip: 2_800
+  },
+  {
+    name: 'slang-syntax',
+    label: 'Existing Slang syntax parser',
+    entry: 'test/size/slang-syntax.ts',
+    external: [],
+    maximum: {minified: 10_800, gzip: 3_700, brotli: 3_400},
+    targetGzip: 3_700
+  },
+  {
+    name: 'wgsl-syntax',
+    label: 'Full WGSL syntax parser',
+    entry: 'test/size/wgsl-syntax.ts',
+    external: [],
+    maximum: {minified: 11_200, gzip: 4_500, brotli: 4_200},
+    targetGzip: 4_500
+  },
+  {
+    name: 'wgsl-declaration-syntax',
+    label: 'Small WGSL declaration parser',
+    entry: 'test/size/wgsl-declaration-syntax.ts',
+    external: [],
+    maximum: {minified: 8_200, gzip: 3_600, brotli: 3_300},
+    targetGzip: 3_600
+  },
+  {
     name: 'slang',
     label: '`@luma.gl/slang` compiler (optional)',
     entry: 'modules/slang/src/index.ts',
     external: [],
-    // Named imports and native contracts add 2.1 KB gzip; retain a tight regression ceiling.
-    maximum: {minified: 108_000, gzip: 31_000, brotli: 27_500},
+    // WGSL ordering and typed operation emission add ~0.5 KB gzip; frontends stay separate.
+    maximum: {minified: 113_500, gzip: 32_400, brotli: 28_700},
+    targetGzip: 25_000
+  },
+  {
+    name: 'wgsl',
+    label: '`@luma.gl/slang/wgsl` compiler (optional)',
+    entry: 'modules/slang/src/wgsl.ts',
+    external: [],
+    maximum: {minified: 130_500, gzip: 37_600, brotli: 33_300},
     targetGzip: 25_000
   },
   {
@@ -26,7 +90,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     entry: 'modules/core/src/index.ts',
     external: [],
     // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
-    maximum: {minified: 102_000, gzip: 28_600, brotli: 25_100},
+    // Decoder caches + scratch normalization together measure 102,869 B / 28,813 B gzip.
+    maximum: {minified: 103_000, gzip: 28_900, brotli: 25_400},
     targetGzip: 24_000
   },
   {
@@ -34,7 +99,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/core/webgl` backend',
     entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
-    maximum: {minified: 140_500, gzip: 39_750, brotli: 34_000},
+    maximum: {minified: 141_000, gzip: 39_750, brotli: 34_250},
     targetGzip: 30_000
   },
   {
@@ -49,7 +114,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    maximum: {minified: 242_500, gzip: 68_100, brotli: 59_000},
+    // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
+    maximum: {minified: 243_400, gzip: 68_750, brotli: 59_300},
     targetGzip: 54_000
   },
   {

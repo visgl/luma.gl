@@ -141,6 +141,6 @@ export function buildMapping({
     xOffset: x,
     yOffsetMin: yMin,
     yOffsetMax: yMax,
-    canvasHeight: nextPowOfTwo(yMax)
+    canvasHeight: Math.max(1, nextPowOfTwo(yMax))
   };
 }

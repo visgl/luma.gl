@@ -5,6 +5,8 @@
 import {CompiledGPUGraph} from './compiled-gpu-graph';
 import type {GPUGraphCompileOptions} from './gpu-expression-plan';
 import type {Device} from '@luma.gl/core';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import type {GPUGraphOutputs} from './gpu-texture-plan';
 
 import type {TextureFormat} from '@luma.gl/core';
 import type {GraphTextureViewProps} from './gpu-command-graph';
@@ -17,6 +19,11 @@ import {
   type GPUGraphOperation
 } from './gpu-operation';
 import {
+  type GPUGraphScalarDescriptor,
+  type GPUGraphTextureDescriptor,
+  type GPUGraphVectorDescriptor,
+  type GPUGraphValueDescriptor,
+  type GPUGraphValueRole,
   GPUGraphScalar,
   GPUGraphTexture,
   GPUGraphTextureView,
@@ -40,6 +47,66 @@ export class GPUGraph {
     this.assertOperationLike(operation);
     this.addOperationLike(operation);
     return this;
+  }
+  addInput<T extends GPUGraphScalarFormat>(
+    id: string,
+    descriptor: GPUGraphScalarDescriptor<T>
+  ): GPUGraphScalar<T>;
+  addInput<T extends GPUGraphVectorFormat>(
+    id: string,
+    descriptor: GPUGraphVectorDescriptor<T>
+  ): GPUGraphVector<T>;
+  addInput<Format extends TextureFormat>(
+    id: string,
+    descriptor: GPUGraphTextureDescriptor<Format>
+  ): GPUGraphTexture<Format>;
+  addInput(
+    id: string,
+    descriptor: GPUGraphValueDescriptor
+  ): GPUGraphScalar | GPUGraphVector | GPUGraphTexture {
+    return this.addDeclaration(id, descriptor, 'input');
+  }
+  /** State is initialized, borrowed vector storage supplied for every invocation. */
+  addState<T extends GPUGraphVectorFormat>(
+    id: string,
+    descriptor: GPUGraphVectorDescriptor<T>
+  ): GPUGraphVector<T> {
+    if (descriptor.type !== 'vector') throw new Error('Graph state requires vector storage');
+    return this.addDeclaration(id, descriptor, 'state') as GPUGraphVector<T>;
+  }
+  /** @internal */
+  addDeclaration(
+    id: string,
+    descriptor: GPUGraphValueDescriptor,
+    role?: GPUGraphValueRole
+  ): GPUGraphScalar | GPUGraphVector | GPUGraphTexture {
+    this.assertValueId(id);
+    if (descriptor.type === 'texture') {
+      const texture = new GPUGraphTexture({
+        id,
+        ...descriptor,
+        usage: 0,
+        role,
+        descriptor,
+        external: role === 'input',
+        ...('width' in (descriptor.extent ?? {}) ? descriptor.extent : {})
+      });
+      this.programTextures.set(id, texture);
+      return texture;
+    }
+    if (descriptor.type === 'scalar') {
+      const scalar = new GPUGraphScalar(id, descriptor.format, role);
+      this.programScalars.set(id, scalar);
+      return scalar;
+    }
+    const vector = new GPUGraphVector({
+      id,
+      ...descriptor,
+      role,
+      external: role === 'input' || role === 'state'
+    });
+    this.programVectors.set(id, vector);
+    return vector;
   }
   scalar<T extends GPUGraphScalarFormat>(id: string, format: T): GPUGraphScalar<T> {
     this.assertValueId(id);
@@ -82,8 +149,43 @@ export class GPUGraph {
     }
     return new GPUGraphTextureView(texture, props);
   }
-  compile(device: Device, options: GPUGraphCompileOptions = {}): CompiledGPUGraph {
-    return new CompiledGPUGraph(device, this, options);
+  compile<Outputs extends GPUGraphOutputs = Record<string, GPUVector>>(
+    device: Device,
+    options: GPUGraphCompileOptions = {}
+  ): CompiledGPUGraph<Outputs> {
+    return new CompiledGPUGraph<Outputs>(device, this, options);
+  }
+  /** @internal */
+  constrainResult(vector: GPUGraphVector, descriptor: GPUGraphVectorDescriptor): GPUGraphVector {
+    if (
+      vector.length !== undefined &&
+      descriptor.length !== undefined &&
+      vector.length !== descriptor.length
+    )
+      throw new Error(`Incompatible result length ${vector.id}`);
+    if (
+      vector.chunkLengths &&
+      descriptor.chunkLengths &&
+      (vector.chunkLengths.length !== descriptor.chunkLengths.length ||
+        vector.chunkLengths.some((length, index) => length !== descriptor.chunkLengths![index]))
+    )
+      throw new Error(`Incompatible result chunks ${vector.id}`);
+    const constrained = new GPUGraphVector({
+      ...vector,
+      length: vector.length ?? descriptor.length,
+      chunkLengths: vector.chunkLengths ?? descriptor.chunkLengths
+    });
+    this.programVectors.set(vector.id, constrained);
+    return constrained;
+  }
+  /** @internal */
+  clone(): GPUGraph {
+    const program = new GPUGraph({id: this.id});
+    for (const [name, value] of this.programScalars) program.programScalars.set(name, value);
+    for (const [name, value] of this.programVectors) program.programVectors.set(name, value);
+    for (const [name, value] of this.programTextures) program.programTextures.set(name, value);
+    program.programOperations.push(...this.programOperations);
+    return program;
   }
   get textures(): readonly GPUGraphTexture[] {
     return Object.freeze([...this.programTextures.values()]);
@@ -120,9 +222,9 @@ export class GPUGraph {
       throw new Error(`${this.id} accepts GPU operations only`);
   }
 }
-export function composite(
-  operations: readonly GPUGraphOperation[],
+export function composite<Operation extends GPUGraphOperation>(
+  operations: readonly Operation[],
   props: {id?: string} = {}
-): GPUCompositeOperation {
+): GPUCompositeOperation<Operation> {
   return new GPUCompositeOperation({id: props.id, operations});
 }

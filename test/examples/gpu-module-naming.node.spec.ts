@@ -11,6 +11,7 @@ import * as gpuCore from '@luma.gl/graph/gpu-core';
 import * as gpuData from '@luma.gl/graph/gpu-data';
 import * as gpuCrossfilter from '@luma.gl/graph/gpu-crossfilter';
 import * as gpuDataframe from '@luma.gl/graph/gpu-dataframe';
+import * as gpuSQL from '@luma.gl/graph/gpu-sql';
 import * as gpuGraphModule from '@luma.gl/graph/gpu-graph-algorithms';
 import * as gpuVectorSearch from '@luma.gl/graph/gpu-vector-search';
 import * as gpuProject from '@luma.gl/graph/gpu-project';
@@ -60,6 +61,12 @@ const UNPUBLISHED_WORKING_NAMES = [
 ] as const;
 
 describe('experimental GPU module naming', () => {
+  test('exports canonical GPU SQL names without Lu compatibility aliases', () => {
+    expect(gpuSQL.GPUSQLContext.name).toBe('GPUSQLContext');
+    expect(gpuSQL.GPUSQLQuery.name).toBe('GPUSQLQuery');
+    expect(Object.keys(gpuSQL).filter(name => /^Lu/.test(name))).toEqual([]);
+    expect(Object.keys(gpuDataframe).filter(name => /^Lu/.test(name))).toEqual([]);
+  });
   test('distinguishes semantic graphs, command graphs, and graph analytics', () => {
     expect(executionGraph.GPUGraph).toBe(gpuCore.GPUGraph);
     expect(gpuCore.GPUGraph).not.toBe(gpuCore.GPUCommandGraph);
@@ -179,7 +186,7 @@ describe('experimental GPU module naming', () => {
     }
   });
 
-  test('gives every public GPU submodule a subgroup in the GPGPU API reference', () => {
+  test('groups shared data, kernels, and evaluator APIs under the graph reference', () => {
     type DocumentationCategory = {label: string; items: Array<string | DocumentationCategory>};
     const documentation = JSON.parse(
       readFileSync(path.join(process.cwd(), 'docs/table-of-contents.json'), 'utf8')
@@ -187,7 +194,7 @@ describe('experimental GPU module naming', () => {
     const reference = documentation.find(category => category.label === 'API Reference');
     const packageReference = reference?.items.find(
       (category): category is DocumentationCategory =>
-        typeof category !== 'string' && category.label === '@luma.gl/graph/gpu-simple-graph'
+        typeof category !== 'string' && category.label === '@luma.gl/graph'
     );
     const moduleGroups: Record<string, string> = {'gpu-data': 'GPU Data'};
     const graphReference = reference?.items.find(
@@ -196,7 +203,9 @@ describe('experimental GPU module naming', () => {
     );
     for (const label of [
       'GPU Core',
-      'GPU Graph',
+      'Command graphs',
+      'Kernels',
+      'Evaluator APIs',
       'GPU Graph Algorithms',
       'GPU Tables',
       'GPU Raster',

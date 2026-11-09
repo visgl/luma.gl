@@ -45,6 +45,7 @@ import {
   type GaussianSplatRADWorkerDecoder
 } from './rad-worker-decoder';
 import {makeGaussianSplatInfoHtml} from './app-ui';
+export {makeGaussianSplatInfoHtml} from './app-ui';
 
 export const title = 'Gaussian Splats';
 export const description =
@@ -129,6 +130,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
   private frameIndex = 0;
   private startTimeMilliseconds: number | null = null;
   private cameraTarget: [number, number, number] = [0, 0, 0];
+  private gltfWorldMatrix: Matrix4 | undefined;
   private readonly cameraFrame: GaussianSplatCameraFrame;
   private cameraSceneRadius = INITIAL_CAMERA_DISTANCE / 2;
   private cameraHomeDistance = INITIAL_CAMERA_DISTANCE;
@@ -437,10 +439,86 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     }
   }
 
+  /** Loads a single glTF Gaussian instance into the existing showcase renderer. */
+  private async loadGLTFSplatData(
+    configuration: LocalGaussianSplatLoadersConfiguration
+  ): Promise<void> {
+    const signal = this.loadAbortController!.signal;
+    const [{load}, {GLTFLoader}, {SPZLoader}, gltfModule, arrowModule] = await Promise.all([
+      import('@loaders.gl/core'),
+      import('@loaders.gl/scene/gltf'),
+      import('@loaders.gl/splats'),
+      import('@luma.gl/engine/gltf'),
+      import('@luma.gl/engine/arrow')
+    ]);
+    const loaded = await load(configuration.sourceUrl, [GLTFLoader, SPZLoader], {
+      signal,
+      splats: {shape: 'arrow-table', targetCoordinateSystem: 'LUF'}
+    });
+    signal.throwIfAborted();
+    const gltf = gltfModule.postProcessGLTF(
+      loaded as unknown as import('@luma.gl/engine/gltf').GLTFWithBuffers
+    );
+    if (
+      gltf.meshes.length !== 1 ||
+      gltf.meshes[0].primitives.length !== 1 ||
+      !gltf.meshes[0].primitives[0].extensions?.KHR_gaussian_splatting
+    ) {
+      throw new Error(
+        'The glTF showcase currently supports one Gaussian primitive without meshes.'
+      );
+    }
+    const scenegraphs = gltfModule.createScenegraphsFromGLTF(this.device, gltf, {
+      excludeGaussianSplatPrimitives: true
+    });
+    let groups: Awaited<ReturnType<typeof arrowModule.makeGPUSplatDataFromGLTFScene>> = [];
+    try {
+      groups = await arrowModule.makeGPUSplatDataFromGLTFScene(this.device, gltf, {signal});
+      const instances = arrowModule.getGLTFSplatSceneInstances(scenegraphs, groups);
+      if (instances.length !== 1) {
+        throw new Error('The glTF showcase currently requires one visible splat instance.');
+      }
+      const worldMatrix = new Matrix4(instances[0].worldMatrix);
+      if (Math.abs(worldMatrix.determinant()) < 1e-12) {
+        throw new Error('The glTF showcase requires an invertible node transform.');
+      }
+      signal.throwIfAborted();
+      this.gltfWorldMatrix = worldMatrix;
+      this.previousCameraState = undefined;
+      const batches = groups[0]?.batches ?? [];
+      if (!batches.length) throw new Error('The glTF scene does not contain any Gaussian splats.');
+      for (const batch of batches) this.appendRendererBatch(batch);
+      this.batches.push(...batches);
+      this.loadedSplatCount = batches.reduce((count, batch) => count + batch.length, 0);
+      groups = [];
+      this.expectedSplatCount = this.loadedSplatCount;
+      this.expectedBatchCount = this.batches.length;
+      if (!this.hasManualCameraInteraction) this.fitCameraToBatches();
+      this.isLoading = false;
+      this.requestRedraw();
+      this.updatePanel();
+    } finally {
+      try {
+        if (groups.length && !(this.renderer instanceof GPUPagedSplatRenderer)) {
+          this.renderer.setProps({data: []});
+          this.gltfWorldMatrix = undefined;
+          this.previousCameraState = undefined;
+        }
+      } finally {
+        for (const group of groups) for (const batch of group.batches) batch.destroy();
+        scenegraphs.destroy();
+      }
+    }
+  }
+
   private async loadLocalSplatData(
     configuration: LocalGaussianSplatLoadersConfiguration
   ): Promise<void> {
     this.loadAbortController = new AbortController();
+    if (configuration.sourceFormat === 'GLB') {
+      await this.loadGLTFSplatData(configuration);
+      return;
+    }
     if (configuration.sourceFormat === 'RAD' && this.renderer instanceof GPUPagedSplatRenderer) {
       if (await this.loadAdaptiveRADScene(configuration)) {
         return;
@@ -698,11 +776,19 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       up: rolledCameraUp
     });
     const modelViewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
+    let rendererCameraPosition = cameraPosition;
+    if (this.gltfWorldMatrix) {
+      modelViewProjectionMatrix.multiplyRight(this.gltfWorldMatrix);
+      const localCamera = new Matrix4(this.gltfWorldMatrix)
+        .invert()
+        .transformAsPoint(cameraPosition);
+      rendererCameraPosition = [localCamera[0], localCamera[1], localCamera[2]];
+    }
     const cameraProps: Pick<SplatRendererProps, 'modelViewProjectionMatrix' | 'viewportSize'> = {
       modelViewProjectionMatrix,
       viewportSize: [cameraState.viewportWidth, cameraState.viewportHeight]
     };
-    this.renderer.setProps({...cameraProps, cameraPosition});
+    this.renderer.setProps({...cameraProps, cameraPosition: rendererCameraPosition});
     this.hierarchyView = {
       cameraPosition,
       modelViewProjectionMatrix,
@@ -782,9 +868,15 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         positionIndex < positions.length;
         positionIndex += sampleStride * 3
       ) {
-        const positionX = positions[positionIndex];
-        const positionY = positions[positionIndex + 1];
-        const positionZ = positions[positionIndex + 2];
+        const position = [
+          positions[positionIndex],
+          positions[positionIndex + 1],
+          positions[positionIndex + 2]
+        ];
+        const worldPosition = this.gltfWorldMatrix
+          ? this.gltfWorldMatrix.transformAsPoint(position)
+          : position;
+        const [positionX, positionY, positionZ] = worldPosition;
         if (
           Number.isFinite(positionX) &&
           Number.isFinite(positionY) &&
@@ -874,8 +966,8 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
         this.localLoadersConfiguration.sceneId === 'coit'
           ? 'Explore Coit Tower and San Francisco with camera-prioritized Gaussian pages. Drag to orbit; pinch to zoom and twist to roll.'
           : this.localLoadersConfiguration.loaderMode === 'local'
-            ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 alpha checkout. Drag to orbit; pinch to zoom and twist to roll.'
-            : 'Complete Gaussian splat scenes streamed through loaders.gl 5 alpha. Drag to orbit; pinch to zoom and twist to roll.';
+            ? 'Complete Gaussian splat scenes streamed through the local loaders.gl 5 checkout. Drag to orbit; pinch to zoom and twist to roll.'
+            : 'Complete Gaussian splat scenes streamed through loaders.gl 5. Drag to orbit; pinch to zoom and twist to roll.';
     }
 
     if (this.device.type === 'webgpu' && executionControl && executionElement) {
@@ -918,11 +1010,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
 
     const hasBundledLoaders = Boolean(window.__lumaGaussianSplatsLoaderBundleUrl);
     const hasLocalLoaders = Boolean(window.__lumaGaussianSplatsLocalLoadersRoot);
-    if (
-      (this.localLoadersConfiguration || hasBundledLoaders || hasLocalLoaders) &&
-      sceneControl &&
-      sceneElement
-    ) {
+    if (sceneControl && sceneElement) {
       sceneControl.hidden = false;
       sceneControl.style.display = 'grid';
       const shouldUseLocalLoaders =
@@ -931,7 +1019,10 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
       const sceneOptions: PanelSelectOption[] = [
         {value: 'synthetic', label: 'Synthetic chromatic showcase'},
         ...GAUSSIAN_SPLAT_SOURCE_CATALOG.filter(
-          source => shouldUseLocalLoaders || source.id !== 'fixture'
+          source =>
+            source.id === 'gltf-fixture' ||
+            ((hasBundledLoaders || hasLocalLoaders) &&
+              (shouldUseLocalLoaders || source.id !== 'fixture'))
         ).map(source => ({
           value: source.id,
           label: source.label

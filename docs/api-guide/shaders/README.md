@@ -9,10 +9,13 @@ run on the GPU. Such code must be provided as WGSL and/or GLSL depending on
 which backend(s) are targeted. luma.gl helps assemble that source, bind its
 inputs, and run it through the engine APIs.
 
+For an introduction to modules, plugins, injection targets, injections, and their ownership
+boundaries, start with the [Shaders module overview](/docs/api-reference/shaders).
+
 | Question | Guide page | Main reference pages |
 | --- | --- | --- |
 | How does luma.gl combine application source with reusable shader code? | [Shader Assembly](/docs/api-guide/shaders/shader-assembly) | [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler), [`ShaderModule`](/docs/api-reference/shaders/shader-module), [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin) |
-| How do I let optional features customize a base shader without copying it? | [Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders) | [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin), [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler) |
+| How do I let optional features customize a base shader without copying it? | [Shader Injection](/docs/api-guide/shaders/shader-injection) | [`ShaderPlugin`](/docs/api-reference/shaders/shader-plugin), [`ShaderAssembler`](/docs/api-reference/shaders/shader-assembler) |
 | How do I keep one rendering feature available on WebGPU and WebGL 2? | [Writing Portable Shaders](/docs/api-guide/shaders/writing-portable-shaders) | [`Model`](/docs/api-reference/engine/model), [`WGSL Support`](/docs/api-reference/shaders/wgsl-support) |
 | How do I preserve more than `f32` precision across WebGPU and WebGL 2? | [GPU Floating-Point Precision Techniques](/docs/api-guide/shaders/gpu-floating-point-precision) | [`fp64`](/docs/api-reference/shaders/shader-modules/fp64), [`fp64arithmetic`](/docs/api-reference/shaders/shader-modules/fp64-arithmetic) |
 | How do I run image effects or other fullscreen texture stages? | [Shader Passes](/docs/api-guide/shaders/shader-passes) | [`ShaderPass`](/docs/api-reference/shaders/shader-pass), [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) |
@@ -27,6 +30,6 @@ Related reference topics:
   shader resources and logical bind groups.
 
 For runnable examples, see the [Shader Modules](/docs/tutorials/shader-modules),
-[Shader Hooks](/docs/tutorials/shader-hooks),
+[Shader Injection](/docs/tutorials/shader-injection),
 [Shader Plugins](/docs/tutorials/shader-plugins), and
 [Lighting](/docs/tutorials/lighting) tutorials.

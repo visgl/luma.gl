@@ -1,9 +1,11 @@
 ---
-title: GPU physics
+title: How physics engines work
 description: How rigid-body physics works, how luma.gl maps it to WebGPU, and the tradeoffs of GPU-resident simulation.
 ---
 
-# GPU physics
+# How physics engines work
+
+For setup and feature guides, start with the [Physics overview](/docs/api-guide/physics/overview).
 
 A physics engine advances a model of a world through time. For rigid bodies, that means
 predicting motion under forces and finding impulses that prevent objects from passing
@@ -173,9 +175,9 @@ moving every setup task to a shader.
 | Submit input commands and schedule fixed steps | Integrate poses and produce compact events |
 | Consume requested diagnostics or gameplay events asynchronously | Publish state for GPU rendering |
 
-This is the intended boundary. In particular, the glTF example's CPU pose bridge is a
-remaining integration limitation; a GPU solver alone does not make that whole application
-GPU-resident.
+The engine and glTF gallery can consume published GPU body-node matrices. Deforming
+geometry and live scene mutations have separate update and ownership requirements; a
+GPU solver alone does not make every asset operation GPU-resident.
 
 Readback has two costs: copying data and waiting for the producer. Even a small readback
 can stall progress if the next simulation step depends on it. Diagnostics should normally
@@ -228,9 +230,9 @@ its intended behavior, and doing so within a qualified performance envelope. Fou
 example scenes do not prove all four levels for an extension. Draft revisions also need
 to be pinned; historical sample conventions and newer proposal semantics can differ.
 
-Remaining work includes general moving nonconvex mesh interactions, broad general-body CCD
-qualification, proposal joints and drives, complete trigger/interactivity semantics, and
-GPU pose publication through the glTF renderer. Unsupported behavior must remain visible.
+Remaining work includes general moving nonconvex mesh interactions, broad CCD
+qualification, deformation-driven recooking and full proposal-profile qualification.
+Supported joints, drives and triggers have explicit solver and geometry envelopes. Unsupported behavior must remain visible.
 An asset-specific collision exclusion is not a substitute for implementing the shape pair.
 
 ## Measuring progress toward state of the art

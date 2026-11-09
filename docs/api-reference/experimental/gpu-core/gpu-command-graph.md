@@ -875,7 +875,7 @@ Call `readTimings()` after submission, or reuse the report returned by
 The panel retains only the latest report across unmounts, shows separate CPU and GPU clocks,
 keeps gaps between node spans, and exposes node details on hover and keyboard focus.
 `GPUTracePanelRenderer` provides the same view directly inside an `HTMLElement` with
-`update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and luSpatial Taxi use this panel.
+`update(report, label)` and `destroy()` methods. GPU Trace Viewer, Billion-Point Spatial Atlas, and GPU Spatial Taxi use this panel.
 
 ### Estimated combined CPU/GPU timeline
 

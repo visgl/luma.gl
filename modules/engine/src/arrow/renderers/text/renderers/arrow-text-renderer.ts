@@ -126,6 +126,7 @@ export type ArrowTextRendererProps = ArrowTextSourceVectorSelectors & {
     | 'vs'
     | 'fs'
     | 'modules'
+    | 'plugins'
     | 'shaderInputs'
     | 'bufferLayout'
     | 'attributes'

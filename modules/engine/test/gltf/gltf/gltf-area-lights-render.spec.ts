@@ -214,3 +214,88 @@ test.each([
     }
   }
 });
+
+test.each([
+  false,
+  true
+])('PBR directional lights follow light travel direction on both backends (clearcoat=%s)', async clearcoat => {
+  const [webgl, webgpu] = await Promise.all([
+    getWebGLTestDevice(),
+    getTestDevices(['webgpu-core'])
+  ]);
+  const devices = webgl ? [webgl, ...webgpu] : webgpu;
+  expect(devices.length).toBeGreaterThan(0);
+  for (const device of devices) {
+    const bundle = createScenegraphsFromGLTF(device, makeReceiver(false, clearcoat), {
+      modelOptions: {
+        modules: [pbrScene, pbrMaterial, skin],
+        defines: {USE_LIGHTS: true, USE_SCENE_COLOR_MANAGEMENT: true}
+      }
+    });
+    const models: ModelNode[] = [];
+    bundle.scenes[0].traverse(node => {
+      if (node instanceof ModelNode) models.push(node);
+    });
+    const color = device.createTexture({
+      width: 64,
+      height: 64,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const depth = device.createTexture({
+      width: 64,
+      height: 64,
+      format: 'depth24plus',
+      usage: Texture.RENDER
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 64,
+      height: 64,
+      colorAttachments: [color],
+      depthStencilAttachment: depth
+    });
+    const layout = color.computeMemoryLayout({width: 64, height: 64});
+    const readback = device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    const render = async (direction: [number, number, number]): Promise<number> => {
+      const pass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0], clearDepth: 1});
+      for (const node of models) {
+        node.model.shaderInputs.setProps({
+          lighting: {
+            lights: [{type: 'directional', direction, color: [255, 255, 255], intensity: 1}]
+          },
+          pbrScene: {exposure: 1, toneMapMode: 0, outputEncoding: 0},
+          pbrProjection: {
+            modelMatrix: new Matrix4(),
+            modelViewProjectionMatrix: new Matrix4(),
+            normalMatrix: new Matrix4(),
+            camera: [0, 0, 3]
+          }
+        });
+        node.model.draw(pass);
+      }
+      pass.end();
+      device.submit();
+      color.readBuffer({width: 64, height: 64}, readback);
+      const pixels = await readback.readAsync(0, layout.byteLength);
+      return pixels[32 * layout.bytesPerRow + 32 * 4];
+    };
+    try {
+      // Keep the light oblique so the unlit case does not normalize a zero half-vector.
+      const fromAbove = await render([0.2, 0, -1]);
+      const fromBelow = await render([0.2, 0, 1]);
+      expect(
+        fromAbove,
+        `${device.type}: downward light illuminates the upward normal`
+      ).toBeGreaterThan(fromBelow + 30);
+    } finally {
+      readback.destroy();
+      framebuffer.destroy();
+      depth.destroy();
+      color.destroy();
+      bundle.destroy();
+    }
+  }
+});

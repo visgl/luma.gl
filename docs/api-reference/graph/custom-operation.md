@@ -1,8 +1,12 @@
 import {GPGPUDocsTabs} from '@site/src/components/docs/gpgpu-docs-tabs';
 
-# Custom Operations
+# Custom evaluator operations
 
 <GPGPUDocsTabs active="custom-operation" />
+
+This page describes the evaluator API. For logical operations added to `GPUGraph`, see
+[GPUOperation contracts](./gpu-operation.md); their lowering interface is separate from
+an evaluator `Operation` and its backend handlers.
 
 Custom operations let applications add lazy `GPUDataEvaluator` operations that
 are dispatched through `backendRegistry`, just like the built-in operations.

@@ -93,6 +93,26 @@ export type GLTFWithBuffers = {
   images?: (GLTFImageData | null)[];
   binary?: ArrayBuffer;
   baseUri?: string;
+  /** Gaussian primitive descriptors supplied by the loader. */
+  gaussianSplatPrimitives?: GLTFGaussianSplatDescriptor[];
+};
+
+/** Loader-supplied Gaussian primitive identity and optional decoded payload. */
+export type GLTFGaussianSplatDescriptor = {
+  /** Index of the source mesh. */
+  meshIndex: number;
+  /** Index of the source primitive within its mesh. */
+  primitiveIndex: number;
+  /** Source accessor indices for the primitive's Gaussian and feature attributes. */
+  attributes?: Readonly<Record<string, number>>;
+  /** Original Gaussian extension declaration, including its compression metadata. */
+  extension?: Readonly<Record<string, unknown>>;
+  /** Source buffer view containing the compressed payload. */
+  compressedBufferView?: number;
+  /** Decoder-specific result, such as a loaders.gl Mesh Arrow table. */
+  decoded?: unknown;
+  /** Copied compressed bytes retained by the loader, when available. */
+  compressedBytes?: Uint8Array;
 };
 
 /** Loader-derived index runs for KHR_mesh_primitive_restart. */

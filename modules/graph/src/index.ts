@@ -164,7 +164,7 @@ export type {
   GPUExpressionOperationProps,
   GPUExpressionAST
 } from './gpu-core/gpu-expression-operation';
-export {CompiledGPUGraph} from './gpu-core/compiled-gpu-graph';
+export {CompiledGPUGraph, PreparedGPUGraphExecution} from './gpu-core/compiled-gpu-graph';
 export type {
   GPUGraphCompileOptions,
   GPUGraphRunBindings,
@@ -178,3 +178,41 @@ export type {
   GPUOperationVectorShape
 } from './gpu-core/gpu-operation-contract';
 export type {GPUOperation} from './gpu-core/gpu-operation';
+
+export {gpuGraph} from './gpu-core/gpu-graph-value';
+export type {
+  GPUGraphScalarDescriptor,
+  GPUGraphVectorDescriptor,
+  GPUGraphValueDescriptor,
+  GPUGraphValueRole
+} from './gpu-core/gpu-graph-value';
+export type {GPUGraphExecutionBindings} from './gpu-core/gpu-expression-plan';
+export type {
+  GPUOperationOutputDeclarations,
+  GPUOperationContractContext
+} from './gpu-core/gpu-operation-contract';
+
+export {GPUUploadOperation, GPUCopyOperation} from './gpu-core/gpu-transfer-operation';
+export {GPUShaderPassOperation} from './gpu-core/gpu-shader-pass-operation';
+export type {GPUShaderPassOperationProps} from './gpu-core/gpu-shader-pass-operation';
+export type {
+  GPUUploadOperationProps,
+  GPUCopyOperationProps
+} from './gpu-core/gpu-transfer-operation';
+export {GPUCompactionOperation} from './gpu-core/gpu-compaction-operation';
+export type {GPUCompactionOperationProps} from './gpu-core/gpu-compaction-operation';
+
+export type {GPUGraphTextureDescriptor, GPUGraphTextureExtent} from './gpu-core/gpu-graph-value';
+export type {
+  GPUGraphTextureBinding,
+  GPUGraphOutput,
+  GPUGraphOutputs
+} from './gpu-core/gpu-texture-plan';
+
+export {GPUCPUOperation} from './gpu-core/gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from './gpu-core/gpu-cpu-operation';

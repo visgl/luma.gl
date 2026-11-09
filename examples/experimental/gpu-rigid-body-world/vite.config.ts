@@ -1,6 +1,11 @@
 import {defineConfig} from 'vite';
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      input: {index: `${__dirname}/index.html`, wreckingBall: `${__dirname}/wrecking-ball.html`}
+    }
+  },
   resolve: {
     alias: {
       '@luma.gl/graph/gpu-simple-graph/cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,

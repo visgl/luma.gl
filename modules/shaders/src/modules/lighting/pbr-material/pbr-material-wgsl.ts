@@ -1268,7 +1268,9 @@ fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
 }
 
 // Visibility for the first four spotlights; environment and other lights are unaffected.
-fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f) -> vec4<f32> {
+var<private> pbr_ambientVisibility: f32 = 1.0;
+
+fn pbr_filterColorWithShadows(vertexColor: vec4<f32>, directionalVisibility: f32, pointVisibility: vec4f, spotVisibility: vec4f) -> vec4<f32> {
   let baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
   let metallicRoughnessUV = getMaterialUV(
     pbrMaterial.metallicRoughnessUVSet,
@@ -1361,7 +1363,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
     color = baseColor.rgb;
     #ifdef HAS_LIGHTMAP
     if (pbrMaterial.lightmapMapEnabled != 0u) {
-      color *= lightmapIrradiance / M_PI;
+      color *= lightmapIrradiance / M_PI * pbr_ambientVisibility;
       #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled != 0) {
         let ao = textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, occlusionUV).r;
@@ -1464,12 +1466,12 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
 
       #ifdef USE_LIGHTS
       PBRInfo_setAmbientLight(&pbrInfo);
-      color += calculateFinalColor(pbrInfo, lighting.ambientColor);
+      color += calculateFinalColor(pbrInfo, lighting.ambientColor * pbr_ambientVisibility);
 
       for (var i = 0; i < lighting.directionalLightCount; i++) {
         if (i < lighting.directionalLightCount) {
-          PBRInfo_setDirectionalLight(&pbrInfo, lighting_getDirectionalLight(i).direction);
-          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
+          PBRInfo_setDirectionalLight(&pbrInfo, -lighting_getDirectionalLight(i).direction);
+          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color * select(1.0, clamp(directionalVisibility, 0.0, 1.0), i == 0));
         }
       }
 
@@ -1480,7 +1482,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
             lighting_getPointLight(i),
             distance(lighting_getPointLight(i).position, fragmentInputs.pbr_vPosition)
           );
-          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color * select(1.0, clamp(pointVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation);
         }
       }
 
@@ -1509,7 +1511,8 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
       }
       #endif
 
-      #ifdef USE_IBL
+      let indirectBaseColor = color;
+#ifdef USE_IBL
       if (pbrMaterial.IBLenabled != 0) {
         color += getIBLContribution(pbrInfo, n, reflection);
       }
@@ -1517,6 +1520,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
 
       // The pinned KHR_lightmap draft explicitly defines c_diff = (1 - metallic) * baseColor.
       color += baseColor.rgb * (1.0 - metallic) * lightmapIrradiance / M_PI;
+      color = indirectBaseColor + (color - indirectBaseColor) * pbr_ambientVisibility;
 
       #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled != 0) {
@@ -1815,7 +1819,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
     PBRInfo_setAmbientLight(&pbrInfo);
     color += calculateMaterialLightColor(
       pbrInfo,
-      lighting.ambientColor,
+      lighting.ambientColor * pbr_ambientVisibility,
       clearcoatNormal,
       clearcoatFactor,
       clearcoatRoughness,
@@ -1828,10 +1832,10 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
     // Apply directional light
     for (var i = 0; i < lighting.directionalLightCount; i++) {
       if (i < lighting.directionalLightCount) {
-        PBRInfo_setDirectionalLight(&pbrInfo, lighting_getDirectionalLight(i).direction);
+        PBRInfo_setDirectionalLight(&pbrInfo, -lighting_getDirectionalLight(i).direction);
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getDirectionalLight(i).color,
+          lighting_getDirectionalLight(i).color * select(1.0, clamp(directionalVisibility, 0.0, 1.0), i == 0),
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1842,7 +1846,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getDirectionalLight(i).color,
+          lighting_getDirectionalLight(i).color * select(1.0, clamp(directionalVisibility, 0.0, 1.0), i == 0),
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -1861,7 +1865,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
         );
         color += calculateMaterialLightColor(
           pbrInfo,
-          lighting_getPointLight(i).color / attenuation,
+          lighting_getPointLight(i).color * select(1.0, clamp(pointVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation,
           clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
@@ -1872,7 +1876,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
         );
         color += calculateDiffuseTransmissionLight(
           pbrInfo,
-          lighting_getPointLight(i).color / attenuation,
+          lighting_getPointLight(i).color * select(1.0, clamp(pointVisibility[min(i, 3)], 0.0, 1.0), i < 4) / attenuation,
           diffuseTransmissionColor,
           diffuseTransmission,
           multiscatterColor,
@@ -1941,6 +1945,7 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
       }
     #endif
 
+    let indirectBaseColor = color;
     // Calculate lighting contribution from image based lighting source (IBL)
     #ifdef USE_IBL
     if (pbrMaterial.IBLenabled != 0) {
@@ -1974,6 +1979,8 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
     color += baseColor.rgb * (1.0 - metallic) * (1.0 - transmission) *
       (1.0 - diffuseTransmission) * baseLayerEnergy * lightmapIrradiance / M_PI;
 #endif
+
+    color = indirectBaseColor + (color - indirectBaseColor) * pbr_ambientVisibility;
 
     // Apply optional PBR terms for additional (optional) shading
     #ifdef HAS_OCCLUSIONMAP
@@ -2035,6 +2042,21 @@ fn pbr_filterColorWithSpotShadows(vertexColor: vec4<f32>, spotVisibility: vec4f)
   let alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
   #endif
   return vec4<f32>(applySceneColorManagement(color), alpha);
+}
+
+// Depth-only passes use the same base-color alpha, vertex color and UV transform.
+fn pbr_discardMaskedFragment(vertexColor: vec4f) {
+#ifdef ALPHA_CUTOFF
+  var alpha = pbrMaterial.baseColorFactor.a * vertexColor.a;
+#ifdef HAS_BASECOLORMAP
+  alpha *= textureSample(pbr_baseColorSampler, pbr_baseColorSamplerSampler, getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform)).a;
+#endif
+  if (alpha < pbrMaterial.alphaCutoff) {discard;}
+#endif
+}
+
+fn pbr_filterColorWithSpotShadows(vertexColor: vec4f, spotVisibility: vec4f) -> vec4f {
+  return pbr_filterColorWithShadows(vertexColor, 1.0, vec4f(1.0), spotVisibility);
 }
 
 fn pbr_filterColor(vertexColor: vec4<f32>) -> vec4<f32> {
