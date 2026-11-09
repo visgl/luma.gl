@@ -11,7 +11,7 @@ import {
   GraphVectorView,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUPartitionedIndexedRangeCompaction keeps visible IDs in bounded chunks', async () => {
   const device = await getWebGPUTestDevice();

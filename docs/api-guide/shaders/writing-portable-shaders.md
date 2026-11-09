@@ -30,7 +30,7 @@ the same logical contract:
 | Varyings | Values passed from vertex to fragment stage. |
 | Module props | `ShaderModule.uniformTypes`, `defaultUniforms`, and `getUniforms()` output. |
 | Bindings | Resource names passed from JavaScript, even when WGSL and GLSL syntax differs. |
-| Plugins | Shared plugin behavior and shader-facing vertex input names, with `glsl` and `wgsl` variants only where syntax differs. |
+| Plugins | Shared plugin behavior and shader-facing vertex input names, with `glsl` and `wgsl` source on each injection. |
 
 Do not make the shader language difference leak into application props unless
 the feature is genuinely backend-specific. Prefer one JavaScript prop model and
@@ -38,7 +38,7 @@ two shader implementations.
 
 ## WGSL Binding Rule
 
-WGSL used through shadertools should usually declare named resources with
+WGSL used through shaders should usually declare named resources with
 `@binding(auto)`:
 
 ```wgsl
@@ -58,14 +58,14 @@ model.setBindings({
 
 The assembler assigns concrete WGSL binding numbers before WebGPU reflects and
 compiles the shader. Raw low-level WebGPU shader creation that bypasses
-shadertools still needs ordinary numeric WGSL bindings.
+shaders still needs ordinary numeric WGSL bindings.
 
 ## Portable Modules And Plugins
 
 A portable `ShaderModule` may provide `source` for WGSL, `vs` and `fs` for GLSL,
-or all three. A portable `ShaderPlugin` can keep backend-neutral modules and
-defines at the top level while placing language-specific injection source under
-`glsl` and `wgsl`. If a plugin declares `vertexInputs`, keep those shader-facing
+or all three. A portable `ShaderPlugin` can declare one backend-neutral primary `module` and
+shared defines while placing language-specific injection source in each injection’s
+`glsl` and `wgsl` fields. If a plugin declares `vertexInputs`, keep those shader-facing
 names and types aligned with the caller-owned buffer layout and attribute data.
 
 Use defines for real source variants, not as a substitute for two clear shader
@@ -81,7 +81,7 @@ assignment, so inactive resource declarations do not consume binding slots.
 - Use shader plugins when a reusable behavior needs different GLSL and WGSL
   source but one application-facing attachment point.
 
-For exact WGSL rules, see [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support).
+For exact WGSL rules, see [`WGSL Support`](/docs/api-reference/shaders/wgsl-support).
 For render model props, see [`Model`](/docs/api-reference/engine/model). For a
 working dual-backend example, see the
 [Shader Plugins tutorial](/docs/tutorials/shader-plugins).

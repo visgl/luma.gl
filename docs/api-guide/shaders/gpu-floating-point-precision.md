@@ -328,13 +328,13 @@ the only value that must reach the shader.
 
 ## luma.gl Precision Paths
 
-The [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64) module exposes
+The [`fp64`](/docs/api-reference/shaders/shader-modules/fp64) module exposes
 the full established `fp64f32` function library in GLSL only. It has no WGSL
 source, so its exponential, logarithmic, and trigonometric functions are not
 available to WebGPU shaders.
 
 Its lower-level
-[`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic)
+[`fp64arithmetic`](/docs/api-reference/shaders/shader-modules/fp64-arithmetic)
 dependency provides the add, subtract, multiply, divide, and square-root
 helpers in both GLSL and WGSL. Non-Apple WGSL uses the classic floating-point
 transforms by default. Apple WebGPU uses the integer-controlled implementation

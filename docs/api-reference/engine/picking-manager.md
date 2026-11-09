@@ -46,7 +46,7 @@ const pickInfo = await pickingManager.updatePickInfo(mousePosition);
 ```
 
 For a complete WebGL color-picking example, including model shaders and visible highlighting,
-see [GPU picking](/docs/api-reference/shadertools/shader-modules/gpu-picking#usage).
+see [GPU picking](/docs/api-reference/shaders/shader-modules/gpu-picking#usage).
 
 ## Types
 

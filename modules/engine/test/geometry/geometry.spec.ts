@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Geometry, GeometryProps} from '@luma.gl/engine';
-import {TypedArray} from '@math.gl/core/types';
+import {TypedArray} from '@math.gl/core';
 
 const TEST_CASES: {title: string; props: GeometryProps; [key: string]: any}[] = [
   {

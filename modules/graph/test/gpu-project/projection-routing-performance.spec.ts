@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {runProjectionRoutingBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
 import {compileProjectionPlan, type ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
 import {
@@ -12,9 +12,12 @@ import {
   parsePerformanceSweep
 } from './projection-performance-fixtures';
 
-const measured = import.meta.env.VITE_LUPROJ_ROUTING_ROWS !== undefined;
-const rowCounts = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_ROUTING_ROWS, [32]);
-const consumerCounts = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_ROUTING_CONSUMERS, [1, 4]);
+const measured = import.meta.env.VITE_GPU_PROJECT_ROUTING_ROWS !== undefined;
+const rowCounts = parsePerformanceSweep(import.meta.env.VITE_GPU_PROJECT_ROUTING_ROWS, [32]);
+const consumerCounts = parsePerformanceSweep(
+  import.meta.env.VITE_GPU_PROJECT_ROUTING_CONSUMERS,
+  [1, 4]
+);
 for (const fixture of performanceFixtures.filter(candidate => candidate.id !== 'utm-local')) {
   for (const rowCount of rowCounts)
     for (const consumerCount of consumerCounts) {
@@ -37,7 +40,7 @@ for (const fixture of performanceFixtures.filter(candidate => candidate.id !== '
           maximumError: 0.001,
           workloadKey: `${fixture.id}-routing-v1/${rowCount}/${consumerCount}`,
           environment: navigator.userAgent,
-          gpuTiming: import.meta.env.VITE_LUPROJ_ROUTING_GPU_TIMING === 'true',
+          gpuTiming: import.meta.env.VITE_GPU_PROJECT_ROUTING_GPU_TIMING === 'true',
           warmupIterations: measured ? 2 : 0,
           measuredIterations: measured ? 5 : 1
         });
@@ -45,7 +48,7 @@ for (const fixture of performanceFixtures.filter(candidate => candidate.id !== '
         expect(report.program.cpuPaths).toHaveLength(12);
         if (measured)
           console.info(
-            `PROJECTION_ROUTING_PERFORMANCE ${JSON.stringify({schemaVersion: 1, capturedAt: new Date().toISOString(), revision: import.meta.env.VITE_LUPROJ_REVISION ?? 'unspecified', fixture: fixture.id, rowCount, tolerance: 0.001, report})}`
+            `PROJECTION_ROUTING_PERFORMANCE ${JSON.stringify({schemaVersion: 1, capturedAt: new Date().toISOString(), revision: import.meta.env.VITE_GPU_PROJECT_REVISION ?? 'unspecified', fixture: fixture.id, rowCount, tolerance: 0.001, report})}`
           );
       }, 180000);
     }
@@ -92,7 +95,7 @@ for (const rowCount of rowCounts)
             valid: position.every(value => Number.isFinite(value) && value >= -2 && value <= 2)
           }),
           consumerCount,
-          gpuTiming: import.meta.env.VITE_LUPROJ_ROUTING_GPU_TIMING === 'true',
+          gpuTiming: import.meta.env.VITE_GPU_PROJECT_ROUTING_GPU_TIMING === 'true',
           warmupIterations: measured ? 2 : 0,
           measuredIterations: measured ? 5 : 1
         });
@@ -103,7 +106,7 @@ for (const rowCount of rowCounts)
         );
         if (measured)
           console.info(
-            `PROJECTION_ROUTING_PERFORMANCE ${JSON.stringify({schemaVersion: 1, capturedAt: new Date().toISOString(), revision: import.meta.env.VITE_LUPROJ_REVISION ?? 'unspecified', fixture: 'sine-cosine-routing-stress-v1', rowCount, tolerance, report})}`
+            `PROJECTION_ROUTING_PERFORMANCE ${JSON.stringify({schemaVersion: 1, capturedAt: new Date().toISOString(), revision: import.meta.env.VITE_GPU_PROJECT_REVISION ?? 'unspecified', fixture: 'sine-cosine-routing-stress-v1', rowCount, tolerance, report})}`
           );
       }, 180000);
     }

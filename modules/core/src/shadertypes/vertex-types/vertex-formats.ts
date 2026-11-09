@@ -84,21 +84,21 @@ export type VertexFormat =
  */
 export type VertexFormatInfo<T extends VertexFormat = VertexFormat> = {
   /** Type of each component */
-  type: VertexFormatDataTypeT<T>;
+  readonly type: VertexFormatDataTypeT<T>;
   /** Number of components per vertex / row */
-  components: VertexFormatComponentsT<T>;
+  readonly components: VertexFormatComponentsT<T>;
   /** Is this an integer format (normalized integer formats are not integer) */
-  integer: DataTypeIsIntegerT<VertexFormatDataTypeT<T>>;
+  readonly integer: DataTypeIsIntegerT<VertexFormatDataTypeT<T>>;
   /** Is this a signed format? */
-  signed: DataTypeIsSignedT<VertexFormatDataTypeT<T>>;
+  readonly signed: DataTypeIsSignedT<VertexFormatDataTypeT<T>>;
   /** Is this a normalized format? */
-  normalized: DataTypeIsNormalizedT<VertexFormatDataTypeT<T>>;
+  readonly normalized: DataTypeIsNormalizedT<VertexFormatDataTypeT<T>>;
   /** Length in bytes */
-  byteLength: number;
+  readonly byteLength: number;
   /** Is this a bgra format? */
-  bgra?: boolean;
+  readonly bgra?: boolean;
   /** Is this a webgl only format? */
-  webglOnly?: boolean;
+  readonly webglOnly?: boolean;
 };
 
 /** @type the NormalizedDataType of the components in a VertexFormat */

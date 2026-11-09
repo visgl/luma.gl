@@ -304,3 +304,17 @@
     transition: none;
   }
 }
+
+/* Standalone panel hosts use the panels module's accessible collapsible box chrome. */
+.luma-example-infobox:has([data-example-panel-title]) {
+  padding: 0;
+}
+[data-example-panel-title] > section {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+[data-example-panel-title] {
+  --button-text: var(--luma-example-text, var(--luma-infobox-text));
+  --button-icon-idle: var(--luma-example-text-muted, var(--luma-infobox-muted));
+  --menu-text: var(--luma-example-text, var(--luma-infobox-text));
+}

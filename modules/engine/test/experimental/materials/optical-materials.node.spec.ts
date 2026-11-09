@@ -4,6 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {makeShaderBlockLayout} from '@luma.gl/core';
+import {NullDevice} from '@luma.gl/core/test-utils';
+import {ShaderInputs} from '@luma.gl/engine';
 import {
   emissiveMaterial,
   emissiveMaterialPlugin,
@@ -23,12 +25,13 @@ import {
   reflectiveMaterial,
   reflectiveMaterialPlugin
 } from '@luma.gl/engine/experimental/materials';
-import {aBuffer, wboit} from '@luma.gl/anari';
+import {aBuffer, aBufferPlugin, wboit, wboitPlugin} from '@luma.gl/anari';
 import {
   getShaderModuleUniformLayoutValidationResult,
+  resolveShaderPlugins,
   GLSLShaderAssembler,
   WGSLShaderAssembler
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {WgslReflect} from 'wgsl_reflect';
 
 const PLATFORM_INFO = {
@@ -124,38 +127,38 @@ const ILLUMINATED_OPTICAL_MATERIAL_SHADER = OPTICAL_MATERIAL_SHADER.replace(
 
 it('optical material modules expose portable shared shader helpers', () => {
   expect(glassMaterialPlugin.name, 'glass plugin has a stable name').toBe('glassMaterial');
-  expect(glassMaterialPlugin.modules, 'glass plugin installs glass').toEqual([glassMaterial]);
+  expect(glassMaterialPlugin.module, 'glass plugin installs glass').toEqual(glassMaterial);
   expect(glassTransmissionPlugin.name, 'rasterized transmission plugin has a stable name').toBe(
     'glassTransmission'
   );
   expect(
-    glassTransmissionPlugin.modules,
+    glassTransmissionPlugin.module,
     'rasterized transmission plugin installs its optional extension'
-  ).toEqual([glassTransmission]);
+  ).toEqual(glassTransmission);
   expect(reflectiveMaterialPlugin.name, 'reflective plugin has a stable name').toBe(
     'reflectiveMaterial'
   );
-  expect(reflectiveMaterialPlugin.modules, 'reflective plugin installs reflective shading').toEqual(
-    [reflectiveMaterial]
+  expect(reflectiveMaterialPlugin.module, 'reflective plugin installs reflective shading').toEqual(
+    reflectiveMaterial
   );
   expect(emissiveMaterialPlugin.name, 'emissive plugin has a stable name').toBe('emissiveMaterial');
-  expect(emissiveMaterialPlugin.modules, 'emissive plugin installs emissive shading').toEqual([
+  expect(emissiveMaterialPlugin.module, 'emissive plugin installs emissive shading').toEqual(
     emissiveMaterial
-  ]);
+  );
   expect(opticalPointLightsPlugin.name, 'point-light plugin has a stable name').toBe(
     'opticalPointLights'
   );
   expect(
-    opticalPointLightsPlugin.modules,
+    opticalPointLightsPlugin.module,
     'point-light plugin installs local lighting explicitly'
-  ).toEqual([opticalPointLights]);
+  ).toEqual(opticalPointLights);
   expect(opticalCausticsPlugin.name, 'caustic-lens plugin has a stable name').toBe(
     'opticalCaustics'
   );
   expect(
-    opticalCausticsPlugin.modules,
+    opticalCausticsPlugin.module,
     'caustic-lens plugin installs focused lighting explicitly'
-  ).toEqual([opticalCaustics]);
+  ).toEqual(opticalCaustics);
   expect(glassMaterial.dependencies, 'glass reuses shared optical lighting').toEqual([
     opticalLighting
   ]);
@@ -818,13 +821,16 @@ it('rasterized glass transmission assembles portable optical and depth bindings'
   const assembledShader = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: transmissionShader,
-    modules: [
-      glassTransmission,
-      reflectiveMaterial,
-      emissiveMaterial,
-      opticalPointLights,
-      opticalCaustics
-    ]
+    modules: resolveShaderPlugins(
+      [
+        glassTransmissionPlugin,
+        reflectiveMaterialPlugin,
+        emissiveMaterialPlugin,
+        opticalPointLightsPlugin,
+        opticalCausticsPlugin
+      ],
+      'wgsl'
+    ).modules
   });
   const reflectedShader = new WgslReflect(assembledShader.source);
   const textureNames = reflectedShader.textures.map(texture => texture.name);
@@ -910,15 +916,18 @@ it('illuminated optical materials compose once with emission and transparency', 
   const assembledShader = assembler.assembleWGSLShader({
     platformInfo: PLATFORM_INFO,
     source: ILLUMINATED_OPTICAL_MATERIAL_SHADER,
-    modules: [
-      glassMaterial,
-      reflectiveMaterial,
-      emissiveMaterial,
-      opticalPointLights,
-      opticalCaustics,
-      aBuffer,
-      wboit
-    ]
+    modules: resolveShaderPlugins(
+      [
+        glassMaterialPlugin,
+        reflectiveMaterialPlugin,
+        emissiveMaterialPlugin,
+        opticalPointLightsPlugin,
+        opticalCausticsPlugin,
+        aBufferPlugin,
+        wboitPlugin
+      ],
+      'wgsl'
+    ).modules
   });
   const reflectedShader = new WgslReflect(assembledShader.source);
 
@@ -1002,13 +1011,16 @@ void main(void) {
     vec4(opticalCaustics_getColor(normal, worldPosition, cameraPosition), 0.0);
 }
 `,
-    modules: [
-      glassMaterial,
-      reflectiveMaterial,
-      emissiveMaterial,
-      opticalPointLights,
-      opticalCaustics
-    ]
+    modules: resolveShaderPlugins(
+      [
+        glassMaterialPlugin,
+        reflectiveMaterialPlugin,
+        emissiveMaterialPlugin,
+        opticalPointLightsPlugin,
+        opticalCausticsPlugin
+      ],
+      'glsl'
+    ).modules
   });
 
   expect(assembledShader.fs, 'GLSL exposes a fixed 16-light uniform array').toMatch(
@@ -1028,4 +1040,33 @@ void main(void) {
     /vec3 opticalCaustics_getColor/
   );
   void 0;
+});
+
+it('a primary material module preserves dependency uniforms and bindings', () => {
+  const resolved = resolveShaderPlugins([glassTransmissionPlugin], 'wgsl');
+  const inputs = new ShaderInputs(
+    Object.fromEntries(resolved.modules.map(module => [module.name, module]))
+  );
+  const device = new NullDevice({});
+  const texture = device.createTexture({width: 1, height: 1});
+  try {
+    expect(inputs.getModules().map(module => module.name)).toEqual(
+      expect.arrayContaining(['glassTransmission', 'glassMaterial', 'opticalLighting'])
+    );
+    inputs.setProps({
+      glassTransmission: {thicknessStrength: 2, environmentTexture: texture},
+      glassMaterial: {roughness: 0.4, sceneColorTexture: texture}
+    });
+    expect(inputs.getUniformValues().glassTransmission?.thicknessStrength).toBe(2);
+    expect(inputs.getUniformValues().glassMaterial?.roughness).toBe(0.4);
+    expect(inputs.getBindingValues().glassEnvironmentTexture).toBe(texture);
+    expect(inputs.getBindingValues().glassSceneColorTexture).toBe(texture);
+    inputs.setProps({glassTransmission: {thicknessStrength: 3}});
+    expect(inputs.getUniformValues().glassMaterial?.roughness).toBe(0.4);
+    expect(inputs.getBindingValues().glassSceneColorTexture).toBe(texture);
+  } finally {
+    inputs.destroy();
+    texture.destroy();
+    device.destroy();
+  }
 });

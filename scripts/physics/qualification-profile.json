@@ -18,7 +18,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports a pinned, device-independent description"
           }
         ]
@@ -136,7 +136,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "honors primitive and authored-material schema defaults"
           }
         ],
@@ -161,7 +161,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "resolves compound ownership, transformed child colliders"
           }
         ],
@@ -186,7 +186,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
         ],
@@ -211,7 +211,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
         ],
@@ -322,7 +322,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "preserves reflected static boxes"
           }
         ]
@@ -353,7 +353,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "distinguishes static and kinematic bodies"
           }
         ],
@@ -384,7 +384,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "computes additive primitive mass and center"
           }
         ],
@@ -411,7 +411,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
         ],
@@ -442,11 +442,11 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "distinguishes static and kinematic bodies"
           },
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
         ]
@@ -465,7 +465,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "resolves compound ownership, transformed child colliders"
           }
         ],
@@ -494,7 +494,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "honors primitive and authored-material schema defaults"
           }
         ],
@@ -526,7 +526,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/parse-gltf-physics.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "compiles symmetric filters without a 32-system bitmask limit"
           }
         ],
@@ -656,7 +656,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports composed joints with forward attachment references"
           }
         ],
@@ -687,7 +687,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports .*dimensional linear and angular limits"
           }
         ],
@@ -716,7 +716,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports .*dimensional linear and angular limits"
           }
         ],
@@ -750,7 +750,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports .*dimensional linear and angular limits"
           }
         ],
@@ -790,7 +790,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "imports composed joints"
           }
         ],
@@ -825,11 +825,11 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-triggers.node.spec.ts",
             "testPattern": "imports nested trigger unions"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-triggers.node.spec.ts",
             "testPattern": "preserves intermediate branch filters"
           }
         ],
@@ -984,7 +984,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "qualifies imported ancestor ownership"
           }
         ],
@@ -1017,13 +1017,13 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-pointer.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-pointer.node.spec.ts",
             "testPattern": "qualifies declared motion"
           }
         ],
         "behavior": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "qualifies imported component pointers"
           },
           {
@@ -1031,11 +1031,11 @@
             "testPattern": "rejects a shared joint edit"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-properties.spec.ts",
             "testPattern": "binds authored motion and material pointers"
           },
           {
-            "file": "modules/gltf/test/physics/mesh-snapshot.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/mesh-snapshot.node.spec.ts",
             "testPattern": "snapshots initial and live morphs"
           }
         ]
@@ -1054,11 +1054,11 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "native export reimport"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-session.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
             "testPattern": "reimports automatically derived inertia"
           }
         ],
@@ -1978,7 +1978,7 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-triggers.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-triggers.node.spec.ts",
             "testPattern": "imports nested trigger unions"
           }
         ],
@@ -2028,7 +2028,7 @@
             "testPattern": "changes restitution live"
           },
           {
-            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-properties.spec.ts",
             "testPattern": "binds authored motion and material pointers"
           }
         ]
@@ -2068,7 +2068,7 @@
       "checks": {
         "behavior": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "binds animated child collider"
           },
           {
@@ -2091,13 +2091,13 @@
       "checks": {
         "import": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-joints.node.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-joints.node.spec.ts",
             "testPattern": "routes analytic scale channels"
           }
         ],
         "behavior": [
           {
-            "file": "modules/gltf/test/physics/gltf-physics-properties.spec.ts",
+            "file": "modules/engine/test/gltf/physics/gltf-physics-properties.spec.ts",
             "testPattern": "animates shared implicit shape pointers"
           },
           {

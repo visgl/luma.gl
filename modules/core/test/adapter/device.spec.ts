@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture, luma} from '@luma.gl/core';
-import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {_getDefaultDebugValue} from '../../src/api/adapter/device';
 

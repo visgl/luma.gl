@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {Buffer, Texture, type Device, type Shader} from '@luma.gl/core';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {Buffer, Texture, type Device, type RenderPassParameters, type Shader} from '@luma.gl/core';
+import {getTestDevices} from '@luma.gl/core/test-utils';
 
 const DEVICE_TYPES = ['webgl', 'webgpu'] as const;
 const EMPTY_SHADER_LAYOUT = {attributes: [], bindings: []};
@@ -67,16 +67,21 @@ async function createIndexedRenderShaders(
   return {vertexShader, fragmentShader};
 }
 
-async function readFirstTexturePixel(device: Device, texture: Texture): Promise<number[]> {
-  const layout = texture.computeMemoryLayout({width: 1, height: 1});
+/** Reads the first `width` RGBA8 pixels of the first texture row. */
+async function readTexturePixels(
+  device: Device,
+  texture: Texture,
+  width: number = 1
+): Promise<number[]> {
+  const layout = texture.computeMemoryLayout({width, height: 1});
   const readBuffer = device.createBuffer({
     byteLength: layout.byteLength,
     usage: Buffer.COPY_DST | Buffer.MAP_READ
   });
   try {
-    texture.readBuffer({width: 1, height: 1}, readBuffer);
+    texture.readBuffer({width, height: 1}, readBuffer);
     const data = await readBuffer.readAsync();
-    return Array.from(data.slice(0, 4));
+    return Array.from(data.slice(0, width * 4));
   } finally {
     readBuffer.destroy();
   }
@@ -126,7 +131,7 @@ it('Device render passes accept zero-valued dynamic stencil state without a vert
     device.submit();
 
     expect(
-      await readFirstTexturePixel(device, colorTexture),
+      await readTexturePixels(device, colorTexture),
       `${device.type} applies stencilReference zero and draws without a vertex array`
     ).toEqual([255, 0, 0, 255]);
 
@@ -177,7 +182,7 @@ it('Device render passes use portable indexed draw offsets', async () => {
     device.submit();
 
     expect(
-      await readFirstTexturePixel(device, texture),
+      await readTexturePixels(device, texture),
       `${device.type} firstIndex selects the expected indexed triangle`
     ).toEqual([255, 0, 0, 255]);
 
@@ -192,7 +197,7 @@ it('Device render passes use portable indexed draw offsets', async () => {
     device.submit();
 
     expect(
-      await readFirstTexturePixel(device, texture),
+      await readTexturePixels(device, texture),
       `${device.type} indexCount zero does not fall back to a non-indexed draw`
     ).toEqual([0, 0, 0, 255]);
 
@@ -207,12 +212,63 @@ it('Device render passes use portable indexed draw offsets', async () => {
     device.submit();
 
     expect(
-      await readFirstTexturePixel(device, texture),
+      await readTexturePixels(device, texture),
       `${device.type} instanceCount zero does not draw an implicit instance`
     ).toEqual([0, 0, 0, 255]);
 
     indexBuffer.destroy();
     vertexArray.destroy();
+    framebuffer.destroy();
+    texture.destroy();
+    renderPipeline.destroy();
+    for (const shader of new Set([vertexShader, fragmentShader])) {
+      shader.destroy();
+    }
+  }
+});
+
+it('Device render passes apply initial viewport and scissorRect parameters', async () => {
+  for (const device of await getTestDevices(DEVICE_TYPES)) {
+    const {vertexShader, fragmentShader} = await createIndexedRenderShaders(device);
+    const renderPipeline = device.createRenderPipeline({
+      vs: vertexShader,
+      fs: fragmentShader,
+      shaderLayout: EMPTY_SHADER_LAYOUT,
+      colorAttachmentFormats: ['rgba8unorm']
+    });
+    // One row, so the expected pixels don't depend on the framebuffer y origin
+    const texture = device.createTexture({
+      width: 2,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.RENDER | Texture.COPY_SRC
+    });
+    const framebuffer = device.createFramebuffer({
+      width: 2,
+      height: 1,
+      colorAttachments: [texture]
+    });
+    const testCases: Array<{parameters: RenderPassParameters; message: string}> = [
+      {parameters: {scissorRect: [1, 0, 1, 1]}, message: 'scissorRect limits the draw'},
+      {parameters: {viewport: [1, 0, 1, 1]}, message: 'viewport limits the draw'}
+    ];
+
+    for (const {parameters, message} of testCases) {
+      // WebGL scissors clears and WebGPU doesn't, so clear in a separate pass
+      device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 1]}).end();
+      // The full-screen triangle covers both pixels unless the parameters are applied
+      const renderPass = device.beginRenderPass({framebuffer, clearColor: false, parameters});
+      renderPass.setPipeline(renderPipeline);
+      renderPass.draw({vertexCount: 3});
+      renderPass.end();
+      device.submit();
+
+      expect(
+        await readTexturePixels(device, texture, 2),
+        `${device.type} ${message} to the right pixel`
+      ).toEqual([0, 0, 0, 255, 255, 0, 0, 255]);
+    }
+
     framebuffer.destroy();
     texture.destroy();
     renderPipeline.destroy();

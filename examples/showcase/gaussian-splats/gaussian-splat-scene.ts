@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {SplatSource} from '@luma.gl/splats';
+import type {SplatSource} from '@luma.gl/engine/splats';
 
 export const GAUSSIAN_SPLAT_BATCH_COUNT = 4;
 export const GAUSSIAN_SPLATS_PER_BATCH = 1536;

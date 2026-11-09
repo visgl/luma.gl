@@ -4,8 +4,8 @@
 
 import {type Buffer} from '@luma.gl/core';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {GPUData} from '@luma.gl/graph/gpu-data';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it, vi} from 'vitest';
 
 it('GPUTable.detachBatches gives every view of a shared buffer its own reference', () => {

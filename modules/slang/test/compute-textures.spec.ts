@@ -3,7 +3,7 @@
 
 import {expect, it} from 'vitest';
 import {transpileSlang} from '@luma.gl/slang';
-import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {
   ATOMIC_SHADER,
   ATOMIC_RESULTS,

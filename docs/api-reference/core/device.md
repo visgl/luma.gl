@@ -523,11 +523,11 @@ See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for how compute work is rec
 loseDevice(): boolean
 ```
 
-Triggers device loss (see below). After this call, the `Device.lost` promise will be resolved with an error message and `Device.isLost` will be set to true.
+Triggers device loss (see below). After this call, the `Device.lost` promise resolves with a loss reason and `Device.isLost` is set to true. For WebGL, `isLost` is set synchronously and remains true for that device even if the native context is subsequently restored. Destroy the lost device and create a new device to recover.
 
-- Returns `true` if an actual or emulated device loss was triggered, `false` otherwise. Note that even if device loss emulation is not supported by the platform this function will still update the `Device` instance to indicate that the device was lost, however the device can still be used.
+- Returns `true` if an actual or emulated device loss was triggered, `false` otherwise. If WebGL context loss emulation is unavailable, this method returns `false` but still marks the device lost and resolves `lost`. The underlying context remains active and can still be used.
 
 :::note
 The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code.
-`loseDevice()` can currently only emulate context loss on WebGL devices on platform's where WebGL API provides the required `WEBGL_lose_context` WebGL debug extension.
+`loseDevice()` can currently only emulate context loss on WebGL devices on platforms where the WebGL API provides the required `WEBGL_lose_context` WebGL debug extension.
 :::

@@ -14,7 +14,7 @@ export type TutorialDocsTabId =
   | 'hello-cube'
   | 'hello-instancing'
   | 'shader-modules'
-  | 'shader-hooks'
+  | 'shader-injection'
   | 'shader-plugins'
   | 'lighting'
   | 'transform'
@@ -32,7 +32,7 @@ const TUTORIAL_DOCS_TABS: Record<TutorialDocsTabGroupId, TutorialDocsTab[]> = {
   ],
   shaders: [
     {id: 'shader-modules', label: 'Modules', href: '/docs/tutorials/shader-modules'},
-    {id: 'shader-hooks', label: 'Hooks', href: '/docs/tutorials/shader-hooks'},
+    {id: 'shader-injection', label: 'Injection', href: '/docs/tutorials/shader-injection'},
     {id: 'shader-plugins', label: 'Plugins', href: '/docs/tutorials/shader-plugins'},
     {id: 'lighting', label: 'Lighting', href: '/docs/tutorials/lighting'}
   ],

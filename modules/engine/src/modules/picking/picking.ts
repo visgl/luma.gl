@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 import type {Device} from '@luma.gl/core';
 
 import type {PickingBindings, PickingProps, PickingUniforms} from './picking-uniforms';

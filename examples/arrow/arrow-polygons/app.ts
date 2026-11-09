@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
-import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from '@luma.gl/arrow';
+import {ArrowPolygonRenderer, type ArrowPolygonRendererPickingInfo} from '@luma.gl/engine/arrow';
 import type {ArrowPolygonViewState} from './arrow-polygon-data';
 import {ArrowPolygonDataSource} from './arrow-polygon-data-source';
 import {makeArrowExamplePanelHostHtml} from '../arrow-example-panels';

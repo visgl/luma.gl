@@ -64,7 +64,7 @@ describe('optional CRS planner', () => {
       readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
     );
     expect(packageJson.exports['./gpu-project/crs'].types).toBe('./dist/gpu-project/crs.d.ts');
-    expect(packageJson.peerDependenciesMeta['@math.gl/geospatial'].optional).toBe(true);
+    expect(packageJson.dependencies['@math.gl/geospatial']).toBeDefined();
   });
 
   it('lowers a public math.gl AST with signed axes, unit changes, and inverse affine stages', () => {

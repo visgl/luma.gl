@@ -4,8 +4,8 @@
 
 import {expect, it, vi} from 'vitest';
 import {Buffer, type ShaderLayout} from '@luma.gl/core';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {NullDevice} from '@luma.gl/test-utils';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUVectorGeometry, GPUVectorModel} from '../../src';
 
 const SHADER_LAYOUT: ShaderLayout = {
@@ -58,6 +58,8 @@ it.each([
   const geometry = new GPUVectorGeometry({attributes: {positions}, topology: 'triangle-strip'});
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: isInstanced ? 'instance' : 'vertex',
+    vertexCount: 4,
     geometry,
     isInstanced,
     attributeVectors: {colors}
@@ -99,6 +101,7 @@ it('GPUVectorGeometry binds sliced indices without taking ownership', () => {
   });
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: 'vertex',
     geometry: new GPUVectorGeometry({attributes: {positions}, indices})
   });
   expect(model.vertexCount).toBe(4);
@@ -108,6 +111,7 @@ it('GPUVectorGeometry binds sliced indices without taking ownership', () => {
   expect(model.firstVertex).toBe(4);
   const overridden = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: 'vertex',
     geometry: new GPUVectorGeometry({attributes: {positions}, indices}),
     indexCount: 3,
     firstIndex: 1,
@@ -179,6 +183,8 @@ it.each([
   });
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: isInstanced ? 'instance' : 'vertex',
+    vertexCount: isInstanced ? 4 : 5,
     isInstanced,
     geometry: new GPUVectorGeometry({attributes: {positions}}),
     attributeVectors: {colors}
@@ -252,6 +258,7 @@ it.each([
   });
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: 'vertex',
     isInstanced,
     geometry: new GPUVectorGeometry({attributes: {positions}})
   });
@@ -277,6 +284,8 @@ it('constructor layouts override inferred attribute step modes', () => {
   });
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: 'instance',
+    vertexCount: 4,
     geometry: new GPUVectorGeometry({attributes: {positions}}),
     attributeVectors: {colors},
     bufferLayout: [{name: 'colors', format: 'unorm8x4', stepMode: 'instance'}]
@@ -301,6 +310,7 @@ it('empty index vectors skip drawing and raw index replacement clears the typed 
   });
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: 'vertex',
     geometry: new GPUVectorGeometry({attributes: {positions}, indices})
   });
   const renderPass = device.getDefaultRenderPass();
@@ -365,6 +375,7 @@ it('layout updates reach typed groups and removed names can be rebound as raw bu
   });
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: 'vertex',
     geometry: new GPUVectorGeometry({attributes: {positions}}),
     attributeVectors: {colors}
   });
@@ -476,6 +487,9 @@ it.each([
   });
   const model = new GPUVectorModel(device, {
     ...SHADERS,
+    inferDrawCount: 'vertex',
+    vertexCount: 5,
+    instanceCount: 5,
     isInstanced: true,
     geometry: new GPUVectorGeometry({attributes: {positions}}),
     attributeVectors: {colors},
@@ -494,16 +508,16 @@ it.each([
       ? []
       : countName === 'vertexCount'
         ? [
-            [2, 2],
-            [2, 3],
-            [1, 2],
-            [1, 3]
+            [2, 5],
+            [2, 5],
+            [1, 5],
+            [1, 5]
           ]
         : [
-            [2, 2],
-            [2, 1],
-            [3, 2],
-            [3, 1]
+            [2, 3],
+            [2, 3],
+            [3, 3],
+            [3, 3]
           ]
   );
   expect(model[countName]).toBe(limit);

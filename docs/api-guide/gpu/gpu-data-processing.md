@@ -12,23 +12,37 @@ and whether the computation is a single transformation or a reusable multi-pass 
 
 | Start with | Use it when |
 | --- | --- |
-| [`@luma.gl/gpgpu`](/docs/api-reference/gpgpu) | You want portable, composable data operations that run on CPU, WebGL, or WebGPU. |
+| [`GPUGraph`](/docs/api-reference/graph/getting-started) | You want named runtime inputs, operation-defined outputs, and compiler-managed intermediate storage on WebGPU, with convenient or caller-owned submission. |
+| [`GPUSimpleGraph` expressions](/docs/api-reference/graph/gpu-simple-graph) | You want the shared `GPUExpressionOperation` subset on WebGL and WebGPU, with new inputs on each execution. |
+| [`@luma.gl/graph/gpu-simple-graph`](/docs/api-reference/graph/gpu-evaluation) | You want portable, composable data operations that run on CPU, WebGL, or WebGPU. |
 | [`GPUCommandGraph`](/docs/api-reference/experimental/gpu-core/gpu-command-graph) | You are building a WebGPU-only, multi-pass workflow and need explicit control over resources, command encoding, and temporary memory. |
 | [`Computation`](/docs/api-reference/engine/compute/computation) | You want to write and dispatch one custom WebGPU compute shader directly. |
 | [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform) | You want to write a custom WebGL transform-feedback operation directly. |
 
-For most portable buffer transformations, begin with GPGPU evaluators. Move to a command graph
-when the workflow itself—not just an individual operation—needs WebGPU scheduling and resource
-management.
+Use reusable graph expressions when types and operations stay fixed while input data changes.
+Use evaluator operations for their broader lazy operation set and cached materialization.
+Choose the lower-level command graph when you need to author passes and resource descriptors
+directly. These APIs have distinct ownership and backend contracts; the
+[graph overview](/docs/api-reference/graph) compares them.
+
+## GPUGraph
+
+Declare inputs with `addInput()` and state with `addState()`. Operations added through `add()`
+define their own results. `compile(device, {outputs})` creates a reusable program;
+`run({inputs, state, outputTargets})` prepares and submits one invocation. `prepare()` instead
+exposes outputs and lets the caller encode into a larger frame. Unselected operation-defined
+vectors can reuse transient storage within an invocation. See the
+[complete example](/docs/api-reference/graph/getting-started) and
+[ownership rules](/docs/api-reference/graph/gpu-graph-values).
 
 ## GPGPU Evaluators
 
-The `@luma.gl/gpgpu` module presents computation as lazy values. Operations such as `add()`,
+The `@luma.gl/graph/gpu-simple-graph` module presents computation as lazy values. Operations such as `add()`,
 `gather()`, and `interleave()` return a `GPUDataEvaluator`; no work runs until the result is
 evaluated.
 
 ```ts
-import {add, multiply} from '@luma.gl/gpgpu';
+import {add, multiply} from '@luma.gl/graph/gpu-simple-graph';
 
 const adjusted = add(multiply(sourceData, 2), 1);
 const result = await adjusted.evaluate(device);
@@ -59,7 +73,7 @@ The command graph deliberately remains WebGPU-only. Its compute passes, storage 
 hazards, and explicit command encoding do not map directly to WebGL transform feedback or CPU
 execution.
 
-## Comparing the APIs
+## Evaluators and command graphs compared
 
 | Concern | GPGPU evaluators | `GPUCommandGraph` |
 | --- | --- | --- |
@@ -125,9 +139,9 @@ the explicit resource boundary described above today.
 
 ## Related Pages
 
-- [GPGPU overview](/docs/api-reference/gpgpu)
-- [GPGPU operations](/docs/api-reference/gpgpu/operations)
-- [GPU evaluators](/docs/api-reference/gpgpu/gpu-data-evaluator)
+- [GPGPU overview](/docs/api-reference/graph/gpu-evaluation)
+- [GPGPU operations](/docs/api-reference/graph/operations)
+- [GPU evaluators](/docs/api-reference/graph/gpu-data-evaluator)
 - [GPUCommandGraph](/docs/api-reference/experimental/gpu-core/gpu-command-graph)
 - [GPU tables](/docs/api-guide/gpu/gpu-tables)
 - [Issuing GPU commands](/docs/api-guide/gpu/gpu-commands)

@@ -3,7 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {GPUGraph} from './gpu-graph';
-import {GPUCompositeOperation, type GPUGraphOperation} from './gpu-operation';
+import {resolveGPUGraphDeclarations} from './gpu-graph-declarations';
+import {validateGPUOperationContract} from './gpu-operation-contract';
+import {GPUCompositeOperation, isGPUOperation, type GPUGraphOperation} from './gpu-operation';
 import {GPUConditionalOperation, GPULoopOperation} from './gpu-control-flow-operation';
 import type {GPUGraphBindings} from './gpu-graph-compiler';
 export type GPUGraphValidationIssue = {
@@ -23,6 +25,37 @@ export function validateGPUGraph(
   bindings: GPUGraphBindings = {}
 ): GPUGraphValidationReport {
   const issues: GPUGraphValidationIssue[] = [];
+  try {
+    program = resolveGPUGraphDeclarations(program);
+  } catch (error) {
+    return {
+      valid: false,
+      issues: [
+        {
+          level: 'error',
+          code: 'invalid-operation-contract',
+          message: error instanceof Error ? error.message : String(error)
+        }
+      ]
+    };
+  }
+  for (const scalar of program.scalars) {
+    if (scalar.role === 'input' && bindings.scalars?.[scalar.id] === undefined)
+      issues.push({
+        level: 'error',
+        code: 'missing-input',
+        valueId: scalar.id,
+        message: `Missing input binding ${scalar.id}`
+      });
+    if (scalar.role === 'value' && bindings.scalars?.[scalar.id] !== undefined)
+      issues.push({
+        level: 'error',
+        code: 'result-binding',
+        valueId: scalar.id,
+        message: `Cannot initialize graph result ${scalar.id}`
+      });
+  }
+
   const scalars = new Set(program.scalars.map(value => value.id));
   for (const vector of program.vectors)
     if (vector.external && !bindings.vectors?.[vector.id])
@@ -34,6 +67,19 @@ export function validateGPUGraph(
       });
   const visit = (operation: GPUGraphOperation): void => {
     const id = 'id' in operation && typeof operation.id === 'string' ? operation.id : undefined;
+    if (isGPUOperation(operation)) {
+      try {
+        const contract = operation.contract;
+        if (contract) validateGPUOperationContract(program, contract);
+      } catch (error) {
+        issues.push({
+          level: 'error',
+          code: 'invalid-operation-contract',
+          operationId: id,
+          message: `${id}: ${error instanceof Error ? error.message : String(error)}`
+        });
+      }
+    }
     if (operation instanceof GPUConditionalOperation || operation instanceof GPULoopOperation) {
       const predicate = operation.predicate;
       if (predicate?.source === 'gpu') {

@@ -1,5 +1,5 @@
 /*
-import {createHeadlessContext} from '@luma.gl/test-utils';
+import {createHeadlessContext} from '@luma.gl/core/test-utils';
 import 'luma.gl/debug';
 
 import util from 'util';

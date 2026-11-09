@@ -12,7 +12,7 @@ import {
   type GPURasterBufferBand,
   type GPURasterGlobalAccumulator
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 
 type GlobalFormat = 'float32' | 'uint32';

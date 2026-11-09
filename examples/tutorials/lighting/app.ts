@@ -9,10 +9,10 @@ import {
   Model,
   CubeGeometry,
   ShaderInputs,
-  loadImageBitmap,
-  DynamicTexture
+  loadImageBitmap
 } from '@luma.gl/engine';
-import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
+import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core';
 import {LIGHTING_INFO_HTML} from './app-ui';
 

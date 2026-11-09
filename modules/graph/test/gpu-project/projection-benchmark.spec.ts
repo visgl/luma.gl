@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import {createWebMercatorProjection} from '@luma.gl/graph/gpu-project';
 import {runGPUProjectionBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('runGPUProjectionBenchmark compares CPU baselines and synchronized WebGPU paths', async () => {
   const device = await getWebGPUTestDevice();
@@ -15,7 +15,7 @@ it('runGPUProjectionBenchmark compares CPU baselines and synchronized WebGPU pat
     return;
   }
 
-  const configuredRows = import.meta.env.VITE_LUPROJ_BENCHMARK_ROWS;
+  const configuredRows = import.meta.env.VITE_GPU_PROJECT_BENCHMARK_ROWS;
   const coordinateCount = configuredRows ? Number(configuredRows) : 64;
   const benchmarkReport = await runGPUProjectionBenchmark(device, {
     projection: createWebMercatorProjection(),

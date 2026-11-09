@@ -24,7 +24,7 @@ import {
   sketchStroke,
   type PathDashProps,
   type ShaderModule
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 
 export type StrokeAppearance = 'plain' | 'sketch' | 'glow';
 export type Route = {
@@ -161,6 +161,7 @@ export class StrokeMeshLayer extends Layer<StrokeMeshLayerProps> {
     });
     try {
       const model = new Model(this.context.device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: VERTEX_SHADER,

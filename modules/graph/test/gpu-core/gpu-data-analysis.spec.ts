@@ -15,8 +15,8 @@ import {
   type GPUGroupAggregationOperation,
   type GPUReductionOperation
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {getGPUGroupAggregationDispatchLayout} from '../../src/gpu-core/gpu-group-aggregation';
 
 it('GPUReduction handles operations, formats, hierarchy, and invalid floats', async () => {

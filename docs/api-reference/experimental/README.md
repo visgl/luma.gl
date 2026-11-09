@@ -22,19 +22,19 @@ are considered for stable packages.
   <DocumentationBadge tone="webgpu">WebGPU features available</DocumentationBadge>
 </DocumentationBadges>
 
-Use the matching public package and explicit subpath for each API. Public scene renderers and their lighting, shadow, and transparency helpers now live in `@luma.gl/anari`. Controls, material plugins, texture helpers, and WebXR APIs live under `@luma.gl/engine/experimental/*`. Path/polygon models and simulation code live under `@luma.gl/graph/experimental/models` and `/simulation`.
+Use the matching public package and explicit subpath for each API. Public scene renderers and their lighting, shadow, and transparency helpers now live in `@luma.gl/anari`. Controls, material plugins, texture helpers, and WebXR APIs live under `@luma.gl/engine/experimental/*`. Path/polygon models live under `@luma.gl/engine/models`; simulation code lives under `@luma.gl/graph/experimental/simulation`.
 
 ## When to use it
 
 Use an experimental module when its current contract fits your application and you can absorb
-changes between releases. Prefer Core, Engine, Shadertools, or another stable package when they
+changes between releases. Prefer Core, Engine, Shaders, or another stable package when they
 already provide the required capability.
 
 ## Live example
 
 This explicitly activated example compares A-buffer, weighted-blended, and ordinary alpha
 blending on the same scene. It demonstrates how an experimental renderer can still compose with
-stable Engine models and Shadertools passes.
+stable Engine models and Shaders passes.
 
 <OITExample embedded showStats={false} />
 
@@ -44,13 +44,13 @@ stable Engine models and Shadertools passes.
 
 | Module | Use it for |
 | --- | --- |
-| [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
+| [`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data) | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers. |
 | [`@luma.gl/graph/gpu-tables`](/docs/api-reference/experimental/gpu-tables) | GPU record batches, tables, schemas, bindings, computations, and generic table planners. |
-| `@luma.gl/graph/experimental/models` | Experimental path and polygon rendering models, GPU input helpers, and model-specific planners. |
+| `@luma.gl/engine/models` | Experimental path and polygon rendering models. GPU input preparation remains in `@luma.gl/graph/experimental/models`. |
 | [`@luma.gl/graph/gpu-core`](/docs/api-reference/experimental/gpu-core) | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work. |
 | [`@luma.gl/graph/gpu-graph-algorithms`](/docs/api-reference/experimental/gpu-graph) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms. |
 | [GPU Raster](/docs/api-reference/experimental/gpu-raster) | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency. |
-| [LuCIM](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
+| [GPU Volume Algorithms](/docs/api-reference/experimental/lucim) | CuCIM-inspired dense 3D volume thresholding, morphology, connected components, and region measurements. |
 | [GPU Project](/docs/api-reference/experimental/gpu-project) | Adaptive high-precision coordinate projection on WebGPU. |
 | [GPU DGGS cells](/docs/api-reference/experimental/gpu-dggs) | H3 and A5 cell-center decoding for GPU-resident split-uint64 indexes. |
 | [GPU Trace](/docs/api-reference/experimental/gpu-trace) | Large GPU-resident trace scenes, interaction, aggregation, temporal indexing, comparison, and causal analysis. |
@@ -65,24 +65,24 @@ The following APIs are owned by `@luma.gl/anari`.
 
 | Module | Use it for |
 | --- | --- |
-| [SceneRenderer](/docs/api-reference/scene/scene-renderer) | Retained physically based forward rendering on WebGPU and WebGL 2. |
-| [DeferredSceneRenderer](/docs/api-reference/scene/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
-| [PBR environments](/docs/api-reference/scene/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
-| [GBuffer](/docs/api-reference/scene/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
-| [Selection outlines](/docs/api-reference/scene/selection-outline) | Visible placement boundaries from exact integer ID textures. |
-| [Deferred lighting](/docs/api-reference/scene/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
-| [Clustered lighting](/docs/api-reference/scene/clustered-lighting) | Compute-binned local lights for deferred shading. |
-| [Shadow maps](/docs/api-reference/scene/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |
+| [SceneRenderer](/docs/api-reference/anari/scene-renderer) | Retained physically based forward rendering on WebGPU and WebGL 2. |
+| [DeferredSceneRenderer](/docs/api-reference/anari/deferred-scene-renderer) | G-buffer-based opaque lighting with forward fallbacks for unsupported materials. |
+| [PBR environments](/docs/api-reference/anari/pbr-environment) | Diffuse irradiance, prefiltered specular cubemaps, and BRDF lookup textures. |
+| [GBuffer](/docs/api-reference/anari/g-buffer) | Standard scene color, normal, roughness, velocity, and depth attachments. |
+| [Selection outlines](/docs/api-reference/anari/selection-outline) | Visible placement boundaries from exact integer ID textures. |
+| [Deferred lighting](/docs/api-reference/anari/deferred-lighting) | Fullscreen lighting from G-buffer material targets. |
+| [Clustered lighting](/docs/api-reference/anari/clustered-lighting) | Compute-binned local lights for deferred shading. |
+| [Shadow maps](/docs/api-reference/anari/shadow-map-renderer) | Cascaded, spot-array, and point cube-array shadows with PCSS filtering. |
 
 ### Materials and transparency
 
 | Module | Use it for |
 | --- | --- |
-| [A-buffer renderer](/docs/api-reference/scene/a-buffer-renderer) | Accurate bounded per-pixel fragment storage, sorting, and compositing. |
-| [Weighted blended OIT](/docs/api-reference/scene/wboit-renderer) | Portable approximate order-independent transparency without sorting. |
+| [A-buffer renderer](/docs/api-reference/anari/a-buffer-renderer) | Accurate bounded per-pixel fragment storage, sorting, and compositing. |
+| [Weighted blended OIT](/docs/api-reference/anari/wboit-renderer) | Portable approximate order-independent transparency without sorting. |
 | [Glass material](/docs/api-reference/engine/experimental/glass-material) | Screen-space refraction, Fresnel reflection, dispersion, and absorption. |
 | [Reflective material](/docs/api-reference/engine/experimental/reflective-material) | Lightweight glossy environment reflection. |
-| [Spectral caustics](/docs/api-reference/scene/spectral-caustics-renderer) | Geometry-derived multi-wavelength planar caustic lighting. |
+| [Spectral caustics](/docs/api-reference/anari/spectral-caustics-renderer) | Geometry-derived multi-wavelength planar caustic lighting. |
 | [Comparison splitter](/docs/api-reference/engine/experimental/comparison-splitter) | Accessible before-and-after canvas comparisons. |
 
 ### Simulation and immersive input
@@ -116,9 +116,9 @@ specific rather than universal performance claims.
 - [Choosing a luma.gl API layer](/docs/api-guide)
 - [Core API](/docs/api-reference/core)
 - [Engine API](/docs/api-reference/engine)
-- [Shadertools API](/docs/api-reference/shadertools)
+- [Shaders API](/docs/api-reference/shaders)
 - [Effects API](/docs/api-reference/effects)
 
-[`DepthTextureCopy`](../scene/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
+[`DepthTextureCopy`](../anari/depth-texture-copy.md) transfers projected ray depth to a render attachment for raster overlays.
 
-[`getRayTracingQualityPreset`](../scene/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.
+[`getRayTracingQualityPreset`](../anari/ray-tracing-quality-presets.md) supplies interactive and still settings without changing camera or sampling seed.

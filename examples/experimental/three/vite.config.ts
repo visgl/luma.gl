@@ -13,28 +13,44 @@ export default defineConfig(({mode}) => ({
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        streamed: fileURLToPath(new URL('./streamed.html', import.meta.url)),
+        embed: fileURLToPath(new URL('./embed.html', import.meta.url)),
         'gpu-graph-galaxy': fileURLToPath(new URL('./gpu-graph-galaxy.html', import.meta.url)),
         'host-overlay': fileURLToPath(new URL('./host-overlay.html', import.meta.url))
       }
     }
   },
   resolve: {
-    alias: Object.fromEntries(
-      [
-        'core',
-        'effects',
-        'engine',
-        'gpgpu',
-        'three',
-        'webgl',
-        'webgpu',
-        'shadertools',
-        'graph'
-      ].map(name => [
-        `@luma.gl/${name}`,
-        fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
-      ])
-    )
+    alias: {
+      '@luma.gl/graph/gpu-simple-graph/cpu': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/cpu', import.meta.url)
+      ),
+      '@luma.gl/graph/gpu-simple-graph/webgl': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgl', import.meta.url)
+      ),
+      '@luma.gl/graph/gpu-simple-graph/webgpu': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgpu', import.meta.url)
+      ),
+
+      '@luma.gl/graph/_internal': fileURLToPath(
+        new URL('../../../modules/graph/src/execution', import.meta.url)
+      ),
+      '@luma.gl/engine/models': fileURLToPath(
+        new URL('../../../modules/engine/src/graph/models', import.meta.url)
+      ),
+      '@luma.gl/engine/physics': fileURLToPath(
+        new URL('../../../modules/engine/src/graph/physics', import.meta.url)
+      ),
+      '@luma.gl/engine/tables': fileURLToPath(
+        new URL('../../../modules/engine/src/graph/tables', import.meta.url)
+      ),
+      ...Object.fromEntries(
+        ['core', 'effects', 'engine', 'three', 'webgl', 'webgpu', 'shaders', 'graph'].map(name => [
+          `@luma.gl/${name}`,
+          fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
+        ])
+      )
+    }
   },
   optimizeDeps: {
     exclude: ['@deck.gl/core', '@deck.gl/layers'],
@@ -48,10 +64,10 @@ export default defineConfig(({mode}) => ({
       '@luma.gl/core',
       '@luma.gl/core/webgl',
       '@luma.gl/core/webgpu',
-      '@luma.gl/effects',
+      '@luma.gl/engine/effects',
       '@luma.gl/engine',
       '@luma.gl/graph/gpu-core',
-      '@luma.gl/shadertools',
+      '@luma.gl/shaders',
       '@luma.gl/three/interop',
       'three/webgpu',
       'three/tsl',

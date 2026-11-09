@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Device, Framebuffer} from '@luma.gl/core';
-import {picking} from '@luma.gl/shadertools';
+import {picking} from '@luma.gl/shaders';
 import {ShaderInputs} from '../../shader-inputs';
-import {NumberArray3} from '@math.gl/core/types';
+import {NumberArray3} from '@math.gl/core';
 
 /**
  * Helper class for using the legacy picking module

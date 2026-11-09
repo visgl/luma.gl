@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {NumberArray4, TypedArray} from '@math.gl/core/types';
+import type {NumberArray4, TypedArray} from '@math.gl/core';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
@@ -125,6 +125,9 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
 
   /** A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference) */
   abstract setParameters(parameters: RenderPassParameters): void;
+
+  /** Returns a detached snapshot of the current dynamic render-pass parameters. */
+  abstract getParameters(): RenderPassParameters;
 
   /** Selects the pipeline used by subsequent binding and draw commands. */
   abstract setPipeline(pipeline: RenderPipeline): void;

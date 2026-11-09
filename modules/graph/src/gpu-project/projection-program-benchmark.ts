@@ -9,7 +9,7 @@ import {
   type GraphDataView,
   type CompiledGPUCommandGraph
 } from '@luma.gl/graph/gpu-core';
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   addGeospatialPass,
   getGeospatialDispatchLayout,

@@ -4,7 +4,7 @@ import {expect, it} from 'vitest';
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {runGPUWorkgroupReductionBenchmark} from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('runGPUWorkgroupReductionBenchmark compares graph-owned reductions', async () => {
   const device = await getWebGPUTestDevice();

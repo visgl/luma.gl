@@ -11,8 +11,8 @@ import {
   type SceneRenderOptions,
   supportsDeferredScene
 } from '@luma.gl/anari';
-import {pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shadertools';
-import {getNullTestDevice} from '@luma.gl/test-utils';
+import {pbrMaterial, pbrScene, WGSLShaderAssembler} from '@luma.gl/shaders';
+import {getNullTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {describe, expect, test} from 'vitest';
 import {WgslReflect} from 'wgsl_reflect';
@@ -165,6 +165,38 @@ describe('DeferredSceneRenderer', () => {
         }))
       })
     ).toBe(false);
+  });
+
+  test('rejects surface-local reflection probes before selecting the G-buffer path', async () => {
+    const options: SceneRenderOptions = {
+      id: 'local-probe',
+      surfaces: [
+        {
+          id: 'surface',
+          geometry: new Geometry({
+            topology: 'triangle-list',
+            attributes: {POSITION: {size: 3, value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])}}
+          }),
+          material: {id: 'metal'},
+          transforms: [new Matrix4()]
+        }
+      ],
+      camera: {viewMatrix: new Matrix4(), projectionMatrix: new Matrix4(), position: [0, 0, 3]}
+    };
+    const texture = (await getNullTestDevice()).createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm'
+    });
+    try {
+      expect(supportsDeferredScene(options)).toBe(true);
+      for (const binding of ['diffuseTexture', 'specularTexture', 'brdfLUTTexture'] as const) {
+        options.surfaces[0].environment = {[binding]: texture};
+        expect(supportsDeferredScene(options)).toBe(false);
+      }
+    } finally {
+      texture.destroy();
+    }
   });
 
   test('assembles canonical instanced PBR G-buffer shader interfaces', () => {

@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parseSlangProgram} from './modules';
-import {SlangEmitter} from './emitter';
+import {lowerSlangOperation} from './slang-operations';
+import {lowerSlangInterface} from './slang-interface';
+import {ShaderEmitter} from './emitter';
 import type {
   SlangTranspileOptions,
   SlangTranspileResult,
@@ -43,7 +45,12 @@ export function transpileSlang(
   options: SlangTranspileOptions
 ): SlangTranspileResult {
   const program = parseSlangProgram(source, options);
-  return new SlangEmitter(program, options).emitProgram();
+  return new ShaderEmitter(
+    program,
+    options,
+    lowerSlangInterface,
+    lowerSlangOperation
+  ).emitProgram();
 }
 
 /** Emit shared declarations once and retain every selected WGSL stage entry point. */
@@ -72,7 +79,13 @@ export function transpileSlangWGSL(
   const declarations = new Set<string>();
   const entries: string[] = [];
   const emitters = entryPoints.map(
-    entryPoint => new SlangEmitter(program, {...options, target: 'wgsl', entryPoint})
+    entryPoint =>
+      new ShaderEmitter(
+        program,
+        {...options, target: 'wgsl', entryPoint},
+        lowerSlangInterface,
+        lowerSlangOperation
+      )
   );
   const comparisonTextures = new Set<string>();
   const ordinaryTextures = new Set<string>();

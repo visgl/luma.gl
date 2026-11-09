@@ -13,6 +13,10 @@ import {GPUCorePipelineTutorial} from '@site/src/components/docs/gpu-core-pipeli
   <DocumentationBadge tone="webgpu">WebGPU required</DocumentationBadge>
 </DocumentationBadges>
 
+For application code using named inputs and operation-defined results, start with the
+[graph tutorial](/docs/api-reference/graph/getting-started). This section goes deeper into
+command graphs, algorithms, and execution infrastructure beneath that interface.
+
 ## Overview
 
 GPU Core is the experimental WebGPU dataflow and scheduling layer in
@@ -258,9 +262,19 @@ Trace-domain algorithms are indexed from the
 - [GPU Graph Algorithms](/docs/api-reference/experimental/gpu-graph) provides graph-data analytics.
 - [GPU Raster](/docs/api-reference/experimental/gpu-raster) provides raster and field operations.
 - [GPU Dataframe](/docs/api-reference/experimental/gpu-dataframe) provides dataframe-style GPU analysis.
-- [`@luma.gl/gpgpu/gpu-data`](/docs/api-reference/gpgpu/gpu-data) defines Arrow-independent GPU data containers.
+- [`@luma.gl/graph/gpu-data`](/docs/api-reference/graph/gpu-data) defines Arrow-independent GPU data containers.
 
 ## Buffer and texture management
 
 See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
 views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+## Reusable expression programs
+
+`GPUExpressionOperation` represents named float32 expressions parsed with math.gl.
+`GPUGraph.compile(device)` returns a `CompiledGPUGraph` whose `run(bindings)` accepts new
+GPUVectors and scalar values, including new vector lengths, on each execution.
+See the [expression operation reference](/docs/api-reference/graph/gpu-expression-operation)
+for declarations, supported operators, output ownership, and SimpleGraph compatibility.
+
+`GPUCPUOperation` describes shared CPU callbacks with dynamic vector results. Both GPUGraph and [GPUSimpleGraph](/docs/api-reference/graph/gpu-simple-graph#cpu-callbacks-and-dynamically-sized-results) execute these callbacks through asynchronous `run()`.

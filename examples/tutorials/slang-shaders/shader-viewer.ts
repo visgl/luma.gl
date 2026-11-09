@@ -2,17 +2,21 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-type ShaderSource = {name: string; code: string};
+import {renderWGSLExample} from './wgsl-examples';
+
+type ShaderSource = {name: string; code: string; wgsl?: boolean};
 
 /** Inspect source and the assembled shaders used by the model, without recompiling. */
 export function createShaderViewer(
   host: HTMLElement,
   sources: ShaderSource[],
-  generatedShaders: ShaderSource[]
+  generatedShaders: ShaderSource[],
+  embedded = false
 ): {open: (opener: HTMLButtonElement) => void; destroy: () => void} {
   const panel = document.createElement('div');
   panel.className = 'slang-shader-viewer';
-  panel.hidden = true;
+  panel.hidden = !embedded;
+  if (embedded) panel.dataset.embedded = '';
   panel.setAttribute('role', 'region');
   panel.setAttribute('aria-label', 'Shader viewer');
   panel.innerHTML = `
@@ -21,6 +25,12 @@ export function createShaderViewer(
         flex-direction:column; max-height:calc(100dvh - 24px); box-sizing:border-box; color:#e6edf7; background:#0c1421; border:1px solid #ffffff30;
         border-radius:12px; box-shadow:0 12px 40px #0008; font:13px/1.5 system-ui,sans-serif; }
       .slang-shader-viewer[hidden] { display:none; }
+      .slang-shader-viewer[data-embedded] { position:static; max-height:none; min-height:400px;
+        border:0; border-radius:0; box-shadow:none; background:transparent; }
+      .slang-shader-viewer[data-embedded] header { display:none; }
+      .slang-shader-viewer[data-embedded] .shader-panes { display:flex; flex-direction:column; padding:0; }
+      .slang-shader-viewer[data-embedded] pre { min-height:200px; max-height:300px; }
+      .slang-shader-viewer[data-embedded] footer { padding:12px 0; }
       .slang-shader-viewer header { display:flex; align-items:center; justify-content:space-between;
         gap:12px; padding:12px 16px; border-bottom:1px solid #ffffff20; }
       .slang-shader-viewer h2 { margin:0; font-size:16px; font-weight:500; }
@@ -50,18 +60,48 @@ export function createShaderViewer(
 
   const selectors = panel.querySelectorAll('select');
   const codeBlocks = panel.querySelectorAll('code');
-  for (const [index, shaders] of [sources, generatedShaders].entries()) {
-    const selector = selectors[index];
-    for (const [shaderIndex, shader] of shaders.entries()) {
-      selector.add(new Option(shader.name, String(shaderIndex)));
+  const preview = document.createElement('canvas');
+  preview.width = 480;
+  preview.height = 240;
+  preview.hidden = true;
+  preview.setAttribute('aria-label', 'WGSL sample rendered as GLSL');
+  preview.style.cssText =
+    'width:100%;height:160px;object-fit:contain;background:#080f1a;margin-bottom:8px;flex-shrink:0';
+  codeBlocks[0].parentElement!.before(preview);
+  let runningSample: ReturnType<typeof renderWGSLExample> | null = null;
+  let activeShaders = generatedShaders;
+  const updateGenerated = (): void => {
+    codeBlocks[1].textContent = activeShaders[selectors[1].selectedIndex]?.code || '';
+    codeBlocks[1].parentElement!.scrollTo(0, 0);
+  };
+  const updateSource = (): void => {
+    runningSample?.destroy();
+    runningSample = null;
+    const source = sources[selectors[0].selectedIndex];
+    codeBlocks[0].textContent = source.code;
+    codeBlocks[0].parentElement!.scrollTo(0, 0);
+    preview.hidden = !source.wgsl;
+    activeShaders = generatedShaders;
+    if (source.wgsl) {
+      try {
+        runningSample = renderWGSLExample(preview, source.code);
+        activeShaders = runningSample.shaders;
+      } catch (error) {
+        activeShaders = [{name: 'Compilation error', code: String(error)}];
+      }
     }
-    const updateCode = (): void => {
-      codeBlocks[index].textContent = shaders[selector.selectedIndex].code;
-      codeBlocks[index].parentElement!.scrollTo(0, 0);
-    };
-    selector.addEventListener('change', updateCode);
-    updateCode();
-  }
+    selectors[1].replaceChildren(
+      ...activeShaders.map((shader, index) => new Option(shader.name, String(index)))
+    );
+    panel.querySelector('footer')!.textContent = source.wgsl
+      ? 'This WGSL source is compiled to GLSL ES 300 and rendered on WebGL 2 above.'
+      : 'Generated code includes the imported libraries. Slang and native shaders call each other through public functions.';
+    updateGenerated();
+  };
+  sources.forEach((source, index) => selectors[0].add(new Option(source.name, String(index))));
+  selectors[0].addEventListener('change', updateSource);
+  selectors[1].addEventListener('change', updateGenerated);
+  updateSource();
 
   let opener: HTMLButtonElement | null = null;
   const closeButton = panel.querySelector('button')!;
@@ -87,6 +127,7 @@ export function createShaderViewer(
       closeButton.focus();
     },
     destroy(): void {
+      runningSample?.destroy();
       panel.remove();
     }
   };
