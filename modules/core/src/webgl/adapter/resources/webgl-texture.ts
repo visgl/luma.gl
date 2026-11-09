@@ -375,14 +375,17 @@ export class WEBGLTexture extends Texture {
       const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
       const unpackRowLength = bytesPerPixel ? options.bytesPerRow / bytesPerPixel : undefined;
       this.gl.bindTexture(this.glTarget, this.handle);
-      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
-      if (this._isUnpackStateCurrent(unpackRowLength, options.rowsPerImage)) {
-        this._uploadBuffer(options, glTarget);
-      } else {
-        this._uploadBufferWithUnpackParameters(options, glTarget, unpackRowLength);
+      try {
+        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
+        if (this._isUnpackStateCurrent(unpackRowLength, options.rowsPerImage)) {
+          this._uploadBuffer(options, glTarget);
+        } else {
+          this._uploadWithUnpackParameters(options, glTarget, unpackRowLength);
+        }
+      } finally {
+        this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+        this.gl.bindTexture(this.glTarget, null);
       }
-      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
-      this.gl.bindTexture(this.glTarget, null);
     } finally {
       textureWriteOptionsPool.push(scratchOptions);
     }
@@ -413,19 +416,26 @@ export class WEBGLTexture extends Texture {
         }
       }
       this.gl.bindTexture(this.glTarget, this.handle);
-      this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
-      if (this.compressed || this._isUnpackStateCurrent(unpackRowLength, options.rowsPerImage)) {
-        this._uploadData(options, sourceData, sourceElementOffset, glTarget);
-      } else {
-        this._uploadDataWithUnpackParameters(
-          options,
-          sourceData,
-          sourceElementOffset,
-          glTarget,
-          unpackRowLength
-        );
+      try {
+        const state = WebGLStateTracker.get(this.gl);
+        // Avoid the generic binding interceptor's temporary objects when already unbound.
+        if (!state?.enable || state.cache?.[GL.PIXEL_UNPACK_BUFFER_BINDING] !== null) {
+          this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+        }
+        if (this.compressed || this._isUnpackStateCurrent(unpackRowLength, options.rowsPerImage)) {
+          this._uploadData(options, sourceData, sourceElementOffset, glTarget);
+        } else {
+          this._uploadWithUnpackParameters(
+            options,
+            glTarget,
+            unpackRowLength,
+            sourceData,
+            sourceElementOffset
+          );
+        }
+      } finally {
+        this.gl.bindTexture(this.glTarget, null);
       }
-      this.gl.bindTexture(this.glTarget, null);
     } finally {
       textureWriteOptionsPool.push(scratchOptions);
     }
@@ -457,26 +467,63 @@ export class WEBGLTexture extends Texture {
     return parameters;
   }
 
-  // Keep callback capture in slow-path methods so fast uploads need no closure environment.
-  private _uploadBufferWithUnpackParameters(
+  /** Save scalar unpack values on the call stack so nested uploads own independent state. */
+  private _uploadWithUnpackParameters(
     options: Required<TextureWriteOptions>,
     glTarget: GLTextureTarget | GLTextureCubeMapTarget,
-    rowLength: number | undefined
+    rowLength: number | undefined,
+    data?: ArrayBufferView,
+    sourceElementOffset = 0
   ): void {
-    withGLParameters(this.gl, this._getUnpackParameters(rowLength, options.rowsPerImage), () => {
-      this._uploadBuffer(options, glTarget);
-    });
+    const state = WebGLStateTracker.get(this.gl);
+    if (!state?.enable || !state.cache) {
+      this._uploadWithUntrackedUnpackParameters(
+        options,
+        glTarget,
+        rowLength,
+        data,
+        sourceElementOffset
+      );
+      return;
+    }
+    const previousAlignment = state.cache[GL.UNPACK_ALIGNMENT];
+    const previousRowLength = state.cache[GL.UNPACK_ROW_LENGTH];
+    const previousImageHeight = state.cache[GL.UNPACK_IMAGE_HEIGHT];
+    // Keep setup inside the try: a debug wrapper may throw after partially applying state.
+    try {
+      this.gl.pixelStorei(GL.UNPACK_ALIGNMENT, this.byteAlignment);
+      this.gl.pixelStorei(GL.UNPACK_IMAGE_HEIGHT, options.rowsPerImage);
+      if (rowLength !== undefined) {
+        this.gl.pixelStorei(GL.UNPACK_ROW_LENGTH, rowLength);
+      }
+      if (data) {
+        this._uploadData(options, data, sourceElementOffset, glTarget);
+      } else {
+        this._uploadBuffer(options, glTarget);
+      }
+    } finally {
+      this.gl.pixelStorei(GL.UNPACK_ALIGNMENT, previousAlignment);
+      this.gl.pixelStorei(GL.UNPACK_IMAGE_HEIGHT, previousImageHeight);
+      if (rowLength !== undefined) {
+        this.gl.pixelStorei(GL.UNPACK_ROW_LENGTH, previousRowLength);
+      }
+    }
   }
 
-  private _uploadDataWithUnpackParameters(
+  // Isolate callback capture so enabled tracking needs no closure environment.
+  private _uploadWithUntrackedUnpackParameters(
     options: Required<TextureWriteOptions>,
-    data: ArrayBufferView,
-    sourceElementOffset: number,
     glTarget: GLTextureTarget | GLTextureCubeMapTarget,
-    rowLength: number | undefined
+    rowLength: number | undefined,
+    data?: ArrayBufferView,
+    sourceElementOffset = 0
   ): void {
     withGLParameters(this.gl, this._getUnpackParameters(rowLength, options.rowsPerImage), () => {
-      this._uploadData(options, data, sourceElementOffset, glTarget);
+      if (data) {
+        this._uploadData(options, data, sourceElementOffset, glTarget);
+      } else {
+        this._uploadBuffer(options, glTarget);
+      }
     });
   }
 

@@ -10,6 +10,7 @@ import {
 } from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {GL} from '@luma.gl/core/webgl-constants';
+import {withGLParameters} from '@luma.gl/core/webgl';
 import {WebGLStateTracker} from '@luma.gl/core/webgl/context/state-tracker/webgl-state-tracker';
 import {expect, it, vi} from 'vitest';
 
@@ -237,8 +238,8 @@ it.each([
       try {
         if (method === 'data') texture.writeData(data);
         else texture.writeBuffer(buffer);
-        expect(push).toHaveBeenCalledTimes(mode === 'matching' ? 0 : 1);
-        expect(pop).toHaveBeenCalledTimes(mode === 'matching' ? 0 : 1);
+        expect(push).toHaveBeenCalledTimes(mode === 'disabled' ? 1 : 0);
+        expect(pop).toHaveBeenCalledTimes(mode === 'disabled' ? 1 : 0);
         if (mode === 'matching') expect(pixelStore).not.toHaveBeenCalled();
         expect(parameters.map(parameter => gl.getParameter(parameter))).toEqual(ambient);
         expect(tracker.stateStack).toHaveLength(stackDepth);
@@ -283,5 +284,165 @@ it.each([
     upload.mockRestore();
     parameters.forEach((parameter, index) => gl.pixelStorei(parameter, original[index]));
     texture.destroy();
+  }
+});
+
+const UNPACK_PARAMETERS = [
+  GL.UNPACK_ALIGNMENT,
+  GL.UNPACK_ROW_LENGTH,
+  GL.UNPACK_IMAGE_HEIGHT
+] as const;
+
+/** Check the driver state as well as the cache, including when tracking is enabled. */
+function readNativeUnpackState(gl: WebGL2RenderingContext): unknown[] {
+  const tracker = WebGLStateTracker.get(gl);
+  const enabled = tracker.enable;
+  tracker.enable = false;
+  try {
+    return UNPACK_PARAMETERS.map(parameter => gl.getParameter(parameter));
+  } finally {
+    tracker.enable = enabled;
+  }
+}
+
+it.each([
+  'data',
+  'buffer'
+] as const)('%s uploads unwind nested uploads and an enclosing generic scope after exceptions', async method => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const tracker = WebGLStateTracker.get(gl);
+  const texture = device.createTexture({format: 'rgba8unorm', width: 4, height: 4});
+  const data = new Uint8Array(64);
+  const buffer = device.createBuffer({data, usage: Buffer.COPY_SRC});
+  const original = readNativeUnpackState(gl);
+  const originalEnabled = tracker.enable;
+  const stackDepth = tracker.stateStack.length;
+  const innerError = new Error('inner upload failed');
+  const outerError = new Error('outer upload failed');
+  const upload = vi.spyOn(gl, 'texSubImage2D').mockImplementation(() => {});
+  const write = (nested: boolean) => {
+    const options = {width: nested ? 1 : 2, height: nested ? 1 : 2};
+    if ((method === 'data') !== nested) texture.writeData(data, options);
+    else texture.writeBuffer(buffer, options);
+  };
+  try {
+    for (const enabled of [true, false]) {
+      tracker.enable = enabled;
+      UNPACK_PARAMETERS.forEach((parameter, index) => gl.pixelStorei(parameter, [8, 0, 0][index]));
+      upload.mockImplementationOnce(() => {
+        expect(readNativeUnpackState(gl)).toEqual([1, 2, 2]);
+        upload.mockImplementationOnce(() => {
+          expect(readNativeUnpackState(gl)).toEqual([1, 1, 1]);
+          throw innerError;
+        });
+        expect(() => write(true)).toThrow(innerError);
+        expect(readNativeUnpackState(gl)).toEqual([1, 2, 2]);
+        throw outerError;
+      });
+      expect(() =>
+        withGLParameters(gl, {[GL.UNPACK_ALIGNMENT]: 4}, () => {
+          expect(() => write(false)).toThrow(outerError);
+          expect(readNativeUnpackState(gl)).toEqual([4, 0, 0]);
+          expect(tracker.stateStack).toHaveLength(stackDepth + 1);
+          throw outerError;
+        })
+      ).toThrow(outerError);
+      expect(readNativeUnpackState(gl)).toEqual([8, 0, 0]);
+      expect(UNPACK_PARAMETERS.map(parameter => tracker.cache[parameter])).toEqual([8, 0, 0]);
+      expect(tracker.stateStack).toHaveLength(stackDepth);
+      expect(gl.getParameter(GL.PIXEL_UNPACK_BUFFER_BINDING)).toBeNull();
+      expect(gl.getParameter(GL.TEXTURE_BINDING_2D)).toBeNull();
+      // A later successful upload must not inherit any failed scope's state.
+      write(false);
+      expect(readNativeUnpackState(gl)).toEqual([8, 0, 0]);
+    }
+  } finally {
+    upload.mockRestore();
+    tracker.enable = originalEnabled;
+    UNPACK_PARAMETERS.forEach((parameter, index) =>
+      gl.pixelStorei(parameter, original[index] as number)
+    );
+    texture.destroy();
+    buffer.destroy();
+  }
+});
+
+it.each([
+  'data',
+  'buffer'
+] as const)('%s uploads restore partially applied unpack state when setup throws', async method => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const tracker = WebGLStateTracker.get(gl);
+  const texture = device.createTexture({format: 'rgba8unorm', width: 2, height: 2});
+  const data = new Uint8Array(16);
+  const buffer = device.createBuffer({data, usage: Buffer.COPY_SRC});
+  const original = readNativeUnpackState(gl);
+  const originalEnabled = tracker.enable;
+  const stackDepth = tracker.stateStack.length;
+  const originalPixelStore = gl.pixelStorei.bind(gl);
+  const setupError = new Error('pixel store failed');
+  const upload = vi.spyOn(gl, 'texSubImage2D').mockImplementation(() => {});
+  try {
+    for (const enabled of [true, false]) {
+      tracker.enable = enabled;
+      UNPACK_PARAMETERS.forEach((parameter, index) => gl.pixelStorei(parameter, [4, 0, 0][index]));
+      let shouldThrow = true;
+      const pixelStore = vi.spyOn(gl, 'pixelStorei').mockImplementation((parameter, value) => {
+        originalPixelStore(parameter, value);
+        if (shouldThrow && parameter === GL.UNPACK_IMAGE_HEIGHT) {
+          shouldThrow = false;
+          throw setupError;
+        }
+      });
+      upload.mockClear();
+      try {
+        expect(() =>
+          method === 'data' ? texture.writeData(data) : texture.writeBuffer(buffer)
+        ).toThrow(setupError);
+        expect(upload).not.toHaveBeenCalled();
+        expect(readNativeUnpackState(gl)).toEqual([4, 0, 0]);
+        expect(UNPACK_PARAMETERS.map(parameter => tracker.cache[parameter])).toEqual([4, 0, 0]);
+        expect(tracker.stateStack).toHaveLength(stackDepth);
+        expect(gl.getParameter(GL.PIXEL_UNPACK_BUFFER_BINDING)).toBeNull();
+        expect(gl.getParameter(GL.TEXTURE_BINDING_2D)).toBeNull();
+      } finally {
+        pixelStore.mockRestore();
+      }
+    }
+  } finally {
+    upload.mockRestore();
+    tracker.enable = originalEnabled;
+    UNPACK_PARAMETERS.forEach((parameter, index) =>
+      gl.pixelStorei(parameter, original[index] as number)
+    );
+    texture.destroy();
+    buffer.destroy();
+  }
+});
+
+it.each([
+  true,
+  false
+])('writeData clears a previously bound unpack buffer (tracking=%s)', async enabled => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const tracker = WebGLStateTracker.get(gl);
+  const originalEnabled = tracker.enable;
+  const texture = device.createTexture({format: 'rgba8unorm', width: 2, height: 2});
+  const data = new Uint8Array(16).fill(63);
+  const buffer = device.createBuffer({data, usage: Buffer.COPY_SRC});
+  try {
+    tracker.enable = enabled;
+    gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
+    texture.writeData(data);
+    expect(gl.getParameter(GL.PIXEL_UNPACK_BUFFER_BINDING)).toBeNull();
+    expect(Array.from(new Uint8Array(texture.readDataSyncWebGL()))).toEqual(Array.from(data));
+  } finally {
+    tracker.enable = originalEnabled;
+    gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+    texture.destroy();
+    buffer.destroy();
   }
 });
