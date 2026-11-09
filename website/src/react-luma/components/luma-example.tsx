@@ -325,9 +325,12 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
         const controls = getExampleFocusableElements(frameDocument);
         const activeElement = frameDocument.activeElement;
         const activeIndex = controls.indexOf(activeElement as HTMLElement);
-        const nextControl = controls[activeIndex + (event.shiftKey ? -1 : 1)];
+        const nextControl =
+          activeIndex < 0
+            ? controls[event.shiftKey ? controls.length - 1 : 0]
+            : controls[activeIndex + (event.shiftKey ? -1 : 1)];
         // Safari may omit buttons and links from its native Tab order.
-        if (activeIndex >= 0 && nextControl) {
+        if (nextControl) {
           event.preventDefault();
           nextControl.focus();
         } else {

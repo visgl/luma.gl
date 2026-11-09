@@ -78,7 +78,7 @@ try {
               await page.route('**/standalone-examples/scene/playground.html', request =>
                 request.fulfill({
                   contentType: 'text/html',
-                  body: '<!doctype html><html><body><a href="#example">Example details</a><label>Scene editor <input aria-label="Scene editor"></label><button>Apply</button></body></html>'
+                  body: '<!doctype html><html><body><canvas width="100" height="30"></canvas><a href="#example">Example details</a><label>Scene editor <input aria-label="Scene editor"></label><button>Apply</button></body></html>'
                 })
               );
               await page.getByRole('button', {name: 'Load scene playground'}).click();
@@ -140,6 +140,12 @@ try {
                     element => element === element.ownerDocument.activeElement
                   ),
                   'Tab must enter the first iframe link'
+                );
+                await page.frameLocator('iframe').locator('canvas').click();
+                await page.keyboard.press('Tab');
+                assert(
+                  await firstLink.evaluate(element => element === element.ownerDocument.activeElement),
+                  'Tab after clicking the canvas must enter iframe controls'
                 );
                 await page.keyboard.press('Shift+Tab');
                 assert(
