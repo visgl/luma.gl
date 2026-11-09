@@ -93,12 +93,30 @@ export class WebGLStateTracker {
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
       const setter = GL_HOOKED_SETTERS[key];
-      installSetterSpy(gl, key, setter);
+      if (key === 'pixelStorei') {
+        installPixelStoreSpy(gl);
+      } else {
+        installSetterSpy(gl, key, setter);
+      }
     }
 
     // intercept all getter functions in the table
     installGetterOverride(gl, 'getParameter');
     installGetterOverride(gl, 'isEnabled');
+  }
+
+  /** Update one scalar parameter without temporary parameter or result objects. */
+  _updateScalar(parameter: number, value: number | boolean): boolean {
+    const cached = this.cache[parameter];
+    if (value === cached) {
+      return false;
+    }
+    const oldValues = this.stateStack[this.stateStack.length - 1];
+    if (oldValues && !(parameter in oldValues)) {
+      oldValues[parameter] = cached;
+    }
+    this.cache[parameter] = value;
+    return true;
   }
 
   /**
@@ -222,6 +240,28 @@ function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, sett
   // Set the name of this anonymous function to help in debugging and profiling
   Object.defineProperty(gl[functionName], 'name', {
     value: `${functionName}-to-cache`,
+    configurable: false
+  });
+}
+
+/** Pixel-store changes are scalar and frequent during texture uploads and readback. */
+function installPixelStoreSpy(gl: WebGL2RenderingContext): void {
+  if (!gl.pixelStorei) {
+    return;
+  }
+  const originalPixelStore = gl.pixelStorei.bind(gl);
+  gl.pixelStorei = function pixelStore(parameter: number, value: number | boolean) {
+    const state = WebGLStateTracker.get(gl);
+    const oldValue = state.cache[parameter];
+    if (state._updateScalar(parameter, value)) {
+      originalPixelStore(parameter, value);
+      return oldValue;
+    }
+    // Match the generic interceptor: unchanged setters return undefined.
+    return undefined;
+  };
+  Object.defineProperty(gl.pixelStorei, 'name', {
+    value: 'pixelStorei-to-cache',
     configurable: false
   });
 }

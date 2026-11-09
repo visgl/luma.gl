@@ -9,6 +9,7 @@ import {WebGLStateTracker} from '@luma.gl/core/webgl/context/state-tracker/webgl
 
 function createTrackedContext(failSetup = false) {
   const values = new Map<number, unknown>();
+  const pixelStoreCalls: [number, unknown][] = [];
   const setupError = new Error('Pixel-store setup failed');
   let shouldFail = failSetup;
   const gl = {
@@ -24,12 +25,13 @@ function createTrackedContext(failSetup = false) {
         shouldFail = false;
         throw setupError;
       }
+      pixelStoreCalls.push([parameter, value]);
       values.set(parameter, value);
     }
   } as unknown as WebGL2RenderingContext;
   const tracker = new WebGLStateTracker(gl);
   tracker.trackState(gl);
-  return {gl, tracker, setupError};
+  return {gl, tracker, setupError, values, pixelStoreCalls};
 }
 
 it.each([
@@ -112,4 +114,27 @@ it('withGLParameters passes through empty parameters without a tracker', () => {
       throw callbackError;
     })
   ).toThrow(callbackError);
+});
+
+it.each([true, false])('pixelStorei preserves scalar tracking with enable=%s', enable => {
+  const {gl, tracker, values, pixelStoreCalls} = createTrackedContext();
+  tracker.enable = enable;
+  expect(gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1)).toBe(4);
+  expect(gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1)).toBeUndefined();
+  expect(gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true)).toBe(false);
+  expect(gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, true)).toBeUndefined();
+  expect(pixelStoreCalls).toEqual([
+    [GL.UNPACK_ALIGNMENT, 1],
+    [GL.UNPACK_FLIP_Y_WEBGL, true]
+  ]);
+  withGLParameters(gl, {[GL.UNPACK_ALIGNMENT]: 2}, () => {
+    gl.pixelStorei(GL.UNPACK_ALIGNMENT, 8);
+    withGLParameters(gl, {[GL.UNPACK_ALIGNMENT]: 4}, () => {
+      expect(values.get(GL.UNPACK_ALIGNMENT)).toBe(4);
+    });
+    expect(values.get(GL.UNPACK_ALIGNMENT)).toBe(8);
+  });
+  expect(values.get(GL.UNPACK_ALIGNMENT)).toBe(1);
+  expect(tracker.cache[GL.UNPACK_ALIGNMENT]).toBe(1);
+  expect(tracker.stateStack).toHaveLength(0);
 });
