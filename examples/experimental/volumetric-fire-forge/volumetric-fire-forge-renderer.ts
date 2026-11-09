@@ -10,7 +10,7 @@ import {
   type Sampler,
   Texture
 } from '@luma.gl/core';
-import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/effects';
+import {createBloomCompositeShaderPass, toneMapping} from '@luma.gl/engine/effects';
 import {CubeGeometry, Model, ShaderInputs, ShaderPassRenderer} from '@luma.gl/engine';
 import type {VolumetricFireSimulation} from '@luma.gl/graph/gpu-simulation';
 import {Matrix4, type NumberArray3} from '@math.gl/core';

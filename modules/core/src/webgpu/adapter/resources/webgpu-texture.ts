@@ -11,8 +11,7 @@ import {
   type TextureWriteOptions,
   Buffer,
   Texture,
-  log,
-  textureFormatDecoder
+  log
 } from '../../../index';
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -20,6 +19,12 @@ import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler, type WebGPUSamplerProps} from './webgpu-sampler';
 import {WebGPUTextureView, type WebGPUTextureViewProps} from './webgpu-texture-view';
 import {WebGPUBuffer} from './webgpu-buffer';
+
+import {getTextureBytesPerRow} from '../../../shadertypes/texture-types/texture-format-decoder';
+
+// Each active upload owns its scratch object, including during nested calls.
+const textureWriteOptionsPool: Required<TextureWriteOptions>[] = [];
+const emptyTextureWriteOptions: TextureWriteOptions = Object.freeze({});
 
 /** WebGPU implementation of the luma.gl core Texture resource */
 export class WebGPUTexture extends Texture {
@@ -367,98 +372,103 @@ export class WebGPUTexture extends Texture {
     );
   }
 
-  override writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
-    const options = this._normalizeTextureWriteOptions(options_);
-    const {
-      x,
-      y,
-      z,
-      width,
-      height,
-      depthOrArrayLayers,
-      mipLevel,
-      aspect,
-      byteOffset,
-      bytesPerRow,
-      rowsPerImage
-    } = options;
-
-    const gpuDevice = this.device.handle;
-
-    this.device.pushErrorScope('validation');
-    const commandEncoder = gpuDevice.createCommandEncoder();
-    commandEncoder.copyBufferToTexture(
-      {
-        buffer: buffer.handle as GPUBuffer,
-        offset: byteOffset,
+  override writeBuffer(buffer: Buffer, options_: TextureWriteOptions = emptyTextureWriteOptions) {
+    const scratchOptions = textureWriteOptionsPool.pop() || ({} as Required<TextureWriteOptions>);
+    try {
+      const options = this._normalizeTextureWriteOptions(options_, scratchOptions);
+      const {
+        x,
+        y,
+        z,
+        width,
+        height,
+        depthOrArrayLayers,
+        mipLevel,
+        aspect,
+        byteOffset,
         bytesPerRow,
         rowsPerImage
-      },
-      {
-        texture: this.handle,
-        origin: {x, y, z},
-        mipLevel,
-        aspect
-      },
-      {width, height, depthOrArrayLayers}
-    );
-    const commandBuffer = commandEncoder.finish();
-    this.device.handle.queue.submit([commandBuffer]);
-    this.device.popErrorScope((error: GPUError) => {
-      this.device.reportError(new Error(`${this} writeBuffer: ${error.message}`), this)();
-      this.device.debug();
-    });
+      } = options;
+
+      const gpuDevice = this.device.handle;
+
+      this.device.pushErrorScope('validation');
+      const commandEncoder = gpuDevice.createCommandEncoder();
+      commandEncoder.copyBufferToTexture(
+        {
+          buffer: buffer.handle as GPUBuffer,
+          offset: byteOffset,
+          bytesPerRow,
+          rowsPerImage
+        },
+        {
+          texture: this.handle,
+          origin: {x, y, z},
+          mipLevel,
+          aspect
+        },
+        {width, height, depthOrArrayLayers}
+      );
+      const commandBuffer = commandEncoder.finish();
+      this.device.handle.queue.submit([commandBuffer]);
+      this.device.popErrorScope((error: GPUError) => {
+        this.device.reportError(new Error(`${this} writeBuffer: ${error.message}`), this)();
+        this.device.debug();
+      });
+    } finally {
+      textureWriteOptionsPool.push(scratchOptions);
+    }
   }
 
   override writeData(
     data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
-    options_: TextureWriteOptions = {}
+    options_: TextureWriteOptions = emptyTextureWriteOptions
   ): void {
-    const device = this.device;
-    const options = this._normalizeTextureWriteOptions(options_);
-    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset} = options;
-    const source = data as GPUAllowSharedBufferSource;
-    const formatInfo = this.device.getTextureFormatInfo(this.format);
-    // queue.writeTexture() defaults to tightly packed rows, unlike WebGPU buffer copy paths.
-    const packedSourceLayout = textureFormatDecoder.computeMemoryLayout({
-      format: this.format,
-      width,
-      height,
-      depth: depthOrArrayLayers,
-      byteAlignment: 1
-    });
-    const bytesPerRow = options_.bytesPerRow ?? packedSourceLayout.bytesPerRow;
-    const rowsPerImage = options_.rowsPerImage ?? packedSourceLayout.rowsPerImage;
-    let copyWidth = width;
-    let copyHeight = height;
+    const scratchOptions = textureWriteOptionsPool.pop() || ({} as Required<TextureWriteOptions>);
+    try {
+      const device = this.device;
+      const options = this._normalizeTextureWriteOptions(options_, scratchOptions);
+      const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset} = options;
+      const source = data as GPUAllowSharedBufferSource;
+      const formatInfo = this.device.getTextureFormatInfo(this.format);
+      // queue.writeTexture() defaults to tightly packed rows, unlike WebGPU buffer copy paths.
+      const bytesPerRow = options_.bytesPerRow ?? getTextureBytesPerRow(formatInfo, width, 1);
+      const rowsPerImage =
+        options_.rowsPerImage ??
+        (formatInfo.compressed ? Math.ceil(height / (formatInfo.blockHeight ?? 1)) : height);
+      let copyWidth = width;
+      let copyHeight = height;
 
-    if (formatInfo.compressed) {
-      const blockWidth = formatInfo.blockWidth || 1;
-      const blockHeight = formatInfo.blockHeight || 1;
-      copyWidth = Math.ceil(width / blockWidth) * blockWidth;
-      copyHeight = Math.ceil(height / blockHeight) * blockHeight;
+      if (formatInfo.compressed) {
+        const blockWidth = formatInfo.blockWidth || 1;
+        const blockHeight = formatInfo.blockHeight || 1;
+        copyWidth = Math.ceil(width / blockWidth) * blockWidth;
+        copyHeight = Math.ceil(height / blockHeight) * blockHeight;
+      }
+
+      this.device.pushErrorScope('validation');
+      device.handle.queue.writeTexture(
+        {
+          texture: this.handle,
+          mipLevel,
+          aspect,
+          origin: {x, y, z}
+        },
+        source,
+        {
+          offset: byteOffset,
+          bytesPerRow,
+          rowsPerImage
+        },
+        {width: copyWidth, height: copyHeight, depthOrArrayLayers}
+      );
+      this.device.popErrorScope((error: GPUError) => {
+        this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();
+        this.device.debug();
+      });
+    } finally {
+      textureWriteOptionsPool.push(scratchOptions);
     }
-
-    this.device.pushErrorScope('validation');
-    device.handle.queue.writeTexture(
-      {
-        texture: this.handle,
-        mipLevel,
-        aspect,
-        origin: {x, y, z}
-      },
-      source,
-      {
-        offset: byteOffset,
-        bytesPerRow,
-        rowsPerImage
-      },
-      {width: copyWidth, height: copyHeight, depthOrArrayLayers}
-    );
-    this.device.popErrorScope((error: GPUError) => {
-      this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();
-      this.device.debug();
-    });
   }
 
   /**

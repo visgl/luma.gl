@@ -1,8 +1,9 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
 
 /** One template-sized GPU reset image; no per-instance snapshots or pose readback. */
 export function makeEnsembleReset(
@@ -29,7 +30,7 @@ export function makeEnsembleReset(
   ].filter(plan => find(plan.name));
   const snapshots: Buffer[] = [];
   const settings = device.createBuffer({byteLength: 32, usage: Buffer.UNIFORM | Buffer.COPY_DST});
-  let computation: Computation | undefined;
+  let computation: BoundKernel | undefined;
   try {
     const encoder = device.createCommandEncoder();
     for (const plan of plans) {
@@ -47,7 +48,7 @@ export function makeEnsembleReset(
     }
     device.submit(encoder.finish());
     const history = find('contact-history');
-    computation = new Computation(device, {
+    computation = createBoundKernel(device, {
       source: /* wgsl */ `
 @group(0) @binding(0) var<uniform> settings:Settings;
 struct Settings {selection:vec4u, shift:vec4f}
@@ -105,7 +106,7 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
   } catch (error) {
     for (const snapshot of snapshots) snapshot.destroy();
     settings.destroy();
-    computation?.destroy();
+    computation?.kernel.destroy();
     throw error;
   }
   return {
@@ -124,15 +125,15 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
           size: plan.size
         });
       const pass = encoder.beginComputePass();
-      computation!.dispatch(
-        pass,
-        Math.ceil(Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance) / 64)
-      );
+      computation!.kernel.dispatch(pass, {
+        bindings: computation!.bindings,
+        x: Math.ceil(Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance) / 64)
+      });
       pass.end();
       device.submit(encoder.finish());
     },
     destroy() {
-      computation!.destroy();
+      computation!.kernel.destroy();
       settings.destroy();
       for (const snapshot of snapshots) snapshot.destroy();
     }

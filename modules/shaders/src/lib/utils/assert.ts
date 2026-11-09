@@ -1,0 +1,13 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+// Recommendation is to ignore message but current test suite checks against the
+// message so keep it for now.
+export function assert(condition: unknown, message?: string): void {
+  if (!condition) {
+    const error = new Error(message || 'shaders: assertion failed.');
+    Error.captureStackTrace?.(error, assert);
+    throw error;
+  }
+}

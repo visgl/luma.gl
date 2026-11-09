@@ -1,0 +1,239 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {Buffer, SignedDataType} from '@luma.gl/core';
+import {Kernel} from '../../../../execution/compute/kernel';
+import {getPlatformInfo} from '../../../../execution/utils/get-platform-info';
+import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
+import {type ShaderModule} from '@luma.gl/shaders';
+import type {GPUEvaluationScope} from '../../../operation/gpu-evaluation-scope';
+import {GPUDataEvaluator} from '../../../operation/gpu-data-evaluator';
+import {getWebGPUDispatchLayout, getWebGPUDispatchRowIndex} from './dispatch';
+import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
+
+const WORKGROUP_SIZE = 64;
+const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
+const COMPUTATION_RUNS = 'Computation Runs';
+const GPGPU_SHADER_ASSEMBLER = new WGSLShaderAssembler();
+
+/** GPU-resident constants require storage; only constants with CPU values can be inlined. */
+export function requiresStorageBinding(input: GPUDataEvaluator): boolean {
+  return !input.isConstant || !input.value;
+}
+
+export function runRowComputation({
+  scope,
+  module,
+  elementWise = false,
+  expression,
+  inputs,
+  output,
+  operationType = output.type,
+  outputBuffer
+}: {
+  scope?: GPUEvaluationScope;
+  module: ShaderModule;
+  elementWise?: boolean;
+  expression?: (laneIndex: number) => string;
+  inputs: {[name: string]: GPUDataEvaluator} | GPUDataEvaluator[];
+  output: GPUDataEvaluator;
+  operationType?: SignedDataType;
+  outputBuffer: Buffer;
+}): void {
+  if (!module.source) {
+    throw new Error(`WebGPU kernel ${module.name} requires WGSL source`);
+  }
+
+  const inputEntries = getInputEntries(inputs);
+  const bindings = inputEntries.map(([name, input]) => ({name, input}));
+  const storageBindings = bindings
+    .filter(({input}) => requiresStorageBinding(input))
+    .map((binding, index) => ({...binding, index}));
+  const castToType = getWGSLType(operationType);
+  const outputType = getWGSLType(output.type);
+  const defines: Record<string, string> = {
+    TYPE: castToType,
+    RESULT_LEN: output.size.toString()
+  };
+  const dispatchLayout = getWebGPUDispatchLayout(
+    Math.ceil(output.length / WORKGROUP_SIZE),
+    outputBuffer.device.limits.maxComputeWorkgroupsPerDimension
+  );
+
+  for (const [name, input] of inputEntries) {
+    defines[`${name.toUpperCase()}_LEN`] = input.size.toString();
+  }
+
+  const source = /* wgsl */ `
+${preprocess(module.source, defines)}
+${storageBindings.map(({name, input, index}) => getInputBinding(name, input, index)).join('\n')}
+${bindings.map(({name, input}) => getInputAccessor(name, input, operationType)).join('\n')}
+${getOutputBinding(output, storageBindings.length)}
+${getOutputWriter(output)}
+
+@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(
+  @builtin(workgroup_id) workgroupId: vec3<u32>,
+  @builtin(local_invocation_id) localId: vec3<u32>
+) {
+  let rowIndex = ${getWebGPUDispatchRowIndex(dispatchLayout, WORKGROUP_SIZE)};
+  if (rowIndex >= ${output.length}u) {
+    return;
+  }
+
+${bindings.map(({name}) => `  let ${name} = read_${name}(rowIndex);`).join('\n')}
+  var result: array<${outputType}, ${output.size}>;
+${getComputeBlock(module.name, inputEntries, output, elementWise, expression)}
+  write_result(rowIndex, result);
+}
+`;
+
+  const assembled = GPGPU_SHADER_ASSEMBLER.assembleWGSLShader({
+    platformInfo: getPlatformInfo(outputBuffer.device),
+    source,
+    modules: module.dependencies,
+    shaderStage: 'compute',
+    scanVertexAttributes: false
+  });
+  const kernel = new Kernel(outputBuffer.device, {
+    source: assembled.source,
+    shaderLayout: {
+      bindings: [
+        ...storageBindings.map(({name}, index) => ({
+          name,
+          type: 'storage' as const,
+          group: 0,
+          location: index
+        })),
+        {name: 'result', type: 'storage' as const, group: 0, location: storageBindings.length}
+      ]
+    }
+  });
+
+  if (scope) scope.retain(() => kernel.destroy());
+
+  const computationBindings: Record<string, Buffer> = Object.fromEntries(
+    storageBindings.map(({name, input}) => [name, input.buffer])
+  );
+  computationBindings['result'] = outputBuffer;
+
+  const computePass = scope
+    ? scope.commandEncoder.beginComputePass({})
+    : outputBuffer.device.beginComputePass({});
+  outputBuffer.device.statsManager
+    .getStats(GPGPU_OPERATION_STATS)
+    .get(COMPUTATION_RUNS)
+    .incrementCount();
+  kernel.dispatch(computePass, {bindings: computationBindings, ...dispatchLayout});
+  computePass.end();
+  if (!scope) {
+    outputBuffer.device.submit();
+    kernel.destroy();
+  }
+}
+
+function getInputBinding(name: string, input: GPUDataEvaluator, index: number): string {
+  const inputType = getWGSLType(input.type);
+  return `@group(0) @binding(${index}) var<storage, read> ${name}: array<${inputType}>;`;
+}
+
+function getInputAccessor(name: string, input: GPUDataEvaluator, asType: SignedDataType): string {
+  const type = getWGSLType(asType);
+  const castToType = input.type === asType ? '' : type;
+  const stride = input.stride / input.ValueType.BYTES_PER_ELEMENT;
+  const offset = input.offset / input.ValueType.BYTES_PER_ELEMENT;
+
+  if (!requiresStorageBinding(input)) {
+    return `fn read_${name}(_rowIndex: u32) -> array<${type}, ${input.size}> {
+  return array<${type}, ${input.size}>(${getConstantValues(input, castToType)});
+}`;
+  }
+
+  return `fn read_${name}(rowIndex: u32) -> array<${type}, ${input.size}> {
+  var value: array<${type}, ${input.size}>;
+  let rowOffset = ${offset}u + ${input.isConstant ? '0u' : 'rowIndex'} * ${stride}u;
+${Array.from({length: input.size}, (_, elementIndex) =>
+  castToType
+    ? `  value[${elementIndex}] = ${castToType}(${name}[rowOffset + ${elementIndex}u]);`
+    : `  value[${elementIndex}] = ${name}[rowOffset + ${elementIndex}u];`
+).join('\n')}
+  return value;
+}`;
+}
+
+function getOutputBinding(output: GPUDataEvaluator, bindingIndex: number): string {
+  const type = getWGSLType(output.type);
+  return `@group(0) @binding(${bindingIndex}) var<storage, read_write> result: array<${type}>;`;
+}
+
+function getOutputWriter(output: GPUDataEvaluator): string {
+  const stride = output.stride / output.ValueType.BYTES_PER_ELEMENT;
+  const offset = output.offset / output.ValueType.BYTES_PER_ELEMENT;
+  const type = getWGSLType(output.type);
+  return `fn write_result(rowIndex: u32, value: array<${type}, ${output.size}>) {
+  let rowOffset = ${offset}u + rowIndex * ${stride}u;
+${Array.from({length: output.size}, (_, elementIndex) => `  result[rowOffset + ${elementIndex}u] = value[${elementIndex}];`).join('\n')}
+}`;
+}
+
+function getComputeBlock(
+  operationName: string,
+  inputEntries: [string, GPUDataEvaluator][],
+  output: GPUDataEvaluator,
+  elementWise: boolean,
+  expression?: (laneIndex: number) => string
+): string {
+  let result = '';
+
+  if (expression) {
+    for (let elementIndex = 0; elementIndex < output.size; elementIndex++) {
+      result += `  result[${elementIndex}] = ${expression(elementIndex)};\n`;
+    }
+  } else if (elementWise) {
+    const zero = getZeroValue(output.type);
+    const outputType = getWGSLType(output.type);
+
+    for (let elementIndex = 0; elementIndex < output.size; elementIndex++) {
+      const elementInputs = inputEntries.map(([name, input]) => {
+        if (elementIndex < input.size) {
+          const inputType = getWGSLType(input.type);
+          if (inputType === outputType) {
+            return `${name}[${elementIndex}]`;
+          }
+          return `${outputType}(${name}[${elementIndex}])`;
+        }
+        return zero;
+      });
+      result += `  result[${elementIndex}] = ${operationName}(${elementInputs.join(', ')});\n`;
+    }
+  } else {
+    result += `result = ${operationName}(${inputEntries.map(([name]) => name).join(', ')});`;
+  }
+
+  return result.trimEnd();
+}
+
+function getInputEntries(
+  inputs: {[name: string]: GPUDataEvaluator} | GPUDataEvaluator[]
+): [string, GPUDataEvaluator][] {
+  return Array.isArray(inputs)
+    ? inputs.map((input, index) => [`x${index}`, input])
+    : Object.entries(inputs);
+}
+
+function getConstantValues(input: GPUDataEvaluator, asType: string): string {
+  const values = input.value;
+  if (!values) {
+    throw new Error(`Constant input ${input} is missing CPU values`);
+  }
+  return Array.from({length: input.size}, (_, index) =>
+    getLiteralValue(asType, values[index] ?? 0)
+  ).join(', ');
+}
+
+function preprocess(source: string, defines: Record<string, string>) {
+  for (const key in defines) {
+    source = source.replaceAll(`{${key}}`, defines[key]);
+  }
+  return source;
+}

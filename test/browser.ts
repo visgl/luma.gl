@@ -37,6 +37,6 @@ enableDOMLogging({
 globalThis.website = true;
 
 // Register WebGL and WebGPU
-import '@luma.gl/test-utils';
+import '@luma.gl/core/test-utils';
 // Run tests
 import './modules';

@@ -4,7 +4,7 @@
 
 import {Matrix4, Vector3} from '@math.gl/core';
 import type {NumericArray} from '@math.gl/core';
-import {log} from '@luma.gl/core';
+import {assert, log} from '@luma.gl/core';
 import {ScenegraphNode, ScenegraphNodeProps} from './scenegraph-node';
 import {
   areScenegraphBoundsDefined,
@@ -12,9 +12,11 @@ import {
   makeEmptyScenegraphBounds
 } from './scenegraph-bounds';
 import type {ScenegraphBounds} from './scenegraph-bounds';
+import type {ScenegraphTransformSource} from './transform-source';
 
 export type GroupNodeProps = ScenegraphNodeProps & {
   children?: ScenegraphNode[];
+  transformSource?: ScenegraphTransformSource;
 };
 
 /** Camera-relative ordering options for a flattened scenegraph traversal. */
@@ -33,6 +35,8 @@ export type DepthSortedTraversalContext = {
 
 export class GroupNode extends ScenegraphNode {
   children: ScenegraphNode[];
+  /** Optional evaluated GPU poses; authored matrices remain unchanged. */
+  transformSource: ScenegraphTransformSource | null;
 
   constructor(children: ScenegraphNode[]);
   constructor(props?: GroupNodeProps);
@@ -46,6 +50,7 @@ export class GroupNode extends ScenegraphNode {
     );
     super(props);
     this.children = children;
+    this.transformSource = props.transformSource ?? null;
   }
 
   override getBounds(): ScenegraphBounds | null {
@@ -92,6 +97,54 @@ export class GroupNode extends ScenegraphNode {
   removeAll(): this {
     this.children = [];
     return this;
+  }
+
+  /** Resolve one exact ID or path. Missing nodes return undefined; ambiguous paths throw. */
+  findNode(path: string): ScenegraphNode | undefined {
+    const matches = this.findNodes(path);
+    if (matches.length > 1) {
+      throw new Error(`Ambiguous scenegraph path: ${path} (${matches.length} matches)`);
+    }
+    return matches[0];
+  }
+
+  /** Find structural matches in preorder, including hidden nodes and the search root. */
+  findNodes(path: string): ScenegraphNode[] {
+    const anchored = path.startsWith('/');
+    const segments =
+      path === '/'
+        ? []
+        : (anchored ? path.slice(1) : path).split('/').map(segment => {
+            if (!segment || /~(?![01])/.test(segment)) {
+              throw new Error(`Invalid scenegraph path: ${path}`);
+            }
+            return segment.replace(/~1/g, '/').replace(/~0/g, '~');
+          });
+    const matches: ScenegraphNode[] = [];
+    const ancestors: string[] = [];
+    const visited = new Set<ScenegraphNode>();
+    const pending: {node: ScenegraphNode; depth: number}[] = [{node: this, depth: 0}];
+    while (pending.length) {
+      const {node, depth} = pending.pop()!;
+      // Structural lookup requires a tree: cycles and shared node objects are invalid.
+      assert(!visited.has(node));
+      visited.add(node);
+      ancestors.length = depth;
+      ancestors.push(node.id);
+      const offset = ancestors.length - segments.length;
+      if (
+        (anchored ? offset === 1 : offset >= 0) &&
+        segments.every((segment, index) => segment === ancestors[offset + index])
+      ) {
+        matches.push(node);
+      }
+      if (node instanceof GroupNode) {
+        for (let index = node.children.length - 1; index >= 0; index--) {
+          pending.push({node: node.children[index], depth: depth + 1});
+        }
+      }
+    }
+    return matches;
   }
 
   traverse(

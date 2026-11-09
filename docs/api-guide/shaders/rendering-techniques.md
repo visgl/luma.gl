@@ -269,7 +269,7 @@ import {
   createSSRCompositeShaderPass,
   createTAACompositeShaderPass,
   toneMapping
-} from '@luma.gl/effects';
+} from '@luma.gl/engine/effects';
 import {createClusteredDeferredLightingCompositeShaderPass} from '@luma.gl/anari';
 
 const renderer = new ShaderPassRenderer(device, {

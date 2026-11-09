@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export {
-  LuSpatialPointLayer,
-  type LuSpatialPointLayerProps
-} from './layers/luspatial-point-layer';
+  GPUSpatialPointLayer,
+  type GPUSpatialPointLayerProps
+} from './layers/gpu-spatial-point-layer';
 export {GPUScatterplotLayer, type GPUScatterplotLayerProps} from './layers/gpu-scatterplot-layer';
 export {GPULineLayer, type GPULineLayerProps} from './layers/gpu-line-layer';
 export {GPUIconLayer, type GPUIconLayerProps} from './layers/gpu-icon-layer';

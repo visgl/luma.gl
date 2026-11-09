@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {AnimationProps} from '@luma.gl/engine';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test} from 'vitest';
 import AlgebraicVarietiesAnimationLoopTemplate from '../../examples/showcase/algebraic-varieties/app';
 

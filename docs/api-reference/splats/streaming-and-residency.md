@@ -48,7 +48,7 @@ world-space bounds, geometric approximation error, independent source identities
 URIs, and caller-supplied asynchronous page decoders:
 
 ```ts
-import {SplatHierarchyManager} from '@luma.gl/splats';
+import {SplatHierarchyManager} from '@luma.gl/engine/splats';
 
 const hierarchy = new SplatHierarchyManager({
   roots: sourceTileRoots,
@@ -91,7 +91,7 @@ Spark RAD hierarchy links belong to individual source rows, not whole source pag
 and source-global `childStarts` arrays:
 
 ```ts
-import {GPUPagedSplatRenderer, SplatRADHierarchyManager} from '@luma.gl/splats';
+import {GPUPagedSplatRenderer, SplatRADHierarchyManager} from '@luma.gl/engine/splats';
 
 const renderer = new GPUPagedSplatRenderer(device, {viewportSize: [width, height]});
 const hierarchy = new SplatRADHierarchyManager({

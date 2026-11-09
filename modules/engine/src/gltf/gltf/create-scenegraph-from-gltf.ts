@@ -1,0 +1,363 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {parseGLTFMetadata} from '../parsers/parse-gltf-metadata';
+import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
+import {Device} from '@luma.gl/core';
+import {
+  GroupNode,
+  Material,
+  ModelNode,
+  JointController,
+  BillboardController
+} from '@luma.gl/engine';
+import {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
+import {Light} from '@luma.gl/shaders';
+import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
+import {bindGLTFPunctualLights} from '../parsers/parse-gltf-lights';
+import {
+  PunctualLightController,
+  type PunctualLightDefinition
+} from '../../scenegraph/controllers/punctual-light-controller';
+import {GLTFAnimator} from './gltf-animator';
+import {parseGLTFSkins} from './gltf-skin';
+import {SkinController, MaterialVariants} from '@luma.gl/engine';
+import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
+import type {GLTFAnimation} from './animations/animations';
+import {
+  assertSupportedGLTFExtensions,
+  getGLTFExtensionSupport,
+  type GLTFExtensionSupport
+} from './gltf-extension-support';
+import {parseGLTFMaterialVariants} from './gltf-material-variants';
+import {parseGLTFBillboards} from './gltf-billboard';
+
+export type GLTFScenegraphBounds = {
+  /** World-space axis-aligned bounds for the scene or model. */
+  bounds: [[number, number, number], [number, number, number]] | null;
+  /** World-space center of the bounds. */
+  center: [number, number, number];
+  /** World-space bounds size on each axis. */
+  size: [number, number, number];
+  /** Half of the world-space bounds diagonal, clamped to a small practical minimum. */
+  radius: number;
+  /** Suggested orbit distance for a 60-degree field of view camera. */
+  recommendedOrbitDistance: number;
+};
+
+/** Scenegraph bundle returned from a parsed glTF asset. */
+export type GLTFScenegraphs = {
+  /** Opt-in camera-facing scene traversal using resolved runtime node bindings. */
+  billboards: BillboardController | null;
+  /** Metadata associated with source asset and scene resources. */
+  metadata: import('@luma.gl/engine').SceneMetadata;
+  /** Shared physical joint declarations, separate from skeletal skinning. */
+  joints: JointController;
+  jointIssues: {code: string; path: string; message: string}[];
+  /** Scene roots produced from the glTF scenes array. */
+  scenes: GroupNode[];
+  /** Materials aligned with the source glTF `materials` array. */
+  materials: Material[];
+  /** Runtime controller for source-authored `KHR_materials_variants` mappings. */
+  variants: MaterialVariants;
+  /** Independent runtime camera projections updated by typed glTF animation pointers. */
+  cameras: GLTFPostprocessed['cameras'];
+  /** Animation controller for glTF animations. */
+  animator: GLTFAnimator;
+  /** Parsed source animations, including supported material and texture-transform pointers. */
+  animations: GLTFAnimation[];
+  /** Parsed punctual lights from the asset. */
+  lights: Light[];
+  /** Updates punctual lights after programmatic transform or visibility changes. */
+  punctualLights: PunctualLightController;
+  /** Extensions reported by the asset and whether luma.gl supports them. */
+  extensionSupport: Map<string, GLTFExtensionSupport>;
+  /** Camera-friendly bounds for each scene in `scenes`, in matching order. */
+  sceneBounds: GLTFScenegraphBounds[];
+  /** Combined camera-friendly bounds for the entire loaded asset. */
+  modelBounds: GLTFScenegraphBounds;
+
+  /** Map from glTF mesh ids to generated mesh group nodes. */
+  gltfMeshIdToNodeMap: Map<string, GroupNode>;
+  /** Map from glTF node indices to generated scenegraph nodes. */
+  gltfNodeIndexToNodeMap: Map<number, GroupNode>;
+  /** Map from glTF node ids to generated scenegraph nodes. */
+  gltfNodeIdToNodeMap: Map<string, GroupNode>;
+
+  /** Automatically updated source skin bindings and reusable mesh-local joint palettes. */
+  skins: SkinController;
+
+  /** Original post-processed glTF document. */
+  gltf: GLTFPostprocessed;
+
+  /** Releases every asset-owned model, material, buffer, and source-image texture exactly once. */
+  destroy(): void;
+};
+
+/** Converts a post-processed glTF asset into luma.gl scenegraph nodes and animation helpers. */
+export function createScenegraphsFromGLTF(
+  device: Device,
+  gltf: GLTFPostprocessed,
+  options?: ParseGLTFOptions
+): GLTFScenegraphs {
+  const metadata = parseGLTFMetadata(gltf);
+  if (options?.strictExtensions) {
+    assertSupportedGLTFExtensions(gltf, device);
+  }
+
+  // Validate the optional profile before parseGLTF allocates models, textures, or buffers.
+  if (options?.billboards) {
+    const validationNodes = new Map<number, GroupNode>();
+    gltf.nodes.forEach((node, index) => {
+      if (node.extensions?.['KHR_billboard']) validationNodes.set(index, new GroupNode());
+    });
+    const validation = new BillboardController(
+      parseGLTFBillboards({
+        gltf,
+        scenes: [],
+        gltfNodeIndexToNodeMap: validationNodes,
+        allowLegacyYAxis: options.billboards.allowLegacyYAxis
+      })
+    );
+    validation.destroy();
+  }
+
+  const {
+    scenes,
+    materials,
+    gltfMeshIdToNodeMap,
+    gltfNodeIdToNodeMap,
+    gltfNodeIndexToNodeMap,
+    generatedTextures,
+    materialInstances
+  } = parseGLTF(device, gltf, options);
+
+  const billboards = options?.billboards
+    ? new BillboardController(
+        parseGLTFBillboards({
+          gltf,
+          scenes,
+          gltfNodeIndexToNodeMap,
+          allowLegacyYAxis: options.billboards.allowLegacyYAxis
+        })
+      )
+    : null;
+  scenes.forEach((scene, index) => {
+    const packet = metadata.get('scene', index);
+    if (packet) scene.metadata['xmp'] = packet;
+    const geometryMetadata = gltf.scenes[index]?.extensions?.['FB_geometry_metadata'];
+    if (geometryMetadata) scene.metadata['fb:geometry'] = geometryMetadata;
+  });
+  const meshPackets = new Map<string, Record<string, unknown>>();
+  gltf.meshes.forEach((mesh, index) => {
+    const packet = metadata.get('mesh', index);
+    if (!packet) return;
+    meshPackets.set(mesh.id, packet);
+    const group = gltfMeshIdToNodeMap.get(mesh.id);
+    if (group) group.metadata['xmp'] = packet;
+  });
+  gltfNodeIndexToNodeMap.forEach((node, index) => {
+    const packet = metadata.get('node', index);
+    if (packet) node.metadata['xmp'] = packet;
+    if (!meshPackets.size) return;
+    const sourceMesh = gltf.nodes[index]?.mesh;
+    const meshPacket = sourceMesh && meshPackets.get(sourceMesh.id);
+    const mesh = node.userData['gltfMesh'];
+    if (meshPacket && mesh instanceof GroupNode) mesh.metadata['xmp'] = meshPacket;
+  });
+  materials.forEach((material, index) => {
+    const packet = metadata.get('material', index);
+    if (packet) {
+      material.metadata['xmp'] = packet;
+      for (const instance of materialInstances.get(index) || []) instance.metadata['xmp'] = packet;
+    }
+  });
+
+  const jointDeclarations = parseGLTFJointDeclarations(gltf, gltfNodeIndexToNodeMap);
+  const joints = new JointController(jointDeclarations.declarations.map(item => item.joint));
+  const animations = parseGLTFAnimations(gltf);
+  const sourceLights =
+    (gltf as GLTFPostprocessed & {lights?: PunctualLightDefinition[]}).lights ||
+    (gltf.extensions?.['KHR_lights_punctual']?.['lights'] as
+      | PunctualLightDefinition[]
+      | undefined) ||
+    [];
+  const lightDefinitions = sourceLights.map<PunctualLightDefinition>(light => ({
+    ...light,
+    ...(Array.isArray(light['color']) ? {color: [...light['color']]} : {}),
+    ...(light['spot'] ? {spot: {...light['spot']}} : {})
+  }));
+  const cameras: GLTFPostprocessed['cameras'] = (gltf.cameras || []).map(camera => {
+    const runtimeCamera = {...camera};
+    if (camera.perspective) {
+      runtimeCamera.perspective = {...camera.perspective};
+    }
+    if (camera.orthographic) {
+      runtimeCamera.orthographic = {...camera.orthographic};
+    }
+    return runtimeCamera;
+  });
+  const lightBindings = bindGLTFPunctualLights(gltf.nodes, gltfNodeIdToNodeMap, lightDefinitions);
+  const punctualLights = new PunctualLightController(lightBindings, options?.useByteColors ?? true);
+  const lights = punctualLights.lights;
+  const refreshLights = () => punctualLights.update();
+  const animator = new GLTFAnimator({
+    onVisibilityChange: refreshLights,
+    onLightChange: refreshLights,
+    properties: options?.properties ?? undefined,
+    cameras,
+    lightDefinitions,
+    animations,
+    gltfNodeIdToNodeMap,
+    materials,
+    materialInstances
+  });
+  const variants = new MaterialVariants(parseGLTFMaterialVariants(gltf, scenes));
+  const extensionSupport = getGLTFExtensionSupport(gltf, device);
+  const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
+  const modelBounds = getCombinedScenegraphBounds(sceneBounds);
+  const skins = new SkinController(parseGLTFSkins({device, gltf, scenes, gltfNodeIndexToNodeMap}));
+  animator.setUpdateHandler(() => {
+    skins.update();
+    if (lightBindings.length) refreshLights();
+  });
+
+  let destroyed = false;
+  const destroy = (): void => {
+    if (destroyed) {
+      return;
+    }
+    destroyed = true;
+    skins.destroy();
+    billboards?.destroy();
+
+    const groups = new Set<GroupNode>([
+      ...scenes,
+      ...gltfMeshIdToNodeMap.values(),
+      ...gltfNodeIdToNodeMap.values()
+    ]);
+    const modelNodes = new Set<ModelNode>();
+    const ownedMaterials = new Set<Material>(materials);
+    for (const group of groups) {
+      group.preorderTraversal(node => {
+        if (node instanceof ModelNode) {
+          modelNodes.add(node);
+          const variants = node.userData['gltfMaterialVariants'] as
+            | import('@luma.gl/engine').PrimitiveMaterialVariants
+            | undefined;
+          if (variants?.defaultMaterial) ownedMaterials.add(variants.defaultMaterial);
+          for (const mapping of variants?.mappings.values() || []) {
+            ownedMaterials.add(mapping.material);
+          }
+          if (node.model?.material) {
+            ownedMaterials.add(node.model.material);
+          }
+        }
+      });
+    }
+
+    for (const modelNode of modelNodes) {
+      modelNode.destroy();
+    }
+    for (const group of groups) {
+      group.destroy();
+    }
+    for (const material of ownedMaterials) {
+      material.destroy();
+    }
+    for (const texture of generatedTextures) {
+      texture.destroy();
+    }
+    generatedTextures.clear();
+  };
+
+  return {
+    metadata,
+    scenes,
+    materials,
+    billboards,
+    variants,
+    joints,
+    jointIssues: jointDeclarations.issues,
+    cameras,
+    animator,
+    animations,
+    lights,
+    punctualLights,
+    extensionSupport,
+    sceneBounds,
+    modelBounds,
+    gltfMeshIdToNodeMap,
+    gltfNodeIdToNodeMap,
+    gltfNodeIndexToNodeMap,
+    skins,
+    gltf,
+    destroy
+  };
+}
+
+function getScenegraphBounds(bounds: [number[], number[]] | null): GLTFScenegraphBounds {
+  if (!bounds) {
+    return {
+      bounds: null,
+      center: [0, 0, 0],
+      size: [0, 0, 0],
+      radius: 0.5,
+      recommendedOrbitDistance: 1
+    };
+  }
+
+  const normalizedBounds: [[number, number, number], [number, number, number]] = [
+    [bounds[0][0], bounds[0][1], bounds[0][2]],
+    [bounds[1][0], bounds[1][1], bounds[1][2]]
+  ];
+  const size: [number, number, number] = [
+    normalizedBounds[1][0] - normalizedBounds[0][0],
+    normalizedBounds[1][1] - normalizedBounds[0][1],
+    normalizedBounds[1][2] - normalizedBounds[0][2]
+  ];
+  const center: [number, number, number] = [
+    normalizedBounds[0][0] + size[0] * 0.5,
+    normalizedBounds[0][1] + size[1] * 0.5,
+    normalizedBounds[0][2] + size[2] * 0.5
+  ];
+  const maxHalfExtent = Math.max(size[0], size[1], size[2]) * 0.5;
+  const radius = Math.max(0.5 * Math.hypot(size[0], size[1], size[2]), 0.001);
+
+  return {
+    bounds: normalizedBounds,
+    center,
+    size,
+    radius,
+    recommendedOrbitDistance: Math.max(
+      (Math.max(maxHalfExtent, 0.001) / Math.tan(Math.PI / 6)) * 1.15,
+      radius * 1.1
+    )
+  };
+}
+
+function getCombinedScenegraphBounds(sceneBounds: GLTFScenegraphBounds[]): GLTFScenegraphBounds {
+  let combinedBounds: [[number, number, number], [number, number, number]] | null = null;
+
+  for (const sceneBoundInfo of sceneBounds) {
+    if (!sceneBoundInfo.bounds) {
+      continue;
+    }
+
+    if (!combinedBounds) {
+      combinedBounds = [
+        [...sceneBoundInfo.bounds[0]] as [number, number, number],
+        [...sceneBoundInfo.bounds[1]] as [number, number, number]
+      ];
+      continue;
+    }
+
+    for (let axis = 0; axis < 3; axis++) {
+      combinedBounds[0][axis] = Math.min(combinedBounds[0][axis], sceneBoundInfo.bounds[0][axis]);
+      combinedBounds[1][axis] = Math.max(combinedBounds[1][axis], sceneBoundInfo.bounds[1][axis]);
+    }
+  }
+
+  return getScenegraphBounds(combinedBounds);
+}

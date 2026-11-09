@@ -11,7 +11,7 @@ import {
   GPUSort,
   type GPUSortAlgorithm
 } from '@luma.gl/graph/gpu-core';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 import {
   getBoundedDispatchLayout,

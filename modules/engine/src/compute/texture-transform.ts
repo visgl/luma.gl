@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';
-import {getPassthroughFS} from '@luma.gl/shadertools';
+import {getPassthroughFS} from '@luma.gl/shaders';
 import {
   GPUVectorModel,
   type GPUVectorModelProps,
@@ -50,9 +50,9 @@ export class TextureTransform {
   readonly sampler: Sampler;
 
   currentIndex = 0;
-  samplerTextureMap: Record<string, any> | null = null;
+  samplerTextureMap: Record<string, unknown> | null = null;
   bindings: TextureBinding[] = []; // each element is an object : {sourceTextures, targetTexture, framebuffer}
-  resources: Record<string, any> = {}; // resources to be deleted
+  resources: Record<string, unknown> = {}; // resources to be deleted
 
   constructor(device: Device, props: TextureTransformProps) {
     this.device = device;

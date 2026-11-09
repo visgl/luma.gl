@@ -11,7 +11,7 @@
     "**/*.spec.ts",
     "examples",
     "modules/core/src/webgl-constants",
-    "modules/shadertools/src/libs",
+    "modules/shaders/src/libs",
     "modules/core/src/webgpu",
     "modules/test-utils"
   ]

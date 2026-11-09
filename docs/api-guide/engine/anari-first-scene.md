@@ -32,7 +32,7 @@ This is particularly useful when an application should expose a stable scene con
 `@luma.gl/anari` is a public package with experimental APIs. Install it with the required luma.gl peers:
 
 ```bash
-yarn add @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/effects @luma.gl/shadertools
+yarn add @luma.gl/anari @luma.gl/core @luma.gl/engine @luma.gl/shaders
 ```
 
 At least one luma.gl backend is required. Use `@luma.gl/core/webgpu` for modern browsers and optional HDR presentation, and add `@luma.gl/core/webgl` when a WebGL 2 fallback is important.
@@ -456,7 +456,7 @@ const glass = anariDevice.newMaterial('physicallyBased', {
 
 The capture includes opaque, non-transmissive scene surfaces; layered glass is not recursively
 resolved. Renderer parameters can also receive the caller-owned
-[prepared PBR lighting environment](/docs/api-reference/scene/pbr-environment) for
+[prepared PBR lighting environment](/docs/api-reference/anari/pbr-environment) for
 roughness-aware diffuse/specular image-based lighting.
 
 An emissive surface glows but does not illuminate neighboring surfaces by itself. Add a point or spot light when it should act as a visible light source.
@@ -732,5 +732,5 @@ anariDevice.extensions;
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

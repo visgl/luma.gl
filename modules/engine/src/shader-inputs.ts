@@ -9,9 +9,9 @@ import {
   getShaderModuleDependencies,
   ShaderModule,
   ShaderModuleUniformValue
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
-import type {TextureBindingSource} from './dynamic-texture/texture-binding-source';
+import type {TextureBindingSource} from '@luma.gl/core/dynamic';
 
 /** Shader binding accepted by ShaderInputs, including deferred texture binding sources. */
 export type ShaderInputBinding = Binding | TextureBindingSource;

@@ -13,6 +13,58 @@ For attachment declarations and an inline constraint example, see
 [Physical joints](./scenegraph-joints.mdx). For skeleton deformation, see
 [Skins](./scenegraph-skins.mdx); skin palettes and physics constraints have separate update paths.
 
+## Start with the object you already have
+
+A scenegraph gives an object its place in a hierarchy. Physics adds motion and collision
+behavior to selected objects. Rendering uses the resulting GPU pose without rewriting the
+object's authored CPU matrix. That separation lets the same scene keep its initial state,
+an animation input and a simulated result without forcing a readback every frame.
+
+For a first application, read [Getting started with physics](/docs/api-guide/physics/getting-started),
+then [Scenes and glTF](/docs/api-guide/physics/scenes-and-gltf). The sections below describe
+the lower-level integration contracts used by controllers and format adapters.
+
+```text
+Author scene → attach bodies/joints → await prepare()
+                                          │
+Each frame: animation/input → fixed steps → GPU publication → rendering
+                                          │
+Explicit edits:          reset / rebuild / capture / restore
+```
+
+## Application-facing controller
+
+Use `PhysicsController` to attach physics to an existing scene without assembling backend
+body-index maps. Node paths use the same ID, anchored-path and partial-path syntax as
+`GroupNode.findNode()`:
+
+```ts
+import {PhysicsController} from '@luma.gl/engine/physics';
+
+const physics = new PhysicsController(device, {scene, gravity: [0, -9.81, 0]});
+const ball = physics.addBody('/room/ball', {mass: 2, collider: 'geometry'});
+physics.addBody('floor', {motion: 'static'});
+await physics.prepare();
+
+physics.update(deltaTimeInSeconds);
+ball.applyImpulse([1, 0, 0]);
+```
+
+Body and joint paths resolve to stable node references during authoring. Inference uses
+retained CPU model geometry, or an explicit collider override. Hidden branches and compound
+groups are supported; nested registered bodies keep independent ownership.
+
+The controller reuses `ScenegraphPhysicsSession` for compilation, reset, rebuild and lifetime
+handling. Its synchronous frame path encodes fixed steps and publishes GPU transforms without
+pose readback. For retained PBR meshes, `SceneRenderer.render({scene, camera, lights})` traverses
+`SceneMeshNode` leaves and consumes the generic transform source installed by the controller.
+Reset/rebuild refresh borrowed buffers automatically. Existing glTF/custom `ModelNode`
+adapters retain their explicit `physics.publication` path; they are not reinterpreted as
+PBR mesh descriptors. Start with the [box-and-floor walkthrough](/docs/api-guide/physics/getting-started)
+for the complete setup and render loop. See the
+[PhysicsController API](/docs/api-reference/engine/physics-controller) for paths, geometry,
+kinematic targets, animation ownership and asynchronous editing boundaries.
+
 ## Physical Joints
 
 `JointController` holds `ScenegraphJoint` declarations. Each joint references two

@@ -9,7 +9,7 @@ import {TutorialDocsTabs} from '@site/src/components/docs/tutorial-docs-tabs';
 Add Phong shading to a textured cube using luma.gl's shader module system.
 
 <DeviceTabs />
-<LightingExample showHeader={false} showStats={false} />
+<LightingExample embedded showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
@@ -45,7 +45,7 @@ import {
   loadImageBitmap,
   DynamicTexture
 } from '@luma.gl/engine';
-import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shadertools';
+import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shaders';
 import {Matrix4} from '@math.gl/core';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';

@@ -9,7 +9,7 @@ import {GLTFModelExample} from '@site/src/examples';
 
 Hide a scene subtree while preserving its hierarchy and resources for later reuse.
 
-<GLTFModelExample modelUrl={new URL('../../../../modules/gltf/test/data/CubeVisibility.glb', import.meta.url).href} title="CubeVisibility" animate embedded showStats={false} />
+<GLTFModelExample modelUrl={new URL('../../../../modules/engine/test/gltf/data/CubeVisibility.glb', import.meta.url).href} title="CubeVisibility" animate embedded showStats={false} />
 
 ## API
 
@@ -19,7 +19,7 @@ nodes are available through `scenegraphs.gltfNodeIndexToNodeMap`; source node in
 asset-specific.
 
 ```ts
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
 
 const scenegraphs = createScenegraphsFromGLTF(device, gltf);
 const sourceNode = scenegraphs.gltfNodeIndexToNodeMap.get(0);

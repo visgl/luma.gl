@@ -4,7 +4,7 @@
 import {expect, it} from 'vitest';
 import {CubeGeometry, Geometry, GroupNode} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
-import {PhysicsGeometryNode, makePhysicsScenegraph} from '../../src/gpu-physics';
+import {PhysicsGeometryNode, makePhysicsScenegraph} from '@luma.gl/engine/physics';
 
 it('keeps visual transforms separate from overridden body frames and bounds', () => {
   const node = new PhysicsGeometryNode({

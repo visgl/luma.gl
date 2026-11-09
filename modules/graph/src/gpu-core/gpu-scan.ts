@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
+import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {
   type GPUBoundedDispatchLayout,
@@ -694,7 +695,13 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
     })
   );
 
-  return nodes;
+  return nodes.map(node =>
+    setGPUComputeDispatchWorkgroups(node, [
+      props.dispatchLayout.x,
+      props.dispatchLayout.y,
+      props.dispatchLayout.z
+    ])
+  );
 }
 
 /** Uses empirical adapter calibration when supplied, otherwise preserves capability selection. */
@@ -931,7 +938,13 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
     })
   );
 
-  return nodes;
+  return nodes.map(node =>
+    setGPUComputeDispatchWorkgroups(node, [
+      props.dispatchLayout.x,
+      props.dispatchLayout.y,
+      props.dispatchLayout.z
+    ])
+  );
 }
 
 type GPUScanDispatchLayout = GPUBoundedDispatchLayout;

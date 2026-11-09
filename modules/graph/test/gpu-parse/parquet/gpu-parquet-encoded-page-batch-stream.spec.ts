@@ -13,7 +13,7 @@ import {
   type GPUParquetEncodedPageBatchStreamTicket,
   type LoadersGLParquetEncodedPageBatch
 } from '@luma.gl/graph/gpu-parse';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUParquetEncodedPageBatchStream reuses slots with explicit backpressure', async () => {
   const device = await getWebGPUTestDevice();

@@ -4,12 +4,15 @@
 
 import type {GPURigidBody, GPURigidBodyJoint} from '@luma.gl/graph/gpu-physics';
 
+import {makeWreckingBall} from './wrecking-ball';
+
 import type {GroupNode} from '@luma.gl/engine';
 import {makeCradleFrame, makeCradleFrameBodies} from './cradle-geometry';
 
 export function makeMechanism(
   scene: string
 ): {bodies: GPURigidBody[]; joints: GPURigidBodyJoint[]; frame?: GroupNode} | null {
+  if (scene === 'wreckingBall') return makeWreckingBall();
   const anchor: GPURigidBody = {
     position: [0, 0, 4],
     mass: 0,

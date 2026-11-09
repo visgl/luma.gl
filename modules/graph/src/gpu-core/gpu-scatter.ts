@@ -8,7 +8,7 @@ import {
   isValueListGPUVectorFormat,
   isVertexListGPUVectorFormat,
   type GPUVectorFormat
-} from '@luma.gl/gpgpu/gpu-data';
+} from '@luma.gl/graph/gpu-data';
 import {GPUCommandGraph, type GraphDataView, type GraphVectorView} from './gpu-command-graph';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';
 import {getViewElementOffset, validatePackedUint32View} from './graph-data-view-utils';

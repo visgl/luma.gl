@@ -15,7 +15,7 @@ import {
   type GPUDataFrameJoinOptions,
   type GPUDataFrameLookupOptions
 } from '@luma.gl/graph/gpu-dataframe';
-import {GPUConstant, GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, GPUData} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
@@ -23,7 +23,7 @@ import {
   type GPURecordBatchSourceInfo,
   type GPUTypeMap
 } from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, expectTypeOf, test, vi} from 'vitest';
 
 type LeftJoinColumns = {

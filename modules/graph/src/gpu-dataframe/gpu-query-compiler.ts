@@ -11,8 +11,8 @@ import {
   type Device,
   type DeviceLimits
 } from '@luma.gl/core';
-import {Kernel} from '@luma.gl/engine';
-import {GPUData, GPUVector, type GPUConstant, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {Kernel} from '../execution/compute/kernel';
+import {GPUData, GPUVector, type GPUConstant, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
   type CompiledGPUCommandGraph,

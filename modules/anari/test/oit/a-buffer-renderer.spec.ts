@@ -11,7 +11,7 @@ import {
   aBufferPlugin,
   createABufferResolveCompositeShaderPass
 } from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const SHADER_STAGE_FRAGMENT = 0x2;
 

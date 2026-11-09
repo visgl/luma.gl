@@ -4,7 +4,7 @@
 
 import type {Buffer, Texture} from '@luma.gl/core';
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
-import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shadertools';
+import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
 
 export const MAX_DEFERRED_POINT_LIGHTS = 64;
 

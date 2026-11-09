@@ -11,7 +11,7 @@ import {
   type CloudProps,
   type GlobeCloudProps,
   type ShaderModule
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {skyView, SKY_VERTEX_SOURCE, SKY_VERTEX_SHADER} from './sky-view';
 
 export type GlobeCloudLayerProps = LayerProps & CloudProps & GlobeCloudProps;
@@ -86,6 +86,7 @@ export class GlobeCloudLayer extends Layer<GlobeCloudLayerProps> {
   override initializeState({device}: LayerContext): void {
     this.setState({
       model: new Model(device, {
+        shaderAssembler: this.context.shaderAssembler,
         ...this.getShaders({
           source: SOURCE,
           vs: SKY_VERTEX_SHADER,

@@ -8,7 +8,7 @@ import {
   type RayTracingSceneRenderOptions,
   type SceneSurface
 } from '@luma.gl/anari';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {updateRayTracingAdaptiveBudget} from '../../src/engine/ray-tracing-scene-renderer';
@@ -134,11 +134,23 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     },
     indices: new Uint16Array([0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4])
   });
+  const materialTexture = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    data: new Uint8Array([255, 128, 64, 255])
+  });
   const sphereSurface: SceneSurface = {
     id: 'ray-tracing-analytic-sphere',
     geometry,
     material: {
       id: 'ray-tracing-sphere-material',
+      bindings: {
+        pbr_baseColorSampler: materialTexture,
+        pbr_emissiveSampler: materialTexture,
+        pbr_metallicRoughnessSampler: materialTexture,
+        pbr_transmissionSampler: materialTexture
+      },
       uniforms: {
         baseColorFactor: [0.9, 0.45, 0.2, 1],
         metallicRoughnessValues: [0.65, 0.3]
@@ -371,8 +383,8 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
     ).toBe(9);
     expect(
       frameResources.traceGraph.stats.importedTextureCount,
-      'the trace graph borrows two rotating color textures and two rotating metadata textures'
-    ).toBe(4);
+      'the trace graph borrows four history textures and one shared material texture'
+    ).toBe(5);
     expect(
       frameResources.traceGraph.stats.logicalTransientTextureCount,
       'retained ping-pong history avoids hidden transient presentation or metadata textures'
@@ -670,10 +682,37 @@ it('RayTracingSceneRenderer builds and traverses Morton TLAS and mesh BLAS withi
       ).toBe(null);
     }
 
+    const replacementTexture = device.createTexture({
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+      data: new Uint8Array([64, 128, 255, 255])
+    });
+    try {
+      const previousTraceGraph = getRayTracingFrameResources(renderer, options.id).traceGraph;
+      sphereSurface.material.bindings = {
+        ...sphereSurface.material.bindings,
+        pbr_baseColorSampler: replacementTexture
+      };
+      renderer.render(options);
+      device.submit();
+      expect(getRayTracingFrameResources(renderer, options.id).traceGraph).not.toBe(
+        previousTraceGraph
+      );
+      expect(
+        getRayTracingFrameResources(renderer, options.id).traceGraph.stats.importedTextureCount
+      ).toBe(6);
+      expect(materialTexture.destroyed).toBe(false);
+      expect(replacementTexture.destroyed).toBe(false);
+    } finally {
+      replacementTexture.destroy();
+    }
+
     renderer.destroyFrame(options.id);
     renderer.destroyFrame(options.id);
   } finally {
     renderer.destroy();
+    materialTexture.destroy();
   }
 
   void 0;

@@ -4,7 +4,7 @@
 
 // eslint-disable-next-line
 import {Program, VertexShader, FragmentShader} from '@luma.gl/webgl-legacy';
-import {createTestContext} from '@luma.gl/test-utils';
+import {createTestContext} from '@luma.gl/core/test-utils';
 
 const gl = createTestContext();
 

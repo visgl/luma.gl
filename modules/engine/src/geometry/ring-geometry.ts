@@ -7,7 +7,7 @@ import {
   type Geometry as MathGeometry,
   type GeometryAttributeInput
 } from '@math.gl/geometry';
-import {LatheGeometry} from '@math.gl/geometry/parametric';
+import {LatheGeometry} from '@math.gl/geometry';
 import {Geometry} from './geometry';
 
 export type RingGeometryProps = {

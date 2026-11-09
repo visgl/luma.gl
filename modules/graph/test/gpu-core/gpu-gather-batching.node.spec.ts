@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test, vi} from 'vitest';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {GPUGather, GPUUint32Gather, GraphVectorView} from '@luma.gl/graph/gpu-core';
 import {getGraphDataPrefix} from '../../src/gpu-core/graph-data-view-utils';
 import {BatchConformanceFixture} from './batch-conformance-utils';

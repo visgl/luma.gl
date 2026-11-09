@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ScenegraphJointLimit, ScenegraphJointDrive} from '@luma.gl/engine';
+import type {GPURigidBodyJointLimit, GPURigidBodyJointDrive} from './joint-types';
 
 /** One composed limit or drive. Several constraints may share the same attachment frames. */
-export type GPURigidBodyGeneralConstraint = ScenegraphJointLimit & {
-  drive?: Omit<ScenegraphJointDrive, 'axis' | 'angular'>;
+export type GPURigidBodyGeneralConstraint = GPURigidBodyJointLimit & {
+  drive?: Omit<GPURigidBodyJointDrive, 'axis' | 'angular'>;
 };
 
 export function validateGeneralJoint(constraint: GPURigidBodyGeneralConstraint): void {

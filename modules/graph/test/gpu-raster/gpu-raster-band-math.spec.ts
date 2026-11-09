@@ -13,7 +13,7 @@ import {
   type GPURasterBufferBand,
   type GPURasterScalarFormat
 } from '@luma.gl/graph/gpu-raster';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 type ScalarArray = Float32Array | Uint32Array | Int32Array;
 

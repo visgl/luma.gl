@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {
+  type BoundKernel,
+  createBoundKernel,
+  createBoundKernelAsync
+} from '../gpu-core/utils/bound-kernel';
+
 import {Buffer, type BindingDeclaration} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
+
 import type {
   GPUCommandGraph,
   GraphBufferHandle,
@@ -141,12 +147,15 @@ export function addRigidBodyContinuous<Parameters>(
       bindings: Object.fromEntries(selectedBindings.map(binding => [binding.name, binding.buffer]))
     };
     const executable = (
-      computation: Computation
+      computation: BoundKernel
     ): GPUCommandGraphComputeExecutable<Parameters> => ({
       encode: ({computePass}) => {
-        computation.dispatch(computePass, Math.ceil(count / 64));
+        computation.kernel.dispatch(computePass, {
+          bindings: computation.bindings,
+          x: Math.ceil(count / 64)
+        });
       },
-      destroy: () => computation.destroy()
+      destroy: () => computation.kernel.destroy()
     });
     graph.addComputePass({
       id: properties.id,
@@ -159,8 +168,8 @@ export function addRigidBodyContinuous<Parameters>(
               ? ('storage-read' as const)
               : ('storage-read-write' as const)
       })),
-      compile: () => executable(new Computation(graph.device, properties)),
-      compileAsync: async () => executable(await Computation.createAsync(graph.device, properties))
+      compile: () => executable(createBoundKernel(graph.device, properties)),
+      compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
     });
   };
   addStage('saveContinuous', ['positions', 'continuousPrevious', 'continuousStatus']);
@@ -294,21 +303,39 @@ function addConvexContinuous<Parameters>(
       };
     };
     const executable = (
-      computations: Computation[]
+      computations: BoundKernel[]
     ): GPUCommandGraphComputeExecutable<Parameters> => ({
       encode: ({computePass}) => {
         if (stage === 'resolve') {
-          computations[0].dispatch(computePass, Math.ceil(count / 64));
+          computations[0].kernel.dispatch(computePass, {
+            bindings: computations[0].bindings,
+            x: Math.ceil(count / 64)
+          });
           for (let impact = 0; impact <= maximumImpacts; impact++) {
             for (let index = 1; index < computations.length - 1; index++)
               if (stages[index].entryPoint === 'findContinuousImpacts')
-                computations[index].dispatchIndirect(computePass, extra[3].buffer, 0);
-              else computations[index].dispatch(computePass, stages[index].groups);
+                computations[index].kernel.dispatchIndirect(computePass, {
+                  bindings: computations[index].bindings,
+                  indirectBuffer: extra[3].buffer,
+                  indirectOffset: 0
+                });
+              else
+                computations[index].kernel.dispatch(computePass, {
+                  bindings: computations[index].bindings,
+                  x: stages[index].groups
+                });
           }
-          computations[computations.length - 1].dispatch(computePass, Math.ceil(count / 64));
-        } else computations[0].dispatch(computePass, Math.ceil(count / 64));
+          computations[computations.length - 1].kernel.dispatch(computePass, {
+            bindings: computations[computations.length - 1].bindings,
+            x: Math.ceil(count / 64)
+          });
+        } else
+          computations[0].kernel.dispatch(computePass, {
+            bindings: computations[0].bindings,
+            x: Math.ceil(count / 64)
+          });
       },
-      destroy: () => computations.forEach(computation => computation.destroy())
+      destroy: () => computations.forEach(computation => computation.kernel.destroy())
     });
     graph.addComputePass({
       id: `${id}-${stage}-convex-continuous`,
@@ -330,12 +357,12 @@ function addConvexContinuous<Parameters>(
       ],
       compile: () =>
         executable(
-          stages.map(stage => new Computation(graph.device, properties(stage.entryPoint)))
+          stages.map(stage => createBoundKernel(graph.device, properties(stage.entryPoint)))
         ),
       compileAsync: async () =>
         executable(
           await Promise.all(
-            stages.map(stage => Computation.createAsync(graph.device, properties(stage.entryPoint)))
+            stages.map(stage => createBoundKernelAsync(graph.device, properties(stage.entryPoint)))
           )
         )
     });

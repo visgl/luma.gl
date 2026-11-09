@@ -57,8 +57,12 @@ export class WebGPUShader extends Shader {
   }
 
   override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
     // Note: WebGPU does not offer a method to destroy shaders
     // this.handle.destroy();
+    this.destroyResource();
     // @ts-expect-error readonly
     this.handle = null;
   }

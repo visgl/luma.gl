@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import lightmapBakingSupport from './api/lightmap-baking/mobile-support';
+import pbrShadowsSupport from './api/pbr-shadows/mobile-support';
+import prefilteredEnvironmentSupport from './api/prefiltered-environment/mobile-support';
 import gltfBillboardSupport from './gltf/features/mobile-support';
 import gltfAudioSupport from './gltf/audio/mobile-support';
 import gltfInteractivitySupport from './deck/gltf-interactivity/mobile-support';
@@ -101,7 +104,7 @@ import support52 from './tutorials/two-cubes/mobile-support';
 import support53 from './tutorials/instanced-cubes/mobile-support';
 import support54 from './tutorials/hello-instancing/mobile-support';
 import support55 from './tutorials/shader-modules/mobile-support';
-import support56 from './tutorials/shader-hooks/mobile-support';
+import support56 from './tutorials/shader-injection/mobile-support';
 import support57 from './tutorials/shader-plugins/mobile-support';
 import slangParticlesSupport from './tutorials/slang-particles/mobile-support';
 import slangShadersSupport from './tutorials/slang-shaders/mobile-support';
@@ -129,7 +132,7 @@ import support78 from './arrow/arrow-columns/mobile-support';
 import support79 from './deck/arrow-path-layer/mobile-support';
 import support80 from './deck/arrow-polygon-layer/mobile-support';
 import support81 from './deck/arrow-text-layer/mobile-support';
-import support82 from './deck/luspatial-taxi/mobile-support';
+import support82 from './deck/gpu-spatial-taxi/mobile-support';
 import support83 from './deck/gpu-graph-explorer/mobile-support';
 import support84 from './deck/gpu-culled-trace/mobile-support';
 import support85 from './showcase/spectral-wave-lab/mobile-support';
@@ -213,6 +216,21 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/gpu-sphere-world': sphereWorldSupport,
   'experimental/gpu-sphere-scale': sphereScaleSupport,
   'experimental/gpu-rigid-body-world': rigidBodyWorldSupport,
+  'experimental/newtons-cradle': {
+    ...rigidBodyWorldSupport,
+    id: 'experimental/newtons-cradle',
+    sourceDirectory: 'experimental/gpu-rigid-body-world'
+  },
+  'experimental/dominoes': {
+    ...rigidBodyWorldSupport,
+    id: 'experimental/dominoes',
+    sourceDirectory: 'experimental/gpu-rigid-body-world'
+  },
+  'experimental/wrecking-ball': {
+    ...rigidBodyWorldSupport,
+    id: 'experimental/wrecking-ball',
+    sourceDirectory: 'experimental/gpu-rigid-body-world'
+  },
   'experimental/vector-observatory': vectorObservatorySupport,
   'experimental/physics-batch': physicsBatchSupport,
   'experimental/physics-stress': physicsStressSupport,
@@ -231,7 +249,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'tutorials/instanced-cubes': support53,
   'tutorials/hello-instancing': support54,
   'tutorials/shader-modules': support55,
-  'tutorials/shader-hooks': support56,
+  'tutorials/shader-injection': support56,
   'tutorials/shader-plugins': support57,
   'tutorials/slang-shaders': slangShadersSupport,
   'tutorials/slang-particles': slangParticlesSupport,
@@ -263,11 +281,14 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'deck/city-scene': citySceneSupport,
   'deck/arrow-polygon-layer': support80,
   'deck/arrow-text-layer': support81,
-  'deck/luspatial-taxi': support82,
+  'deck/gpu-spatial-taxi': support82,
   'deck/gpu-graph-explorer': support83,
   'deck/gpu-culled-trace': support84,
   'showcase/spectral-wave-lab': support85,
   'api/texture-compressed': standaloneSupport0,
+  'api/lightmap-baking': lightmapBakingSupport,
+  'api/pbr-shadows': pbrShadowsSupport,
+  'api/prefiltered-environment': prefilteredEnvironmentSupport,
   'integrations/hello-react': standaloneSupport1,
   'showcase/algebraic-varieties': standaloneSupport2,
   'experimental/gpu-parquet-constellation': parquetSupport,

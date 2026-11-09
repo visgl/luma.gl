@@ -223,6 +223,7 @@ export class GPUGraphNodeLayer extends Layer<GPUGraphNodeLayerProps> {
     const pointMode =
       this.props.pointMode ?? this.props.vertexCount >= GPU_GRAPH_DECK_POINT_VERTEX_COUNT;
     const model = new Model(device, {
+      shaderAssembler: this.context.shaderAssembler,
       ...this.getShaders({modules: [project32, picking], source: GPU_GRAPH_DECK_NODE_SHADER}),
       id: `${this.id}-model`,
       topology: pointMode ? 'point-list' : 'triangle-list',
