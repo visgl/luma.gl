@@ -98,6 +98,8 @@ participate in copies. Indexed and variable-length restrictions still apply to t
 varying data being packed. Columns carrying null bitmaps or producer-owned
 readback metadata are rejected until a metadata-preserving packing contract is
 available; ordinary non-null fixed-size-list storage columns remain packable.
+When a superseded batch owns a buffer that a batch left unpacked still views, the unpacked view
+receives its own ownership reference before the superseded batch is destroyed.
 
 ### `addBatch(batch): this`
 
@@ -122,6 +124,12 @@ a constant throws because there is no vector storage to detach.
 
 Transfers a half-open range of physical batches out of the table. Constants remain on
 the original table.
+
+The caller owns the returned batches. When detached and retained batches view one owned
+buffer, for example per-batch views sliced from one allocation, `detachBatches()` gives every
+such view its own ownership reference (see `GPUData.retainBufferOwnership()`). Either group,
+and any single batch in either group, can then be destroyed first; the buffer is released with
+its last view. Buffers that no view owns remain caller-owned.
 
 ### `destroy(): void`
 
