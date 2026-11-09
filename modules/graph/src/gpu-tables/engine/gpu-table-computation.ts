@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type Binding, type ComputePass, Device} from '@luma.gl/core';
+import {assert, type Binding, type ComputePass, Device} from '@luma.gl/core';
 import {Kernel, type KernelProps} from '../../execution/compute/kernel';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
@@ -60,7 +60,7 @@ export class GPUTableComputation {
 
     const batchState = getGPUTableComputationBatchState(inputVectors);
     const baseBindings = {
-      ...getDirectVectorBindings(inputVectors),
+      ...getDirectVectorBindings(device, inputVectors),
       ...bindings
     };
 
@@ -94,7 +94,7 @@ export class GPUTableComputation {
       } satisfies GPUTableComputationBatch;
       this.setBindings({
         ...this.baseBindings,
-        ...getBatchVectorBindings(this.inputVectors, batchIndex)
+        ...getBatchVectorBindings(this.kernel.device, this.inputVectors, batchIndex)
       });
 
       const workgroupCount =
@@ -161,21 +161,21 @@ function requiresBatchBinding(vector: GPUVector): boolean {
   return vector.data.length !== 1;
 }
 
-function getDirectVectorBindings(inputVectors: Record<string, GPUVector>): Record<string, Binding> {
+function getDirectVectorBindings(
+  device: Device,
+  inputVectors: Record<string, GPUVector>
+): Record<string, Binding> {
   const bindings: Record<string, Binding> = {};
   for (const [name, vector] of Object.entries(inputVectors)) {
     if (!requiresBatchBinding(vector)) {
-      bindings[name] = getDirectVectorBinding(vector);
+      bindings[name] = getGPUDataBinding(device, getSingleGPUVectorData(vector));
     }
   }
   return bindings;
 }
 
-function getDirectVectorBinding(vector: GPUVector): Binding {
-  return getGPUDataBinding(getSingleGPUVectorData(vector));
-}
-
 function getBatchVectorBindings(
+  device: Device,
   inputVectors: Record<string, GPUVector>,
   batchIndex: number
 ): Record<string, Binding> {
@@ -188,12 +188,15 @@ function getBatchVectorBindings(
     if (!data) {
       throw new Error(`GPUTableComputation vector "${name}" is missing batch ${batchIndex}`);
     }
-    bindings[name] = getGPUDataBinding(data);
+    bindings[name] = getGPUDataBinding(device, data);
   }
   return bindings;
 }
 
-function getGPUDataBinding(data: GPUData): Binding {
+function getGPUDataBinding(device: Device, data: GPUData): Binding {
+  // WebGPU storage bindings must start at a multiple of minStorageBufferOffsetAlignment.
+  // Views that start inside a shared buffer need a binding that starts at an aligned offset.
+  assert(data.byteOffset % getStorageOffsetAlignment(device) === 0);
   const fixedSizeListByteLength =
     data.format && isFixedSizeListGPUVectorFormat(data.format)
       ? data.length === 0
@@ -208,6 +211,10 @@ function getGPUDataBinding(data: GPUData): Binding {
         ? (data.valueByteLength ?? data.length * data.byteStride)
         : Math.max(data.valueByteLength ?? 0, fixedSizeListByteLength)
   };
+}
+
+function getStorageOffsetAlignment(device: Device): number {
+  return Math.max(device.limits.minStorageBufferOffsetAlignment || 1, 1);
 }
 
 function getGPUDataBuffer(data: GPUData) {

@@ -639,3 +639,51 @@ function makeMatrixVector(device: NullDevice, rowCount: number): GPUVector<'floa
     ownsData: true
   });
 }
+
+it('GPUTableShaderBindings rejects storage views at unaligned byte offsets', () => {
+  const device = new NullDevice({});
+  Object.defineProperty(device, 'limits', {
+    value: {...device.limits, minStorageBufferOffsetAlignment: 256}
+  });
+  const buffer = device.createBuffer({byteLength: 512});
+  const makeTable = (byteOffset: number) =>
+    new GPUTable({
+      batches: [
+        new GPURecordBatch({
+          gpuData: {
+            positions: new GPUData({
+              buffer,
+              format: 'float32x2',
+              length: 1,
+              stride: 2,
+              byteOffset,
+              byteStride: 8
+            })
+          }
+        })
+      ]
+    });
+  const shaderLayout = {
+    attributes: [],
+    bindings: [{name: 'positions', type: 'read-only-storage', group: 0, location: 0}]
+  } satisfies ShaderLayout;
+  const gpuInputSchema = GPU_INPUT_SCHEMA.slice(0, 1);
+
+  const alignedTable = makeTable(256);
+  const aligned = new GPUTableShaderBindings(device, {
+    table: alignedTable,
+    gpuInputSchema,
+    shaderLayout
+  });
+  expect(aligned.batches[0].bindings.positions).toMatchObject({offset: 256});
+  // A view that starts inside a shared buffer cannot be bound at its own byte offset.
+  const unalignedTable = makeTable(8);
+  expect(
+    () => new GPUTableShaderBindings(device, {table: unalignedTable, gpuInputSchema, shaderLayout})
+  ).toThrow();
+
+  aligned.destroy();
+  alignedTable.destroy();
+  unalignedTable.destroy();
+  buffer.destroy();
+});
