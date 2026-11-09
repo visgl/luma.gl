@@ -1,5 +1,11 @@
 # What's New
 
+### Lighting workflow hardening
+
+Combined PBR receiving and shared-frame regressions now cover visibility, baked results, resize,
+reset, resource reuse and allocation-failure recovery. The [lighting guide](./api-guide/engine/lighting-effects.md#frame-and-resource-lifecycle)
+explains frame ordering, ownership and reproducible performance measurements.
+
 ### Progressive lightmap baking
 
 The optional lighting entry now exposes UV-space diffuse bake models, progressive irradiance accumulation, chart-safe dilation and independent result copies. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
