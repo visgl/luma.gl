@@ -50,7 +50,11 @@ light; spot light `direction` points along the light cone. Angles are in radians
 
 `getPracticalCascadeSplits`, `getDirectionalCascadeViews`, `getSpotShadowView`, and
 `getPointShadowViews` expose the same camera calculations for custom orchestration.
-The spot and point camera helpers accept fully resolved light descriptors.
+The spot and point camera helpers accept fully resolved light descriptors. For WebGPU cube
+textures, call `getPointShadowViews(light, true)` to invert the projection Y axis for the
+texture origin. `ShadowMapRenderer` applies this automatically and returns `frontFace: 'cw'`
+in point-view raster parameters to preserve front-face culling. Apply the supplied raster
+parameters as well as the matrices; directional and spot views retain their existing convention.
 
 ## Draw callbacks and ownership
 

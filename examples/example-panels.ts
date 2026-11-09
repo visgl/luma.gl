@@ -3,12 +3,13 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
+  BoxPanelContainer,
   CustomPanel,
+  Panel,
   PanelThemeScope,
   SettingsManager,
   SettingsPanel,
   TabbedPanel,
-  type Panel,
   type SettingsChangeDescriptor,
   type SettingsManagerLocalStorageConfig,
   type SettingsManagerOnChange,
@@ -28,10 +29,14 @@ const EXAMPLE_SETTINGS_PANEL_ATTRIBUTE = 'data-example-settings-panel';
 const EXAMPLE_SETTINGS_SECTIONS_ATTRIBUTE = 'data-example-settings-sections';
 const EXAMPLE_SOURCE_PANEL_ID = 'example-source';
 const EXAMPLES_PATH_PREFIX = '/examples/';
+const standalonePanelContainers = new WeakMap<
+  HTMLElement,
+  {container: BoxPanelContainer; resize: () => void}
+>();
 const MODEL_SETTING_NAMES = new Set(['modelKind', 'renderMode']);
 const EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE = 'data-example-panel-appearance';
 const EXAMPLE_PANEL_STYLE = `
-[data-example-panel-host] [aria-hidden='true'] {
+[data-example-panel-host] [data-panel-tabs] + div > [aria-hidden='true'] {
   display: none !important;
 }
 [data-example-panel-host][${EXAMPLE_PANEL_APPEARANCE_ATTRIBUTE}='cinematic'] [data-panel-theme-mode] {
@@ -100,6 +105,31 @@ export function makeExamplePanelHostHtml(hostId = EXAMPLE_PANEL_HOST_ID): string
 
 /** Renders panel content directly inside an existing InfoBox host. */
 export function renderExamplePanel(hostElement: HTMLElement, panel: Panel | null): void {
+  const title = hostElement.dataset.examplePanelTitle;
+  if (title) {
+    let mounted = standalonePanelContainers.get(hostElement);
+    if (!panel) {
+      mounted?.container.onRemove();
+      if (mounted) window.removeEventListener('resize', mounted.resize);
+      standalonePanelContainers.delete(hostElement);
+      return;
+    }
+    const content = new Panel({
+      id: panel.id,
+      content: h(Fragment, {}, h('style', {}, EXAMPLE_PANEL_STYLE), panel.content)
+    });
+    if (!mounted) {
+      const container = new BoxPanelContainer({title, panel: content, collapsible: true});
+      const resize = () => container.onViewportChange();
+      mounted = {container, resize};
+      standalonePanelContainers.set(hostElement, mounted);
+      window.addEventListener('resize', resize);
+      container.onRenderHTML(hostElement);
+    } else {
+      mounted.container.setProps({title, panel: content});
+    }
+    return;
+  }
   render(
     panel ? h(PanelThemeScope, {panel}, h('style', {}, EXAMPLE_PANEL_STYLE), panel.content) : null,
     hostElement

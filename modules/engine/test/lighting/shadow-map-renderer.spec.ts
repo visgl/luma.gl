@@ -50,6 +50,9 @@ for (const getDevice of [getWebGPUTestDevice, getWebGLTestDevice]) {
       pointLights: [{position: [0, 3, 0] as [number, number, number], range: 12}],
       prepareShadowCasters: view => {
         preparedViews.set(view.framebuffer, view.viewProjectionMatrix);
+        expect(view.rasterParameters.frontFace).toBe(
+          view.type === 'point' && device.type === 'webgpu' ? 'cw' : 'ccw'
+        );
       },
       drawShadowCasters: view => {
         expect(preparedViews.get(view.framebuffer)).toBe(view.viewProjectionMatrix);

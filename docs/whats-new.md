@@ -3,7 +3,7 @@
 ### Static lightmap workflows
 
 A dedicated two-room [Lightmap Baking example](/examples/api/lightmap-baking) demonstrates fixed colored
-lights, shadowed environment sampling, and portable HDR export/reload. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
+lights, shadowed environment sampling, and portable HDR export/reload. Point-shadow cube projections now match WebGPU texture coordinates, correcting misplaced shadows from off-axis occluders. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
 
 ### Lighting workflow hardening
 

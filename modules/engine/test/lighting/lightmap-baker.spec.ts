@@ -275,7 +275,7 @@ test('standard example renders live lighting and freezes baked pixels', async co
   if (!devices.length) return context.skip('No GPU');
   const {LightmapPreview} = await import('../../../../examples/api/pbr-shadows/lightmap-preview');
   for (const device of devices) {
-    const preview = new LightmapPreview(device);
+    const preview = new LightmapPreview(device, 'preview');
     const texture = device.createTexture({
       width: 32,
       height: 32,
@@ -310,6 +310,11 @@ test('standard example renders live lighting and freezes baked pixels', async co
         Math.max(...initialBake.filter((_, index) => index % 4 < 3)),
         device.type
       ).toBeGreaterThan(80);
+      const directBake = await preview.exportData();
+      const litFloor = directBake.data[(26 * 256 + 9) * 4];
+      const blockedFloor = directBake.data[(28 * 256 + 18) * 4];
+      expect(litFloor, device.type).toBeGreaterThan(0.1);
+      expect(blockedFloor).toBeLessThan(litFloor * 0.04);
       const live = await render('live', 0);
       expect(Math.max(...live.filter((_, index) => index % 4 < 3)), device.type).toBeGreaterThan(
         80
@@ -327,7 +332,7 @@ test('standard example renders live lighting and freezes baked pixels', async co
       expect(exported.data[3]).toBe(1);
       expect(exported.data[31 * 4 + 3]).toBe(1);
       expect(exported.data[32 * 4 + 3]).toBe(2);
-      expect(exported.data[(64 * 256 + 128) * 4 + 3]).toBe(0);
+      expect(exported.data[(64 * 256 + 128) * 4 + 3]).toBe(21);
       preview.reset();
       preview.loadData(exported);
       expect(await render('baked', 2100)).toEqual(frozen);

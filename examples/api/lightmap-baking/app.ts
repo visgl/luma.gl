@@ -128,6 +128,8 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     const canvas = root.querySelector<HTMLCanvasElement>('[data-atlas-view]');
                     const context = canvas?.getContext('2d');
                     if (!canvas || !context) return;
+                    canvas.width = data.width;
+                    canvas.height = data.height;
                     const image = context.createImageData(data.width, data.height);
                     for (let pixel = 0; pixel < data.width * data.height; pixel++) {
                       for (let channel = 0; channel < 3; channel++) {
@@ -152,8 +154,12 @@ export default class LightmapExample extends AnimationLoopTemplate {
                   try {
                     const data = decodeLightmapData(await file.arrayBuffer());
                     if (this.disposed) return;
-                    if (data.width !== 256 || data.height !== 128 || data.uvSet !== 1)
-                      throw new Error('This scene requires its 256 × 128 UV1 atlas.');
+                    if (
+                      data.width !== preview.baker.width ||
+                      data.height !== preview.baker.height ||
+                      data.uvSet !== 1
+                    )
+                      throw new Error('This scene requires its 1024 × 512 UV1 atlas.');
                     preview.loadData(data);
                     status('Loaded — displaying baked lighting.');
                     this.setMode('baked');

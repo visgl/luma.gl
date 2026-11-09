@@ -1,3 +1,4 @@
+import '../../examples/example-infobox.css';
 import type {SettingsChangeDescriptor, SettingsSchema} from '@deck.gl-community/panels';
 import * as arrow from 'apache-arrow';
 import {describe, expect, test, vi} from 'vitest';
@@ -1042,3 +1043,51 @@ function getRequiredElement<T extends Element>(root: ParentNode, selector: strin
   }
   return element;
 }
+
+describe('standalone infobox panels', () => {
+  test.each([
+    'Lightmap Baking',
+    'PBR Shadows',
+    'Prefiltered environment'
+  ])('keeps the %s title visible while collapsing and refreshing content', async title => {
+    const shell = document.createElement('aside');
+    shell.className = 'luma-example-infobox';
+    shell.dataset.infoBoxAppearance = 'cinematic';
+    shell.innerHTML = makeExamplePanelHostHtml();
+    const host = shell.querySelector<HTMLElement>('[data-example-panel-host]')!;
+    host.dataset.examplePanelTitle = title;
+    host.id = `collapse-${title.replaceAll(' ', '-')}`;
+    document.body.append(shell);
+    const manager = new ExamplePanelManager({
+      hostId: host.id,
+      panel: makeHtmlCustomPanel({
+        id: 'collapse-content',
+        title: 'Info',
+        html: '<input aria-label="Retained value" value="retained">'
+      })
+    });
+    try {
+      manager.mount();
+      const button = host.querySelector<HTMLButtonElement>('button[aria-expanded]')!;
+      expect(button.textContent).toContain(title);
+      expect(getComputedStyle(button).color).toBe(EXAMPLE_THEME_TOKENS.cinematic.text);
+      expect(button.querySelector('[aria-hidden]')?.checkVisibility()).toBe(true);
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      button.click();
+      await vi.waitFor(() => expect(button.getAttribute('aria-expanded')).toBe('false'));
+      const input = host.querySelector<HTMLInputElement>('input')!;
+      expect(input.checkVisibility()).toBe(false);
+      manager.refresh();
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      button.click();
+      await vi.waitFor(() => expect(button.getAttribute('aria-expanded')).toBe('true'));
+      expect(input.checkVisibility()).toBe(true);
+      expect(input.value).toBe('retained');
+      expect(button.textContent).toContain(title);
+    } finally {
+      manager.finalize();
+      expect(host.childElementCount).toBe(0);
+      shell.remove();
+    }
+  });
+});

@@ -138,3 +138,33 @@ function expectWebGPUClipDepth(camera: ShadowCamera): void {
     'far plane maps to WebGPU depth one'
   ).toBeCloseTo(1, 6);
 }
+
+it('WebGPU cube projections align off-axis texels with cube sampling on all six faces', () => {
+  const views = getPointShadowViews(
+    {
+      position: [0, 0, 0],
+      range: 20,
+      nearPlane: 0.1,
+      sourceRadius: 0,
+      normalBias: 0,
+      depthBias: 0,
+      depthBiasSlopeScale: 0,
+      strength: 1
+    },
+    true
+  );
+  // Cube lookup face axes: +X(-Z,-Y), -X(+Z,-Y), +Y(+X,+Z), -Y(+X,-Z), +Z(+X,-Y), -Z(-X,-Y).
+  const samples = [
+    {position: [2, 0.5, -0.25], coordinates: [0.5625, 0.375]},
+    {position: [-2, 0.5, 0.25], coordinates: [0.5625, 0.375]},
+    {position: [0.25, 2, 0.5], coordinates: [0.5625, 0.625]},
+    {position: [0.25, -2, -0.5], coordinates: [0.5625, 0.625]},
+    {position: [0.25, 0.5, 2], coordinates: [0.5625, 0.375]},
+    {position: [-0.25, 0.5, -2], coordinates: [0.5625, 0.375]}
+  ];
+  samples.forEach((sample, index) => {
+    const projected = views[index].viewProjectionMatrix.transformAsPoint(sample.position);
+    expect((projected[0] + 1) / 2).toBeCloseTo(sample.coordinates[0], 6);
+    expect((1 - projected[1]) / 2).toBeCloseTo(sample.coordinates[1], 6);
+  });
+});

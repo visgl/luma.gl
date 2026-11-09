@@ -29,7 +29,7 @@ type BakeLight =
   | {type: 'directional'; direction: [number, number, number]; color: [number, number, number]};
 
 /** Fixed room geometry with authored, disjoint atlas charts. */
-function makeRoom(): Geometry {
+function makeRoom(atlasHeight: number): Geometry {
   const positions: number[] = [],
     normals: number[] = [],
     coordinates: number[] = [],
@@ -38,7 +38,7 @@ function makeRoom(): Geometry {
     const chart = positions.length / 18;
     const column = chart % 8,
       row = Math.floor(chart / 8);
-    const padding = 2 / 128;
+    const padding = 2 / atlasHeight;
     const minimum = [column / 8 + padding / 2, row / 4 + padding];
     const maximum = [(column + 1) / 8 - padding / 2, (row + 1) / 4 - padding];
     const textureCoordinates = [
@@ -94,21 +94,76 @@ function makeRoom(): Geometry {
     [-1, 0, 0],
     [0.75, 0.75, 0.75]
   );
-  // Two-sided partition with a 1.2-wide, 2-high doorway.
-  for (const [minimumDepth, maximumDepth, minimumHeight] of [
-    [-2, -0.6, 0],
-    [0.6, 2, 0],
-    [-0.6, 0.6, 2]
-  ]) {
-    const corners = [
-      [0, minimumHeight, minimumDepth],
-      [0, minimumHeight, maximumDepth],
-      [0, 3, maximumDepth],
-      [0, 3, minimumDepth]
-    ];
-    quad([...corners].reverse(), [1, 0, 0], [0.75, 0.75, 0.75]);
-    quad(corners, [-1, 0, 0], [0.75, 0.75, 0.75]);
+  // Closed, 20 cm thick divider sections overlap the floor and back wall at their joints.
+  function appendDivider(minimumDepth: number, maximumDepth: number, minimumHeight: number) {
+    const left = -0.1,
+      right = 0.1,
+      top = 3;
+    const color = [0.75, 0.75, 0.75];
+    quad(
+      [
+        [right, minimumHeight, minimumDepth],
+        [right, top, minimumDepth],
+        [right, top, maximumDepth],
+        [right, minimumHeight, maximumDepth]
+      ],
+      [1, 0, 0],
+      color
+    );
+    quad(
+      [
+        [left, minimumHeight, maximumDepth],
+        [left, top, maximumDepth],
+        [left, top, minimumDepth],
+        [left, minimumHeight, minimumDepth]
+      ],
+      [-1, 0, 0],
+      color
+    );
+    quad(
+      [
+        [left, minimumHeight, maximumDepth],
+        [right, minimumHeight, maximumDepth],
+        [right, top, maximumDepth],
+        [left, top, maximumDepth]
+      ],
+      [0, 0, 1],
+      color
+    );
+    quad(
+      [
+        [right, minimumHeight, minimumDepth],
+        [left, minimumHeight, minimumDepth],
+        [left, top, minimumDepth],
+        [right, top, minimumDepth]
+      ],
+      [0, 0, -1],
+      color
+    );
+    quad(
+      [
+        [left, top, maximumDepth],
+        [right, top, maximumDepth],
+        [right, top, minimumDepth],
+        [left, top, minimumDepth]
+      ],
+      [0, 1, 0],
+      color
+    );
+    quad(
+      [
+        [left, minimumHeight, minimumDepth],
+        [right, minimumHeight, minimumDepth],
+        [right, minimumHeight, maximumDepth],
+        [left, minimumHeight, maximumDepth]
+      ],
+      [0, -1, 0],
+      color
+    );
   }
+  appendDivider(-2.02, -0.6, -0.02);
+  appendDivider(0.6, 2, -0.02);
+  appendDivider(-0.6, 0.6, 2);
   function box(center: number, height: number, color: number[]) {
     const left = center - 0.45,
       right = center + 0.45,
@@ -188,7 +243,7 @@ export class LightmapPreview {
   private readonly model;
   private readonly shadows: ShadowMapRenderer;
   private readonly casters = new Map<object, ReturnType<typeof createPBRShadowModel>>();
-  private readonly geometry = makeRoom();
+  private readonly geometry: Geometry;
   private result: LightmapBakeResult | null = null;
   private readonly environment = {
     width: 4,
@@ -207,8 +262,15 @@ export class LightmapPreview {
       output.render && output.filter && device.getTextureFormatCapabilities('rgba32float').render
     );
   }
-  constructor(private readonly device: Device) {
-    this.baker = new LightmapBaker(device, {width: 256, height: 128});
+  constructor(
+    private readonly device: Device,
+    resolution: 'full' | 'preview' = 'full'
+  ) {
+    const width = resolution === 'full' ? 1024 : 256;
+    const height = width / 2;
+    const chartSize = width / 8;
+    this.geometry = makeRoom(height);
+    this.baker = new LightmapBaker(device, {width, height});
     this.white = device.createTexture({
       width: 1,
       height: 1,
@@ -231,15 +293,15 @@ export class LightmapPreview {
       model.shaderInputs.setProps({lightmapBake: {chartId: chartIndex + 1}});
       return model;
     });
-    const chartOwners = Float32Array.from({length: 256 * 128}, (_, index) => {
-      const column = Math.floor((index % 256) / 32);
-      const row = Math.floor(Math.floor(index / 256) / 32);
+    const chartOwners = Float32Array.from({length: width * height}, (_, index) => {
+      const column = Math.floor((index % width) / chartSize);
+      const row = Math.floor(Math.floor(index / width) / chartSize);
       const chartIndex = row * 8 + column;
       return chartIndex < chartCount ? chartIndex + 1 : 0;
     });
     this.chartTexture = device.createTexture({
-      width: 256,
-      height: 128,
+      width,
+      height,
       format: 'r32float',
       data: chartOwners
     });
@@ -252,10 +314,10 @@ export class LightmapPreview {
     });
     this.shadows = new ShadowMapRenderer(device, {
       quality: 'low',
-      directionalMapSize: 256,
+      directionalMapSize: resolution === 'full' ? 1024 : 256,
       spotLightCapacity: 0,
       pointLightCapacity: 2,
-      pointMapSize: 128
+      pointMapSize: resolution === 'full' ? 1024 : 128
     });
   }
   reset(): void {
@@ -349,7 +411,9 @@ export class LightmapPreview {
                     number
                   ],
                   shadowDistance: 20,
-                  normalBias: 0.01,
+                  normalBias: 0.002,
+                  depthBias: 0,
+                  depthBiasSlopeScale: 0.5,
                   sourceAngularRadius: 0
                 }
               ]
@@ -357,7 +421,16 @@ export class LightmapPreview {
         ),
         pointLights: lights.flatMap(light =>
           light.type === 'point'
-            ? [{position: light.position, range: 12, normalBias: 0.01, sourceRadius: 0}]
+            ? [
+                {
+                  position: light.position,
+                  range: 12,
+                  normalBias: 0.002,
+                  depthBias: 0,
+                  depthBiasSlopeScale: 0.5,
+                  sourceRadius: 0
+                }
+              ]
             : []
         ),
         prepareShadowCasters: target => {
