@@ -158,3 +158,78 @@ UV-unwrapped surfaces. Record sampled lighting and shadow maps in texture space,
 irradiance, then bind the result to PBR materials. Reset after bake inputs change.
 Baked light can include direct illumination: disable corresponding live contributions to
 avoid counting them twice. Baking does not replace dynamic-object lighting or screen-space effects.
+
+
+## Frame and resource lifecycle
+
+Keep one surface prepass per camera, shared by AO and contact shadows. Prepare model uniforms
+before opening its render pass. Record the visibility passes after surfaces, bind their returned
+textures to receivers, and then draw receivers. Shadow maps may be prepared earlier in the frame.
+Clustered light lists select light candidates independently of visibility; constructing a grid does
+not automatically make the standalone PBR shader consume it. The application still supplies its
+cluster-aware shading consumer.
+
+Use one update/consume sequence per mutable pass or grid per submission. Uniform buffers and
+scratch targets are reused; recording several differently parameterized views before submitting
+can overwrite inputs needed by earlier work. Use separate instances for independent views.
+
+| Change | Required action |
+| --- | --- |
+| Camera resolution or device pixel ratio | Submit outstanding work, resize the surface pass in physical pixels, then render AO/contact again and rebind returned masks and receiver viewports. |
+| Camera matrices without a resolution change | Refresh surface, visibility and receiver matrices together. Rebuild cluster lists using the matching projection and depth range. |
+| Lighting, transforms or geometry used for a bake | Reset the baker before its next update. Camera movement alone does not invalidate a world-space bake. |
+| Atlas resolution | Submit work referencing the old atlas, resize the baker, and reacquire its preview; resize also resets the sample count. |
+| Replacing a material map | Follow the model's material-specialization/replacement contract; changing uniforms alone cannot add a shader feature. |
+| Keeping a bake after producer disposal | Call `createResult()`, submit the copy, then bind its independent texture. Destroy that result when its consumers no longer need it. |
+
+Same-size surface/baker resize calls preserve their allocations and bake sample count. Failed
+surface draw callbacks end their render pass, allowing later passes to be recorded. A failed
+surface/baker target allocation preserves the previous targets and dimensions and releases partial
+replacements. These guarantees do not make arbitrary GPU allocation failures recoverable at the
+application level; device loss still requires rebuilding device resources.
+
+Destroy receiver and pass models when no recorded work references them. Materials borrow maps,
+visibility passes borrow surface attachments, and clustered grids borrow light-record buffers.
+Destroying those consumers does not transfer or release ownership of their inputs. A baker preview
+is borrowed and becomes invalid on replacement/disposal; a submitted result copy survives both.
+
+## Measure the complete workflow
+
+Tune one cost at a time in the existing example: start with AO/contact disabled, enable shadow
+maps, then contact shadows, then SSAO or GTAO. Keep camera, light count, shadow resolution,
+viewport and device pixel ratio fixed when comparing. Warm pipelines before collecting samples.
+Measure both CPU command recording and GPU execution; CPU `performance.now()` around recording
+alone does not measure GPU time. A readback fence measures completion plus synchronization and
+transfer overhead, not isolated shader execution. Use timestamp queries where supported to isolate
+GPU passes, and keep readback out of the production render loop.
+
+The workflow regression provides a small reproducible diagnostic:
+
+```bash
+yarn test-headless --no-coverage --reporter=json --outputFile=lighting-workflow-results.json \
+  modules/engine/test/lighting/lighting-workflow.spec.ts
+```
+
+It runs on baseline and max-feature WebGPU, plus WebGL for combined PBR receiving. The shared
+frame records surfaces, GTAO, contact shadows, clustered lists and a bake update. It verifies no
+new texture or persistent-buffer allocations after warm-up, and that ordered-upload staging buffers
+are destroyed after submission. Its timing annotations (also in JSON reporter test metadata) discard five warm-up frames and reports medians
+over twenty frames, including CPU recording/submission and completion with a one-pixel readback.
+These tiny fixtures test orchestration overhead, not scene throughput or a recommended frame budget;
+timings have no CI pass/fail threshold. Repeat at production dimensions and record browser, GPU,
+backend, feature level and power state before drawing performance conclusions.
+
+Budget memory separately from timing. The following are logical storage sizes, excluding driver
+alignment, pipelines, uniform buffers and any caller-owned inputs:
+
+| Allocation | Storage budget |
+| --- | --- |
+| Camera surfaces | `8 × width × height` bytes for rgba8 normals and depth32 depth; about 15.8 MiB at 1920 × 1080. |
+| Default baker targets | `56 × atlasWidth × atlasHeight` bytes: three rgba16 targets and two rgba32 history targets; 56 MiB at 1024². |
+| Independent default bake result | Another `8 × atlasWidth × atlasHeight` bytes; 8 MiB at 1024². |
+| Cluster output and scratch | `4 × clusterCount × (1 + maxLightsPerCluster + ceil(maxLightCount / 32)) + 80` bytes; about 1.07 MiB at the default capacities, excluding compute-model resources. |
+
+AO/contact additionally allocate scaled evaluation/blur targets and full-size outputs. Half-scale
+intermediates have about one quarter as many texels, but full-size surfaces and returned masks
+remain. Increasing atlas width and height by two multiplies baker storage and raster work by four.
+Dilation adds one full-atlas pass per step; keep it explicit and measure it separately from sampling.
