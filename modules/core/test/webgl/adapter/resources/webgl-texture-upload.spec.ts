@@ -163,3 +163,32 @@ it.each([
     bitmap.close();
   }
 });
+
+it('writeData reuses scratch options and isolates nested and failed uploads', async () => {
+  const device = await getWebGLTestDevice();
+  const texture = device.createTexture({format: 'rgba8unorm', width: 4, height: 4});
+  const normalize = vi.spyOn(texture, '_normalizeTextureWriteOptions');
+  const upload = vi.spyOn(device.gl, 'texSubImage2D').mockImplementation(() => {});
+  const data = new Uint8Array(64);
+  try {
+    upload.mockImplementationOnce(() => texture.writeData(data, {width: 1, height: 1}));
+    texture.writeData(data, {width: 2, height: 2});
+    const outer = normalize.mock.results[0].value;
+    const inner = normalize.mock.results[1].value;
+    expect(outer).not.toBe(inner);
+    expect(outer.width).toBe(2);
+    expect(inner.width).toBe(1);
+    texture.writeData(data, {width: 3, height: 1});
+    expect(normalize.mock.results[2].value).toBe(outer);
+    upload.mockImplementationOnce(() => {
+      throw new Error('upload failed');
+    });
+    expect(() => texture.writeData(data)).toThrow('upload failed');
+    texture.writeData(data, {width: 1, height: 1});
+    expect(normalize.mock.results[4].value).toBe(outer);
+  } finally {
+    upload.mockRestore();
+    normalize.mockRestore();
+    texture.destroy();
+  }
+});

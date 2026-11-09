@@ -136,3 +136,34 @@ function makeMockGPUTexture(options: {label?: string; readOnlyLabel?: boolean} =
 
   return handle as unknown as GPUTexture;
 }
+
+test('writeData reuses scratch options and isolates nested and failed uploads', () => {
+  const device = makeMockWebGPUDevice();
+  const writeTexture = vi.fn();
+  Object.assign(device, {
+    handle: {queue: {writeTexture}},
+    getTextureFormatInfo: () => ({bytesPerPixel: 4})
+  });
+  const texture = new WebGPUTexture(device, {handle: makeMockGPUTexture(), width: 4, height: 4});
+  const normalize = vi.spyOn(texture, '_normalizeTextureWriteOptions');
+  const data = new Uint8Array(64);
+  try {
+    writeTexture.mockImplementationOnce(() => texture.writeData(data, {width: 1, height: 1}));
+    texture.writeData(data, {width: 2, height: 2});
+    const outer = normalize.mock.results[0].value;
+    const inner = normalize.mock.results[1].value;
+    expect(outer).not.toBe(inner);
+    expect(outer.width).toBe(2);
+    expect(inner.width).toBe(1);
+    texture.writeData(data, {width: 3, height: 1});
+    expect(normalize.mock.results[2].value).toBe(outer);
+    writeTexture.mockImplementationOnce(() => {
+      throw new Error('upload failed');
+    });
+    expect(() => texture.writeData(data)).toThrow('upload failed');
+    texture.writeData(data, {width: 1, height: 1});
+    expect(normalize.mock.results[4].value).toBe(outer);
+  } finally {
+    texture.destroy();
+  }
+});
