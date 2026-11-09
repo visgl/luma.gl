@@ -231,8 +231,8 @@ it.each([
       const ambient = mode === 'different' ? [4, 0, 0] : [1, 2, 2];
       parameters.forEach((parameter, index) => gl.pixelStorei(parameter, ambient[index]));
       tracker.enable = mode !== 'disabled';
-      const push = vi.spyOn(tracker, 'push');
-      const pop = vi.spyOn(tracker, 'pop');
+      const push = vi.spyOn(WebGLStateTracker.prototype, 'push');
+      const pop = vi.spyOn(WebGLStateTracker.prototype, 'pop');
       const pixelStore = vi.spyOn(gl, 'pixelStorei');
       try {
         if (method === 'data') texture.writeData(data);

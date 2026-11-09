@@ -368,6 +368,7 @@ export class WEBGLTexture extends Texture {
     try {
       this._assertWritable('write buffer data into');
       const options = this._normalizeTextureWriteOptions(options_, scratchOptions);
+      const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, options.z);
       if (this.compressed) {
         throw new Error('writeBuffer for compressed textures is not implemented in WebGL');
       }
@@ -376,15 +377,9 @@ export class WEBGLTexture extends Texture {
       this.gl.bindTexture(this.glTarget, this.handle);
       this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
       if (this._isUnpackStateCurrent(unpackRowLength, options.rowsPerImage)) {
-        this._uploadBuffer(options);
+        this._uploadBuffer(options, glTarget);
       } else {
-        withGLParameters(
-          this.gl,
-          this._getUnpackParameters(unpackRowLength, options.rowsPerImage),
-          () => {
-            this._uploadBuffer(options);
-          }
-        );
+        this._uploadBufferWithUnpackParameters(options, glTarget, unpackRowLength);
       }
       this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
       this.gl.bindTexture(this.glTarget, null);
@@ -401,11 +396,15 @@ export class WEBGLTexture extends Texture {
     try {
       this._assertWritable('write data into');
       const options = this._normalizeTextureWriteOptions(options_, scratchOptions);
+      const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, options.z);
       const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
       const sourceElementOffset = getWebGLTextureSourceElementOffset(
         typedArray,
         options.byteOffset
       );
+      const sourceData = this.compressed
+        ? getArrayBufferView(typedArray, options.byteOffset)
+        : typedArray;
       let unpackRowLength: number | undefined;
       if (!this.compressed) {
         const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
@@ -416,14 +415,14 @@ export class WEBGLTexture extends Texture {
       this.gl.bindTexture(this.glTarget, this.handle);
       this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
       if (this.compressed || this._isUnpackStateCurrent(unpackRowLength, options.rowsPerImage)) {
-        this._uploadData(options, typedArray, sourceElementOffset);
+        this._uploadData(options, sourceData, sourceElementOffset, glTarget);
       } else {
-        withGLParameters(
-          this.gl,
-          this._getUnpackParameters(unpackRowLength, options.rowsPerImage),
-          () => {
-            this._uploadData(options, typedArray, sourceElementOffset);
-          }
+        this._uploadDataWithUnpackParameters(
+          options,
+          sourceData,
+          sourceElementOffset,
+          glTarget,
+          unpackRowLength
         );
       }
       this.gl.bindTexture(this.glTarget, null);
@@ -458,10 +457,35 @@ export class WEBGLTexture extends Texture {
     return parameters;
   }
 
-  private _uploadBuffer(options: Required<TextureWriteOptions>): void {
+  // Keep callback capture in slow-path methods so fast uploads need no closure environment.
+  private _uploadBufferWithUnpackParameters(
+    options: Required<TextureWriteOptions>,
+    glTarget: GLTextureTarget | GLTextureCubeMapTarget,
+    rowLength: number | undefined
+  ): void {
+    withGLParameters(this.gl, this._getUnpackParameters(rowLength, options.rowsPerImage), () => {
+      this._uploadBuffer(options, glTarget);
+    });
+  }
+
+  private _uploadDataWithUnpackParameters(
+    options: Required<TextureWriteOptions>,
+    data: ArrayBufferView,
+    sourceElementOffset: number,
+    glTarget: GLTextureTarget | GLTextureCubeMapTarget,
+    rowLength: number | undefined
+  ): void {
+    withGLParameters(this.gl, this._getUnpackParameters(rowLength, options.rowsPerImage), () => {
+      this._uploadData(options, data, sourceElementOffset, glTarget);
+    });
+  }
+
+  private _uploadBuffer(
+    options: Required<TextureWriteOptions>,
+    glTarget: GLTextureTarget | GLTextureCubeMapTarget
+  ): void {
     const {width, height, depthOrArrayLayers, mipLevel, byteOffset, x, y, z} = options;
     const {glFormat, glType} = this;
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
     switch (this.dimension) {
       case '2d':
       case 'cube':
@@ -500,12 +524,12 @@ export class WEBGLTexture extends Texture {
   private _uploadData(
     options: Required<TextureWriteOptions>,
     typedArray: ArrayBufferView,
-    sourceElementOffset: number
+    sourceElementOffset: number,
+    glTarget: GLTextureTarget | GLTextureCubeMapTarget
   ): void {
-    const {width, height, depthOrArrayLayers, mipLevel, x, y, z, byteOffset} = options;
+    const {width, height, depthOrArrayLayers, mipLevel, x, y, z} = options;
     const {glFormat, glType, compressed} = this;
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
-    const compressedData = compressed ? getArrayBufferView(typedArray, byteOffset) : typedArray;
+    const compressedData = typedArray;
     // Only compressed uploads need to distinguish full-mip allocation from subimage updates.
     const isFullMipUpload =
       compressed &&
