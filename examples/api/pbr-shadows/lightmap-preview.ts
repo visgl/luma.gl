@@ -183,7 +183,8 @@ export class LightmapPreview {
   private readonly white: Texture;
   private readonly bakeMaterial;
   private material;
-  private readonly bakeModel;
+  private readonly bakeModels;
+  private readonly chartTexture: Texture;
   private readonly model;
   private readonly shadows: ShadowMapRenderer;
   private readonly casters = new Map<object, ReturnType<typeof createPBRShadowModel>>();
@@ -200,6 +201,12 @@ export class LightmapPreview {
   private lightIntensity = 1;
   private stale = false;
   private destroyed = false;
+  static isSupported(device: Device): boolean {
+    const output = device.getTextureFormatCapabilities('rgba16float');
+    return Boolean(
+      output.render && output.filter && device.getTextureFormatCapabilities('rgba32float').render
+    );
+  }
   constructor(private readonly device: Device) {
     this.baker = new LightmapBaker(device, {width: 256, height: 128});
     this.white = device.createTexture({
@@ -212,10 +219,29 @@ export class LightmapPreview {
       bindings: {pbr_lightmapSampler: this.white},
       uniforms: {metallicRoughnessValues: [0, 1], lightmapUVSet: 1}
     });
-    this.bakeModel = createPBRLightmapModel(device, {
-      geometry: this.geometry,
-      material: this.bakeMaterial,
-      receiveShadows: true
+    const chartCount = this.geometry.vertexCount / 6;
+    this.bakeModels = Array.from({length: chartCount}, (_, chartIndex) => {
+      const model = createPBRLightmapModel(device, {
+        geometry: this.geometry,
+        material: this.bakeMaterial,
+        receiveShadows: true,
+        firstVertex: chartIndex * 6,
+        vertexCount: 6
+      });
+      model.shaderInputs.setProps({lightmapBake: {chartId: chartIndex + 1}});
+      return model;
+    });
+    const chartOwners = Float32Array.from({length: 256 * 128}, (_, index) => {
+      const column = Math.floor((index % 256) / 32);
+      const row = Math.floor(Math.floor(index / 256) / 32);
+      const chartIndex = row * 8 + column;
+      return chartIndex < chartCount ? chartIndex + 1 : 0;
+    });
+    this.chartTexture = device.createTexture({
+      width: 256,
+      height: 128,
+      format: 'r32float',
+      data: chartOwners
     });
     this.model = createPBRModel(device, {
       geometry: this.geometry,
@@ -366,18 +392,25 @@ export class LightmapPreview {
       const light =
         sampleIndex % 3 === 0 ? primary : sampleIndex % 3 === 1 ? secondary : environment.light;
       this.baker.update({
-        prepareSample: () =>
-          this.bakeModel.shaderInputs.setProps({
-            shadow: recordShadows([light]),
-            pbrShadow: {viewMatrix: new Matrix4().lookAt({eye: [5, 4, 6], center: [0, 1, 0]})},
-            lighting: {
-              useByteColors: false,
-              lights: [
-                {...light, color: [3 * light.color[0], 3 * light.color[1], 3 * light.color[2]]}
-              ]
-            }
-          }),
-        drawSample: ({renderPass}) => this.bakeModel.draw(renderPass)
+        chartTexture: this.chartTexture,
+        dilationSteps: 2,
+        prepareSample: () => {
+          const shadow = recordShadows([light]);
+          for (const model of this.bakeModels)
+            model.shaderInputs.setProps({
+              shadow,
+              pbrShadow: {viewMatrix: new Matrix4().lookAt({eye: [5, 4, 6], center: [0, 1, 0]})},
+              lighting: {
+                useByteColors: false,
+                lights: [
+                  {...light, color: [3 * light.color[0], 3 * light.color[1], 3 * light.color[2]]}
+                ]
+              }
+            });
+        },
+        drawSample: ({renderPass}) => {
+          for (const model of this.bakeModels) model.draw(renderPass);
+        }
       });
     }
     const snapshot = mode === 'baked' && !this.result;
@@ -435,7 +468,8 @@ export class LightmapPreview {
     if (this.destroyed) return;
     this.destroyed = true;
     this.model.destroy();
-    this.bakeModel.destroy();
+    for (const model of this.bakeModels) model.destroy();
+    this.chartTexture.destroy();
     for (const caster of this.casters.values()) caster.destroy();
     this.shadows.destroy();
     this.material.destroy();

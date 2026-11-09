@@ -4,7 +4,7 @@
 import {expect, test, vi} from 'vitest';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {Geometry} from '@luma.gl/engine';
+import {Geometry, type AnimationProps} from '@luma.gl/engine';
 import {LightmapBaker, createPBRMaterial, createPBRLightmapModel} from '@luma.gl/engine/lighting';
 
 async function getDevices() {
@@ -323,6 +323,11 @@ test('standard example renders live lighting and freezes baked pixels', async co
       const frozen = await render('baked', 1000);
       expect(await render('baked', 2000)).toEqual(frozen);
       const exported = await preview.exportData();
+      // Each two-texel gutter is filled only from its own chart, including atlas corners.
+      expect(exported.data[3]).toBe(1);
+      expect(exported.data[31 * 4 + 3]).toBe(1);
+      expect(exported.data[32 * 4 + 3]).toBe(2);
+      expect(exported.data[(64 * 256 + 128) * 4 + 3]).toBe(0);
       preview.reset();
       preview.loadData(exported);
       expect(await render('baked', 2100)).toEqual(frozen);
@@ -379,5 +384,33 @@ test('long default bakes retain later samples in float32 history', {
       samples.forEach(model => model.destroy());
       baker.destroy();
     }
+  }
+});
+
+test('lightmap example explains unsupported float render targets before allocating GPU resources', async context => {
+  const devices = await getDevices();
+  if (!devices.length) return context.skip('No GPU');
+  const {default: LightmapExample} = await import('../../../../examples/api/lightmap-baking/app');
+  const device = devices[0];
+  const getCapabilities = device.getTextureFormatCapabilities.bind(device);
+  const capabilities = vi
+    .spyOn(device, 'getTextureFormatCapabilities')
+    .mockImplementation(format => ({...getCapabilities(format), render: false}));
+  const createTexture = vi.spyOn(device, 'createTexture');
+  const host = document.createElement('div');
+  host.id = 'example-panel-host';
+  document.body.append(host);
+  let example: InstanceType<typeof LightmapExample> | undefined;
+  try {
+    example = new LightmapExample({device} as AnimationProps);
+    expect(createTexture).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(host.textContent).toContain('Lightmap baking requires renderable float32 textures')
+    );
+  } finally {
+    example?.onFinalize();
+    host.remove();
+    capabilities.mockRestore();
+    createTexture.mockRestore();
   }
 });

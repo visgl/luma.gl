@@ -124,7 +124,7 @@ scene identity and bake settings remain application metadata; reloading requires
 
 The [Lightmap Baking example](/examples/api/lightmap-baking) uses two static rooms connected by a
 doorway, warm/cool lights and colored objects. It offers progressive baking, a frozen result, explicit
-stale/reset behavior, export and reload. Live mode uses direct shadowed lights with unoccluded ambient
+stale/reset behavior, chart-owned gutter padding, export and reload. Unsupported float-rendering devices receive an explanatory message before bake resources are allocated. Live mode uses direct shadowed lights with unoccluded ambient
 as a reference; baked mode adds shadowed environment illumination and disables duplicate live diffuse
 lighting. Camera movement does not alter the bake. Materials provide object color at receiving time;
 this workflow does not simulate multi-bounce color bleeding.

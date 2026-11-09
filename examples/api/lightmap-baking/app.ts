@@ -15,15 +15,18 @@ import {LightmapPreview} from '../pbr-shadows/lightmap-preview';
 
 export default class LightmapExample extends AnimationLoopTemplate {
   static info = makeExamplePanelHostHtml();
-  private readonly preview: LightmapPreview;
+  private readonly preview: LightmapPreview | null;
   private readonly settings: ExampleSettingsPanelManager;
   private readonly panels: ExamplePanelManager;
   private controls: OrbitControls | null = null;
   private mode: 'live' | 'baking' | 'baked' = 'baking';
   private disposed = false;
+  private statusMessage = '';
   constructor(props: AnimationProps) {
     super(props);
-    this.preview = new LightmapPreview(props.device);
+    this.preview = LightmapPreview.isSupported(props.device)
+      ? new LightmapPreview(props.device)
+      : null;
     this.settings = new ExampleSettingsPanelManager({
       id: 'lightmap-baking-settings',
       schema: {
@@ -63,6 +66,13 @@ export default class LightmapExample extends AnimationLoopTemplate {
     this.panels.setPanel(this.makePanel());
   }
   private makePanel() {
+    const preview = this.preview;
+    if (!preview)
+      return makeHtmlCustomPanel({
+        id: 'baking-unsupported',
+        title: 'Unsupported device',
+        html: '<p>Lightmap baking requires renderable float32 textures and renderable, filterable float16 textures. Try WebGPU or a WebGL2 device with floating-point color-buffer support.</p>'
+      });
     return makeExampleTabbedPanel({
       id: 'baking-panels',
       title: 'Lightmap Baking',
@@ -83,17 +93,20 @@ export default class LightmapExample extends AnimationLoopTemplate {
               html: '<p data-bake-samples></p><button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export bake</button> <button data-atlas>View atlas</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lml"></label></p><p data-status role="status"></p>',
               onRender: root => {
                 const reset = () => {
-                  this.preview.reset();
+                  this.statusMessage = '';
+                  preview.reset();
                   this.setMode('baking');
                 };
-                const change = () => this.preview.changeLight();
+                const change = () => preview.changeLight();
                 const status = (message: string) => {
+                  this.statusMessage = message;
                   const label = root.querySelector('[data-status]');
                   if (label) label.textContent = message;
                 };
+                status(this.statusMessage);
                 const download = async () => {
                   try {
-                    const data = await this.preview.exportData();
+                    const data = await preview.exportData();
                     if (this.disposed) return;
                     const url = URL.createObjectURL(
                       new Blob([encodeLightmapData(data)], {type: 'application/octet-stream'})
@@ -110,7 +123,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
                 };
                 const showAtlas = async () => {
                   try {
-                    const data = await this.preview.exportData();
+                    const data = await preview.exportData();
                     if (this.disposed) return;
                     const canvas = root.querySelector<HTMLCanvasElement>('[data-atlas-view]');
                     const context = canvas?.getContext('2d');
@@ -141,9 +154,9 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     if (this.disposed) return;
                     if (data.width !== 256 || data.height !== 128 || data.uvSet !== 1)
                       throw new Error('This scene requires its 256 × 128 UV1 atlas.');
-                    this.preview.loadData(data);
-                    this.setMode('baked');
+                    preview.loadData(data);
                     status('Loaded — displaying baked lighting.');
+                    this.setMode('baked');
                   } catch (error) {
                     status(String(error));
                   }
@@ -169,6 +182,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
     });
   }
   onRender({canvasContext, time}: AnimationProps) {
+    if (!this.preview) return;
     if (!(canvasContext.canvas instanceof HTMLCanvasElement)) return;
     this.controls ??= new OrbitControls(canvasContext.canvas, {
       target: [0, 1, 0],
@@ -193,6 +207,6 @@ export default class LightmapExample extends AnimationLoopTemplate {
     this.controls?.destroy();
     this.panels.finalize();
     this.settings.finalize();
-    this.preview.destroy();
+    this.preview?.destroy();
   }
 }
