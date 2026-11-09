@@ -5,7 +5,7 @@
 import {
   BoxPanelContainer,
   CustomPanel,
-  Panel,
+  type Panel,
   PanelThemeScope,
   SettingsManager,
   SettingsPanel,
@@ -105,7 +105,7 @@ export function makeExamplePanelHostHtml(hostId = EXAMPLE_PANEL_HOST_ID): string
 
 /** Renders panel content directly inside an existing InfoBox host. */
 export function renderExamplePanel(hostElement: HTMLElement, panel: Panel | null): void {
-  const title = hostElement.dataset.examplePanelTitle;
+  const title = hostElement.dataset['examplePanelTitle'];
   if (title) {
     let mounted = standalonePanelContainers.get(hostElement);
     if (!panel) {
@@ -114,9 +114,14 @@ export function renderExamplePanel(hostElement: HTMLElement, panel: Panel | null
       standalonePanelContainers.delete(hostElement);
       return;
     }
-    const content = new Panel({
+    const content = new CustomPanel({
       id: panel.id,
-      content: h(Fragment, {}, h('style', {}, EXAMPLE_PANEL_STYLE), panel.content)
+      title,
+      theme: panel.theme,
+      onRenderHTML: rootElement => {
+        render(h(Fragment, {}, h('style', {}, EXAMPLE_PANEL_STYLE), panel.content), rootElement);
+        return () => render(null, rootElement);
+      }
     });
     if (!mounted) {
       const container = new BoxPanelContainer({title, panel: content, collapsible: true});
