@@ -78,7 +78,7 @@ try {
               await page.route('**/standalone-examples/scene/playground.html', request =>
                 request.fulfill({
                   contentType: 'text/html',
-                  body: '<!doctype html><html><body><label>Scene editor <input aria-label="Scene editor"></label><button>Apply</button></body></html>'
+                  body: '<!doctype html><html><body><a href="#example">Example details</a><label>Scene editor <input aria-label="Scene editor"></label><button>Apply</button></body></html>'
                 })
               );
               await page.getByRole('button', {name: 'Load scene playground'}).click();
@@ -129,14 +129,57 @@ try {
                 'expanded focus must stay inside the example'
               );
               if (route.endsWith('/anari')) {
+                const firstLink = page
+                  .frameLocator('iframe')
+                  .getByRole('link', {name: 'Example details'});
+                const editor = page
+                  .frameLocator('iframe')
+                  .getByRole('textbox', {name: 'Scene editor'});
+                assert(
+                  await firstLink.evaluate(
+                    element => element === element.ownerDocument.activeElement
+                  ),
+                  'Tab must enter the first iframe link'
+                );
+                await page.keyboard.press('Shift+Tab');
+                assert(
+                  await toggle.evaluate(element => element === document.activeElement),
+                  'backward tabbing must stay inside the expanded example'
+                );
                 await page.keyboard.press('Tab');
                 assert(
-                  await page
-                    .frameLocator('iframe')
-                    .getByRole('textbox', {name: 'Scene editor'})
-                    .evaluate(input => input.ownerDocument.activeElement === input),
+                  await firstLink.evaluate(
+                    element => element === element.ownerDocument.activeElement
+                  ),
+                  'forward wrapping must re-enter the first iframe link'
+                );
+                await page.keyboard.press('Tab');
+                assert(
+                  await editor.evaluate(element => element === element.ownerDocument.activeElement),
                   'keyboard users must reach controls inside the iframe'
                 );
+                const frameControlCount = await page
+                  .frameLocator('iframe')
+                  .locator('a, input, button')
+                  .count();
+                for (
+                  let step = 0;
+                  step <= frameControlCount &&
+                  !(await toggle.evaluate(element => element === document.activeElement));
+                  step++
+                ) {
+                  await page.keyboard.press('Tab');
+                  assert(
+                    await example.evaluate(element => element.contains(document.activeElement)),
+                    'forward tabbing must remain inside the expanded example'
+                  );
+                }
+                assert(
+                  await toggle.evaluate(element => element === document.activeElement),
+                  'forward tabbing must leave the iframe inside the dialog'
+                );
+                await page.keyboard.press('Tab');
+                await page.keyboard.press('Tab');
               }
               const backendTrigger = example.locator('[data-luma-backend-trigger]');
               if ((await backendTrigger.count()) && (await backendTrigger.isVisible())) {
@@ -197,6 +240,51 @@ try {
                 );
                 await example.locator('button[aria-label="Collapse info box"]').first().click();
               }
+            }
+            if (route.endsWith('/hello-triangle')) {
+              const trigger = example.locator('[data-luma-backend-trigger]');
+              await trigger.tap();
+              const menu = example.getByRole('menu', {name: 'Graphics backend options'});
+              const originalType = await menu
+                .locator('[aria-checked="true"]')
+                .getAttribute('data-luma-backend-option');
+              const webglOption = menu.locator(
+                '[data-luma-backend-option="webgl"][aria-checked="false"]:not(:disabled)'
+              );
+              const alternative = (await webglOption.count())
+                ? webglOption
+                : menu.locator('[aria-checked="false"]:not(:disabled)').first();
+              const target = (await alternative.count())
+                ? alternative
+                : menu.locator('[aria-checked="true"]');
+              const targetType = await target.getAttribute('data-luma-backend-option');
+              await menu.evaluate(element => {
+                const active = element.ownerDocument.activeElement;
+                if (active instanceof HTMLElement) active.blur();
+              });
+              await target.tap();
+              await menu.waitFor({state: 'hidden'});
+              await trigger.tap();
+              assert.equal(
+                await menu
+                  .locator(`[data-luma-backend-option="${targetType}"]`)
+                  .getAttribute('aria-checked'),
+                'true',
+                'touch selection must update the backend'
+              );
+              if (originalType !== targetType) {
+                await menu.locator(`[data-luma-backend-option="${originalType}"]`).tap();
+                await menu.waitFor({state: 'hidden'});
+                await trigger.tap();
+                assert.equal(
+                  await menu
+                    .locator(`[data-luma-backend-option="${originalType}"]`)
+                    .getAttribute('aria-checked'),
+                  'true'
+                );
+              }
+              await page.keyboard.press('Escape');
+              await menu.waitFor({state: 'hidden'});
             }
             await page.screenshot({
               path: `${outputDirectory}/${browserName}-${orientation}-${route.split('/').at(-1)}.png`

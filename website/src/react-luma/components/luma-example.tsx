@@ -216,6 +216,38 @@ export const ExampleStage: FC<ExampleStageProps> = (props: ExampleStageProps) =>
   </div>
 );
 
+function getExampleFocusableElements(root: ParentNode): HTMLElement[] {
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(
+      'button, a[href], input, select, textarea, iframe, [tabindex]'
+    )
+  )
+    .filter(
+      element =>
+        element.tabIndex >= 0 &&
+        !element.matches(':disabled') &&
+        element.getClientRects().length > 0 &&
+        element.ownerDocument.defaultView?.getComputedStyle(element).visibility === 'visible'
+    )
+    .sort(
+      (firstElement, secondElement) =>
+        (firstElement.tabIndex || Number.MAX_SAFE_INTEGER) -
+        (secondElement.tabIndex || Number.MAX_SAFE_INTEGER)
+    );
+}
+
+function focusExampleElement(element: HTMLElement | undefined, backward = false): void {
+  if (element instanceof HTMLIFrameElement && element.contentDocument) {
+    const controls = getExampleFocusableElements(element.contentDocument);
+    const target = backward ? controls[controls.length - 1] : controls[0];
+    if (target) {
+      target.focus();
+      return;
+    }
+  }
+  element?.focus();
+}
+
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
   const [isImmersive, setIsImmersive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -266,11 +298,7 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
     const handleKeyDown = (event: KeyboardEvent) => {
       handleEscape(event);
       if (event.key !== 'Tab') return;
-      const controls = Array.from(
-        container.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), iframe, [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter(element => element.getClientRects().length > 0);
+      const controls = getExampleFocusableElements(container);
       const firstControl = controls[0];
       const lastControl = controls[controls.length - 1];
       if (
@@ -278,27 +306,50 @@ export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
         (document.activeElement === firstControl || !container.contains(document.activeElement))
       ) {
         event.preventDefault();
-        lastControl?.focus();
+        focusExampleElement(lastControl, true);
       } else if (
         !event.shiftKey &&
         (document.activeElement === lastControl || !container.contains(document.activeElement))
       ) {
         event.preventDefault();
-        firstControl?.focus();
+        focusExampleElement(firstControl);
       }
     };
     const frameCleanups = Array.from(container.querySelectorAll('iframe')).map(frame => {
       let frameDocument: Document | null = null;
+      // Keyboard events do not bubble across document boundaries.
+      const handleFrameKeyDown = (event: KeyboardEvent) => {
+        if (event.defaultPrevented) return;
+        handleEscape(event);
+        if (event.key !== 'Tab' || !frameDocument) return;
+        const controls = getExampleFocusableElements(frameDocument);
+        const activeElement = frameDocument.activeElement;
+        const activeIndex = controls.indexOf(activeElement as HTMLElement);
+        const nextControl = controls[activeIndex + (event.shiftKey ? -1 : 1)];
+        // Safari may omit buttons and links from its native Tab order.
+        if (activeIndex >= 0 && nextControl) {
+          event.preventDefault();
+          nextControl.focus();
+        } else {
+          event.preventDefault();
+          const parentControls = getExampleFocusableElements(container);
+          const frameIndex = parentControls.indexOf(frame);
+          let nextIndex = frameIndex + (event.shiftKey ? -1 : 1);
+          if (frameIndex < 0) nextIndex = event.shiftKey ? parentControls.length - 1 : 0;
+          else nextIndex = (nextIndex + parentControls.length) % parentControls.length;
+          focusExampleElement(parentControls[nextIndex], event.shiftKey);
+        }
+      };
       const attachFrame = () => {
-        frameDocument?.removeEventListener('keydown', handleEscape);
+        frameDocument?.removeEventListener('keydown', handleFrameKeyDown);
         frameDocument = frame.contentDocument;
-        frameDocument?.addEventListener('keydown', handleEscape);
+        frameDocument?.addEventListener('keydown', handleFrameKeyDown);
       };
       frame.addEventListener('load', attachFrame);
       attachFrame();
       return () => {
         frame.removeEventListener('load', attachFrame);
-        frameDocument?.removeEventListener('keydown', handleEscape);
+        frameDocument?.removeEventListener('keydown', handleFrameKeyDown);
       };
     });
     document.addEventListener('keydown', handleKeyDown);

@@ -91,14 +91,17 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
       '[data-luma-backend-option][aria-checked="true"]:not(:disabled)'
     );
     (selectedOption || menuRef.current?.querySelector<HTMLButtonElement>('[data-luma-backend-option]:not(:disabled)'))?.focus();
-    const onPointerDown = (event: PointerEvent) => {
+    const handleOutsideInteraction = (event: Event) => {
       if (event.target instanceof Node && !menuRef.current?.contains(event.target)) {
         setIsMenuOpen(false);
       }
     };
-    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('pointerdown', handleOutsideInteraction);
+    // Focus destinations remain reliable when Safari blur has no relatedTarget.
+    document.addEventListener('focusin', handleOutsideInteraction);
     return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointerdown', handleOutsideInteraction);
+      document.removeEventListener('focusin', handleOutsideInteraction);
     };
   }, [isMenuOpen]);
 
@@ -139,11 +142,6 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
       <div
         ref={menuRef}
         data-luma-backend-dropdown=""
-        onBlur={event => {
-          if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
-            setIsMenuOpen(false);
-          }
-        }}
         onKeyDown={event => {
           if (!isMenuOpen || event.key !== 'Escape') return;
           event.preventDefault();
