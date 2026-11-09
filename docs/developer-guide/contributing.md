@@ -58,6 +58,41 @@ yarn website:build
 Node and browser verification. Add focused tests beside the affected module's tests.
 Use Vitest for new coverage, and remove temporary `test.only` calls before committing.
 
+## Merge queue
+
+The `test` workflow runs on `merge_group: checks_requested` so GitHub can validate
+queued changes against the current `master` and earlier queue entries. Its concurrency
+key uses the queue ref, keeping independent merge groups separate from PR runs.
+
+Queue runs include the three general browser shards, compute tests, Node tests, package
+builds, GPU presentation, lint, examples, and the website build. The physics browser shard
+runs on PRs and master pushes but is excluded from the queue. The separate physics
+reference and endurance workflows retain their existing triggers. Queue coverage is not
+published to Coveralls because it omits physics.
+
+After merging the workflow preparation, a repository administrator can enable the queue
+for `master` in Settings → Branches (the existing protection rule), or in a branch ruleset:
+
+1. Require `Aggregate test coverage` and `Build, lint, Node tests, examples, and website`.
+   The aggregate check fails if a scheduled browser shard, Node coverage, presentation,
+   or package build fails. Do not require individual physics checks for queue commits.
+2. Enable **Require merge queue**. Start with build concurrency 1, minimum and maximum
+   merge group size 1, a 60-minute status-check timeout, and **Only merge non-failing
+   pull requests** enabled.
+3. Use squash or rebase merging to preserve the branch's required linear history.
+4. Retain one required approval, with `ibgreen` as the sole user allowed to bypass
+   required PR reviews. Apply protection to administrators as well. Keep this exception
+   scoped to PR review requirements; do not add a bypass for CI or the merge queue.
+5. Queue a small PR and confirm that the two required checks run on its merge-group
+   commit before relying on the queue for subsequent changes.
+
+A bypass applies to the person merging or queuing a PR, not its author. Other contributors
+still need an approval when merging their own PRs; `ibgreen` can bypass reviews for any PR.
+
+See [GitHub's merge queue documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue)
+for configuration details. Repository settings are separate from workflow files; merging
+this preparation does not itself enable the queue.
+
 ## Writing luma.gl documentation
 
 Documentation should help readers choose a layer, complete a workflow, and then look up an exact
