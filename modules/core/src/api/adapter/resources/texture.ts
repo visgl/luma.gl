@@ -15,7 +15,17 @@ import {Resource, type ResourceProps} from './resource';
 import {Sampler, type SamplerProps} from './sampler';
 import {Buffer} from './buffer';
 import {log} from '../../utils/log';
-import {textureFormatDecoder} from '../../../shadertypes/texture-types/texture-format-decoder';
+import {
+  textureFormatDecoder,
+  getTextureBytesPerRow,
+  type TextureMemoryLayoutOptions
+} from '../../../shadertypes/texture-types/texture-format-decoder';
+
+const textureLayoutScratchPool: {
+  readOptions: Required<TextureReadOptions>;
+  layoutOptions: TextureMemoryLayoutOptions;
+}[] = [];
+const emptyTextureReadOptions: TextureReadOptions = Object.freeze({});
 
 /** Options for Texture.copyExternalImage */
 export type CopyExternalImageOptions = {
@@ -350,20 +360,27 @@ export abstract class Texture extends Resource<TextureProps> {
    * Calculates the memory layout of the texture, required when reading and writing data.
    * @return the backend-aligned linear layout, in particular bytesPerRow which includes any required padding for buffer copy/read paths
    */
-  computeMemoryLayout(options_: TextureReadOptions = {}): TextureMemoryLayout {
-    const options = this._normalizeTextureReadOptions(options_);
-    const {width = this.width, height = this.height, depthOrArrayLayers = this.depth} = options;
-    const {format, byteAlignment} = this;
-
-    // TODO - does the overriding above make sense?
-    // return textureFormatDecoder.computeMemoryLayout(this);
-    return textureFormatDecoder.computeMemoryLayout({
-      format,
-      width,
-      height,
-      depth: depthOrArrayLayers,
-      byteAlignment
-    });
+  /** The optional result is caller-owned; internal scratch never escapes this call. */
+  computeMemoryLayout(
+    options_: TextureReadOptions = emptyTextureReadOptions,
+    result?: TextureMemoryLayout
+  ): TextureMemoryLayout {
+    const scratch = textureLayoutScratchPool.pop() || {
+      readOptions: {} as Required<TextureReadOptions>,
+      layoutOptions: {} as TextureMemoryLayoutOptions
+    };
+    try {
+      const options = this._normalizeTextureReadOptions(options_, scratch.readOptions);
+      const layoutOptions = scratch.layoutOptions;
+      layoutOptions.format = this.format;
+      layoutOptions.width = options.width;
+      layoutOptions.height = options.height;
+      layoutOptions.depth = options.depthOrArrayLayers;
+      layoutOptions.byteAlignment = this.byteAlignment;
+      return textureFormatDecoder.computeMemoryLayout(layoutOptions, result);
+    } finally {
+      textureLayoutScratchPool.push(scratch);
+    }
   }
 
   /**
@@ -641,16 +658,10 @@ export abstract class Texture extends Resource<TextureProps> {
     const options = result;
     options.byteOffset = byteOffset;
 
-    const layout = textureFormatDecoder.computeMemoryLayout({
-      format: this.format,
-      width: options.width,
-      height: options.height,
-      depth: options.depthOrArrayLayers,
-      byteAlignment: this.byteAlignment
-    });
-
-    const minimumBytesPerRow = layout.bytesPerPixel * options.width;
-    options.bytesPerRow = bytesPerRow ?? layout.bytesPerRow;
+    const formatInfo = this.device.getTextureFormatInfo(this.format);
+    const minimumBytesPerRow = formatInfo.bytesPerPixel * options.width;
+    options.bytesPerRow =
+      bytesPerRow ?? getTextureBytesPerRow(formatInfo, options.width, this.byteAlignment);
     options.rowsPerImage = rowsPerImage ?? options.height;
 
     if (options.bytesPerRow < minimumBytesPerRow) {
@@ -664,7 +675,7 @@ export abstract class Texture extends Resource<TextureProps> {
       );
     }
 
-    const bytesPerPixel = this.device.getTextureFormatInfo(this.format).bytesPerPixel;
+    const {bytesPerPixel} = formatInfo;
     if (bytesPerPixel && options.bytesPerRow % bytesPerPixel !== 0) {
       throw new Error(
         `bytesPerRow (${options.bytesPerRow}) must be a multiple of bytesPerPixel (${bytesPerPixel}) for ${this.format}`

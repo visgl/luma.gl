@@ -11,8 +11,7 @@ import {
   type TextureWriteOptions,
   Buffer,
   Texture,
-  log,
-  textureFormatDecoder
+  log
 } from '../../../index';
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -20,6 +19,8 @@ import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler, type WebGPUSamplerProps} from './webgpu-sampler';
 import {WebGPUTextureView, type WebGPUTextureViewProps} from './webgpu-texture-view';
 import {WebGPUBuffer} from './webgpu-buffer';
+
+import {getTextureBytesPerRow} from '../../../shadertypes/texture-types/texture-format-decoder';
 
 // Each active upload owns its scratch object, including during nested calls.
 const textureWriteOptionsPool: Required<TextureWriteOptions>[] = [];
@@ -431,15 +432,10 @@ export class WebGPUTexture extends Texture {
       const source = data as GPUAllowSharedBufferSource;
       const formatInfo = this.device.getTextureFormatInfo(this.format);
       // queue.writeTexture() defaults to tightly packed rows, unlike WebGPU buffer copy paths.
-      const packedSourceLayout = textureFormatDecoder.computeMemoryLayout({
-        format: this.format,
-        width,
-        height,
-        depth: depthOrArrayLayers,
-        byteAlignment: 1
-      });
-      const bytesPerRow = options_.bytesPerRow ?? packedSourceLayout.bytesPerRow;
-      const rowsPerImage = options_.rowsPerImage ?? packedSourceLayout.rowsPerImage;
+      const bytesPerRow = options_.bytesPerRow ?? getTextureBytesPerRow(formatInfo, width, 1);
+      const rowsPerImage =
+        options_.rowsPerImage ??
+        (formatInfo.compressed ? Math.ceil(height / (formatInfo.blockHeight ?? 1)) : height);
       let copyWidth = width;
       let copyHeight = height;
 
