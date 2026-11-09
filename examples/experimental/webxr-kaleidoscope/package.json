@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-experimental-webxr-kaleidoscope",
-  "version": "10.0.0-alpha.11",
+  "version": "10.0.0-alpha.12",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,8 +8,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "10.0.0-alpha.11",
-    "@luma.gl/engine": "10.0.0-alpha.11",
+    "@luma.gl/core": "10.0.0-alpha.12",
+    "@luma.gl/engine": "10.0.0-alpha.12",
     "@math.gl/core": "5.0.0-beta.6"
   },
   "devDependencies": {
