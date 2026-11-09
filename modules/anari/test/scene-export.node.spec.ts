@@ -1,4 +1,4 @@
-import {getTextureTransformSlotDefinitions} from '@luma.gl/gltf';
+import {getTextureTransformSlotDefinitions} from '@luma.gl/engine/gltf';
 import {expect, it} from 'vitest';
 import {PLAYGROUND_PRESETS} from '../../../examples/anari/scenes/playground-presets';
 import {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 // import {makeSpy} from '@probe.gl/test-utils';
 import {Model, ModelNode} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';

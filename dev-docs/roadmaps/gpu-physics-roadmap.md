@@ -133,7 +133,7 @@ and its stacked prerequisites; it does not imply that these PRs have landed. Spa
 Salvage establishes a real consumer of public contact events and queries. It does
 not close G5: its query kernels scan colliders, its event kernel scans the pair
 cache, and docking samples overlap rather than maintaining simulation-step triggers.
-The [feature cards](../../docs/api-reference/gpgpu/gpu-physics.md#feature-cards)
+The [feature cards](../../docs/api-reference/graph/gpu-physics.md#feature-cards)
 distinguish usable APIs from remaining qualification work.
 
 Keep G1–G12 stable: these identifiers already connect documentation, fixtures and
@@ -248,7 +248,7 @@ by its SOTA target.
 ## Active programme: glTF physics qualification first
 
 Target the exact `KHR_physics_rigid_bodies` and `KHR_implicit_shapes` revisions
-recorded in the [adapter profile](../../modules/gltf/src/physics/README.md). Record
+recorded in the [adapter profile](../../modules/engine/src/gltf/physics/README.md). Record
 prose/schema discrepancies and the separately versioned legacy sample profile.
 “Complete” means every normative feature in the declared profile has behavioral
 evidence, including its companion interactivity operations; it does not mean support
@@ -641,7 +641,7 @@ must accompany any performance or supported stacking-depth claim.
 
 ## Tranches 20A–B: glTF import and body semantics
 
-The optional `@luma.gl/gltf/physics` subpath decodes pinned raw-JSON revisions of
+The optional `@luma.gl/engine/gltf-physics` subpath decodes pinned raw-JSON revisions of
 `KHR_physics_rigid_bodies` and `KHR_implicit_shapes` without GPU allocation. It
 returns source-node/body/collider mappings, preserved source data and explicit
 capability issues; unsupported assets cannot create partial worlds.
@@ -652,7 +652,7 @@ kinematic velocity/target motion, per-collider filtering, and distinct static/dy
 friction with material combine policies. Limits remain 128 bodies and 128 colliders,
 quadratic pair storage and discrete collision detection.
 
-See the [adapter profile](../../modules/gltf/src/physics/README.md) for draft hashes,
+See the [adapter profile](../../modules/engine/src/gltf/physics/README.md) for draft hashes,
 coordinate/ownership rules, schema discrepancies and unsupported features.
 GPU transform/bounds publication (20C), animation ownership (20D), behavior/event
 bindings (20E), and exporter interoperability (20F) remain separate increments.

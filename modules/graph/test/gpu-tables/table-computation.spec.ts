@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUTableComputation} from '@luma.gl/graph/gpu-tables';
 import {Buffer, type ComputeShaderLayout, type Device} from '@luma.gl/core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 
 const COMPUTE_SHADER = /* wgsl */ `\

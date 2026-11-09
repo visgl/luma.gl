@@ -5,7 +5,7 @@ Reusable deck.gl layers for geographic rendering that consume caller-owned GPU b
 ## Water surfaces
 
 `WaterSurfaceLayer` shades flat, triangulated water polygons on WebGPU and WebGL2 using the shared
-`@luma.gl/shadertools` water material. Supply packed `float32x3` positions in local east/north/up
+`@luma.gl/shaders` water material. Supply packed `float32x3` positions in local east/north/up
 meters, `vertexCount`, and Deck's `coordinateOrigin`. The layer borrows the position buffer and owns
 only its render model; the application must release the buffer after removing/finalizing the layer.
 
@@ -83,21 +83,21 @@ features into these GPU cores. The same rule applies to future classic JavaScrip
 binary compatibility: each input family converts or borrows GPUVectors and delegates to the same
 renderer.
 
-`LuSpatialPointLayer` binds caller-owned position and point-ID buffers directly and replays a
+`GPUSpatialPointLayer` binds caller-owned position and point-ID buffers directly and replays a
 caller-owned `DrawCommandBuffer`. The layer owns only its render model and style-uniform buffer;
 query results, indirect commands, and source positions remain owned by the application.
 
 The command buffer must use the non-indexed `draw` layout. Its selected record keeps
 `vertexCount: 6` and `firstVertex: 0`; GPU queries normally update only `instanceCount`.
 
-The root layer entry point deliberately does not import Arrow, GeoArrow, or the luSpatial query
+The root layer entry point deliberately does not import Arrow, GeoArrow, or the GPU Spatial query
 algorithms. Applications can produce the fixed-width buffers with any ingestion and query pipeline;
 the optional query entry point described below supplies one reusable geographic workflow.
 
 ```ts
-import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
+import {GPUSpatialPointLayer} from '@deck.gl-community/gpu-layers';
 
-const layer = new LuSpatialPointLayer({
+const layer = new GPUSpatialPointLayer({
   id: 'selected-points',
   pickable: true,
   positions,
@@ -125,13 +125,13 @@ resident row indices and keep any global corpus-ID mapping in the application.
 The optional `@deck.gl-community/gpu-layers/query` subpath adds a WebGPU Deck effect that projects
 WGS84 longitude/latitude rows into local kilometres, builds a flat uniform-grid index once, and
 runs viewport-bounds plus local-radius queries before each draw. It keeps result IDs and clamped
-counts on the GPU; the two `outputs` objects can be passed directly to `LuSpatialPointLayer`.
+counts on the GPU; the two `outputs` objects can be passed directly to `GPUSpatialPointLayer`.
 
 ```ts
-import {LuSpatialPointLayer} from '@deck.gl-community/gpu-layers';
-import {LuSpatialGeographicPointQueryEffect} from '@deck.gl-community/gpu-layers/query';
+import {GPUSpatialPointLayer} from '@deck.gl-community/gpu-layers';
+import {GPUSpatialGeographicPointQueryEffect} from '@deck.gl-community/gpu-layers/query';
 
-const queryEffect = new LuSpatialGeographicPointQueryEffect(device, {
+const queryEffect = new GPUSpatialGeographicPointQueryEffect(device, {
   longitudeLatitudes,
   sourceBounds: [-74.1, 40.65, -73.84, 40.85],
   projectionOrigin: [-73.97, 40.75],
@@ -142,11 +142,11 @@ const queryEffect = new LuSpatialGeographicPointQueryEffect(device, {
   onStats: stats => updateInspector(stats.inspectorSnapshot)
 });
 
-const contextLayer = new LuSpatialPointLayer({
+const contextLayer = new GPUSpatialPointLayer({
   id: 'context-points',
   ...queryEffect.outputs.viewport
 });
-const selectionLayer = new LuSpatialPointLayer({
+const selectionLayer = new GPUSpatialPointLayer({
   id: 'selected-points',
   ...queryEffect.outputs.selection
 });
@@ -157,7 +157,7 @@ queryEffect.setSelection([-73.99, 40.75], 0.5);
 
 The caller supplies source bounds in WGS84 degrees and projected bounds in the same
 cuSpatial-compatible sinusoidal space selected by `projectionOrigin`. The effect compiles an
-adaptive luProj plan once and uses it for both resident rows and mutable selections. This keeps
+adaptive GPU Project plan once and uses it for both resident rows and mutable selections. This keeps
 ingestion and source metadata outside the package. Use
 `setSelection`, `setSelectionRadius`, and `getSelection` for the mutable radius query. Set
 `viewportId` when a Deck instance has multiple views; otherwise the first viewport is queried.
@@ -218,7 +218,7 @@ same geometry. Draw opaque fill layers first to hide rear edges. The layer owns 
 quad buffer, and borrows `segments`; the application destroys that buffer after finalizing Deck.
 It does not extract mesh boundaries, join paths, or drape lines over terrain. The
 [Sketch buildings example](../../examples/deck/sketch-edges) demonstrates the controls, picking,
-and hidden-edge rendering. The underlying `sketchStroke` shader in `@luma.gl/shadertools`
+and hidden-edge rendering. The underlying `sketchStroke` shader in `@luma.gl/shaders`
 can also be used by non-Deck renderers.
 ## Auxiliary scene buffers
 

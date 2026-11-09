@@ -69,7 +69,7 @@ evaluation has different arithmetic cost. These sweeps do not isolate routing co
 Reproduce from the repository root after other task builds/tests finish:
 
 ```sh
-VITE_LUPROJ_SWEEP_ROWS=4096,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
+VITE_GPU_PROJECT_SWEEP_ROWS=4096,65536 VITE_GPU_PROJECT_SWEEP_CONSUMERS=1,4 \
   yarn test-browser-benchmarks --silent=false --reporter=verbose \
   modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
@@ -201,14 +201,14 @@ separate per-submission measurements.
 
 ```sh
 LUMA_TEST_BROWSER_BENCHMARKS=true \
-  VITE_LUPROJ_SWEEP_ROWS=1024,16384,65536 VITE_LUPROJ_SWEEP_CONSUMERS=1,4 \
-  VITE_LUPROJ_SWEEP_GPU_TIMING=false \
+  VITE_GPU_PROJECT_SWEEP_ROWS=1024,16384,65536 VITE_GPU_PROJECT_SWEEP_CONSUMERS=1,4 \
+  VITE_GPU_PROJECT_SWEEP_GPU_TIMING=false \
   yarn test-headless --no-coverage --silent=false --reporter=verbose --fileParallelism=false \
   modules/graph/test/gpu-project/projection-performance.spec.ts
 ```
 
-For the separate profile, set `VITE_LUPROJ_SWEEP_ROWS=65536`,
-`VITE_LUPROJ_SWEEP_CONSUMERS=4` and `VITE_LUPROJ_SWEEP_GPU_TIMING=true`.
+For the separate profile, set `VITE_GPU_PROJECT_SWEEP_ROWS=65536`,
+`VITE_GPU_PROJECT_SWEEP_CONSUMERS=4` and `VITE_GPU_PROJECT_SWEEP_GPU_TIMING=true`.
 Each JSON record is printed after `PROJECTION_PERFORMANCE_SWEEP `.
 The archived file contains 18 uninstrumented reports (72 paths) followed by three instrumented
 reports (12 paths), all passing the same independent accuracy/validity gate.

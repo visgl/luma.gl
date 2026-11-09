@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuProj.
 
-import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shaders';
 import {
   GEOSPATIAL_INTEGER_FP64_ARITHMETIC_MODULE,
   getClassicFP64Defines

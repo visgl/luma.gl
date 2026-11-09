@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@math.gl/core/types';
+import type {TypedArray} from '@math.gl/core';
 import type {
   DeviceProps,
   DeviceInfo,
@@ -526,6 +526,7 @@ export class WebGLDevice extends Device {
    */
   override loseDevice(): boolean {
     this._lossWasRequested = true;
+    this._isLost = true;
     let deviceLossTriggered = false;
     const extensions = this.getExtension('WEBGL_lose_context');
     const ext = extensions.WEBGL_lose_context;

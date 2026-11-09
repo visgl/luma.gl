@@ -4,15 +4,15 @@
 
 import {expect, it} from 'vitest';
 import {projectionEngine} from '@math.gl/geospatial/projection';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {planCRSProjection, createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project/crs';
 import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
 import type {ProjectionBounds} from '@luma.gl/graph/gpu-project';
 import {makeConicCRS, geographicCRS, getConicOracleDefinition} from './projection-crs-fixtures';
 import {makePerformanceCoordinates, parsePerformanceSweep} from './projection-performance-fixtures';
 
-const rowCounts = parsePerformanceSweep(import.meta.env.VITE_LUPROJ_CONIC_ROWS, [32]);
-const measured = import.meta.env.VITE_LUPROJ_CONIC_ROWS !== undefined;
+const rowCounts = parsePerformanceSweep(import.meta.env.VITE_GPU_PROJECT_CONIC_ROWS, [32]);
+const measured = import.meta.env.VITE_GPU_PROJECT_CONIC_ROWS !== undefined;
 const domains: {id: string; bounds: ProjectionBounds}[] = [
   {id: 'local', bounds: [-72, 41, -71, 42]},
   {id: 'regional', bounds: [-100, 25, -60, 60]}
@@ -37,7 +37,7 @@ for (const method of ['lambert-1sp', 'lambert-2sp', 'albers'] as const) {
         // covered separately: the native geographic footprint is larger than the fitted rectangle.
         const coordinates = makePerformanceCoordinates(domain.bounds, rowCount).slice(0, -2);
         coordinates.push([NaN, 0]);
-        const providerLabel = '@math.gl/geospatial/projection 5.0.0-alpha.19 TypeScript';
+        const providerLabel = '@math.gl/geospatial/projection 5.0.0-beta.5 TypeScript';
         const report = await runProjectionProgramBenchmark(device, {
           coordinates,
           oracleLabel: providerLabel,

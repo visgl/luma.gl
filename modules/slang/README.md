@@ -384,7 +384,7 @@ owns compiler registration and uses reflection for layouts, bindings and uniform
 `omitUnusedResources` so native interface scanners see only the resources for each pipeline.
 
 The experimental compiler has no runtime dependencies. It is an optional import and does not
-increase core/engine/shadertools bundles. Bundle-size tests guard the compiler (about 30 KB gzip)
+increase core/engine/shaders bundles. Bundle-size tests guard the compiler (about 30 KB gzip)
 and separate luma helpers (about 1.4 KB gzip).
 
 ## Development
@@ -419,3 +419,19 @@ non-host-shareable WGSL bool uniform fields. Its numeric ABI and results are com
 packed bytes; separate GPU tests cover this transpiler's bool legalization. These fixtures verify
 specific supported cases, not full Slang compatibility.
 
+
+## Experimental WGSL input
+
+Import `transpileWGSL` from `@luma.gl/slang/wgsl` to compile the initial WGSL vertex/fragment
+subset to GLSL. This separate entry point shares code generation with Slang while excluding its
+parser and registry. Root Slang imports exclude the WGSL frontend. See the
+[WGSL frontend guide](https://luma.gl/docs/api-reference/slang/wgsl) for supported syntax,
+coordinate conventions, diagnostics and deferred features.
+
+
+## Shader inspection
+
+Import `inspectWGSL` or `inspectGLSL` from `@luma.gl/slang/inspect` for shared declaration metadata
+without code generation. The parsers remain independently tree-shakable. See the
+[inspection guide](https://luma.gl/docs/api-reference/slang/inspect) for the supported subsets,
+source locations, comparison with core's runtime WGSL scanner, and bundle measurements.

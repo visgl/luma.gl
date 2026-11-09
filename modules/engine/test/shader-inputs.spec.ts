@@ -4,18 +4,8 @@
 
 import {expect, it} from 'vitest';
 import {Texture} from '../../core/src/index';
-import {
-  floatColors,
-  lighting,
-  phongMaterial,
-  picking,
-  ShaderModule
-} from '../../shadertools/src/index';
-import type {
-  FloatColorsProps,
-  LightingProps,
-  PhongMaterialProps
-} from '../../shadertools/src/index';
+import {floatColors, lighting, phongMaterial, picking, ShaderModule} from '../../shaders/src/index';
+import type {FloatColorsProps, LightingProps, PhongMaterialProps} from '../../shaders/src/index';
 import {ShaderInputs} from '../src/shader-inputs';
 
 it('ShaderInputs#picking', () => {

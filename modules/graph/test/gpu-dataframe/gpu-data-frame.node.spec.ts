@@ -8,14 +8,14 @@ import type {Buffer} from '@luma.gl/core';
 import * as graphRootModule from '@luma.gl/graph';
 import * as gpuDataFrameModule from '@luma.gl/graph/gpu-dataframe';
 import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
-import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
   type GPUField,
   type GPURecordBatchSourceInfo
 } from '@luma.gl/graph/gpu-tables';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {describe, expect, test, vi} from 'vitest';
 
 describe('@luma.gl/graph/gpu-dataframe package boundary', () => {
@@ -37,10 +37,10 @@ describe('@luma.gl/graph/gpu-dataframe package boundary', () => {
       require: './dist/gpu-dataframe/index.cjs',
       types: './dist/gpu-dataframe/index.d.ts'
     });
-    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBeDefined();
+    expect(packageJson.dependencies?.['@luma.gl/gpgpu']).toBeUndefined();
     expect(packageJson.dependencies?.['@luma.gl/tables']).toBeUndefined();
     expect(packageJson.dependencies?.['apache-arrow']).toBeUndefined();
-    expect(packageJson.peerDependencies?.['apache-arrow']).toBeUndefined();
+    expect(packageJson.peerDependencies?.['apache-arrow']).toBe('>=17.0.0');
   });
 
   test('keeps dataframe runtime exports out of the graph root entry point', () => {

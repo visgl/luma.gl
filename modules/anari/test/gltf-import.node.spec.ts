@@ -1,12 +1,12 @@
 import {readFile} from 'node:fs/promises';
 import {parse} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
-import {postProcessGLTF} from '@luma.gl/gltf';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
+import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {ANARIDevice} from '@luma.gl/anari';
 import {makeANARIAnimationScene} from '@luma.gl/anari/gltf';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
-import {getTextureTransformSlotDefinitions, parseGLTFLights} from '@luma.gl/gltf';
-import {NullDevice} from '@luma.gl/test-utils';
+import {getTextureTransformSlotDefinitions, parseGLTFLights} from '@luma.gl/engine/gltf';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {makeANARIJSONSceneFromGLTF} from '../../../examples/anari/scenes/gltf-to-anari';

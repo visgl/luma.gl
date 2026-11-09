@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {SnapshotTestRunner} from '@luma.gl/test-utils';
+import {SnapshotTestRunner} from '../utils/legacy-test-runners/snapshot-test-runner';
 
 import EXAMPLE_TEST_CASES from './example-test-cases';
 // import GLTF_TEST_CASES from './gltf-test-cases';

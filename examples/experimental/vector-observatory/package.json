@@ -12,7 +12,7 @@
     "@luma.gl/core": "workspace:*",
     "@luma.gl/engine": "workspace:*",
     "@luma.gl/graph": "workspace:*",
-    "@luma.gl/shadertools": "workspace:*",
+    "@luma.gl/shaders": "workspace:*",
     "preact": "^10.17.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

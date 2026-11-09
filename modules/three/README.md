@@ -2,7 +2,7 @@
 
 **Status: Exploration**
 
-Private experimental integrations tested with Three.js **0.185.1**. Existing Three
+Integrations tested with Three.js **0.187.0**. Existing Three
 applications can add deck layers or luma compute while keeping their renderer.
 
 ## Deck layers in an existing Three app
@@ -180,7 +180,7 @@ compute interoperability path; it does not require replacing Three's backend.
 
 ## Choose an integration
 
-All paths are experimental and tested against Three **0.185.1**; the deck
+All paths are experimental and tested against Three **0.187.0**; the deck
 and overlay entry points additionally require this workspace's patched deck **9.4.0** and luma **10**.
 These are tested combinations, not a broad version range.
 
@@ -283,7 +283,7 @@ ordinary and interleaved attributes in supported WebGPU vertex formats, indexed
 and non-indexed draws, normal alpha blending, single-sample render targets,
 2D R/RG/RGBA byte and floating-point textures, data-array textures for morph targets,
 ordinary skinning, instanced matrix/color attributes, generated mipmaps and mipmap samplers,
-depth-free PMREM passes, directional PCF shadows, packed uniform buffers, and TSL compute storage buffers.
+cube render targets and mip generation for PMREM passes, directional PCF shadows, packed uniform buffers, and TSL compute storage buffers.
 Interleaved attributes share one source GPU buffer. Attribute readback returns the
 packed source array (or requested byte range), and geometry disposal releases that
 buffer once. WebGL binds each attribute location from the shared buffer; WebGPU
@@ -295,7 +295,7 @@ less-equal comparison samplers. The example's shadow toggle sets shadow intensit
 to zero; shadow-map generation remains enabled.
 
 This is not a general Three.js replacement. WebGL1, point-light cube shadows, VSM, reversed-depth shadows, broad PBR parity,
-postprocessing, XR, bundles, array cameras, compressed/cube/storage textures,
+postprocessing, XR, bundles, array cameras, compressed/source-cube/storage textures,
 indirect commands, advanced blend/depth/stencil state and reusable
 `ReadbackBuffer` targets are outside the prototype. Unsupported backend hooks
 throw; material/node features beyond the tested subset have no compatibility
@@ -402,6 +402,36 @@ Three's renderer bindings and node lifecycle. Those scenes continue to use the b
 
 ## Shared compute buffers with upstream Three
 
+### Streamed dataset example
+
+Run `yarn workspace luma.gl-examples-three start` and open `/streamed.html`.
+Deterministic synthetic batches arrive every second; Append adds a batch immediately.
+Each batch of x/value pairs is uploaded once. A luma compute shader
+produces a logarithmic scatterplot layout, and upstream Three renders those same
+GPU buffers. The latest 12 batches are retained independently; older batches are explicitly removed. Reset disposes all
+geometry and borrowed bindings before releasing buffers and recreating the bridge.
+Canvas resizing changes the render target without reallocating the data.
+
+The source is [streamed-layout.ts](https://github.com/visgl/luma.gl/blob/master/examples/experimental/three/streamed-layout.ts).
+Applications can feed `append()` from an async stream; source uploads are expected,
+but computed positions are never read back or re-uploaded. The example performs
+layout, not compaction, and preserves one draw per batch.
+
+### Supported compute-to-render contract
+
+The buffer bridge supports Three.js r187 (`three@0.187.0`) on WebGPU with the
+standard drawing pipeline. It is a version-pinned integration: upgrade Three and
+this adapter together. The custom luma renderer backend remains experimental.
+
+Submit completed luma compute commands before calling `renderer.render()`. Both
+use the same device queue, so queue ordering makes the writes visible without a
+CPU readback or an `onSubmittedWorkDone()` wait on every frame. End all compute
+passes before submitting. The application owns buffer allocation and lifetime.
+
+Meshlet and visibility-buffer drawing pipelines are outside this contract: their
+geometry preprocessing cannot infer positions or topology from the bridge's
+metadata-only CPU arrays. Use the standard pipeline for GPU-generated geometry.
+
 `@luma.gl/three/interop` provides a thin `ThreeBufferBridge` for upstream
 `WebGPURenderer`, independently of `LumaRenderer`. Create a luma WebGPU device,
 pass `device.handle` as the upstream renderer's `device` option, and initialize it
@@ -466,7 +496,7 @@ geometry.setAttribute('instanceOffset', bridge.createInstancedAttribute(offsets,
 // The material must consume instanceOffset, e.g. through a TSL attribute node.
 ```
 
-The bridge is pinned to Three 0.185.1's private backend attribute methods/cache.
+The bridge is pinned to Three 0.187.0's private backend attribute methods/cache.
 Interleaved and storage-node attributes, textures, automatic bounds, CPU raycasting
 and deck integration remain unsupported. The CPU arrays are metadata only: do not
 set `needsUpdate`, mutate their layout/usage, or compute bounds/normals from them.
@@ -560,7 +590,7 @@ not dispose the adapter: the application owns its lifetime and calls `dispose()`
 when finished. Source objects and the device remain borrowed.
 
 This path targets single-sample Cartesian or bounded local-meter Mercator views
-and display-encoded sRGB output with no tone mapping. It uses pinned Three r185 context/output hooks to apply
+and display-encoded sRGB output with no tone mapping. It uses pinned Three r187 context/output hooks to apply
 color conversion inline, avoiding a second main-color output pass. Preparation adds
 work each frame; this is a compatibility exploration, not a performance guarantee.
 Transmission, lazy PMREM, postprocessing and nested passes during
@@ -805,3 +835,7 @@ composed scene.
 
 Lantern bases are normalized from geometry bounds before applying instance scale,
 so placement altitude describes the model base.
+
+The r187 buffer bridge supports `StandardDrawingPipeline`. Meshlet and visibility-buffer
+drawing pipelines perform additional geometry processing and are unsupported; the support
+probe rejects them. Do not change the drawing pipeline while a bridge is attached.

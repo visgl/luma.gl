@@ -6,7 +6,7 @@ import {describe, expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
 import {GPUSegmentedScan} from '../../src/gpu-core/gpu-segmented-scan';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 // Full GPU execution coverage is added alongside public export integration; keep constructor
 // contracts covered here so the primitive's CSR-style shape is explicit from the first PR.

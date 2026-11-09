@@ -12,6 +12,8 @@ export class SlangTranspileError extends Error {
   constructor(message: string, location: SourceLocation, sourceName = 'shader.slang') {
     super(`${sourceName}:${location.line}:${location.column}: ${message}`);
     this.name = 'SlangTranspileError';
-    this.diagnostics = [{...location, message, sourceName}];
+    this.diagnostics = [
+      {offset: location.offset, line: location.line, column: location.column, message, sourceName}
+    ];
   }
 }

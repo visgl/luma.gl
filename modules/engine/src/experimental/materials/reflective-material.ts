@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ShaderModule, ShaderPlugin} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPlugin} from '@luma.gl/shaders';
 import {opticalLighting} from './optical-lighting';
 
 /** Runtime properties for the portable reflective-surface shader module. */
@@ -210,5 +210,5 @@ export const reflectiveMaterial = {
 /** Installs portable reflective surface shading and shared optical-lighting helpers. */
 export const reflectiveMaterialPlugin = {
   name: 'reflectiveMaterial',
-  modules: [reflectiveMaterial as ShaderModule]
+  module: reflectiveMaterial as ShaderModule
 } as const satisfies ShaderPlugin;

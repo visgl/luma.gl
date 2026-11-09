@@ -28,8 +28,8 @@ Each raster `frame.render()` performs the following work:
 
 The ANARI adapter does not own a second shader or material pipeline. It translates retained
 objects into the format-independent
-[`SceneRenderer`](/docs/api-reference/scene/scene-renderer),
-[`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer), or
+[`SceneRenderer`](/docs/api-reference/anari/scene-renderer),
+[`DeferredSceneRenderer`](/docs/api-reference/anari/deferred-scene-renderer), or
 `RayTracingSceneRenderer` descriptors from `@luma.gl/anari`. The shared forward runtime uses
 WGSL shaders on WebGPU and equivalent GLSL shaders on WebGL 2. The WebGPU deferred path resolves
 compatible opaque scenes through the same retained object graph and falls back to forward rendering
@@ -49,7 +49,7 @@ frame.setParameter('renderer', raymarch).commitParameters();
 ```
 
 Runtime factories are lazy and device-owned. See
-[registering renderer runtimes](/docs/api-reference/scene/anari-device#registering-renderer-runtimes)
+[registering renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes)
 for the runtime contract and ownership details.
 
 ### Ray-tracing technique background and tradeoffs
@@ -269,5 +269,5 @@ associated instance buffers.
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

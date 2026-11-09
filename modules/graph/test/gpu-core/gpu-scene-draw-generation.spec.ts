@@ -13,7 +13,7 @@ import {
   GPU_SCENE_INVALID_REFERENCE,
   type GraphDataView
 } from '@luma.gl/graph/gpu-core';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 const STORAGE_USAGE = Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC;
 const BOUNDS = {minimum: [0, 0, 0], maximum: [1, 1, 1]} as const;

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {GLBWriter} from '@loaders.gl/gltf';
+import {GLBWriter} from '@loaders.gl/scene/gltf';
 
 type GLTFExportTypedArray =
   | Int8Array
@@ -181,7 +181,7 @@ class GLTFExportWriter {
     const document: GLTFJSONRecord = {
       asset: {
         version: '2.0',
-        generator: this.scene.generator || '@luma.gl/gltf'
+        generator: this.scene.generator || '@luma.gl/engine/gltf'
       },
       scene: this.scene.scene ?? 0
     };

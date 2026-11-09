@@ -1,6 +1,6 @@
 ---
 title: Choosing a luma.gl API layer
-description: Choose between Shadertools, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
+description: Choose between Shaders, Engine, Core, and GPU Core based on the amount of GPU control and orchestration your application needs.
 ---
 
 import {ApiOverviewDocsTabs} from '@site/src/components/docs/api-overview-docs-tabs';
@@ -16,7 +16,7 @@ layer that expresses the work clearly, then move down only when the application 
 | --- | --- |
 | Render geometry, manage redraws, animate, or pick objects | **Engine** |
 | Create and control buffers, textures, passes, pipelines, and submission | **Core** |
-| Compose reusable WGSL/GLSL behavior | **Shadertools** |
+| Compose reusable WGSL/GLSL behavior | **Shaders** |
 | Schedule several dependent WebGPU operations with indirect work or transient storage | **GPU Core** |
 
 Start with [How luma.gl fits together](/docs/api-guide/luma-layers) for one small rendered
@@ -29,12 +29,12 @@ The engine API provides higher-level classes like `Model`, `AnimationLoop`, `Buf
 [shared animation system](/docs/api-guide/engine/animation) adds keyframe tracks, clips, weighted
 mixing, crossfades, and portable morph-target deformation. Scenegraphs are included, while
 [glTF loading, physical materials, skeletal animation, and morph animation](/docs/api-reference/gltf)
-live in the format-specific `@luma.gl/gltf` module.
+live in the format-specific `@luma.gl/engine/gltf` module.
 
-The experimental [`SceneRenderer`](/docs/api-reference/scene/scene-renderer) and
-[`DeferredSceneRenderer`](/docs/api-reference/scene/deferred-scene-renderer) consume
+The experimental [`SceneRenderer`](/docs/api-reference/anari/scene-renderer) and
+[`DeferredSceneRenderer`](/docs/api-reference/anari/deferred-scene-renderer) consume
 format-independent scene descriptions instead of introducing a second glTF renderer. Their
-[physical lighting environments](/docs/api-reference/scene/pbr-environment) can be prepared
+[physical lighting environments](/docs/api-reference/anari/pbr-environment) can be prepared
 from caller-owned equirectangular textures.
 
 For an experimental retained, renderer-independent scene contract, see
@@ -42,6 +42,10 @@ For an experimental retained, renderer-independent scene contract, see
 the experimental `@luma.gl/anari` package, scene objects, committed parameters,
 instancing, physically based lighting,
 and HDR presentation.
+
+The [Materials guide](/docs/api-guide/engine/materials) compares Unlit, Lambert,
+Phong, Gouraud, and PBR shading and explains when to use a dedicated unlit shader
+versus a material's runtime `unlit` flag.
 
 ## Core
 
@@ -60,7 +64,7 @@ Core responsibilities for any GPU library are to enable applications to perform:
 - [Shader execution / rendering](/docs/api-guide/gpu/gpu-rendering) - Drawing into textures, running compute shaders.
 - [GPU parameter management](/docs/api-guide/gpu/gpu-parameters) - Configuring blending, clipping, depth tests etc.
 
-## Shadertools
+## Shaders
 
 The Shader API lets the application use a library of existing shader modules to create new custom shaders.
 It is also possible for developers to create new reusable shader modules.

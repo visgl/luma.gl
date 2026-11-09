@@ -57,7 +57,7 @@ describe('GPGPU example catalog navigation', () => {
     );
   });
 
-  test('keeps GPUCrossfilter, GPURaster, luProj, and luSpatial discoverable through their real integrations', () => {
+  test('keeps GPUCrossfilter, GPURaster, GPU Project, and GPU Spatial discoverable through their real integrations', () => {
     const category = getCategory('GPGPU');
     const graphModulesCategory = category.items.find(
       (entry): entry is ExampleCategory =>
@@ -76,7 +76,7 @@ describe('GPGPU example catalog navigation', () => {
     const spatialAtlasExample = getGraphModuleExample('showcase/billion-point-spatial-atlas');
     const graphLayersCategory = getCategory('GPU Graph Layers - deck.gl v10');
     const taxiExample = graphLayersCategory.items.find(
-      entry => typeof entry !== 'string' && entry.id === 'deck/luspatial-taxi'
+      entry => typeof entry !== 'string' && entry.id === 'deck/gpu-spatial-taxi'
     );
     const crossfilterExampleSource = readFileSync(
       path.join(EXAMPLES_DIRECTORY, 'showcase/million-row-crossfilter.mdx'),
@@ -91,7 +91,7 @@ describe('GPGPU example catalog navigation', () => {
       'utf8'
     );
     const taxiExampleSource = readFileSync(
-      path.join(EXAMPLES_DIRECTORY, 'deck/luspatial-taxi.mdx'),
+      path.join(EXAMPLES_DIRECTORY, 'deck/gpu-spatial-taxi.mdx'),
       'utf8'
     );
 
@@ -120,8 +120,8 @@ describe('GPGPU example catalog navigation', () => {
     expect(spatialAtlasExample).toBe('showcase/billion-point-spatial-atlas');
     expect(taxiExample).toEqual({
       type: 'doc',
-      id: 'deck/luspatial-taxi',
-      label: 'luProj + luSpatial: Taxi Explorer'
+      id: 'deck/gpu-spatial-taxi',
+      label: 'GPU Project + GPU Spatial: Taxi Explorer'
     });
     expect(spatialAtlasSource).toContain("from '@luma.gl/graph/geospatial'");
     expect(spatialAtlasSource).not.toContain("from '@luma.gl/graph/gpu-project'");
@@ -248,34 +248,28 @@ describe('GPGPU example catalog navigation', () => {
       label: 'GPU Graph Layers - deck.gl v10'
     });
     expect(readCategoryIdentifiers(finalEntry as ExampleCategory)).toEqual([
-      'deck/luspatial-taxi',
+      'deck/gpu-spatial-taxi',
       'deck/gpu-graph-explorer',
       'deck/gpu-culled-trace'
     ]);
   });
 
-  test('groups floating-point precision with GPGPU guides while preserving its canonical URL', () => {
+  test('groups floating-point precision with shader guides while preserving its canonical URL', () => {
     const documentationTableOfContents = JSON.parse(
       readFileSync(path.join(DOCUMENTATION_DIRECTORY, 'table-of-contents.json'), 'utf8')
     ) as ExampleSidebarEntry[];
-    const generalPurposeGPUGraphming = documentationTableOfContents.find(
+    const officialModules = documentationTableOfContents.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' &&
-        entry.type === 'category' &&
-        entry.label === 'Computing on the GPU'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Modules'
     );
-    const shaderProgramming = documentationTableOfContents.find(
+    const shaderProgramming = officialModules?.items.find(
       (entry): entry is ExampleCategory =>
-        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Writing Shaders'
+        typeof entry !== 'string' && entry.type === 'category' && entry.label === 'Shaders'
     );
     const precisionGuideIdentifier = 'api-guide/shaders/gpu-floating-point-precision';
 
-    expect(generalPurposeGPUGraphming).toBeDefined();
     expect(shaderProgramming).toBeDefined();
-    expect(readCategoryIdentifiers(generalPurposeGPUGraphming!)).toContain(
-      precisionGuideIdentifier
-    );
-    expect(readCategoryIdentifiers(shaderProgramming!)).not.toContain(precisionGuideIdentifier);
+    expect(readCategoryIdentifiers(shaderProgramming!)).toContain(precisionGuideIdentifier);
     expect(existsSync(path.join(DOCUMENTATION_DIRECTORY, `${precisionGuideIdentifier}.md`))).toBe(
       true
     );
@@ -289,14 +283,14 @@ describe('GPGPU example catalog navigation', () => {
         '/docs/api-guide/shaders/gpu-floating-point-precision'
       ],
       [
-        'api-reference/shadertools/shader-modules/fp64.md',
+        'api-reference/shaders/shader-modules/fp64.md',
         'fp64',
-        '/docs/api-reference/shadertools/shader-modules/fp64'
+        '/docs/api-reference/shaders/shader-modules/fp64'
       ],
       [
-        'api-reference/shadertools/shader-modules/fp64-arithmetic.md',
+        'api-reference/shaders/shader-modules/fp64-arithmetic.md',
         'fp64-arithmetic',
-        '/docs/api-reference/shadertools/shader-modules/fp64-arithmetic'
+        '/docs/api-reference/shaders/shader-modules/fp64-arithmetic'
       ]
     ] as const;
     const generalPurposeGPUTabs = readFileSync(

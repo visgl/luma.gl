@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getRegisteredGLTFExtensions, type GLTFRegisteredExtensionSupport} from '@luma.gl/gltf';
+import {
+  getRegisteredGLTFExtensions,
+  type GLTFRegisteredExtensionSupport
+} from '@luma.gl/engine/gltf';
 
 import {GLTF_EXTENSION_DEMOS, type GLTFExtensionDemoModel} from './gltf-extension-demos';
 import {
@@ -47,32 +50,32 @@ const LOCAL_FIXTURES: Record<
   Pick<GLTFReferenceFixture, 'assetLocation' | 'licenseLocation' | 'sourceRevision' | 'source'>
 > = {
   BumpMaterial: {
-    assetLocation: 'modules/gltf/test/data/BumpMaterial.gltf',
-    licenseLocation: 'modules/gltf/test/data/README.md',
+    assetLocation: 'modules/engine/test/gltf/data/BumpMaterial.gltf',
+    licenseLocation: 'modules/engine/test/gltf/data/README.md',
     sourceRevision: 'repository',
     source: 'luma.gl'
   },
   CubeVisibility: {
-    assetLocation: 'modules/gltf/test/data/CubeVisibility.glb',
-    licenseLocation: 'modules/gltf/test/data/README.md',
+    assetLocation: 'modules/engine/test/gltf/data/CubeVisibility.glb',
+    licenseLocation: 'modules/engine/test/gltf/data/README.md',
     sourceRevision: '2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf',
     source: 'luma.gl'
   },
   LightVisibility: {
-    assetLocation: 'modules/gltf/test/data/LightVisibility.glb',
-    licenseLocation: 'modules/gltf/test/data/README.md',
+    assetLocation: 'modules/engine/test/gltf/data/LightVisibility.glb',
+    licenseLocation: 'modules/engine/test/gltf/data/README.md',
     sourceRevision: '2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf',
     source: 'luma.gl'
   },
   SimpleInstancing: {
-    assetLocation: 'modules/gltf/test/data/SimpleInstancing.glb',
-    licenseLocation: 'modules/gltf/test/data/README.md',
+    assetLocation: 'modules/engine/test/gltf/data/SimpleInstancing.glb',
+    licenseLocation: 'modules/engine/test/gltf/data/README.md',
     sourceRevision: '2bac6f8c57bf471df0d2a1e8a8ec023c7801dddf',
     source: 'luma.gl'
   },
   SimpleSkinLOD: {
-    assetLocation: 'modules/gltf/test/data/SimpleSkinLOD.gltf',
-    licenseLocation: 'modules/gltf/test/data/README.md',
+    assetLocation: 'modules/engine/test/gltf/data/SimpleSkinLOD.gltf',
+    licenseLocation: 'modules/engine/test/gltf/data/README.md',
     sourceRevision: 'repository',
     source: 'luma.gl'
   }
@@ -123,7 +126,7 @@ export function getGLTFReferenceLedger(): GLTFReferenceLedger {
     sampleViewerReleaseSource: GLTF_SAMPLE_VIEWER_RELEASE_SOURCE_URL,
     extensions,
     unsupportedRequiredFixture: {
-      assetLocation: 'modules/gltf/test/data/UnsupportedRequiredExtensions.gltf',
+      assetLocation: 'modules/engine/test/gltf/data/UnsupportedRequiredExtensions.gltf',
       extensionNames: unsupportedRequiredExtensionNames
     }
   };

@@ -1,5 +1,5 @@
 import {ANARIDevice} from '@luma.gl/anari';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {
   type ANARIJSONScene,

@@ -4,7 +4,7 @@
 
 import type {ShaderLayout} from '@luma.gl/core';
 import {ShaderInputs} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import type {ShaderModule} from '@luma.gl/shaders';
 
 export const PRECISION_PATH_SHADER_LAYOUT = {
   attributes: [

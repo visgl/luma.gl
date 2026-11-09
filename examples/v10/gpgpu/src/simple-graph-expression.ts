@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {GPUDataEvaluator} from '@luma.gl/gpgpu';
+import {GPUDataEvaluator} from '@luma.gl/graph/gpu-simple-graph';
 import {
   GPUSimpleGraph,
   GPUSimpleGraphValue,

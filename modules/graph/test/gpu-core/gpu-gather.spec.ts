@@ -5,8 +5,8 @@ import {expect, it} from 'vitest';
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {GPUCommandGraph, GPUGather} from '@luma.gl/graph/gpu-core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {GPUData} from '@luma.gl/graph/gpu-data';
+import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
 it('GPUGather reorders fixed-width float32x3 rows and zeroes invalid indices', async () => {
   const device = await getWebGPUTestDevice();

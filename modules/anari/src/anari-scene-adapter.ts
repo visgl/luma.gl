@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
+import type {Device, Texture} from '@luma.gl/core';
 import {
   ConeGeometry,
   CylinderGeometry,
@@ -18,7 +18,7 @@ import {
   type PBRMaterialBindings,
   type PBRMaterialUniforms,
   pbrMaterial
-} from '@luma.gl/shadertools';
+} from '@luma.gl/shaders';
 import {Matrix4, type NumberArray9} from '@math.gl/core';
 import {unpackIndexedGeometry} from '@math.gl/geometry';
 import {
@@ -755,7 +755,7 @@ export function makeSceneMaterial(material: ANARIMaterial): SceneMaterial {
     anisotropyDirection: parameters.anisotropyDirection || [1, 0],
     bumpFactor: parameters.bumpFactor ?? 1
   };
-  const bindings: Partial<PBRMaterialBindings> = {};
+  const bindings: Partial<PBRMaterialBindings<Texture>> = {};
 
   for (const slot of MATERIAL_TEXTURE_SLOTS) {
     const sampler = parameters[slot.parameter];
