@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {CopyExternalImageOptions} from '@luma.gl/core';
+import {
+  Buffer,
+  Texture,
+  type TextureWriteOptions,
+  type CopyExternalImageOptions
+} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {GL} from '@luma.gl/core/webgl-constants';
 import {WebGLStateTracker} from '@luma.gl/core/webgl/context/state-tracker/webgl-state-tracker';
@@ -164,31 +169,45 @@ it.each([
   }
 });
 
-it('writeData reuses scratch options and isolates nested and failed uploads', async () => {
+it.each([
+  'data',
+  'buffer'
+] as const)('%s uploads reuse scratch options across nested and failed calls', async method => {
   const device = await getWebGLTestDevice();
   const texture = device.createTexture({format: 'rgba8unorm', width: 4, height: 4});
-  const normalize = vi.spyOn(texture, '_normalizeTextureWriteOptions');
+  const buffer = device.createBuffer({byteLength: 64, usage: Buffer.COPY_SRC});
+  const normalize = vi.spyOn(Texture.prototype, '_normalizeTextureWriteOptions');
   const upload = vi.spyOn(device.gl, 'texSubImage2D').mockImplementation(() => {});
   const data = new Uint8Array(64);
+  const write = (options?: TextureWriteOptions) =>
+    method === 'data' ? texture.writeData(data, options) : texture.writeBuffer(buffer, options);
   try {
-    upload.mockImplementationOnce(() => texture.writeData(data, {width: 1, height: 1}));
-    texture.writeData(data, {width: 2, height: 2});
+    upload.mockImplementationOnce(() =>
+      method === 'data'
+        ? texture.writeBuffer(buffer, {width: 1, height: 1})
+        : texture.writeData(data, {width: 1, height: 1})
+    );
+    write({width: 2, height: 2});
     const outer = normalize.mock.results[0].value;
     const inner = normalize.mock.results[1].value;
     expect(outer).not.toBe(inner);
     expect(outer.width).toBe(2);
     expect(inner.width).toBe(1);
-    texture.writeData(data, {width: 3, height: 1});
+    write({width: 3, height: 1});
     expect(normalize.mock.results[2].value).toBe(outer);
     upload.mockImplementationOnce(() => {
       throw new Error('upload failed');
     });
-    expect(() => texture.writeData(data)).toThrow('upload failed');
-    texture.writeData(data, {width: 1, height: 1});
+    expect(() => write()).toThrow('upload failed');
+    write({width: 1, height: 1});
     expect(normalize.mock.results[4].value).toBe(outer);
+    expect(() => write({bytesPerRow: 1})).toThrow('bytesPerRow');
+    write({width: 1, height: 1});
+    expect(normalize.mock.results[6].value).toBe(outer);
   } finally {
     upload.mockRestore();
     normalize.mockRestore();
     texture.destroy();
+    buffer.destroy();
   }
 });
