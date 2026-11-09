@@ -86,6 +86,7 @@ export {
   type SceneMaterial,
   type SceneRenderOptions,
   type SceneRenderStatistics,
+  type ScenegraphRenderOptions,
   type SceneSurface,
   getSceneAlphaMode,
   SceneRenderer,
@@ -214,3 +215,5 @@ export {
   type RayTracingImageTile,
   type RayTracingImageTileRegion
 } from './renderers';
+
+export {SceneMeshNode, type SceneMeshNodeProps} from './engine/scene-mesh-node';

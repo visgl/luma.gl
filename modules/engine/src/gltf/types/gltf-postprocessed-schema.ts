@@ -746,6 +746,8 @@ export type GLTFTexturePostprocessed = {
  */
 export type GLTFPostprocessed = {
   id?: string;
+  /** Loader-supplied Gaussian descriptors, retaining source primitive identity. */
+  gaussianSplatPrimitives?: import('./gltf-types').GLTFGaussianSplatDescriptor[];
 
   // GLTF attributes (possibly overridden)
   /** Names of glTF extensions used somewhere in this asset. */

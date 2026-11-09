@@ -178,6 +178,7 @@ export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
       ...this.getShaders({modules: [project32, picking], source: GPU_COLUMN_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
+      inferDrawCount: 'instance',
       isInstanced: true,
       vertexCount: diskResolution * 9,
       instanceCount: 0,

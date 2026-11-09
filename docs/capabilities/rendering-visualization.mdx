@@ -60,7 +60,7 @@ Return to the [capabilities overview](/docs/capabilities) for GPU data and compu
 | WGSL shader assembly | Available | WebGPU | `@luma.gl/shaders` | Compose supported WebGPU shader source and typed application bindings. |
 | GLSL shader assembly | Available | WebGL2 | `@luma.gl/shaders` | Compose supported WebGL vertex and fragment shaders. |
 | Typed shader modules | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Reuse shader modules with explicit source, dependencies, and uniform types. |
-| Shader hooks and injections | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Extend supported applications through composable shader hooks and source injections. |
+| Shader targets and injections | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Extend supported applications through composable shader injection targets and source injections. |
 | Shader plugins | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Order reusable shader plugins and validate supported varying relationships. |
 | Uniform and binding reflection | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Coordinate application uniforms, supported bindings, and shader layouts. |
 | Color and picking modules | Available | WebGPU + WebGL2 | `@luma.gl/shaders` | Reuse compatible color transforms, clipping, filtering, and picking logic. |
@@ -188,8 +188,8 @@ See the [glTF extension support matrix](/docs/api-reference/gltf/gltf-extensions
 
 This is an ANARI-inspired proof of concept, not a claim of complete standards conformance.
 Explore the [ANARI Playground](/examples/anari/scenes), or read about
-[retained animation](/docs/api-reference/scene/anari-animation) and
-[switchable scene renderers](/docs/api-reference/scene/anari-rendering).
+[retained animation](/docs/api-reference/anari/anari-animation) and
+[switchable scene renderers](/docs/api-reference/anari/anari-rendering).
 
 ### GPU ray tracing and progressive rendering
 
@@ -209,7 +209,7 @@ Explore the [ANARI Playground](/examples/anari/scenes), or read about
 | Multi-bounce path tracing | Opportunity | WebGPU | `@luma.gl/anari` | Extend existing direct-light ray tracing with indirect transport, physically based bounces, and denoising. |
 | Ray-traced animated materials | Opportunity | WebGPU | `@luma.gl/anari` | Extend supported ray tracing toward textured PBR, transmission, skeletal deformation, and animated morph targets. |
 
-Read the [ANARI ray-tracing renderer](/docs/api-reference/scene/anari-rendering) and the
+Read the [ANARI ray-tracing renderer](/docs/api-reference/anari/anari-rendering) and the
 [retained rendering architecture](/docs/api-guide/engine/anari-rendering).
 
 ### Gaussian splats and captured-scene rendering

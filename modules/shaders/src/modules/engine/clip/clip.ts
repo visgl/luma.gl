@@ -106,7 +106,8 @@ export const clipShaderPlugin: ShaderPlugin = {
   },
   injections: [
     {
-      target: 'vs:CLIP_POSITION',
+      stage: 'vertex',
+      target: 'CLIP_POSITION',
       glsl: `\
 clipCoordinates = geometryCoordinates;
 if (clipState.enabled != 0 && clipState.mode == ${CLIP_MODE_INSTANCE} &&
@@ -121,7 +122,8 @@ if (clipUniforms.enabled != 0 && clipUniforms.mode == ${CLIP_MODE_INSTANCE} &&
 }`
     },
     {
-      target: 'fs:CLIP_COLOR',
+      stage: 'fragment',
+      target: 'CLIP_COLOR',
       glsl: `\
 if (clipState.enabled != 0 && clipState.mode == ${CLIP_MODE_GEOMETRY} &&
     !clip_isInBounds(clipCoordinates)) {

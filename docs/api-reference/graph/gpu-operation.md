@@ -4,14 +4,17 @@ A `GPUOperation` describes logical work. Its contract identifies graph values it
 writes and how vector output dimensions are determined. A supplied lowering turns the
 operation into command-graph passes. Contracts do not execute work or own GPU storage.
 
-This is the first part of the unified graph API: existing declarations and execution methods
-remain unchanged. Input/value/state declaration roles, new invocation APIs, and changes to
-control flow are not introduced here.
+Operations can [define their own results](./gpu-graph-values.md#operation-defined-results), so
+applications declare external inputs and state rather than every intermediate. If you are new
+to graph execution, start with [Getting started](./getting-started.md).
+
+Built-in [upload/copy](./gpu-transfer-operations.md) and [compaction](./gpu-compaction-operation.md)
+operations already provide these contracts and their backend lowerings.
 
 ## Contract types
 
 ```typescript
-import type {GPUOperation, GPUOperationContract} from '@luma.gl/graph';
+import {GPUGraph, gpuGraph, type GPUOperation, type GPUOperationContract, type GPUOperationLowering} from '@luma.gl/graph';
 
 class CopyRows implements GPUOperation {
   readonly type = 'copy-rows';
@@ -19,10 +22,11 @@ class CopyRows implements GPUOperation {
 
   constructor(
     readonly id: string,
-    readonly input: GPUGraphVector<'uint32x2'>,
-    readonly output: GPUGraphVector<'uint32x2'>
+    readonly input: string,
+    readonly output: string
   ) {
     this.contract = {
+      outputs: {[output]: gpuGraph.vector('uint32x2')},
       values: [
         {value: input, access: 'read'},
         {value: output, access: 'write', shape: {like: input}}
@@ -32,7 +36,6 @@ class CopyRows implements GPUOperation {
 }
 ```
 
-Import `GPUGraphVector` as a type from `@luma.gl/graph` for this example.
 A reference may be a scalar, vector, or texture declaration, or its string name. Both forms
 resolve through the graph's declaration namespace. Typed references must have the declared
 kind and format. They are not physical buffers or command-graph views.
@@ -46,13 +49,16 @@ kind and format. They are not physical buffers or command-graph views.
 List every logical read and write. Reusable-program planning uses these declarations to
 check producer order, discover scalar results, allocate vector outputs, and accept output
 targets. Add producers before consumers; contracts do not implicitly reorder operations.
-Values updated by non-expression operations may instead have an initial execution binding,
-including when they are read before a later replacement. Missing initial bindings are checked
-when preparing execution. Expression outputs retain their single-assignment restrictions.
-An output target cannot replace storage already read by an earlier operation; reuse that
-binding as the target instead.
+Operation-defined results have one writer and cannot also be inputs or state. Use `addState()`
+for initialized mutable vector storage supplied on each execution. Existing explicit declarations
+can retain their older read-before-replacement behavior, but new operations should distinguish
+produced results from state. Output targets cannot replace inputs or state.
 Actual command-node resource uses remain required: they describe physical accesses and are
-what the command graph uses for scheduling and hazards.
+what the command graph uses for scheduling and hazards. A produced result must be initialized
+by its producer before consumers read it: write every element they need, or add an explicit
+initialization pass before partial updates or atomics. Transient storage may contain an earlier
+result; a `write` contract does not promise zero-filled memory. Use initialized state for values
+that depend on previous contents.
 
 `metadata` remains optional diagnostic information. It does not substitute for a contract.
 Contracts are readonly descriptions; do not mutate them after compilation.
@@ -79,7 +85,7 @@ and its lowering. Expressions retain their existing type inference and matching-
 
 For reusable programs, `read-write` vector values require execution bindings. A distinct
 output target cannot replace their initialized storage. This contract does not introduce
-new mutable-state semantics or permit self-referential expression outputs.
+implicit state initialization or permit self-referential expression outputs.
 
 ## Supply lowerings
 
@@ -91,6 +97,7 @@ const copyRowsLowering: GPUOperationLowering<void, CopyRows> = {
   lower: (operation, context) => {
     const source = context.resolveVector(operation.input);
     const destination = context.resolveVector(operation.output);
+    if (source.format !== 'uint32x2') throw new Error('CopyRows expects uint32x2');
 
     source.data.forEach((chunk, index) => {
       if (chunk.length === 0) return;
@@ -118,20 +125,27 @@ const copyRowsLowering: GPUOperationLowering<void, CopyRows> = {
 };
 
 const graph = new GPUGraph();
-const input = graph.vector('input', 'uint32x2');
-const output = graph.vector('output', 'uint32x2');
-graph.add(new CopyRows('copy', input, output));
+graph.addInput('input', gpuGraph.vector('uint32x2'));
+graph.add(new CopyRows('copy', 'input', 'output'));
 
 const compiled = graph.compile(device, {lowerings: [copyRowsLowering], outputs: ['output']});
-const results = await compiled.run({input: inputVector});
-// Once downstream GPU consumers have finished:
-results.output.destroy();
-compiled.destroy();
+try {
+  const results = await compiled.run({inputs: {input: inputVector}});
+  try {
+    // Submit downstream GPU consumers of results.output here.
+  } finally {
+    results.output.destroy();
+  }
+} finally {
+  compiled.destroy();
+}
 ```
 
-Import `GPUGraph` and the `GPUOperationLowering` type from `@luma.gl/graph`.
-The example requires WebGPU buffers with copy-source/copy-destination usage and aligned
-ranges. Lowerers encode work; they must not privately submit or read back data.
+Here `inputVector` is an existing packed `GPUVector<'uint32x2'>`. The example requires WebGPU buffers with copy-source/copy-destination usage and aligned
+ranges. Lowerers describe command passes; the callbacks encode work later. Neither stage may privately
+submit or read back data. Logical result buffers can share physical storage after their last
+operation, so use `getBuffer()` during encoding and do not retain intermediate buffers beyond
+the declared uses. Private scratch should use command-graph transient declarations.
 
 Lowering resolvers accept declaration objects or string names; for example,
 `context.resolveVector('input')` resolves the declared vector to its execution view.
@@ -162,4 +176,4 @@ and evaluator APIs are unchanged.
 Contracts remain optional for compatibility with existing command producers and unmigrated
 operations. Such operations do not gain automatic reusable-output planning merely by being
 accepted by the command compiler. Texture references can be described and validated, but
-reusable `GPUGraph.compile().run()` texture support remains a later tranche.
+reusable `GPUGraph.compile(device).run()` texture bindings are currently unsupported.

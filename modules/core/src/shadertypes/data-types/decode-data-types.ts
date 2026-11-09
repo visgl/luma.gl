@@ -15,11 +15,26 @@ import type {
   SignedDataType
 } from './data-types';
 
+const dataTypeInfoCache = new Map<NormalizedDataType, DataTypeInfo>();
+
+/** Returns shared, immutable metadata for recognized data types. */
+export function getDataTypeInfo(type: NormalizedDataType): DataTypeInfo {
+  const cached = dataTypeInfoCache.get(type);
+  if (cached) {
+    return cached;
+  }
+  const decoded = Object.freeze(decodeDataTypeInfo(type));
+  if (Object.hasOwn(NORMALIZED_TYPE_MAP, type)) {
+    dataTypeInfoCache.set(type, decoded);
+  }
+  return decoded;
+}
+
 /**
  * Gets info about a data type constant (signed or normalized)
  * @returns underlying primitive / signed types, byte length, normalization, integer, signed flags
  */
-export function getDataTypeInfo(type: NormalizedDataType): DataTypeInfo {
+function decodeDataTypeInfo(type: NormalizedDataType): DataTypeInfo {
   const normalized: boolean = type.includes('norm');
   const integer: boolean = !normalized && !type.startsWith('float');
   const signed: boolean = type.startsWith('s');

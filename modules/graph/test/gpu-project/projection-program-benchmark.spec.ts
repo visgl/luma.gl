@@ -57,7 +57,7 @@ for (const fixture of fixtures) {
     if (!device) return;
     if (device.info.gpu === 'software' || device.info.gpuType === 'cpu' || device.info.fallback)
       context.skip();
-    const configuredRows = import.meta.env.VITE_LUPROJ_BENCHMARK_ROWS;
+    const configuredRows = import.meta.env.VITE_GPU_PROJECT_BENCHMARK_ROWS;
     const rowCount = configuredRows ? Number(configuredRows) : 32;
     const bounds = fixture.bounds;
     const coordinates: ProjectionCoordinates[] = Array.from({length: rowCount}, (_value, index) => [

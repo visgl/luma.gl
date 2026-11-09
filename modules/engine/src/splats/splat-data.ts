@@ -143,54 +143,62 @@ export class GPUSplatData {
       rowIndices[rowIndex] = this.sourceInfo.sourceRowIndexOffset + rowIndex;
     }
 
-    this.positions = createSplatGPUVector(
-      device,
-      'positions',
-      source.positions,
-      'float32x3',
-      length
-    );
-    this.scales = createSplatGPUVector(device, 'scales', source.scales, 'float32x3', length);
-    this.rotations = createSplatGPUVector(
-      device,
-      'rotations',
-      source.rotations,
-      'float32x4',
-      length
-    );
-    const colorFormat = source.colors instanceof Float32Array ? 'float32x4' : 'unorm8x4';
-    this.colors = createSplatGPUVector(device, 'colors', source.colors, colorFormat, length);
-    this.opacities = createSplatGPUVector(device, 'opacities', source.opacities, 'float32', length);
-    this.rowIndices = createSplatGPUVector(device, 'rowIndices', rowIndices, 'uint32', length);
-    if (source.semanticIds) {
-      this.semanticIds = createSplatGPUVector(
-        device,
-        'semanticIds',
-        source.semanticIds,
-        'uint32',
-        length
+    const allocatedVectors: GPUVector[] = [];
+    const track = <VectorT extends GPUVector>(vector: VectorT): VectorT => {
+      allocatedVectors.push(vector);
+      return vector;
+    };
+    try {
+      this.positions = track(
+        createSplatGPUVector(device, 'positions', source.positions, 'float32x3', length)
       );
-    }
-    if (source.sphericalHarmonics) {
-      this.sphericalHarmonics = createSplatGPUVector(
-        device,
-        'sphericalHarmonics',
-        source.sphericalHarmonics,
-        'float32',
-        source.sphericalHarmonics.length
+      this.scales = track(
+        createSplatGPUVector(device, 'scales', source.scales, 'float32x3', length)
       );
+      this.rotations = track(
+        createSplatGPUVector(device, 'rotations', source.rotations, 'float32x4', length)
+      );
+      const colorFormat = source.colors instanceof Float32Array ? 'float32x4' : 'unorm8x4';
+      this.colors = track(
+        createSplatGPUVector(device, 'colors', source.colors, colorFormat, length)
+      );
+      this.opacities = track(
+        createSplatGPUVector(device, 'opacities', source.opacities, 'float32', length)
+      );
+      this.rowIndices = track(
+        createSplatGPUVector(device, 'rowIndices', rowIndices, 'uint32', length)
+      );
+      if (source.semanticIds) {
+        this.semanticIds = track(
+          createSplatGPUVector(device, 'semanticIds', source.semanticIds, 'uint32', length)
+        );
+      }
+      if (source.sphericalHarmonics) {
+        this.sphericalHarmonics = track(
+          createSplatGPUVector(
+            device,
+            'sphericalHarmonics',
+            source.sphericalHarmonics,
+            'float32',
+            source.sphericalHarmonics.length
+          )
+        );
+      }
+      this.table = new GPUTable({
+        vectors: {
+          positions: this.positions,
+          scales: this.scales,
+          rotations: this.rotations,
+          colors: this.colors,
+          opacities: this.opacities,
+          rowIndices: this.rowIndices
+        },
+        sourceInfo: this.sourceInfo
+      });
+    } catch (error) {
+      for (const vector of allocatedVectors) vector.destroy();
+      throw error;
     }
-    this.table = new GPUTable({
-      vectors: {
-        positions: this.positions,
-        scales: this.scales,
-        rotations: this.rotations,
-        colors: this.colors,
-        opacities: this.opacities,
-        rowIndices: this.rowIndices
-      },
-      sourceInfo: this.sourceInfo
-    });
   }
 
   /** Number of logical source rows, matching {@link length}. */

@@ -1,7 +1,7 @@
 import {fileURLToPath} from 'node:url';
 import {getVitestConfig} from '@vis.gl/dev-tools';
 import {BrowserTestSequencer} from './test/utils/browser-test-sequencer';
-import {getBrowserTestGroup, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
+import {getBrowserTestGroup, getReleaseQualificationExcludes, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
 
 const optionalTextureCompressorShim = fileURLToPath(
   new URL('./test/utils/texture-compressor-shim.ts', import.meta.url)
@@ -9,6 +9,9 @@ const optionalTextureCompressorShim = fileURLToPath(
 
 const excludePatterns = [
   '**/*.disabled.*',
+  // Deck integration packages are scheduled for removal; omit their module suites.
+  'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/*.spec.{ts,js}',
   'modules/**/wip/**',
   'modules/graph/test/arrow/arrow-column-info.spec.ts',
   'modules/graph/test/arrow/get-arrow-data.spec.ts',
@@ -117,6 +120,8 @@ const nodeCoverageIncludePatterns = [
 // this list focused: Istanbul remapping for the complete Node graph takes several minutes.
 const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
+  'modules/engine/test/scenegraph/node-paths.node.spec.{ts,js}',
+  'modules/engine/test/scenegraph/physics-controller.node.spec.{ts,js}',
   'modules/engine/test/gltf/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
   'modules/{graph,engine}/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
@@ -126,7 +131,7 @@ const nodeCoverageNativePatterns = [
   'modules/graph/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
   'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
   'modules/graph/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
-  'modules/graph/test/gpu-sql/lu-sql.node.spec.{ts,js}'
+  'modules/graph/test/gpu-sql/gpu-sql.node.spec.{ts,js}'
 ];
 const nodeCoveragePatterns = [
   ...nodeCoverageIncludePatterns,
@@ -161,6 +166,7 @@ const browserIncludePatterns = browserTestGroup === 'physics-endurance'
 const reuseComputeContext = ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
+  ...getReleaseQualificationExcludes(browserTestGroup),
   'modules/**/*.node.spec.{ts,js}',
   'test/**/*.node.spec.{ts,js}',
   ...browserBenchmarkTestPatterns,
@@ -209,6 +215,9 @@ const vitestConfig = getVitestConfig({
         // Istanbul transforms use substantial memory. Bound the focused coverage pass so it is
         // stable on GitHub's two-core runners without changing the fast default Node command.
         ...(runNodeCoverage ? {maxWorkers: 2} : {}),
+        ...(process.env.LUMA_TEST_NODE_MAX_WORKERS
+          ? {maxWorkers: Number(process.env.LUMA_TEST_NODE_MAX_WORKERS)}
+          : {}),
         include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
         exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
       }

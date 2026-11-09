@@ -16,16 +16,16 @@ import {
   performanceFixtures
 } from './projection-performance-fixtures';
 
-const largeSweep = import.meta.env.VITE_LUPROJ_TABLE_LARGE === 'true';
+const largeSweep = import.meta.env.VITE_GPU_PROJECT_TABLE_LARGE === 'true';
 const rowCounts = parsePerformanceSweep(
-  import.meta.env.VITE_LUPROJ_TABLE_ROWS,
+  import.meta.env.VITE_GPU_PROJECT_TABLE_ROWS,
   largeSweep ? [4096, 16384, 65536, 262144, 1048576, 4194304] : [32]
 );
 const batchSizes = parsePerformanceSweep(
-  import.meta.env.VITE_LUPROJ_TABLE_BATCH_ROWS,
+  import.meta.env.VITE_GPU_PROJECT_TABLE_BATCH_ROWS,
   largeSweep ? [65536] : [16, 1024]
 );
-const measured = largeSweep || import.meta.env.VITE_LUPROJ_TABLE_ROWS !== undefined;
+const measured = largeSweep || import.meta.env.VITE_GPU_PROJECT_TABLE_ROWS !== undefined;
 
 for (const fixture of performanceFixtures) {
   for (const rowCount of rowCounts) {
@@ -67,7 +67,7 @@ for (const fixture of performanceFixtures) {
         const report = await runProjectionTableBenchmark(device, {
           transform: new ProjectionTableTransform(prepared),
           batches,
-          provider: '@math.gl/geospatial/projection 5.0.0-beta.2 TypeScript',
+          provider: '@math.gl/geospatial/projection 5.0.0-beta.5 TypeScript',
           maximumError: 0.001,
           warmupIterations: measured ? 2 : 0,
           measuredIterations: measured ? 5 : 1

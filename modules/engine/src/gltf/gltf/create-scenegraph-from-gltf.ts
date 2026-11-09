@@ -2,13 +2,24 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {parseGLTFMetadata} from '../parsers/parse-gltf-metadata';
 import {parseGLTFJointDeclarations} from '../parsers/parse-gltf-joints';
 import {Device} from '@luma.gl/core';
-import {GroupNode, Material, ModelNode, JointController} from '@luma.gl/engine';
+import {
+  GroupNode,
+  Material,
+  ModelNode,
+  JointController,
+  BillboardController
+} from '@luma.gl/engine';
 import {GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
 import {Light} from '@luma.gl/shaders';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
-import {parseGLTFLights} from '../parsers/parse-gltf-lights';
+import {bindGLTFPunctualLights} from '../parsers/parse-gltf-lights';
+import {
+  PunctualLightController,
+  type PunctualLightDefinition
+} from '../../scenegraph/controllers/punctual-light-controller';
 import {GLTFAnimator} from './gltf-animator';
 import {parseGLTFSkins} from './gltf-skin';
 import {SkinController, MaterialVariants} from '@luma.gl/engine';
@@ -20,6 +31,7 @@ import {
   type GLTFExtensionSupport
 } from './gltf-extension-support';
 import {parseGLTFMaterialVariants} from './gltf-material-variants';
+import {parseGLTFBillboards} from './gltf-billboard';
 
 export type GLTFScenegraphBounds = {
   /** World-space axis-aligned bounds for the scene or model. */
@@ -36,6 +48,10 @@ export type GLTFScenegraphBounds = {
 
 /** Scenegraph bundle returned from a parsed glTF asset. */
 export type GLTFScenegraphs = {
+  /** Opt-in camera-facing scene traversal using resolved runtime node bindings. */
+  billboards: BillboardController | null;
+  /** Metadata associated with source asset and scene resources. */
+  metadata: import('@luma.gl/engine').SceneMetadata;
   /** Shared physical joint declarations, separate from skeletal skinning. */
   joints: JointController;
   jointIssues: {code: string; path: string; message: string}[];
@@ -53,6 +69,8 @@ export type GLTFScenegraphs = {
   animations: GLTFAnimation[];
   /** Parsed punctual lights from the asset. */
   lights: Light[];
+  /** Updates punctual lights after programmatic transform or visibility changes. */
+  punctualLights: PunctualLightController;
   /** Extensions reported by the asset and whether luma.gl supports them. */
   extensionSupport: Map<string, GLTFExtensionSupport>;
   /** Camera-friendly bounds for each scene in `scenes`, in matching order. */
@@ -83,8 +101,26 @@ export function createScenegraphsFromGLTF(
   gltf: GLTFPostprocessed,
   options?: ParseGLTFOptions
 ): GLTFScenegraphs {
+  const metadata = parseGLTFMetadata(gltf);
   if (options?.strictExtensions) {
     assertSupportedGLTFExtensions(gltf, device);
+  }
+
+  // Validate the optional profile before parseGLTF allocates models, textures, or buffers.
+  if (options?.billboards) {
+    const validationNodes = new Map<number, GroupNode>();
+    gltf.nodes.forEach((node, index) => {
+      if (node.extensions?.['KHR_billboard']) validationNodes.set(index, new GroupNode());
+    });
+    const validation = new BillboardController(
+      parseGLTFBillboards({
+        gltf,
+        scenes: [],
+        gltfNodeIndexToNodeMap: validationNodes,
+        allowLegacyYAxis: options.billboards.allowLegacyYAxis
+      })
+    );
+    validation.destroy();
   }
 
   const {
@@ -97,14 +133,57 @@ export function createScenegraphsFromGLTF(
     materialInstances
   } = parseGLTF(device, gltf, options);
 
+  const billboards = options?.billboards
+    ? new BillboardController(
+        parseGLTFBillboards({
+          gltf,
+          scenes,
+          gltfNodeIndexToNodeMap,
+          allowLegacyYAxis: options.billboards.allowLegacyYAxis
+        })
+      )
+    : null;
+  scenes.forEach((scene, index) => {
+    const packet = metadata.get('scene', index);
+    if (packet) scene.metadata['xmp'] = packet;
+    const geometryMetadata = gltf.scenes[index]?.extensions?.['FB_geometry_metadata'];
+    if (geometryMetadata) scene.metadata['fb:geometry'] = geometryMetadata;
+  });
+  const meshPackets = new Map<string, Record<string, unknown>>();
+  gltf.meshes.forEach((mesh, index) => {
+    const packet = metadata.get('mesh', index);
+    if (!packet) return;
+    meshPackets.set(mesh.id, packet);
+    const group = gltfMeshIdToNodeMap.get(mesh.id);
+    if (group) group.metadata['xmp'] = packet;
+  });
+  gltfNodeIndexToNodeMap.forEach((node, index) => {
+    const packet = metadata.get('node', index);
+    if (packet) node.metadata['xmp'] = packet;
+    if (!meshPackets.size) return;
+    const sourceMesh = gltf.nodes[index]?.mesh;
+    const meshPacket = sourceMesh && meshPackets.get(sourceMesh.id);
+    const mesh = node.userData['gltfMesh'];
+    if (meshPacket && mesh instanceof GroupNode) mesh.metadata['xmp'] = meshPacket;
+  });
+  materials.forEach((material, index) => {
+    const packet = metadata.get('material', index);
+    if (packet) {
+      material.metadata['xmp'] = packet;
+      for (const instance of materialInstances.get(index) || []) instance.metadata['xmp'] = packet;
+    }
+  });
+
   const jointDeclarations = parseGLTFJointDeclarations(gltf, gltfNodeIndexToNodeMap);
   const joints = new JointController(jointDeclarations.declarations.map(item => item.joint));
   const animations = parseGLTFAnimations(gltf);
   const sourceLights =
-    (gltf as GLTFPostprocessed & {lights?: Record<string, any>[]}).lights ||
-    (gltf.extensions?.['KHR_lights_punctual']?.['lights'] as Record<string, any>[] | undefined) ||
+    (gltf as GLTFPostprocessed & {lights?: PunctualLightDefinition[]}).lights ||
+    (gltf.extensions?.['KHR_lights_punctual']?.['lights'] as
+      | PunctualLightDefinition[]
+      | undefined) ||
     [];
-  const lightDefinitions = sourceLights.map(light => ({
+  const lightDefinitions = sourceLights.map<PunctualLightDefinition>(light => ({
     ...light,
     ...(Array.isArray(light['color']) ? {color: [...light['color']]} : {}),
     ...(light['spot'] ? {spot: {...light['spot']}} : {})
@@ -119,21 +198,16 @@ export function createScenegraphsFromGLTF(
     }
     return runtimeCamera;
   });
-  const lightOptions = {
-    useByteColors: options?.useByteColors ?? true,
-    nodeVisibility: gltfNodeIdToNodeMap,
-    lightDefinitions
-  };
-  const lights = parseGLTFLights(gltf, lightOptions);
-  const refreshLights = () => {
-    lights.splice(0, lights.length, ...parseGLTFLights(gltf, lightOptions));
-  };
+  const lightBindings = bindGLTFPunctualLights(gltf.nodes, gltfNodeIdToNodeMap, lightDefinitions);
+  const punctualLights = new PunctualLightController(lightBindings, options?.useByteColors ?? true);
+  const lights = punctualLights.lights;
+  const refreshLights = () => punctualLights.update();
   const animator = new GLTFAnimator({
-    properties: options?.properties ?? undefined,
     onVisibilityChange: refreshLights,
+    onLightChange: refreshLights,
+    properties: options?.properties ?? undefined,
     cameras,
     lightDefinitions,
-    onLightChange: refreshLights,
     animations,
     gltfNodeIdToNodeMap,
     materials,
@@ -144,7 +218,10 @@ export function createScenegraphsFromGLTF(
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);
   const skins = new SkinController(parseGLTFSkins({device, gltf, scenes, gltfNodeIndexToNodeMap}));
-  animator.setUpdateHandler(() => skins.update());
+  animator.setUpdateHandler(() => {
+    skins.update();
+    if (lightBindings.length) refreshLights();
+  });
 
   let destroyed = false;
   const destroy = (): void => {
@@ -153,6 +230,7 @@ export function createScenegraphsFromGLTF(
     }
     destroyed = true;
     skins.destroy();
+    billboards?.destroy();
 
     const groups = new Set<GroupNode>([
       ...scenes,
@@ -195,8 +273,10 @@ export function createScenegraphsFromGLTF(
   };
 
   return {
+    metadata,
     scenes,
     materials,
+    billboards,
     variants,
     joints,
     jointIssues: jointDeclarations.issues,
@@ -204,6 +284,7 @@ export function createScenegraphsFromGLTF(
     animator,
     animations,
     lights,
+    punctualLights,
     extensionSupport,
     sceneBounds,
     modelBounds,

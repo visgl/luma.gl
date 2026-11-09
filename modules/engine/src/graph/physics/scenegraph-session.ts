@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '@luma.gl/core';
-import {GroupNode, type ScenegraphNode} from '../../index';
+import {assert, type Device, type CommandEncoder} from '@luma.gl/core';
+import {GroupNode, type ScenegraphNode, type ScenegraphBounds} from '../../index';
 import {
   ScenegraphPhysicsInstance,
   type ScenegraphPhysicsDefinition,
@@ -22,6 +22,8 @@ export type ScenegraphPhysicsScene = {
   roots: readonly ScenegraphNode[];
   definition: ScenegraphPhysicsDefinition;
   colliders?: readonly ScenegraphPhysicsColliderTarget[];
+  /** Prepared local visual bounds for geometry nodes that do not expose getBounds(). */
+  localBounds?: ReadonlyMap<ScenegraphNode, ScenegraphBounds>;
   properties?: (world: GPURigidBodyWorld) => ScenegraphPhysicsProperties;
   behaviors?: ScenegraphPhysicsBehaviorProps;
 };
@@ -102,7 +104,12 @@ export class ScenegraphPhysicsSession {
         scene.definition.bodies,
         scene.colliders
       ),
-      publication: new ScenegraphPhysicsPublication(world, scene.roots, scene.definition.bodies),
+      publication: new ScenegraphPhysicsPublication(
+        world,
+        scene.roots,
+        scene.definition.bodies,
+        scene.localBounds
+      ),
       properties: scene.properties?.(world) ?? new ScenegraphPhysicsProperties(world, new Map()),
       behaviors: scene.behaviors
         ? new ScenegraphPhysicsBehaviors(world, scene.behaviors)
@@ -125,6 +132,31 @@ export class ScenegraphPhysicsSession {
     } finally {
       this.pending = undefined;
     }
+  }
+
+  /** Encode a fixed-step batch after sampling animation; the caller owns submission. */
+  encode(
+    encoder: CommandEncoder,
+    {
+      steps = 1,
+      animatedNodes = new Set<ScenegraphNode>(),
+      excludedNodes,
+      targetNodes
+    }: {
+      steps?: number;
+      animatedNodes?: ReadonlySet<ScenegraphNode>;
+      excludedNodes?: ReadonlySet<ScenegraphNode>;
+      targetNodes?: ReadonlySet<ScenegraphNode>;
+    } = {}
+  ): void {
+    // Synchronous frame encoding must not overlap readback, reset, rebuild or destruction.
+    assert(!this.pending && !this.closing);
+    // Validate the batch before mutating animation ownership or targets.
+    assert(Number.isSafeInteger(steps) && steps > 0);
+    this.motion.setAnimatedNodes(animatedNodes, {excludedNodes, targetNodes});
+    this.motion.update();
+    this.publication.update();
+    this.instance.encode(encoder, steps);
   }
 
   /** Sample/blend first; declare active transform tracks, including paused tracks, explicitly. */

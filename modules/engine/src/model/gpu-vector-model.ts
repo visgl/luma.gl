@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {type TypedArray} from '@math.gl/core';
+import type {NumberArray4, NumberArray6, TypedArray} from '@math.gl/core';
 import {
   type RenderPipelineProps,
   type RenderPipelineParameters,
@@ -42,6 +42,7 @@ import {mergeShaderPluginModules, resolveShaderPlugins, ShaderAssembler} from '@
 import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
 import {WGSLShaderAssembler} from '@luma.gl/shaders/wgsl';
 
+import {BatchUniformBuffer} from './batch-uniform-buffer';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
@@ -109,13 +110,33 @@ type ModelBuffer = Buffer | DynamicBuffer;
 /** Shader layout subset needed while resolving texture binding sources. */
 export type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
+/** Per-draw overrides shared by Model and GPUVectorModel. */
+export type ModelDrawOptions = {
+  /** Dynamic parameters scoped to this draw, including internal vector batches. */
+  parameters?: {
+    /** Viewport [x, y, width, height, minDepth?, maxDepth?]. */
+    viewport?: NumberArray4 | NumberArray6;
+    /** Scissor rectangle [x, y, width, height], or null to disable clipping. */
+    scissorRect?: NumberArray4 | null;
+    /** Blend color used by constant blend factors. */
+    blendConstant?: NumberArray4;
+    /** Value used for stencil comparison and replacement. */
+    stencilReference?: number;
+  };
+};
+
 export type GPUVectorModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** GPU-only mesh inputs, indices, and topology. */
   geometry?: GPUVectorGeometry | null;
   /** Supplemental vertex or instance vectors and constants. */
   attributeVectors?: GPUVectorModelAttributes;
-  /** Draw count updated from each vector batch. Defaults to `instance`. */
-  gpuVectorCount?: GPUVectorModelCount;
+  /**
+   * Count inferred from vector rows or each explicit batch. `no` preserves both counts.
+   * @default 'no'
+   */
+  inferDrawCount?: 'instance' | 'vertex' | 'no';
+  /** Require aligned lengths and chunks. False requires inferDrawCount: 'no' and single chunks. */
+  enforceMatchingVectorLengths?: boolean;
   source?: string;
   /** Input language compiled by the application-registered shader assembler transpiler. */
   sourceLanguage?: string;
@@ -227,7 +248,8 @@ export class GPUVectorModel {
 
   static defaultProps: Required<GPUVectorModelProps> = {
     ...RenderPipeline.defaultProps,
-    gpuVectorCount: 'instance',
+    inferDrawCount: 'no',
+    enforceMatchingVectorLengths: true,
     geometry: null,
     attributeVectors: undefined!,
     source: undefined!,
@@ -339,6 +361,7 @@ export class GPUVectorModel {
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   protected props: Required<GPUVectorModelProps>;
+  private batchUniformBuffer?: BatchUniformBuffer;
   private geometryVectorBindings!: GPUVectorBindings;
   private attributeVectorBindings!: GPUVectorBindings;
   private explicitBufferLayout: BufferLayout[] = [];
@@ -476,6 +499,7 @@ export class GPUVectorModel {
           ...this.props,
           modules,
           defines,
+          pluginInjectionTargets: resolvedPlugins.injectionTargets,
           pluginInjections: resolvedPlugins.injections,
           pluginVertexInputs: resolvedPlugins.vertexInputs,
           pluginInterStageVariables: resolvedPlugins.interStageVariables
@@ -513,6 +537,7 @@ export class GPUVectorModel {
           ...this.props,
           modules,
           defines,
+          pluginInjectionTargets: resolvedPlugins.injectionTargets,
           pluginInjections: resolvedPlugins.injections,
           pluginVertexInputs: resolvedPlugins.vertexInputs,
           pluginInterStageVariables: resolvedPlugins.interStageVariables
@@ -610,6 +635,7 @@ export class GPUVectorModel {
       this.geometryVectorBindings.destroy();
       this.attributeVectorBindings.destroy();
       this._uniformStore?.destroy();
+      this.batchUniformBuffer?.destroy();
       this._destroyed = true;
     }
   }
@@ -654,9 +680,32 @@ export class GPUVectorModel {
   /**
    * Issue one draw call.
    * @param renderPass - render pass to draw into
+   * @param options - Optional dynamic parameters restored after drawing, including on errors.
    * @returns `true` if the draw call was executed, `false` if resources were not ready.
    */
-  draw(renderPass: RenderPass): boolean {
+  draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    if (options?.parameters) {
+      return this._withDrawParameters(renderPass, options.parameters, () => this._draw(renderPass));
+    }
+    return this._draw(renderPass);
+  }
+
+  /** Applies draw overrides around the complete model batch, including failure paths. */
+  protected _withDrawParameters<T>(
+    renderPass: RenderPass,
+    parameters: NonNullable<ModelDrawOptions['parameters']>,
+    draw: () => T
+  ): T {
+    const state = renderPass.getParameters();
+    try {
+      renderPass.setParameters(parameters);
+      return draw();
+    } finally {
+      renderPass.setParameters(state);
+    }
+  }
+
+  private _draw(renderPass: RenderPass): boolean {
     if (this.indexVector?.length === 0) {
       this._lastDrawTimestamp = this.device.timestamp;
       this._needsRedraw = false;
@@ -795,13 +844,22 @@ export class GPUVectorModel {
     bufferLayouts ??=
       this.getExplicitVectorLayouts(vectors) ??
       this.getExplicitVectorLayouts(vectors, this.geometryVectorBindings.sourceLayouts);
-    validateGPUVectorBatchStructure(vectors);
-    if (!this.isInstanced || this.attributeVectorBindings.vertexCount !== undefined)
+    this.validateVectorLengthPolicy();
+    if (this.props.enforceMatchingVectorLengths) validateGPUVectorBatchStructure(vectors);
+    if (
+      this.props.enforceMatchingVectorLengths &&
+      (!this.isInstanced || this.attributeVectorBindings.vertexCount !== undefined)
+    )
       validateGPUVectorBatchStructure([
         ...Object.values(vectors),
         ...Object.values(this.attributeVectorBindings.inputs)
       ]);
-    this.geometryVectorBindings.setInputs(vectors, bufferLayouts, 'vertex');
+    this.geometryVectorBindings.setInputs(
+      vectors,
+      bufferLayouts,
+      'vertex',
+      this.props.enforceMatchingVectorLengths
+    );
     this.claimVectorLayouts(this.geometryVectorBindings);
     this.syncVectorBindings();
     const rowCount = this.geometryVectorBindings.rowCount;
@@ -810,7 +868,8 @@ export class GPUVectorModel {
         this.attributeVectorBindings.vertexCount === undefined ||
         rowCount === this.attributeVectorBindings.vertexCount
     );
-    this.setVertexCount(rowCount ?? this.attributeVectorBindings.vertexCount ?? 0);
+    if (this.props.inferDrawCount === 'vertex')
+      this.setVertexCount(rowCount ?? this.attributeVectorBindings.vertexCount ?? 0);
   }
 
   /** Replaces supplemental vectors; instanced models default these inputs to instance step mode. */
@@ -838,7 +897,8 @@ export class GPUVectorModel {
               layout.attributes?.some(attribute => attribute.attribute === name)
           )?.stepMode ?? vector.bufferLayout?.stepMode) === 'vertex'
       );
-    if (usesVertexRows)
+    this.validateVectorLengthPolicy();
+    if (usesVertexRows && this.props.enforceMatchingVectorLengths)
       validateGPUVectorBatchStructure([
         ...Object.values(this.geometryVectorBindings.inputs),
         ...Object.values(vectors)
@@ -846,14 +906,18 @@ export class GPUVectorModel {
     this.attributeVectorBindings.setInputs(
       vectors,
       bufferLayouts,
-      this.isInstanced ? 'instance' : 'vertex'
+      this.isInstanced ? 'instance' : 'vertex',
+      this.props.enforceMatchingVectorLengths
     );
     this.claimVectorLayouts(this.attributeVectorBindings);
     this.syncVectorBindings();
-    if (this.attributeVectorBindings.instanceCount !== undefined)
+    if (
+      this.props.inferDrawCount === 'instance' &&
+      this.attributeVectorBindings.instanceCount !== undefined
+    )
       this.setInstanceCount(this.attributeVectorBindings.instanceCount);
     const vertexCount = this.attributeVectorBindings.vertexCount;
-    if (vertexCount !== undefined) {
+    if (vertexCount !== undefined && this.props.inferDrawCount === 'vertex') {
       const geometryRowCount = this.geometryVectorBindings.rowCount;
       // Supplemental vertex columns describe the same rows as the geometry columns.
       assert(geometryRowCount === undefined || geometryRowCount === vertexCount);
@@ -994,7 +1058,8 @@ export class GPUVectorModel {
         this.geometryVectorBindings,
         this.attributeVectorBindings,
         () => this.syncVectorBindings(),
-        () => GPUVectorModel.prototype.draw.call(this, renderPass)
+        () => GPUVectorModel.prototype.draw.call(this, renderPass),
+        this.props.inferDrawCount
       );
       if (success) {
         this._lastDrawTimestamp = this.device.timestamp;
@@ -1007,7 +1072,13 @@ export class GPUVectorModel {
     }
   }
 
-  /** Draws each aligned physical chunk without retaining or taking ownership of input vectors. */
+  /**
+   * Draws each aligned physical chunk without taking ownership of input vectors.
+   * Each batch uses a separate aligned slot for managed shader-input uniforms set by
+   * `onBatch`. Slots are reused on each call: submit previous draws before changing their
+   * values or growing the allocation. Explicit buffers remain caller-managed. Vector
+   * lengths and physical chunk boundaries must match.
+   */
   drawBatches<Inputs extends GPUVectorModelInputs = GPUVectorModelInputs>(
     renderPass: RenderPass,
     {vectors, onBatch}: GPUVectorModelDrawBatchesOptions<Inputs>
@@ -1026,6 +1097,20 @@ export class GPUVectorModel {
     const previousIsInstanced = this.isInstanced;
     const previousVertexCountSet = this._vertexCountSet;
     const drawingVectorBatches = this.drawingVectorBatches;
+    const batchUniformStore =
+      this.device.type === 'webgpu' && batches.length
+        ? new UniformStore(this.device, this.shaderInputs.modules)
+        : undefined;
+    if (batchUniformStore && this._uniformStore.uniformBuffers.size) {
+      this.batchUniformBuffer ??= new BatchUniformBuffer(this.device);
+      let batchByteLength = 0;
+      for (const moduleName of this._uniformStore.uniformBuffers.keys()) {
+        batchByteLength += this.batchUniformBuffer.getAlignedByteLength(
+          batchUniformStore.getUniformBufferData(moduleName).byteLength
+        );
+      }
+      this.batchUniformBuffer.prepare(batchByteLength * batches.length);
+    }
     this.drawingVectorBatches = true;
     let drawSuccess = true;
     try {
@@ -1033,9 +1118,29 @@ export class GPUVectorModel {
         this.setGPUData(batch.data);
         this.setBatchDrawCount(batch.rowCount);
         onBatch?.(batch);
-        drawSuccess = GPUVectorModel.prototype.draw.call(this, renderPass) && drawSuccess;
+        const managedBindings: Record<string, ModelBinding> = {};
+        try {
+          if (batchUniformStore) {
+            batchUniformStore.setUniforms(this.shaderInputs.getUniformValues());
+            for (const [moduleName, buffer] of this._uniformStore.uniformBuffers) {
+              const bindingName = `${moduleName}Uniforms`;
+              // Explicit bindings are caller-owned and must not be replaced.
+              if (this.bindings[bindingName] !== buffer) continue;
+              managedBindings[bindingName] = buffer;
+              this.setBindings({
+                [bindingName]: this.batchUniformBuffer!.write(
+                  batchUniformStore.getUniformBufferData(moduleName)
+                )
+              });
+            }
+          }
+          drawSuccess = GPUVectorModel.prototype.draw.call(this, renderPass) && drawSuccess;
+        } finally {
+          this.setBindings(managedBindings);
+        }
       }
     } finally {
+      batchUniformStore?.destroy();
       this.setAttributes(previousAttributes, {byteOffsets: previousAttributeByteOffsets});
       for (const name of Object.keys(this.bindings)) {
         if (!(name in previousBindings)) delete this.bindings[name];
@@ -1067,9 +1172,16 @@ export class GPUVectorModel {
     );
   }
 
+  private validateVectorLengthPolicy(): void {
+    // Independent lengths cannot determine a common draw count.
+    assert(this.props.enforceMatchingVectorLengths !== false || this.props.inferDrawCount === 'no');
+  }
+
   private setBatchDrawCount(
     rowCount: number,
-    count: GPUVectorModelCount = this.props.gpuVectorCount
+    count: GPUVectorModelCount = this.props.inferDrawCount === 'no'
+      ? 'none'
+      : this.props.inferDrawCount
   ): void {
     if (count === 'instance') {
       this.setInstanceCount(rowCount);
@@ -1103,13 +1215,22 @@ export class GPUVectorModel {
       this.getExplicitVectorLayouts(geometry.inputs) ?? geometry.sourceLayouts;
     const attributeLayouts =
       this.getExplicitVectorLayouts(attributes.inputs) ?? attributes.sourceLayouts;
-    geometry.setInputs(geometry.inputs, geometryLayouts, 'vertex');
+    geometry.setInputs(
+      geometry.inputs,
+      geometryLayouts,
+      'vertex',
+      this.props.enforceMatchingVectorLengths
+    );
     attributes.setInputs(
       attributes.inputs,
       attributeLayouts,
-      this.isInstanced ? 'instance' : 'vertex'
+      this.isInstanced ? 'instance' : 'vertex',
+      this.props.enforceMatchingVectorLengths
     );
-    if (!this.isInstanced || attributes.vertexCount !== undefined)
+    if (
+      this.props.enforceMatchingVectorLengths &&
+      (!this.isInstanced || attributes.vertexCount !== undefined)
+    )
       validateGPUVectorBatchStructure([
         ...Object.values(geometry.inputs),
         ...Object.values(attributes.inputs)

@@ -2,6 +2,43 @@
 
 ## v10.0
 
+### v10.0.0-alpha.11
+
+- Upgrade loaders.gl and math.gl to beta.5, reuse shared GeoArrow adapters, support explicit table encodings, and emit canonical GeoArrow union IDs.
+- Add CPU vector storage, lazy CPU/GPU transfers, shared CPU graph operations, and Arrow and GeoArrow geometry pipelines.
+- Share SimpleGraph render operations, input invalidation, per-run bindings, and coordinate projection across deck.gl adapters.
+- Expose standalone PBR materials, models, environment prefiltering, shadow primitives, camera prepasses, contact shadows, ambient visibility, and clustered light lists; infer lightmap receiving flags.
+- Add an unlit material, shared shader types and interface metadata, and lightweight WGSL and GLSL inspection parsers with expanded WGSL support.
+- Add ANARI ray material textures and dielectric transport, and support Three.js r187 with streamed compute rendering.
+- Expose scene geometry and XMP metadata, scenegraph interactions, billboard bindings, and runtime punctual lights; qualify emissive strength rendering and animation.
+- Scope model draw parameters through render-pass snapshots, keep empty font atlases uploadable, and improve mobile documentation and example navigation.
+
+### v10.0.0-alpha.10
+
+- Rename shader hooks to injection targets and unify shader injection documentation.
+- Allow shared WGSL injection target names across vertex and fragment stages.
+- Support cancelling Arrow uploads from streams and validate requested GPU output formats.
+- Document automatic recovery from provenance transparency errors and independent npm registry propagation checks.
+
+### v10.0.0-alpha.9
+
+- Move shader injections from ShaderModule to ShaderPlugin and unify GLSL/WGSL hook descriptors and return types.
+- Expose makeGPUVectorGeometry and support independent vector lengths with explicit draw-count inference controls.
+- Add glTF Gaussian splat preparation and rendering, and inline graph texture debugging previews.
+- Apply initial WebGPU render-pass parameters correctly.
+- Finish the Lu-to-GPU naming migration and reorganize guides, API navigation, and shader and Three.js examples.
+- Keep simulation qualification in physics CI while retaining ordinary correctness checks in release tests, and build workspace packages before website publication.
+
+### v10.0.0-alpha.8
+
+- Add graph texture values and execution bindings, operation-defined results, capacity/count outputs, and shared transfer operations.
+- Support caller-owned graph encoding and reuse intermediate storage across graph execution.
+- Add path-based scenegraph lookup and physics controllers, integrate GPU physics rendering with engine PBR, and expand physics examples and guides.
+- Isolate per-batch uniforms in aligned buffer ranges and consolidate inferred vector buffer layouts.
+- Make shader, fence, and vertex-array destruction idempotent; support reverse-Z splat alpha ordering and improve glTF extension capability diagnostics.
+- Add portable ShaderPlugin hooks, align PBR directional lighting with Phong and Lambert, and add ocean velocity sampling with a geographic RK2 reference.
+- Upgrade math.gl and loaders.gl to beta.4, use the consolidated math.gl expression parser, and accept the standard ETC1 texture-format spelling while preserving its legacy alias.
+
 ### v10.0.0-alpha.7
 
 - Consolidate GPU execution, data, and table APIs into graph subpaths and expose explicit package exports.

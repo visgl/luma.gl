@@ -36,6 +36,8 @@ Neither establishes complete glTF proposal coverage or state-of-the-art performa
 The [background guide](/docs/api-guide/gpu/gpu-physics) explains the algorithms and
 GPU tradeoffs; the references below describe the actual contracts.
 
+For task-oriented guides, start with the [Physics overview](/docs/api-guide/physics/overview).
+
 ## Feature cards
 
 **Available** means an implemented API within the limits shown, not full performance
@@ -56,7 +58,7 @@ experimental as a module.
 | Collision events | Available | Opt-in rigid-body begin/end and thresholded impact samples with IDs, step ordering and explicit loss reporting | Event recording scans the bounded pair cache; large-world compaction and recoverable consumer overflow remain work |
 | Scene queries | Partial | Parallel collider rays, sphere overlap and bounded sphere casts across analytic shapes and cooked mesh geometry | One pending query per world; bounded casts report incomplete results; spatial batching and general shape casts remain planned |
 | Trigger volumes | Partial | Step-local compound sensors, per-collider glTF events, bounded general geometry and swept sphere crossings | Curved trajectories, general swept sensor geometry and large-world event throughput remain work |
-| Joints and articulations | Partial | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits, warm starts, springs, position/velocity drives and island sleeping | Parallel scheduling, breakage and articulations remain planned |
+| Joints and articulations | Partial | Bounded ordered distance/fixed/hinge/slider constraints, frames, limits, warm starts, springs, position/velocity drives and island sleeping | Static-anchored distance joints can alternate with parallel contacts; dynamic-to-dynamic parallel scheduling, breakage and articulations remain planned |
 | glTF physics | Partial | Pinned draft import, shape/body/material/filter semantics and explicit capability reports | Pinned G4/G5 qualification covers attachment constraints, triggers and behavior operations; analytic shape mutation/scale and live scene capture are implemented, while mesh-deformation recooking and full-profile qualification remain work |
 | GPU scenegraph pose publication | Partial | Reusable geometry snapshots and GPU body-node matrices/visual AABBs; cradle PBR and shadows consume published matrices | The glTF gallery consumes GPU matrices directly and binds rigid animation targets; deformation, live scene edits and export/reimport remain work |
 | Capacity and diagnostics | Available | Allocation preflight, bounded queues, lifetime diagnostics and GPU rollback; opt-in bounded automatic growth/replay for sparse pair, traversal and swept-candidate budgets | Recovery synchronizes each tick and replays from initial state; fixed mesh-task/CCD impact failures, event continuity and GPU-only adaptive growth remain work |

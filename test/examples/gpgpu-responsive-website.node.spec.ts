@@ -64,7 +64,7 @@ describe('responsive GPGPU website examples', () => {
     for (const modulePath of [
       '../../examples/showcase/billion-point-spatial-atlas/app',
       '../../examples/showcase/million-row-crossfilter/app',
-      '../../examples/deck/luspatial-taxi/app',
+      '../../examples/deck/gpu-spatial-taxi/app',
       '../../examples/experimental/fp64/app'
     ]) {
       expect(examplesSource, `${modulePath} must be loaded asynchronously`).toContain(

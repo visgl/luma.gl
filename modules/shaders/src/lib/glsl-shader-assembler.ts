@@ -23,7 +23,7 @@ export class GLSLShaderAssembler extends ShaderAssembler {
     modules: ShaderModule[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
-    const hookFunctions = [...this._hookFunctions, ...(props.hookFunctions || [])];
+    const injectionTargets = [...this._injectionTargets, ...(props.injectionTargets || [])];
     const vertex = this._transpileShader(props, modules, props.vs, 'vertex');
     const fragment = this._transpileShader(props, modules, props.fs, 'fragment');
     const assembled = assembleGLSLShaderPair({
@@ -31,7 +31,7 @@ export class GLSLShaderAssembler extends ShaderAssembler {
       vs: vertex.code,
       fs: props.fs == null ? undefined : fragment.code,
       modules: vertex.modules,
-      hookFunctions
+      injectionTargets
     });
 
     return {...assembled, modules};

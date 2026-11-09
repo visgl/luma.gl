@@ -48,7 +48,7 @@ This portable example maps the Engine objects to the Core work they manage.
   description="The example creates no GPU device or animation loop before activation."
   height={420}
 >
-  <HelloTriangleGeometryExample />
+  <HelloTriangleGeometryExample embedded />
 </ClientOnlyLiveExample>
 
 ## Core concepts
@@ -91,3 +91,14 @@ animation, picking and highlighting, scenes, and shader passes.
 - Use [Core](/docs/api-reference/core) for direct resource and command control.
 - Use [Shaders](/docs/api-reference/shaders) for modules, hooks, and plugins.
 - Use [GPU Core](/docs/api-reference/experimental/gpu-core) for scheduled multi-stage GPU work.
+
+- Use [directional contact shadows](./lighting/contact-shadows.md) for short screen-space visibility refinement.
+- Use [PBR surface prepasses](./lighting/pbr-surface-pass.md) for reusable camera depth and view-space normal textures.
+- Use [PBR shadows](./lighting/pbr-shadows.md) to cast and receive shadows with standalone mesh models.
+- Use [ShadowMapRenderer](./lighting/shadow-map-renderer.md) to record caller-owned shadow caster draws and share depth resources with receiver shaders.
+- Use [standalone PBR models](./lighting/pbr-model.md) to render native or loaded meshes with explicit transforms and lighting.
+- Use [PBR materials](./lighting/pbr-material.md) and [environment bindings](./lighting/pbr-environment.md) for shared physical materials and lighting resources.
+- Use [PrefilteredEnvironment](./lighting/prefiltered-environment.md) for reusable image-based lighting.
+
+- Use [ClusteredLightGrid](./lighting/clustered-light-grid.md) to build WebGPU light candidate lists.
+For choosing and combining environments, shadows, and AO, see the [lighting effects guide](../../api-guide/engine/lighting-effects.md).

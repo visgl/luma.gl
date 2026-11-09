@@ -651,3 +651,26 @@ it('gltf#parsePBRMaterial binds linear lightmap irradiance with UV1 and authored
   expect(() => parsePBRMaterial(device, material as any, {TEXCOORD_0: {}}, {})).toThrow();
   destroyParsedTextures(parsed);
 });
+
+it('gltf#parsePBRMaterial preserves default, zero and HDR emissive strengths', () => {
+  for (const [value, expected] of [
+    [undefined, undefined],
+    [0, 0],
+    [5, 5]
+  ] as const) {
+    const parsed = parsePBRMaterial(
+      device,
+      {
+        emissiveFactor: [0.2, 0.4, 0.6],
+        emissiveTexture: makeCompressedTextureInfo('emissive'),
+        extensions: {KHR_materials_emissive_strength: {emissiveStrength: value}}
+      },
+      {NORMAL: {}, TEXCOORD_0: {}},
+      {}
+    );
+    expect(parsed.uniforms.emissiveStrength).toBe(expected);
+    expect(parsed.uniforms.emissiveFactor).toEqual([0.2, 0.4, 0.6]);
+    expect(parsed.uniforms.emissiveMapEnabled).toBe(true);
+    destroyParsedTextures(parsed);
+  }
+});

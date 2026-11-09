@@ -301,6 +301,7 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
 
   // WEBGL_compressed_texture_etc1
 
+  'etc1-rgb-unorm-webgl': {gl: GL.COMPRESSED_RGB_ETC1_WEBGL},
   'etc1-rbg-unorm-webgl': {gl: GL.COMPRESSED_RGB_ETC1_WEBGL},
 
   // WEBGL_compressed_texture_atc

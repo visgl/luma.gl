@@ -2,11 +2,21 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {lowerGPUUpload, lowerGPUCopy, lowerGPUTextureCopy} from './gpu-transfer-lowering';
+import {GPUUploadOperation, GPUCopyOperation} from './gpu-transfer-operation';
+import {GPUCompactionOperation} from './gpu-compaction-operation';
+import {GPUCompaction} from './gpu-compaction';
+
 import type {TextureFormat} from '@luma.gl/core';
-import type {GraphTextureHandle, GraphImportedTexture} from './gpu-command-graph';
+import {getTextureBindingInfo, getBoundTextureViewProps} from './gpu-texture-plan';
+import type {
+  GraphBufferHandle,
+  GraphTextureHandle,
+  GraphImportedTexture
+} from './gpu-command-graph';
 import {GPUGraphTextureView, type GPUGraphTexture} from './gpu-graph-value';
 
-import {Buffer, type Device} from '@luma.gl/core';
+import {assert, Buffer, TextureView, type Device} from '@luma.gl/core';
 import {getGPUVectorFormatInfo, type GPUVectorInput} from '@luma.gl/graph/gpu-data';
 import type {GPUGraphVectorFormat} from './gpu-graph-value';
 import {type GPUCommandGraph, GraphVectorView} from './gpu-command-graph';
@@ -50,13 +60,14 @@ import {
   type GPUOperationLoweringDecision,
   type GPUGraphBackendCapabilities
 } from './gpu-graph-lowering';
+import {resolveGPUGraphDeclarations} from './gpu-graph-declarations';
 import {validateGPUGraph, type GPUGraphValidationReport} from './gpu-graph-validation';
 import type {GPUGraphScalar, GPUGraphVector} from './gpu-graph-value';
 import type {GPUGraph} from './gpu-graph';
 export type GPUGraphBindings = {
   scalars?: Readonly<Record<string, number>>;
   vectors?: Readonly<Record<string, GPUVectorInput>>;
-  textures?: Readonly<Record<string, GraphImportedTexture>>;
+  textures?: Readonly<Record<string, GraphImportedTexture | TextureView>>;
 };
 export type GPUGraphLoweredNode = {
   nodeId: string;
@@ -86,13 +97,17 @@ type LoweringState = {
   vectors: Map<string, GraphVectorView>;
   textures: Map<string, GraphTextureHandle>;
   textureValues: readonly GPUGraphTexture[];
+  textureViews: ReadonlyMap<string, TextureView>;
   predicateConjunctions: Map<string, GPUScalar<'uint32'>>;
   commandNodeIds: Set<string>;
+  transientResultNames: ReadonlySet<string>;
+  retainedBuffers: readonly GraphBufferHandle[];
 };
 export class GPUGraphCompiler<Parameters = void> {
   readonly device: Device;
   readonly capabilities: GPUGraphBackendCapabilities;
   readonly lowerings: readonly GPUOperationLowering<Parameters>[];
+  private compactionIndex = 0;
   constructor(device: Device, lowerings: readonly GPUOperationLowering<Parameters>[] = []) {
     this.device = device;
     this.capabilities = Object.freeze({
@@ -115,6 +130,35 @@ export class GPUGraphCompiler<Parameters = void> {
     );
   }
   compile(program: GPUGraph, bindings: GPUGraphBindings = {}): GPUGraphCompilation<Parameters> {
+    this.compactionIndex = 0;
+    // Bound external partitions must be available when resolving shape-inheriting results.
+    program = program.clone();
+    for (const vector of program.vectors) {
+      const binding = bindings.vectors?.[vector.id];
+      if (!vector.external || !binding || vector.chunkLengths) continue;
+      const data = 'data' in binding ? binding.data : 'buffer' in binding ? [binding] : binding;
+      program.constrainResult(vector, {
+        type: 'vector',
+        format: vector.format,
+        chunkLengths: data.map(chunk => chunk.length)
+      });
+    }
+    program = resolveGPUGraphDeclarations(program);
+    const transferUsages = new Map<string, number>();
+    const addTransferUsage = (name: string, usage: number): void => {
+      transferUsages.set(name, (transferUsages.get(name) ?? 0) | usage);
+    };
+    const collectTransferUsages = (operation: GPUGraphOperation): void => {
+      if (operation instanceof GPUCompositeOperation)
+        operation.operations.forEach(collectTransferUsages);
+      else if (operation instanceof GPUUploadOperation)
+        addTransferUsage(operation.output, Buffer.COPY_DST);
+      else if (operation instanceof GPUCopyOperation) {
+        addTransferUsage(operation.input, Buffer.COPY_SRC);
+        addTransferUsage(operation.output, Buffer.COPY_DST);
+      }
+    };
+    program.operations.forEach(collectTransferUsages);
     const validation = validateGPUGraph(program, bindings);
     if (!validation.valid)
       throw new Error(
@@ -198,7 +242,10 @@ export class GPUGraphCompiler<Parameters = void> {
             graph,
             chunkLengths.length === 1 ? vector.id : `${vector.id}-chunk-${index}`,
             vector.format,
-            length
+            length,
+            vector.role === 'value'
+              ? Buffer.STORAGE | Buffer.VERTEX | Buffer.COPY_SRC | Buffer.COPY_DST
+              : Buffer.STORAGE | (transferUsages.get(vector.id) ?? 0)
           )
         );
         const formatInfo = getGPUVectorFormatInfo(vector.format);
@@ -217,10 +264,34 @@ export class GPUGraphCompiler<Parameters = void> {
       vectors.set(vector.id, resolved);
     }
     const textures = new Map<string, GraphTextureHandle>();
+    const textureViews = new Map<string, TextureView>();
     for (const texture of program.textures) {
+      // Reusable declarations must have execution-resolved dimensions before low-level lowering.
+      assert(texture.width !== undefined && texture.height !== undefined);
+      let binding = bindings.textures?.[texture.id];
+      let descriptor = {...texture, width: texture.width, height: texture.height};
+      if (binding instanceof TextureView) {
+        const info = getTextureBindingInfo(binding);
+        assert(
+          info.format === texture.format &&
+            info.width === texture.width &&
+            info.height === texture.height
+        );
+        textureViews.set(texture.id, binding);
+        binding = info.texture;
+        descriptor = {
+          ...descriptor,
+          dimension: binding.dimension,
+          width: binding.width,
+          height: binding.height,
+          depth: binding.depth,
+          mipLevels: binding.mipLevels,
+          samples: binding.samples
+        };
+      }
       const handle = texture.external
-        ? graph.importTexture(texture, bindings.textures?.[texture.id])
-        : graph.createTransientTexture(texture);
+        ? graph.importTexture(descriptor, binding)
+        : graph.createTransientTexture(descriptor);
       textures.set(texture.id, handle);
     }
     const state: LoweringState = {
@@ -232,8 +303,15 @@ export class GPUGraphCompiler<Parameters = void> {
       vectors,
       textures,
       textureValues: program.textures,
+      textureViews,
       predicateConjunctions: new Map(),
-      commandNodeIds: new Set()
+      commandNodeIds: new Set(),
+      transientResultNames: new Set(
+        program.vectors
+          .filter(vector => vector.role === 'value' && !vector.external)
+          .map(vector => vector.id)
+      ),
+      retainedBuffers: []
     };
     for (const operation of program.operations) this.lower(graph, operation, state);
     return Object.freeze({
@@ -256,6 +334,24 @@ export class GPUGraphCompiler<Parameters = void> {
   }
   protected createCoreLowerings(): GPUOperationLowering<Parameters>[] {
     return [
+      {type: 'vector-upload', lower: lowerGPUUpload},
+      {type: 'vector-copy', lower: lowerGPUCopy},
+      {
+        type: 'compaction',
+        lower: (operation: GPUCompactionOperation, context) => {
+          const {input, flags, output, count} = operation.props;
+          context.graph.add(
+            new GPUCompaction({
+              // Unrolled iterations need distinct scratch resources as well as distinct nodes.
+              id: `${operation.id}-${this.compactionIndex++}`,
+              input: context.resolveVector<'uint32'>(input),
+              flags: context.resolveVector<'uint32'>(flags),
+              output: context.resolveVector<'uint32'>(output),
+              count: context.resolveScalar<'uint32'>(count).view
+            })
+          );
+        }
+      },
       {
         type: 'scalar-literal',
         lower: (operation: GPUGraphScalarLiteral, context) => {
@@ -411,6 +507,16 @@ export class GPUGraphCompiler<Parameters = void> {
         ? operation.id
         : (operation.constructor?.name ?? 'command-node-producer');
     state.path.push(id);
+    const previousRetainedBuffers = state.retainedBuffers;
+    const retainedBuffers = [...previousRetainedBuffers];
+    if (isGPUOperation(operation)) {
+      for (const use of operation.contract?.values ?? []) {
+        const name = typeof use.value === 'string' ? use.value : use.value.id;
+        if (state.transientResultNames.has(name))
+          for (const chunk of state.vectors.get(name)!.data) retainedBuffers.push(chunk.buffer);
+      }
+    }
+    state.retainedBuffers = retainedBuffers;
     try {
       if (operation instanceof GPUCompositeOperation && operation.type === 'composite') {
         state.decisions.push({
@@ -428,7 +534,10 @@ export class GPUGraphCompiler<Parameters = void> {
         const lowerer = this.lowerings.find(lowering => lowering.type === operation.type)?.lower;
         if (lowerer) {
           const invoke = () =>
-            lowerer(operation, {
+            (operation instanceof GPUCopyOperation &&
+              state.textureValues.some(value => value.id === operation.input)
+              ? (lowerGPUTextureCopy as typeof lowerer)
+              : lowerer)(operation, {
               graph,
               capabilities: this.capabilities,
               lower: child => this.lower(graph, child, state),
@@ -446,7 +555,13 @@ export class GPUGraphCompiler<Parameters = void> {
               resolveTextureView: value => {
                 const texture = value instanceof GPUGraphTextureView ? value.texture : value;
                 const props = value instanceof GPUGraphTextureView ? value.props : {};
-                return graph.createTextureView(this.resolveTexture(texture, state), props);
+                const binding = state.textureViews.get(
+                  typeof texture === 'string' ? texture : texture.id
+                );
+                return graph.createTextureView(
+                  this.resolveTexture(texture, state),
+                  binding ? getBoundTextureViewProps(binding, props) : props
+                );
               },
               recordDecision: d => state.decisions.push(d)
             });
@@ -468,6 +583,7 @@ export class GPUGraphCompiler<Parameters = void> {
       }
       throw new Error(`GPUGraph operation "${id}" has no WebGPU lowering`);
     } finally {
+      state.retainedBuffers = previousRetainedBuffers;
       state.path.pop();
     }
   }
@@ -515,7 +631,7 @@ export class GPUGraphCompiler<Parameters = void> {
             nodeType: decorated.type,
             operationPath: [...state.path]
           });
-          return decorated;
+          return {...decorated, retainedBuffers: state.retainedBuffers};
         }, callback)
     );
   }
@@ -524,7 +640,10 @@ export class GPUGraphCompiler<Parameters = void> {
     node: any,
     state: LoweringState
   ): any {
-    node = this.makeCommandNodeIdUnique(node, state);
+    node = {
+      ...this.makeCommandNodeIdUnique(node, state),
+      retainedBuffers: state.retainedBuffers
+    };
     if (state.path.length)
       state.nodes.push({nodeId: node.id, nodeType: 'compute', operationPath: [...state.path]});
     if (!state.predicates.length) return node;

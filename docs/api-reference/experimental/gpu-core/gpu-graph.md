@@ -2,9 +2,23 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 # GPUGraph
 
+For portable fullscreen image processing on WebGPU, use
+[`GPUShaderPassOperation`](../../graph/gpu-shader-pass-operation.md) with named texture inputs
+and scalar parameters. The same operation description also runs on WebGPU GPUSimpleGraph.
+
 ## Overview
 
-`GPUGraph` is luma.gl's backend-independent graph of operations and logical values. It is intentionally distinct from `GPUCommandGraph`, which is the WebGPU execution graph.
+`GPUGraph` describes operations and logical values without requiring a device during authoring.
+Its execution implementation currently requires WebGPU. `GPUCommandGraph` is the lower-level
+pass and resource graph produced by lowering. Start with the
+[graph tutorial](/docs/api-reference/graph/getting-started) for reusable compilation and runtime inputs;
+this reference also covers the advanced, concrete-dimension compiler interface.
+
+Built-in reusable operations include
+[GPUUploadOperation and GPUCopyOperation](/docs/api-reference/graph/gpu-transfer-operations),
+which also work in reusable SimpleGraph, and WebGPU
+[GPUCompactionOperation](/docs/api-reference/graph/gpu-compaction-operation), which produces
+capacity and a GPU logical count.
 
 <GPUOperationContract operation="gpu-graph" />
 
@@ -36,6 +50,15 @@ A mathematical operation and an executable GPU command are different abstraction
 
 This separation is also compatible with native execution systems such as CUDA Graphs. A semantic `GPULoopOperation` may lower on WebGPU to a bounded sequence of GPU-gated indirect dispatches, while a CUDA backend could lower the same semantic loop to a native CUDA conditional WHILE graph node.
 
+## External inputs and operation-defined results
+
+Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))` for
+external inputs, and `addState()` for initialized borrowed vector state. Operations declare
+their results through contracts; expressions infer theirs automatically. Applications select
+returned outputs at compilation and supply `{inputs, state, outputTargets}` at execution.
+See [Graph inputs, results, and state](/docs/api-reference/graph/gpu-graph-values) for examples,
+ownership, dynamic dimension support, and current boundaries.
+
 ## API
 
 ```ts
@@ -60,13 +83,13 @@ The public semantic value and operation types are `GPUGraphScalar`, `GPUGraphVec
 `GPUGraphScalarLiteral`, `GPUGraphScalarOperation`, `GPUGraphVectorMADD`,
 `GPUGraphDotProduct`, `GPUGraphCSRMatrix`, and `GPUGraphSpMV`. The WebGPU
 `GPUGraphCompiler` lowers these built-ins using explicit `GPUOperationLowering` descriptors; custom
-semantic operation types can register an equally explicit backend lowering.
+semantic operation types can supply an equally explicit backend lowering.
 
 ## Hard boundary
 
 A semantic `GPUOperation` does not expose `getCommandNodes()`. Operations do not own a `Device`, command encoder, bindings, dispatch dimensions, or command-graph nodes.
 
-`GPUGraph` also accepts `GPUGraphPrimitive` objects that construct explicit command nodes against the compiler-supplied graph. There is no graph-mutation compatibility fallback. Semantic operations require a registered backend lowerer.
+`GPUGraph` also accepts `GPUGraphPrimitive` objects that construct explicit command nodes against the compiler-supplied graph. There is no graph-mutation compatibility fallback. Semantic operations require an explicit backend lowerer.
 
 The intended end state is:
 
@@ -189,3 +212,6 @@ fields plus `external`. `graph.textureView(texture, props)` selects subresources
 storage. `GPUGraphCompiler.compile()` accepts optional `textures` defaults; imported textures may
 also be supplied when encoding. `compilation.textures` exposes logical graph texture handles.
 Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
+
+Reusable `compile(device)` programs also support named texture inputs and operation-produced
+texture results. See [texture values and execution bindings](/docs/api-reference/graph/gpu-graph-textures).
