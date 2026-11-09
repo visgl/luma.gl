@@ -78,7 +78,17 @@ test('combined PBR visibility preserves emission and separates direct from baked
     bakeModel.destroy();
     bakeMaterial.destroy();
     const lightmap = baked.textures.lightmapTexture;
-    const mask = device.createTexture({width: 1, height: 1, data: new Uint8Array([0, 0, 0, 255])});
+    // Center sampling lands in column 8; omitting viewport.x would land in white column 10.
+    const maskData = new Uint8Array(16 * 12 * 4);
+    for (let pixel = 0; pixel < 16 * 12; pixel++) {
+      maskData.set([...(pixel % 16 < 9 ? [0, 0, 0] : [255, 255, 255]), 255], pixel * 4);
+    }
+    const mask = device.createTexture({
+      width: 16,
+      height: 12,
+      data: maskData,
+      sampler: {minFilter: 'nearest', magFilter: 'nearest'}
+    });
     const material = createPBRMaterial(device, {
       bindings: {pbr_lightmapSampler: lightmap},
       uniforms: {
@@ -141,10 +151,15 @@ test('combined PBR visibility preserves emission and separates direct from baked
       ambientOcclusion: boolean,
       contact: boolean,
       mapped: boolean,
-      indirect: boolean,
+      indirect: boolean | 'environment' | 'lightmap',
       direct: boolean
     ) {
-      material.setProps({pbrMaterial: {IBLenabled: indirect, lightmapIntensity: indirect ? 1 : 0}});
+      material.setProps({
+        pbrMaterial: {
+          IBLenabled: indirect === true || indirect === 'environment',
+          lightmapIntensity: indirect === true || indirect === 'lightmap' ? 1 : 0
+        }
+      });
       receiver.shaderInputs.setProps({
         pbrAmbientOcclusion: {ambientOcclusionTexture: mask, viewport, enabled: ambientOcclusion},
         pbrContactShadow: {contactShadowTexture: mask, viewport, enabled: contact},
@@ -164,7 +179,7 @@ test('combined PBR visibility preserves emission and separates direct from baked
               : []),
             {
               type: 'ambient' as const,
-              color: (indirect ? [0.1, 0.1, 0.1] : [0, 0, 0]) as [number, number, number]
+              color: (indirect === true ? [0.1, 0.1, 0.1] : [0, 0, 0]) as [number, number, number]
             }
           ]
         }
@@ -190,13 +205,26 @@ test('combined PBR visibility preserves emission and separates direct from baked
       const emission = await render(false, false, false, false, false);
       const direct = await render(false, false, false, false, true);
       const indirect = await render(false, false, false, true, false);
+      const environmentOnly = await render(false, false, false, 'environment', false);
+      const lightmapOnly = await render(false, false, false, 'lightmap', false);
+      const environmentBlocked = await render(true, false, false, 'environment', false);
+      const lightmapBlocked = await render(true, false, false, 'lightmap', false);
       const full = await render(false, false, false, true, true);
+      const rightFull = await readPixel(device, color, 15, 9);
       const ambientBlocked = await render(true, false, false, true, true);
+      const rightAmbient = await readPixel(device, color, 15, 9);
       const contactBlocked = await render(false, true, false, true, true);
+      const rightContact = await readPixel(device, color, 15, 9);
       const mapBlocked = await render(false, false, true, true, true);
       const allBlocked = await render(true, true, true, true, true);
       for (let channel = 0; channel < 3; channel++) {
         expect(Math.abs(emission[channel] - [5, 8, 10][channel])).toBeLessThanOrEqual(1);
+        expect(environmentOnly[channel]).toBeGreaterThan(emission[channel] + 2);
+        expect(lightmapOnly[channel]).toBeGreaterThan(emission[channel] + 15);
+        expect(Math.abs(environmentBlocked[channel] - emission[channel])).toBeLessThanOrEqual(1);
+        expect(Math.abs(lightmapBlocked[channel] - emission[channel])).toBeLessThanOrEqual(1);
+        expect(Math.abs(rightAmbient[channel] - rightFull[channel])).toBeLessThanOrEqual(1);
+        expect(Math.abs(rightContact[channel] - rightFull[channel])).toBeLessThanOrEqual(1);
         expect(full[channel]).toBeGreaterThan(direct[channel] + 10);
         expect(full[channel]).toBeGreaterThan(indirect[channel] + 10);
         expect(Math.abs(ambientBlocked[channel] - direct[channel])).toBeLessThanOrEqual(1);
@@ -311,10 +339,13 @@ test('shared frame reuses resources, replaces resized outputs and recovers from 
       expect(createTexture).not.toHaveBeenCalled();
       // Ordered uniform uploads may allocate submission-scoped COPY_SRC staging buffers.
       for (const [props] of createBuffer.mock.calls) expect(props.usage).toBe(Buffer.COPY_SRC);
-      for (const result of createBuffer.mock.results) expect(result.value.destroyed).toBe(true);
+      const stagingBuffers = createBuffer.mock.results.map(result => result.value);
       createTexture.mockRestore();
       createBuffer.mockRestore();
       submit.mockRestore();
+      // Readback yields until prior submissions and their staging cleanup have completed.
+      await readPixel(device, surface.normalTexture, 0, 0);
+      for (const buffer of stagingBuffers) expect(buffer.destroyed).toBe(true);
       const previous = record();
       device.submit();
       const oldDepth = surface.depthTexture;
