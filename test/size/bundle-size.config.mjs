@@ -99,8 +99,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: '`@luma.gl/core/webgl` backend',
     entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
-    // Unpack fast path trades ~0.6 KB minified for fewer upload allocations.
-    maximum: {minified: 141_200, gzip: 39_900, brotli: 34_200},
+    // Includes scalar pixel-store tracking and pooled state frames (141,646 B / 39,995 B gzip combined).
+    maximum: {minified: 141_800, gzip: 40_100, brotli: 34_400},
     targetGzip: 30_000
   },
   {
@@ -115,8 +115,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     name: 'core-webgl',
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
-    // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
-    maximum: {minified: 244_200, gzip: 68_800, brotli: 59_600},
+    // Includes both state-tracker optimizations; shared ceiling avoids merge-order regressions.
+    maximum: {minified: 244_600, gzip: 69_000, brotli: 60_000},
     targetGzip: 54_000
   },
   {
