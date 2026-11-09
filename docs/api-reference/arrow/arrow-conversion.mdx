@@ -277,7 +277,9 @@ const compactCPU = convertCPUColors(cpuColors, {format: 'float16x4'});
 ```
 
 The Arrow-free `convertCPUColors(source, options)` accepts Uint8/unorm8, Float16, or Float32
-RGB/RGBA CPUVector rows and the same format/preservation constraints. Compatible preservation
+RGB/RGBA CPUVector rows and the same format/preservation constraints. Packed Float16 RGB
+stored as `uint16x3-webgl` requires `inputFormat: 'float16x3'` to distinguish half-float
+bits from unsigned integer channels. Compatible preservation
 borrows the existing chunks; conversion allocates CPU payloads only. Low-level
 `convertColorData(source, {format})` returns a lazy evaluator; the WebGPU handler supports
 `GPUEvaluationScope`, encoding into its caller-owned command stream without private submission.

@@ -297,3 +297,20 @@ test('array-backed and constant colors derive storage formats on CPU, including 
   }
   device.destroy();
 });
+
+test('CPU Float16 RGB storage alias uses explicit channel interpretation', () => {
+  const source = new CPUVector({
+    format: 'uint16x3-webgl',
+    data: [
+      new CPUData({
+        format: 'uint16x3-webgl',
+        buffer: new Uint16Array([0x3c00, 0x4000, 0x3800]),
+        length: 1
+      })
+    ]
+  });
+  expect(() => convertCPUColors(source)).toThrow();
+  const result = convertCPUColors(source, {inputFormat: 'float16x3', format: 'preserve'});
+  expect(result.format).toBe('float16x4');
+  expect(Array.from(new Uint16Array(result.data[0].buffer), fromHalfFloat)).toEqual([1, 2, 0.5, 1]);
+});

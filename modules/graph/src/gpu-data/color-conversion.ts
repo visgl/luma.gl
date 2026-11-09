@@ -50,24 +50,33 @@ export function resolveColorOutputFormat(
   return format;
 }
 
+/** CPU storage interpretation, independent of output format negotiation. */
+type CPUColorConversionOptions = ColorConversionOptions & {
+  /** Interpret packed Float16 RGB stored using the uint16x3-webgl alias. */
+  inputFormat?: 'float16x3';
+};
+
 /** Convert CPU color chunks without uploading or combining chunks. Input storage is borrowed. */
 export function convertCPUColors(
   source: CPUVector,
-  options?: ColorConversionOptions & {format?: 'unorm8x4'}
+  options?: CPUColorConversionOptions & {format?: 'unorm8x4'}
 ): CPUVector<'unorm8x4'>;
 export function convertCPUColors<T extends ColorOutputFormat>(
   source: CPUVector,
-  options: ColorConversionOptions & {format: T}
+  options: CPUColorConversionOptions & {format: T}
 ): CPUVector<T>;
 export function convertCPUColors(
   source: CPUVector,
-  options: ColorConversionOptions
+  options: CPUColorConversionOptions
 ): CPUVector<ColorOutputFormat>;
 export function convertCPUColors(
   source: CPUVector,
-  options: ColorConversionOptions = {}
+  options: CPUColorConversionOptions = {}
 ): CPUVector<ColorOutputFormat> {
-  const format = resolveColorOutputFormat(source.format, options);
+  const format = resolveColorOutputFormat(
+    options.inputFormat ? 'float16x4' : source.format,
+    options
+  );
   if (options.format === 'preserve' && source.format === format)
     return new CPUVector({
       name: source.name,
@@ -77,7 +86,7 @@ export function convertCPUColors(
   return new CPUVector({
     name: source.name,
     format,
-    data: source.data.map(chunk => convertCPUColorData(chunk, format))
+    data: source.data.map(chunk => convertCPUColorData(chunk, format, options.inputFormat))
   });
 }
 
