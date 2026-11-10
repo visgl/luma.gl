@@ -229,6 +229,12 @@ GPU expressions now support row-local `dot`, `length`, `equalAll`, and
 See the [expression syntax reference](./api-reference/graph/gpu-expression-operation.md).
 
 
+## Semantic aggregation operations
+
+[`GPUGraphGroupAggregation` and `GPUGraphReduction`](./api-reference/experimental/gpu-core/gpu-graph.md#grouped-aggregation-and-scalar-reduction)
+compose dense grouped statistics and scalar reductions with named graph inputs,
+inferred result shapes, and GPU-resident intermediate values.
+
 ## Shader plugin primary modules
 
 ShaderPlugin now contributes one optional `module`, with supporting modules expressed
