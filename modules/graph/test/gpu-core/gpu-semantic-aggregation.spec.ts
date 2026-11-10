@@ -6,7 +6,14 @@ import {expect, test} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
-import {GPUGraph, GPUGraphGroupAggregation, GPUGraphReduction, gpuGraph} from '@luma.gl/graph';
+import {GPUConditionalOperation, GPUGraphScalarLiteral} from '@luma.gl/graph/gpu-core';
+import {
+  GPUGraph,
+  GPUGraphCompiler,
+  GPUGraphGroupAggregation,
+  GPUGraphReduction,
+  gpuGraph
+} from '@luma.gl/graph';
 
 for (const operation of ['count', 'sum', 'min', 'max', 'mean'] as const) {
   test(`semantic grouped ${operation} composes with extent across independent chunks`, async ({
@@ -177,3 +184,72 @@ test('semantic aggregation reuses borrowed destinations and resets them between 
     target.destroy();
   }
 });
+
+for (const enabled of [0, 1]) {
+  test(`semantic grouped sum and extent respect GPU predicate ${enabled}`, async ({skip}) => {
+    const device = await getWebGPUTestDevice();
+    if (!device) return skip();
+    const keys = new GPUData({
+      format: 'uint32',
+      length: 3,
+      ownsBuffer: true,
+      buffer: device.createBuffer({
+        data: new Uint32Array([0, 0, 1]),
+        usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+      })
+    });
+    const makeFloatData = (values: number[]) =>
+      new GPUData({
+        format: 'float32',
+        length: values.length,
+        ownsBuffer: true,
+        buffer: device.createBuffer({
+          data: new Float32Array(values),
+          usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
+        })
+      });
+    const values = makeFloatData([2, 3, 4]);
+    const groups = makeFloatData([100, 200]);
+    const extent = makeFloatData([300, 400]);
+    const program = new GPUGraph();
+    program.vector('keys', 'uint32', 3, {external: true});
+    program.vector('values', 'float32', 3, {external: true});
+    program.vector('groups', 'float32', 2, {external: true});
+    program.vector('extent', 'float32', 2, {external: true});
+    const active = program.scalar('active', 'uint32');
+    program.add([
+      new GPUGraphScalarLiteral({output: active, value: enabled}),
+      new GPUConditionalOperation({
+        predicate: {id: 'enabled', source: 'gpu', value: active},
+        body: [
+          new GPUGraphGroupAggregation({
+            keys: 'keys',
+            values: 'values',
+            output: 'groups',
+            operation: 'sum'
+          }),
+          new GPUGraphReduction({input: 'groups', output: 'extent', operation: 'extent'})
+        ]
+      })
+    ]);
+    const {graph} = new GPUGraphCompiler(device).compile(program, {
+      vectors: {keys, values, groups, extent}
+    });
+    const executable = graph.compile();
+    try {
+      const encoder = device.createCommandEncoder();
+      executable.encode(encoder, {parameters: undefined});
+      device.submit(encoder.finish());
+      for (const [output, expected] of [
+        [groups, enabled ? [5, 4] : [100, 200]],
+        [extent, enabled ? [4, 5] : [300, 400]]
+      ] as const) {
+        const bytes = await output.buffer.readAsync();
+        expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 2))).toEqual(expected);
+      }
+    } finally {
+      executable.destroy();
+      for (const data of [keys, values, groups, extent]) data.destroy();
+    }
+  });
+}

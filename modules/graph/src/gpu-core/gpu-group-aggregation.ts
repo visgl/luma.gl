@@ -4,6 +4,7 @@
 
 import {alignGraphVectorViews} from './graph-vector-view-utils';
 
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {type Binding} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
@@ -739,56 +740,43 @@ function addKernelPass<Parameters>(
     dispatchSize?: GPUGroupAggregationDispatchLayout;
   }
 ): readonly GPUCommandNode<Parameters>[] {
-  const nodes: GPUCommandNode<Parameters>[] = [];
-  const maximumWorkgroupCount = props.dispatchSize
-    ? props.dispatchSize.x * props.dispatchSize.y * props.dispatchSize.z
-    : (props.dispatchCount ?? 1);
-  nodes.push(
-    createGPUComputeCommandNode<Parameters>({
-      id: props.id,
-      resources: props.resources,
-      workload: {
-        operation: 'GPUGroupAggregation',
-        commandCount: 1,
-        maximumWorkgroupCount,
-        maximumInvocationCount: maximumWorkgroupCount * GROUP_AGGREGATION_WORKGROUP_SIZE
-      },
-      compile: ({device}) => {
-        const kernel = new Kernel(device, {
-          id: props.id,
-          source: props.source,
-          shaderLayout: {
-            bindings: Object.keys(props.bindings).map((name, location) => ({
-              name,
-              type: 'storage' as const,
-              group: 0,
-              location
-            }))
+  const {x, y, z} = props.dispatchSize ?? {x: props.dispatchCount ?? 1, y: 1, z: 1};
+  const maximumWorkgroupCount = x * y * z;
+  const node = createGPUComputeCommandNode<Parameters>({
+    id: props.id,
+    resources: props.resources,
+    workload: {
+      operation: 'GPUGroupAggregation',
+      commandCount: 1,
+      maximumWorkgroupCount,
+      maximumInvocationCount: maximumWorkgroupCount * GROUP_AGGREGATION_WORKGROUP_SIZE
+    },
+    compile: ({device}) => {
+      const kernel = new Kernel(device, {
+        id: props.id,
+        source: props.source,
+        shaderLayout: {
+          bindings: Object.keys(props.bindings).map((name, location) => ({
+            name,
+            type: 'storage' as const,
+            group: 0,
+            location
+          }))
+        }
+      });
+      return {
+        encode: ({computePass, getBuffer}) => {
+          const bindings: Record<string, Binding> = {};
+          for (const [name, view] of Object.entries(props.bindings)) {
+            bindings[name] = getViewBinding(view, getBuffer);
           }
-        });
-        return {
-          encode: ({computePass, getBuffer}) => {
-            const bindings: Record<string, Binding> = {};
-            for (const [name, view] of Object.entries(props.bindings)) {
-              bindings[name] = getViewBinding(view, getBuffer);
-            }
 
-            if (props.dispatchSize) {
-              kernel.dispatch(computePass, {
-                bindings,
-                x: props.dispatchSize.x,
-                y: props.dispatchSize.y,
-                z: props.dispatchSize.z
-              });
-            } else {
-              kernel.dispatch(computePass, {bindings, x: props.dispatchCount!});
-            }
-          },
-          destroy: () => kernel.destroy()
-        };
-      }
-    })
-  );
+          kernel.dispatch(computePass, {bindings, x, y, z});
+        },
+        destroy: () => kernel.destroy()
+      };
+    }
+  });
 
-  return nodes;
+  return [setGPUComputeDispatchWorkgroups(node, [x, y, z])];
 }
