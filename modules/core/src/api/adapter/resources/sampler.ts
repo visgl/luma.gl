@@ -4,21 +4,21 @@
 
 import type {Device} from '../device';
 import type {SamplerProps as ShaderSamplerProps} from '@luma.gl/shaders/types';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Edge values sampling mode */
 export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 
 /** Sampler filtering mode */
 export type SamplerFilterMode = 'nearest' | 'linear';
-export type SamplerProps = ResourceProps & ShaderSamplerProps;
+export type SamplerProps = DeviceResourceProps & ShaderSamplerProps;
 
-export type SamplerParameters = Omit<SamplerProps, keyof ResourceProps>;
+export type SamplerParameters = Omit<SamplerProps, keyof DeviceResourceProps>;
 
 /** Immutable Sampler object */
-export abstract class Sampler extends Resource<SamplerProps> {
+export abstract class Sampler extends DeviceResource<SamplerProps> {
   static override defaultProps: Required<SamplerProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     type: 'color-sampler',
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',

@@ -6,12 +6,12 @@ import type {TypedArray} from '../../types';
 import type {Device} from '../device';
 import type {Buffer} from './buffer';
 import type {RenderPass} from './render-pass';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {ShaderLayout} from '../types/shader-layout';
 import {BufferLayout} from '../types/buffer-layout';
 
 /** Properties for initializing a VertexArray */
-export type VertexArrayProps = ResourceProps & {
+export type VertexArrayProps = DeviceResourceProps & {
   /** Shader-side attribute declarations used by the backend-specific vertex-array implementation. */
   shaderLayout: ShaderLayout;
   /** Logical buffer layout declarations used by the backend-specific vertex-array implementation. */
@@ -25,9 +25,9 @@ export type VertexArrayProps = ResourceProps & {
  * WebGL derives and caches that information in its own implementation, while WebGPU only tracks
  * the logical buffer bindings it needs to rebind at draw time.
  */
-export abstract class VertexArray extends Resource<VertexArrayProps> {
+export abstract class VertexArray extends DeviceResource<VertexArrayProps> {
   static override defaultProps: Required<VertexArrayProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     shaderLayout: undefined!,
     bufferLayout: []
   };

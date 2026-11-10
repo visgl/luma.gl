@@ -4,10 +4,10 @@
 
 import type {Device} from '../device';
 import type {Sampler, SamplerProps} from './sampler';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Properties for one concrete backend external texture binding snapshot. */
-export type ExternalTextureProps = ResourceProps & {
+export type ExternalTextureProps = DeviceResourceProps & {
   /** Browser video source imported into this concrete WebGPU external binding. */
   source?: HTMLVideoElement | VideoFrame;
   /** Width for handle-backed external textures when it cannot be inferred from source. */
@@ -21,7 +21,7 @@ export type ExternalTextureProps = ResourceProps & {
 };
 
 /** Concrete backend binding snapshot for opaque external texture data. */
-export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
+export abstract class ExternalTexture extends DeviceResource<ExternalTextureProps> {
   /** Width in pixels for this concrete sampled binding. */
   readonly width: number;
   /** Height in pixels for this concrete sampled binding. */
@@ -33,7 +33,7 @@ export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
   /** Device timestamp of this external binding acquisition. */
   updateTimestamp: number;
 
-  /** Resource label used by debug output. */
+  /** DeviceResource label used by debug output. */
   override get [Symbol.toStringTag](): string {
     return 'ExternalTexture';
   }
@@ -53,7 +53,7 @@ export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
 
   /** Default resolved properties used by concrete external texture bindings. */
   static override defaultProps: Required<ExternalTextureProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     source: undefined!,
     width: 0,
     height: 0,

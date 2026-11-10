@@ -55,16 +55,12 @@ export class WEBGLBuffer extends Buffer {
     }
   }
 
-  override destroy(): void {
-    if (!this.destroyed && this.handle) {
-      this.removeStats();
+  protected override destroyHandle(): void {
+    if (this.handle) {
       if (!this.props.handle) {
-        this.trackDeallocatedMemory();
         this.gl.deleteBuffer(this.handle);
-      } else {
-        this.trackDeallocatedReferencedMemory('Buffer');
       }
-      this.destroyed = true;
+
       // @ts-expect-error
       this.handle = null;
     }

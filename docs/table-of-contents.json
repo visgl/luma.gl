@@ -86,6 +86,7 @@
           "api-guide/gpu/README",
           "api-guide/gpu/gpu-initialization",
           "api-guide/gpu/gpu-resources",
+          "api-guide/gpu/resource-ownership",
           {
             "type": "category",
             "label": "Memory and buffers",
@@ -447,6 +448,7 @@
             "label": "Buffers and textures",
             "items": [
               "api-reference/core/resources/resource",
+              "api-reference/core/resources/device-resource",
               "api-reference/core/resources/buffer",
               "api-reference/core/resources/texture",
               "api-reference/core/resources/texture-view",

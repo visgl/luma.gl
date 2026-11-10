@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {ResourceProps} from '../../../index';
+import type {DeviceResourceProps} from '../../../index';
 import {CommandBuffer} from '../../../index';
 
 import {WebGPUDevice} from '../webgpu-device';
@@ -16,7 +16,7 @@ export class WebGPUCommandBuffer extends CommandBuffer {
   timestampSnapshots: WebGPUTimestampSnapshot[];
   transientUploadBuffers: WebGPUBuffer[];
 
-  constructor(commandEncoder: WebGPUCommandEncoder, props: ResourceProps) {
+  constructor(commandEncoder: WebGPUCommandEncoder, props: DeviceResourceProps) {
     super(commandEncoder.device, props);
     this.device = commandEncoder.device;
     this.timestampSnapshots = commandEncoder.takeTimestampSnapshots();
@@ -29,13 +29,12 @@ export class WebGPUCommandBuffer extends CommandBuffer {
       });
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     for (const snapshot of this.timestampSnapshots) snapshot.destroy();
     this.timestampSnapshots = [];
     for (const uploadBuffer of this.transientUploadBuffers) {
       uploadBuffer.destroy();
     }
     this.transientUploadBuffers = [];
-    this.destroyResource();
   }
 }

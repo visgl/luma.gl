@@ -18,11 +18,11 @@ import type {
 import type {Shader} from './shader';
 import type {SharedRenderPipeline} from './shared-render-pipeline';
 import type {RenderPass} from './render-pass';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {VertexArray} from './vertex-array';
 import {TransformFeedback} from './transform-feedback';
 
-export type RenderPipelineProps = ResourceProps & {
+export type RenderPipelineProps = DeviceResourceProps & {
   // Shaders and shader layout
 
   /** Compiled vertex shader */
@@ -79,7 +79,7 @@ export type RenderPipelineProps = ResourceProps & {
 /**
  * A compiled and linked shader program
  */
-export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
+export abstract class RenderPipeline extends DeviceResource<RenderPipelineProps> {
   override get [Symbol.toStringTag](): string {
     return 'RenderPipeline';
   }
@@ -164,7 +164,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   }): boolean;
 
   static override defaultProps: Required<RenderPipelineProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
 
     vs: null,
     vertexEntryPoint: 'vertexMain',

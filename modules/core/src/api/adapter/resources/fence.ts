@@ -3,14 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import {Resource, type ResourceProps} from './resource';
+import {DeviceResource, type DeviceResourceProps} from './device-resource';
 
-export type FenceProps = ResourceProps;
+export type FenceProps = DeviceResourceProps;
 
 /** Synchronization primitive that resolves when GPU work is completed */
-export abstract class Fence extends Resource<FenceProps> {
+export abstract class Fence extends DeviceResource<FenceProps> {
   static override defaultProps: Required<FenceProps> = {
-    ...Resource.defaultProps
+    ...DeviceResource.defaultProps
   };
 
   override get [Symbol.toStringTag](): string {
@@ -25,7 +25,6 @@ export abstract class Fence extends Resource<FenceProps> {
   }
 
   /** Destroy the fence and release any resources */
-  abstract override destroy(): void;
 
   /** Check if the fence has been signaled */
   abstract isSignaled(): boolean;

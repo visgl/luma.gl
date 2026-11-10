@@ -4,7 +4,7 @@
 
 // import type {TypedArray} from '@math.gl/core';
 import {Device} from '../device';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {QuerySet} from './query-set';
 import {Buffer} from './buffer';
 import {Texture} from './texture';
@@ -141,7 +141,7 @@ export type ClearTextureOptions = {
 //   size: [number, number, number] | number[];
 // };
 
-export type CommandEncoderProps = ResourceProps & {
+export type CommandEncoderProps = DeviceResourceProps & {
   measureExecutionTime?: boolean;
   timeProfilingQuerySet?: QuerySet | null;
 };
@@ -154,10 +154,10 @@ type PassWithTimestamps = {
 
 /**
  * Records commands onto a single backend command encoder and can finish them into one command
- * buffer. Resource helpers invoked through a CommandEncoder must record onto that encoder rather
+ * buffer. DeviceResource helpers invoked through a CommandEncoder must record onto that encoder rather
  * than allocating hidden encoders or submitting work eagerly.
  */
-export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
+export abstract class CommandEncoder extends DeviceResource<CommandEncoderProps> {
   override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }
@@ -305,7 +305,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
 
   static override defaultProps: Required<CommandEncoderProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     measureExecutionTime: undefined!,
     timeProfilingQuerySet: undefined!
   };

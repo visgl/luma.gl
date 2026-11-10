@@ -40,14 +40,11 @@ export class WebGPUExternalTexture extends ExternalTexture {
   }
 
   /** Invalidates this wrapper without manually destroying browser-owned external data. */
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
+  protected override destroyHandle(): void {
     // External textures are destroyed automatically,
     // as a microtask, instead of manually or upon garbage collection like other resources.
     // this.handle.destroy();
-    this.destroyResource();
+
     // @ts-expect-error invalidated wrapper handle
     this.handle = null;
   }

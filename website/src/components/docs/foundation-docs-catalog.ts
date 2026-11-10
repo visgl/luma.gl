@@ -97,6 +97,7 @@ export const FOUNDATION_DOCS_CATALOG = {
       label: 'Resources and synchronization',
       tabs: [
         {id: 'resource', label: 'Resource', href: '/docs/api-reference/core/resources/resource'},
+        {id: 'device-resource', label: 'DeviceResource', href: '/docs/api-reference/core/resources/device-resource'},
         {id: 'buffer', label: 'Buffer', href: '/docs/api-reference/core/resources/buffer'},
         {id: 'command-buffer', label: 'CommandBuffer', href: '/docs/api-reference/core/resources/command-buffer'},
         {id: 'query-set', label: 'QuerySet', href: '/docs/api-reference/core/resources/query-set'},

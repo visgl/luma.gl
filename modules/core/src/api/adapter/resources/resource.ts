@@ -2,481 +2,138 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device} from '../device';
-import type {Stat, Stats} from 'probe.gl/stats';
-import {uid} from '../../utils/uid';
+import {assert} from '../../utils/assert';
 
-const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
-const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
-const LEGACY_RESOURCE_COUNTS_STATS = 'Resource Counts';
-const GPU_TIME_AND_MEMORY_STATS = 'GPU Time and Memory';
-const BASE_RESOURCE_COUNT_ORDER = [
-  'Resources',
-  'Buffers',
-  'Textures',
-  'Samplers',
-  'TextureViews',
-  'Framebuffers',
-  'QuerySets',
-  'Shaders',
-  'RenderPipelines',
-  'ComputePipelines',
-  'PipelineLayouts',
-  'VertexArrays',
-  'RenderPasss',
-  'RenderBundleEncoders',
-  'RenderBundles',
-  'ComputePasss',
-  'CommandEncoders',
-  'CommandBuffers'
-] as const;
-const WEBGL_RESOURCE_COUNT_ORDER = [
-  'Resources',
-  'Buffers',
-  'Textures',
-  'Samplers',
-  'TextureViews',
-  'Framebuffers',
-  'QuerySets',
-  'Shaders',
-  'RenderPipelines',
-  'SharedRenderPipelines',
-  'ComputePipelines',
-  'PipelineLayouts',
-  'VertexArrays',
-  'RenderPasss',
-  'RenderBundleEncoders',
-  'RenderBundles',
-  'ComputePasss',
-  'CommandEncoders',
-  'CommandBuffers'
-] as const;
-const BASE_RESOURCE_COUNT_STAT_ORDER = BASE_RESOURCE_COUNT_ORDER.flatMap(resourceType => [
-  `${resourceType} Created`,
-  `${resourceType} Active`
-]);
-const WEBGL_RESOURCE_COUNT_STAT_ORDER = WEBGL_RESOURCE_COUNT_ORDER.flatMap(resourceType => [
-  `${resourceType} Created`,
-  `${resourceType} Active`
-]);
-const ORDERED_STATS_CACHE = new WeakMap<
-  Stats,
-  {orderedStatNames: readonly string[]; statCount: number}
->();
-const ORDERED_STAT_NAME_SET_CACHE = new WeakMap<readonly string[], Set<string>>();
+/** A device-independent lifetime with exclusive ownership and deterministic cleanup. */
+export abstract class Resource {
+  private _owner: Resource | null = null;
+  private readonly _ownedResources = new Set<Resource>();
+  private _state: 'live' | 'destroying' | 'destroyed' = 'live';
+  private _destroyingOwnedResources = false;
 
-type CpuHotspotProfiler = {
-  enabled?: boolean;
-  activeDefaultFramebufferAcquireDepth?: number;
-  statsBookkeepingTimeMs?: number;
-  statsBookkeepingCalls?: number;
-  transientCanvasResourceCreates?: number;
-  transientCanvasTextureCreates?: number;
-  transientCanvasTextureViewCreates?: number;
-  transientCanvasSamplerCreates?: number;
-  transientCanvasFramebufferCreates?: number;
-};
-
-export type ResourceProps = {
-  /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
-  id?: string;
-  /** Handle for the underlying resources (WebGL object or WebGPU handle) */
-  handle?: unknown;
-  /**
-   * @internal Opaque externally owned handle. luma.gl may reference this handle but must not
-   * initialize, mutate, or destroy it.
-   */
-  _isHandleBorrowed?: boolean;
-  /** User provided data stored on this resource  */
-  userData?: {[key: string]: unknown};
-};
-
-/**
- * Base class for GPU (WebGPU/WebGL) Resources
- */
-export abstract class Resource<Props extends ResourceProps> {
-  /** Default properties for resource */
-  static defaultProps: Required<ResourceProps> = {
-    id: 'undefined',
-    handle: undefined,
-    _isHandleBorrowed: false,
-    userData: undefined!
-  };
-
-  abstract get [Symbol.toStringTag](): string;
-
-  toString(): string {
-    return `${this[Symbol.toStringTag] || this.constructor.name}:"${this.id}"`;
+  /** The resource responsible for destroying this resource, or null for caller-managed lifetime. */
+  get owner(): Resource | null {
+    return this._owner;
   }
 
-  /** Compact serialization for assertion diffs and structured debug logs. */
-  toJSON(): string {
-    return this.toString();
+  /** A snapshot of this resource's children. Mutating the snapshot cannot change ownership. */
+  get ownedResources(): readonly Resource[] {
+    return Array.from(this._ownedResources);
   }
 
-  /** props.id, for debugging. */
-  id: string;
-  /** The props that this resource was created with */
-  readonly props: Required<Props>;
-  /** User data object, reserved for the application */
-  readonly userData: Record<string, unknown> = {};
-  /** The device that this resource is associated with */
-  abstract readonly device: Device;
-  /** The handle for the underlying resource, e.g. WebGL object or WebGPU handle */
-  abstract readonly handle: unknown;
-  /** The device that this resource is associated with - TODO can we remove this dup? */
-  private _device: Device;
-
-  /** Whether this resource has been destroyed */
-  destroyed: boolean = false;
-  /** For resources that allocate GPU memory */
-  private allocatedBytes: number = 0;
-  /** Stats bucket currently holding the tracked allocation */
-  private allocatedBytesName: string | null = null;
-  /** Attached resources will be destroyed when this resource is destroyed. Tracks auto-created "sub" resources. */
-  private _attachedResources = new Set<Resource<ResourceProps>>();
-
-  /** Whether luma.gl created and owns the underlying resource handle. */
-  get ownsHandle(): boolean {
-    return (
-      (this.props.handle === undefined || this.props.handle === null) && !this.isHandleBorrowed
-    );
+  /** Whether destruction has completed, including when cleanup reported an error. */
+  get destroyed(): boolean {
+    return this._state === 'destroyed';
   }
 
-  /** Whether luma.gl may only reference the opaque externally owned resource handle. */
-  get isHandleBorrowed(): boolean {
-    return Boolean(this.props._isHandleBorrowed);
-  }
-
-  /**
-   * Create a new Resource. Called from Subclass
-   */
-  constructor(device: Device, props: Props, defaultProps: Required<Props>) {
-    if (!device) {
-      throw new Error('no device');
+  /** Transfer exclusive ownership, or return lifetime responsibility to the caller with null. */
+  transferOwnershipTo(owner: Resource | null): this {
+    // Neither endpoint, nor the previous owner, may be tearing down its ownership tree.
+    assert(this._state === 'live' && !this._destroyingOwnedResources);
+    assert(!this._owner || this._owner.canChangeOwnership());
+    assert(!owner || owner.canChangeOwnership());
+    for (let ancestor = owner; ancestor; ancestor = ancestor._owner) {
+      // Ownership must remain acyclic, including rejecting self-ownership.
+      assert(ancestor !== this);
     }
-    this._device = device;
-    this.props = selectivelyMerge<Props>(props, defaultProps);
-
-    const id =
-      this.props.id !== 'undefined' ? (this.props.id as string) : uid(this[Symbol.toStringTag]);
-    this.props.id = id;
-    this.id = id;
-    this.userData = this.props.userData || {};
-
-    this.addStats();
+    if (owner !== this._owner) {
+      this._owner?._ownedResources.delete(this);
+      this._owner = owner;
+      owner?._ownedResources.add(this);
+    }
+    return this;
   }
 
-  /**
-   * destroy can be called on any resource to release it before it is garbage collected.
-   */
+  /** Destroy children before this resource. Subclasses implement hooks instead of overriding. */
   destroy(): void {
-    if (this.destroyed) {
+    if (this._state !== 'live') {
       return;
     }
-    this.destroyResource();
+    this._state = 'destroying';
+    this._owner?._ownedResources.delete(this);
+    this._owner = null;
+    const errors: unknown[] = [];
+    try {
+      try {
+        this.onBeforeDestroy();
+      } catch (error) {
+        errors.push(error);
+      }
+      this.destroyChildren(errors);
+      try {
+        this.onDestroy();
+      } catch (error) {
+        errors.push(error);
+      }
+    } finally {
+      this._state = 'destroyed';
+    }
+    if (errors.length) {
+      throw new AggregateError(errors, 'Resource cleanup failed');
+    }
   }
 
-  /** @deprecated Use destroy() */
+  /** @deprecated Use destroy(). */
   delete(): this {
     this.destroy();
     return this;
   }
 
-  /**
-   * Combines a map of user props and default props, only including props from defaultProps
-   * @returns returns a map of overridden default props
-   */
-  getProps(): object {
-    return this.props;
+  /** @deprecated Use resource.transferOwnershipTo(this). */
+  attachResource(resource: Resource): void {
+    resource.transferOwnershipTo(this);
   }
 
-  // ATTACHED RESOURCES
-
-  /**
-   * Attaches a resource. Attached resources are auto destroyed when this resource is destroyed
-   * Called automatically when sub resources are auto created but can be called by application
-   */
-  attachResource(resource: Resource<ResourceProps>): void {
-    this._attachedResources.add(resource);
+  /** @deprecated Use resource.transferOwnershipTo(null). Only detaches a child owned by this. */
+  detachResource(resource: Resource): void {
+    if (resource._owner === this) {
+      resource.transferOwnershipTo(null);
+    }
   }
 
-  /**
-   * Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
-   */
-  detachResource(resource: Resource<ResourceProps>): void {
-    this._attachedResources.delete(resource);
-  }
-
-  /**
-   * Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
-   */
-  destroyAttachedResource(resource: Resource<ResourceProps>): void {
-    if (this._attachedResources.delete(resource)) {
+  /** @deprecated Check resource.owner and call resource.destroy(). */
+  destroyAttachedResource(resource: Resource): void {
+    if (resource._owner === this) {
       resource.destroy();
     }
   }
 
-  /** Destroy all owned resources. Make sure the resources are no longer needed before calling. */
+  /** @deprecated Destroy individually owned resources, or destroy the owner. */
   destroyAttachedResources(): void {
-    for (const resource of this._attachedResources) {
-      resource.destroy();
-    }
-    // don't remove while we are iterating
-    this._attachedResources = new Set<Resource<ResourceProps>>();
-  }
-
-  // PROTECTED METHODS
-
-  /** Perform all destroy steps. Can be called by derived resources when overriding destroy() */
-  protected destroyResource(): void {
-    if (this.destroyed) {
+    if (this._state !== 'live' || this._destroyingOwnedResources) {
       return;
     }
-    this.destroyAttachedResources();
-    this.removeStats();
-    this.destroyed = true;
-  }
-
-  /** Called by .destroy() to track object destruction. Subclass must call if overriding destroy() */
-  protected removeStats(): void {
-    const profiler = getCpuHotspotProfiler(this._device);
-    const startTime = profiler ? getTimestamp() : 0;
-    const statsObjects = [
-      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
-      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
-    ];
-    const orderedStatNames = getResourceCountStatOrder(this._device);
-    for (const stats of statsObjects) {
-      initializeStats(stats, orderedStatNames);
-    }
-    const name = this.getStatsName();
-    for (const stats of statsObjects) {
-      stats.get('Resources Active').decrementCount();
-      stats.get(`${name}s Active`).decrementCount();
-    }
-    if (profiler) {
-      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
-      profiler.statsBookkeepingTimeMs =
-        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
+    const errors: unknown[] = [];
+    this.destroyChildren(errors);
+    if (errors.length) {
+      throw new AggregateError(errors, 'Resource cleanup failed');
     }
   }
 
-  /** Called by subclass to track memory allocations */
-  protected trackAllocatedMemory(bytes: number, name = this.getStatsName()): void {
-    const profiler = getCpuHotspotProfiler(this._device);
-    const startTime = profiler ? getTimestamp() : 0;
-    const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
+  /** Stop callbacks or other activity before destroying owned children. */
+  protected onBeforeDestroy(): void {}
 
-    if (this.allocatedBytes > 0 && this.allocatedBytesName) {
-      stats.get('GPU Memory').subtractCount(this.allocatedBytes);
-      stats.get(`${this.allocatedBytesName} Memory`).subtractCount(this.allocatedBytes);
-    }
+  /** Release this resource's own state after its children have been destroyed. */
+  protected onDestroy(): void {}
 
-    stats.get('GPU Memory').addCount(bytes);
-    stats.get(`${name} Memory`).addCount(bytes);
-    if (profiler) {
-      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
-      profiler.statsBookkeepingTimeMs =
-        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
-    }
-    this.allocatedBytes = bytes;
-    this.allocatedBytesName = name;
+  private canChangeOwnership(): boolean {
+    return this._state === 'live' && !this._destroyingOwnedResources;
   }
 
-  /** Called by subclass to track handle-backed memory allocations separately from owned allocations */
-  protected trackReferencedMemory(bytes: number, name = this.getStatsName()): void {
-    this.trackAllocatedMemory(bytes, `External ${name}`);
-  }
-
-  /** Called by subclass to track memory deallocations */
-  protected trackDeallocatedMemory(name = this.getStatsName()): void {
-    if (this.allocatedBytes === 0) {
-      this.allocatedBytesName = null;
-      return;
-    }
-
-    const profiler = getCpuHotspotProfiler(this._device);
-    const startTime = profiler ? getTimestamp() : 0;
-    const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
-    stats.get('GPU Memory').subtractCount(this.allocatedBytes);
-    stats.get(`${this.allocatedBytesName || name} Memory`).subtractCount(this.allocatedBytes);
-    if (profiler) {
-      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
-      profiler.statsBookkeepingTimeMs =
-        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
-    }
-    this.allocatedBytes = 0;
-    this.allocatedBytesName = null;
-  }
-
-  /** Called by subclass to deallocate handle-backed memory tracked via trackReferencedMemory() */
-  protected trackDeallocatedReferencedMemory(name = this.getStatsName()): void {
-    this.trackDeallocatedMemory(`Referenced ${name}`);
-  }
-
-  /** Called by resource constructor to track object creation */
-  private addStats(): void {
-    const name = this.getStatsName();
-    const profiler = getCpuHotspotProfiler(this._device);
-    const startTime = profiler ? getTimestamp() : 0;
-    const statsObjects = [
-      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
-      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
-    ];
-    const orderedStatNames = getResourceCountStatOrder(this._device);
-    for (const stats of statsObjects) {
-      initializeStats(stats, orderedStatNames);
-    }
-    for (const stats of statsObjects) {
-      stats.get('Resources Created').incrementCount();
-      stats.get('Resources Active').incrementCount();
-      stats.get(`${name}s Created`).incrementCount();
-      stats.get(`${name}s Active`).incrementCount();
-    }
-    if (profiler) {
-      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
-      profiler.statsBookkeepingTimeMs =
-        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
-    }
-    recordTransientCanvasResourceCreate(this._device, name);
-  }
-
-  /** Canonical resource name used for stats buckets. */
-  protected getStatsName(): string {
-    return getCanonicalResourceName(this);
-  }
-}
-
-/**
- * Combines a map of user props and default props, only including props from defaultProps
- * @param props
- * @param defaultProps
- * @returns returns a map of overridden default props
- */
-function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): Required<Props> {
-  const mergedProps = {...defaultProps};
-  for (const key in props) {
-    if (props[key] !== undefined) {
-      mergedProps[key] = props[key];
+  private destroyChildren(errors: unknown[]): void {
+    this._destroyingOwnedResources = true;
+    try {
+      // Children unregister themselves, and a hook may destroy a sibling early.
+      for (const resource of this._ownedResources) {
+        try {
+          resource.destroy();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+    } finally {
+      this._ownedResources.clear();
+      this._destroyingOwnedResources = false;
     }
   }
-  return mergedProps;
-}
-
-function initializeStats(stats: Stats, orderedStatNames: readonly string[]): void {
-  const statsMap = stats.stats;
-  let addedOrderedStat = false;
-  for (const statName of orderedStatNames) {
-    if (!statsMap[statName]) {
-      stats.get(statName);
-      addedOrderedStat = true;
-    }
-  }
-
-  const statCount = Object.keys(statsMap).length;
-  const cachedStats = ORDERED_STATS_CACHE.get(stats);
-  if (
-    !addedOrderedStat &&
-    cachedStats?.orderedStatNames === orderedStatNames &&
-    cachedStats.statCount === statCount
-  ) {
-    return;
-  }
-
-  const reorderedStats: Record<string, Stat> = {};
-  let orderedStatNamesSet = ORDERED_STAT_NAME_SET_CACHE.get(orderedStatNames);
-  if (!orderedStatNamesSet) {
-    orderedStatNamesSet = new Set(orderedStatNames);
-    ORDERED_STAT_NAME_SET_CACHE.set(orderedStatNames, orderedStatNamesSet);
-  }
-
-  for (const statName of orderedStatNames) {
-    if (statsMap[statName]) {
-      reorderedStats[statName] = statsMap[statName];
-    }
-  }
-
-  for (const [statName, stat] of Object.entries(statsMap)) {
-    if (!orderedStatNamesSet.has(statName)) {
-      reorderedStats[statName] = stat;
-    }
-  }
-
-  for (const statName of Object.keys(statsMap)) {
-    delete statsMap[statName];
-  }
-
-  Object.assign(statsMap, reorderedStats);
-  ORDERED_STATS_CACHE.set(stats, {orderedStatNames, statCount});
-}
-
-function getResourceCountStatOrder(device: Device): readonly string[] {
-  return device.type === 'webgl' ? WEBGL_RESOURCE_COUNT_STAT_ORDER : BASE_RESOURCE_COUNT_STAT_ORDER;
-}
-
-function getCpuHotspotProfiler(device: Device): CpuHotspotProfiler | null {
-  const profiler = device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler | undefined;
-  return profiler?.enabled ? profiler : null;
-}
-
-function getTimestamp(): number {
-  return globalThis.performance?.now?.() ?? Date.now();
-}
-
-function recordTransientCanvasResourceCreate(device: Device, name: string): void {
-  const profiler = getCpuHotspotProfiler(device);
-  if (!profiler || !profiler.activeDefaultFramebufferAcquireDepth) {
-    return;
-  }
-
-  profiler.transientCanvasResourceCreates = (profiler.transientCanvasResourceCreates || 0) + 1;
-
-  switch (name) {
-    case 'Texture':
-      profiler.transientCanvasTextureCreates = (profiler.transientCanvasTextureCreates || 0) + 1;
-      break;
-    case 'TextureView':
-      profiler.transientCanvasTextureViewCreates =
-        (profiler.transientCanvasTextureViewCreates || 0) + 1;
-      break;
-    case 'Sampler':
-      profiler.transientCanvasSamplerCreates = (profiler.transientCanvasSamplerCreates || 0) + 1;
-      break;
-    case 'Framebuffer':
-      profiler.transientCanvasFramebufferCreates =
-        (profiler.transientCanvasFramebufferCreates || 0) + 1;
-      break;
-    default:
-      break;
-  }
-}
-
-function getCanonicalResourceName(resource: Resource<any>): string {
-  let prototype = Object.getPrototypeOf(resource);
-
-  while (prototype) {
-    const parentPrototype = Object.getPrototypeOf(prototype);
-    if (!parentPrototype || parentPrototype === Resource.prototype) {
-      return (
-        getPrototypeToStringTag(prototype) ||
-        resource[Symbol.toStringTag] ||
-        resource.constructor.name
-      );
-    }
-    prototype = parentPrototype;
-  }
-
-  return resource[Symbol.toStringTag] || resource.constructor.name;
-}
-
-function getPrototypeToStringTag(prototype: object): string | null {
-  const descriptor = Object.getOwnPropertyDescriptor(prototype, Symbol.toStringTag);
-  if (typeof descriptor?.get === 'function') {
-    return descriptor.get.call(prototype);
-  }
-  if (typeof descriptor?.value === 'string') {
-    return descriptor.value;
-  }
-  return null;
 }

@@ -45,9 +45,8 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     Object.seal(this);
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     this.gl.deleteTransformFeedback(this.handle);
-    super.destroy();
   }
 
   begin(topology: PrimitiveTopology = 'point-list'): void {
