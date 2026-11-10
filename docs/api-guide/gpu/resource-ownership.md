@@ -88,6 +88,21 @@ preparation. All children and the parent's cleanup are attempted even if a hook 
 is finalized and an `AggregateError` reports the failures; another `destroy()` call does not retry
 failed cleanup.
 
+### Cleanup cannot veto destruction
+
+`onBeforeDestroy()` is a cleanup hook, not an admission check. Throwing from it does **not**
+leave the resource alive: owned children and local state are still cleaned up, then an
+`AggregateError` is thrown. Do not put an active-execution assertion in this hook.
+
+For example, the independent graph-state API proposed in
+[PR #3639](https://github.com/visgl/luma.gl/pull/3639) retains state while prepared executions
+are active and rejects destruction until those executions release it. Moving that assertion
+into `onBeforeDestroy()` would destroy storage that those executions still need.
+
+Such APIs should keep their existing guarded lifecycle for now. Adoption requires a separate
+destruction-admission or deferred-release design, including what happens when destruction
+cascades from an owner. This ownership foundation does not supply either policy.
+
 Extend `Resource` by overriding the protected hooks, not `destroy()`:
 
 ```typescript

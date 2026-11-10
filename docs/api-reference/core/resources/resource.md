@@ -36,6 +36,10 @@ Repeated and reentrant calls do nothing. Cleanup continues after failures and th
 - `onDestroy(): void` — Release local state after children are destroyed.
 
 Override hooks instead of `destroy()`. DeviceResource backend subclasses use `destroyHandle()`.
+Neither hook can veto destruction: an error is collected while remaining cleanup continues.
+APIs that reject destruction while work is active must retain their guarded lifecycle until an
+admission or deferred-release policy is designed; see the
+[ownership guide](/docs/api-guide/gpu/resource-ownership#cleanup-cannot-veto-destruction).
 
 ### Deprecated compatibility methods
 

@@ -202,3 +202,42 @@ it('DeviceResource finalizes statistics when native cleanup fails', () => {
   expect(memory.get('GPU Memory').count).toBe(memoryBefore);
   device.destroy();
 });
+
+it.each([
+  false,
+  true
+])('Resource defers parent destruction during child-only cleanup (failure: %s)', fail => {
+  const events: string[] = [];
+  const parent = new TestResource('parent', events);
+  const child = new TestResource(
+    'child',
+    events,
+    () => {
+      parent.destroy();
+      parent.destroy();
+      expect(parent.destroyed).toBe(false);
+      expect(events).not.toContain('destroy:parent');
+    },
+    () => {
+      expect(parent.destroyed).toBe(false);
+      if (fail) throw new Error('child cleanup failed');
+    }
+  ).transferOwnershipTo(parent);
+  const sibling = new TestResource('sibling', events).transferOwnershipTo(parent);
+  if (fail) {
+    expect(() => parent.destroyAttachedResources()).toThrow(AggregateError);
+  } else {
+    parent.destroyAttachedResources();
+  }
+  expect(events).toEqual([
+    'before:child',
+    'destroy:child',
+    'before:sibling',
+    'destroy:sibling',
+    'before:parent',
+    'destroy:parent'
+  ]);
+  expect([parent, child, sibling].every(resource => resource.destroyed)).toBe(true);
+  expect(parent.ownedResources).toEqual([]);
+  expect(() => parent.destroy()).not.toThrow();
+});

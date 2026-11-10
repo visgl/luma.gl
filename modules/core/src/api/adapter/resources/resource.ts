@@ -10,6 +10,7 @@ export abstract class Resource {
   private readonly _ownedResources = new Set<Resource>();
   private _state: 'live' | 'destroying' | 'destroyed' = 'live';
   private _destroyingOwnedResources = false;
+  private _destroyRequested = false;
 
   /** The resource responsible for destroying this resource, or null for caller-managed lifetime. */
   get owner(): Resource | null {
@@ -49,6 +50,12 @@ export abstract class Resource {
     if (this._state !== 'live') {
       return;
     }
+    if (this._destroyingOwnedResources) {
+      // A child requested parent destruction during destroyAttachedResources(). Finish children first.
+      this._destroyRequested = true;
+      return;
+    }
+    this._destroyRequested = false;
     this._state = 'destroying';
     this._owner?._ownedResources.delete(this);
     this._owner = null;
@@ -105,12 +112,19 @@ export abstract class Resource {
     }
     const errors: unknown[] = [];
     this.destroyChildren(errors);
+    if (this._destroyRequested) {
+      try {
+        this.destroy();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
     if (errors.length) {
       throw new AggregateError(errors, 'Resource cleanup failed');
     }
   }
 
-  /** Stop callbacks or other activity before destroying owned children. */
+  /** Stop activity before children are destroyed. Errors are collected; this hook cannot veto cleanup. */
   protected onBeforeDestroy(): void {}
 
   /** Release this resource's own state after its children have been destroyed. */
