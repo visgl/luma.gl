@@ -26,7 +26,7 @@ export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParame
     return;
   }
 
-  const compositeSetters = {};
+  let compositeSetters: Record<string, boolean> | undefined;
 
   // HANDLE PRIMITIVE SETTERS (and make note of any composite setters)
 
@@ -38,6 +38,7 @@ export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParame
       // Composite setters should only be called once, so save them
       if (typeof setter === 'string') {
         // @ts-ignore TODO
+        compositeSetters ||= {};
         compositeSetters[setter] = true;
       } else {
         // if (gl[glConstant] !== undefined) {
@@ -59,7 +60,7 @@ export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParame
   // This is the ONLY external dependency in this module/
   // @ts-expect-error
   const cache = gl.lumaState?.cache;
-  if (cache) {
+  if (cache && compositeSetters) {
     for (const key in compositeSetters) {
       // TODO - avoid calling composite setters if values have not changed.
       // @ts-ignore TODO

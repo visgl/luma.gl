@@ -28,6 +28,7 @@ export class WebGLStateTracker {
   gl: WebGL2RenderingContext;
   program: unknown = null;
   stateStack: object[] = [];
+  private stateFramePool: Record<string, any>[] = [];
   enable = true;
   cache: Record<string, any> = null!;
   log;
@@ -47,8 +48,8 @@ export class WebGLStateTracker {
     Object.seal(this);
   }
 
-  push(values = {}) {
-    this.stateStack.push({});
+  push() {
+    this.stateStack.push(this.stateFramePool.pop() || {});
   }
 
   pop() {
@@ -58,6 +59,11 @@ export class WebGLStateTracker {
     setGLParameters(this.gl, oldValues);
     // Don't pop until we have reset parameters (to make sure other "stack frames" are not affected)
     this.stateStack.pop();
+    // Release references and remove saved keys before this frame is reused.
+    for (const key in oldValues) {
+      delete oldValues[key];
+    }
+    this.stateFramePool.push(oldValues);
   }
 
   /**
