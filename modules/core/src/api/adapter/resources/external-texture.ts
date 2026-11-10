@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import type {Sampler, SamplerProps} from './sampler';
+import {type Sampler, type SamplerProps, setTextureSampler} from './sampler';
 import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Properties for one concrete backend external texture binding snapshot. */
@@ -29,7 +29,10 @@ export abstract class ExternalTexture extends DeviceResource<ExternalTextureProp
   /** Default sampler for this external texture. */
   abstract sampler: Sampler;
   /** Replace the default sampler used for paired shader sampler bindings. */
-  abstract setSampler(sampler: Sampler | SamplerProps): this;
+  setSampler(sampler: Sampler | SamplerProps): this {
+    setTextureSampler(this, sampler);
+    return this;
+  }
   /** Device timestamp of this external binding acquisition. */
   updateTimestamp: number;
 

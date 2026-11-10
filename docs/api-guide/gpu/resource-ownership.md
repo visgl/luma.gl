@@ -44,6 +44,9 @@ created with attachment format strings owns the textures it creates. A texture o
 view, while a separate view returned by `createView()` is caller-managed. Views reference their
 texture; owning a view does not imply ownership of its texture.
 
+Ordinary and external textures own samplers created from sampler properties. Replacing such a
+sampler destroys the previous owned sampler; passing a sampler instance borrows it instead.
+
 ```typescript
 const texture = device.createTexture({width: 256, height: 256});
 const framebuffer = device.createFramebuffer({colorAttachments: [texture]});

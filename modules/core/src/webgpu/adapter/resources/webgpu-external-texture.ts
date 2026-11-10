@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {ExternalTexture, ExternalTextureProps, Sampler, SamplerProps} from '../../../index';
+import {ExternalTexture, ExternalTextureProps} from '../../../index';
 import type {WebGPUDevice} from '../webgpu-device';
-import {WebGPUSampler, type WebGPUSamplerProps} from './webgpu-sampler';
+import type {WebGPUSampler} from './webgpu-sampler';
 
 /** WebGPU concrete wrapper for one acquired `GPUExternalTexture` binding snapshot. */
 export class WebGPUExternalTexture extends ExternalTexture {
@@ -47,18 +47,5 @@ export class WebGPUExternalTexture extends ExternalTexture {
 
     // @ts-expect-error invalidated wrapper handle
     this.handle = null;
-  }
-
-  /**
-   * Replaces the default paired shader sampler.
-   * @param sampler Existing WebGPU sampler or sampler properties to create.
-   */
-  setSampler(sampler: Sampler | SamplerProps): this {
-    // We can accept a sampler instance or set of props;
-    this.sampler =
-      sampler instanceof WebGPUSampler
-        ? sampler
-        : new WebGPUSampler(this.device, sampler as WebGPUSamplerProps);
-    return this;
   }
 }

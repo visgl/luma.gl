@@ -12,7 +12,7 @@ import {
 import {type ExternalImage} from '../../../shadertypes/image-types/image-types';
 import {type TextureView, type TextureViewProps} from './texture-view';
 import {DeviceResource, type DeviceResourceProps} from './device-resource';
-import {Sampler, type SamplerProps} from './sampler';
+import {Sampler, type SamplerProps, setTextureSampler} from './sampler';
 import {Buffer} from './buffer';
 import {log} from '../../utils/log';
 import {
@@ -327,18 +327,7 @@ export abstract class Texture extends DeviceResource<TextureProps> {
 
   /** Set sampler props associated with this texture */
   setSampler(sampler: Sampler | SamplerProps): void {
-    const nextSampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
-    if (nextSampler === this.sampler) {
-      return;
-    }
-    if (!(sampler instanceof Sampler)) {
-      nextSampler.transferOwnershipTo(this);
-    }
-    const previousSampler = this.sampler;
-    this.sampler = nextSampler;
-    if (previousSampler?.owner === this) {
-      previousSampler.destroy();
-    }
+    setTextureSampler(this, sampler);
   }
 
   /** Create a texture view for this texture */

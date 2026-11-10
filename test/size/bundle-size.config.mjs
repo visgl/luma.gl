@@ -90,7 +90,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     entry: 'modules/core/src/index.ts',
     external: [],
     // Includes device-creation error reporting (#3147), probe.gl v5 logging, and deferred canvas resize arbitration.
-    // Resource ownership adds 1,548 B minified / 420 B gzip / 306 B Brotli versus the PR base.
+    // Resource ownership adds 1,592 B minified / 445 B gzip / 347 B Brotli versus the PR base.
     maximum: {minified: 104_600, gzip: 29_350, brotli: 25_750},
     targetGzip: 24_000
   },

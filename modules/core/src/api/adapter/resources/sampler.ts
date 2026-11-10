@@ -45,3 +45,22 @@ export abstract class Sampler extends DeviceResource<SamplerProps> {
     return props;
   }
 }
+
+/** Replace a texture's sampler, owning only samplers created from properties. @internal */
+export function setTextureSampler(
+  texture: DeviceResource & {sampler: Sampler},
+  sampler: Sampler | SamplerProps
+): void {
+  const nextSampler = sampler instanceof Sampler ? sampler : texture.device.createSampler(sampler);
+  if (nextSampler === texture.sampler) {
+    return;
+  }
+  if (!(sampler instanceof Sampler)) {
+    nextSampler.transferOwnershipTo(texture);
+  }
+  const previousSampler = texture.sampler;
+  texture.sampler = nextSampler;
+  if (previousSampler?.owner === texture) {
+    previousSampler.destroy();
+  }
+}

@@ -156,3 +156,43 @@ it('Texture#setSampler releases samplers it created when they are replaced', asy
     texture.destroy();
   }
 });
+
+it('ExternalTexture owns created samplers and preserves borrowed samplers', async () => {
+  for (const device of await getTestDevices(['webgpu'])) {
+    const source = new VideoFrame(new Uint8Array([255, 0, 0, 255]), {
+      format: 'RGBA',
+      codedWidth: 1,
+      codedHeight: 1,
+      timestamp: 0
+    });
+    const baseline = getActiveResourceCount(device);
+    const callerSampler = device.createSampler({});
+    const texture = device.createExternalTexture({source});
+    try {
+      const firstSampler = texture.sampler;
+      expect(firstSampler.owner).toBe(texture);
+      const beforeReplace = getActiveResourceCount(device);
+      expect(texture.setSampler({minFilter: 'linear'})).toBe(texture);
+      expect(firstSampler.destroyed).toBe(true);
+      expect(getActiveResourceCount(device)).toBe(beforeReplace);
+      const replacementSampler = texture.sampler;
+      texture.setSampler(replacementSampler);
+      expect(replacementSampler.destroyed).toBe(false);
+      texture.setSampler(callerSampler);
+      expect(replacementSampler.destroyed).toBe(true);
+      expect(callerSampler.owner).toBe(null);
+      texture.setSampler({});
+      const ownedSampler = texture.sampler;
+      texture.destroy();
+      texture.destroy();
+      expect(ownedSampler.destroyed).toBe(true);
+      expect(callerSampler.destroyed).toBe(false);
+      expect(getActiveResourceCount(device)).toBe(baseline + 1);
+    } finally {
+      texture.destroy();
+      callerSampler.destroy();
+      source.close();
+    }
+    expect(getActiveResourceCount(device)).toBe(baseline);
+  }
+});
