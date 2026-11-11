@@ -75,7 +75,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   add<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  add<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  add<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('add', this, expression);
   }
 
@@ -83,7 +91,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   subtract<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  subtract<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  subtract<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('subtract', this, expression);
   }
 
@@ -91,7 +107,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   multiply<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  multiply<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  multiply<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('multiply', this, expression);
   }
 
@@ -99,7 +123,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   divide<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  divide<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  divide<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('divide', this, expression);
   }
 

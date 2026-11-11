@@ -224,7 +224,38 @@ columns, arithmetic, comparisons, boolean operators, unary negation/not,
 `array_float32` of width 2–4, and `cast` to float32/int32. Other nodes fail closed.
 The bridge does not parse SQL itself or execute arbitrary callbacks.
 
-This first tranche provides syntax and layout planning. Vector execution and cast
-lowering are supplied by the dependent execution PR. Unsupported scope includes
+Vector execution uses the packed layout described below. Unsupported scope includes
 float64, normalized/packed integer formats, arbitrary lists, CASE/functions,
 implicit scalar broadcasting, vector ordering and SQL unsigned array syntax.
+
+### Executing packed vector expressions
+
+```ts
+const position = vector('float32x3', [column('x'), column('y'), column('z')]);
+const query = frame.withColumn('position', position, {format: 'float32x3'});
+const compiled = query.compile(graph);
+```
+
+Supply the explicit output `format` when adding vector or portable AST expressions.
+This preserves precise output schema typing; existing scalar `withColumn` calls
+retain their inferred formats. Vector arithmetic requires matching component type
+and width; equality uses all components, inequality uses any differing component.
+Ordering, implicit broadcasting, and vector reductions are not implemented.
+
+The compiler emits scalar-array read accessors and component writes. Output buffers
+have STORAGE, VERTEX and COPY usage with 8/12/16-byte packed strides. Source chunks
+must be packed and four-byte aligned; padded native WGSL arrays and interleaved
+sources are rejected, never implicitly repacked. Source batch boundaries, including
+empty batches, survive execution.
+
+Vector construction converts scalar components explicitly to the requested type.
+Numeric casts preserve width, truncate floats toward zero, saturate out-of-range
+finite integers, and round integer-to-float conversion to f32 precision. Signed to
+unsigned clamps negative values to zero; unsigned to signed clamps at INT32_MAX.
+These are the shared graph GPU cast rules, not an assertion of full SQL CPU cast
+conformance. Float NaN/Infinity converted to integers makes the row invalid.
+
+Any null component makes the entire constructed vector null. Arithmetic combines
+row validity with AND; casts preserve it, and a nullable result has one uint32
+validity word per row. Invalid rows' component bytes are unspecified. Use validity
+when rendering or reading results. Component-level nullable vectors are unsupported.

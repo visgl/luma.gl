@@ -4,6 +4,7 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import type {BufferLayout} from '@luma.gl/core';
+import type {GPUExpressionNumericValue} from './gpu-expression';
 import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
@@ -206,11 +207,39 @@ export class GPUDataFrame<T extends GPUTypeMap = GPUTypeMap> {
   >(
     name: Name,
     expression: GPUExpression<number | null, ReferencedColumns>,
+    options?: GPUDataFrameDerivedColumnOptions<Format>
+  ): GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T>;
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends keyof T & string,
+    Format extends GPUDataFrameDerivedColumnFormat = GPUDataFrameDerivedColumnFormatForExpression<
+      T,
+      ReferencedColumns
+    >
+  >(
+    name: Name,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, ReferencedColumns>,
+    options: GPUDataFrameDerivedColumnOptions<Format> & {format: Format}
+  ): GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T>;
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends keyof T & string,
+    Format extends GPUDataFrameDerivedColumnFormat = GPUDataFrameDerivedColumnFormatForExpression<
+      T,
+      ReferencedColumns
+    >
+  >(
+    name: Name,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, ReferencedColumns>,
     options: GPUDataFrameDerivedColumnOptions<Format> = {}
   ): GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T> {
     this.assertAvailable();
-    const query = new GPUDataFrameQuery<T, keyof T & string, T>(this, [], this.columnNames);
-    return query.withColumn<Name, ReferencedColumns, Format>(name, expression, options);
+    return new GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T>(
+      this,
+      [],
+      [...this.columnNames, name],
+      [Object.freeze({name, expression, ...options})]
+    );
   }
 
   /** Plans dense unsigned grouping without allocating GPU resources or retaining source leases. */
