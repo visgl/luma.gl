@@ -65,11 +65,7 @@ export class WEBGLQuerySet extends QuerySet {
     Object.seal(this);
   }
 
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
-
+  protected override destroyHandle(): void {
     if (this.handle) {
       this.device.gl.deleteQuery(this.handle);
     }
@@ -93,8 +89,6 @@ export class WEBGLQuerySet extends QuerySet {
     for (const query of Array.from(this._pendingReads)) {
       this._cancelPendingQuery(query);
     }
-
-    this.destroyResource();
   }
 
   isResultAvailable(queryIndex?: number): boolean {

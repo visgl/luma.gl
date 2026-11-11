@@ -20,10 +20,10 @@ import {
   type GPUInputDeclaration,
   type GPUInputSchema
 } from './gpu-input-schema';
-import {GPUConstant} from '@luma.gl/gpgpu/gpu-data';
-import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant} from '@luma.gl/graph/gpu-data';
+import type {GPUData} from '@luma.gl/graph/gpu-data';
 import type {GPUTable} from '../table/gpu-table';
-import {getGPUVectorFormatInfo, isFixedSizeListGPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorFormatInfo, isFixedSizeListGPUVectorFormat} from '@luma.gl/graph/gpu-data';
 
 type GPUBuffer = Buffer | DynamicBuffer;
 

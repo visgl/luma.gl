@@ -1,5 +1,118 @@
 # Upgrade Guide
 
+### Resource ownership base classes
+
+The former GPU `Resource<Props>` and `ResourceProps` are now `DeviceResource<Props>` and
+`DeviceResourceProps`. Update imports, GPU-specific type annotations, and backend subclasses.
+`Resource` is now a non-generic, device-independent lifetime base. Use `instanceof DeviceResource`
+when a check specifically requires a device-backed resource.
+
+Custom backends must move native cleanup from `destroy()` into protected `destroyHandle()`.
+Remove calls to `destroyResource()`, `removeStats()`, and assignments to `destroyed`; the shared
+lifecycle now owns cleanup ordering and bookkeeping. `destroyed` is read-only.
+
+Attachment methods are deprecated and now enforce exclusive ownership. Attaching an already-owned
+resource transfers it from its previous owner. Cycles and transfers during destruction throw.
+See [Resource ownership](/docs/api-guide/gpu/resource-ownership) for migration examples.
+
+
+### Readonly shadertype metadata
+
+Texture, vertex-format, scalar-data-type, and shader-type decoders now return shared,
+readonly metadata. Results are frozen, including texture `bitsPerChannel` tuples.
+Copy metadata before modifying it; copy nested tuples separately when needed.
+Device-dependent texture capabilities and computed memory layouts remain caller-owned.
+
+### Scoped model draw parameters
+
+`RenderPass.withParameters()` is removed. Pass temporary dynamic state to
+`Model.draw(renderPass, {parameters})` or `GPUVectorModel.draw()` instead.
+Model drawing snapshots `renderPass.getParameters()` and restores it through
+`setParameters()` even when drawing fails. Custom render-pass backends must implement
+`getParameters()` and return detached parameter values.
+
+### Render-pass color masks
+
+`RenderPassParameters.colorMask` has been removed. Configure `colorMask` on a
+render pipeline or through `Model.setParameters()` instead; WebGPU color write masks
+are pipeline state.
+
+### Arrow stream output formats
+
+`convertArrowRecordBatchesToGPURecordBatches()` now rejects changes to an output
+column’s GPU format across batches. Supply an explicit output format in the conversion
+schema when source types vary but should share one GPU representation. Previously
+yielded batches remain caller-owned; the rejected batch is destroyed.
+
+### Shader injection target naming
+
+Shader hooks are now called injection targets throughout the public API. Update
+`ShaderHook` to `ShaderInjectionTarget`, `ShaderPlugin.hooks` to
+`ShaderPlugin.injectionTargets`, assembly `hookFunctions` to
+`injectionTargets`, and `addShaderHook()`/`resetShaderHooks()` to
+`addShaderInjectionTarget()`/`resetShaderInjectionTargets()`. The
+`ShaderInjection.target` field and target strings such as `vs:#decl` and
+`fs:FILTER_COLOR` are unchanged. There is no separate public type for the
+`glsl`/`wgsl` signature object; it is part of `ShaderInjectionTarget`.
+
+
+### Shader hook descriptors
+
+`ShaderAssembler.addShaderHook()` and assembly `hookFunctions` now accept only
+`ShaderHook` descriptors. String signatures and the second options argument have
+been removed. Replace `addShaderHook('vs:OFFSET_POSITION(inout vec4 position)',
+{header, footer})` with:
+
+```typescript
+assembler.addShaderHook({
+  name: 'OFFSET_POSITION',
+  stage: 'vertex',
+  glsl: {parameters: 'inout vec4 position', header, footer},
+  wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+});
+```
+
+Plugin `hooks` also accept these descriptors; replace `target` with `name` and
+move each language parameter string into `{parameters}` without parentheses.
+
+The public declarations are `ShaderHook` and `ShaderInjection`, used by both
+application assembly and plugins. Remove imports of `ShaderPluginHook`,
+`ShaderPluginInjection`, `ShaderPluginTarget`, and `ShaderPluginInjectionTarget`.
+The former source/order `ShaderInjection` shape is now `ResolvedShaderInjection`.
+Application `inject` also accepts arrays of the language-aware `ShaderInjection`.
+
+Move header/footer source into its language implementation. Existing injection
+target names stay the same; provide separate `glsl`/`wgsl` bodies on each entry in root-level plugin
+`injections`.
+
+## GPU API naming
+
+The remaining experimental Lu-prefixed APIs now use GPU names. Update imports and type references:
+
+| Previous name | New name |
+| --- | --- |
+| `LuSQLContext`, `LuSQLQuery` | `GPUSQLContext`, `GPUSQLQuery` |
+| `LuSQLQueryOptions`, `LuSQLTables` | `GPUSQLQueryOptions`, `GPUSQLTables` |
+| `LuSpatialPointLayer` and associated types | `GPUSpatialPointLayer` and corresponding `GPUSpatial…` types |
+| `LuSpatialGeographicPointQueryEffect` and associated types/helpers | `GPUSpatialGeographicPointQueryEffect` and corresponding `GPUSpatial…` names |
+
+Package import subpaths are unchanged, including `@luma.gl/graph/gpu-sql` and
+`@luma.gl/graph/lucim`. Old-name API aliases are not retained. Projection benchmark
+settings now use `VITE_GPU_PROJECT_*` instead of `VITE_LUPROJ_*`. The spatial taxi
+example route is now `/examples/deck/gpu-spatial-taxi`.
+
+## PBR directional light direction
+
+`pbrMaterial` now interprets directional light `direction` as the direction light travels, matching Phong and Lambert. Applications that previously reversed directions to compensate for PBR lighting must remove that workaround.
+
+## Opaque GPU and glTF metadata
+
+GPU data `readbackMetadata` and postprocessed glTF `extras` are now typed as `unknown`. Narrow or explicitly type these values before reading their properties.
+
+## Opaque metadata types
+
+Resource, model, and computation `userData` values and glTF `extras` now have type `unknown`. Narrow or explicitly type these values before reading their properties. Texture transform resource maps also use `unknown` values.
+
 ## Shader package rename
 
 Install `@luma.gl/shaders` instead of `@luma.gl/shadertools` and update imports, including
@@ -47,78 +160,11 @@ Remove `@luma.gl/experimental` from project dependencies and update imports:
 
 ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
 
-## GPU graph authoring and command graph names
-
-The application-facing `GPUProgram` is now `GPUGraph`. The former execution-level
-`GPUGraph` is now `GPUCommandGraph`; `CompiledGPUGraph` becomes
-`CompiledGPUCommandGraph`. These are naming changes only: constructors, methods,
-compilation, resource ownership, and execution behavior are unchanged.
-
-- Replace `GPUProgramCompiler` with `GPUGraphCompiler` and
-  `createGPUConjugateGradientProgram` with `createGPUConjugateGradientGraph`.
-- Replace the `GPUProgram` prefix on value, binding, operation, validation, and
-  inspection types with `GPUGraph` (for example, `GPUGraphVector` and
-  `GPUGraphCompilation`). Helpers become `validateGPUGraph` and
-  `inspectGPUGraphCompilation`.
-- Import `GPUGraph`, `GPUGraphCompiler`, and graph value types from
-  `@luma.gl/graph`, `@luma.gl/graph/gpu-graph`, or `@luma.gl/graph/gpu-core`.
-- Existing low-level `new GPUGraph(device)` calls must become
-  `new GPUCommandGraph(device)`. The new `GPUGraph` takes the former
-  `GPUProgram` options, not a device.
-
-Compilation result fields retain their existing names: `compilation.program`
-contains the authored `GPUGraph`, and `compilation.graph` contains the lowered
-`GPUCommandGraph`. This change does not introduce a new compile/run lifecycle or
-add WebGL support to the semantic graph compiler.
-
-## Graph package rename
-
-`@luma.gl/gpu-graph` is renamed to `@luma.gl/graph`. Replace the package in your
-project dependencies and update the package prefix in every import:
-
-```typescript
-import {GPUCommandGraph} from '@luma.gl/graph';
-import {GPUGraph} from '@luma.gl/graph/gpu-core';
-```
-
-The package rename preserves subpath suffixes; see the API naming changes below. For example,
-`@luma.gl/gpu-graph/gpu-tables` becomes `@luma.gl/graph/gpu-tables`.
-The source package directory is now `modules/graph`.
-
-## GPU graph naming
-
-Graph analytics now use `@luma.gl/graph/gpu-graph-algorithms` and a shared
-`GPUGraphAlgorithms` prefix for classes, types, and helpers:
-
-- The former analytics `GPUGraph` becomes `GPUGraphAlgorithmsData`.
-- `GPUGraphProps` becomes `GPUGraphAlgorithmsDataProps`.
-- `GPUGraphPageRank` becomes `GPUGraphAlgorithmsPageRank`.
-- `GPUGraphTopology` becomes `GPUGraphAlgorithmsTopology`.
-- `runGPUGraphBenchmark` becomes `runGPUGraphAlgorithmsBenchmark`.
-
-Update analytics imports from `@luma.gl/graph/gpu-graph` to
-`@luma.gl/graph/gpu-graph-algorithms`, including the `/benchmarks` entry point.
-The `gpu-graph` entry point exposes graph authoring and command execution.
-
-The execution scheduler is `GPUCommandGraph`, with compiled instances named
-`CompiledGPUCommandGraph`. Scheduling option and result types retain their
-`GPUCommandGraph` prefixes.
-
-The upgrade guide lists breaking changes in each major and minor version of the luma.gl API, and provides information on how to update applications.
-
-Upgrade instructions assume that you are upgrading from the immediately previous release.
-If you are upgrading across multiple releases you will want to consider the release notes for all
-intermediary releases.
-
-luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking changes are typically only done in major versions, minor version bumps bring new functionality but few breaking changes, and patch releases typically contain only low-risk fixes.
-
-*For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
-
 ## Upgrading to v10.0
 
 ### loaders.gl grouped packages
 
-luma.gl now uses loaders.gl 5.0.0-beta.2. Install `@loaders.gl/tables` in place of
+luma.gl now uses loaders.gl 5.0.0-beta.4. Install `@loaders.gl/tables` in place of
 `@loaders.gl/parquet`, and import Parquet APIs from `@loaders.gl/tables/parquet` or
 its explicit implementation subpaths. Schema, schema utilities, and Node polyfills
 now come from `@loaders.gl/core/schema`, `@loaders.gl/core/schema-utils`, and
@@ -146,18 +192,32 @@ loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.g
 options. This keeps encoded clip loading under the controller's active-scene and
 resource ownership rules, and preserves luma.gl's support for legacy draft attachments.
 
+### GeoArrow adapter validation and union IDs
+
+Arrow conversion now delegates to math.gl's shared adapter. For ambiguous list nesting,
+supply an explicit `encoding` or an Arrow `field` with GeoArrow extension metadata.
+For `convertGeoArrowTableToInterleaved`, select unannotated geometry columns with
+`geometryColumn`/`geometryColumns` and supply their `encoding` in the same options.
+Name three-component coordinate children `xyz` or `xym`, or supply `dimension`
+when adapting a vector directly. A `coordinateLayout` option must match physical
+storage; use the explicit interleaving conversion to change layouts.
+
+New dense-union output uses canonical GeoArrow IDs: XY point/line/polygon use
+1/2/3; XYZ adds 10, XYM adds 20, and XYZM adds 30. Read child fields and union
+metadata instead of relying on luma.gl's former sequential child IDs.
+
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.2. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.6. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
-`@math.gl/polygon` becomes `@math.gl/geometry`, and CRS, projection, and
-GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to
+`@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection
+imports move under `@math.gl/geospatial`. GeoArrow imports move to `@math.gl/arrow`. Sun imports move to
 `@math.gl/earth/sun`. Install the package root when using these subpaths.
 
 The beta also removes alpha subpaths: import array types and `mat4`/`vec2`/`vec3`/`vec4`
 from `@math.gl/core`, parametric geometry and polygon helpers from `@math.gl/geometry`,
 DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from
-`@math.gl/geospatial/geoarrow`. TypeScript projects using `Float16Array` must include
+`@math.gl/arrow/geoarrow-utils`. TypeScript projects using `Float16Array` must include
 `ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
 
 
@@ -219,7 +279,7 @@ Uint8 indices supplied to the engine compatibility adapter are widened to Uint16
 frusta. Primitive tessellation order can change, so derive face metadata from normals rather
 than relying on vertex or index ordering.
 
-**@luma.gl/gpgpu**
+**@luma.gl/graph/gpu-simple-graph**
 
 ### GPUFFT2D graph lifecycle
 
@@ -238,13 +298,13 @@ See [GPUFFT2D](./api-reference/experimental/gpu-core/gpu-fft2d) for the migratio
 
 **@luma.gl/shaders**
 
+- `ShaderModule.inject` has been removed. Move module-owned hook and anchor injections to a named `ShaderPlugin` with `injections`, and attach the shader module through the plugin's `module` field when source or uniforms are needed. Plugins select GLSL and WGSL injection source explicitly.
 - `ShaderPassPipeline`, `ShaderPassPipelineStep`, and `ShaderPassComputeOptimization` have been
   renamed to `CompositeShaderPass`, `CompositeShaderPassStep`, and
   `CompositeShaderPassComputeOptimization`. Effect factories and values likewise replace their
   `ShaderPassPipeline` suffix with `CompositeShaderPass`.
 - Named shader hook injections now throw if their target is not registered. Register the hook
-  for the matching shader stage before injecting into it. WGSL continues to skip unregistered
-  module injections, which may contain GLSL-only code.
+  for the matching shader stage before injecting into it.
 
 **@luma.gl/core/webgpu**
 
@@ -399,23 +459,6 @@ luma.gl v9 is a major modernization of the luma.gl API, with many breaking chang
 This page only covers luma.gl v9 and later releases.
 For information on upgrading to from v8 and earlier releases, see the [Legacy Upgrade Guide](/docs/legacy/legacy-upgrade-guide).
 
-## GPU Core composition
-
-GPU Core primitives now expose `getCommandNodes(graph)` instead of `addToGraph(graph)`. Schedule
-a primitive with `graph.add(primitive)`, which calls `getCommandNodes(graph)` internally. To inspect
-or modify nodes before scheduling, use `addGPUCommandNodes(graph, nodes)`. Graph-independent
-primitives can also be added to `GPUGraph`. `GPUCommandGraphContributor` and the compiler's legacy mutation fallback were
-removed. The three range/scatter primitives that also publish scratch views expose
-`getCommands(graph)` returning `{nodes, ...views}`; schedule `nodes` explicitly.
-
-`GPUGraphBindings.vectors` now accepts typed `GPUData`, readonly `GPUData[]`, or `GPUVector`
-instead of raw buffers. Compiler vector resolution returns `GraphVectorView`; access physical
-chunks through `.data` or canonical logical descriptors through `.chunks`.
-
-## GPU Graph package
-
-Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `GPUCommandGraph` from the package root. Replace `@luma.gl/gpgpu/gpu-core` and graph-based domain subpaths with `@luma.gl/graph/<subpath>`. Experimental GPU tables, dataframe, SQL, crossfilter, trace, projection, raster, geospatial, and volume modules use the corresponding new subpaths. GPU data primitives and immediate operations remain in `@luma.gl/gpgpu`.
-
 ## Module loader dependencies
 
 - `exportGLTF` and its `GLTFExport*` descriptor types moved from `@luma.gl/engine/gltf` to
@@ -426,8 +469,8 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 - The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`,
   `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and
   `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to
-  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `LuSQLContext`
-  and `LuSQLQuery` remain in the module.
+  `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `GPUSQLContext`
+  and `GPUSQLQuery` remain in the module.
 - Install loaders.gl packages explicitly in applications that use these integrations.
   Published luma.gl modules no longer install them transitively.
 
@@ -437,13 +480,13 @@ Execution graphs and graph-based modules now live in `@luma.gl/graph`. Import `G
 
 ### Kernel imports
 
-`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/gpgpu`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/gpgpu`.
+`Kernel`, `RenderKernel`, and their props/draw/dispatch types are exported from `@luma.gl/graph`. Engine no longer re-exports these APIs. Replace kernel imports from `@luma.gl/engine` with imports from `@luma.gl/graph`.
 
-`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/gpgpu` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
+`BufferTransform` and `TextureTransform` are owned by `@luma.gl/engine`. Replace imports of these classes and their props types from `@luma.gl/graph` with engine imports. Gpgpu operations use RenderKernel directly and no longer depend on these adapters.
 
 ### GPU vector rendering imports
 
-`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/gpgpu` or `@luma.gl/gpgpu/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant remain in gpgpu/gpu-data. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.
+`GPUVectorModel`, `GPUVectorGeometry`, `getGPUVectorModelBatches`, `validateGPUVectorBatchStructure`, and their associated types belong to `@luma.gl/engine`. Replace imports from `@luma.gl/graph/gpu-simple-graph` or `@luma.gl/graph/gpu-data` with engine imports. GPUData, GPUVector, and GPUConstant live in `@luma.gl/graph/gpu-data`. Engine Model continues to extend GPUVectorModel; vector binding, batching, and resource ownership behavior is unchanged.
 
 ### glTF imports
 
@@ -478,7 +521,7 @@ const plugin: ShaderPlugin = {
   module: tintModule,
   injections: [
     {
-      target: 'fs:FILTER_COLOR',
+      stage: 'fragment', target: 'FILTER_COLOR',
       glsl: 'color *= tint.color;',
       wgsl: '*color *= tint.color;'
     }
@@ -520,3 +563,25 @@ Dependencies retain their existing uniform/binding namespaces. Continue configur
 them by module name through `ShaderInputs`; the primary module does not automatically
 forward props to dependencies. The `modules` arrays accepted by models, computations,
 and assemblers, as well as `ResolvedShaderPlugins.modules`, are unchanged.
+
+### Removal of `@luma.gl/gpgpu`
+
+The v10 graph package now owns the former gpgpu APIs. The gpgpu package is removed without compatibility exports. Existing evaluator expressions retain their behavior. Update imports as follows:
+
+| Former entry | Replacement |
+| --- | --- |
+| `@luma.gl/gpgpu` evaluator and operation exports | `@luma.gl/graph/gpu-simple-graph` |
+| `@luma.gl/gpgpu` shared execution exports, including `Kernel` and `RenderKernel` | `@luma.gl/graph` |
+| `@luma.gl/gpgpu/gpu-data` | `@luma.gl/graph/gpu-data` |
+| `@luma.gl/gpgpu/cpu`, `/webgl`, `/webgpu` | `@luma.gl/graph/gpu-simple-graph/cpu`, `/webgl`, `/webgpu` |
+| `@luma.gl/gpgpu/arrow` | `@luma.gl/graph/arrow` |
+
+Replace the package dependency with `@luma.gl/graph`. Apache Arrow remains an optional peer used only by the Arrow entry.
+
+## ShaderPlugin object targets
+
+ShaderPlugin hook and injection objects now separate the shader stage from the
+target: replace `{target: 'fs:FILTER_COLOR', glsl: '...'}` with
+`{stage: 'fragment', target: 'FILTER_COLOR', glsl: '...'}`. Use `vertex` for `vs`.
+String forms retain `vs:` and `fs:` prefixes and additionally support `glsl:` and
+`wgsl:` language prefixes. See [ShaderPlugin](/docs/api-reference/shaders/shader-plugin).

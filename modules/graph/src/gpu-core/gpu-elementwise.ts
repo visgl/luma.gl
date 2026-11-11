@@ -5,7 +5,7 @@
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import type {Binding} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {alignGraphVectorViews, getGraphVectorData} from './graph-vector-view-utils';
 import {getBoundedDispatchLayout, getBoundedInvocationIndexSource} from './gpu-dispatch-utils';

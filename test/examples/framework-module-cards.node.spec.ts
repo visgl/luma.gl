@@ -62,7 +62,7 @@ const EXPECTED_FRAMEWORK_MODULES = [
     id: 'anari',
     title: 'ANARI',
     packageName: '@luma.gl/anari',
-    documentationPath: 'docs/api-reference/scene',
+    documentationPath: 'docs/api-reference/anari',
     capabilities: ['glTF', 'OpenUSD', 'Renderers'],
     descriptions: [/declarative 3D scenes/i, /glTF and OpenUSD/i, /switch renderers/i]
   },
@@ -77,8 +77,8 @@ const EXPECTED_FRAMEWORK_MODULES = [
   {
     id: 'gpgpu',
     title: 'GPGPU',
-    packageName: '@luma.gl/gpgpu',
-    documentationPath: 'docs/api-reference/gpgpu',
+    packageName: '@luma.gl/graph/gpu-simple-graph',
+    documentationPath: 'docs/api-reference/graph/gpu-evaluation',
     capabilities: ['GPU graphs', 'Compute modules', 'Zero readback'],
     descriptions: [/compute modules and rendering/i, /GPU-native pipeline/i]
   }

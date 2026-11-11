@@ -5,7 +5,7 @@
 import {Device} from '../adapter/device';
 import {ComputePipeline, type ComputePipelineProps} from '../adapter/resources/compute-pipeline';
 import {RenderPipeline, type RenderPipelineProps} from '../adapter/resources/render-pipeline';
-import {Resource} from '../adapter/resources/resource';
+import {DeviceResource} from '../adapter/resources/device-resource';
 import type {SharedRenderPipeline} from '../adapter/resources/shared-render-pipeline';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
@@ -13,8 +13,8 @@ import type {CoreModuleState} from './core-module-state';
 
 export type PipelineFactoryProps = RenderPipelineProps;
 
-type CacheItem<ResourceT extends Resource<any>> = {resource: ResourceT; useCount: number};
-type PendingCacheItem<ResourceT extends Resource<any>> = {
+type CacheItem<ResourceT extends DeviceResource<any>> = {resource: ResourceT; useCount: number};
+type PendingCacheItem<ResourceT extends DeviceResource<any>> = {
   promise: Promise<ResourceT>;
   useCount: number;
 };

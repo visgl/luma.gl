@@ -19,12 +19,16 @@ export function drawGPUVectorGroups(
   geometry: GPUVectorBindings,
   attributes: GPUVectorBindings,
   syncBindings: () => void,
-  draw: () => boolean
+  draw: () => boolean,
+  inferDrawCount?: 'instance' | 'vertex' | 'no'
 ): boolean {
   const geometryInputs = geometry.inputs;
   const attributeInputs = attributes.inputs;
   const geometryLayouts = geometry.sourceLayouts;
   const attributeLayouts = attributes.sourceLayouts;
+  // Keep the full group's inference stable when selecting individual chunks.
+  const geometryBatchLayouts = geometry.layouts;
+  const attributeBatchLayouts = attributes.layouts;
   const attributeStepMode = attributes.stepMode;
   const geometryBatchCount = geometry.batchCount;
   const attributeBatchCount = attributes.batchCount;
@@ -52,10 +56,10 @@ export function drawGPUVectorGroups(
       const attributeBatchIndex = independentInstances
         ? batchIndex % attributeBatchCount
         : Math.min(batchIndex, attributeBatchCount - 1);
-      geometry.setInputs(geometryBatches[geometryBatchIndex], geometryLayouts, 'vertex');
+      geometry.setInputs(geometryBatches[geometryBatchIndex], geometryBatchLayouts, 'vertex');
       attributes.setInputs(
         attributeBatches[attributeBatchIndex],
-        attributeLayouts,
+        attributeBatchLayouts,
         attributeStepMode
       );
       syncBindings();
@@ -65,16 +69,17 @@ export function drawGPUVectorGroups(
           : attributes.vertexCount !== undefined
             ? attributeOffsets[attributeBatchIndex]
             : 0;
-      model.setVertexCount(
-        Math.max(
-          0,
-          Math.min(
-            geometry.rowCount ?? attributes.vertexCount ?? vertexCount,
-            vertexCount - vertexOffset
+      if (inferDrawCount === 'vertex')
+        model.setVertexCount(
+          Math.max(
+            0,
+            Math.min(
+              geometry.rowCount ?? attributes.vertexCount ?? vertexCount,
+              vertexCount - vertexOffset
+            )
           )
-        )
-      );
-      if (attributes.instanceCount !== undefined)
+        );
+      if (inferDrawCount === 'instance' && attributes.instanceCount !== undefined)
         model.setInstanceCount(
           Math.max(
             0,

@@ -29,4 +29,3 @@ Revision: historical import revision unknown unless explicitly identified below.
 Adaptation: src/modules/math/fp16/fp16-utils.ts adapts half-float conversion to TypeScript and math.gl clamp.
 
 Full terms: [three](./licenses/three.txt).
-

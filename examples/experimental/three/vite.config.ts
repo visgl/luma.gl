@@ -13,6 +13,8 @@ export default defineConfig(({mode}) => ({
     rollupOptions: {
       input: {
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        streamed: fileURLToPath(new URL('./streamed.html', import.meta.url)),
+        embed: fileURLToPath(new URL('./embed.html', import.meta.url)),
         'gpu-graph-galaxy': fileURLToPath(new URL('./gpu-graph-galaxy.html', import.meta.url)),
         'host-overlay': fileURLToPath(new URL('./host-overlay.html', import.meta.url))
       }
@@ -20,8 +22,18 @@ export default defineConfig(({mode}) => ({
   },
   resolve: {
     alias: {
-      '@luma.gl/gpgpu/_internal': fileURLToPath(
-        new URL('../../../modules/gpgpu/src/execution', import.meta.url)
+      '@luma.gl/graph/gpu-simple-graph/cpu': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/cpu', import.meta.url)
+      ),
+      '@luma.gl/graph/gpu-simple-graph/webgl': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgl', import.meta.url)
+      ),
+      '@luma.gl/graph/gpu-simple-graph/webgpu': fileURLToPath(
+        new URL('../../../modules/graph/src/gpu-simple-graph/operations/webgpu', import.meta.url)
+      ),
+
+      '@luma.gl/graph/_internal': fileURLToPath(
+        new URL('../../../modules/graph/src/execution', import.meta.url)
       ),
       '@luma.gl/engine/models': fileURLToPath(
         new URL('../../../modules/engine/src/graph/models', import.meta.url)
@@ -33,12 +45,10 @@ export default defineConfig(({mode}) => ({
         new URL('../../../modules/engine/src/graph/tables', import.meta.url)
       ),
       ...Object.fromEntries(
-        ['core', 'effects', 'engine', 'gpgpu', 'three', 'webgl', 'webgpu', 'shaders', 'graph'].map(
-          name => [
-            `@luma.gl/${name}`,
-            fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
-          ]
-        )
+        ['core', 'effects', 'engine', 'three', 'webgl', 'webgpu', 'shaders', 'graph'].map(name => [
+          `@luma.gl/${name}`,
+          fileURLToPath(new URL(`../../../modules/${name}/src`, import.meta.url))
+        ])
       )
     }
   },

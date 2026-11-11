@@ -8,7 +8,7 @@ import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const forbidden = {shaders: ['core', 'gpgpu', 'graph', 'engine'], core: ['gpgpu', 'graph', 'engine'], gpgpu: ['engine', 'graph'], graph: ['engine']};
+const forbidden = {shaders: ['core', 'graph', 'engine'], core: ['graph', 'engine'], graph: ['engine']};
 for (const [name, dependencies] of Object.entries(forbidden)) {
   const directory = resolve(root, 'modules', name);
   const manifest = JSON.parse(await readFile(resolve(directory, 'package.json'), 'utf8'));
@@ -38,4 +38,4 @@ for (const [name, dependencies] of Object.entries(forbidden)) {
     }
   }
 }
-console.log('Verified engine → graph → gpgpu → core → shaders package boundaries.');
+console.log('Verified engine → graph → core → shaders package boundaries.');

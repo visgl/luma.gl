@@ -21,7 +21,7 @@ import {
   type CompiledGPUDataFrameSort,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
-import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, type GPUData} from '@luma.gl/graph/gpu-data';
 import * as arrow from 'apache-arrow';
 
 const DEFAULT_ROW_COUNT = 65_536;

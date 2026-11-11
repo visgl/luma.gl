@@ -14,7 +14,7 @@ const distributionDirectory = new URL('../modules/core/dist/', import.meta.url);
 await writeCommonJSModules(distributionDirectory);
 await writeCommonJSModules(new URL('../modules/shaders/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/anari/dist/', import.meta.url));
-await writeCommonJSModules(new URL('../modules/gpgpu/dist/', import.meta.url));
+
 await writeCommonJSModules(new URL('../modules/graph/dist/', import.meta.url));
 await writeCommonJSModules(new URL('../modules/engine/dist/', import.meta.url));
 
@@ -77,25 +77,37 @@ process.stdout.write('Verified CommonJS GPU graph constructor identity.\n');
 
 // The focused package root reuses scheduler and diagnostics constructors without
 // re-exporting the optional algorithms from gpu-core.
-const rootGraphEntryPoint = new URL('index.js', graphDistributionDirectory);
 const rootGraphExportNames = [
   ...Object.keys(graphApi),
+  'GPUExpressionOperation',
+  'GPUUploadOperation',
+  'GPUCopyOperation',
+  'GPUShaderPassOperation',
+  'GPUCompactionOperation',
+  'CompiledGPUGraph',
   'GPUCommandGraphAutotuner',
   'getGPUCommandGraphAdapterIdentity',
   'GPUCommandGraphExecutionBudgetController',
   'GPUCommandGraphInspector'
 ];
-const {code: rootGraphCode} = await transform(
-  `export {${rootGraphExportNames.join(',')}} from './gpu-core/index.cjs';`,
-  {format: 'cjs', platform: 'node', target: 'node16', sourcefile: fileURLToPath(rootGraphEntryPoint)}
-);
-await writeFile(new URL('index.cjs', graphDistributionDirectory), rootGraphCode);
 const rootGraphApi = require(fileURLToPath(new URL('index.cjs', graphDistributionDirectory)));
-for (const [name, value] of Object.entries(rootGraphApi)) {
-  assert.equal(value, gpuCoreApi[name]);
+for (const name of rootGraphExportNames) {
+  assert.equal(rootGraphApi[name], gpuCoreApi[name]);
 }
 assert.equal('GPUScan' in rootGraphApi, false);
 process.stdout.write('Verified CommonJS GPU Graph package root identity.\n');
+const graphEsm = await import(new URL('index.js', graphDistributionDirectory));
+const gpuCoreEsm = await import(new URL('gpu-core/index.js', graphDistributionDirectory));
+for (const name of ['GPUExpressionOperation', 'GPUUploadOperation', 'GPUCopyOperation', 'GPUShaderPassOperation', 'GPUCompactionOperation', 'CompiledGPUGraph']) {
+  assert.equal(typeof rootGraphApi[name], 'function');
+  assert.equal(rootGraphApi[name], gpuCoreApi[name]);
+  assert.equal(graphEsm[name], gpuCoreEsm[name]);
+}
+for (const api of [rootGraphApi, graphEsm, gpuCoreApi, gpuCoreEsm]) {
+  assert.equal(api.gpuGraph.texture({format: 'rgba8unorm'}).type, 'texture');
+}
+process.stdout.write('Verified expression operation exports in ESM and CommonJS.\n');
+
 
 // Public renderer facades and experimental aggregates preserve constructor identity.
 const anariDistributionDirectory = new URL('../modules/anari/dist/', import.meta.url);
@@ -118,8 +130,8 @@ process.stdout.write('Verified CommonJS renderer and experimental subpath identi
 
 // Dynamic resource facades preserve identity; engine owns shader-module convenience APIs.
 const engineApi = require('../modules/engine/dist/index.cjs');
-const executionApi = require('../modules/gpgpu/dist/index.cjs');
-const dataApi = require('../modules/gpgpu/dist/gpu-data/index.cjs');
+const executionApi = require('../modules/graph/dist/index.cjs');
+const dataApi = require('../modules/graph/dist/gpu-data/index.cjs');
 for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(engineApi[name], executionApi[name]);
@@ -140,7 +152,7 @@ const [coreEsm, dynamicEsm, engineEsm, executionEsm] = await Promise.all([
   import('../modules/core/dist/index.js'),
   import('../modules/core/dist/dynamic/index.js'),
   import('../modules/engine/dist/index.js'),
-  import('../modules/gpgpu/dist/index.js')
+  import('../modules/graph/dist/index.js')
 ]);
 for (const name of ['DynamicBuffer', 'DynamicTexture']) {
   assert.equal(typeof dynamicApi[name], 'function');
@@ -159,7 +171,7 @@ for (const name of ['Computation', 'ShaderInputs']) {
   assert(!(name in executionEsm));
 }
 
-// Kernel execution helpers are exported only by gpgpu, in both module formats.
+// Kernel execution helpers are exported only by graph, in both module formats.
 for (const name of ['Kernel', 'RenderKernel']) {
   assert.equal(typeof executionApi[name], 'function');
   assert.equal(typeof executionEsm[name], 'function');
@@ -168,7 +180,7 @@ for (const name of ['Kernel', 'RenderKernel']) {
   assert(!(name in coreApi));
   assert(!(name in coreEsm));
 }
-process.stdout.write('Verified gpgpu kernel export ownership.\n');
+process.stdout.write('Verified graph kernel export ownership.\n');
 
 // The lightweight browser entry shares existing CommonJS device singleton implementations.
 const testUtilities = require('../modules/core/dist/test-utils/index.cjs');
@@ -249,3 +261,135 @@ for (const name of ['shaderTypeDecoder', 'makeShaderBlockLayout', 'getVariableSh
 assert.equal(coreScanners.scanWGSLInterface, shaderScanners.scanWGSLInterface);
 assert(!('getDefaultShaderAssembler' in shadersApi.ShaderAssembler));
 process.stdout.write('Verified standalone shader contracts and core CommonJS identity.\n');
+
+// SimpleGraph and evaluator exports retain one implementation per module format.
+const simpleGraphApi = require('../modules/graph/dist/gpu-simple-graph/index.cjs');
+const evaluatorApi = require('../modules/graph/dist/gpu-simple-graph/operation/gpu-data-evaluator.cjs');
+assert.equal(simpleGraphApi.GPUDataEvaluator, evaluatorApi.GPUDataEvaluator);
+const simpleGraphEsm = await import('../modules/graph/dist/gpu-simple-graph/index.js');
+const evaluatorEsm = await import('../modules/graph/dist/gpu-simple-graph/operation/gpu-data-evaluator.js');
+assert.equal(simpleGraphEsm.GPUDataEvaluator, evaluatorEsm.GPUDataEvaluator);
+for (const backend of ['cpu', 'webgl', 'webgpu']) {
+  const entry = `@luma.gl/graph/gpu-simple-graph/${backend}`;
+  assert.equal(typeof require(entry).interleave, 'function');
+  assert.equal(typeof (await import(entry)).interleave, 'function');
+}
+process.stdout.write('Verified SimpleGraph evaluator identity and backend entries.\n');
+
+// The optional lighting entry must preserve constructor identity within each module system.
+const lightingApi = require('@luma.gl/engine/lighting');
+const lightingEsm = await import('../modules/engine/dist/lighting/index.js');
+const lightingImplementation = require('../modules/engine/dist/lighting/prefiltered-environment.cjs');
+const lightingImplementationEsm = await import('../modules/engine/dist/lighting/prefiltered-environment.js');
+for (const name of ['PrefilteredEnvironment', 'PrefilteredEnvironmentGenerator', 'createPrefilteredEnvironment']) {
+  assert.equal(typeof lightingApi[name], 'function');
+  assert.equal(lightingApi[name], lightingImplementation[name]);
+  assert.equal(lightingEsm[name], lightingImplementationEsm[name]);
+}
+process.stdout.write('Verified optional lighting subpath identities.\n');
+
+const lightingMaterialApi = require('../modules/engine/dist/lighting/pbr-material.cjs');
+const lightingMaterialEsm = await import('../modules/engine/dist/lighting/pbr-material.js');
+const compatibleMaterialApi = require('../modules/anari/dist/engine/pbr-material.cjs');
+const compatibleMaterialEsm = await import('../modules/anari/dist/engine/pbr-material.js');
+for (const name of ['createPBRMaterial', 'createPBRMaterialFactory', 'getPBRMaterialMapUniforms']) {
+  assert.equal(lightingApi[name], lightingMaterialApi[name]);
+  assert.equal(lightingEsm[name], lightingMaterialEsm[name]);
+  assert.equal(compatibleMaterialApi[name], lightingApi[name]);
+  assert.equal(compatibleMaterialEsm[name], lightingEsm[name]);
+}
+process.stdout.write('Verified PBR material compatibility export identities.\n');
+
+const lightingModelApi = require('../modules/engine/dist/lighting/pbr-model.cjs');
+const lightingModelEsm = await import('../modules/engine/dist/lighting/pbr-model.js');
+for (const name of ['createPBRModel', 'createPBRShadowModel', 'getPBRGeometryDefines', 'getPBRTextureDefines', 'getPBRModelWGSL', 'PBR_MODEL_WGSL_SHADER']) {
+  assert.equal(lightingApi[name], lightingModelApi[name]);
+  assert.equal(lightingEsm[name], lightingModelEsm[name]);
+}
+process.stdout.write('Verified standalone PBR model subpath identities.\n');
+
+// Shadow resources and sampling share one implementation across compatibility facades.
+const shadowRendererApi = require('../modules/engine/dist/lighting/shadow-map-renderer.cjs');
+const shadowRendererEsm = await import('../modules/engine/dist/lighting/shadow-map-renderer.js');
+const compatibleShadowApi = require('../modules/anari/dist/shadows/shadow-map-renderer.cjs');
+const compatibleShadowEsm = await import('../modules/anari/dist/shadows/shadow-map-renderer.js');
+const renderersApi = require('../modules/anari/dist/renderers.cjs');
+const renderersEsm = await import('../modules/anari/dist/renderers.js');
+for (const name of ['ShadowMapRenderer', 'getPracticalCascadeSplits', 'getDirectionalCascadeViews', 'getSpotShadowView', 'getPointShadowViews']) {
+  assert.equal(lightingApi[name], shadowRendererApi[name]);
+  assert.equal(lightingEsm[name], shadowRendererEsm[name]);
+  assert.equal(compatibleShadowApi[name], lightingApi[name]);
+  assert.equal(compatibleShadowEsm[name], lightingEsm[name]);
+}
+assert.equal(renderersApi.ShadowMapRenderer, lightingApi.ShadowMapRenderer);
+assert.equal(renderersEsm.ShadowMapRenderer, lightingEsm.ShadowMapRenderer);
+const shaderShadowApi = require('../modules/shaders/dist/modules/lighting/shadow/shadow.cjs');
+const shaderShadowEsm = await import('../modules/shaders/dist/modules/lighting/shadow/shadow.js');
+const shadersEsm = await import('../modules/shaders/dist/index.js');
+assert.equal(shadersApi.shadow, shaderShadowApi.shadow);
+assert.equal(shadersEsm.shadow, shaderShadowEsm.shadow);
+assert.equal(renderersApi.shadow, shadersApi.shadow);
+assert.equal(renderersEsm.shadow, shadersEsm.shadow);
+assert.equal('ShadowMapRenderer' in engineApi, false);
+process.stdout.write('Verified shadow primitive and compatibility export identities.\n');
+
+assert.equal(shadersApi.pbrShadow, require('../modules/shaders/dist/modules/lighting/pbr-shadow/pbr-shadow.cjs').pbrShadow);
+assert.equal(shadersEsm.pbrShadow, (await import('../modules/shaders/dist/modules/lighting/pbr-shadow/pbr-shadow.js')).pbrShadow);
+assert.equal('createPBRShadowModel' in engineApi, false);
+
+const surfacePassApi = require('../modules/engine/dist/lighting/pbr-surface-pass.cjs');
+const surfacePassEsm = await import('../modules/engine/dist/lighting/pbr-surface-pass.js');
+assert.equal(lightingApi.PBRSurfacePass, surfacePassApi.PBRSurfacePass);
+assert.equal(lightingEsm.PBRSurfacePass, surfacePassEsm.PBRSurfacePass);
+assert.equal(lightingApi.createPBRSurfaceModel, lightingModelApi.createPBRSurfaceModel);
+assert.equal(lightingEsm.createPBRSurfaceModel, lightingModelEsm.createPBRSurfaceModel);
+assert.equal(shadersApi.pbrSurface, require('../modules/shaders/dist/modules/lighting/pbr-surface/pbr-surface.cjs').pbrSurface);
+assert.equal(shadersEsm.pbrSurface, (await import('../modules/shaders/dist/modules/lighting/pbr-surface/pbr-surface.js')).pbrSurface);
+for (const name of ['PBRSurfacePass', 'createPBRSurfaceModel']) assert.equal(name in engineApi, false);
+process.stdout.write('Verified PBR surface prepass optional-subpath identities.\n');
+
+const contactPassApi = require('../modules/engine/dist/lighting/contact-shadow-pass.cjs');
+const contactPassEsm = await import('../modules/engine/dist/lighting/contact-shadow-pass.js');
+assert.equal(lightingApi.ContactShadowPass, contactPassApi.ContactShadowPass);
+assert.equal(lightingEsm.ContactShadowPass, contactPassEsm.ContactShadowPass);
+const compatibleContactApi = require('../modules/anari/dist/shadows/contact-shadow.cjs');
+const compatibleContactEsm = await import('../modules/anari/dist/shadows/contact-shadow.js');
+assert.equal(compatibleContactApi.createContactShadowCompositeShaderPass, lightingApi.createContactShadowCompositeShaderPass);
+assert.equal(compatibleContactEsm.createContactShadowCompositeShaderPass, lightingEsm.createContactShadowCompositeShaderPass);
+for (const name of ['contactShadowTrace','contactShadowBilateralBlur','contactShadowComposite','pbrContactShadow']) {
+  const path = name === 'pbrContactShadow' ? 'pbr-contact-shadow/pbr-contact-shadow' : 'contact-shadow/contact-shadow';
+  assert.equal(shadersApi[name], require(`../modules/shaders/dist/modules/lighting/${path}.cjs`)[name]);
+  assert.equal(shadersEsm[name], (await import(`../modules/shaders/dist/modules/lighting/${path}.js`))[name]);
+}
+assert.equal('ContactShadowPass' in engineApi, false);
+process.stdout.write('Verified contact shadow optional-subpath and compatibility identities.\n');
+
+const clusterApi = require('../modules/engine/dist/lighting/clustered-light-grid.cjs');
+const clusterEsm = await import('../modules/engine/dist/lighting/clustered-light-grid.js');
+const compatibleClusterApi = require('../modules/anari/dist/rendering/clustered-lighting.cjs');
+const compatibleClusterEsm = await import('../modules/anari/dist/rendering/clustered-lighting.js');
+for (const name of ['ClusteredLightGrid', 'MAX_CLUSTERED_POINT_LIGHTS', 'DEFAULT_CLUSTER_DIMENSIONS', 'DEFAULT_MAX_LIGHTS_PER_CLUSTER']) {
+  assert.equal(lightingApi[name], clusterApi[name]);
+  assert.equal(lightingEsm[name], clusterEsm[name]);
+  assert.equal(compatibleClusterApi[name], lightingApi[name]);
+  assert.equal(compatibleClusterEsm[name], lightingEsm[name]);
+}
+assert.equal('ClusteredLightGrid' in engineApi, false);
+process.stdout.write('Verified clustered light grid compatibility identities.\n');
+assert.equal(lightingApi.AmbientOcclusionPass, require('../modules/engine/dist/lighting/ambient-occlusion-pass.cjs').AmbientOcclusionPass);
+assert.equal(lightingEsm.AmbientOcclusionPass, (await import('../modules/engine/dist/lighting/ambient-occlusion-pass.js')).AmbientOcclusionPass);
+assert.equal(shadersApi.pbrAmbientOcclusion, require('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.cjs').pbrAmbientOcclusion);
+assert.equal(shadersEsm.pbrAmbientOcclusion, (await import('../modules/shaders/dist/modules/lighting/pbr-ambient-occlusion/pbr-ambient-occlusion.js')).pbrAmbientOcclusion);
+assert.equal('AmbientOcclusionPass' in engineApi, false);
+process.stdout.write('Verified ambient visibility optional-subpath identities.\n');
+
+const bakeApi = require('../modules/engine/dist/lighting/lightmap-baker.cjs');
+const bakeEsm = await import('../modules/engine/dist/lighting/lightmap-baker.js');
+for (const name of ['LightmapBaker', 'LightmapBakeResult']) {
+  assert.equal(lightingApi[name], bakeApi[name]);
+  assert.equal(lightingEsm[name], bakeEsm[name]);
+  assert.equal(name in engineApi, false);
+}
+assert.equal(lightingApi.createPBRLightmapModel, lightingModelApi.createPBRLightmapModel);
+assert.equal(lightingEsm.createPBRLightmapModel, lightingModelEsm.createPBRLightmapModel);
+process.stdout.write('Verified lightmap baking optional-subpath identities.\n');

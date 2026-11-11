@@ -32,7 +32,7 @@ import type {
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps,
-  Resource,
+  DeviceResource,
   VertexFormat,
   DeviceLostInfo
 } from '../../index';
@@ -526,6 +526,7 @@ export class WebGLDevice extends Device {
    */
   override loseDevice(): boolean {
     this._lossWasRequested = true;
+    this._isLost = true;
     let deviceLossTriggered = false;
     const extensions = this.getExtension('WEBGL_lose_context');
     const ext = extensions.WEBGL_lose_context;
@@ -630,7 +631,7 @@ export class WebGLDevice extends Device {
    */
   _setWebGLDebugMetadata(
     handle: unknown,
-    resource: Resource<any>,
+    resource: DeviceResource<any>,
     options: {spector: Record<string, unknown>}
   ): void {
     // @ts-expect-error

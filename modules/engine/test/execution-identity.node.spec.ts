@@ -4,10 +4,10 @@
 
 import {expect, it} from 'vitest';
 import * as engine from '@luma.gl/engine';
-import * as execution from '@luma.gl/gpgpu';
-import * as data from '@luma.gl/gpgpu/gpu-data';
+import * as execution from '@luma.gl/graph';
+import * as data from '@luma.gl/graph/gpu-data';
 
-it('engine compatibility exports share execution constructors with gpgpu', () => {
+it('engine compatibility exports share execution constructors with graph', () => {
   for (const name of ['DynamicBuffer', 'DynamicTexture'] as const) {
     expect(engine[name]).toBe(execution[name]);
   }

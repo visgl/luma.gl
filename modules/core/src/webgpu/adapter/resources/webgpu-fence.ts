@@ -13,7 +13,7 @@ export class WebGPUFence extends Fence {
   private _signaled = false;
 
   constructor(device: WebGPUDevice, props: FenceProps = {}) {
-    super(device, {});
+    super(device, props);
     this.device = device;
     this.signaled = device.handle.queue
       .onSubmittedWorkDone()
@@ -32,7 +32,7 @@ export class WebGPUFence extends Fence {
     return this._signaled;
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     // Nothing to release for WebGPU fence
   }
 }

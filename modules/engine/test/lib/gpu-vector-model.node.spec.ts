@@ -6,7 +6,7 @@ import {expect, it} from 'vitest';
 import {Buffer, type ShaderLayout} from '@luma.gl/core';
 import {GPUVectorModel, getGPUVectorModelBatches, Model} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 
 const SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
@@ -58,6 +58,7 @@ it.each([
     shaderLayout: SHADER_LAYOUT,
     bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}],
     attributes: {positions: firstBuffer},
+    inferDrawCount: 'instance',
     isInstanced: true,
     vertexCount: 1
   });
@@ -126,6 +127,7 @@ it.each([
       }
     ],
     attributes: {positions: buffer},
+    inferDrawCount: 'instance',
     isInstanced: true,
     vertexCount: 1
   });
@@ -233,8 +235,8 @@ it('Model.createAsync preserves the requested subclass and its defaults', async 
 it.each([
   'instance',
   'vertex',
-  'none'
-] as const)('GPUVectorModel preserves draw state and byte offsets after a failed %s batch', gpuVectorCount => {
+  'no'
+] as const)('GPUVectorModel preserves draw state and byte offsets after a failed %s batch', inferDrawCount => {
   const device = new NullDevice({});
   const positions = makeVector(device, 'positions', 'float32x2', [2, 3]);
   const previousBuffer = device.createBuffer({byteLength: 128});
@@ -244,7 +246,7 @@ it.each([
     shaderLayout: SHADER_LAYOUT,
     bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}],
     attributes: {positions: previousBuffer},
-    gpuVectorCount,
+    inferDrawCount,
     vertexCount: 7,
     instanceCount: 5
   });
@@ -257,8 +259,8 @@ it.each([
       onBatch: batch => {
         // Inferred batch chunks retain the full GPUData API, including ownership metadata.
         expect(batch.data.positions.ownsBuffer).toBe(true);
-        expect(model.vertexCount).toBe(gpuVectorCount === 'vertex' ? 2 : 7);
-        expect(model.instanceCount).toBe(gpuVectorCount === 'instance' ? 2 : 5);
+        expect(model.vertexCount).toBe(inferDrawCount === 'vertex' ? 2 : 7);
+        expect(model.instanceCount).toBe(inferDrawCount === 'instance' ? 2 : 5);
         model.setBindings({temporary: previousBuffer});
         throw new Error('stop batch');
       }
@@ -293,7 +295,7 @@ it('GPUVectorModel direct vector binding rejects implicit multi-chunk packing', 
 it.each([
   'instance',
   'vertex'
-] as const)('GPUVectorModel restores automatic indexed draw counts after %s batching', gpuVectorCount => {
+] as const)('GPUVectorModel restores automatic indexed draw counts after %s batching', inferDrawCount => {
   const device = new NullDevice({});
   const positions = makeVector(device, 'positions', 'float32x2', [3]);
   const indexBuffer = device.createBuffer({
@@ -308,7 +310,7 @@ it.each([
     bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}],
     attributes: {positions: positions.data[0].buffer},
     indexBuffer,
-    gpuVectorCount
+    inferDrawCount
   });
   const renderPass = device.getDefaultRenderPass();
   const draws: Array<{indexCount?: number; instanceCount?: number}> = [];
@@ -325,4 +327,72 @@ it.each([
   positions.destroy();
   indexBuffer.destroy();
   renderPass.destroy();
+});
+
+it('GPUVectorModel binds independent lengths without changing caller draw counts', () => {
+  const device = new NullDevice({});
+  const buffers = [2, 4].map(length => device.createBuffer({data: new Float32Array(length * 2)}));
+  const vectors = buffers.map(
+    (buffer, index) =>
+      new GPUVector({
+        type: 'data',
+        format: 'float32x2',
+        data: [new GPUData({buffer, format: 'float32x2', length: index ? 4 : 2})]
+      })
+  );
+  const model = new GPUVectorModel(device, {
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER,
+    shaderLayout: SHADER_LAYOUT,
+    inferDrawCount: 'no',
+    enforceMatchingVectorLengths: false,
+    vertexCount: 7,
+    instanceCount: 3,
+    isInstanced: true
+  });
+  model.setAttributeVectors({positions: vectors[0], other: vectors[1]});
+  expect(model.vertexCount).toBe(7);
+  expect(model.instanceCount).toBe(3);
+  expect(() =>
+    getGPUVectorModelBatches('independent', {positions: vectors[0], other: vectors[1]})
+  ).toThrow();
+  model.destroy();
+  expect(buffers.every(buffer => !buffer.destroyed)).toBe(true);
+  for (const buffer of buffers) buffer.destroy();
+});
+
+it.each([
+  'instance',
+  'vertex',
+  'no',
+  undefined
+] as const)('inferDrawCount %s preserves the other count', inferDrawCount => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({data: new Float32Array(4)});
+  const model = new GPUVectorModel(device, {
+    vs: VERTEX_SHADER,
+    fs: FRAGMENT_SHADER,
+    shaderLayout: SHADER_LAYOUT,
+    inferDrawCount,
+    vertexCount: 7,
+    instanceCount: 5,
+    isInstanced: true,
+    bufferLayout: [{name: 'positions', format: 'float32x2', stepMode: 'instance'}]
+  });
+  model.setGPUVectors({
+    positions: {
+      name: 'positions',
+      byteStride: 8,
+      rowByteLength: 8,
+      length: 2,
+      format: 'float32x2',
+      data: [
+        {buffer, byteOffset: 0, byteStride: 8, rowByteLength: 8, length: 2, format: 'float32x2'}
+      ]
+    }
+  });
+  expect(model.vertexCount).toBe(inferDrawCount === 'vertex' ? 2 : 7);
+  expect(model.instanceCount).toBe(inferDrawCount === 'instance' ? 2 : 5);
+  model.destroy();
+  buffer.destroy();
 });

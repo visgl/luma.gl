@@ -255,7 +255,7 @@ import {
 ```
 
 Proposed runtime dependencies remain limited to existing experimental-package dependencies:
-`@luma.gl/core`, `@luma.gl/engine`, `@luma.gl/shaders`, and `@luma.gl/gpgpu`. No
+`@luma.gl/core`, `@luma.gl/engine`, `@luma.gl/shaders`, and `@luma.gl/graph/gpu-simple-graph`. No
 `apache-arrow`, deck.gl, loaders.gl, GeoTIFF decoder, projection database, browser fetch client,
 or codec belongs in this package.
 

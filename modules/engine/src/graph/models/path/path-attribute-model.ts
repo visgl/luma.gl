@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
 import {
   type Buffer,
   type BufferLayout,
@@ -11,9 +12,9 @@ import {
 } from '@luma.gl/core';
 import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/engine/tables';
 import type {GPUTable} from '@luma.gl/graph/gpu-tables';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
-import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
-import {isVertexListGPUVectorFormat, type VertexList} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/graph/gpu-data';
+import {isVertexListGPUVectorFormat, type VertexList} from '@luma.gl/graph/gpu-data';
 import type {GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
 import {type GPUInputSchema, validateGPUInputVectors} from '@luma.gl/graph/gpu-tables';
 
@@ -251,7 +252,15 @@ export class PathAttributeModel extends GPUTableModel {
   }
 
   /** Draws each generated path render batch against the supplied render pass. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    return options?.parameters
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
+          this.drawPathAttributeModelBatches(renderPass)
+        )
+      : this.drawPathAttributeModelBatches(renderPass);
+  }
+
+  private drawPathAttributeModelBatches(renderPass: RenderPass): boolean {
     const tableBatches = this.table?.batches || [];
     if (tableBatches.length > 0 && tableBatches.length !== this.renderBatches.length) {
       throw new Error(

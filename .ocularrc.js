@@ -16,9 +16,11 @@ const config = {
   },
 
   aliases: {
-    '@luma.gl/gpgpu/_internal/arrow': join(packageRoot, 'modules/gpgpu/src/arrow/internal.ts'),
+    '@luma.gl/graph/gpu-simple-graph/cpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/cpu'),
+    '@luma.gl/graph/gpu-simple-graph/webgl': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgl'),
+    '@luma.gl/graph/gpu-simple-graph/webgpu': join(packageRoot, 'modules/graph/src/gpu-simple-graph/operations/webgpu'),
+
     '@luma.gl/graph/_internal/arrow': join(packageRoot, 'modules/graph/src/arrow/internal.ts'),
-    '@luma.gl/gpgpu/arrow': join(packageRoot, 'modules/gpgpu/src/arrow/index.ts'),
     '@luma.gl/graph/arrow': join(packageRoot, 'modules/graph/src/arrow/index.ts'),
     '@luma.gl/engine/arrow': join(packageRoot, 'modules/engine/src/arrow/index.ts'),
     '@luma.gl/core/test-utils': join(packageRoot, 'modules/core/src/test-utils'),
@@ -31,8 +33,8 @@ const config = {
     '@luma.gl/engine/gltf-physics': join(packageRoot, 'modules/engine/src/gltf/physics'),
     '@luma.gl/engine/gltf': join(packageRoot, 'modules/engine/src/gltf'),
     '@luma.gl/engine/splats': join(packageRoot, 'modules/engine/src/splats'),
-    // Match the gpgpu export map instead of appending _internal to the package directory.
-    '@luma.gl/gpgpu/_internal': join(packageRoot, 'modules/gpgpu/src/execution'),
+    // Match the graph export map instead of appending _internal to the package directory.
+    '@luma.gl/graph/_internal': join(packageRoot, 'modules/graph/src/execution'),
 
     // DEV MODULES
     'dev-modules': devModules,
@@ -61,6 +63,7 @@ const config = {
         three: '/examples/experimental/three',
         'pool': '/examples/experimental/gpu-pool',
         'rigid-body-lab': '/examples/experimental/gpu-rigid-body-world',
+        'wrecking-ball': '/examples/experimental/gpu-rigid-body-world/wrecking-ball.html',
         'vector-observatory': '/examples/experimental/vector-observatory',
         'wind': '/examples/deck/wind',
         'physics-batch': '/examples/experimental/physics-batch',
@@ -86,6 +89,9 @@ const config = {
         'hello-triangle': '/examples/tutorials/hello-triangle',
         globe: '/examples/showcase/globe',
         instancing: '/examples/showcase/instancing',
+        'pbr-shadows': '/examples/api/pbr-shadows',
+        'lightmap-baking': '/examples/api/lightmap-baking',
+        'prefiltered-environment': '/examples/api/prefiltered-environment',
         'render-bundles': '/examples/api/render-bundles',
         'instanced-cubes': '/examples/tutorials/instanced-cubes',
         lighting: '/examples/tutorials/lighting',
@@ -96,7 +102,7 @@ const config = {
         'vector-field-lab': '/examples/showcase/vector-field-lab',
         'quantum-state-studio': '/examples/showcase/quantum-state-studio',
         'react-strict-mode': '/examples/integrations/react-strict-mode',
-        'shader-hooks': '/examples/tutorials/shader-hooks',
+        'shader-injection': '/examples/tutorials/shader-injection',
         'shader-modules': '/examples/tutorials/shader-modules',
         'slang-shaders': '/examples/tutorials/slang-shaders',
         'slang-particles': '/examples/tutorials/slang-particles',

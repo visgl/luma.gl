@@ -10,14 +10,14 @@ import {
   readArrowGPUDataAsync,
   readArrowGPUVectorAsync,
   type GPUVectorFormatForArrowType
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 import {
   makeGPURecordBatchFromArrowRecordBatch,
   makeGPUTableFromArrowTable
 } from '@luma.gl/graph/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
 import {GPURecordBatch, GPUTable} from '@luma.gl/graph/gpu-tables';
-import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice, NullDevice} from '@luma.gl/core/test-utils';
 import * as arrow from 'apache-arrow';
 import {expectTypeOf} from 'vitest';
@@ -253,15 +253,18 @@ it('nullable FixedSizeList Arrow readback preserves parent and child validity', 
   const data = await readArrowGPUDataAsync<ArrowEmbeddingType>(vector.data[0]);
   const reconstructed = await readArrowGPUVectorAsync<ArrowEmbeddingType>(vector);
 
-  expect(vector.data[0].readbackMetadata?.kind, 'keeps compact null metadata').toBe(
-    'fixed-size-list'
-  );
+  expect(
+    (vector.data[0].readbackMetadata as {kind?: string} | undefined)?.kind,
+    'keeps compact null metadata'
+  ).toBe('fixed-size-list');
   expect(
     Array.from(vector.data[0].nullBitmap ?? []),
     'generic row validity combines sliced parent and child nulls'
   ).toEqual([4]);
   expect(
-    Array.from(vector.data[0].readbackMetadata?.nullBitmap ?? []),
+    Array.from(
+      (vector.data[0].readbackMetadata as {nullBitmap?: Uint8Array} | undefined)?.nullBitmap ?? []
+    ),
     'Arrow readback metadata independently preserves original parent validity'
   ).toEqual([6]);
   expect(data.nullCount, 'retains parent null rows').toBe(1);
@@ -308,9 +311,10 @@ it('nullable numeric Arrow GPU data retains normalized row validity and readback
   expect(Array.from(vector.data[0].nullBitmap ?? []), 'normalizes a sliced row bitmap').toEqual([
     5
   ]);
-  expect(vector.data[0].readbackMetadata?.kind, 'retains compact scalar null metadata').toBe(
-    'numeric'
-  );
+  expect(
+    (vector.data[0].readbackMetadata as {kind?: string} | undefined)?.kind,
+    'retains compact scalar null metadata'
+  ).toBe('numeric');
   expect(data.nullCount, 'retains nullable row counts on direct chunk readback').toBe(1);
   expect(Array.from(reconstructed), 'numeric Arrow readback preserves nullable source IDs').toEqual(
     [19, null, 21]

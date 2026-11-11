@@ -43,7 +43,16 @@ Inside the graph inspector, select **Graph Resources** to see the declared buffe
 texture views. The resource list sits above a persistent viewer. Select a resource (or focus it
 and press Enter) to read its current contents; **Refresh selected resource** reads it again.
 Hovering or focusing a row also shows a quick preview popup. Texture entries include format,
-extent, mip level, and array layer. RGBA8/BGRA8 previews include a pixel thumbnail.
+extent, mip level, and array layer. Reading a supported color texture also leaves a thumbnail
+inline in its row. **Refresh texture thumbnails** reads up to 32 listed textures sequentially;
+additional textures can be inspected individually. Snapshot updates do not trigger readbacks.
+
+Images support R/RG/RGBA 8-bit normalized and 16/32-bit floating-point formats, plus BGRA8.
+Single-channel textures display as grayscale; RG textures display red/green. Linear colors are
+converted to sRGB for display; sRGB texture bytes retain their encoded colors. Values are clamped
+to 0–1 (including HDR and signed values), with transparency shown over a checkerboard. The raw
+bytes remain unchanged in the numeric viewer. Unsupported image formats still show their bytes
+when readback is supported. Thumbnails are top-left crops, not full-texture downscales.
 
 Connect a live inspector to the example panel with `{inspector}`. Snapshot-only panels still
 list resources, but cannot read data. Application renderers must submit their graph command

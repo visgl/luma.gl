@@ -1,3 +1,5 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import {ShadersDocsTabs} from '@site/src/components/docs/shaders-docs-tabs';
 import {DocumentationContract} from '@site/src/components/docs/foundation-docs';
 
@@ -10,19 +12,134 @@ attached to [`Model`](/docs/api-reference/engine/model) and
 [`Computation`](/docs/api-reference/engine/compute/computation). Prefer plugins
 as the application-facing optional composition layer when a behavior needs
 a primary shader module, defines, shader-facing vertex inputs, named injections, portable
-cross-stage varyings, or backend-specific shader source.
+inter-stage variables, or backend-specific shader source.
 
 For the authoring model, see
-[Writing Customizable Shaders](/docs/api-guide/shaders/writing-customizable-shaders).
+[Shader Injection](/docs/api-guide/shaders/shader-injection).
 
 <DocumentationContract title="ShaderPlugin" rows={[
   {label: 'Languages', value: 'One portable interface with GLSL/WGSL source per injection'},
   {label: 'Dependencies', value: 'Composes ShaderModules selected by the plugin'},
-  {label: 'Hooks and injections', value: 'Targets named vertex and fragment extension points'},
-  {label: 'Props and bindings', value: 'Declares vertex inputs, varyings, a primary module, and defines'},
-  {label: 'Assembly output', value: 'Resolved modules, defines, injections, inputs, and varyings'},
+  {label: 'Injection targets and injections', value: 'Targets named vertex and fragment extension points'},
+  {label: 'Props and bindings', value: 'Declares vertex inputs, inter-stage variables, a primary module, and defines'},
+  {label: 'Assembly output', value: 'Resolved modules, defines, injections, inputs, and inter-stage variables'},
   {label: 'Cost', value: 'Resolve when configuration changes, not for every draw'}
 ]} />
+
+## Learn the composition model
+
+A **shader module** owns reusable shader code and its data contract: uniform types,
+bindings, a uniform getter, and dependencies. A **shader plugin** packages optional
+assembly contributions around one primary module. A **target** is a function the host
+shader calls at a deliberate extension point. An **injection** supplies statements
+inside that function, or source at a built-in target.
+
+The host chooses *where* extension behavior runs. Plugins choose *what* it does.
+Declaring a callable target does not insert a call into your shader: the host must call it.
+With no injections its generated function is a no-op.
+
+### Provide a callable target
+
+```ts
+import type {ShaderPlugin} from '@luma.gl/shaders';
+
+const colorTargets: ShaderPlugin = {
+  name: 'color-targets',
+  injectionTargets: [{
+    stage: 'fragment',
+    name: 'FILTER_COLOR',
+    glsl: {parameters: 'inout vec4 color'},
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  }]
+};
+```
+
+The signatures describe the same logical function in two languages. GLSL `inout`
+and WGSL function pointers let injected statements modify the host's local color.
+The GLSL host calls `FILTER_COLOR(color)`; the WGSL host calls `FILTER_COLOR(&color)`
+after computing its local color and before returning it.
+
+### Contribute behavior
+
+```ts
+const tint: ShaderPlugin = {
+  name: 'tint',
+  injections: [{
+    stage: 'fragment',
+    target: 'FILTER_COLOR',
+    glsl: 'color.rgb *= vec3(1.0, 0.5, 0.5);',
+    wgsl: '(*color) = vec4<f32>((*color).rgb * vec3<f32>(1.0, 0.5, 0.5), (*color).a);',
+    order: 0
+  }]
+};
+
+const model = new Model(device, {
+  vs: glslVertexSource,
+  fs: glslFragmentSource, // Calls FILTER_COLOR(color)
+  source: wgslSource,    // Calls FILTER_COLOR(&color)
+  plugins: [colorTargets, tint]
+});
+```
+
+`Model` selects sources for its device. Providers are collected before injections
+are validated, so `[tint, colorTargets]` also works. Identical injection target declarations
+compose and preserve an existing assembler target’s header/footer; conflicting signatures, including conflicts with assembler-registered
+injection targets, throw. Injection `order` determines execution order; equal orders preserve
+plugin declaration order. A missing language variant contributes nothing for that
+language. An injection into a missing target throws rather than silently disappearing.
+
+### Injection string shorthand
+
+Injection target declarations use `ShaderInjectionTarget` descriptors with `stage`, `name`, and language
+implementations. Each implementation has `parameters`, optional `returnType`, and
+optional `header`/`footer`. Target signature strings are not supported. Injection strings can
+retain stage and language prefixes:
+
+```ts
+const shortTint: ShaderPlugin = {
+  name: 'short-tint',
+  injectionTargets: [
+    {name: 'FILTER_COLOR', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}},
+    {name: 'FILTER_COLOR', stage: 'fragment', wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}}
+  ],
+  injections: {
+    'glsl:fs:FILTER_COLOR': 'color.r = 0.5;',
+    'wgsl:fs:FILTER_COLOR': '(*color).r = 0.5;'
+  }
+};
+```
+
+Unqualified string targets such as `fs:FILTER_COLOR` remain available when source
+is intentionally language-independent. Prefer qualified strings for shader code.
+Use object injections when you need explicit ordering. Compact objects such as
+`{target: 'fs:FILTER_COLOR', glsl: '...'}` are not supported; supply
+`stage: 'fragment', target: 'FILTER_COLOR'` instead.
+
+### Callable and built-in targets
+
+Callable targets express semantic operations such as filtering a color. Built-in targets such as `#decl`, `#main-start`, and `#main-end` add declarations or statements
+to an entry point. They use the same injection descriptor, for example
+`{stage: 'vertex', target: '#main-start', wgsl: '...'}`. Built-in targets require no declaration;
+do not declare them as injection targets. Prefer named targets when the placement is part of a
+host shader's public extension contract.
+
+### Configure data and own resources
+
+Put uniforms, bindings, and helper functions in the plugin's primary `module`;
+put supporting modules in that module's `dependencies`. Update runtime values
+through `model.shaderInputs.setProps({moduleName: {...}})`. Changing uniform values
+does not require replacing the plugin or rebuilding the shader interface.
+
+`vertexInputs` and `interStageVariables` declare shader interfaces. They do not
+allocate buffers or compute attributes. The application still supplies the matching
+buffer layout, vertex buffers, updates, and cleanup. Luma injects the required stage
+inputs and transports inter-stage values. This keeps optional features composable
+without moving application resource ownership into shader assembly.
+
+Injection targets describe render stages. `Computation` rejects render injection targets, vertex inputs,
+and inter-stage variables; compute plugins can still contribute modules, defines,
+and supported structural injections. Plugins do not schedule extra render or
+compute passes. Use engine and graph APIs for execution.
 
 ## Usage
 
@@ -39,46 +156,55 @@ const model = new Model(device, {
 
 ```ts
 import type {AttributeShaderType} from '@luma.gl/core';
-import type {ShaderInjection, ShaderModule} from '@luma.gl/shaders';
+import type {ShaderInjectionTarget, ShaderInjection, ResolvedShaderInjection, ShaderModule} from '@luma.gl/shaders';
 
 export type ShaderPlugin = {
   name: string;
-  module?: ShaderModule;
-  defines?: Record<string, boolean>;
-  injections?: ShaderPluginInjection[];
+  module?: ShaderModule<any, any, any>;
+  defines?: Record<string, boolean | number>;
+  injectionTargets?: ShaderInjectionTarget[];
+  injections?: ShaderInjection[] | Record<string, string>;
   vertexInputs?: Record<string, AttributeShaderType>;
-  varyings?: Record<string, ShaderPluginVarying>;
+  interStageVariables?: Record<string, ShaderPluginInterStageVariable>;
 };
 
-export type ShaderPluginVaryingInterpolation = 'smooth' | 'flat';
+export type ShaderPluginInterStageVariableInterpolation = 'smooth' | 'flat';
 
-export type ShaderPluginVarying = {
+export type ShaderPluginInterStageVariable = {
   type: AttributeShaderType;
-  interpolation?: ShaderPluginVaryingInterpolation;
+  interpolation?: ShaderPluginInterStageVariableInterpolation;
 };
 
-export type ShaderPluginInjection = {
-  target: ShaderPluginInjectionTarget;
+export type ShaderInjection = {
+  stage: 'vertex' | 'fragment';
+  target: string;
   glsl?: string;
   wgsl?: string;
   order?: number;
 };
 
 export type ResolvedShaderPlugins = {
+  injectionTargets: ShaderInjectionTarget[];
   modules: ShaderModule[];
-  defines: Record<string, boolean>;
-  injections: Record<string, ShaderInjection[]>;
+  defines: Record<string, boolean | number>;
+  injections: Record<string, ResolvedShaderInjection[]>;
   vertexInputs: Record<string, AttributeShaderType>;
-  varyings: Record<string, {
+  interStageVariables: Record<string, {
     type: AttributeShaderType;
-    interpolation: ShaderPluginVaryingInterpolation;
+    interpolation: ShaderPluginInterStageVariableInterpolation;
   }>;
 };
 ```
 
+Numeric defines support channel counts and other preprocessor specializations, alongside
+boolean feature flags. WGSL preprocessor conditions support simple numeric comparisons
+(`==`, `!=`, `<`, `<=`, `>`, `>=`) between defines and numeric literals. This does
+not add token substitution or general arithmetic expressions. Define precedence
+matches normal shader assembly.
+
 ## Primary module
 
-A plugin optionally supplies one `module`. That module owns its uniform and binding
+A plugin optionally supplies one `module`, including a concretely typed `ShaderModule<Props, Uniforms, Bindings>` without a cast. That module owns its uniform and binding
 contract; supporting shader code belongs in `module.dependencies`. For example,
 `glassTransmissionPlugin.module` depends on `glassMaterial`, which depends on
 `opticalLighting`. The assembler and `ShaderInputs` resolve that dependency graph.
@@ -89,7 +215,7 @@ const filterPlugin: ShaderPlugin = {
   name: 'filter',
   module: filterShaderModule,
   vertexInputs: {filterValues: 'f32'},
-  injections: [/* host hook injections */]
+  injections: [/* host target injections */]
 };
 ```
 
@@ -104,15 +230,15 @@ assembly module list remain arrays.
 
 | Field | Resolution |
 | --- | --- |
-| `module`, `defines`, `vertexInputs`, and `varyings` | Shared across shader languages. Later plugins override same-named define keys. |
+| `module`, `defines`, `vertexInputs`, and `interStageVariables` | Shared across shader languages. Later plugins override same-named define keys. |
 | Injection `glsl` / `wgsl` | Select the source matching the assembly language. An omitted source skips that injection; an empty string remains an explicit injection. |
 | `vertexInputs` | Render-shader inputs merged by input name. Repeated names must use the same shader type; conflicting types throw. Buffer ownership remains with the caller. |
-| `varyings` | Cross-stage values merged by name. Repeated names must use the same type and interpolation. Floating-point values default to `smooth`; integer values default to and require `flat`. |
+| `interStageVariables` | Cross-stage values merged by name. Repeated names must use the same type and interpolation. Floating-point values default to `smooth`; integer values default to and require `flat`. |
 | Injection entries | Preserve author order within the same `order` value. |
 
 ## Injection Targets
 
-`ShaderPlugin` only accepts named injection targets:
+`ShaderPlugin` accepts built-in and declared callable injection targets:
 
 - `vs:#decl`
 - `vs:#main-start`
@@ -120,12 +246,12 @@ assembly module list remain arrays.
 - `fs:#decl`
 - `fs:#main-start`
 - `fs:#main-end`
-- named shader hooks such as `vs:OFFSET_POSITION` and `fs:FILTER_COLOR` when the active shader assembly path already exposes those hooks
+- named shader injection targets such as `vs:OFFSET_POSITION` and `fs:FILTER_COLOR` declared by a provider plugin or the active shader assembler
 
 Raw regex or arbitrary text-replacement targets from lower-level assembler APIs are intentionally not part of `ShaderPlugin`.
 
-Use a named hook target only when the active shader assembly path already
-registers and calls that hook. Use `#decl` for helper functions and globals,
+Use a named target only when a provider plugin or the active shader assembly path
+declares and calls that target. Use `#decl` for helper functions and globals,
 and `#main-*` for short entry-point statements.
 
 ## Vertex Inputs
@@ -144,7 +270,7 @@ For GLSL, the assembler emits portable vertex `in` declarations. For WGSL, it
 inspects the selected `vertexEntryPoint`, including direct parameters and
 struct-based inputs, and assigns the first unused `@location` values in plugin
 declaration order. Generated entry-point parameters initialize same-invocation
-private variables before other `vs:#main-start` injections, so generated hook
+private variables before other `vs:#main-start` injections, so generated target
 functions can use the public input names.
 
 WGSL reflection maps those generated parameters back to their public names.
@@ -159,7 +285,9 @@ resources remain `ShaderModule` bindings managed through `ShaderInputs`.
 
 ## Varyings
 
-`varyings` declares values that plugin hook source writes during the vertex
+GLSL plugin input and inter-stage variable declarations precede shader module source, so module helpers can read inputs and read or write inter-stage variables without redeclaring them. Ordinary `#decl` injections retain their existing ordering.
+
+`interStageVariables` declares values that plugin target source writes during the vertex
 stage and reads during the fragment stage. The assembler owns the generated
 shader interface only. It does not own the source coordinates, attributes,
 buffers, events, resources, or update lifecycle.
@@ -172,14 +300,15 @@ vector types default to `smooth`; integer types default to `flat` and reject
 For GLSL, the assembler generates matching vertex `out` and fragment `in`
 declarations, then zero-initializes the vertex value before other main-start
 injections. For WGSL, the selected vertex entry point must return a named
-stage-I/O struct and the selected fragment entry point must consume exactly one
-named stage-I/O struct. The assembler appends matching fields at the first
-locations unused by both structs, initializes same-named private variables,
+stage-I/O struct. Fragment inputs may use a named struct, individual parameters,
+or no parameters. The assembler extends the fragment struct when present, or
+adds individual parameters otherwise. It allocates matching locations unused by
+either stage, including existing direct parameters, and initializes same-named private variables,
 copies them to every vertex return, and initializes them from the fragment
 input before fragment injections. Direct WGSL vertex outputs and ambiguous
 fragment struct inputs are rejected with an assembly error.
 
-`Computation` rejects plugins with `vertexInputs` or `varyings` because compute
+`Computation` rejects plugins with `vertexInputs` or `interStageVariables` because compute
 pipelines do not have a render vertex-to-fragment interface.
 
 ## `filterShaderPlugin`
@@ -188,22 +317,29 @@ pipelines do not have a render vertex-to-fragment interface.
 the `filterValues: 'f32'` vertex input and attaches a `filter` shader module with
 `enabled`, `min`, and `max` props. Defaults are `{enabled: true, min: 0, max: 1}`.
 
-Compatible base shaders register and call the position hook:
+Compatible base shaders register and call the position target:
 
 ```ts
-shaderAssembler.addShaderHook('vs:FILTER_POSITION(inout vec4 position)'); // GLSL
-shaderAssembler.addShaderHook(
-  'vs:FILTER_POSITION(position: ptr<function, vec4<f32>>)'
-); // WGSL
+shaderAssembler.addShaderInjectionTarget({name: 'FILTER_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}}); // GLSL
+shaderAssembler.addShaderInjectionTarget({name: 'FILTER_POSITION', stage: 'vertex', wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}}); // WGSL
 ```
+
+<Tabs groupId="shader-language">
+<TabItem value="glsl" label="GLSL">
 
 ```glsl
 FILTER_POSITION(gl_Position);
 ```
 
+</TabItem>
+<TabItem value="wgsl" label="WGSL">
+
 ```wgsl
 FILTER_POSITION(&outputs.position);
 ```
+
+</TabItem>
+</Tabs>
 
 The caller supplies the data and updates only shader inputs when the range
 changes:
@@ -226,7 +362,7 @@ inputs.
 ## `clipShaderPlugin`
 
 `clipShaderPlugin` provides coordinate-system-neutral rectangular clipping.
-It declares a smooth `clipCoordinates: vec2<f32>` varying and a `clip` shader
+It declares a smooth `clipCoordinates: vec2<f32>` inter-stage variable and a `clip` shader
 module with these props:
 
 ```ts
@@ -241,7 +377,10 @@ Defaults are `{enabled: true, bounds: [0, 0, 1, 1], mode: 'geometry'}`.
 Lower bounds are inclusive and upper bounds are exclusive. Coordinates and
 bounds must use the same application-defined coordinate system.
 
-Compatible shaders register and call both hooks:
+Compatible shaders register and call both targets:
+
+<Tabs groupId="shader-language">
+<TabItem value="glsl" label="GLSL">
 
 ```glsl
 vs:CLIP_POSITION(
@@ -252,6 +391,9 @@ vs:CLIP_POSITION(
 fs:CLIP_COLOR(inout vec4 color)
 ```
 
+</TabItem>
+<TabItem value="wgsl" label="WGSL">
+
 ```wgsl
 vs:CLIP_POSITION(
   position: ptr<function, vec4<f32>>,
@@ -261,9 +403,12 @@ vs:CLIP_POSITION(
 fs:CLIP_COLOR(color: ptr<function, vec4<f32>>)
 ```
 
-The vertex hook always stores `geometryCoordinates` in the generated varying.
+</TabItem>
+</Tabs>
+
+The vertex target always stores `geometryCoordinates` in the generated inter-stage variable.
 In `instance` mode, an out-of-bounds `instanceCoordinates` value moves the
-complete object outside clip space. In `geometry` mode, the fragment hook
+complete object outside clip space. In `geometry` mode, the fragment target
 discards pixels whose interpolated coordinates are outside the bounds.
 
 ```ts
@@ -282,7 +427,7 @@ const tintPlugin: ShaderPlugin = {
   name: 'tint-plugin',
   injections: [
     {
-      target: 'fs:#decl',
+      stage: 'fragment', target: '#decl',
       glsl: 'vec4 plugin_getTint() { return vec4(1.0, 0.4, 0.2, 1.0); }',
       wgsl: 'fn pluginGetTint() -> vec4<f32> { return vec4<f32>(1.0, 0.4, 0.2, 1.0); }'
     }
@@ -293,11 +438,11 @@ const tintPlugin: ShaderPlugin = {
 For runnable examples, see [Shader Plugins](/docs/tutorials/shader-plugins) and
 [Arrow ShaderPlugin Filtering](/examples/arrow/arrow-filtering).
 
-## Hook diagnostics and ownership
+## Target diagnostics and ownership
 
-Unknown named injection targets report the stage-prefixed hook and contributing
-plugin names. Register the hook on an application-owned assembler or pass
-`hookFunctions` to an assembly call. Per-call hooks follow registered hooks and
+Unknown named injection targets report the stage-prefixed target and contributing
+plugin names. Register the target on an application-owned assembler or pass
+`injectionTargets` to an assembly call. Per-call targets follow registered targets and
 override matching stage-prefixed names without changing subsequent assemblies.
 For WGSL mutable arguments, use pointers such as
 `fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)` and write through `*color`.
@@ -312,9 +457,9 @@ Omitting the callback preserves existing behavior. Explicit modules retain
 precedence and plugin modules use first-seen name selection.
 
 Plugin contributions are collected in plugin declaration order, selecting each
-injection's source for the active language. Hook injections execute in
+injection's source for the active language. Target injections execute in
 ascending `order`; equal-order plugin injections retain declaration order.
 
-Legacy application injections append to plugin injections at the same target
-instead of replacing them. Module injections follow application injections;
-explicit `order` values take precedence over collection order.
+Application injections supplied through the assembler's `inject` option follow
+plugin injections at the same target when their `order` values are equal.
+Explicit `order` values take precedence over collection order.

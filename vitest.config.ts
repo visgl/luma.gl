@@ -1,7 +1,7 @@
 import {fileURLToPath} from 'node:url';
 import {getVitestConfig} from '@vis.gl/dev-tools';
 import {BrowserTestSequencer} from './test/utils/browser-test-sequencer';
-import {getBrowserTestGroup, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
+import {getBrowserTestGroup, getReleaseQualificationExcludes, PHYSICS_TEST_PATTERNS, PHYSICS_ENDURANCE_TEST_PATTERNS, COMPUTE_TEST_PATTERNS} from './test/utils/browser-test-groups';
 
 const optionalTextureCompressorShim = fileURLToPath(
   new URL('./test/utils/texture-compressor-shim.ts', import.meta.url)
@@ -9,9 +9,12 @@ const optionalTextureCompressorShim = fileURLToPath(
 
 const excludePatterns = [
   '**/*.disabled.*',
+  // Deck integration packages are scheduled for removal; omit their module suites.
+  'modules/deck-arrow-layers/test/**/*.spec.{ts,js}',
+  'modules/deck-gpu-layers/test/**/*.spec.{ts,js}',
   'modules/**/wip/**',
-  'modules/gpgpu/test/arrow/arrow-column-info.spec.ts',
-  'modules/gpgpu/test/arrow/get-arrow-data.spec.ts',
+  'modules/graph/test/arrow/arrow-column-info.spec.ts',
+  'modules/graph/test/arrow/get-arrow-data.spec.ts',
   'modules/core/test/shadertypes/shader-types.spec.ts',
   'modules/engine/test/shader-inputs-types.spec.ts',
   'modules/engine/test/geometry/gpu-geometry.spec.ts',
@@ -57,15 +60,15 @@ const nodeOnlyTestPatterns = [
   'modules/core/test/webgl/adapter/webgl-adapter.spec.{ts,js}',
   'modules/core/test/webgl/context/state-tracker/deep-array-equal.spec.{ts,js}',
   'modules/core/test/webgl/utils/**/*.spec.{ts,js}',
-  'modules/{gpgpu,graph,engine}/test/arrow/{arrow-column-info,arrow-shader-layout,arrow-input-schema,arrow-splats,arrow-matrix-gpu-vector,arrow-geometry,arrow-model,arrow-paths,arrow-polygon-renderer,arrow-polygon,plain-gpu-table,analyze-arrow-table,arrow-variable-length-attribute-gpu-vector,get-arrow-data,arrow-fixed-size-list}.spec.{ts,js}',
+  'modules/{graph,engine}/test/arrow/{arrow-column-info,arrow-shader-layout,arrow-input-schema,arrow-splats,arrow-matrix-gpu-vector,arrow-geometry,arrow-model,arrow-paths,arrow-polygon-renderer,arrow-polygon,plain-gpu-table,analyze-arrow-table,arrow-variable-length-attribute-gpu-vector,get-arrow-data,arrow-fixed-size-list}.spec.{ts,js}',
   'modules/geoarrow/test/geoarrow/geoarrow-interleaving.spec.{ts,js}',
   'modules/engine/test/gltf/gltf/{lights,gltf-extension-support,gltf-animator}.spec.{ts,js}',
   'modules/engine/test/gltf/parsers/{parse-gltf-animations,parse-pbr-material,parse-pbr-compressed-texture}.spec.{ts,js}',
   'modules/engine/test/gltf/webgl-to-webgpu/**/*.spec.{ts,js}',
-  'modules/gpgpu/test/gpu-vector/gpu-data-evaluator-types.spec.{ts,js}',
-  'modules/gpgpu/test/operations/arithmetic-operation.spec.{ts,js}',
+  'modules/graph/test/gpu-vector/gpu-data-evaluator-types.spec.{ts,js}',
+  'modules/graph/test/operations/arithmetic-operation.spec.{ts,js}',
   'modules/graph/test/gpu-core/{gpu-scalar,gpu-matvec,gpu-matmul,gpu-elementwise,gpu-coo-to-csr}.spec.{ts,js}',
-  'modules/gpgpu/test/utils/{expression,webgpu-dispatch}.spec.{ts,js}',
+  'modules/graph/test/utils/{expression,webgpu-dispatch}.spec.{ts,js}',
   'modules/engine/test/splats/{splat-rad-hierarchy,splat-browser-coverage}.spec.{ts,js}',
   'modules/core/test/test-utils/null-device/**/*.spec.{ts,js}',
   'modules/graph/test/geospatial/geospatial-types.spec.{ts,js}',
@@ -90,7 +93,7 @@ const nodeIncludePatterns = [
 // These plain specs are imported by an existing .node.spec wrapper or register the same shared
 // suite as one. Exclude the plain entry point so the shared module graph registers each suite once.
 const nodeWrapperSourcePatterns = [
-  'modules/{gpgpu,graph,engine}/test/arrow/{arrow-polygon,arrow-polygon-renderer,arrow-splats}.spec.{ts,js}',
+  'modules/{graph,engine}/test/arrow/{arrow-polygon,arrow-polygon-renderer,arrow-splats}.spec.{ts,js}',
   'modules/core/test/adapter/helpers/parse-shader-compiler-log.spec.{ts,js}',
   'modules/core/test/adapter-utils/format-compiler-log.spec.{ts,js}',
   'modules/core/test/shadertypes/data-type-utils.spec.{ts,js}',
@@ -117,16 +120,18 @@ const nodeCoverageIncludePatterns = [
 // this list focused: Istanbul remapping for the complete Node graph takes several minutes.
 const nodeCoverageNativePatterns = [
   'test/dev-modules/**/*.node.spec.{ts,js}',
+  'modules/engine/test/scenegraph/node-paths.node.spec.{ts,js}',
+  'modules/engine/test/scenegraph/physics-controller.node.spec.{ts,js}',
   'modules/engine/test/gltf/gltf/gltf-animated-crowd.node.spec.{ts,js}',
   'modules/anari/test/{gltf-import,scene-export,scene-interchange}.node.spec.{ts,js}',
-  'modules/{gpgpu,graph,engine}/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
+  'modules/{graph,engine}/test/arrow/{arrow-colors,arrow-gpu-conversion,arrow-gpu-data,arrow-renderer-preparation}.node.spec.{ts,js}',
   'modules/engine/test/arrow/geoarrow/{geoarrow-dense-union,arrow-polygon-tessellation}.node.spec.{ts,js}',
   'modules/engine/test/splats/{splat-renderer,gpu-paged-splat-renderer,splat-residency,splat-hierarchy}.node.spec.{ts,js}',
   'modules/graph/test/gpu-core/gpu-command-graph-{history,passes,planning}.node.spec.{ts,js}',
-  'modules/gpgpu/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
+  'modules/graph/test/operations/{cast-data,convert-colors}.node.spec.{ts,js}',
   'modules/deck-arrow-layers/test/layers/arrow-layers.node.spec.{ts,js}',
   'modules/graph/test/gpu-raster/{gpu-raster-tile-source,gpu-raster-tile-cache,gpu-raster-cross-tile-components}.node.spec.{ts,js}',
-  'modules/graph/test/gpu-sql/lu-sql.node.spec.{ts,js}'
+  'modules/graph/test/gpu-sql/gpu-sql.node.spec.{ts,js}'
 ];
 const nodeCoveragePatterns = [
   ...nodeCoverageIncludePatterns,
@@ -161,6 +166,7 @@ const browserIncludePatterns = browserTestGroup === 'physics-endurance'
 const reuseComputeContext = ['compute', 'physics', 'physics-endurance'].includes(browserTestGroup);
 const runNodeCoverage = process.env.LUMA_TEST_NODE_COVERAGE === 'true';
 const browserExcludePatterns = [
+  ...getReleaseQualificationExcludes(browserTestGroup),
   'modules/**/*.node.spec.{ts,js}',
   'test/**/*.node.spec.{ts,js}',
   ...browserBenchmarkTestPatterns,
@@ -209,6 +215,9 @@ const vitestConfig = getVitestConfig({
         // Istanbul transforms use substantial memory. Bound the focused coverage pass so it is
         // stable on GitHub's two-core runners without changing the fast default Node command.
         ...(runNodeCoverage ? {maxWorkers: 2} : {}),
+        ...(process.env.LUMA_TEST_NODE_MAX_WORKERS
+          ? {maxWorkers: Number(process.env.LUMA_TEST_NODE_MAX_WORKERS)}
+          : {}),
         include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
         exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
       }

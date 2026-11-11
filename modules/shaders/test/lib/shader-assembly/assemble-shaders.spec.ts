@@ -14,7 +14,9 @@ import {
   pbrMaterial,
   pbrScene,
   PlatformInfo,
-  WGSLShaderAssembler
+  type ShaderInjectionTarget,
+  WGSLShaderAssembler,
+  resolveShaderPlugins
 } from '@luma.gl/shaders';
 import type {WebGLDevice} from '@luma.gl/core/webgl';
 import {isBrowser} from 'probe.gl/env';
@@ -264,17 +266,14 @@ const FS_GLSL_300_GLTF = /* glsl */ `\
   }
 `;
 
-const TEST_MODULE = {
-  name: 'TEST_MODULE',
-  inject: {
-    'vs:#decl': 'uniform float vsFloat;',
-    // Hook function has access to injected variable
-    'vs:HOOK_FUNCTION': 'value = vsFloat;',
-
-    'fs:#decl': 'uniform vec4 fsVec4;',
-    // Hook function has access to injected variable
-    'fs:HOOK_FUNCTION': 'value = fsVec4;'
-  }
+const TEST_PLUGIN = {
+  name: 'TEST_PLUGIN',
+  injections: [
+    {stage: 'vertex' as const, target: '#decl', glsl: 'uniform float vsFloat;'},
+    {stage: 'vertex' as const, target: 'HOOK_FUNCTION', glsl: 'value = vsFloat;'},
+    {stage: 'fragment' as const, target: '#decl', glsl: 'uniform vec4 fsVec4;'},
+    {stage: 'fragment' as const, target: 'HOOK_FUNCTION', glsl: 'value = fsVec4;'}
+  ]
 };
 
 const VS_GLSL_300_MODULES = /* glsl */ `\
@@ -628,43 +627,57 @@ it('assembleGLSLShaderPair#fp64 platform defines compile', async () => {
 });
 
 /** Note that */
-const pickingInject = {
-  ...picking,
-  instance: undefined,
-  inject: {
-    'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
-    'fs:LUMAGL_fragmentColor': {
-      injection: 'color = picking_filterColor(color);',
+const pickingPlugin = {
+  name: 'picking-injection',
+  module: picking,
+  injections: [
+    {
+      stage: 'vertex' as const,
+      target: 'LUMAGL_pickColor',
+      glsl: 'picking_setPickingColor(color.rgb);'
+    },
+    {
+      stage: 'fragment' as const,
+      target: 'LUMAGL_fragmentColor',
+      glsl: 'color = picking_filterColor(color);',
       order: Number.POSITIVE_INFINITY
     },
-    'fs:#main-end': 'fragmentColor = picking_filterColor(fragmentColor);'
-  }
+    {
+      stage: 'fragment' as const,
+      target: '#main-end',
+      glsl: 'fragmentColor = picking_filterColor(fragmentColor);'
+    }
+  ]
 };
 
 it('assembleGLSLShaderPair#shaderhooks', async () => {
   const webglDevice = await getWebGLTestDevice();
 
-  const hookFunctions = [
-    'vs:LUMAGL_pickColor(inout vec4 color)',
+  const injectionTargets: ShaderInjectionTarget[] = [
+    {name: 'LUMAGL_pickColor', stage: 'vertex', glsl: {parameters: 'inout vec4 color'}},
     {
-      hook: 'fs:LUMAGL_fragmentColor(inout vec4 color)',
-      header: 'if (color.a == 0.0) discard;\n',
-      footer: 'color.a *= 1.2;\n'
+      name: 'LUMAGL_fragmentColor',
+      stage: 'fragment',
+      glsl: {
+        parameters: 'inout vec4 color',
+        header: 'if (color.a == 0.0) discard;\n',
+        footer: 'color.a *= 1.2;\n'
+      }
     }
   ];
 
-  const testInject = {
+  const testPlugin = {
     name: 'test-injection',
-    inject: {
-      'fs:LUMAGL_fragmentColor': 'color.r = 1.0;'
-    }
+    injections: [
+      {stage: 'fragment' as const, target: 'LUMAGL_fragmentColor', glsl: 'color.r = 1.0;'}
+    ]
   };
 
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    hookFunctions
+    injectionTargets
   });
   // Verify version directive remains as first line.
   expect(
@@ -681,24 +694,25 @@ it('assembleGLSLShaderPair#shaderhooks', async () => {
   ).toBe(true);
   expect(
     Boolean(assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') === -1),
-    'injection code not included in vertex shader without module'
+    'injection code not included in vertex shader without plugin'
   ).toBe(true);
   expect(
     Boolean(assembleResult.fs.indexOf('color = picking_filterColor(color)') === -1),
-    'injection code not included in fragment shader without module'
+    'injection code not included in fragment shader without plugin'
   ).toBe(true);
 
   expect(
     Boolean(assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') === -1),
-    'regex injection code not included in fragment shader without module'
+    'regex injection code not included in fragment shader without plugin'
   ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    modules: [pickingInject],
-    hookFunctions
+    modules: [picking],
+    pluginInjections: resolveShaderPlugins([pickingPlugin], 'glsl').injections,
+    injectionTargets
   });
   // Verify version directive remains as first line.
   expect(
@@ -712,11 +726,11 @@ it('assembleGLSLShaderPair#shaderhooks', async () => {
 
   expect(
     Boolean(assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1),
-    'injection code included in vertex shader with module'
+    'injection code included in vertex shader with plugin'
   ).toBe(true);
   expect(
     Boolean(assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1),
-    'injection code included in fragment shader with module'
+    'injection code included in fragment shader with plugin'
   ).toBe(true);
   expect(
     Boolean(
@@ -728,7 +742,7 @@ it('assembleGLSLShaderPair#shaderhooks', async () => {
 
   expect(
     Boolean(assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1),
-    'regex injection code included in fragment shader with module'
+    'regex injection code included in fragment shader with plugin'
   ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
@@ -739,8 +753,9 @@ it('assembleGLSLShaderPair#shaderhooks', async () => {
       'vs:LUMAGL_pickColor': 'color *= 0.1;',
       'fs:LUMAGL_fragmentColor': 'color += 0.1;'
     },
-    modules: [pickingInject],
-    hookFunctions
+    modules: [picking],
+    pluginInjections: resolveShaderPlugins([pickingPlugin], 'glsl').injections,
+    injectionTargets
   });
 
   expect(
@@ -763,20 +778,21 @@ it('assembleGLSLShaderPair#shaderhooks', async () => {
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    modules: [pickingInject, testInject],
-    hookFunctions
+    modules: [picking],
+    pluginInjections: resolveShaderPlugins([pickingPlugin, testPlugin], 'glsl').injections,
+    injectionTargets
   });
 
   expect(
     Boolean(assembleResult.fs.indexOf('color.r = 1.0') > -1),
-    'module injection code included in shader hook'
+    'plugin injection code included in shader hook'
   ).toBe(true);
   expect(
     Boolean(
       assembleResult.fs.indexOf('color.r = 1.0') <
         assembleResult.fs.indexOf('color = picking_filterColor(color)')
     ),
-    'module injection code injected in the correct order'
+    'plugin injection code injected in the correct order'
   ).toBe(true);
 
   assembleResult = assembleGLSLShaderPair({
@@ -786,7 +802,7 @@ it('assembleGLSLShaderPair#shaderhooks', async () => {
     inject: {
       'fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);': 'fragmentColor -= 0.1;'
     },
-    hookFunctions
+    injectionTargets
   });
 
   expect(
@@ -803,15 +819,15 @@ it('assembleGLSLShaderPair rejects unknown application hook injections', () => {
       platformInfo: STATIC_PLATFORM_INFO,
       vs: VS_GLSL_300,
       fs: FS_GLSL_300,
-      hookFunctions: [
-        'vs:KNOWN_VERTEX_HOOK(inout vec4 position)',
-        'fs:KNOWN_FRAGMENT_HOOK(inout vec4 color)'
+      injectionTargets: [
+        {name: 'KNOWN_VERTEX_HOOK', stage: 'vertex', glsl: {parameters: 'inout vec4 position'}},
+        {name: 'KNOWN_FRAGMENT_HOOK', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}}
       ],
       inject: {
         'vs:KNOWN_VERTEX_HOOK_TYPO': 'position.x += 1.0;'
       }
     })
-  ).toThrow('Unknown shader hook vs:KNOWN_VERTEX_HOOK_TYPO');
+  ).toThrow('Unknown shader injection target vs:KNOWN_VERTEX_HOOK_TYPO');
   void 0;
 });
 
@@ -825,27 +841,36 @@ it('assembleGLSLShaderPair rejects unknown plugin hooks and reports an empty reg
         'fs:UNDECLARED_PLUGIN_HOOK': [{injection: 'color.r = 1.0;', order: 0}]
       }
     })
-  ).toThrow('Unknown shader hook fs:UNDECLARED_PLUGIN_HOOK');
+  ).toThrow('Unknown shader injection target fs:UNDECLARED_PLUGIN_HOOK');
   void 0;
 });
 
-it('GLSLShaderAssembler rejects module injections into undeclared hooks', () => {
+it('GLSLShaderAssembler rejects plugin injections into undeclared hooks', () => {
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:KNOWN_VERTEX_HOOK(inout vec4 position)');
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'KNOWN_VERTEX_HOOK',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position'}
+  });
 
   expect(() =>
     shaderAssembler.assembleGLSLShaderPair({
       platformInfo: STATIC_PLATFORM_INFO,
       vs: VS_GLSL_300,
       fs: FS_GLSL_300,
-      modules: [
-        {
-          name: 'misspelled-glsl-hook-injection',
-          inject: {'vs:KNOWN_VERTEX_HOOK_TYPO': 'position.x += 1.0;'}
-        }
-      ]
+      pluginInjections: resolveShaderPlugins(
+        [
+          {
+            name: 'misspelled-glsl-hook-injection',
+            injections: [
+              {stage: 'vertex', target: 'KNOWN_VERTEX_HOOK_TYPO', glsl: 'position.x += 1.0;'}
+            ]
+          }
+        ],
+        'glsl'
+      ).injections
     })
-  ).toThrow('Unknown shader hook vs:KNOWN_VERTEX_HOOK_TYPO');
+  ).toThrow('Unknown shader injection target vs:KNOWN_VERTEX_HOOK_TYPO');
   void 0;
 });
 
@@ -855,10 +880,12 @@ it('assembleGLSLShaderPair matches hook injections by stage', () => {
       platformInfo: STATIC_PLATFORM_INFO,
       vs: VS_GLSL_300,
       fs: FS_GLSL_300,
-      hookFunctions: ['fs:SHARED_HOOK(inout vec4 color)'],
+      injectionTargets: [
+        {name: 'SHARED_HOOK', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}}
+      ],
       inject: {'vs:SHARED_HOOK': 'color.r = 1.0;'}
     })
-  ).toThrow('Unknown shader hook vs:SHARED_HOOK');
+  ).toThrow('Unknown shader injection target vs:SHARED_HOOK');
   void 0;
 });
 
@@ -882,8 +909,16 @@ it('assembleGLSLShaderPair does not validate anchors or source-pattern injection
 
 it('WGSLShaderAssembler#assembleWGSLShader supports hooks and named injections', () => {
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:OFFSET_POSITION(position: ptr<function, vec4<f32>>)');
-  shaderAssembler.addShaderHook('fs:FILTER_COLOR(color: ptr<function, vec4<f32>>)');
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'OFFSET_POSITION',
+    stage: 'vertex',
+    wgsl: {parameters: 'position: ptr<function, vec4<f32>>'}
+  });
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'FILTER_COLOR',
+    stage: 'fragment',
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  });
 
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: {
@@ -908,18 +943,25 @@ fn fragmentMain() -> @location(0) vec4<f32> {
   return color;
 }
 `,
-    modules: [
-      {
-        name: 'wgsl-injections',
-        inject: {
-          'vs:OFFSET_POSITION': '(*position).x += 0.5;',
-          'fs:FILTER_COLOR': '(*color).r = 0.25;',
-          'fs:#decl': 'fn getColor() -> vec4<f32> { return vec4<f32>(1.0); }',
-          'vs:#main-start': 'let vertexStart = 1u;',
-          'fs:#main-end': 'let fragmentEnd = 2u;'
+    pluginInjections: resolveShaderPlugins(
+      [
+        {
+          name: 'wgsl-injections',
+          injections: [
+            {stage: 'vertex', target: 'OFFSET_POSITION', wgsl: '(*position).x += 0.5;'},
+            {stage: 'fragment', target: 'FILTER_COLOR', wgsl: '(*color).r = 0.25;'},
+            {
+              stage: 'fragment',
+              target: '#decl',
+              wgsl: 'fn getColor() -> vec4<f32> { return vec4<f32>(1.0); }'
+            },
+            {stage: 'vertex', target: '#main-start', wgsl: 'let vertexStart = 1u;'},
+            {stage: 'fragment', target: '#main-end', wgsl: 'let fragmentEnd = 2u;'}
+          ]
         }
-      }
-    ]
+      ],
+      'wgsl'
+    ).injections
   });
 
   expect(
@@ -979,58 +1021,41 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 }
 `;
 
-it('WGSLShaderAssembler applies module injections only to declared hooks', () => {
+it('WGSLShaderAssembler selects only WGSL plugin injections', () => {
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook('fs:KNOWN_FRAGMENT_HOOK(color: ptr<function, vec4<f32>>)');
-
-  // Module injections may be GLSL-only, so undeclared targets in either stage are skipped even
-  // when the stage declares other WGSL hooks.
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'KNOWN_FRAGMENT_HOOK',
+    stage: 'fragment',
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  });
   const assembledShader = shaderAssembler.assembleWGSLShader({
     platformInfo: WGSL_TEST_PLATFORM_INFO,
     source: WGSL_HOOK_TEST_SOURCE,
-    modules: [
-      {
-        name: 'mixed-language-hook-injections',
-        inject: {
-          'fs:KNOWN_FRAGMENT_HOOK': '(*color).r = 0.25;',
-          'fs:LEGACY_FRAGMENT_HOOK': 'color.g = 0.5;',
-          'vs:LEGACY_VERTEX_HOOK': 'position.x += 1.0;'
+    pluginInjections: resolveShaderPlugins(
+      [
+        {
+          name: 'language-specific-hook-injections',
+          injections: [
+            {stage: 'fragment', target: 'KNOWN_FRAGMENT_HOOK', wgsl: '(*color).r = 0.25;'},
+            {stage: 'fragment', target: 'LEGACY_FRAGMENT_HOOK', glsl: 'color.g = 0.5;'}
+          ]
         }
-      }
-    ]
+      ],
+      'wgsl'
+    ).injections
   });
-
   expect(assembledShader.source).toContain('(*color).r = 0.25;');
   expect(assembledShader.source).not.toContain('color.g = 0.5;');
-  expect(assembledShader.source).not.toContain('position.x += 1.0;');
-  void 0;
-});
-
-it('WGSLShaderAssembler ignores module hook injections when no hooks are declared', () => {
-  const shaderAssembler = new WGSLShaderAssembler();
-
-  const assembledShader = shaderAssembler.assembleWGSLShader({
-    platformInfo: WGSL_TEST_PLATFORM_INFO,
-    source: WGSL_HOOK_TEST_SOURCE,
-    modules: [
-      {
-        name: 'legacy-language-specific-injections',
-        inject: {
-          'vs:LEGACY_VERTEX_HOOK': 'position.x += 1.0;',
-          'fs:LEGACY_FRAGMENT_HOOK': 'color.r = 0.25;'
-        }
-      }
-    ]
-  });
-
-  expect(assembledShader.source).not.toContain('position.x += 1.0;');
-  expect(assembledShader.source).not.toContain('color.r = 0.25;');
   void 0;
 });
 
 it('WGSLShaderAssembler rejects application injections into undeclared hooks', () => {
   const shaderAssembler = new WGSLShaderAssembler();
-  shaderAssembler.addShaderHook('fs:KNOWN_FRAGMENT_HOOK(color: ptr<function, vec4<f32>>)');
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'KNOWN_FRAGMENT_HOOK',
+    stage: 'fragment',
+    wgsl: {parameters: 'color: ptr<function, vec4<f32>>'}
+  });
 
   expect(() =>
     shaderAssembler.assembleWGSLShader({
@@ -1038,7 +1063,7 @@ it('WGSLShaderAssembler rejects application injections into undeclared hooks', (
       source: WGSL_HOOK_TEST_SOURCE,
       inject: {'fs:KNOWN_FRAGMENT_HOOK_TYPO': '(*color).r = 0.25;'}
     })
-  ).toThrow('Unknown shader hook fs:KNOWN_FRAGMENT_HOOK_TYPO');
+  ).toThrow('Unknown shader injection target fs:KNOWN_FRAGMENT_HOOK_TYPO');
 
   expect(() =>
     new WGSLShaderAssembler().assembleWGSLShader({
@@ -1046,7 +1071,7 @@ it('WGSLShaderAssembler rejects application injections into undeclared hooks', (
       source: WGSL_HOOK_TEST_SOURCE,
       inject: {'vs:MISSING_APPLICATION_HOOK': '(*position).x += 1.0;'}
     })
-  ).toThrow('Unknown shader hook vs:MISSING_APPLICATION_HOOK');
+  ).toThrow('Unknown shader injection target vs:MISSING_APPLICATION_HOOK');
   void 0;
 });
 
@@ -1066,7 +1091,10 @@ it('assembleGLSLShaderPair#injection order', async () => {
       // Hook function has access to injected variable
       'fs:HOOK_FUNCTION': 'value = fsVec4;'
     },
-    hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
+    injectionTargets: [
+      {name: 'HOOK_FUNCTION', stage: 'vertex', glsl: {parameters: 'inout float value'}},
+      {name: 'HOOK_FUNCTION', stage: 'fragment', glsl: {parameters: 'inout vec4 value'}}
+    ]
   });
 
   expect(
@@ -1078,13 +1106,16 @@ it('assembleGLSLShaderPair#injection order', async () => {
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
     fs: FS_GLSL_300_MODULES,
-    modules: [TEST_MODULE],
-    hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
+    pluginInjections: resolveShaderPlugins([TEST_PLUGIN], 'glsl').injections,
+    injectionTargets: [
+      {name: 'HOOK_FUNCTION', stage: 'vertex', glsl: {parameters: 'inout float value'}},
+      {name: 'HOOK_FUNCTION', stage: 'fragment', glsl: {parameters: 'inout vec4 value'}}
+    ]
   });
 
   expect(
     Boolean(compileAndLinkShaders(webglDevice, assembleResult)),
-    'Hook functions have access to injected variables through modules.'
+    'Hook functions have access to injected variables through plugins.'
   ).toBe(true);
 
   void 0;

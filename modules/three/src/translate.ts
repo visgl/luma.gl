@@ -26,6 +26,7 @@ export type ThreeBinding = {
     type: number;
     isDepthTexture?: boolean;
     isDataArrayTexture?: boolean;
+    isCubeTexture?: boolean;
     compareFunction?: number | null;
   };
 };
@@ -55,7 +56,11 @@ export function translateBinding(
     return {
       ...base,
       type: 'texture',
-      viewDimension: binding.texture?.isDataArrayTexture ? '2d-array' : '2d',
+      viewDimension: binding.texture?.isCubeTexture
+        ? 'cube'
+        : binding.texture?.isDataArrayTexture
+          ? '2d-array'
+          : '2d',
       sampleType: binding.texture?.isDepthTexture
         ? 'depth'
         : binding.texture?.type === FloatType && !float32Filterable

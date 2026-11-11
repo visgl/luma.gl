@@ -42,7 +42,6 @@ The website also distributes [standalone example notices](/standalone-examples/T
 | [core](https://github.com/visgl/luma.gl/blob/master/modules/core/THIRD-PARTY-NOTICES.md) | Portable API and backends; Gregg Tavares’s webgpu-utils mipmaps, Mikola Lysenko’s regl polyfill lineage, wwwtyro’s compiler parser, and Spector.js declarations. |
 | [engine](https://github.com/visgl/luma.gl/blob/master/modules/engine/THIRD-PARTY-NOTICES.md) | PhiloGL heritage; glTF schemas, effects, text, splats, and area-light fit data. |
 | [shaders](https://github.com/visgl/luma.gl/blob/master/modules/shaders/THIRD-PARTY-NOTICES.md) | Historical Khronos PBR shaders and three.js half-float conversion. |
-| [gpgpu](https://github.com/visgl/luma.gl/blob/master/modules/gpgpu/THIRD-PARTY-NOTICES.md) | GPU data containers, low-level operations, and execution utilities. |
 | [slang](https://github.com/visgl/luma.gl/blob/master/modules/slang/THIRD-PARTY-NOTICES.md) | Slang language and compiler community; optional compiler integration. |
 | [deck-arrow-layers](https://github.com/visgl/luma.gl/blob/master/modules/deck-arrow-layers/THIRD-PARTY-NOTICES.md) | deck.gl rendering and Arrow interoperability. |
 | [deck-gpu-layers](https://github.com/visgl/luma.gl/blob/master/modules/deck-gpu-layers/THIRD-PARTY-NOTICES.md) | deck.gl rendering and GPU data interoperability. |

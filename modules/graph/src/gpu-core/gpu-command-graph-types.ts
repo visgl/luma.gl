@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
-import {getGPUVectorChunks, type GPUVectorChunk} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorLike} from '@luma.gl/graph/gpu-data';
+import {getGPUVectorChunks, type GPUVectorChunk} from '@luma.gl/graph/gpu-data';
 
 import type {
   Buffer,
@@ -19,7 +19,7 @@ import type {
   TextureView
 } from '@luma.gl/core';
 import type {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';
-import type {GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 
 /** Internal identity shared by graph-owned handles without importing the graph implementation. */
 export type GPUCommandGraphOwner = {
@@ -549,6 +549,8 @@ export type GPUCommandGraphNodeConditionPreflight = {
 };
 
 type GPUCommandGraphNodeBase<Condition> = {
+  /** @internal Logical result buffers kept live across the containing operation. */
+  retainedBuffers?: readonly GraphBufferHandle[];
   /** Optional plain-text explanation shown in debugging tools and retained in traces. */
   description?: string;
   /** Graph-wide node identifier. */

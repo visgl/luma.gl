@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {getArrowFixedSizeListValues, getArrowVectorBufferSource} from '@luma.gl/gpgpu/arrow';
-import {GPUDataEvaluator} from '@luma.gl/gpgpu';
+import {getArrowFixedSizeListValues, getArrowVectorBufferSource} from '@luma.gl/graph/arrow';
+import {GPUDataEvaluator} from '@luma.gl/graph/gpu-simple-graph';
 import * as arrow from 'apache-arrow';
 import type {ExpressionInputs} from './expression';
 import {formatFixedRow, formatSegmentedRow, type TableColumn} from './table-renderer';

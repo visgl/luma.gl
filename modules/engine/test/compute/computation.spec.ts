@@ -218,6 +218,19 @@ it('Computation#plugins assemble WGSL contributions', async () => {
       () =>
         new Computation(webgpuDevice, {
           source,
+          plugins: [
+            {
+              name: 'render-hooks',
+              injectionTargets: [{stage: 'fragment', name: 'TINT', wgsl: {parameters: ''}}]
+            }
+          ]
+        })
+    ).toThrow(/does not support ShaderPlugin render hooks/);
+
+    expect(
+      () =>
+        new Computation(webgpuDevice, {
+          source,
           plugins: [{name: 'vertex-input-plugin', vertexInputs: {filterValues: 'f32'}}]
         }),
       'compute pipelines reject plugin vertex inputs'
@@ -230,12 +243,12 @@ it('Computation#plugins assemble WGSL contributions', async () => {
           plugins: [
             {
               name: 'varying-plugin',
-              varyings: {pluginValue: {type: 'f32'}}
+              interStageVariables: {pluginValue: {type: 'f32'}}
             }
           ]
         }),
-      'compute pipelines reject plugin varyings'
-    ).toThrow(/does not support ShaderPlugin vertex inputs or varyings/);
+      'compute pipelines reject plugin interStageVariables'
+    ).toThrow(/does not support ShaderPlugin vertex inputs or interStageVariables/);
   }
   void 0;
 });

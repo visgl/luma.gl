@@ -24,6 +24,7 @@ export type {
   SceneMaterial,
   SceneRenderOptions,
   SceneRenderStatistics,
+  ScenegraphRenderOptions,
   SceneSurface
 } from './engine/scene-renderer';
 export {getSceneAlphaMode, SceneRenderer} from './engine/scene-renderer';
@@ -97,9 +98,9 @@ export type {
   ShadowRenderView,
   ShadowShaderProps,
   SpotShadowLight
-} from './shadows/shadow-map-renderer';
-export {ShadowMapRenderer} from './shadows/shadow-map-renderer';
-export {shadow} from './shadows/shadow';
+} from '@luma.gl/engine/lighting';
+export {ShadowMapRenderer} from '@luma.gl/engine/lighting';
+export {shadow} from '@luma.gl/shaders';
 export type {ContactShadowProps} from './shadows/contact-shadow';
 export {createContactShadowCompositeShaderPass} from './shadows/contact-shadow';
 export type {

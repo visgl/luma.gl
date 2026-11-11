@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/slang",
-  "version": "10.0.0-alpha.6",
+  "version": "10.0.0-alpha.12",
   "description": "Experimental TypeScript Slang to GLSL and WGSL transpiler for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -28,6 +28,16 @@
       "types": "./dist/luma.d.ts",
       "import": "./dist/luma.js",
       "require": "./dist/luma.cjs"
+    },
+    "./wgsl": {
+      "types": "./dist/wgsl.d.ts",
+      "import": "./dist/wgsl.js",
+      "require": "./dist/wgsl.cjs"
+    },
+    "./inspect": {
+      "types": "./dist/inspect.d.ts",
+      "import": "./dist/inspect.js",
+      "require": "./dist/inspect.cjs"
     }
   },
   "files": [

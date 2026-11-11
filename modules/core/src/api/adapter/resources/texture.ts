@@ -11,11 +11,21 @@ import {
 } from '../../../shadertypes/texture-types/texture-formats';
 import {type ExternalImage} from '../../../shadertypes/image-types/image-types';
 import {type TextureView, type TextureViewProps} from './texture-view';
-import {Resource, type ResourceProps} from './resource';
-import {Sampler, type SamplerProps} from './sampler';
+import {DeviceResource, type DeviceResourceProps} from './device-resource';
+import {Sampler, type SamplerProps, setTextureSampler} from './sampler';
 import {Buffer} from './buffer';
 import {log} from '../../utils/log';
-import {textureFormatDecoder} from '../../../shadertypes/texture-types/texture-format-decoder';
+import {
+  textureFormatDecoder,
+  getTextureBytesPerRow,
+  type TextureMemoryLayoutOptions
+} from '../../../shadertypes/texture-types/texture-format-decoder';
+
+const textureLayoutScratchPool: {
+  readOptions: Required<TextureReadOptions>;
+  layoutOptions: TextureMemoryLayoutOptions;
+}[] = [];
+const emptyTextureReadOptions: TextureReadOptions = Object.freeze({});
 
 /** Options for Texture.copyExternalImage */
 export type CopyExternalImageOptions = {
@@ -177,7 +187,7 @@ const BASE_DIMENSIONS = {
 } as const satisfies Record<string, '1d' | '2d' | '3d'>;
 
 /** Texture properties */
-export type TextureProps = ResourceProps & {
+export type TextureProps = DeviceResourceProps & {
   /** @deprecated Use DynamicTexture to create textures with data. */
   data?: ExternalImage | TypedArray | null;
   /** Dimension of this texture. Defaults to '2d' */
@@ -208,7 +218,7 @@ export type TextureProps = ResourceProps & {
  * Texture Object
  * https://gpuweb.github.io/gpuweb/#gputexture
  */
-export abstract class Texture extends Resource<TextureProps> {
+export abstract class Texture extends DeviceResource<TextureProps> {
   /** The texture can be bound for use as a sampled texture in a shader */
   static SAMPLE = 0x04;
   /** The texture can be bound for use as a storage texture in a shader */
@@ -317,7 +327,7 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /** Set sampler props associated with this texture */
   setSampler(sampler: Sampler | SamplerProps): void {
-    this.sampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
+    setTextureSampler(this, sampler);
   }
 
   /** Create a texture view for this texture */
@@ -350,20 +360,27 @@ export abstract class Texture extends Resource<TextureProps> {
    * Calculates the memory layout of the texture, required when reading and writing data.
    * @return the backend-aligned linear layout, in particular bytesPerRow which includes any required padding for buffer copy/read paths
    */
-  computeMemoryLayout(options_: TextureReadOptions = {}): TextureMemoryLayout {
-    const options = this._normalizeTextureReadOptions(options_);
-    const {width = this.width, height = this.height, depthOrArrayLayers = this.depth} = options;
-    const {format, byteAlignment} = this;
-
-    // TODO - does the overriding above make sense?
-    // return textureFormatDecoder.computeMemoryLayout(this);
-    return textureFormatDecoder.computeMemoryLayout({
-      format,
-      width,
-      height,
-      depth: depthOrArrayLayers,
-      byteAlignment
-    });
+  /** The optional result is caller-owned; internal scratch never escapes this call. */
+  computeMemoryLayout(
+    options_: TextureReadOptions = emptyTextureReadOptions,
+    result?: TextureMemoryLayout
+  ): TextureMemoryLayout {
+    const scratch = textureLayoutScratchPool.pop() || {
+      readOptions: {} as Required<TextureReadOptions>,
+      layoutOptions: {} as TextureMemoryLayoutOptions
+    };
+    try {
+      const options = this._normalizeTextureReadOptions(options_, scratch.readOptions);
+      const layoutOptions = scratch.layoutOptions;
+      layoutOptions.format = this.format;
+      layoutOptions.width = options.width;
+      layoutOptions.height = options.height;
+      layoutOptions.depth = options.depthOrArrayLayers;
+      layoutOptions.byteAlignment = this.byteAlignment;
+      return textureFormatDecoder.computeMemoryLayout(layoutOptions, result);
+    } finally {
+      textureLayoutScratchPool.push(scratch);
+    }
   }
 
   /**
@@ -490,68 +507,80 @@ export abstract class Texture extends Resource<TextureProps> {
     }
   }
 
-  _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): Required<CopyImageDataOptions> {
-    const {data, depth, ...writeOptions} = options_;
-    const options = this._normalizeTextureWriteOptions({
-      ...writeOptions,
-      depthOrArrayLayers: writeOptions.depthOrArrayLayers ?? depth
-    });
-    return {data, depth: options.depthOrArrayLayers, ...options};
+  /** The optional result is caller-owned scratch storage; every result field is overwritten. */
+  _normalizeCopyImageDataOptions(
+    options_: CopyImageDataOptions,
+    result = {} as Required<CopyImageDataOptions>
+  ): Required<CopyImageDataOptions> {
+    const {data, depth, depthOrArrayLayers} = options_;
+    this._normalizeTextureWriteOptions(options_, result);
+    // Preserve the legacy depth alias without allocating an intermediate options object.
+    if (depthOrArrayLayers === undefined && depth !== undefined) {
+      const mipDepth =
+        this.dimension === '3d' ? Math.max(1, this.depth >> result.mipLevel) : this.depth;
+      result.depthOrArrayLayers = Math.min(depth, mipDepth - result.z);
+    }
+    result.data = data;
+    result.depth = result.depthOrArrayLayers;
+    return result;
   }
 
   _normalizeCopyExternalImageOptions(
-    options_: CopyExternalImageOptions
+    options_: CopyExternalImageOptions,
+    result = {} as Required<CopyExternalImageOptions>
   ): Required<CopyExternalImageOptions> {
-    const optionsWithoutUndefined = Texture._omitUndefined(options_);
-    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
-    const mipLevelSize = this._getMipLevelSize(mipLevel);
+    const {width, height} = options_;
     const size = this.device.getExternalImageSize(options_.image);
-    const options = {
-      ...Texture.defaultCopyExternalImageOptions,
-      ...mipLevelSize,
-      ...size,
-      ...optionsWithoutUndefined
-    };
-    // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, mipLevelSize.width - options.x);
-    options.height = Math.min(options.height, mipLevelSize.height - options.y);
-    options.depth = Math.min(options.depth, mipLevelSize.depthOrArrayLayers - options.z);
+    const options = Texture._normalizeOptions(
+      options_,
+      Texture.defaultCopyExternalImageOptions,
+      result
+    );
+    const mipWidth = Math.max(1, this.width >> options.mipLevel);
+    const mipHeight =
+      this.baseDimension === '1d' ? 1 : Math.max(1, this.height >> options.mipLevel);
+    const mipDepth =
+      this.dimension === '3d' ? Math.max(1, this.depth >> options.mipLevel) : this.depth;
+    options.width = Math.min(width ?? size.width, mipWidth - options.x);
+    options.height = Math.min(height ?? size.height, mipHeight - options.y);
+    options.depth = Math.min(options.depth, mipDepth - options.z);
     return options;
   }
 
   _normalizeCopyElementImageOptions(
-    options_: CopyElementImageOptions
+    options_: CopyElementImageOptions,
+    result = {} as Required<CopyElementImageOptions>
   ): Required<CopyElementImageOptions> {
-    const optionsWithoutUndefined = Texture._omitUndefined(options_);
-    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
-    const mipLevelSize = this._getMipLevelSize(mipLevel);
-    const options = {
-      ...Texture.defaultCopyElementImageOptions,
-      ...mipLevelSize,
-      ...optionsWithoutUndefined
-    };
-    options.width = Math.min(options.width, mipLevelSize.width - options.x);
-    options.height = Math.min(options.height, mipLevelSize.height - options.y);
-    options.depth = Math.min(options.depth, mipLevelSize.depthOrArrayLayers - options.z);
+    const options = Texture._normalizeOptions(
+      options_,
+      Texture.defaultCopyElementImageOptions,
+      result
+    );
+    const mipWidth = Math.max(1, this.width >> options.mipLevel);
+    const mipHeight =
+      this.baseDimension === '1d' ? 1 : Math.max(1, this.height >> options.mipLevel);
+    const mipDepth =
+      this.dimension === '3d' ? Math.max(1, this.depth >> options.mipLevel) : this.depth;
+    options.width = Math.min(options.width ?? mipWidth, mipWidth - options.x);
+    options.height = Math.min(options.height ?? mipHeight, mipHeight - options.y);
+    options.depth = Math.min(options.depth, mipDepth - options.z);
     return options;
   }
 
-  _normalizeTextureReadOptions(options_: TextureReadOptions): Required<TextureReadOptions> {
-    const optionsWithoutUndefined = Texture._omitUndefined(options_);
-    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
-    const mipLevelSize = this._getMipLevelSize(mipLevel);
-    const options = {
-      ...Texture.defaultTextureReadOptions,
-      ...mipLevelSize,
-      ...optionsWithoutUndefined
-    };
-    // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, mipLevelSize.width - options.x);
-    options.height = Math.min(options.height, mipLevelSize.height - options.y);
-    options.depthOrArrayLayers = Math.min(
-      options.depthOrArrayLayers,
-      mipLevelSize.depthOrArrayLayers - options.z
-    );
+  _normalizeTextureReadOptions(
+    options_: TextureReadOptions,
+    result = {} as Required<TextureReadOptions>
+  ): Required<TextureReadOptions> {
+    const {depthOrArrayLayers} = options_;
+    const options = Texture._normalizeOptions(options_, Texture.defaultTextureReadOptions, result);
+    const mipWidth = Math.max(1, this.width >> options.mipLevel);
+    const mipHeight =
+      this.baseDimension === '1d' ? 1 : Math.max(1, this.height >> options.mipLevel);
+    const mipDepth =
+      this.dimension === '3d' ? Math.max(1, this.depth >> options.mipLevel) : this.depth;
+    options.width = Math.min(options.width ?? mipWidth, mipWidth - options.x);
+    options.height = Math.min(options.height ?? mipHeight, mipHeight - options.y);
+    options.depthOrArrayLayers = Math.min(depthOrArrayLayers ?? mipDepth, mipDepth - options.z);
     return options;
   }
 
@@ -620,34 +649,20 @@ export abstract class Texture extends Resource<TextureProps> {
     }
   }
 
-  _normalizeTextureWriteOptions(options_: TextureWriteOptions): Required<TextureWriteOptions> {
-    const optionsWithoutUndefined = Texture._omitUndefined(options_);
-    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
-    const mipLevelSize = this._getMipLevelSize(mipLevel);
-    const options = {
-      ...Texture.defaultTextureWriteOptions,
-      ...mipLevelSize,
-      ...optionsWithoutUndefined
-    };
+  _normalizeTextureWriteOptions(
+    options_: TextureWriteOptions,
+    result = {} as Required<TextureWriteOptions>
+  ): Required<TextureWriteOptions> {
+    const {byteOffset = 0, bytesPerRow, rowsPerImage} = options_;
+    this._normalizeTextureReadOptions(options_, result);
+    const options = result;
+    options.byteOffset = byteOffset;
 
-    options.width = Math.min(options.width, mipLevelSize.width - options.x);
-    options.height = Math.min(options.height, mipLevelSize.height - options.y);
-    options.depthOrArrayLayers = Math.min(
-      options.depthOrArrayLayers,
-      mipLevelSize.depthOrArrayLayers - options.z
-    );
-
-    const layout = textureFormatDecoder.computeMemoryLayout({
-      format: this.format,
-      width: options.width,
-      height: options.height,
-      depth: options.depthOrArrayLayers,
-      byteAlignment: this.byteAlignment
-    });
-
-    const minimumBytesPerRow = layout.bytesPerPixel * options.width;
-    options.bytesPerRow = optionsWithoutUndefined.bytesPerRow ?? layout.bytesPerRow;
-    options.rowsPerImage = optionsWithoutUndefined.rowsPerImage ?? options.height;
+    const formatInfo = this.device.getTextureFormatInfo(this.format);
+    const minimumBytesPerRow = formatInfo.bytesPerPixel * options.width;
+    options.bytesPerRow =
+      bytesPerRow ?? getTextureBytesPerRow(formatInfo, options.width, this.byteAlignment);
+    options.rowsPerImage = rowsPerImage ?? options.height;
 
     if (options.bytesPerRow < minimumBytesPerRow) {
       throw new Error(
@@ -660,7 +675,7 @@ export abstract class Texture extends Resource<TextureProps> {
       );
     }
 
-    const bytesPerPixel = this.device.getTextureFormatInfo(this.format).bytesPerPixel;
+    const {bytesPerPixel} = formatInfo;
     if (bytesPerPixel && options.bytesPerRow % bytesPerPixel !== 0) {
       throw new Error(
         `bytesPerRow (${options.bytesPerRow}) must be a multiple of bytesPerPixel (${bytesPerPixel}) for ${this.format}`
@@ -698,14 +713,22 @@ export abstract class Texture extends Resource<TextureProps> {
     return allocatedByteLength * this.samples;
   }
 
-  protected static _omitUndefined<T extends object>(options: T): Partial<T> {
-    return Object.fromEntries(
-      Object.entries(options).filter(([, value]) => value !== undefined)
-    ) as Partial<T>;
+  /** Fill every declared field, resetting stale scratch values without allocating entries or spreads. */
+  protected static _normalizeOptions<T extends object>(
+    options: T,
+    defaults: Required<T>,
+    result: Required<T>
+  ): Required<T> {
+    for (const key in defaults) {
+      result[key] = (
+        options[key] === undefined ? defaults[key] : options[key]
+      ) as Required<T>[typeof key];
+    }
+    return result;
   }
 
   static override defaultProps: Required<TextureProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     data: null,
     dimension: '2d',
     format: 'rgba8unorm',
@@ -774,20 +797,6 @@ export abstract class Texture extends Resource<TextureProps> {
   };
 
   protected static defaultTextureReadOptions: Required<TextureReadOptions> = {
-    x: 0,
-    y: 0,
-    z: 0,
-    width: undefined!,
-    height: undefined!,
-    depthOrArrayLayers: 1,
-    mipLevel: 0,
-    aspect: 'all'
-  };
-
-  protected static defaultTextureWriteOptions: Required<TextureWriteOptions> = {
-    byteOffset: 0,
-    bytesPerRow: undefined!,
-    rowsPerImage: undefined!,
     x: 0,
     y: 0,
     z: 0,

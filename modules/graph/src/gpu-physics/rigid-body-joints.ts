@@ -51,8 +51,7 @@ export function validateRigidBodyJoints(
   bodies: readonly GPURigidBody[],
   solver: string
 ): void {
-  if (joints.length > 64 || (joints.length && solver !== 'ordered'))
-    throw new Error('Unsupported joint configuration');
+  if (joints.length > 64) throw new Error('Unsupported joint configuration');
   for (const joint of joints) {
     if (
       !['distance', 'fixed', 'hinge', 'slider', 'general'].includes(joint.type) ||
@@ -67,6 +66,16 @@ export function validateRigidBodyJoints(
       )
     )
       throw new Error('Invalid joint bodies');
+    if (solver === 'parallel') {
+      // Parallel contacts can alternate with a small serial sweep of anchored distance rows.
+      // Dynamic-dynamic joints still require shared island ownership and remain ordered-only.
+      const anchored = [joint.first, joint.second].some(
+        index =>
+          (bodies[index].mode ?? ((bodies[index].mass ?? 1) === 0 ? 'static' : 'dynamic')) ===
+          'static'
+      );
+      if (joint.type !== 'distance' || !anchored) throw new Error('Unsupported parallel joint');
+    }
     if (joint.type === 'general') validateGeneralJoint(joint);
     for (const frame of [joint.firstFrame, joint.secondFrame]) {
       if (

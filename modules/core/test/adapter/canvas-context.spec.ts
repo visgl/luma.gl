@@ -106,6 +106,33 @@ function createContextSuite(
   label: string,
   createContext: () => CanvasContext | PresentationContext
 ) {
+  it(`${label} applies a pending resize when canvas dimensions return to their snapshot`, () => {
+    const canvasContext = createContext();
+    canvasContext.setDrawingBufferSize(100, 50);
+    canvasContext._resizeDrawingBufferIfNeeded();
+    canvasContext.setDrawingBufferSize(300, 150);
+    canvasContext.canvas.width = 640;
+    canvasContext.canvas.height = 480;
+    canvasContext.canvas.width = 100;
+    canvasContext.canvas.height = 50;
+    canvasContext._resizeDrawingBufferIfNeeded();
+    expect(canvasContext.getDrawingBufferSize()).toEqual([300, 150]);
+    expect([canvasContext.canvas.width, canvasContext.canvas.height]).toEqual([300, 150]);
+    canvasContext.destroy();
+  });
+
+  it(`${label} adopts an external resize when applying a pending request`, () => {
+    const canvasContext = createContext();
+    canvasContext.setDrawingBufferSize(100, 50);
+    canvasContext._resizeDrawingBufferIfNeeded();
+    canvasContext.setDrawingBufferSize(300, 150);
+    canvasContext.canvas.width = 640;
+    canvasContext.canvas.height = 480;
+    canvasContext._resizeDrawingBufferIfNeeded();
+    expect(canvasContext.getDrawingBufferSize()).toEqual([640, 480]);
+    canvasContext.destroy();
+  });
+
   it(`${label}#_handleIntersection does not call callbacks when destroyed`, () => {
     if (!isBrowser()) {
       void 0;

@@ -14,7 +14,7 @@ import {
 } from '@deck.gl/core';
 import {type Buffer, type RenderPass} from '@luma.gl/core';
 import {GPUVectorModel} from '@luma.gl/engine';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   createGPUVectorStyleBuffer,
   getGPUVectorStyleBufferBinding,
@@ -178,6 +178,7 @@ export class GPUColumnLayer extends Layer<GPUColumnLayerProps> {
       ...this.getShaders({modules: [project32, picking], source: GPU_COLUMN_SHADER}),
       id: `${this.id}-model`,
       topology: 'triangle-list',
+      inferDrawCount: 'instance',
       isInstanced: true,
       vertexCount: diskResolution * 9,
       instanceCount: 0,

@@ -6,8 +6,8 @@ See [luma.gl](http://luma.gl) for documentation.
 
 ## Graph integrations
 
-Engine builds on `@luma.gl/graph` and `@luma.gl/gpgpu`. Execution primitives remain
-available from engine as compatibility exports, with their implementation owned by gpgpu.
+Engine builds on `@luma.gl/graph` and `@luma.gl/graph/gpu-simple-graph`. Execution primitives remain
+available from engine as compatibility exports, with their implementation owned by core/dynamic.
 Use `@luma.gl/engine/tables` for `GPUTableModel` and `GPUTableGeometry`,
 `@luma.gl/engine/physics` for scenegraph physics integration, and
 `@luma.gl/engine/models` for specialized path/polygon rendering models. These optional

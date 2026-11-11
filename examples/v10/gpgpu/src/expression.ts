@@ -27,7 +27,7 @@ import {
   subtract,
   tan,
   swizzle
-} from '@luma.gl/gpgpu';
+} from '@luma.gl/graph/gpu-simple-graph';
 import {
   parseExpressionAt,
   type ArrayExpression,

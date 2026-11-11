@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData} from '@luma.gl/graph/gpu-data';
 import {
   getSortedSplatIndicesByDepth,
   makeGPUSplatData,

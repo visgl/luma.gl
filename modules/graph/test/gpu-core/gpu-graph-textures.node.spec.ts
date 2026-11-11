@@ -8,6 +8,7 @@ import {
   GPUGraphCompiler,
   GPUGraphTexture,
   GPUConditionalOperation,
+  type GPUOperationLowering,
   type GraphTextureView
 } from '@luma.gl/graph/gpu-core';
 import {NullDevice} from '@luma.gl/core/test-utils';
@@ -45,15 +46,18 @@ test('program textures preserve full graph descriptors and concrete format typin
     baseArrayLayer: 2,
     arrayLayerCount: 1
   });
-  const compiler = new GPUGraphCompiler(device);
+  const lowerings: GPUOperationLowering[] = [];
   let resolved: GraphTextureView<'rgba16float'> | undefined;
-  compiler.lowerings.register('inspect', (_operation, context) => {
-    resolved = context.resolveTextureView(selection);
-    expect(context.resolveTexture(array)).toBe(resolved.texture);
+  lowerings.push({
+    type: 'inspect',
+    lower: (_operation, context) => {
+      resolved = context.resolveTextureView(selection);
+      expect(context.resolveTexture(array)).toBe(resolved.texture);
+    }
   });
   program.add({id: 'inspect', type: 'inspect'});
   try {
-    const compilation = compiler.compile(program);
+    const compilation = new GPUGraphCompiler(device, lowerings).compile(program);
     expect(compilation.textures.get('array')).toMatchObject({
       dimension: '2d-array',
       depth: 4,
@@ -76,22 +80,25 @@ test('program texture imports can be bound at encoding and remain borrowed', () 
     usage: Texture.COPY_SRC,
     external: true
   });
-  const compiler = new GPUGraphCompiler(device);
+  const lowerings: GPUOperationLowering[] = [];
   let seen: Texture | undefined;
-  compiler.lowerings.register('read', (_operation, context) => {
-    const texture = context.resolveTexture(source);
-    context.graph.addCopyPass({
-      id: 'read',
-      resources: [{texture, usage: 'copy-source'}],
-      compile: () => ({
-        encode: encoding => {
-          seen = encoding.getTexture(texture);
-        }
-      })
-    });
+  lowerings.push({
+    type: 'read',
+    lower: (_operation, context) => {
+      const texture = context.resolveTexture(source);
+      context.graph.addCopyPass({
+        id: 'read',
+        resources: [{texture, usage: 'copy-source'}],
+        compile: () => ({
+          encode: encoding => {
+            seen = encoding.getTexture(texture);
+          }
+        })
+      });
+    }
   });
   program.add({id: 'read', type: 'read'});
-  const compilation = compiler.compile(program);
+  const compilation = new GPUGraphCompiler(device, lowerings).compile(program);
   const compiled = compilation.graph.compile();
   const texture = device.createTexture({
     format: 'rgba8unorm',
@@ -126,33 +133,42 @@ test('program texture views reject foreign identity and invalid subresources', (
   const foreign = new GPUGraphTexture({...texture});
   expect(() => program.textureView(foreign)).toThrow(/Undeclared/);
   expect(() => program.scalar('image', 'float32')).toThrow(/already exists/);
-  const compiler = new GPUGraphCompiler(device);
-  compiler.lowerings.register('foreign', (_operation, context) => {
-    context.resolveTexture(foreign);
+  const lowerings: GPUOperationLowering[] = [];
+  lowerings.push({
+    type: 'foreign',
+    lower: (_operation, context) => {
+      context.resolveTexture(foreign);
+    }
   });
   program.add({id: 'foreign', type: 'foreign'});
-  expect(() => compiler.compile(program)).toThrow(/Undeclared/);
+  expect(() => new GPUGraphCompiler(device, lowerings).compile(program)).toThrow(/Undeclared/);
   const invalid = new GPUGraph();
   const small = invalid.texture('small', {...texture});
   const view = invalid.textureView(small, {baseMipLevel: 2});
-  compiler.lowerings.register('invalid-view', (_operation, context) => {
-    context.resolveTextureView(view);
+  lowerings.push({
+    type: 'invalid-view',
+    lower: (_operation, context) => {
+      context.resolveTextureView(view);
+    }
   });
   invalid.add({id: 'invalid-view', type: 'invalid-view'});
-  expect(() => compiler.compile(invalid)).toThrow();
+  expect(() => new GPUGraphCompiler(device, lowerings).compile(invalid)).toThrow();
   device.destroy();
 });
 
 test('render and copy lowering preserves operation attribution and rejects GPU predicates', () => {
   const device = createDevice();
-  const compiler = new GPUGraphCompiler(device);
-  compiler.lowerings.register('render', (_operation, context) => {
-    context.graph.addRenderPass({id: 'draw', resources: [], compile: () => ({encode: () => {}})});
-    context.graph.addCopyPass({id: 'copy', resources: [], compile: () => ({encode: () => {}})});
+  const lowerings: GPUOperationLowering[] = [];
+  lowerings.push({
+    type: 'render',
+    lower: (_operation, context) => {
+      context.graph.addRenderPass({id: 'draw', resources: [], compile: () => ({encode: () => {}})});
+      context.graph.addCopyPass({id: 'copy', resources: [], compile: () => ({encode: () => {}})});
+    }
   });
   const program = new GPUGraph();
   program.add({id: 'image-operation', type: 'render'});
-  expect(compiler.compile(program).lowering.nodes).toEqual([
+  expect(new GPUGraphCompiler(device, lowerings).compile(program).lowering.nodes).toEqual([
     {nodeId: 'draw', nodeType: 'render', operationPath: ['image-operation']},
     {nodeId: 'copy', nodeType: 'copy', operationPath: ['image-operation']}
   ]);
@@ -164,7 +180,9 @@ test('render and copy lowering preserves operation attribution and rejects GPU p
       body: {id: 'conditional-render', type: 'render'}
     })
   );
-  expect(() => compiler.compile(conditional)).toThrow(/GPU predicates do not support render/);
+  expect(() => new GPUGraphCompiler(device, lowerings).compile(conditional)).toThrow(
+    /GPU predicates do not support render/
+  );
   device.destroy();
 });
 
@@ -186,22 +204,28 @@ test('array layers do not increase the valid mip count', () => {
 
 test('delegating lowerers decorate copy dependencies exactly once', () => {
   const device = createDevice();
-  const compiler = new GPUGraphCompiler(device);
-  compiler.lowerings.register('delegate', (_operation, context) => {
-    context.lower({id: 'child', type: 'copies'});
+  const lowerings: GPUOperationLowering[] = [];
+  lowerings.push({
+    type: 'delegate',
+    lower: (_operation, context) => {
+      context.lower({id: 'child', type: 'copies'});
+    }
   });
-  compiler.lowerings.register('copies', (_operation, context) => {
-    context.graph.addCopyPass({id: 'first', resources: [], compile: () => ({encode: () => {}})});
-    context.graph.addCopyPass({
-      id: 'second',
-      dependsOn: ['first'],
-      resources: [],
-      compile: () => ({encode: () => {}})
-    });
+  lowerings.push({
+    type: 'copies',
+    lower: (_operation, context) => {
+      context.graph.addCopyPass({id: 'first', resources: [], compile: () => ({encode: () => {}})});
+      context.graph.addCopyPass({
+        id: 'second',
+        dependsOn: ['first'],
+        resources: [],
+        compile: () => ({encode: () => {}})
+      });
+    }
   });
   const program = new GPUGraph();
   program.add({id: 'parent', type: 'delegate'});
-  const compilation = compiler.compile(program);
+  const compilation = new GPUGraphCompiler(device, lowerings).compile(program);
   expect(compilation.lowering.nodes).toEqual([
     {nodeId: 'first', nodeType: 'copy', operationPath: ['parent', 'child']},
     {nodeId: 'second', nodeType: 'copy', operationPath: ['parent', 'child']}

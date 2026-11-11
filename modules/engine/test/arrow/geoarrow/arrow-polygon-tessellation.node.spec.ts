@@ -445,7 +445,12 @@ function makeNestedVector(
   const coordinates = flattenCoordinates(rows);
   const coordinateValues =
     valueKind === 'float32' ? Float32Array.from(coordinates) : Float64Array.from(coordinates);
-  const coordinateData = makeFixedSizeListData(childType, dimension, coordinateValues);
+  const coordinateData = makeFixedSizeListData(
+    childType,
+    dimension,
+    coordinateValues,
+    dimension === 3 ? 'xyz' : 'value'
+  );
 
   if (nesting === 1) {
     return new arrow.Vector([
@@ -603,12 +608,13 @@ function makeRowColorVector(colors: Color[]): arrow.Vector<any> {
 function makeFixedSizeListData<T extends arrow.DataType>(
   childType: T,
   listSize: number,
-  values: T['TArray']
+  values: T['TArray'],
+  childName = 'value'
 ): arrow.Data<arrow.FixedSizeList<T>> {
   const childData = new arrow.Data(childType, 0, values.length, 0, {
     [arrow.BufferType.DATA]: values
   });
-  const listType = new arrow.FixedSizeList(listSize, new arrow.Field('value', childType, false));
+  const listType = new arrow.FixedSizeList(listSize, new arrow.Field(childName, childType, false));
   return new arrow.Data(listType, 0, values.length / listSize, 0, {}, [childData]);
 }
 

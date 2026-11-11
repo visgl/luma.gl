@@ -6,7 +6,7 @@ import {ShaderPassRenderer} from '@luma.gl/engine';
 import {bokehDof} from '@luma.gl/engine/effects';
 import {ExternalTexture, type Texture as ThreeTexture, type WebGPURenderer} from 'three/webgpu';
 
-// The example pins Three r185. Keep its private native-texture lookup at this adapter boundary.
+// The example pins Three r187. Keep its private native-texture lookup at this adapter boundary.
 type TextureBackend = {get(texture: ThreeTexture): {texture: GPUTexture}};
 
 /** Run the existing luma DOF pass on borrowed Three textures, on the same GPU queue. */
@@ -67,7 +67,7 @@ export class GalaxyDepthOfField {
     this.device.submit();
     const outputHandle = result!.handle as GPUTexture;
     if (this.outputHandle !== outputHandle) {
-      // r185 requires releasing cached texture metadata before rebinding a resized handle.
+      // r187 requires releasing cached texture metadata before rebinding a resized handle.
       // ExternalTexture disposal does not destroy the luma-owned GPU texture.
       if (this.outputHandle) this.output.dispose();
       this.outputHandle = outputHandle;

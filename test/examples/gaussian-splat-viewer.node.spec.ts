@@ -1375,6 +1375,16 @@ describe('published Gaussian splat viewer', () => {
     });
   });
 
+  test('loads the embedded glTF showcase without the optional loader bundle', () => {
+    installViewerWindow('?scene=gltf-fixture', {__lumaGaussianSplatsLoaderBundleUrl: undefined});
+    expect(getLocalGaussianSplatLoadersConfiguration()).toMatchObject({
+      sceneId: 'gltf-fixture',
+      sourceFormat: 'GLB',
+      expectedSplatCount: 256,
+      up: [0, 1, 0]
+    });
+  });
+
   test('keeps the parser fixture local and does not activate loading without a bundle', () => {
     installViewerWindow('?scene=fixture');
     expect(() => getLocalGaussianSplatLoadersConfiguration()).toThrow(

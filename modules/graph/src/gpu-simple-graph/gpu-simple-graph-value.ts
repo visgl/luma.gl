@@ -3,35 +3,36 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/core';
-import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
-import {GPUDataEvaluator, type GPUVectorEvaluator} from '@luma.gl/gpgpu';
+import type {GPUData} from '@luma.gl/graph/gpu-data';
+import {GPUDataEvaluator} from './operation/gpu-data-evaluator';
+import {type GPUVectorEvaluator} from './operation/gpu-vector-evaluator';
 import {
   abs,
   add,
   cos,
   divide,
-  dot,
-  equalAll,
   exp,
-  extent,
-  fround,
-  gather,
-  interleave,
-  length,
   log,
   multiply,
   pow,
-  segmentedMap,
-  select,
-  sequence,
   sin,
   sqrt,
   subtract,
-  tan,
-  swizzle,
-  castData,
-  convertColorData
-} from '@luma.gl/gpgpu';
+  tan
+} from './operations/arithmetic';
+import {dot} from './operations/dot';
+import {equalAll} from './operations/equal-all';
+import {extent} from './operations/extent';
+import {fround} from './operations/fround';
+import {gather} from './operations/gather';
+import {interleave} from './operations/interleave';
+import {length} from './operations/length';
+import {segmentedMap} from './operations/segmented-map';
+import {select} from './operations/select';
+import {sequence} from './operations/sequence';
+import {swizzle} from './operations/swizzle';
+import {castData} from './operations/cast-data';
+import {convertColorData} from './operations/convert-colors';
 import type {GPUOperation, GPUOperationMetadata} from '@luma.gl/graph/gpu-core';
 import type {GPUSimpleGraphUploadProps} from './gpu-simple-graph-transfer';
 

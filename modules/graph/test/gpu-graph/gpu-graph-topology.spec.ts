@@ -9,7 +9,7 @@ import {
   GPUGraphAlgorithmsTopology,
   type GPUGraphAlgorithmsAdjacency
 } from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {addGPUGraphAlgorithmsTopologyToGraphWithDispatchLimit} from '../../src/gpu-graph-algorithms/gpu-graph-topology-internals';

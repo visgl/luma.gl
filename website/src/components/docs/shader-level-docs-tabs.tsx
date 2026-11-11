@@ -2,7 +2,7 @@ import React, {type ReactNode} from 'react';
 import {FOUNDATION_DOCS_CATALOG} from './foundation-docs-catalog';
 import {DocsPageTabs} from './docs-page-tabs';
 
-export type ShaderLevelDocsTabId = 'shader-assembly' | 'writing-portable-shaders' | 'writing-customizable-shaders' | 'gpu-floating-point-precision' | 'shader-passes' | 'rendering-techniques' | 'transparency' | 'glass-effects';
+export type ShaderLevelDocsTabId = 'shader-assembly' | 'writing-portable-shaders' | 'shader-injection' | 'gpu-floating-point-precision' | 'shader-passes' | 'rendering-techniques' | 'transparency' | 'glass-effects';
 export type ShaderLevelDocsTabGroupId = 'authoring' | 'techniques';
 
 const SHADER_GUIDE_GROUPS = {

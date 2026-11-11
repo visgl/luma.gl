@@ -104,6 +104,31 @@ function evaluateIfExpression(
     return false;
   }
 
+  const operandPattern = '(?:[A-Za-z_][A-Za-z0-9_]*|[+-]?\\d+(?:\\.\\d+)?)';
+  const comparison = trimmedExpression.match(
+    new RegExp(`^(${operandPattern})\\s*(==|!=|<=|>=|<|>)\\s*(${operandPattern})$`)
+  );
+  if (comparison) {
+    const resolveOperand = (operand: string) =>
+      /^[A-Za-z_]/.test(operand) ? Number(defines[operand] ?? 0) : Number(operand);
+    const left = resolveOperand(comparison[1]);
+    const right = resolveOperand(comparison[3]);
+    switch (comparison[2]) {
+      case '==':
+        return left === right;
+      case '!=':
+        return left !== right;
+      case '<=':
+        return left <= right;
+      case '>=':
+        return left >= right;
+      case '<':
+        return left < right;
+      case '>':
+        return left > right;
+    }
+  }
+
   const negatedDefineMatch = trimmedExpression.match(new RegExp(`^!\\s*${DEFINE_NAME_PATTERN}$`));
   if (negatedDefineMatch) {
     return !Boolean(defines[negatedDefineMatch[1]]);

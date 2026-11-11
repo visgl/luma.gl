@@ -4,21 +4,21 @@
 
 import type {Device} from '../device';
 import type {SamplerProps as ShaderSamplerProps} from '@luma.gl/shaders/types';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Edge values sampling mode */
 export type SamplerAddressMode = 'clamp-to-edge' | 'repeat' | 'mirror-repeat';
 
 /** Sampler filtering mode */
 export type SamplerFilterMode = 'nearest' | 'linear';
-export type SamplerProps = ResourceProps & ShaderSamplerProps;
+export type SamplerProps = DeviceResourceProps & ShaderSamplerProps;
 
-export type SamplerParameters = Omit<SamplerProps, keyof ResourceProps>;
+export type SamplerParameters = Omit<SamplerProps, keyof DeviceResourceProps>;
 
 /** Immutable Sampler object */
-export abstract class Sampler extends Resource<SamplerProps> {
+export abstract class Sampler extends DeviceResource<SamplerProps> {
   static override defaultProps: Required<SamplerProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     type: 'color-sampler',
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',
@@ -43,5 +43,24 @@ export abstract class Sampler extends Resource<SamplerProps> {
 
   protected static normalizeProps(device: Device, props: SamplerProps): SamplerProps {
     return props;
+  }
+}
+
+/** Replace a texture's sampler, owning only samplers created from properties. @internal */
+export function setTextureSampler(
+  texture: DeviceResource & {sampler: Sampler},
+  sampler: Sampler | SamplerProps
+): void {
+  const nextSampler = sampler instanceof Sampler ? sampler : texture.device.createSampler(sampler);
+  if (nextSampler === texture.sampler) {
+    return;
+  }
+  if (!(sampler instanceof Sampler)) {
+    nextSampler.transferOwnershipTo(texture);
+  }
+  const previousSampler = texture.sampler;
+  texture.sampler = nextSampler;
+  if (previousSampler?.owner === texture) {
+    previousSampler.destroy();
   }
 }

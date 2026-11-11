@@ -4,7 +4,7 @@
 
 import {assert} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import type {GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUVector} from '@luma.gl/graph/gpu-data';
 import type {GPUCommandGraph, GraphDataView} from '../gpu-core/gpu-command-graph';
 import {createChunkNode, getChunkDispatch, validateChunkViews} from '../gpu-core/gpu-chunk-utils';
 import {getViewElementOffset} from '../gpu-core/graph-data-view-utils';

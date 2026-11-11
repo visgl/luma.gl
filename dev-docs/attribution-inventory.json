@@ -3,7 +3,6 @@
     "anari",
     "core",
     "engine",
-    "gpgpu",
     "graph",
     "shaders",
     "slang",

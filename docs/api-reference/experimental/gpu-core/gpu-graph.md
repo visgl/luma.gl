@@ -2,9 +2,23 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 # GPUGraph
 
+For portable fullscreen image processing on WebGPU, use
+[`GPUShaderPassOperation`](../../graph/gpu-shader-pass-operation.md) with named texture inputs
+and scalar parameters. The same operation description also runs on WebGPU GPUSimpleGraph.
+
 ## Overview
 
-`GPUGraph` is luma.gl's backend-independent graph of operations and logical values. It is intentionally distinct from `GPUCommandGraph`, which is the WebGPU execution graph.
+`GPUGraph` describes operations and logical values without requiring a device during authoring.
+Its execution implementation currently requires WebGPU. `GPUCommandGraph` is the lower-level
+pass and resource graph produced by lowering. Start with the
+[graph tutorial](/docs/api-reference/graph/getting-started) for reusable compilation and runtime inputs;
+this reference also covers the advanced, concrete-dimension compiler interface.
+
+Built-in reusable operations include
+[GPUUploadOperation and GPUCopyOperation](/docs/api-reference/graph/gpu-transfer-operations),
+which also work in reusable SimpleGraph, and WebGPU
+[GPUCompactionOperation](/docs/api-reference/graph/gpu-compaction-operation), which produces
+capacity and a GPU logical count.
 
 <GPUOperationContract operation="gpu-graph" />
 
@@ -36,6 +50,15 @@ A mathematical operation and an executable GPU command are different abstraction
 
 This separation is also compatible with native execution systems such as CUDA Graphs. A semantic `GPULoopOperation` may lower on WebGPU to a bounded sequence of GPU-gated indirect dispatches, while a CUDA backend could lower the same semantic loop to a native CUDA conditional WHILE graph node.
 
+## External inputs and operation-defined results
+
+Use `addInput(name, gpuGraph.scalar(...))` or `addInput(name, gpuGraph.vector(...))` for
+external inputs, and `addState()` for initialized borrowed vector state. Operations declare
+their results through contracts; expressions infer theirs automatically. Applications select
+returned outputs at compilation and supply `{inputs, state, outputTargets}` at execution.
+See [Graph inputs, results, and state](/docs/api-reference/graph/gpu-graph-values) for examples,
+ownership, dynamic dimension support, and current boundaries.
+
 ## API
 
 ```ts
@@ -59,14 +82,14 @@ Arrays are root-level construction sugar. `GPUCompositeOperation` preserves sema
 The public semantic value and operation types are `GPUGraphScalar`, `GPUGraphVector`, `GPUGraphTexture`, `GPUGraphTextureView`,
 `GPUGraphScalarLiteral`, `GPUGraphScalarOperation`, `GPUGraphVectorMADD`,
 `GPUGraphDotProduct`, `GPUGraphCSRMatrix`, and `GPUGraphSpMV`. The WebGPU
-`GPUGraphCompiler` lowers these built-ins through its `GPUOperationLoweringRegistry`; custom
-semantic operation types can register an equally explicit backend lowering.
+`GPUGraphCompiler` lowers these built-ins using explicit `GPUOperationLowering` descriptors; custom
+semantic operation types can supply an equally explicit backend lowering.
 
 ## Hard boundary
 
 A semantic `GPUOperation` does not expose `getCommandNodes()`. Operations do not own a `Device`, command encoder, bindings, dispatch dimensions, or command-graph nodes.
 
-`GPUGraph` also accepts `GPUGraphPrimitive` objects that construct explicit command nodes against the compiler-supplied graph. There is no graph-mutation compatibility fallback. Semantic operations require a registered backend lowerer.
+`GPUGraph` also accepts `GPUGraphPrimitive` objects that construct explicit command nodes against the compiler-supplied graph. There is no graph-mutation compatibility fallback. Semantic operations require an explicit backend lowerer.
 
 The intended end state is:
 
@@ -189,3 +212,60 @@ fields plus `external`. `graph.textureView(texture, props)` selects subresources
 storage. `GPUGraphCompiler.compile()` accepts optional `textures` defaults; imported textures may
 also be supplied when encoding. `compilation.textures` exposes logical graph texture handles.
 Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
+
+Reusable `compile(device)` programs also support named texture inputs and operation-produced
+texture results. See [texture values and execution bindings](/docs/api-reference/graph/gpu-graph-textures).
+
+## Grouped aggregation and scalar reduction
+
+`GPUGraphGroupAggregation` and `GPUGraphReduction` are built-in semantic operations.
+They lower to the existing [GPUGroupAggregation](./gpu-group-aggregation.md) and
+[GPUReduction](./gpu-reduction.md) kernels without custom compiler registration:
+
+```ts
+import {
+  GPUGraph, GPUGraphGroupAggregation, GPUGraphReduction, gpuGraph
+} from '@luma.gl/graph/gpu-graph';
+
+const graph = new GPUGraph();
+graph.addInput('keys', gpuGraph.vector('uint32'));
+graph.addInput('weights', gpuGraph.vector('float32'));
+graph.addInput('selection', gpuGraph.vector('uint32'));
+graph.add([
+  new GPUGraphGroupAggregation({
+    keys: 'keys', values: 'weights', mask: 'selection',
+    output: 'groups', groupCount: 100, operation: 'sum'
+  }),
+  new GPUGraphReduction({input: 'groups', output: 'domain', operation: 'extent'})
+]);
+const compiled = graph.compile(device, {outputs: ['groups', 'domain']});
+const result = await compiled.run({inputs: {keys, weights, selection}});
+// Both outputs are GPUVectors. Readback is explicit.
+result.groups.destroy();
+result.domain.destroy();
+compiled.destroy();
+```
+
+### Inputs and outputs
+
+- `GPUGraphGroupAggregation` accepts dense `uint32` keys and an optional `uint32` mask.
+  Nonzero mask values select rows; keys outside `[0, groupCount)` are ignored.
+  `count` returns `uint32`; `sum`, `min`, `max`, and `mean` accept finite `float32`
+  contributions and return `float32`. `groupCount` infers a packed result length.
+  It can be omitted with the concrete compiler API when output dimensions are
+  declared explicitly using `graph.vector(...)`.
+- `GPUGraphReduction` accepts scalar `uint32`, `sint32`, or `float32` inputs and an
+  optional `uint32` mask. `sum`, `min`, and `max` return one row; `extent` returns
+  two rows containing minimum and maximum. Output format matches input format.
+- Logical references may be names or typed `GPUGraphVector` objects. Inputs retain
+  their supported chunk/stride layouts and masks may have independent partitions.
+  Destinations must be one packed chunk. Use `outputTargets` for caller-owned
+  result storage; operation-defined results cannot overwrite inputs or `addState()`.
+
+### Execution and ownership
+
+The compiler uses existing kernels and graph-owned scratch storage. Operations
+encode no CPU readback. Inputs and caller-provided targets remain borrowed; returned
+results belong to the caller. Repeated executions reset grouped statistics, including
+empty groups. Empty counts and sums are zero; empty min/max/mean groups are NaN.
+Scalar reductions retain the underlying kernel's masking and nonfinite-value rules.

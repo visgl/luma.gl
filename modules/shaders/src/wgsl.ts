@@ -20,4 +20,15 @@ export {
   type ShaderBindingDebugRow
 } from './lib/shader-assembly/wgsl-binding-debug';
 
-export * from './lib/shader-assembly/wgsl-binding-scan';
+export {
+  maskWGSLComments,
+  getWGSLBindingDeclarationMatches,
+  replaceWGSLBindingDeclarationMatches,
+  hasWGSLAutoBinding,
+  getFirstWGSLAutoBindingDeclarationMatch,
+  WGSL_BINDABLE_VARIABLE_PATTERN,
+  MODULE_WGSL_BINDING_DECLARATION_REGEXES,
+  WGSL_BINDING_DECLARATION_REGEXES,
+  WGSL_EXPLICIT_BINDING_DECLARATION_REGEXES,
+  type WGSLBindingDeclarationMatch
+} from './lib/shader-assembly/wgsl-binding-scan';

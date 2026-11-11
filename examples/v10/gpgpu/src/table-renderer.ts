@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {GPUDataEvaluator} from '@luma.gl/gpgpu';
+import type {GPUDataEvaluator} from '@luma.gl/graph/gpu-simple-graph';
 import {Virtualizer, observeElementRect, type VirtualItem} from '@tanstack/virtual-core';
 
 const ROW_HEIGHT = 34;

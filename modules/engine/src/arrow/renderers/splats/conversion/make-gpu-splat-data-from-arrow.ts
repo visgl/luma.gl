@@ -20,7 +20,7 @@ import {
   type Table,
   type Vector
 } from 'apache-arrow';
-import {getArrowDataBufferSource} from '@luma.gl/gpgpu/_internal/arrow';
+import {getArrowDataBufferSource} from '@luma.gl/graph/_internal/arrow';
 
 const SPHERICAL_HARMONIC_DC = 0.28209479177387814;
 const GAUSSIAN_SPLAT_ENCODING_METADATA_KEY = 'loaders_gl.gaussian_splats.encoding';

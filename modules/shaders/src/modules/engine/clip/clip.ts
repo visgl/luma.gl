@@ -101,12 +101,13 @@ fn clip_isInBounds(coordinates: vec2<f32>) -> bool {
 export const clipShaderPlugin: ShaderPlugin = {
   name: 'clip',
   module: clipShaderModule,
-  varyings: {
+  interStageVariables: {
     clipCoordinates: {type: 'vec2<f32>', interpolation: 'smooth'}
   },
   injections: [
     {
-      target: 'vs:CLIP_POSITION',
+      stage: 'vertex',
+      target: 'CLIP_POSITION',
       glsl: `\
 clipCoordinates = geometryCoordinates;
 if (clipState.enabled != 0 && clipState.mode == ${CLIP_MODE_INSTANCE} &&
@@ -121,7 +122,8 @@ if (clipUniforms.enabled != 0 && clipUniforms.mode == ${CLIP_MODE_INSTANCE} &&
 }`
     },
     {
-      target: 'fs:CLIP_COLOR',
+      stage: 'fragment',
+      target: 'CLIP_COLOR',
       glsl: `\
 if (clipState.enabled != 0 && clipState.mode == ${CLIP_MODE_GEOMETRY} &&
     !clip_isInBounds(clipCoordinates)) {

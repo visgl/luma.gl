@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Device, CommandEncoder} from '@luma.gl/core';
+import {assert, type Device, type CommandEncoder} from '@luma.gl/core';
 import {Vector3} from '@math.gl/core';
 import type {ScenegraphNode} from '../../index';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
@@ -127,6 +127,17 @@ export class ScenegraphPhysicsInstance {
       this.world.publishPoses();
       await this.finishSubmission();
     });
+  }
+
+  /** Encode fixed steps into a caller-owned encoder without submission or readback. */
+  encode(encoder: CommandEncoder, steps = 1): void {
+    // Encoding cannot race an asynchronous edit or outlive the owned execution.
+    assert(!this.pending && !this.destroying && !this.destroyed);
+    // A batch contains a positive integral number of fixed simulation steps.
+    assert(Number.isSafeInteger(steps) && steps > 0);
+    for (let index = 0; index < steps; index++) {
+      this.graph.encode(encoder, {parameters: undefined});
+    }
   }
 
   /** Advance one fixed step; state remains on GPU and only submission completion is awaited. */

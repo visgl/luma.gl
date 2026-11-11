@@ -3,15 +3,15 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type BufferLayout, type Device, type ShaderLayout} from '@luma.gl/core';
-import {GPUVector, type GPUData} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, type GPUData} from '@luma.gl/graph/gpu-data';
 import {planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/graph/gpu-tables';
 import {type GPUTableModelProps} from '@luma.gl/engine/tables';
-import {expandArrowVector} from '@luma.gl/gpgpu/arrow';
-import {getArrowVectorBufferSource, makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {expandArrowVector} from '@luma.gl/graph/arrow';
+import {getArrowVectorBufferSource, makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
-import {makeGPUVectorFromArrow} from '@luma.gl/gpgpu/arrow';
-import {getRequiredArrowGPUVectorDataType} from '@luma.gl/gpgpu/_internal/arrow';
-import {isNumericArrowType, type NumericArrowType} from '@luma.gl/gpgpu/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
+import {getRequiredArrowGPUVectorDataType} from '@luma.gl/graph/_internal/arrow';
+import {isNumericArrowType, type NumericArrowType} from '@luma.gl/graph/arrow';
 import {DynamicBuffer, DynamicTexture} from '@luma.gl/core/dynamic';
 import {
   Data,

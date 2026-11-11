@@ -5,7 +5,7 @@
 import {expect, it} from 'vitest';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUConstant, GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   getGPUInputAttributeNames,
   GPURecordBatch,

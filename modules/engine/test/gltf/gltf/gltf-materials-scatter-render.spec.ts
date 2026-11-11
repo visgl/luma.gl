@@ -185,19 +185,20 @@ test.each([
       return pixels[(16 * 32 + 16) * 4];
     };
     try {
-      const forward = await render([0, 0, -1], 0.9);
-      const scalarReference = await render([0, 0, -1], 0.9, false, strengthAlpha / 255);
+      // Light travels toward the camera through the surface for forward transmission.
+      const forward = await render([0, 0, 1], 0.9);
+      const scalarReference = await render([0, 0, 1], 0.9, false, strengthAlpha / 255);
       expect(Math.abs(forward - scalarReference)).toBeLessThanOrEqual(1);
       if (strengthAlpha === 128) {
-        const fullStrength = await render([0, 0, -1], 0.9, false, 1);
+        const fullStrength = await render([0, 0, 1], 0.9, false, 1);
         expect(forward).toBeLessThan(fullStrength - 10);
       }
-      const backward = await render([0, 0, -1], -0.9);
+      const backward = await render([0, 0, 1], -0.9);
       if (strengthAlpha === 0) expect(forward).toBe(backward);
       else if (lightmap) expect(backward).toBeGreaterThan(forward + 10);
       else expect(forward).toBeGreaterThan(backward + 10);
-      const reflected = await render([0, 0, 1], -0.9);
-      const transmitted = await render([0, 0, 1], 0.9);
+      const reflected = await render([0, 0, -1], -0.9);
+      const transmitted = await render([0, 0, -1], 0.9);
       if (strengthAlpha === 0) expect(reflected).toBe(transmitted);
       else expect(reflected).toBeGreaterThan(transmitted + 10);
     } finally {

@@ -51,7 +51,7 @@ index construction, fenced GPU execution, explicit validation readback, and CPU 
 | Execution | One browser WebGPU device and caller-owned command encoding, submission, and optional readback. |
 
 Import the dataframe facade only from its optional subpath. Arrow-specific upload helpers belong to
-`@luma.gl/graph/arrow`; generic GPU storage remains in `@luma.gl/gpgpu/gpu-data`, while record batches and
+`@luma.gl/graph/arrow`; generic GPU storage remains in `@luma.gl/graph/gpu-data`, while record batches and
 tables come from `@luma.gl/graph/gpu-tables`. Neither GPU package requires Apache Arrow as a
 runtime dependency.
 

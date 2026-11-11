@@ -84,7 +84,8 @@ export const filterShaderPlugin: ShaderPlugin = {
   },
   injections: [
     {
-      target: 'vs:FILTER_POSITION',
+      stage: 'vertex',
+      target: 'FILTER_POSITION',
       glsl: `\
 if (!filter_isVisible(filterValues)) {
   position = vec4(2.0, 2.0, 2.0, 1.0);

@@ -4,7 +4,7 @@
 
 import {Buffer, type Device} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import type {GPUData} from '@luma.gl/gpgpu/gpu-data';
+import type {GPUData} from '@luma.gl/graph/gpu-data';
 import {
   GPUScene,
   GPU_SCENE_RECORD_BYTE_LENGTH,

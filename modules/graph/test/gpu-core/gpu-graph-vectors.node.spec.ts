@@ -8,7 +8,7 @@ import {alignGraphVectorViews} from '../../src/gpu-core/graph-vector-view-utils'
 import {expect, test, vi} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {GPUData, GPUVector, type GPUVectorLike} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector, type GPUVectorLike} from '@luma.gl/graph/gpu-data';
 import {
   GPUGraph,
   GPUCommandGraph,

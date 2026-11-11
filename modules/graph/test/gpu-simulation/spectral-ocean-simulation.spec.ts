@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {SpectralOceanSimulation} from '@luma.gl/graph/gpu-simulation';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 

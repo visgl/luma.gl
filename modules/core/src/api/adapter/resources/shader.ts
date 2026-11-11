@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {log} from '../../utils/log';
 import {uid} from '../../utils/uid';
 import {CompilerMessage} from '../types/compiler-message';
@@ -12,7 +12,7 @@ import {formatCompilerLog} from '../../adapter-utils/format-compiler-log';
 /**
  * Properties for a Shader
  */
-export type ShaderProps = ResourceProps & {
+export type ShaderProps = DeviceResourceProps & {
   /** Shader language (defaults to auto) */
   language?: 'glsl' | 'wgsl' | 'auto';
   /** Which stage are we compiling? Required for GLSL. Ignored for WGSL. */
@@ -31,7 +31,7 @@ export type ShaderProps = ResourceProps & {
  * Immutable Shader object
  * In WebGPU the handle can be copied between threads
  */
-export abstract class Shader extends Resource<ShaderProps> {
+export abstract class Shader extends DeviceResource<ShaderProps> {
   override get [Symbol.toStringTag](): string {
     return 'Shader';
   }
@@ -145,7 +145,7 @@ export abstract class Shader extends Resource<ShaderProps> {
   }
 
   static override defaultProps: Required<ShaderProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     language: 'auto',
     stage: undefined!,
     source: '',

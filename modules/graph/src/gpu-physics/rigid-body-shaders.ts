@@ -393,6 +393,7 @@ ${
 ${parallel ? getRigidBodyParallelShader(Boolean(ensembleBodiesPerInstance)) : ''}
 ${(parallel || hasJoints) && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
 ${jointShader}
+${parallel && hasJoints ? '@compute @workgroup_size(1) fn parallelJointWarm(){solveJoints(true);} @compute @workgroup_size(1) fn parallelJointSolve(){solveJoints(false);}' : ''}
 fn root(body: u32) -> u32 {var current=body;for(var iteration=0u;iteration<BODY_COUNT;iteration++) {let parent=u32(sleepStates[current].z);if(parent==current) {break;}current=parent;}return current;}
 @compute @workgroup_size(1) fn solve() {
  ${extended && !hasJoints ? 'collectMeshContacts();' : ''}

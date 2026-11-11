@@ -26,7 +26,7 @@ export type GLTFAccessorSparseIndices = {
    */
   componentType: 5121 | 5123 | 5125 | number;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -43,7 +43,7 @@ export type GLTFAccessorSparseValues = {
    */
   byteOffset?: number;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -64,7 +64,7 @@ export type GLTFAccessorSparse = {
    */
   values: GLTFAccessorSparseValues;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -122,7 +122,7 @@ export type GLTFAccessor = {
   sparse?: GLTFAccessorSparse;
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -139,7 +139,7 @@ export type GLTFAnimationChannelTarget = {
    */
   path: 'translation' | 'rotation' | 'scale' | 'weights' | string;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -156,7 +156,7 @@ export type GLTFAnimationChannel = {
    */
   target: GLTFAnimationChannelTarget;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -177,7 +177,7 @@ export type GLTFAnimationSampler = {
    */
   output: GLTFId;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -195,7 +195,7 @@ export type GLTFAnimation = {
   samplers: GLTFAnimationSampler[];
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -225,7 +225,7 @@ export type GLTFAsset = {
    */
   thumbnail?: GLTFId;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -248,7 +248,7 @@ export type GLTFBuffer = {
   byteLength: number;
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -278,7 +278,7 @@ export type GLTFBufferView = {
   target?: 34962 | 34963 | number;
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -303,7 +303,7 @@ export type GLTFCameraOrthographic = {
    */
   znear: number;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -328,7 +328,7 @@ export type GLTFCameraPerspective = {
    */
   znear: number;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -350,7 +350,7 @@ export type GLTFCamera = {
   type: 'perspective' | 'orthographic' | string;
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -372,7 +372,7 @@ export type GLTFImage = {
   bufferView?: GLTFId;
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -389,7 +389,7 @@ export type GLTFFile = {
   /** Name used to resolve references from embedded packaged assets. */
   name?: string;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -401,7 +401,7 @@ export type GLTFExternalAsset = {
   /** Optional application-facing name for this external asset. */
   name?: string;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -419,7 +419,7 @@ export type GLTFTextureInfo = {
    */
   texCoord?: number;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -464,7 +464,7 @@ export type GLTFMaterialPbrMetallicRoughness = {
    */
   metallicRoughnessTexture?: GLTFTextureInfo;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 export type GLTFMaterialNormalTextureInfo = {
@@ -475,7 +475,7 @@ export type GLTFMaterialNormalTextureInfo = {
    */
   scale?: number;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 export type GLTFMaterialOcclusionTextureInfo = {
@@ -486,7 +486,7 @@ export type GLTFMaterialOcclusionTextureInfo = {
    */
   strength?: number;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -496,7 +496,7 @@ export type GLTFMaterialOcclusionTextureInfo = {
 export type GLTFMaterial = {
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   /**
    * A set of parameter values that are used to define the metallic-roughness material model from Physically-Based Rendering (PBR) methodology. When not specified, all the default values of `pbrMetallicRoughness` apply.
    */
@@ -561,7 +561,7 @@ export type GLTFMeshPrimitive = {
     [k: string]: GLTFId;
   }[];
   extensions?: Record<string, unknown>;
-  extras?: any;
+  extras?: unknown;
   /** Loader-derived primitive-restart topology. This property is not serialized by glTF. */
   primitiveRestart?: import('./gltf-types').GLTFPrimitiveRestartData;
   // [k: string]: any;
@@ -583,7 +583,7 @@ export type GLTFMesh = {
   weights?: number[];
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -633,7 +633,7 @@ export type GLTFNode = {
   weights?: number[];
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -659,7 +659,7 @@ export type GLTFSampler = {
   wrapT?: 33071 | 33648 | 10497 | number;
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -673,7 +673,7 @@ export type GLTFScene = {
   nodes?: GLTFId[];
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -694,7 +694,7 @@ export type GLTFSkin = {
   joints: GLTFId[];
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -708,7 +708,7 @@ export type GLTFTexture = {
   source?: GLTFId;
   name?: any;
   extensions?: Record<string, any>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -828,7 +828,7 @@ export type GLTF_KHR_binary_glTF = {
   mimeType?: string;
   height?: number;
   width?: number;
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -837,7 +837,7 @@ export type GLTF_KHR_binary_glTF = {
 export type GLTF_KHR_draco_mesh_compression = {
   bufferView: GLTFId;
   attributes: {[name: string]: number};
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -845,7 +845,7 @@ export type GLTF_KHR_draco_mesh_compression = {
  */
 export type GLTF_KHR_texture_basisu = {
   source: GLTFId;
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -872,7 +872,7 @@ export type GLTF_EXT_meshopt_compression = {
   /** EXT post-decode filter; defaults to `NONE` and is valid only for `ATTRIBUTES` mode. */
   filter?: 'NONE' | 'OCTAHEDRAL' | 'QUATERNION' | 'EXPONENTIAL';
   /** Application-specific extension data. */
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -901,7 +901,7 @@ export type GLTF_KHR_meshopt_compression = {
   /** KHR post-decode filter; defaults to `NONE` and is valid only for `ATTRIBUTES` mode. */
   filter?: 'NONE' | 'OCTAHEDRAL' | 'QUATERNION' | 'EXPONENTIAL' | 'COLOR';
   /** Application-specific extension data. */
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -909,7 +909,7 @@ export type GLTF_KHR_meshopt_compression = {
  */
 export type GLTF_EXT_texture_webp = {
   source: GLTFId;
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -919,7 +919,7 @@ export type GLTF_EXT_texture_avif = {
   /** Index of the AVIF image used in place of the ordinary texture source. */
   source: GLTFId;
   /** Application-specific extension data. */
-  extras?: any;
+  extras?: unknown;
 };
 
 /**
@@ -927,5 +927,5 @@ export type GLTF_EXT_texture_avif = {
  */
 export type GLTF_MSFT_texture_dds = {
   source: GLTFId;
-  extras?: any;
+  extras?: unknown;
 };

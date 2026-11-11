@@ -44,6 +44,27 @@ export async function selectDeviceBackend(page, backend) {
     throw new Error(`Unsupported backend "${backend}"`);
   }
 
+  const triggers = page.locator('[data-luma-backend-trigger]');
+  if ((await triggers.count()) > 0 && (await triggers.last().isVisible())) {
+    const trigger = triggers.last();
+    const selector = `[data-luma-device-tab="${normalizedBackend}"]`;
+    const tab = page.locator(selector).last();
+    if ((await tab.count()) === 0 || (await isDisabledDeviceTab(tab))) return false;
+    if (await isSelectedDeviceTab(tab)) return true;
+    if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click();
+    const option = page.locator(`[data-luma-backend-option="${normalizedBackend}"]`).last();
+    if (!(await option.isEnabled())) return false;
+    await option.click();
+    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForFunction(
+      backend => document.querySelector(`[data-luma-device-tab="${backend}"]`)
+        ?.getAttribute('data-luma-device-tab-selected') === 'true',
+      normalizedBackend,
+      {timeout: 5000}
+    ).catch(() => {});
+    return await isSelectedDeviceTab(tab);
+  }
+
   const tabSelector = `[data-luma-device-tab="${normalizedBackend}"]`;
   if (typeof page.waitForSelector === 'function') {
     await page

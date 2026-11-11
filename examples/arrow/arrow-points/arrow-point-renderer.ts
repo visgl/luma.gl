@@ -29,10 +29,10 @@ import {
   makeGPUVectorFromArrow,
   convertArrowTemporalToGPUVector,
   type ArrowTemporalType
-} from '@luma.gl/gpgpu/arrow';
+} from '@luma.gl/graph/arrow';
 import type {Device, RenderPass} from '@luma.gl/core';
 import type {PickingManager, PickInfo, PickingShouldPickOptions} from '@luma.gl/engine';
-import {GPUConstant, type GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUConstant, type GPUVector} from '@luma.gl/graph/gpu-data';
 import {GPUTable, type GPURecordBatch} from '@luma.gl/graph/gpu-tables';
 import {type GPUTableModel} from '@luma.gl/engine/tables';
 import * as arrow from 'apache-arrow';

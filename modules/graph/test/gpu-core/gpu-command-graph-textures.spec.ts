@@ -13,7 +13,7 @@ import {
   type SamplerProps
 } from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {Kernel} from '@luma.gl/gpgpu';
+import {Kernel} from '@luma.gl/graph';
 import {
   decodeGPUIndexPickInfo,
   decodeGPUIndexPickRegion,

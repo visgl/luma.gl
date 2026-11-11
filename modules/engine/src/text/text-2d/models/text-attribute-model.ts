@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
 import {type Buffer, type Device, type RenderPass} from '@luma.gl/core';
 import type {ModelProps} from '@luma.gl/engine';
 import type {DynamicTexture} from '@luma.gl/core/dynamic';
-import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/graph/gpu-data';
 import {GPUTableModel, type GPUTableModelProps} from '@luma.gl/engine/tables';
 import type {TextGlyphLayout} from '../model-utils/gpu-text-types';
 import {EXPANDED_GLYPH_VERTEX_DATA} from '../model-utils/text-shaders';
@@ -100,7 +101,15 @@ export class TextAttributeModel extends GPUTableModel {
   }
 
   /** Draws each generated glyph render batch against the supplied render pass. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
+    return options?.parameters
+      ? this._withDrawParameters(renderPass, options.parameters, () =>
+          this.drawTextAttributeModelBatches(renderPass)
+        )
+      : this.drawTextAttributeModelBatches(renderPass);
+  }
+
+  private drawTextAttributeModelBatches(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     try {
       for (const attributeState of this.attributeStates) {

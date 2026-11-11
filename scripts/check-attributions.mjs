@@ -37,7 +37,7 @@ for (const directory of packages) {
     assert(filename.startsWith(packageRoot + path.sep), 'Package notices must stay inside the package');
     assert(existsSync(path.join(repositoryRoot, filename)), 'Broken notice link: ' + filename);
     assert(readText(filename).trim().length > 100, 'Empty notice: ' + filename);
-    const relativeFilename = path.relative(packageRoot, filename);
+    const relativeFilename = path.relative(packageRoot, filename).split(path.sep).join('/');
     requiredFiles.add(relativeFilename);
     assert(
       !manifest.files || manifest.files.some(entry => relativeFilename === entry || relativeFilename.startsWith(entry + '/')),
@@ -49,8 +49,9 @@ for (const directory of packages) {
   }
   // The recorded inventory is independent of editable Markdown links.
   for (const filename of new Set(inventory.sources.flatMap(source => source.notices))) {
-    if (filename.startsWith(packageRoot + '/')) {
-      addRequiredNotice(filename);
+    const nativeFilename = path.normalize(filename);
+    if (nativeFilename.startsWith(packageRoot + path.sep)) {
+      addRequiredNotice(nativeFilename);
     }
   }
 

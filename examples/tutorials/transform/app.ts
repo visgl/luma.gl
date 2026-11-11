@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Framebuffer, type ShaderLayout} from '@luma.gl/core';
-import {makeArrowFixedSizeListVector} from '@luma.gl/gpgpu/arrow';
+import {makeArrowFixedSizeListVector} from '@luma.gl/graph/arrow';
 import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
-import {getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUVectorBuffer, getRequiredGPUVector} from '@luma.gl/graph/gpu-data';
 import {TableTransform} from '@luma.gl/engine/tables';
 import {
   AnimationLoopTemplate,

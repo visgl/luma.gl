@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUVector, type GPUVectorFormat} from '@luma.gl/gpgpu/gpu-data';
+import {GPUVector, type GPUVectorFormat} from '@luma.gl/graph/gpu-data';
 import {DataType, Float64, Vector} from 'apache-arrow';
 
 /** Owned vectors produced from a numeric Arrow column. */

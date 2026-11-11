@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {readFile} from 'node:fs/promises';
+import {parse} from '@loaders.gl/core';
+import {GLTFLoader} from '@loaders.gl/scene/gltf';
 import {
   type GLTFPostprocessed,
+  postProcessGLTF,
   assertSupportedGLTFExtensions,
   createScenegraphsFromGLTF,
   getGLTFExtensionSupport,
@@ -12,13 +16,63 @@ import {
 } from '@luma.gl/engine/gltf';
 import type {TextureFormat} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 
 class CompressedTextureNullDevice extends NullDevice {
   override isTextureFormatSupported(_format: TextureFormat): boolean {
     return true;
   }
 }
+
+it('strict extension validation rejects before creating GPU resources', async () => {
+  const data = await readFile(new URL('../data/CubeVisibility.glb', import.meta.url));
+  const gltf = postProcessGLTF(await parse(data, GLTFLoader, {gltf: {loadImages: false}}));
+  const image = {
+    compressed: true,
+    mipmaps: true,
+    data: [{data: new Uint8Array(16), width: 4, height: 4, textureFormat: 'bc7-rgba-unorm'}]
+  };
+  for (const material of gltf.materials) {
+    material.pbrMetallicRoughness = {
+      ...material.pbrMetallicRoughness,
+      baseColorTexture: {id: 'image', texture: {source: {image}, sampler: {parameters: {}}}} as any
+    };
+  }
+  for (const mesh of gltf.meshes) {
+    for (const primitive of mesh.primitives) {
+      const position = primitive.attributes['POSITION'];
+      primitive.attributes['TEXCOORD_0'] = {
+        ...position,
+        components: 2,
+        value: new Float32Array(position.count * 2)
+      };
+    }
+  }
+  gltf.extensionsUsed = [...(gltf.extensionsUsed || []), 'VENDOR_optional'];
+  gltf.extensionsRequired = [...(gltf.extensionsRequired || []), 'VENDOR_missing'];
+
+  const device = new CompressedTextureNullDevice({});
+  const createBuffer = vi.spyOn(device, 'createBuffer');
+  const createTexture = vi.spyOn(device, 'createTexture');
+  try {
+    expect(() => createScenegraphsFromGLTF(device, gltf, {strictExtensions: true})).toThrow(
+      /VENDOR_missing: Not currently listed/
+    );
+    expect(createBuffer).not.toHaveBeenCalled();
+    expect(createTexture).not.toHaveBeenCalled();
+    expect(getGLTFExtensionSupport(gltf).get('VENDOR_optional')?.required).toBe(false);
+
+    const scenegraphs = createScenegraphsFromGLTF(device, gltf, {strictExtensions: false});
+    try {
+      expect(createBuffer).toHaveBeenCalled();
+      expect(createTexture).toHaveBeenCalled();
+    } finally {
+      scenegraphs.destroy();
+    }
+  } finally {
+    device.destroy();
+  }
+});
 
 type GLTFPostprocessedWithRemovedExtensions = GLTFPostprocessed & {
   extensionsRemoved?: string[];
@@ -185,17 +239,17 @@ it('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summ
     summary,
     'summary is derived from the registry rather than copied into documentation'
   ).toEqual({
-    total: 44,
-    supported: 27,
-    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 7, 'loader-only': 10, none: 7},
+    total: 48,
+    supported: 28,
+    bySupportLevel: {'built-in': 20, 'parsed-and-wired': 8, 'loader-only': 10, none: 10},
     byStandardStatus: {
-      ratified: 26,
+      ratified: 27,
       'release-candidate': 2,
       'multi-vendor': 2,
       vendor: 1,
       draft: 11,
       archived: 2,
-      unknown: 0
+      unknown: 3
     }
   });
   expect(
@@ -207,4 +261,25 @@ it('gltf#getRegisteredGLTFExtensions exposes generated support and maturity summ
     extensions.find(extension => extension.extensionName === 'MSFT_lod')?.standardStatus,
     'vendor extensions retain their source maturity'
   ).toBe('vendor');
+});
+
+it('gltf registry reports new ratified extensions without claiming runtime support', () => {
+  const extensions = getRegisteredGLTFExtensions();
+  for (const name of [
+    'KHR_gaussian_splatting',
+    'KHR_interactivity',
+    'KHR_node_selectability',
+    'KHR_node_hoverability'
+  ]) {
+    expect(extensions.find(extension => extension.extensionName === name)).toMatchObject({
+      standardStatus: 'ratified',
+      supportLevel: 'none',
+      supported: false
+    });
+  }
+  for (const name of ['EXT_texture_avif', 'EXT_mesh_features', 'EXT_structural_metadata']) {
+    expect(extensions.find(extension => extension.extensionName === name)?.standardStatus).toBe(
+      'unknown'
+    );
+  }
 });

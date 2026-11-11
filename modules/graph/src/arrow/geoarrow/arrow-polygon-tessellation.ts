@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {tessellateGeoArrowPolygons} from '@math.gl/geospatial/geoarrow';
+import {tessellateGeoArrowPolygons} from '@math.gl/arrow/geoarrow-utils';
 import {
   DataType,
   DenseUnion,
@@ -19,7 +19,7 @@ import {
   inferGeoArrowDimensionFromArrowType,
   makeGeoArrowColumnFromArrowVector
 } from './arrow-geoarrow-adapter';
-import {type ArrowColorType} from '@luma.gl/gpgpu/arrow';
+import {type ArrowColorType} from '@luma.gl/graph/arrow';
 
 export type ArrowPolygonCoordinateType = FixedSizeList<Float32> | FixedSizeList<Float64>;
 export type ArrowSeparatedPolygonCoordinateType = Struct;

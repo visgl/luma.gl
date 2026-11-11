@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {ModelDrawOptions} from '../../model/gpu-vector-model';
 import {
   Buffer,
   Device,
@@ -20,7 +21,7 @@ import {GPUTableShaderBindings} from '@luma.gl/graph/gpu-tables';
 import type {GPURecordBatch} from '@luma.gl/graph/gpu-tables';
 import {GPU_TABLE_INDEX_COLUMN_NAME} from '@luma.gl/graph/gpu-tables';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
-import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/gpgpu/gpu-data';
+import {getGPUDataBuffersForLayout, getGPUDataByteOffsetsForLayout} from '@luma.gl/graph/gpu-data';
 
 /** Controls which Model draw count mirrors the current GPU table row count. */
 export type GPUTableModelCount = 'instance' | 'vertex' | 'none';
@@ -119,7 +120,7 @@ export class GPUTableModel extends Model {
   }
 
   /** Skips a direct draw while an empty prepared storage range is still bound. */
-  override draw(renderPass: RenderPass): boolean {
+  override draw(renderPass: RenderPass, options?: ModelDrawOptions): boolean {
     const firstBatch = this.tableShaderBindings?.batches[0];
     if (
       firstBatch?.numRows === 0 &&
@@ -130,7 +131,7 @@ export class GPUTableModel extends Model {
     ) {
       return true;
     }
-    return super.draw(renderPass);
+    return super.draw(renderPass, options);
   }
 
   /** Replaces the bound GPU table when one is supplied. */

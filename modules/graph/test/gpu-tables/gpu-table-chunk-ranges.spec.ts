@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
-import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,

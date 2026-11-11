@@ -31,7 +31,7 @@ export type AccessorSparseIndices = {
    */
   componentType: 5121 | 5123 | 5125 | number;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -51,7 +51,7 @@ export type AccessorSparseValues = {
    */
   byteOffset?: number;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -75,7 +75,7 @@ export type AccessorSparse = {
    */
   values: AccessorSparseValues;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -141,7 +141,7 @@ export type GLTFAccessorPostprocessed = {
   sparse?: AccessorSparse;
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -161,7 +161,7 @@ export type AnimationChannelTarget = {
    */
   path: 'translation' | 'rotation' | 'scale' | 'weights' | string;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -181,7 +181,7 @@ export type AnimationChannel = {
    */
   target: AnimationChannelTarget;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -205,7 +205,7 @@ export type AnimationSampler = {
    */
   output: GlTfId;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -222,7 +222,7 @@ export type GLTFAnimationPostprocessed = {
   samplers: AnimationSampler[];
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -253,7 +253,7 @@ export type Asset = {
    */
   thumbnail?: GLTFImagePostprocessed;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -275,7 +275,7 @@ export type GLTFBufferPostprocessed = {
   chunk?: number;
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -309,7 +309,7 @@ export type GLTFBufferViewPostprocessed = {
   target?: 34962 | 34963 | number;
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -337,7 +337,7 @@ export type CameraOrthographic = {
    */
   znear: number;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -365,7 +365,7 @@ export type CameraPerspective = {
    */
   znear: number;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -388,7 +388,7 @@ export type GLTFCameraPostprocessed = {
   type: 'perspective' | 'orthographic' | string;
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -420,7 +420,7 @@ export type GLTFImagePostprocessed = {
   bufferView?: GLTFBufferViewPostprocessed;
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -441,7 +441,7 @@ export type GLTFTextureInfoPostprocessed = {
    */
   texCoord?: number;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -473,7 +473,7 @@ export type MaterialPbrMetallicRoughnessPostprocessed = {
    */
   metallicRoughnessTexture?: GLTFTextureInfoPostprocessed;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -489,7 +489,7 @@ export type MaterialNormalTextureInfoPostprocessed = {
    */
   scale?: number;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -505,7 +505,7 @@ export type MaterialOcclusionTextureInfoPostprocessed = {
    */
   strength?: number;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -518,7 +518,7 @@ export type GLTFMaterialPostprocessed = {
   // GLTF attributes (possibly overridden)
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   /**
    * A set of parameter values that are used to define the metallic-roughness material model from Physically-Based Rendering (PBR) methodology. When not specified, all the default values of `pbrMetallicRoughness` apply.
    */
@@ -582,7 +582,7 @@ export type GLTFMeshPrimitivePostprocessed = {
     [k: string]: GlTfId;
   }[];
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   /** Loader-derived primitive-restart topology. */
   primitiveRestart?: import('./gltf-types').GLTFPrimitiveRestartData;
   // [k: string]: any;
@@ -603,7 +603,7 @@ export type GLTFMeshPostprocessed = {
   weights?: number[];
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -654,7 +654,7 @@ export type GLTFNodePostprocessed = {
   weights?: number[];
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -677,7 +677,7 @@ export type GLTFSamplerPostprocessed = {
   wrapT?: 33071 | 33648 | 10497 | number;
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -692,7 +692,7 @@ export type GLTFScenePostprocessed = {
   nodes?: GLTFNodePostprocessed[];
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -717,7 +717,7 @@ export type GLTFSkinPostprocessed = {
   joints: GlTfId[];
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -738,7 +738,7 @@ export type GLTFTexturePostprocessed = {
   source?: GLTFImagePostprocessed;
   name?: any;
   extensions?: any;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };
 
@@ -747,6 +747,8 @@ export type GLTFTexturePostprocessed = {
  */
 export type GLTFPostprocessed = {
   id?: string;
+  /** Loader-supplied Gaussian descriptors, retaining source primitive identity. */
+  gaussianSplatPrimitives?: import('./gltf-types').GLTFGaussianSplatDescriptor[];
 
   // GLTF attributes (possibly overridden)
   /** Names of glTF extensions used somewhere in this asset. */
@@ -784,6 +786,6 @@ export type GLTFPostprocessed = {
   /** An array of textures. */
   textures: GLTFTexturePostprocessed[];
   extensions?: Record<string, Record<string, any>>;
-  extras?: any;
+  extras?: unknown;
   // [k: string]: any;
 };

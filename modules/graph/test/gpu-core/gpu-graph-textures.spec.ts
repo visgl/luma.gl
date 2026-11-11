@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, Texture} from '@luma.gl/core';
-import {GPUGraph, GPUGraphCompiler} from '@luma.gl/graph/gpu-core';
+import {GPUGraph, GPUGraphCompiler, type GPUOperationLowering} from '@luma.gl/graph/gpu-core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, test, vi} from 'vitest';
 
@@ -41,54 +41,57 @@ test('program texture subresources and rebound imports compose in one submission
     usage: Texture.COPY_DST | Texture.COPY_SRC,
     external: true
   });
-  const compiler = new GPUGraphCompiler(device);
+  const lowerings: GPUOperationLowering[] = [];
   let physicalScratch: Texture | undefined;
-  compiler.lowerings.register('copy', (_operation, context) => {
-    const input = context.resolveTexture(source);
-    const selected = context.resolveTextureView(view);
-    const destination = context.resolveTexture(output);
-    context.graph.addCopyPass({
-      id: 'write-layer-mip',
-      resources: [
-        {texture: input, usage: 'copy-source'},
-        {texture: selected, usage: 'copy-destination'}
-      ],
-      compile: () => ({
-        encode: ({commandEncoder, getTexture}) => {
-          physicalScratch = getTexture(selected);
-          commandEncoder.copyTextureToTexture({
-            sourceTexture: getTexture(input),
-            destinationTexture: physicalScratch,
-            destinationMipLevel: selected.baseMipLevel,
-            destinationOrigin: [0, 0, selected.baseArrayLayer],
-            width: 2,
-            height: 2
-          });
-        }
-      })
-    });
-    context.graph.addCopyPass({
-      id: 'read-layer-mip',
-      resources: [
-        {texture: selected, usage: 'copy-source'},
-        {texture: destination, usage: 'copy-destination'}
-      ],
-      compile: () => ({
-        encode: ({commandEncoder, getTexture}) => {
-          commandEncoder.copyTextureToTexture({
-            sourceTexture: getTexture(selected),
-            mipLevel: selected.baseMipLevel,
-            origin: [0, 0, selected.baseArrayLayer],
-            destinationTexture: getTexture(destination),
-            width: 2,
-            height: 2
-          });
-        }
-      })
-    });
+  lowerings.push({
+    type: 'copy',
+    lower: (_operation, context) => {
+      const input = context.resolveTexture(source);
+      const selected = context.resolveTextureView(view);
+      const destination = context.resolveTexture(output);
+      context.graph.addCopyPass({
+        id: 'write-layer-mip',
+        resources: [
+          {texture: input, usage: 'copy-source'},
+          {texture: selected, usage: 'copy-destination'}
+        ],
+        compile: () => ({
+          encode: ({commandEncoder, getTexture}) => {
+            physicalScratch = getTexture(selected);
+            commandEncoder.copyTextureToTexture({
+              sourceTexture: getTexture(input),
+              destinationTexture: physicalScratch,
+              destinationMipLevel: selected.baseMipLevel,
+              destinationOrigin: [0, 0, selected.baseArrayLayer],
+              width: 2,
+              height: 2
+            });
+          }
+        })
+      });
+      context.graph.addCopyPass({
+        id: 'read-layer-mip',
+        resources: [
+          {texture: selected, usage: 'copy-source'},
+          {texture: destination, usage: 'copy-destination'}
+        ],
+        compile: () => ({
+          encode: ({commandEncoder, getTexture}) => {
+            commandEncoder.copyTextureToTexture({
+              sourceTexture: getTexture(selected),
+              mipLevel: selected.baseMipLevel,
+              origin: [0, 0, selected.baseArrayLayer],
+              destinationTexture: getTexture(destination),
+              width: 2,
+              height: 2
+            });
+          }
+        })
+      });
+    }
   });
   program.add({id: 'copy', type: 'copy'});
-  const compilation = compiler.compile(program);
+  const compilation = new GPUGraphCompiler(device, lowerings).compile(program);
   const compiled = compilation.graph.compile();
   const sources = [37, 191].map(value =>
     device.createTexture({
