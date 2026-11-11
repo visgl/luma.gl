@@ -52,6 +52,14 @@ type ArrowAnalyticsRow = {batchIndex: number; rowIndex: number};
  * Ordinary materialization preserves every source batch, including empty chunks. Optional
  * dataframe selection identities retain those batch boundaries, while explicitly requested global
  * identities produce one intentionally reordered Arrow result batch.
+ *
+ * @example
+ * ```ts
+ * const arrowTable = await makeArrowTableFromGPUAnalyticsTable({
+ *   table: compiled.table,
+ *   validity: compiled.validity
+ * });
+ * ```
  */
 export async function makeArrowTableFromGPUAnalyticsTable<T extends GPUTypeMap>(
   props: ArrowTableFromGPUAnalyticsTableProps<T>

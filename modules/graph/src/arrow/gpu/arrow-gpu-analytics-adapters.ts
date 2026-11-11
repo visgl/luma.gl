@@ -115,6 +115,12 @@ const GPU_ANALYTICS_BUFFER_USAGE =
  * Numeric values and dictionary indices stay in existing `GPUData`, `GPURecordBatch`, `GPUVector`,
  * and `GPUTable` objects. Nullable rows receive separate batch-aligned uint32 validity vectors,
  * while dictionary labels and source null counts remain explicit adapter-owned metadata.
+ *
+ * @example
+ * ```ts
+ * const uploaded = makeGPUAnalyticsTableFromArrowTable(device, arrowTable);
+ * const frame = new GPUDataFrame({...uploaded, ownership: 'owned'});
+ * ```
  */
 export function makeGPUAnalyticsTableFromArrowTable<T extends TypeMap>(
   device: Device,
