@@ -11,8 +11,8 @@ import {
 } from '../../../shadertypes/texture-types/texture-formats';
 import {type ExternalImage} from '../../../shadertypes/image-types/image-types';
 import {type TextureView, type TextureViewProps} from './texture-view';
-import {Resource, type ResourceProps} from './resource';
-import {Sampler, type SamplerProps} from './sampler';
+import {DeviceResource, type DeviceResourceProps} from './device-resource';
+import {Sampler, type SamplerProps, setTextureSampler} from './sampler';
 import {Buffer} from './buffer';
 import {log} from '../../utils/log';
 import {
@@ -187,7 +187,7 @@ const BASE_DIMENSIONS = {
 } as const satisfies Record<string, '1d' | '2d' | '3d'>;
 
 /** Texture properties */
-export type TextureProps = ResourceProps & {
+export type TextureProps = DeviceResourceProps & {
   /** @deprecated Use DynamicTexture to create textures with data. */
   data?: ExternalImage | TypedArray | null;
   /** Dimension of this texture. Defaults to '2d' */
@@ -218,7 +218,7 @@ export type TextureProps = ResourceProps & {
  * Texture Object
  * https://gpuweb.github.io/gpuweb/#gputexture
  */
-export abstract class Texture extends Resource<TextureProps> {
+export abstract class Texture extends DeviceResource<TextureProps> {
   /** The texture can be bound for use as a sampled texture in a shader */
   static SAMPLE = 0x04;
   /** The texture can be bound for use as a storage texture in a shader */
@@ -327,7 +327,7 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /** Set sampler props associated with this texture */
   setSampler(sampler: Sampler | SamplerProps): void {
-    this.sampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
+    setTextureSampler(this, sampler);
   }
 
   /** Create a texture view for this texture */
@@ -728,7 +728,7 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   static override defaultProps: Required<TextureProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     data: null,
     dimension: '2d',
     format: 'rgba8unorm',

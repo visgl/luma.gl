@@ -18,6 +18,9 @@ stable, and destroy the resources your application owns.
 Passes and command encoders are different: they record a unit of work and are not durable scene
 state.
 
+See [Resource ownership](/docs/api-guide/gpu/resource-ownership) for ownership trees, transfers,
+and deterministic cleanup.
+
 ## Resource families
 
 | Family | Purpose | Typical lifetime |

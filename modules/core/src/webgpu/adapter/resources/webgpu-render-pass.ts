@@ -149,10 +149,6 @@ export class WebGPURenderPass extends RenderPass {
     }
   }
 
-  override destroy(): void {
-    this.destroyResource();
-  }
-
   end(): void {
     if (this.destroyed) {
       return;

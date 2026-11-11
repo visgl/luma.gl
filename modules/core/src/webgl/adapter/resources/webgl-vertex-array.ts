@@ -55,8 +55,7 @@ export class WEBGLVertexArray extends VertexArray {
     }
   }
 
-  override destroy(): void {
-    super.destroy();
+  protected override destroyHandle(): void {
     if (this.buffer) {
       this.buffer?.destroy();
     }

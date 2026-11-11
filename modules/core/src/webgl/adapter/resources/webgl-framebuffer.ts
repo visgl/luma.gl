@@ -49,10 +49,7 @@ export class WEBGLFramebuffer extends Framebuffer {
   }
 
   /** destroys any auto created resources etc. */
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
+  protected override destroyHandle(): void {
     if (this.handle !== null && this.ownsHandle) {
       // Deleting a bound framebuffer implicitly unbinds it; keep the state tracker in sync.
       if (this.gl.getParameter(GL.DRAW_FRAMEBUFFER_BINDING) === this.handle) {
@@ -67,7 +64,6 @@ export class WEBGLFramebuffer extends Framebuffer {
       stateTracker?.replaceSavedValue(GL.READ_FRAMEBUFFER_BINDING, this.handle, null);
       this.gl.deleteFramebuffer(this.handle);
     }
-    super.destroy(); // destroys owned resources etc.
   }
 
   protected updateAttachments(): void {
