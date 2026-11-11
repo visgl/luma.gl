@@ -3,7 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {getGPUExpressionLayout, type GPUExpressionNumericFormat} from './gpu-expression-layout';
+import {
+  getGPUVectorWGSLLayout,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
 import {getGPUExpressionCastWGSL, GPU_EXPRESSION_CAST_WGSL} from '../gpu-core/gpu-expression-cast';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUDataFrame} from './gpu-data-frame';
@@ -281,7 +284,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   private emitVector(
     node: Extract<GPUExpressionNode, {kind: 'vector'}>
   ): GPUQueryExpressionShaderValue {
-    const layout = getGPUExpressionLayout(node.format);
+    const layout = getGPUVectorWGSLLayout(node.format);
     if (layout.components === 1 || node.components.length !== layout.components)
       throw new Error('Vector width must match its format');
     const components = node.components.map(component =>
@@ -326,8 +329,8 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     target: GPUExpressionNumericFormat
   ): GPUQueryExpressionShaderValue {
     if (source.format === 'boolean') throw new Error('Numeric casts require numeric inputs');
-    const sourceLayout = getGPUExpressionLayout(source.format);
-    const targetLayout = getGPUExpressionLayout(target);
+    const sourceLayout = getGPUVectorWGSLLayout(source.format);
+    const targetLayout = getGPUVectorWGSLLayout(target);
     if (sourceLayout.components !== targetLayout.components)
       throw new Error('Numeric casts must preserve width');
     if (source.format === target) return source;
@@ -365,7 +368,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     convertInteger = false
   ): GPUQueryExpressionShaderValue {
     const inferred = typeof value === 'boolean' ? 'boolean' : (expected ?? 'float32');
-    if (inferred !== 'boolean' && getGPUExpressionLayout(inferred).components !== 1)
+    if (inferred !== 'boolean' && getGPUVectorWGSLLayout(inferred).components !== 1)
       throw new Error('Scalar literals cannot broadcast to vectors');
     if (value !== null && (typeof value === 'boolean') !== (inferred === 'boolean')) {
       throw new Error('GPUDataFrame expression combines incompatible literal and column formats');
@@ -412,7 +415,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       }
       case 'negate': {
         const format = this.inferFormat(operandNode) ?? expected ?? 'float32';
-        if (format === 'boolean' || getGPUExpressionLayout(format).componentType === 'uint32') {
+        if (format === 'boolean' || getGPUVectorWGSLLayout(format).componentType === 'uint32') {
           throw new Error('GPUDataFrame negation requires a signed numeric expression');
         }
         const operand = this.emit(operandNode, format);
@@ -466,7 +469,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     const right = this.emit(rightNode, format);
     const symbol = getGPUQueryBinaryOperator(operator);
     let value = `(${left.value} ${symbol} ${right.value})`;
-    if (format !== 'boolean' && getGPUExpressionLayout(format).components > 1 && !arithmetic) {
+    if (format !== 'boolean' && getGPUVectorWGSLLayout(format).components > 1 && !arithmetic) {
       if (operator !== 'equal' && operator !== 'not-equal')
         throw new Error('Vector ordering is unsupported');
       value = `${operator === 'equal' ? 'all' : 'any'}(${value})`;
@@ -553,7 +556,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       throw new Error(`GPUDataFrame expression column "${name}" is not a GPU vector`);
     }
     const format = vector?.format ?? field.format;
-    const layout = getGPUExpressionLayout(format as GPUExpressionNumericFormat);
+    const layout = getGPUVectorWGSLLayout(format as GPUExpressionNumericFormat);
     if (
       vector?.data.some(
         chunk =>
@@ -603,7 +606,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
 
 /** Converts a closed scalar format to the corresponding native WGSL scalar type. @internal */
 export function getGPUQueryShaderType(format: GPUQueryValueFormat): string {
-  return format === 'boolean' ? 'bool' : getGPUExpressionLayout(format).shaderType;
+  return format === 'boolean' ? 'bool' : getGPUVectorWGSLLayout(format).shaderType;
 }
 
 /** Maps only known discriminants to WGSL operators without accepting application shader text. */
