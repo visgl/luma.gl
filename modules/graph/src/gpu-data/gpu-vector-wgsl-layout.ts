@@ -41,6 +41,13 @@ export type GPUVectorWGSLLayout = {
  * @param format - Packed 32-bit scalar or vector format.
  * @returns Layout metadata in bytes. The helper does not allocate or modify storage.
  * @throws If the format has no supported 32-bit WGSL representation.
+ *
+ * @example
+ * ```ts
+ * const layout = getGPUVectorWGSLLayout('float32x3');
+ * layout.packedByteStride; // 12
+ * layout.nativeArrayByteStride; // 16
+ * ```
  */
 export function getGPUVectorWGSLLayout(format: GPUVectorWGSLFormat): GPUVectorWGSLLayout {
   const {components, signedDataType, primitiveType, byteLength, elementFormat} =

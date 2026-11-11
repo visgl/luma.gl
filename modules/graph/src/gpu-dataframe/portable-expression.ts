@@ -11,7 +11,19 @@ import {
   type GPUExpressionNumericValue
 } from './gpu-expression';
 
-/** Bridges the supported math.gl SQL/portable AST subset; never evaluates JavaScript callbacks. */
+/**
+ * Converts the supported subset of math.gl's portable AST into a DataFrame expression.
+ *
+ * @example
+ * ```ts
+ * import {parseSQLExpression} from '@math.gl/core/sql';
+ *
+ * const position = makeGPUExpressionFromPortableAST(
+ *   parseSQLExpression('ARRAY[x,y,z]::REAL[3]')
+ * );
+ * const query = frame.withColumn('position', position, {format: 'float32x3'});
+ * ```
+ */
 export function makeGPUExpressionFromPortableAST(
   expression: Expression
 ): GPUExpression<GPUExpressionNumericValue | boolean> {
