@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import type {GPUExpressionNumericFormat} from './gpu-expression-layout';
+import {getGPUExpressionLayout, type GPUExpressionNumericFormat} from './gpu-expression-layout';
 
 /** Numeric values, including fixed-width vectors. */
 export type GPUExpressionNumericValue = number | readonly number[] | null;
@@ -343,7 +343,7 @@ export function vector<Columns extends string>(
   format: GPUExpressionNumericFormat,
   components: readonly GPUExpression<number | null, Columns>[]
 ): GPUExpression<readonly number[] | null, Columns> {
-  const width = Number(format.slice(-1));
+  const width = getGPUExpressionLayout(format).components;
   if (![2, 3, 4].includes(width) || components.length !== width)
     throw new Error('Vector width must match its format');
   return new GPUExpression({

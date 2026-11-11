@@ -53,3 +53,9 @@ describe('GPU dataframe vector syntax and layout', () => {
     }
   });
 });
+
+test('rejects scalar formats in vector constructors', () => {
+  for (const format of ['float32', 'sint32', 'uint32'] as const) {
+    expect(() => vector(format, [literal(1), literal(2)])).toThrow(/width/);
+  }
+});
