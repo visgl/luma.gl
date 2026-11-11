@@ -9,23 +9,11 @@ import {
   literal,
   vector,
   cast,
-  getGPUExpressionLayout,
   makeGPUExpressionFromPortableAST
 } from '@luma.gl/graph/gpu-dataframe';
 import {getGPUExpressionColumnNames} from '../../src/gpu-dataframe/gpu-expression';
 
-describe('GPU dataframe vector syntax and layout', () => {
-  test('separates packed vec3 from native storage array stride', () => {
-    for (const component of ['float32', 'sint32', 'uint32'] as const) {
-      for (const width of [2, 3, 4] as const) {
-        const layout = getGPUExpressionLayout(`${component}x${width}`);
-        expect(layout.packedByteStride).toBe(width * 4);
-        expect(layout.nativeArrayByteStride).toBe(width === 3 ? 16 : width * 4);
-        expect(layout.storageAlignment).toBe(width === 2 ? 8 : 16);
-      }
-    }
-    expect(() => getGPUExpressionLayout('unorm8x4' as any)).toThrow();
-  });
+describe('GPU dataframe vector syntax', () => {
   test('bridges actual SQL arrays and freezes every component', () => {
     const expression = makeGPUExpressionFromPortableAST(
       parseSQLExpression('ARRAY[x,y,z]::REAL[3]')

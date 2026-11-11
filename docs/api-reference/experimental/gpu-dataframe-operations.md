@@ -200,21 +200,10 @@ the underlying WebGPU execution infrastructure.
 
 ## Vector expressions
 
-DataFrame expressions distinguish logical numeric values from physical storage.
-`getGPUExpressionLayout()` describes `float32`, `sint32`, `uint32` and their `x2`,
-`x3`, `x4` forms. Shader values are precisely `f32`/`i32`/`u32` or vectors of those
-components; boolean values remain predicates.
-
-| Components | Packed bytes/row | WGSL alignment | Native WGSL array stride |
-| --- | --- | --- | --- |
-| 1 | 4 | 4 | 4 |
-| 2 | 8 | 8 | 8 |
-| 3 | 12 | 16 | 16 |
-| 4 | 16 | 16 | 16 |
-
-`float32x3` describes packed bytes. It never implies `array<vec3<f32>>` storage.
-Packed arrays can be read through scalar storage arrays and assembled into vector
-values, preserving Arrow FixedSizeList and vertex attribute layouts.
+DataFrame expressions use packed rows for compute and rendering. The compiler
+accesses those rows through scalar storage arrays so Arrow FixedSizeList and
+vertex consumers can use the same bytes. See [GPUVectorFormat and WGSL storage](/docs/api-reference/graph/gpu-vector-format#wgsl-storage-layout)
+for the shared layout rules.
 
 `vector('float32x3', [column('x'), column('y'), column('z')])` creates immutable
 syntax. `cast(expression, format)` requests an explicit numeric conversion.
