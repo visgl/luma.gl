@@ -408,25 +408,24 @@ const BUFFER_BINDING_PARAMETERS: Record<number, GL> = {
 };
 
 // Setter functions intercepted for cache updates
+/** Single-value setters: fixed parameter, fixed boolean, or (parameter, value). */
+export type ScalarSetter = {parameter?: GL; value?: boolean};
+export const GL_SCALAR_SETTERS: Record<string, ScalarSetter> = {
+  enable: {value: true},
+  disable: {value: false},
+  pixelStorei: {},
+  hint: {},
+  clearDepth: {parameter: GL.DEPTH_CLEAR_VALUE},
+  clearStencil: {parameter: GL.STENCIL_CLEAR_VALUE},
+  cullFace: {parameter: GL.CULL_FACE_MODE},
+  depthFunc: {parameter: GL.DEPTH_FUNC},
+  depthMask: {parameter: GL.DEPTH_WRITEMASK},
+  frontFace: {parameter: GL.FRONT_FACE},
+  lineWidth: {parameter: GL.LINE_WIDTH}
+};
+
 export const GL_HOOKED_SETTERS = {
   // GENERIC SETTERS
-
-  enable: (update: UpdateFunc, capability: GL) =>
-    update({
-      [capability]: true
-    }),
-  disable: (update: UpdateFunc, capability: GL) =>
-    update({
-      [capability]: false
-    }),
-  pixelStorei: (update: UpdateFunc, pname: GL, value) =>
-    update({
-      [pname]: value
-    }),
-  hint: (update: UpdateFunc, pname: GL, value: GL) =>
-    update({
-      [pname]: value
-    }),
 
   // SPECIFIC SETTERS
   useProgram: (update: UpdateFunc, value) =>
@@ -509,49 +508,14 @@ export const GL_HOOKED_SETTERS = {
       [GL.COLOR_CLEAR_VALUE]: new Float32Array([r, g, b, a])
     }),
 
-  clearDepth: (update: UpdateFunc, depth: number) =>
-    update({
-      [GL.DEPTH_CLEAR_VALUE]: depth
-    }),
-
-  clearStencil: (update: UpdateFunc, s: number) =>
-    update({
-      [GL.STENCIL_CLEAR_VALUE]: s
-    }),
-
   colorMask: (update: UpdateFunc, r: number, g: number, b: number, a: number) =>
     update({
       [GL.COLOR_WRITEMASK]: [r, g, b, a]
     }),
 
-  cullFace: (update: UpdateFunc, mode) =>
-    update({
-      [GL.CULL_FACE_MODE]: mode
-    }),
-
-  depthFunc: (update: UpdateFunc, func) =>
-    update({
-      [GL.DEPTH_FUNC]: func
-    }),
-
   depthRange: (update: UpdateFunc, zNear: number, zFar: number) =>
     update({
       [GL.DEPTH_RANGE]: new Float32Array([zNear, zFar])
-    }),
-
-  depthMask: (update: UpdateFunc, mask: number) =>
-    update({
-      [GL.DEPTH_WRITEMASK]: mask
-    }),
-
-  frontFace: (update: UpdateFunc, face) =>
-    update({
-      [GL.FRONT_FACE]: face
-    }),
-
-  lineWidth: (update: UpdateFunc, width) =>
-    update({
-      [GL.LINE_WIDTH]: width
     }),
 
   polygonOffset: (update: UpdateFunc, factor, units) =>

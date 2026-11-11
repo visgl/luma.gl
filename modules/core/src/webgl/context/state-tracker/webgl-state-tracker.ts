@@ -10,6 +10,8 @@ import {GL} from '../../../webgl-constants/index';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_HOOKED_SETTERS,
+  GL_SCALAR_SETTERS,
+  type ScalarSetter,
   NON_CACHE_PARAMETERS
 } from '../parameters/webgl-parameter-tables';
 
@@ -115,9 +117,27 @@ export class WebGLStateTracker {
       installSetterSpy(gl, key, setter);
     }
 
+    for (const key in GL_SCALAR_SETTERS) {
+      installScalarSetterSpy(gl, key, GL_SCALAR_SETTERS[key]);
+    }
+
     // intercept all getter functions in the table
     installGetterOverride(gl, 'getParameter');
     installGetterOverride(gl, 'isEnabled');
+  }
+
+  /** Update one scalar parameter without temporary parameter or result objects. */
+  _updateScalar(parameter: number, value: number | boolean): boolean {
+    const cached = this.cache[parameter];
+    if (value === cached) {
+      return false;
+    }
+    const oldValues = this.stateStack[this.stateStack.length - 1];
+    if (oldValues && !(parameter in oldValues)) {
+      oldValues[parameter] = cached;
+    }
+    this.cache[parameter] = value;
+    return true;
   }
 
   /**
@@ -239,6 +259,33 @@ function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, sett
   };
 
   // Set the name of this anonymous function to help in debugging and profiling
+  Object.defineProperty(gl[functionName], 'name', {
+    value: `${functionName}-to-cache`,
+    configurable: false
+  });
+}
+
+/** Fixed arguments avoid per-call arrays, parameter maps, and result objects. */
+function installScalarSetterSpy(
+  gl: WebGL2RenderingContext,
+  functionName: string,
+  setter: ScalarSetter
+): void {
+  if (!gl[functionName]) {
+    return;
+  }
+  const originalSetter = gl[functionName].bind(gl);
+  gl[functionName] = function setScalar(first: number | boolean, second?: number | boolean) {
+    const parameter = setter.parameter ?? first;
+    const value = setter.value ?? (setter.parameter === undefined ? second : first);
+    const state = WebGLStateTracker.get(gl);
+    const oldValue = state.cache[parameter];
+    if (state._updateScalar(parameter, value)) {
+      originalSetter(first, second);
+      return oldValue;
+    }
+    return undefined;
+  };
   Object.defineProperty(gl[functionName], 'name', {
     value: `${functionName}-to-cache`,
     configurable: false
