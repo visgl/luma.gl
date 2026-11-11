@@ -66,6 +66,8 @@ export {CompiledGPUDataFrameJoin, CompiledGPUDataFrameLookup} from './gpu-join-c
 
 export {vector, cast} from './gpu-expression';
 export type {GPUExpressionNumericValue} from './gpu-expression';
-export {getGPUExpressionLayout} from './gpu-expression-layout';
-export type {GPUExpressionNumericFormat, GPUExpressionScalarFormat} from './gpu-expression-layout';
+export type {
+  GPUVectorWGSLFormat as GPUExpressionNumericFormat,
+  GPUVectorWGSLScalarFormat as GPUExpressionScalarFormat
+} from '@luma.gl/graph/gpu-data';
 export {makeGPUExpressionFromPortableAST} from './portable-expression';

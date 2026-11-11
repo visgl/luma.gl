@@ -4,8 +4,10 @@
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
 import type {GPUExpressionNumericValue} from './gpu-expression';
-import type {GPUExpressionNumericFormat} from './gpu-expression-layout';
-import {getGPUExpressionLayout} from './gpu-expression-layout';
+import {
+  getGPUVectorWGSLLayout,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import type {GPUDataFrame} from './gpu-data-frame';
@@ -491,12 +493,12 @@ function inferNumericFormat(
 ): GPUExpressionNumericFormat | undefined {
   switch (node.kind) {
     case 'vector': {
-      const layout = getGPUExpressionLayout(node.format);
+      const layout = getGPUVectorWGSLLayout(node.format);
       if (layout.components === 1 || node.components.length !== layout.components)
         throw new Error('Vector width must match its format');
       for (const component of node.components) {
         if (
-          getGPUExpressionLayout(inferNumericFormat(component, formats) ?? 'float32').components !==
+          getGPUVectorWGSLLayout(inferNumericFormat(component, formats) ?? 'float32').components !==
           1
         )
           throw new Error('Vector components must be scalar');
@@ -506,14 +508,14 @@ function inferNumericFormat(
     case 'cast': {
       const source = inferNumericFormat(node.operand, formats) ?? 'float32';
       if (
-        getGPUExpressionLayout(source).components !== getGPUExpressionLayout(node.format).components
+        getGPUVectorWGSLLayout(source).components !== getGPUVectorWGSLLayout(node.format).components
       )
         throw new Error('Numeric casts must preserve width');
       return node.format;
     }
     case 'column': {
       const format = formats.get(node.name) as GPUExpressionNumericFormat;
-      getGPUExpressionLayout(format);
+      getGPUVectorWGSLLayout(format);
       return format;
     }
     case 'literal':

@@ -10,7 +10,10 @@ import {
   type CommandEncoder,
   type Device
 } from '@luma.gl/core';
-import {getGPUExpressionLayout, type GPUExpressionNumericFormat} from './gpu-expression-layout';
+import {
+  getGPUVectorWGSLLayout,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
 import {Kernel} from '../execution/compute/kernel';
 import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
@@ -432,7 +435,7 @@ function createGPUQueryOutputVector<Format extends GPUExpressionNumericFormat>(
     for (const [batchIndex, length] of lengths.entries()) {
       const buffer = device.createBuffer({
         id: `${name}-batch-${batchIndex}`,
-        byteLength: Math.max(length, 1) * getGPUExpressionLayout(format).packedByteStride,
+        byteLength: Math.max(length, 1) * getGPUVectorWGSLLayout(format).packedByteStride,
         usage:
           Buffer.STORAGE |
           Buffer.COPY_SRC |
@@ -509,7 +512,7 @@ function createGPUQueryDerivedTable<Result extends GPUTypeMap>(
         {
           name,
           format: output.plan.format,
-          byteStride: getGPUExpressionLayout(output.plan.format).packedByteStride
+          byteStride: getGPUVectorWGSLLayout(output.plan.format).packedByteStride
         }
       ];
     }
@@ -694,9 +697,9 @@ function addGPUQueryPredicatePass(
       `const INPUT_${column.index}_OFFSET: u32 = ${getViewElementOffset(values)}u;`
     );
     declarations.push(
-      `@group(0) @binding(${bindingIndex++}) var<storage, read> input${column.index}: array<${getGPUExpressionLayout(column.format).scalarType}>;`
+      `@group(0) @binding(${bindingIndex++}) var<storage, read> input${column.index}: array<${getGPUVectorWGSLLayout(column.format).scalarType}>;`
     );
-    const layout = getGPUExpressionLayout(column.format);
+    const layout = getGPUVectorWGSLLayout(column.format);
     const components = Array.from(
       {length: layout.components},
       (_, component) =>
@@ -744,11 +747,11 @@ function addGPUQueryPredicatePass(
       `const DERIVED_${output.index}_OFFSET: u32 = ${getViewElementOffset(values)}u;`
     );
     declarations.push(
-      `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derived${output.index}: array<${getGPUExpressionLayout(output.format).scalarType}>;`
+      `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derived${output.index}: array<${getGPUVectorWGSLLayout(output.format).scalarType}>;`
     );
     bindings[`derived${output.index}`] = values;
     resources.push({buffer: values, usage: 'storage-write'});
-    const layout = getGPUExpressionLayout(output.format);
+    const layout = getGPUVectorWGSLLayout(output.format);
     for (let component = 0; component < layout.components; component++) {
       derivedWrites.push(
         `derived${output.index}[DERIVED_${output.index}_OFFSET + index * ${layout.components}u + ${component}u] = ${layout.components === 1 ? output.value : `${output.value}[${component}]`};`
