@@ -6,6 +6,7 @@ import {expect, it} from 'vitest';
 import {
   makeArrowFixedSizeListVector,
   makeCPUVectorFromArrow,
+  convertArrowToGPUVector,
   makeGPUDataFromArrowData,
   makeGPUVectorFromArrow,
   readArrowGPUDataAsync,
@@ -914,5 +915,50 @@ it('general-purpose WebGPU vector uploads preserve bytes and enable indirect and
     }
   } finally {
     for (const vector of uploaded) vector.destroy();
+  }
+});
+
+it('converted and packed WebGPU uint16 columns retain their index width', async ({skip}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    skip();
+    return;
+  }
+
+  const converted = await convertArrowToGPUVector(
+    device,
+    arrow.vectorFromArray([1, 2], new arrow.Uint32()),
+    {format: 'uint16'}
+  );
+  try {
+    expect(converted.plan.backend).toBe('webgpu');
+    const backing = converted.vector.data[0].buffer;
+    const buffer = backing instanceof Buffer ? backing : backing.buffer;
+    expect(buffer.usage & Buffer.INDEX).toBe(Buffer.INDEX);
+    expect(buffer.indexType).toBe('uint16');
+  } finally {
+    converted.destroy();
+  }
+
+  const first = new arrow.Table({values: arrow.vectorFromArray([1, 2], new arrow.Uint16())});
+  const second = new arrow.Table({values: arrow.vectorFromArray([3, 4], new arrow.Uint16())});
+  const table = makeGPUTableFromArrowTable(
+    device,
+    new arrow.Table([...first.batches, ...second.batches]),
+    {
+      shaderLayout: makeStorageShaderLayout('values')
+    }
+  );
+  try {
+    table.packBatches();
+    const backing = table.batches[0].gpuData.values.buffer;
+    const buffer = backing instanceof Buffer ? backing : backing.buffer;
+    expect(buffer.usage & Buffer.INDEX).toBe(Buffer.INDEX);
+    expect(buffer.indexType).toBe('uint16');
+    expect(Array.from(new Uint16Array((await buffer.readAsync(0, 8)).slice().buffer))).toEqual([
+      1, 2, 3, 4
+    ]);
+  } finally {
+    table.destroy();
   }
 });

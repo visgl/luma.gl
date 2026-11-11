@@ -546,7 +546,7 @@ function createPackedGPURecordBatch(
       0
     );
     const buffer = device.createBuffer({
-      ...getGPUDataBufferProps(device),
+      ...getGPUDataBufferProps(device, firstData.format === 'uint16' ? 'uint16' : 'uint32'),
       byteLength
     });
     let destinationOffset = 0;

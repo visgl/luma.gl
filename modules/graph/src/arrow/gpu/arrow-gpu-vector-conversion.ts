@@ -847,7 +847,7 @@ async function convertArrowNumericVectorOnGPU(
       const outputBuffer = device.createBuffer({
         ...options.bufferProps,
         id: `${options.name}-${chunkIndex}`,
-        ...getGPUDataBufferProps(device),
+        ...getGPUDataBufferProps(device, targetElementFormat === 'uint16' ? 'uint16' : 'uint32'),
         byteLength: Math.max(4, converted.byteLength)
       });
       outputBuffers.push(outputBuffer);
