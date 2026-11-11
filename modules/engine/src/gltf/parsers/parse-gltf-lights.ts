@@ -4,13 +4,46 @@
 
 import {Matrix4} from '@math.gl/core';
 import type {GLTFNodePostprocessed, GLTFPostprocessed} from '../types/gltf-postprocessed-schema';
+import type {Light} from '@luma.gl/shaders';
 import {
-  normalizeByteColor3,
-  type DirectionalLight,
-  type Light,
-  type PointLight,
-  type SpotLight
-} from '@luma.gl/shaders';
+  makePunctualLight,
+  type PunctualLightBinding,
+  type PunctualLightDefinition
+} from '../../scenegraph/controllers/punctual-light-controller';
+import type {ScenegraphNode} from '../../scenegraph/scenegraph-node';
+
+/** Resolves source light references to paths of runtime nodes during import. */
+export function bindGLTFPunctualLights(
+  nodes: GLTFNodePostprocessed[],
+  runtimeNodes: ReadonlyMap<string, ScenegraphNode>,
+  definitions: readonly PunctualLightDefinition[]
+): PunctualLightBinding[] {
+  if (!definitions.length) return [];
+  const parents = createParentNodeMap(nodes);
+  const bindings: PunctualLightBinding[] = [];
+  for (const node of nodes) {
+    const lightIndex = getLightIndex(node);
+    const definition = lightIndex === undefined ? undefined : definitions[lightIndex];
+    if (!definition) continue;
+    const path: ScenegraphNode[] = [];
+    let source: GLTFNodePostprocessed | undefined = node;
+    while (source && path.length < nodes.length) {
+      const runtime = runtimeNodes.get(source.id);
+      if (!runtime) break;
+      path.push(runtime);
+      source = parents.get(source.id);
+    }
+    if (!source) bindings.push({path: path.reverse(), definition});
+  }
+  return bindings;
+}
+
+function getLightIndex(node: GLTFNodePostprocessed): number | undefined {
+  return (
+    (node as GLTFNodePostprocessed & {light?: number}).light ??
+    node.extensions?.['KHR_lights_punctual']?.light
+  );
+}
 
 export type ParseGLTFLightsOptions = {
   /** Restricts authored lights to nodes belonging to the selected scene hierarchy. */
@@ -46,9 +79,7 @@ export function parseGLTFLights(
       continue;
     }
 
-    const lightIndex =
-      (node as GLTFNodePostprocessed & {light?: number}).light ??
-      node.extensions?.KHR_lights_punctual?.light;
+    const lightIndex = getLightIndex(node);
     if (
       typeof lightIndex !== 'number' ||
       (options.nodeIdentifiers && !options.nodeIdentifiers.has(node.id))
@@ -62,28 +93,9 @@ export function parseGLTFLights(
       continue;
     }
 
-    const color = normalizeGLTFLightColor(
-      (gltfLight.color || [1, 1, 1]) as [number, number, number],
-      options.useByteColors ?? true
-    );
-    const intensity = gltfLight.intensity ?? 1;
-    const range = gltfLight.range;
     const worldMatrix = getNodeWorldMatrix(node, parentNodeById, worldMatrixByNodeId);
-
-    switch (gltfLight.type) {
-      case 'directional':
-        lights.push(parseDirectionalLight(worldMatrix, color, intensity));
-        break;
-      case 'point':
-        lights.push(parsePointLight(worldMatrix, color, intensity, range));
-        break;
-      case 'spot':
-        lights.push(parseSpotLight(worldMatrix, color, intensity, range, gltfLight.spot));
-        break;
-      default:
-        // Unsupported light type
-        break;
-    }
+    const light = makePunctualLight(gltfLight, worldMatrix, options.useByteColors ?? true);
+    if (light) lights.push(light);
   }
 
   return lights;
@@ -108,92 +120,6 @@ function isNodeVisible(
     currentNode = parentNodeById.get(currentNode.id);
   }
   return true;
-}
-
-/**
- * Converts glTF colors from the 0-1 spec range to the configured luma light convention.
- */
-function normalizeGLTFLightColor(
-  color: [number, number, number],
-  useByteColors: boolean
-): [number, number, number] {
-  if (useByteColors) {
-    return color.map(component => component * 255) as [number, number, number];
-  }
-  return normalizeByteColor3(color, false) as [number, number, number];
-}
-
-/**
- * Converts a glTF punctual light attached to a node into a point light.
- */
-function parsePointLight(
-  worldMatrix: Matrix4,
-  color: [number, number, number],
-  intensity: number,
-  range?: number
-): PointLight {
-  const position = getLightPosition(worldMatrix);
-
-  let attenuation: Readonly<[number, number, number]> = [1, 0, 0];
-  if (range !== undefined && range > 0) {
-    attenuation = [1, 0, 1 / (range * range)] as [number, number, number];
-  }
-
-  return {
-    type: 'point',
-    position,
-    color,
-    intensity,
-    attenuation
-  };
-}
-
-/**
- * Converts a glTF punctual light attached to a node into a directional light.
- */
-function parseDirectionalLight(
-  worldMatrix: Matrix4,
-  color: [number, number, number],
-  intensity: number
-): DirectionalLight {
-  const direction = getLightDirection(worldMatrix);
-
-  return {
-    type: 'directional',
-    direction,
-    color,
-    intensity
-  };
-}
-
-/**
- * Converts a glTF punctual light attached to a node into a spot light.
- */
-function parseSpotLight(
-  worldMatrix: Matrix4,
-  color: [number, number, number],
-  intensity: number,
-  range?: number,
-  spot: {innerConeAngle?: number; outerConeAngle?: number} = {}
-): SpotLight {
-  const position = getLightPosition(worldMatrix);
-  const direction = getLightDirection(worldMatrix);
-
-  let attenuation: Readonly<[number, number, number]> = [1, 0, 0];
-  if (range !== undefined && range > 0) {
-    attenuation = [1, 0, 1 / (range * range)] as [number, number, number];
-  }
-
-  return {
-    type: 'spot',
-    position,
-    direction,
-    color,
-    intensity,
-    attenuation,
-    innerConeAngle: spot.innerConeAngle ?? 0,
-    outerConeAngle: spot.outerConeAngle ?? Math.PI / 4
-  };
 }
 
 /**
@@ -259,18 +185,4 @@ function getNodeLocalMatrix(node: GLTFNodePostprocessed): Matrix4 {
   }
 
   return matrix;
-}
-
-/**
- * Resolves the world-space position of a glTF light node.
- */
-function getLightPosition(worldMatrix: Matrix4): [number, number, number] {
-  return worldMatrix.transformAsPoint([0, 0, 0]) as [number, number, number];
-}
-
-/**
- * Resolves the world-space forward direction of a glTF light node.
- */
-function getLightDirection(worldMatrix: Matrix4): [number, number, number] {
-  return worldMatrix.transformAsVector([0, 0, -1]) as [number, number, number];
 }

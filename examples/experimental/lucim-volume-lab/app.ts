@@ -9,13 +9,13 @@ import {makeVolumeLabDataset, type VolumeLabDataset} from './volume-lab-data';
 import {VolumeLabEngine} from './volume-lab-engine';
 import {VolumeLabRenderer, type VolumeLabDisplaySettings} from './volume-lab-renderer';
 
-export const title = 'LuCIM Volume Lab';
+export const title = 'GPU Volume Algorithms Volume Lab';
 export const description =
   'GPU-resident thresholding, 3D morphology, connected components, and region measurements on a synthetic CT-like phantom.';
 
 type VolumeLabAnimationProps = AnimationProps & {dataset?: VolumeLabDataset};
 
-/** Interactive tri-planar inspection of one reusable LuCIM segmentation graph. */
+/** Interactive tri-planar inspection of one reusable GPU Volume Algorithms segmentation graph. */
 export default class VolumeLabAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = VOLUME_LAB_INFO_HTML;
   static props = {debug: true};
@@ -34,7 +34,7 @@ export default class VolumeLabAnimationLoopTemplate extends AnimationLoopTemplat
   constructor({device, dataset}: VolumeLabAnimationProps) {
     super();
     if (device.type !== 'webgpu') {
-      throw new Error('LuCIM Volume Lab requires WebGPU');
+      throw new Error('GPU Volume Algorithms Volume Lab requires WebGPU');
     }
     this.device = device;
     this.dataset = dataset ?? makeVolumeLabDataset();

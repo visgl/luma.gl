@@ -207,6 +207,9 @@
       },
       "api/multi-canvas",
       "api/cubemap",
+      "api/prefiltered-environment",
+      "api/pbr-shadows",
+      "api/lightmap-baking",
       "api/texture-3d",
       {
         "type": "doc",
@@ -251,7 +254,7 @@
       "tutorials/instanced-cubes",
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
-      "tutorials/shader-hooks",
+      "tutorials/shader-injection",
       "tutorials/shader-plugins",
       "tutorials/slang-shaders",
       "tutorials/slang-particles",
@@ -339,8 +342,8 @@
     "items": [
       {
         "type": "doc",
-        "id": "deck/luspatial-taxi",
-        "label": "luProj + luSpatial: Taxi Explorer"
+        "id": "deck/gpu-spatial-taxi",
+        "label": "GPU Project + GPU Spatial: Taxi Explorer"
       },
       {
         "type": "doc",

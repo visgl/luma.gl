@@ -61,7 +61,7 @@ const FRAMEWORK_MODULES: readonly FrameworkModule[] = [
     description:
       'Describe declarative 3D scenes with glTF and OpenUSD, then switch renderers without rebuilding the world.',
     capabilities: ['glTF', 'OpenUSD', 'Renderers'],
-    documentationPath: 'docs/api-reference/scene'
+    documentationPath: 'docs/api-reference/anari'
   },
   {
     id: 'splats',

@@ -34,7 +34,7 @@ const textureView = texture.createView({...});
 
 ### TextureViewProps
 
-Views inherit [ResourceProps](resource.md#resourceprops). `texture.createView()` accepts
+Views inherit [DeviceResourceProps](device-resource.md#deviceresourceprops). `texture.createView()` accepts
 partial view properties; omitted ranges are resolved by the backend from the texture.
 
 | Property | Type | Description |

@@ -4,8 +4,8 @@
 
 import {type PlatformInfo} from './platform-info';
 import {type ShaderModule} from '../shader-module/shader-module';
-import {type ShaderHook} from './shader-hooks';
-import {type ShaderInjection} from './shader-injections';
+import {type ShaderInjectionTarget} from './shader-injection-targets';
+import {type ShaderInjection, type ResolvedShaderInjection} from './shader-injections';
 import {type AttributeShaderType} from '../../types';
 import {type ResolvedShaderPluginInterStageVariable} from '../shader-plugin';
 
@@ -44,14 +44,14 @@ export type AssembleShaderOptions = {
   defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
-  /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
-  hookFunctions?: readonly (ShaderHook | string)[];
-  /** Hook declarations contributed by resolved plugins. */
-  pluginHooks?: readonly ShaderHook[];
+  /** Per-call injection targets, appended after registered assembler targets; matching names override for this call. */
+  injectionTargets?: readonly ShaderInjectionTarget[];
+  /** Injection target declarations contributed by resolved plugins. */
+  pluginInjectionTargets?: readonly ShaderInjectionTarget[];
   /** Code injections */
-  inject?: Record<string, string | ShaderInjection>;
+  inject?: readonly ShaderInjection[] | Record<string, string | ResolvedShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
-  pluginInjections?: Record<string, ShaderInjection[]>;
+  pluginInjections?: Record<string, ResolvedShaderInjection[]>;
   /** Vertex inputs contributed by ShaderPlugin descriptors. */
   pluginVertexInputs?: Record<string, AttributeShaderType>;
   /** Inter-stage variables contributed by ShaderPlugin descriptors. */
@@ -80,14 +80,14 @@ export type AssembleStageOptions = {
   defines?: Record<string, boolean | number>;
   /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
   constants?: Record<string, number>;
-  /** Per-call hooks, appended after registered assembler hooks; matching names override for this call. */
-  hookFunctions?: readonly (ShaderHook | string)[];
-  /** Hook declarations contributed by resolved plugins. */
-  pluginHooks?: readonly ShaderHook[];
+  /** Per-call injection targets, appended after registered assembler targets; matching names override for this call. */
+  injectionTargets?: readonly ShaderInjectionTarget[];
+  /** Injection target declarations contributed by resolved plugins. */
+  pluginInjectionTargets?: readonly ShaderInjectionTarget[];
   /** Code injections */
-  inject?: Record<string, string | ShaderInjection>;
+  inject?: readonly ShaderInjection[] | Record<string, string | ResolvedShaderInjection>;
   /** Ordered code injections contributed by ShaderPlugin descriptors. */
-  pluginInjections?: Record<string, ShaderInjection[]>;
+  pluginInjections?: Record<string, ResolvedShaderInjection[]>;
   /** Vertex inputs contributed by ShaderPlugin descriptors. */
   pluginVertexInputs?: Record<string, AttributeShaderType>;
   /** Inter-stage variables contributed by ShaderPlugin descriptors. */

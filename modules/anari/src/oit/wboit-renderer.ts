@@ -147,7 +147,7 @@ export class WBOITRenderer {
     const opaqueDepthPass = this.device.beginRenderPass({
       id: makeWBOITResourceId('wboit-opaque-depth'),
       framebuffer: this.renderTargets.accumulationFramebuffer,
-      parameters: {colorMask: 0},
+      // The accumulation pass clears this color attachment again before using it.
       clearColor: [0, 0, 0, 0],
       clearDepth: 1
     });

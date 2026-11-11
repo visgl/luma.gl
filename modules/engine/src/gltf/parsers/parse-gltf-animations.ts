@@ -249,10 +249,21 @@ function parseNodePointerAnimationChannel(
     pointerSegments[2] === 'extensions' &&
     pointerSegments[3] === 'KHR_node_visibility' &&
     pointerSegments[4] === 'visible';
-  if (pointerSegments.length !== 3 && !isVisibilityPointer) {
+  const isSelectablePointer =
+    pointerSegments.length === 5 &&
+    pointerSegments[2] === 'extensions' &&
+    pointerSegments[3] === 'KHR_node_selectability' &&
+    pointerSegments[4] === 'selectable';
+  const isHoverablePointer =
+    pointerSegments.length === 5 &&
+    pointerSegments[2] === 'extensions' &&
+    pointerSegments[3] === 'KHR_node_hoverability' &&
+    pointerSegments[4] === 'hoverable';
+  const isBooleanPointer = isVisibilityPointer || isSelectablePointer || isHoverablePointer;
+  if (pointerSegments.length !== 3 && !isBooleanPointer) {
     warnUnsupportedAnimationPointer(
       pointer,
-      'node pointers must target transforms, morph weights, or KHR_node_visibility.visible'
+      'node pointers must target transforms, morph weights, visibility, selectability, or hoverability'
     );
     return null;
   }
@@ -266,15 +277,18 @@ function parseNodePointerAnimationChannel(
     return null;
   }
 
-  if (isVisibilityPointer && sampler.interpolation !== 'STEP') {
-    warnUnsupportedAnimationPointer(
-      pointer,
-      'boolean visibility animation requires STEP interpolation'
-    );
+  if (isBooleanPointer && sampler.interpolation !== 'STEP') {
+    warnUnsupportedAnimationPointer(pointer, 'boolean node animation requires STEP interpolation');
     return null;
   }
 
-  const path = isVisibilityPointer ? 'visibility' : getNodeAnimationPath(pointerSegments[2]);
+  const path = isVisibilityPointer
+    ? 'visibility'
+    : isSelectablePointer
+      ? 'selectable'
+      : isHoverablePointer
+        ? 'hoverable'
+        : getNodeAnimationPath(pointerSegments[2]);
   if (!path) {
     warnUnsupportedAnimationPointer(
       pointer,

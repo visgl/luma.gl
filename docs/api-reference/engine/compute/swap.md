@@ -18,7 +18,7 @@ swapBuffers.swap();
 
 ## Classes
 
-### `Swap<T extends Resource>`
+### `Swap<T extends DeviceResource>`
 
 Generic double-buffer helper for two structurally compatible resources.
 

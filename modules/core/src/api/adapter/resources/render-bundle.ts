@@ -9,10 +9,10 @@ import type {
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 import {RenderPass, RenderPassProps} from './render-pass';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 
 /** Properties used to configure a {@link RenderBundleEncoder}. */
-export type RenderBundleEncoderProps = ResourceProps & {
+export type RenderBundleEncoderProps = DeviceResourceProps & {
   /**
    * Color attachment formats required by render passes that execute the finished bundle.
    * @defaultValue `[device.preferredColorFormat]`
@@ -50,17 +50,17 @@ export type RenderBundleEncoderProps = ResourceProps & {
  * bundles are not constructed directly. A render bundle inherits its encoder's `id` and
  * `userData`, and can be replayed more than once by compatible render passes.
  */
-export abstract class RenderBundle extends Resource<ResourceProps> {
+export abstract class RenderBundle extends DeviceResource<DeviceResourceProps> {
   override get [Symbol.toStringTag](): string {
     return 'RenderBundle';
   }
 
-  constructor(device: Device, props: ResourceProps) {
+  constructor(device: Device, props: DeviceResourceProps) {
     super(device, props, RenderBundle.defaultProps);
   }
 
-  static override defaultProps: Required<ResourceProps> = {
-    ...Resource.defaultProps
+  static override defaultProps: Required<DeviceResourceProps> = {
+    ...DeviceResource.defaultProps
   };
 }
 
@@ -104,12 +104,17 @@ export abstract class RenderBundleEncoder extends RenderPass {
     throw new Error('RenderBundleEncoder.end() is not supported; call finish() instead');
   }
 
+  /** Render bundles inherit dynamic state from the executing pass and have no snapshot. */
+  override getParameters(): never {
+    return this.setParameters({});
+  }
+
   /**
    * Render bundle encoders do not support render-pass dynamic state.
    * @throws Always throws.
    */
-  override setParameters(_parameters: RenderPassParameters): void {
-    throw new Error('RenderBundleEncoder.setParameters() is not supported');
+  override setParameters(_parameters: RenderPassParameters): never {
+    throw new Error('Render bundles cannot set parameters');
   }
 
   /**

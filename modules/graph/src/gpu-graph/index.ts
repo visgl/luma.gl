@@ -74,3 +74,11 @@ export type {
 } from '../gpu-core/gpu-operation-contract';
 
 export {CompiledGPUGraph, PreparedGPUGraphExecution} from '../gpu-core/compiled-gpu-graph';
+
+export {GPUCPUOperation} from '../gpu-core/gpu-cpu-operation';
+export type {
+  GPUCPUOperationProps,
+  GPUCPUArray,
+  GPUCPUVector,
+  GPUCPUResult
+} from '../gpu-core/gpu-cpu-operation';

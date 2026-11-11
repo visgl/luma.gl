@@ -30,7 +30,8 @@ export type {PresentationContextProps} from './adapter/presentation-context';
 
 export {PresentationContext} from './adapter/presentation-context';
 
-export {Resource, type ResourceProps} from './adapter/resources/resource';
+export {Resource} from './adapter/resources/resource';
+export {DeviceResource, type DeviceResourceProps} from './adapter/resources/device-resource';
 
 export {Buffer, type BufferProps, type BufferMapCallback} from './adapter/resources/buffer';
 

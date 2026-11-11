@@ -8,12 +8,12 @@ import type {
   TextureFormat
 } from '../../../shadertypes/texture-types/texture-formats';
 import type {Device} from '../device';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {Texture} from './texture';
 import {TextureView} from './texture-view';
 import {log} from '../../utils/log';
 
-export type FramebufferProps = ResourceProps & {
+export type FramebufferProps = DeviceResourceProps & {
   width?: number;
   height?: number;
   colorAttachments?: (TextureView | Texture | TextureFormatColor)[];
@@ -24,7 +24,7 @@ export type FramebufferProps = ResourceProps & {
  * Create new textures with correct size for all attachments.
  * @note resize() destroys existing textures (if size has changed).
  */
-export abstract class Framebuffer extends Resource<FramebufferProps> {
+export abstract class Framebuffer extends DeviceResource<FramebufferProps> {
   override get [Symbol.toStringTag](): string {
     return 'Framebuffer';
   }
@@ -185,7 +185,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   protected abstract updateAttachments(): void;
 
   static override defaultProps: Required<FramebufferProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     width: 1,
     height: 1,
     colorAttachments: [], // ['rgba8unorm'],

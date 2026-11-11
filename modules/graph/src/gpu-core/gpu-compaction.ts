@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
 import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, GraphVectorView, type GraphDataView} from './gpu-command-graph';
@@ -134,9 +135,46 @@ export function getGPUCompactionCommandNodesWithDispatchLimit<Parameters>(
     compaction.flags instanceof GraphVectorView
       ? createTransientVectorView(graph, `${compaction.id}-offsets`, compaction.flags)
       : createTransientView(graph, `${compaction.id}-offsets`, 'uint32', compaction.flags.length);
+  // Normalize nonzero flags before the prefix sum, matching the scatter's selection semantics.
+  const normalized =
+    compaction.flags instanceof GraphVectorView
+      ? createTransientVectorView(graph, `${compaction.id}-flags`, compaction.flags)
+      : createTransientView(graph, `${compaction.id}-flags`, 'uint32', compaction.flags.length);
+  for (const [index, input] of getCompactionChunks(compaction.flags).entries()) {
+    if (!input.length) continue;
+    const output = getCompactionChunks(normalized)[index];
+    const dispatchLayout = getBoundedDispatchLayout(
+      compaction.id,
+      input.length,
+      COMPACTION_WORKGROUP_SIZE,
+      maxComputeWorkgroupsPerDimension
+    );
+    nodes.push(
+      ...addCompactionPass(graph, {
+        id: `${compaction.id}-normalize-${index}`,
+        source: `
+@group(0) @binding(0) var<storage, read> inputValues: array<u32>;
+@group(0) @binding(1) var<storage, read_write> outputValues: array<u32>;
+@compute @workgroup_size(${COMPACTION_WORKGROUP_SIZE}) fn main(
+  @builtin(local_invocation_index) localInvocationIndex: u32,
+  @builtin(workgroup_id) workgroupId: vec3<u32>
+) {
+  ${getBoundedInvocationIndexSource(dispatchLayout, COMPACTION_WORKGROUP_SIZE)}
+  if (index >= ${input.length}u) { return; }
+  outputValues[${getViewElementOffset(output)}u + index] = min(inputValues[${getViewElementOffset(input)}u + index], 1u);
+}`,
+        resources: [
+          {buffer: input, usage: 'storage-read'},
+          {buffer: output, usage: 'storage-write'}
+        ],
+        bindings: {inputValues: input, outputValues: output},
+        dispatchLayout
+      })
+    );
+  }
   const scan = new GPUScan({
     id: `${compaction.id}-scan`,
-    input: compaction.flags,
+    input: normalized,
     output: offsets
   });
   nodes.push(
@@ -193,7 +231,7 @@ function addClearCountPass<Parameters>(
     })
   );
 
-  return nodes;
+  return nodes.map(node => setGPUComputeDispatchWorkgroups(node, [1, 1, 1]));
 }
 
 /** Routes every non-empty input chunk through each non-empty logical output range. */
@@ -415,7 +453,13 @@ function addCompactionPass<Parameters>(
     })
   );
 
-  return nodes;
+  return nodes.map(node =>
+    setGPUComputeDispatchWorkgroups(node, [
+      props.dispatchLayout.x,
+      props.dispatchLayout.y,
+      props.dispatchLayout.z
+    ])
+  );
 }
 
 /** Normalizes one compaction input or vector into its ordered atomic chunks. */

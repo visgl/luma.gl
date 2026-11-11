@@ -61,7 +61,7 @@ let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 ### `VideoTextureProps`
 
 ```ts
-export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
+export type VideoTextureProps = Pick<DeviceResourceProps, 'id'> & {
   source: HTMLVideoElement | VideoFrame;
   colorSpace?: 'srgb';
   sampler?: Sampler | SamplerProps;

@@ -39,6 +39,8 @@ on a compilation snapshot; compilation does not add declarations to the authored
 
 `gpuGraph.scalar(format)` describes a numeric scalar supplied as a JavaScript number.
 `gpuGraph.vector(format, constraints?)` describes packed rows supplied as a `GPUVector`.
+`gpuGraph.texture({format, ...})` describes a texture supplied as a `Texture` or `TextureView`;
+see [texture values and execution bindings](./gpu-graph-textures.md).
 Neither helper creates GPU resources. A vector's length and exact chunk boundaries normally
 come from execution bindings, so the same compiled graph can run on differently sized batches.
 Optional `{length, chunkLengths}` constraints are checked rather than used to repack inputs.
@@ -220,3 +222,101 @@ control-flow declarations remain supported.
 
 Use `graph.compile(device).run(...)` for runtime-sized results. The lower-level
 `GPUGraphCompiler.compile(graph, bindings)` still requires concrete vector dimensions.
+
+
+## CPU operations and execution-sized results
+
+`GPUGraph` accepts the same `GPUCPUOperation` as [SimpleGraph](./gpu-simple-graph.md#cpu-callbacks-and-dynamically-sized-results).
+Callbacks return typed arrays (or explicit chunks), and execution allocates and uploads
+GPUVectors using the returned row counts. Multiple outputs can have different lengths,
+and lengths may change between runs without recompiling the authored graph.
+
+CPU-containing programs use asynchronous `compiled.run()`. GPU stages use the native
+GPUGraph compiler and submit before a CPU callback reads their outputs. Downstream
+stages resolve their dimensions only after the callback completes. The shared CPU executor
+handles readback and uploads; it does not lower CPU work to a GPU command node.
+
+This initial implementation supports straight-line numeric graphs with `addInput()` and
+operation-owned vector results. Textures, state, output targets, and caller-controlled
+`prepare()`/encoding are unsupported. GPU stages and CPU stages execute in authored order;
+intermediates are retained until the invocation finishes. CPU-to-CPU chains retain CPU results without transfers. Only one CPU-containing invocation may run at a time
+per compiled graph, and destroying it while a callback is pending is rejected.
+
+Selected results belong to the caller. Failures release invocation-owned intermediates,
+preserve borrowed inputs, and allow subsequent runs. GPU-only programs retain their existing
+preparation, transient allocation, and encoding behavior.
+
+## CPUVector bindings and lazy transfers
+
+Reusable numeric GPUGraph and GPUSimpleGraph programs accept `CPUVector` inputs alongside
+GPUVector inputs. Declarations keep the same `gpuGraph.vector()` format and shape contract.
+Use `compile(device, {outputs: ['result'], outputLocations: {result: 'cpu'}})` to return a
+CPUVector; omitted locations return GPUVectors. With CPU outputs, specify the result type
+through the existing compile generic, for example `compile<{result: CPUVector}>(...)`.
+
+CPU callback results remain in CPU memory until a GPU consumer or GPU output needs them.
+GPU results are read back only for CPU consumers or CPU outputs. Each invocation caches both
+representations, sharing an upload or readback across branches. Caches do not survive a run.
+CPU input buffers are borrowed and must remain unchanged until the run settles. Callback
+input arrays remain read-only snapshots; array-returning callbacks remain compatible.
+
+This first version supports portable float32, sint32 and uint32 rows with one to four
+components. Chunk boundaries are preserved and strided CPU inputs are packed explicitly by
+the executor. Nested lists, validity metadata, textures, state, output targets, and caller-owned
+encoding are outside the CPU residency path. Returned CPU vectors retain their arrays without
+requiring destroy(); returned GPU vectors follow the usual caller-owned lifetime.
+
+## Arrow adapters and explicit topology-preserving transfers
+
+`makeCPUVectorFromArrow(vector)` and `makeArrowVectorFromCPUVector(vector)` from
+`@luma.gl/graph/arrow` convert numeric rows and one-level lists of numeric coordinate tuples.
+They preserve chunk boundaries and parent-row validity. Arrow slices normalize their validity
+and list offsets; compatible numeric payloads remain borrowed. Strided or unaligned CPU
+payloads are packed when Arrow requires contiguous aligned storage. Nullable nested child
+values and deeper list nesting are unsupported.
+
+`makeGPUVectorFromCPUVector(device, vector)` and asynchronous
+`makeCPUVectorFromGPUVector(vector)` from `@luma.gl/graph/gpu-data` perform explicit transfers
+that preserve format, row count, flattened count, list offsets, validity, and chunk boundaries.
+GPU results own their uploaded buffers. CPU readback owns its returned arrays. Metadata is
+copied so callers can retain source vectors independently. These helpers do not expand the
+portable numeric graph callback contract to list data.
+
+`projectCPUVector(vector, projection)` from `@luma.gl/graph/arrow` projects Float32 xy/xyz
+coordinates while preserving single-level list topology and validity. Null rows are skipped.
+`tessellateCPUVectorPolygons(vector)` handles one simple polygon ring per list row, using the
+existing math.gl-backed Arrow tessellator. It returns vertex-list positions, indices and source
+row IDs, preserving input chunks and null polygon rows. Holes and multipolygons require the
+existing nested GeoArrow pipeline. The mesh can be uploaded through the explicit transfer
+helper for use by polygon GPU models.
+
+For polygon indices, upload with `{usage: Buffer.INDEX, indexType: 'uint32'}` as the third
+argument to `makeGPUVectorFromCPUVector`.
+
+The CPU geometry helpers are also available from `@luma.gl/graph/gpu-project/geoarrow` without
+loading Apache Arrow. `makeGeoArrowColumnFromCPUVector` borrows packed Float32 coordinates,
+validity and list offsets directly into math.gl descriptors; strided data is packed.
+`makeCPUVectorFromGeoArrowColumn` borrows normalized interleaved Float32 point/linestring/
+multipoint descriptors. Explicit dimensions distinguish XYZ from XYM. Unsupported nested,
+sliced-offset, separated or nullable-child layouts are rejected rather than flattened.
+
+`tessellateGeoArrowColumnToCPUVectors(column, options)` accepts full math.gl GeoArrow columns,
+including polygon holes and multipolygons, and forwards resource limits. It calls math.gl
+without Apache Arrow or renderer color preparation. Math.gl still materializes geometry rows
+internally. Full geometry nesting remains in GeoArrow descriptors rather than CPUVector.
+
+## Layer-facing coordinate projection graph
+
+`CoordinateProjectionGraph` from `@luma.gl/graph/gpu-project/graph` is a reusable point
+coordinate pipeline. Construct it with a device and `{format: 'float32x2' | 'float32x3',
+projection}` using a prepared math.gl transform. `run(cpuVectorOrGPUVector)` borrows its input
+and returns `{positions, destroy()}`. Every invocation owns an independent projected GPUVector;
+release it after rendering consumers finish. Destroying the compiled graph does not release
+previously returned results. The layer can reuse the graph for data updates, including changes
+in row count and chunking. Construct a new graph when its projection changes.
+
+`projectArrowCoordinates(graph, arrowVector)` from `@luma.gl/graph/arrow` adapts Arrow coordinate
+chunks into this same graph. GPUVector-native layers call `graph.run()` directly. Both paths
+share CPU projection, lazy transfer, validation, and result ownership. This first layer-facing
+API supports non-null packed numeric point rows. Filter null points and expand/handle list
+geometry explicitly before this boundary; path/polygon graph operations remain follow-up work.

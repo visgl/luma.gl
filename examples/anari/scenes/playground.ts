@@ -26,7 +26,12 @@ import {
   makePlaygroundRenderer
 } from './playground-renderer';
 import {exportANARIJSONSceneToGLTF, exportANARIJSONSceneToUSD} from './scene-export';
-import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
+import {
+  loadAntiqueCameraRayStudy,
+  loadSceneFile,
+  loadSceneSample,
+  SCENE_SAMPLES
+} from './usd-samples';
 
 export default class ANARIPlayground extends AnimationLoopTemplate {
   static info = '';
@@ -61,6 +66,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private refinementChangedTime = 0;
   private refinementRenderTime = 0;
   private refinementSamples = 0;
+  private refinementPending = false;
+  private refinementGeneration = 0;
 
   constructor({device}: AnimationProps) {
     super();
@@ -221,7 +228,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
 
     // Bound stationary refinement in the static lighting demonstration.
     if (
-      scene.name === 'CHART LIGHTING' &&
+      this.isStaticRefinementScene(scene.name) &&
       this.rendererSubtype === 'raytrace' &&
       !this.captureFrameLimit
     ) {
@@ -239,7 +246,13 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         this.refinementSignature = signature;
         this.refinementChangedTime = time;
         this.refinementSamples = 0;
+        this.updateRefinementProgress(
+          0,
+          scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64
+        );
       }
+      // Update camera/scene state even while the previous batch is still executing.
+      if (this.refinementPending) return;
       const renderer = scene.frame.getParameter('renderer');
       const historyLimit = renderer?.getParameter('historySampleLimit') ?? 64;
       const stationary = time - this.refinementChangedTime > 250;
@@ -310,6 +323,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       if (frameTelemetry) {
         frameTelemetry.hidden = !rayTracing;
       }
+      const refinementTelemetry = document.getElementById('scene-refinement-statistic');
+      const progressive = scene.frame.getParameter('renderer')?.getParameter('progressive') ?? true;
+      if (refinementTelemetry) refinementTelemetry.hidden = !rayTracing || !progressive;
+      if (rayTracing && progressive) {
+        const targetSamples =
+          scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
+        if (!this.isStaticRefinementScene(scene.name) || this.captureFrameLimit) {
+          this.updateRefinementProgress(rayTracing.accumulatedSamples, targetSamples);
+        }
+      }
       const memoryTelemetry = document.getElementById('scene-ray-memory-statistic');
       if (memoryTelemetry) memoryTelemetry.hidden = !rayTracing?.memory;
       if (rayTracing?.memory)
@@ -329,9 +352,60 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       }
       this.lastStatisticsUpdate = elapsedSeconds;
     }
+    if (
+      statistics.rayTracing &&
+      this.isStaticRefinementScene(scene.name) &&
+      !this.captureFrameLimit
+    ) {
+      // Bound queued work and report completed samples instead of encoded batches.
+      device.submit();
+      const fence = device.createFence();
+      this.refinementPending = true;
+      const generation = this.refinementGeneration;
+      const signature = this.refinementSignature;
+      const samples = statistics.rayTracing.accumulatedSamples;
+      const target = scene.frame.getParameter('renderer')?.getParameter('historySampleLimit') ?? 64;
+      void fence.signaled
+        .then(
+          () => {
+            if (
+              this.scene === scene &&
+              generation === this.refinementGeneration &&
+              signature === this.refinementSignature
+            )
+              this.updateRefinementProgress(samples, target);
+          },
+          () => {
+            if (this.scene === scene && generation === this.refinementGeneration)
+              setElementText('scene-refinement-value', 'GPU work interrupted');
+          }
+        )
+        .finally(() => {
+          fence.destroy();
+          if (generation === this.refinementGeneration) this.refinementPending = false;
+        });
+    }
+  }
+
+  private isStaticRefinementScene(name: string): boolean {
+    return ['CHART LIGHTING', 'INDIRECT LIGHT STUDY', 'ANTIQUE CAMERA · RAY STUDY'].includes(name);
+  }
+
+  private updateRefinementProgress(accumulatedSamples: number, targetSamples: number): void {
+    const samples = Math.min(accumulatedSamples, targetSamples);
+    const percentage = Math.min(100, Math.floor((samples / Math.max(targetSamples, 1)) * 100));
+    const progress = getRequiredElement('scene-refinement-progress', HTMLProgressElement);
+    progress.value = percentage;
+    progress.setAttribute(
+      'aria-valuetext',
+      `${percentage}% — ${samples} of ${targetSamples} samples per pixel`
+    );
+    setElementText('scene-refinement-value', `${percentage}% · ${samples} / ${targetSamples} spp`);
   }
 
   override onFinalize(): void {
+    this.refinementGeneration++;
+    this.refinementPending = false;
     if (this.pendingApply !== null) {
       window.clearTimeout(this.pendingApply);
     }
@@ -493,6 +567,15 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       button.addEventListener('click', () => this.selectPreset(presetIndex));
       presetList.appendChild(button);
     }
+
+    const cameraStudyButton = document.createElement('button');
+    cameraStudyButton.type = 'button';
+    cameraStudyButton.className = 'preset-button';
+    cameraStudyButton.textContent = 'Antique Camera · Ray Study';
+    cameraStudyButton.addEventListener('click', () => {
+      void this.importScene(loadAntiqueCameraRayStudy());
+    });
+    presetList.appendChild(cameraStudyButton);
 
     const usdSelector = getRequiredElement('usd-scene-selector', HTMLSelectElement);
     for (const sample of SCENE_SAMPLES) {
@@ -837,6 +920,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         renderer?.setParameters(this.getTemporalAntialiasingParameters()).commitParameters();
       }
       const previousScene = this.scene;
+      this.refinementGeneration++;
+      this.refinementPending = false;
       this.scene = nextScene;
       this.renderedFrameCount = 0;
       this.selectedPlacementId = null;

@@ -49,8 +49,8 @@ new Texture2D({
 
 - `createGLContext` will no longer attempt to create a headlessgl context under node.js. One can either create headless context externally and use `instrumentGLContext` to prepare it for use with luma.gl or use `createHeadlessContext` from `@luma.gl/test-utils` to create a headlessgl context.
 - `registerShaderModules` has been removed. Modules can be imported and used directly where necessary.
-- `createShaderHook` and `createModuleInjection` have been removed. Use `ProgramManager.getDefaultProgramManger(gl).addShaderHook` && the shader module [inject field](/docs/api-reference/shaders/shader-module#defining-injections) instead.
-- `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` been removed. Use the shader module [inject field](/docs/api-reference/shaders/shader-module#defining-injections) instead.
+- `createShaderHook` and `createModuleInjection` have been removed. For current shader code, use registered hooks and [ShaderPlugin injections](/docs/api-reference/shaders/shader-module#adding-injections).
+- `ProgramManager.getDefaultProgramManger(gl).addModuleInjection` has been removed. For current shader code, use [ShaderPlugin injections](/docs/api-reference/shaders/shader-module#adding-injections).
 - `getParameter` and `setParameter` have been removed. Use `getParameters` and `setParameters` instead.
 - The following are no longer exported by @luma.gl/core, but can still be imported from the modules indicated:
 

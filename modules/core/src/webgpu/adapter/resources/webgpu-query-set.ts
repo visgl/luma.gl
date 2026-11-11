@@ -36,13 +36,11 @@ export class WebGPUQuerySet extends QuerySet {
     this.handle.label = this.props.id;
   }
 
-  override destroy(): void {
-    if (!this.destroyed) {
-      this.handle?.destroy();
-      this.destroyResource();
-      // @ts-expect-error readonly
-      this.handle = null;
-    }
+  protected override destroyHandle(): void {
+    this.handle?.destroy();
+
+    // @ts-expect-error readonly
+    this.handle = null;
   }
 
   isResultAvailable(queryIndex?: number): boolean {

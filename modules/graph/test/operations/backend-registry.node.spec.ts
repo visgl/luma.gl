@@ -4,10 +4,14 @@
 
 import {afterEach, expect, test, vi} from 'vitest';
 import {backendRegistry} from '../../src/gpu-simple-graph/operation/backend-registry';
+import * as cpuBackend from '../../src/gpu-simple-graph/operations/cpu/index';
 import * as webgpuBackend from '../../src/gpu-simple-graph/operations/webgpu/index';
 import * as webglBackend from '../../src/gpu-simple-graph/operations/webgl/index';
 
-afterEach(() => backendRegistry.clear());
+afterEach(async () => {
+  backendRegistry.clear();
+  await backendRegistry.add('cpu', cpuBackend);
+});
 
 for (const [deviceType, defaultBackend] of [
   ['webgpu', webgpuBackend],

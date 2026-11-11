@@ -8,6 +8,9 @@ Operations can [define their own results](./gpu-graph-values.md#operation-define
 applications declare external inputs and state rather than every intermediate. If you are new
 to graph execution, start with [Getting started](./getting-started.md).
 
+Built-in [upload/copy](./gpu-transfer-operations.md) and [compaction](./gpu-compaction-operation.md)
+operations already provide these contracts and their backend lowerings.
+
 ## Contract types
 
 ```typescript

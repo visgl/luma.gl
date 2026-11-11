@@ -73,7 +73,7 @@ it('convertGeoArrowVectorToDenseUnion converts vectors and returns dense unions 
   ).toEqual([
     {typeId: 1, value: [30, 10]},
     {
-      typeId: 5,
+      typeId: 2,
       value: [
         [30, 10],
         [10, 30],
@@ -81,7 +81,7 @@ it('convertGeoArrowVectorToDenseUnion converts vectors and returns dense unions 
       ]
     },
     {
-      typeId: 9,
+      typeId: 3,
       value: [
         [
           [30, 10],
@@ -147,7 +147,7 @@ it('convertGeoArrowVectorToDenseUnion preserves EWKT dimensions and strips SRID 
   expect(
     getDenseUnionRows(convertedGeometry),
     'decodes the geometry after removing the SRID prefix'
-  ).toEqual([{typeId: 2, value: [1, 2, 3]}]);
+  ).toEqual([{typeId: 11, value: [1, 2, 3]}]);
   void 0;
 });
 

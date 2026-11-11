@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {parse, type Expression} from '@math.gl/expressions';
+import {parse, type Expression} from '@math.gl/core/expressions';
 import {getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
 import {gpuGraph, type GPUGraphVectorFormat} from './gpu-graph-value';
 import type {GPUOperationContract} from './gpu-operation-contract';
@@ -25,7 +25,11 @@ export class GPUExpressionOperation implements GPUOperation {
     const references = getGPUExpressionReferences(expression);
     return {
       outputs: ({getValue}) => {
-        const inputs = references.map(name => [name, getValue(name)] as const);
+        const inputs = references.map(name => {
+          const value = getValue(name);
+          if (value.type === 'texture') throw new Error('Numeric expressions cannot read textures');
+          return [name, value] as const;
+        });
         const format = getGPUExpressionFormat(
           expression,
           new Map(inputs.map(([name, value]) => [name, value.format]))

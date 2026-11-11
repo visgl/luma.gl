@@ -18,6 +18,7 @@ import {NullDevice} from '../null-device';
 export class NullRenderPass extends RenderPass {
   readonly device: NullDevice;
   readonly handle = null;
+  private parameters: Required<RenderPassParameters>;
   pipeline: RenderPipeline | null = null;
   bindings: Bindings | BindingsByGroup = {};
   vertexArray: VertexArray | null = null;
@@ -25,6 +26,13 @@ export class NullRenderPass extends RenderPass {
   constructor(device: NullDevice, props: RenderPassProps) {
     super(device, props);
     this.device = device;
+    this.parameters = {
+      viewport: [0, 0, props.framebuffer?.width ?? 1, props.framebuffer?.height ?? 1, 0, 1],
+      scissorRect: null,
+      blendConstant: [0, 0, 0, 0],
+      stencilReference: 0
+    };
+    this.setParameters(props.parameters);
   }
 
   end(): void {
@@ -38,7 +46,25 @@ export class NullRenderPass extends RenderPass {
   popDebugGroup(): void {}
   insertDebugMarker(markerLabel: string): void {}
 
-  setParameters(parameters: RenderPassParameters = {}): void {}
+  setParameters(parameters: RenderPassParameters = {}): void {
+    this.parameters = {
+      viewport: parameters.viewport ?? this.parameters.viewport,
+      scissorRect:
+        parameters.scissorRect === undefined ? this.parameters.scissorRect : parameters.scissorRect,
+      blendConstant: parameters.blendConstant ?? this.parameters.blendConstant,
+      stencilReference: parameters.stencilReference ?? this.parameters.stencilReference
+    };
+    this.parameters = this.getParameters();
+  }
+
+  override getParameters(): Required<RenderPassParameters> {
+    return {
+      viewport: [...this.parameters.viewport],
+      scissorRect: this.parameters.scissorRect ? [...this.parameters.scissorRect] : null,
+      blendConstant: [...this.parameters.blendConstant],
+      stencilReference: this.parameters.stencilReference
+    };
+  }
 
   setPipeline(pipeline: RenderPipeline): void {
     this.pipeline = pipeline;

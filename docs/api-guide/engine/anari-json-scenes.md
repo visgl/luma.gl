@@ -339,7 +339,7 @@ animation.seek(1.5);
 
 `update()` receives an absolute monotonic time in seconds. The handle shares the engine animation
 mixer and commits each changed retained object at most once per frame. See
-[ANARI glTF and keyframe animation](/docs/api-reference/scene/anari-animation) and
+[ANARI glTF and keyframe animation](/docs/api-reference/anari/anari-animation) and
 [glTF animation and deformation](/docs/api-reference/gltf/gltf-animation) for complete bindings,
 interpolation modes, ownership, and playback examples. Local file selection supports standalone
 `.gltf` and `.glb` assets as well as supported OpenUSD files.
@@ -376,5 +376,5 @@ URL.
 ## Related pages
 
 - [Declarative ANARI rendering](/docs/api-guide/engine/anari-rendering)
-- [ANARI API reference](/docs/api-reference/scene)
+- [ANARI API reference](/docs/api-reference/anari)
 - [Engine programming](/docs/api-guide/engine)

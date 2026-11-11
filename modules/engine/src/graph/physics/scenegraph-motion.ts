@@ -43,14 +43,25 @@ export class ScenegraphPhysicsMotion {
    * Paused actions should remain in this set; stopped actions should be removed. On release,
    * physics retains the last accepted pose and kinematic velocity rather than snapping to authoring.
    */
-  setAnimatedNodes(nodes: ReadonlySet<ScenegraphNode>): void {
+  setAnimatedNodes(
+    nodes: ReadonlySet<ScenegraphNode>,
+    {
+      excludedNodes = new Set<ScenegraphNode>(),
+      targetNodes = new Set<ScenegraphNode>()
+    }: {
+      excludedNodes?: ReadonlySet<ScenegraphNode>;
+      /** Direct scene-following targets; unlike animation roots, these do not own descendants. */
+      targetNodes?: ReadonlySet<ScenegraphNode>;
+    } = {}
+  ): void {
     const active = new Set<ScenegraphNode>();
     const visit = (node: ScenegraphNode, inherited: boolean) => {
       const animated = inherited || nodes.has(node);
-      if (animated && this.targets.has(node)) active.add(node);
+      if ((animated || targetNodes.has(node)) && !excludedNodes.has(node) && this.targets.has(node))
+        active.add(node);
       if (node instanceof GroupNode) for (const child of node.children) visit(child, animated);
     };
-    if (nodes.size) for (const root of this.roots) visit(root, false);
+    if (nodes.size || targetNodes.size) for (const root of this.roots) visit(root, false);
     for (const [node, body] of this.targets) {
       if (active.has(node)) {
         if (!this.releasedModes.has(body) || this.world.getBodyMode(body) !== 'kinematic')

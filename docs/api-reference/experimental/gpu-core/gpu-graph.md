@@ -2,6 +2,10 @@ import {GPUOperationContract} from '@site/src/components/docs/gpu-operation-cont
 
 # GPUGraph
 
+For portable fullscreen image processing on WebGPU, use
+[`GPUShaderPassOperation`](../../graph/gpu-shader-pass-operation.md) with named texture inputs
+and scalar parameters. The same operation description also runs on WebGPU GPUSimpleGraph.
+
 ## Overview
 
 `GPUGraph` describes operations and logical values without requiring a device during authoring.
@@ -9,6 +13,12 @@ Its execution implementation currently requires WebGPU. `GPUCommandGraph` is the
 pass and resource graph produced by lowering. Start with the
 [graph tutorial](/docs/api-reference/graph/getting-started) for reusable compilation and runtime inputs;
 this reference also covers the advanced, concrete-dimension compiler interface.
+
+Built-in reusable operations include
+[GPUUploadOperation and GPUCopyOperation](/docs/api-reference/graph/gpu-transfer-operations),
+which also work in reusable SimpleGraph, and WebGPU
+[GPUCompactionOperation](/docs/api-reference/graph/gpu-compaction-operation), which produces
+capacity and a GPU logical count.
 
 <GPUOperationContract operation="gpu-graph" />
 
@@ -202,3 +212,6 @@ fields plus `external`. `graph.textureView(texture, props)` selects subresources
 storage. `GPUGraphCompiler.compile()` accepts optional `textures` defaults; imported textures may
 also be supplied when encoding. `compilation.textures` exposes logical graph texture handles.
 Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
+
+Reusable `compile(device)` programs also support named texture inputs and operation-produced
+texture results. See [texture values and execution bindings](/docs/api-reference/graph/gpu-graph-textures).

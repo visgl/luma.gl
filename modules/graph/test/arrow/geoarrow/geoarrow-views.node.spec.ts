@@ -3,7 +3,7 @@
 
 import {expect, it} from 'vitest';
 import * as arrow from 'apache-arrow';
-import {materializeGeoArrowRows} from '@math.gl/geospatial/geoarrow';
+import {materializeGeoArrowRows} from '@math.gl/arrow/geoarrow-utils';
 import {
   getGeoArrowRowViewFromArrowVector,
   iterateGeoArrowBatchesFromArrowVector
@@ -45,4 +45,56 @@ it('borrowed views preserve sliced chunks, null rows, and coordinate buffers', (
   }
   expect(() => getGeoArrowRowViewFromArrowVector(vector, -1)).toThrow(RangeError);
   expect(() => getGeoArrowRowViewFromArrowVector(vector, vector.length)).toThrow(RangeError);
+});
+
+it('borrowed views use field metadata to distinguish multipoints from linestrings', () => {
+  const coordinateType = new arrow.FixedSizeList(
+    2,
+    new arrow.Field('xy', new arrow.Float64(), false)
+  );
+  const type = new arrow.List(new arrow.Field('vertices', coordinateType, false));
+  const vector = arrow.vectorFromArray(
+    [
+      [
+        [1, 2],
+        [3, 4]
+      ],
+      null
+    ],
+    type
+  );
+  const field = new arrow.Field(
+    'geometry',
+    type,
+    true,
+    new Map([
+      ['ARROW:extension:name', 'geoarrow.multipoint'],
+      ['ARROW:extension:metadata', JSON.stringify({edges: 'spherical', crs: 'EPSG:4326'})]
+    ])
+  );
+  const batches = Array.from(iterateGeoArrowBatchesFromArrowVector(vector, {field}));
+  expect(batches[0].column.encoding).toBe('geoarrow.multipoint');
+  expect(batches[0].column.edges).toBe('spherical');
+  expect(batches[0].column.metadata?.crs).toBe('EPSG:4326');
+  expect(materializeGeoArrowRows(batches[0].column)).toEqual([
+    {
+      type: 'MultiPoint',
+      coordinates: [
+        [1, 2],
+        [3, 4]
+      ]
+    },
+    null
+  ]);
+  expect(() => Array.from(iterateGeoArrowBatchesFromArrowVector(vector))).toThrow(/Ambiguous/);
+});
+
+it('borrowed views reject layout assertions that would reinterpret coordinate storage', () => {
+  const type = new arrow.FixedSizeList(2, new arrow.Field('xy', new arrow.Float64(), false));
+  const vector = arrow.vectorFromArray([[1, 2]], type);
+  expect(() =>
+    getGeoArrowRowViewFromArrowVector(vector, 0, {
+      coordinateLayout: 'separated'
+    })
+  ).toThrow(/Coordinate layout must match/);
 });

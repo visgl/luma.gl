@@ -112,7 +112,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this._bindGroupCacheKeysByGroup = createBindGroupCacheKeys(this._bindingsByGroup);
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     // WebGPURenderPipeline has no destroy method.
     // @ts-expect-error
     this.handle = null;
@@ -207,6 +207,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const layout = this.device.createPipelineLayout({
       shaderLayout: this.shaderLayout
     });
+    layout.transferOwnershipTo(this);
 
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {

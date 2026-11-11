@@ -5,10 +5,13 @@
 import {expect, it} from 'vitest';
 import {
   GLSLShaderAssembler,
+  WGSLShaderAssembler,
   ShaderAssembler,
   type PlatformInfo,
+  type ShaderInjectionTarget,
   picking,
-  dirlight
+  dirlight,
+  resolveShaderPlugins
 } from '@luma.gl/shaders';
 
 const platformInfo: PlatformInfo = {
@@ -36,7 +39,7 @@ void main(void) {
 }
 `;
 
-const _wgslPlatformInfo: PlatformInfo = {
+const wgslPlatformInfo: PlatformInfo = {
   type: 'webgpu',
   gpu: 'test-gpu',
   shaderLanguage: 'wgsl',
@@ -44,7 +47,7 @@ const _wgslPlatformInfo: PlatformInfo = {
   features: new Set()
 };
 
-const _wgslSource = /* wgsl */ `\
+const wgslSource = /* wgsl */ `\
 @vertex
 fn vertexMain() -> @builtin(position) vec4<f32> {
   return vec4<f32>(0.0, 0.0, 0.0, 1.0);
@@ -86,27 +89,47 @@ it('ShaderAssembler#hooks', () => {
 
   const preHookShaders = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
-  shaderAssembler.addShaderHook('vs:LUMAGL_pickColor(inout vec4 color)');
-  shaderAssembler.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)', {
-    header: 'if (color.a == 0.0) discard;\n',
-    footer: 'color.a *= 1.2;\n'
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'LUMAGL_pickColor',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 color'}
+  });
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'LUMAGL_fragmentColor',
+    stage: 'fragment',
+    glsl: {
+      parameters: 'inout vec4 color',
+      header: 'if (color.a == 0.0) discard;\n',
+      footer: 'color.a *= 1.2;\n'
+    }
   });
 
   const assemblyResults = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
   expect(Boolean(preHookShaders !== assemblyResults), 'Adding hooks changes hash').toBe(true);
 
-  const pickingInjection = {
-    ...picking,
-    instance: undefined,
-    inject: {
-      'vs:LUMAGL_pickColor': 'picking_setPickingColor(color.rgb);',
-      'fs:LUMAGL_fragmentColor': {
-        injection: 'color = picking_filterColor(color);',
-        order: Number.POSITIVE_INFINITY
+  const pickingPlugin = resolveShaderPlugins(
+    [
+      {
+        name: 'picking-injection',
+        module: picking,
+        injections: [
+          {
+            stage: 'vertex',
+            target: 'LUMAGL_pickColor',
+            glsl: 'picking_setPickingColor(color.rgb);'
+          },
+          {
+            stage: 'fragment',
+            target: 'LUMAGL_fragmentColor',
+            glsl: 'color = picking_filterColor(color);',
+            order: Number.POSITIVE_INFINITY
+          }
+        ]
       }
-    }
-  };
+    ],
+    'glsl'
+  );
 
   const noModuleProgram = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
 
@@ -126,18 +149,19 @@ it('ShaderAssembler#hooks', () => {
 
   expect(
     Boolean(noModuleVs.indexOf('picking_setPickingColor(color.rgb)') === -1),
-    'injection code not included in vertex shader without module'
+    'injection code not included in vertex shader without plugin'
   ).toBe(true);
   expect(
     Boolean(noModuleFs.indexOf('color = picking_filterColor(color)') === -1),
-    'injection code not included in fragment shader without module'
+    'injection code not included in fragment shader without plugin'
   ).toBe(true);
 
   const modulesProgram = shaderAssembler.assembleGLSLShaderPair({
     platformInfo,
     vs,
     fs,
-    modules: [pickingInjection]
+    modules: pickingPlugin.modules,
+    pluginInjections: pickingPlugin.injections
   });
   const modulesVs = modulesProgram.vs;
   const modulesFs = modulesProgram.fs;
@@ -153,11 +177,11 @@ it('ShaderAssembler#hooks', () => {
 
   expect(
     Boolean(modulesVs.indexOf('picking_setPickingColor(color.rgb)') > -1),
-    'injection code included in vertex shader with module'
+    'injection code included in vertex shader with plugin'
   ).toBe(true);
   expect(
     Boolean(modulesFs.indexOf('color = picking_filterColor(color)') > -1),
-    'injection code included in fragment shader with module'
+    'injection code included in fragment shader with plugin'
   ).toBe(true);
   expect(
     Boolean(modulesFs.indexOf('if (color.a == 0.0) discard;') > -1),
@@ -216,11 +240,15 @@ it('ShaderAssembler#hooks', () => {
 
 it('ShaderAssembler#hooks preserves last-registration-wins behavior', () => {
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:REPLACED_HOOK(inout vec4 position)', {
-    header: 'position.x = 1.0;\n'
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'REPLACED_HOOK',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position', header: 'position.x = 1.0;\n'}
   });
-  shaderAssembler.addShaderHook('vs:REPLACED_HOOK(inout vec4 position)', {
-    header: 'position.x = 2.0;\n'
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'REPLACED_HOOK',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position', header: 'position.x = 2.0;\n'}
   });
 
   const assembled = shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs});
@@ -231,24 +259,32 @@ it('ShaderAssembler#hooks preserves last-registration-wins behavior', () => {
   void 0;
 });
 
-it('ShaderAssembler#resetShaderHooks removes registered hooks', () => {
+it('ShaderAssembler#resetShaderInjectionTargets removes registered hooks', () => {
   const shaderAssembler = new GLSLShaderAssembler();
-  shaderAssembler.addShaderHook('vs:RESET_HOOK(inout vec4 position)');
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'RESET_HOOK',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position'}
+  });
   const inject = {'vs:RESET_HOOK': 'position.x += 1.0;'};
 
   expect(shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject}).vs).toContain(
     'void RESET_HOOK'
   );
 
-  shaderAssembler.resetShaderHooks();
+  shaderAssembler.resetShaderInjectionTargets();
   expect(shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs}).vs).not.toContain(
     'void RESET_HOOK'
   );
   expect(() => shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject})).toThrow(
-    'Unknown shader hook vs:RESET_HOOK'
+    'Unknown shader injection target vs:RESET_HOOK'
   );
 
-  shaderAssembler.addShaderHook('vs:RESET_HOOK(inout vec4 position)');
+  shaderAssembler.addShaderInjectionTarget({
+    name: 'RESET_HOOK',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 position'}
+  });
   expect(shaderAssembler.assembleGLSLShaderPair({platformInfo, vs, fs, inject}).vs).toContain(
     'position.x += 1.0;'
   );
@@ -324,4 +360,121 @@ it('ShaderAssembler has explicit instance ownership without a global default fac
   first.addDefaultModule({name: 'first-only'});
   expect(first._getModuleList().map(module => module.name)).toEqual(['first-only']);
   expect(second._getModuleList()).toEqual([]);
+});
+
+it('ShaderAssembler#dual-language hook descriptors isolate syntax and preserve ordering', () => {
+  const hook: ShaderInjectionTarget = Object.freeze({
+    name: 'FILTER_COLOR',
+    stage: 'fragment',
+    glsl: Object.freeze({
+      parameters: 'inout vec4 color',
+      header: '// GLSL header\n',
+      footer: '// GLSL footer\n'
+    }),
+    wgsl: Object.freeze({
+      parameters: 'color: ptr<function, vec4<f32>>',
+      header: '// WGSL header\n',
+      footer: '// WGSL footer\n'
+    })
+  });
+  const vertexHook: ShaderInjectionTarget = {
+    name: 'FILTER_COLOR',
+    stage: 'vertex',
+    glsl: {parameters: 'inout vec4 color'}
+  };
+  const glslAssembler = new GLSLShaderAssembler();
+  const wgslAssembler = new WGSLShaderAssembler();
+  for (const assembler of [glslAssembler, wgslAssembler]) {
+    assembler.addShaderInjectionTarget(hook);
+    assembler.addShaderInjectionTarget(vertexHook);
+    assembler.addShaderInjectionTarget({
+      name: 'GLSL_ONLY',
+      stage: 'vertex',
+      glsl: {parameters: ''}
+    });
+    assembler.addShaderInjectionTarget({
+      name: 'WGSL_ONLY',
+      stage: 'vertex',
+      wgsl: {parameters: ''}
+    });
+  }
+  const glsl = glslAssembler.assembleGLSLShaderPair({
+    platformInfo,
+    vs,
+    fs,
+    pluginInjections: {
+      'fs:FILTER_COLOR': [
+        {injection: '// GLSL second', order: 2},
+        {injection: '// GLSL first', order: 1}
+      ]
+    }
+  });
+  const wgsl = wgslAssembler.assembleWGSLShader({
+    platformInfo: wgslPlatformInfo,
+    source: wgslSource,
+    pluginInjections: {
+      'fs:FILTER_COLOR': [
+        {injection: '// WGSL second', order: 2},
+        {injection: '// WGSL first', order: 1}
+      ]
+    }
+  }).source;
+  expect(glsl.vs).toContain('void FILTER_COLOR(inout vec4 color)');
+  expect(glsl.vs).not.toContain('GLSL header');
+  expect(glsl.fs).not.toContain('WGSL');
+  expect(glsl.vs).toContain('void GLSL_ONLY()');
+  expect(glsl.vs).not.toContain('WGSL_ONLY');
+  expect(wgsl).toContain('fn FILTER_COLOR(color: ptr<function, vec4<f32>>)');
+  expect(wgsl).toContain('fn WGSL_ONLY()');
+  expect(wgsl).not.toContain('GLSL');
+  for (const [source, language] of [
+    [glsl.fs, 'GLSL'],
+    [wgsl, 'WGSL']
+  ]) {
+    const markers = ['header', 'first', 'second', 'footer'].map(marker =>
+      source.indexOf(`${language} ${marker}`)
+    );
+    expect(markers.every(index => index >= 0)).toBe(true);
+    expect(markers).toEqual([...markers].sort((left, right) => left - right));
+  }
+  expect(
+    wgslAssembler.assembleWGSLShader({platformInfo: wgslPlatformInfo, source: wgslSource}).source
+  ).not.toContain('WGSL first');
+});
+
+it.each(['glsl', 'wgsl'] as const)('ShaderAssembler#return types on %s', language => {
+  const descriptor: ShaderInjectionTarget = {
+    name: 'GET_COLOR',
+    stage: 'fragment',
+    glsl: {parameters: 'vec4 color', returnType: 'vec4', footer: 'return color;'},
+    wgsl: {parameters: 'color: vec4<f32>', returnType: 'vec4<f32>', footer: 'return color;'}
+  };
+  const assembler = language === 'glsl' ? new GLSLShaderAssembler() : new WGSLShaderAssembler();
+  assembler.addShaderInjectionTarget(descriptor);
+  const source =
+    assembler instanceof GLSLShaderAssembler
+      ? assembler.assembleGLSLShaderPair({platformInfo, vs, fs}).fs
+      : assembler.assembleWGSLShader({platformInfo: wgslPlatformInfo, source: wgslSource}).source;
+  expect(source).toContain(
+    language === 'glsl'
+      ? 'vec4 GET_COLOR(vec4 color) {'
+      : 'fn GET_COLOR(color: vec4<f32>) -> vec4<f32> {'
+  );
+  expect(source).toContain('return color;');
+  expect(() => {
+    if (assembler instanceof GLSLShaderAssembler) {
+      assembler.assembleGLSLShaderPair({
+        platformInfo,
+        vs,
+        fs,
+        pluginInjectionTargets: [{...descriptor, glsl: {...descriptor.glsl!, returnType: 'float'}}]
+      });
+    } else {
+      assembler.assembleWGSLShader({
+        platformInfo: wgslPlatformInfo,
+        source: wgslSource,
+        pluginInjectionTargets: [{...descriptor, wgsl: {...descriptor.wgsl!, returnType: 'f32'}}]
+      });
+    }
+  }).toThrow(/Conflicting ShaderPlugin injection target fs:GET_COLOR/);
 });

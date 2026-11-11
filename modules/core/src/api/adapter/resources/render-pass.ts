@@ -7,7 +7,7 @@ import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {Bindings, BindingsByGroup} from '../types/shader-layout';
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import {Framebuffer} from './framebuffer';
 import {Buffer} from './buffer';
 import {QuerySet} from './query-set';
@@ -54,7 +54,7 @@ export type RenderPassBindingOptions = {
 /**
  * Properties for a RenderPass instance is a required parameter to all draw calls.
  */
-export type RenderPassProps = ResourceProps & {
+export type RenderPassProps = DeviceResourceProps & {
   /** Framebuffer specifies which textures to render into. Default gets framebuffer from canvas context. */
   framebuffer?: Framebuffer | null;
   /** Optional single-sample targets receiving resolved multisampled color attachments. WebGPU only. */
@@ -99,7 +99,7 @@ export type RenderPassProps = ResourceProps & {
  * - clear colors, read/write, discard information for the framebuffer attachments
  * - a couple of mutable parameters ()
  */
-export abstract class RenderPass extends Resource<RenderPassProps> {
+export abstract class RenderPass extends DeviceResource<RenderPassProps> {
   /** TODO - should be [0, 0, 0, 0], update once deck.gl tests run clean */
   static defaultClearColor: [number, number, number, number] = [0, 0, 0, 1];
   /** Depth 1.0 represents the far plance */
@@ -125,6 +125,9 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
 
   /** A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference) */
   abstract setParameters(parameters: RenderPassParameters): void;
+
+  /** Returns a detached snapshot of the current dynamic render-pass parameters. */
+  abstract getParameters(): RenderPassParameters;
 
   /** Selects the pipeline used by subsequent binding and draw commands. */
   abstract setPipeline(pipeline: RenderPipeline): void;
@@ -175,7 +178,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
 
   /** Default properties for RenderPass */
   static override defaultProps: Required<RenderPassProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     framebuffer: null,
     resolveTargets: undefined!,
     parameters: undefined!,

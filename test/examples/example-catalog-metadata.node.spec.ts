@@ -135,12 +135,12 @@ describe('live example catalog metadata', () => {
     expect(websiteExamples).not.toContain('ArrowInstancingExample');
     expect(websiteExamples).not.toContain("from '../../examples/arrow/arrow-instancing/app'");
     expect(websiteConfiguration).toMatch(
-      /from:\s*\[['"]\/examples\/arrow\/arrow-instancing['"]\],\s*to:\s*['"]\/examples\/showcase\/instancing['"]/
+      /['"]from['"]:\s*\[\s*['"]\/examples\/arrow\/arrow-instancing['"]\s*\],\s*['"]to['"]:\s*['"]\/examples\/showcase\/instancing['"]/
     );
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(138);
+    expect(LIVE_EXAMPLES).toHaveLength(141);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();

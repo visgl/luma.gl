@@ -56,7 +56,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     this.handle.label = this.props.id;
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     for (const uploadBuffer of this._transientUploadBuffers) {
       uploadBuffer.destroy();
     }
@@ -64,7 +64,6 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     if (!this._timestampSnapshotsTransferred) {
       for (const snapshot of this._timestampSnapshots.values()) snapshot.destroy();
     }
-    this.destroyResource();
   }
 
   finish(): WebGPUCommandBuffer {

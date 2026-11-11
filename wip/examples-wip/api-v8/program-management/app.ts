@@ -64,8 +64,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.programManager = new PipelineFactory(device);
-    this.programManager.addShaderHook('vs:LUMAGL_normal(inout vec3 normal)');
-    this.programManager.addShaderHook('fs:LUMAGL_fragmentColor(inout vec4 color)');
+    this.programManager.addShaderInjectionTarget('vs:LUMAGL_normal(inout vec3 normal)');
+    this.programManager.addShaderInjectionTarget('fs:LUMAGL_fragmentColor(inout vec4 color)');
 
     const translations = [
       [2, -2, 0],

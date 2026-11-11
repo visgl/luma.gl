@@ -97,6 +97,7 @@ export const FOUNDATION_DOCS_CATALOG = {
       label: 'Resources and synchronization',
       tabs: [
         {id: 'resource', label: 'Resource', href: '/docs/api-reference/core/resources/resource'},
+        {id: 'device-resource', label: 'DeviceResource', href: '/docs/api-reference/core/resources/device-resource'},
         {id: 'buffer', label: 'Buffer', href: '/docs/api-reference/core/resources/buffer'},
         {id: 'command-buffer', label: 'CommandBuffer', href: '/docs/api-reference/core/resources/command-buffer'},
         {id: 'query-set', label: 'QuerySet', href: '/docs/api-reference/core/resources/query-set'},
@@ -242,7 +243,7 @@ export const FOUNDATION_DOCS_CATALOG = {
       label: 'Shader authoring guides',
       tabs: [
         {id: 'shader-assembly', label: 'Assembly', href: '/docs/api-guide/shaders/shader-assembly'},
-        {id: 'writing-customizable-shaders', label: 'Customization', href: '/docs/api-guide/shaders/writing-customizable-shaders'},
+        {id: 'shader-injection', label: 'Injection', href: '/docs/api-guide/shaders/shader-injection'},
         {id: 'writing-portable-shaders', label: 'Portability', href: '/docs/api-guide/shaders/writing-portable-shaders'},
         {id: 'shader-passes', label: 'Passes', href: '/docs/api-guide/shaders/shader-passes'}
       ]

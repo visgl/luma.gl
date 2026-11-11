@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Texture, type Device, type RenderPass} from '@luma.gl/core';
+import {Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {ClipSpace} from '@luma.gl/engine';
 import {PBREnvironmentGenerator} from '@luma.gl/anari';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
@@ -11,7 +11,7 @@ import {Matrix4, type NumberArray3} from '@math.gl/core';
 export function captureReflectionProbe(
   device: Device,
   eye: NumberArray3,
-  draw: (pass: RenderPass, view: Matrix4, projection: Matrix4) => void
+  draw: (framebuffer: Framebuffer, view: Matrix4, projection: Matrix4) => void
 ) {
   const size = 256;
   const cube = device.createTexture({
@@ -61,14 +61,7 @@ export function captureReflectionProbe(
       colorAttachments: [target],
       depthStencilAttachment: depth
     });
-    // Bright studio illumination is independent of the visible charcoal background.
-    const pass = device.beginRenderPass({
-      framebuffer,
-      clearColor: [0.787, 0.828, 0.768, 1],
-      clearDepth: 1
-    });
-    draw(pass, view, projection);
-    pass.end();
+    draw(framebuffer, view, projection);
     device.submit();
     framebuffer.destroy();
     target.destroy();
