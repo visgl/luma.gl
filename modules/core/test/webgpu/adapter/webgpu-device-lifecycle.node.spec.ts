@@ -200,6 +200,26 @@ describe('WebGPU device creation lifecycle', () => {
     });
   });
 
+  test('cleans up the native device if preparing wrapper props fails', async () => {
+    const loss = makeDeferred<GPUDeviceLostInfo>();
+    const nativeDevice = makeNativeDevice(loss.promise);
+    const nativeAdapter = makeNativeAdapter(nativeDevice.device);
+    const cause = new Error('Could not read device ID');
+    const props: DeviceProps = {
+      get id(): string {
+        throw cause;
+      }
+    };
+
+    await expect(
+      new MockWebGPUAdapter([nativeAdapter.adapter]).create(props)
+    ).rejects.toMatchObject({
+      message: 'WebGPU wrapper initialization failed',
+      cause
+    });
+    expect(nativeDevice.device.destroy).toHaveBeenCalledTimes(1);
+  });
+
   test('cleans up native devices after wrapper and canvas initialization failures', async () => {
     const pendingWrapperLoss = makeDeferred<GPUDeviceLostInfo>();
     const wrapperDevice = makeNativeDevice(pendingWrapperLoss.promise);
