@@ -2,6 +2,14 @@
 
 ## v10.0
 
+### v10.0.0-alpha.13
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.7. Use math.gl to parse GPU SQL expressions and match column names and sort aliases exactly.
+- Add semantic grouped aggregation and reduction to GPUGraph, and broaden default GPUData buffer usage on WebGPU.
+- Introduce Resource ownership and DeviceResource, and release WebGPU devices when initialization fails.
+- Let the platform choose GPU power preference by default. Share WebGL scalar state tracking and invalidate tracked bindings when native resources are deleted.
+- Add an opt-in display-order text source adapter and expand project credits and distributed attribution notices.
+
 ### v10.0.0-alpha.12
 
 - Upgrade math.gl and loaders.gl to 5.0.0-beta.6 across active packages and examples.
