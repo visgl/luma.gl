@@ -33,6 +33,7 @@ export type GPUQueryExpressionColumn = {
 /** One fixed-size literal or caller-controlled parameter stored outside shader source. @internal */
 export type GPUQueryExpressionControl = {
   name?: string;
+  convertInteger?: boolean;
   value: GPUExpressionValue;
   format: GPUQueryScalarFormat | 'boolean';
   index: number;
@@ -135,7 +136,7 @@ export function encodeGPUQueryExpressionControls(
   const floatingPointWords = new Float32Array(words.buffer);
 
   for (const control of controls) {
-    const value =
+    let value =
       control.name !== undefined && Object.prototype.hasOwnProperty.call(parameters, control.name)
         ? parameters[control.name]
         : control.value;
@@ -166,6 +167,7 @@ export function encodeGPUQueryExpressionControls(
     } else {
       const minimum = control.format === 'sint32' ? MINIMUM_SINT32 : 0;
       const maximum = control.format === 'sint32' ? MAXIMUM_SINT32 : MAXIMUM_UINT32;
+      if (control.convertInteger) value = Math.min(maximum, Math.max(minimum, Math.trunc(value)));
       if (!Number.isInteger(value) || value < minimum || value > maximum) {
         throw new Error('GPUDataFrame numeric parameters must fit their integer column');
       }
@@ -305,15 +307,16 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   ): GPUQueryExpressionShaderValue {
     if (
       (target === 'sint32' || target === 'uint32') &&
-      node.kind === 'literal' &&
-      typeof node.value === 'number' &&
-      Number.isFinite(node.value)
+      (node.kind === 'literal' || node.kind === 'parameter') &&
+      (node.value === null || typeof node.value === 'number')
     ) {
-      // Encode integer literals directly to retain all 32 bits, including values above f32 precision.
-      const minimum = target === 'sint32' ? MINIMUM_SINT32 : 0;
-      const maximum = target === 'sint32' ? MAXIMUM_SINT32 : MAXIMUM_UINT32;
-      const value = Math.min(maximum, Math.max(minimum, Math.trunc(node.value)));
-      return this.emitControl(value, undefined, target);
+      // Convert controls before upload to retain values above f32 integer precision.
+      return this.emitControl(
+        node.value,
+        node.kind === 'parameter' ? node.name : undefined,
+        target,
+        true
+      );
     }
     return this.convertValue(this.emit(node, this.inferFormat(node) ?? 'float32'), target);
   }
@@ -358,7 +361,8 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   private emitControl(
     value: GPUExpressionValue,
     name: string | undefined,
-    expected?: GPUQueryValueFormat
+    expected?: GPUQueryValueFormat,
+    convertInteger = false
   ): GPUQueryExpressionShaderValue {
     const inferred = typeof value === 'boolean' ? 'boolean' : (expected ?? 'float32');
     if (inferred !== 'boolean' && getGPUExpressionLayout(inferred).components !== 1)
@@ -369,6 +373,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     const control: GPUQueryExpressionControl = {
       ...(name !== undefined ? {name} : {}),
       value,
+      ...(convertInteger ? {convertInteger} : {}),
       format: inferred as GPUQueryScalarFormat | 'boolean',
       index: this.controls.length
     };

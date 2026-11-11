@@ -200,6 +200,17 @@ export class GPUDataFrame<T extends GPUTypeMap = GPUTypeMap> {
   withColumn<
     Name extends string,
     ReferencedColumns extends keyof T & string,
+    Format extends GPUDataFrameDerivedColumnFormat
+  >(
+    name: Name,
+    expression: GPUExpression<GPUExpressionNumericValue, ReferencedColumns> & {
+      readonly node: {readonly kind: 'cast'; readonly format: Format};
+    },
+    options?: GPUDataFrameDerivedColumnOptions<Format>
+  ): GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T>;
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends keyof T & string,
     Format extends GPUDataFrameDerivedColumnFormat = GPUDataFrameDerivedColumnFormatForExpression<
       T,
       ReferencedColumns

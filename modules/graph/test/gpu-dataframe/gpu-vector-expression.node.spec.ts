@@ -7,6 +7,7 @@ import {parseSQLExpression} from '@math.gl/core/sql';
 import {
   column,
   literal,
+  parameter,
   vector,
   cast,
   getGPUExpressionLayout,
@@ -120,7 +121,11 @@ test('integer vector literals saturate, truncate and retain full integer precisi
   const table = new GPUTable({schema: {fields: [], metadata: new Map()}});
   const frame = new GPUDataFrame({table});
   try {
-    const expression = vector('uint32x3', [literal(-1), literal(1.5), literal(4294967294)]);
+    const expression = vector('uint32x3', [
+      literal(-1),
+      parameter('component', 1.5),
+      literal(4294967294)
+    ]);
     const plan = makeGPUQueryExpressionShaderPlan(
       frame,
       [],
@@ -130,6 +135,25 @@ test('integer vector literals saturate, truncate and retain full integer precisi
     expect(Array.from(encodeGPUQueryExpressionControls(plan.controls, {}))).toEqual([
       0, 1, 1, 1, 4294967294, 1
     ]);
+  } finally {
+    frame.destroy();
+    table.destroy();
+  }
+});
+
+test('retains cast formats in subsequent scalar analytics', () => {
+  const table = new GPUTable<{x: 'uint32'}>({
+    schema: {fields: [{name: 'x', format: 'uint32'}], metadata: new Map()}
+  });
+  const frame = new GPUDataFrame({table});
+  try {
+    const query = frame.withColumn('fractional', cast(column('x'), 'float32'));
+    expect(query.derivedColumns[0].format).toBe('float32');
+    expect(() => query.histogram('fractional', {edges: [0, 0.5, 1]})).not.toThrow();
+    const chained = frame
+      .withColumn('copy', column('x'))
+      .withColumn('fractional', cast(column('copy'), 'float32'));
+    expect(chained.derivedColumns[1].format).toBe('float32');
   } finally {
     frame.destroy();
     table.destroy();
