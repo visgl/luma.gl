@@ -276,28 +276,28 @@ export class WebGPUAdapter extends Adapter {
 
     // log.probe(1, 'GPUDevice available')();
 
-    const {WebGPUDevice} = await import('./webgpu-device');
-    const featureLevel = getEffectiveWebGPUFeatureLevel(requestedFeatureLevel, gpuDevice.features);
-    const deviceProps = {...props, featureLevel};
-
     log.groupCollapsed(1, 'WebGPUDevice created')();
     try {
-      let device: WebGPUDevice;
+      let device: WebGPUDevice | undefined;
       try {
+        const {WebGPUDevice} = await import('./webgpu-device');
+        const featureLevel = getEffectiveWebGPUFeatureLevel(
+          requestedFeatureLevel,
+          gpuDevice.features
+        );
+        const deviceProps = {...props, featureLevel};
         device = new WebGPUDevice(deviceProps, gpuDevice, adapter, adapterInfo);
-      } catch (error) {
-        gpuDevice.destroy();
-        throw new Error('WebGPU wrapper initialization failed', {cause: error});
-      }
-
-      const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
-      if (canvasContextProps) {
-        try {
+        const canvasContextProps = WebGPUDevice.getCanvasContextProps(deviceProps);
+        if (canvasContextProps) {
           device.initializeCanvasContext(canvasContextProps);
-        } catch (error) {
+        }
+      } catch (error) {
+        if (device) {
           device.destroy();
           throw new Error('WebGPU canvas initialization failed', {cause: error});
         }
+        gpuDevice.destroy();
+        throw new Error('WebGPU wrapper initialization failed', {cause: error});
       }
       log.probe(
         1,
