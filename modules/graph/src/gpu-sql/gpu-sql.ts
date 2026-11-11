@@ -438,20 +438,44 @@ class GPUSQLParser {
   private parseExpression(): GPUExpressionNode {
     const tokens: string[] = [];
     let depth = 0;
+    let expectsOperand: boolean = true;
     for (let token = this.peek(); token; token = this.peek()) {
-      if (
-        depth === 0 &&
-        token.kind !== 'parameter' &&
-        /^(,|;|AS|FROM|GROUP|ORDER|LIMIT)$/i.test(token.value)
-      )
-        break;
-      if (token.value === '(') depth++;
-      if (token.value === ')') depth--;
-      // Pass GPU parameter names and qualified columns through as opaque identifiers.
-      if (token.kind === 'parameter') tokens.push(`":${token.value}"`);
-      else if (token.kind === 'identifier' && token.value.includes('.'))
-        tokens.push(`"${token.value}"`);
-      else tokens.push(token.value);
+      const value = token.value;
+      if (depth === 0) {
+        if (token.kind === 'symbol' && (value === ',' || value === ';')) break;
+        if (
+          token.kind === 'identifier' &&
+          !expectsOperand &&
+          /^(AS|FROM|GROUP|ORDER|LIMIT)$/i.test(value)
+        ) {
+          break;
+        }
+      }
+      switch (token.kind) {
+        case 'parameter':
+          // The shared AST leaves parameter binding to the GPU planner.
+          tokens.push(`":${value}"`);
+          expectsOperand = false;
+          break;
+        case 'identifier': {
+          const operator: boolean =
+            /^NOT$/i.test(value) || (!expectsOperand && /^(AND|OR|IS)$/i.test(value));
+          const keyword = operator || /^(NULL|TRUE|FALSE)$/i.test(value);
+          tokens.push(keyword ? value : `"${value}"`);
+          expectsOperand = operator;
+          break;
+        }
+        case 'symbol':
+          if (value === '(') depth++;
+          if (value === ')') depth--;
+          tokens.push(value);
+          expectsOperand = value !== ')';
+          break;
+        case 'number':
+          tokens.push(value);
+          expectsOperand = false;
+          break;
+      }
       this.take();
     }
     return lowerSQLExpression(parseSQLExpression(tokens.join(' ')), this.parameters);
