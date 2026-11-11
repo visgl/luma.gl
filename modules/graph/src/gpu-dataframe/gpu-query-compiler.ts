@@ -11,11 +11,13 @@ import {
   type Device
 } from '@luma.gl/core';
 import {
+  GPUData,
+  GPUVector,
   getGPUVectorWGSLLayout,
+  type GPUConstant,
   type GPUVectorWGSLFormat as GPUExpressionNumericFormat
 } from '@luma.gl/graph/gpu-data';
 import {Kernel} from '../execution/compute/kernel';
-import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
   type CompiledGPUCommandGraph,
