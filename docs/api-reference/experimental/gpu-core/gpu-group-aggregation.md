@@ -137,3 +137,9 @@ On subgroup-capable devices, aggregations with at most 16 groups combine lanes c
 key before issuing count, sum, minimum, maximum, or mean atomics. This targets compact dictionaries
 with high contention. Larger dictionaries and devices without both subgroup capabilities retain
 the existing local-count or direct-global-atomic implementations.
+
+## Semantic graph operation
+
+Use [`GPUGraphGroupAggregation`](./gpu-graph.md#grouped-aggregation-and-scalar-reduction)
+for named logical inputs and operation-defined results in `GPUGraph`. It lowers to
+this primitive and preserves its statistics, masks, chunking, and numerical behavior.

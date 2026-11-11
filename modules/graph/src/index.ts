@@ -216,3 +216,12 @@ export type {
   GPUCPUVector,
   GPUCPUResult
 } from './gpu-core/gpu-cpu-operation';
+
+export {
+  GPUGraphGroupAggregation,
+  GPUGraphReduction
+} from './gpu-core/gpu-semantic-aggregation-operation';
+export type {
+  GPUGraphGroupAggregationProps,
+  GPUGraphReductionProps
+} from './gpu-core/gpu-semantic-aggregation-operation';
