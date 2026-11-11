@@ -3,6 +3,11 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import type {GPUExpressionNumericFormat} from './gpu-expression-layout';
+
+/** Numeric values, including fixed-width vectors. */
+export type GPUExpressionNumericValue = number | readonly number[] | null;
+
 /** Portable scalar values accepted by GPU-resident dataframe expressions. */
 export type GPUExpressionValue = number | boolean | null;
 
@@ -26,6 +31,12 @@ export type GPUExpressionBinaryOperator =
 
 /** Immutable, renderer-independent dataframe expression syntax. */
 export type GPUExpressionNode =
+  | Readonly<{
+      kind: 'vector';
+      format: GPUExpressionNumericFormat;
+      components: readonly GPUExpressionNode[];
+    }>
+  | Readonly<{kind: 'cast'; format: GPUExpressionNumericFormat; operand: GPUExpressionNode}>
   | Readonly<{kind: 'column'; name: string}>
   | Readonly<{kind: 'literal'; value: GPUExpressionValue}>
   | Readonly<{kind: 'parameter'; name: string; value: GPUExpressionValue}>
@@ -236,6 +247,18 @@ export function getGPUExpressionColumnNames(expression: GPUExpression<any, strin
 /** Clones every closed node so caller-owned child objects cannot alter an immutable query plan. */
 function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNode {
   switch (node.kind) {
+    case 'vector':
+      return Object.freeze({
+        kind: 'vector',
+        format: node.format,
+        components: Object.freeze(node.components.map(cloneFrozenGPUExpressionNode))
+      });
+    case 'cast':
+      return Object.freeze({
+        kind: 'cast',
+        format: node.format,
+        operand: cloneFrozenGPUExpressionNode(node.operand)
+      });
     case 'column':
       return Object.freeze({kind: 'column', name: node.name});
     case 'literal':
@@ -262,6 +285,13 @@ function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNod
 
 function collectGPUExpressionColumnNames(node: GPUExpressionNode, columnNames: Set<string>): void {
   switch (node.kind) {
+    case 'vector':
+      for (const component of node.components)
+        collectGPUExpressionColumnNames(component, columnNames);
+      break;
+    case 'cast':
+      collectGPUExpressionColumnNames(node.operand, columnNames);
+      break;
     case 'column':
       columnNames.add(node.name);
       break;
@@ -306,4 +336,27 @@ function assertValidExpressionValue(
   ) {
     throw new Error(`GPUDataFrame ${kind} values must be finite numbers, booleans, or null`);
   }
+}
+
+/** Constructs a fixed-width numeric vector; a null component makes the whole row null. */
+export function vector<Columns extends string>(
+  format: GPUExpressionNumericFormat,
+  components: readonly GPUExpression<number | null, Columns>[]
+): GPUExpression<readonly number[] | null, Columns> {
+  const width = Number(format.slice(-1));
+  if (![2, 3, 4].includes(width) || components.length !== width)
+    throw new Error('Vector width must match its format');
+  return new GPUExpression({
+    kind: 'vector',
+    format,
+    components: components.map(component => component.node)
+  });
+}
+
+/** Explicit numeric conversion. Width changes and implicit scalar broadcasting are unsupported. */
+export function cast<Value extends GPUExpressionNumericValue, Columns extends string>(
+  expression: GPUExpression<Value, Columns>,
+  format: GPUExpressionNumericFormat
+): GPUExpression<Value, Columns> {
+  return new GPUExpression({kind: 'cast', format, operand: expression.node});
 }

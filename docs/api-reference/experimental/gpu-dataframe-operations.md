@@ -197,3 +197,34 @@ the underlying WebGPU execution infrastructure.
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU tables](/docs/api-reference/experimental/gpu-tables)
 - [GPU data analysis example](/examples/experimental/gpu-data-analysis)
+
+## Vector expressions
+
+DataFrame expressions distinguish logical numeric values from physical storage.
+`getGPUExpressionLayout()` describes `float32`, `sint32`, `uint32` and their `x2`,
+`x3`, `x4` forms. Shader values are precisely `f32`/`i32`/`u32` or vectors of those
+components; boolean values remain predicates.
+
+| Components | Packed bytes/row | WGSL alignment | Native WGSL array stride |
+| --- | --- | --- | --- |
+| 1 | 4 | 4 | 4 |
+| 2 | 8 | 8 | 8 |
+| 3 | 12 | 16 | 16 |
+| 4 | 16 | 16 | 16 |
+
+`float32x3` describes packed bytes. It never implies `array<vec3<f32>>` storage.
+Packed arrays can be read through scalar storage arrays and assembled into vector
+values, preserving Arrow FixedSizeList and vertex attribute layouts.
+
+`vector('float32x3', [column('x'), column('y'), column('z')])` creates immutable
+syntax. `cast(expression, format)` requests an explicit numeric conversion.
+`makeGPUExpressionFromPortableAST(parseSQLExpression('ARRAY[x,y,z]::REAL[3]'))`
+bridges math.gl's portable AST. Supported nodes are numeric/boolean/null literals,
+columns, arithmetic, comparisons, boolean operators, unary negation/not,
+`array_float32` of width 2–4, and `cast` to float32/int32. Other nodes fail closed.
+The bridge does not parse SQL itself or execute arbitrary callbacks.
+
+This first tranche provides syntax and layout planning. Vector execution and cast
+lowering are supplied by the dependent execution PR. Unsupported scope includes
+float64, normalized/packed integer formats, arbitrary lists, CASE/functions,
+implicit scalar broadcasting, vector ordering and SQL unsigned array syntax.
