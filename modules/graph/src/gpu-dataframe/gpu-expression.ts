@@ -373,7 +373,14 @@ function assertValidExpressionValue(
   }
 }
 
-/** Constructs a fixed-width numeric vector; a null component makes the whole row null. */
+/**
+ * Constructs a fixed-width numeric vector. A null component makes the whole row null.
+ *
+ * @example
+ * ```ts
+ * const position = vector('float32x3', [column('x'), column('y'), column('z')]);
+ * ```
+ */
 export function vector<Columns extends string>(
   format: GPUExpressionNumericFormat,
   components: readonly GPUExpression<number | null, Columns>[]
@@ -388,7 +395,15 @@ export function vector<Columns extends string>(
   });
 }
 
-/** Explicit numeric conversion. Width changes and implicit scalar broadcasting are unsupported. */
+/**
+ * Converts a numeric expression to the requested format while preserving its width.
+ *
+ * @example
+ * ```ts
+ * const position = vector('sint32x2', [column('x'), column('y')]);
+ * const floatPosition = cast(position, 'float32x2');
+ * ```
+ */
 export function cast<
   Value extends GPUExpressionNumericValue,
   Columns extends string,
