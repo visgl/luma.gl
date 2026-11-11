@@ -4,13 +4,13 @@
 
 import * as arrow from 'apache-arrow';
 import {Buffer} from '@luma.gl/core';
+import {getGPUVectorWGSLLayout} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {makeGPUAnalyticsTableFromArrowTable} from '@luma.gl/graph/arrow';
 import {
   GPUDataFrame,
   column,
   vector,
-  getGPUExpressionLayout,
   type GPUDataFrameQueryParameters
 } from '@luma.gl/graph/gpu-dataframe';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
@@ -51,7 +51,7 @@ for (const rowCount of [100_000, 1_000_000]) {
         expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 3))).toEqual([1, 2, 3]);
       }
       samples.sort((left, right) => left - right);
-      const layout = getGPUExpressionLayout('float32x3');
+      const layout = getGPUVectorWGSLLayout('float32x3');
       console.log(
         JSON.stringify({
           rowCount,
