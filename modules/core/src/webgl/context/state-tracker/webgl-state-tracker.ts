@@ -60,6 +60,19 @@ export class WebGLStateTracker {
     this.stateStack.pop();
   }
 
+  /** Mirror deletion in tracked bindings without querying or changing native GL state. */
+  invalidateDeletedBinding(key: number, handle: unknown): void {
+    if (this.cache[key] === handle) {
+      this.cache[key] = null;
+    }
+    // Deletion is permanent: no saved frame may restore this handle.
+    for (const savedState of this.stateStack) {
+      if (savedState[key] === handle) {
+        savedState[key] = null;
+      }
+    }
+  }
+
   /**
    * Initialize WebGL state caching on a context
    * can be called multiple times to enable/disable
@@ -89,6 +102,12 @@ export class WebGLStateTracker {
     this.gl.lumaState = this;
 
     installProgramSpy(gl);
+    installDeletionSpy(gl, 'deleteFramebuffer', [
+      GL.DRAW_FRAMEBUFFER_BINDING,
+      GL.READ_FRAMEBUFFER_BINDING
+    ]);
+    installDeletionSpy(gl, 'deleteRenderbuffer', [GL.RENDERBUFFER_BINDING]);
+    installDeletionSpy(gl, 'deleteVertexArray', [GL.VERTEX_ARRAY_BINDING]);
 
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
@@ -234,6 +253,24 @@ function installProgramSpy(gl: WebGL2RenderingContext): void {
     if (glState.program !== handle) {
       originalUseProgram(handle);
       glState.program = handle;
+    }
+  };
+}
+
+/** Mirror implicit unbinding only for bindings already maintained by this tracker. */
+function installDeletionSpy(
+  gl: WebGL2RenderingContext,
+  functionName: 'deleteFramebuffer' | 'deleteRenderbuffer' | 'deleteVertexArray',
+  bindings: readonly number[]
+): void {
+  const originalDelete = gl[functionName].bind(gl);
+  gl[functionName] = function deleteResourceLuma(handle) {
+    originalDelete(handle);
+    if (handle !== null) {
+      const tracker = WebGLStateTracker.get(gl);
+      for (const binding of bindings) {
+        tracker.invalidateDeletedBinding(binding, handle);
+      }
     }
   };
 }
