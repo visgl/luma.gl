@@ -631,3 +631,22 @@ test('round-trips packed Arrow vectors and collapses component nulls into row va
     }
   }
 });
+
+test('preserves packed vector stride for schema-only Arrow tables', () => {
+  const device = new NullDevice({id: 'analytics-empty-vector-layout'});
+  const schema = new arrow.Schema([
+    new arrow.Field(
+      'position',
+      new arrow.FixedSizeList(3, new arrow.Field('item', new arrow.Float32()))
+    )
+  ]);
+  const uploaded = makeGPUAnalyticsTableFromArrowTable(device, new arrow.Table(schema, []));
+  try {
+    expect(uploaded.table.numRows).toBe(0);
+    expect(uploaded.table.bufferLayout).toEqual([
+      {name: 'position', format: 'float32x3', byteStride: 12}
+    ]);
+  } finally {
+    destroyAnalyticsResult(uploaded);
+  }
+});

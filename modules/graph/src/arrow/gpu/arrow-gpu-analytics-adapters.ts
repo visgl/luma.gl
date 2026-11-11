@@ -186,7 +186,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
             bufferLayout: columns.map(column => ({
               name: column.field.name,
               format: column.format,
-              byteStride: 4
+              byteStride: getGPUVectorFormatInfo(column.format).byteLength
             }))
           });
 
