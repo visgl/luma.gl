@@ -24,6 +24,8 @@ it('initializes size-dependent state before hooking getters and restores native 
     scissor,
     isEnabled() {},
     deleteFramebuffer() {},
+    deleteRenderbuffer() {},
+    deleteVertexArray() {},
     useProgram() {}
   };
   const gl = context as unknown as WebGL2RenderingContext;

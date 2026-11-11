@@ -102,7 +102,12 @@ export class WebGLStateTracker {
     this.gl.lumaState = this;
 
     installProgramSpy(gl);
-    installFramebufferDeletionSpy(gl);
+    installDeletionSpy(gl, 'deleteFramebuffer', [
+      GL.DRAW_FRAMEBUFFER_BINDING,
+      GL.READ_FRAMEBUFFER_BINDING
+    ]);
+    installDeletionSpy(gl, 'deleteRenderbuffer', [GL.RENDERBUFFER_BINDING]);
+    installDeletionSpy(gl, 'deleteVertexArray', [GL.VERTEX_ARRAY_BINDING]);
 
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
@@ -252,15 +257,20 @@ function installProgramSpy(gl: WebGL2RenderingContext): void {
   };
 }
 
-/** Framebuffer deletion implicitly clears both bindings; mirror only the state we track. */
-function installFramebufferDeletionSpy(gl: WebGL2RenderingContext): void {
-  const originalDeleteFramebuffer = gl.deleteFramebuffer.bind(gl);
-  gl.deleteFramebuffer = function deleteFramebufferLuma(handle) {
-    originalDeleteFramebuffer(handle);
+/** Mirror implicit unbinding only for bindings already maintained by this tracker. */
+function installDeletionSpy(
+  gl: WebGL2RenderingContext,
+  functionName: 'deleteFramebuffer' | 'deleteRenderbuffer' | 'deleteVertexArray',
+  bindings: readonly number[]
+): void {
+  const originalDelete = gl[functionName].bind(gl);
+  gl[functionName] = function deleteResourceLuma(handle) {
+    originalDelete(handle);
     if (handle !== null) {
       const tracker = WebGLStateTracker.get(gl);
-      tracker.invalidateDeletedBinding(GL.DRAW_FRAMEBUFFER_BINDING, handle);
-      tracker.invalidateDeletedBinding(GL.READ_FRAMEBUFFER_BINDING, handle);
+      for (const binding of bindings) {
+        tracker.invalidateDeletedBinding(binding, handle);
+      }
     }
   };
 }
