@@ -67,7 +67,7 @@ it('WEBGLFramebuffer destruction does not let popState restore its deleted handl
     return originalBindFramebuffer.call(gl, target, handle);
   }) as typeof gl.bindFramebuffer;
   try {
-    // Bound before the state frame: destruction saves the handle as the value to restore
+    // Bound before the state frame: deletion must not introduce a saved binding
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, framebuffer.handle);
     device.pushState();
     framebuffer.destroy();
@@ -95,6 +95,61 @@ it('WEBGLFramebuffer destruction does not let popState restore its deleted handl
     gl.bindFramebuffer = originalBindFramebuffer;
     framebuffer.destroy();
     otherFramebuffer.destroy();
+    device.destroy();
+  }
+});
+
+it('native framebuffer deletion invalidates tracked state without queries or binds', async () => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+  const framebuffer = gl.createFramebuffer();
+  const otherFramebuffer = gl.createFramebuffer();
+  const originalGetParameter = gl.getParameter;
+  const originalBindFramebuffer = gl.bindFramebuffer;
+  try {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    device.pushState();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, otherFramebuffer);
+    device.pushState();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    device.pushState();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+    // Native deletion must not depend on reading back or explicitly unbinding state.
+    gl.getParameter = () => {
+      throw new Error('unexpected query during deletion');
+    };
+    gl.bindFramebuffer = () => {
+      throw new Error('unexpected bind during deletion');
+    };
+    gl.deleteFramebuffer(framebuffer);
+    gl.getParameter = originalGetParameter;
+    gl.bindFramebuffer = originalBindFramebuffer;
+
+    device.popState();
+    expect(gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING)).toBe(null);
+    expect(gl.getParameter(gl.READ_FRAMEBUFFER_BINDING)).toBe(null);
+    device.popState();
+    expect(gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING)).toBe(otherFramebuffer);
+    expect(gl.getParameter(gl.READ_FRAMEBUFFER_BINDING)).toBe(otherFramebuffer);
+    device.popState();
+    expect(gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING)).toBe(null);
+    expect(gl.getParameter(gl.READ_FRAMEBUFFER_BINDING)).toBe(null);
+    // Bypass the cached getter to check that native and tracked bindings agree.
+    expect(
+      WebGL2RenderingContext.prototype.getParameter.call(gl, gl.DRAW_FRAMEBUFFER_BINDING)
+    ).toBe(null);
+    expect(
+      WebGL2RenderingContext.prototype.getParameter.call(gl, gl.READ_FRAMEBUFFER_BINDING)
+    ).toBe(null);
+    expect(gl.getError()).toBe(gl.NO_ERROR);
+  } finally {
+    gl.getParameter = originalGetParameter;
+    gl.bindFramebuffer = originalBindFramebuffer;
+    gl.deleteFramebuffer(framebuffer);
+    gl.deleteFramebuffer(otherFramebuffer);
     device.destroy();
   }
 });

@@ -9,7 +9,6 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
 import {getDepthStencilAttachmentWebGL} from '../converters/webgl-texture-table';
-import {WebGLStateTracker} from '../../context/state-tracker/webgl-state-tracker';
 
 export type Attachment = WEBGLTextureView | WEBGLTexture; // | WEBGLRenderbuffer;
 
@@ -51,17 +50,6 @@ export class WEBGLFramebuffer extends Framebuffer {
   /** destroys any auto created resources etc. */
   protected override destroyHandle(): void {
     if (this.handle !== null && this.ownsHandle) {
-      // Deleting a bound framebuffer implicitly unbinds it; keep the state tracker in sync.
-      if (this.gl.getParameter(GL.DRAW_FRAMEBUFFER_BINDING) === this.handle) {
-        this.gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, null);
-      }
-      if (this.gl.getParameter(GL.READ_FRAMEBUFFER_BINDING) === this.handle) {
-        this.gl.bindFramebuffer(GL.READ_FRAMEBUFFER, null);
-      }
-      // Saved bindings must not restore the deleted handle on popState().
-      const stateTracker = WebGLStateTracker.get(this.gl);
-      stateTracker?.replaceSavedValue(GL.DRAW_FRAMEBUFFER_BINDING, this.handle, null);
-      stateTracker?.replaceSavedValue(GL.READ_FRAMEBUFFER_BINDING, this.handle, null);
       this.gl.deleteFramebuffer(this.handle);
     }
   }

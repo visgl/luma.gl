@@ -18,6 +18,7 @@ function createTrackedContext(failSetup = false) {
     isEnabled() {
       return false;
     },
+    deleteFramebuffer() {},
     useProgram() {},
     pixelStorei(parameter: number, value: unknown) {
       if (shouldFail && parameter === GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL) {

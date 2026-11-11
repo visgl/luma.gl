@@ -60,14 +60,15 @@ export class WebGLStateTracker {
     this.stateStack.pop();
   }
 
-  /**
-   * Replaces a saved parameter value in every state stack frame, so that pop() does not restore
-   * it. Used when the value is a handle that has been deleted.
-   */
-  replaceSavedValue(key: number, value: unknown, replacement: unknown): void {
-    for (const oldValues of this.stateStack) {
-      if (key in oldValues && oldValues[key] === value) {
-        oldValues[key] = replacement;
+  /** Mirror deletion in tracked bindings without querying or changing native GL state. */
+  invalidateDeletedBinding(key: number, handle: unknown): void {
+    if (this.cache[key] === handle) {
+      this.cache[key] = null;
+    }
+    // Deletion is permanent: no saved frame may restore this handle.
+    for (const savedState of this.stateStack) {
+      if (savedState[key] === handle) {
+        savedState[key] = null;
       }
     }
   }
@@ -101,6 +102,7 @@ export class WebGLStateTracker {
     this.gl.lumaState = this;
 
     installProgramSpy(gl);
+    installFramebufferDeletionSpy(gl);
 
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
@@ -246,6 +248,19 @@ function installProgramSpy(gl: WebGL2RenderingContext): void {
     if (glState.program !== handle) {
       originalUseProgram(handle);
       glState.program = handle;
+    }
+  };
+}
+
+/** Framebuffer deletion implicitly clears both bindings; mirror only the state we track. */
+function installFramebufferDeletionSpy(gl: WebGL2RenderingContext): void {
+  const originalDeleteFramebuffer = gl.deleteFramebuffer.bind(gl);
+  gl.deleteFramebuffer = function deleteFramebufferLuma(handle) {
+    originalDeleteFramebuffer(handle);
+    if (handle !== null) {
+      const tracker = WebGLStateTracker.get(gl);
+      tracker.invalidateDeletedBinding(GL.DRAW_FRAMEBUFFER_BINDING, handle);
+      tracker.invalidateDeletedBinding(GL.READ_FRAMEBUFFER_BINDING, handle);
     }
   };
 }

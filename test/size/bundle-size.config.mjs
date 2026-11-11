@@ -100,7 +100,7 @@ export const BUNDLE_SIZE_FIXTURES = [
     entry: 'modules/core/src/webgl/index.ts',
     external: ['@luma.gl/core'],
     // Unpack fast path trades ~0.6 KB minified for fewer upload allocations.
-    maximum: {minified: 141_750, gzip: 40_000, brotli: 34_200},
+    maximum: {minified: 141_200, gzip: 39_900, brotli: 34_200},
     targetGzip: 30_000
   },
   {
