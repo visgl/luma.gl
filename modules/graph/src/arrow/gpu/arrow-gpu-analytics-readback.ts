@@ -275,6 +275,7 @@ function isArrowAnalyticsDictionary(
   return !Array.isArray(value);
 }
 
+/** Maps a GPU analytics scalar or packed vector format to its Arrow type. */
 function makeArrowAnalyticsType(format: string | undefined): DataType {
   const match = /^(float32|sint32|uint32)x([234])$/.exec(format ?? '');
   if (match)
@@ -302,6 +303,7 @@ async function readArrowAnalyticsWords(
   return new Uint32Array(bytes.buffer, bytes.byteOffset, length);
 }
 
+/** Reads tightly packed rows from a GPU data view. */
 async function readArrowAnalyticsBytes(
   data: GPUData,
   length = data.length,

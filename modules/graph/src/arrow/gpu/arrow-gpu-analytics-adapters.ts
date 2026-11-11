@@ -33,11 +33,13 @@ import {
 import {getArrowFixedSizeListRowValidity} from './arrow-gpu-data';
 import {makeGPUDataFromArrowData} from '@luma.gl/graph/arrow';
 
-/** Supported WebGPU-native scalar and categorical index storage formats. */
+/** Supported scalar and categorical index formats. */
 type GPUAnalyticsScalarFormat = 'float32' | 'sint32' | 'uint32';
+/** Packed scalar and fixed-width numeric row formats accepted by the Arrow adapter. */
 type GPUAnalyticsVectorFormat =
   | GPUAnalyticsScalarFormat
   | `${GPUAnalyticsScalarFormat}x${2 | 3 | 4}`;
+/** Maps supported Arrow child types to the format of one packed component. */
 type GPUAnalyticsListFormat<T> = T extends Float32
   ? 'float32'
   : T extends Int32
