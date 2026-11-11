@@ -36,6 +36,69 @@ export type ArrowColumnGPUVectorOptions = {
   transform?: (value: number[]) => readonly number[];
 };
 
+/** Options for selecting an output format from Arrow type metadata. */
+export type ArrowColumnFormatOptions = Pick<
+  Partial<ArrowColumnGPUVectorOptions>,
+  'format' | 'transform'
+> & {
+  /** Selects numeric, XY/XYZ position, scalar, or normalized RGBA conversion. */
+  semantic?: 'auto' | 'numeric' | 'position' | 'scalar' | 'color';
+};
+
+/**
+ * Infers and validates a GPU format for an Arrow column without reading rows or uploading data.
+ * Conversion still validates nulls and transformed row widths.
+ */
+export function getArrowConversionFormat(
+  type: DataType,
+  {semantic = 'auto', format, transform}: ArrowColumnFormatOptions = {}
+): GPUVectorFormat {
+  const listWidth = DataType.isFixedSizeList(type) ? type.listSize : undefined;
+  if (semantic === 'position' && listWidth !== 2 && listWidth !== 3) {
+    throw new Error('Arrow positions must be FixedSizeList[2] or FixedSizeList[3]');
+  }
+  if (semantic === 'scalar' && !DataType.isInt(type) && !DataType.isFloat(type)) {
+    throw new Error('Arrow scalar input must be numeric');
+  }
+  const width = listWidth ?? 1;
+  const outputFormat =
+    format ??
+    (semantic === 'color'
+      ? 'unorm8x4'
+      : width === 1
+        ? 'float32'
+        : (`float32x${width}` as GPUVectorFormat));
+  validateArrowColumnFormat(
+    type,
+    outputFormat,
+    semantic === 'color' || outputFormat === 'unorm8x4',
+    transform
+  );
+  return outputFormat;
+}
+
+function validateArrowColumnFormat(
+  sourceType: DataType,
+  format: GPUVectorFormat,
+  color: boolean,
+  transform: ArrowColumnGPUVectorOptions['transform']
+) {
+  const width = format === 'float32' ? 1 : Number(/x([234])$/.exec(format)?.[1]);
+  if (!width || (color ? format !== 'unorm8x4' : !format.startsWith('float32'))) {
+    throw new Error(`Unsupported Arrow output format: ${format}`);
+  }
+  const list = DataType.isFixedSizeList(sourceType);
+  const sourceWidth = list ? sourceType.listSize : 1;
+  const type = list ? sourceType.children[0].type : sourceType;
+  if (!DataType.isInt(type) && !DataType.isFloat(type)) {
+    throw new Error('Arrow input must contain numeric values');
+  }
+  if ((!color && !transform && sourceWidth > width) || (color && ![3, 4].includes(sourceWidth))) {
+    throw new Error('Arrow input width does not match the requested output format');
+  }
+  return {width, sourceWidth, type, list};
+}
+
 /** Converts fixed-width numeric Arrow chunks to owned GPU vectors with optional row transforms and validity. */
 export function convertArrowColumnToGPUVector(
   device: Device,
@@ -43,22 +106,12 @@ export function convertArrowColumnToGPUVector(
   options: ArrowColumnGPUVectorOptions
 ): PreparedArrowColumnGPUVector {
   const {name = 'arrow-column', format, color, preserveNulls} = options;
-  const width = format === 'float32' ? 1 : Number(/x([234])$/.exec(format)?.[1]);
-  if (!width || (color ? format !== 'unorm8x4' : !format.startsWith('float32'))) {
-    throw new Error(`Unsupported Arrow output format: ${format}`);
-  }
-  const list = DataType.isFixedSizeList(vector.type);
-  const sourceWidth = list ? vector.type.listSize : 1;
-  const type = list ? vector.type.children[0].type : vector.type;
-  if (!DataType.isInt(type) && !DataType.isFloat(type)) {
-    throw new Error('Arrow input must contain numeric values');
-  }
-  if (
-    (!color && !options.transform && sourceWidth > width) ||
-    (color && ![3, 4].includes(sourceWidth))
-  ) {
-    throw new Error('Arrow input width does not match the requested output format');
-  }
+  const {width, sourceWidth, type, list} = validateArrowColumnFormat(
+    vector.type,
+    format,
+    color,
+    options.transform
+  );
   const parts: GPUVector[] = [];
   const residuals: GPUVector[] = [];
   const validity: GPUVector[] = [];
