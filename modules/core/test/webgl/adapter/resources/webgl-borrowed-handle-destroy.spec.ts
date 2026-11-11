@@ -7,6 +7,8 @@ import {Resource, type Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {WEBGLFence} from '@luma.gl/core/webgl';
 
+class ResourceScope extends Resource {}
+
 const GLSL_VERTEX_SOURCE = `#version 300 es
 void main() {
   gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
@@ -23,7 +25,7 @@ it.each([
 ] as const)('WEBGLShader %s destruction keeps a borrowed native shader', async destruction => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
-  const owner = new Resource();
+  const owner = new ResourceScope();
   const nativeShader = gl.createShader(gl.VERTEX_SHADER)!;
   try {
     const countBeforeCreate = getActiveResourceCount(device);
@@ -63,7 +65,7 @@ it.each([
 ] as const)('WEBGLFence %s destruction keeps a borrowed native sync', async destruction => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
-  const owner = new Resource();
+  const owner = new ResourceScope();
   const nativeSync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)!;
   try {
     const countBeforeCreate = getActiveResourceCount(device);
