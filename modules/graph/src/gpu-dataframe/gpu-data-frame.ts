@@ -209,16 +209,9 @@ export class GPUDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     expression: GPUExpression<number | null, ReferencedColumns>,
     options?: GPUDataFrameDerivedColumnOptions<Format>
   ): GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T>;
-  withColumn<
-    Name extends string,
-    ReferencedColumns extends keyof T & string,
-    Format extends GPUDataFrameDerivedColumnFormat = GPUDataFrameDerivedColumnFormatForExpression<
-      T,
-      ReferencedColumns
-    >
-  >(
+  withColumn<Name extends string, Format extends GPUDataFrameDerivedColumnFormat>(
     name: Name,
-    expression: GPUExpression<GPUExpressionNumericValue | boolean, ReferencedColumns>,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, string>,
     options: GPUDataFrameDerivedColumnOptions<Format> & {format: Format}
   ): GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T>;
   withColumn<
@@ -230,7 +223,7 @@ export class GPUDataFrame<T extends GPUTypeMap = GPUTypeMap> {
     >
   >(
     name: Name,
-    expression: GPUExpression<GPUExpressionNumericValue | boolean, ReferencedColumns>,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, string>,
     options: GPUDataFrameDerivedColumnOptions<Format> = {}
   ): GPUDataFrameQuery<T & Record<Name, Format>, (keyof T & string) | Name, T> {
     this.assertAvailable();

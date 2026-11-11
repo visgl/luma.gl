@@ -153,16 +153,9 @@ export class GPUDataFrameQuery<
     expression: GPUExpression<number | null, ReferencedColumns>,
     options?: GPUDataFrameDerivedColumnOptions<Format>
   ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source>;
-  withColumn<
-    Name extends string,
-    ReferencedColumns extends SelectedColumns,
-    Format extends GPUDataFrameDerivedColumnFormat = GPUDataFrameDerivedColumnFormatForExpression<
-      Logical,
-      ReferencedColumns
-    >
-  >(
+  withColumn<Name extends string, Format extends GPUDataFrameDerivedColumnFormat>(
     name: Name,
-    expression: GPUExpression<GPUExpressionNumericValue | boolean, ReferencedColumns>,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, string>,
     options: GPUDataFrameDerivedColumnOptions<Format> & {format: Format}
   ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source>;
   withColumn<
@@ -174,7 +167,7 @@ export class GPUDataFrameQuery<
     >
   >(
     name: Name,
-    expression: GPUExpression<GPUExpressionNumericValue | boolean, ReferencedColumns>,
+    expression: GPUExpression<GPUExpressionNumericValue | boolean, string>,
     options: GPUDataFrameDerivedColumnOptions<Format> = {}
   ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source> {
     assertDataFrameDerivedColumnName(name);

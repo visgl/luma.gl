@@ -25,7 +25,10 @@ for (const width of [2, 3, 4] as const) {
       const device = await getWebGPUTestDevice();
       if (!device) return;
       const format = `${componentType}x${width}` as const;
-      const schema = {fields: [{name: 'position', format, nullable: true}], metadata: new Map()};
+      const schema = {
+        fields: [{name: 'position' as const, format, nullable: true}],
+        metadata: new Map()
+      };
       const ArrayType =
         componentType === 'float32'
           ? Float32Array
@@ -71,8 +74,7 @@ for (const width of [2, 3, 4] as const) {
             new GPURecordBatch({
               fields: schema.fields,
               gpuData: {position: chunk},
-              ownsData: true,
-              length: chunk.length
+              numRows: chunk.length
             })
         )
       });
@@ -94,12 +96,16 @@ for (const width of [2, 3, 4] as const) {
         const encoder = device.createCommandEncoder();
         compiled.encode(encoder);
         device.submit(encoder.finish());
-        expect(compiled.table.gpuVectors.result.byteStride).toBe(width * 4);
-        expect(compiled.table.gpuVectors.result.data.map(chunk => chunk.length)).toEqual([2, 0, 1]);
-        const result = compiled.table.gpuVectors.result.data[0];
+        expect(compiled.table.gpuVectors['result'].byteStride).toBe(width * 4);
+        expect(compiled.table.gpuVectors['result'].data.map(chunk => chunk.length)).toEqual([
+          2, 0, 1
+        ]);
+        const result = compiled.table.gpuVectors['result'].data[0];
         const bytes = await (result.buffer as Buffer).readAsync(0, width * 2 * 4);
         expect(
-          Array.from(new ArrayType(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4))
+          Array.from(
+            new ArrayType(bytes.buffer as ArrayBuffer, bytes.byteOffset, bytes.byteLength / 4)
+          )
         ).toEqual(Array.from({length: width * 2}, (_, index) => index + 3));
         const validityBytes = await (compiled.validity.result!.data[0].buffer as Buffer).readAsync(
           0,
@@ -125,7 +131,10 @@ for (const width of [2, 3, 4] as const) {
 test('DataFrame vector constructors propagate null parameters and saturating casts', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
-  const schema = {fields: [{name: 'value', format: 'float32' as const}], metadata: new Map()};
+  const schema = {
+    fields: [{name: 'value' as const, format: 'float32' as const}],
+    metadata: new Map()
+  };
   const chunk = new GPUData({
     buffer: device.createBuffer({
       data: new Float32Array([-2.7, 4.9, 1e20, NaN]),
@@ -141,8 +150,7 @@ test('DataFrame vector constructors propagate null parameters and saturating cas
       new GPURecordBatch({
         fields: schema.fields,
         gpuData: {value: chunk},
-        length: 4,
-        ownsData: true
+        numRows: 4
       })
     ]
   });
@@ -159,7 +167,7 @@ test('DataFrame vector constructors propagate null parameters and saturating cas
     let encoder = device.createCommandEncoder();
     compiled.encode(encoder);
     device.submit(encoder.finish());
-    const bytes = await (compiled.table.gpuVectors.result.data[0].buffer as Buffer).readAsync(
+    const bytes = await (compiled.table.gpuVectors['result'].data[0].buffer as Buffer).readAsync(
       0,
       36
     );
