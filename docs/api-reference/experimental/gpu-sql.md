@@ -68,6 +68,8 @@ rendering and compute can use the compiled GPU resources directly. Call
 - `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`.
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
 
+SQL keywords are case-insensitive. Column names must match the dataframe schema exactly.
+
 Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous
 expressions, multiple sort/group keys, and `LIMIT` without ordering fail during CPU-only planning.
 Applications still own command submission, synchronization, result readback, and cleanup.

@@ -118,8 +118,8 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     const context = new GPUSQLContext({trips: frame});
 
     const query = context.query(
-      'SELECT fare, fare * 2 AS doubled FROM trips WHERE fare >= :minimum ORDER BY fare DESC NULLS LAST LIMIT 2',
-      {parameters: {minimum: 5}}
+      'SELECT fare, fare * 2 AS doubled FROM trips WHERE trips.fare >= :limit ORDER BY fare DESC NULLS LAST LIMIT 2',
+      {parameters: {limit: 5}}
     );
 
     expect(query).toBeInstanceOf(GPUSQLQuery);
@@ -130,6 +130,35 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
 
     createBuffer.mockRestore();
     submit.mockRestore();
+    frame.destroy();
+  });
+
+  test('matches column case exactly and distinguishes column names from clause boundaries', () => {
+    const device = new NullDevice({id: 'ludf-sql-keyword-columns'});
+    const batch = new GPURecordBatch({
+      gpuData: {
+        limit: createGPUSQLNodeData(device, Float32Array.of(4), 'float32'),
+        Limit: createGPUSQLNodeData(device, Float32Array.of(6), 'float32'),
+        order: createGPUSQLNodeData(device, Float32Array.of(8), 'float32')
+      },
+      fields: [
+        {name: 'limit', format: 'float32', nullable: false},
+        {name: 'Limit', format: 'float32', nullable: false},
+        {name: 'order', format: 'float32', nullable: false}
+      ]
+    });
+    const frame = new GPUDataFrame({table: new GPUTable({batches: [batch]}), ownership: 'owned'});
+    const context = new GPUSQLContext({trips: frame});
+
+    expect(context.query('sElEcT limit, Limit fRoM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT LIMIT FROM trips')).toThrow(/does not exist/);
+    expect(() => context.query('SELECT limit, Limit FROM trips ORDER BY LIMIT')).toThrow(
+      /does not exist/
+    );
+    expect(
+      context.query('SELECT limit, order FROM trips WHERE order > limit ORDER BY order LIMIT 1')
+    ).toBeInstanceOf(GPUSQLQuery);
+
     frame.destroy();
   });
 

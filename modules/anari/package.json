@@ -65,8 +65,8 @@
   },
   "dependencies": {
     "@luma.gl/graph": "10.0.0-alpha.12",
-    "@math.gl/core": "5.0.0-beta.6",
-    "@math.gl/geometry": "~5.0.0-beta.6",
+    "@math.gl/core": "5.0.0-beta.7",
+    "@math.gl/geometry": "~5.0.0-beta.7",
     "zod": "^4.4.3"
   }
 }
