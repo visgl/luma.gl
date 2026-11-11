@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
+import {getGPUDataBufferProps} from '../../gpu-data/gpu-data-buffer-props';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   GPUData,
@@ -707,7 +708,7 @@ async function convertArrowFloat64VectorOnGPU(
       const outputBuffer = device.createBuffer({
         ...options.bufferProps,
         id: `${options.name}-${chunkIndex}`,
-        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+        ...getGPUDataBufferProps(device),
         byteLength: Math.max(Float32Array.BYTES_PER_ELEMENT, split.byteLength)
       });
       outputBuffers.push(outputBuffer);
@@ -846,7 +847,7 @@ async function convertArrowNumericVectorOnGPU(
       const outputBuffer = device.createBuffer({
         ...options.bufferProps,
         id: `${options.name}-${chunkIndex}`,
-        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+        ...getGPUDataBufferProps(device),
         byteLength: Math.max(4, converted.byteLength)
       });
       outputBuffers.push(outputBuffer);

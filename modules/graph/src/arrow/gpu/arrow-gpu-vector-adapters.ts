@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, Device, type SignedDataType, type VertexFormat} from '@luma.gl/core';
+import {getGPUDataBufferProps} from '../../gpu-data/gpu-data-buffer-props';
+import {Device, type SignedDataType, type VertexFormat} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import {
   GPUData,
@@ -210,7 +211,9 @@ export function makeGPUDataFromArrowData<T extends DataType>(
     const byteStride = getArrowTypeByteStride(arrowType.indices);
     return new GPUData({
       buffer: new DynamicBuffer(device, {
-        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+        ...(bufferProps.usage === undefined
+          ? getGPUDataBufferProps(device, format === 'uint16' ? 'uint16' : 'uint32')
+          : {}),
         ...bufferProps,
         data: getArrowDictionaryIndexBufferSource(data as unknown as Data<ArrowUtf8Dictionary>)
       }),
@@ -227,7 +230,9 @@ export function makeGPUDataFromArrowData<T extends DataType>(
   if (DataType.isUtf8(arrowType)) {
     return new GPUData({
       buffer: new DynamicBuffer(device, {
-        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+        ...(bufferProps.usage === undefined
+          ? getGPUDataBufferProps(device, format === 'uint16' ? 'uint16' : 'uint32')
+          : {}),
         ...bufferProps,
         data: getArrowUtf8DataBufferSource(data as Data<Utf8>)
       }),
@@ -254,7 +259,9 @@ export function makeGPUDataFromArrowData<T extends DataType>(
     const byteStride = getArrowTypeByteStride(arrowType);
     return new GPUData({
       buffer: new DynamicBuffer(device, {
-        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+        ...(bufferProps.usage === undefined
+          ? getGPUDataBufferProps(device, format === 'uint16' ? 'uint16' : 'uint32')
+          : {}),
         ...bufferProps,
         data: getArrowVariableLengthAttributeDataBufferSource(
           data as unknown as Data<VariableLengthAttributeArrowType>
@@ -278,7 +285,9 @@ export function makeGPUDataFromArrowData<T extends DataType>(
   const byteStride = getArrowTypeByteStride(arrowType);
   return new GPUData({
     buffer: new DynamicBuffer(device, {
-      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      ...(bufferProps.usage === undefined
+        ? getGPUDataBufferProps(device, format === 'uint16' ? 'uint16' : 'uint32')
+        : {}),
       ...bufferProps,
       data: getArrowDataBufferSource(data as unknown as Data<AttributeArrowType>)
     }),
@@ -385,7 +394,9 @@ export function makeGPUVectorFromArrow<T extends DataType>(
   }
 
   const buffer = device.createBuffer({
-    usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+    ...(bufferProps.usage === undefined
+      ? getGPUDataBufferProps(device, vectorFormat === 'uint16' ? 'uint16' : 'uint32')
+      : {}),
     ...bufferProps,
     data: getArrowVectorBufferSource(vector as unknown as Vector<AttributeArrowType>)
   });

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {getGPUDataBufferProps} from '../../gpu-data/gpu-data-buffer-props';
 import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/core/dynamic';
 import type {GPUField, GPUSchema, GPUTypeMap} from './gpu-schema';
@@ -545,7 +546,7 @@ function createPackedGPURecordBatch(
       0
     );
     const buffer = device.createBuffer({
-      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      ...getGPUDataBufferProps(device),
       byteLength
     });
     let destinationOffset = 0;

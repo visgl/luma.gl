@@ -6,6 +6,7 @@ import {assert, Buffer, type Device, type BufferProps} from '@luma.gl/core';
 import {CPUData} from './cpu-data';
 import {CPUVector} from './cpu-vector';
 import {GPUData} from './gpu-data';
+import {getGPUDataBufferProps, PORTABLE_GPU_DATA_USAGE} from './gpu-data-buffer-props';
 import {GPUVector} from './gpu-vector';
 import {getGPUVectorFormatInfo, type GPUVectorFormat} from './gpu-vector-format';
 
@@ -30,6 +31,13 @@ export function makeGPUVectorFromCPUVector<T extends GPUVectorFormat>(
         assert(
           inferredIndexType && (!options.indexType || options.indexType === inferredIndexType)
         );
+      const defaults =
+        options.usage === undefined
+          ? getGPUDataBufferProps(device, inferredIndexType)
+          : {
+              usage: PORTABLE_GPU_DATA_USAGE,
+              indexType: undefined
+            };
       const count = info.vertexList || info.valueList ? chunk.valueLength : chunk.length;
       const bytes = new Uint8Array(count * info.byteLength);
       for (let index = 0; index < count; index++)
@@ -45,15 +53,10 @@ export function makeGPUVectorFromCPUVector<T extends GPUVectorFormat>(
         new GPUData({
           buffer: device.createBuffer({
             data: bytes.length ? bytes : new Uint8Array(4),
-            usage:
-              Buffer.COPY_SRC |
-              Buffer.COPY_DST |
-              Buffer.STORAGE |
-              Buffer.VERTEX |
-              (options.usage ?? 0),
+            usage: (defaults.usage ?? 0) | (options.usage ?? 0),
             indexType:
               options.indexType ??
-              ((options.usage ?? 0) & Buffer.INDEX ? inferredIndexType : undefined)
+              ((options.usage ?? 0) & Buffer.INDEX ? inferredIndexType : defaults.indexType)
           }),
           format: vector.format,
           length: chunk.length,
