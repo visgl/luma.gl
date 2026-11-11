@@ -214,31 +214,80 @@ path vertices.
 
 ## Color Columns
 
-`canConvertColors()`, `convertColors()`, `convertArrowColors()`, and
-`convertArrowColorsToArrow()` normalize
-fixed-width RGB and RGBA rows into the canonical
-`GPUVector<'unorm8x4'>` representation used by renderers. Supported Arrow
-sources are `FixedSizeList<Uint8 | Float16 | Float32, 3 | 4>`; equivalent
-fixed-width GPU vectors can enter through `convertColors()` without an Arrow
-round trip.
+`convertColors(device, gpuVector, options)` and `convertArrowColors(device, arrowVector, options)`
+convert fixed-width RGB/RGBA columns to `unorm8x4` (default), `float16x4`, or `float32x4`.
+Arrow inputs support `FixedSizeList<Uint8 | Float16 | Float32, 3 | 4>`.
+`canConvertColors(source)` checks the input representation, not device rendering capabilities.
 
-`convertArrowColorsToArrow()` performs the same lowering and returns canonical
-Arrow Uint8 RGBA rows for CPU-side conversion pipelines.
+```typescript
+import {convertArrowToGPUVector} from '@luma.gl/graph/arrow';
 
-Uint8 channels are preserved, while Float16 and Float32 channels are clamped to
-`[0, 1]`, scaled to `[0, 255]`, and rounded. Three-channel inputs receive an
-opaque alpha channel. This is a normalized display/style-color conversion, not
-a lossless scene-linear or HDR conversion for values outside `[0, 1]`.
+// The consumer declares its supported storage representations.
+const acceptedFormats = ['unorm8x4', 'float16x4', 'float32x4'] as const;
+const prepared = await convertArrowToGPUVector(device, colors, {
+  semantic: 'color',
+  acceptedFormats,
+  format: 'preserve'
+});
+// Use prepared.vector until the consumer has finished; then prepared.destroy().
 
-Conversion preserves source chunk boundaries and nullable row validity. The
-returned vector owns distinct output buffers; caller-owned input buffers remain
-borrowed. WebGPU performs the conversion with compute, while WebGL devices use
-the equivalent CPU/readback fallback.
+// Explicitly halve Float32 RGBA storage from 16 to 8 bytes per row.
+const compact = await convertArrowToGPUVector(device, colors, {
+  semantic: 'color', acceptedFormats, format: 'float16x4'
+});
+```
 
-Arrow path, polygon, and text layers apply this normalization automatically to
-fixed-width per-row colors. Specialized nested per-vertex or per-character
-`vertex-list<unorm8x4>` inputs already satisfy the renderer contract and pass
-through without fixed-width normalization.
+| Output policy | Behavior |
+| --- | --- |
+| `unorm8x4` | 4 bytes per row. Uint8 channels are preserved; floats clamp to `[0, 1]`, scale to 255 and round. |
+| `float16x4` | 8 bytes per row. Uint8 divides by 255; floats retain negative/HDR values with binary16 rounding. |
+| `float32x4` | 16 bytes per row. Uint8 divides by 255; floating channels retain their numeric interpretation. |
+| `preserve` | Preserve the source channel representation: Uint8 → unorm8, Float16 → Float16, Float32 → Float32. RGB expands to RGBA. Compatible GPU storage is borrowed; compatible Arrow payloads upload directly. |
+
+Missing alpha is 255 in RGBA8 and 1 in floating output. These are storage conversions:
+no sRGB/linear transfer function, premultiplication, tone mapping, or implicit display-range
+clamping is applied to floating output. Binary16 has less precision than binary32 and a maximum
+finite magnitude of 65,504; rounding can overflow to infinity. Applications must choose an
+appropriate representation for their data and renderer. Normalized bytes do not identify a color space.
+
+The optional `acceptedFormats` constraint is independent of the requested `format`. An unsupported
+preserved representation throws unless `fallbackFormat` explicitly names an accepted output.
+An explicit output that the consumer does not accept also throws. The existing planner `formats`
+option still selects the first supported color target in the supplied order; use `acceptedFormats`
+with `format` to distinguish a conversion policy from consumer capabilities. Omitting these
+options retains the existing RGBA8 behavior.
+
+`planArrowGPUConversion()` reports the resolved format, bytes, upload/pass counts, and precision
+warnings before allocation. `policy: 'prefer-cpu'` converts Arrow payloads on CPU before uploading
+only the final output. WebGL/CPU-backed Arrow conversion uses that path automatically; WebGPU
+otherwise converts on GPU. GPU-resident WebGL input still requires the CPU/readback fallback.
+
+Conversion preserves chunk boundaries and row validity, including empty chunks. Format-changing
+results own output buffers. `convertColors(..., {format: 'preserve'})` returns a borrowed wrapper
+when GPU storage already matches; destroying that wrapper does not destroy the source. Keep the
+source alive while consuming it. The planner's prepared result reports `ownsVector` and its
+idempotent `destroy()` releases only owned storage. `convertArrowColorsToArrow()` reads the selected
+output representation back into Arrow; use the CPUVector helper for a CPU-only pipeline.
+
+```typescript
+import {convertCPUColors} from '@luma.gl/graph/gpu-data';
+
+const compactCPU = convertCPUColors(cpuColors, {format: 'float16x4'});
+// No device allocation, upload, or readback; chunks and validity remain separate.
+```
+
+The Arrow-free `convertCPUColors(source, options)` accepts Uint8/unorm8, Float16, or Float32
+RGB/RGBA CPUVector rows and the same format/preservation constraints. Packed Float16 RGB
+stored as `uint16x3-webgl` requires `inputFormat: 'float16x3'` to distinguish half-float
+bits from unsigned integer channels. Compatible preservation
+borrows the existing chunks; conversion allocates CPU payloads only. Low-level
+`convertColorData(source, {format})` returns a lazy evaluator; the WebGPU handler supports
+`GPUEvaluationScope`, encoding into its caller-owned command stream without private submission.
+
+Existing Arrow path/polygon/text consumers still request RGBA8. Requesting floating output does
+not make a renderer support HDR automatically. Shared named-operation graph descriptors currently
+cover packed 32-bit rows; compact color formats are available through CPUVector helpers, conversion
+planning and evaluator/scoped execution. Extending those descriptor formats is a separate change.
 
 ## Matrix Columns
 

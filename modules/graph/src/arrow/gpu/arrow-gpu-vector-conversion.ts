@@ -13,6 +13,7 @@ import {
   type GPUVectorBufferProps,
   type GPUVectorFormat
 } from '@luma.gl/graph/gpu-data';
+import {resolveColorOutputFormat, type ColorOutputFormat} from '../../gpu-data/color-conversion';
 import {castData} from '../../gpu-simple-graph/operations/cast-data';
 import {fround} from '../../gpu-simple-graph/operations/fround';
 import {GPUDataEvaluator} from '../../gpu-simple-graph/operation/gpu-data-evaluator';
@@ -113,7 +114,11 @@ export type ArrowGPUConversionOptions = {
   /** Semantic conversion family. `auto` recognizes temporal and metadata-tagged matrices. */
   semantic?: ArrowGPUConversionSemantic;
   /** One required output memory format. */
-  format?: GPUVectorFormat;
+  format?: GPUVectorFormat | 'preserve';
+  /** Consumer color storage capabilities, checked independently of the requested policy. */
+  acceptedFormats?: readonly ColorOutputFormat[];
+  /** Explicit fallback when preserved color precision is not accepted. */
+  fallbackFormat?: ColorOutputFormat;
   /** Ordered acceptable output formats. The planner selects the first compatible format. */
   formats?: readonly GPUVectorFormat[];
   /** Strategy constraint. */
@@ -265,9 +270,14 @@ export async function convertArrowToGPUVector(
     case 'convert-color': {
       const vector =
         source instanceof GPUVector
-          ? await convertColors(device, source, {name})
+          ? await convertColors(device, source, {
+              name,
+              format: plan.targetFormat as ColorOutputFormat
+            })
           : await convertArrowColors(device, source as Parameters<typeof convertArrowColors>[1], {
               name,
+              format: plan.targetFormat as ColorOutputFormat,
+              preferCPU: plan.backend === 'cpu',
               bufferProps: options.bufferProps
             });
       return makePreparedArrowGPUVector(vector, plan, true);
@@ -368,10 +378,33 @@ function resolveTargetFormat(
   options: ArrowGPUConversionOptions
 ): GPUVectorFormat {
   const canonicalFormat = getCanonicalSemanticFormat(semantic, source, sourceFormat, options.field);
+  if (semantic === 'color') {
+    const requested =
+      options.format ??
+      options.formats?.find(format => ['unorm8x4', 'float16x4', 'float32x4'].includes(format)) ??
+      'unorm8x4';
+    if (!['preserve', 'unorm8x4', 'float16x4', 'float32x4'].includes(requested))
+      throw new Error('Unsupported color output format');
+    if (options.formats && !options.formats.includes(requested as GPUVectorFormat))
+      throw new Error('No compatible color output format');
+    return resolveColorOutputFormat(
+      source instanceof Vector &&
+        DataType.isFixedSizeList(source.type) &&
+        source.type.children[0].type instanceof Float16
+        ? 'float16x4'
+        : (sourceFormat ?? canonicalFormat),
+      {
+        format: requested as ColorOutputFormat | 'preserve',
+        acceptedFormats: options.acceptedFormats,
+        fallbackFormat: options.fallbackFormat
+      }
+    );
+  }
+  if (options.format === 'preserve') throw new Error('preserve requires color semantics');
   const requestedFormats = options.format ? [options.format] : options.formats;
   if (!requestedFormats?.length) return canonicalFormat;
 
-  if (semantic === 'color' || semantic === 'matrix' || semantic === 'temporal') {
+  if (semantic === 'matrix' || semantic === 'temporal') {
     if (!requestedFormats.includes(canonicalFormat)) {
       throw new Error(
         `Arrow ${semantic} conversion produces ${canonicalFormat}, not ${requestedFormats.join(', ')}`
@@ -435,7 +468,8 @@ function resolveConversionStrategy(
     if (!sourceFormat || !areGPUFormatsByteCompatible(sourceFormat, targetFormat)) {
       return 'convert-color';
     }
-    if (source instanceof GPUVector) return 'borrow';
+    if (source instanceof GPUVector)
+      return sourceFormat === targetFormat ? 'borrow' : 'convert-color';
     return sourceFormat === targetFormat ? 'upload' : 'reinterpret-upload';
   }
   if (semantic === 'matrix') {
@@ -478,6 +512,8 @@ function resolveConversionBackend(
   if (strategy === 'borrow') return 'none';
   if (strategy === 'upload' || strategy === 'reinterpret-upload') return 'upload';
   if (strategy === 'convert-matrix' && source instanceof Vector) return 'cpu';
+  if (strategy === 'convert-color' && source instanceof Vector && policy === 'prefer-cpu')
+    return 'cpu';
   if (
     strategy === 'convert-numeric' &&
     source instanceof Vector &&
@@ -1060,6 +1096,12 @@ function getConversionWarnings(
   backend: ArrowGPUConversionBackend
 ): string[] {
   const warnings: string[] = [];
+  if (strategy === 'convert-color') {
+    if (targetFormat === 'unorm8x4')
+      warnings.push('floating color channels are clamped and quantized to RGBA8');
+    if (targetFormat === 'float16x4')
+      warnings.push('color channels are rounded to binary16; out-of-range values may overflow');
+  }
   const sourceType = getSourceArrowType(source);
   const leafType = sourceType ? getArrowNumericLeafType(sourceType) : undefined;
   if (

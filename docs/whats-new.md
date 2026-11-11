@@ -28,6 +28,9 @@ The optional lighting entry now exposes UV-space diffuse bake models, progressiv
 
 PBR material and model factories now infer lightmap flags from `pbr_lightmapSampler`. See [baked lightmaps](./api-reference/engine/lighting/pbr-material.md#baked-lightmaps) for irradiance, UV and ownership conventions.
 
+### Color storage precision
+
+Color conversion supports Float16/Float32 RGBA output, source preservation with consumer format constraints, CPUVector conversion without GPU transfers, and scoped WebGPU encoding. See [color conversion](./api-reference/arrow/arrow-conversion.mdx#color-columns).
 
 ### Reusable clustered light lists
 

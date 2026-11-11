@@ -929,6 +929,8 @@ function getVertexFormat(
   if (size < 1 || size > 4) {
     throw new Error(`Cannot synthesize a GPUVector vertex format with ${size} components`);
   }
+  // Binary16 RGB has no vertex format; retain byte-identical packed storage for compute readers.
+  if (type === 'float16' && size === 3 && !normalized) return 'uint16x3-webgl';
   let baseFormat: string = type;
   if (normalized) {
     switch (type) {
