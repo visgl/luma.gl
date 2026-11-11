@@ -283,10 +283,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     if (layout.components === 1 || node.components.length !== layout.components)
       throw new Error('Vector width must match its format');
     const components = node.components.map(component =>
-      this.convertValue(
-        this.emit(component, this.inferFormat(component) ?? layout.componentType),
-        layout.componentType
-      )
+      this.emitConversion(component, layout.componentType)
     );
     return this.addValue(
       node.format,
@@ -299,10 +296,26 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   private emitCast(
     node: Extract<GPUExpressionNode, {kind: 'cast'}>
   ): GPUQueryExpressionShaderValue {
-    return this.convertValue(
-      this.emit(node.operand, this.inferFormat(node.operand) ?? 'float32'),
-      node.format
-    );
+    return this.emitConversion(node.operand, node.format);
+  }
+
+  private emitConversion(
+    node: GPUExpressionNode,
+    target: GPUExpressionNumericFormat
+  ): GPUQueryExpressionShaderValue {
+    if (
+      (target === 'sint32' || target === 'uint32') &&
+      node.kind === 'literal' &&
+      typeof node.value === 'number' &&
+      Number.isFinite(node.value)
+    ) {
+      // Encode integer literals directly to retain all 32 bits, including values above f32 precision.
+      const minimum = target === 'sint32' ? MINIMUM_SINT32 : 0;
+      const maximum = target === 'sint32' ? MAXIMUM_SINT32 : MAXIMUM_UINT32;
+      const value = Math.min(maximum, Math.max(minimum, Math.trunc(node.value)));
+      return this.emitControl(value, undefined, target);
+    }
+    return this.convertValue(this.emit(node, this.inferFormat(node) ?? 'float32'), target);
   }
 
   private convertValue(

@@ -56,7 +56,10 @@ describe('GPU dataframe vector syntax and layout', () => {
 
 import {GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import {GPUTable} from '@luma.gl/graph/gpu-tables';
-import {makeGPUQueryExpressionShaderPlan} from '../../src/gpu-dataframe/gpu-expression-shader';
+import {
+  encodeGPUQueryExpressionControls,
+  makeGPUQueryExpressionShaderPlan
+} from '../../src/gpu-dataframe/gpu-expression-shader';
 
 test('plans typed vector execution and rejects incompatible widths before allocation', () => {
   const table = new GPUTable({
@@ -110,5 +113,25 @@ test('plans typed vector execution and rejects incompatible widths before alloca
 test('rejects scalar formats in vector constructors', () => {
   for (const format of ['float32', 'sint32', 'uint32'] as const) {
     expect(() => vector(format, [literal(1), literal(2)])).toThrow(/width/);
+  }
+});
+
+test('integer vector literals saturate, truncate and retain full integer precision', () => {
+  const table = new GPUTable({schema: {fields: [], metadata: new Map()}});
+  const frame = new GPUDataFrame({table});
+  try {
+    const expression = vector('uint32x3', [literal(-1), literal(1.5), literal(4294967294)]);
+    const plan = makeGPUQueryExpressionShaderPlan(
+      frame,
+      [],
+      [{name: 'value', expression}],
+      ['value']
+    );
+    expect(Array.from(encodeGPUQueryExpressionControls(plan.controls, {}))).toEqual([
+      0, 1, 1, 1, 4294967294, 1
+    ]);
+  } finally {
+    frame.destroy();
+    table.destroy();
   }
 });
