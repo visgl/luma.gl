@@ -386,9 +386,22 @@ export function vector<Columns extends string>(
 }
 
 /** Explicit numeric conversion. Width changes and implicit scalar broadcasting are unsupported. */
-export function cast<Value extends GPUExpressionNumericValue, Columns extends string>(
+export function cast<
+  Value extends GPUExpressionNumericValue,
+  Columns extends string,
+  Format extends GPUExpressionNumericFormat
+>(
   expression: GPUExpression<Value, Columns>,
-  format: GPUExpressionNumericFormat
-): GPUExpression<Value, Columns> {
-  return new GPUExpression({kind: 'cast', format, operand: expression.node});
+  format: Format
+): GPUExpression<Value, Columns> & {
+  readonly node: {readonly kind: 'cast'; readonly format: Format};
+} {
+  const result = new GPUExpression<Value, Columns>({
+    kind: 'cast',
+    format,
+    operand: expression.node
+  });
+  return result as GPUExpression<Value, Columns> & {
+    readonly node: {readonly kind: 'cast'; readonly format: Format};
+  };
 }

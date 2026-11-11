@@ -92,7 +92,10 @@ export class GPUDataFrameQuery<
     selectedColumns: readonly SelectedColumns[],
     derivedColumns: readonly GPUDataFrameDerivedColumn[] = []
   ) {
-    const logicalColumns = assertDataFrameDerivedColumns(source, derivedColumns);
+    const {logicalColumns, resolvedColumns} = resolveDataFrameDerivedColumns(
+      source,
+      derivedColumns
+    );
     assertSelectedQueryColumns(selectedColumns, logicalColumns);
     for (const predicate of predicates) {
       assertDataFrameQueryPredicate(source, predicate, logicalColumns, logicalColumns);
@@ -101,7 +104,7 @@ export class GPUDataFrameQuery<
     this.source = source;
     this.predicates = Object.freeze([...predicates]);
     this.selectedColumns = Object.freeze([...selectedColumns]);
-    this.derivedColumns = Object.freeze([...derivedColumns]);
+    this.derivedColumns = Object.freeze(resolvedColumns);
     Object.freeze(this);
   }
 
@@ -141,6 +144,17 @@ export class GPUDataFrameQuery<
   }
 
   /** Adds one selected derived column without allocating GPU storage or retaining source leases. */
+  withColumn<
+    Name extends string,
+    ReferencedColumns extends SelectedColumns,
+    Format extends GPUDataFrameDerivedColumnFormat
+  >(
+    name: Name,
+    expression: GPUExpression<GPUExpressionNumericValue, ReferencedColumns> & {
+      readonly node: {readonly kind: 'cast'; readonly format: Format};
+    },
+    options?: GPUDataFrameDerivedColumnOptions<Format>
+  ): GPUDataFrameQuery<Logical & Record<Name, Format>, SelectedColumns | Name, Source>;
   withColumn<
     Name extends string,
     ReferencedColumns extends SelectedColumns,
@@ -333,10 +347,11 @@ export function assertDataFrameQueryPredicate<T extends GPUTypeMap>(
 }
 
 /** Validates computed definitions in dependency order and returns all available logical fields. */
-function assertDataFrameDerivedColumns<T extends GPUTypeMap>(
+function resolveDataFrameDerivedColumns<T extends GPUTypeMap>(
   source: GPUDataFrame<T>,
   derivedColumns: readonly GPUDataFrameDerivedColumn[]
-): string[] {
+) {
+  const resolvedColumns: GPUDataFrameDerivedColumn[] = [];
   const logicalColumns = [...source.columnNames];
   const logicalFormats = new Map<string, string | undefined>(
     source.schema.fields.map(
@@ -357,11 +372,12 @@ function assertDataFrameDerivedColumns<T extends GPUTypeMap>(
       throw new Error(`GPUDataFrame derived column "${derivedColumn.name}" format does not match`);
     }
 
+    resolvedColumns.push(Object.freeze({...derivedColumn, format: inferredFormat}));
     logicalFormats.set(derivedColumn.name, inferredFormat);
     logicalColumns.push(derivedColumn.name);
   }
 
-  return logicalColumns;
+  return {logicalColumns, resolvedColumns};
 }
 
 /** Validates one numerical derived expression against its currently selected logical inputs. */
