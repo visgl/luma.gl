@@ -77,5 +77,6 @@ export {makeGPUVectorFromCPUVector, makeCPUVectorFromGPUVector} from './cpu-gpu-
 export {
   getGPUVectorWGSLLayout,
   type GPUVectorWGSLFormat,
+  type GPUVectorWGSLLayout,
   type GPUVectorWGSLScalarFormat
 } from './gpu-vector-wgsl-layout';

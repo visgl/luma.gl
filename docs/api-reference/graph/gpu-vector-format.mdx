@@ -224,4 +224,6 @@ packed `float32`, `sint32`, and `uint32` formats and their 2-, 3-, and
 The GPUVector format describes the packed row. A packed `float32x3` can be
 read as three consecutive `f32` values. An `array<vec3<f32>>` starts each
 row on a 16-byte boundary. Choose a stride and a shader declaration that agree
-with the buffer's physical layout.
+with the buffer's physical layout. Applications can set `byteStride` and
+`byteOffset` on a `GPUData` view over an existing buffer. The helper reports
+layout metadata and leaves buffer creation and layout selection to the caller.

@@ -13,8 +13,36 @@ export type GPUVectorWGSLFormat =
   | GPUVectorWGSLScalarFormat
   | `${GPUVectorWGSLScalarFormat}x${2 | 3 | 4}`;
 
-/** Describes packed GPUVector rows and the corresponding native WGSL storage array. */
-export function getGPUVectorWGSLLayout(format: GPUVectorWGSLFormat) {
+/** Packed row metadata and the layout of the corresponding native WGSL storage value. */
+export type GPUVectorWGSLLayout = {
+  /** The packed GPUVector format. */
+  format: GPUVectorWGSLFormat;
+  /** Number of scalar components in a row. */
+  components: 1 | 2 | 3 | 4;
+  /** GPUVector format of an individual component. */
+  componentType: GPUVectorWGSLScalarFormat;
+  /** WGSL type of an individual component. */
+  scalarType: 'f32' | 'i32' | 'u32';
+  /** WGSL scalar or vector type for one row. */
+  shaderType: 'f32' | 'i32' | 'u32' | `vec${2 | 3 | 4}<${'f32' | 'i32' | 'u32'}>`;
+  /** Number of bytes occupied by the components of one row. */
+  byteLength: number;
+  /** Distance in bytes between rows in a tightly packed GPUVector. */
+  packedByteStride: number;
+  /** Required byte alignment of the value in a native WGSL storage buffer. */
+  storageAlignment: number;
+  /** Distance in bytes between elements in a native WGSL storage array of this value type. */
+  nativeArrayByteStride: number;
+};
+
+/**
+ * Describes packed GPUVector rows and the corresponding native WGSL storage array.
+ *
+ * @param format - Packed 32-bit scalar or vector format.
+ * @returns Layout metadata in bytes. The helper does not allocate or modify storage.
+ * @throws If the format has no supported 32-bit WGSL representation.
+ */
+export function getGPUVectorWGSLLayout(format: GPUVectorWGSLFormat): GPUVectorWGSLLayout {
   const {components, signedDataType, primitiveType, byteLength, elementFormat} =
     getGPUVectorFormatInfo(format);
   if (
