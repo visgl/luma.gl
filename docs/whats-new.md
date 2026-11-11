@@ -1,5 +1,13 @@
 # What's New
 
+## Explicit resource ownership
+
+A device-independent `Resource` base supports exclusive ownership, atomic ownership transfer,
+and recursive cleanup. GPU resources now extend `DeviceResource`, which centralizes native cleanup
+and statistics. See [Resource ownership](/docs/api-guide/gpu/resource-ownership) and the
+[upgrade guide](/docs/upgrade-guide) for API migration details.
+
+
 ### Static lightmap workflows
 
 A dedicated two-room [Lightmap Baking example](/examples/api/lightmap-baking) demonstrates fixed colored
@@ -397,8 +405,8 @@ Target Release Date: Q3, 2026
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
-- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.5 grouped
-  packages and loaders.gl 5.0.0-beta.5 grouped packages. Arrow adapters expose
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.6 grouped
+  packages and loaders.gl 5.0.0-beta.6 grouped packages. Arrow adapters expose
   `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
   for native GeoArrow chunks and rows without copying coordinate buffers. Views
   use math.gl’s shared adapter, including field extension metadata and canonical

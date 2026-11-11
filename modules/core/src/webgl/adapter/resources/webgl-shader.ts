@@ -43,14 +43,10 @@ export class WEBGLShader extends Shader {
     }
   }
 
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
+  protected override destroyHandle(): void {
     if (this.handle && this.ownsHandle) {
       this.device.gl.deleteShader(this.handle);
     }
-    this.destroyResource();
   }
 
   get asyncCompilationStatus(): Promise<'pending' | 'success' | 'error'> {

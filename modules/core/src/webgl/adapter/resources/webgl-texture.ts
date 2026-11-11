@@ -152,26 +152,22 @@ export class WEBGLTexture extends Texture {
     }
     // @ts-ignore TODO - fix types
     this.view = new WEBGLTextureView(this.device, {...this.props, texture: this});
+    this.view.transferOwnershipTo(this);
 
     Object.seal(this);
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     if (this.handle) {
       // Destroy any cached framebuffer
       this._framebuffer?.destroy();
       this._framebuffer = null;
       this._framebufferAttachmentKey = null;
 
-      this.removeStats();
       if (this.ownsHandle) {
         this.gl.deleteTexture(this.handle);
-        this.trackDeallocatedMemory('Texture');
-      } else {
-        this.trackDeallocatedReferencedMemory('Texture');
       }
       // this.handle = null;
-      this.destroyed = true;
     }
   }
 

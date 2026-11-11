@@ -1,5 +1,21 @@
 # Upgrade Guide
 
+### Resource ownership base classes
+
+The former GPU `Resource<Props>` and `ResourceProps` are now `DeviceResource<Props>` and
+`DeviceResourceProps`. Update imports, GPU-specific type annotations, and backend subclasses.
+`Resource` is now a non-generic, device-independent lifetime base. Use `instanceof DeviceResource`
+when a check specifically requires a device-backed resource.
+
+Custom backends must move native cleanup from `destroy()` into protected `destroyHandle()`.
+Remove calls to `destroyResource()`, `removeStats()`, and assignments to `destroyed`; the shared
+lifecycle now owns cleanup ordering and bookkeeping. `destroyed` is read-only.
+
+Attachment methods are deprecated and now enforce exclusive ownership. Attaching an already-owned
+resource transfers it from its previous owner. Cycles and transfers during destruction throw.
+See [Resource ownership](/docs/api-guide/gpu/resource-ownership) for migration examples.
+
+
 ### Readonly shadertype metadata
 
 Texture, vertex-format, scalar-data-type, and shader-type decoders now return shared,
@@ -192,7 +208,7 @@ metadata instead of relying on luma.gl's former sequential child IDs.
 
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.5. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.6. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
 `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection
 imports move under `@math.gl/geospatial`. GeoArrow imports move to `@math.gl/arrow`. Sun imports move to

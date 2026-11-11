@@ -32,8 +32,7 @@ export class WebGPUFence extends Fence {
     return this._signaled;
   }
 
-  override destroy(): void {
+  protected override destroyHandle(): void {
     // Nothing to release for WebGPU fence
-    this.destroyResource();
   }
 }

@@ -32,7 +32,7 @@ import type {
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps,
-  Resource,
+  DeviceResource,
   VertexFormat,
   DeviceLostInfo
 } from '../../index';
@@ -631,7 +631,7 @@ export class WebGLDevice extends Device {
    */
   _setWebGLDebugMetadata(
     handle: unknown,
-    resource: Resource<any>,
+    resource: DeviceResource<any>,
     options: {spector: Record<string, unknown>}
   ): void {
     // @ts-expect-error

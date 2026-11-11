@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Resource, ResourceProps} from './resource';
+import {DeviceResource, DeviceResourceProps} from './device-resource';
 import type {ComputeShaderLayout, Bindings, BindingsByGroup} from '../types/shader-layout';
 import type {Device} from '../device';
 import type {Shader} from './shader';
@@ -10,7 +10,7 @@ import type {Shader} from './shader';
 /**
  * Properties for a compute pipeline
  */
-export type ComputePipelineProps = ResourceProps & {
+export type ComputePipelineProps = DeviceResourceProps & {
   handle?: unknown;
   /** Compiled shader object */
   shader: Shader;
@@ -25,7 +25,7 @@ export type ComputePipelineProps = ResourceProps & {
 /**
  * A compiled and linked shader program for compute
  */
-export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
+export abstract class ComputePipeline extends DeviceResource<ComputePipelineProps> {
   override get [Symbol.toStringTag](): string {
     return 'ComputePipeline';
   }
@@ -46,7 +46,7 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
   abstract setBindings(bindings: Bindings | BindingsByGroup): void;
 
   static override defaultProps: Required<ComputePipelineProps> = {
-    ...Resource.defaultProps,
+    ...DeviceResource.defaultProps,
     shader: undefined!,
     entryPoint: undefined!,
     constants: {},

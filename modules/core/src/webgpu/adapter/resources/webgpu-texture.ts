@@ -114,19 +114,11 @@ export class WebGPUTexture extends Texture {
     }
   }
 
-  override destroy(): void {
-    if (this.destroyed) {
-      return;
-    }
-
+  protected override destroyHandle(): void {
     if (!this.props.handle && this.handle) {
-      this.trackDeallocatedMemory('Texture');
       this.handle.destroy();
-    } else if (this.handle) {
-      this.trackDeallocatedReferencedMemory('Texture');
     }
 
-    this.destroyResource();
     // @ts-expect-error readonly
     this.handle = null;
   }
