@@ -54,15 +54,18 @@ for (const caching of [true, false]) {
     const context: Record<string, any> = {
       getParameter: (parameter: number) => values.get(parameter),
       isEnabled: (parameter: number) => values.get(parameter),
-      useProgram() {}
+      useProgram() {},
+      deleteFramebuffer() {},
+      deleteRenderbuffer() {},
+      deleteVertexArray() {}
     };
     const capability = setting.method === 'enable' || setting.method === 'disable';
     if (capability) {
-      context.enable = (parameter: number) => {
+      context['enable'] = (parameter: number) => {
         calls(parameter, true);
         values.set(parameter, true);
       };
-      context.disable = (parameter: number) => {
+      context['disable'] = (parameter: number) => {
         calls(parameter, false);
         values.set(parameter, false);
       };
