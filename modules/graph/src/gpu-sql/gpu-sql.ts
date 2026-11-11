@@ -3,6 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by relational SQL semantics.
 
+import type {Expression} from '@math.gl/core/expressions';
+import {parseSQLExpression} from '@math.gl/core/sql';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
 import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
@@ -21,7 +23,6 @@ import type {
 
 const MAXIMUM_SQL_LENGTH = 65_536;
 const MAXIMUM_SQL_TOKENS = 4_096;
-const MAXIMUM_EXPRESSION_DEPTH = 64;
 
 /** Explicit GPU dataframe registrations; Arrow remains exclusively an adapter boundary. */
 export type GPUSQLTables = Readonly<Record<string, GPUDataFrame>>;
@@ -97,7 +98,7 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
 };
 
 /**
- * Dependency-free SQL frontend over explicitly registered, already GPU-resident dataframes.
+ * SQL frontend over explicitly registered, already GPU-resident dataframes.
  *
  * Parsing and planning never upload data, submit work, or read GPU buffers. Arrow upload/output
  * remain explicit `@luma.gl/graph/arrow` operations around the shared GPU table execution core.
@@ -330,7 +331,7 @@ class GPUSQLParser {
     const table = this.parseIdentifier();
     const alias = this.parseOptionalTableAlias();
     const join = this.parseOptionalJoin();
-    const predicate = this.takeKeyword('WHERE') ? this.parseExpression(0) : undefined;
+    const predicate = this.takeKeyword('WHERE') ? this.parseExpression() : undefined;
     let groupBy: string | undefined;
     if (this.takeKeyword('GROUP')) {
       this.expectKeyword('BY');
@@ -402,7 +403,7 @@ class GPUSQLParser {
         ...(this.takeKeyword('AS') ? {alias: this.parseIdentifier()} : {})
       };
     }
-    const expression = this.parseExpression(0);
+    const expression = this.parseExpression();
     return {
       ...(expression ? {expression} : {}),
       ...(this.takeKeyword('AS') ? {alias: this.parseIdentifier()} : {})
@@ -434,67 +435,26 @@ class GPUSQLParser {
     return {type, table, ...(alias ? {alias} : {}), left, right};
   }
 
-  private parseExpression(depth: number, minimumPrecedence = 0): GPUExpressionNode {
-    if (depth > MAXIMUM_EXPRESSION_DEPTH)
-      throw new Error('GPUSQL expression nesting exceeds its safe limit');
-    let expression = this.parseUnary(depth + 1);
-    while (true) {
-      if (minimumPrecedence <= 3 && this.takeKeyword('IS')) {
-        const negated = this.takeKeyword('NOT');
-        this.expectKeyword('NULL');
-        expression = {
-          kind: 'unary',
-          operator: negated ? 'is-valid' : 'is-null',
-          operand: expression
-        };
-        continue;
-      }
-      const token = this.peek();
-      const operation = token ? getGPUSQLBinaryOperator(token.value) : undefined;
-      if (!operation || operation.precedence < minimumPrecedence) break;
+  private parseExpression(): GPUExpressionNode {
+    const tokens: string[] = [];
+    let depth = 0;
+    for (let token = this.peek(); token; token = this.peek()) {
+      if (
+        depth === 0 &&
+        token.kind !== 'parameter' &&
+        /^(,|;|AS|FROM|GROUP|ORDER|LIMIT)$/i.test(token.value)
+      )
+        break;
+      if (token.value === '(') depth++;
+      if (token.value === ')') depth--;
+      // Pass GPU parameter names and qualified columns through as opaque identifiers.
+      if (token.kind === 'parameter') tokens.push(`":${token.value}"`);
+      else if (token.kind === 'identifier' && token.value.includes('.'))
+        tokens.push(`"${token.value}"`);
+      else tokens.push(token.value);
       this.take();
-      expression = {
-        kind: 'binary',
-        operator: operation.operator,
-        left: expression,
-        right: this.parseExpression(depth + 1, operation.precedence + 1)
-      };
     }
-    return expression;
-  }
-
-  private parseUnary(depth: number): GPUExpressionNode {
-    if (this.takeKeyword('NOT')) {
-      return {kind: 'unary', operator: 'not', operand: this.parseExpression(depth, 3)};
-    }
-    if (this.takeSymbol('-')) {
-      return {kind: 'unary', operator: 'negate', operand: this.parseUnary(depth + 1)};
-    }
-    if (this.takeSymbol('(')) {
-      const expression = this.parseExpression(depth + 1);
-      this.expectSymbol(')');
-      return expression;
-    }
-    const token = this.take();
-    if (!token) throw new Error('GPUSQL expected an expression');
-    if (token.kind === 'number') {
-      const value = Number(token.value);
-      if (!Number.isFinite(value)) throw new Error('GPUSQL numeric literals must be finite');
-      return literal(value).node;
-    }
-    if (token.kind === 'parameter') {
-      if (!Object.hasOwn(this.parameters, token.value)) {
-        throw new Error(`GPUSQL parameter ":${token.value}" requires an explicit default`);
-      }
-      return parameter(token.value, this.parameters[token.value]).node;
-    }
-    if (token.kind === 'identifier') {
-      if (/^NULL$/i.test(token.value)) return literal(null).node;
-      if (/^TRUE$/i.test(token.value)) return literal(true).node;
-      if (/^FALSE$/i.test(token.value)) return literal(false).node;
-      return column(token.value).node;
-    }
-    throw new Error(`GPUSQL does not support expression token "${token.value}"`);
+    return lowerSQLExpression(parseSQLExpression(tokens.join(' ')), this.parameters);
   }
 
   private parseOptionalTableAlias(): string | undefined {
@@ -570,39 +530,84 @@ function tokenizeGPUSQL(source: string): GPUSQLToken[] {
   return tokens;
 }
 
-function getGPUSQLBinaryOperator(value: string):
-  | Readonly<{
-      operator: Extract<GPUExpressionNode, {kind: 'binary'}>['operator'];
-      precedence: number;
-    }>
-  | undefined {
-  switch (value.toUpperCase()) {
-    case 'OR':
-      return {operator: 'or', precedence: 1};
-    case 'AND':
-      return {operator: 'and', precedence: 2};
-    case '=':
-      return {operator: 'equal', precedence: 3};
-    case '!=':
-    case '<>':
-      return {operator: 'not-equal', precedence: 3};
-    case '>':
-      return {operator: 'greater-than', precedence: 3};
-    case '>=':
-      return {operator: 'greater-than-or-equal', precedence: 3};
-    case '<':
-      return {operator: 'less-than', precedence: 3};
-    case '<=':
-      return {operator: 'less-than-or-equal', precedence: 3};
-    case '+':
-      return {operator: 'add', precedence: 4};
-    case '-':
-      return {operator: 'subtract', precedence: 4};
-    case '*':
-      return {operator: 'multiply', precedence: 5};
-    case '/':
-      return {operator: 'divide', precedence: 5};
+const SQL_BINARY_OPERATORS: Readonly<
+  Partial<Record<string, Extract<GPUExpressionNode, {kind: 'binary'}>['operator']>>
+> = {
+  '||': 'or',
+  '&&': 'and',
+  '==': 'equal',
+  '!=': 'not-equal',
+  '>': 'greater-than',
+  '>=': 'greater-than-or-equal',
+  '<': 'less-than',
+  '<=': 'less-than-or-equal',
+  '+': 'add',
+  '-': 'subtract',
+  '*': 'multiply',
+  '/': 'divide'
+};
+
+function lowerSQLExpression(
+  node: Extract<Expression, {type: 'BinaryExpression'}>['left'],
+  parameters: GPUDataFrameQueryParameters
+): GPUExpressionNode {
+  // math.gl types child nodes as generic expressions, though the SQL parser emits the AST union.
+  const expression = node as Expression;
+  switch (expression.type) {
+    case 'Identifier': {
+      if (!expression.name.startsWith(':')) return column(expression.name).node;
+      const name = expression.name.slice(1);
+      if (!Object.hasOwn(parameters, name)) {
+        throw new Error(`GPUSQL parameter ":${name}" requires an explicit default`);
+      }
+      return parameter(name, parameters[name]).node;
+    }
+    case 'Literal': {
+      const value = expression.value;
+      if (
+        value === null ||
+        typeof value === 'boolean' ||
+        (typeof value === 'number' && Number.isFinite(value))
+      ) {
+        return literal(value).node;
+      }
+      break;
+    }
+    case 'UnaryExpression':
+      if (expression.operator === '!' || expression.operator === '-') {
+        return {
+          kind: 'unary',
+          operator: expression.operator === '!' ? 'not' : 'negate',
+          operand: lowerSQLExpression(expression.argument, parameters)
+        };
+      }
+      break;
+    case 'BinaryExpression': {
+      const operator = SQL_BINARY_OPERATORS[expression.operator];
+      if (operator) {
+        return {
+          kind: 'binary',
+          operator,
+          left: lowerSQLExpression(expression.left, parameters),
+          right: lowerSQLExpression(expression.right, parameters)
+        };
+      }
+      break;
+    }
+    case 'CallExpression':
+      if (
+        expression.arguments.length === 1 &&
+        (expression.callee['name'] === 'isNull' || expression.callee['name'] === 'isNotNull')
+      ) {
+        return {
+          kind: 'unary',
+          operator: expression.callee['name'] === 'isNull' ? 'is-null' : 'is-valid',
+          operand: lowerSQLExpression(expression.arguments[0], parameters)
+        };
+      }
+      break;
     default:
-      return undefined;
+      break;
   }
+  throw new Error(`GPUSQL does not support SQL expression "${expression.type}"`);
 }

@@ -118,8 +118,8 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     const context = new GPUSQLContext({trips: frame});
 
     const query = context.query(
-      'SELECT fare, fare * 2 AS doubled FROM trips WHERE fare >= :minimum ORDER BY fare DESC NULLS LAST LIMIT 2',
-      {parameters: {minimum: 5}}
+      'SELECT fare, fare * 2 AS doubled FROM trips WHERE trips.fare >= :limit ORDER BY fare DESC NULLS LAST LIMIT 2',
+      {parameters: {limit: 5}}
     );
 
     expect(query).toBeInstanceOf(GPUSQLQuery);
