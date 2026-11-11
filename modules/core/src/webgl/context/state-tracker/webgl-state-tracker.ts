@@ -10,6 +10,8 @@ import {GL} from '../../../webgl-constants/index';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_HOOKED_SETTERS,
+  GL_SCALAR_SETTERS,
+  type ScalarSetter,
   NON_CACHE_PARAMETERS
 } from '../parameters/webgl-parameter-tables';
 
@@ -93,11 +95,11 @@ export class WebGLStateTracker {
     // intercept all setter functions in the table
     for (const key in GL_HOOKED_SETTERS) {
       const setter = GL_HOOKED_SETTERS[key];
-      if (key === 'pixelStorei') {
-        installPixelStoreSpy(gl);
-      } else {
-        installSetterSpy(gl, key, setter);
-      }
+      installSetterSpy(gl, key, setter);
+    }
+
+    for (const key in GL_SCALAR_SETTERS) {
+      installScalarSetterSpy(gl, key, GL_SCALAR_SETTERS[key]);
     }
 
     // intercept all getter functions in the table
@@ -244,24 +246,29 @@ function installSetterSpy(gl: WebGL2RenderingContext, functionName: string, sett
   });
 }
 
-/** Pixel-store changes are scalar and frequent during texture uploads and readback. */
-function installPixelStoreSpy(gl: WebGL2RenderingContext): void {
-  if (!gl.pixelStorei) {
+/** Fixed arguments avoid per-call arrays, parameter maps, and result objects. */
+function installScalarSetterSpy(
+  gl: WebGL2RenderingContext,
+  functionName: string,
+  setter: ScalarSetter
+): void {
+  if (!gl[functionName]) {
     return;
   }
-  const originalPixelStore = gl.pixelStorei.bind(gl);
-  gl.pixelStorei = function pixelStore(parameter: number, value: number | boolean) {
+  const originalSetter = gl[functionName].bind(gl);
+  gl[functionName] = function setScalar(first: number | boolean, second?: number | boolean) {
+    const parameter = setter.parameter ?? first;
+    const value = setter.value ?? (setter.parameter === undefined ? second : first);
     const state = WebGLStateTracker.get(gl);
     const oldValue = state.cache[parameter];
     if (state._updateScalar(parameter, value)) {
-      originalPixelStore(parameter, value);
+      originalSetter(first, second);
       return oldValue;
     }
-    // Match the generic interceptor: unchanged setters return undefined.
     return undefined;
   };
-  Object.defineProperty(gl.pixelStorei, 'name', {
-    value: 'pixelStorei-to-cache',
+  Object.defineProperty(gl[functionName], 'name', {
+    value: `${functionName}-to-cache`,
     configurable: false
   });
 }
