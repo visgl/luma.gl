@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   buildTextGlyphLayout,
+  createTextCodePointSource,
   measureFontAtlasText,
   type FontAtlas,
   type TextCodePointSource
@@ -55,6 +56,40 @@ const FONT_ATLAS: FontAtlas = {
   width: 16,
   height: 16
 };
+
+it('creates a stable display-order source from Unicode string rows', () => {
+  const rows = ['A😀e\u0301', ''];
+  const source = createTextCodePointSource(rows);
+  rows[0] = 'changed';
+
+  const codePoints: number[] = [];
+  source.visitCodePoints(0, codePoint => codePoints.push(codePoint));
+  source.visitCodePoints(1, codePoint => codePoints.push(codePoint));
+
+  expect(source.rowCount).toBe(2);
+  expect(source.countCodePoints(0)).toBe(4);
+  expect(source.countCodePoints(1)).toBe(0);
+  expect(codePoints).toEqual([0x41, 0x1f600, 0x65, 0x301]);
+});
+
+it('prepares display order once per row before atlas glyph layout', () => {
+  const toDisplayOrder = vi.fn((_text: string, rowIndex: number) => ['בא', ''][rowIndex]);
+  const fontAtlas = {
+    ...FONT_ATLAS,
+    mapping: {א: FONT_ATLAS.mapping.A, ב: FONT_ATLAS.mapping.B}
+  };
+  const source = createTextCodePointSource(['אב', ''], toDisplayOrder);
+  const firstLayout = buildTextGlyphLayout(source, {fontAtlas});
+  const secondLayout = buildTextGlyphLayout(source, {fontAtlas});
+
+  expect(firstLayout.startIndices).toEqual([0, 2, 2]);
+  expect(Array.from(firstLayout.glyphPages)).toEqual([2, 1]);
+  expect(secondLayout).toEqual(firstLayout);
+  expect(toDisplayOrder.mock.calls).toEqual([
+    ['אב', 0],
+    ['', 1]
+  ]);
+});
 
 it('text layout helpers own atlas offsets, pages, kerning, and GPU definitions', () => {
   const source = makeTextCodePointSource([
