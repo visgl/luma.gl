@@ -36,6 +36,7 @@ const binaryOperators: Readonly<Record<string, GPUExpressionBinaryOperator>> = {
   '||': 'or'
 };
 
+/** Lowers one validated portable node and rejects unsupported operations. */
 function convert(expression: Expression): GPUExpressionNode {
   // math.gl's public parser type includes nonportable nodes; validation above narrows at runtime.
   const node = expression as any;

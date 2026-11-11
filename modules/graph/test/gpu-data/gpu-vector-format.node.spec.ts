@@ -1007,7 +1007,7 @@ it('GPUTable keeps storage in GPU vectors instead of cached bindings', () => {
   table.destroy();
 });
 
-test('separates packed vec3 from native storage array stride', () => {
+it('separates packed vec3 from native storage array stride', () => {
   for (const component of ['float32', 'sint32', 'uint32'] as const) {
     for (const width of [1, 2, 3, 4] as const) {
       const layout = getGPUVectorWGSLLayout(width === 1 ? component : `${component}x${width}`);
