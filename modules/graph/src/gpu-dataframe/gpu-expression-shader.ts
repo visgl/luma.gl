@@ -62,6 +62,7 @@ export type GPUQueryExpressionShaderPlan = {
   condition: string;
 };
 
+/** The WGSL value formats accepted by DataFrame expression lowering. */
 type GPUQueryValueFormat = GPUExpressionNumericFormat | 'boolean';
 
 type GPUQueryExpressionShaderValue = {
@@ -281,6 +282,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     return this.addValue(column.format, value, valid, column.nullable);
   }
 
+  /** Constructs a vector and combines validity across all of its components. */
   private emitVector(
     node: Extract<GPUExpressionNode, {kind: 'vector'}>
   ): GPUQueryExpressionShaderValue {
@@ -298,12 +300,14 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     );
   }
 
+  /** Lowers a width-preserving numeric cast. */
   private emitCast(
     node: Extract<GPUExpressionNode, {kind: 'cast'}>
   ): GPUQueryExpressionShaderValue {
     return this.emitConversion(node.operand, node.format);
   }
 
+  /** Encodes integer controls directly and lowers other conversions into WGSL. */
   private emitConversion(
     node: GPUExpressionNode,
     target: GPUExpressionNumericFormat
@@ -324,6 +328,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     return this.convertValue(this.emit(node, this.inferFormat(node) ?? 'float32'), target);
   }
 
+  /** Converts each component while preserving width and row validity. */
   private convertValue(
     source: GPUQueryExpressionShaderValue,
     target: GPUExpressionNumericFormat
