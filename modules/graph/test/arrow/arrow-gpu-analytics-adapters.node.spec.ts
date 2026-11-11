@@ -605,3 +605,29 @@ function destroyAnalyticsResult(result: {
   result.table.destroy();
   for (const validity of Object.values(result.validity)) validity?.destroy();
 }
+
+test('round-trips packed Arrow vectors and collapses component nulls into row validity', async () => {
+  const device = new NullDevice({id: 'analytics-packed-vectors'});
+  for (const child of [new arrow.Float32(), new arrow.Int32(), new arrow.Uint32()]) {
+    for (const width of [2, 3, 4]) {
+      const type = new arrow.FixedSizeList(width, new arrow.Field('item', child, true));
+      const expected = Array.from({length: width}, (_, component) => component + 10);
+      const vector = arrow
+        .vectorFromArray([expected, expected, null, [null, ...expected.slice(1)]], type)
+        .slice(1);
+      const table = new arrow.Table([new arrow.RecordBatch({position: vector.data[0]})]);
+      const uploaded = makeGPUAnalyticsTableFromArrowTable(device, table);
+      try {
+        expect(uploaded.table.gpuVectors.position.byteStride).toBe(width * 4);
+        expect(uploaded.nullCounts.position).toEqual([2]);
+        const result = await makeArrowTableFromGPUAnalyticsTable(uploaded);
+        const position = result.getChild('position')!;
+        expect(Array.from(position.get(0))).toEqual(expected);
+        expect(position.get(1)).toBeNull();
+        expect(position.get(2)).toBeNull();
+      } finally {
+        destroyAnalyticsResult(uploaded);
+      }
+    }
+  }
+});
