@@ -1,5 +1,13 @@
 # What's New
 
+## Explicit resource ownership
+
+A device-independent `Resource` base supports exclusive ownership, atomic ownership transfer,
+and recursive cleanup. GPU resources now extend `DeviceResource`, which centralizes native cleanup
+and statistics. See [Resource ownership](/docs/api-guide/gpu/resource-ownership) and the
+[upgrade guide](/docs/upgrade-guide) for API migration details.
+
+
 ### Static lightmap workflows
 
 A dedicated two-room [Lightmap Baking example](/examples/api/lightmap-baking) demonstrates fixed colored

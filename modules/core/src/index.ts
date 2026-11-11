@@ -30,7 +30,8 @@ export type {PresentationContextProps} from './api/index';
 
 export {PresentationContext} from './api/index';
 
-export {Resource, type ResourceProps} from './api/index';
+export {Resource} from './api/index';
+export {DeviceResource, type DeviceResourceProps} from './api/index';
 
 export {Buffer, type BufferProps, type BufferMapCallback} from './api/index';
 

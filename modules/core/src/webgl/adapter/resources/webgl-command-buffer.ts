@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {
-  type ResourceProps,
+  type DeviceResourceProps,
   type CopyBufferToBufferOptions,
   type CopyBufferToTextureOptions,
   type CopyTextureToBufferOptions,
@@ -70,7 +70,7 @@ export class WEBGLCommandBuffer extends CommandBuffer {
   readonly handle = null;
   commands: Command[] = [];
 
-  constructor(device: WebGLDevice, props: ResourceProps = {}) {
+  constructor(device: WebGLDevice, props: DeviceResourceProps = {}) {
     super(device, props);
     this.device = device;
   }

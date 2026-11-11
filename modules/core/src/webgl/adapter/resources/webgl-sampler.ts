@@ -25,12 +25,12 @@ export class WEBGLSampler extends Sampler {
     this._setSamplerParameters(this.parameters);
   }
 
-  override destroy(): void {
-    if (this.handle) {
+  protected override destroyHandle(): void {
+    if (this.handle && this.ownsHandle) {
       this.device.gl.deleteSampler(this.handle);
-      // @ts-expect-error read-only/undefined
-      this.handle = undefined;
     }
+    // @ts-expect-error read-only/undefined
+    this.handle = undefined;
   }
 
   override toString(): string {

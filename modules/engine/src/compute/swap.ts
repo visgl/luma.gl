@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {BufferProps, FramebufferProps} from '@luma.gl/core';
-import {Device, Resource, Buffer, Framebuffer, Texture} from '@luma.gl/core';
+import {Device, DeviceResource, Buffer, Framebuffer, Texture} from '@luma.gl/core';
 
 /**
  * Helper class for working with repeated transformations / computations
@@ -11,7 +11,7 @@ import {Device, Resource, Buffer, Framebuffer, Texture} from '@luma.gl/core';
  * @note the two resources are expected to be structurally identical (same size, length, format, etc)
  * @note the two resources can be destroyed by calling `destroy()`
  */
-export class Swap<T extends Resource<any>> {
+export class Swap<T extends DeviceResource<any>> {
   id: string;
 
   /** The current resource - usually the source for renders or computations */
