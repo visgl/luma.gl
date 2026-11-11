@@ -133,22 +133,25 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     frame.destroy();
   });
 
-  test('distinguishes clause keywords used as columns from clause boundaries', () => {
+  test('matches column case exactly and distinguishes column names from clause boundaries', () => {
     const device = new NullDevice({id: 'ludf-sql-keyword-columns'});
     const batch = new GPURecordBatch({
       gpuData: {
         limit: createGPUSQLNodeData(device, Float32Array.of(4), 'float32'),
+        Limit: createGPUSQLNodeData(device, Float32Array.of(6), 'float32'),
         order: createGPUSQLNodeData(device, Float32Array.of(8), 'float32')
       },
       fields: [
         {name: 'limit', format: 'float32', nullable: false},
+        {name: 'Limit', format: 'float32', nullable: false},
         {name: 'order', format: 'float32', nullable: false}
       ]
     });
     const frame = new GPUDataFrame({table: new GPUTable({batches: [batch]}), ownership: 'owned'});
     const context = new GPUSQLContext({trips: frame});
 
-    expect(context.query('SELECT limit FROM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(context.query('sElEcT limit, Limit fRoM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT LIMIT FROM trips')).toThrow(/does not exist/);
     expect(
       context.query('SELECT limit, order FROM trips WHERE order > limit ORDER BY order LIMIT 1')
     ).toBeInstanceOf(GPUSQLQuery);

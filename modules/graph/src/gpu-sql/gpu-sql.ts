@@ -286,9 +286,8 @@ function resolveGPUSQLColumn(name: string, qualifier: string, columns: readonly 
     throw new Error(`GPUSQL column "${name}" has an unknown table qualifier`);
   }
   const requested = parts[parts.length - 1];
-  const matches = columns.filter(candidate => candidate.toLowerCase() === requested.toLowerCase());
-  if (matches.length !== 1) throw new Error(`GPUSQL column "${name}" does not exist`);
-  return matches[0];
+  if (!columns.includes(requested)) throw new Error(`GPUSQL column "${name}" does not exist`);
+  return requested;
 }
 
 function resolveGPUSQLExpression(
