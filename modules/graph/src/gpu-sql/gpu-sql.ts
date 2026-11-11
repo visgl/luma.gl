@@ -246,15 +246,14 @@ function buildGPUSQLPlan(
   }
 
   if (statement.orderBy) {
-    const orderColumn =
-      selected.find(name => name.toLowerCase() === statement.orderBy!.column.toLowerCase()) ??
-      resolve(statement.orderBy.column);
+    const {column: requested, direction, nulls} = statement.orderBy;
+    const orderColumn = selected.includes(requested) ? requested : resolve(requested);
     if (!selected.includes(orderColumn)) {
       throw new Error('GPUSQL ORDER BY requires the sort column in the SELECT projection');
     }
     const sort = query.select(selected).sortByGlobal(orderColumn, {
-      direction: statement.orderBy.direction,
-      ...(statement.orderBy.nulls ? {nulls: statement.orderBy.nulls} : {})
+      direction,
+      ...(nulls ? {nulls} : {})
     });
     return statement.limit === undefined ? sort : sort.topK(statement.limit);
   }

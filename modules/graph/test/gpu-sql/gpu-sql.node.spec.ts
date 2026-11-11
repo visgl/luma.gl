@@ -152,6 +152,9 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
 
     expect(context.query('sElEcT limit, Limit fRoM trips')).toBeInstanceOf(GPUSQLQuery);
     expect(() => context.query('SELECT LIMIT FROM trips')).toThrow(/does not exist/);
+    expect(() => context.query('SELECT limit, Limit FROM trips ORDER BY LIMIT')).toThrow(
+      /does not exist/
+    );
     expect(
       context.query('SELECT limit, order FROM trips WHERE order > limit ORDER BY order LIMIT 1')
     ).toBeInstanceOf(GPUSQLQuery);
