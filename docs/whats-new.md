@@ -415,7 +415,7 @@ Target Release Date: Q3, 2026
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
 - **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.8 grouped
-  packages and loaders.gl 5.0.0-beta.7 grouped packages. Arrow adapters expose
+  packages and loaders.gl 5.0.0-beta.8 grouped packages. Arrow adapters expose
   `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
   for native GeoArrow chunks and rows without copying coordinate buffers. Views
   use math.gl’s shared adapter, including field extension metadata and canonical
