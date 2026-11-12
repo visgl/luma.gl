@@ -2,6 +2,11 @@
 
 ## v10.0
 
+### v10.0.0-alpha.14
+
+- Preserve graph color precision and support Float16 output.
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.8. Use the standalone math.gl expression parser and the updated loaders.gl Parquet source API.
+
 ### v10.0.0-alpha.13
 
 - Upgrade math.gl and loaders.gl to 5.0.0-beta.7. Use math.gl to parse GPU SQL expressions and match column names and sort aliases exactly.
