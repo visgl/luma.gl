@@ -14,7 +14,7 @@ for (const fixture of ['deep', 'massRatio', 'impact', 'continuous']) {
     url: values.url,
     fixture,
     solver: 'parallel',
-    iterations: ['deep', 'massRatio'].includes(fixture) ? 48 : 16,
+    iterations: fixture === 'deep' ? 32 : fixture === 'massRatio' ? 48 : 16,
     failurePolicy: 'rollback',
     maximumPairs: 64,
     warmup: 120,
