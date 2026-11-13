@@ -62,6 +62,8 @@ export default defineConfig(({mode}) => ({
       '@deck.gl-community/panels',
       'preact',
       'preact/hooks',
+      'react',
+      'react-dom/client',
       '@luma.gl/core',
       '@luma.gl/core/webgl',
       '@luma.gl/core/webgpu',
