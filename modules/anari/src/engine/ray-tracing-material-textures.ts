@@ -18,6 +18,12 @@ const MATERIAL_MAPS = [
     'primitive.properties.x *= sampled.g; primitive.emissive.w *= sampled.b;'
   ],
   ['transmission', 'pbr_transmissionSampler', 'primitive.material.y *= sampled.r;'],
+  [
+    'specularColor',
+    'pbr_specularColorSampler',
+    'primitive.specular = vec4<f32>(primitive.specular.rgb * sampled.rgb, primitive.specular.w);'
+  ],
+  ['specularIntensity', 'pbr_specularIntensitySampler', 'primitive.specular.w *= sampled.a;'],
   ['normal', 'pbr_normalSampler', '']
 ] as const;
 
