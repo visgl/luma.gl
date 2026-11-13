@@ -14,6 +14,7 @@ import pointCloudOctreeSupport from './experimental/gpu-pointcloud-octree/mobile
 import windSupport from './deck/wind/mobile-support';
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
+import dominoJunctionSupport from './three/domino-junction/mobile-support';
 import galacticVortexSupport from './three/galactic-vortex/mobile-support';
 import threeDeckLayersSupport from './three/deck-layers/mobile-support';
 import gltfPhysicsSupport from './gltf/physics/mobile-support';
@@ -209,6 +210,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'integrations/external-context': support45,
   'experimental/three': threeSupport,
   'three/galactic-vortex': galacticVortexSupport,
+  'three/domino-junction': dominoJunctionSupport,
   'three/deck-layers': threeDeckLayersSupport,
   'gltf/physics': gltfPhysicsSupport,
   'gltf/authored-scene-stress': authoredSceneStressSupport,
