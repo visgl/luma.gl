@@ -13,14 +13,16 @@ export async function benchmarkRigidBody(options = {}) {
   const baseUrl = new URL(options.url || 'http://127.0.0.1:5198/');
   const settings = {
     compactContacts: options.compactContacts !== false,
-    fixture: options.fixture ?? 'deep', broadPhase: options.broadPhase ?? 'hierarchical-grid', failurePolicy: options.failurePolicy ?? 'report', solver: options.solver ?? 'parallel',
+    fixture: options.fixture ?? 'deep', broadPhase: options.broadPhase ?? 'hierarchical-grid', failurePolicy: options.failurePolicy ?? (options.fixture === 'continuous' ? 'rollback' : 'report'), solver: options.solver ?? 'parallel',
     iterations: Number(options.iterations ?? 32), samples: Number(options.samples ?? 30),
     warmup: Number(options.warmup ?? 120), timeStep: Number(options.timeStep ?? 1 / 120),
     warmStartFactor: Number(options.warmStartFactor ?? 1),
+    sleepAfter: options.sleepAfter === undefined ? undefined : Number(options.sleepAfter),
+    penetrationRecoveryFraction: Number(options.penetrationRecoveryFraction ?? 0.15),
     maximumPairs: options.maximumPairs === undefined ? undefined : Number(options.maximumPairs)
   };
   if (!['localhost', '127.0.0.1', '[::1]'].includes(baseUrl.hostname) ||
-      !['sleepingIslands', 'sparseContacts', 'stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'torque', 'cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
+      !['sleepingIslands', 'sparseContacts', 'stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'continuous', 'torque', 'cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
       (['cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) && settings.solver !== 'ordered') ||
       !['ordered', 'parallel'].includes(settings.solver) ||
       !['all-pairs', 'hierarchical-grid'].includes(settings.broadPhase) ||
@@ -29,6 +31,8 @@ export async function benchmarkRigidBody(options = {}) {
       !Number.isInteger(settings.samples) || settings.samples < 1 || settings.samples > 1000 ||
       !Number.isInteger(settings.warmup) || settings.warmup < 0 || settings.warmup > 10000 ||
       !Number.isFinite(settings.timeStep) || settings.timeStep <= 0 || settings.timeStep > 1 ||
+      (settings.sleepAfter !== undefined && (!Number.isFinite(settings.sleepAfter) || settings.sleepAfter < 0)) ||
+      !Number.isFinite(settings.penetrationRecoveryFraction) || settings.penetrationRecoveryFraction < 0 || settings.penetrationRecoveryFraction > 1 ||
       !Number.isFinite(settings.warmStartFactor) || settings.warmStartFactor < 0 || settings.warmStartFactor > 1 ||
       (settings.maximumPairs !== undefined && (!Number.isInteger(settings.maximumPairs) || settings.maximumPairs < 1 || settings.maximumPairs > 2 ** 20 || (settings.maximumPairs & (settings.maximumPairs - 1)) !== 0))) {
     throw new Error('Invalid rigid-body benchmark configuration');
@@ -45,7 +49,7 @@ export async function benchmarkRigidBody(options = {}) {
 }
 
 async function runBenchmark(options) {
-  const {root, fixture, solver, broadPhase, failurePolicy, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs, compactContacts} = options;
+  const {root, fixture, solver, broadPhase, failurePolicy, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs, compactContacts, sleepAfter: requestedSleepAfter, penetrationRecoveryFraction} = options;
   const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {GPUCommandGraphInspector}, {GPURigidBodyWorld}, {makeRigidBodyScene, getRigidBodySceneGravity}, {makeMechanism}, {makeStressScene}] = await Promise.all([
     import(`${root}/modules/core/src/index.ts`), import(`${root}/modules/core/src/webgpu/index.ts`),
     import(`${root}/modules/graph/src/gpu-core/gpu-command-graph.ts`),
@@ -58,8 +62,9 @@ async function runBenchmark(options) {
   const device = await luma.createDevice({type: 'webgpu', featureLevel: 'core', optionalFeatures: ['timestamp-query'], adapters: [webgpuAdapter]});
   const mechanism = makeMechanism(fixture);
   const stress = ['sparseContacts', 'sleepingIslands'].includes(fixture) ? makeStressScene(fixture, solver, timeStep).props : null;
+  const sleepAfter = requestedSleepAfter ?? stress?.sleepAfter ?? 0.5;
   const bodies = stress?.bodies ?? mechanism?.bodies ?? makeRigidBodyScene(fixture);
-  const world = new GPURigidBodyWorld({...stress, bodies, joints: mechanism?.joints ?? stress?.joints, solver, compactContacts, iterations, timeStep, warmStartFactor, maximumPairs: maximumPairs ?? stress?.maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: stress?.gravity ?? getRigidBodySceneGravity(fixture)});
+  const world = new GPURigidBodyWorld({...stress, bodies, joints: mechanism?.joints ?? stress?.joints, solver, compactContacts, iterations, timeStep, warmStartFactor, sleepAfter, penetrationRecoveryFraction, ...(fixture === 'continuous' ? {continuous: {bodies: [0]}} : {}), maximumPairs: maximumPairs ?? stress?.maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: stress?.gravity ?? getRigidBodySceneGravity(fixture)});
   let graph;
   try {
     const definition = new GPUCommandGraph(device);
@@ -92,7 +97,7 @@ async function runBenchmark(options) {
     };
     return {formatVersion: 1, stage: 'full-rigid-body-step', fixture, objectCount: bodies.length,
       solverWork: await world.readSolverWork(),
-      settings: {solver, compactContacts, sleepAfter: stress?.sleepAfter ?? 0.5, restitutionThreshold: stress?.restitutionThreshold ?? (fixture === 'cradle' ? 0 : 0.5), jointCount: mechanism?.joints.length ?? 0, failurePolicy, broadPhase, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
+      settings: {solver, compactContacts, sleepAfter, penetrationRecoveryFraction, restitutionThreshold: stress?.restitutionThreshold ?? (fixture === 'cradle' ? 0 : 0.5), jointCount: mechanism?.joints.length ?? 0, failurePolicy, broadPhase, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
       sampleCount: samples, warmupCount: warmup, adapter: device.info,
       timestampQueries: device.features.has('timestamp-query'), compileMilliseconds,
       graphNodes: graph.stats.nodeOrder.length, capacity: world.getCapacityInfo(),
