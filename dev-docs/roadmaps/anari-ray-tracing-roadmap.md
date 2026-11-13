@@ -14,9 +14,9 @@ current behavior, architecture, and limitations.
 | T2b: interactive frame budgeting | Half-resolution defaults, bounded adaptive quality, interleaved pixel coverage, retained-identity temporal reprojection, rotating shadow samples, and dirty-triggered object acceleration. | Implemented; frame pacing uses CPU animation intervals. |
 | T2c: large-scene acceleration | GPU Morton-sorted object/instance TLAS leaves, retained-permutation transform refits, tight transformed BLAS-root bounds, four-bit radix sorting, batched small-mesh sort/BVH construction, and CORE-compatible packed traversal. | Implemented; SAH/Karras topology, wide hierarchies, and traversal counters remain planned. |
 | T2d: retained scene updates | Categorized world/topology/transform/material/light revisions, cached scene descriptors, stable animated placement identities, sparse packed-transform uploads, and rotating copy-free texture history. | Implemented; camera- and light-only frames avoid acceleration rebuilds. |
-| T2e: presentation and direct-light parity | Caller-owned offscreen framebuffers, actual-target color/depth formats, exact SDR/HDR tone mapping and sRGB/linear presentation, incoming directional-light agreement, scalar metallic/roughness GGX shading, and per-stage graph encoding diagnostics. | Implemented for direct lighting; material textures, alpha/transmission, indirect transport, and GPU-stage timestamps remain separate work. |
+| T2e: presentation and direct-light parity | Caller-owned offscreen framebuffers, actual-target color/depth formats, exact SDR/HDR tone mapping and sRGB/linear presentation, incoming directional-light agreement, scalar metallic/roughness GGX shading, and per-stage graph encoding diagnostics. | Implemented. Subsequent material and transport work is tracked in M2 and M3. GPU-stage timestamps remain open. |
 | T2f: deforming scene extraction | Skeletal/morph geometry extraction, bounded deforming-mesh updates, and shared animated instance acceleration. | Planned. |
-| T3: indirect transport and denoising | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1. | Diffuse transport is implemented with opt-in bounded bounces. Opt-in opaque GGX reflective paths are implemented. Smooth dielectric paths, base-color/emissive/metallic-roughness/transmission maps, explicit emitter sampling and textured alpha masks are implemented. Extension maps, rough transmission, nested media, MIS and advanced temporal denoising remain planned. Opt-in guided spatial presentation filtering is implemented. |
+| T3: indirect transport and denoising | Advanced PBR texture, alpha, and transmission parity; multi-bounce material transport/path tracing, convergence controls, and denoising; primary-ray progressive accumulation already exists in T1. | Diffuse transport is implemented with opt-in bounded bounces. Opt-in opaque GGX reflective paths are implemented. Smooth dielectric paths, base-color/emissive/metallic-roughness/transmission maps, explicit emitter sampling and textured alpha masks are implemented. Triangle normal maps, smooth dielectric absorption, specular color/intensity and clearcoat strength/roughness are implemented. Remaining material and sampling gaps are listed below. Opt-in guided spatial presentation filtering is implemented. |
 | T4: ray marching and volumes | Signed-distance-field ray marching, retained spatial fields, 3D textures, transfer functions, and ANARI volume objects. | Planned. |
 | T5: hybrid composition and advanced diagnostics | Raster/ray composition, GPU-stage timings, traversal counters, renderer capability reporting, and debug visualization channels. | Basic graph node/pass/CPU-encoding counters are implemented; full-resolution primary-hit GPU channels are implemented; projected-depth transfer supports raster overlays. T5a adds allocation-free implementation capability reporting; T5b adds normal/camera-distance/identity/history presentation diagnostics. GPU timings and traversal diagnostics remain planned. |
 
@@ -42,8 +42,7 @@ Run `yarn workspace luma.gl-examples-showcase-scene start`, open `playground.htm
 and choose **Chart Baseline**. Switch the renderer selector between forward and ray tracing
 on WebGPU. The preset supplies full-resolution ray settings with adaptive resolution and
 temporal reprojection disabled; it has no automatic camera or mark animation. The same
-scene inputs are used in both renderers. Direct shadows currently exist only in the ray
-path, so pixel equality is not the acceptance criterion.
+scene inputs are used in both renderers. Compare silhouettes, visibility, and retained identity. The raster and ray configurations use different lighting and shadow algorithms.
 
 `chart-baseline.ts` also exports `makeChartBaseline(rendererSubtype)` for future capture
 and benchmark harnesses. IDs combine mark type and source datum identifier. These are
@@ -54,3 +53,59 @@ and peak GPU memory on named hardware before setting numeric budgets. Record can
 renderer settings, browser/backend, and warm-up separately. Existing graph counters report
 CPU encoding work, not GPU completion time. Volumes, deformation, and advanced BVH topology
 remain independent tracks unless chart benchmarks establish a dependency.
+
+## November 2026 technical review
+
+The target is interactive visualization and reproducible stills on portable WebGPU, with
+stable picking and raster composition. The renderer already provides a credible geometry
+and visibility foundation for that target. Its current evidence does not establish
+state-of-the-art light transport, convergence, or real-time performance. Evaluate those
+separately: an artifact-free still, the time required to reach it, and the behavior of the
+image during camera or scene motion are different outcomes.
+
+The implementation baseline includes clearcoat strength and roughness (#3745), dielectric
+specular parameters (#3744), absorption inside closed smooth dielectrics (#3743), triangle
+normal maps (#3739), and textured cutouts (#3738). Clearcoat normal maps are a separate
+implementation tranche.
+
+| Dimension | Current implementation and gap | Reference |
+| --- | --- | --- |
+| Visibility and acceleration | Software TLAS/BLAS traversal, retained refits, hard visibility and alpha cutouts. The portable WebGPU API offers no standard hardware ray-query or acceleration-structure interface. GPU timing and traversal counters are needed to distinguish bandwidth, divergence, and hierarchy quality. | [WebGPU specification](https://www.w3.org/TR/2026/CRD-webgpu-20260512/), [GPU path tracing architecture](https://pbr-book.org/4ed/Wavefront_Rendering_on_GPUs/Mapping_Path_Tracing_to_the_GPU) |
+| Transport and convergence | Bounded diffuse and GGX paths, smooth dielectric interfaces, explicit emitter sampling and power-weighted selection. Light and BSDF techniques lack paired MIS weights, and the display background supplies no environment lighting. An emitter CDF accounts for source power but not receiver location or orientation. | [PBRT's reference path integrator](https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer) |
+| Shadows | Direct lights use hard visibility and optional rotation across lights. Sampled emissive geometry can give area-light penumbrae. Shadow rays treat transmissive glass as an occluder even when camera paths refract through it. Straight-line colored shadow transmittance would be an approximation and cannot reproduce refracted caustics. | [PBRT surface transport](https://pbr-book.org/4ed/Light_Transport_I_Surface_Reflection/A_Better_Path_Tracer), [Bidirectional ReSTIR caustics research](https://research.nvidia.com/labs/rtr/publication/hedstrom2025restir/hedstrom2025restir.pdf) |
+| Reconstruction | Retained-identity reprojection and guided spatial presentation filtering are useful for interaction. Variance estimates, robust disocclusion rejection, and separate diffuse/specular history remain missing. | [SVGF](https://research.nvidia.com/labs/rtr/publication/schied2017spatiotemporal/), [RTXPT design](https://github.com/NVIDIA-RTX/RTXPT/blob/main/Docs/Design.md) |
+| Materials and assets | The shipped subset handles common metallic/roughness materials, cutouts, smooth glass, specular maps and clearcoat. Mip-zero material sampling, the per-frame texture binding budget, and missing deformation all affect ordinary asset fidelity. Rough refraction, nested media, alpha blending, and further glTF extensions need distinct acceptance scenes. | [Khronos glTF material extensions](https://www.khronos.org/gltf/pbr) |
+| Research frontier | Production-oriented native examples use hardware traversal with next-event estimation, reconstruction, and optional reservoirs or radiance caches. Recent reservoir methods improve reuse for difficult paths, but introduce state, visibility checks and history rejection costs. Their native performance figures cannot predict a portable browser implementation. | [RTXPT design](https://github.com/NVIDIA-RTX/RTXPT/blob/main/Docs/Design.md), [ReSTIR PT Enhanced](https://research.nvidia.com/labs/rtr/publication/lin2026restirptenhanced/) |
+
+### Priority and acceptance gates
+
+1. **Measure convergence and latency.** Capture static chart, small emissive source, glTF
+   material, and animated displacement scenes at fixed seeds. Compare linear HDR error
+   against an analytic result or an independently converged reference in the same material
+   model. Track error versus elapsed GPU time and samples, plus frame-time percentiles,
+   history rejection, and logical allocation size. Keep tone-mapped comparisons for visible
+   artifacts. Record the browser, hardware and resolution. Report GPU timings only when the
+   optional timestamp feature is available, and distinguish logical allocations from peak VRAM.
+2. **Fix the estimator before adding reuse.** Pair light-sampled and BSDF-sampled paths with
+   MIS, including emitter-hit PDFs, delta events, and the uniform/power emitter selection
+   mixture. Validate mean radiance across seeds and check variance at equal GPU cost. Add
+   importance-sampled environment lighting separately from the display backdrop. Evaluate
+   spatial light sampling or reservoirs only if many-light scenes remain the bottleneck.
+3. **Make motion and shadows predictable.** Gate temporal improvements on measured ghosting
+   at moving silhouettes, glossy highlights and exposure changes. Track variance separately
+   from history confidence. Compare transmissive shadow approximations against a reference
+   with a neutral receiver and known attenuation, and measure opaque visibility regressions.
+4. **Prioritize asset gaps by visible impact.** Add texture footprints and mip selection for
+   distant detail, then expand material and deformation support using representative glTF
+   fixtures. Keep transport changes such as rough dielectric transmission separate from
+   localized shading changes. Validate energy, UV selection, retained updates, and query
+   behavior on each feature.
+5. **Profile before changing traversal architecture.** Use timings and traversal statistics
+   to compare better build topology, wide nodes, and queue-based stages against the existing
+   graph. A wavefront design can reduce divergence but adds queue traffic. Keep the existing
+   portable path as the baseline. Treat hardware traversal and neural reconstruction as
+   future backend options with their own portability and performance evidence.
+
+The lightmap-baking example owns a separate UV-space lighting pipeline. Diagnose blocky
+baked shadows by checking shadow-map projection/filtering and atlas texel density before
+changing ANARI's interactive ray tracer.
