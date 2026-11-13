@@ -616,3 +616,26 @@ resolution and disables adaptive resolution and temporal reprojection.
 independent of retained scheduling. Region changes reset accumulation; changing
 only the explicit sample frame advances sampling without clearing history.
 Default rendering omits both options and retains its existing behavior.
+
+### Moving reflection probes
+
+On WebGPU, use `ReflectionProbe` from `@luma.gl/engine/lighting` to capture moving
+geometry for a reflective surface. Call `probe.update()` before the main render.
+Pass the GPU pose buffer and the reflective object's matrix index. The draw
+callback receives a face framebuffer, a rotation-only view matrix and a GPU
+snapshot of the capture origin and scene matrices. Render the capture surfaces
+with those matrices and set `camera.gpuOrigin` to the supplied origin buffer.
+Use a stable render ID per face to keep the recorded uniforms independent.
+Omit the reflective object from the capture to avoid self-reflection.
+
+Use the completed `probe.texture` as the surface environment's specular
+cubemap, alongside its diffuse environment and BRDF lookup. Submit the device
+after recording the frame. Release renderer bindings before destroying the probe.
+
+Incremental refresh uses measured frame headroom to schedule work and accepts
+directions toward multiple views to prioritize their faces. All faces use one
+GPU pose snapshot, and the probe publishes the cube after all faces are ready.
+For fast motion, set `refreshMode: 'same-frame'` to capture and publish on the
+same frame, skipping updates when headroom is low. This bounds the delay from
+capture to display at the cost of a higher peak per-frame workload. A smaller
+mip count or sample count reduces filtering work.
