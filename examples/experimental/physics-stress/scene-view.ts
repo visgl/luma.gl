@@ -33,6 +33,9 @@ const BODY: SceneMaterial = {
   uniforms: {baseColorFactor: [0.75, 0.32, 0.08, 1], metallicRoughnessValues: [0.15, 0.35]}
 };
 
+const TWO_SIDED_TABLE: SceneMaterial = {...TABLE, id: 'stress-table-two-sided', doubleSided: true};
+const TWO_SIDED_BODY: SceneMaterial = {...BODY, id: 'stress-body-two-sided', doubleSided: true};
+
 /** Retained engine rendering, borrowing published physics poses even after recovery replaces a world. */
 export class StressSceneView {
   private readonly renderer: SceneRenderer;
@@ -58,8 +61,9 @@ export class StressSceneView {
   }
 
   setWorld(world: GPURigidBodyWorld, props: GPURigidBodyWorldProps, frameCamera = false): void {
-    this.world = world;
+    this.renderer.destroyScene(this.root);
     this.root.destroy();
+    this.world = world;
     this.bindings = new Map();
     this.root = new GroupNode({
       id: 'stress-scene',
@@ -89,10 +93,20 @@ export class StressSceneView {
           geometry = sphere;
           localMatrix.scale([shape.radius, shape.radius, shape.radius]);
         } else geometry = makeShapeGeometry(shape);
+        const isStatic = body.mode === 'static' || body.mass === 0;
+        const doubleSided =
+          shape.type === 'triangle-mesh' || (shape.type === 'plane' && shape.doubleSided);
+        const material = isStatic
+          ? doubleSided
+            ? TWO_SIDED_TABLE
+            : TABLE
+          : doubleSided
+            ? TWO_SIDED_BODY
+            : BODY;
         const node = new SceneMeshNode({
           id: `body-${index}-${colliderIndex}`,
           geometry,
-          material: body.mode === 'static' || body.mass === 0 ? TABLE : BODY
+          material
         });
         this.bindings.set(node, {matrixIndex: index, localMatrix});
         this.root.add(node);
