@@ -176,6 +176,43 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(reflectedRed.slice(1)).toEqual([0, 0]);
     specularSurface.material.uniforms.specularIntensityUVSet = 0;
     expect(await readPixel()).toEqual([0, 0, 0]);
+    const coatedSurface = {
+      ...specularSurface,
+      material: {
+        id: 'clearcoat-material',
+        uniforms: {
+          baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+          specularIntensityFactor: 0,
+          metallicRoughnessValues: [0, 0.5] as [number, number],
+          clearcoatFactor: 1,
+          clearcoatRoughnessFactor: 1,
+          clearcoatUVSet: 0,
+          clearcoatRoughnessUVSet: 0
+        },
+        bindings: {
+          pbr_clearcoatSampler: map,
+          pbr_clearcoatRoughnessSampler: replacement
+        }
+      }
+    };
+    // Red enables the coat. Green sets its roughness independently of the other channels.
+    replacement.writeData(new Uint8Array([255, 128, 255, 0, 255, 255, 255, 0]));
+    options.surfaces = [coatedSurface, reflectionEmitter];
+    const coatedBounce = await readPixel();
+    expect(coatedBounce[0]).toBeGreaterThan(8);
+    expect(coatedBounce[1]).toBe(coatedBounce[0]);
+    coatedSurface.material.uniforms.clearcoatUVSet = 1;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    coatedSurface.material.uniforms.clearcoatUVSet = 0;
+    options.maxBounces = 0;
+    options.lights = [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 4}];
+    options.surfaces = [coatedSurface];
+    const glossyCoat = await readPixel();
+    expect(glossyCoat[0]).toBeGreaterThan(20);
+    coatedSurface.material.uniforms.clearcoatRoughnessUVSet = 1;
+    expect((await readPixel())[0]).toBeLessThan(glossyCoat[0] / 2);
+    coatedSurface.material.uniforms.clearcoatFactor = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
     options.transportMode = 'diffuse';
     options.maxBounces = 0;
     options.samplesPerPixel = 1;
@@ -427,4 +464,4 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     device.destroy();
   }
   // Software WebGPU CI compiles several complete traversal/material pipelines here.
-}, 420_000);
+}, 540_000);
