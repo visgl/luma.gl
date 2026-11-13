@@ -142,3 +142,83 @@ test('indexed triangle snapshots generate finite shared-vertex normals', () => {
   adapter.destroy();
   device.destroy();
 });
+
+test('snapshots retain implicitly enabled textures, explicit disables, and inferred transparency', () => {
+  const graphicsDevice = new NullDevice({});
+  const device = new ANARIDevice(graphicsDevice);
+  const texture = graphicsDevice.createTexture({width: 1, height: 1});
+  const geometry = new Geometry({
+    topology: 'triangle-list',
+    attributes: {POSITION: {size: 3, value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])}}
+  });
+  const material = {
+    id: 'textured',
+    uniforms: {
+      baseColorFactor: [1, 1, 1, 0.4] as [number, number, number, number],
+      baseColorUVSet: 1
+    },
+    bindings: {pbr_baseColorSampler: texture}
+  };
+  const root = new GroupNode({children: [new SceneMeshNode({geometry, material})]});
+  const adapter = new ScenegraphSurfaces();
+  const roundtrip = makeScenegraphFromANARIWorld(makeANARIWorldFromScenegraph(device, root));
+  const result = adapter.getSurfaces(roundtrip.scene)[0].material;
+  expect(result.bindings?.pbr_baseColorSampler).toBe(texture);
+  expect(result.uniforms?.baseColorMapEnabled).toBe(true);
+  expect(result.uniforms?.baseColorUVSet).toBe(1);
+  expect(result.alphaMode).toBe('BLEND');
+  const disabled = new GroupNode({
+    children: [
+      new SceneMeshNode({
+        geometry,
+        material: {
+          ...material,
+          alphaMode: 'OPAQUE',
+          uniforms: {...material.uniforms, baseColorMapEnabled: false}
+        }
+      })
+    ]
+  });
+  const disabledResult = adapter.getSurfaces(
+    makeScenegraphFromANARIWorld(makeANARIWorldFromScenegraph(device, disabled)).scene
+  )[0].material;
+  expect(disabledResult.bindings?.pbr_baseColorSampler).toBeUndefined();
+  expect(disabledResult.alphaMode).toBe('OPAQUE');
+  adapter.destroy();
+  device.destroy();
+  expect(texture.destroyed).toBe(false);
+  texture.destroy();
+  graphicsDevice.destroy();
+});
+
+test('snapshots reject morph and skin state instead of silently returning an undeformed mesh', () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const geometry = device.newGeometry('triangle', {
+    'vertex.position': new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    morphTargets: [{POSITION: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])}],
+    morphWeights: [1]
+  });
+  const material = device.newMaterial('matte');
+  expect(() =>
+    makeScenegraphFromANARIWorld(
+      device.newWorld({surfaces: [device.newSurface({geometry, material})]})
+    )
+  ).toThrow('skin and morph');
+  const rigidGeometry = device.newGeometry('triangle', {
+    'vertex.position': new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])
+  });
+  expect(() =>
+    makeScenegraphFromANARIWorld(
+      device.newWorld({
+        surfaces: [
+          device.newSurface({
+            geometry: rigidGeometry,
+            material,
+            skin: {jointMatrices: new Float32Array(new Matrix4())}
+          })
+        ]
+      })
+    )
+  ).toThrow('skin and morph');
+  device.destroy();
+});

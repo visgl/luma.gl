@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {GroupNode, Geometry} from '@luma.gl/engine';
+import {getPBRMaterialMapUniforms} from '@luma.gl/engine/lighting';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import {pbrMaterial, type Light} from '@luma.gl/shaders';
 import type {ANARIDevice} from './anari-device';
@@ -9,7 +10,7 @@ import type {ANARIGeometryParameters, ANARIMaterialParameters} from './anari-typ
 import {ANARISceneAdapter, MATERIAL_TEXTURE_SLOTS} from './anari-scene-adapter';
 import {ScenegraphSurfaces} from './engine/scenegraph-surfaces';
 import {SceneMeshNode} from './engine/scene-mesh-node';
-import type {SceneMaterial} from './engine/scene-renderer';
+import {getSceneAlphaMode, type SceneMaterial} from './engine/scene-renderer';
 
 /** An explicit snapshot: CPU geometry is copied; material textures remain borrowed. */
 export type ANARIScenegraphSnapshot = {
@@ -22,6 +23,8 @@ export function makeScenegraphFromANARIWorld(world: ANARIWorld): ANARIScenegraph
   const adapter = new ANARISceneAdapter();
   try {
     const snapshot = adapter.getScene(world);
+    if (snapshot.surfaces.some(surface => surface.skin || surface.morphTargets?.length))
+      throw new Error('Bake skin and morph deformation before creating a scenegraph snapshot');
     const geometries = new Map<Geometry, Geometry>();
     const materials = new Map<SceneMaterial, SceneMaterial>();
     const children = snapshot.surfaces.flatMap(surface =>
@@ -165,7 +168,12 @@ function convertGeometry(device: ANARIDevice, geometry: Geometry): ANARIGeometry
 }
 
 function convertMaterial(device: ANARIDevice, material: SceneMaterial): ANARIMaterial {
-  const uniforms = {...pbrMaterial.defaultUniforms, ...material.uniforms};
+  const uniforms = {
+    ...pbrMaterial.defaultUniforms,
+    ...getPBRMaterialMapUniforms(material.bindings ?? {}),
+    ...material.uniforms
+  };
+  const alphaMode = getSceneAlphaMode(material);
   if (Object.keys(material.defines ?? {}).length)
     throw new Error('Custom shader defines require an explicit ANARI material adapter');
   const color = uniforms.baseColorFactor;
@@ -173,8 +181,7 @@ function convertMaterial(device: ANARIDevice, material: SceneMaterial): ANARIMat
     ...(color ? {baseColor: [color[0], color[1], color[2], color[3]]} : {}),
     metallic: uniforms.metallicRoughnessValues?.[0],
     roughness: uniforms.metallicRoughnessValues?.[1],
-    alphaMode:
-      material.alphaMode === 'MASK' ? 'mask' : material.alphaMode === 'BLEND' ? 'blend' : 'opaque',
+    alphaMode: alphaMode === 'MASK' ? 'mask' : alphaMode === 'BLEND' ? 'blend' : 'opaque',
     alphaCutoff: uniforms.alphaCutoff,
     doubleSided: material.doubleSided ?? false,
     unlit: uniforms.unlit,

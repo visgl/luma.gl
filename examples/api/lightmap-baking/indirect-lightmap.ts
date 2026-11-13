@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {Texture, type Device, type RenderPass} from '@luma.gl/core';
-import {ClipSpace, GroupNode, type Geometry} from '@luma.gl/engine';
+import {ClipSpace, type Geometry} from '@luma.gl/engine';
 import type {LightmapAtlas} from '@luma.gl/engine/lighting';
-import {RayTracingSceneRenderer, SceneMeshNode, ScenegraphSurfaces} from '@luma.gl/anari';
+import {RayTracingSceneRenderer, ScenegraphSurfaces} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core';
 import type {Light} from '@luma.gl/shaders';
+import {makeBakingScenegraph} from './baking-scenegraph';
 
 /** Example-owned indirect transport. Geometry and atlas positions are in world space. */
 export class IndirectLightmap {
@@ -24,14 +25,7 @@ export class IndirectLightmap {
     atlas: LightmapAtlas
   ) {
     this.renderer = new RayTracingSceneRenderer(device);
-    this.scene = new GroupNode({
-      children: [
-        new SceneMeshNode({
-          geometry,
-          material: {id: 'baking-scene', uniforms: {metallicRoughnessValues: [0, 1]}}
-        })
-      ]
-    });
+    this.scene = makeBakingScenegraph(geometry);
     const {positions, normals} = makeReceiverData(geometry, atlas);
     this.positions = device.createTexture({
       width: atlas.width,

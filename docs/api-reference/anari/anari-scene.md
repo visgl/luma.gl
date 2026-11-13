@@ -219,7 +219,7 @@ PBR material factors and supported image samplers are preserved, including UV
 transforms and UV-set selection. Ambient, directional, point, and spot lights
 are supported; point and spot attenuation is retained by the ANARI extension
 `attenuation`. Area lights must be represented as emissive geometry. Unsupported
-shader defines, geometry attributes, GPU transforms/connections, local probes,
+shader defines, geometry attributes, GPU transforms/connections, skin/morph deformation, local probes,
 and non-mesh leaves fail explicitly. Bake or snapshot these inputs before
 conversion. Cameras and renderer-specific environment settings remain separate
 from the world and must be supplied to the renderer.
