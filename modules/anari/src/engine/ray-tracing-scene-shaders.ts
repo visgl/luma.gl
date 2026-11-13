@@ -813,10 +813,23 @@ fn getShadingNormal(hit: RayHit) -> vec3<f32> {
   return hit.normal;
 }
 
+fn getFaceNormal(hit: RayHit, ray: Ray) -> vec3<f32> {
+  if (hit.triangleIndex == 0xffffffffu) {
+    return faceForward(hit.normal, ray.direction, hit.normal);
+  }
+  let triangle = triangles[hit.triangleIndex];
+  let transform = primitives[hit.primitiveIndex].transform;
+  let firstEdge = (transform * vec4<f32>(triangle.secondPosition.xyz - triangle.firstPosition.xyz, 0.0)).xyz;
+  let secondEdge = (transform * vec4<f32>(triangle.thirdPosition.xyz - triangle.firstPosition.xyz, 0.0)).xyz;
+  let normal = normalize(cross(firstEdge, secondEdge));
+  return faceForward(normal, ray.direction, normal);
+}
+
 fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<f32> {
   let primitive = getShadedPrimitive(hit);
   let hitPosition = ray.origin + ray.direction * hit.distance;
   let normal = getShadingNormal(hit);
+  let faceNormal = select(getFaceNormal(hit, ray), hit.normal, hit.triangleIndex == 0xffffffffu);
   let viewDirection = -ray.direction;
   let baseColor = primitive.baseColor.rgb;
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
@@ -881,11 +894,11 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     }
 
     let normalLight = max(dot(normal, lightDirection), 0.0);
-    if (normalLight <= 0.0 || dot(hit.normal, lightDirection) <= 0.0 || attenuation <= 0.0) {
+    if (normalLight <= 0.0 || dot(faceNormal, lightDirection) <= 0.0 || attenuation <= 0.0) {
       continue;
     }
     if (uniforms.settings.w > 0.5) {
-      let shadowRay = Ray(hitPosition + hit.normal * 0.002, lightDirection);
+      let shadowRay = Ray(hitPosition + faceNormal * 0.002, lightDirection);
       let shadowDistance = select(lightDistance - 0.003, RAY_INFINITY, lightType == 1u);
       if (intersectsScene(shadowRay, shadowDistance)) {
         continue;
@@ -1220,7 +1233,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
       normal * sqrt(max(1.0 - radialSample, 0.0)));
   }
   let normalLight = dot(normal, direction);
-  if (normalLight <= 0.0 || dot(faceForward(hit.normal, ray.direction, hit.normal), direction) <= 0.0) {
+  if (normalLight <= 0.0 || dot(getFaceNormal(hit, ray), direction) <= 0.0) {
     return RayMaterialSample(direction, vec3<f32>(0.0), false);
   }
   let halfDirection = normalize(viewDirection + direction);
@@ -1250,7 +1263,7 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
   let viewDirection = -ray.direction;
   let normalView = clamp(dot(normal, viewDirection), 0.001, 1.0);
   let normalLight = dot(normal, direction);
-  if (normalLight <= 0.0 || dot(faceForward(hit.normal, ray.direction, hit.normal), direction) <= 0.0) { return vec3<f32>(0.0); }
+  if (normalLight <= 0.0 || dot(getFaceNormal(hit, ray), direction) <= 0.0) { return vec3<f32>(0.0); }
   let halfDirection = normalize(viewDirection + direction);
   let normalHalf = max(dot(normal, halfDirection), 0.0);
   let viewHalf = max(dot(viewDirection, halfDirection), 0.000001);
@@ -1343,8 +1356,8 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
   if (distanceSquared <= RAY_EPSILON * RAY_EPSILON) { return vec3<f32>(0.0); }
   let direction = offset / sqrt(distanceSquared);
   let normalLight = max(dot(normal, direction), 0.0);
-  if (normalLight <= 0.0 || dot(faceForward(hit.normal, ray.direction, hit.normal), direction) <= 0.0) { return vec3<f32>(0.0); }
-  let shadowOrigin = position + faceForward(hit.normal, ray.direction, hit.normal) * 0.002;
+  if (normalLight <= 0.0 || dot(getFaceNormal(hit, ray), direction) <= 0.0) { return vec3<f32>(0.0); }
+  let shadowOrigin = position + getFaceNormal(hit, ray) * 0.002;
   let shadowOffset = lightPosition - shadowOrigin;
   let shadowDistance = length(shadowOffset);
   if (uniforms.settings.w > 0.5 && shadowDistance > RAY_EPSILON && intersectsScene(Ray(shadowOrigin, shadowOffset / shadowDistance), shadowDistance - 0.002)) { return vec3<f32>(0.0); }
@@ -1384,7 +1397,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     dielectricOnly = dielectricOnly && sample.delta;
     throughput *= sample.weight;
     if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) { break; }
-    let normal = select(hit.normal, -hit.normal, dot(hit.normal, ray.direction) > 0.0);
+    let normal = select(getFaceNormal(hit, ray), faceForward(hit.normal, ray.direction, hit.normal), sample.delta);
     let position = ray.origin + ray.direction * hit.distance;
     ray = Ray(position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
     hit = intersectScene(ray, RAY_INFINITY);
@@ -1427,7 +1440,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     let direction = tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
       normal * sqrt(max(1.0 - radialSample, 0.0));
     let position = ray.origin + ray.direction * hit.distance;
-    let surfaceNormal = faceForward(hit.normal, ray.direction, hit.normal);
+    let surfaceNormal = getFaceNormal(hit, ray);
     if (dot(surfaceNormal, direction) <= 0.0) { break; }
     ray = Ray(position + surfaceNormal * 0.002, normalize(direction));
     hit = intersectScene(ray, RAY_INFINITY);
