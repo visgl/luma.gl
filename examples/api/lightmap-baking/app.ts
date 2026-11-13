@@ -102,6 +102,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
       activePanelId: this.activePanelId,
       onActivePanelIdChange: activePanelId => {
         this.activePanelId = activePanelId;
+        this.panels.setPanel(this.makePanel());
       },
       panels: [
         makeHtmlCustomPanel({

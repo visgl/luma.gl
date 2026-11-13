@@ -14,6 +14,13 @@ test('irradiance transport preserves coverage and receives emissive color', asyn
     createCanvasContext: {canvas: new OffscreenCanvas(2, 1)}
   });
   const renderer = new RayTracingSceneRenderer(device);
+  const color = device.createTexture({
+    width: 2,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER_ATTACHMENT
+  });
+  const framebuffer = device.createFramebuffer({colorAttachments: [color]});
   const positions = device.createTexture({
     width: 2,
     height: 1,
@@ -37,6 +44,7 @@ test('irradiance transport preserves coverage and receives emissive color', asyn
     device.handle.pushErrorScope('validation');
     const options: RayTracingSceneRenderOptions = {
       id: 'bake',
+      framebuffer,
       width: 2,
       height: 1,
       camera: {
@@ -119,6 +127,8 @@ test('irradiance transport preserves coverage and receives emissive color', asyn
     expect(Array.from(blockedPixels.slice(0, 4))).toEqual([0, 0, 0, 0x3c00]);
   } finally {
     renderer.destroy();
+    framebuffer.destroy();
+    color.destroy();
     positions.destroy();
     normals.destroy();
     output.destroy();
