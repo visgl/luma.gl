@@ -152,6 +152,34 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(await readPixel()).toEqual([0, 0, 0]);
     specularSurface.material.uniforms.specularIntensityUVSet = 1;
     expect(await readPixel()).toEqual(blueReflection);
+    const reflectionEmitter = {
+      ...surface,
+      id: 'specular-emitter',
+      transforms: [new Matrix4().translate([0, 0, 5])],
+      material: {
+        id: 'specular-emitter-material',
+        uniforms: {emissiveFactor: [12, 12, 12]}
+      }
+    } satisfies RayTracingSceneRenderOptions['surfaces'][number];
+    options.surfaces = [specularSurface, reflectionEmitter];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.maxBounces = 1;
+    options.samplesPerPixel = 16;
+    options.samplingSeed = 17;
+    const reflectedBlue = await readPixel();
+    expect(reflectedBlue[2]).toBeGreaterThan(8);
+    expect(reflectedBlue.slice(0, 2)).toEqual([0, 0]);
+    specularSurface.material.uniforms.specularColorUVSet = 0;
+    const reflectedRed = await readPixel();
+    expect(reflectedRed[0]).toBe(reflectedBlue[2]);
+    expect(reflectedRed.slice(1)).toEqual([0, 0]);
+    specularSurface.material.uniforms.specularIntensityUVSet = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.transportMode = 'diffuse';
+    options.maxBounces = 0;
+    options.samplesPerPixel = 1;
+    options.samplingSeed = undefined;
     replacement.writeData(new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]));
     options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 1}];
     options.samplingFrameIndex = undefined;
