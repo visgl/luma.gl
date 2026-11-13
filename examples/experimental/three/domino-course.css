@@ -1,0 +1,7 @@
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #111820; }
+body { color: #f6f0e5; font: 15px/1.5 Inter, system-ui, sans-serif; }
+canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.controls { display: flex; gap: 8px; }
+#course-controls { padding: 4px 0; }
+#course-controls output { display: block; margin-top: 8px; }
+body > #course-controls { position: absolute; top: 18px; left: 18px; }

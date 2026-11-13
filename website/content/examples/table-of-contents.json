@@ -230,6 +230,7 @@
     "label": "Three.js",
     "items": [
       "three/galactic-vortex",
+      "three/domino-junction",
       "three/deck-layers",
       "experimental/three"
     ]
