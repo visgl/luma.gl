@@ -43,7 +43,7 @@ export function createDominoCoursePanel(controls: HTMLElement, diagnostics: GPUG
             makeHtmlCustomPanel({
               id: 'domino-course-info',
               title: 'Info',
-              html: '<p>The first tile starts two branches. Either branch can tip the wide gold receiver and start the finish.</p><p>luma.gl simulates contact and motion. Three.js renders the published GPU poses on the same WebGPU device. Drag to orbit or scroll to zoom.</p>',
+              html: '<p>The first tile starts two branches. Either branch can tip the gold receiver and start the finish.</p><p>luma.gl simulates contact and motion. Three.js renders the published GPU poses on the same WebGPU device. Drag to orbit or scroll to zoom.</p>',
               onRender: root => configurePanelHostElement(root, 'cinematic')
             }),
             diagnostics.inspectorPanel.panel,

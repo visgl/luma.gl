@@ -173,7 +173,7 @@ async function run() {
   controls.maxZoom = 3;
   const resize = () => {
     const aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
-    const halfWidth = Math.max(16.7, 7.2 * aspect);
+    const halfWidth = Math.max(14.5, 13.5 * aspect);
     camera.left = -halfWidth;
     camera.right = halfWidth;
     camera.top = halfWidth / aspect;
