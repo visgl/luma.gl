@@ -418,6 +418,13 @@ examples remain the interoperability and authored-semantics qualification suite.
 
 ### G8. Competitive contact solving and difficult dynamics
 
+Implemented checkpoint: an opt-in two-sweep manifold-block contact solver, scalar/block
+quality-cost matrix against native Box3D, dense and 10:1 loaded fixtures, independent
+lateral-drift gates, stage profiling and a retained 3D Stress Lab. See the
+[G8 report](../benchmarks/physics-g8.md) for measured results and explicit limits.
+Scalar contacts remain the default. Constraint coloring, native compound matching,
+large dense scale points and cross-device competitive qualification remain open.
+
 Qualify deep stacks, large mass ratios, dense compounds and persistent friction under
 repeatable accuracy budgets. Compare the parallel solver with constraint coloring and
 other scheduling/stabilization strategies before selecting production defaults. Measure
