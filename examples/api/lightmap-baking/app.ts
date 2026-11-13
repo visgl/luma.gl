@@ -2,13 +2,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {
-  encodeLightmapData,
-  decodeLightmapData,
-  getLightmapAtlasDebugData,
-  validateLightmapAtlas
-} from '@luma.gl/engine/lighting';
+import {getLightmapAtlasDebugData, validateLightmapAtlas} from '@luma.gl/engine/lighting';
 import {BAKING_SCENES, type BakingScene} from './scenes';
+import {encodeSceneBake, decodeSceneBake} from './bake-file';
 import {ColumnPanel} from '@deck.gl-community/panels';
 import {
   ExamplePanelManager,
@@ -30,6 +26,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
   private scene: BakingScene = 'courtyard';
   private readonly device;
   private statusMessage = '';
+  private activePanelId: string | undefined = 'baking-info';
   constructor(props: AnimationProps) {
     super(props);
     this.device = props.device;
@@ -102,11 +99,15 @@ export default class LightmapExample extends AnimationLoopTemplate {
     return makeExampleTabbedPanel({
       id: 'baking-panels',
       title: 'Lightmap Baking',
+      activePanelId: this.activePanelId,
+      onActivePanelIdChange: activePanelId => {
+        this.activePanelId = activePanelId;
+      },
       panels: [
         makeHtmlCustomPanel({
           id: 'baking-info',
           title: 'Info',
-          html: '<p>Explore static architectural scenes. Courtyard & Arcade contrasts terracotta walls, pale stone and blue sculpture; Two Rooms remains available for comparison.</p><p>Baking averages fixed-light and environment samples. Baked mode uses only stored diffuse lighting. Live uses direct shadowed lights with unoccluded ambient as a reference. There is no multi-bounce color bleeding.</p><p>Change the warm light to mark the bake stale, then reset to rebake. Export preserves linear HDR irradiance and UV-set metadata; loading requires this same scene and generated UV layout. View UV charts to inspect density, allocation and validation.</p><p>Drag to orbit · Scroll to zoom.</p>'
+          html: '<p>Explore static architectural scenes. Courtyard & Arcade contrasts terracotta walls, pale stone and blue sculpture; Two Rooms remains available for comparison.</p><p>Baking averages fixed-light and environment samples. Baked mode uses only stored diffuse lighting. Live uses direct shadowed lights with unoccluded ambient as a reference. WebGPU also traces two diffuse bounces for indirect color bleeding.</p><p>Change the warm light to mark the bake stale, then reset to rebake. Export preserves linear HDR irradiance and UV-set metadata; loading requires this same scene and generated UV layout. View UV charts to inspect density, allocation and validation.</p><p>Drag to orbit · Scroll to zoom.</p>'
         }),
         new ColumnPanel({
           id: 'baking-controls',
@@ -116,7 +117,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
             makeHtmlCustomPanel({
               id: 'baking-actions',
               title: 'Bake',
-              html: '<p data-bake-samples></p><button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export bake</button> <button data-atlas>View irradiance</button> <button data-charts>View UV charts</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lml"></label></p><p data-status role="status"></p>',
+              html: '<p data-bake-samples></p><button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export bake</button> <button data-atlas>View irradiance</button> <button data-charts>View UV charts</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lmb"></label></p><p data-status role="status"></p>',
               onRender: root => {
                 const reset = () => {
                   this.statusMessage = '';
@@ -135,15 +136,18 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     const data = await preview.exportData();
                     if (this.disposed || this.preview !== preview) return;
                     const url = URL.createObjectURL(
-                      new Blob([encodeLightmapData(data)], {type: 'application/octet-stream'})
+                      new Blob([encodeSceneBake(data, this.scene)], {
+                        type: 'application/octet-stream'
+                      })
                     );
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = `${this.scene}.lml`;
+                    link.download = `${this.scene}.lmb`;
                     link.click();
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                     status('Bake exported.');
                   } catch (error) {
+                    if (this.disposed || this.preview !== preview) return;
                     status(String(error));
                   }
                 };
@@ -170,6 +174,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     canvas.style.display = 'block';
                     status('Atlas preview — tone mapped for display.');
                   } catch (error) {
+                    if (this.disposed || this.preview !== preview) return;
                     status(String(error));
                   }
                 };
@@ -194,8 +199,9 @@ export default class LightmapExample extends AnimationLoopTemplate {
                   const file = input?.files?.[0];
                   if (!file) return;
                   try {
-                    const data = decodeLightmapData(await file.arrayBuffer());
+                    const buffer = await file.arrayBuffer();
                     if (this.disposed || this.preview !== preview) return;
+                    const data = decodeSceneBake(buffer, this.scene);
                     if (
                       data.width !== preview.baker.width ||
                       data.height !== preview.baker.height ||
@@ -206,6 +212,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     status('Loaded — displaying baked lighting.');
                     this.setMode('baked');
                   } catch (error) {
+                    if (this.disposed || this.preview !== preview) return;
                     status(String(error));
                   }
                 };

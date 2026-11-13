@@ -56,3 +56,89 @@ test('unsupported nodes fail explicitly instead of disappearing from exported sc
   expect(() => makeANARIWorldFromScenegraph(device, root)).toThrow('tree');
   device.destroy();
 });
+
+test('snapshot conversion preserves colors and both UV sets without borrowing CPU arrays', () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+  const colors = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+  const coordinates = new Float32Array([0, 0, 1, 0, 0, 1]);
+  const secondCoordinates = new Float32Array([0.2, 0.2, 0.4, 0.2, 0.2, 0.4]);
+  const world = device.newWorld({
+    surfaces: [
+      device.newSurface({
+        geometry: device.newGeometry('triangle', {
+          'vertex.position': positions,
+          'vertex.attribute0': colors,
+          'vertex.attribute1': coordinates,
+          'vertex.attribute2': secondCoordinates
+        }),
+        material: device.newMaterial('physicallyBased', {
+          sheenColor: [0.3, 0.2, 0.1],
+          diffuseTransmission: 0.4
+        })
+      })
+    ]
+  });
+  const snapshot = makeScenegraphFromANARIWorld(world);
+  const adapter = new ScenegraphSurfaces();
+  const first = adapter.getSurfaces(snapshot.scene)[0];
+  expect(first.geometry.attributes.COLOR_0.value).toEqual(colors);
+  expect(first.geometry.attributes.TEXCOORD_0.value).toEqual(coordinates);
+  expect(first.geometry.attributes.TEXCOORD_1.value).toEqual(secondCoordinates);
+  positions[0] = 25;
+  colors[0] = 0;
+  expect(first.geometry.attributes.POSITION.value[0]).toBe(0);
+  expect(first.geometry.attributes.COLOR_0.value[0]).toBe(1);
+  const roundtrip = makeScenegraphFromANARIWorld(
+    makeANARIWorldFromScenegraph(device, snapshot.scene)
+  );
+  const second = adapter.getSurfaces(roundtrip.scene)[0];
+  expect(second.geometry.attributes.TEXCOORD_0.value).toEqual(coordinates);
+  expect(second.geometry.attributes.TEXCOORD_1.value).toEqual(secondCoordinates);
+  expect(second.material.uniforms?.sheenColorFactor).toEqual([0.3, 0.2, 0.1]);
+  expect(second.material.uniforms?.diffuseTransmissionFactor).toBe(0.4);
+  adapter.destroy();
+  device.destroy();
+});
+
+test('scenegraph light snapshots preserve point attenuation and independent vectors', () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const position: [number, number, number] = [1, 2, 3];
+  const world = makeANARIWorldFromScenegraph(device, new GroupNode(), [
+    {type: 'point', position, color: [1, 0.5, 0.2], intensity: 4, attenuation: [0, 0, 1]},
+    {type: 'directional', direction: [0, -1, 0], intensity: 2}
+  ]);
+  position[0] = 90;
+  const snapshot = makeScenegraphFromANARIWorld(world);
+  expect(snapshot.lights[0]).toEqual({
+    type: 'point',
+    position: [1, 2, 3],
+    color: [1, 0.5, 0.2],
+    intensity: 4,
+    attenuation: [0, 0, 1]
+  });
+  expect(snapshot.lights[1].type).toBe('directional');
+  device.destroy();
+});
+
+test('indexed triangle snapshots generate finite shared-vertex normals', () => {
+  const device = new ANARIDevice(new NullDevice({}));
+  const world = device.newWorld({
+    surfaces: [
+      device.newSurface({
+        geometry: device.newGeometry('triangle', {
+          'vertex.position': new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]),
+          'primitive.index': new Uint16Array([0, 1, 2, 0, 2, 3])
+        }),
+        material: device.newMaterial('matte')
+      })
+    ]
+  });
+  const snapshot = makeScenegraphFromANARIWorld(world);
+  const adapter = new ScenegraphSurfaces();
+  expect(
+    Array.from(adapter.getSurfaces(snapshot.scene)[0].geometry.attributes.NORMAL.value)
+  ).toEqual([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]);
+  adapter.destroy();
+  device.destroy();
+});

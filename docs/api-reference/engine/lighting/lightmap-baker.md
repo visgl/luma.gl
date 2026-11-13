@@ -182,3 +182,18 @@ messages and does not modify the atlas. `getLightmapAtlasDebugData(atlas)` retur
 RGBA8 chart colors suitable for `ImageData`; black pixels are unallocated. `occupancy`
 reports the fraction reserved by chart rectangles, including padding, rather than actual
 triangle coverage. All pixel coordinates and ownership/debug arrays run top-to-bottom.
+
+
+### Static example scenes
+
+The Lightmap Baking example defaults to Courtyard & Arcade and retains Two Rooms,
+Sculpture Gallery, Architectural Light Wells, Workshop, and Material Pavilion.
+WebGPU combines direct/environment samples with two-bounce diffuse transport from
+ANARI. Only the indirect term receives a small chart-local spatial filter; direct
+shadow detail and chart boundaries are preserved. This is progressive Monte Carlo
+baking, so early samples can be noisy.
+
+Example exports use a `.lmb` envelope carrying the scene identity and atlas revision
+around the standard engine lightmap payload. Loading a different scene is rejected
+before upload. The public `encodeLightmapData` / `decodeLightmapData` format remains
+unchanged. Applications using those lower-level APIs own scene/layout association.

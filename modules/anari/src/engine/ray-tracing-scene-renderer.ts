@@ -724,6 +724,10 @@ export class RayTracingSceneRenderer {
   private nextScenegraphId = 1;
   private readonly frames = new Map<string, RayTracingFrameResources>();
   private readonly emitterAreaCaches = new Map<string, EmitterAreaCache>();
+  private readonly irradianceComputations = new Map<
+    string,
+    {source: string; computation: Computation}
+  >();
   private readonly geometryCache = new Map<string, CompiledRayGeometry>();
   private pickMaterialRevision?: string;
   private channelMaterialRevision?: string;
@@ -1457,14 +1461,15 @@ export class RayTracingSceneRenderer {
   }
 
   /** Encode one indirect irradiance sample from borrowed world-position/chart and normal textures.
-   * Call render and submit first to prepare the retained scene. Caller owns output and submission; destroy the returned computation only after GPU completion.
+   * Call render and submit first to prepare the retained scene. Caller owns input/output textures and submission.
+   * The renderer owns and caches the computation until destroyFrame or destroy.
    */
   encodeIrradiance(
     frameIdentifier: string,
     positions: Texture,
     normals: Texture,
     output: Texture
-  ): Computation {
+  ): void {
     const resources = this.frames.get(frameIdentifier);
     assert(
       resources &&
@@ -1480,56 +1485,64 @@ export class RayTracingSceneRenderer {
     );
     assert(output.format === 'rgba16float');
     const textures = getRayMaterialTextures(resources.retainedSurfaces);
-    const computation = new Computation(this.device, {
-      source: getRayMaterialTextureShader(
-        RAY_TRACING_IRRADIANCE_SHADER,
-        resources.retainedSurfaces
-      ),
-      entryPoint: 'bakeIrradiance',
-      shaderLayout: {
-        bindings: [
-          ...getRayMaterialTextureLayout(textures),
-          {name: 'uniforms', type: 'uniform', group: 0, location: 0},
-          ...[
-            'primitives',
-            'triangles',
-            'lights',
-            'nodeMinima',
-            'nodeMaxima',
-            'leafPrimitiveIds',
-            'blasNodes',
-            'blasTriangleIds'
-          ].map((name, index) => ({
-            name,
-            type: 'read-only-storage' as const,
-            group: 0,
-            location: index + 1
-          })),
-          {
-            name: 'outputImage',
-            type: 'storage',
-            group: 0,
-            location: 11,
-            access: 'write-only',
-            format: 'rgba16float'
-          },
-          {
-            name: 'receiverPositions',
-            type: 'texture',
-            group: 0,
-            location: 13,
-            sampleType: 'unfilterable-float'
-          },
-          {
-            name: 'receiverNormals',
-            type: 'texture',
-            group: 0,
-            location: 14,
-            sampleType: 'unfilterable-float'
-          }
-        ]
-      }
-    });
+    const source = getRayMaterialTextureShader(
+      RAY_TRACING_IRRADIANCE_SHADER,
+      resources.retainedSurfaces
+    );
+    let cached = this.irradianceComputations.get(frameIdentifier);
+    if (cached?.source !== source) {
+      cached?.computation.destroy();
+      const computation = new Computation(this.device, {
+        source,
+        entryPoint: 'bakeIrradiance',
+        shaderLayout: {
+          bindings: [
+            ...getRayMaterialTextureLayout(textures),
+            {name: 'uniforms', type: 'uniform', group: 0, location: 0},
+            ...[
+              'primitives',
+              'triangles',
+              'lights',
+              'nodeMinima',
+              'nodeMaxima',
+              'leafPrimitiveIds',
+              'blasNodes',
+              'blasTriangleIds'
+            ].map((name, index) => ({
+              name,
+              type: 'read-only-storage' as const,
+              group: 0,
+              location: index + 1
+            })),
+            {
+              name: 'outputImage',
+              type: 'storage',
+              group: 0,
+              location: 11,
+              access: 'write-only',
+              format: 'rgba16float'
+            },
+            {
+              name: 'receiverPositions',
+              type: 'texture',
+              group: 0,
+              location: 13,
+              sampleType: 'unfilterable-float'
+            },
+            {
+              name: 'receiverNormals',
+              type: 'texture',
+              group: 0,
+              location: 14,
+              sampleType: 'unfilterable-float'
+            }
+          ]
+        }
+      });
+      cached = {source, computation};
+      this.irradianceComputations.set(frameIdentifier, cached);
+    }
+    const {computation} = cached;
     computation.setBindings({
       ...getRayMaterialTextureBindings(textures),
       uniforms: resources.uniformBuffer,
@@ -1548,7 +1561,6 @@ export class RayTracingSceneRenderer {
     const pass = this.device.beginComputePass();
     computation.dispatch(pass, Math.ceil(output.width / 8), Math.ceil(output.height / 8));
     pass.end();
-    return computation;
   }
 
   private getEmitterAreaCache(frameIdentifier: string): EmitterAreaCache {
@@ -1561,6 +1573,8 @@ export class RayTracingSceneRenderer {
   }
 
   destroyFrame(frameIdentifier: string): void {
+    this.irradianceComputations.get(frameIdentifier)?.computation.destroy();
+    this.irradianceComputations.delete(frameIdentifier);
     this.emitterAreaCaches.delete(frameIdentifier);
     const resources = this.frames.get(frameIdentifier);
     if (!resources) {

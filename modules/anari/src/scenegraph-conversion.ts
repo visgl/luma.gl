@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
-import {GroupNode, type Geometry} from '@luma.gl/engine';
+import {GroupNode, Geometry} from '@luma.gl/engine';
 import {Matrix4, type NumericArray} from '@math.gl/core';
-import type {Light} from '@luma.gl/shaders';
+import {pbrMaterial, type Light} from '@luma.gl/shaders';
 import type {ANARIDevice} from './anari-device';
 import type {ANARIWorld, ANARIGeometry, ANARIMaterial} from './anari-objects';
 import type {ANARIGeometryParameters, ANARIMaterialParameters} from './anari-types';
@@ -22,18 +22,23 @@ export function makeScenegraphFromANARIWorld(world: ANARIWorld): ANARIScenegraph
   const adapter = new ANARISceneAdapter();
   try {
     const snapshot = adapter.getScene(world);
+    const geometries = new Map<Geometry, Geometry>();
+    const materials = new Map<SceneMaterial, SceneMaterial>();
     const children = snapshot.surfaces.flatMap(surface =>
       surface.transforms.map(
         (matrix, index) =>
           new SceneMeshNode({
             id: surface.instanceIds?.[index] ?? `${surface.id}-${index}`,
-            geometry: surface.geometry,
-            material: surface.material,
+            geometry: copyGeometry(surface.geometry, geometries),
+            material: copyMaterial(surface.material, materials),
             matrix: new Matrix4(matrix)
           })
       )
     );
-    return {scene: new GroupNode({id: world.id, children}), lights: snapshot.lights};
+    return {
+      scene: new GroupNode({id: world.id, children}),
+      lights: structuredClone(snapshot.lights)
+    };
   } finally {
     adapter.destroy();
   }
@@ -44,7 +49,11 @@ export function makeScenegraphFromANARIWorld(world: ANARIWorld): ANARIScenegraph
  * Geometry arrays are independent; GPU texture resources are borrowed and never destroyed.
  * Node hierarchy is flattened into world-space instances with shared geometry/material handles.
  */
-export function makeANARIWorldFromScenegraph(device: ANARIDevice, scene: GroupNode): ANARIWorld {
+export function makeANARIWorldFromScenegraph(
+  device: ANARIDevice,
+  scene: GroupNode,
+  lights: readonly Light[] = []
+): ANARIWorld {
   const pending = [scene];
   const visited = new Set<object>();
   while (pending.length) {
@@ -57,6 +66,7 @@ export function makeANARIWorldFromScenegraph(device: ANARIDevice, scene: GroupNo
       if (child instanceof GroupNode) pending.push(child);
       else if (!(child instanceof SceneMeshNode))
         throw new Error(`Unsupported scenegraph node: ${child.id}`);
+      else if (child.connection) throw new Error('Snapshot GPU connections before conversion');
     }
   }
   const adapter = new ScenegraphSurfaces();
@@ -81,7 +91,27 @@ export function makeANARIWorldFromScenegraph(device: ANARIDevice, scene: GroupNo
         device.newInstance({group, transform: Array.from(transform)})
       );
     });
-    return device.newWorld({instances});
+    return device.newWorld({
+      instances,
+      lights: lights.map(light => {
+        if (light.type === 'rect' || light.type === 'disk')
+          throw new Error('Convert area lights to emissive geometry before exporting');
+        return device.newLight(light.type, {
+          color: copyVector3(light.color),
+          intensity: light.intensity,
+          ...(light.type === 'point' || light.type === 'spot'
+            ? {
+                position: copyVector3(light.position),
+                attenuation: copyVector3(light.attenuation ?? [1, 0, 0])
+              }
+            : {}),
+          ...('direction' in light ? {direction: copyVector3(light.direction)} : {}),
+          ...(light.type === 'spot'
+            ? {openingAngle: light.outerConeAngle, falloffAngle: light.innerConeAngle}
+            : {})
+        });
+      })
+    });
   } finally {
     adapter.destroy();
   }
@@ -94,13 +124,20 @@ function convertGeometry(device: ANARIDevice, geometry: Geometry): ANARIGeometry
     POSITION: 'vertex.position',
     NORMAL: 'vertex.normal',
     TANGENT: 'vertex.tangent',
-    TEXCOORD_0: 'vertex.attribute0',
-    TEXCOORD_1: 'vertex.attribute1'
+    COLOR_0: 'vertex.attribute0',
+    TEXCOORD_0: 'vertex.attribute1',
+    TEXCOORD_1: 'vertex.attribute2'
   } as const;
   const parameters: ANARIGeometryParameters = {};
   for (const [semantic, attribute] of Object.entries(geometry.attributes)) {
     if (!(semantic in semantics)) throw new Error(`Unsupported geometry attribute: ${semantic}`);
-    if (attribute.constant || attribute.normalized || !(attribute.value instanceof Float32Array))
+    if (
+      attribute.constant ||
+      attribute.normalized ||
+      attribute['byteStride'] ||
+      attribute['byteOffset'] ||
+      !(attribute.value instanceof Float32Array)
+    )
       throw new Error(`Convert ${semantic} to packed Float32 vertex data before exporting`);
     const parameter = semantics[semantic as keyof typeof semantics];
     parameters[parameter] = attribute.value.slice();
@@ -128,7 +165,7 @@ function convertGeometry(device: ANARIDevice, geometry: Geometry): ANARIGeometry
 }
 
 function convertMaterial(device: ANARIDevice, material: SceneMaterial): ANARIMaterial {
-  const uniforms = material.uniforms ?? {};
+  const uniforms = {...pbrMaterial.defaultUniforms, ...material.uniforms};
   if (Object.keys(material.defines ?? {}).length)
     throw new Error('Custom shader defines require an explicit ANARI material adapter');
   const color = uniforms.baseColorFactor;
@@ -139,7 +176,7 @@ function convertMaterial(device: ANARIDevice, material: SceneMaterial): ANARIMat
     alphaMode:
       material.alphaMode === 'MASK' ? 'mask' : material.alphaMode === 'BLEND' ? 'blend' : 'opaque',
     alphaCutoff: uniforms.alphaCutoff,
-    doubleSided: material.doubleSided,
+    doubleSided: material.doubleSided ?? false,
     unlit: uniforms.unlit,
     emissive: copyVector3(uniforms.emissiveFactor),
     emissiveStrength: uniforms.emissiveStrength,
@@ -153,7 +190,24 @@ function convertMaterial(device: ANARIDevice, material: SceneMaterial): ANARIMat
     specularIntensity: uniforms.specularIntensityFactor,
     thickness: uniforms.thicknessFactor,
     attenuationColor: copyVector3(uniforms.attenuationColor),
-    attenuationDistance: uniforms.attenuationDistance
+    attenuationDistance: uniforms.attenuationDistance,
+    diffuseTransmission: uniforms.diffuseTransmissionFactor,
+    diffuseTransmissionColor: copyVector3(uniforms.diffuseTransmissionColorFactor),
+    dispersion: uniforms.dispersion,
+    multiscatterColor: copyVector3(uniforms.multiscatterColorFactor),
+    scatterAnisotropy: uniforms.scatterAnisotropy,
+    sheenColor: copyVector3(uniforms.sheenColorFactor),
+    sheenRoughness: uniforms.sheenRoughnessFactor,
+    iridescence: uniforms.iridescenceFactor,
+    iridescenceIndexOfRefraction: uniforms.iridescenceIor,
+    iridescenceThicknessMinimum: uniforms.iridescenceThicknessRange?.[0],
+    iridescenceThicknessMaximum: uniforms.iridescenceThicknessRange?.[1],
+    anisotropyStrength: uniforms.anisotropyStrength,
+    anisotropyRotation: uniforms.anisotropyRotation,
+    anisotropyDirection: uniforms.anisotropyDirection
+      ? [uniforms.anisotropyDirection[0], uniforms.anisotropyDirection[1]]
+      : undefined,
+    bumpFactor: uniforms.bumpFactor
   };
   for (const [binding, texture] of Object.entries(material.bindings ?? {})) {
     if (!texture) continue;
@@ -189,4 +243,40 @@ function copyVector3(
   value: Readonly<NumericArray> | undefined
 ): [number, number, number] | undefined {
   return value ? [value[0], value[1], value[2]] : undefined;
+}
+
+function copyGeometry(source: Geometry, copies: Map<Geometry, Geometry>): Geometry {
+  let copy = copies.get(source);
+  if (!copy) {
+    copy = new Geometry({
+      topology: source.topology,
+      vertexCount: source.vertexCount,
+      attributes: Object.fromEntries(
+        Object.entries(source.attributes).map(([name, attribute]) => [
+          name,
+          {...attribute, value: attribute.value.slice()}
+        ])
+      ),
+      indices: source.indices ? {...source.indices, value: source.indices.value.slice()} : undefined
+    });
+    copies.set(source, copy);
+  }
+  return copy;
+}
+
+function copyMaterial(
+  source: SceneMaterial,
+  copies: Map<SceneMaterial, SceneMaterial>
+): SceneMaterial {
+  let copy = copies.get(source);
+  if (!copy) {
+    copy = {
+      ...source,
+      uniforms: structuredClone(source.uniforms),
+      bindings: {...source.bindings},
+      defines: {...source.defines}
+    };
+    copies.set(source, copy);
+  }
+  return copy;
 }

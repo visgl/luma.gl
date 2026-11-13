@@ -3,6 +3,7 @@
 
 import {Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
+import {IndirectLightmap} from '../lightmap-baking/indirect-lightmap';
 import {makeBakingScene, type BakingScene} from '../lightmap-baking/scenes';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {
@@ -238,6 +239,7 @@ function makeRoom(atlasHeight: number): Geometry {
 
 export class LightmapPreview {
   readonly baker: LightmapBaker;
+  private readonly indirect: IndirectLightmap | null;
   private readonly white: Texture;
   private readonly bakeMaterial;
   private material;
@@ -272,7 +274,7 @@ export class LightmapPreview {
     atlasMode: 'authored' | 'generated' = 'authored',
     scene: BakingScene = 'rooms'
   ) {
-    const width = resolution === 'full' ? 2048 : 256;
+    const width = resolution === 'full' ? (atlasMode === 'generated' ? 2048 : 1024) : 256;
     const height = width / 2;
     const chartSize = width / 8;
     const source = scene === 'rooms' ? makeRoom(height) : makeBakingScene(scene);
@@ -287,6 +289,10 @@ export class LightmapPreview {
         : null;
     this.geometry = this.atlas?.meshes[0].geometry ?? source;
     this.baker = new LightmapBaker(device, {width, height});
+    this.indirect =
+      this.atlas && device.type === 'webgpu'
+        ? new IndirectLightmap(device, this.geometry, this.atlas)
+        : null;
     this.white = device.createTexture({
       width: 1,
       height: 1,
@@ -339,10 +345,10 @@ export class LightmapPreview {
     });
     this.shadows = new ShadowMapRenderer(device, {
       quality: 'low',
-      directionalMapSize: resolution === 'full' ? 2048 : 256,
+      directionalMapSize: resolution === 'full' ? width : 256,
       spotLightCapacity: 0,
       pointLightCapacity: 2,
-      pointMapSize: resolution === 'full' ? 2048 : 128
+      pointMapSize: resolution === 'full' ? width : 128
     });
   }
   reset(): void {
@@ -493,6 +499,7 @@ export class LightmapPreview {
         chartTexture: this.chartTexture,
         dilationSteps: 2,
         prepareSample: () => {
+          this.indirect?.update([primary, secondary], sampleIndex);
           const shadow = recordShadows([light]);
           for (const model of this.bakeModels)
             model.shaderInputs.setProps({
@@ -508,6 +515,7 @@ export class LightmapPreview {
         },
         drawSample: ({renderPass}) => {
           for (const model of this.bakeModels) model.draw(renderPass);
+          this.indirect?.draw(renderPass);
         }
       });
     }
@@ -573,6 +581,7 @@ export class LightmapPreview {
     this.material.destroy();
     this.bakeMaterial.destroy();
     this.result?.destroy();
+    this.indirect?.destroy();
     this.baker.destroy();
     this.white.destroy();
   }

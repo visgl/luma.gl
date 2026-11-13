@@ -222,6 +222,8 @@ export type ANARIWorldParameters = {
 };
 
 export type ANARILightParameters = {
+  /** Constant, linear, quadratic attenuation; preserves engine light snapshots. */
+  attenuation?: ANARIVector3;
   color?: ANARIVector3;
   direction?: ANARIVector3;
   position?: ANARIVector3;

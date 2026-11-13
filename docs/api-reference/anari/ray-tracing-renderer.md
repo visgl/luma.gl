@@ -100,3 +100,30 @@ and temporal reconstruction policy, see
 
 Applications can also
 [register custom renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes).
+
+### Receiver-space irradiance samples
+
+`RayTracingSceneRenderer.encodeIrradiance(frameId, positions, normals, output)`
+encodes one cosine-weighted hemisphere sample for each covered receiver texel.
+Call `render()` and submit first to prepare the retained scene and acceleration
+structures. This method reuses that scene's diffuse transport, material textures,
+lights, seed, sample-frame index, and bounce settings. The initial receiver ray
+adds one bounce to `maxBounces`.
+
+`positions` and `normals` are same-size floating-point textures in world space.
+Position alpha contains a positive chart ID; zero marks uncovered texels.
+Normals must be unit length. `output` is a same-size `rgba16float` storage texture
+containing linear indirect irradiance and the receiver's chart ID in alpha.
+Uncovered texels are cleared. Receiver albedo is not multiplied into irradiance;
+the receiving PBR material applies it when displaying the bake.
+
+This is the indirect term: rays that escape the scene contribute zero. Combine
+it with direct-light and environment samples, then accumulate and dilate using
+`LightmapBaker`. Advance `samplingFrameIndex` on the retained render to obtain
+new samples; the same scene, seed, and frame index reproduce a sample. Do not use
+a camera denoiser on atlas texels, which have unrelated neighbors across charts.
+
+The caller owns all textures and command submission. The renderer caches the
+computation and releases it with `destroyFrame()` or `destroy()`. Keep borrowed
+textures alive through command completion. Changing receiver content requires
+resetting the application's accumulation history.

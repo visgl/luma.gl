@@ -1792,9 +1792,9 @@ fn bakeIrradiance(@builtin(global_invocation_id) invocation: vec3u) {
   let position = textureLoad(receiverPositions, vec2i(pixel), 0);
   if (position.w <= 0.0) { textureStore(outputImage, vec2i(pixel), vec4f(0.0)); return; }
   let normal = normalize(textureLoad(receiverNormals, vec2i(pixel), 0).xyz);
-  let seed = uniforms.sampling.x ^ ((pixel.x + pixel.y * dimensions.x) * 1973u) ^ (uniforms.acceleration.w * 26699u);
-  let radial = makeRandom(seed ^ 17u);
-  let angle = 2.0 * PI * makeRandom(seed ^ 101u);
+  let seed = uniforms.sampling.x ^ ((pixel.x + pixel.y * dimensions.x) * 1973u);
+  let radial = fract(makeRandom(seed ^ 17u) + f32(uniforms.acceleration.w) * 0.754877666);
+  let angle = 2.0 * PI * fract(makeRandom(seed ^ 101u) + f32(uniforms.acceleration.w) * 0.569840291);
   let reference = select(vec3f(0,0,1), vec3f(0,1,0), abs(normal.z) > 0.999);
   let tangent = normalize(cross(reference, normal));
   let direction = tangent * (sqrt(radial) * cos(angle)) + cross(normal,tangent) * (sqrt(radial) * sin(angle)) + normal * sqrt(1.0-radial);
@@ -1802,7 +1802,7 @@ fn bakeIrradiance(@builtin(global_invocation_id) invocation: vec3u) {
   let hit = intersectScene(ray, RAY_INFINITY);
   var irradiance = vec3f(0.0);
   if (hit.distance < RAY_INFINITY) {
-    irradiance = PI * evaluateDiffuseTransport(ray, hit, pixel, 0u);
+    irradiance = PI * evaluateDiffuseTransport(ray, hit, vec2u(pixel.x + pixel.y * dimensions.x, 0u), 0u);
   }
   textureStore(outputImage, vec2i(pixel), vec4f(irradiance, position.w));
 }
