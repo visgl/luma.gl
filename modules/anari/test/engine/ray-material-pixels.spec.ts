@@ -255,9 +255,32 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(transmitted[2]).toBeLessThan(4);
     options.surfaces = [glass];
     options.background = [0.8, 0.2, 0.05, 1];
+    options.samplingFrameIndex = 0;
     const backdrop = await readPixel();
     expect(backdrop[0]).toBeGreaterThan(100);
     expect(backdrop[1]).toBeGreaterThan(20);
+    const absorbingGlass = {
+      ...glass,
+      material: {
+        ...glass.material,
+        uniforms: {
+          ...glass.material.uniforms,
+          attenuationColor: [1, 0.25, 0] as [number, number, number],
+          attenuationDistance: 2
+        }
+      }
+    };
+    options.surfaces = [absorbingGlass];
+    const tintedBackdrop = await readPixel();
+    expect(tintedBackdrop[0]).toBe(backdrop[0]);
+    expect(tintedBackdrop[1]).toBeLessThan(backdrop[1] / 2);
+    expect(tintedBackdrop[2]).toBeLessThan(backdrop[2]);
+    absorbingGlass.material.uniforms.attenuationDistance = 1;
+    const denserBackdrop = await readPixel();
+    expect(denserBackdrop[1]).toBeLessThan(tintedBackdrop[1]);
+    absorbingGlass.material.uniforms.attenuationDistance = Number.POSITIVE_INFINITY;
+    expect(await readPixel()).toEqual(backdrop);
+    options.samplingFrameIndex = undefined;
     options.background = [0, 0, 0, 1];
     options.surfaces = [glass, emitter];
     options.surfaces[0].material.bindings = {pbr_transmissionSampler: replacement};

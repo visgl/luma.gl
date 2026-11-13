@@ -498,7 +498,7 @@ the material version to invalidate accumulated lighting.
 With `transportMode: 'pbr'` and positive `maxBounces`, `transmissionFactor` and `ior` enable
 smooth dielectric continuation with Fresnel reflection, refraction, total internal reflection,
 and radiance transport scaling. Use closed meshes with outward winding for entry/exit IOR
-handling. Rough transmission, nested dielectric media, absorption, and
+handling. Rough transmission, nested dielectric media, and
 extension maps are not implemented. Base-color texture alpha masks apply to primary/secondary
 rays, shadows, explicit emitter samples, picking and channels. Alpha blending and transparent
 shadow transport remain unsupported.
