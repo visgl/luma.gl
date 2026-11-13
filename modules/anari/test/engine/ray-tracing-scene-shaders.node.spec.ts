@@ -44,7 +44,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'primitiveMaxima', binding: 3},
       {name: 'blasNodes', binding: 4}
     ]);
-    expect(reflection.storage[0].format?.size).toBe(320);
+    expect(reflection.storage[0].format?.size).toBe(336);
     expect(reflection.storage.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.uniforms.length + reflection.storage.length).toBe(5);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
@@ -138,7 +138,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'blasTriangleIds', binding: 8}
     ]);
     expect(storageBuffers).toHaveLength(8);
-    expect(storageBuffers[0].format?.size).toBe(320);
+    expect(storageBuffers[0].format?.size).toBe(336);
     expect(storageBuffers.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(11);
     expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(12);

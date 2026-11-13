@@ -74,6 +74,10 @@ shading. The color map uses RGB with texture-format color decoding, and the inte
 alpha. Both use the same UV selection and transforms as the other material maps. Smooth dielectric
 refraction continues to use its IOR-based Fresnel model.
 
+Clearcoat adds a dielectric glossy layer to direct lighting and opaque PBR paths. The strength
+map uses red, and the roughness map uses green. Both support the shared UV sets and transforms.
+The coat uses the base shading normal and the existing opaque bounce sampling distribution.
+
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
