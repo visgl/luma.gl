@@ -3,9 +3,13 @@
 
 import {Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
+import {IndirectLightmap} from '../lightmap-baking/indirect-lightmap';
+import {makeBakingScene, type BakingScene} from '../lightmap-baking/scenes';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
 import {
   LightmapBaker,
+  createLightmapAtlas,
+  type LightmapAtlas,
   ShadowMapRenderer,
   createPBRShadowModel,
   createPBRLightmapModel,
@@ -235,6 +239,7 @@ function makeRoom(atlasHeight: number): Geometry {
 
 export class LightmapPreview {
   readonly baker: LightmapBaker;
+  private readonly indirect: IndirectLightmap | null;
   private readonly white: Texture;
   private readonly bakeMaterial;
   private material;
@@ -244,6 +249,7 @@ export class LightmapPreview {
   private readonly shadows: ShadowMapRenderer;
   private readonly casters = new Map<object, ReturnType<typeof createPBRShadowModel>>();
   private readonly geometry: Geometry;
+  readonly atlas: LightmapAtlas | null;
   private result: LightmapBakeResult | null = null;
   private readonly environment = {
     width: 4,
@@ -264,13 +270,29 @@ export class LightmapPreview {
   }
   constructor(
     private readonly device: Device,
-    resolution: 'full' | 'preview' = 'full'
+    resolution: 'full' | 'preview' = 'full',
+    atlasMode: 'authored' | 'generated' = 'authored',
+    scene: BakingScene = 'rooms'
   ) {
-    const width = resolution === 'full' ? 1024 : 256;
+    const width = resolution === 'full' ? (atlasMode === 'generated' ? 2048 : 1024) : 256;
     const height = width / 2;
     const chartSize = width / 8;
-    this.geometry = makeRoom(height);
+    const source = scene === 'rooms' ? makeRoom(height) : makeBakingScene(scene);
+    this.atlas =
+      atlasMode === 'generated'
+        ? createLightmapAtlas([{id: 'room', geometry: source}], {
+            width,
+            height,
+            texelsPerUnit: width / 64,
+            padding: 2
+          })
+        : null;
+    this.geometry = this.atlas?.meshes[0].geometry ?? source;
     this.baker = new LightmapBaker(device, {width, height});
+    this.indirect =
+      this.atlas && device.type === 'webgpu'
+        ? new IndirectLightmap(device, this.geometry, this.atlas)
+        : null;
     this.white = device.createTexture({
       width: 1,
       height: 1,
@@ -282,23 +304,32 @@ export class LightmapPreview {
       uniforms: {metallicRoughnessValues: [0, 1], lightmapUVSet: 1}
     });
     const chartCount = this.geometry.vertexCount / 6;
-    this.bakeModels = Array.from({length: chartCount}, (_, chartIndex) => {
+    const charts =
+      this.atlas?.charts ??
+      Array.from({length: chartCount}, (_, chartIndex) => ({
+        id: chartIndex + 1,
+        firstVertex: chartIndex * 6,
+        vertexCount: 6
+      }));
+    this.bakeModels = charts.map(chart => {
       const model = createPBRLightmapModel(device, {
         geometry: this.geometry,
         material: this.bakeMaterial,
         receiveShadows: true,
-        firstVertex: chartIndex * 6,
-        vertexCount: 6
+        firstVertex: chart.firstVertex,
+        vertexCount: chart.vertexCount
       });
-      model.shaderInputs.setProps({lightmapBake: {chartId: chartIndex + 1}});
+      model.shaderInputs.setProps({lightmapBake: {chartId: chart.id}});
       return model;
     });
-    const chartOwners = Float32Array.from({length: width * height}, (_, index) => {
-      const column = Math.floor((index % width) / chartSize);
-      const row = Math.floor(Math.floor(index / width) / chartSize);
-      const chartIndex = row * 8 + column;
-      return chartIndex < chartCount ? chartIndex + 1 : 0;
-    });
+    const chartOwners =
+      this.atlas?.chartOwners ??
+      Float32Array.from({length: width * height}, (_, index) => {
+        const column = Math.floor((index % width) / chartSize);
+        const row = Math.floor(Math.floor(index / width) / chartSize);
+        const chartIndex = row * 8 + column;
+        return chartIndex < chartCount ? chartIndex + 1 : 0;
+      });
     this.chartTexture = device.createTexture({
       width,
       height,
@@ -314,10 +345,10 @@ export class LightmapPreview {
     });
     this.shadows = new ShadowMapRenderer(device, {
       quality: 'low',
-      directionalMapSize: resolution === 'full' ? 1024 : 256,
+      directionalMapSize: resolution === 'full' ? width : 256,
       spotLightCapacity: 0,
       pointLightCapacity: 2,
-      pointMapSize: resolution === 'full' ? 1024 : 128
+      pointMapSize: resolution === 'full' ? width : 128
     });
   }
   reset(): void {
@@ -468,6 +499,7 @@ export class LightmapPreview {
         chartTexture: this.chartTexture,
         dilationSteps: 2,
         prepareSample: () => {
+          this.indirect?.update([primary, secondary], sampleIndex);
           const shadow = recordShadows([light]);
           for (const model of this.bakeModels)
             model.shaderInputs.setProps({
@@ -483,6 +515,7 @@ export class LightmapPreview {
         },
         drawSample: ({renderPass}) => {
           for (const model of this.bakeModels) model.draw(renderPass);
+          this.indirect?.draw(renderPass);
         }
       });
     }
@@ -548,6 +581,7 @@ export class LightmapPreview {
     this.material.destroy();
     this.bakeMaterial.destroy();
     this.result?.destroy();
+    this.indirect?.destroy();
     this.baker.destroy();
     this.white.destroy();
   }

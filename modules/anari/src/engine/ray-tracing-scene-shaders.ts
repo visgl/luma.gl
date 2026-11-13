@@ -1789,3 +1789,33 @@ function getRayTracingDebugFragmentShader(debugView: RayTracingDebugView): strin
       return '';
   }
 }
+
+/** UV receivers supply world positions and normals; camera presentation is bypassed. */
+export const RAY_TRACING_IRRADIANCE_SHADER = /* wgsl */ `
+${RAY_TRACING_SCENE_SHADER}
+@group(0) @binding(13) var receiverPositions: texture_2d<f32>;
+@group(0) @binding(14) var receiverNormals: texture_2d<f32>;
+
+@compute @workgroup_size(8, 8)
+fn bakeIrradiance(@builtin(global_invocation_id) invocation: vec3u) {
+  let pixel = invocation.xy;
+  let dimensions = textureDimensions(receiverPositions);
+  if (any(pixel >= dimensions)) { return; }
+  let position = textureLoad(receiverPositions, vec2i(pixel), 0);
+  if (position.w <= 0.0) { textureStore(outputImage, vec2i(pixel), vec4f(0.0)); return; }
+  let normal = normalize(textureLoad(receiverNormals, vec2i(pixel), 0).xyz);
+  let seed = uniforms.sampling.x ^ ((pixel.x + pixel.y * dimensions.x) * 1973u);
+  let radial = fract(makeRandom(seed ^ 17u) + f32(uniforms.acceleration.w) * 0.754877666);
+  let angle = 2.0 * PI * fract(makeRandom(seed ^ 101u) + f32(uniforms.acceleration.w) * 0.569840291);
+  let reference = select(vec3f(0,0,1), vec3f(0,1,0), abs(normal.z) > 0.999);
+  let tangent = normalize(cross(reference, normal));
+  let direction = tangent * (sqrt(radial) * cos(angle)) + cross(normal,tangent) * (sqrt(radial) * sin(angle)) + normal * sqrt(1.0-radial);
+  let ray = Ray(position.xyz + normal * 0.002, direction);
+  let hit = intersectScene(ray, RAY_INFINITY);
+  var irradiance = vec3f(0.0);
+  if (hit.distance < RAY_INFINITY) {
+    irradiance = PI * evaluateDiffuseTransport(ray, hit, vec2u(pixel.x + pixel.y * dimensions.x, 0u), 0u);
+  }
+  textureStore(outputImage, vec2i(pixel), vec4f(irradiance, position.w));
+}
+`;

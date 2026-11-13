@@ -274,6 +274,7 @@ export const ANARIAnimationSchema = z
   .describe('A retained instance or light animation.');
 
 const lightProperties = {
+  attenuation: ANARIVector3Schema.optional(),
   '@@id': identifierSchema,
   color: ANARIVector3Schema.optional(),
   direction: ANARIVector3Schema.optional(),

@@ -17,14 +17,21 @@ and statistics. See [Resource ownership](/docs/api-guide/gpu/resource-ownership)
 
 ### Static lightmap workflows
 
-A dedicated two-room [Lightmap Baking example](/examples/api/lightmap-baking) demonstrates fixed colored
-lights, shadowed environment sampling, and portable HDR export/reload. Point-shadow cube projections now match WebGPU texture coordinates, correcting misplaced shadows from off-axis occluders. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
+The [Lightmap Baking example](/examples/api/lightmap-baking) offers six static scenes, with Courtyard & Arcade as the default and Two Rooms retained. It demonstrates fixed colored lights, shadowed environment sampling, WebGPU indirect diffuse transport, and scene-checked HDR export/reload. Point-shadow cube projections now match WebGPU texture coordinates, correcting misplaced shadows from off-axis occluders. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
 
 ### Lighting workflow hardening
 
 Combined PBR receiving and shared-frame regressions now cover visibility, baked results, resize,
 reset, resource reuse and allocation-failure recovery. The [lighting guide](./api-guide/engine/lighting-effects.md#frame-and-resource-lifecycle)
 explains frame ordering, ownership and reproducible performance measurements.
+
+### Scenegraph snapshots and indirect transport
+
+`makeANARIWorldFromScenegraph` and `makeScenegraphFromANARIWorld` convert static scenegraphs and ANARI worlds with copied CPU data, shared geometry/material snapshots, and borrowed textures. Ray tracing accepts scenegraphs through the same retained surface adapter. Receiver-space irradiance sampling reuses the ray tracer's diffuse transport for baking. See [scenegraph snapshots](./api-reference/anari/anari-scene.md#scenegraph-snapshots) and [irradiance sampling](./api-reference/anari/ray-tracing-renderer.md#receiver-space-irradiance-samples).
+
+### Lightmap atlas preparation
+
+`createLightmapAtlas` generates independent UV charts, world-space texel density, deterministic multi-mesh packing and gutter ownership. Explicit validation and chart preview data help inspect allocations before baking. See [atlas preparation](./api-reference/engine/lighting/lightmap-baker.md#preparing-atlas-uvs).
 
 ### Progressive lightmap baking
 

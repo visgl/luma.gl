@@ -112,3 +112,14 @@ export type {
   ReflectionProbeUpdate,
   ReflectionProbeView
 } from './reflection-probe';
+export {
+  createLightmapAtlas,
+  validateLightmapAtlas,
+  getLightmapAtlasDebugData
+} from './lightmap-atlas';
+export type {
+  LightmapAtlas,
+  LightmapAtlasInput,
+  LightmapAtlasOptions,
+  LightmapAtlasChart
+} from './lightmap-atlas';
