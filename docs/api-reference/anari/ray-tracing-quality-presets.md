@@ -99,7 +99,7 @@ Check `supported` before interpreting the implementation features for a device.
 
 Analytic spheres and triangle-list meshes, scalar metallic/roughness direct lighting,
 bounded diffuse and opt-in opaque GGX reflective transport, guided spatial denoising, and debug views are supported.
-Scalar and textured `MASK` visibility, base-color/emissive/metallic-roughness/transmission maps,
+Scalar and textured `MASK` visibility, base-color/emissive/metallic-roughness/transmission maps, triangle mesh normal maps,
 smooth dielectric transport and opt-in explicit emitter sampling are supported.
 Alpha blending, rough transmission, hardware ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
 

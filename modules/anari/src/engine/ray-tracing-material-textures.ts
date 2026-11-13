@@ -17,7 +17,8 @@ const MATERIAL_MAPS = [
     'pbr_metallicRoughnessSampler',
     'primitive.properties.x *= sampled.g; primitive.emissive.w *= sampled.b;'
   ],
-  ['transmission', 'pbr_transmissionSampler', 'primitive.material.y *= sampled.r;']
+  ['transmission', 'pbr_transmissionSampler', 'primitive.material.y *= sampled.r;'],
+  ['normal', 'pbr_normalSampler', '']
 ] as const;
 
 /** Borrowed material maps; ownership remains with the scene adapter. */
@@ -48,6 +49,7 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
   return JSON.stringify(
     surfaces.map(surface => [
       surface.id,
+      surface.material.uniforms?.normalScale,
       MATERIAL_MAPS.map(([name, binding]) => [
         textures.findIndex(texture => texture === surface.material.bindings?.[binding]),
         surface.material.uniforms?.[`${name}MapEnabled`],
@@ -81,6 +83,7 @@ export function getRayMaterialTextureShader(
     )
     .join('');
   const opacityMaterials: string[] = [];
+  const normalMaterials: string[] = [];
   const materials = surfaces
     .map((surface, surfaceIndex) => {
       const uniforms = surface.material.uniforms;
@@ -97,6 +100,16 @@ export function getRayMaterialTextureShader(
         const matrix = Array.from(transform, value => `${Number(value).toFixed(9)}`).join(', ');
         const coordinates =
           uniforms?.[`${name}UVSet`] === 1 ? 'hit.secondaryCoordinates' : 'hit.coordinates';
+        if (name === 'normal') {
+          const scale = Number(uniforms?.normalScale ?? 1).toFixed(9);
+          normalMaterials.push(`case ${surfaceIndex}u: {
+            let transform = mat3x3<f32>(${matrix});
+            let coordinates = (transform * vec3<f32>(${coordinates}, 1.0)).xy;
+            let sampled = sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates);
+            return applyNormalMap(hit, transform, ${uniforms?.normalUVSet === 1}, sampled.xyz, ${scale});
+          }`);
+          return '';
+        }
         if (name === 'baseColor') {
           opacityMaterials.push(`case ${surfaceIndex}u: {
             let coordinates = (mat3x3<f32>(${matrix}) * vec3<f32>(${coordinates}, 1.0)).xy;
@@ -114,7 +127,8 @@ export function getRayMaterialTextureShader(
     .replace('/* MATERIAL_TEXTURE_DECLARATIONS */', declarations)
     .replace('/* MATERIAL_TEXTURE_CASES */', cases)
     .replace('/* MATERIAL_SURFACE_CASES */', materials)
-    .replace('/* MATERIAL_OPACITY_CASES */', opacityMaterials.join('\n'));
+    .replace('/* MATERIAL_OPACITY_CASES */', opacityMaterials.join('\n'))
+    .replace('/* MATERIAL_NORMAL_CASES */', normalMaterials.join('\n'));
 }
 
 /** Shared explicit texture layout for trace, picking and primary-hit channels. */
