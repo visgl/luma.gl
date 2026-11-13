@@ -44,7 +44,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'primitiveMaxima', binding: 3},
       {name: 'blasNodes', binding: 4}
     ]);
-    expect(reflection.storage[0].format?.size).toBe(304);
+    expect(reflection.storage[0].format?.size).toBe(320);
     expect(reflection.storage.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.uniforms.length + reflection.storage.length).toBe(5);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
@@ -138,7 +138,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'blasTriangleIds', binding: 8}
     ]);
     expect(storageBuffers).toHaveLength(8);
-    expect(storageBuffers[0].format?.size).toBe(304);
+    expect(storageBuffers[0].format?.size).toBe(320);
     expect(storageBuffers.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(11);
     expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(12);
@@ -485,9 +485,9 @@ describe('graph-accelerated ray tracing shaders', () => {
       )
     ).toHaveLength(1);
     for (const invariant of [
-      'let dielectricReflectance = vec3<f32>(0.04)',
+      'let dielectricReflectance = getDielectricReflectance(primitive)',
       'let reflectance = mix(dielectricReflectance, baseColor, metallic)',
-      'let grazingReflectance = vec3<f32>(clamp(maximumReflectance * 25.0, 0.0, 1.0))',
+      'let grazingReflectance = getGrazingReflectance(primitive, reflectance, metallic)',
       'let alphaRoughness = roughness * roughness',
       'let alphaRoughnessSquared = alphaRoughness * alphaRoughness',
       'let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance)',
@@ -516,9 +516,7 @@ describe('graph-accelerated ray tracing shaders', () => {
 
     expect(functionSource).toContain('let roughness = clamp(primitive.properties.x, 0.04, 1.0)');
     expect(functionSource).toContain('let metallic = clamp(primitive.emissive.w, 0.0, 1.0)');
-    expect(functionSource).toContain(
-      'let maximumReflectance = max(reflectance.r, max(reflectance.g, reflectance.b))'
-    );
+    expect(functionSource).toContain('getGrazingReflectance(primitive, reflectance, metallic)');
     expect(functionSource).toContain('grazingReflectance - reflectance');
     expect(functionSource).toContain('pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0)');
     expect(functionSource).toContain(

@@ -55,7 +55,7 @@ build graph.
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
 not implemented. Skeletal skinning, morph-target displacement, alpha blending, and
-advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
+other advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
 
 Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
 with explicit mip-zero sampling and up to 14 distinct textures per frame. `MASK` multiplies the
@@ -69,6 +69,11 @@ transformed UV chart. They affect lighting and opaque bounce shading. Analytic s
 degenerate UV charts use the surface normal, which also remains the normal for picking, hit
 channels and smooth dielectric refraction. The tangent frame is derived from the triangle UVs
 and does not use authored vertex tangents.
+Dielectric specular color and intensity factors affect direct lighting and opaque PBR bounce
+shading. The color map uses RGB with texture-format color decoding, and the intensity map uses
+alpha. Both use the same UV selection and transforms as the other material maps. Smooth dielectric
+refraction continues to use its IOR-based Fresnel model.
+
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a

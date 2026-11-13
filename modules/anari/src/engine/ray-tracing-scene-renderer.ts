@@ -52,7 +52,7 @@ import type {
   SceneSurface
 } from './scene-renderer';
 
-const PRIMITIVE_FLOAT_COUNT = 76;
+const PRIMITIVE_FLOAT_COUNT = 80;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
@@ -3725,6 +3725,8 @@ function makePrimitiveData(
         attenuationDistance && Number.isFinite(attenuationDistance) && attenuationDistance > 0
           ? attenuationDistance
           : 0;
+      primitiveValues.set(materialUniforms?.specularColorFactor ?? [1, 1, 1], primitiveOffset + 76);
+      primitiveValues[primitiveOffset + 79] = materialUniforms?.specularIntensityFactor ?? 1;
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,

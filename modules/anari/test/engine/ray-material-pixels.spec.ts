@@ -116,6 +116,46 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(await readPixel()).toEqual([0, 0, 255]);
     surface.material.bindings.pbr_baseColorSampler = replacement;
     expect(await readPixel()).toEqual([0, 255, 0]);
+    const specularSurface = {
+      ...surface,
+      material: {
+        id: 'specular-material',
+        uniforms: {
+          baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+          metallicRoughnessValues: [0, 0.5] as [number, number],
+          specularColorFactor: [1, 0, 0] as [number, number, number],
+          specularIntensityFactor: 1,
+          specularColorUVSet: 0,
+          specularIntensityUVSet: 0
+        },
+        bindings: {} as Record<string, Texture>
+      }
+    };
+    options.surfaces = [specularSurface];
+    options.lights = [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 4}];
+    options.samplingFrameIndex = 0;
+    const redReflection = await readPixel();
+    expect(redReflection[0]).toBeGreaterThan(20);
+    expect(redReflection.slice(1)).toEqual([0, 0]);
+    specularSurface.material.uniforms.specularIntensityFactor = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    specularSurface.material.uniforms.specularIntensityFactor = 1;
+    specularSurface.material.uniforms.specularColorFactor = [1, 1, 1];
+    specularSurface.material.bindings.pbr_specularColorSampler = map;
+    expect(await readPixel()).toEqual(redReflection);
+    specularSurface.material.uniforms.specularColorUVSet = 1;
+    const blueReflection = await readPixel();
+    expect(blueReflection[2]).toBeGreaterThan(20);
+    expect(blueReflection.slice(0, 2)).toEqual([0, 0]);
+    replacement.writeData(new Uint8Array([255, 255, 255, 0, 0, 0, 0, 255]));
+    specularSurface.material.bindings.pbr_specularIntensitySampler = replacement;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    specularSurface.material.uniforms.specularIntensityUVSet = 1;
+    expect(await readPixel()).toEqual(blueReflection);
+    replacement.writeData(new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]));
+    options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 1}];
+    options.samplingFrameIndex = undefined;
+    options.surfaces = [surface];
     const mappedSurface = {
       ...surface,
       id: 'normal-mapped',
@@ -359,4 +399,4 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     device.destroy();
   }
   // Software WebGPU CI compiles several complete traversal/material pipelines here.
-}, 300_000);
+}, 420_000);

@@ -33,6 +33,7 @@ struct RayPrimitive {
   previousTransform: mat4x4<f32>,
   material: vec4<f32>,
   attenuation: vec4<f32>,
+  specular: vec4<f32>,
 };
 
 struct RayBlasNode {
@@ -826,6 +827,17 @@ fn getFaceNormal(hit: RayHit, ray: Ray) -> vec3<f32> {
   return faceForward(normal, ray.direction, normal);
 }
 
+fn getDielectricReflectance(primitive: RayPrimitive) -> vec3<f32> {
+  return clamp(primitive.specular.rgb * 0.04, vec3<f32>(0.0), vec3<f32>(1.0)) *
+    clamp(primitive.specular.w, 0.0, 1.0);
+}
+
+fn getGrazingReflectance(primitive: RayPrimitive, reflectance: vec3<f32>, metallic: f32) -> vec3<f32> {
+  let maximumReflectance = max(reflectance.r, max(reflectance.g, reflectance.b));
+  return vec3<f32>(min(clamp(maximumReflectance * 25.0, 0.0, 1.0),
+    mix(clamp(primitive.specular.w, 0.0, 1.0), 1.0, metallic)));
+}
+
 fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<f32> {
   let primitive = getShadedPrimitive(hit);
   let hitPosition = ray.origin + ray.direction * hit.distance;
@@ -835,10 +847,9 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
   let baseColor = primitive.baseColor.rgb;
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
-  let dielectricReflectance = vec3<f32>(0.04);
+  let dielectricReflectance = getDielectricReflectance(primitive);
   let reflectance = mix(dielectricReflectance, baseColor, metallic);
-  let maximumReflectance = max(reflectance.r, max(reflectance.g, reflectance.b));
-  let grazingReflectance = vec3<f32>(clamp(maximumReflectance * 25.0, 0.0, 1.0));
+  let grazingReflectance = getGrazingReflectance(primitive, reflectance, metallic);
   let alphaRoughness = roughness * roughness;
   let alphaRoughnessSquared = alphaRoughness * alphaRoughness;
   let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance) *
@@ -1272,15 +1283,16 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
   let normalHalfSquared = normalHalf * normalHalf;
   let distributionDenominator = (1.0 - normalHalfSquared) + alphaSquared * normalHalfSquared;
   let distribution = alphaSquared / (PI * distributionDenominator * distributionDenominator);
-  let reflectance = mix(vec3<f32>(0.04), baseColor, metallic);
-  let grazingReflectance = vec3<f32>(clamp(max(reflectance.r, max(reflectance.g, reflectance.b)) * 25.0, 0.0, 1.0));
+  let dielectricReflectance = getDielectricReflectance(primitive);
+  let reflectance = mix(dielectricReflectance, baseColor, metallic);
+  let grazingReflectance = getGrazingReflectance(primitive, reflectance, metallic);
   let fresnel = reflectance + (grazingReflectance - reflectance) * pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0);
   let lightVisibility = 2.0 * normalLight / (normalLight + sqrt(alphaSquared +
     (1.0 - alphaSquared) * normalLight * normalLight));
   let viewVisibility = 2.0 * normalView / (normalView + sqrt(alphaSquared +
     (1.0 - alphaSquared) * normalView * normalView));
   // Match the scalar direct-light BRDF; cancel N.L before dividing by the PDF.
-  let diffuse = (vec3<f32>(1.0) - fresnel) * baseColor * 0.96 * (1.0 - metallic) * normalLight / PI;
+  let diffuse = (vec3<f32>(1.0) - fresnel) * baseColor * (vec3<f32>(1.0) - dielectricReflectance) * (1.0 - metallic) * normalLight / PI;
   let specular = fresnel * lightVisibility * viewVisibility * distribution / (4.0 * normalView);
   return diffuse + specular;
 }
