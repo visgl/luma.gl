@@ -37,11 +37,7 @@ export class WreckingBallScene {
   private readonly probe: ReflectionProbe;
   private readonly captureRoots: GroupNode[];
   private captureMatrices?: Buffer;
-  private ball?: SceneMeshNode;
-  private readonly reflectionEnvironments = new Map<
-    NonNullable<ReflectionProbe['texture']>,
-    SceneEnvironment
-  >();
+  private readonly reflectionEnvironment: SceneEnvironment;
   constructor(
     device: Device,
     private readonly world: GPURigidBodyWorld,
@@ -49,6 +45,7 @@ export class WreckingBallScene {
   ) {
     this.renderer = new SceneRenderer(device);
     this.environment = createLabEnvironment(device);
+    this.reflectionEnvironment = {...this.environment};
     this.probe = new ReflectionProbe(device, {
       size: 64,
       sampleCount: 8,
@@ -100,7 +97,9 @@ export class WreckingBallScene {
       });
       bindings.set(node, {matrixIndex: index, localMatrix});
       this.root.add(node);
-      if (index === WRECKING_BALL_BODY_INDEX) this.ball = node;
+      if (index === WRECKING_BALL_BODY_INDEX) {
+        node.environment = this.reflectionEnvironment;
+      }
       // The nearby suspension can dominate the reflection. Capture the plinth and blocks.
       if (index === 0 || index >= 6) captureNodes.push(node);
     }
@@ -158,24 +157,14 @@ export class WreckingBallScene {
           lights: LIGHTS,
           background: BACKGROUND,
           transmission: false,
+          // The cube projection flips Y to match cube sampling, reversing triangle winding.
+          rasterParameters: {frontFace: 'cw'},
           toneMapMode: 0,
           outputColorSpace: 'linear'
         });
       }
     });
-    if (
-      this.ball &&
-      this.probe.texture &&
-      this.ball.environment?.specularTexture !== this.probe.texture
-    ) {
-      const texture = this.probe.texture;
-      let environment = this.reflectionEnvironments.get(texture);
-      if (!environment) {
-        environment = {...this.environment, specularTexture: texture};
-        this.reflectionEnvironments.set(texture, environment);
-      }
-      this.ball.environment = environment;
-    }
+    if (this.probe.texture) this.reflectionEnvironment.specularTexture = this.probe.texture;
     this.renderer.render({
       scene: this.root,
       camera: {

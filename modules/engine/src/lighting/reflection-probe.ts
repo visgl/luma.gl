@@ -53,13 +53,13 @@ export type ReflectionProbeProps = {
   sampleCount?: number;
   frameBudgetMilliseconds?: number;
   maximumFacesPerFrame?: number;
-  /** Capture and publish in the same frame, with the budget controlling refresh frequency. */
+  /** Capture and publish in the same frame, with the budget controlling filtering quality. */
   refreshMode?: 'incremental' | 'same-frame';
   /** Number of specular mips, including the sharp capture. Defaults to four, up to the texture limit. */
   mipLevels?: number;
 };
 
-/** Incremental WebGPU capture and specular filtering with a complete, double-buffered publication. */
+/** WebGPU capture and specular filtering with a complete, double-buffered publication. */
 export class ReflectionProbe {
   private readonly device: Device;
   private readonly origin: Buffer;
@@ -74,6 +74,7 @@ export class ReflectionProbe {
   private readonly filter: ClipSpace;
   private readonly size: number;
   private readonly sampleCount: number;
+  private activeSampleCount: number;
   private readonly budget: number;
   private readonly maximumFaces: number;
   private readonly sameFrame: boolean;
@@ -94,6 +95,7 @@ export class ReflectionProbe {
     this.device = device;
     this.size = props.size ?? 32;
     this.sampleCount = props.sampleCount ?? 16;
+    this.activeSampleCount = this.sampleCount;
     this.budget = props.frameBudgetMilliseconds ?? 1000 / 60;
     this.maximumFaces = props.maximumFacesPerFrame ?? 2;
     this.sameFrame = props.refreshMode === 'same-frame';
@@ -107,10 +109,10 @@ export class ReflectionProbe {
     assert(Number.isInteger(this.maximumFaces) && this.maximumFaces > 0 && this.maximumFaces <= 6);
     const capabilities = device.getTextureFormatCapabilities('rgba16float');
     assert(capabilities.render && capabilities.filter);
-    this.origin = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE | Buffer.COPY_DST});
     const requestedMipLevels = props.mipLevels ?? 4;
     assert(Number.isSafeInteger(requestedMipLevels) && requestedMipLevels > 0);
     const mipLevels = Math.min(requestedMipLevels, device.getMipLevelCount(this.size, this.size));
+    this.origin = device.createBuffer({byteLength: 16, usage: Buffer.STORAGE | Buffer.COPY_DST});
     this.capture = this.createCube('reflection-capture', 1);
     this.targets = [
       this.createCube('reflection-filter-a', mipLevels),
@@ -147,7 +149,7 @@ export class ReflectionProbe {
   }
 
   /**
-   * Record capture or filtering work before the main draw. A budget estimate throttles refreshes.
+   * Record capture and filtering before the main draw. A budget estimate controls work or quality.
    * Returns the number of face work units recorded. Submit the frame before calling again.
    */
   update(options: ReflectionProbeUpdate): number {
@@ -177,9 +179,18 @@ export class ReflectionProbe {
         : this.budget / 4;
     let available: number;
     if (this.sameFrame) {
-      // Run one complete capture at startup. Under load, alternate capture and
-      // ordinary frames so capture cost does not permanently throttle itself.
-      if (this.front !== undefined && headroom < 2 && ++this.pausedFrames < 2) return 0;
+      // Keep the probe in step with the scene. Recover quality only with spare
+      // headroom so the sample count stays stable near the frame budget.
+      if (measured !== undefined && Number.isFinite(measured)) {
+        if (measured > this.budget) {
+          this.activeSampleCount = Math.max(
+            Math.min(4, this.sampleCount),
+            Math.floor(this.activeSampleCount / 2)
+          );
+        } else if (headroom >= this.budget / 4) {
+          this.activeSampleCount = Math.min(this.sampleCount, this.activeSampleCount + 1);
+        }
+      }
       available = FACES.length * 2;
     } else {
       this.credit = Math.min(this.maximumFaces, this.credit + headroom);
@@ -328,7 +339,7 @@ export class ReflectionProbe {
           face,
           roughness: mip / targets.length,
           mode: 0,
-          sampleCount: this.sampleCount,
+          sampleCount: this.activeSampleCount,
           sourceEncoding: 0,
           pbrEnvironmentSource: this.capture
         }

@@ -326,7 +326,10 @@ export class SceneRenderer {
           origin.byteLength >= 16 &&
           origin.usage & Buffer.STORAGE &&
           !options.spotShadows &&
-          !options.rasterPass
+          !options.rasterPass &&
+          (options.transmission === false ||
+            (options.renderMode && options.renderMode !== 'default') ||
+            !options.surfaces.some(isTransmissiveSurface))
       );
     }
     let shadowProps: ShadowShaderProps | undefined;

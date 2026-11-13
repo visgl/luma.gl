@@ -626,7 +626,10 @@ callback receives a face framebuffer, a rotation-only view matrix and a GPU
 snapshot of the capture origin and scene matrices. Render the capture surfaces
 with those matrices and set `camera.gpuOrigin` to the supplied origin buffer.
 Use a stable render ID per face to keep the recorded uniforms independent.
-Omit the reflective object from the capture to avoid self-reflection.
+Set `rasterParameters: {frontFace: 'cw'}` because the cube projection flips Y.
+GPU-origin capture uses the forward color pass without scene transmission,
+spot shadows, picking, or depth-only rendering. Omit the reflective object
+from the capture to avoid self-reflection.
 
 Use the completed `probe.texture` as the surface environment's specular
 cubemap, alongside its diffuse environment and BRDF lookup. Submit the device
@@ -636,6 +639,7 @@ Incremental refresh uses measured frame headroom to schedule work and accepts
 directions toward multiple views to prioritize their faces. All faces use one
 GPU pose snapshot, and the probe publishes the cube after all faces are ready.
 For fast motion, set `refreshMode: 'same-frame'` to capture and publish on the
-same frame, skipping updates when headroom is low. This bounds the delay from
-capture to display at the cost of a higher peak per-frame workload. A smaller
-mip count or sample count reduces filtering work.
+same frame. With a frame timing estimate, this mode reduces roughness-filter
+samples under load and restores them as headroom returns. Capture resolution and
+refresh cadence stay fixed. A smaller face size or mip count reduces the peak
+per-frame workload.
