@@ -307,4 +307,4 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     device.destroy();
   }
   // Software WebGPU CI compiles several complete traversal/material pipelines here.
-}, 180_000);
+}, 300_000);
