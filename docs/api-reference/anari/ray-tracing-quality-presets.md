@@ -99,9 +99,9 @@ Check `supported` before interpreting the implementation features for a device.
 
 Analytic spheres and triangle-list meshes, scalar metallic/roughness direct lighting,
 bounded diffuse and opt-in opaque GGX reflective transport, guided spatial denoising, and debug views are supported.
-Scalar `MASK` visibility and opt-in explicit emitter sampling are supported.
-Material textures, alpha blending, transmissive secondary transport, hardware
-ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
+Scalar and textured `MASK` visibility, base-color/emissive/metallic-roughness/transmission maps,
+smooth dielectric transport and opt-in explicit emitter sampling are supported.
+Alpha blending, rough transmission, hardware ray tracing and GPU-stage timestamps are not implemented. Other geometric shapes use shared tessellated triangle meshes.
 
 ## Reference-image error measurements
 
@@ -147,10 +147,11 @@ for the material terms.
 
 Secondary rays gather emission and explicit directional/point/spot lighting at
 hits. A miss contributes zero: the background remains a primary display color,
-not an environment light. There is no texture sampling, alpha blending/transmission,
-IOR/attenuation or environment-map transport. Explicit emitter sampling is an opt-in control described below. Small
-emitters and rough reflections may require more samples; this is bounded opaque
-transport, not a complete path tracer or a glass renderer.
+not an environment light. PBR dielectric continuation can escape to the display background.
+Material maps and smooth dielectric transmission with IOR are supported; alpha blending,
+rough transmission, absorption and environment-map illumination remain unsupported.
+Explicit emitter sampling is an opt-in control described below. Small emitters and rough
+reflections may require more samples.
 
 Choose **Chart Materials** in the playground for matte bars, emissive points,
 a metallic floor and a six-column roughness sweep using the same data/camera and
@@ -205,12 +206,12 @@ transform and emitter geometry changes reset radiance history, including at
 zero material bounces. PBR camera changes reset explicit-light accumulation.
 The sampling seed and global tiled-export coordinates remain authoritative.
 
-Ray materials with `alphaMode: 'MASK'` use scalar base-color alpha and
+Ray materials with `alphaMode: 'MASK'` multiply scalar base-color alpha by the base-color map alpha and compare with
 `alphaCutoff` (default `0.5`). Below-cutoff geometry is invisible to primary,
-secondary and shadow rays, picking and channel snapshots, and is excluded from
-explicit emitter sampling. Equality to the cutoff is visible. `OPAQUE` remains
-visible regardless of scalar alpha. Texture alpha and `BLEND` compositing are
-unsupported by the ray renderer.
+secondary and shadow rays, picking and channel snapshots. Below-cutoff emitter samples
+contribute no light. Equality to the cutoff is visible. `OPAQUE` remains
+visible regardless of scalar or texture alpha. UV0/UV1 selection and transforms also apply
+to alpha sampling. `BLEND` compositing remains unsupported by the ray renderer.
 
 Choose **Chart Lighting**, or open
 `playground.html?preset=chart-lighting&renderer=raytrace`. The **Emissive lighting**

@@ -5,6 +5,8 @@
 import {
   getRayMaterialTextures,
   getRayMaterialTextureShader,
+  getRayMaterialTextureLayout,
+  getRayMaterialTextureBindings,
   getRayMaterialTextureRevision
 } from './ray-tracing-material-textures';
 import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
@@ -714,6 +716,8 @@ export class RayTracingSceneRenderer {
   private readonly frames = new Map<string, RayTracingFrameResources>();
   private readonly emitterAreaCaches = new Map<string, EmitterAreaCache>();
   private readonly geometryCache = new Map<string, CompiledRayGeometry>();
+  private pickMaterialRevision?: string;
+  private channelMaterialRevision?: string;
   private pickComputation?: Computation;
   private channelComputation?: Computation;
 
@@ -1219,12 +1223,24 @@ export class RayTracingSceneRenderer {
     const commandEncoder = this.device.createCommandEncoder();
     let commandBuffer: ReturnType<typeof commandEncoder.finish> | undefined;
     try {
+      if (this.pickMaterialRevision !== resources.materialTextureRevision) {
+        this.pickComputation?.destroy();
+        this.pickComputation = undefined;
+        this.pickMaterialRevision = resources.materialTextureRevision;
+      }
       this.pickComputation ??= new Computation(this.device, {
         id: 'ray-scene-picking',
-        source: RAY_TRACING_PICK_SHADER,
+        source: getRayMaterialTextureShader(
+          RAY_TRACING_PICK_SHADER,
+          resources.retainedSurfaces,
+          true
+        ),
         entryPoint: 'pick',
         shaderLayout: {
           bindings: [
+            ...getRayMaterialTextureLayout(
+              getRayMaterialTextures(resources.retainedSurfaces, true)
+            ),
             {name: 'uniforms', type: 'uniform', group: 0, location: 0},
             {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
             {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
@@ -1239,6 +1255,7 @@ export class RayTracingSceneRenderer {
         }
       });
       this.pickComputation.setBindings({
+        ...getRayMaterialTextureBindings(getRayMaterialTextures(resources.retainedSurfaces, true)),
         uniforms: resources.uniformBuffer,
         primitives: resources.primitiveBuffer,
         triangles: resources.triangleBuffer,
@@ -1307,12 +1324,24 @@ export class RayTracingSceneRenderer {
       textures.push(normalTexture);
       const projectedDepthTexture = createTexture('r32float');
       textures.push(projectedDepthTexture);
+      if (this.channelMaterialRevision !== resources.materialTextureRevision) {
+        this.channelComputation?.destroy();
+        this.channelComputation = undefined;
+        this.channelMaterialRevision = resources.materialTextureRevision;
+      }
       this.channelComputation ??= new Computation(this.device, {
         id: 'ray-scene-channels',
-        source: RAY_TRACING_CHANNEL_SHADER,
+        source: getRayMaterialTextureShader(
+          RAY_TRACING_CHANNEL_SHADER,
+          resources.retainedSurfaces,
+          true
+        ),
         entryPoint: 'captureChannels',
         shaderLayout: {
           bindings: [
+            ...getRayMaterialTextureLayout(
+              getRayMaterialTextures(resources.retainedSurfaces, true)
+            ),
             {name: 'uniforms', type: 'uniform', group: 0, location: 0},
             {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
             {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
@@ -1358,6 +1387,7 @@ export class RayTracingSceneRenderer {
         }
       });
       this.channelComputation.setBindings({
+        ...getRayMaterialTextureBindings(getRayMaterialTextures(resources.retainedSurfaces, true)),
         uniforms: resources.uniformBuffer,
         primitives: resources.primitiveBuffer,
         triangles: resources.triangleBuffer,
@@ -3135,20 +3165,7 @@ export class RayTracingSceneRenderer {
           source: getRayMaterialTextureShader(RAY_TRACING_SCENE_SHADER, props.surfaces),
           shaderLayout: {
             bindings: [
-              ...materialTextures.flatMap((texture, index) => [
-                {
-                  name: `materialTexture${index}`,
-                  type: 'texture' as const,
-                  group: 1,
-                  location: index * 2
-                },
-                {
-                  name: `materialSampler${index}`,
-                  type: 'sampler' as const,
-                  group: 1,
-                  location: index * 2 + 1
-                }
-              ]),
+              ...getRayMaterialTextureLayout(materialTextures),
               {name: 'uniforms', type: 'uniform', group: 0, location: 0},
               {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
               {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
@@ -3525,6 +3542,7 @@ function getPrimitiveRevision(
     options.surfaces.map(surface => [
       surface.material.id,
       surface.material.version,
+      surface.material.alphaMode,
       surface.material.uniforms,
       options.primitives?.[surface.id]
     ])
