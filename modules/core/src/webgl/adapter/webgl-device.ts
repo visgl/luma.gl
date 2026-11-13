@@ -118,7 +118,6 @@ export class WebGLDevice extends Device {
 
   /** Store constants */
   // @ts-ignore TODO fix
-  _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
   readonly extensions!: GLExtensions;
@@ -588,20 +587,8 @@ export class WebGLDevice extends Device {
    * Set a constant value for a location. Disabled attributes at that location will read from this value
    * @note WebGL constants are stored globally on the WebGL context, not the VertexArray
    * so they need to be updated before every render
-   * @todo - remember/cache values to avoid setting them unnecessarily?
    */
   setConstantAttributeWebGL(location: number, constant: TypedArray): void {
-    const maxVertexAttributes = this.limits.maxVertexAttributes;
-    this._constants = this._constants || new Array(maxVertexAttributes).fill(null);
-    const currentConstant = this._constants[location];
-    if (currentConstant && compareConstantArrayValues(currentConstant, constant)) {
-      log.info(
-        1,
-        `setConstantAttributeWebGL(${location}) could have been skipped, value unchanged`
-      )();
-    }
-    this._constants[location] = constant;
-
     switch (constant.constructor) {
       case Float32Array:
         setConstantFloatArray(this, location, constant as Float32Array);
@@ -680,20 +667,4 @@ function setConstantUintArray(device: WebGLDevice, location: number, array: Uint
   } else {
     device.gl.vertexAttribI4uiv(location, array);
   }
-}
-
-/**
- * Compares contents of two typed arrays
- * @todo max length?
- */
-function compareConstantArrayValues(v1: TypedArray, v2: TypedArray): boolean {
-  if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
-    return false;
-  }
-  for (let i = 0; i < v1.length; ++i) {
-    if (v1[i] !== v2[i]) {
-      return false;
-    }
-  }
-  return true;
 }
