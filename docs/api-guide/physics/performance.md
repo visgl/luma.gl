@@ -59,3 +59,7 @@ The [collision matrix](/docs/api-reference/graph/gpu-physics-collision-coverage)
 [roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md)
 provide the current evidence and remaining boundaries. Record device/backend, settings,
 scene counts and failure counters with every performance claim.
+
+The [G7 glTF physics qualification report](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/gltf-physics-g7.md)
+records which draft features have passing evidence, how the upstream samples were
+checked, and the hardware and workload limits of the measurements.
