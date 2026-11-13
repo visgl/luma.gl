@@ -116,6 +116,45 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(await readPixel()).toEqual([0, 0, 255]);
     surface.material.bindings.pbr_baseColorSampler = replacement;
     expect(await readPixel()).toEqual([0, 255, 0]);
+    const mappedSurface = {
+      ...surface,
+      id: 'normal-mapped',
+      geometry: new Geometry({
+        id: 'normal-mapped-geometry',
+        topology: 'triangle-list',
+        attributes: {
+          ...geometry.attributes,
+          TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 1, 0, 0.5, 1])},
+          TEXCOORD_1: {size: 2, value: new Float32Array([1, 0, 0, 0, 0.5, 1])}
+        }
+      }),
+      material: {
+        id: 'normal-mapped-material',
+        uniforms: {
+          baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+          normalScale: 0,
+          normalUVSet: 0,
+          normalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        },
+        bindings: {pbr_normalSampler: replacement}
+      }
+    };
+    replacement.writeData(new Uint8Array([255, 128, 200, 255, 255, 128, 200, 255]));
+    options.surfaces = [mappedSurface];
+    options.lights = [
+      {type: 'directional', direction: [-1, 0, -0.4], color: [1, 1, 1], intensity: 1}
+    ];
+    const unmapped = (await readPixel())[0];
+    mappedSurface.material.uniforms.normalScale = 1;
+    expect((await readPixel())[0]).toBeGreaterThan(unmapped + 20);
+    const pick = await renderer.pick(options.id, 4, 4);
+    expect(pick?.normal).toEqual([0, 0, 1]);
+    mappedSurface.material.uniforms.normalUVSet = 1;
+    expect((await readPixel())[0]).toBeLessThan(unmapped);
+    mappedSurface.material.uniforms.normalUVTransform = [-1, 0, 0, 0, 1, 0, 1, 0, 1];
+    expect((await readPixel())[0]).toBeGreaterThan(unmapped + 20);
+    replacement.writeData(new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]));
+    options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 1}];
     const glass = {
       id: 'glass',
       geometry,
