@@ -54,13 +54,22 @@ build graph.
 
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
-not implemented. Skeletal skinning, morph-target displacement, material textures, alpha blending/
-transmission, and advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
+not implemented. Skeletal skinning, morph-target displacement, alpha blending, normal maps,
+and advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
+
+Base-color, emissive, metallic/roughness and transmission maps support UV sets 0/1 and UV transforms,
+with explicit mip-zero sampling and up to 14 distinct textures per frame. `MASK` multiplies the
+base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
+Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, picking and primary-hit
+channels. Rejected triangles do not hide deeper triangles in the same mesh; analytic spheres check
+both interfaces. `OPAQUE` ignores texture alpha; alpha blending and transparent shadows remain unsupported.
+Replacing a map or changing its UV metadata invalidates history. After an in-place texture upload,
+increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
 cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
 so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse
 throughput in `transportMode: 'diffuse'` is base color × 0.96 × (1 − metallic).
-`transportMode: 'pbr'` additionally samples opaque GGX reflection; transmission is not sampled. Misses contribute no indirect radiance: `background` is a display color, not an
+`transportMode: 'pbr'` additionally samples GGX reflection and smooth dielectric transmission with IOR. Rough transmission, absorption and nested media are not implemented. Misses contribute no indirect radiance: `background` is a display color, not an
 environment light. Ambient lights and fog retain the existing per-hit approximations.
 
 `samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices

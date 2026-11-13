@@ -1,5 +1,12 @@
 # What's New
 
+## Ray-traced texture cutouts
+
+ANARI ray tracing now applies base-color texture alpha masks consistently to visible surfaces,
+secondary paths, shadows, sampled emitters, picking and depth/normal/identity channels.
+UV transforms and retained texture changes update cutout visibility. See the
+[ray-tracing renderer](./api-reference/anari/ray-tracing-renderer.md) for supported maps and limits.
+
 ## Explicit resource ownership
 
 A device-independent `Resource` base supports exclusive ownership, atomic ownership transfer,

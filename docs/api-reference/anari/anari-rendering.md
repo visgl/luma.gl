@@ -107,7 +107,7 @@ implements that feature. Registered custom renderers define their own support.
 | Retained meshes and instancing | Yes | Yes | Triangle meshes; analytic spheres | Yes |
 | Matte and scalar metallic-roughness materials | Yes | Yes | Yes; diffuse or opaque GGX transport | Diagnostic output |
 | Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | Base color, emissive, metallic-roughness and transmission; UV0/UV1 transforms | Shared raster surface inputs; diagnostic output |
-| Alpha masking | Scalar and texture alpha | Scalar and texture alpha | Scalar alpha only, including shadows and queries | Shared raster mask behavior |
+| Alpha masking | Scalar and texture alpha | Scalar and texture alpha | Scalar and texture alpha, including shadows and queries | Shared raster mask behavior |
 | Alpha blending | Yes; sorted forward draws | Fallback | No | Shared raster blend behavior |
 | Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | Smooth dielectric transmission in PBR paths; other extensions unsupported | Diagnostic output, not physical transport |
 | Skeletal skinning and morph targets | Yes | Yes through shared raster geometry | No | Yes through shared raster geometry |
@@ -305,7 +305,7 @@ Picking uses the runtime that last rendered the frame, even if a different rende
 has since been committed. Background, out-of-bounds or non-finite coordinates,
 unrendered/destroyed frames, and frames last rendered by a built-in raster renderer
 return `null`. Intersections use the ray renderer's opaque
-geometry semantics. Scalar alpha masks exclude below-cutoff surfaces; alpha blending and transmission remain unsupported.
+geometry semantics. Scalar and textured alpha masks exclude below-cutoff intersections. Picking does not follow refracted paths or alpha-blended layers.
 The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
 Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
@@ -352,7 +352,7 @@ texture-to-buffer copies.
 
 Like picking, capture uses the runtime that last rendered the frame. Unrendered or
 destroyed frames and frames last rendered by the built-in raster runtime return `null`.
-Channels use scalar alpha-mask intersection semantics. Texture alpha, blending and transmission remain separate work.
+Channels use the same scalar and textured alpha-mask intersections as picking; they describe the first visible surface, without following refraction or blending layers.
 Use [`DepthTextureCopy`](/docs/api-reference/anari/depth-texture-copy) to transfer
 `projectedDepthTexture` into a color-preserving render pass with a depth attachment before
 drawing raster overlays with matching camera and viewport conventions.
@@ -499,8 +499,9 @@ With `transportMode: 'pbr'` and positive `maxBounces`, `transmissionFactor` and 
 smooth dielectric continuation with Fresnel reflection, refraction, total internal reflection,
 and radiance transport scaling. Use closed meshes with outward winding for entry/exit IOR
 handling. Rough transmission, nested dielectric media, absorption, normal maps, and other
-extension maps are not implemented. Shadow rays remain opaque and alpha masking remains
-scalar; textured alpha cutouts and alpha blending are not supported by this path.
+extension maps are not implemented. Base-color texture alpha masks apply to primary/secondary
+rays, shadows, explicit emitter samples, picking and channels. Alpha blending and transparent
+shadow transport remain unsupported.
 
 The **Indirect Light Study** playground preset provides a fixed-camera emissive scene with
 three diffuse bounces. Set `maxBounces` to zero to compare direct-only rendering.

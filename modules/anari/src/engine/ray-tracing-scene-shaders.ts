@@ -288,7 +288,7 @@ fn makeGuideCameraRay(pixel: vec2<u32>) -> Ray {
   return makeCameraRayAtOffset(pixel, vec2<f32>(0.5));
 }
 
-fn intersectSphere(ray: Ray, radius: f32, maximumDistance: f32) -> f32 {
+fn intersectSphere(ray: Ray, radius: f32, minimumDistance: f32, maximumDistance: f32) -> f32 {
   let directionLength = dot(ray.direction, ray.direction);
   let halfProjection = dot(ray.origin, ray.direction);
   let discriminant = halfProjection * halfProjection -
@@ -299,8 +299,8 @@ fn intersectSphere(ray: Ray, radius: f32, maximumDistance: f32) -> f32 {
   let root = sqrt(discriminant);
   let firstDistance = (-halfProjection - root) / directionLength;
   let secondDistance = (-halfProjection + root) / directionLength;
-  let distance = select(secondDistance, firstDistance, firstDistance > RAY_EPSILON);
-  return select(RAY_INFINITY, distance, distance > RAY_EPSILON && distance < maximumDistance);
+  let distance = select(secondDistance, firstDistance, firstDistance > minimumDistance);
+  return select(RAY_INFINITY, distance, distance > minimumDistance && distance < maximumDistance);
 }
 
 fn intersectTriangle(ray: Ray, triangle: RayTriangle, maximumDistance: f32) -> vec3<f32> {
@@ -418,18 +418,22 @@ fn intersectBlasNodeBounds(
 fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> RayHit {
   var closestHit = RayHit(maximumDistance, vec3<f32>(0.0), 0u, true, vec2<f32>(0.0), vec2<f32>(0.0));
   let primitive = primitives[primitiveIndex];
-  if (primitive.material.x >= 0.0 && primitive.baseColor.a < primitive.material.x) { return closestHit; }
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
   let localRay = Ray(localOrigin, localDirection);
   let sphereRadius = primitive.properties.y;
   if (sphereRadius > 0.0) {
-    let distance = intersectSphere(localRay, sphereRadius, closestHit.distance);
-    if (distance < closestHit.distance) {
+    var minimumDistance = RAY_EPSILON;
+    // A cutout on the near side must still allow an opaque far-side intersection.
+    for (var interfaceIndex = 0u; interfaceIndex < 2u; interfaceIndex++) {
+      let distance = intersectSphere(localRay, sphereRadius, minimumDistance, maximumDistance);
+      if (distance >= maximumDistance) { break; }
       let localNormal = normalize(localOrigin + localDirection * distance);
       let worldNormal = normalize((transpose(primitive.inverseTransform) *
         vec4<f32>(localNormal, 0.0)).xyz);
-      closestHit = RayHit(distance, worldNormal, primitiveIndex, dot(worldNormal, ray.direction) < 0.0, vec2<f32>(atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5, acos(clamp(localNormal.y, -1.0, 1.0)) / PI), vec2<f32>(0.0));
+      let candidate = RayHit(distance, worldNormal, primitiveIndex, dot(worldNormal, ray.direction) < 0.0, vec2<f32>(atan2(localNormal.z, localNormal.x) / (2.0 * PI) + 0.5, acos(clamp(localNormal.y, -1.0, 1.0)) / PI), vec2<f32>(0.0));
+      if (isMaterialVisible(candidate)) { return candidate; }
+      minimumDistance = distance;
     }
     return closestHit;
   }
@@ -486,11 +490,12 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
             }
             let worldNormal = normalize((transpose(primitive.inverseTransform) *
               vec4<f32>(localNormal, 0.0)).xyz);
-            closestHit = RayHit(intersection.x, worldNormal, primitiveIndex, entering,
+            let candidate = RayHit(intersection.x, worldNormal, primitiveIndex, entering,
               vec2<f32>(triangle.firstPosition.w, triangle.firstNormal.w) * normalWeight +
               vec2<f32>(triangle.secondPosition.w, triangle.secondNormal.w) * intersection.y +
               vec2<f32>(triangle.thirdPosition.w, triangle.thirdNormal.w) * intersection.z,
               triangle.secondaryCoordinates[0].xy * normalWeight + triangle.secondaryCoordinates[0].zw * intersection.y + triangle.secondaryCoordinates[1].xy * intersection.z);
+            if (isMaterialVisible(candidate)) { closestHit = candidate; }
           }
         }
       }
@@ -531,13 +536,16 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
 
 fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> bool {
   let primitive = primitives[primitiveIndex];
-  if (primitive.material.x >= 0.0 && primitive.baseColor.a < primitive.material.x) { return false; }
+  // Share masked traversal with primary rays, including UVs and both sphere interfaces.
+  if (primitive.material.x >= 0.0) {
+    return intersectPrimitive(ray, primitiveIndex, maximumDistance).distance < maximumDistance;
+  }
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
   let localRay = Ray(localOrigin, localDirection);
   let sphereRadius = primitive.properties.y;
   if (sphereRadius > 0.0) {
-    return intersectSphere(localRay, sphereRadius, maximumDistance) < maximumDistance;
+    return intersectSphere(localRay, sphereRadius, RAY_EPSILON, maximumDistance) < maximumDistance;
   }
 
   let triangleStart = u32(primitive.properties.z);
@@ -738,6 +746,19 @@ fn sampleMaterialTexture(identifier: u32, coordinates: vec2<f32>) -> vec4<f32> {
     /* MATERIAL_TEXTURE_CASES */
     default: { return vec4<f32>(1.0); }
   }
+}
+fn isMaterialVisible(hit: RayHit) -> bool {
+  let primitive = primitives[hit.primitiveIndex];
+  if (primitive.material.x < 0.0) { return true; }
+  return getMaterialOpacity(hit) >= primitive.material.x;
+}
+fn getMaterialOpacity(hit: RayHit) -> f32 {
+  var opacity = primitives[hit.primitiveIndex].baseColor.a;
+  switch u32(primitives[hit.primitiveIndex].material.w) {
+    /* MATERIAL_OPACITY_CASES */
+    default: {}
+  }
+  return opacity;
 }
 fn getShadedPrimitive(hit: RayHit) -> RayPrimitive {
   var primitive = primitives[hit.primitiveIndex];
@@ -1289,7 +1310,9 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
       uniforms.sampling.y > 0u);
   }
   let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
-  let shadedEmitter = getShadedPrimitive(RayHit(0.0, lightNormal, primitiveIndex, true, emitterCoordinates, emitterSecondaryCoordinates));
+  let emitterHit = RayHit(0.0, lightNormal, primitiveIndex, true, emitterCoordinates, emitterSecondaryCoordinates);
+  if (!isMaterialVisible(emitterHit)) { return vec3<f32>(0.0); }
+  let shadedEmitter = getShadedPrimitive(emitterHit);
   return response * shadedEmitter.emissive.rgb * abs(dot(lightNormal, -direction)) * inverseAreaDensity / distanceSquared * visibility;
 }
 
