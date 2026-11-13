@@ -1408,7 +1408,8 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
         if (attenuation.w > 0.0 && any(attenuation.rgb < vec3<f32>(1.0))) {
           medium = hit.primitiveIndex;
         }
-      } else if (!hit.entering && medium == hit.primitiveIndex) {
+      } else if (!hit.entering) {
+        // A closed shell can span multiple scene surfaces. Nested media are unsupported.
         medium = 0xffffffffu;
       }
     }

@@ -280,6 +280,35 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(denserBackdrop[1]).toBeLessThan(tintedBackdrop[1]);
     absorbingGlass.material.uniforms.attenuationDistance = Number.POSITIVE_INFINITY;
     expect(await readPixel()).toEqual(backdrop);
+    // This seed transmits at entry, reflects once inside the sphere, then exits.
+    options.samplingSeed = 81;
+    options.samplesPerPixel = 1;
+    options.maxBounces = 2;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.maxBounces = 3;
+    const clearReflectedPath = await readPixel();
+    expect(clearReflectedPath[1]).toBeGreaterThan(40);
+    absorbingGlass.material.uniforms.attenuationDistance = 2;
+    const absorbedReflectedPath = await readPixel();
+    expect(absorbedReflectedPath[0]).toBe(clearReflectedPath[0]);
+    expect(absorbedReflectedPath[1]).toBeGreaterThan(0);
+    expect(absorbedReflectedPath[1]).toBeLessThan(tintedBackdrop[1] / 2);
+
+    // Model a shell split across two mesh primitives with opposite winding.
+    const exitSurface = {
+      ...absorbingGlass,
+      id: 'glass-exit',
+      transforms: [new Matrix4().translate([0, 0, -2]).rotateY(Math.PI)]
+    };
+    options.primitives = {};
+    options.surfaces = [absorbingGlass, exitSurface];
+    options.samplingSeed = 17;
+    options.samplesPerPixel = 16;
+    options.maxBounces = 2;
+    const splitBackdrop = await readPixel();
+    expect(splitBackdrop[0]).toBeGreaterThan(100);
+    expect(splitBackdrop[1]).toBeLessThan(backdrop[1] / 2);
+    options.primitives = {glass: {type: 'sphere', radius: 1}};
     options.samplingFrameIndex = undefined;
     options.background = [0, 0, 0, 1];
     options.surfaces = [glass, emitter];
