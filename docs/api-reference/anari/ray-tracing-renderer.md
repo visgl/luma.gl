@@ -75,7 +75,11 @@ Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce 
 cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
 so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse
 throughput in `transportMode: 'diffuse'` is base color × 0.96 × (1 − metallic).
-`transportMode: 'pbr'` additionally samples GGX reflection and smooth dielectric transmission with IOR. Rough transmission, absorption and nested media are not implemented. Misses contribute no indirect radiance: `background` is a display color, not an
+`transportMode: 'pbr'` additionally samples GGX reflection and smooth dielectric transmission with IOR. For closed, non-nested dielectrics, `attenuationColor` specifies the fraction of linear RGB light
+remaining after traveling `attenuationDistance` world units. The path applies Beer–Lambert
+absorption along each segment inside the object, including segments after internal reflection.
+The camera path must enter the medium through a refracted hit. Nonpositive or infinite distance
+disables absorption. Rough transmission and nested media are not implemented. Misses contribute no indirect radiance: `background` is a display color, not an
 environment light. Ambient lights and fog retain the existing per-hit approximations.
 
 `samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices

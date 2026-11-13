@@ -52,7 +52,7 @@ import type {
   SceneSurface
 } from './scene-renderer';
 
-const PRIMITIVE_FLOAT_COUNT = 72;
+const PRIMITIVE_FLOAT_COUNT = 76;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
@@ -3718,6 +3718,13 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 69] = materialUniforms?.transmissionFactor ?? 0;
       primitiveValues[primitiveOffset + 70] = materialUniforms?.ior ?? 1.5;
       primitiveValues[primitiveOffset + 71] = surfaceIndex;
+      const attenuationColor = materialUniforms?.attenuationColor ?? [1, 1, 1];
+      primitiveValues.set(attenuationColor, primitiveOffset + 72);
+      const attenuationDistance = materialUniforms?.attenuationDistance;
+      primitiveValues[primitiveOffset + 75] =
+        attenuationDistance && Number.isFinite(attenuationDistance) && attenuationDistance > 0
+          ? attenuationDistance
+          : 0;
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,

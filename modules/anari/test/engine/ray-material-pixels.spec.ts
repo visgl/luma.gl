@@ -255,9 +255,61 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(transmitted[2]).toBeLessThan(4);
     options.surfaces = [glass];
     options.background = [0.8, 0.2, 0.05, 1];
+    options.samplingFrameIndex = 0;
     const backdrop = await readPixel();
     expect(backdrop[0]).toBeGreaterThan(100);
     expect(backdrop[1]).toBeGreaterThan(20);
+    const absorbingGlass = {
+      ...glass,
+      material: {
+        ...glass.material,
+        uniforms: {
+          ...glass.material.uniforms,
+          attenuationColor: [1, 0.25, 0] as [number, number, number],
+          attenuationDistance: 2
+        }
+      }
+    };
+    options.surfaces = [absorbingGlass];
+    const tintedBackdrop = await readPixel();
+    expect(tintedBackdrop[0]).toBe(backdrop[0]);
+    expect(tintedBackdrop[1]).toBeLessThan(backdrop[1] / 2);
+    expect(tintedBackdrop[2]).toBeLessThan(backdrop[2]);
+    absorbingGlass.material.uniforms.attenuationDistance = 1;
+    const denserBackdrop = await readPixel();
+    expect(denserBackdrop[1]).toBeLessThan(tintedBackdrop[1]);
+    absorbingGlass.material.uniforms.attenuationDistance = Number.POSITIVE_INFINITY;
+    expect(await readPixel()).toEqual(backdrop);
+    // This seed transmits at entry, reflects once inside the sphere, then exits.
+    options.samplingSeed = 81;
+    options.samplesPerPixel = 1;
+    options.maxBounces = 2;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.maxBounces = 3;
+    const clearReflectedPath = await readPixel();
+    expect(clearReflectedPath[1]).toBeGreaterThan(40);
+    absorbingGlass.material.uniforms.attenuationDistance = 2;
+    const absorbedReflectedPath = await readPixel();
+    expect(absorbedReflectedPath[0]).toBe(clearReflectedPath[0]);
+    expect(absorbedReflectedPath[1]).toBeGreaterThan(0);
+    expect(absorbedReflectedPath[1]).toBeLessThan(tintedBackdrop[1] / 2);
+
+    // Model a shell split across two mesh primitives with opposite winding.
+    const exitSurface = {
+      ...absorbingGlass,
+      id: 'glass-exit',
+      transforms: [new Matrix4().translate([0, 0, -2]).rotateY(Math.PI)]
+    };
+    options.primitives = {};
+    options.surfaces = [absorbingGlass, exitSurface];
+    options.samplingSeed = 17;
+    options.samplesPerPixel = 16;
+    options.maxBounces = 2;
+    const splitBackdrop = await readPixel();
+    expect(splitBackdrop[0]).toBeGreaterThan(100);
+    expect(splitBackdrop[1]).toBeLessThan(backdrop[1] / 2);
+    options.primitives = {glass: {type: 'sphere', radius: 1}};
+    options.samplingFrameIndex = undefined;
     options.background = [0, 0, 0, 1];
     options.surfaces = [glass, emitter];
     options.surfaces[0].material.bindings = {pbr_transmissionSampler: replacement};

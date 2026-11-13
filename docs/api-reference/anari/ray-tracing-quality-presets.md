@@ -149,7 +149,7 @@ Secondary rays gather emission and explicit directional/point/spot lighting at
 hits. A miss contributes zero: the background remains a primary display color,
 not an environment light. PBR dielectric continuation can escape to the display background.
 Material maps and smooth dielectric transmission with IOR are supported; alpha blending,
-rough transmission, absorption and environment-map illumination remain unsupported.
+rough transmission and environment-map illumination remain unsupported.
 Explicit emitter sampling is an opt-in control described below. Small emitters and rough
 reflections may require more samples.
 

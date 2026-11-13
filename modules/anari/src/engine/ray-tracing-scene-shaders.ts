@@ -32,6 +32,7 @@ struct RayPrimitive {
   blas: vec4<f32>,
   previousTransform: mat4x4<f32>,
   material: vec4<f32>,
+  attenuation: vec4<f32>,
 };
 
 struct RayBlasNode {
@@ -1176,6 +1177,7 @@ struct RayMaterialSample {
   direction: vec3<f32>,
   weight: vec3<f32>,
   delta: bool,
+  crossesInterface: bool,
 };
 
 // Sample a cosine/GGX-NDF mixture, then evaluate both lobes with the combined PDF.
@@ -1192,7 +1194,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
     let cosineIncident = clamp(dot(-ray.direction, normal), 0.0, 1.0);
     let sineTransmittedSquared = ratio * ratio * (1.0 - cosineIncident * cosineIncident);
     if (sineTransmittedSquared >= 1.0) {
-      return RayMaterialSample(reflect(ray.direction, normal), vec3<f32>(1.0), true);
+      return RayMaterialSample(reflect(ray.direction, normal), vec3<f32>(1.0), true, false);
     }
     let cosineTransmitted = sqrt(1.0 - sineTransmittedSquared);
     let perpendicular = (ratio * cosineIncident - cosineTransmitted) /
@@ -1201,9 +1203,9 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
       max(cosineIncident + ratio * cosineTransmitted, 0.000001);
     let fresnel = 0.5 * (perpendicular * perpendicular + parallel * parallel);
     if (makeRandom(randomSeed ^ 947u) < fresnel) {
-      return RayMaterialSample(reflect(ray.direction, normal), vec3<f32>(1.0), true);
+      return RayMaterialSample(reflect(ray.direction, normal), vec3<f32>(1.0), true, false);
     }
-    return RayMaterialSample(refract(ray.direction, normal, ratio), baseColor * ratio * ratio, true);
+    return RayMaterialSample(refract(ray.direction, normal, ratio), baseColor * ratio * ratio, true, true);
   }
 
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
@@ -1234,7 +1236,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
   }
   let normalLight = dot(normal, direction);
   if (normalLight <= 0.0 || dot(getFaceNormal(hit, ray), direction) <= 0.0) {
-    return RayMaterialSample(direction, vec3<f32>(0.0), false);
+    return RayMaterialSample(direction, vec3<f32>(0.0), false, false);
   }
   let halfDirection = normalize(viewDirection + direction);
   let normalHalf = max(dot(normal, halfDirection), 0.0);
@@ -1246,9 +1248,9 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
   let sampleDensity = specularProbability * specularDensity +
     (1.0 - specularProbability) * normalLight / PI;
   if (sampleDensity <= 0.0) {
-    return RayMaterialSample(direction, vec3<f32>(0.0), false);
+    return RayMaterialSample(direction, vec3<f32>(0.0), false, false);
   }
-  return RayMaterialSample(direction, evaluatePBRResponse(ray, hit, direction) / sampleDensity, false);
+  return RayMaterialSample(direction, evaluatePBRResponse(ray, hit, direction) / sampleDensity, false, false);
 }
 
 fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32> {
@@ -1388,6 +1390,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   var radiance = evaluateDirectLighting(ray, hit, true);
   var throughput = vec3<f32>(1.0);
   var dielectricOnly = true;
+  var medium = 0xffffffffu;
   let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
@@ -1399,13 +1402,30 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     if (max(throughput.r, max(throughput.g, throughput.b)) <= 0.0) { break; }
     let normal = select(getFaceNormal(hit, ray), faceForward(hit.normal, ray.direction, hit.normal), sample.delta);
     let position = ray.origin + ray.direction * hit.distance;
+    if (sample.crossesInterface) {
+      if (hit.entering && medium == 0xffffffffu) {
+        let attenuation = primitives[hit.primitiveIndex].attenuation;
+        if (attenuation.w > 0.0 && any(attenuation.rgb < vec3<f32>(1.0))) {
+          medium = hit.primitiveIndex;
+        }
+      } else if (!hit.entering) {
+        // A closed shell can span multiple scene surfaces. Nested media are unsupported.
+        medium = 0xffffffffu;
+      }
+    }
     ray = Ray(position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
       // A camera backdrop remains visible through smooth dielectric paths without
       // turning it into diffuse environment illumination.
-      if (dielectricOnly) { radiance += throughput * uniforms.background.rgb; }
+      if (dielectricOnly && medium == 0xffffffffu) { radiance += throughput * uniforms.background.rgb; }
       break;
+    }
+    if (medium != 0xffffffffu) {
+      let attenuation = primitives[medium].attenuation;
+      let segmentLength = length(ray.origin + ray.direction * hit.distance - position);
+      throughput *= pow(clamp(attenuation.rgb, vec3<f32>(0.0), vec3<f32>(1.0)),
+        vec3<f32>(segmentLength / attenuation.w));
     }
     radiance += throughput * (evaluateDirectLighting(ray, hit, sample.delta || uniforms.emitters.y == 0u) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u)));
   }
