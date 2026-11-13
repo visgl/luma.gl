@@ -1,0 +1,192 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+import {GroupNode, type Geometry} from '@luma.gl/engine';
+import {Matrix4, type NumericArray} from '@math.gl/core';
+import type {Light} from '@luma.gl/shaders';
+import type {ANARIDevice} from './anari-device';
+import type {ANARIWorld, ANARIGeometry, ANARIMaterial} from './anari-objects';
+import type {ANARIGeometryParameters, ANARIMaterialParameters} from './anari-types';
+import {ANARISceneAdapter, MATERIAL_TEXTURE_SLOTS} from './anari-scene-adapter';
+import {ScenegraphSurfaces} from './engine/scenegraph-surfaces';
+import {SceneMeshNode} from './engine/scene-mesh-node';
+import type {SceneMaterial} from './engine/scene-renderer';
+
+/** An explicit snapshot: CPU geometry is copied; material textures remain borrowed. */
+export type ANARIScenegraphSnapshot = {
+  scene: GroupNode;
+  lights: readonly Light[];
+};
+
+/** Convert committed ANARI surfaces into PBR scenegraph leaves, preserving shared geometry/materials. */
+export function makeScenegraphFromANARIWorld(world: ANARIWorld): ANARIScenegraphSnapshot {
+  const adapter = new ANARISceneAdapter();
+  try {
+    const snapshot = adapter.getScene(world);
+    const children = snapshot.surfaces.flatMap(surface =>
+      surface.transforms.map(
+        (matrix, index) =>
+          new SceneMeshNode({
+            id: surface.instanceIds?.[index] ?? `${surface.id}-${index}`,
+            geometry: surface.geometry,
+            material: surface.material,
+            matrix: new Matrix4(matrix)
+          })
+      )
+    );
+    return {scene: new GroupNode({id: world.id, children}), lights: snapshot.lights};
+  } finally {
+    adapter.destroy();
+  }
+}
+
+/**
+ * Snapshot a CPU-transform PBR scenegraph as committed ANARI objects.
+ * Geometry arrays are independent; GPU texture resources are borrowed and never destroyed.
+ * Node hierarchy is flattened into world-space instances with shared geometry/material handles.
+ */
+export function makeANARIWorldFromScenegraph(device: ANARIDevice, scene: GroupNode): ANARIWorld {
+  const pending = [scene];
+  const visited = new Set<object>();
+  while (pending.length) {
+    const group = pending.pop()!;
+    if (visited.has(group)) throw new Error('Scenegraph conversion requires a tree');
+    visited.add(group);
+    if (group.transformSource)
+      throw new Error('Snapshot GPU transforms before converting a scenegraph');
+    for (const child of group.children) {
+      if (child instanceof GroupNode) pending.push(child);
+      else if (!(child instanceof SceneMeshNode))
+        throw new Error(`Unsupported scenegraph node: ${child.id}`);
+    }
+  }
+  const adapter = new ScenegraphSurfaces();
+  const geometries = new Map<Geometry, ANARIGeometry>();
+  const materials = new Map<SceneMaterial, ANARIMaterial>();
+  try {
+    const instances = adapter.getSurfaces(scene).flatMap(surface => {
+      if (surface.environment || surface.gpuTransforms)
+        throw new Error('Local probes and GPU placements cannot be converted to ANARI instances');
+      let geometry = geometries.get(surface.geometry);
+      if (!geometry) {
+        geometry = convertGeometry(device, surface.geometry);
+        geometries.set(surface.geometry, geometry);
+      }
+      let material = materials.get(surface.material);
+      if (!material) {
+        material = convertMaterial(device, surface.material);
+        materials.set(surface.material, material);
+      }
+      const group = device.newGroup({surfaces: [device.newSurface({geometry, material})]});
+      return surface.transforms.map(transform =>
+        device.newInstance({group, transform: Array.from(transform)})
+      );
+    });
+    return device.newWorld({instances});
+  } finally {
+    adapter.destroy();
+  }
+}
+
+function convertGeometry(device: ANARIDevice, geometry: Geometry): ANARIGeometry {
+  if (geometry.topology !== 'triangle-list')
+    throw new Error('ANARI scenegraph conversion requires triangle-list geometry');
+  const semantics = {
+    POSITION: 'vertex.position',
+    NORMAL: 'vertex.normal',
+    TANGENT: 'vertex.tangent',
+    TEXCOORD_0: 'vertex.attribute0',
+    TEXCOORD_1: 'vertex.attribute1'
+  } as const;
+  const parameters: ANARIGeometryParameters = {};
+  for (const [semantic, attribute] of Object.entries(geometry.attributes)) {
+    if (!(semantic in semantics)) throw new Error(`Unsupported geometry attribute: ${semantic}`);
+    if (attribute.constant || attribute.normalized || !(attribute.value instanceof Float32Array))
+      throw new Error(`Convert ${semantic} to packed Float32 vertex data before exporting`);
+    const parameter = semantics[semantic as keyof typeof semantics];
+    parameters[parameter] = attribute.value.slice();
+  }
+  if (!parameters['vertex.position']) throw new Error('Geometry requires POSITION');
+  if (geometry.indices) {
+    const indices = geometry.indices.value;
+    if (!(indices instanceof Uint16Array || indices instanceof Uint32Array))
+      throw new Error('Unsupported index storage');
+    parameters['primitive.index'] = indices.slice(0, geometry.vertexCount);
+  } else {
+    for (const parameter of Object.values(semantics)) {
+      const value = parameters[parameter];
+      const semantic = Object.keys(semantics).find(
+        key => semantics[key as keyof typeof semantics] === parameter
+      )!;
+      if (value instanceof Float32Array)
+        parameters[parameter] = value.slice(
+          0,
+          geometry.vertexCount * geometry.attributes[semantic].size!
+        );
+    }
+  }
+  return device.newGeometry('triangle', parameters);
+}
+
+function convertMaterial(device: ANARIDevice, material: SceneMaterial): ANARIMaterial {
+  const uniforms = material.uniforms ?? {};
+  if (Object.keys(material.defines ?? {}).length)
+    throw new Error('Custom shader defines require an explicit ANARI material adapter');
+  const color = uniforms.baseColorFactor;
+  const parameters: ANARIMaterialParameters = {
+    ...(color ? {baseColor: [color[0], color[1], color[2], color[3]]} : {}),
+    metallic: uniforms.metallicRoughnessValues?.[0],
+    roughness: uniforms.metallicRoughnessValues?.[1],
+    alphaMode:
+      material.alphaMode === 'MASK' ? 'mask' : material.alphaMode === 'BLEND' ? 'blend' : 'opaque',
+    alphaCutoff: uniforms.alphaCutoff,
+    doubleSided: material.doubleSided,
+    unlit: uniforms.unlit,
+    emissive: copyVector3(uniforms.emissiveFactor),
+    emissiveStrength: uniforms.emissiveStrength,
+    transmission: uniforms.transmissionFactor,
+    indexOfRefraction: uniforms.ior,
+    normalScale: uniforms.normalScale,
+    occlusionStrength: uniforms.occlusionStrength,
+    clearcoat: uniforms.clearcoatFactor,
+    clearcoatRoughness: uniforms.clearcoatRoughnessFactor,
+    specularColor: copyVector3(uniforms.specularColorFactor),
+    specularIntensity: uniforms.specularIntensityFactor,
+    thickness: uniforms.thicknessFactor,
+    attenuationColor: copyVector3(uniforms.attenuationColor),
+    attenuationDistance: uniforms.attenuationDistance
+  };
+  for (const [binding, texture] of Object.entries(material.bindings ?? {})) {
+    if (!texture) continue;
+    const slot = MATERIAL_TEXTURE_SLOTS.find(candidate => candidate.binding === binding);
+    if (!slot) throw new Error(`Unsupported ANARI texture binding: ${binding}`);
+    if (slot.enabled && uniforms[slot.enabled] === false) continue;
+    const coordinates = uniforms[slot.textureCoordinateSet];
+    if (coordinates !== undefined && coordinates !== 0 && coordinates !== 1)
+      throw new Error('ANARI supports UV sets zero and one');
+    const transform = uniforms[slot.transform];
+    parameters[slot.parameter] = device.newSampler('image2D', {
+      image: texture,
+      textureCoordinateSet: coordinates,
+      transform: transform
+        ? [
+            transform[0],
+            transform[1],
+            transform[2],
+            transform[3],
+            transform[4],
+            transform[5],
+            transform[6],
+            transform[7],
+            transform[8]
+          ]
+        : undefined
+    });
+  }
+  return device.newMaterial('physicallyBased', parameters);
+}
+
+function copyVector3(
+  value: Readonly<NumericArray> | undefined
+): [number, number, number] | undefined {
+  return value ? [value[0], value[1], value[2]] : undefined;
+}

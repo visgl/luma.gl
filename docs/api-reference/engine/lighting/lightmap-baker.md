@@ -128,3 +128,57 @@ stale/reset behavior, chart-owned gutter padding, export and reload. Unsupported
 as a reference; baked mode adds shadowed environment illumination and disables duplicate live diffuse
 lighting. Camera movement does not alter the bake. Materials provide object color at receiving time;
 this workflow does not simulate multi-bounce color bleeding.
+
+## Preparing atlas UVs
+
+`createLightmapAtlas(inputs, options)` prepares CPU triangle-list geometry for a shared bake.
+Each input has a unique application `id`, a `Geometry`, and an optional affine `modelMatrix`.
+Options specify `width`, `height`, world-space `texelsPerUnit`, `padding` (default 2,
+0–16), and `uvSet` (default 1). It uses deterministic height-sorted shelf packing;
+if the requested density does not fit, it throws instead of silently reducing quality.
+
+```typescript
+import {createLightmapAtlas, validateLightmapAtlas} from '@luma.gl/engine/lighting';
+
+const atlas = createLightmapAtlas(
+  [{id: 'room', geometry: roomGeometry, modelMatrix}],
+  {width: 1024, height: 1024, texelsPerUnit: 32, padding: 2}
+);
+console.log(validateLightmapAtlas(atlas)); // []
+const chartTexture = device.createTexture({
+  width: atlas.width,
+  height: atlas.height,
+  format: 'r32float',
+  data: atlas.chartOwners
+});
+```
+
+Use each returned mesh's `geometry` for both the visible PBR receiver and its bake models.
+For each `atlas.charts` entry, find the mesh with the matching `meshId`, create a
+`createPBRLightmapModel` with its `firstVertex` and `vertexCount`, and set
+`lightmapBake.chartId` to the chart's `id`. Apply the same model transform supplied during
+preparation. Pass `chartTexture` and `dilationSteps: atlas.padding` to `LightmapBaker.update`.
+The caller owns and destroys all GPU textures and models; preparation allocates none.
+
+The result owns independent, deindexed attribute arrays. Positions remain in object space;
+world-space transforms affect density measurements only. Numeric storage, normalization,
+custom attribute names, and the other UV set are preserved. Source geometry and explicit
+source shader buffer layouts are untouched; output layouts are synthesized for the new
+packed attributes. Inputs must have tightly packed per-vertex attributes, a `POSITION`
+attribute, and nondegenerate triangles. Instancing, interleaved attributes, skinning and
+morph deformation must be resolved by the caller before preparing a static bake.
+
+The initial implementation assigns one planar chart per triangle. It supports arbitrary
+triangle meshes without a seam-selection dependency, but uses more space and bake draw
+calls than an optimized chart unwrapper. At most 2048 charts are supported so IDs remain
+exact in the default half-float bake target. Increase density for thin triangles that are
+smaller than a raster sample. Packing is deterministic for the same ordered inputs and
+options; preserve these alongside exported lightmaps, or persist the returned geometry.
+Texture serialization does not serialize mesh geometry or atlas layout.
+
+`validateLightmapAtlas(atlas)` performs an explicit diagnostic pass for chart bounds,
+rectangle overlap, draw ranges, UV bounds, and gutter ownership. It returns an array of
+messages and does not modify the atlas. `getLightmapAtlasDebugData(atlas)` returns independent
+RGBA8 chart colors suitable for `ImageData`; black pixels are unallocated. `occupancy`
+reports the fraction reserved by chart rectangles, including padding, rather than actual
+triangle coverage. All pixel coordinates and ownership/debug arrays run top-to-bottom.

@@ -141,7 +141,7 @@ type MaterialTextureSlot = {
 const IDENTITY_MATRIX = new Matrix4();
 const IDENTITY_TEXTURE_TRANSFORM: Readonly<NumberArray9> = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-const MATERIAL_TEXTURE_SLOTS = [
+export const MATERIAL_TEXTURE_SLOTS = [
   {
     parameter: 'baseColorTexture',
     binding: 'pbr_baseColorSampler',
@@ -338,6 +338,18 @@ export class ANARISceneAdapter {
             ? 'debugDepth'
             : 'default'
     };
+  }
+
+  /** Extract a committed world without inventing a camera or ambient light. Returned resources are borrowed. */
+  getScene(world: ANARIWorld): {surfaces: readonly SceneSurface[]; lights: readonly Light[]} {
+    let cached = this.worlds.get(world);
+    if (!cached) {
+      cached = this.createCachedWorld(world, 0);
+      this.worlds.set(world, cached);
+    } else {
+      this.updateCachedWorld(cached, 0);
+    }
+    return {surfaces: cached.surfaces, lights: cached.lights};
   }
 
   /** Returns cached analytic metadata without traversing the retained world a second time. */
