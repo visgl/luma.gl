@@ -13,6 +13,7 @@ export async function benchmarkRigidBody(options = {}) {
   const baseUrl = new URL(options.url || 'http://127.0.0.1:5198/');
   const settings = {
     compactContacts: options.compactContacts !== false,
+    replayImpact: options.replayImpact === true,
     fixture: options.fixture ?? 'deep', broadPhase: options.broadPhase ?? 'hierarchical-grid', failurePolicy: options.failurePolicy ?? (options.fixture === 'continuous' ? 'rollback' : 'report'), solver: options.solver ?? 'parallel',
     iterations: Number(options.iterations ?? 32), samples: Number(options.samples ?? 30),
     warmup: Number(options.warmup ?? 120), timeStep: Number(options.timeStep ?? 1 / 120),
@@ -24,6 +25,7 @@ export async function benchmarkRigidBody(options = {}) {
   if (!['localhost', '127.0.0.1', '[::1]'].includes(baseUrl.hostname) ||
       !['sleepingIslands', 'sparseContacts', 'stack', 'deep', 'massRatio', 'support', 'friction', 'mesh', 'mixed', 'impact', 'continuous', 'torque', 'cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) ||
       (['cradle', 'pendulum', 'hinge', 'slider'].includes(settings.fixture) && settings.solver !== 'ordered') ||
+      (settings.replayImpact && (settings.fixture !== 'impact' || settings.solver !== 'parallel' || !settings.compactContacts)) ||
       !['ordered', 'parallel'].includes(settings.solver) ||
       !['all-pairs', 'hierarchical-grid'].includes(settings.broadPhase) ||
       !['report', 'rollback'].includes(settings.failurePolicy) ||
@@ -49,7 +51,7 @@ export async function benchmarkRigidBody(options = {}) {
 }
 
 async function runBenchmark(options) {
-  const {root, fixture, solver, broadPhase, failurePolicy, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs, compactContacts, sleepAfter: requestedSleepAfter, penetrationRecoveryFraction} = options;
+  const {root, fixture, solver, broadPhase, failurePolicy, samples, warmup, iterations, timeStep, warmStartFactor, maximumPairs, compactContacts, replayImpact, sleepAfter: requestedSleepAfter, penetrationRecoveryFraction} = options;
   const [{luma}, {webgpuAdapter}, {GPUCommandGraph}, {GPUCommandGraphInspector}, {GPURigidBodyWorld}, {makeRigidBodyScene, getRigidBodySceneGravity}, {makeMechanism}, {makeStressScene}] = await Promise.all([
     import(`${root}/modules/core/src/index.ts`), import(`${root}/modules/core/src/webgpu/index.ts`),
     import(`${root}/modules/graph/src/gpu-core/gpu-command-graph.ts`),
@@ -64,8 +66,11 @@ async function runBenchmark(options) {
   const stress = ['sparseContacts', 'sleepingIslands'].includes(fixture) ? makeStressScene(fixture, solver, timeStep).props : null;
   const sleepAfter = requestedSleepAfter ?? stress?.sleepAfter ?? 0.5;
   const bodies = stress?.bodies ?? mechanism?.bodies ?? makeRigidBodyScene(fixture);
+  // Seed a shallow overlap so each replay resolves one approaching contact.
+  if (replayImpact) bodies[0] = {...bodies[0], position: [-0.999, 0, 1]};
   const world = new GPURigidBodyWorld({...stress, bodies, joints: mechanism?.joints ?? stress?.joints, solver, compactContacts, iterations, timeStep, warmStartFactor, sleepAfter, penetrationRecoveryFraction, ...(fixture === 'continuous' ? {continuous: {bodies: [0]}} : {}), maximumPairs: maximumPairs ?? stress?.maximumPairs, broadPhase, failurePolicy, ...(fixture === 'cradle' ? {restitutionThreshold: 0} : {}), gravity: stress?.gravity ?? getRigidBodySceneGravity(fixture)});
   let graph;
+  let checkpoint;
   try {
     const definition = new GPUCommandGraph(device);
     world.addToGraph(definition);
@@ -74,8 +79,19 @@ async function runBenchmark(options) {
     const compileMilliseconds = performance.now() - compileStart;
     const inspector = new GPUCommandGraphInspector();inspector.registerGraph(graph);
     const timings = [];
+    let measuredContactSteps = 0;
+    let completedSteps = 0;
+    if (replayImpact) {
+      checkpoint = world.createGPUCheckpoint({includeRollbackScratch: false});
+      checkpoint.save();
+    }
     let diagnostics;
     for (let step = -warmup; step < samples; step++) {
+      if (checkpoint) {
+        checkpoint.restore();
+        const fence = device.createFence();
+        try {await fence.signaled;} finally {fence.destroy();}
+      }
       const query = step >= 0 && device.features.has('timestamp-query') ? device.createQuerySet({type: 'timestamp', count: graph.stats.nodeOrder.length * 2}) : null;
       try {
         const start = performance.now();const encoder = device.createCommandEncoder();
@@ -83,6 +99,8 @@ async function runBenchmark(options) {
         const encodingEnd = performance.now();device.submit(encoder.finish());
         diagnostics = await world.readSimulationDiagnostics();
         const completed = performance.now();
+        if (diagnostics.complete && diagnostics.steps === (checkpoint ? 1 : step + warmup + 1)) completedSteps++;
+        if (checkpoint && step >= 0 && (await world.readSolverWork())?.awakeContacts > 0) measuredContactSteps++;
         const timing = query ? await inspector.recordGPUTimings(graph.id, encoding) : null;
         if (step >= 0) timings.push({cpuEncode: encodingEnd - start, completionWithDiagnostics: completed - start,
           gpuWork: timing?.gpuTimeMilliseconds ?? null,
@@ -98,20 +116,20 @@ async function runBenchmark(options) {
     return {formatVersion: 1, stage: 'full-rigid-body-step', fixture, objectCount: bodies.length,
       solverWork: await world.readSolverWork(),
       settings: {solver, compactContacts, sleepAfter, penetrationRecoveryFraction, restitutionThreshold: stress?.restitutionThreshold ?? (fixture === 'cradle' ? 0 : 0.5), jointCount: mechanism?.joints.length ?? 0, failurePolicy, broadPhase, iterations, timeStep, warmStartFactor, maximumPairs: world.maximumPairs},
-      sampleCount: samples, warmupCount: warmup, adapter: device.info,
+      sampleCount: samples, warmupCount: warmup, completedSteps, replayImpact, measuredContactSteps, checkpointBytes: checkpoint?.byteLength ?? 0, adapter: device.info,
       timestampQueries: device.features.has('timestamp-query'), compileMilliseconds,
       graphNodes: graph.stats.nodeOrder.length, capacity: world.getCapacityInfo(),
       graphBufferBytes: graph.stats.importedBufferBytes + graph.stats.physicalTransientBytes,
       maximumPendingSteps: 1,
       perStepMilliseconds: Object.fromEntries(['cpuEncode', 'completionWithDiagnostics', 'gpuWork', 'gpuSpan'].map(key => [key, summarize(key)])),
-      diagnostics, finiteState: finite, executionComplete: finite && diagnostics.complete && diagnostics.steps === warmup + samples,
+      diagnostics, finiteState: finite, executionComplete: finite && completedSteps === warmup + samples,
       finalState: states,
       notes: ['One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.',
-        'Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.',
+        checkpoint ? 'The approaching contact is restored before each step. Checkpoint copies and contact counter reads are outside timing.' : 'Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.',
         'Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.',
         'Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.',
         'Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed.']};
-  } finally {graph?.destroy();world.destroy();device.destroy();}
+  } finally {checkpoint?.destroy();graph?.destroy();world.destroy();device.destroy();}
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

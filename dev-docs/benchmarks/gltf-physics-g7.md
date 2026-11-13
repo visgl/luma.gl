@@ -17,10 +17,12 @@ Each run uses the parallel solver at a fixed 120 Hz timestep, with sleeping disa
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | deep | 9 | 32 | 2.10 | 2.99 | 13.50 | 64,488 | Pass |
 | massRatio | 5 | 48 | 2.60 | 6.57 | 16.60 | 62,504 | Pass |
-| impact | 2 | 16 | 2.10 | 2.69 | 10.40 | 61,328 | Pass |
+| impact | 2 | 16 | 1.70 | 3.77 | 11.10 | 95,280 | Pass |
 | continuous | 3 | 16 | 2.00 | 0.88 | 7.50 | 61,732 | Pass |
 
 The initial 64-iteration heavy-on-light run recorded 20.2 ms p95 completion. The eight-box stack recorded 12.9 ms with the original 256-pair budget and 19.3 ms in a subsequent 64-pair rollback run at 64 iterations. At 48 iterations the same 64-pair stack recorded 16.70 ms, just outside the gate. Browser and GPU contention can affect repeatability.
+
+The impact benchmark restores a checkpoint with an approaching contact before each sample. All 60 timed samples solved a contact and the final velocities match the elastic reference. The memory total includes the checkpoint. Checkpoint copies and contact-counter readback run outside timing.
 
 [Raw full-step results](./gltf-physics-g7-rigid.json) include numerical error, energy, diagnostic counters, and timing summaries.
 

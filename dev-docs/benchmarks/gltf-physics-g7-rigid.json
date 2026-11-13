@@ -844,12 +844,12 @@
     "objectCount": 2,
     "solverWork": {
       "compacted": true,
-      "activeContacts": 0,
+      "activeContacts": 1,
       "awakeBodies": 2,
-      "awakeContacts": 0,
+      "awakeContacts": 1,
       "bodyWorkgroups": 1,
       "pairCapacity": 64,
-      "pairWorkgroups": 0
+      "pairWorkgroups": 1
     },
     "settings": {
       "solver": "parallel",
@@ -867,6 +867,10 @@
     },
     "sampleCount": 60,
     "warmupCount": 120,
+    "completedSteps": 180,
+    "replayImpact": true,
+    "measuredContactSteps": 60,
+    "checkpointBytes": 33952,
     "adapter": {
       "type": "webgpu",
       "vendor": "apple",
@@ -884,7 +888,7 @@
       "shadingLanguageVersion": 100
     },
     "timestampQueries": true,
-    "compileMilliseconds": 1130.6000000238419,
+    "compileMilliseconds": 1967.6999999284744,
     "graphNodes": 26,
     "capacity": {
       "bodyCount": 2,
@@ -1019,28 +1023,28 @@
     "maximumPendingSteps": 1,
     "perStepMilliseconds": {
       "cpuEncode": {
-        "median": 1.3000000715255737,
-        "p95": 2.0999999046325684,
-        "maximum": 5
+        "median": 0.8999999761581421,
+        "p95": 1.7000000476837158,
+        "maximum": 1.8000000715255737
       },
       "completionWithDiagnostics": {
-        "median": 5.400000095367432,
-        "p95": 10.399999976158142,
-        "maximum": 12.699999928474426
+        "median": 5.600000023841858,
+        "p95": 11.100000023841858,
+        "maximum": 38.300000071525574
       },
       "gpuWork": {
-        "median": 0.5358670000000001,
-        "p95": 2.690791,
-        "maximum": 2.8670359999999997
+        "median": 0.9301529999999998,
+        "p95": 3.774776,
+        "maximum": 4.167395999999998
       },
       "gpuSpan": {
-        "median": 0.865557074546814,
-        "p95": 2.705749988555908,
-        "maximum": 3.613139033317566
+        "median": 1.2353980541229248,
+        "p95": 4.139896035194397,
+        "maximum": 4.282600998878479
       }
     },
     "diagnostics": {
-      "steps": 180,
+      "steps": 1,
       "incompleteSteps": 0,
       "droppedPairs": 0,
       "droppedManifolds": 0,
@@ -1063,7 +1067,7 @@
     "finalState": [
       {
         "position": [
-          -2.1666688919067383,
+          -1.0073333978652954,
           0,
           1
         ],
@@ -1087,7 +1091,7 @@
       },
       {
         "position": [
-          2.333331823348999,
+          0.01666666753590107,
           0,
           1
         ],
@@ -1112,7 +1116,7 @@
     ],
     "notes": [
       "One complete physics step per sample, including discovery, contacts, solving, integration and diagnostics; no rendering.",
-      "Warm-up advances the scene. State at measurement time, sleeping and contact density affect cost.",
+      "The approaching contact is restored before each step. Checkpoint copies and contact counter reads are outside timing.",
       "Completion includes a 64-byte diagnostic readback. Timestamp GPU work/span excludes host readback latency.",
       "Finite state and complete execution are not an accuracy, conformance or performance-budget qualification.",
       "Memory is logical buffer capacity, not measured VRAM residency. No exclusive GPU ownership is assumed."

@@ -37,7 +37,12 @@ export function qualifyRigidBodyReport(report) {
     report.settings?.sleepAfter === 0 &&
     report.settings?.timeStep === 1 / 120, 'declared solver timestep and awake workload');
   require(report.diagnostics?.steps ===
-    report.sampleCount + report.warmupCount, 'all steps completed');
+    (report.replayImpact ? 1 : report.sampleCount + report.warmupCount), 'all steps completed');
+  if (report.fixture === 'impact') {
+    require(report.replayImpact === true &&
+      report.measuredContactSteps === report.sampleCount &&
+      report.completedSteps === report.sampleCount + report.warmupCount, 'each timed impact solved a contact');
+  }
   require(bounded(
     report.perStepMilliseconds?.completionWithDiagnostics?.p95,
     budgets.maximumCompletionP95Milliseconds
@@ -46,7 +51,7 @@ export function qualifyRigidBodyReport(report) {
     report.perStepMilliseconds?.cpuEncode?.p95,
     budgets.maximumEncodeP95Milliseconds
   ), 'CPU encoding budget');
-  require(bounded(report.graphBufferBytes, budgets.maximumBufferBytes), 'logical buffer budget');
+  require(bounded(report.graphBufferBytes + (report.checkpointBytes ?? 0), budgets.maximumBufferBytes), 'logical buffer budget');
   const states = report.finalState;
   require(Array.isArray(states) &&
     states.length === counts[report.fixture], 'complete state evidence');

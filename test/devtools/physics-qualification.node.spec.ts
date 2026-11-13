@@ -89,3 +89,20 @@ test('every G2 G3 and G7 required stage has evidence selectors without implying 
   expect(result.requestedComplete).toBe(false);
   expect(result.summary.passed).toBe(0);
 });
+
+test('impact qualification requires a contact solve in every timed sample', () => {
+  const report = {
+    ...fixture(),
+    fixture: 'impact',
+    objectCount: 2,
+    replayImpact: true,
+    completedSteps: 180,
+    measuredContactSteps: 60,
+    diagnostics: {complete: true, steps: 1},
+    finalState: fixture().finalState.slice(0, 2)
+  };
+  report.finalState[0].velocity[0] = -1;
+  report.finalState[1].velocity[0] = 2;
+  expect(qualifyRigidBodyReport(report).qualified).toBe(true);
+  expect(qualifyRigidBodyReport({...report, measuredContactSteps: 59}).qualified).toBe(false);
+});

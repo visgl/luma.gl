@@ -13,6 +13,7 @@ for (const fixture of ['deep', 'massRatio', 'impact', 'continuous']) {
   const raw = await benchmarkRigidBody({
     url: values.url,
     fixture,
+    replayImpact: fixture === 'impact',
     solver: 'parallel',
     iterations: fixture === 'deep' ? 32 : fixture === 'massRatio' ? 48 : 16,
     failurePolicy: 'rollback',
