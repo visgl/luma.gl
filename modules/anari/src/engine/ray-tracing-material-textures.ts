@@ -85,6 +85,7 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
     surfaces.map(surface => [
       surface.id,
       surface.material.uniforms?.normalScale,
+      (surface.material.uniforms?.anisotropyStrength ?? 0) > 0,
       MATERIAL_MAPS.map(([name, binding]) => [
         textures.findIndex(texture => texture === surface.material.bindings?.[binding]),
         name === 'clearcoatNormal' || name === 'iridescenceThickness'
@@ -184,7 +185,11 @@ export function getRayMaterialTextureShader(
       return `case ${surfaceIndex}u: { ${statements} }`;
     })
     .join('\n');
+  const hasAnisotropy =
+    !opacityOnly &&
+    surfaces.some(surface => (surface.material.uniforms?.anisotropyStrength ?? 0) > 0);
   return source
+    .replace('/* MATERIAL_HAS_ANISOTROPY */ false', String(hasAnisotropy))
     .replace(
       '/* MATERIAL_PRIMARY_FOOTPRINT */',
       textures.some(texture => texture.mipLevels > 1)

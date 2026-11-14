@@ -884,6 +884,8 @@ fn getClearcoatNormal(hit: RayHit) -> vec3<f32> {
   return hit.normal;
 }
 
+const MATERIAL_HAS_ANISOTROPY = /* MATERIAL_HAS_ANISOTROPY */ false;
+
 struct AnisotropicGGX {
   tangent: vec3<f32>,
   bitangent: vec3<f32>,
@@ -902,7 +904,7 @@ fn getAnisotropyFrame(hit: RayHit, primitive: RayPrimitive, normal: vec3<f32>) -
 fn getAnisotropicGGX(hit: RayHit, primitive: RayPrimitive, normal: vec3<f32>, alpha: f32) -> AnisotropicGGX {
   let isotropic = AnisotropicGGX(vec3<f32>(0.0), vec3<f32>(0.0), vec2<f32>(alpha));
   let strength = clamp(primitive.anisotropy.z, 0.0, 1.0);
-  if (strength <= 0.0) { return isotropic; }
+  if (!MATERIAL_HAS_ANISOTROPY || strength <= 0.0) { return isotropic; }
   let frame = getAnisotropyFrame(hit, primitive, normal);
   if (dot(frame[0], frame[0]) == 0.0) { return isotropic; }
   var direction = primitive.anisotropy.xy;
@@ -918,7 +920,7 @@ fn getAnisotropicGGX(hit: RayHit, primitive: RayPrimitive, normal: vec3<f32>, al
 
 fn getGGXDistribution(lobe: AnisotropicGGX, halfDirection: vec3<f32>,
     normalHalf: f32, isotropicDistribution: f32) -> f32 {
-  if (lobe.alpha.x == lobe.alpha.y) { return isotropicDistribution; }
+  if (!MATERIAL_HAS_ANISOTROPY || lobe.alpha.x == lobe.alpha.y) { return isotropicDistribution; }
   let projected = vec2<f32>(dot(lobe.tangent, halfDirection), dot(lobe.bitangent, halfDirection)) / lobe.alpha;
   let denominator = dot(projected, projected) + normalHalf * normalHalf;
   return 1.0 / (PI * lobe.alpha.x * lobe.alpha.y * denominator * denominator);
@@ -926,7 +928,7 @@ fn getGGXDistribution(lobe: AnisotropicGGX, halfDirection: vec3<f32>,
 
 fn getGGXVisibility(lobe: AnisotropicGGX, direction: vec3<f32>, normalCosine: f32,
     isotropicVisibility: f32) -> f32 {
-  if (lobe.alpha.x == lobe.alpha.y) { return isotropicVisibility; }
+  if (!MATERIAL_HAS_ANISOTROPY || lobe.alpha.x == lobe.alpha.y) { return isotropicVisibility; }
   let projected = vec2<f32>(dot(lobe.tangent, direction), dot(lobe.bitangent, direction)) * lobe.alpha;
   return 2.0 * normalCosine / max(normalCosine + sqrt(normalCosine * normalCosine + dot(projected, projected)), 0.000001);
 }
@@ -1421,7 +1423,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
     let tangentHalf = sqrt(max(1.0 - normalHalf * normalHalf, 0.0));
     var halfDirection = tangent * (tangentHalf * cos(angle)) +
       bitangent * (tangentHalf * sin(angle)) + normal * normalHalf;
-    if (anisotropic.alpha.x != anisotropic.alpha.y) {
+    if (MATERIAL_HAS_ANISOTROPY && anisotropic.alpha.x != anisotropic.alpha.y) {
       // Stretch isotropic GGX slopes along the two principal roughness axes.
       let radius = sqrt(radialSample);
       halfDirection = normalize(
