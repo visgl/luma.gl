@@ -6,7 +6,7 @@ import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-no
 import type {Binding} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
-import {getBoundedDispatchLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
+import {getBoundedWorkgroupLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
 import {
   getViewBinding,
   getViewElementOffset,
@@ -74,10 +74,9 @@ export class GPUSegmentedReduction<T extends GPUScalarFormat = GPUScalarFormat> 
     }
     if (this.output.length === 0) return nodes;
 
-    const dispatch = getBoundedDispatchLayout(
+    const dispatch = getBoundedWorkgroupLayout(
       this.id,
-      this.output.length * WORKGROUP_SIZE,
-      WORKGROUP_SIZE,
+      this.output.length,
       graph.device.limits.maxComputeWorkgroupsPerDimension
     );
     const source = makeShaderSource(this, dispatch);
