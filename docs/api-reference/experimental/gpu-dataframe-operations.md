@@ -212,6 +212,8 @@ bridges math.gl's portable AST. Supported nodes are numeric/boolean/null literal
 columns, arithmetic, comparisons, boolean operators, unary negation/not,
 `array_float32` of width 2–4, and `cast` to float32/int32. Other nodes fail closed.
 The bridge does not parse SQL itself or execute arbitrary callbacks.
+Pass `makeGPUPredicateFromPortableAST(parseSQLExpression('x > 0'))` to
+`frame.filter()` to require a boolean result.
 
 This first tranche provides syntax and layout planning. Vector execution and cast
 lowering are supplied by the dependent execution PR. Unsupported scope includes

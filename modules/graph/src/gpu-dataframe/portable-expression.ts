@@ -6,6 +6,7 @@
 import {validateExpressionAST, type Expression} from '@math.gl/expressions';
 import {
   GPUExpression,
+  isBooleanExpressionNode,
   type GPUExpressionNode,
   type GPUExpressionBinaryOperator,
   type GPUExpressionNumericValue
@@ -27,8 +28,21 @@ import {
 export function makeGPUExpressionFromPortableAST(
   expression: Expression
 ): GPUExpression<GPUExpressionNumericValue | boolean> {
+  return new GPUExpression(convertPortableExpression(expression));
+}
+
+/** Converts a portable AST and requires a boolean result for use as a DataFrame predicate. */
+export function makeGPUPredicateFromPortableAST(expression: Expression): GPUExpression<boolean> {
+  const node = convertPortableExpression(expression);
+  if (!isBooleanExpressionNode(node)) {
+    throw new Error('Expected a boolean portable GPU dataframe expression');
+  }
+  return new GPUExpression(node);
+}
+
+function convertPortableExpression(expression: Expression): GPUExpressionNode {
   validateExpressionAST(expression);
-  return new GPUExpression(convert(expression));
+  return convert(expression);
 }
 
 const binaryOperators: Readonly<Record<string, GPUExpressionBinaryOperator>> = {
