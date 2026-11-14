@@ -37,6 +37,7 @@ struct RayPrimitive {
   clearcoatOcclusion: vec4<f32>, // Coat strength, coat roughness, occlusion strength, occlusion sample.
   sheen: vec4<f32>,
   iridescence: vec4<f32>, // Strength, film IOR, minimum thickness, effective thickness in nm.
+  anisotropy: vec4<f32>, // Tangent-space direction, strength, rotation in radians.
 };
 
 struct RayBlasNode {
@@ -800,8 +801,9 @@ fn getShadedPrimitive(hit: RayHit) -> RayPrimitive {
 }
 
 // Derive the frame from world-space triangle edges and the sampled UV chart.
-fn applyNormalMap(hit: RayHit, uvTransform: mat3x3<f32>, secondary: bool,
-    sampled: vec3<f32>, scale: f32) -> vec3<f32> {
+fn getTriangleTangentFrame(hit: RayHit, normal: vec3<f32>, uvTransform: mat3x3<f32>,
+    secondary: bool) -> mat2x3<f32> {
+  if (hit.triangleIndex == 0xffffffffu) { return mat2x3<f32>(); }
   let triangle = triangles[hit.triangleIndex];
   let first = select(vec2<f32>(triangle.firstPosition.w, triangle.firstNormal.w),
     triangle.secondaryCoordinates[0].xy, secondary);
@@ -812,8 +814,8 @@ fn applyNormalMap(hit: RayHit, uvTransform: mat3x3<f32>, secondary: bool,
   let firstUVEdge = (uvTransform * vec3<f32>(second - first, 0.0)).xy;
   let secondUVEdge = (uvTransform * vec3<f32>(third - first, 0.0)).xy;
   let determinant = firstUVEdge.x * secondUVEdge.y - secondUVEdge.x * firstUVEdge.y;
-  if (abs(determinant) <= 0.000001 * length(firstUVEdge) * length(secondUVEdge) || scale == 0.0) {
-    return hit.normal;
+  if (abs(determinant) <= 0.000001 * length(firstUVEdge) * length(secondUVEdge)) {
+    return mat2x3<f32>();
   }
 
   let transform = primitives[hit.primitiveIndex].transform;
@@ -821,13 +823,21 @@ fn applyNormalMap(hit: RayHit, uvTransform: mat3x3<f32>, secondary: bool,
   let secondEdge = (transform * vec4<f32>(triangle.thirdPosition.xyz - triangle.firstPosition.xyz, 0.0)).xyz;
   let tangentDirection = (firstEdge * secondUVEdge.y - secondEdge * firstUVEdge.y) * sign(determinant);
   let bitangentDirection = (secondEdge * firstUVEdge.x - firstEdge * secondUVEdge.x) * sign(determinant);
-  let projectedTangent = tangentDirection - hit.normal * dot(hit.normal, tangentDirection);
-  if (dot(projectedTangent, projectedTangent) <= 0.0) { return hit.normal; }
+  let projectedTangent = tangentDirection - normal * dot(normal, tangentDirection);
+  if (dot(projectedTangent, projectedTangent) <= 0.0) { return mat2x3<f32>(); }
   let tangent = normalize(projectedTangent);
-  let bitangent = cross(hit.normal, tangent);
+  let bitangent = cross(normal, tangent);
   let handedness = select(-1.0, 1.0, dot(bitangent, bitangentDirection) >= 0.0);
+  return mat2x3<f32>(tangent, bitangent * handedness);
+}
+
+fn applyNormalMap(hit: RayHit, uvTransform: mat3x3<f32>, secondary: bool,
+    sampled: vec3<f32>, scale: f32) -> vec3<f32> {
+  if (scale == 0.0) { return hit.normal; }
+  let frame = getTriangleTangentFrame(hit, hit.normal, uvTransform, secondary);
+  if (dot(frame[0], frame[0]) == 0.0) { return hit.normal; }
   let tangentNormal = sampled * 2.0 - vec3<f32>(1.0);
-  let mapped = (tangent * tangentNormal.x + bitangent * (handedness * tangentNormal.y)) * scale +
+  let mapped = (frame * tangentNormal.xy) * scale +
     hit.normal * tangentNormal.z;
   if (dot(mapped, hit.normal) <= 0.000001) { return hit.normal; }
   return normalize(mapped);
@@ -872,6 +882,55 @@ fn getClearcoatNormal(hit: RayHit) -> vec3<f32> {
     default: {}
   }
   return hit.normal;
+}
+
+const MATERIAL_HAS_ANISOTROPY = /* MATERIAL_HAS_ANISOTROPY */ false;
+
+struct AnisotropicGGX {
+  tangent: vec3<f32>,
+  bitangent: vec3<f32>,
+  alpha: vec2<f32>,
+};
+
+fn getAnisotropyFrame(hit: RayHit, primitive: RayPrimitive, normal: vec3<f32>) -> mat2x3<f32> {
+  switch u32(primitive.material.w) {
+    /* MATERIAL_ANISOTROPY_CASES */
+    default: {}
+  }
+  return getTriangleTangentFrame(hit, normal,
+    mat3x3<f32>(vec3<f32>(1.0, 0.0, 0.0), vec3<f32>(0.0, 1.0, 0.0), vec3<f32>(0.0, 0.0, 1.0)), false);
+}
+
+fn getAnisotropicGGX(hit: RayHit, primitive: RayPrimitive, normal: vec3<f32>, alpha: f32) -> AnisotropicGGX {
+  let isotropic = AnisotropicGGX(vec3<f32>(0.0), vec3<f32>(0.0), vec2<f32>(alpha));
+  let strength = clamp(primitive.anisotropy.z, 0.0, 1.0);
+  if (!MATERIAL_HAS_ANISOTROPY || strength <= 0.0) { return isotropic; }
+  let frame = getAnisotropyFrame(hit, primitive, normal);
+  if (dot(frame[0], frame[0]) == 0.0) { return isotropic; }
+  var direction = primitive.anisotropy.xy;
+  if (dot(direction, direction) <= 0.000001) { direction = vec2<f32>(1.0, 0.0); }
+  let rotation = primitive.anisotropy.w;
+  let axis = vec2<f32>(cos(rotation), sin(rotation));
+  let rotated = vec2<f32>(dot(direction, vec2<f32>(axis.x, -axis.y)),
+    dot(direction, axis.yx));
+  let tangent = normalize(frame * rotated);
+  return AnisotropicGGX(tangent, cross(normal, tangent),
+    vec2<f32>(mix(alpha, 1.0, strength * strength), alpha));
+}
+
+fn getGGXDistribution(lobe: AnisotropicGGX, halfDirection: vec3<f32>,
+    normalHalf: f32, isotropicDistribution: f32) -> f32 {
+  if (!MATERIAL_HAS_ANISOTROPY || lobe.alpha.x == lobe.alpha.y) { return isotropicDistribution; }
+  let projected = vec2<f32>(dot(lobe.tangent, halfDirection), dot(lobe.bitangent, halfDirection)) / lobe.alpha;
+  let denominator = dot(projected, projected) + normalHalf * normalHalf;
+  return 1.0 / (PI * lobe.alpha.x * lobe.alpha.y * denominator * denominator);
+}
+
+fn getGGXVisibility(lobe: AnisotropicGGX, direction: vec3<f32>, normalCosine: f32,
+    isotropicVisibility: f32) -> f32 {
+  if (!MATERIAL_HAS_ANISOTROPY || lobe.alpha.x == lobe.alpha.y) { return isotropicVisibility; }
+  let projected = vec2<f32>(dot(lobe.tangent, direction), dot(lobe.bitangent, direction)) * lobe.alpha;
+  return 2.0 * normalCosine / max(normalCosine + sqrt(normalCosine * normalCosine + dot(projected, projected)), 0.000001);
 }
 
 // Airy reflectance from the two interface amplitudes and their round-trip phase.
@@ -984,6 +1043,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
   let lightSampleWeight = f32(directLightCount) / f32(max(shadowSampleCount, 1u));
   var directLightIndex = 0u;
 
+  let anisotropic = getAnisotropicGGX(hit, primitive, normal, alphaRoughness);
   for (var lightIndex = 0u; lightIndex < uniforms.dimensions.w; lightIndex++) {
     let light = lights[lightIndex];
     let lightType = u32(light.directionType.w);
@@ -1049,9 +1109,11 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     let viewVisibility = 2.0 * normalView /
       (normalView + sqrt(alphaRoughnessSquared +
         (1.0 - alphaRoughnessSquared) * normalView * normalView));
-    let geometricOcclusion = lightVisibility * viewVisibility;
+    let baseDistribution = getGGXDistribution(anisotropic, halfDirection, normalHalf, distribution);
+    let baseVisibility = getGGXVisibility(anisotropic, lightDirection, normalLight, lightVisibility) *
+      getGGXVisibility(anisotropic, viewDirection, normalView, viewVisibility);
     let diffuseContribution = (vec3<f32>(1.0) - fresnel) * diffuse;
-    let specular = fresnel * geometricOcclusion * distribution /
+    let specular = fresnel * baseVisibility * baseDistribution /
       (4.0 * max(normalLight, 0.000001) * normalView);
     let layeredResponse = applySheen((diffuseContribution + specular) * normalLight,
       primitive.sheen, normalHalf, normalView, normalLight);
@@ -1353,13 +1415,22 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
   let radialSample = makeRandom(randomSeed ^ 17u);
   let angle = 2.0 * PI * makeRandom(randomSeed ^ 101u);
   let specularProbability = mix(0.25, 1.0, metallic);
+  let anisotropic = getAnisotropicGGX(hit, primitive, normal, alphaRoughness);
   var direction: vec3<f32>;
   if (specularProbability >= 1.0 || makeRandom(randomSeed ^ 263u) < specularProbability) {
     let normalHalf = sqrt((1.0 - radialSample) /
       ((1.0 - radialSample) + alphaSquared * radialSample));
     let tangentHalf = sqrt(max(1.0 - normalHalf * normalHalf, 0.0));
-    let halfDirection = tangent * (tangentHalf * cos(angle)) +
+    var halfDirection = tangent * (tangentHalf * cos(angle)) +
       bitangent * (tangentHalf * sin(angle)) + normal * normalHalf;
+    if (MATERIAL_HAS_ANISOTROPY && anisotropic.alpha.x != anisotropic.alpha.y) {
+      // Stretch isotropic GGX slopes along the two principal roughness axes.
+      let radius = sqrt(radialSample);
+      halfDirection = normalize(
+        anisotropic.tangent * (anisotropic.alpha.x * radius * cos(angle)) +
+        anisotropic.bitangent * (anisotropic.alpha.y * radius * sin(angle)) +
+        normal * sqrt(max(1.0 - radialSample, 0.0)));
+    }
     direction = normalize(reflect(ray.direction, halfDirection));
   } else {
     let radius = sqrt(radialSample);
@@ -1376,7 +1447,8 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
   let normalHalfSquared = normalHalf * normalHalf;
   let distributionDenominator = (1.0 - normalHalfSquared) + alphaSquared * normalHalfSquared;
   let distribution = alphaSquared / (PI * distributionDenominator * distributionDenominator);
-  let specularDensity = distribution * normalHalf / (4.0 * viewHalf);
+  let baseDistribution = getGGXDistribution(anisotropic, halfDirection, normalHalf, distribution);
+  let specularDensity = baseDistribution * normalHalf / (4.0 * viewHalf);
   let sampleDensity = specularProbability * specularDensity +
     (1.0 - specularProbability) * normalLight / PI;
   if (sampleDensity <= 0.0) {
@@ -1414,7 +1486,11 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
     (1.0 - alphaSquared) * normalView * normalView));
   // Match the scalar direct-light BRDF; cancel N.L before dividing by the PDF.
   let diffuse = (vec3<f32>(1.0) - fresnel) * baseColor * (vec3<f32>(1.0) - dielectricReflectance) * (1.0 - metallic) * normalLight / PI;
-  let specular = fresnel * lightVisibility * viewVisibility * distribution / (4.0 * normalView);
+  let anisotropic = getAnisotropicGGX(hit, primitive, normal, alphaRoughness);
+  let baseDistribution = getGGXDistribution(anisotropic, halfDirection, normalHalf, distribution);
+  let baseVisibility = getGGXVisibility(anisotropic, direction, normalLight, lightVisibility) *
+    getGGXVisibility(anisotropic, viewDirection, normalView, viewVisibility);
+  let specular = fresnel * baseVisibility * baseDistribution / (4.0 * normalView);
   let layeredResponse = applySheen(diffuse + specular, primitive.sheen, normalHalf, normalView, normalLight);
   return applyClearcoat(layeredResponse, primitive.clearcoatOcclusion.xy, hit, viewDirection, direction, halfDirection, viewHalf);
 }
