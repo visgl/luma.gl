@@ -79,11 +79,10 @@ Together with `GPUSegmentedReduction`, this establishes the basic segmented alge
 
 ## Performance notes
 
-The first implementation establishes the API before optimizing execution: one workgroup is assigned per segment and one lane currently scans that segment serially. This is a correctness baseline and is appropriate only for small segments.
 
 Each segment gets a 256-lane workgroup. The lanes scan tiles in parallel and carry the previous tile total forward. Dispatch spans multiple axes when needed. Long segments process their tiles sequentially within one workgroup.
 
 
 ## Limitations
 
-The initial primitive supports `uint32` addition only. Input/output aliasing is rejected. Offsets are assumed monotonic and within input bounds; producers establish those GPU-resident invariants without requiring readback.
+The initial primitive supports `uint32` addition only. Input/output aliasing is rejected. The GPU trusts the producer to supply nondecreasing offsets.
