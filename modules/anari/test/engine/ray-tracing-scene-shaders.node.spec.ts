@@ -815,7 +815,7 @@ test('primary-hit diagnostics keep presentation within sampled-texture bindings'
 
 test('ray material texture budgets preserve opacity maps and prioritize existing maps', () => {
   const textures: Texture[] = Array.from({length: 15}, () => Object.create(Texture.prototype));
-  const geometry = new Geometry({topology: 'triangle-list', attributes: {}});
+  const geometry = new Geometry({topology: 'triangle-list', vertexCount: 0, attributes: {}});
   const surfaces: SceneSurface[] = [
     {
       id: 'iridescent',
