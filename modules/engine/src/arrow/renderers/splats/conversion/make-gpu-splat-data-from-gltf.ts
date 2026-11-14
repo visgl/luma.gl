@@ -65,23 +65,27 @@ export async function makeGPUSplatDataFromGLTFScene(
           ) {
             throw new Error('Unsupported decoded glTF Gaussian splat primitive');
           }
+          const result = descriptor.decoded;
+          const table =
+            result &&
+            typeof result === 'object' &&
+            'shape' in result &&
+            result.shape === 'arrow-table' &&
+            'data' in result
+              ? result.data
+              : result;
           if (
-            typeof descriptor.decoded !== 'object' ||
-            descriptor.decoded === null ||
-            !('data' in descriptor.decoded) ||
-            !('shape' in descriptor.decoded) ||
-            descriptor.decoded.shape !== 'arrow-table'
+            !table ||
+            typeof table !== 'object' ||
+            !('batches' in table) ||
+            !Array.isArray(table.batches) ||
+            !('getChild' in table) ||
+            typeof table.getChild !== 'function'
           ) {
             throw new Error('Decoded glTF splats require a Mesh Arrow table');
           }
-          // Decoded data is a loader result, not a glTF accessor-bearing primitive.
-          const decoded = descriptor.decoded as GPUSplatArrowSource & {
-            data: GPUSplatArrowTableLike;
-          };
-          if (!decoded.data || !Array.isArray(decoded.data.batches)) {
-            throw new Error('Decoded glTF splats require a Mesh Arrow table');
-          }
-          consumedSourceBatches = decoded.data.batches.length;
+          const decoded = table as GPUSplatArrowTableLike;
+          consumedSourceBatches = decoded.batches.length;
           const declaredFeature = primitive.extensions?.EXT_mesh_features?.featureIds?.find(
             (feature: {attribute?: number}) => feature.attribute !== undefined
           );
@@ -102,11 +106,11 @@ export async function makeGPUSplatDataFromGLTFScene(
             ) {
               throw new Error('glTF Gaussian splat feature IDs must be unsigned integers');
             }
-            if (values.length !== decoded.data.numRows) {
+            if (values.length !== decoded.numRows) {
               throw new Error('glTF Gaussian splat feature-ID count does not match decoded splats');
             }
             let offset = 0;
-            const recordBatches = decoded.data.batches.map(recordBatch => {
+            const recordBatches = decoded.batches.map(recordBatch => {
               const ids = values.subarray(offset, offset + recordBatch.numRows);
               offset += recordBatch.numRows;
               const vector = makeVector(ids);
@@ -118,10 +122,10 @@ export async function makeGPUSplatDataFromGLTFScene(
               };
             });
             const table = {
-              numRows: decoded.data.numRows,
-              schema: decoded.data.schema,
+              numRows: decoded.numRows,
+              schema: decoded.schema,
               batches: recordBatches,
-              getChild: (name: string) => decoded.data.getChild(name)
+              getChild: (name: string) => decoded.getChild(name)
             };
             source = {...decoded, data: table};
           }

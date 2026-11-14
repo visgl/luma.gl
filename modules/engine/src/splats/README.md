@@ -57,7 +57,7 @@ import type {GLTFWithBuffers} from '@luma.gl/engine/gltf';
 import {getGLTFSplatSceneInstances, makeGPUSplatDataFromGLTFScene} from '@luma.gl/engine/arrow';
 
 const loaded = await load('scene.glb', [GLTFLoader, SPZLoader], {
-  splats: {shape: 'arrow-table', targetCoordinateSystem: 'LUF'}
+  splats: {shape: 'arrow', targetCoordinateSystem: 'LUF'}
 });
 const gltf = postProcessGLTF(loaded as GLTFWithBuffers);
 const scenegraphs = createScenegraphsFromGLTF(device, gltf, {

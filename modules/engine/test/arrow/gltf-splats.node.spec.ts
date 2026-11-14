@@ -203,7 +203,7 @@ test('prepares an embedded SPZ payload decoded by loaders.gl', async () => {
   glb.writeUInt32LE(0x004e4942, 24 + jsonLength);
   bytes.copy(glb, 28 + jsonLength);
   const loaded = await parse(Uint8Array.from(glb).buffer, [GLTFLoader, SPZLoader], {
-    splats: {shape: 'arrow-table'}
+    splats: {shape: 'arrow'}
   });
   const gltf = postProcessGLTF(loaded as any);
   const groups = await makeGPUSplatDataFromGLTFScene(new NullDevice({}), gltf);
@@ -324,7 +324,7 @@ test('showcase GLB produces an identity-placed visible Gaussian instance', async
     )
   );
   const loaded = await parse(Uint8Array.from(bytes).buffer, [GLTFLoader, SPZLoader], {
-    splats: {shape: 'arrow-table', targetCoordinateSystem: 'LUF'}
+    splats: {shape: 'arrow', targetCoordinateSystem: 'LUF'}
   });
   const gltf = postProcessGLTF(loaded as any);
   const device = new NullDevice({});
