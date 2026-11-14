@@ -140,6 +140,8 @@ export {GPUByteRangeGather} from './gpu-byte-range-gather';
 export type {GPUByteRangeGatherProps} from './gpu-byte-range-gather';
 export {GPUGather} from './gpu-gather';
 export type {GPUGatherFormat, GPUGatherProps} from './gpu-gather';
+export {GPUScatter} from './gpu-scatter';
+export type {GPUScatterFormat, GPUScatterProps} from './gpu-scatter';
 export {
   GPULZByteDecompressor,
   GPU_LZ_BYTE_DESCRIPTOR_WORDS,
@@ -636,6 +638,12 @@ export {
 export {GPUGraphDotProduct, GPUGraphVectorMADD} from './gpu-semantic-vector-operation';
 export {GPUGraphCSRMatrix, GPUGraphSpMV} from './gpu-semantic-spmv';
 export {createGPUConjugateGradientGraph} from './gpu-conjugate-gradient-program';
+
+export {GPUAdaptiveSpMV} from './gpu-adaptive-spmv';
+export type {GPUAdaptiveSpMVProps} from './gpu-adaptive-spmv';
+export type {GPUSpMVRowStatistics, GPUSpMVStrategyId} from './gpu-spmv-strategy';
+export {GPUJacobiPCG} from './gpu-pcg';
+export type {GPUJacobiPCGProps, GPUJacobiPCGResult} from './gpu-pcg';
 
 export {GPUCOOToCSR} from './gpu-coo-to-csr';
 export type {GPUCOOToCSRProps} from './gpu-coo-to-csr';
