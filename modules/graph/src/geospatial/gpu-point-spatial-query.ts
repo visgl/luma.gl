@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuSpatial.
 
+import {GPU_GRID_COORDINATE_WGSL} from '../gpu-core/gpu-grid-coordinate';
 import {type Binding, Buffer} from '@luma.gl/core';
 import {assembleComputeKernel} from '../utils/assemble-compute-kernel';
 import {Kernel} from '../execution/compute/kernel';
@@ -277,21 +278,7 @@ fn finite(value: f32) -> bool {
   return value == value && abs(value) <= 3.402823466e+38;
 }
 
-fn getCoordinate(value: f32, minimum: f32, maximum: f32, size: u32) -> u32 {
-  if (maximum == minimum || value <= minimum) { return 0u; }
-  if (value >= maximum) { return size - 1u; }
-  if (minimum < 0.0 && maximum > 0.0) {
-    let scale = max(abs(minimum), abs(maximum));
-    let scaledValue = value / scale;
-    let scaledMinimum = minimum / scale;
-    let scaledMaximum = maximum / scale;
-    return min(
-      u32((scaledValue - scaledMinimum) / (scaledMaximum - scaledMinimum) * f32(size)),
-      size - 1u
-    );
-  }
-  return min(u32((value - minimum) / (maximum - minimum) * f32(size)), size - 1u);
-}
+${GPU_GRID_COORDINATE_WGSL}
 
 fn getCell(position: vec3<f32>) -> vec3<u32> {
   return vec3<u32>(
