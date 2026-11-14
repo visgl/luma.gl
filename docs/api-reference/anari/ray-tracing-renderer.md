@@ -69,6 +69,7 @@ compatible raster renderer.
 | Ambient occlusion | Red channel and scalar strength applied to ambient lighting |
 | Sheen | RGB color and alpha roughness maps |
 | Thin-film iridescence | Red strength and green thickness maps, evaluated with an RGB approximation |
+| Anisotropy | UV-aligned GGX for direct lighting and opaque bounces. Map RGB encodes direction in red and green and scales strength in blue. |
 
 Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
 with explicit LOD and up to 14 distinct textures per frame. Excess maps use material defaults,
