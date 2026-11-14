@@ -146,7 +146,7 @@ export class IndirectLightmap {
 }
 
 /** Rasterize generated triangle charts at texel centers; gutters remain unoccupied. */
-function makeReceiverData(
+export function makeReceiverData(
   geometry: Geometry,
   atlas: LightmapAtlas,
   region = {x: 0, y: 0, width: atlas.width, height: atlas.height}

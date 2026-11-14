@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {parseCornellScene} from '../../../../examples/api/lightmap-baking/cornell-scene';
+import {makeReceiverData} from '../../../../examples/api/lightmap-baking/indirect-lightmap';
+import {Geometry} from '@luma.gl/engine';
+
 import {createLightmapAtlas, validateLightmapAtlas} from '@luma.gl/engine/lighting';
 import {expect, test} from 'vitest';
 
@@ -78,4 +81,65 @@ test('packs a two-mesh glTF beyond the old triangle-per-chart limit', async () =
   expect(uv.slice(0, 2)).toEqual(uv.slice(6, 8));
   expect(uv.slice(4, 6)).toEqual(uv.slice(8, 10));
   expect(inputs[0].geometry.attributes.TEXCOORD_1).toBeUndefined();
+});
+
+const firstTriangle = [0, 0, 0, 2, 0, 0, 0, 2, 0];
+
+function makePair(second: number[]) {
+  return new Geometry({
+    topology: 'triangle-list',
+    attributes: {
+      POSITION: {size: 3, value: new Float32Array([...firstTriangle, ...second])},
+      NORMAL: {size: 3, value: new Float32Array(Array.from({length: 6}, () => [0, 0, 1]).flat())}
+    }
+  });
+}
+
+test.each([
+  ['opposite winding', [0, 0, 0, 2, 0, 0, 1, -2, 0]],
+  ['overlap', [0, 0, 0, 2, 0, 0, 1, 1, 0]],
+  ['crease', [2, 0, 0, 0, 0, 0, 1, -2, 1]]
+])('keeps %s in separate charts', (_label, second) => {
+  const atlas = createLightmapAtlas([{id: 'pair', geometry: makePair(second)}], {
+    width: 32,
+    height: 32,
+    texelsPerUnit: 4,
+    mergeCoplanarPairs: true
+  });
+  expect(atlas.charts.map(chart => chart.vertexCount)).toEqual([3, 3]);
+});
+
+test('rasterizes both halves of a paired chart with identical cropped receivers', () => {
+  const atlas = createLightmapAtlas(
+    [{id: 'pair', geometry: makePair([2, 0, 0, 0, 0, 0, 1, -2, 0])}],
+    {
+      width: 32,
+      height: 32,
+      texelsPerUnit: 4,
+      mergeCoplanarPairs: true
+    }
+  );
+  expect(atlas.charts.map(chart => chart.vertexCount)).toEqual([6]);
+  const geometry = atlas.meshes[0].geometry;
+  const full = makeReceiverData(geometry, atlas);
+  const extent = atlas.charts[0].rectangle;
+  const crop = makeReceiverData(geometry, atlas, extent);
+  const sides = new Set<number>();
+  for (let y = 0; y < extent.height; y++) {
+    for (let x = 0; x < extent.width; x++) {
+      const local = (y * extent.width + x) * 4;
+      const offset = ((extent.y + y) * atlas.width + extent.x + x) * 4;
+      expect(crop.positions.slice(local, local + 4)).toEqual(
+        full.positions.slice(offset, offset + 4)
+      );
+      expect(crop.normals.slice(local, local + 4)).toEqual(full.normals.slice(offset, offset + 4));
+      if (full.positions[offset + 3]) {
+        sides.add(Math.sign(full.positions[offset + 1]));
+        expect(full.positions[offset]).toBeLessThanOrEqual(2);
+        expect(full.normals.slice(offset, offset + 4)).toEqual(new Float32Array([0, 0, 1, 0]));
+      }
+    }
+  }
+  expect(sides.has(-1)).toBe(true);
+  expect(sides.has(1)).toBe(true);
 });
