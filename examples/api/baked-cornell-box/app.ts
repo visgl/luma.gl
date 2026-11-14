@@ -68,7 +68,7 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
                 geometry: prepared.geometry,
                 material,
                 defines: {USE_LIGHTS: true},
-                parameters: {depthWriteEnabled: true, depthCompare: 'less-equal'}
+                parameters: {depthWriteEnabled: true, depthCompare: 'less-equal', cullMode: 'back'}
               });
               this.model?.destroy();
               this.material?.destroy();
@@ -86,6 +86,12 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
             if (file) void load(() => file.arrayBuffer());
           };
           input.addEventListener('change', openFile);
+          void load(async () => {
+            const response = await fetch(new URL('./cornell-box.lmb-gzip', import.meta.url));
+            if (!response.ok || !response.body) throw new Error('Could not load the default bake.');
+            const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
+            return new Response(stream).arrayBuffer();
+          });
           return () => input.removeEventListener('change', openFile);
         }
       })

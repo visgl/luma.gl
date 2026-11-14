@@ -33,6 +33,8 @@ type LiveExample = {
 
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
+  'api/baked-cornell-box',
+
   'three/galactic-vortex',
   'three/domino-junction',
   'gltf/physics',
