@@ -85,6 +85,11 @@ base shading distribution.
 Ambient occlusion maps use the red channel and the material's `occlusionStrength` to
 attenuate ambient light. Direct lights, emission, and ray visibility are unaffected.
 
+Sheen adds a grazing reflection below clearcoat in direct lighting and opaque PBR paths.
+The color map contributes RGB after texture-format color decoding, and the roughness map
+uses alpha. The lobe uses a Charlie distribution with approximate visibility and base-layer
+attenuation. Opaque bounce sampling uses the existing diffuse/GGX mixture.
+
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
