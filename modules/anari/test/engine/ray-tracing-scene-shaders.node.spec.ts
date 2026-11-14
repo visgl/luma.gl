@@ -578,7 +578,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
     );
     const jitteredRayIndex = mainSource.indexOf('let ray = makeCameraRay(pixel, sampleIndex)');
-    const tracedHitIndex = mainSource.indexOf('let hit = intersectScene(ray, RAY_INFINITY)');
+    const tracedHitIndex = mainSource.indexOf('var hit = intersectScene(ray, RAY_INFINITY)');
 
     expect(guideHitIndex).toBeGreaterThan(0);
     expect(loopIndex).toBeGreaterThan(guideHitIndex);
