@@ -256,8 +256,7 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
           clearcoatFactor: 1,
           clearcoatRoughnessFactor: 0.5,
           clearcoatNormalUVSet: 0,
-          clearcoatNormalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-          clearcoatNormalMapEnabled: true
+          clearcoatNormalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
         },
         bindings: {pbr_clearcoatNormalSampler: replacement}
       }
@@ -273,7 +272,7 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(tiltedCoat).toBeGreaterThan(mirroredCoat + 3);
     mappedCoat.material.uniforms.clearcoatNormalUVTransform = [-1, 0, 0, 0, 1, 0, 1, 0, 1];
     expect((await readPixel())[0]).toBe(tiltedCoat);
-    mappedCoat.material.uniforms.clearcoatNormalMapEnabled = false;
+    options.surfaces = [{...mappedCoat, material: {...mappedCoat.material, bindings: {}}}];
     expect((await readPixel())[0]).toBeLessThan(tiltedCoat);
     options.samplingFrameIndex = undefined;
     options.surfaces = [mappedSurface];
