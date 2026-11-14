@@ -37,6 +37,12 @@ const MATERIAL_MAPS = [
     'primitive.sheen = vec4<f32>(primitive.sheen.rgb * sampled.rgb, primitive.sheen.w);'
   ],
   ['sheenRoughness', 'pbr_sheenRoughnessSampler', 'primitive.sheen.w *= sampled.a;'],
+  ['iridescence', 'pbr_iridescenceSampler', 'primitive.iridescence.x *= sampled.r;'],
+  [
+    'iridescenceThickness',
+    'pbr_iridescenceThicknessSampler',
+    'primitive.iridescence.w = mix(primitive.iridescence.z, primitive.iridescence.w, sampled.g);'
+  ],
   ['normal', 'pbr_normalSampler', ''],
   ['clearcoatNormal', 'pbr_clearcoatNormalSampler', '']
 ] as const;

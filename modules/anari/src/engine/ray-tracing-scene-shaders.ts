@@ -36,6 +36,7 @@ struct RayPrimitive {
   specular: vec4<f32>,
   clearcoatOcclusion: vec4<f32>, // Coat strength, coat roughness, occlusion strength, occlusion sample.
   sheen: vec4<f32>,
+  iridescence: vec4<f32>, // Strength, film IOR, minimum thickness, effective thickness in nm.
 };
 
 struct RayBlasNode {
@@ -873,6 +874,42 @@ fn getClearcoatNormal(hit: RayHit) -> vec3<f32> {
   return hit.normal;
 }
 
+// Airy reflectance from the two interface amplitudes and their round-trip phase.
+fn airyReflectance(first: f32, second: vec3<f32>, phaseCosine: vec3<f32>) -> vec3<f32> {
+  let product = first * second;
+  let interference = 2.0 * product * phaseCosine;
+  return (vec3<f32>(first * first) + second * second + interference) /
+    max(vec3<f32>(1.0) + product * product + interference, vec3<f32>(0.000001));
+}
+
+fn evaluateBaseFresnel(primitive: RayPrimitive, reflectance: vec3<f32>,
+    grazingReflectance: vec3<f32>, viewHalf: f32) -> vec3<f32> {
+  let cosine = clamp(viewHalf, 0.0, 1.0);
+  let baseFresnel = reflectance + (grazingReflectance - reflectance) * pow(1.0 - cosine, 5.0);
+  let film = primitive.iridescence;
+  if (film.x <= 0.0 || film.w <= 0.0) { return baseFresnel; }
+
+  let filmIndex = max(film.y, 1.0);
+  // Choose a real substrate index per RGB channel from its normal-incidence reflectance.
+  let rootReflectance = sqrt(clamp(reflectance, vec3<f32>(0.0), vec3<f32>(0.999)));
+  let substrateIndex = (vec3<f32>(1.0) + rootReflectance) / (vec3<f32>(1.0) - rootReflectance);
+  let incidentSineSquared = 1.0 - cosine * cosine;
+  let filmCosine = sqrt(max(1.0 - incidentSineSquared / (filmIndex * filmIndex), 0.0));
+  let substrateCosine = sqrt(max(vec3<f32>(1.0) - vec3<f32>(incidentSineSquared) / (substrateIndex * substrateIndex), vec3<f32>(0.0)));
+  let filmNormal = filmIndex * filmCosine;
+  let substrateNormal = substrateIndex * substrateCosine;
+  let firstPerpendicular = (cosine - filmNormal) / max(cosine + filmNormal, 0.000001);
+  let secondPerpendicular = (vec3<f32>(filmNormal) - substrateNormal) / max(vec3<f32>(filmNormal) + substrateNormal, vec3<f32>(0.000001));
+  let firstParallel = (filmIndex * cosine - filmCosine) / max(filmIndex * cosine + filmCosine, 0.000001);
+  let secondParallel = (substrateIndex * filmCosine - filmIndex * substrateCosine) /
+    max(substrateIndex * filmCosine + filmIndex * substrateCosine, vec3<f32>(0.000001));
+  // Approximate visible spectra by sampling representative RGB wavelengths.
+  let phaseCosine = cos(vec3<f32>(4.0 * PI * film.w * filmNormal) / vec3<f32>(650.0, 550.0, 460.0));
+  let filmFresnel = 0.5 * (airyReflectance(firstPerpendicular, secondPerpendicular, phaseCosine) +
+    airyReflectance(firstParallel, secondParallel, phaseCosine));
+  return mix(baseFresnel, clamp(filmFresnel, vec3<f32>(0.0), vec3<f32>(1.0)), clamp(film.x, 0.0, 1.0));
+}
+
 // Charlie distribution with a compact visibility and base attenuation approximation.
 fn applySheen(baseResponse: vec3<f32>, sheen: vec4<f32>, normalHalf: f32,
     normalView: f32, normalLight: f32) -> vec3<f32> {
@@ -1001,8 +1038,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     let halfDirection = normalize(lightDirection + viewDirection);
     let normalHalf = max(dot(normal, halfDirection), 0.0);
     let viewHalf = max(dot(viewDirection, halfDirection), 0.0);
-    let fresnel = reflectance + (grazingReflectance - reflectance) *
-      pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0);
+    let fresnel = evaluateBaseFresnel(primitive, reflectance, grazingReflectance, viewHalf);
     let distributionDenominator =
       (normalHalf * alphaRoughnessSquared - normalHalf) * normalHalf + 1.0;
     let distribution = alphaRoughnessSquared /
@@ -1371,7 +1407,7 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
   let dielectricReflectance = getDielectricReflectance(primitive);
   let reflectance = mix(dielectricReflectance, baseColor, metallic);
   let grazingReflectance = getGrazingReflectance(primitive, reflectance, metallic);
-  let fresnel = reflectance + (grazingReflectance - reflectance) * pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0);
+  let fresnel = evaluateBaseFresnel(primitive, reflectance, grazingReflectance, viewHalf);
   let lightVisibility = 2.0 * normalLight / (normalLight + sqrt(alphaSquared +
     (1.0 - alphaSquared) * normalLight * normalLight));
   let viewVisibility = 2.0 * normalView / (normalView + sqrt(alphaSquared +

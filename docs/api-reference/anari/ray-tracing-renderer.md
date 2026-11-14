@@ -90,6 +90,11 @@ The color map contributes RGB after texture-format color decoding, and the rough
 uses alpha. The lobe uses a Charlie distribution with approximate visibility and base-layer
 attenuation. Opaque bounce sampling uses the existing diffuse/GGX mixture.
 
+Thin-film iridescence modifies the base Fresnel response for direct lighting and opaque PBR paths.
+The strength map uses red and the thickness map uses green to interpolate the specified thickness
+range in nanometers. Without a thickness map the renderer uses the maximum thickness. The film
+model approximates spectral reflectance at three RGB wavelengths.
+
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a

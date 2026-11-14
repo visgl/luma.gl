@@ -54,7 +54,7 @@ import type {
   SceneSurface
 } from './scene-renderer';
 
-const PRIMITIVE_FLOAT_COUNT = 88;
+const PRIMITIVE_FLOAT_COUNT = 92;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
@@ -3879,6 +3879,11 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 83] = 1;
       primitiveValues.set(materialUniforms?.sheenColorFactor ?? [0, 0, 0], primitiveOffset + 84);
       primitiveValues[primitiveOffset + 87] = materialUniforms?.sheenRoughnessFactor ?? 0.5;
+      const thicknessRange = materialUniforms?.iridescenceThicknessRange ?? [100, 400];
+      primitiveValues[primitiveOffset + 88] = materialUniforms?.iridescenceFactor ?? 0;
+      primitiveValues[primitiveOffset + 89] = materialUniforms?.iridescenceIor ?? 1.3;
+      primitiveValues[primitiveOffset + 90] = thicknessRange[0];
+      primitiveValues[primitiveOffset + 91] = thicknessRange[1];
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,
