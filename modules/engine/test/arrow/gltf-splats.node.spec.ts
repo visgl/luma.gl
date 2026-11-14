@@ -239,7 +239,16 @@ test('preserves glTF feature IDs alongside decoded Arrow rows', async () => {
   const gltf = {
     meshes: [{primitives: [primitive]}],
     gaussianSplatPrimitives: [
-      {meshIndex: 0, primitiveIndex: 0, decoded: {shape: 'arrow-table', data: table}}
+      {
+        meshIndex: 0,
+        primitiveIndex: 0,
+        decoded: {
+          numRows: table.numRows,
+          schema: table.schema,
+          batches: table.batches,
+          getChild: table.getChild.bind(table)
+        }
+      }
     ]
   };
   const groups = await makeGPUSplatDataFromGLTFScene(new NullDevice({}), gltf as any);

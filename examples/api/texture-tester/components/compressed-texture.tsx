@@ -5,7 +5,7 @@
 import * as React from 'react';
 
 import {load, registerLoaders, selectLoader, fetchFile, type LoaderOptions} from '@loaders.gl/core';
-import {BasisLoader, CompressedTextureLoader, CrunchWorkerLoader} from '@loaders.gl/images';
+import {BasisLoader, CompressedTextureLoader, CrunchLoader} from '@loaders.gl/images';
 import {BASIS_EXTERNAL_LIBRARIES} from '@loaders.gl/images/basis-module-loader';
 import {CRUNCH_EXTERNAL_LIBRARIES} from '@loaders.gl/images/crunch-module-loader';
 import type {GPUTextureFormat} from '@loaders.gl/core/schema';
@@ -330,7 +330,7 @@ export class CompressedTexture extends React.PureComponent<
 
       const loader = usesBasisLoader
         ? BasisLoader
-        : await selectLoader(src, [CompressedTextureLoader, CrunchWorkerLoader, ImageLoader]);
+        : await selectLoader(src, [CompressedTextureLoader, CrunchLoader, ImageLoader]);
       if (!loader) {
         throw new Error(`No texture loader found for ${src}`);
       }

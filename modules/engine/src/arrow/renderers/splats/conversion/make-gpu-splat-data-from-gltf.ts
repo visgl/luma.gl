@@ -127,7 +127,7 @@ export async function makeGPUSplatDataFromGLTFScene(
               batches: recordBatches,
               getChild: (name: string) => decoded.getChild(name)
             };
-            source = {...decoded, data: table};
+            source = table;
           }
           batches = makeGPUSplatDataFromArrow(device, source, {
             sourceBatchIndex,
