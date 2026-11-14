@@ -74,5 +74,12 @@ export {CPUVector, type CPUVectorProps} from './cpu-vector';
 
 export {makeGPUVectorFromCPUVector, makeCPUVectorFromGPUVector} from './cpu-gpu-vector-transfer';
 
+export {
+  getGPUVectorWGSLLayout,
+  type GPUVectorWGSLFormat,
+  type GPUVectorWGSLLayout,
+  type GPUVectorWGSLScalarFormat
+} from './gpu-vector-wgsl-layout';
+
 export {convertCPUColors, resolveColorOutputFormat} from './color-conversion';
 export type {ColorOutputFormat, ColorConversionOptions} from './color-conversion';

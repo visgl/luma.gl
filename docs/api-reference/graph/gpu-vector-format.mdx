@@ -206,3 +206,24 @@ unsupported formats such as `float32x768`.
 
 Arrow data types remain adapter/readback metadata. Table core uses
 `GPUVectorFormat`.
+
+
+## WGSL storage layout
+
+Use `getGPUVectorWGSLLayout()` from `@luma.gl/graph/gpu-data` to compare
+packed `float32`, `sint32`, and `uint32` formats and their 2-, 3-, and
+4-component forms with native WGSL storage arrays.
+
+| Components | Packed bytes/row | WGSL alignment | Native WGSL array stride |
+| --- | --- | --- | --- |
+| 1 | 4 | 4 | 4 |
+| 2 | 8 | 8 | 8 |
+| 3 | 12 | 16 | 16 |
+| 4 | 16 | 16 | 16 |
+
+The GPUVector format describes the packed row. A packed `float32x3` can be
+read as three consecutive `f32` values. An `array<vec3<f32>>` starts each
+row on a 16-byte boundary. Choose a stride and a shader declaration that agree
+with the buffer's physical layout. Applications can set `byteStride` and
+`byteOffset` on a `GPUData` view over an existing buffer. The helper reports
+layout metadata and leaves buffer creation and layout selection to the caller.
