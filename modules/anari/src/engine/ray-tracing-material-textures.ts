@@ -31,6 +31,12 @@ const MATERIAL_MAPS = [
     'primitive.clearcoatOcclusion.y *= sampled.g;'
   ],
   ['occlusion', 'pbr_occlusionSampler', 'primitive.clearcoatOcclusion.w = sampled.r;'],
+  [
+    'sheenColor',
+    'pbr_sheenColorSampler',
+    'primitive.sheen = vec4<f32>(primitive.sheen.rgb * sampled.rgb, primitive.sheen.w);'
+  ],
+  ['sheenRoughness', 'pbr_sheenRoughnessSampler', 'primitive.sheen.w *= sampled.a;'],
   ['normal', 'pbr_normalSampler', ''],
   ['clearcoatNormal', 'pbr_clearcoatNormalSampler', '']
 ] as const;
