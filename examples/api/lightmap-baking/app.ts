@@ -306,6 +306,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     '[data-cancel]',
                     'click',
                     () => {
+                      this.sceneRequest++;
                       this.device.submit();
                       preview.cancel();
                       status('Bake cancelled. Reset to start again.');
