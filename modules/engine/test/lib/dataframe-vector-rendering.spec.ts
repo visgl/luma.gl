@@ -16,7 +16,7 @@ import {
 } from '@luma.gl/graph/gpu-dataframe';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUVectorModel} from '@luma.gl/engine';
-import {parseSQLExpression} from '@math.gl/core/sql';
+import {parseSQLExpression} from '@math.gl/expressions/sql';
 import {expect, test} from 'vitest';
 
 test('renders a SQL-computed packed vec3 directly and reads it back as Arrow', async () => {

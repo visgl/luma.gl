@@ -64,7 +64,7 @@ export {CompiledGPUDataFrameSort} from './gpu-sort-compiler';
 export {CompiledGPUDataFrameGlobalSort} from './gpu-global-sort-compiler';
 export {CompiledGPUDataFrameJoin, CompiledGPUDataFrameLookup} from './gpu-join-compiler';
 
-export {vector, cast} from './gpu-expression';
+export {vector, vectorColumn, cast} from './gpu-expression';
 export type {GPUExpressionNumericValue} from './gpu-expression';
 export type {
   GPUVectorWGSLFormat as GPUExpressionNumericFormat,

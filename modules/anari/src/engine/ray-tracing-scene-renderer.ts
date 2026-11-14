@@ -5,8 +5,11 @@
 import {
   getRayMaterialTextures,
   getRayMaterialTextureShader,
+  getRayMaterialTextureLayout,
+  getRayMaterialTextureBindings,
   getRayMaterialTextureRevision
 } from './ray-tracing-material-textures';
+import {ScenegraphSurfaces} from './scenegraph-surfaces';
 import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
@@ -19,7 +22,7 @@ import {
   type TextureFormatDepthStencil,
   textureFormatDecoder
 } from '@luma.gl/core';
-import {Computation, type Geometry, Model} from '@luma.gl/engine';
+import {Computation, type Geometry, type GroupNode, Model} from '@luma.gl/engine';
 import {type Light, PBR_TONE_MAP_MODE} from '@luma.gl/shaders';
 import {Matrix4, type NumericArray} from '@math.gl/core';
 import {GPUBVH} from '@luma.gl/graph/gpu-core';
@@ -39,6 +42,7 @@ import {
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   RAY_TRACING_SCENE_SHADER,
+  RAY_TRACING_IRRADIANCE_SHADER,
   RAY_TRACING_PICK_SHADER,
   RAY_TRACING_CHANNEL_SHADER
 } from './ray-tracing-scene-shaders';
@@ -50,7 +54,7 @@ import type {
   SceneSurface
 } from './scene-renderer';
 
-const PRIMITIVE_FLOAT_COUNT = 72;
+const PRIMITIVE_FLOAT_COUNT = 100;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
@@ -514,6 +518,11 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
 };
 
 /** Top-left crop origin and full-image dimensions; camera matrices describe the full image. */
+export type RayTracingScenegraphRenderOptions = Omit<
+  RayTracingSceneRenderOptions,
+  'id' | 'surfaces'
+> & {scene: GroupNode};
+
 export type RayTracingImageRegion = {
   offset: readonly [number, number];
   fullSize: readonly [number, number];
@@ -711,9 +720,17 @@ type RayTracingStatistics = {
 /** Shared WebGPU software ray tracer consuming the canonical retained-scene contract. */
 export class RayTracingSceneRenderer {
   private readonly device: Device;
+  private readonly scenegraphs = new Map<GroupNode, {id: string; adapter: ScenegraphSurfaces}>();
+  private nextScenegraphId = 1;
   private readonly frames = new Map<string, RayTracingFrameResources>();
   private readonly emitterAreaCaches = new Map<string, EmitterAreaCache>();
+  private readonly irradianceComputations = new Map<
+    string,
+    {source: string; computation: Computation}
+  >();
   private readonly geometryCache = new Map<string, CompiledRayGeometry>();
+  private pickMaterialRevision?: string;
+  private channelMaterialRevision?: string;
   private pickComputation?: Computation;
   private channelComputation?: Computation;
 
@@ -724,7 +741,25 @@ export class RayTracingSceneRenderer {
     this.device = device;
   }
 
-  render(options: RayTracingSceneRenderOptions): SceneRenderStatistics {
+  render(
+    input: RayTracingSceneRenderOptions | RayTracingScenegraphRenderOptions
+  ): SceneRenderStatistics {
+    let options: RayTracingSceneRenderOptions;
+    if ('scene' in input) {
+      let cached = this.scenegraphs.get(input.scene);
+      if (!cached) {
+        cached = {
+          id: `ray-scenegraph-${this.nextScenegraphId++}`,
+          adapter: new ScenegraphSurfaces()
+        };
+        this.scenegraphs.set(input.scene, cached);
+      }
+      const {scene, ...settings} = input;
+      const surfaces = cached.adapter.getSurfaces(scene);
+      // Ray geometry extraction needs CPU placements; GPU poses require an explicit snapshot.
+      assert(surfaces.every(surface => !surface.gpuTransforms));
+      options = {...settings, id: cached.id, surfaces};
+    } else options = input;
     const [displayWidth, displayHeight] = getRayTracingDisplaySize(this.device, options);
     if (options.imageRegion) {
       const {offset, fullSize} = options.imageRegion;
@@ -1219,12 +1254,24 @@ export class RayTracingSceneRenderer {
     const commandEncoder = this.device.createCommandEncoder();
     let commandBuffer: ReturnType<typeof commandEncoder.finish> | undefined;
     try {
+      if (this.pickMaterialRevision !== resources.materialTextureRevision) {
+        this.pickComputation?.destroy();
+        this.pickComputation = undefined;
+        this.pickMaterialRevision = resources.materialTextureRevision;
+      }
       this.pickComputation ??= new Computation(this.device, {
         id: 'ray-scene-picking',
-        source: RAY_TRACING_PICK_SHADER,
+        source: getRayMaterialTextureShader(
+          RAY_TRACING_PICK_SHADER,
+          resources.retainedSurfaces,
+          true
+        ),
         entryPoint: 'pick',
         shaderLayout: {
           bindings: [
+            ...getRayMaterialTextureLayout(
+              getRayMaterialTextures(resources.retainedSurfaces, true)
+            ),
             {name: 'uniforms', type: 'uniform', group: 0, location: 0},
             {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
             {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
@@ -1239,6 +1286,7 @@ export class RayTracingSceneRenderer {
         }
       });
       this.pickComputation.setBindings({
+        ...getRayMaterialTextureBindings(getRayMaterialTextures(resources.retainedSurfaces, true)),
         uniforms: resources.uniformBuffer,
         primitives: resources.primitiveBuffer,
         triangles: resources.triangleBuffer,
@@ -1307,12 +1355,24 @@ export class RayTracingSceneRenderer {
       textures.push(normalTexture);
       const projectedDepthTexture = createTexture('r32float');
       textures.push(projectedDepthTexture);
+      if (this.channelMaterialRevision !== resources.materialTextureRevision) {
+        this.channelComputation?.destroy();
+        this.channelComputation = undefined;
+        this.channelMaterialRevision = resources.materialTextureRevision;
+      }
       this.channelComputation ??= new Computation(this.device, {
         id: 'ray-scene-channels',
-        source: RAY_TRACING_CHANNEL_SHADER,
+        source: getRayMaterialTextureShader(
+          RAY_TRACING_CHANNEL_SHADER,
+          resources.retainedSurfaces,
+          true
+        ),
         entryPoint: 'captureChannels',
         shaderLayout: {
           bindings: [
+            ...getRayMaterialTextureLayout(
+              getRayMaterialTextures(resources.retainedSurfaces, true)
+            ),
             {name: 'uniforms', type: 'uniform', group: 0, location: 0},
             {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
             {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
@@ -1358,6 +1418,7 @@ export class RayTracingSceneRenderer {
         }
       });
       this.channelComputation.setBindings({
+        ...getRayMaterialTextureBindings(getRayMaterialTextures(resources.retainedSurfaces, true)),
         uniforms: resources.uniformBuffer,
         primitives: resources.primitiveBuffer,
         triangles: resources.triangleBuffer,
@@ -1399,6 +1460,109 @@ export class RayTracingSceneRenderer {
     }
   }
 
+  /** Encode one indirect irradiance sample from borrowed world-position/chart and normal textures.
+   * Call render and submit first to prepare the retained scene. Caller owns input/output textures and submission.
+   * The renderer owns and caches the computation until destroyFrame or destroy.
+   */
+  encodeIrradiance(
+    frameIdentifier: string,
+    positions: Texture,
+    normals: Texture,
+    output: Texture
+  ): void {
+    const resources = this.frames.get(frameIdentifier);
+    assert(
+      resources &&
+        positions.device === this.device &&
+        normals.device === this.device &&
+        output.device === this.device
+    );
+    assert(
+      positions.width === normals.width &&
+        positions.height === normals.height &&
+        output.width === positions.width &&
+        output.height === positions.height
+    );
+    assert(output.format === 'rgba16float');
+    const textures = getRayMaterialTextures(resources.retainedSurfaces);
+    const source = getRayMaterialTextureShader(
+      RAY_TRACING_IRRADIANCE_SHADER,
+      resources.retainedSurfaces
+    );
+    let cached = this.irradianceComputations.get(frameIdentifier);
+    if (cached?.source !== source) {
+      cached?.computation.destroy();
+      const computation = new Computation(this.device, {
+        source,
+        entryPoint: 'bakeIrradiance',
+        shaderLayout: {
+          bindings: [
+            ...getRayMaterialTextureLayout(textures),
+            {name: 'uniforms', type: 'uniform', group: 0, location: 0},
+            ...[
+              'primitives',
+              'triangles',
+              'lights',
+              'nodeMinima',
+              'nodeMaxima',
+              'leafPrimitiveIds',
+              'blasNodes',
+              'blasTriangleIds'
+            ].map((name, index) => ({
+              name,
+              type: 'read-only-storage' as const,
+              group: 0,
+              location: index + 1
+            })),
+            {
+              name: 'outputImage',
+              type: 'storage',
+              group: 0,
+              location: 11,
+              access: 'write-only',
+              format: 'rgba16float'
+            },
+            {
+              name: 'receiverPositions',
+              type: 'texture',
+              group: 0,
+              location: 13,
+              sampleType: 'unfilterable-float'
+            },
+            {
+              name: 'receiverNormals',
+              type: 'texture',
+              group: 0,
+              location: 14,
+              sampleType: 'unfilterable-float'
+            }
+          ]
+        }
+      });
+      cached = {source, computation};
+      this.irradianceComputations.set(frameIdentifier, cached);
+    }
+    const {computation} = cached;
+    computation.setBindings({
+      ...getRayMaterialTextureBindings(textures),
+      uniforms: resources.uniformBuffer,
+      primitives: resources.primitiveBuffer,
+      triangles: resources.triangleBuffer,
+      lights: resources.lightBuffer,
+      nodeMinima: resources.nodeMinimaBuffer,
+      nodeMaxima: resources.nodeMaximaBuffer,
+      leafPrimitiveIds: resources.sortedPrimitiveIdsBuffer,
+      blasNodes: resources.blasNodesBuffer,
+      blasTriangleIds: resources.blasTriangleIdsBuffer,
+      receiverPositions: positions,
+      receiverNormals: normals,
+      outputImage: output
+    });
+    const pass = this.device.beginComputePass();
+    computation.dispatch(pass, Math.ceil(output.width / 8), Math.ceil(output.height / 8));
+    pass.end();
+  }
+
   private getEmitterAreaCache(frameIdentifier: string): EmitterAreaCache {
     let cache = this.emitterAreaCaches.get(frameIdentifier);
     if (!cache) {
@@ -1409,6 +1573,8 @@ export class RayTracingSceneRenderer {
   }
 
   destroyFrame(frameIdentifier: string): void {
+    this.irradianceComputations.get(frameIdentifier)?.computation.destroy();
+    this.irradianceComputations.delete(frameIdentifier);
     this.emitterAreaCaches.delete(frameIdentifier);
     const resources = this.frames.get(frameIdentifier);
     if (!resources) {
@@ -1436,7 +1602,16 @@ export class RayTracingSceneRenderer {
     this.frames.delete(frameIdentifier);
   }
 
+  destroyScene(scene: GroupNode): void {
+    const cached = this.scenegraphs.get(scene);
+    if (!cached) return;
+    this.destroyFrame(cached.id);
+    cached.adapter.destroy();
+    this.scenegraphs.delete(scene);
+  }
+
   destroy(): void {
+    for (const scene of this.scenegraphs.keys()) this.destroyScene(scene);
     for (const frameIdentifier of Array.from(this.frames.keys())) {
       this.destroyFrame(frameIdentifier);
     }
@@ -2911,6 +3086,7 @@ export class RayTracingSceneRenderer {
             format: texture.format,
             width: texture.width,
             height: texture.height,
+            mipLevels: texture.mipLevels,
             usage: Texture.SAMPLE
           },
           texture
@@ -3135,20 +3311,7 @@ export class RayTracingSceneRenderer {
           source: getRayMaterialTextureShader(RAY_TRACING_SCENE_SHADER, props.surfaces),
           shaderLayout: {
             bindings: [
-              ...materialTextures.flatMap((texture, index) => [
-                {
-                  name: `materialTexture${index}`,
-                  type: 'texture' as const,
-                  group: 1,
-                  location: index * 2
-                },
-                {
-                  name: `materialSampler${index}`,
-                  type: 'sampler' as const,
-                  group: 1,
-                  location: index * 2 + 1
-                }
-              ]),
+              ...getRayMaterialTextureLayout(materialTextures),
               {name: 'uniforms', type: 'uniform', group: 0, location: 0},
               {name: 'primitives', type: 'read-only-storage', group: 0, location: 1},
               {name: 'triangles', type: 'read-only-storage', group: 0, location: 2},
@@ -3525,6 +3688,7 @@ function getPrimitiveRevision(
     options.surfaces.map(surface => [
       surface.material.id,
       surface.material.version,
+      surface.material.alphaMode,
       surface.material.uniforms,
       options.primitives?.[surface.id]
     ])
@@ -3700,6 +3864,34 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 69] = materialUniforms?.transmissionFactor ?? 0;
       primitiveValues[primitiveOffset + 70] = materialUniforms?.ior ?? 1.5;
       primitiveValues[primitiveOffset + 71] = surfaceIndex;
+      const attenuationColor = materialUniforms?.attenuationColor ?? [1, 1, 1];
+      primitiveValues.set(attenuationColor, primitiveOffset + 72);
+      const attenuationDistance = materialUniforms?.attenuationDistance;
+      primitiveValues[primitiveOffset + 75] =
+        attenuationDistance && Number.isFinite(attenuationDistance) && attenuationDistance > 0
+          ? attenuationDistance
+          : 0;
+      primitiveValues.set(materialUniforms?.specularColorFactor ?? [1, 1, 1], primitiveOffset + 76);
+      primitiveValues[primitiveOffset + 79] = materialUniforms?.specularIntensityFactor ?? 1;
+      primitiveValues[primitiveOffset + 80] = materialUniforms?.clearcoatFactor ?? 0;
+      primitiveValues[primitiveOffset + 81] = materialUniforms?.clearcoatRoughnessFactor ?? 0.18;
+      primitiveValues[primitiveOffset + 82] = materialUniforms?.occlusionStrength ?? 1;
+      primitiveValues[primitiveOffset + 83] = 1;
+      primitiveValues.set(materialUniforms?.sheenColorFactor ?? [0, 0, 0], primitiveOffset + 84);
+      primitiveValues[primitiveOffset + 87] = materialUniforms?.sheenRoughnessFactor ?? 0.5;
+      const thicknessRange = materialUniforms?.iridescenceThicknessRange ?? [100, 400];
+      primitiveValues[primitiveOffset + 88] = materialUniforms?.iridescenceFactor ?? 0;
+      primitiveValues[primitiveOffset + 89] = materialUniforms?.iridescenceIor ?? 1.3;
+      primitiveValues[primitiveOffset + 90] = thicknessRange[0];
+      primitiveValues[primitiveOffset + 91] = thicknessRange[1];
+      const anisotropyDirection = materialUniforms?.anisotropyDirection ?? [1, 0];
+      primitiveValues[primitiveOffset + 92] = anisotropyDirection[0];
+      primitiveValues[primitiveOffset + 93] = anisotropyDirection[1];
+      primitiveValues[primitiveOffset + 94] = materialUniforms?.anisotropyStrength ?? 0;
+      primitiveValues[primitiveOffset + 95] = materialUniforms?.anisotropyRotation ?? 0;
+      const transmissionColor = materialUniforms?.diffuseTransmissionColorFactor ?? [1, 1, 1];
+      primitiveValues.set(transmissionColor, primitiveOffset + 96);
+      primitiveValues[primitiveOffset + 99] = materialUniforms?.diffuseTransmissionFactor ?? 0;
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,

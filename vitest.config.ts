@@ -141,6 +141,8 @@ const nodeCoveragePatterns = [
 // out of every pull request's instrumented browser run and expose them through an opt-in project.
 const browserBenchmarkTestPatterns = [
   'modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts',
+  'modules/engine/test/lighting/indirect-convergence.spec.ts',
+
   'modules/graph/test/experimental/simulation/scientific-flow-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-kernel-benchmark.spec.ts',
   'modules/graph/test/gpu-core/gpu-fragmentation-benchmark.spec.ts',

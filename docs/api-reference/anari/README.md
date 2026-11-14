@@ -77,7 +77,7 @@ its own rendering techniques. Applications can also register custom renderers.
 | --- | :---: | :---: | --- |
 | [Forward](/docs/api-reference/anari/forward-renderer) | ✅ | ✅ | Forward rasterization on WebGPU and WebGL 2. Supports physically based materials, lighting, transparency, bloom, and fog. |
 | [Deferred](/docs/api-reference/anari/deferred-renderer) | ✅ | ❌ | Separates lighting from geometry rendering, providing a foundation for effects and scenes with many lights that can be expensive with forward rendering. The current WebGPU implementation supports opaque PBR lighting. |
-| [Ray tracing](/docs/api-reference/anari/ray-tracing-renderer) | ✅ | ❌ | Renders supported geometry with ray-traced hard shadows and physically based lighting. Optional secondary bounces add diffuse color bleeding and emissive illumination, with opaque reflections in PBR transport mode. Requires WebGPU. |
+| [Ray tracing](/docs/api-reference/anari/ray-tracing-renderer) | ✅ | ❌ | Progressive WebGPU ray tracing with textured PBR materials, alpha cutouts, hard shadows, diffuse and reflective bounces, smooth glass, and optional spatial denoising. Supports picking, raster depth composition, and tiled export. |
 | [Ray marching](/docs/api-reference/anari/raymarch) | ✅ | ❌ | Renders scalar and vector volumes with transfer functions, compositing, and optional vector glyphs. Requires WebGPU and is not yet integrated with the ANARI object model. |
 | [Debug normals](/docs/api-reference/anari/debug-normals-renderer) | ✅ | ✅ | Visualizes world-space surface normals as colors. |
 | [Debug depth](/docs/api-reference/anari/debug-depth-renderer) | ✅ | ✅ | Visualizes scene depth for inspecting geometry and camera setup. |

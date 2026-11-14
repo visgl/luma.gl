@@ -1,0 +1,32 @@
+---
+title: Domino Junction
+description: Follow a domino cascade as it splits into two colored branches and rejoins at a shared finish.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: intermediate
+  maturity: experimental
+  mobile: full
+  mobileProfile: standard
+  topics: [physics, integration, three.js]
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
+export const DominoJunction = () => (
+  <iframe
+    title="Domino Junction interactive example"
+    src={useBaseUrl('/standalone-examples/three/domino-course.html')}
+    style={{width: '100%', height: '75vh', minHeight: 480, border: 0, borderRadius: 12}}
+  />
+);
+
+<DominoJunction />
+
+Select **Tip first tile** and watch the teal and orange branches split around the center.
+Both rows converge on a receiver that starts the gold finish. Drag to orbit or scroll to zoom.
+Reset restores the starting layout while keeping your camera.
+
+luma.gl advances the rigid bodies on the GPU. Three.js renders instanced meshes using
+the published matrices, packed into vertex buffers on the same WebGPU device with
+[ThreeBufferBridge](/docs/api-reference/three). The only input to the cascade is the impulse
+on the first tile. Contacts carry the motion through both junctions.

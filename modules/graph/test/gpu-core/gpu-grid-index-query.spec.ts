@@ -6,6 +6,8 @@ import {expect, it} from 'vitest';
 import {Buffer, type Device} from '@luma.gl/core';
 import {
   GPUCommandGraph,
+  GPUGridAggregation,
+  GPUGridBinning,
   GPUGridIndex,
   GPUGridIndexQuery,
   type GPUGridIndexBounds,
@@ -242,9 +244,58 @@ it('GPUGridIndexQuery rejects overlapping inputs and writable results', async ()
   buffer.destroy();
 });
 
+it('assigns cross-zero boundary points to the same cells in all grid operations', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    return;
+  }
+
+  const gridSize = [360, 1] as const;
+  const bounds = [-180, 0, 180, 1] as const;
+  const coordinates = [-180, -177.25, -177, 0, 180];
+  const expectedCells = [0, 2, 3, 180, 359];
+  const weights = Float32Array.from([1, 2, 4, 8, 16]);
+  const fixture = createQueryFixture(device, {
+    positions: Float32Array.from(coordinates.flatMap(coordinate => [coordinate, 0.5])),
+    format: 'float32x2',
+    gridSize,
+    bounds,
+    kind: 'point',
+    query: Float32Array.from([-177, 0.5]),
+    outputCapacity: coordinates.length,
+    comparison: {gridSize, bounds, weights}
+  });
+
+  try {
+    encode(device, fixture.compiled);
+    const offsets = await readUint32(fixture.cellOffsets, 361);
+    const expectedCounts = Array<number>(360).fill(0);
+    const expectedSums = Array<number>(360).fill(0);
+    for (const [index, cell] of expectedCells.entries()) {
+      expectedCounts[cell] = 1;
+      expectedSums[cell] = weights[index];
+    }
+    expect(offsets.slice(1).map((end, cell) => end - offsets[cell])).toEqual(expectedCounts);
+    expect(await readUint32(fixture.binning!, 360)).toEqual(expectedCounts);
+    const bytes = await fixture.aggregation!.readAsync();
+    expect(Array.from(new Float32Array(bytes.buffer, bytes.byteOffset, 360))).toEqual(expectedSums);
+
+    for (const [index, coordinate] of coordinates.entries()) {
+      fixture.query.write(Float32Array.from([coordinate, 0.5]));
+      encode(device, fixture.compiled);
+      expect(await readQueryResult(fixture)).toEqual({ids: [index], count: 1, overflow: 0});
+    }
+  } finally {
+    destroyFixture(fixture);
+  }
+});
+
 type QueryFixture = {
   compiled: ReturnType<GPUCommandGraph['compile']>;
   query: Buffer;
+  cellOffsets: Buffer;
+  binning?: Buffer;
+  aggregation?: Buffer;
   output: Buffer;
   outputCount: Buffer;
   outputOverflow: Buffer;
@@ -265,6 +316,11 @@ function createQueryFixture(
     indexCapacity?: number;
     outputCapacity: number;
     maskLength?: number;
+    comparison?: {
+      gridSize: readonly [number, number];
+      bounds: readonly [number, number, number, number];
+      weights: Float32Array;
+    };
   }
 ): QueryFixture {
   const rowLength = props.format === 'float32x2' ? 2 : 3;
@@ -283,8 +339,12 @@ function createQueryFixture(
   const outputMask =
     props.maskLength === undefined ? undefined : createOutputBuffer(device, props.maskLength);
   const graph = new GPUCommandGraph(device);
+  const positionView =
+    props.format === 'float32x2'
+      ? importView(graph, 'positions', positions, 'float32x2', positionCount)
+      : importView(graph, 'positions', positions, 'float32x3', positionCount);
   const index = new GPUGridIndex({
-    positions: importView(graph, 'positions', positions, props.format, positionCount) as never,
+    positions: positionView,
     gridSize: props.gridSize,
     bounds: props.bounds,
     cellOffsets: importView(graph, 'cell-offsets', cellOffsets, 'uint32', cellCount + 1),
@@ -306,8 +366,39 @@ function createQueryFixture(
         : undefined
     })
   );
+  let binning: Buffer | undefined;
+  let aggregation: Buffer | undefined;
+  const comparisonBuffers: Buffer[] = [];
+  if (props.comparison) {
+    const {gridSize, bounds, weights} = props.comparison;
+    binning = createOutputBuffer(device, cellCount);
+    aggregation = createOutputBuffer(device, cellCount);
+    const weightBuffer = createInputBuffer(device, weights);
+    comparisonBuffers.push(binning, aggregation, weightBuffer);
+    if (positionView.format !== 'float32x2') throw new Error('Expected 2D comparison positions');
+    graph.add(
+      new GPUGridBinning({
+        positions: positionView,
+        gridSize,
+        bounds,
+        output: importView(graph, 'binning', binning, 'uint32', cellCount)
+      })
+    );
+    graph.add(
+      new GPUGridAggregation({
+        positions: positionView,
+        gridSize,
+        bounds,
+        weights: importView(graph, 'weights', weightBuffer, 'float32', positionCount),
+        output: importView(graph, 'aggregation', aggregation, 'float32', cellCount)
+      })
+    );
+  }
   return {
     compiled: graph.compile(),
+    cellOffsets,
+    binning,
+    aggregation,
     query,
     output,
     outputCount,
@@ -324,6 +415,7 @@ function createQueryFixture(
       output,
       outputCount,
       outputOverflow,
+      ...comparisonBuffers,
       ...(outputMask ? [outputMask] : [])
     ]
   };

@@ -41,7 +41,11 @@ struct PBREnvironmentFilterUniforms {
 };
 
 @group(0) @binding(auto) var<uniform> pbrEnvironmentFilter: PBREnvironmentFilterUniforms;
+#ifdef PBR_ENVIRONMENT_CUBE_SOURCE
+@group(0) @binding(auto) var pbrEnvironmentSource: texture_cube<f32>;
+#else
 @group(0) @binding(auto) var pbrEnvironmentSource: texture_2d<f32>;
+#endif
 @group(0) @binding(auto) var pbrEnvironmentSourceSampler: sampler;
 `;
 
@@ -257,6 +261,9 @@ fn getEnvironmentTangentBasis(normal: vec3f) -> mat3x3f {
 
 fn sampleEnvironmentDirection(direction: vec3f) -> vec3f {
   let normalizedDirection = normalize(direction);
+#ifdef PBR_ENVIRONMENT_CUBE_SOURCE
+  var color = textureSampleLevel(pbrEnvironmentSource, pbrEnvironmentSourceSampler, normalizedDirection, 0.0).rgb;
+#else
   let textureCoordinate = vec2f(
     atan2(normalizedDirection.z, normalizedDirection.x) / (2.0 * ENVIRONMENT_PI) + 0.5,
     acos(clamp(normalizedDirection.y, -1.0, 1.0)) / ENVIRONMENT_PI
@@ -267,6 +274,7 @@ fn sampleEnvironmentDirection(direction: vec3f) -> vec3f {
     textureCoordinate,
     0.0
   ).rgb;
+#endif
   if (pbrEnvironmentFilter.sourceEncoding == 1) {
     let lower = color / 12.92;
     let upper = pow((color + 0.055) / 1.055, vec3f(2.4));

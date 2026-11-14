@@ -50,6 +50,7 @@ test('invalid and unsupported comparison inputs are rejected before launching en
   expect(() => validateOptions({frames: 10, warmup: 10})).toThrow();
   expect(() => validateOptions({substeps: 0})).toThrow();
   expect(() => validateOptions({repeats: 1.5})).toThrow();
+  expect(() => validateOptions({contactSolver: 'block', solver: 'ordered'})).toThrow();
   expect(() => makeMatchedFixture('matchedChain', 65)).toThrow();
   expect(() => makeMatchedFixture('matchedPile', 0)).toThrow();
 });
@@ -165,4 +166,32 @@ test('reference caches are private, unique and explicitly disposable', () => {
   expect(existsSync(first.root)).toBe(false);
   expect(existsSync(second.root)).toBe(false);
   expect(() => first.destroy()).not.toThrow();
+});
+
+test('G8 dense and loaded fixtures preserve comparable geometry and explicit loads', () => {
+  const loaded = makeMatchedFixture('matchedLoaded', 16);
+  expect(loaded.bodies).toHaveLength(17);
+  expect(loaded.bodies[8].mass / loaded.bodies[7].mass).toBeCloseTo(10);
+  expect(loaded.bodies[16].mass / loaded.bodies[15].mass).toBeCloseTo(10);
+  const dense = makeMatchedFixture('matchedDense', 64);
+  expect(dense.bodies).toHaveLength(65);
+  expect(dense.bodies[2].position[0] - dense.bodies[1].position[0]).toBeCloseTo(0.94);
+  expect(dense.bodies.every(body => body.orientation[3] === 1)).toBe(true);
+  expect(makeMatchedWorld(dense, 1 / 120, 'parallel').sleepAfter).toBe(0);
+});
+
+test('G8 stack quality rejects lateral collapse even without overlap', () => {
+  const fixture = makeMatchedFixture('matchedLoaded', 8);
+  const states = initialStates(fixture).map(state => ({...state, position: [...state.position]}));
+  states[8].position[0] += 2;
+  const quality = measureQuality(
+    fixture,
+    [
+      {step: 0, states: initialStates(fixture)},
+      {step: 600, states}
+    ],
+    1 / 60
+  );
+  expect(quality.maximumLateralDrift).toBe(2);
+  expect(assessQuality(quality).failures).toContain('maximumLateralDrift');
 });

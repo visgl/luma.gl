@@ -16,6 +16,7 @@ export default defineConfig(({mode}) => ({
         streamed: fileURLToPath(new URL('./streamed.html', import.meta.url)),
         embed: fileURLToPath(new URL('./embed.html', import.meta.url)),
         'gpu-graph-galaxy': fileURLToPath(new URL('./gpu-graph-galaxy.html', import.meta.url)),
+        'domino-course': fileURLToPath(new URL('./domino-course.html', import.meta.url)),
         'host-overlay': fileURLToPath(new URL('./host-overlay.html', import.meta.url))
       }
     }
@@ -61,6 +62,8 @@ export default defineConfig(({mode}) => ({
       '@deck.gl-community/panels',
       'preact',
       'preact/hooks',
+      'react',
+      'react-dom/client',
       '@luma.gl/core',
       '@luma.gl/core/webgl',
       '@luma.gl/core/webgpu',

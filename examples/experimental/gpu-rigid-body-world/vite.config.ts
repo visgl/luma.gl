@@ -13,6 +13,7 @@ export default defineConfig({
       '@luma.gl/graph/gpu-simple-graph/webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
 
       '@luma.gl/graph/_internal': `${__dirname}/../../../modules/graph/src/execution`,
+      '@luma.gl/engine/lighting': `${__dirname}/../../../modules/engine/src/lighting`,
       '@luma.gl/engine/models': `${__dirname}/../../../modules/engine/src/graph/models`,
       '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,
       '@luma.gl/engine/tables': `${__dirname}/../../../modules/engine/src/graph/tables`,

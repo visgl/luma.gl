@@ -63,6 +63,7 @@ export {extent} from './operations/extent';
 export {convertColorData} from './operations/convert-colors';
 export type {
   ColorInputFormat,
+  ColorOutputFormat,
   ConvertColorsInputs,
   ConvertColorsProps
 } from './operations/convert-colors';

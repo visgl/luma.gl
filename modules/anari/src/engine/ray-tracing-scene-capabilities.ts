@@ -13,15 +13,16 @@ export function getRayTracingSceneCapabilities(device: Pick<Device, 'type'>) {
     hardwareRayTracing: false as const,
     analyticPrimitives: ['sphere'] as const,
     meshTopology: 'triangle-list' as const,
-    materialTextures: false as const,
+    materialTextures: true as const,
     alphaModes: ['OPAQUE', 'MASK'] as const,
     scalarAlphaMask: true as const,
+    texturedAlphaMask: true as const,
     scalarMetallicRoughness: true as const,
     transport: {
       maximumDiffuseBounces: 8,
       modes: ['diffuse', 'pbr'] as const,
       specular: true as const,
-      transmission: false as const,
+      transmission: true as const,
       explicitEmitterSampling: true as const,
       emitterSelection: ['uniform', 'power'] as const
     },

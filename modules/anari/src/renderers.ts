@@ -192,3 +192,7 @@ export type {
   RayTracingImageTile,
   RayTracingImageTileRegion
 } from './engine/ray-tracing-image-export';
+
+export {ScenegraphSurfaces} from './engine/scenegraph-surfaces';
+
+export type {RayTracingScenegraphRenderOptions} from './engine/ray-tracing-scene-renderer';

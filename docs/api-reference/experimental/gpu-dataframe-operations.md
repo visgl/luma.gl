@@ -225,6 +225,9 @@ const query = frame.withColumn('position', position, {format: 'float32x3'});
 const compiled = query.compile(graph);
 ```
 
+Use `vectorColumn('position')` to reference an existing packed vector column in
+arithmetic expressions. The planner reads its component type and width from the schema.
+
 Supply the explicit output `format` when adding vector or portable AST expressions.
 This preserves precise output schema typing; existing scalar `withColumn` calls
 retain their inferred formats. Vector arithmetic requires matching component type

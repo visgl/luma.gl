@@ -5,8 +5,7 @@
 import {describe, expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
-import {GPUSegmentedReduction} from '../../src/gpu-core/gpu-segmented-reduction';
+import {GPUCommandGraph, GPUSegmentedReduction} from '@luma.gl/graph/gpu-core';
 
 describe('GPUSegmentedReduction', () => {
   it('validates CSR-style offset cardinality', async () => {
@@ -30,7 +29,10 @@ describe('GPUSegmentedReduction', () => {
     ).toThrow(/output.length \+ 1/);
   });
 
-  it('reduces independent uint32 segments including an empty segment', async () => {
+  it.each([
+    false,
+    true
+  ])('sums sorted float32 segments (multi-axis dispatch: %s)', async multiAxis => {
     const device = await getWebGPUTestDevice();
     if (
       !device ||
@@ -40,38 +42,50 @@ describe('GPUSegmentedReduction', () => {
     )
       return;
     const graph = new GPUCommandGraph(device);
-    const inputBuffer = device.createBuffer({
-      data: new Uint32Array([2, 3, 5, 7, 11]),
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
-    });
-    const offsetBuffer = device.createBuffer({
-      data: new Uint32Array([0, 2, 2, 5]),
-      usage: Buffer.STORAGE | Buffer.COPY_SRC
-    });
+    const segmentCount = multiAxis ? device.limits.maxComputeWorkgroupsPerDimension + 1 : 3;
+    const inputValues = new Float32Array(segmentCount + 4);
+    const offsetValues = new Uint32Array(segmentCount + 3);
+    const expected = new Float32Array(segmentCount + 2).fill(-10);
+    for (let segment = 0; segment < segmentCount; segment++) {
+      offsetValues[segment + 1] = segment < 2 ? segment * 2 : segment;
+      if (segment === 1) {
+        expected[segment + 1] = 0;
+      } else {
+        inputValues[segment + 1] = segment + 1;
+        expected[segment + 1] = segment + 1;
+      }
+    }
+    inputValues[2] = 7;
+    expected[1] = 8;
+
+    inputValues[segmentCount + 1] = 1000;
+    offsetValues[segmentCount + 1] = segmentCount + 2;
+    const inputBuffer = device.createBuffer({data: inputValues, usage: Buffer.STORAGE});
+    const offsetBuffer = device.createBuffer({data: offsetValues, usage: Buffer.STORAGE});
     const outputBuffer = device.createBuffer({
-      byteLength: 3 * Uint32Array.BYTES_PER_ELEMENT,
-      usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
+      data: new Float32Array(segmentCount + 2).fill(-10),
+      usage: Buffer.STORAGE | Buffer.COPY_SRC
     });
     const input = graph.createDataView(
       graph.importBuffer(
         {id: 'input', byteLength: inputBuffer.byteLength, usage: inputBuffer.usage},
         inputBuffer
       ),
-      {format: 'uint32', length: 5}
+      {format: 'float32', length: segmentCount, byteOffset: 4}
     );
     const offsets = graph.createDataView(
       graph.importBuffer(
         {id: 'offsets', byteLength: offsetBuffer.byteLength, usage: offsetBuffer.usage},
         offsetBuffer
       ),
-      {format: 'uint32', length: 4}
+      {format: 'uint32', length: segmentCount + 1, byteOffset: 4}
     );
     const output = graph.createDataView(
       graph.importBuffer(
         {id: 'output', byteLength: outputBuffer.byteLength, usage: outputBuffer.usage},
         outputBuffer
       ),
-      {format: 'uint32', length: 3}
+      {format: 'float32', length: segmentCount, byteOffset: 4}
     );
     graph.add(
       new GPUSegmentedReduction({
@@ -87,7 +101,7 @@ describe('GPUSegmentedReduction', () => {
       compiled.encode(commandEncoder, {parameters: undefined});
       device.submit(commandEncoder.finish());
       const bytes = await outputBuffer.readAsync();
-      expect(Array.from(new Uint32Array(bytes.buffer, bytes.byteOffset, 3))).toEqual([5, 0, 23]);
+      expect(new Float32Array(bytes.buffer, bytes.byteOffset, expected.length)).toEqual(expected);
     } finally {
       compiled.destroy();
       inputBuffer.destroy();

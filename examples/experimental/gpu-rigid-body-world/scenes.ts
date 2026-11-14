@@ -12,7 +12,7 @@ export const RIGID_BODY_SCENES = {
   wreckingBall: {
     title: 'Wrecking ball',
     description:
-      'Release an 400-unit steel wrecking ball into a stepped pyramid of 204 one-unit blocks. A ten-unit distance joint suspends the ball from the gantry; gravity and real contacts drive the demolition. Pause to inspect the impact, or Reset to rebuild the pyramid and raise the ball. Drag to orbit and scroll to zoom. Parallel block contacts alternate with a distance-joint solve on the GPU; the real-time percentage shows when simulation cannot keep pace.'
+      'Release a 650-unit steel wrecking ball into a stepped pyramid of 204 one-unit blocks. A ten-unit distance joint suspends the ball from the gantry; gravity and real contacts drive the demolition. Pause to inspect the impact, or Reset to rebuild the pyramid and raise the ball. Drag to orbit and scroll to zoom. Parallel block contacts alternate with a distance-joint solve on the GPU; the real-time percentage shows when simulation cannot keep pace.'
   },
   dominoSpiral: {
     title: 'Spiral dominoes',
