@@ -753,3 +753,91 @@ it('ray iridescence uses red strength and green film thickness in direct and bou
     destroy();
   }
 }, 180_000);
+
+it('ray anisotropy rotates the highlight and uses the map blue channel for strength', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, map, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const geometry = new Geometry({
+      topology: 'triangle-list',
+      attributes: {
+        ...surface.geometry.attributes,
+        TEXCOORD_0: {size: 2, value: new Float32Array([0.5, 0, 1, 0, 0.75, 1])},
+        TEXCOORD_1: {size: 2, value: new Float32Array([0, 0, 0.5, 0, 0.25, 1])}
+      }
+    });
+    const uniforms = {
+      baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+      metallicRoughnessValues: [1, 0.35] as [number, number],
+      anisotropyStrength: 0,
+      anisotropyRotation: 0,
+      anisotropyUVSet: 0,
+      anisotropyMapEnabled: false
+    };
+    map.writeData(new Uint8Array([255, 128, 0, 255, 255, 128, 255, 255]));
+    options.surfaces = [
+      {
+        ...surface,
+        geometry,
+        material: {id: 'brushed-metal', uniforms, bindings: {pbr_anisotropySampler: map}}
+      }
+    ];
+    options.samplingFrameIndex = 0;
+    options.lights = [
+      {type: 'directional', direction: [-0.7, 0, -1], color: [1, 1, 1], intensity: 1}
+    ];
+    const isotropic = await readPixel();
+    uniforms.anisotropyStrength = 0.9;
+    const tangent = await readPixel();
+    uniforms.anisotropyRotation = Math.PI / 2;
+    expect(tangent[0] - (await readPixel())[0]).toBeGreaterThan(5);
+    uniforms.anisotropyRotation = 0;
+    uniforms.anisotropyMapEnabled = true;
+    expect((await readPixel())[0]).toBeCloseTo(tangent[0], -1);
+    uniforms.anisotropyUVSet = 1;
+    expect(await readPixel()).toEqual(isotropic);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray anisotropic PBR bounces respond to a rotated brushed-metal axis', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const geometry = new Geometry({
+      topology: 'triangle-list',
+      attributes: {
+        ...surface.geometry.attributes,
+        TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 1, 0, 0.5, 1])}
+      }
+    });
+    const uniforms = {
+      baseColorFactor: [0.7, 0.7, 0.7, 1] as [number, number, number, number],
+      metallicRoughnessValues: [1, 0.35] as [number, number],
+      anisotropyStrength: 0.9,
+      anisotropyRotation: 0
+    };
+    options.surfaces = [
+      {...surface, geometry, material: {id: 'brushed-metal-bounce', uniforms}},
+      {
+        ...surface,
+        id: 'strip-emitter',
+        transforms: [new Matrix4().translate([0, 0, 5]).scale([1, 0.15, 1])],
+        material: {id: 'strip-emitter-material', uniforms: {emissiveFactor: [1, 1, 1]}}
+      }
+    ];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.maxBounces = 1;
+    options.samplesPerPixel = 32;
+    options.samplingFrameIndex = 0;
+    options.samplingSeed = 17;
+    const alongStrip = (await readPixel())[0];
+    uniforms.anisotropyRotation = Math.PI / 2;
+    const acrossStrip = (await readPixel())[0];
+    expect(alongStrip - acrossStrip).toBeGreaterThan(10);
+  } finally {
+    destroy();
+  }
+}, 180_000);

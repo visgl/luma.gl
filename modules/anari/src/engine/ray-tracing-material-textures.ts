@@ -44,6 +44,11 @@ const MATERIAL_MAPS = [
     'iridescenceThickness',
     'pbr_iridescenceThicknessSampler',
     'primitive.iridescence.w = mix(primitive.iridescence.z, primitive.iridescence.w, sampled.g);'
+  ],
+  [
+    'anisotropy',
+    'pbr_anisotropySampler',
+    'primitive.anisotropy.z *= sampled.b; let orientation = sampled.rg * 2.0 - vec2<f32>(1.0); if (dot(orientation, orientation) > 0.000001) { primitive.anisotropy = vec4<f32>(orientation, primitive.anisotropy.zw); }'
   ]
 ] as const;
 
@@ -126,6 +131,7 @@ export function getRayMaterialTextureShader(
   const opacityMaterials: string[] = [];
   const normalMaterials: string[] = [];
   const clearcoatNormalMaterials: string[] = [];
+  const anisotropyMaterials: string[] = [];
   const materials = surfaces
     .map((surface, surfaceIndex) => {
       const uniforms = surface.material.uniforms;
@@ -158,6 +164,11 @@ export function getRayMaterialTextureShader(
             return applyNormalMap(hit, transform, ${uniforms?.[`${name}UVSet`] === 1}, sampled.xyz, ${scale});
           }`);
           return '';
+        }
+        if (name === 'anisotropy') {
+          anisotropyMaterials.push(`case ${surfaceIndex}u: {
+            return getTriangleTangentFrame(hit, normal, mat3x3<f32>(${matrix}), ${uniforms?.anisotropyUVSet === 1});
+          }`);
         }
         if (name === 'baseColor') {
           opacityMaterials.push(`case ${surfaceIndex}u: {
@@ -193,7 +204,8 @@ export function getRayMaterialTextureShader(
     .replace('/* MATERIAL_SURFACE_CASES */', materials)
     .replace('/* MATERIAL_OPACITY_CASES */', opacityMaterials.join('\n'))
     .replace('/* MATERIAL_NORMAL_CASES */', normalMaterials.join('\n'))
-    .replace('/* MATERIAL_CLEARCOAT_NORMAL_CASES */', clearcoatNormalMaterials.join('\n'));
+    .replace('/* MATERIAL_CLEARCOAT_NORMAL_CASES */', clearcoatNormalMaterials.join('\n'))
+    .replace('/* MATERIAL_ANISOTROPY_CASES */', anisotropyMaterials.join('\n'));
 }
 
 /** Shared explicit texture layout for trace, picking and primary-hit channels. */
