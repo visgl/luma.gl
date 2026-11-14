@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {Buffer, type Device} from '@luma.gl/core';
-import {GPUData, GPUVector, type GPUVectorBufferProps} from '@luma.gl/graph/gpu-data';
+import {
+  GPUData,
+  GPUVector,
+  getGPUVectorFormatInfo,
+  type GPUVectorBufferProps
+} from '@luma.gl/graph/gpu-data';
 import {
   GPURecordBatch,
   GPUTable,
@@ -14,6 +19,7 @@ import {
 import {
   DataType,
   Dictionary,
+  type FixedSizeList,
   Precision,
   type Data,
   type Field,
@@ -24,26 +30,41 @@ import {
   type Uint32,
   type Utf8
 } from 'apache-arrow';
+import {getArrowFixedSizeListRowValidity} from './arrow-gpu-data';
 import {makeGPUDataFromArrowData} from '@luma.gl/graph/arrow';
 
-/** Supported WebGPU-native scalar and categorical index storage formats. */
-type GPUAnalyticsVectorFormat = 'float32' | 'sint32' | 'uint32';
+/** Supported scalar and categorical index formats. */
+type GPUAnalyticsScalarFormat = 'float32' | 'sint32' | 'uint32';
+/** Packed scalar and fixed-width numeric row formats accepted by the Arrow adapter. */
+type GPUAnalyticsVectorFormat =
+  | GPUAnalyticsScalarFormat
+  | `${GPUAnalyticsScalarFormat}x${2 | 3 | 4}`;
+/** Maps supported Arrow child types to the format of one packed component. */
+type GPUAnalyticsListFormat<T> = T extends Float32
+  ? 'float32'
+  : T extends Int32
+    ? 'sint32'
+    : T extends Uint32
+      ? 'uint32'
+      : never;
 
 /** Maps a typed Arrow schema to its exact portable GPU analytics column formats. */
 export type GPUAnalyticsTypeMapForArrow<T extends TypeMap> = {
-  [Name in keyof T & string]: T[Name] extends Float32
-    ? 'float32'
-    : T[Name] extends Int32
-      ? 'sint32'
-      : T[Name] extends Uint32
-        ? 'uint32'
-        : T[Name] extends Dictionary<Utf8, infer IndexType>
-          ? IndexType extends Int32
-            ? 'sint32'
-            : IndexType extends Uint32
-              ? 'uint32'
-              : never
-          : never;
+  [Name in keyof T & string]: T[Name] extends FixedSizeList<infer Child>
+    ? `${GPUAnalyticsListFormat<Child>}x${2 | 3 | 4}`
+    : T[Name] extends Float32
+      ? 'float32'
+      : T[Name] extends Int32
+        ? 'sint32'
+        : T[Name] extends Uint32
+          ? 'uint32'
+          : T[Name] extends Dictionary<Utf8, infer IndexType>
+            ? IndexType extends Int32
+              ? 'sint32'
+              : IndexType extends Uint32
+                ? 'uint32'
+                : never
+            : never;
 };
 
 /** CPU-owned category labels associated with one GPU-resident dictionary-index column. */
@@ -77,6 +98,7 @@ export type GPUAnalyticsTableFromArrowTableResult<T extends GPUTypeMap = GPUType
 /** Fully validated source metadata collected before allocating any GPU resources. */
 type PreparedGPUAnalyticsColumn = {
   field: Field;
+  nullable: boolean;
   format: GPUAnalyticsVectorFormat;
   chunks: Data[];
   validity: Uint32Array[];
@@ -93,6 +115,12 @@ const GPU_ANALYTICS_BUFFER_USAGE =
  * Numeric values and dictionary indices stay in existing `GPUData`, `GPURecordBatch`, `GPUVector`,
  * and `GPUTable` objects. Nullable rows receive separate batch-aligned uint32 validity vectors,
  * while dictionary labels and source null counts remain explicit adapter-owned metadata.
+ *
+ * @example
+ * ```ts
+ * const uploaded = makeGPUAnalyticsTableFromArrowTable(device, arrowTable);
+ * const frame = new GPUDataFrame({...uploaded, ownership: 'owned'});
+ * ```
  */
 export function makeGPUAnalyticsTableFromArrowTable<T extends TypeMap>(
   device: Device,
@@ -166,7 +194,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
             bufferLayout: columns.map(column => ({
               name: column.field.name,
               format: column.format,
-              byteStride: 4
+              byteStride: getGPUVectorFormatInfo(column.format).byteLength
             }))
           });
 
@@ -180,7 +208,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
     }
 
     for (const column of columns) {
-      if (!column.field.nullable || batches.length === 0) {
+      if (!column.nullable || batches.length === 0) {
         continue;
       }
 
@@ -258,6 +286,8 @@ function prepareGPUAnalyticsColumns(
 
     const column: PreparedGPUAnalyticsColumn = {
       field,
+      nullable:
+        field.nullable || (DataType.isFixedSizeList(field.type) && field.type.children[0].nullable),
       format: getGPUAnalyticsVectorFormat(field.type, columnName),
       chunks: [],
       validity: [],
@@ -277,7 +307,18 @@ function prepareGPUAnalyticsColumns(
         throw new Error(`GPU analytics column "${columnName}" changes type between batches`);
       }
 
-      const validity = getGPUAnalyticsValidity(data, field.nullable, columnName);
+      const parentValidity = getGPUAnalyticsValidity(data, field.nullable, columnName);
+      const validity = DataType.isFixedSizeList(field.type)
+        ? (getArrowFixedSizeListRowValidity(
+            data as Data<FixedSizeList<Float32 | Int32 | Uint32>>
+          ) ?? parentValidity)
+        : parentValidity;
+      const nullCount = validity.reduce((count, valid) => count + Number(!valid), 0);
+      if (nullCount && !column.nullable) {
+        throw new Error(
+          `GPU analytics non-nullable vector "${columnName}" contains null components`
+        );
+      }
       if (DataType.isDictionary(field.type)) {
         const dictionary = getGPUAnalyticsDictionary(data, columnName);
         if (column.dictionary && !areGPUAnalyticsDictionariesEqual(column.dictionary, dictionary)) {
@@ -289,7 +330,7 @@ function prepareGPUAnalyticsColumns(
 
       column.chunks.push(data);
       column.validity.push(validity);
-      column.nullCounts.push(data.nullCount);
+      column.nullCounts.push(nullCount);
     }
 
     return column;
@@ -298,6 +339,18 @@ function prepareGPUAnalyticsColumns(
 
 /** Maps the intentionally limited portable Arrow analytics surface to canonical GPU formats. */
 function getGPUAnalyticsVectorFormat(type: DataType, columnName: string): GPUAnalyticsVectorFormat {
+  if (DataType.isFixedSizeList(type)) {
+    const child = type.children[0].type;
+    const width = type.listSize;
+    if (
+      (width === 2 || width === 3 || width === 4) &&
+      ((DataType.isFloat(child) && child.precision === Precision.SINGLE) ||
+        (DataType.isInt(child) && child.bitWidth === 32))
+    ) {
+      const scalar = DataType.isFloat(child) ? 'float32' : child.isSigned ? 'sint32' : 'uint32';
+      return `${scalar}x${width}`;
+    }
+  }
   if (DataType.isFloat(type) && type.precision === Precision.SINGLE) {
     return 'float32';
   }
@@ -424,15 +477,14 @@ function makeGPUAnalyticsData(
     return makeGPUDataFromArrowData(device, source, {...bufferProps, format});
   }
 
-  const buffer = device.createBuffer({...bufferProps, byteLength: 4});
+  const layout = getGPUVectorFormatInfo(format);
+  const buffer = device.createBuffer({...bufferProps, byteLength: layout.byteLength});
   try {
     return new GPUData({
       buffer,
       format,
       length: 0,
-      stride: 1,
-      byteStride: 4,
-      rowByteLength: 4,
+
       dataType: source.type,
       ownsBuffer: true
     });
@@ -468,7 +520,7 @@ function makeGPUAnalyticsField(column: PreparedGPUAnalyticsColumn): GPUField {
   return {
     name: column.field.name,
     format: column.format,
-    nullable: column.field.nullable,
+    nullable: column.nullable,
     metadata: new Map(column.field.metadata)
   };
 }

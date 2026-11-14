@@ -253,3 +253,22 @@ Any null component makes the entire constructed vector null. Arithmetic combines
 row validity with AND; casts preserve it, and a nullable result has one uint32
 validity word per row. Invalid rows' component bytes are unspecified. Use validity
 when rendering or reading results. Component-level nullable vectors are unsupported.
+
+### Arrow and rendering
+
+The analytics Arrow adapter accepts FixedSizeList columns of width 2–4 with
+Float32, Int32 or Uint32 children. It uploads the original packed values once and
+preserves the record batches. A null parent or child produces a null GPU row.
+Explicit analytics readback emits a FixedSizeList with a parent validity bitmap.
+
+Bind a compiled query's packed vector directly with
+`model.setAttributeVectors({position: compiled.table.gpuVectors.position})`.
+For a `vec3<f32>` vertex input the same buffer uses a 12-byte stride in the
+compute and render passes. Handle null rows through the query's validity or
+selection outputs when preparing the draw.
+
+Run the opt-in benchmark with
+`yarn test-browser-benchmarks modules/graph/test/gpu-dataframe/gpu-vector-expression-benchmark.spec.ts`.
+It reports the median encode, submit, and one-row readback fence time at 100,000
+and 1,000,000 rows, plus the packed and native-array value sizes. It excludes
+upload and compilation and does not time a padded GPU kernel.
