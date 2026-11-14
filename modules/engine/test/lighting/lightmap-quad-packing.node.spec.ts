@@ -10,8 +10,24 @@ test('packs a two-mesh surface beyond the old triangle-per-chart limit', () => {
   for (let row = 0; row < 24; row++) {
     for (let column = 0; column < 24; column++) {
       positions.push(
-        column, row, 0, column + 1, row, 0, column + 1, row + 1, 0,
-        column, row, 0, column + 1, row + 1, 0, column, row + 1, 0
+        column,
+        row,
+        0,
+        column + 1,
+        row,
+        0,
+        column + 1,
+        row + 1,
+        0,
+        column,
+        row,
+        0,
+        column + 1,
+        row + 1,
+        0,
+        column,
+        row + 1,
+        0
       );
     }
   }
@@ -19,7 +35,10 @@ test('packs a two-mesh surface beyond the old triangle-per-chart limit', () => {
     topology: 'triangle-list',
     attributes: {POSITION: {size: 3, value: new Float32Array(positions)}}
   });
-  const inputs = [{id: 'first', geometry}, {id: 'second', geometry}];
+  const inputs = [
+    {id: 'first', geometry},
+    {id: 'second', geometry}
+  ];
   const options = {width: 512, height: 512, texelsPerUnit: 4};
   expect(() => createLightmapAtlas(inputs, options)).toThrow();
   const atlas = createLightmapAtlas(inputs, {...options, mergeCoplanarPairs: true});

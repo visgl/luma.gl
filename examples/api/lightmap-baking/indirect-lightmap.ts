@@ -157,49 +157,53 @@ function makeReceiverData(
   const sourcePositions = geometry.attributes.POSITION.value;
   const sourceNormals = geometry.attributes.NORMAL.value;
   for (const chart of atlas.charts) {
-    for (let firstVertex = chart.firstVertex; firstVertex < chart.firstVertex + chart.vertexCount; firstVertex += 3) {
-    const vertices = [firstVertex, firstVertex + 1, firstVertex + 2];
-    const horizontal = vertices.map(vertex => coordinates[vertex * 2] * atlas.width);
-    const vertical = vertices.map(vertex => coordinates[vertex * 2 + 1] * atlas.height);
-    const determinant =
-      (vertical[1] - vertical[2]) * (horizontal[0] - horizontal[2]) +
-      (horizontal[2] - horizontal[1]) * (vertical[0] - vertical[2]);
-    if (Math.abs(determinant) < 1e-12) continue;
-    const {x, y, width, height} = chart.rectangle;
     for (
-      let row = Math.max(y, region.y);
-      row < Math.min(y + height, region.y + region.height);
-      row++
-    )
+      let firstVertex = chart.firstVertex;
+      firstVertex < chart.firstVertex + chart.vertexCount;
+      firstVertex += 3
+    ) {
+      const vertices = [firstVertex, firstVertex + 1, firstVertex + 2];
+      const horizontal = vertices.map(vertex => coordinates[vertex * 2] * atlas.width);
+      const vertical = vertices.map(vertex => coordinates[vertex * 2 + 1] * atlas.height);
+      const determinant =
+        (vertical[1] - vertical[2]) * (horizontal[0] - horizontal[2]) +
+        (horizontal[2] - horizontal[1]) * (vertical[0] - vertical[2]);
+      if (Math.abs(determinant) < 1e-12) continue;
+      const {x, y, width, height} = chart.rectangle;
       for (
-        let column = Math.max(x, region.x);
-        column < Math.min(x + width, region.x + region.width);
-        column++
-      ) {
-        const first =
-          ((vertical[1] - vertical[2]) * (column + 0.5 - horizontal[2]) +
-            (horizontal[2] - horizontal[1]) * (row + 0.5 - vertical[2])) /
-          determinant;
-        const second =
-          ((vertical[2] - vertical[0]) * (column + 0.5 - horizontal[2]) +
-            (horizontal[0] - horizontal[2]) * (row + 0.5 - vertical[2])) /
-          determinant;
-        const weights = [first, second, 1 - first - second];
-        if (weights.some(weight => weight < -1e-6)) continue;
-        const offset = ((row - region.y) * region.width + column - region.x) * 4;
-        if (positions[offset + 3] > 0) continue;
-        for (let component = 0; component < 3; component++)
-          for (let corner = 0; corner < 3; corner++) {
-            positions[offset + component] +=
-              weights[corner] * sourcePositions[vertices[corner] * 3 + component];
-            normals[offset + component] +=
-              weights[corner] * sourceNormals[vertices[corner] * 3 + component];
-          }
-        const length = Math.hypot(normals[offset], normals[offset + 1], normals[offset + 2]) || 1;
-        for (let component = 0; component < 3; component++) normals[offset + component] /= length;
-        positions[offset + 3] = chart.id;
-      }
-  }
+        let row = Math.max(y, region.y);
+        row < Math.min(y + height, region.y + region.height);
+        row++
+      )
+        for (
+          let column = Math.max(x, region.x);
+          column < Math.min(x + width, region.x + region.width);
+          column++
+        ) {
+          const first =
+            ((vertical[1] - vertical[2]) * (column + 0.5 - horizontal[2]) +
+              (horizontal[2] - horizontal[1]) * (row + 0.5 - vertical[2])) /
+            determinant;
+          const second =
+            ((vertical[2] - vertical[0]) * (column + 0.5 - horizontal[2]) +
+              (horizontal[0] - horizontal[2]) * (row + 0.5 - vertical[2])) /
+            determinant;
+          const weights = [first, second, 1 - first - second];
+          if (weights.some(weight => weight < -1e-6)) continue;
+          const offset = ((row - region.y) * region.width + column - region.x) * 4;
+          if (positions[offset + 3] > 0) continue;
+          for (let component = 0; component < 3; component++)
+            for (let corner = 0; corner < 3; corner++) {
+              positions[offset + component] +=
+                weights[corner] * sourcePositions[vertices[corner] * 3 + component];
+              normals[offset + component] +=
+                weights[corner] * sourceNormals[vertices[corner] * 3 + component];
+            }
+          const length = Math.hypot(normals[offset], normals[offset + 1], normals[offset + 2]) || 1;
+          for (let component = 0; component < 3; component++) normals[offset + component] /= length;
+          positions[offset + 3] = chart.id;
+        }
+    }
   }
   return {positions, normals};
 }
