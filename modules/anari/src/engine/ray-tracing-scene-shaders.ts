@@ -970,6 +970,14 @@ fn evaluateBaseFresnel(primitive: RayPrimitive, reflectance: vec3<f32>,
   return mix(baseFresnel, clamp(filmFresnel, vec3<f32>(0.0), vec3<f32>(1.0)), clamp(film.x, 0.0, 1.0));
 }
 
+fn getSheenBaseWeight(strength: f32, roughness: f32, cosine: f32) -> f32 {
+  return 1.0 - strength * mix(0.5, 0.157, cosine) * (1.0 - 0.5 * roughness);
+}
+
+fn getClearcoatFresnel(strength: f32, cosine: f32) -> f32 {
+  return strength * (0.04 + 0.96 * pow(clamp(1.0 - cosine, 0.0, 1.0), 5.0));
+}
+
 // Charlie distribution with a compact visibility and base attenuation approximation.
 fn applySheen(baseResponse: vec3<f32>, sheen: vec4<f32>, normalHalf: f32,
     normalView: f32, normalLight: f32) -> vec3<f32> {
@@ -982,7 +990,7 @@ fn applySheen(baseResponse: vec3<f32>, sheen: vec4<f32>, normalHalf: f32,
   let distribution = (2.0 + exponent) * pow(halfSineSquared, 0.5 * exponent) / (2.0 * PI);
   let visibility = 0.25 / max(normalLight + normalView - normalLight * normalView, 0.000001);
   let enteringCosine = min(normalLight, normalView);
-  let baseWeight = 1.0 - strength * mix(0.5, 0.157, enteringCosine) * (1.0 - 0.5 * roughness);
+  let baseWeight = getSheenBaseWeight(strength, roughness, enteringCosine);
   return baseResponse * baseWeight + color * (distribution * visibility * normalLight);
 }
 
@@ -1008,7 +1016,7 @@ fn applyClearcoat(baseResponse: vec3<f32>, clearcoat: vec2<f32>, hit: RayHit,
     (1.0 - alphaSquared) * normalLight * normalLight));
   let viewVisibility = 2.0 * normalView / (normalView + sqrt(alphaSquared +
     (1.0 - alphaSquared) * normalView * normalView));
-  let fresnel = strength * (0.04 + 0.96 * pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0));
+  let fresnel = getClearcoatFresnel(strength, viewHalf);
   let coatResponse = fresnel * distribution * lightVisibility * viewVisibility / (4.0 * normalView);
   return baseResponse * (1.0 - fresnel) + vec3<f32>(coatResponse);
 }
@@ -1020,13 +1028,24 @@ fn getDiffuseTransmission(primitive: RayPrimitive) -> f32 {
   return clamp(primitive.diffuseTransmission.w, 0.0, 1.0);
 }
 
-fn getDiffuseTransmissionTint(primitive: RayPrimitive, viewCosine: f32) -> vec3<f32> {
+fn getDiffuseTransmissionTint(primitive: RayPrimitive, hit: RayHit,
+    viewDirection: vec3<f32>, viewCosine: f32, lightCosine: f32) -> vec3<f32> {
+  let sheen = clamp(primitive.sheen.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+  let sheenWeight = getSheenBaseWeight(max(sheen.r, max(sheen.g, sheen.b)),
+    clamp(primitive.sheen.w, 0.04, 1.0), min(viewCosine, lightCosine));
+  let coatStrength = clamp(primitive.clearcoatOcclusion.x, 0.0, 1.0);
+  var coatWeight = 1.0;
+  if (coatStrength > 0.0) {
+    // Use the outgoing coat crossing for the thin-surface approximation.
+    let coatCosine = abs(dot(getClearcoatNormal(hit), viewDirection));
+    coatWeight = 1.0 - getClearcoatFresnel(coatStrength, coatCosine);
+  }
   let reflectance = getDielectricReflectance(primitive);
   let grazing = getGrazingReflectance(primitive, reflectance, 0.0);
   let fresnel = evaluateBaseFresnel(primitive, reflectance, grazing, viewCosine);
   return clamp(primitive.diffuseTransmission.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
     (vec3<f32>(1.0) - fresnel) * (vec3<f32>(1.0) - reflectance) *
-    (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
+    (1.0 - clamp(primitive.emissive.w, 0.0, 1.0)) * sheenWeight * coatWeight;
 }
 
 fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<f32> {
@@ -1071,6 +1090,11 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
       let occlusion = mix(1.0, clamp(primitive.clearcoatOcclusion.w, 0.0, 1.0),
         clamp(primitive.clearcoatOcclusion.z, 0.0, 1.0));
       result += baseColor * lightColor * opaqueWeight * occlusion * (1.0 - diffuseTransmission);
+      if (diffuseTransmission > 0.0) {
+        let tint = getDiffuseTransmissionTint(primitive, hit, viewDirection,
+          abs(dot(transmissionNormal, viewDirection)), 2.0 / 3.0);
+        result += tint * lightColor * opaqueWeight * occlusion * diffuseTransmission;
+      }
       continue;
     }
 
@@ -1106,7 +1130,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
       let shadowRay = Ray(hitPosition - transmissionNormal * 0.002, lightDirection);
       let shadowDistance = select(lightDistance - 0.003, RAY_INFINITY, lightType == 1u);
       if (uniforms.settings.w <= 0.5 || !intersectsScene(shadowRay, shadowDistance)) {
-        let tint = getDiffuseTransmissionTint(primitive, abs(dot(transmissionNormal, viewDirection)));
+        let tint = getDiffuseTransmissionTint(primitive, hit, viewDirection, abs(dot(transmissionNormal, viewDirection)), -faceLight);
         result += tint * lightColor * (-faceLight / PI) * diffuseTransmission *
           attenuation * lightSampleWeight * opaqueWeight;
       }
@@ -1472,7 +1496,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
       let transmittedDirection = across * (radius * cos(angle)) +
         cross(face, across) * (radius * sin(angle)) - face * sqrt(max(1.0 - radialSample, 0.0));
       // The cosine density and diffuse branch probability cancel the BTDF and its weight.
-      let tint = getDiffuseTransmissionTint(primitive, abs(dot(face, viewDirection)));
+      let tint = getDiffuseTransmissionTint(primitive, hit, viewDirection, abs(dot(face, viewDirection)), -dot(face, transmittedDirection));
       return RayMaterialSample(transmittedDirection, tint / (1.0 - specularProbability), false, false);
     }
     direction = normalize(tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
@@ -1623,7 +1647,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
     (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)) * normalLight / PI;
   if (uniforms.sampling.w > 0u) {
     if (faceLight < 0.0) {
-      response = getDiffuseTransmissionTint(receiver, abs(dot(face, ray.direction))) *
+      response = getDiffuseTransmissionTint(receiver, hit, -ray.direction, abs(dot(face, ray.direction)), -faceLight) *
         (-faceLight / PI) * diffuseTransmission;
     } else {
       response = evaluatePBRResponse(ray, hit, direction);

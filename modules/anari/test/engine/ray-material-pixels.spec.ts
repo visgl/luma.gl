@@ -852,6 +852,8 @@ it('ray diffuse transmission tints backlighting and emissive bounces', async () 
     const uniforms = {
       baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
       specularIntensityFactor: 0,
+      clearcoatFactor: 0,
+      sheenColorFactor: [0, 0, 0] as [number, number, number],
       diffuseTransmissionFactor: 1,
       diffuseTransmissionColorUVSet: 1,
       diffuseTransmissionUVSet: 0
@@ -874,6 +876,16 @@ it('ray diffuse transmission tints backlighting and emissive bounces', async () 
     const backlit = await readPixel();
     expect(backlit[1]).toBeGreaterThan(80);
     expect([backlit[0], backlit[2]]).toEqual([0, 0]);
+    uniforms.clearcoatFactor = 1;
+    expect((await readPixel())[1]).toBeLessThan(backlit[1]);
+    uniforms.clearcoatFactor = 0;
+    uniforms.sheenColorFactor = [1, 1, 1];
+    expect((await readPixel())[1]).toBeLessThan(backlit[1]);
+    uniforms.sheenColorFactor = [0, 0, 0];
+    options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 0.5}];
+    const ambient = await readPixel();
+    expect(ambient[1]).toBeGreaterThan(100);
+    expect([ambient[0], ambient[2]]).toEqual([0, 0]);
     uniforms.diffuseTransmissionUVSet = 1;
     expect(await readPixel()).toEqual([0, 0, 0]);
 
