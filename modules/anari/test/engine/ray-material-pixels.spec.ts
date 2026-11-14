@@ -172,10 +172,9 @@ it('ray occlusion maps attenuate ambient light without changing directional ligh
   }
 }, 180_000);
 
-it('ray maps preserve UV selection and replacement, and dielectrics cross both sphere interfaces', async () => {
+it('ray maps preserve UV selection, replacement, and specular and clearcoat transport', async () => {
   if (!webgpuAdapter.isSupported()) return;
-  const {options, surface, geometry, renderer, replacement, map, mipMap, readPixel, destroy} =
-    await createMaterialFixture();
+  const {options, surface, replacement, map, readPixel, destroy} = await createMaterialFixture();
   try {
     expect(await readPixel()).toEqual([255, 0, 0]);
     surface.material.uniforms.baseColorUVSet = 1;
@@ -282,14 +281,16 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect((await readPixel())[0]).toBeLessThan(glossyCoat[0] / 2);
     coatedSurface.material.uniforms.clearcoatFactor = 0;
     expect(await readPixel()).toEqual([0, 0, 0]);
-    options.transportMode = 'diffuse';
-    options.maxBounces = 0;
-    options.samplesPerPixel = 1;
-    options.samplingSeed = undefined;
-    replacement.writeData(new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]));
-    options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 1}];
-    options.samplingFrameIndex = undefined;
-    options.surfaces = [surface];
+  } finally {
+    destroy();
+  }
+}, 360_000);
+
+it('ray triangle normal maps, coat normals, and primary mip footprints use the retained UV charts', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, renderer, replacement, mipMap, readPixel, destroy} =
+    await createMaterialFixture();
+  try {
     const mappedSurface = {
       ...surface,
       id: 'normal-mapped',
@@ -332,13 +333,14 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     minifiedSurface.geometry = geometry;
     expect(await readPixel()).toEqual([255, 0, 0]);
     const mappedCoat = {
-      ...coatedSurface,
+      ...surface,
       id: 'mapped-coat',
       geometry: mappedSurface.geometry,
       material: {
         id: 'mapped-coat-material',
         uniforms: {
-          ...coatedSurface.material.uniforms,
+          baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+          specularIntensityFactor: 0,
           clearcoatFactor: 1,
           clearcoatRoughnessFactor: 0.5,
           clearcoatNormalUVSet: 0,
