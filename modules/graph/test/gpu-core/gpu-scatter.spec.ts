@@ -4,8 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer} from '@luma.gl/core';
-import {GPUCommandGraph} from '../../src/gpu-core/gpu-command-graph';
-import {GPUScatter} from '../../src/gpu-core/gpu-scatter';
+import {GPUCommandGraph, GPUScatter} from '@luma.gl/graph/gpu-core';
 import {GPUData} from '@luma.gl/graph/gpu-data';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 
