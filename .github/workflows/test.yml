@@ -128,7 +128,7 @@ jobs:
   browser_coverage:
     name: Browser coverage (${{ matrix.group }} ${{ matrix.shard }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       LUMA_TEST_BROWSER_GROUP: ${{ matrix.group }}
     strategy:

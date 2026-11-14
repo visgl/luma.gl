@@ -235,7 +235,20 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "imports independent finite plane extents"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-plane.spec.ts",
+            "testPattern": "supports finite, unbounded, single-sided and double-sided plane contacts"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.convex-hull",
@@ -253,6 +266,12 @@
             "file": "modules/graph/test/gpu-physics/rigid-body-convex.spec.ts",
             "testPattern": "solves convex hull and tapered primitive contacts"
           }
+        ],
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "resolves draft geometry.node subtrees"
+          }
         ]
       }
     },
@@ -266,7 +285,20 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "resolves draft geometry.node subtrees"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies off-scene geometry node descendants"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.initial-deformation",
@@ -278,7 +310,20 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/mesh-snapshot.node.spec.ts",
+            "testPattern": "snapshots initial and live morphs before skinning"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies initial morph and skin deformation"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.moving-mesh-pairs",
@@ -289,7 +334,18 @@
       "requiredChecks": [
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "exchanges momentum between two moving mesh bodies"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts",
+            "testPattern": "preserves a nonconvex mesh opening"
+          }
+        ]
+      }
     },
     {
       "id": "geometry.holes-and-sidedness",
@@ -325,6 +381,12 @@
             "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "preserves reflected static boxes"
           }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies imported reflected nonuniform hierarchy"
+          }
         ]
       }
     },
@@ -338,7 +400,24 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "disables all-zero-scale colliders"
+          },
+          {
+            "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
+            "testPattern": "keeps disabled collider descendants"
+          }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies imported reflected nonuniform hierarchy"
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.modes",
@@ -449,6 +528,12 @@
             "file": "modules/engine/test/gltf/physics/parse-gltf-physics.node.spec.ts",
             "testPattern": "imports tapered primitives, signed gravity"
           }
+        ],
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-qualification.spec.ts",
+            "testPattern": "qualifies imported initial linear angular velocity"
+          }
         ]
       }
     },
@@ -548,7 +633,36 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-parallel.spec.ts",
+            "testPattern": "conserves energy and momentum across 80"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "impact",
+              "minimumObjectCount": 2,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.manifold-persistence",
@@ -596,7 +710,40 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts",
+            "testPattern": "bounds sustained penetration"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "massRatio",
+              "minimumObjectCount": 5,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.continuous-collision",
@@ -608,7 +755,32 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts",
+            "testPattern": "qualifies swept impact position"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "detects a rotating gate"
+          },
+          {
+            "file": "modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts",
+            "testPattern": "rejects impact exhaustion"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "continuous",
+              "minimumObjectCount": 3,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "dynamics.timestep-convergence",
@@ -638,7 +810,32 @@
         "behavior",
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/graph/test/gpu-physics/scenegraph-session.spec.ts",
+            "testPattern": "qualifies scene lifecycle, independent instances, pending work"
+          }
+        ],
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "continuous",
+              "minimumObjectCount": 3,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "constraints.frames",
@@ -1121,7 +1318,76 @@
         "import",
         "behavior"
       ],
-      "checks": {}
+      "checks": {
+        "import": [
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "MotionProperties",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "Materials_Restitution",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "Materials_Friction",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-import",
+              "fixture": "Filtering",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          }
+        ],
+        "behavior": [
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "MotionProperties",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "Materials_Restitution",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "Materials_Friction",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "external-asset-behavior",
+              "fixture": "Filtering",
+              "minimumObjectCount": 1,
+              "hardware": false
+            }
+          }
+        ]
+      }
     },
     {
       "id": "qualification.device-envelope",
@@ -1132,7 +1398,42 @@
       "requiredChecks": [
         "performance"
       ],
-      "checks": {}
+      "checks": {
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "deep",
+              "minimumObjectCount": 9,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "massRatio",
+              "minimumObjectCount": 5,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "impact",
+              "minimumObjectCount": 2,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "qualified-rigid-body-step",
+              "fixture": "continuous",
+              "minimumObjectCount": 3,
+              "hardware": true
+            }
+          }
+        ]
+      }
     },
     {
       "id": "solver.coupled-friction-stability",

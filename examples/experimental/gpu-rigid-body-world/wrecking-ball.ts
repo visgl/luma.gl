@@ -35,7 +35,7 @@ export function makeWreckingBall(): {bodies: GPURigidBody[]; joints: GPURigidBod
         0,
         WRECKING_BALL_ANCHOR[2] - WRECKING_BALL_LENGTH * Math.cos(WRECKING_BALL_ANGLE)
       ],
-      mass: 400,
+      mass: 650,
       shape: {type: 'sphere', radius: 1.1},
       friction: 0.45,
       restitution: 0.05

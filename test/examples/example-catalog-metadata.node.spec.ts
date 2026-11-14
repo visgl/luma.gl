@@ -33,7 +33,10 @@ type LiveExample = {
 
 const EXAMPLES_DIRECTORY = path.join(process.cwd(), 'website/content/examples');
 const WEBGPU_ONLY_EXAMPLES = new Set([
+  'api/baked-cornell-box',
+
   'three/galactic-vortex',
+  'three/domino-junction',
   'gltf/physics',
   'gltf/authored-scene-stress',
   'api/render-bundles',
@@ -68,7 +71,12 @@ describe('live example catalog metadata', () => {
       LIVE_EXAMPLES.filter(example => example.categories.includes('Three.js')).map(
         example => example.id
       )
-    ).toEqual(['three/galactic-vortex', 'three/deck-layers', 'experimental/three']);
+    ).toEqual([
+      'three/galactic-vortex',
+      'three/domino-junction',
+      'three/deck-layers',
+      'experimental/three'
+    ]);
     expect(example?.metadata?.maturity).toBe('experimental');
     expect(example?.metadata?.backends).toEqual(['webgpu', 'webgl2']);
     const packageDefinition = JSON.parse(
@@ -140,7 +148,7 @@ describe('live example catalog metadata', () => {
   });
 
   test('provides complete, curated filters for every sidebar example', () => {
-    expect(LIVE_EXAMPLES).toHaveLength(141);
+    expect(LIVE_EXAMPLES).toHaveLength(143);
 
     for (const {id, metadata} of LIVE_EXAMPLES) {
       expect(metadata, `${id} requires sidebar_custom_props`).toBeDefined();

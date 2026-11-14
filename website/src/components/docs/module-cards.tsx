@@ -88,7 +88,7 @@ const DOCUMENTATION_MODULES: Record<DocumentationModuleGroup, readonly Documenta
   exploratory: [
     {
       name: 'anari',
-      description: 'Describe 3D scenes and switch renderers through an ANARI-inspired scene API.',
+      description: 'Describe retained 3D scenes and switch between raster rendering and progressive WebGPU ray tracing.',
       image: 'deck/city-scene',
       reference: 'scene',
       status: 'Exploratory'

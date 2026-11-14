@@ -14,11 +14,24 @@ export function registerStackQualification(
     load: number;
     centerOffset: number;
   },
-  {durationSeconds = 6}: {durationSeconds?: number} = {}
+  {
+    durationSeconds = 6,
+    contactSolver = 'scalar',
+    iterations = 64,
+    timeSteps = [1 / 120, 1 / 240]
+  }: {
+    durationSeconds?: number;
+    contactSolver?: 'scalar' | 'block';
+    iterations?: number;
+    timeSteps?: readonly number[];
+  } = {}
 ): void {
   it.for(
-    (['ordered', 'parallel'] as const).flatMap(solver =>
-      [1 / 120, 1 / 240].map(timeStep => ({...scenario, solver, timeStep, durationSeconds}))
+    (contactSolver === 'block'
+      ? (['parallel'] as const)
+      : (['ordered', 'parallel'] as const)
+    ).flatMap(solver =>
+      timeSteps.map(timeStep => ({...scenario, solver, timeStep, durationSeconds}))
     )
   )(
     'bounds sustained penetration, drift and residual energy for $name with $solver at $timeStep s for $durationSeconds s',
@@ -51,7 +64,8 @@ export function registerStackQualification(
         solver: scenario.solver,
         broadPhase: 'hierarchical-grid',
         timeStep,
-        iterations: 64,
+        iterations,
+        parallelContactSolver: contactSolver,
         maximumPairs: 64,
         warmStartFactor: 0.8,
         penetrationRecoveryFraction: 0.1,

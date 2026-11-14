@@ -105,3 +105,21 @@ export {
 export type {LightmapData} from './lightmap-data';
 export {sampleLightmapEnvironment} from './lightmap-environment';
 export type {LightmapEnvironment, LightmapEnvironmentSample} from './lightmap-environment';
+
+export {ReflectionProbe} from './reflection-probe';
+export type {
+  ReflectionProbeProps,
+  ReflectionProbeUpdate,
+  ReflectionProbeView
+} from './reflection-probe';
+export {
+  createLightmapAtlas,
+  validateLightmapAtlas,
+  getLightmapAtlasDebugData
+} from './lightmap-atlas';
+export type {
+  LightmapAtlas,
+  LightmapAtlasInput,
+  LightmapAtlasOptions,
+  LightmapAtlasChart
+} from './lightmap-atlas';

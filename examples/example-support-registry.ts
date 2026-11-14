@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import bakedCornellBoxSupport from './api/baked-cornell-box/mobile-support';
+
 import lightmapBakingSupport from './api/lightmap-baking/mobile-support';
 import pbrShadowsSupport from './api/pbr-shadows/mobile-support';
 import prefilteredEnvironmentSupport from './api/prefiltered-environment/mobile-support';
@@ -14,6 +16,7 @@ import pointCloudOctreeSupport from './experimental/gpu-pointcloud-octree/mobile
 import windSupport from './deck/wind/mobile-support';
 import flowParticlesSupport from './deck/flow-particles/mobile-support';
 import threeSupport from './experimental/three/mobile-support';
+import dominoJunctionSupport from './three/domino-junction/mobile-support';
 import galacticVortexSupport from './three/galactic-vortex/mobile-support';
 import threeDeckLayersSupport from './three/deck-layers/mobile-support';
 import gltfPhysicsSupport from './gltf/physics/mobile-support';
@@ -209,6 +212,7 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'integrations/external-context': support45,
   'experimental/three': threeSupport,
   'three/galactic-vortex': galacticVortexSupport,
+  'three/domino-junction': dominoJunctionSupport,
   'three/deck-layers': threeDeckLayersSupport,
   'gltf/physics': gltfPhysicsSupport,
   'gltf/authored-scene-stress': authoredSceneStressSupport,
@@ -287,6 +291,8 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'showcase/spectral-wave-lab': support85,
   'api/texture-compressed': standaloneSupport0,
   'api/lightmap-baking': lightmapBakingSupport,
+  'api/baked-cornell-box': bakedCornellBoxSupport,
+
   'api/pbr-shadows': pbrShadowsSupport,
   'api/prefiltered-environment': prefilteredEnvironmentSupport,
   'integrations/hello-react': standaloneSupport1,

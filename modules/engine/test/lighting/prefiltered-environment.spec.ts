@@ -5,7 +5,7 @@ import {expect, test} from 'vitest';
 import {Buffer, type Texture} from '@luma.gl/core';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import {toHalfFloat, fromHalfFloat} from '@luma.gl/shaders';
-import {PrefilteredEnvironmentGenerator} from '@luma.gl/engine/lighting';
+import {PrefilteredEnvironmentGenerator, ReflectionProbe} from '@luma.gl/engine/lighting';
 
 async function readPixel(texture: Texture, face = 0, mipLevel = 0, x = 0, y = 0) {
   const options = {width: 1, height: 1, x, y, z: face, mipLevel};
@@ -194,3 +194,50 @@ test('direction-coded equirectangular input preserves cube face orientation', as
     }
   }
 }, 30000);
+
+test('same-frame reflection probes publish every moving frame under load', async context => {
+  const [device] = await getTestDevices(['webgpu']);
+  if (!device) return context.skip('No WebGPU device');
+  const probe = new ReflectionProbe(device, {
+    size: 4,
+    mipLevels: 2,
+    sampleCount: 8,
+    refreshMode: 'same-frame'
+  });
+  const matrices = device.createBuffer({byteLength: 64, usage: Buffer.COPY_SRC});
+  let red = 0.25;
+  const update = (refresh: boolean) =>
+    probe.update({
+      matrices,
+      matrixIndex: 0,
+      frameMilliseconds: 40,
+      refresh,
+      draw: ({framebuffer}) => {
+        const pass = device.beginRenderPass({framebuffer, clearColor: [red, 0, 0, 1]});
+        pass.end();
+      }
+    });
+
+  try {
+    expect(update(true)).toBe(12);
+    const first = probe.texture!;
+    device.submit();
+    expect((await readPixel(first, 0, 1))[0]).toBeCloseTo(red, 2);
+
+    red = 0.75;
+    expect(update(true)).toBe(12);
+    const second = probe.texture!;
+    expect(second).not.toBe(first);
+    device.submit();
+    for (let face = 0; face < 6; face++) {
+      expect((await readPixel(second, face))[0]).toBeCloseTo(red, 2);
+      expect((await readPixel(second, face, 1))[0]).toBeCloseTo(red, 2);
+    }
+
+    expect(update(false)).toBe(0);
+    expect(probe.texture).toBe(second);
+  } finally {
+    probe.destroy();
+    matrices.destroy();
+  }
+});

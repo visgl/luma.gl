@@ -29,9 +29,10 @@ node scripts/physics/matched/report.mjs matched.json > matched.md
 
 Useful options:
 
-- `--scenes matchedPile,matchedMixed,matchedStack,matchedChain,matchedFast,matchedBallistic`
+- `--scenes matchedPile,matchedDense,matchedLoaded,matchedMixed,matchedStack,matchedChain,matchedFast,matchedBallistic`
 - `--count 32 --seed 42 --frames 360 --warmup 60 --substeps 4 --repeats 3`
 - `--timeStep 0.016666666666666666 --iterations 16 --solver ordered`
+- `--contactSolver scalar` or `--contactSolver block`: per-contact relaxation or two manifold-local sweeps; applies to the parallel GPU lane.
 - `--workers 1` or `--workers 4`: explicit native CPU worker count; do not compare these as one lane.
 - `--stride 6`: quality snapshot interval in outer frames. Use `--stride 1` for fast-motion investigations.
 - `--profile`: separate timestamp-instrumented GPU replay; primary timings remain uninstrumented.
@@ -62,7 +63,7 @@ The fast scenario rotates bars between thin, very tall walls. It tests both tran
 and rotation without intentionally allowing the bars to go around a wall. Box3D enables
 continuous collision; luma selects its convex CCD path with rollback on incomplete work.
 The suite rejects incomplete execution instead of counting a rolled-back/frozen step
-as successful physics. The live Stress Lab exposes all six inputs, with its existing
+as successful physics. The live Stress Lab exposes all inputs, with its existing
 pause/reset, solver controls and GPU Graph tabs. That diagnostic renderer reads poses
 back and is **not** the performance runner.
 
@@ -121,3 +122,26 @@ samples, each repetition, trajectories, quality gates, capacities and provenance
 Remaining comparison lanes: Box3D WebAssembly, wider native worker sweeps, cross-vendor
 GPU runs, contact-rich large-world scale, off-center COM/compound/mesh geometry and
 controlled CPU/GPU power or thermal measurements. None are implied by this first profile.
+
+## G8 difficult-contact matrix
+
+```sh
+node scripts/physics/matched/g8.mjs --url http://127.0.0.1:5255/ --output g8-results
+node scripts/physics/matched/report.mjs g8-results/block-24.json.gz
+```
+
+This sequential matrix compares scalar/24, block/12 and block/24 global iterations
+on dense interacting piles, 10:1 loaded stacks and ordinary eight-high stacks. Defaults
+are 64 dynamic bodies, 30 simulated seconds, four substeps per 1/60-second frame and
+three repetitions. Sleeping is disabled. Override `--count`, `--frames` and `--repeats`
+for exploratory runs, and keep those settings with the results. Use 64, 128 and 512
+bodies as separate scale points; do not combine them into one headline number.
+
+Reports contain per-stage timestamp distributions from a separate replay, as well as
+unprofiled completion latency. Source hashes include the shader implementation. The
+additional stack gate bounds maximum lateral drift to 12 cm: an overturned or dispersed
+stack cannot pass merely because its final bodies no longer overlap. Dense piles are
+allowed to spread and are not subject to this stationary-stack metric. The native
+reference is not treated as ground truth; either engine can fail a declared budget.
+Raw compressed reports retain every timing sample and sampled trajectory. Run on an
+otherwise idle machine before drawing performance conclusions.
