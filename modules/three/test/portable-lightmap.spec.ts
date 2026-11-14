@@ -28,8 +28,17 @@ test('browser GLB export plays linear lightmaps in Three.js with a draft adapter
     height: 16,
     texelsPerUnit: 3
   });
+  // glTF places the image origin at the upper left. Pin the triangle's UVs so
+  // the two readbacks sample opposite sides of the PNG's horizontal split.
+  const {POSITION, TEXCOORD_1} = atlas.meshes[0].geometry.attributes;
+  for (let vertex = 0; vertex < POSITION.value.length / 3; vertex++) {
+    TEXCOORD_1.value[vertex * 2] = (POSITION.value[vertex * 3] + 1) / 2;
+    TEXCOORD_1.value[vertex * 2 + 1] = (1 - POSITION.value[vertex * 3 + 1]) / 2;
+  }
   const data = new Float32Array(16 * 16 * 4);
-  for (let offset = 0; offset < data.length; offset += 4) data.set([4, 2, 0, 1], offset);
+  for (let offset = 0; offset < data.length; offset += 4) {
+    data.set(offset < data.length / 2 ? [4, 0, 0, 1] : [0, 2, 0, 1], offset);
+  }
   const bytes = await exportPortableLightmap(atlas, {
     data,
     width: 16,
@@ -63,13 +72,15 @@ test('browser GLB export plays linear lightmaps in Three.js with a draft adapter
     renderer.setRenderTarget(target);
     renderer.render(scene, camera);
     const pixel = new Uint8Array(4);
-    renderer.readRenderTargetPixels(target, 16, 16, 1, 1, pixel);
-    expect(pixel[0]).toBeGreaterThan(pixel[1]);
+    renderer.readRenderTargetPixels(target, 16, 22, 1, 1, pixel);
+    expect(pixel[0]).toBeGreaterThan(100);
+    expect(Array.from(pixel.slice(1, 3))).toEqual([0, 0]);
+    renderer.readRenderTargetPixels(target, 16, 10, 1, 1, pixel);
     expect(pixel[1]).toBeGreaterThan(50);
-    expect(pixel[2]).toBe(0);
+    expect([pixel[0], pixel[2]]).toEqual([0, 0]);
     mesh.material.lightMapIntensity = 0;
     renderer.render(scene, camera);
-    renderer.readRenderTargetPixels(target, 16, 16, 1, 1, pixel);
+    renderer.readRenderTargetPixels(target, 16, 22, 1, 1, pixel);
     expect(Array.from(pixel.slice(0, 3))).toEqual([0, 0, 0]);
   } finally {
     target.dispose();
