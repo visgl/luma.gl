@@ -534,10 +534,14 @@ export class LightmapPreview {
       near: 0.1,
       far: 40
     });
+    // Soften near-light falloff in the generated scenes to suppress indirect fireflies.
+    // Keep Cornell's falloff for compatibility with its saved bake.
+    const attenuation: [number, number, number] =
+      this.atlas && !this.cornell ? [0.25, 0, 1] : [0, 0, 1];
     const primary: BakeLight = {
       type: 'point',
       position: this.cornell ? [0, 4.5, 0] : [-1.5, 2.4, -0.6],
-      attenuation: [0, 0, 1],
+      attenuation,
       color: this.cornell
         ? [40 * this.lightIntensity, 40 * this.lightIntensity, 40 * this.lightIntensity]
         : [5 * this.lightIntensity, 2 * this.lightIntensity, 0.5 * this.lightIntensity]
@@ -545,7 +549,7 @@ export class LightmapPreview {
     const secondary: BakeLight = {
       type: 'point',
       position: [1.5, 2.4, -0.6],
-      attenuation: [0, 0, 1],
+      attenuation,
       color: this.cornell ? [0, 0, 0] : [0.5, 2, 5]
     };
     const recordShadows = (lights: BakeLight[]) =>
