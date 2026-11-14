@@ -90,17 +90,21 @@ export function getRayMaterialTextureShader(
     )
     .join('');
   const cases = textures
-    .map(
-      (texture, index) => `
-    case ${index + 1}u: {
-      let extent = footprint * vec2<f32>(textureDimensions(materialTexture${index}, 0));
-      let level = clamp(log2(max(length(extent), 1.0)), 0.0,
-        f32(textureNumLevels(materialTexture${index}) - 1u));
-      return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, level);
-    }
-`
-    )
-    .join('');
+    .map((texture, index) => {
+      // Single-level textures cannot benefit from a footprint calculation.
+      if (texture.mipLevels === 1) {
+        return `case ${index + 1}u: {
+          return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, 0.0);
+        }`;
+      }
+      return `case ${index + 1}u: {
+        let extent = footprint * vec2<f32>(textureDimensions(materialTexture${index}, 0));
+        let level = clamp(log2(max(length(extent), 1.0)), 0.0,
+          f32(textureNumLevels(materialTexture${index}) - 1u));
+        return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, level);
+      }`;
+    })
+    .join('\n');
   const opacityMaterials: string[] = [];
   const normalMaterials: string[] = [];
   const clearcoatNormalMaterials: string[] = [];
