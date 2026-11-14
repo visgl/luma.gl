@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Texture, assert} from '@luma.gl/core';
+import {Texture} from '@luma.gl/core';
 import type {SceneSurface} from './scene-renderer';
 
 const MATERIAL_MAPS = [
@@ -37,14 +37,14 @@ const MATERIAL_MAPS = [
     'primitive.sheen = vec4<f32>(primitive.sheen.rgb * sampled.rgb, primitive.sheen.w);'
   ],
   ['sheenRoughness', 'pbr_sheenRoughnessSampler', 'primitive.sheen.w *= sampled.a;'],
+  ['normal', 'pbr_normalSampler', ''],
+  ['clearcoatNormal', 'pbr_clearcoatNormalSampler', ''],
   ['iridescence', 'pbr_iridescenceSampler', 'primitive.iridescence.x *= sampled.r;'],
   [
     'iridescenceThickness',
     'pbr_iridescenceThicknessSampler',
     'primitive.iridescence.w = mix(primitive.iridescence.z, primitive.iridescence.w, sampled.g);'
-  ],
-  ['normal', 'pbr_normalSampler', ''],
-  ['clearcoatNormal', 'pbr_clearcoatNormalSampler', '']
+  ]
 ] as const;
 
 /** Borrowed material maps; ownership remains with the scene adapter. */
@@ -53,8 +53,8 @@ export function getRayMaterialTextures(
   opacityOnly = false
 ): Texture[] {
   const textures: Texture[] = [];
-  for (const surface of surfaces) {
-    for (const [name, binding] of MATERIAL_MAPS) {
+  for (const [name, binding] of MATERIAL_MAPS) {
+    for (const surface of surfaces) {
       if (
         (opacityOnly && name !== 'baseColor') ||
         (name !== 'clearcoatNormal' &&
@@ -63,11 +63,13 @@ export function getRayMaterialTextures(
       )
         continue;
       const texture = surface.material.bindings?.[binding];
-      if (texture instanceof Texture && !textures.includes(texture)) textures.push(texture);
+      if (texture instanceof Texture && !textures.includes(texture)) {
+        textures.push(texture);
+        // Temporal history occupies two of the 16 guaranteed sampled texture bindings.
+        if (textures.length === 14) return textures;
+      }
     }
   }
-  // Two sampled textures are already used by temporal history in the CORE profile.
-  assert(textures.length <= 14);
   return textures;
 }
 

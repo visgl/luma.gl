@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Geometry} from '@luma.gl/engine';
+import {Texture} from '@luma.gl/core';
+import type {SceneSurface} from '../../src/engine/scene-renderer';
+import {getRayMaterialTextures} from '../../src/engine/ray-tracing-material-textures';
 import {describe, expect, test} from 'vitest';
 import {ResourceType, WgslReflect} from 'wgsl_reflect';
 import {
@@ -807,4 +811,34 @@ test('primary-hit diagnostics keep presentation within sampled-texture bindings'
     expect(reflection.storage).toEqual([]);
     expect(reflection.uniforms).toEqual([]);
   }
+});
+
+test('ray material texture budgets preserve opacity maps and prioritize existing maps', () => {
+  const textures: Texture[] = Array.from({length: 15}, () => Object.create(Texture.prototype));
+  const geometry = new Geometry({topology: 'triangle-list', attributes: {}});
+  const surfaces: SceneSurface[] = [
+    {
+      id: 'iridescent',
+      transforms: [],
+      geometry,
+      material: {
+        id: 'film',
+        bindings: {
+          pbr_iridescenceSampler: textures[0],
+          pbr_iridescenceThicknessSampler: textures[1]
+        }
+      }
+    },
+    ...textures.slice(2).map((texture, index) => ({
+      id: `surface-${index}`,
+      transforms: [],
+      geometry,
+      material: {id: `material-${index}`, bindings: {pbr_baseColorSampler: texture}}
+    }))
+  ];
+  const selected = getRayMaterialTextures(surfaces);
+  expect(selected).toHaveLength(14);
+  expect(selected[13]).toBe(textures[0]);
+  expect(selected).not.toContain(textures[1]);
+  expect(getRayMaterialTextures(surfaces, true)).toEqual(textures.slice(2));
 });
