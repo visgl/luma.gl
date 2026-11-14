@@ -55,6 +55,9 @@ describe('GPUSegmentedReduction', () => {
         expected[segment + 1] = segment + 1;
       }
     }
+    inputValues[2] = 7;
+    expected[1] = 8;
+
     inputValues[segmentCount + 1] = 1000;
     offsetValues[segmentCount + 1] = segmentCount + 2;
     const inputBuffer = device.createBuffer({data: inputValues, usage: Buffer.STORAGE});
