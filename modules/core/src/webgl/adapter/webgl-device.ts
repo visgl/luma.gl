@@ -118,7 +118,6 @@ export class WebGLDevice extends Device {
 
   /** Store constants */
   // @ts-ignore TODO fix
-  _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
   readonly extensions!: GLExtensions;
@@ -588,20 +587,8 @@ export class WebGLDevice extends Device {
    * Set a constant value for a location. Disabled attributes at that location will read from this value
    * @note WebGL constants are stored globally on the WebGL context, not the VertexArray
    * so they need to be updated before every render
-   * @todo - remember/cache values to avoid setting them unnecessarily?
    */
   setConstantAttributeWebGL(location: number, constant: TypedArray): void {
-    const maxVertexAttributes = this.limits.maxVertexAttributes;
-    this._constants = this._constants || new Array(maxVertexAttributes).fill(null);
-    const currentConstant = this._constants[location];
-    if (currentConstant && compareConstantArrayValues(currentConstant, constant)) {
-      log.info(
-        1,
-        `setConstantAttributeWebGL(${location}) could have been skipped, value unchanged`
-      )();
-    }
-    this._constants[location] = constant;
-
     switch (constant.constructor) {
       case Float32Array:
         setConstantFloatArray(this, location, constant as Float32Array);
@@ -664,61 +651,20 @@ function setConstantFloatArray(device: WebGLDevice, location: number, array: Flo
   }
 }
 
-/** Set constant signed int array attribute */
+/** Set constant signed int array attribute. WebGL2 requires all four components. */
 function setConstantIntArray(device: WebGLDevice, location: number, array: Int32Array): void {
-  device.gl.vertexAttribI4iv(location, array);
-  // TODO - not clear if we need to use the special forms, more testing needed
-  // switch (array.length) {
-  //   case 1:
-  //     gl.vertexAttribI1iv(location, array);
-  //     break;
-  //   case 2:
-  //     gl.vertexAttribI2iv(location, array);
-  //     break;
-  //   case 3:
-  //     gl.vertexAttribI3iv(location, array);
-  //     break;
-  //   case 4:
-  //     break;
-  //   default:
-  //     assert(false);
-  // }
+  if (array.length < 4) {
+    device.gl.vertexAttribI4i(location, array[0] ?? 0, array[1] ?? 0, array[2] ?? 0, 1);
+  } else {
+    device.gl.vertexAttribI4iv(location, array);
+  }
 }
 
-/** Set constant unsigned int array attribute */
-function setConstantUintArray(device: WebGLDevice, location: number, array: Uint32Array) {
-  device.gl.vertexAttribI4uiv(location, array);
-  // TODO - not clear if we need to use the special forms, more testing needed
-  // switch (array.length) {
-  //   case 1:
-  //     gl.vertexAttribI1uiv(location, array);
-  //     break;
-  //   case 2:
-  //     gl.vertexAttribI2uiv(location, array);
-  //     break;
-  //   case 3:
-  //     gl.vertexAttribI3uiv(location, array);
-  //     break;
-  //   case 4:
-  //     gl.vertexAttribI4uiv(location, array);
-  //     break;
-  //   default:
-  //     assert(false);
-  // }
-}
-
-/**
- * Compares contents of two typed arrays
- * @todo max length?
- */
-function compareConstantArrayValues(v1: TypedArray, v2: TypedArray): boolean {
-  if (!v1 || !v2 || v1.length !== v2.length || v1.constructor !== v2.constructor) {
-    return false;
+/** Set constant unsigned int array attribute. WebGL2 requires all four components. */
+function setConstantUintArray(device: WebGLDevice, location: number, array: Uint32Array): void {
+  if (array.length < 4) {
+    device.gl.vertexAttribI4ui(location, array[0] ?? 0, array[1] ?? 0, array[2] ?? 0, 1);
+  } else {
+    device.gl.vertexAttribI4uiv(location, array);
   }
-  for (let i = 0; i < v1.length; ++i) {
-    if (v1[i] !== v2[i]) {
-      return false;
-    }
-  }
-  return true;
 }
