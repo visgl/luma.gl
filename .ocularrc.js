@@ -91,6 +91,7 @@ const config = {
         instancing: '/examples/showcase/instancing',
         'pbr-shadows': '/examples/api/pbr-shadows',
         'lightmap-baking': '/examples/api/lightmap-baking',
+        'baked-cornell-box': '/examples/api/baked-cornell-box',
         'prefiltered-environment': '/examples/api/prefiltered-environment',
         'render-bundles': '/examples/api/render-bundles',
         'instanced-cubes': '/examples/tutorials/instanced-cubes',

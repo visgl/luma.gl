@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="luma-example-id" content="api/baked-cornell-box" />
+    <meta name="luma-example-backends" content="webgpu,webgl2" />
+    <meta name="luma-example-mobile" content="full" />
+    <meta name="luma-example-mobile-profile" content="standard" />
+    <title>Baked Cornell Box · luma.gl</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html, body {width: 100%; height: 100%; margin: 0; overflow: hidden; background: #101418;}
+      body > canvas {display: block; width: 100vw !important; height: 100vh !important; touch-action: none;}
+      aside.luma-example-infobox--overlay {left: auto; right: 12px; width: 360px;}
+    </style>
+  </head>
+  <body>
+    <aside class="luma-example-infobox luma-example-infobox--overlay" aria-label="Baked Cornell Box" data-info-box-appearance="cinematic">
+      <div id="example-panel-host" data-example-panel-host data-example-panel-title="Baked Cornell Box"></div>
+    </aside>
+    <script type="module">
+      import '../../example-infobox.css';
+      import {installStandaloneExampleSupport} from '../../example-support.ts';
+      const exampleSupport = await installStandaloneExampleSupport();
+      if (exampleSupport.supported) {
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {webgl2Adapter}, {default: AnimationLoopTemplate}] = await Promise.all([
+          import('@luma.gl/core'),
+          import('@luma.gl/engine'),
+          import('@luma.gl/core/webgpu'),
+          import('@luma.gl/core/webgl'),
+          import('./app.ts')
+        ]);
+        const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+          device: luma.createDevice({
+            type: new URLSearchParams(location.search).get('backend') || 'best-available',
+            adapters: [webgpuAdapter, webgl2Adapter],
+            createCanvasContext: true
+          })
+        });
+        animationLoop.start().catch(exampleSupport.reportFailed);
+      }
+    </script>
+  </body>
+</html>
