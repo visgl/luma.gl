@@ -1,0 +1,18 @@
+---
+title: Baked Cornell Box
+description: Reload a Cornell Box HDR lightmap in an independent glTF viewer.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: intermediate
+  maturity: experimental
+  topics: [api, rendering, lighting]
+---
+
+import {BakedCornellBoxExample} from '@site/src/examples';
+
+<BakedCornellBoxExample />
+
+The viewer opens a 4096 × 4096 bake made with 768 samples. To try your own lighting,
+export a completed Cornell Box bake from [Lightmap Baking](/examples/api/lightmap-baking)
+and open the `.lmb` file here. The viewer checks the source asset and atlas recipe,
+then uses the stored irradiance to light the scene.

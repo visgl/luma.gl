@@ -3,6 +3,7 @@
 
 import {Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
+import type {prepareCornellAtlas} from '../lightmap-baking/cornell-scene';
 import {IndirectLightmap} from '../lightmap-baking/indirect-lightmap';
 import {makeBakingScene, type BakingScene} from '../lightmap-baking/scenes';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
@@ -260,7 +261,9 @@ export class LightmapPreview {
     ])
   };
   private lightIntensity = 1;
+  private readonly sampleLimit: number;
   private stale = false;
+  private loaded = false;
   private destroyed = false;
   static isSupported(device: Device): boolean {
     const output = device.getTextureFormatCapabilities('rgba16float');
@@ -272,26 +275,37 @@ export class LightmapPreview {
     private readonly device: Device,
     resolution: 'full' | 'preview' = 'full',
     atlasMode: 'authored' | 'generated' = 'authored',
-    scene: BakingScene = 'rooms'
+    scene: BakingScene = 'rooms',
+    private readonly cornell?: ReturnType<typeof prepareCornellAtlas>,
+    sampleLimit = SAMPLE_COUNT
   ) {
-    const width = resolution === 'full' ? (atlasMode === 'generated' ? 2048 : 1024) : 256;
-    const height = width / 2;
+    this.sampleLimit = sampleLimit;
+    const width =
+      cornell?.atlas.width ??
+      (resolution === 'full' ? (atlasMode === 'generated' ? 2048 : 1024) : 256);
+    const height = cornell?.atlas.height ?? width / 2;
     const chartSize = width / 8;
-    const source = scene === 'rooms' ? makeRoom(height) : makeBakingScene(scene);
+    const source =
+      cornell?.geometry ?? (scene === 'rooms' ? makeRoom(height) : makeBakingScene(scene));
     this.atlas =
-      atlasMode === 'generated'
+      cornell?.atlas ??
+      (atlasMode === 'generated'
         ? createLightmapAtlas([{id: 'room', geometry: source}], {
             width,
             height,
             texelsPerUnit: width / 64,
             padding: 2
           })
-        : null;
-    this.geometry = this.atlas?.meshes[0].geometry ?? source;
+        : null);
+    this.geometry = cornell?.geometry ?? this.atlas?.meshes[0].geometry ?? source;
     this.baker = new LightmapBaker(device, {width, height});
     this.indirect =
       this.atlas && device.type === 'webgpu'
-        ? new IndirectLightmap(device, this.geometry, this.atlas)
+        ? new IndirectLightmap(
+            device,
+            this.geometry,
+            cornell ? {...this.atlas, charts: cornell.drawCharts} : this.atlas
+          )
         : null;
     this.white = device.createTexture({
       width: 1,
@@ -305,6 +319,7 @@ export class LightmapPreview {
     });
     const chartCount = this.geometry.vertexCount / 6;
     const charts =
+      cornell?.drawCharts ??
       this.atlas?.charts ??
       Array.from({length: chartCount}, (_, chartIndex) => ({
         id: chartIndex + 1,
@@ -345,14 +360,15 @@ export class LightmapPreview {
     });
     this.shadows = new ShadowMapRenderer(device, {
       quality: 'low',
-      directionalMapSize: resolution === 'full' ? width : 256,
+      directionalMapSize: cornell ? 2048 : resolution === 'full' ? width : 256,
       spotLightCapacity: 0,
-      pointLightCapacity: 2,
+      pointLightCapacity: cornell ? 1 : 2,
       pointMapSize: resolution === 'full' ? width : 128
     });
   }
   reset(): void {
     this.baker.reset();
+    this.loaded = false;
     this.result?.destroy();
     this.result = null;
     this.stale = false;
@@ -360,6 +376,9 @@ export class LightmapPreview {
   changeLight(): void {
     this.lightIntensity = this.lightIntensity === 1 ? 2 : 1;
     this.stale = this.baker.sampleCount > 0 || Boolean(this.result);
+  }
+  get complete(): boolean {
+    return !this.stale && (this.loaded || this.baker.sampleCount === this.sampleLimit);
   }
   async exportData(): Promise<LightmapData> {
     if (this.destroyed || this.stale || (!this.result && !this.baker.sampleCount))
@@ -389,6 +408,7 @@ export class LightmapPreview {
     const result = createLightmapFromData(this.device, data);
     this.result?.destroy();
     this.result = result;
+    this.loaded = true;
     this.baker.reset();
     this.stale = false;
   }
@@ -407,15 +427,17 @@ export class LightmapPreview {
     });
     const primary: BakeLight = {
       type: 'point',
-      position: [-1.5, 2.4, -0.6],
+      position: this.cornell ? [0, 4.5, 0] : [-1.5, 2.4, -0.6],
       attenuation: [0, 0, 1],
-      color: [5 * this.lightIntensity, 2 * this.lightIntensity, 0.5 * this.lightIntensity]
+      color: this.cornell
+        ? [40 * this.lightIntensity, 40 * this.lightIntensity, 40 * this.lightIntensity]
+        : [5 * this.lightIntensity, 2 * this.lightIntensity, 0.5 * this.lightIntensity]
     };
     const secondary: BakeLight = {
       type: 'point',
       position: [1.5, 2.4, -0.6],
       attenuation: [0, 0, 1],
-      color: [0.5, 2, 5]
+      color: this.cornell ? [0, 0, 0] : [0.5, 2, 5]
     };
     const recordShadows = (lights: BakeLight[]) =>
       this.shadows.render({
@@ -451,7 +473,7 @@ export class LightmapPreview {
             : []
         ),
         pointLights: lights.flatMap(light =>
-          light.type === 'point'
+          light.type === 'point' && light.color.some(component => component > 0)
             ? [
                 {
                   position: light.position,
@@ -482,22 +504,23 @@ export class LightmapPreview {
       });
     if (
       !this.stale &&
-      this.baker.sampleCount < SAMPLE_COUNT &&
+      this.baker.sampleCount < this.sampleLimit &&
       (mode === 'baking' || (mode === 'baked' && !this.result && this.baker.sampleCount === 0))
     ) {
       this.result?.destroy();
       this.result = null;
+      this.loaded = false;
       const sampleIndex = this.baker.sampleCount;
       const environment = sampleLightmapEnvironment(
         this.environment,
         Math.floor(sampleIndex / 3),
-        SAMPLE_COUNT / 3
+        this.sampleLimit / 3
       );
       const light =
         sampleIndex % 3 === 0 ? primary : sampleIndex % 3 === 1 ? secondary : environment.light;
       this.baker.update({
         chartTexture: this.chartTexture,
-        dilationSteps: 2,
+        dilationSteps: this.atlas?.padding ?? 2,
         prepareSample: () => {
           this.indirect?.update([primary, secondary], sampleIndex);
           const shadow = recordShadows([light]);
@@ -540,7 +563,9 @@ export class LightmapPreview {
         new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1])
       );
     this.model.shaderInputs.setProps({
-      shadow: recordShadows(mode === 'live' ? [primary, secondary] : []),
+      shadow: recordShadows(
+        mode === 'live' ? (this.cornell ? [primary] : [primary, secondary]) : []
+      ),
       pbrShadow: {
         enabled: mode === 'live',
         viewMatrix: new Matrix4().lookAt({eye: [5, 4, 6], center: [0, 1, 0]})
@@ -568,7 +593,7 @@ export class LightmapPreview {
         ? 'Lighting changed — reset to rebake'
         : this.result && !this.baker.sampleCount
           ? 'Loaded bake'
-          : `Samples: ${this.baker.sampleCount}/${SAMPLE_COUNT}`;
+          : `Samples: ${this.baker.sampleCount}/${this.sampleLimit}`;
   }
   destroy(): void {
     if (this.destroyed) return;

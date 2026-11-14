@@ -15058,6 +15058,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-baked-cornell-box@workspace:examples/api/baked-cornell-box":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-baked-cornell-box@workspace:examples/api/baked-cornell-box"
+  dependencies:
+    "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@loaders.gl/core": "npm:~5.0.0-beta.8"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.8"
+    "@luma.gl/core": "npm:10.0.0-alpha.14"
+    "@luma.gl/engine": "npm:10.0.0-alpha.14"
+    "@luma.gl/shaders": "npm:10.0.0-alpha.14"
+    "@math.gl/core": "npm:5.0.0-beta.8"
+    typescript: "npm:^6.0.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-blending@workspace:examples/api/blending":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-blending@workspace:examples/api/blending"
@@ -16102,6 +16118,8 @@ __metadata:
   resolution: "luma.gl-examples-lightmap-baking@workspace:examples/api/lightmap-baking"
   dependencies:
     "@deck.gl-community/panels": "https://github.com/visgl/deck.gl-community.git#workspace=@deck.gl-community/panels&commit=ede78777382aaf1c821a9c427cdb48eb4e77e20e"
+    "@loaders.gl/core": "npm:~5.0.0-beta.8"
+    "@loaders.gl/scene": "npm:~5.0.0-beta.8"
     "@luma.gl/anari": "npm:10.0.0-alpha.14"
     "@luma.gl/core": "npm:10.0.0-alpha.14"
     "@luma.gl/engine": "npm:10.0.0-alpha.14"

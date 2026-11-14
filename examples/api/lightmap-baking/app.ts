@@ -4,6 +4,13 @@
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
 import {getLightmapAtlasDebugData, validateLightmapAtlas} from '@luma.gl/engine/lighting';
 import {BAKING_SCENES, type BakingScene} from './scenes';
+import {
+  CORNELL_BAKE_PROFILES,
+  decodeCornellBake,
+  encodeCornellBake,
+  type CornellBakeRecipe
+} from './cornell-bake-file';
+import {loadCornellScene, prepareCornellAtlas} from './cornell-scene';
 import {encodeSceneBake, decodeSceneBake} from './bake-file';
 import {ColumnPanel} from '@deck.gl-community/panels';
 import {
@@ -23,15 +30,17 @@ export default class LightmapExample extends AnimationLoopTemplate {
   private controls: OrbitControls | null = null;
   private mode: 'live' | 'baking' | 'baked' = 'baking';
   private disposed = false;
-  private scene: BakingScene = 'courtyard';
+  private scene: BakingScene | 'cornell' | 'cornell-preview' = 'courtyard';
   private readonly device;
+  private cornellRecipe: CornellBakeRecipe | null = null;
+  private sceneRequest = 0;
   private statusMessage = '';
   private activePanelId: string | undefined = 'baking-info';
   constructor(props: AnimationProps) {
     super(props);
     this.device = props.device;
     this.preview = LightmapPreview.isSupported(props.device)
-      ? new LightmapPreview(props.device, 'full', 'generated', this.scene)
+      ? new LightmapPreview(props.device, 'full', 'generated', 'courtyard')
       : null;
     this.settings = new ExampleSettingsPanelManager({
       id: 'lightmap-baking-settings',
@@ -47,7 +56,11 @@ export default class LightmapExample extends AnimationLoopTemplate {
                 label: 'Scene',
                 type: 'select',
                 persist: 'none',
-                options: BAKING_SCENES.map(scene => ({...scene}))
+                options: [
+                  ...BAKING_SCENES.map(scene => ({...scene})),
+                  {value: 'cornell-preview', label: 'Cornell Box (glTF) · Preview'},
+                  {value: 'cornell', label: 'Cornell Box (glTF) · High quality'}
+                ]
               },
               {
                 name: 'mode',
@@ -66,22 +79,70 @@ export default class LightmapExample extends AnimationLoopTemplate {
       },
       settings: {mode: 'baking', scene: this.scene},
       onSettingsChange: values => {
-        const selected = BAKING_SCENES.find(scene => scene.value === values.scene);
-        if (selected && selected.value !== this.scene) {
-          const next = new LightmapPreview(this.device, 'full', 'generated', selected.value);
-          this.preview?.destroy();
-          this.preview = next;
-          this.scene = selected.value;
-          this.statusMessage = '';
-          this.setMode('baking');
+        const selected =
+          BAKING_SCENES.find(scene => scene.value === values.scene)?.value ??
+          (values.scene === 'cornell' || values.scene === 'cornell-preview'
+            ? values.scene
+            : undefined);
+        if (selected && selected !== this.scene) {
+          void this.selectScene(selected);
           return;
         }
+        this.sceneRequest++;
         if (values.mode === 'live' || values.mode === 'baking' || values.mode === 'baked')
           this.mode = values.mode;
       }
     });
     this.panels = new ExamplePanelManager({panel: this.makePanel()});
     this.panels.mount();
+  }
+  private async selectScene(scene: LightmapExample['scene']): Promise<void> {
+    const request = ++this.sceneRequest;
+    const current = () => !this.disposed && request === this.sceneRequest;
+    const profile = scene === 'cornell' ? 'high' : scene === 'cornell-preview' ? 'preview' : null;
+    try {
+      let next: LightmapPreview;
+      let recipe: CornellBakeRecipe | null = null;
+      if (profile) {
+        const settings = CORNELL_BAKE_PROFILES[profile];
+        if (
+          this.device.type !== 'webgpu' ||
+          this.device.limits.maxTextureDimension2D < settings.width
+        ) {
+          throw new Error(`Cornell Box baking needs WebGPU and ${settings.width}px textures.`);
+        }
+        this.statusMessage = 'Preparing Cornell Box atlas…';
+        this.panels.setPanel(this.makePanel());
+        const source = await loadCornellScene();
+        if (!current()) return;
+        const atlas = prepareCornellAtlas(source, profile);
+        next = new LightmapPreview(
+          this.device,
+          'full',
+          'generated',
+          'rooms',
+          atlas,
+          settings.samples
+        );
+        recipe = atlas.recipe;
+      } else {
+        next = new LightmapPreview(this.device, 'full', 'generated', scene as BakingScene);
+      }
+      if (!current()) {
+        next.destroy();
+        return;
+      }
+      this.preview?.destroy();
+      this.preview = next;
+      this.cornellRecipe = recipe;
+      this.scene = scene;
+      this.statusMessage = '';
+      this.setMode('baking');
+    } catch (error) {
+      if (!current()) return;
+      this.statusMessage = String(error);
+      this.setMode(this.mode);
+    }
   }
   private setMode(mode: 'live' | 'baking' | 'baked'): void {
     this.mode = mode;
@@ -134,12 +195,21 @@ export default class LightmapExample extends AnimationLoopTemplate {
                 status(this.statusMessage);
                 const download = async () => {
                   try {
+                    if (this.cornellRecipe && !preview.complete)
+                      throw new Error('Finish the Cornell Box bake before exporting.');
                     const data = await preview.exportData();
                     if (this.disposed || this.preview !== preview) return;
                     const url = URL.createObjectURL(
-                      new Blob([encodeSceneBake(data, this.scene)], {
-                        type: 'application/octet-stream'
-                      })
+                      new Blob(
+                        [
+                          this.cornellRecipe
+                            ? encodeCornellBake(data, this.cornellRecipe)
+                            : encodeSceneBake(data, this.scene as BakingScene)
+                        ],
+                        {
+                          type: 'application/octet-stream'
+                        }
+                      )
                     );
                     const link = document.createElement('a');
                     link.href = url;
@@ -202,13 +272,15 @@ export default class LightmapExample extends AnimationLoopTemplate {
                   try {
                     const buffer = await file.arrayBuffer();
                     if (this.disposed || this.preview !== preview) return;
-                    const data = decodeSceneBake(buffer, this.scene);
+                    const data = this.cornellRecipe
+                      ? decodeCornellBake(buffer, this.cornellRecipe)
+                      : decodeSceneBake(buffer, this.scene as BakingScene);
                     if (
                       data.width !== preview.baker.width ||
                       data.height !== preview.baker.height ||
                       data.uvSet !== 1
                     )
-                      throw new Error('This scene requires its 2048 × 1024 UV1 atlas.');
+                      throw new Error('The bake dimensions or UV set do not match this scene.');
                     preview.loadData(data);
                     status('Loaded — displaying baked lighting.');
                     this.setMode('baked');

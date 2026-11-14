@@ -197,3 +197,16 @@ Example exports use a `.lmb` envelope carrying the scene identity and atlas revi
 around the standard engine lightmap payload. Loading a different scene is rejected
 before upload. The public `encodeLightmapData` / `decodeLightmapData` format remains
 unchanged. Applications using those lower-level APIs own scene/layout association.
+
+### Baking a glTF scene
+
+Select **Cornell Box (glTF)** in [Lightmap Baking](/examples/api/lightmap-baking).
+The example resolves the glTF node transforms and prepares independent UV1 charts
+for each placement, including two nodes that share one mesh. The preview uses a
+2048 × 2048 atlas and 192 samples. High quality uses a 4096 × 4096 atlas and 768
+samples. Both use eight texels of chart padding and two diffuse bounces on WebGPU.
+
+Export the completed bake and open the `.lmb` in
+[Baked Cornell Box](/examples/api/baked-cornell-box). The viewer matches the source
+asset hash and ordered placements to the atlas recipe before reconstructing the
+receiving geometry and uploading the HDR irradiance.
