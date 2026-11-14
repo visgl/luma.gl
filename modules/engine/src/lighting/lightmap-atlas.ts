@@ -18,6 +18,8 @@ export type LightmapAtlasOptions = {
   texelsPerUnit: number;
   padding?: number;
   uvSet?: 0 | 1;
+  /** Join consecutive coplanar triangles that form a quad. */
+  mergeCoplanarPairs?: boolean;
 };
 export type LightmapAtlasChart = {
   id: number;
@@ -28,7 +30,7 @@ export type LightmapAtlasChart = {
   rectangle: {x: number; y: number; width: number; height: number};
   worldArea: number;
 };
-export type LightmapAtlas = Required<LightmapAtlasOptions> & {
+export type LightmapAtlas = Required<Omit<LightmapAtlasOptions, 'mergeCoplanarPairs'>> & {
   meshes: {id: string; geometry: Geometry}[];
   charts: LightmapAtlasChart[];
   /** Independent row-major r32float data, suitable for LightmapBaker chartTexture. Zero is unused. */
@@ -98,13 +100,15 @@ export function createLightmapAtlas(
         matrix[11] === 0 &&
         matrix[15] === 1
     );
-    for (let firstVertex = 0; firstVertex < vertexCount; firstVertex += 3) {
-      const points = [0, 1, 2].map(offset => {
+    const getPoints = (firstVertex: number) =>
+      [0, 1, 2].map(offset => {
         const vertex = indices ? indices[firstVertex + offset] : firstVertex + offset;
         const point = new Vector3(positions.value.slice(vertex * 3, vertex * 3 + 3));
         assert(point.every(Number.isFinite));
         return point.transformAsPoint(matrix);
       });
+    for (let firstVertex = 0; firstVertex < vertexCount; ) {
+      const points = getPoints(firstVertex);
       const edges = points.map((point, index) =>
         new Vector3(points[(index + 1) % 3]).subtract(point)
       );
@@ -122,21 +126,73 @@ export function createLightmapAtlas(
       local[end * 2] = lengths[start] * texelsPerUnit;
       local[third * 2] = projected * texelsPerUnit;
       local[third * 2 + 1] = altitude * texelsPerUnit;
+      let worldArea = (lengths[start] * altitude) / 2;
+      if (options.mergeCoplanarPairs && firstVertex + 6 <= vertexCount) {
+        const second = getPoints(firstVertex + 3);
+        const shared = second.map(point =>
+          points.findIndex(candidate =>
+            candidate.every((component, index) => component === point[index])
+          )
+        );
+        if (shared.filter(index => index >= 0).length === 2 && new Set(shared).size === 3) {
+          const normal = edges[start].clone().cross(relative).normalize();
+          const vertical = normal.clone().cross(horizontal);
+          const opposite = shared.indexOf(-1);
+          const delta = second[opposite].clone().subtract(points[start]);
+          const projectedPoint = [delta.dot(horizontal), delta.dot(vertical)];
+          const [sharedFirst, sharedSecond] = shared.filter(index => index >= 0);
+          const unshared = [0, 1, 2].find(index => !shared.includes(index))!;
+          const side = (x: number, y: number) =>
+            (local[sharedSecond * 2] - local[sharedFirst * 2]) * (y - local[sharedFirst * 2 + 1]) -
+            (local[sharedSecond * 2 + 1] - local[sharedFirst * 2 + 1]) *
+              (x - local[sharedFirst * 2]);
+          const secondArea = second[1]
+            .clone()
+            .subtract(second[0])
+            .cross(second[2].clone().subtract(second[0]));
+          if (
+            Math.abs(delta.dot(normal)) <= 1e-7 * delta.len() &&
+            secondArea.dot(normal) > 0 &&
+            side(local[unshared * 2], local[unshared * 2 + 1]) *
+              side(projectedPoint[0] * texelsPerUnit, projectedPoint[1] * texelsPerUnit) <
+              0
+          ) {
+            for (const index of shared) {
+              if (index >= 0) local.push(local[index * 2], local[index * 2 + 1]);
+              else local.push(projectedPoint[0] * texelsPerUnit, projectedPoint[1] * texelsPerUnit);
+            }
+            worldArea += secondArea.len() / 2;
+          }
+        }
+      }
+      const horizontalCoordinates = local.filter((_, index) => index % 2 === 0);
+      const verticalCoordinates = local.filter((_, index) => index % 2 === 1);
+      const chartVertexCount = local.length / 2;
+      const minimumX = chartVertexCount === 3 ? 0 : Math.min(...horizontalCoordinates);
+      const minimumY = chartVertexCount === 3 ? 0 : Math.min(...verticalCoordinates);
       charts.push({
         id: charts.length + 1,
         meshId: input.id,
         meshIndex,
         firstVertex,
-        vertexCount: 3,
+        vertexCount: chartVertexCount,
         rectangle: {
           x: 0,
           y: 0,
-          width: Math.ceil(lengths[start] * texelsPerUnit) + 1 + padding * 2,
-          height: Math.ceil(altitude * texelsPerUnit) + 1 + padding * 2
+          width:
+            Math.ceil(
+              chartVertexCount === 3
+                ? lengths[start] * texelsPerUnit
+                : Math.max(...horizontalCoordinates) - minimumX
+            ) +
+            1 +
+            padding * 2,
+          height: Math.ceil(Math.max(...verticalCoordinates) - minimumY) + 1 + padding * 2
         },
-        worldArea: (lengths[start] * altitude) / 2,
-        coordinates: local
+        worldArea,
+        coordinates: local.map((value, index) => value - (index % 2 ? minimumY : minimumX))
       });
+      firstVertex += chartVertexCount;
     }
     return {
       id: input.id,
@@ -174,7 +230,7 @@ export function createLightmapAtlas(
     shelfHeight = Math.max(shelfHeight, rectangle.height);
     allocatedPixels += rectangle.width * rectangle.height;
     const coordinates = meshes[chart.meshIndex].geometry.attributes[`TEXCOORD_${uvSet}`].value;
-    for (let vertex = 0; vertex < 3; vertex++) {
+    for (let vertex = 0; vertex < chart.vertexCount; vertex++) {
       coordinates[(chart.firstVertex + vertex) * 2] =
         (rectangle.x + padding + 0.5 + chart.coordinates[vertex * 2]) / width;
       coordinates[(chart.firstVertex + vertex) * 2 + 1] =
