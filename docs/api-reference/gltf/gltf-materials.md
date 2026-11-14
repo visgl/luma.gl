@@ -268,10 +268,11 @@ prepared diffuse cubemap, specular cubemap mip chain, and BRDF lookup texture:
 
 ```ts
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/engine/gltf';
-import {loadImageTexture} from '@loaders.gl/images/load-image';
+import {load} from '@loaders.gl/core';
+import {ImageLoader} from '@loaders.gl/images';
 
 const environment = loadPBREnvironment(device, {
-  loadImage: loadImageTexture,
+  loadImage: url => load(url, ImageLoader),
   brdfLutUrl: '/environment/brdf-lut.png',
   getTexUrl: (kind, face, level) => `/environment/${kind}/${face}/${level}.png`,
   specularMipLevels: 6

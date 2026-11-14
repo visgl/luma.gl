@@ -179,8 +179,8 @@ respectively. Install package roots, then import from the format subpaths.
 ### loaders.gl beta.2 imports
 
 Replace `@loaders.gl/textures` dependencies and imports with `@loaders.gl/images`.
-Legacy texture helpers and decoder configuration use explicit entries such as
-`@loaders.gl/images/load-image`, `@loaders.gl/images/basis-module-loader`, and
+Load images with `load(url, ImageLoader)` and use explicit decoder entries such as
+`@loaders.gl/images/basis-module-loader` and
 `@loaders.gl/images/crunch-module-loader`. Loader, writer, and source entries are
 now flat: for example, replace `@loaders.gl/tables/parquet/parquet-source-loader`
 with `@loaders.gl/tables/parquet-source-loader`.
@@ -469,7 +469,7 @@ For information on upgrading to from v8 and earlier releases, see the [Legacy Up
   the shared `examples/gltf/gltf-exporter.ts` application helper. Copy it into your application
   when exporting assets; it uses loaders.gl for GLB encoding.
 - `loadPBREnvironment()` now requires a `loadImage` callback. Pass your application image loader,
-  such as `loadImage: loadImageTexture` from `@loaders.gl/images/load-image`.
+  such as `loadImage: url => load(url, ImageLoader)`.
 - The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`,
   `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and
   `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to
