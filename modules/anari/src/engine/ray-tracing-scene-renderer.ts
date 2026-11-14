@@ -3875,6 +3875,8 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 79] = materialUniforms?.specularIntensityFactor ?? 1;
       primitiveValues[primitiveOffset + 80] = materialUniforms?.clearcoatFactor ?? 0;
       primitiveValues[primitiveOffset + 81] = materialUniforms?.clearcoatRoughnessFactor ?? 0.18;
+      primitiveValues[primitiveOffset + 82] = materialUniforms?.occlusionStrength ?? 1;
+      primitiveValues[primitiveOffset + 83] = 1;
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,

@@ -24,8 +24,13 @@ const MATERIAL_MAPS = [
     'primitive.specular = vec4<f32>(primitive.specular.rgb * sampled.rgb, primitive.specular.w);'
   ],
   ['specularIntensity', 'pbr_specularIntensitySampler', 'primitive.specular.w *= sampled.a;'],
-  ['clearcoat', 'pbr_clearcoatSampler', 'primitive.clearcoat.x *= sampled.r;'],
-  ['clearcoatRoughness', 'pbr_clearcoatRoughnessSampler', 'primitive.clearcoat.y *= sampled.g;'],
+  ['clearcoat', 'pbr_clearcoatSampler', 'primitive.clearcoatOcclusion.x *= sampled.r;'],
+  [
+    'clearcoatRoughness',
+    'pbr_clearcoatRoughnessSampler',
+    'primitive.clearcoatOcclusion.y *= sampled.g;'
+  ],
+  ['occlusion', 'pbr_occlusionSampler', 'primitive.clearcoatOcclusion.w = sampled.r;'],
   ['normal', 'pbr_normalSampler', ''],
   ['clearcoatNormal', 'pbr_clearcoatNormalSampler', '']
 ] as const;

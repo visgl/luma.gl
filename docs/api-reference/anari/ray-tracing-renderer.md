@@ -82,6 +82,9 @@ Triangle clearcoat normal maps use their own UV chart and linear RGB. The coat u
 surface normal when the map is absent. Opaque bounce sampling still follows the
 base shading distribution.
 
+Ambient occlusion maps use the red channel and the material's `occlusionStrength` to
+attenuate ambient light. Direct lights, emission, and ray visibility are unaffected.
+
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a

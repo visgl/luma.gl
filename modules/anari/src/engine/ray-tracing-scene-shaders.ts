@@ -34,7 +34,7 @@ struct RayPrimitive {
   material: vec4<f32>,
   attenuation: vec4<f32>,
   specular: vec4<f32>,
-  clearcoat: vec4<f32>,
+  clearcoatOcclusion: vec4<f32>, // Coat strength, coat roughness, occlusion strength, occlusion sample.
 };
 
 struct RayBlasNode {
@@ -935,7 +935,9 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     let lightType = u32(light.directionType.w);
     let lightColor = light.colorIntensity.rgb * light.colorIntensity.w;
     if (lightType == 0u) {
-      result += baseColor * lightColor * opaqueWeight;
+      let occlusion = mix(1.0, clamp(primitive.clearcoatOcclusion.w, 0.0, 1.0),
+        clamp(primitive.clearcoatOcclusion.z, 0.0, 1.0));
+      result += baseColor * lightColor * opaqueWeight * occlusion;
       continue;
     }
 
@@ -967,7 +969,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     }
 
     let normalLight = max(dot(normal, lightDirection), 0.0);
-    if ((normalLight <= 0.0 && primitive.clearcoat.x <= 0.0) ||
+    if ((normalLight <= 0.0 && primitive.clearcoatOcclusion.x <= 0.0) ||
         dot(faceNormal, lightDirection) <= 0.0 || attenuation <= 0.0) {
       continue;
     }
@@ -999,7 +1001,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     let specular = fresnel * geometricOcclusion * distribution /
       (4.0 * max(normalLight, 0.000001) * normalView);
     let response = applyClearcoat((diffuseContribution + specular) * normalLight,
-      primitive.clearcoat.xy, hit, viewDirection, lightDirection, halfDirection, viewHalf);
+      primitive.clearcoatOcclusion.xy, hit, viewDirection, lightDirection, halfDirection, viewHalf);
     result += response * lightColor *
       attenuation * lightSampleWeight * opaqueWeight;
   }
@@ -1340,7 +1342,7 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
   let viewDirection = -ray.direction;
   let normalView = clamp(dot(normal, viewDirection), 0.001, 1.0);
   let normalLight = max(dot(normal, direction), 0.0);
-  if ((normalLight <= 0.0 && primitive.clearcoat.x <= 0.0) || dot(getFaceNormal(hit, ray), direction) <= 0.0) { return vec3<f32>(0.0); }
+  if ((normalLight <= 0.0 && primitive.clearcoatOcclusion.x <= 0.0) || dot(getFaceNormal(hit, ray), direction) <= 0.0) { return vec3<f32>(0.0); }
   let halfDirection = normalize(viewDirection + direction);
   let normalHalf = max(dot(normal, halfDirection), 0.0);
   let viewHalf = max(dot(viewDirection, halfDirection), 0.000001);
@@ -1358,7 +1360,7 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
   // Match the scalar direct-light BRDF; cancel N.L before dividing by the PDF.
   let diffuse = (vec3<f32>(1.0) - fresnel) * baseColor * (vec3<f32>(1.0) - dielectricReflectance) * (1.0 - metallic) * normalLight / PI;
   let specular = fresnel * lightVisibility * viewVisibility * distribution / (4.0 * normalView);
-  return applyClearcoat(diffuse + specular, primitive.clearcoat.xy, hit, viewDirection, direction, halfDirection, viewHalf);
+  return applyClearcoat(diffuse + specular, primitive.clearcoatOcclusion.xy, hit, viewDirection, direction, halfDirection, viewHalf);
 }
 
 // CDF emitter selection, uniform triangle selection and conditional area sampling. Visibility rejects far sides of spheres.
