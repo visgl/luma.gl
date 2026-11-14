@@ -24,8 +24,13 @@ const MATERIAL_MAPS = [
     'primitive.specular = vec4<f32>(primitive.specular.rgb * sampled.rgb, primitive.specular.w);'
   ],
   ['specularIntensity', 'pbr_specularIntensitySampler', 'primitive.specular.w *= sampled.a;'],
-  ['clearcoat', 'pbr_clearcoatSampler', 'primitive.clearcoat.x *= sampled.r;'],
-  ['clearcoatRoughness', 'pbr_clearcoatRoughnessSampler', 'primitive.clearcoat.y *= sampled.g;'],
+  ['clearcoat', 'pbr_clearcoatSampler', 'primitive.clearcoatOcclusion.x *= sampled.r;'],
+  [
+    'clearcoatRoughness',
+    'pbr_clearcoatRoughnessSampler',
+    'primitive.clearcoatOcclusion.y *= sampled.g;'
+  ],
+  ['occlusion', 'pbr_occlusionSampler', 'primitive.clearcoatOcclusion.w = sampled.r;'],
   ['normal', 'pbr_normalSampler', ''],
   ['clearcoatNormal', 'pbr_clearcoatNormalSampler', '']
 ] as const;
@@ -85,17 +90,21 @@ export function getRayMaterialTextureShader(
     )
     .join('');
   const cases = textures
-    .map(
-      (texture, index) => `
-    case ${index + 1}u: {
-      let extent = footprint * vec2<f32>(textureDimensions(materialTexture${index}, 0));
-      let level = clamp(log2(max(length(extent), 1.0)), 0.0,
-        f32(textureNumLevels(materialTexture${index}) - 1u));
-      return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, level);
-    }
-`
-    )
-    .join('');
+    .map((texture, index) => {
+      // Single-level textures cannot benefit from a footprint calculation.
+      if (texture.mipLevels === 1) {
+        return `case ${index + 1}u: {
+          return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, 0.0);
+        }`;
+      }
+      return `case ${index + 1}u: {
+        let extent = footprint * vec2<f32>(textureDimensions(materialTexture${index}, 0));
+        let level = clamp(log2(max(length(extent), 1.0)), 0.0,
+          f32(textureNumLevels(materialTexture${index}) - 1u));
+        return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, level);
+      }`;
+    })
+    .join('\n');
   const opacityMaterials: string[] = [];
   const normalMaterials: string[] = [];
   const clearcoatNormalMaterials: string[] = [];

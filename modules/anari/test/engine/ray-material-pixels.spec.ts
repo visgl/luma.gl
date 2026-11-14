@@ -8,8 +8,7 @@ import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 
-it('ray maps preserve UV selection and replacement, and dielectrics cross both sphere interfaces', async () => {
-  if (!webgpuAdapter.isSupported()) return;
+async function createMaterialFixture() {
   const device = await webgpuAdapter.create({
     featureLevel: 'core',
     createCanvasContext: {canvas: new OffscreenCanvas(8, 8)}
@@ -125,6 +124,58 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
       buffer.destroy();
     }
   }
+  function destroy(): void {
+    renderer.destroy();
+    framebuffer.destroy();
+    color.destroy();
+    map.destroy();
+    mipMap.destroy();
+    replacement.destroy();
+    device.destroy();
+  }
+  return {options, surface, geometry, renderer, replacement, map, mipMap, readPixel, destroy};
+}
+
+it('ray occlusion maps attenuate ambient light without changing directional lighting', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, map, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const occludedSurface = {
+      ...surface,
+      material: {
+        id: 'occlusion-material',
+        uniforms: {
+          baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+          occlusionStrength: 1,
+          occlusionUVSet: 1,
+          occlusionMapEnabled: true
+        },
+        bindings: {pbr_occlusionSampler: map}
+      }
+    };
+    options.surfaces = [occludedSurface];
+    options.samplingFrameIndex = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    occludedSurface.material.uniforms.occlusionStrength = 0.5;
+    expect((await readPixel())[0]).toBeCloseTo(128, -1);
+    occludedSurface.material.uniforms.occlusionUVSet = 0;
+    expect(await readPixel()).toEqual([255, 255, 255]);
+    occludedSurface.material.uniforms.occlusionUVSet = 1;
+    occludedSurface.material.uniforms.occlusionStrength = 1;
+    options.lights = [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 1}];
+    const directWithOcclusion = await readPixel();
+    expect(directWithOcclusion[0]).toBeGreaterThan(20);
+    occludedSurface.material.uniforms.occlusionMapEnabled = false;
+    expect(await readPixel()).toEqual(directWithOcclusion);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray maps preserve UV selection and replacement, and dielectrics cross both sphere interfaces', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, renderer, replacement, map, mipMap, readPixel, destroy} =
+    await createMaterialFixture();
   try {
     expect(await readPixel()).toEqual([255, 0, 0]);
     surface.material.uniforms.baseColorUVSet = 1;
@@ -414,6 +465,16 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     options.samplesPerPixel = 1;
     replacement.writeData(new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]));
     options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 1}];
+  } finally {
+    destroy();
+  }
+}, 540_000);
+
+it('ray dielectrics refract and absorb light and sample remaining material maps', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, replacement, readPixel, destroy} =
+    await createMaterialFixture();
+  try {
     const glass = {
       id: 'glass',
       geometry,
@@ -550,13 +611,7 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     options.maxBounces = 3;
     expect(await readPixel()).toEqual([0, 0, 0]);
   } finally {
-    renderer.destroy();
-    framebuffer.destroy();
-    color.destroy();
-    map.destroy();
-    mipMap.destroy();
-    replacement.destroy();
-    device.destroy();
+    destroy();
   }
   // Software WebGPU CI compiles several complete traversal/material pipelines here.
 }, 540_000);
