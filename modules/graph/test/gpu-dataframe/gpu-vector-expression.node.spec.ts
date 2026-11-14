@@ -9,6 +9,7 @@ import {
   literal,
   parameter,
   vector,
+  vectorColumn,
   cast,
   makeGPUExpressionFromPortableAST
 } from '@luma.gl/graph/gpu-dataframe';
@@ -70,6 +71,15 @@ test('plans typed vector execution and rejects incompatible widths before alloca
     expect(plan.outputs[0].nullable).toBe(true);
     expect(plan.statements.join('\n')).toContain('vec3<f32>');
     expect(plan.statements.join('\n')).toContain('f32(');
+    const translated = frame.withColumn(
+      'translated',
+      vectorColumn('position').add(vector('float32x3', [literal(1), literal(2), literal(3)])),
+      {format: 'float32x3'}
+    );
+    expect(
+      makeGPUQueryExpressionShaderPlan(frame, [], translated.derivedColumns, ['translated'])
+        .outputs[0].format
+    ).toBe('float32x3');
     expect(() =>
       frame.withColumn('bad', cast(column('position'), 'float32x2'), {format: 'float32x2'})
     ).toThrow(/width/);

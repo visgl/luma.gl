@@ -223,10 +223,21 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
 
 /** References a named source column without accessing GPU storage. */
 export function column<Name extends string>(name: Name): GPUExpression<number | null, Name> {
+  return new GPUExpression(makeColumnNode(name));
+}
+
+/** References a packed vector column. The query planner resolves its format from the schema. */
+export function vectorColumn<Name extends string>(
+  name: Name
+): GPUExpression<readonly number[] | null, Name> {
+  return new GPUExpression(makeColumnNode(name));
+}
+
+function makeColumnNode(name: string): GPUExpressionNode {
   if (typeof name !== 'string' || name.length === 0) {
     throw new Error('GPUDataFrame expression columns require a nonempty name');
   }
-  return new GPUExpression({kind: 'column', name});
+  return {kind: 'column', name};
 }
 
 /** Creates one immutable portable scalar literal without embedding it in generated WGSL. */
