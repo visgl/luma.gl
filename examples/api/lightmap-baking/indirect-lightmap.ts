@@ -6,6 +6,7 @@ import type {LightmapAtlas} from '@luma.gl/engine/lighting';
 import {RayTracingSceneRenderer, ScenegraphSurfaces} from '@luma.gl/anari';
 import {Matrix4} from '@math.gl/core';
 import type {Light} from '@luma.gl/shaders';
+import type {BakeTile} from './bake-tiles';
 import {makeBakingScenegraph} from './baking-scenegraph';
 
 /** Example-owned indirect transport. Geometry and atlas positions are in world space. */
@@ -21,27 +22,28 @@ export class IndirectLightmap {
   private readonly composite;
   constructor(
     private readonly device: Device,
-    geometry: Geometry,
-    atlas: LightmapAtlas
+    private readonly geometry: Geometry,
+    private readonly atlas: LightmapAtlas,
+    private region?: BakeTile
   ) {
     this.renderer = new RayTracingSceneRenderer(device);
     this.scene = makeBakingScenegraph(geometry);
-    const {positions, normals} = makeReceiverData(geometry, atlas);
+    const {positions, normals} = makeReceiverData(geometry, atlas, region);
     this.positions = device.createTexture({
-      width: atlas.width,
-      height: atlas.height,
+      width: region?.width ?? atlas.width,
+      height: region?.height ?? atlas.height,
       format: 'rgba32float',
       data: positions
     });
     this.normals = device.createTexture({
-      width: atlas.width,
-      height: atlas.height,
+      width: region?.width ?? atlas.width,
+      height: region?.height ?? atlas.height,
       format: 'rgba32float',
       data: normals
     });
     this.output = device.createTexture({
-      width: atlas.width,
-      height: atlas.height,
+      width: region?.width ?? atlas.width,
+      height: region?.height ?? atlas.height,
       format: 'rgba16float',
       usage: Texture.STORAGE | Texture.TEXTURE
     });
@@ -90,6 +92,12 @@ export class IndirectLightmap {
       }
     });
   }
+  setRegion(region: BakeTile): void {
+    const {positions, normals} = makeReceiverData(this.geometry, this.atlas, region);
+    this.positions.writeData(positions);
+    this.normals.writeData(normals);
+    this.region = region;
+  }
   update(lights: readonly Light[], sampleIndex: number): void {
     this.renderer.render({
       id: 'indirect-bake',
@@ -109,6 +117,9 @@ export class IndirectLightmap {
       progressive: false,
       adaptiveResolution: false,
       resolutionScale: 1,
+      imageRegion: this.region
+        ? {offset: [this.region.x, this.region.y], fullSize: [this.atlas.width, this.atlas.height]}
+        : undefined,
       samplingFrameIndex: sampleIndex,
       samplingSeed: 31,
       maxBounces: 1,
@@ -135,8 +146,12 @@ export class IndirectLightmap {
 }
 
 /** Rasterize generated triangle charts at texel centers; gutters remain unoccupied. */
-function makeReceiverData(geometry: Geometry, atlas: LightmapAtlas) {
-  const positions = new Float32Array(atlas.width * atlas.height * 4);
+function makeReceiverData(
+  geometry: Geometry,
+  atlas: LightmapAtlas,
+  region = {x: 0, y: 0, width: atlas.width, height: atlas.height}
+) {
+  const positions = new Float32Array(region.width * region.height * 4);
   const normals = new Float32Array(positions.length);
   const coordinates = geometry.attributes[`TEXCOORD_${atlas.uvSet}`].value;
   const sourcePositions = geometry.attributes.POSITION.value;
@@ -150,8 +165,16 @@ function makeReceiverData(geometry: Geometry, atlas: LightmapAtlas) {
       (horizontal[2] - horizontal[1]) * (vertical[0] - vertical[2]);
     if (Math.abs(determinant) < 1e-12) continue;
     const {x, y, width, height} = chart.rectangle;
-    for (let row = y; row < y + height; row++)
-      for (let column = x; column < x + width; column++) {
+    for (
+      let row = Math.max(y, region.y);
+      row < Math.min(y + height, region.y + region.height);
+      row++
+    )
+      for (
+        let column = Math.max(x, region.x);
+        column < Math.min(x + width, region.x + region.width);
+        column++
+      ) {
         const first =
           ((vertical[1] - vertical[2]) * (column + 0.5 - horizontal[2]) +
             (horizontal[2] - horizontal[1]) * (row + 0.5 - vertical[2])) /
@@ -162,7 +185,7 @@ function makeReceiverData(geometry: Geometry, atlas: LightmapAtlas) {
           determinant;
         const weights = [first, second, 1 - first - second];
         if (weights.some(weight => weight < -1e-6)) continue;
-        const offset = (row * atlas.width + column) * 4;
+        const offset = ((row - region.y) * region.width + column - region.x) * 4;
         for (let component = 0; component < 3; component++)
           for (let corner = 0; corner < 3; corner++) {
             positions[offset + component] +=

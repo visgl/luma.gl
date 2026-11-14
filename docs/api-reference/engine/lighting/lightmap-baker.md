@@ -210,3 +210,16 @@ Export the completed bake and open the `.lmb` in
 [Baked Cornell Box](/examples/api/baked-cornell-box). The viewer matches the source
 asset hash and ordered placements to the atlas recipe before reconstructing the
 receiving geometry and uploading the HDR irradiance.
+
+The high-quality Cornell preset schedules 1024 × 1024 tiles. One set of scratch
+textures is reused across tiles. Each scratch tile extends nine texels beyond
+its interior where the atlas permits it, so the one-texel indirect filter and
+eight dilation steps have the same neighbors as a full-atlas bake. Sampling
+uses global atlas coordinates and completed interiors are copied into the
+original UV layout.
+
+The estimate in the bake controls counts the main GPU textures. It excludes
+CPU atlas data, export staging, scene buffers, canvas targets and driver
+overhead. **Cancel bake** stops new submissions and releases the preview's
+resources. **Reset bake** starts a new bake. The high-quality preset submits
+one sample at a time and waits for the GPU before scheduling another.

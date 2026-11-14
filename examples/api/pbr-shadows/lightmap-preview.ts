@@ -4,6 +4,7 @@
 import {Texture, type Device, type Framebuffer} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import type {prepareCornellAtlas} from '../lightmap-baking/cornell-scene';
+import {estimateBakeTextureBytes, planBakeTiles} from '../lightmap-baking/bake-tiles';
 import {IndirectLightmap} from '../lightmap-baking/indirect-lightmap';
 import {makeBakingScene, type BakingScene} from '../lightmap-baking/scenes';
 import {Matrix4, type NumberArray3} from '@math.gl/core';
@@ -264,11 +265,40 @@ export class LightmapPreview {
   private readonly sampleLimit: number;
   private stale = false;
   private loaded = false;
+  get cancelled(): boolean {
+    return this.destroyed;
+  }
+  readonly width: number;
+  readonly height: number;
+  readonly estimatedTextureBytes: number;
+  private readonly tiles;
+  private tileIndex = 0;
+  private samplePending = false;
+  private bakeError: string | null = null;
+  private assembled: Texture | null;
   private destroyed = false;
   static isSupported(device: Device): boolean {
     const output = device.getTextureFormatCapabilities('rgba16float');
     return Boolean(
       output.render && output.filter && device.getTextureFormatCapabilities('rgba32float').render
+    );
+  }
+  static estimateTextureBytes(
+    width: number,
+    height: number,
+    resolution: 'full' | 'preview',
+    cornell: boolean,
+    indirect: boolean
+  ): number {
+    const tiled = cornell && width === 4096;
+    return estimateBakeTextureBytes(
+      width * height,
+      tiled ? 1042 ** 2 : width * height,
+      (cornell ? 2048 : resolution === 'full' ? width : 256) ** 2 * 3 +
+        512 ** 2 +
+        (resolution === 'full' ? width : 128) ** 2 * (cornell ? 6 : 12),
+      indirect,
+      tiled
     );
   }
   constructor(
@@ -284,6 +314,20 @@ export class LightmapPreview {
       cornell?.atlas.width ??
       (resolution === 'full' ? (atlasMode === 'generated' ? 2048 : 1024) : 256);
     const height = cornell?.atlas.height ?? width / 2;
+    this.width = width;
+    this.height = height;
+    this.tiles =
+      cornell && width === 4096
+        ? planBakeTiles(width, height, 1024, cornell.atlas.padding + 1)
+        : null;
+    const scratch = this.tiles?.[0].scratch ?? {x: 0, y: 0, width, height};
+    this.estimatedTextureBytes = LightmapPreview.estimateTextureBytes(
+      width,
+      height,
+      resolution,
+      Boolean(cornell),
+      atlasMode === 'generated' && device.type === 'webgpu'
+    );
     const chartSize = width / 8;
     const source =
       cornell?.geometry ?? (scene === 'rooms' ? makeRoom(height) : makeBakingScene(scene));
@@ -298,13 +342,15 @@ export class LightmapPreview {
           })
         : null);
     this.geometry = cornell?.geometry ?? this.atlas?.meshes[0].geometry ?? source;
-    this.baker = new LightmapBaker(device, {width, height});
+    this.baker = new LightmapBaker(device, {width: scratch.width, height: scratch.height});
+    this.assembled = this.tiles ? this.createAssembledTexture() : null;
     this.indirect =
       this.atlas && device.type === 'webgpu'
         ? new IndirectLightmap(
             device,
             this.geometry,
-            cornell ? {...this.atlas, charts: cornell.drawCharts} : this.atlas
+            cornell ? {...this.atlas, charts: cornell.drawCharts} : this.atlas,
+            this.tiles ? scratch : undefined
           )
         : null;
     this.white = device.createTexture({
@@ -346,10 +392,10 @@ export class LightmapPreview {
         return chartIndex < chartCount ? chartIndex + 1 : 0;
       });
     this.chartTexture = device.createTexture({
-      width,
-      height,
+      width: scratch.width,
+      height: scratch.height,
       format: 'r32float',
-      data: chartOwners
+      data: this.tiles ? undefined : chartOwners
     });
     this.model = createPBRModel(device, {
       geometry: this.geometry,
@@ -366,7 +412,56 @@ export class LightmapPreview {
       pointMapSize: resolution === 'full' ? width : 128
     });
   }
+  private createAssembledTexture(): Texture {
+    return this.device.createTexture({
+      width: this.width,
+      height: this.height,
+      format: 'rgba16float',
+      usage: Texture.COPY_DST | Texture.COPY_SRC | Texture.SAMPLE,
+      sampler: {minFilter: 'linear', magFilter: 'linear'}
+    });
+  }
+
+  private prepareTile(): void {
+    const scratch = this.tiles?.[this.tileIndex]?.scratch;
+    if (!scratch) return;
+    const owners = new Float32Array(scratch.width * scratch.height);
+    const atlas = this.atlas!;
+    for (let row = 0; row < scratch.height; row++) {
+      const offset = (scratch.y + row) * atlas.width + scratch.x;
+      owners.set(atlas.chartOwners.subarray(offset, offset + scratch.width), row * scratch.width);
+    }
+    this.chartTexture.writeData(owners);
+    this.indirect?.setRegion(scratch);
+    for (const model of this.bakeModels) {
+      model.shaderInputs.setProps({
+        lightmapBake: {
+          uvTransform: [
+            this.width / scratch.width,
+            0,
+            0,
+            0,
+            this.height / scratch.height,
+            0,
+            -scratch.x / scratch.width,
+            -scratch.y / scratch.height,
+            1
+          ]
+        }
+      });
+    }
+  }
+  cancel(): void {
+    this.destroy();
+  }
   reset(): void {
+    if (this.destroyed) return;
+    this.tileIndex = 0;
+    this.bakeError = null;
+    if (this.assembled) {
+      this.assembled.destroy();
+      this.assembled = this.createAssembledTexture();
+    }
     this.baker.reset();
     this.loaded = false;
     this.result?.destroy();
@@ -375,15 +470,28 @@ export class LightmapPreview {
   }
   changeLight(): void {
     this.lightIntensity = this.lightIntensity === 1 ? 2 : 1;
-    this.stale = this.baker.sampleCount > 0 || Boolean(this.result);
+    this.stale = this.tileIndex > 0 || this.baker.sampleCount > 0 || Boolean(this.result);
   }
   get complete(): boolean {
-    return !this.stale && (this.loaded || this.baker.sampleCount === this.sampleLimit);
+    return (
+      !this.stale &&
+      (this.loaded ||
+        (this.tiles
+          ? this.tileIndex === this.tiles.length
+          : this.baker.sampleCount === this.sampleLimit))
+    );
   }
   async exportData(): Promise<LightmapData> {
-    if (this.destroyed || this.stale || (!this.result && !this.baker.sampleCount))
+    if (
+      this.destroyed ||
+      this.stale ||
+      (this.tiles ? !this.complete : !this.result && !this.baker.sampleCount)
+    )
       throw new Error('Bake the current lighting before exporting.');
-    const source = this.result?.textures.lightmapTexture ?? this.baker.textures.lightmapTexture;
+    const source =
+      this.result?.textures.lightmapTexture ??
+      this.assembled ??
+      this.baker.textures.lightmapTexture;
     // Keep an independent snapshot alive if reset, import or disposal happens during readback.
     const snapshot = this.device.createTexture({
       width: source.width,
@@ -418,6 +526,7 @@ export class LightmapPreview {
     _time: number,
     eye: Readonly<NumberArray3> = [5, 4, 6]
   ): void {
+    if (this.destroyed) return;
     const view = new Matrix4().lookAt({eye, center: [0, 1, 0]});
     const projection = new Matrix4().perspective({
       fovy: Math.PI / 4,
@@ -504,6 +613,9 @@ export class LightmapPreview {
       });
     if (
       !this.stale &&
+      !this.samplePending &&
+      !this.bakeError &&
+      !this.complete &&
       this.baker.sampleCount < this.sampleLimit &&
       (mode === 'baking' || (mode === 'baked' && !this.result && this.baker.sampleCount === 0))
     ) {
@@ -511,6 +623,7 @@ export class LightmapPreview {
       this.result = null;
       this.loaded = false;
       const sampleIndex = this.baker.sampleCount;
+      if (!sampleIndex) this.prepareTile();
       const environment = sampleLightmapEnvironment(
         this.environment,
         Math.floor(sampleIndex / 3),
@@ -541,15 +654,41 @@ export class LightmapPreview {
           this.indirect?.draw(renderPass);
         }
       });
+      const tile = this.tiles?.[this.tileIndex];
+      if (tile && this.baker.sampleCount === this.sampleLimit) {
+        this.device.commandEncoder.copyTextureToTexture({
+          sourceTexture: this.baker.textures.lightmapTexture,
+          destinationTexture: this.assembled!,
+          origin: [tile.core.x - tile.scratch.x, tile.core.y - tile.scratch.y, 0],
+          destinationOrigin: [tile.core.x, tile.core.y, 0],
+          width: tile.core.width,
+          height: tile.core.height
+        });
+        this.tileIndex++;
+        if (this.tileIndex < this.tiles!.length) this.baker.reset();
+      }
+      if (this.tiles) {
+        this.device.submit();
+        const fence = this.device.createFence();
+        this.samplePending = true;
+        void fence.signaled
+          .catch(error => {
+            this.bakeError = String(error);
+          })
+          .finally(() => {
+            fence.destroy();
+            this.samplePending = false;
+          });
+      }
     }
-    const snapshot = mode === 'baked' && !this.result;
+    const snapshot = this.baker.sampleCount > 0 && mode === 'baked' && !this.result && !this.tiles;
     if (snapshot) this.result = this.baker.createResult();
     const lightmap =
       mode === 'live'
         ? this.white
-        : mode === 'baked' && !snapshot
-          ? this.result!.textures.lightmapTexture
-          : this.baker.textures.lightmapTexture;
+        : (this.result?.textures.lightmapTexture ??
+          this.assembled ??
+          this.baker.textures.lightmapTexture);
     if (this.material.getResourceBindings().pbr_lightmapSampler !== lightmap) {
       const previous = this.material;
       this.material = previous.clone({bindings: {pbr_lightmapSampler: lightmap}});
@@ -589,11 +728,15 @@ export class LightmapPreview {
     this.model.draw(pass);
     pass.end();
     for (const label of document.querySelectorAll('[data-bake-samples]'))
-      label.textContent = this.stale
-        ? 'Lighting changed — reset to rebake'
-        : this.result && !this.baker.sampleCount
-          ? 'Loaded bake'
-          : `Samples: ${this.baker.sampleCount}/${this.sampleLimit}`;
+      label.textContent =
+        this.bakeError ??
+        (this.stale
+          ? 'Lighting changed — reset to rebake'
+          : this.tiles && !this.loaded
+            ? `Tiles: ${this.tileIndex}/${this.tiles.length} · Samples: ${this.baker.sampleCount}/${this.sampleLimit}`
+            : this.result && !this.baker.sampleCount
+              ? 'Loaded bake'
+              : `Samples: ${this.baker.sampleCount}/${this.sampleLimit}`);
   }
   destroy(): void {
     if (this.destroyed) return;
@@ -608,6 +751,7 @@ export class LightmapPreview {
     this.result?.destroy();
     this.indirect?.destroy();
     this.baker.destroy();
+    this.assembled?.destroy();
     this.white.destroy();
   }
 }
