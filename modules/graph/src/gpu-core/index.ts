@@ -177,6 +177,12 @@ export type {
   GPUWorkgroupReductionBenchmarkReport,
   GPUWorkgroupReductionBenchmarkStrategy
 } from './gpu-workgroup-reduction-benchmark';
+export {GPUSegmentedReduction} from './gpu-segmented-reduction';
+export type {
+  GPUSegmentedReductionOperation,
+  GPUSegmentedReductionProps
+} from './gpu-segmented-reduction';
+
 export {GPUSegmentedSort} from './gpu-segmented-sort';
 export type {GPUSegmentedSortProps, GPUSortSegment} from './gpu-segmented-sort';
 export {GPUCompaction} from './gpu-compaction';
