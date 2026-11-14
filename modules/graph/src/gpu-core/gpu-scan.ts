@@ -4,7 +4,7 @@
 
 import {setGPUComputeDispatchWorkgroups} from './gpu-command-dispatch-metadata';
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import {type Binding, type Device} from '@luma.gl/core';
+import {type Binding, type Device, type ComputeShaderLayout} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphDataView, GraphVectorView} from './gpu-command-graph';
 import {
@@ -602,9 +602,39 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
       ? getSubgroupBlockScanSource(props, sumOutput, sumBinding)
       : portableSource;
 
+  const shaderLayout: ComputeShaderLayout = {
+    bindings: [
+      {name: 'inputValues', type: 'storage', group: 0, location: 0},
+      {name: 'outputValues', type: 'storage', group: 0, location: 1},
+      ...(sumOutput ? [{name: 'sumValues', type: 'storage' as const, group: 0, location: 2}] : []),
+      ...(props.segmentFlags
+        ? [{name: 'segmentFlags', type: 'storage' as const, group: 0, location: 3}]
+        : []),
+      ...(props.segmentPrefixes
+        ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 4}]
+        : []),
+      ...(segmentFlagOutput
+        ? [
+            {
+              name: 'summarySegmentFlags',
+              type: 'storage' as const,
+              group: 0,
+              location: 5
+            }
+          ]
+        : [])
+    ]
+  };
+
   nodes.push(
     createGPUComputeCommandNode<Parameters>({
       id: props.id,
+      kernel: {
+        entryPoint: 'main',
+        workgroupSize: [SCAN_WORKGROUP_SIZE, 1, 1],
+        bindings: shaderLayout.bindings,
+        source
+      },
       workload: {
         operation: 'GPUScan',
         variant: strategy,
@@ -637,31 +667,7 @@ ${props.segmentFlags ? `var<workgroup> segmentScratch: array<u32, ${SCAN_WORKGRO
         const kernel = new Kernel(device, {
           id: props.id,
           source,
-          shaderLayout: {
-            bindings: [
-              {name: 'inputValues', type: 'storage', group: 0, location: 0},
-              {name: 'outputValues', type: 'storage', group: 0, location: 1},
-              ...(sumOutput
-                ? [{name: 'sumValues', type: 'storage' as const, group: 0, location: 2}]
-                : []),
-              ...(props.segmentFlags
-                ? [{name: 'segmentFlags', type: 'storage' as const, group: 0, location: 3}]
-                : []),
-              ...(props.segmentPrefixes
-                ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 4}]
-                : []),
-              ...(segmentFlagOutput
-                ? [
-                    {
-                      name: 'summarySegmentFlags',
-                      type: 'storage' as const,
-                      group: 0,
-                      location: 5
-                    }
-                  ]
-                : [])
-            ]
-          }
+          shaderLayout
         });
         return {
           encode: ({computePass, getBuffer}) => {
@@ -854,9 +860,35 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
     ${props.segmentPrefixes && props.offsetSegmentPrefixes ? 'segmentPrefixes[SEGMENT_PREFIXES_OFFSET + index] = segmentPrefix | offsetSegmentPrefix;' : ''}
   }
 }`;
+  const shaderLayout: ComputeShaderLayout = {
+    bindings: [
+      {name: 'outputValues', type: 'storage', group: 0, location: 0},
+      {name: 'offsets', type: 'storage', group: 0, location: 1},
+      ...(props.segmentPrefixes
+        ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 2}]
+        : []),
+      ...(props.offsetSegmentPrefixes
+        ? [
+            {
+              name: 'offsetSegmentPrefixes',
+              type: 'storage' as const,
+              group: 0,
+              location: 3
+            }
+          ]
+        : [])
+    ]
+  };
+
   nodes.push(
     createGPUComputeCommandNode<Parameters>({
       id: props.id,
+      kernel: {
+        entryPoint: 'main',
+        workgroupSize: [SCAN_WORKGROUP_SIZE, 1, 1],
+        bindings: shaderLayout.bindings,
+        source
+      },
       workload: {
         operation: 'GPUScan',
         commandCount: 1,
@@ -889,25 +921,7 @@ ${props.offsetSegmentPrefixes ? '@group(0) @binding(3) var<storage, read> offset
         const kernel = new Kernel(device, {
           id: props.id,
           source,
-          shaderLayout: {
-            bindings: [
-              {name: 'outputValues', type: 'storage', group: 0, location: 0},
-              {name: 'offsets', type: 'storage', group: 0, location: 1},
-              ...(props.segmentPrefixes
-                ? [{name: 'segmentPrefixes', type: 'storage' as const, group: 0, location: 2}]
-                : []),
-              ...(props.offsetSegmentPrefixes
-                ? [
-                    {
-                      name: 'offsetSegmentPrefixes',
-                      type: 'storage' as const,
-                      group: 0,
-                      location: 3
-                    }
-                  ]
-                : [])
-            ]
-          }
+          shaderLayout
         });
         return {
           encode: ({computePass, getBuffer}) => {

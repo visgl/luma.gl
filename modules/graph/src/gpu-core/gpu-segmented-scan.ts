@@ -3,9 +3,10 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-node';
-import type {Binding} from '@luma.gl/core';
+import type {Binding, ComputeShaderLayout} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {getBoundedWorkgroupLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
 import {
   getViewBinding,
   getViewElementOffset,
@@ -66,16 +67,35 @@ export class GPUSegmentedScan {
         throw new Error(`${this.id} views must belong to target graph`);
     }
     const segmentCount = this.segmentOffsets.length - 1;
-    if (segmentCount === 0) return nodes;
-    const source = makeShaderSource(this);
+    if (segmentCount === 0 || this.input.length === 0) return nodes;
+    const dispatch = getBoundedWorkgroupLayout(
+      this.id,
+      segmentCount,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
+    const workgroupCount = dispatch.x * dispatch.y * dispatch.z;
+    const source = makeShaderSource(this, dispatch, segmentCount);
+    const shaderLayout: ComputeShaderLayout = {
+      bindings: [
+        {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
+        {name: 'segmentOffsets', type: 'read-only-storage', group: 0, location: 1},
+        {name: 'outputValues', type: 'storage', group: 0, location: 2}
+      ]
+    };
     nodes.push(
       createGPUComputeCommandNode<Parameters>({
         id: this.id,
+        kernel: {
+          entryPoint: 'main',
+          workgroupSize: [WORKGROUP_SIZE, 1, 1],
+          bindings: shaderLayout.bindings,
+          source
+        },
         workload: {
           operation: 'GPUSegmentedScan',
           commandCount: 1,
-          maximumWorkgroupCount: segmentCount,
-          maximumInvocationCount: segmentCount * WORKGROUP_SIZE,
+          maximumWorkgroupCount: workgroupCount,
+          maximumInvocationCount: workgroupCount * WORKGROUP_SIZE,
           readByteLength: this.input.length * 4 + this.segmentOffsets.length * 4,
           writeByteLength: this.output.length * 4
         },
@@ -88,13 +108,7 @@ export class GPUSegmentedScan {
           const kernel = new Kernel(device, {
             id: this.id,
             source,
-            shaderLayout: {
-              bindings: [
-                {name: 'inputValues', type: 'read-only-storage', group: 0, location: 0},
-                {name: 'segmentOffsets', type: 'read-only-storage', group: 0, location: 1},
-                {name: 'outputValues', type: 'storage', group: 0, location: 2}
-              ]
-            }
+            shaderLayout
           });
           return {
             encode: ({computePass, getBuffer}) => {
@@ -104,7 +118,7 @@ export class GPUSegmentedScan {
                 outputValues: getViewBinding(this.output, getBuffer)
               };
 
-              kernel.dispatch(computePass, {bindings, x: segmentCount, y: 1, z: 1});
+              kernel.dispatch(computePass, {bindings, ...dispatch});
             },
             destroy: () => kernel.destroy()
           };
@@ -116,8 +130,59 @@ export class GPUSegmentedScan {
   }
 }
 
-function makeShaderSource(scan: GPUSegmentedScan): string {
-  return `const INPUT_OFFSET:u32=${getViewElementOffset(scan.input)}u; const SEGMENT_OFFSET:u32=${getViewElementOffset(scan.segmentOffsets)}u; const OUTPUT_OFFSET:u32=${getViewElementOffset(scan.output)}u; const INCLUSIVE:bool=${scan.mode === 'inclusive'};
-@group(0) @binding(0) var<storage,read> inputValues:array<u32>; @group(0) @binding(1) var<storage,read> segmentOffsets:array<u32>; @group(0) @binding(2) var<storage,read_write> outputValues:array<u32>;
-@compute @workgroup_size(${WORKGROUP_SIZE}) fn main(@builtin(workgroup_id) wg:vec3u,@builtin(local_invocation_index) lane:u32){let segment=wg.x;let begin=segmentOffsets[SEGMENT_OFFSET+segment];let end=segmentOffsets[SEGMENT_OFFSET+segment+1u];if(lane!=0u){return;}var sum=0u;var i=begin;loop{if(i>=end){break;}let value=inputValues[INPUT_OFFSET+i];outputValues[OUTPUT_OFFSET+i]=select(sum,sum+value,INCLUSIVE);sum+=value;i+=1u;}}`;
+function makeShaderSource(
+  scan: GPUSegmentedScan,
+  dispatch: GPUBoundedDispatchLayout,
+  segmentCount: number
+): string {
+  return `const INPUT_OFFSET: u32 = ${getViewElementOffset(scan.input)}u;
+const SEGMENT_OFFSET: u32 = ${getViewElementOffset(scan.segmentOffsets)}u;
+const OUTPUT_OFFSET: u32 = ${getViewElementOffset(scan.output)}u;
+const INPUT_LENGTH: u32 = ${scan.input.length}u;
+@group(0) @binding(0) var<storage, read> inputValues: array<u32>;
+@group(0) @binding(1) var<storage, read> segmentOffsets: array<u32>;
+@group(0) @binding(2) var<storage, read_write> outputValues: array<u32>;
+var<workgroup> prefixes: array<u32, ${WORKGROUP_SIZE}>;
+var<workgroup> segmentBounds: array<u32, 2>;
+
+
+@compute @workgroup_size(${WORKGROUP_SIZE})
+fn main(
+  @builtin(workgroup_id) workgroup: vec3u,
+  @builtin(local_invocation_index) lane: u32
+) {
+  let segment = (workgroup.z * ${dispatch.y}u + workgroup.y) * ${dispatch.x}u + workgroup.x;
+  if (segment >= ${segmentCount}u) { return; }
+  if (lane == 0u) {
+    segmentBounds[0] = min(segmentOffsets[SEGMENT_OFFSET + segment], INPUT_LENGTH);
+    segmentBounds[1] = min(segmentOffsets[SEGMENT_OFFSET + segment + 1u], INPUT_LENGTH);
+  }
+  let begin = workgroupUniformLoad(&segmentBounds[0]);
+  let end = workgroupUniformLoad(&segmentBounds[1]);
+  var carry = 0u;
+  for (var tile = begin; tile < end;) {
+    let tileLength = min(end - tile, ${WORKGROUP_SIZE}u);
+    var value = 0u;
+    if (lane < tileLength) {
+      value = inputValues[INPUT_OFFSET + tile + lane];
+    }
+    prefixes[lane] = value;
+    workgroupBarrier();
+
+    for (var stride = 1u; stride < ${WORKGROUP_SIZE}u; stride *= 2u) {
+      var previous = 0u;
+      if (lane >= stride) { previous = prefixes[lane - stride]; }
+      workgroupBarrier();
+      prefixes[lane] += previous;
+      workgroupBarrier();
+    }
+
+    if (lane < tileLength) {
+      outputValues[OUTPUT_OFFSET + tile + lane] = carry + prefixes[lane]${scan.mode === 'exclusive' ? ' - value' : ''};
+    }
+    carry += prefixes[${WORKGROUP_SIZE - 1}u];
+    workgroupBarrier();
+    tile += tileLength;
+  }
+}`;
 }

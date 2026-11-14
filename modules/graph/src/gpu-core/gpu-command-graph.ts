@@ -61,6 +61,7 @@ import type {
   GPUCommandGraphNodeEncodingStats,
   GPUCommandGraphNodeTiming,
   GPUCommandGraphNodePreflight,
+  GPUCommandGraphCompileOptions,
   GPUCommandGraphNodePublication,
   GPUCommandGraphPreflightReport,
   GPUCommandGraphRenderExecutable,
@@ -108,6 +109,8 @@ export type {
   GPUCommandGraphNodeConditionPreflight,
   GPUCommandGraphNodeEncodingStats,
   GPUCommandGraphNodePreflight,
+  GPUCommandGraphCompileOptions,
+  GPUCommandGraphKernelMetadata,
   GPUCommandGraphResourceSummary,
   GPUCommandGraphNodePublication,
   GPUCommandGraphNodeTiming,
@@ -987,7 +990,7 @@ export class GPUCommandGraphBuilder<Parameters = void> {
    *
    * @returns An executable graph that owns compiled node state and transient allocations.
    */
-  compile(): CompiledGPUCommandGraph<Parameters> {
+  compile(options: GPUCommandGraphCompileOptions = {}): CompiledGPUCommandGraph<Parameters> {
     this.assertMutable();
     assertDeviceAvailable(this.device, 'compilation');
     this.compiled = true;
@@ -998,7 +1001,8 @@ export class GPUCommandGraphBuilder<Parameters = void> {
         buffers: this.buffers,
         textures: this.textures,
         externalTextures: this.externalTextures,
-        nodes: this.nodes
+        nodes: this.nodes,
+        kernelMetadata: options.kernelMetadata
       })
     );
   }
@@ -1015,7 +1019,9 @@ export class GPUCommandGraphBuilder<Parameters = void> {
    *
    * @returns An executable graph whose pipelines are ready before the promise resolves.
    */
-  async compileAsync(): Promise<CompiledGPUCommandGraph<Parameters>> {
+  async compileAsync(
+    options: GPUCommandGraphCompileOptions = {}
+  ): Promise<CompiledGPUCommandGraph<Parameters>> {
     this.assertMutable();
     assertDeviceAvailable(this.device, 'compilation');
     this.compiled = true;
@@ -1026,7 +1032,8 @@ export class GPUCommandGraphBuilder<Parameters = void> {
         buffers: this.buffers,
         textures: this.textures,
         externalTextures: this.externalTextures,
-        nodes: this.nodes
+        nodes: this.nodes,
+        kernelMetadata: options.kernelMetadata
       })
     );
   }

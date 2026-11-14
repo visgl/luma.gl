@@ -36,7 +36,10 @@ exclusive = [0, 2 | 0, 4, 9 | 0]
 inclusive = [2, 5 | 4, 9,15 | 7]
 ```
 
-Segment `s` is `[offsets[s], offsets[s + 1])`. N segments require N+1 offsets; repeated offsets describe empty segments. This general representation also appears in Arrow lists, graph adjacency and CSR matrices, but the segmented API is not matrix-specific.
+Segment `s` is `[offsets[s], offsets[s + 1])`. N segments require N+1 offsets; repeated offsets describe empty segments. Offsets are nondecreasing and relative to the input view. Offsets beyond the input length are
+clamped, and rows outside the covered ranges are left alone. Prefix sums wrap modulo 2^32.
+
+This general representation also appears in Arrow lists, graph adjacency and CSR matrices, but the segmented API is not matrix-specific.
 
 ## Why it matters
 
@@ -47,6 +50,9 @@ Many GPU structures contain thousands of logical lists packed into one allocatio
 The initial operation consumes packed `uint32` values and `segmentOffsets`. The output has the same length as the input and supports `exclusive` and `inclusive` modes.
 
 ```ts
+import {GPUSegmentedScan} from '@luma.gl/graph/gpu-core';
+
+
 graph.add(new GPUSegmentedScan({
   input: weights,
   segmentOffsets,
@@ -75,7 +81,8 @@ Together with `GPUSegmentedReduction`, this establishes the basic segmented alge
 
 The first implementation establishes the API before optimizing execution: one workgroup is assigned per segment and one lane currently scans that segment serially. This is a correctness baseline and is appropriate only for small segments.
 
-The intended optimized implementation uses parallel workgroup scans for medium segments, subgroup collectives when available, and hierarchical strategies for very large segments. Highly skewed segment distributions require strategy selection to avoid poor GPU utilization. None of those optimizations requires changing the offset-delimited contract.
+Each segment gets a 256-lane workgroup. The lanes scan tiles in parallel and carry the previous tile total forward. Dispatch spans multiple axes when needed. Long segments process their tiles sequentially within one workgroup.
+
 
 ## Limitations
 
