@@ -434,3 +434,29 @@ export function cast<
     readonly node: {readonly kind: 'cast'; readonly format: Format};
   };
 }
+
+/** Checks whether the expression produces a boolean result. */
+export function isBooleanExpressionNode(node: GPUExpressionNode): boolean {
+  switch (node.kind) {
+    case 'column':
+      return false;
+    case 'literal':
+    case 'parameter':
+      return typeof node.value === 'boolean';
+    case 'unary':
+      return node.operator === 'not' || node.operator === 'is-valid' || node.operator === 'is-null';
+    case 'binary':
+      return (
+        node.operator === 'equal' ||
+        node.operator === 'not-equal' ||
+        node.operator === 'greater-than' ||
+        node.operator === 'greater-than-or-equal' ||
+        node.operator === 'less-than' ||
+        node.operator === 'less-than-or-equal' ||
+        node.operator === 'and' ||
+        node.operator === 'or'
+      );
+    default:
+      return false;
+  }
+}

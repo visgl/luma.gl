@@ -70,4 +70,7 @@ export type {
   GPUVectorWGSLFormat as GPUExpressionNumericFormat,
   GPUVectorWGSLScalarFormat as GPUExpressionScalarFormat
 } from '@luma.gl/graph/gpu-data';
-export {makeGPUExpressionFromPortableAST} from './portable-expression';
+export {
+  makeGPUExpressionFromPortableAST,
+  makeGPUPredicateFromPortableAST
+} from './portable-expression';
