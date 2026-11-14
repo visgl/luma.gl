@@ -465,6 +465,16 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     options.samplesPerPixel = 1;
     replacement.writeData(new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]));
     options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 1}];
+  } finally {
+    destroy();
+  }
+}, 540_000);
+
+it('ray dielectrics refract and absorb light and sample remaining material maps', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, replacement, readPixel, destroy} =
+    await createMaterialFixture();
+  try {
     const glass = {
       id: 'glass',
       geometry,

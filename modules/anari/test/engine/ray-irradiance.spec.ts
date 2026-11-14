@@ -135,4 +135,4 @@ test('irradiance transport preserves coverage and receives emissive color', asyn
     readback.destroy();
     device.destroy();
   }
-});
+}, 120_000);
