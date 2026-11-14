@@ -109,7 +109,7 @@ implements that feature. Registered custom renderers define their own support.
 | Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | [Supported ray maps](/docs/api-reference/anari/ray-tracing-renderer#material-support) with UV0/UV1 transforms | Shared raster surface inputs; diagnostic output |
 | Alpha masking | Scalar and texture alpha | Scalar and texture alpha | Scalar and texture alpha, including shadows and queries | Shared raster mask behavior |
 | Alpha blending | Yes; sorted forward draws | Fallback | No | Shared raster blend behavior |
-| Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | Smooth dielectric transmission and absorption; specular, clearcoat, occlusion, sheen, iridescence, and anisotropy | Diagnostic output, not physical transport |
+| Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | Smooth dielectric transmission and absorption; specular, clearcoat, occlusion, sheen, and iridescence | Diagnostic output, not physical transport |
 | Skeletal skinning and morph targets | Yes | Yes through shared raster geometry | No | Yes through shared raster geometry |
 | Ambient, directional and point lights | Yes | Yes; one directional and up to 64 point lights, otherwise fallback | Yes | No lighting; normals or depth |
 | Spot lights | Yes | Fallback | Yes | No lighting |
