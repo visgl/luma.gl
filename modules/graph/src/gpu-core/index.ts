@@ -46,6 +46,8 @@ export type {
   GPUCommandGraphNodeTiming,
   GPUCommandGraphNodeType,
   GPUCommandGraphNodePreflight,
+  GPUCommandGraphCompileOptions,
+  GPUCommandGraphKernelMetadata,
   GPUCommandGraphResourceSummary,
   GPUCommandGraphNodePublication,
   GPUCommandGraphNodeWorkloadEstimate,
@@ -179,6 +181,9 @@ export type {
   GPUWorkgroupReductionBenchmarkReport,
   GPUWorkgroupReductionBenchmarkStrategy
 } from './gpu-workgroup-reduction-benchmark';
+export {GPUSegmentedScan} from './gpu-segmented-scan';
+export type {GPUSegmentedScanMode, GPUSegmentedScanProps} from './gpu-segmented-scan';
+
 export {GPUSegmentedReduction} from './gpu-segmented-reduction';
 export type {
   GPUSegmentedReductionOperation,

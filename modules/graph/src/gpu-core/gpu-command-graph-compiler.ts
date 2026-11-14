@@ -10,6 +10,7 @@ import type {
   GPUCommandGraphCopyExecutable,
   GPUCommandGraphNode,
   GPUCommandGraphPreflightReport,
+  GPUCommandGraphCompileOptions,
   GPUCommandGraphRenderExecutable,
   GPUCommandGraphStats,
   GPUCommandGraphResourceSummary,
@@ -113,6 +114,7 @@ type GPUCommandGraphCompilerProps<Parameters> = {
   textures: Map<string, GraphTextureHandle>;
   externalTextures: Map<string, GraphExternalTextureHandle>;
   nodes: GPUCommandGraphNode<Parameters>[];
+  kernelMetadata?: GPUCommandGraphCompileOptions['kernelMetadata'];
 };
 
 /**
@@ -363,7 +365,12 @@ function finishGPUCommandGraphCompilation<Parameters>(
       'physical transient resource estimates'
     )
   };
-  const preflight = getGPUCommandGraphPreflightReport(props.device, logicalBuffers, nodeOrder);
+  const preflight = getGPUCommandGraphPreflightReport(
+    props.device,
+    logicalBuffers,
+    nodeOrder,
+    props.kernelMetadata
+  );
 
   return {
     device: props.device,
@@ -421,14 +428,30 @@ function summarizeResource(resource: GraphResourceUse): GPUCommandGraphResourceS
 function getGPUCommandGraphPreflightReport<Parameters>(
   device: Device,
   buffers: GraphBufferHandle[],
-  nodes: GPUCommandGraphNode<Parameters>[]
+  nodes: GPUCommandGraphNode<Parameters>[],
+  kernelMetadata: GPUCommandGraphCompileOptions['kernelMetadata']
 ): GPUCommandGraphPreflightReport {
   const nodeReports = nodes.map(node => {
     const workload = node.workload ?? {};
+    const kernel = kernelMetadata && node.type === 'compute' ? node.kernel : undefined;
     return Object.freeze({
       id: node.id,
       ...(node.description === undefined ? {} : {description: node.description}),
       type: node.type,
+      ...(kernel && {
+        kernel: Object.freeze({
+          entryPoint: kernel.entryPoint,
+          workgroupSize: Object.freeze([...kernel.workgroupSize] as const),
+          bindings: Object.freeze(
+            kernel.bindings.map(({name, type, group, location}) =>
+              Object.freeze({name, type, group, location})
+            )
+          ),
+          ...(kernelMetadata === 'source' && kernel.source !== undefined
+            ? {source: kernel.source}
+            : {})
+        })
+      }),
       resources: Object.freeze((node.resources ?? []).map(summarizeResource)),
       ...(workload.operation ? {operation: workload.operation} : {}),
       ...(workload.variant ? {variant: workload.variant} : {}),
