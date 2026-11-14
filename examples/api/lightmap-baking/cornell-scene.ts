@@ -34,6 +34,11 @@ export async function parseCornellScene(bytes: ArrayBuffer) {
           .scale(node.scale ?? [1, 1, 1]);
     const world = new Matrix4(parent).multiplyRight(local);
     const normalMatrix = new Matrix4(world).invert().transpose();
+    // Keep only the linear part so transforming a normal cannot divide by a
+    // homogeneous coordinate derived from the node's translation.
+    normalMatrix[3] = 0;
+    normalMatrix[7] = 0;
+    normalMatrix[11] = 0;
     for (const [index, primitive] of (node.mesh?.primitives ?? []).entries()) {
       // This fixture is static and uses opaque, factor-only materials.
       const {POSITION, NORMAL, TEXCOORD_0} = primitive.attributes;
@@ -78,7 +83,9 @@ export async function parseCornellScene(bytes: ArrayBuffer) {
     }
     for (const child of node.children ?? []) visit(child, world);
   }
-  for (const root of (gltf.scene ?? gltf.scenes[0]).nodes) visit(root, new Matrix4());
+  const roots = (gltf.scene ?? gltf.scenes[0])?.nodes;
+  if (!roots?.length) throw new Error('The Cornell Box asset does not contain a scene.');
+  for (const root of roots) visit(root, new Matrix4());
   return {assetHash, placements};
 }
 

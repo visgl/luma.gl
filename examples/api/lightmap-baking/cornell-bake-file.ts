@@ -55,8 +55,7 @@ export function encodeCornellBake(data: LightmapData, recipe: CornellBakeRecipe)
   return output.buffer;
 }
 
-/** Validate the source and deterministic atlas recipe before decoding the irradiance payload. */
-export function decodeCornellBake(buffer: ArrayBuffer, recipe: CornellBakeRecipe): LightmapData {
+function readEnvelope(buffer: ArrayBuffer): {metadata: string; payloadOffset: number} {
   if (buffer.byteLength < 8) throw new Error('Incomplete Cornell Box bake.');
   const header = new DataView(buffer);
   if (header.getUint32(0, true) !== CORNELL_BAKE_MAGIC) {
@@ -67,10 +66,32 @@ export function decodeCornellBake(buffer: ArrayBuffer, recipe: CornellBakeRecipe
     throw new Error('Invalid Cornell Box atlas recipe.');
   }
   const metadata = new TextDecoder().decode(new Uint8Array(buffer, 8, metadataLength));
+  return {metadata, payloadOffset: 8 + metadataLength};
+}
+
+export function matchCornellBakeProfile(
+  buffer: ArrayBuffer,
+  identity: Pick<CornellBakeRecipe, 'assetHash' | 'placements'>
+): keyof typeof CORNELL_BAKE_PROFILES {
+  const {metadata} = readEnvelope(buffer);
+  for (const profile of ['preview', 'high'] as const) {
+    const recipe: CornellBakeRecipe = {
+      ...identity,
+      ...CORNELL_BAKE_PROFILES[profile],
+      layoutVersion: 1,
+      uvSet: 1
+    };
+    if (metadata === recipeKey(recipe)) return profile;
+  }
+  throw new Error('This bake belongs to a different source asset or atlas layout.');
+}
+
+export function decodeCornellBake(buffer: ArrayBuffer, recipe: CornellBakeRecipe): LightmapData {
+  const {metadata, payloadOffset} = readEnvelope(buffer);
   if (metadata !== recipeKey(recipe)) {
     throw new Error('This bake belongs to a different source asset or atlas layout.');
   }
-  const data = decodeLightmapData(buffer.slice(8 + metadataLength));
+  const data = decodeLightmapData(buffer.slice(payloadOffset));
   validatePayload(data, recipe);
   return data;
 }

@@ -10,7 +10,11 @@ import {
 } from '@luma.gl/engine/lighting';
 import {Matrix4} from '@math.gl/core';
 import {loadCornellScene, prepareCornellAtlas} from '../lightmap-baking/cornell-scene';
-import {decodeCornellBake} from '../lightmap-baking/cornell-bake-file';
+import {
+  CORNELL_BAKE_PROFILES,
+  decodeCornellBake,
+  matchCornellBakeProfile
+} from '../lightmap-baking/cornell-bake-file';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -39,23 +43,22 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
         onRender: root => {
           const input = root.querySelector<HTMLInputElement>('input')!;
           const status = root.querySelector('[role="status"]')!;
-          const load = async () => {
-            const file = input.files?.[0];
-            if (!file) return;
+          const load = async (read: () => Promise<ArrayBuffer>) => {
             const generation = ++this.generation;
             status.textContent = 'Loading bake…';
             try {
               this.source ??= loadCornellScene();
-              const [bytes, source] = await Promise.all([file.arrayBuffer(), this.source]);
+              const [bytes, source] = await Promise.all([read(), this.source]);
               if (generation !== this.generation) return;
-              let prepared = prepareCornellAtlas(source, 'preview');
-              let data;
-              try {
-                data = decodeCornellBake(bytes, prepared.recipe);
-              } catch {
-                prepared = prepareCornellAtlas(source, 'high');
-                data = decodeCornellBake(bytes, prepared.recipe);
+              const profile = matchCornellBakeProfile(bytes, {
+                assetHash: source.assetHash,
+                placements: source.placements.map(placement => placement.id)
+              });
+              if (CORNELL_BAKE_PROFILES[profile].width > this.device.limits.maxTextureDimension2D) {
+                throw new Error('This device cannot upload the exported atlas size.');
               }
+              const prepared = prepareCornellAtlas(source, profile);
+              const data = decodeCornellBake(bytes, prepared.recipe);
               const result = createLightmapFromData(this.device, data);
               const material = createPBRMaterial(this.device, {
                 bindings: {pbr_lightmapSampler: result.textures.lightmapTexture},
@@ -78,8 +81,12 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
               if (generation === this.generation) status.textContent = String(error);
             }
           };
-          input.addEventListener('change', load);
-          return () => input.removeEventListener('change', load);
+          const openFile = () => {
+            const file = input.files?.[0];
+            if (file) void load(() => file.arrayBuffer());
+          };
+          input.addEventListener('change', openFile);
+          return () => input.removeEventListener('change', openFile);
         }
       })
     });

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import bakedCornellBoxSupport from './api/baked-cornell-box/mobile-support';
+
 import lightmapBakingSupport from './api/lightmap-baking/mobile-support';
 import pbrShadowsSupport from './api/pbr-shadows/mobile-support';
 import prefilteredEnvironmentSupport from './api/prefiltered-environment/mobile-support';
@@ -289,6 +291,8 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'showcase/spectral-wave-lab': support85,
   'api/texture-compressed': standaloneSupport0,
   'api/lightmap-baking': lightmapBakingSupport,
+  'api/baked-cornell-box': bakedCornellBoxSupport,
+
   'api/pbr-shadows': pbrShadowsSupport,
   'api/prefiltered-environment': prefilteredEnvironmentSupport,
   'integrations/hello-react': standaloneSupport1,

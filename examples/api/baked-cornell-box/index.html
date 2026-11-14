@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="luma-example-id" content="api/baked-cornell-box" />
-    <meta name="luma-example-backends" content="webgpu,webgl2" />
+    <meta name="luma-example-backends" content="webgpu" />
     <meta name="luma-example-mobile" content="full" />
     <meta name="luma-example-mobile-profile" content="standard" />
     <title>Baked Cornell Box · luma.gl</title>
@@ -24,17 +24,16 @@
       import {installStandaloneExampleSupport} from '../../example-support.ts';
       const exampleSupport = await installStandaloneExampleSupport();
       if (exampleSupport.supported) {
-        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {webgl2Adapter}, {default: AnimationLoopTemplate}] = await Promise.all([
+        const [{luma}, {makeAnimationLoop}, {webgpuAdapter}, {default: AnimationLoopTemplate}] = await Promise.all([
           import('@luma.gl/core'),
           import('@luma.gl/engine'),
           import('@luma.gl/core/webgpu'),
-          import('@luma.gl/core/webgl'),
           import('./app.ts')
         ]);
         const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
           device: luma.createDevice({
-            type: new URLSearchParams(location.search).get('backend') || 'best-available',
-            adapters: [webgpuAdapter, webgl2Adapter],
+            type: 'webgpu',
+            adapters: [webgpuAdapter],
             createCanvasContext: true
           })
         });
