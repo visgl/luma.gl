@@ -49,6 +49,16 @@ const MATERIAL_MAPS = [
     'anisotropy',
     'pbr_anisotropySampler',
     'primitive.anisotropy.z *= sampled.b; let orientation = sampled.rg * 2.0 - vec2<f32>(1.0); if (dot(orientation, orientation) > 0.000001) { primitive.anisotropy = vec4<f32>(orientation, primitive.anisotropy.zw); }'
+  ],
+  [
+    'diffuseTransmission',
+    'pbr_diffuseTransmissionSampler',
+    'primitive.diffuseTransmission.w *= sampled.a;'
+  ],
+  [
+    'diffuseTransmissionColor',
+    'pbr_diffuseTransmissionColorSampler',
+    'primitive.diffuseTransmission = vec4<f32>(primitive.diffuseTransmission.rgb * sampled.rgb, primitive.diffuseTransmission.w);'
   ]
 ] as const;
 
@@ -85,6 +95,7 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
     surfaces.map(surface => [
       surface.id,
       surface.material.uniforms?.normalScale,
+      (surface.material.uniforms?.diffuseTransmissionFactor ?? 0) > 0,
       (surface.material.uniforms?.anisotropyStrength ?? 0) > 0,
       MATERIAL_MAPS.map(([name, binding]) => [
         textures.findIndex(texture => texture === surface.material.bindings?.[binding]),
@@ -189,6 +200,13 @@ export function getRayMaterialTextureShader(
     !opacityOnly &&
     surfaces.some(surface => (surface.material.uniforms?.anisotropyStrength ?? 0) > 0);
   return source
+    .replace(
+      '/* MATERIAL_HAS_DIFFUSE_TRANSMISSION */ false',
+      String(
+        !opacityOnly &&
+          surfaces.some(surface => (surface.material.uniforms?.diffuseTransmissionFactor ?? 0) > 0)
+      )
+    )
     .replace('/* MATERIAL_HAS_ANISOTROPY */ false', String(hasAnisotropy))
     .replace(
       '/* MATERIAL_PRIMARY_FOOTPRINT */',

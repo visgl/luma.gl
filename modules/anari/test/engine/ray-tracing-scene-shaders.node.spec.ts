@@ -48,7 +48,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'primitiveMaxima', binding: 3},
       {name: 'blasNodes', binding: 4}
     ]);
-    expect(reflection.storage[0].format?.size).toBe(384);
+    expect(reflection.storage[0].format?.size).toBe(400);
     expect(reflection.storage.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.uniforms.length + reflection.storage.length).toBe(5);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
@@ -142,7 +142,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'blasTriangleIds', binding: 8}
     ]);
     expect(storageBuffers).toHaveLength(8);
-    expect(storageBuffers[0].format?.size).toBe(384);
+    expect(storageBuffers[0].format?.size).toBe(400);
     expect(storageBuffers.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(11);
     expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(12);
@@ -494,7 +494,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       'let grazingReflectance = getGrazingReflectance(primitive, reflectance, metallic)',
       'let alphaRoughness = roughness * roughness',
       'let alphaRoughnessSquared = alphaRoughness * alphaRoughness',
-      'let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance)',
+      'let diffuse = (1.0 - diffuseTransmission) * baseColor * (vec3<f32>(1.0) - dielectricReflectance)',
       'let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0)',
       'let lightSampleWeight = f32(directLightCount) / f32(max(shadowSampleCount, 1u))'
     ]) {

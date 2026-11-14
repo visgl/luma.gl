@@ -63,6 +63,7 @@ compatible raster renderer.
 | --- | --- |
 | Metallic-roughness | Base color, emissive, metallic-roughness, and triangle normal maps |
 | Visibility | Scalar and textured alpha cutouts for rendering, shadows, and hit queries |
+| Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
 | Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
 | Dielectric specular | RGB color and alpha intensity maps |
 | Clearcoat | Red strength, green roughness, and independent triangle normal maps |
@@ -114,6 +115,11 @@ Anisotropy stretches opaque GGX reflections along a triangle's UV tangent frame.
 is in radians. The map uses red and green for tangent-space direction and blue to scale strength.
 Mapped surfaces use the selected UV chart and transform. Scalar anisotropy uses UV0. Analytic
 primitives and triangles without a usable UV frame use isotropic reflection.
+
+Diffuse transmission diverts part of the diffuse reflection lobe to the opposite side of a thin
+surface. In PBR mode it receives direct and sampled emissive lighting, and a positive bounce
+budget allows cosine-weighted transmission paths. The strength map uses alpha, and the tint map
+uses RGB after color decoding. This lobe models surface scattering without entering a volume.
 
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
