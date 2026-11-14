@@ -40,7 +40,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
     super(props);
     this.device = props.device;
     this.preview = LightmapPreview.isSupported(props.device)
-      ? new LightmapPreview(props.device, 'full', 'generated', this.scene)
+      ? new LightmapPreview(props.device, 'full', 'generated', 'courtyard')
       : null;
     this.settings = new ExampleSettingsPanelManager({
       id: 'lightmap-baking-settings',

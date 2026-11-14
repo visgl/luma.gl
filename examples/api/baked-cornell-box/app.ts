@@ -45,10 +45,8 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
             const generation = ++this.generation;
             status.textContent = 'Loading bake…';
             try {
-              const [bytes, source] = await Promise.all([
-                file.arrayBuffer(),
-                (this.source ??= loadCornellScene())
-              ]);
+              this.source ??= loadCornellScene();
+              const [bytes, source] = await Promise.all([file.arrayBuffer(), this.source]);
               if (generation !== this.generation) return;
               let prepared = prepareCornellAtlas(source, 'preview');
               let data;
@@ -66,6 +64,7 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
               const model = createPBRModel(this.device, {
                 geometry: prepared.geometry,
                 material,
+                defines: {USE_LIGHTS: true},
                 parameters: {depthWriteEnabled: true, depthCompare: 'less-equal'}
               });
               this.model?.destroy();
@@ -92,8 +91,8 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
     this.controls ??= new OrbitControls(canvasContext.canvas, {
       target: [0, 1, 0],
       distance: 10,
-      yaw: 0.1,
-      pitch: 0.15,
+      yaw: 0.55,
+      pitch: 0.35,
       minDistance: 4,
       maxDistance: 18
     });
@@ -113,6 +112,7 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
     }
     this.model.shaderInputs.setProps({
       pbrProjection: {modelViewProjectionMatrix: projection.multiplyRight(view), camera: eye},
+      lighting: {useByteColors: false, lights: [{type: 'ambient', color: [0, 0, 0]}]},
       pbrScene: {toneMapMode: 2, outputEncoding: 1}
     });
     const pass = this.device.beginRenderPass({
