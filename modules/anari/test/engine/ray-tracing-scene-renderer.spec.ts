@@ -940,8 +940,8 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
       writes.map(write => [write.byteOffset, write.values.byteLength]),
       'one committed placement writes only its current/inverse matrices and previous motion matrix'
     ).toEqual([
-      [3 * 96 * Float32Array.BYTES_PER_ELEMENT, 32 * Float32Array.BYTES_PER_ELEMENT],
-      [(3 * 96 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
+      [3 * 100 * Float32Array.BYTES_PER_ELEMENT, 32 * Float32Array.BYTES_PER_ELEMENT],
+      [(3 * 100 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
     ]);
     expect(writes[0].values[12], 'the current sparse transform is packed').toBe(Math.fround(0.9));
     expect(
@@ -967,7 +967,7 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
       writes.map(write => [write.byteOffset, write.values.byteLength]),
       'the following unchanged frame commits only the pending previous-motion matrix'
     ).toEqual([
-      [(5 * 96 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
+      [(5 * 100 + 52) * Float32Array.BYTES_PER_ELEMENT, 16 * Float32Array.BYTES_PER_ELEMENT]
     ]);
     expect(
       Boolean(resources.previousTransformsNeedCommit),
@@ -985,7 +985,7 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
     expect(
       writes.map(write => write.values.byteLength),
       'fresh scene descriptor arrays conservatively fall back to a complete primitive upload'
-    ).toEqual([8 * 96 * Float32Array.BYTES_PER_ELEMENT]);
+    ).toEqual([8 * 100 * Float32Array.BYTES_PER_ELEMENT]);
 
     writes.length = 0;
     const replacementSurface = {
@@ -1002,7 +1002,7 @@ it('RayTracingSceneRenderer uploads only committed dirty placement transforms', 
     expect(
       writes.map(write => write.values.byteLength),
       'in-place descriptor replacement never reuses a stale retained placement reference'
-    ).toEqual([8 * 96 * Float32Array.BYTES_PER_ELEMENT]);
+    ).toEqual([8 * 100 * Float32Array.BYTES_PER_ELEMENT]);
   } finally {
     renderer.destroy();
   }
