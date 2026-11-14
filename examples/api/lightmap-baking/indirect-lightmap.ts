@@ -157,7 +157,8 @@ function makeReceiverData(
   const sourcePositions = geometry.attributes.POSITION.value;
   const sourceNormals = geometry.attributes.NORMAL.value;
   for (const chart of atlas.charts) {
-    const vertices = [chart.firstVertex, chart.firstVertex + 1, chart.firstVertex + 2];
+    for (let firstVertex = chart.firstVertex; firstVertex < chart.firstVertex + chart.vertexCount; firstVertex += 3) {
+    const vertices = [firstVertex, firstVertex + 1, firstVertex + 2];
     const horizontal = vertices.map(vertex => coordinates[vertex * 2] * atlas.width);
     const vertical = vertices.map(vertex => coordinates[vertex * 2 + 1] * atlas.height);
     const determinant =
@@ -186,6 +187,7 @@ function makeReceiverData(
         const weights = [first, second, 1 - first - second];
         if (weights.some(weight => weight < -1e-6)) continue;
         const offset = ((row - region.y) * region.width + column - region.x) * 4;
+        if (positions[offset + 3] > 0) continue;
         for (let component = 0; component < 3; component++)
           for (let corner = 0; corner < 3; corner++) {
             positions[offset + component] +=
@@ -197,6 +199,7 @@ function makeReceiverData(
         for (let component = 0; component < 3; component++) normals[offset + component] /= length;
         positions[offset + 3] = chart.id;
       }
+  }
   }
   return {positions, normals};
 }

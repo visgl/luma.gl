@@ -223,3 +223,10 @@ CPU atlas data, export staging, scene buffers, canvas targets and driver
 overhead. **Cancel bake** stops new submissions and releases the preview's
 resources. **Reset bake** starts a new bake. The high-quality preset submits
 one sample at a time and waits for the GPU before scheduling another.
+
+Set `mergeCoplanarPairs: true` to share one chart between consecutive triangles
+that share an edge, face the same way, and lie in the same plane on opposite
+sides of that edge. Draw the chart's entire vertex range and rasterize receiver
+data for each triangle in that range. The default atlas layout remains compatible
+with existing bake files. Applications opting in should record the option in
+their atlas recipe because it changes UVs and chart ownership.
