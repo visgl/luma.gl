@@ -6,6 +6,7 @@ import {type GPUCommandNode, createGPUComputeCommandNode} from './gpu-command-no
 import type {Binding} from '@luma.gl/core';
 import {Kernel} from '../execution/compute/kernel';
 import {GPUCommandGraph, type GraphDataView} from './gpu-command-graph';
+import {getBoundedDispatchLayout, type GPUBoundedDispatchLayout} from './gpu-dispatch-utils';
 import {
   getViewBinding,
   getViewElementOffset,
@@ -22,7 +23,7 @@ export type GPUSegmentedReductionOperation = 'sum' | 'min' | 'max';
 export type GPUSegmentedReductionProps<T extends GPUScalarFormat = GPUScalarFormat> = {
   id?: string;
   input: GraphDataView<T>;
-  /** CSR-style element offsets. Length must equal output.length + 1. */
+  /** Nondecreasing element offsets relative to input. Length must equal output.length + 1. */
   segmentOffsets: GraphDataView<'uint32'>;
   output: GraphDataView<T>;
   operation: GPUSegmentedReductionOperation;
@@ -73,15 +74,21 @@ export class GPUSegmentedReduction<T extends GPUScalarFormat = GPUScalarFormat> 
     }
     if (this.output.length === 0) return nodes;
 
-    const source = makeShaderSource(this);
+    const dispatch = getBoundedDispatchLayout(
+      this.id,
+      this.output.length * WORKGROUP_SIZE,
+      WORKGROUP_SIZE,
+      graph.device.limits.maxComputeWorkgroupsPerDimension
+    );
+    const source = makeShaderSource(this, dispatch);
     nodes.push(
       createGPUComputeCommandNode<Parameters>({
         id: this.id,
         workload: {
           operation: 'GPUSegmentedReduction',
           commandCount: 1,
-          maximumWorkgroupCount: this.output.length,
-          maximumInvocationCount: this.output.length * WORKGROUP_SIZE,
+          maximumWorkgroupCount: dispatch.x * dispatch.y * dispatch.z,
+          maximumInvocationCount: dispatch.x * dispatch.y * dispatch.z * WORKGROUP_SIZE,
           readByteLength: this.input.length * 4 + this.segmentOffsets.length * 4,
           writeByteLength: this.output.length * 4
         },
@@ -110,7 +117,7 @@ export class GPUSegmentedReduction<T extends GPUScalarFormat = GPUScalarFormat> 
                 outputValues: getViewBinding(this.output, getBuffer)
               };
 
-              kernel.dispatch(computePass, {bindings, x: this.output.length, y: 1, z: 1});
+              kernel.dispatch(computePass, {bindings, ...dispatch});
             },
             destroy: () => kernel.destroy()
           };
@@ -122,7 +129,10 @@ export class GPUSegmentedReduction<T extends GPUScalarFormat = GPUScalarFormat> 
   }
 }
 
-function makeShaderSource(reduction: GPUSegmentedReduction): string {
+function makeShaderSource(
+  reduction: GPUSegmentedReduction,
+  dispatch: GPUBoundedDispatchLayout
+): string {
   const type =
     reduction.input.format === 'uint32'
       ? 'u32'
@@ -161,9 +171,10 @@ var<workgroup> scratch: array<${type}, ${WORKGROUP_SIZE}>;
 fn combine(a: ${type}, b: ${type}) -> ${type} { return ${combine}; }
 @compute @workgroup_size(${WORKGROUP_SIZE})
 fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) lane: u32) {
-  let segment = wg.x;
-  let begin = segmentOffsets[SEGMENT_OFFSET + segment];
-  let end = segmentOffsets[SEGMENT_OFFSET + segment + 1u];
+  let segment = (wg.z * ${dispatch.y}u + wg.y) * ${dispatch.x}u + wg.x;
+  if (segment >= ${reduction.output.length}u) { return; }
+  let begin = min(segmentOffsets[SEGMENT_OFFSET + segment], ${reduction.input.length}u);
+  let end = min(segmentOffsets[SEGMENT_OFFSET + segment + 1u], ${reduction.input.length}u);
   var value: ${type} = ${identity};
   var i = begin + lane;
   loop {
@@ -181,7 +192,7 @@ fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) lane:
     stride = stride / 2u;
   }
   if (lane == 0u) {
-    outputValues[OUTPUT_OFFSET + segment] = select(scratch[0], ${type}(${reduction.operation === 'sum' ? '0' : '0'}), begin == end);
+    outputValues[OUTPUT_OFFSET + segment] = select(scratch[0], ${type}(0), begin >= end);
   }
 }`;
 }
