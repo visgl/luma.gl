@@ -316,6 +316,35 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
         uniforms: {baseColorFactor: [0, 0, 0, 1], emissiveFactor: [2, 0, 0]}
       }
     } satisfies RayTracingSceneRenderOptions['surfaces'][number];
+    const coatOnlyReceiver = {
+      ...mappedCoat,
+      material: {
+        ...mappedCoat.material,
+        uniforms: {...mappedCoat.material.uniforms, normalUVSet: 1},
+        bindings: {pbr_clearcoatNormalSampler: replacement, pbr_normalSampler: replacement}
+      }
+    };
+    options.surfaces = [
+      coatOnlyReceiver,
+      {
+        ...sideEmitter,
+        material: {
+          ...sideEmitter.material,
+          uniforms: {...sideEmitter.material.uniforms, emissiveFactor: [20, 0, 0]}
+        }
+      }
+    ];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.emitterSampling = true;
+    options.samplesPerPixel = 16;
+    options.samplingFrameIndex = 0;
+    const coatEmitter = (await readPixel())[0];
+    expect(coatEmitter).toBeGreaterThan(3);
+    coatOnlyReceiver.material.uniforms.clearcoatFactor = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.transportMode = 'diffuse';
+    options.samplingFrameIndex = undefined;
     options.surfaces = [mappedSurface, sideEmitter];
     options.lights = [];
     options.emitterSampling = true;
