@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {describe, expect, test} from 'vitest';
-import {parseSQLExpression} from '@math.gl/core/sql';
+import {parseSQLExpression} from '@math.gl/expressions/sql';
 import {
   column,
   literal,
