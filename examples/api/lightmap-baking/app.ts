@@ -20,6 +20,7 @@ import {
   makeExampleTabbedPanel,
   makeHtmlCustomPanel
 } from '../../example-panels';
+import {exportPortableLightmap} from './portable-bake';
 import {LightmapPreview} from '../pbr-shadows/lightmap-preview';
 
 export default class LightmapExample extends AnimationLoopTemplate {
@@ -186,7 +187,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
             makeHtmlCustomPanel({
               id: 'baking-actions',
               title: 'Bake',
-              html: `<p>Estimated bake textures: ${Math.ceil(preview.estimatedTextureBytes / 2 ** 20)} MiB</p><p data-bake-samples></p><button data-cancel>Cancel bake</button> <button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export bake</button> <button data-atlas>View irradiance</button> <button data-charts>View UV charts</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lmb"></label></p><p data-status role="status"></p>`,
+              html: `<p>Estimated bake textures: ${Math.ceil(preview.estimatedTextureBytes / 2 ** 20)} MiB</p><p data-bake-samples></p><button data-cancel>Cancel bake</button> <button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export HDR bake</button> ${this.cornellRecipe ? '<button data-export-glb>Export GLB</button>' : ''} <button data-atlas>View irradiance</button> <button data-charts>View UV charts</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lmb"></label></p><p data-status role="status"></p>`,
               onRender: root => {
                 const reset = () => {
                   this.statusMessage = '';
@@ -204,18 +205,24 @@ export default class LightmapExample extends AnimationLoopTemplate {
                   if (label) label.textContent = message;
                 };
                 status(this.statusMessage);
-                const download = async () => {
+                const download = async (portable = false) => {
                   try {
                     if (this.cornellRecipe && !preview.complete)
                       throw new Error('Finish the Cornell Box bake before exporting.');
                     const data = await preview.exportData();
                     if (this.disposed || this.preview !== preview || preview.cancelled) return;
+                    const glb =
+                      portable && preview.atlas
+                        ? await exportPortableLightmap(preview.atlas, data)
+                        : null;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
                     const url = URL.createObjectURL(
                       new Blob(
                         [
-                          this.cornellRecipe
-                            ? encodeCornellBake(data, this.cornellRecipe)
-                            : encodeSceneBake(data, this.scene as BakingScene)
+                          glb ??
+                            (this.cornellRecipe
+                              ? encodeCornellBake(data, this.cornellRecipe)
+                              : encodeSceneBake(data, this.scene as BakingScene))
                         ],
                         {
                           type: 'application/octet-stream'
@@ -224,7 +231,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     );
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = `${this.scene}.lmb`;
+                    link.download = `${this.scene}.${glb ? 'glb' : 'lmb'}`;
                     link.click();
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                     status('Bake exported.');
@@ -313,7 +320,8 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     }
                   ],
                   ['[data-light]', 'click', change],
-                  ['[data-export]', 'click', download],
+                  ['[data-export]', 'click', () => void download()],
+                  ['[data-export-glb]', 'click', () => void download(true)],
                   ['[data-atlas]', 'click', showAtlas],
                   ['[data-charts]', 'click', showCharts],
                   ['[data-import]', 'change', upload]
