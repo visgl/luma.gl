@@ -109,6 +109,11 @@ The strength map uses red and the thickness map uses green to interpolate the sp
 range in nanometers. Without a thickness map the renderer uses the maximum thickness. The film
 model approximates spectral reflectance at three RGB wavelengths.
 
+Anisotropy stretches opaque GGX reflections along a triangle's UV tangent frame. The rotation
+is in radians. The map uses red and green for tangent-space direction and blue to scale strength.
+Mapped surfaces use the selected UV chart and transform. Scalar anisotropy uses UV0. Analytic
+primitives and triangles without a usable UV frame use isotropic reflection.
+
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a

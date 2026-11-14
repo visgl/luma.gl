@@ -48,7 +48,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'primitiveMaxima', binding: 3},
       {name: 'blasNodes', binding: 4}
     ]);
-    expect(reflection.storage[0].format?.size).toBe(368);
+    expect(reflection.storage[0].format?.size).toBe(384);
     expect(reflection.storage.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.uniforms.length + reflection.storage.length).toBe(5);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
@@ -142,7 +142,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'blasTriangleIds', binding: 8}
     ]);
     expect(storageBuffers).toHaveLength(8);
-    expect(storageBuffers[0].format?.size).toBe(368);
+    expect(storageBuffers[0].format?.size).toBe(384);
     expect(storageBuffers.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(11);
     expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(12);
@@ -537,12 +537,11 @@ describe('graph-accelerated ray tracing shaders', () => {
     );
     expect(functionSource).toContain('let lightVisibility = 2.0 * normalLight');
     expect(functionSource).toContain('let viewVisibility = 2.0 * normalView');
-    expect(functionSource).toContain('let geometricOcclusion = lightVisibility * viewVisibility');
     expect(functionSource).toContain(
       'let diffuseContribution = (vec3<f32>(1.0) - fresnel) * diffuse'
     );
     expect(functionSource).toContain(
-      'let specular = fresnel * geometricOcclusion * distribution /'
+      'let specular = fresnel * baseVisibility * baseDistribution /'
     );
     expect(functionSource).toContain('(4.0 * max(normalLight, 0.000001) * normalView)');
     expect(functionSource).toContain('result += baseColor * lightColor');

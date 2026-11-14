@@ -54,7 +54,7 @@ import type {
   SceneSurface
 } from './scene-renderer';
 
-const PRIMITIVE_FLOAT_COUNT = 92;
+const PRIMITIVE_FLOAT_COUNT = 96;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
@@ -3884,6 +3884,11 @@ function makePrimitiveData(
       primitiveValues[primitiveOffset + 89] = materialUniforms?.iridescenceIor ?? 1.3;
       primitiveValues[primitiveOffset + 90] = thicknessRange[0];
       primitiveValues[primitiveOffset + 91] = thicknessRange[1];
+      const anisotropyDirection = materialUniforms?.anisotropyDirection ?? [1, 0];
+      primitiveValues[primitiveOffset + 92] = anisotropyDirection[0];
+      primitiveValues[primitiveOffset + 93] = anisotropyDirection[1];
+      primitiveValues[primitiveOffset + 94] = materialUniforms?.anisotropyStrength ?? 0;
+      primitiveValues[primitiveOffset + 95] = materialUniforms?.anisotropyRotation ?? 0;
       nextPreviousTransforms.set(placementIdentifier, new Matrix4(transform));
       placements.set(instanceIds?.[transformIndex] ?? placementIdentifier, {
         surface,

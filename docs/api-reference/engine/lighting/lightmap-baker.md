@@ -122,12 +122,8 @@ by tightly packed little-endian float32 RGBA. Rows follow increasing texture V, 
 It is a luma-specific transport format, not an EXR or Radiance HDR image. Geometry, chart transforms,
 scene identity and bake settings remain application metadata; reloading requires matching UVs.
 
-The [Lightmap Baking example](/examples/api/lightmap-baking) uses two static rooms connected by a
-doorway, warm/cool lights and colored objects. The solid divider intersects the floor and back wall. The example uses a 1024×512 atlas and 1024px point/cascaded-directional shadow maps; no light probes are involved. It offers progressive baking, a frozen result, explicit
-stale/reset behavior, chart-owned gutter padding, export and reload. Unsupported float-rendering devices receive an explanatory message before bake resources are allocated. Live mode uses direct shadowed lights with unoccluded ambient
-as a reference; baked mode adds shadowed environment illumination and disables duplicate live diffuse
-lighting. Camera movement does not alter the bake. Materials provide object color at receiving time;
-this workflow does not simulate multi-bounce color bleeding.
+Start with the [lightmaps guide](/docs/api-guide/engine/features/lightmaps)
+for a bake-and-reload walkthrough and quality settings.
 
 ## Preparing atlas UVs
 
