@@ -111,7 +111,14 @@ export default class LightmapExample extends AnimationLoopTemplate {
         ) {
           throw new Error(`Cornell Box baking needs WebGPU and ${settings.width}px textures.`);
         }
-        this.statusMessage = 'Preparing Cornell Box atlas…';
+        const bytes = LightmapPreview.estimateTextureBytes(
+          settings.width,
+          settings.height,
+          'full',
+          true,
+          true
+        );
+        this.statusMessage = `Preparing Cornell Box atlas · estimated bake textures: ${Math.ceil(bytes / 2 ** 20)} MiB`;
         this.panels.setPanel(this.makePanel());
         const source = await loadCornellScene();
         if (!current()) return;
@@ -179,10 +186,14 @@ export default class LightmapExample extends AnimationLoopTemplate {
             makeHtmlCustomPanel({
               id: 'baking-actions',
               title: 'Bake',
-              html: '<p data-bake-samples></p><button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export bake</button> <button data-atlas>View irradiance</button> <button data-charts>View UV charts</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lmb"></label></p><p data-status role="status"></p>',
+              html: `<p>Estimated bake textures: ${Math.ceil(preview.estimatedTextureBytes / 2 ** 20)} MiB</p><p data-bake-samples></p><button data-cancel>Cancel bake</button> <button data-reset>Reset bake</button> <button data-light>Change warm light</button> <button data-export>Export bake</button> <button data-atlas>View irradiance</button> <button data-charts>View UV charts</button><canvas data-atlas-view width="256" height="128" style="display:none;width:100%;height:auto"></canvas><p><label>Load bake <input data-import type="file" accept=".lmb"></label></p><p data-status role="status"></p>`,
               onRender: root => {
                 const reset = () => {
                   this.statusMessage = '';
+                  if (preview.cancelled) {
+                    void this.selectScene(this.scene);
+                    return;
+                  }
                   preview.reset();
                   this.setMode('baking');
                 };
@@ -198,7 +209,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     if (this.cornellRecipe && !preview.complete)
                       throw new Error('Finish the Cornell Box bake before exporting.');
                     const data = await preview.exportData();
-                    if (this.disposed || this.preview !== preview) return;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
                     const url = URL.createObjectURL(
                       new Blob(
                         [
@@ -218,14 +229,14 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                     status('Bake exported.');
                   } catch (error) {
-                    if (this.disposed || this.preview !== preview) return;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
                     status(String(error));
                   }
                 };
                 const showAtlas = async () => {
                   try {
                     const data = await preview.exportData();
-                    if (this.disposed || this.preview !== preview) return;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
                     const canvas = root.querySelector<HTMLCanvasElement>('[data-atlas-view]');
                     const context = canvas?.getContext('2d');
                     if (!canvas || !context) return;
@@ -245,7 +256,7 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     canvas.style.display = 'block';
                     status('Atlas preview — tone mapped for display.');
                   } catch (error) {
-                    if (this.disposed || this.preview !== preview) return;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
                     status(String(error));
                   }
                 };
@@ -271,13 +282,13 @@ export default class LightmapExample extends AnimationLoopTemplate {
                   if (!file) return;
                   try {
                     const buffer = await file.arrayBuffer();
-                    if (this.disposed || this.preview !== preview) return;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
                     const data = this.cornellRecipe
                       ? decodeCornellBake(buffer, this.cornellRecipe)
                       : decodeSceneBake(buffer, this.scene as BakingScene);
                     if (
-                      data.width !== preview.baker.width ||
-                      data.height !== preview.baker.height ||
+                      data.width !== preview.width ||
+                      data.height !== preview.height ||
                       data.uvSet !== 1
                     )
                       throw new Error('The bake dimensions or UV set do not match this scene.');
@@ -285,12 +296,21 @@ export default class LightmapExample extends AnimationLoopTemplate {
                     status('Loaded — displaying baked lighting.');
                     this.setMode('baked');
                   } catch (error) {
-                    if (this.disposed || this.preview !== preview) return;
+                    if (this.disposed || this.preview !== preview || preview.cancelled) return;
                     status(String(error));
                   }
                 };
                 const bindings: [string, string, EventListener][] = [
                   ['[data-reset]', 'click', reset],
+                  [
+                    '[data-cancel]',
+                    'click',
+                    () => {
+                      this.device.submit();
+                      preview.cancel();
+                      status('Bake cancelled. Reset to start again.');
+                    }
+                  ],
                   ['[data-light]', 'click', change],
                   ['[data-export]', 'click', download],
                   ['[data-atlas]', 'click', showAtlas],
