@@ -33,8 +33,18 @@ const BODY: SceneMaterial = {
   uniforms: {baseColorFactor: [0.75, 0.32, 0.08, 1], metallicRoughnessValues: [0.15, 0.35]}
 };
 
-const TWO_SIDED_TABLE: SceneMaterial = {...TABLE, id: 'stress-table-two-sided', doubleSided: true};
-const TWO_SIDED_BODY: SceneMaterial = {...BODY, id: 'stress-body-two-sided', doubleSided: true};
+const TWO_SIDED_TABLE: SceneMaterial = {
+  ...TABLE,
+  id: 'stress-table-two-sided',
+  doubleSided: true,
+  defines: {DOUBLE_SIDED: true}
+};
+const TWO_SIDED_BODY: SceneMaterial = {
+  ...BODY,
+  id: 'stress-body-two-sided',
+  doubleSided: true,
+  defines: {DOUBLE_SIDED: true}
+};
 
 /** Retained engine rendering, borrowing published physics poses even after recovery replaces a world. */
 export class StressSceneView {
