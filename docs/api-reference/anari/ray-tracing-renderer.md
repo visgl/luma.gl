@@ -58,7 +58,9 @@ not implemented. Skeletal skinning, morph-target displacement, alpha blending, a
 other advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
 
 Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
-with explicit mip-zero sampling and up to 14 distinct textures per frame. `MASK` multiplies the
+with explicit LOD and up to 14 distinct textures per frame. Primary triangle shading estimates
+a mip level from the projected pixel footprint and transformed UVs. Secondary shading, analytic
+spheres and alpha visibility still sample mip zero. `MASK` multiplies the
 base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
 Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, picking and primary-hit
 channels. Rejected triangles do not hide deeper triangles in the same mesh, and analytic spheres

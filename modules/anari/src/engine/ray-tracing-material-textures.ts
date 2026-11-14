@@ -87,7 +87,12 @@ export function getRayMaterialTextureShader(
   const cases = textures
     .map(
       (texture, index) => `
-    case ${index + 1}u: { return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, 0.0); }
+    case ${index + 1}u: {
+      let extent = footprint * vec2<f32>(textureDimensions(materialTexture${index}, 0));
+      let level = clamp(log2(max(length(extent), 1.0)), 0.0,
+        f32(textureNumLevels(materialTexture${index}) - 1u));
+      return textureSampleLevel(materialTexture${index}, materialSampler${index}, coordinates, level);
+    }
 `
     )
     .join('');
@@ -110,13 +115,17 @@ export function getRayMaterialTextureShader(
         const matrix = Array.from(transform, value => `${Number(value).toFixed(9)}`).join(', ');
         const coordinates =
           uniforms?.[`${name}UVSet`] === 1 ? 'hit.secondaryCoordinates' : 'hit.coordinates';
+        const footprint =
+          texture.mipLevels > 1
+            ? `getMaterialFootprint(hit, transform, ${uniforms?.[`${name}UVSet`] === 1})`
+            : 'vec2<f32>(0.0)';
         if (name === 'normal' || name === 'clearcoatNormal') {
           const scale = name === 'normal' ? Number(uniforms?.normalScale ?? 1).toFixed(9) : '1.0';
           const cases = name === 'normal' ? normalMaterials : clearcoatNormalMaterials;
           cases.push(`case ${surfaceIndex}u: {
             let transform = mat3x3<f32>(${matrix});
             let coordinates = (transform * vec3<f32>(${coordinates}, 1.0)).xy;
-            let sampled = sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates);
+            let sampled = sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, ${footprint});
             return applyNormalMap(hit, transform, ${uniforms?.[`${name}UVSet`] === 1}, sampled.xyz, ${scale});
           }`);
           return '';
@@ -124,17 +133,32 @@ export function getRayMaterialTextureShader(
         if (name === 'baseColor') {
           opacityMaterials.push(`case ${surfaceIndex}u: {
             let coordinates = (mat3x3<f32>(${matrix}) * vec3<f32>(${coordinates}, 1.0)).xy;
-            opacity *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates).a;
+            opacity *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, vec2<f32>(0.0)).a;
           }`);
         }
-        return `{ let coordinates = (mat3x3<f32>(${matrix}) * vec3<f32>(${coordinates}, 1.0)).xy;
-        let sampled = sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates);
+        return `{ let transform = mat3x3<f32>(${matrix});
+        let coordinates = (transform * vec3<f32>(${coordinates}, 1.0)).xy;
+        let sampled = sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, ${footprint});
         ${assignment} }`;
       }).join('\n');
       return `case ${surfaceIndex}u: { ${statements} }`;
     })
     .join('\n');
   return source
+    .replace(
+      '/* MATERIAL_PRIMARY_FOOTPRINT */',
+      textures.some(texture => texture.mipLevels > 1)
+        ? `
+      let horizontal = makeCameraRayAtOffset(pixel, sampleOffset + vec2<f32>(1.0, 0.0));
+      let vertical = makeCameraRayAtOffset(pixel, sampleOffset + vec2<f32>(0.0, 1.0));
+      let position = ray.origin + ray.direction * hit.distance;
+      let face = getFaceNormal(hit, ray);
+      let horizontalOffset = horizontal.origin + horizontal.direction * hit.distance - position;
+      let verticalOffset = vertical.origin + vertical.direction * hit.distance - position;
+      hit.footprint = max(length(horizontalOffset), length(verticalOffset)) /
+        max(abs(dot(face, ray.direction)), 0.05);`
+        : ''
+    )
     .replace('/* MATERIAL_TEXTURE_DECLARATIONS */', declarations)
     .replace('/* MATERIAL_TEXTURE_CASES */', cases)
     .replace('/* MATERIAL_SURFACE_CASES */', materials)

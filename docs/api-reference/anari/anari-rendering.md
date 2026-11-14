@@ -487,7 +487,9 @@ The ray renderer samples base-color, emissive, metallic/roughness, transmission,
 Each map uses its canonical PBR UV transform and UV-set selector (`TEXCOORD_0` or
 `TEXCOORD_1`). Analytic spheres synthesize longitude/latitude UV0. Texture formats control
 color decoding: use sRGB formats for color maps and linear formats for data maps. Sampling
-uses explicit mip level zero inside divergent ray traversal and honors the texture's sampler.
+uses explicit LOD inside divergent traversal and honors the texture's sampler. Primary triangle
+shading estimates its footprint from the camera and transformed UVs. Secondary hits, analytic
+spheres, and cutout tests use mip zero.
 At most fourteen distinct material textures may be bound to one frame with CORE limits.
 Textures are borrowed and must remain alive until their submitted GPU work finishes.
 

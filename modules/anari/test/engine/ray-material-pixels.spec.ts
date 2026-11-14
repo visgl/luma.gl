@@ -40,6 +40,21 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     data: new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]),
     sampler: map.sampler
   });
+  const mipMap = device.createTexture({
+    width: 32,
+    height: 32,
+    mipLevels: 6,
+    format: 'rgba8unorm',
+    sampler: {minFilter: 'nearest', magFilter: 'nearest', mipmapFilter: 'nearest'}
+  });
+  for (let level = 0; level < 6; level++) {
+    const size = 32 >> level;
+    const texels = new Uint8Array(size * size * 4);
+    for (let offset = 0; offset < texels.length; offset += 4) {
+      texels.set(level === 0 ? [255, 0, 0, 255] : [0, 255, 0, 255], offset);
+    }
+    mipMap.writeData(texels, {mipLevel: level, width: size, height: size});
+  }
   const color = device.createTexture({
     width: 8,
     height: 8,
@@ -245,6 +260,14 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
       }
     };
     replacement.writeData(new Uint8Array([255, 128, 200, 255, 255, 128, 200, 255]));
+    const minifiedSurface = {
+      ...mappedSurface,
+      material: {...mappedSurface.material, bindings: {pbr_baseColorSampler: mipMap}}
+    };
+    options.surfaces = [minifiedSurface];
+    expect(await readPixel()).toEqual([0, 255, 0]);
+    minifiedSurface.geometry = geometry;
+    expect(await readPixel()).toEqual([255, 0, 0]);
     const mappedCoat = {
       ...coatedSurface,
       id: 'mapped-coat',
@@ -519,6 +542,7 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     framebuffer.destroy();
     color.destroy();
     map.destroy();
+    mipMap.destroy();
     replacement.destroy();
     device.destroy();
   }

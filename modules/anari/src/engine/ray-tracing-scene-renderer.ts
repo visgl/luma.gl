@@ -3086,6 +3086,7 @@ export class RayTracingSceneRenderer {
             format: texture.format,
             width: texture.width,
             height: texture.height,
+            mipLevels: texture.mipLevels,
             usage: Texture.SAMPLE
           },
           texture
