@@ -50,9 +50,10 @@ export type GPUVectorWGSLLayout = {
  * ```
  */
 export function getGPUVectorWGSLLayout(format: GPUVectorWGSLFormat): GPUVectorWGSLLayout {
-  const {components, signedDataType, primitiveType, byteLength, elementFormat} =
+  const {components, signedDataType, primitiveType, byteLength, elementFormat, normalized} =
     getGPUVectorFormatInfo(format);
   if (
+    normalized ||
     elementFormat !== format ||
     (signedDataType !== 'float32' && signedDataType !== 'sint32' && signedDataType !== 'uint32') ||
     primitiveType === 'f16'

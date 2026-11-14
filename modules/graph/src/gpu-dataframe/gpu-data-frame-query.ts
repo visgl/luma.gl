@@ -11,7 +11,12 @@ import {
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import type {GPUDataFrame} from './gpu-data-frame';
-import {getGPUExpressionColumnNames, GPUExpression, type GPUExpressionNode} from './gpu-expression';
+import {
+  getGPUExpressionColumnNames,
+  GPUExpression,
+  isBooleanExpressionNode,
+  type GPUExpressionNode
+} from './gpu-expression';
 import {
   GPUDataFrameAggregationQuery,
   type GPUDataFrameGlobalAggregationDefinitions,
@@ -455,31 +460,6 @@ function isNumericExpressionNode(node: GPUExpressionNode): boolean {
         node.operator === 'subtract' ||
         node.operator === 'multiply' ||
         node.operator === 'divide'
-      );
-    default:
-      return false;
-  }
-}
-
-function isBooleanExpressionNode(node: GPUExpressionNode): boolean {
-  switch (node.kind) {
-    case 'column':
-      return false;
-    case 'literal':
-    case 'parameter':
-      return typeof node.value === 'boolean';
-    case 'unary':
-      return node.operator === 'not' || node.operator === 'is-valid' || node.operator === 'is-null';
-    case 'binary':
-      return (
-        node.operator === 'equal' ||
-        node.operator === 'not-equal' ||
-        node.operator === 'greater-than' ||
-        node.operator === 'greater-than-or-equal' ||
-        node.operator === 'less-than' ||
-        node.operator === 'less-than-or-equal' ||
-        node.operator === 'and' ||
-        node.operator === 'or'
       );
     default:
       return false;

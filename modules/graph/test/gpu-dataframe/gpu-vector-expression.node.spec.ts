@@ -8,10 +8,12 @@ import {
   column,
   literal,
   parameter,
+  not,
   vector,
   vectorColumn,
   cast,
-  makeGPUExpressionFromPortableAST
+  makeGPUExpressionFromPortableAST,
+  makeGPUPredicateFromPortableAST
 } from '@luma.gl/graph/gpu-dataframe';
 import {getGPUExpressionColumnNames} from '../../src/gpu-dataframe/gpu-expression';
 
@@ -32,6 +34,12 @@ describe('GPU dataframe vector syntax', () => {
     expect(cast(column('x'), 'sint32').node.kind).toBe('cast');
     expect(() => vector('float32x3', [literal(1), literal(2)])).toThrow();
   });
+  test('converts SQL comparisons into composable predicates', () => {
+    const predicate = makeGPUPredicateFromPortableAST(parseSQLExpression('x > 0'));
+    expect(not(predicate).node).toEqual(not(column('x').greaterThan(literal(0))).node);
+    expect(() => makeGPUPredicateFromPortableAST(parseSQLExpression('x + 1'))).toThrow(/boolean/);
+  });
+
   test('rejects unsupported SQL widths, precision, strings and callbacks', () => {
     for (const sql of [
       'ARRAY[x]::REAL[1]',

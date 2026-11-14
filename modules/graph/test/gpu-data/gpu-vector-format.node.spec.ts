@@ -1017,4 +1017,5 @@ it('separates packed vec3 from native storage array stride', () => {
     }
   }
   expect(() => getGPUVectorWGSLLayout('unorm8x4' as any)).toThrow();
+  expect(() => getGPUVectorWGSLLayout('unorm10-10-10-2' as any)).toThrow();
 });
