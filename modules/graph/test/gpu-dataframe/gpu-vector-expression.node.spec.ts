@@ -47,6 +47,11 @@ describe('GPU dataframe vector syntax', () => {
     expect(() =>
       makeGPUExpressionFromPortableAST(parseSQLExpression('CAST(ARRAY[x,y]::REAL[2] AS INTEGER)'))
     ).toThrow(/width/);
+    for (const operand of ['1 + ARRAY[x,y]::REAL[2]', 'ARRAY[x,y]::REAL[2] + 1']) {
+      expect(() =>
+        makeGPUExpressionFromPortableAST(parseSQLExpression(`CAST(${operand} AS INTEGER)`))
+      ).toThrow(/matching widths/);
+    }
   });
 
   test('rejects unsupported SQL widths, precision, strings and callbacks', () => {

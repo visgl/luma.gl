@@ -453,10 +453,17 @@ function getKnownExpressionWidth(node: GPUExpressionNode): number | undefined {
       return node.value === null ? undefined : 1;
     case 'unary':
       return node.operator === 'negate' ? getKnownExpressionWidth(node.operand) : 1;
-    case 'binary':
-      return isBooleanExpressionNode(node)
-        ? 1
-        : (getKnownExpressionWidth(node.left) ?? getKnownExpressionWidth(node.right));
+    case 'binary': {
+      if (isBooleanExpressionNode(node)) {
+        return 1;
+      }
+      const leftWidth = getKnownExpressionWidth(node.left);
+      const rightWidth = getKnownExpressionWidth(node.right);
+      if (leftWidth !== undefined && rightWidth !== undefined && leftWidth !== rightWidth) {
+        throw new Error('Numeric arithmetic requires matching widths');
+      }
+      return leftWidth ?? rightWidth;
+    }
     case 'column':
       return undefined;
   }
