@@ -40,6 +40,15 @@ describe('GPU dataframe vector syntax', () => {
     expect(() => makeGPUPredicateFromPortableAST(parseSQLExpression('x + 1'))).toThrow(/boolean/);
   });
 
+  test('rejects casts that change a known vector width', () => {
+    const position = vector('float32x2', [column('x'), column('y')]);
+    expect(() => cast(position, 'sint32')).toThrow(/width/);
+    expect(cast(position, 'sint32x2').node).toMatchObject({format: 'sint32x2'});
+    expect(() =>
+      makeGPUExpressionFromPortableAST(parseSQLExpression('CAST(ARRAY[x,y]::REAL[2] AS INTEGER)'))
+    ).toThrow(/width/);
+  });
+
   test('rejects unsupported SQL widths, precision, strings and callbacks', () => {
     for (const sql of [
       'ARRAY[x]::REAL[1]',
