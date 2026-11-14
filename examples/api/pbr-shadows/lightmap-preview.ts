@@ -263,6 +263,7 @@ export class LightmapPreview {
   private lightIntensity = 1;
   private readonly sampleLimit: number;
   private stale = false;
+  private loaded = false;
   private destroyed = false;
   static isSupported(device: Device): boolean {
     const output = device.getTextureFormatCapabilities('rgba16float');
@@ -359,14 +360,15 @@ export class LightmapPreview {
     });
     this.shadows = new ShadowMapRenderer(device, {
       quality: 'low',
-      directionalMapSize: resolution === 'full' ? width : 256,
+      directionalMapSize: cornell ? 2048 : resolution === 'full' ? width : 256,
       spotLightCapacity: 0,
-      pointLightCapacity: 2,
+      pointLightCapacity: cornell ? 1 : 2,
       pointMapSize: resolution === 'full' ? width : 128
     });
   }
   reset(): void {
     this.baker.reset();
+    this.loaded = false;
     this.result?.destroy();
     this.result = null;
     this.stale = false;
@@ -376,7 +378,7 @@ export class LightmapPreview {
     this.stale = this.baker.sampleCount > 0 || Boolean(this.result);
   }
   get complete(): boolean {
-    return this.baker.sampleCount === this.sampleLimit && !this.stale;
+    return !this.stale && (this.loaded || this.baker.sampleCount === this.sampleLimit);
   }
   async exportData(): Promise<LightmapData> {
     if (this.destroyed || this.stale || (!this.result && !this.baker.sampleCount))
@@ -406,6 +408,7 @@ export class LightmapPreview {
     const result = createLightmapFromData(this.device, data);
     this.result?.destroy();
     this.result = result;
+    this.loaded = true;
     this.baker.reset();
     this.stale = false;
   }
@@ -470,7 +473,7 @@ export class LightmapPreview {
             : []
         ),
         pointLights: lights.flatMap(light =>
-          light.type === 'point'
+          light.type === 'point' && light.color.some(component => component > 0)
             ? [
                 {
                   position: light.position,
@@ -506,6 +509,7 @@ export class LightmapPreview {
     ) {
       this.result?.destroy();
       this.result = null;
+      this.loaded = false;
       const sampleIndex = this.baker.sampleCount;
       const environment = sampleLightmapEnvironment(
         this.environment,
@@ -559,7 +563,9 @@ export class LightmapPreview {
         new Matrix4([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1])
       );
     this.model.shaderInputs.setProps({
-      shadow: recordShadows(mode === 'live' ? [primary, secondary] : []),
+      shadow: recordShadows(
+        mode === 'live' ? (this.cornell ? [primary] : [primary, secondary]) : []
+      ),
       pbrShadow: {
         enabled: mode === 'live',
         viewMatrix: new Matrix4().lookAt({eye: [5, 4, 6], center: [0, 1, 0]})

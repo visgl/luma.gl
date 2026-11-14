@@ -47,7 +47,10 @@ export default class BakedCornellBox extends AnimationLoopTemplate {
             const generation = ++this.generation;
             status.textContent = 'Loading bake…';
             try {
-              this.source ??= loadCornellScene();
+              this.source ??= loadCornellScene().catch(error => {
+                this.source = null;
+                throw error;
+              });
               const [bytes, source] = await Promise.all([read(), this.source]);
               if (generation !== this.generation) return;
               const profile = matchCornellBakeProfile(bytes, {
