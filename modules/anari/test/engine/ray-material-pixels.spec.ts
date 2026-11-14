@@ -51,7 +51,10 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     const size = 32 >> level;
     const texels = new Uint8Array(size * size * 4);
     for (let offset = 0; offset < texels.length; offset += 4) {
-      texels.set(level === 0 ? [255, 0, 0, 255] : [0, 255, 0, 255], offset);
+      texels.set(
+        level === 0 ? [255, 0, 0, 255] : level === 5 ? [0, 0, 255, 255] : [0, 255, 0, 255],
+        offset
+      );
     }
     mipMap.writeData(texels, {mipLevel: level, width: size, height: size});
   }
@@ -262,10 +265,19 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     replacement.writeData(new Uint8Array([255, 128, 200, 255, 255, 128, 200, 255]));
     const minifiedSurface = {
       ...mappedSurface,
-      material: {...mappedSurface.material, bindings: {pbr_baseColorSampler: mipMap}}
+      material: {
+        ...mappedSurface.material,
+        uniforms: {
+          ...mappedSurface.material.uniforms,
+          baseColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        },
+        bindings: {pbr_baseColorSampler: mipMap}
+      }
     };
     options.surfaces = [minifiedSurface];
     expect(await readPixel()).toEqual([0, 255, 0]);
+    minifiedSurface.material.uniforms.baseColorUVTransform = [64, 0, 0, 0, 64, 0, 0, 0, 1];
+    expect(await readPixel()).toEqual([0, 0, 255]);
     minifiedSurface.geometry = geometry;
     expect(await readPixel()).toEqual([255, 0, 0]);
     const mappedCoat = {
