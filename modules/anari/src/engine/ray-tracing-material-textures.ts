@@ -57,7 +57,9 @@ export function getRayMaterialTextures(
     for (const [name, binding] of MATERIAL_MAPS) {
       if (
         (opacityOnly && name !== 'baseColor') ||
-        (name !== 'clearcoatNormal' && surface.material.uniforms?.[`${name}MapEnabled`] === false)
+        (name !== 'clearcoatNormal' &&
+          name !== 'iridescenceThickness' &&
+          surface.material.uniforms?.[`${name}MapEnabled`] === false)
       )
         continue;
       const texture = surface.material.bindings?.[binding];
@@ -78,7 +80,9 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
       surface.material.uniforms?.normalScale,
       MATERIAL_MAPS.map(([name, binding]) => [
         textures.findIndex(texture => texture === surface.material.bindings?.[binding]),
-        name === 'clearcoatNormal' ? undefined : surface.material.uniforms?.[`${name}MapEnabled`],
+        name === 'clearcoatNormal' || name === 'iridescenceThickness'
+          ? undefined
+          : surface.material.uniforms?.[`${name}MapEnabled`],
         surface.material.uniforms?.[`${name}UVSet`],
         surface.material.uniforms?.[`${name}UVTransform`]
       ])
@@ -129,7 +133,9 @@ export function getRayMaterialTextureShader(
           !(texture instanceof Texture) ||
           !textures.includes(texture) ||
           (opacityOnly && name !== 'baseColor') ||
-          (name !== 'clearcoatNormal' && uniforms?.[`${name}MapEnabled`] === false)
+          (name !== 'clearcoatNormal' &&
+            name !== 'iridescenceThickness' &&
+            uniforms?.[`${name}MapEnabled`] === false)
         )
           return '';
         const transform = uniforms?.[`${name}UVTransform`] ?? [1, 0, 0, 0, 1, 0, 0, 0, 1];
