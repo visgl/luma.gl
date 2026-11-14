@@ -76,7 +76,9 @@ refraction continues to use its IOR-based Fresnel model.
 
 Clearcoat adds a dielectric glossy layer to direct lighting and opaque PBR paths. The strength
 map uses red, and the roughness map uses green. Both support the shared UV sets and transforms.
-The coat uses the base shading normal and the existing opaque bounce sampling distribution.
+Triangle clearcoat normal maps use their own UV chart and linear RGB. The coat uses the unperturbed
+surface normal when the map is absent. Opaque bounce sampling still follows the
+base shading distribution.
 
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.

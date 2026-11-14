@@ -245,6 +245,36 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
       }
     };
     replacement.writeData(new Uint8Array([255, 128, 200, 255, 255, 128, 200, 255]));
+    const mappedCoat = {
+      ...coatedSurface,
+      id: 'mapped-coat',
+      geometry: mappedSurface.geometry,
+      material: {
+        id: 'mapped-coat-material',
+        uniforms: {
+          ...coatedSurface.material.uniforms,
+          clearcoatFactor: 1,
+          clearcoatRoughnessFactor: 0.5,
+          clearcoatNormalUVSet: 0,
+          clearcoatNormalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        },
+        bindings: {pbr_clearcoatNormalSampler: replacement}
+      }
+    };
+    options.surfaces = [mappedCoat];
+    options.samplingFrameIndex = 0;
+    options.lights = [
+      {type: 'directional', direction: [-1, 0, -0.4], color: [1, 1, 1], intensity: 4}
+    ];
+    const tiltedCoat = (await readPixel())[0];
+    mappedCoat.material.uniforms.clearcoatNormalUVSet = 1;
+    const mirroredCoat = (await readPixel())[0];
+    expect(tiltedCoat).toBeGreaterThan(mirroredCoat + 3);
+    mappedCoat.material.uniforms.clearcoatNormalUVTransform = [-1, 0, 0, 0, 1, 0, 1, 0, 1];
+    expect((await readPixel())[0]).toBe(tiltedCoat);
+    options.surfaces = [{...mappedCoat, material: {...mappedCoat.material, bindings: {}}}];
+    expect((await readPixel())[0]).toBeLessThan(tiltedCoat);
+    options.samplingFrameIndex = undefined;
     options.surfaces = [mappedSurface];
     options.lights = [
       {type: 'directional', direction: [-1, 0, -0.4], color: [1, 1, 1], intensity: 1}
@@ -286,6 +316,35 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
         uniforms: {baseColorFactor: [0, 0, 0, 1], emissiveFactor: [2, 0, 0]}
       }
     } satisfies RayTracingSceneRenderOptions['surfaces'][number];
+    const coatOnlyReceiver = {
+      ...mappedCoat,
+      material: {
+        ...mappedCoat.material,
+        uniforms: {...mappedCoat.material.uniforms, normalUVSet: 1},
+        bindings: {pbr_clearcoatNormalSampler: replacement, pbr_normalSampler: replacement}
+      }
+    };
+    options.surfaces = [
+      coatOnlyReceiver,
+      {
+        ...sideEmitter,
+        material: {
+          ...sideEmitter.material,
+          uniforms: {...sideEmitter.material.uniforms, emissiveFactor: [20, 0, 0]}
+        }
+      }
+    ];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.emitterSampling = true;
+    options.samplesPerPixel = 16;
+    options.samplingFrameIndex = 0;
+    const coatEmitter = (await readPixel())[0];
+    expect(coatEmitter).toBeGreaterThan(3);
+    coatOnlyReceiver.material.uniforms.clearcoatFactor = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.transportMode = 'diffuse';
+    options.samplingFrameIndex = undefined;
     options.surfaces = [mappedSurface, sideEmitter];
     options.lights = [];
     options.emitterSampling = true;

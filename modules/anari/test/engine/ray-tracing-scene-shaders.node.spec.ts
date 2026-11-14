@@ -534,7 +534,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(functionSource).toContain(
       'let specular = fresnel * geometricOcclusion * distribution /'
     );
-    expect(functionSource).toContain('(4.0 * normalLight * normalView)');
+    expect(functionSource).toContain('(4.0 * max(normalLight, 0.000001) * normalView)');
     expect(functionSource).toContain('result += baseColor * lightColor');
     expect(functionSource).not.toContain('specularPower');
     expect(functionSource).not.toContain('pow(normalHalf,');
