@@ -7,6 +7,7 @@ import {validateExpressionAST, type Expression} from '@math.gl/expressions';
 import {
   GPUExpression,
   isBooleanExpressionNode,
+  makeGPUCastNode,
   type GPUExpressionNode,
   type GPUExpressionBinaryOperator,
   type GPUExpressionNumericValue
@@ -104,11 +105,10 @@ function convert(expression: Expression): GPUExpressionNode {
       if (name === 'cast' && node.arguments.length === 2 && node.arguments[1].type === 'Literal') {
         const target = node.arguments[1].value;
         if (target === 'float32' || target === 'int32')
-          return {
-            kind: 'cast',
-            format: target === 'int32' ? 'sint32' : 'float32',
-            operand: convert(node.arguments[0])
-          };
+          return makeGPUCastNode(
+            convert(node.arguments[0]),
+            target === 'int32' ? 'sint32' : 'float32'
+          );
       }
       break;
     }

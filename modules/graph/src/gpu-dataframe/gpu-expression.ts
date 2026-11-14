@@ -376,7 +376,38 @@ export function cast<Value extends GPUExpressionNumericValue, Columns extends st
   expression: GPUExpression<Value, Columns>,
   format: GPUExpressionNumericFormat
 ): GPUExpression<Value, Columns> {
-  return new GPUExpression({kind: 'cast', format, operand: expression.node});
+  return new GPUExpression(makeGPUCastNode(expression.node, format));
+}
+
+export function makeGPUCastNode<Format extends GPUExpressionNumericFormat>(
+  operand: GPUExpressionNode,
+  format: Format
+): {kind: 'cast'; format: Format; operand: GPUExpressionNode} {
+  const width = getGPUVectorWGSLLayout(format).components;
+  const operandWidth = getKnownExpressionWidth(operand);
+  if (operandWidth !== undefined && operandWidth !== width) {
+    throw new Error('Numeric casts must preserve width');
+  }
+  return {kind: 'cast', format, operand};
+}
+
+function getKnownExpressionWidth(node: GPUExpressionNode): number | undefined {
+  switch (node.kind) {
+    case 'vector':
+    case 'cast':
+      return getGPUVectorWGSLLayout(node.format).components;
+    case 'literal':
+    case 'parameter':
+      return node.value === null ? undefined : 1;
+    case 'unary':
+      return node.operator === 'negate' ? getKnownExpressionWidth(node.operand) : 1;
+    case 'binary':
+      return isBooleanExpressionNode(node)
+        ? 1
+        : (getKnownExpressionWidth(node.left) ?? getKnownExpressionWidth(node.right));
+    case 'column':
+      return undefined;
+  }
 }
 
 /** Checks whether the expression produces a boolean result. */
