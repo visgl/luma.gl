@@ -245,6 +245,37 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
       }
     };
     replacement.writeData(new Uint8Array([255, 128, 200, 255, 255, 128, 200, 255]));
+    const mappedCoat = {
+      ...coatedSurface,
+      id: 'mapped-coat',
+      geometry: mappedSurface.geometry,
+      material: {
+        id: 'mapped-coat-material',
+        uniforms: {
+          ...coatedSurface.material.uniforms,
+          clearcoatFactor: 1,
+          clearcoatRoughnessFactor: 0.5,
+          clearcoatNormalUVSet: 0,
+          clearcoatNormalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+          clearcoatNormalMapEnabled: true
+        },
+        bindings: {pbr_clearcoatNormalSampler: replacement}
+      }
+    };
+    options.surfaces = [mappedCoat];
+    options.samplingFrameIndex = 0;
+    options.lights = [
+      {type: 'directional', direction: [-1, 0, -0.4], color: [1, 1, 1], intensity: 4}
+    ];
+    const tiltedCoat = (await readPixel())[0];
+    mappedCoat.material.uniforms.clearcoatNormalUVSet = 1;
+    const mirroredCoat = (await readPixel())[0];
+    expect(tiltedCoat).toBeGreaterThan(mirroredCoat + 3);
+    mappedCoat.material.uniforms.clearcoatNormalUVTransform = [-1, 0, 0, 0, 1, 0, 1, 0, 1];
+    expect((await readPixel())[0]).toBe(tiltedCoat);
+    mappedCoat.material.uniforms.clearcoatNormalMapEnabled = false;
+    expect((await readPixel())[0]).toBeLessThan(tiltedCoat);
+    options.samplingFrameIndex = undefined;
     options.surfaces = [mappedSurface];
     options.lights = [
       {type: 'directional', direction: [-1, 0, -0.4], color: [1, 1, 1], intensity: 1}

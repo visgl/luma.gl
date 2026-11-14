@@ -839,12 +839,27 @@ fn getGrazingReflectance(primitive: RayPrimitive, reflectance: vec3<f32>, metall
     mix(clamp(primitive.specular.w, 0.0, 1.0), 1.0, metallic)));
 }
 
-// Both lobes use the same shading normal. The coat's Fresnel term reduces
-// the base response before adding the coat's reflected contribution.
-fn applyClearcoat(baseResponse: vec3<f32>, clearcoat: vec2<f32>, normalHalf: f32,
-    viewHalf: f32, normalView: f32, normalLight: f32) -> vec3<f32> {
+fn getClearcoatNormal(hit: RayHit) -> vec3<f32> {
+  if (hit.triangleIndex == 0xffffffffu) { return hit.normal; }
+  switch u32(primitives[hit.primitiveIndex].material.w) {
+    /* MATERIAL_CLEARCOAT_NORMAL_CASES */
+    default: {}
+  }
+  return hit.normal;
+}
+
+// Apply the coat's Fresnel attenuation and reflection using its own normal.
+fn applyClearcoat(baseResponse: vec3<f32>, clearcoat: vec2<f32>, hit: RayHit,
+    viewDirection: vec3<f32>, lightDirection: vec3<f32>,
+    halfDirection: vec3<f32>, viewHalf: f32) -> vec3<f32> {
   let strength = clamp(clearcoat.x, 0.0, 1.0);
   if (strength == 0.0) { return baseResponse; }
+  let mappedNormal = getClearcoatNormal(hit);
+  let normal = select(mappedNormal, -mappedNormal, dot(hit.normal, viewDirection) < 0.0);
+  let normalView = dot(normal, viewDirection);
+  let normalLight = dot(normal, lightDirection);
+  if (normalView <= 0.0 || normalLight <= 0.0) { return baseResponse; }
+  let normalHalf = max(dot(normal, halfDirection), 0.0);
   let roughness = clamp(clearcoat.y, 0.04, 1.0);
   let alpha = roughness * roughness;
   let alphaSquared = alpha * alpha;
@@ -928,7 +943,8 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     }
 
     let normalLight = max(dot(normal, lightDirection), 0.0);
-    if (normalLight <= 0.0 || dot(faceNormal, lightDirection) <= 0.0 || attenuation <= 0.0) {
+    if ((normalLight <= 0.0 && primitive.clearcoat.x <= 0.0) ||
+        dot(faceNormal, lightDirection) <= 0.0 || attenuation <= 0.0) {
       continue;
     }
     if (uniforms.settings.w > 0.5) {
@@ -957,9 +973,9 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     let geometricOcclusion = lightVisibility * viewVisibility;
     let diffuseContribution = (vec3<f32>(1.0) - fresnel) * diffuse;
     let specular = fresnel * geometricOcclusion * distribution /
-      (4.0 * normalLight * normalView);
+      (4.0 * max(normalLight, 0.000001) * normalView);
     let response = applyClearcoat((diffuseContribution + specular) * normalLight,
-      primitive.clearcoat.xy, normalHalf, viewHalf, normalView, normalLight);
+      primitive.clearcoat.xy, hit, viewDirection, lightDirection, halfDirection, viewHalf);
     result += response * lightColor *
       attenuation * lightSampleWeight * opaqueWeight;
   }
@@ -1318,7 +1334,7 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
   // Match the scalar direct-light BRDF; cancel N.L before dividing by the PDF.
   let diffuse = (vec3<f32>(1.0) - fresnel) * baseColor * (vec3<f32>(1.0) - dielectricReflectance) * (1.0 - metallic) * normalLight / PI;
   let specular = fresnel * lightVisibility * viewVisibility * distribution / (4.0 * normalView);
-  return applyClearcoat(diffuse + specular, primitive.clearcoat.xy, normalHalf, viewHalf, normalView, normalLight);
+  return applyClearcoat(diffuse + specular, primitive.clearcoat.xy, hit, viewDirection, direction, halfDirection, viewHalf);
 }
 
 // CDF emitter selection, uniform triangle selection and conditional area sampling. Visibility rejects far sides of spheres.
