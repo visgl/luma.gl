@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {readFileSync} from 'node:fs';
+import {gunzipSync} from 'node:zlib';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 export function formatReport(report) {
@@ -21,9 +22,34 @@ export function formatReport(report) {
         : `| ${result.scene} | ${number(result.performance.box3dNativeMilliseconds?.p95)} | ${number(result.performance.gpuCompletionMilliseconds?.p95)} | ${number(result.performance.gpuToNativeCompletionRatio)} | ${result.executionComplete ? 'complete' : 'INCOMPLETE'} | ${number(result.quality.box3d.maximumPenetration)} / ${number(result.quality.gpu.maximumPenetration)} | ${number(result.quality.box3d.maximumJointError)} / ${number(result.quality.gpu.maximumJointError)} | ${number(result.quality.box3d.maximumConservativeEnergyError)} / ${number(result.quality.gpu.maximumConservativeEnergyError)} | ${result.qualityAssessment.box3d.passed ? 'pass' : result.qualityAssessment.box3d.failures.join(', ')} / ${result.qualityAssessment.gpu.passed ? 'pass' : result.qualityAssessment.gpu.failures.join(', ')} |`
     ),
     '',
+    ...report.results.flatMap(result =>
+      result.error
+        ? []
+        : [
+            `## ${result.scene}: ${result.settings.solver}, ${result.settings.contactSolver ?? 'scalar'} contacts, ${result.settings.iterations} iterations`,
+            '',
+            `Stack lateral drift CPU / GPU: ${number(result.quality.box3d.maximumLateralDrift)} / ${number(result.quality.gpu.maximumLateralDrift)} m.`,
+            '',
+            '| GPU stage (separate profile replay) | median ms | p95 ms |',
+            '| --- | ---: | ---: |',
+            ...Object.entries(result.performance.gpuStageMilliseconds ?? {}).map(
+              ([stage, timing]) =>
+                `| ${stage} | ${number(timing?.median)} | ${number(timing?.p95)} |`
+            ),
+            ''
+          ]
+    ),
     ...report.notes.map(note => `- ${note}`),
     ''
   ].join('\n');
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href)
-  console.log(formatReport(JSON.parse(readFileSync(process.argv[2], 'utf8'))));
+  console.log(
+    formatReport(
+      JSON.parse(
+        process.argv[2].endsWith('.gz')
+          ? gunzipSync(readFileSync(process.argv[2])).toString()
+          : readFileSync(process.argv[2], 'utf8')
+      )
+    )
+  );

@@ -139,6 +139,10 @@ export type GPURigidBodyWorldProps = {
   maximumRecoverySpeed?: number;
   /** Additional under-relaxation for the parallel solver, in (0, 1]. Default 1. */
   parallelRelaxation?: number;
+  /** Contact scheduling within a parallel manifold. Block uses two local sweeps before gathering.
+   * Default scalar preserves the original per-contact relaxation path.
+   */
+  parallelContactSolver?: 'scalar' | 'block';
   /** Small worlds retain the all-pairs numerical oracle; larger worlds use sparse discovery. */
   /** Independent equal collider blocks; currently excludes joints, CCD and authored triggers. */
   collisionPartitionSize?: number;
@@ -271,6 +275,8 @@ export class GPURigidBodyWorld {
     this.solver = props.solver ?? 'ordered';
     if (!['ordered', 'parallel'].includes(this.solver))
       throw new Error('Invalid rigid-body solver');
+    if (!['scalar', 'block'].includes(props.parallelContactSolver ?? 'scalar'))
+      throw new Error('Invalid parallel contact solver');
     validateRigidBodyJoints(props.joints ?? [], props.bodies, this.solver);
     const colliderCount = props.bodies.reduce(
       (sum, body) => sum + (body.colliders?.length ?? 1),
@@ -1043,7 +1049,8 @@ export class GPURigidBodyWorld {
       this.props.joints?.length ?? 0,
       this.props.compactContacts ?? true,
       this.props.collisionPartitionSize,
-      this.props.ensembleBodiesPerInstance
+      this.props.ensembleBodiesPerInstance,
+      this.props.parallelContactSolver === 'block'
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],

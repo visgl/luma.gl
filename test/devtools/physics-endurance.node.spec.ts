@@ -11,7 +11,7 @@ import {STACK_QUALIFICATION_SCENARIOS} from '../../modules/graph/test/gpu-physic
 
 test('nightly physics selects all full endurance entries', () => {
   expect(getBrowserTestGroup('physics-endurance')).toBe('physics-endurance');
-  expect(PHYSICS_ENDURANCE_TEST_PATTERNS).toHaveLength(5);
+  expect(PHYSICS_ENDURANCE_TEST_PATTERNS).toHaveLength(6);
   for (const filename of PHYSICS_ENDURANCE_TEST_PATTERNS) {
     expect(existsSync(fileURLToPath(new URL(`../../${filename}`, import.meta.url)))).toBe(true);
   }

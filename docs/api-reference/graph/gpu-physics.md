@@ -172,6 +172,31 @@ These qualify named cases; general mesh containment, rotational CCD, deep stacks
 cross-device performance still require separate evidence.
 
 
+### Difficult contact patches
+
+With `solver: 'parallel'`, `parallelContactSolver: 'block'` opts into two local
+Gauss–Seidel sweeps over each manifold before the global velocity gather. The solver
+relaxes the whole patch once, rather than each contact increment. This can achieve a
+similar contact error with fewer global iterations, at the cost of more arithmetic
+and private state per invocation. `parallelContactSolver: 'scalar'` remains the default.
+Both modes retain compact queues, warm starts, island sleeping and exclusive output
+ownership. There is no additional CPU synchronization or pose readback.
+
+```typescript
+const world = new GPURigidBodyWorld({
+  bodies,
+  solver: 'parallel',
+  parallelContactSolver: 'block',
+  iterations: 24,
+  timeStep: 1 / 240
+});
+```
+
+Compare error and cost for your scene before reducing iterations. More local sweeps
+are not equivalent to more substeps: collision geometry is still refreshed once per
+substep. See the [G8 comparison](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/physics-g8.md) for the
+bounded workload, measurements and remaining performance limits.
+
 ### Awake solver work
 
 With `solver: 'parallel'` and contact compaction enabled, island construction retains
