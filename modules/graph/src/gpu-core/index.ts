@@ -392,6 +392,8 @@ export type {
   GPUHistogramProps
 } from './gpu-histogram';
 
+export {GPU_GRID_COORDINATE_WGSL} from './gpu-grid-coordinate';
+
 export {GPUGridBinning} from './gpu-grid-binning';
 export type {
   GPUGridBinningBounds,
