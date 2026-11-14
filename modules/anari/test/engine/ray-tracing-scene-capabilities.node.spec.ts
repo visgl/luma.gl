@@ -12,11 +12,12 @@ it('reports implemented software tracing separately from planned material transp
     maximumDiffuseBounces: 8,
     modes: ['diffuse', 'pbr'],
     specular: true,
-    transmission: false,
+    transmission: true,
     explicitEmitterSampling: true,
     emitterSelection: ['uniform', 'power']
   });
-  expect(capabilities.materialTextures).toBe(false);
+  expect(capabilities.materialTextures).toBe(true);
+  expect(capabilities.texturedAlphaMask).toBe(true);
   expect(capabilities.alphaModes).toEqual(['OPAQUE', 'MASK']);
   expect(capabilities.debugViews).toEqual([
     'color',

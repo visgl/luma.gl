@@ -9,6 +9,7 @@ export type BrowserTestGroup =
   | 'physics-endurance'
   | (typeof BROWSER_TEST_GROUPS)[number];
 export const PHYSICS_ENDURANCE_TEST_PATTERNS = [
+  'modules/graph/test/gpu-physics/rigid-body-block-contacts-endurance.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts',

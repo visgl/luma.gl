@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: October 22, 2026
+Updated: November 13, 2026
 
 ## Goal and current status
 
@@ -28,6 +28,19 @@ Implementation references on master:
 - [Module API and limitations](../../modules/graph/src/gpu-physics/README.md)
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
+
+## G7 glTF physics qualification checkpoint
+
+The [G7 qualification report](../benchmarks/gltf-physics-g7.md) records the status
+of the executable G1–G7 matrix, the four upstream sample files, and full-step
+measurements for the declared desktop fixtures. The G2 geometry checks cover
+imported transforms, off-scene geometry and initial deformation through GPU queries.
+G3 pairs analytic and endurance checks with measured latency and accuracy budgets.
+
+The next release qualification work is to reproduce these checks on additional
+hardware and browsers, then expand the timed envelope to dense worlds, moving
+meshes, and authored scenes with rendering active. G8 and later continue to track
+broader library capabilities separately from the pinned glTF profile.
 
 ## Authored qualification closure — October 24, 2026
 
@@ -404,6 +417,13 @@ scenes with the corresponding implementation, not placeholder approximations. gl
 examples remain the interoperability and authored-semantics qualification suite.
 
 ### G8. Competitive contact solving and difficult dynamics
+
+Implemented checkpoint: an opt-in two-sweep manifold-block contact solver, scalar/block
+quality-cost matrix against native Box3D, dense and 10:1 loaded fixtures, independent
+lateral-drift gates, stage profiling and a retained 3D Stress Lab. See the
+[G8 report](../benchmarks/physics-g8.md) for measured results and explicit limits.
+Scalar contacts remain the default. Constraint coloring, native compound matching,
+large dense scale points and cross-device competitive qualification remain open.
 
 Qualify deep stacks, large mass ratios, dense compounds and persistent friction under
 repeatable accuracy budgets. Compare the parallel solver with constraint coloring and

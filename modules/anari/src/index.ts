@@ -217,3 +217,9 @@ export {
 } from './renderers';
 
 export {SceneMeshNode, type SceneMeshNodeProps} from './engine/scene-mesh-node';
+
+export {ScenegraphSurfaces} from './engine/scenegraph-surfaces';
+export {makeANARIWorldFromScenegraph, makeScenegraphFromANARIWorld} from './scenegraph-conversion';
+export type {ANARIScenegraphSnapshot} from './scenegraph-conversion';
+
+export type {RayTracingScenegraphRenderOptions} from './engine/ray-tracing-scene-renderer';

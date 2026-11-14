@@ -1394,7 +1394,11 @@ fn pbr_filterColorWithShadows(vertexColor: vec4<f32>, directionalVisibility: f32
     let tbn = getTBN(normalUV);
     let n = getNormal(tbn, normalUV);                          // normal at surface point
     perceptualRoughness = widenSpecularRoughness(perceptualRoughness, n);
-    let v = normalize(pbrProjection.camera - fragmentInputs.pbr_vPosition);  // Vector from surface point to camera
+#ifdef USE_SCENE_PROBE_CAMERA
+    let v = normalize(sceneProbeOrigin[0].xyz - fragmentInputs.pbr_vPosition);
+#else
+    let v = normalize(pbrProjection.camera - fragmentInputs.pbr_vPosition);
+#endif  // Vector from surface point to camera
     let NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
     var useExtendedPBR = false;
     #ifdef USE_MATERIAL_EXTENSIONS

@@ -5,6 +5,8 @@ import type {GPURigidBodyWorldProps} from '@luma.gl/graph/gpu-physics';
 
 export const MATCHED_SCENES = {
   matchedPile: 'Box3D comparison · box pile',
+  matchedDense: 'G8 · dense interacting pile',
+  matchedLoaded: 'G8 · heavy-on-light stacks',
   matchedMixed: 'Box3D comparison · mixed sizes',
   matchedStack: 'Box3D comparison · tall stacks',
   matchedChain: 'Box3D comparison · joint chain',
@@ -57,6 +59,10 @@ export function makeMatchedFixture(scene: MatchedScene, count = 32, seed = 42): 
     return randomState / 4294967296;
   };
   const details: Record<MatchedScene, string> = {
+    matchedDense:
+      'A close-packed cubic pile collapses into sustained shared contacts. Compare penetration, energy and full-step cost during collapse and settling.',
+    matchedLoaded:
+      'Eight-high stacks carry a 10:1 top load. Compare support drift and convergence under sustained load.',
     matchedPile:
       'Identical boxes fall onto a slab; compare settled overlap, energy dissipation and contact cost.',
     matchedMixed:
@@ -116,24 +122,28 @@ export function makeMatchedFixture(scene: MatchedScene, count = 32, seed = 42): 
     for (let index = 0; index < count; index++)
       add([index * 2, 0, 10], [0.3, 0.3, 0.3]).velocity = [1, 0, 2];
   } else {
-    const width = Math.ceil(Math.sqrt(scene === 'matchedStack' ? Math.ceil(count / 8) : count));
+    const stacked = scene === 'matchedStack' || scene === 'matchedLoaded';
+    const dense = scene === 'matchedDense';
+    const width = Math.ceil(Math.sqrt(stacked ? Math.ceil(count / 8) : count));
     add([0, 0, -0.5], [width * 1.5 + 4, width * 1.5 + 4, 0.5], 0);
-    const gridWidth = scene === 'matchedStack' ? width : 4;
+    const gridWidth = stacked ? width : dense ? Math.ceil(Math.cbrt(count)) : 4;
+    const layerSize = gridWidth * gridWidth;
     const center = (gridWidth - 1) / 2;
     for (let index = 0; index < count; index++) {
-      const layer = scene === 'matchedStack' ? index % 8 : Math.floor(index / 16);
-      const column = scene === 'matchedStack' ? Math.floor(index / 8) : index % 16;
+      const layer = stacked ? index % 8 : Math.floor(index / layerSize);
+      const column = stacked ? Math.floor(index / 8) : index % layerSize;
       const size = scene === 'matchedMixed' ? 0.2 + random() * 0.3 : 0.45;
       const body = add(
         [
-          ((column % gridWidth) - center) * 1.4,
-          (Math.floor(column / gridWidth) - center) * 1.4,
-          0.5 + layer * (scene === 'matchedStack' ? 0.92 : 1.4)
+          ((column % gridWidth) - center) * (dense ? 0.94 : 1.4),
+          (Math.floor(column / gridWidth) - center) * (dense ? 0.94 : 1.4),
+          0.5 + layer * (stacked ? 0.92 : 1.4)
         ],
         [size, size, size],
         8 * size ** 3
       );
-      if (scene !== 'matchedStack') {
+      if (scene === 'matchedLoaded' && (index % 8 === 7 || index === count - 1)) body.mass *= 10;
+      if (!stacked && !dense) {
         const angle = (random() - 0.5) * 0.4;
         body.orientation = [0, 0, Math.sin(angle / 2), Math.cos(angle / 2)];
       }
@@ -146,11 +156,13 @@ export function makeMatchedWorld(
   fixture: MatchedFixture,
   timeStep: number,
   solver: 'ordered' | 'parallel' = 'ordered',
-  iterations = 16
+  iterations = 16,
+  parallelContactSolver: 'scalar' | 'block' = 'scalar'
 ): GPURigidBodyWorldProps {
   return {
     timeStep,
     solver,
+    parallelContactSolver,
     iterations,
     gravity: fixture.gravity,
     sleepAfter: 0,

@@ -8,8 +8,7 @@ import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 
-it('ray maps preserve UV selection and replacement, and dielectrics cross both sphere interfaces', async () => {
-  if (!webgpuAdapter.isSupported()) return;
+async function createMaterialFixture() {
   const device = await webgpuAdapter.create({
     featureLevel: 'core',
     createCanvasContext: {canvas: new OffscreenCanvas(8, 8)}
@@ -40,6 +39,24 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     data: new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]),
     sampler: map.sampler
   });
+  const mipMap = device.createTexture({
+    width: 32,
+    height: 32,
+    mipLevels: 6,
+    format: 'rgba8unorm',
+    sampler: {minFilter: 'nearest', magFilter: 'nearest', mipmapFilter: 'nearest'}
+  });
+  for (let level = 0; level < 6; level++) {
+    const size = 32 >> level;
+    const texels = new Uint8Array(size * size * 4);
+    for (let offset = 0; offset < texels.length; offset += 4) {
+      texels.set(
+        level === 0 ? [255, 0, 0, 255] : level === 5 ? [0, 0, 255, 255] : [0, 255, 0, 255],
+        offset
+      );
+    }
+    mipMap.writeData(texels, {mipLevel: level, width: size, height: size});
+  }
   const color = device.createTexture({
     width: 8,
     height: 8,
@@ -107,6 +124,57 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
       buffer.destroy();
     }
   }
+  function destroy(): void {
+    renderer.destroy();
+    framebuffer.destroy();
+    color.destroy();
+    map.destroy();
+    mipMap.destroy();
+    replacement.destroy();
+    device.destroy();
+  }
+  return {options, surface, geometry, renderer, replacement, map, mipMap, readPixel, destroy};
+}
+
+it('ray occlusion maps attenuate ambient light without changing directional lighting', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, map, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const occludedSurface = {
+      ...surface,
+      material: {
+        id: 'occlusion-material',
+        uniforms: {
+          baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+          occlusionStrength: 1,
+          occlusionUVSet: 1,
+          occlusionMapEnabled: true
+        },
+        bindings: {pbr_occlusionSampler: map}
+      }
+    };
+    options.surfaces = [occludedSurface];
+    options.samplingFrameIndex = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    occludedSurface.material.uniforms.occlusionStrength = 0.5;
+    expect((await readPixel())[0]).toBeCloseTo(128, -1);
+    occludedSurface.material.uniforms.occlusionUVSet = 0;
+    expect(await readPixel()).toEqual([255, 255, 255]);
+    occludedSurface.material.uniforms.occlusionUVSet = 1;
+    occludedSurface.material.uniforms.occlusionStrength = 1;
+    options.lights = [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 1}];
+    const directWithOcclusion = await readPixel();
+    expect(directWithOcclusion[0]).toBeGreaterThan(20);
+    occludedSurface.material.uniforms.occlusionMapEnabled = false;
+    expect(await readPixel()).toEqual(directWithOcclusion);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray maps preserve UV selection, replacement, and specular and clearcoat transport', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, replacement, map, readPixel, destroy} = await createMaterialFixture();
   try {
     expect(await readPixel()).toEqual([255, 0, 0]);
     surface.material.uniforms.baseColorUVSet = 1;
@@ -116,6 +184,299 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(await readPixel()).toEqual([0, 0, 255]);
     surface.material.bindings.pbr_baseColorSampler = replacement;
     expect(await readPixel()).toEqual([0, 255, 0]);
+    const specularSurface = {
+      ...surface,
+      material: {
+        id: 'specular-material',
+        uniforms: {
+          baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+          metallicRoughnessValues: [0, 0.5] as [number, number],
+          specularColorFactor: [1, 0, 0] as [number, number, number],
+          specularIntensityFactor: 1,
+          specularColorUVSet: 0,
+          specularIntensityUVSet: 0
+        },
+        bindings: {} as Record<string, Texture>
+      }
+    };
+    options.surfaces = [specularSurface];
+    options.lights = [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 4}];
+    options.samplingFrameIndex = 0;
+    const redReflection = await readPixel();
+    expect(redReflection[0]).toBeGreaterThan(20);
+    expect(redReflection.slice(1)).toEqual([0, 0]);
+    specularSurface.material.uniforms.specularIntensityFactor = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    specularSurface.material.uniforms.specularIntensityFactor = 1;
+    specularSurface.material.uniforms.specularColorFactor = [1, 1, 1];
+    specularSurface.material.bindings.pbr_specularColorSampler = map;
+    expect(await readPixel()).toEqual(redReflection);
+    specularSurface.material.uniforms.specularColorUVSet = 1;
+    const blueReflection = await readPixel();
+    expect(blueReflection[2]).toBeGreaterThan(20);
+    expect(blueReflection.slice(0, 2)).toEqual([0, 0]);
+    replacement.writeData(new Uint8Array([255, 255, 255, 0, 0, 0, 0, 255]));
+    specularSurface.material.bindings.pbr_specularIntensitySampler = replacement;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    specularSurface.material.uniforms.specularIntensityUVSet = 1;
+    expect(await readPixel()).toEqual(blueReflection);
+    const reflectionEmitter = {
+      ...surface,
+      id: 'specular-emitter',
+      transforms: [new Matrix4().translate([0, 0, 5])],
+      material: {
+        id: 'specular-emitter-material',
+        uniforms: {emissiveFactor: [12, 12, 12]}
+      }
+    } satisfies RayTracingSceneRenderOptions['surfaces'][number];
+    options.surfaces = [specularSurface, reflectionEmitter];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.maxBounces = 1;
+    options.samplesPerPixel = 16;
+    options.samplingSeed = 17;
+    const reflectedBlue = await readPixel();
+    expect(reflectedBlue[2]).toBeGreaterThan(8);
+    expect(reflectedBlue.slice(0, 2)).toEqual([0, 0]);
+    specularSurface.material.uniforms.specularColorUVSet = 0;
+    const reflectedRed = await readPixel();
+    expect(reflectedRed[0]).toBe(reflectedBlue[2]);
+    expect(reflectedRed.slice(1)).toEqual([0, 0]);
+    specularSurface.material.uniforms.specularIntensityUVSet = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    const coatedSurface = {
+      ...specularSurface,
+      material: {
+        id: 'clearcoat-material',
+        uniforms: {
+          baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+          specularIntensityFactor: 0,
+          metallicRoughnessValues: [0, 0.5] as [number, number],
+          clearcoatFactor: 1,
+          clearcoatRoughnessFactor: 1,
+          clearcoatUVSet: 0,
+          clearcoatRoughnessUVSet: 0
+        },
+        bindings: {
+          pbr_clearcoatSampler: map,
+          pbr_clearcoatRoughnessSampler: replacement
+        }
+      }
+    };
+    // Red enables the coat. Green sets its roughness independently of the other channels.
+    replacement.writeData(new Uint8Array([255, 128, 255, 0, 255, 255, 255, 0]));
+    options.surfaces = [coatedSurface, reflectionEmitter];
+    const coatedBounce = await readPixel();
+    expect(coatedBounce[0]).toBeGreaterThan(8);
+    expect(coatedBounce[1]).toBe(coatedBounce[0]);
+    coatedSurface.material.uniforms.clearcoatUVSet = 1;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    coatedSurface.material.uniforms.clearcoatUVSet = 0;
+    options.maxBounces = 0;
+    options.lights = [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 4}];
+    options.surfaces = [coatedSurface];
+    const glossyCoat = await readPixel();
+    expect(glossyCoat[0]).toBeGreaterThan(20);
+    coatedSurface.material.uniforms.clearcoatRoughnessUVSet = 1;
+    expect((await readPixel())[0]).toBeLessThan(glossyCoat[0] / 2);
+    coatedSurface.material.uniforms.clearcoatFactor = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+  } finally {
+    destroy();
+  }
+}, 360_000);
+
+it('ray triangle normal maps, coat normals, and primary mip footprints use the retained UV charts', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, renderer, replacement, mipMap, readPixel, destroy} =
+    await createMaterialFixture();
+  try {
+    const mappedSurface = {
+      ...surface,
+      id: 'normal-mapped',
+      geometry: new Geometry({
+        id: 'normal-mapped-geometry',
+        topology: 'triangle-list',
+        attributes: {
+          ...geometry.attributes,
+          TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 1, 0, 0.5, 1])},
+          TEXCOORD_1: {size: 2, value: new Float32Array([1, 0, 0, 0, 0.5, 1])}
+        }
+      }),
+      material: {
+        id: 'normal-mapped-material',
+        uniforms: {
+          baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+          normalScale: 0,
+          normalUVSet: 0,
+          normalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        },
+        bindings: {pbr_normalSampler: replacement}
+      }
+    };
+    replacement.writeData(new Uint8Array([255, 128, 200, 255, 255, 128, 200, 255]));
+    const minifiedSurface = {
+      ...mappedSurface,
+      material: {
+        ...mappedSurface.material,
+        uniforms: {
+          ...mappedSurface.material.uniforms,
+          baseColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        },
+        bindings: {pbr_baseColorSampler: mipMap}
+      }
+    };
+    options.surfaces = [minifiedSurface];
+    expect(await readPixel()).toEqual([0, 255, 0]);
+    minifiedSurface.material.uniforms.baseColorUVTransform = [64, 0, 0, 0, 64, 0, 0, 0, 1];
+    expect(await readPixel()).toEqual([0, 0, 255]);
+    minifiedSurface.geometry = geometry;
+    expect(await readPixel()).toEqual([255, 0, 0]);
+    const mappedCoat = {
+      ...surface,
+      id: 'mapped-coat',
+      geometry: mappedSurface.geometry,
+      material: {
+        id: 'mapped-coat-material',
+        uniforms: {
+          baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+          specularIntensityFactor: 0,
+          clearcoatFactor: 1,
+          clearcoatRoughnessFactor: 0.5,
+          clearcoatNormalUVSet: 0,
+          clearcoatNormalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        },
+        bindings: {pbr_clearcoatNormalSampler: replacement}
+      }
+    };
+    options.surfaces = [mappedCoat];
+    options.samplingFrameIndex = 0;
+    options.lights = [
+      {type: 'directional', direction: [-1, 0, -0.4], color: [1, 1, 1], intensity: 4}
+    ];
+    const tiltedCoat = (await readPixel())[0];
+    mappedCoat.material.uniforms.clearcoatNormalUVSet = 1;
+    const mirroredCoat = (await readPixel())[0];
+    expect(tiltedCoat).toBeGreaterThan(mirroredCoat + 3);
+    mappedCoat.material.uniforms.clearcoatNormalUVTransform = [-1, 0, 0, 0, 1, 0, 1, 0, 1];
+    expect((await readPixel())[0]).toBe(tiltedCoat);
+    options.surfaces = [{...mappedCoat, material: {...mappedCoat.material, bindings: {}}}];
+    expect((await readPixel())[0]).toBeLessThan(tiltedCoat);
+    options.samplingFrameIndex = undefined;
+    options.surfaces = [mappedSurface];
+    options.lights = [
+      {type: 'directional', direction: [-1, 0, -0.4], color: [1, 1, 1], intensity: 1}
+    ];
+    const unmapped = (await readPixel())[0];
+    mappedSurface.material.uniforms.normalScale = 1;
+    expect((await readPixel())[0]).toBeGreaterThan(unmapped + 20);
+    const pick = await renderer.pick(options.id, 4, 4);
+    expect(pick?.normal).toEqual([0, 0, 1]);
+    mappedSurface.material.uniforms.normalUVSet = 1;
+    expect((await readPixel())[0]).toBeLessThan(unmapped);
+    mappedSurface.material.uniforms.normalUVTransform = [-1, 0, 0, 0, 1, 0, 1, 0, 1];
+    expect((await readPixel())[0]).toBeGreaterThan(unmapped + 20);
+    const smoothSurface = {
+      ...mappedSurface,
+      id: 'smooth-normal-mapped',
+      geometry: new Geometry({
+        id: 'smooth-normal-mapped-geometry',
+        topology: 'triangle-list',
+        attributes: {
+          ...mappedSurface.geometry.attributes,
+          NORMAL: {size: 3, value: new Float32Array([-0.8, 0, 0.6, -0.8, 0, 0.6, -0.8, 0, 0.6])}
+        }
+      })
+    };
+    options.surfaces = [smoothSurface];
+    expect((await readPixel())[0]).toBeGreaterThan(20);
+    const sideEmitter = {
+      ...surface,
+      id: 'side-emitter',
+      transforms: [
+        new Matrix4()
+          .translate([2, 0, 2])
+          .rotateY(-Math.PI / 2)
+          .scale([0.4, 0.6, 0.6])
+      ],
+      material: {
+        id: 'side-emitter-material',
+        uniforms: {baseColorFactor: [0, 0, 0, 1], emissiveFactor: [2, 0, 0]}
+      }
+    } satisfies RayTracingSceneRenderOptions['surfaces'][number];
+    const coatOnlyReceiver = {
+      ...mappedCoat,
+      material: {
+        ...mappedCoat.material,
+        uniforms: {...mappedCoat.material.uniforms, normalUVSet: 1},
+        bindings: {pbr_clearcoatNormalSampler: replacement, pbr_normalSampler: replacement}
+      }
+    };
+    options.surfaces = [
+      coatOnlyReceiver,
+      {
+        ...sideEmitter,
+        material: {
+          ...sideEmitter.material,
+          uniforms: {...sideEmitter.material.uniforms, emissiveFactor: [20, 0, 0]}
+        }
+      }
+    ];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.emitterSampling = true;
+    options.samplesPerPixel = 16;
+    options.samplingFrameIndex = 0;
+    const coatEmitter = (await readPixel())[0];
+    expect(coatEmitter).toBeGreaterThan(3);
+    coatOnlyReceiver.material.uniforms.clearcoatFactor = 0;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.transportMode = 'diffuse';
+    options.samplingFrameIndex = undefined;
+    options.surfaces = [mappedSurface, sideEmitter];
+    options.lights = [];
+    options.emitterSampling = true;
+    options.samplesPerPixel = 16;
+    options.samplingSeed = 17;
+    const mappedEmitter = (await readPixel())[0];
+    mappedSurface.material.uniforms.normalScale = 0;
+    expect(mappedEmitter).toBeGreaterThan((await readPixel())[0] + 5);
+
+    options.emitterSampling = false;
+    options.maxBounces = 1;
+    const unmappedBounce = (await readPixel())[0];
+    mappedSurface.material.uniforms.normalScale = 1;
+    expect((await readPixel())[0]).toBeGreaterThan(unmappedBounce + 5);
+
+    const mappedGlass = {
+      ...mappedSurface,
+      material: {
+        ...mappedSurface.material,
+        uniforms: {...mappedSurface.material.uniforms, transmissionFactor: 1, ior: 1.5}
+      }
+    };
+    options.surfaces = [mappedGlass];
+    options.transportMode = 'pbr';
+    options.background = [0.8, 0.2, 0.05, 1];
+    const mappedRefraction = await readPixel();
+    expect(mappedRefraction[0]).toBeGreaterThan(50);
+    mappedGlass.material.uniforms.normalScale = 0;
+    expect(await readPixel()).toEqual(mappedRefraction);
+    options.background = [0, 0, 0, 1];
+    options.maxBounces = 0;
+    options.samplesPerPixel = 1;
+    replacement.writeData(new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]));
+    options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 1}];
+  } finally {
+    destroy();
+  }
+}, 540_000);
+
+it('ray dielectrics refract and absorb light and sample remaining material maps', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, replacement, readPixel, destroy} =
+    await createMaterialFixture();
+  try {
     const glass = {
       id: 'glass',
       geometry,
@@ -156,9 +517,61 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     expect(transmitted[2]).toBeLessThan(4);
     options.surfaces = [glass];
     options.background = [0.8, 0.2, 0.05, 1];
+    options.samplingFrameIndex = 0;
     const backdrop = await readPixel();
     expect(backdrop[0]).toBeGreaterThan(100);
     expect(backdrop[1]).toBeGreaterThan(20);
+    const absorbingGlass = {
+      ...glass,
+      material: {
+        ...glass.material,
+        uniforms: {
+          ...glass.material.uniforms,
+          attenuationColor: [1, 0.25, 0] as [number, number, number],
+          attenuationDistance: 2
+        }
+      }
+    };
+    options.surfaces = [absorbingGlass];
+    const tintedBackdrop = await readPixel();
+    expect(tintedBackdrop[0]).toBe(backdrop[0]);
+    expect(tintedBackdrop[1]).toBeLessThan(backdrop[1] / 2);
+    expect(tintedBackdrop[2]).toBeLessThan(backdrop[2]);
+    absorbingGlass.material.uniforms.attenuationDistance = 1;
+    const denserBackdrop = await readPixel();
+    expect(denserBackdrop[1]).toBeLessThan(tintedBackdrop[1]);
+    absorbingGlass.material.uniforms.attenuationDistance = Number.POSITIVE_INFINITY;
+    expect(await readPixel()).toEqual(backdrop);
+    // This seed transmits at entry, reflects once inside the sphere, then exits.
+    options.samplingSeed = 81;
+    options.samplesPerPixel = 1;
+    options.maxBounces = 2;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.maxBounces = 3;
+    const clearReflectedPath = await readPixel();
+    expect(clearReflectedPath[1]).toBeGreaterThan(40);
+    absorbingGlass.material.uniforms.attenuationDistance = 2;
+    const absorbedReflectedPath = await readPixel();
+    expect(absorbedReflectedPath[0]).toBe(clearReflectedPath[0]);
+    expect(absorbedReflectedPath[1]).toBeGreaterThan(0);
+    expect(absorbedReflectedPath[1]).toBeLessThan(tintedBackdrop[1] / 2);
+
+    // Model a shell split across two mesh primitives with opposite winding.
+    const exitSurface = {
+      ...absorbingGlass,
+      id: 'glass-exit',
+      transforms: [new Matrix4().translate([0, 0, -2]).rotateY(Math.PI)]
+    };
+    options.primitives = {};
+    options.surfaces = [absorbingGlass, exitSurface];
+    options.samplingSeed = 17;
+    options.samplesPerPixel = 16;
+    options.maxBounces = 2;
+    const splitBackdrop = await readPixel();
+    expect(splitBackdrop[0]).toBeGreaterThan(100);
+    expect(splitBackdrop[1]).toBeLessThan(backdrop[1] / 2);
+    options.primitives = {glass: {type: 'sphere', radius: 1}};
+    options.samplingFrameIndex = undefined;
     options.background = [0, 0, 0, 1];
     options.surfaces = [glass, emitter];
     options.surfaces[0].material.bindings = {pbr_transmissionSampler: replacement};
@@ -200,12 +613,306 @@ it('ray maps preserve UV selection and replacement, and dielectrics cross both s
     options.maxBounces = 3;
     expect(await readPixel()).toEqual([0, 0, 0]);
   } finally {
-    renderer.destroy();
-    framebuffer.destroy();
-    color.destroy();
-    map.destroy();
-    replacement.destroy();
-    device.destroy();
+    destroy();
   }
   // Software WebGPU CI compiles several complete traversal/material pipelines here.
+}, 540_000);
+
+it('ray sheen samples color RGB and roughness alpha independently', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, map, replacement, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const uniforms = {
+      baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+      specularIntensityFactor: 0,
+      sheenColorFactor: [1, 1, 1] as [number, number, number],
+      sheenColorUVSet: 0,
+      sheenRoughnessFactor: 1,
+      sheenRoughnessUVSet: 0
+    };
+    replacement.writeData(new Uint8Array([0, 0, 0, 255, 255, 255, 255, 0]));
+    options.surfaces = [
+      {
+        ...surface,
+        material: {
+          id: 'sheen-material',
+          uniforms,
+          bindings: {pbr_sheenColorSampler: map, pbr_sheenRoughnessSampler: replacement}
+        }
+      }
+    ];
+    options.samplingFrameIndex = 0;
+    options.lights = [
+      {
+        type: 'directional',
+        direction: [-1, 0, -0.25],
+        color: [1, 1, 1],
+        intensity: 8
+      }
+    ];
+    const red = await readPixel();
+    expect(red[0]).toBeGreaterThan(20);
+    expect(red.slice(1)).toEqual([0, 0]);
+    uniforms.sheenColorUVSet = 1;
+    expect(await readPixel()).toEqual([0, 0, red[0]]);
+    uniforms.sheenRoughnessUVSet = 1;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray PBR bounces carry sheen reflection from an emissive surface', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const uniforms = {
+      baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+      specularIntensityFactor: 0,
+      sheenColorFactor: [1, 0, 0] as [number, number, number],
+      sheenRoughnessFactor: 1
+    };
+    options.surfaces = [
+      {...surface, material: {id: 'sheen-receiver-material', uniforms}},
+      {
+        ...surface,
+        id: 'sheen-emitter',
+        transforms: [new Matrix4().translate([0, 0, 5])],
+        material: {id: 'sheen-emitter-material', uniforms: {emissiveFactor: [12, 12, 12]}}
+      }
+    ];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.maxBounces = 1;
+    options.samplesPerPixel = 16;
+    options.samplingFrameIndex = 0;
+    options.samplingSeed = 17;
+    const reflected = await readPixel();
+    expect(reflected[0]).toBeGreaterThan(8);
+    expect(reflected.slice(1)).toEqual([0, 0]);
+    uniforms.sheenColorFactor = [0, 0, 0];
+    expect(await readPixel()).toEqual([0, 0, 0]);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray iridescence uses red strength and green film thickness in direct and bounce lighting', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, map, replacement, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const uniforms = {
+      baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+      iridescenceFactor: 1,
+      iridescenceUVSet: 0,
+      iridescenceThicknessUVSet: 1,
+      iridescenceThicknessRange: [0, 200] as [number, number]
+    };
+    replacement.writeData(new Uint8Array([255, 0, 255, 255, 0, 255, 0, 255]));
+    const receiver = {
+      ...surface,
+      material: {
+        id: 'film-material',
+        uniforms,
+        bindings: {pbr_iridescenceSampler: map, pbr_iridescenceThicknessSampler: replacement}
+      }
+    };
+    options.surfaces = [receiver];
+    options.samplingFrameIndex = 0;
+    options.lights = [{type: 'directional', direction: [0, 0, -1], color: [1, 1, 1], intensity: 3}];
+    const coated = await readPixel();
+    expect(Math.max(...coated) - Math.min(...coated)).toBeGreaterThan(5);
+    uniforms.iridescenceThicknessUVSet = 0;
+    const bare = await readPixel();
+    expect(bare[1]).toBe(bare[0]);
+    expect(bare[2]).toBe(bare[0]);
+    uniforms.iridescenceThicknessUVSet = 1;
+    uniforms.iridescenceUVSet = 1;
+    expect(await readPixel()).toEqual(bare);
+
+    options.surfaces = [
+      receiver,
+      {
+        ...surface,
+        id: 'film-emitter',
+        transforms: [new Matrix4().translate([0, 0, 5])],
+        material: {id: 'film-emitter-material', uniforms: {emissiveFactor: [16, 16, 16]}}
+      }
+    ];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.maxBounces = 1;
+    options.samplesPerPixel = 16;
+    options.samplingSeed = 17;
+    const bareBounce = await readPixel();
+    expect(bareBounce[0]).toBeGreaterThan(0);
+    expect(bareBounce[1]).toBe(bareBounce[0]);
+    expect(bareBounce[2]).toBe(bareBounce[0]);
+    uniforms.iridescenceUVSet = 0;
+    const coatedBounce = await readPixel();
+    expect(Math.max(...coatedBounce) - Math.min(...coatedBounce)).toBeGreaterThan(5);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray anisotropy rotates the highlight and uses the map blue channel for strength', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, map, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const geometry = new Geometry({
+      topology: 'triangle-list',
+      attributes: {
+        ...surface.geometry.attributes,
+        TEXCOORD_0: {size: 2, value: new Float32Array([0.5, 0, 1, 0, 0.75, 1])},
+        TEXCOORD_1: {size: 2, value: new Float32Array([0, 0, 0.5, 0, 0.25, 1])}
+      }
+    });
+    const uniforms = {
+      baseColorFactor: [1, 1, 1, 1] as [number, number, number, number],
+      metallicRoughnessValues: [1, 0.35] as [number, number],
+      anisotropyStrength: 0,
+      anisotropyRotation: 0,
+      anisotropyUVSet: 0,
+      anisotropyMapEnabled: false
+    };
+    map.writeData(new Uint8Array([255, 128, 0, 255, 255, 128, 255, 255]));
+    options.surfaces = [
+      {
+        ...surface,
+        geometry,
+        material: {id: 'brushed-metal', uniforms, bindings: {pbr_anisotropySampler: map}}
+      }
+    ];
+    options.samplingFrameIndex = 0;
+    options.lights = [
+      {type: 'directional', direction: [-0.7, 0, -1], color: [1, 1, 1], intensity: 1}
+    ];
+    const isotropic = await readPixel();
+    uniforms.anisotropyStrength = 0.9;
+    const tangent = await readPixel();
+    uniforms.anisotropyRotation = Math.PI / 2;
+    expect(tangent[0] - (await readPixel())[0]).toBeGreaterThan(5);
+    uniforms.anisotropyRotation = 0;
+    uniforms.anisotropyMapEnabled = true;
+    expect((await readPixel())[0]).toBeCloseTo(tangent[0], -1);
+    uniforms.anisotropyUVSet = 1;
+    expect(await readPixel()).toEqual(isotropic);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray anisotropic PBR bounces respond to a rotated brushed-metal axis', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, readPixel, destroy} = await createMaterialFixture();
+  try {
+    const geometry = new Geometry({
+      topology: 'triangle-list',
+      attributes: {
+        ...surface.geometry.attributes,
+        TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 1, 0, 0.5, 1])}
+      }
+    });
+    const uniforms = {
+      baseColorFactor: [0.7, 0.7, 0.7, 1] as [number, number, number, number],
+      metallicRoughnessValues: [1, 0.35] as [number, number],
+      anisotropyStrength: 0.9,
+      anisotropyRotation: 0
+    };
+    options.surfaces = [
+      {...surface, geometry, material: {id: 'brushed-metal-bounce', uniforms}},
+      {
+        ...surface,
+        id: 'strip-emitter',
+        transforms: [new Matrix4().translate([0, 0, 5]).scale([1, 0.15, 1])],
+        material: {id: 'strip-emitter-material', uniforms: {emissiveFactor: [1, 1, 1]}}
+      }
+    ];
+    options.lights = [];
+    options.transportMode = 'pbr';
+    options.maxBounces = 1;
+    options.samplesPerPixel = 32;
+    options.samplingFrameIndex = 0;
+    options.samplingSeed = 17;
+    const alongStrip = (await readPixel())[0];
+    uniforms.anisotropyRotation = Math.PI / 2;
+    const acrossStrip = (await readPixel())[0];
+    expect(alongStrip - acrossStrip).toBeGreaterThan(10);
+  } finally {
+    destroy();
+  }
+}, 180_000);
+
+it('ray diffuse transmission tints backlighting and emissive bounces', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, map, replacement, readPixel, destroy} = await createMaterialFixture();
+  try {
+    map.writeData(new Uint8Array([0, 0, 0, 255, 255, 255, 255, 0]));
+    const uniforms = {
+      baseColorFactor: [0, 0, 0, 1] as [number, number, number, number],
+      specularIntensityFactor: 0,
+      clearcoatFactor: 0,
+      sheenColorFactor: [0, 0, 0] as [number, number, number],
+      diffuseTransmissionFactor: 1,
+      diffuseTransmissionColorUVSet: 1,
+      diffuseTransmissionUVSet: 0
+    };
+    const sheet = {
+      ...surface,
+      material: {
+        id: 'translucent-sheet',
+        uniforms,
+        bindings: {
+          pbr_diffuseTransmissionSampler: map,
+          pbr_diffuseTransmissionColorSampler: replacement
+        }
+      }
+    };
+    options.samplingFrameIndex = 0;
+    options.transportMode = 'pbr';
+    options.surfaces = [sheet];
+    options.lights = [{type: 'directional', direction: [0, 0, 1], color: [1, 1, 1], intensity: 2}];
+    const backlit = await readPixel();
+    expect(backlit[1]).toBeGreaterThan(80);
+    expect([backlit[0], backlit[2]]).toEqual([0, 0]);
+    uniforms.clearcoatFactor = 1;
+    expect((await readPixel())[1]).toBeLessThan(backlit[1]);
+    uniforms.clearcoatFactor = 0;
+    uniforms.sheenColorFactor = [1, 1, 1];
+    expect((await readPixel())[1]).toBeLessThan(backlit[1]);
+    uniforms.sheenColorFactor = [0, 0, 0];
+    options.lights = [{type: 'ambient', color: [1, 1, 1], intensity: 0.5}];
+    const ambient = await readPixel();
+    expect(ambient[1]).toBeGreaterThan(100);
+    expect([ambient[0], ambient[2]]).toEqual([0, 0]);
+    uniforms.diffuseTransmissionUVSet = 1;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+
+    options.lights = [];
+    options.surfaces = [
+      sheet,
+      {
+        ...surface,
+        id: 'backlight',
+        transforms: [new Matrix4().translate([0, 0, -1])],
+        material: {id: 'backlight-material', uniforms: {emissiveFactor: [2, 2, 2]}}
+      }
+    ];
+    options.maxBounces = 1;
+    options.samplesPerPixel = 16;
+    options.samplingSeed = 17;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    uniforms.diffuseTransmissionUVSet = 0;
+    const bounced = await readPixel();
+    expect(bounced[1]).toBeGreaterThan(40);
+    expect([bounced[0], bounced[2]]).toEqual([0, 0]);
+    options.maxBounces = 0;
+    options.emitterSampling = true;
+    const sampled = await readPixel();
+    expect(sampled[1]).toBeGreaterThan(20);
+    expect([sampled[0], sampled[2]]).toEqual([0, 0]);
+  } finally {
+    destroy();
+  }
 }, 180_000);

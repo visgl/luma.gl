@@ -77,7 +77,7 @@ try {
   });
   const camera = new PerspectiveCamera(45, 1, 0.1, 200);
   camera.up.set(0, 0, 1);
-  if (scene.value === 'wreckingBall') camera.position.set(24, -30, 22);
+  if (scene.value === 'wreckingBall') camera.position.set(19, -21, 16);
   else camera.position.set(13, -19, 19);
   const controls = new OrbitControls(camera, canvas);
   controls.autoRotate = true;
@@ -389,6 +389,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
   let previousSampleWall = performance.now();
   let simulationRate = 0;
   const frameWorkSamples: number[] = [];
+  let latestWreckingFrameMilliseconds: number | undefined;
   let playbackStartedAt = 0;
   let quietSince: number | null = null;
   let advanceAt: number | null = null;
@@ -435,7 +436,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       resources = replacement;
       if (changedScene) {
         if (resources.sceneName === 'wreckingBall') {
-          camera.position.set(24, -30, 22);
+          camera.position.set(19, -21, 16);
           controls.target.set(-2, 0, 4);
         } else {
           camera.position.set(
@@ -453,6 +454,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       accumulator = 0;
       elapsedSimulation = 0;
       frameWorkSamples.length = 0;
+      latestWreckingFrameMilliseconds = undefined;
       previousSampleSimulation = 0;
       previousSampleWall = performance.now();
       restartPlayback();
@@ -539,6 +541,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     }
     const frameWorkStarted = performance.now();
     const measureFrame = !paused && !loading;
+    const previousSimulationTime = elapsedSimulation;
     const elapsed = Math.min(0.05, (now - previous) / 1000);
     previous = now;
     if (!loading && !paused && advanceAt === null) {
@@ -576,11 +579,20 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       const projection = new Matrix4([
         1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1
       ]).multiplyRight(camera.projectionMatrix.elements);
-      resources.cradle.draw(new Matrix4(camera.matrixWorldInverse.elements), projection, [
+      const view = new Matrix4(camera.matrixWorldInverse.elements);
+      const eye: [number, number, number] = [
         camera.position.x,
         camera.position.y,
         camera.position.z
-      ]);
+      ];
+      if (resources.cradle instanceof WreckingBallScene) {
+        resources.cradle.draw(view, projection, eye, {
+          frameMilliseconds: latestWreckingFrameMilliseconds,
+          advanced: elapsedSimulation !== previousSimulationTime
+        });
+      } else {
+        resources.cradle.draw(view, projection, eye);
+      }
     } else {
       if (resources.shadows) {
         const projection = new Matrix4([
@@ -602,6 +614,8 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     const fence = device.createFence();
     submitted = fence.signaled
       .then(() => {
+        if (resources.sceneName === 'wreckingBall')
+          latestWreckingFrameMilliseconds = performance.now() - frameWorkStarted;
         if (measureFrame && resources.sceneName === 'wreckingBall') {
           frameWorkSamples.push(performance.now() - frameWorkStarted);
           if (frameWorkSamples.length > 180) frameWorkSamples.shift();

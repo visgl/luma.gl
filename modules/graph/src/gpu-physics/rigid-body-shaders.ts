@@ -29,7 +29,8 @@ export function getRigidBodyShader(
   jointCount = 0,
   compactContacts = true,
   collisionPartitionSize?: number,
-  ensembleBodiesPerInstance?: number
+  ensembleBodiesPerInstance?: number,
+  blockContacts = false
 ): string {
   return /* wgsl */ `
 const COMPACT_CONTACTS:bool=${compactContacts};
@@ -390,7 +391,7 @@ ${
  }
  manifolds[pair].count=contactCount;
 }
-${parallel ? getRigidBodyParallelShader(Boolean(ensembleBodiesPerInstance)) : ''}
+${parallel ? getRigidBodyParallelShader(Boolean(ensembleBodiesPerInstance), blockContacts) : ''}
 ${(parallel || hasJoints) && extended ? '@compute @workgroup_size(1) fn meshCollect(){collectMeshContacts();}' : ''}
 ${jointShader}
 ${parallel && hasJoints ? '@compute @workgroup_size(1) fn parallelJointWarm(){solveJoints(true);} @compute @workgroup_size(1) fn parallelJointSolve(){solveJoints(false);}' : ''}

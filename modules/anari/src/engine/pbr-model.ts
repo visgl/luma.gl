@@ -36,7 +36,10 @@ export const PBR_MODEL_WGSL_SHADER = /* @__PURE__ */ getPBRModelWGSL({
   }
 #endif
 `,
-  vertexOutput: /* wgsl */ `#ifdef USE_SCENE_INSTANCES
+  vertexOutput: /* wgsl */ `#ifdef USE_SCENE_PROBE_CAMERA
+  outputs.position = pbrProjection.modelViewProjectionMatrix * vec4f(worldPosition.xyz - sceneProbeOrigin[0].xyz, worldPosition.w);
+#endif
+#ifdef USE_SCENE_INSTANCES
   outputs.instanceIdentifier = inputs.instanceMetadata.z;
 #endif`,
   fragmentDeclarations: /* wgsl */ `// Depth, shadow and picking must use the visible material's alpha cutoff and UV transform.

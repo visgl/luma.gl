@@ -141,7 +141,7 @@ type MaterialTextureSlot = {
 const IDENTITY_MATRIX = new Matrix4();
 const IDENTITY_TEXTURE_TRANSFORM: Readonly<NumberArray9> = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
-const MATERIAL_TEXTURE_SLOTS = [
+export const MATERIAL_TEXTURE_SLOTS = [
   {
     parameter: 'baseColorTexture',
     binding: 'pbr_baseColorSampler',
@@ -338,6 +338,18 @@ export class ANARISceneAdapter {
             ? 'debugDepth'
             : 'default'
     };
+  }
+
+  /** Extract a committed world without inventing a camera or ambient light. Returned resources are borrowed. */
+  getScene(world: ANARIWorld): {surfaces: readonly SceneSurface[]; lights: readonly Light[]} {
+    let cached = this.worlds.get(world);
+    if (!cached) {
+      cached = this.createCachedWorld(world, 0);
+      this.worlds.set(world, cached);
+    } else {
+      this.updateCachedWorld(cached, 0);
+    }
+    return {surfaces: cached.surfaces, lights: cached.lights};
   }
 
   /** Returns cached analytic metadata without traversing the retained world a second time. */
@@ -903,7 +915,9 @@ function resolveObjectArray<ObjectType extends ANARISurface | ANARIInstance | AN
 }
 
 function collectSceneLights(world: ANARIWorld, ambientRadiance: number): Light[] {
-  const lights: Light[] = [{type: 'ambient', color: [1, 1, 1], intensity: ambientRadiance}];
+  const lights: Light[] = ambientRadiance
+    ? [{type: 'ambient', color: [1, 1, 1], intensity: ambientRadiance}]
+    : [];
   const parameters = world.getParameters();
   for (const light of resolveObjectArray(parameters.light, parameters.lights)) {
     addSceneLight(light, lights);
@@ -957,7 +971,7 @@ function addSceneLight(light: ANARILight, lights: Light[]): void {
         color,
         position: parameters.position || [0, 0, 0],
         intensity: parameters.intensity ?? 1,
-        attenuation: [1, 0, 0.025]
+        attenuation: parameters.attenuation ?? [1, 0, 0.025]
       });
       break;
     case 'spot':
@@ -967,7 +981,7 @@ function addSceneLight(light: ANARILight, lights: Light[]): void {
         position: parameters.position || [0, 0, 0],
         direction: parameters.direction || [0, -1, 0],
         intensity: parameters.intensity ?? 1,
-        attenuation: [1, 0, 0.018],
+        attenuation: parameters.attenuation ?? [1, 0, 0.018],
         innerConeAngle: parameters.falloffAngle ?? (parameters.openingAngle ?? 0.5) * 0.7,
         outerConeAngle: parameters.openingAngle ?? 0.5
       });
@@ -1103,7 +1117,15 @@ function makeEngineGeometry(geometry: ANARIGeometry): Geometry {
           POSITION: {size: 3, value: positions},
           NORMAL: {
             size: 3,
-            value: normals instanceof Float32Array ? normals : makeVertexNormals(positions)
+            value:
+              normals instanceof Float32Array
+                ? normals
+                : makeVertexNormals(
+                    positions,
+                    indices instanceof Uint16Array || indices instanceof Uint32Array
+                      ? indices
+                      : undefined
+                  )
           },
           ...(tangents instanceof Float32Array ? {TANGENT: {size: 4, value: tangents}} : {}),
           ...(joints instanceof Uint8Array ||
@@ -1161,24 +1183,33 @@ function unwrapArray(value: unknown): unknown {
   return value instanceof ANARIArray ? value.data : value;
 }
 
-function makeVertexNormals(positions: Float32Array): Float32Array {
+function makeVertexNormals(
+  positions: Float32Array,
+  indices?: Uint16Array | Uint32Array
+): Float32Array {
   const normals = new Float32Array(positions.length);
-  for (let vertexIndex = 0; vertexIndex < positions.length; vertexIndex += 9) {
-    const firstEdgeX = positions[vertexIndex + 3] - positions[vertexIndex];
-    const firstEdgeY = positions[vertexIndex + 4] - positions[vertexIndex + 1];
-    const firstEdgeZ = positions[vertexIndex + 5] - positions[vertexIndex + 2];
-    const secondEdgeX = positions[vertexIndex + 6] - positions[vertexIndex];
-    const secondEdgeY = positions[vertexIndex + 7] - positions[vertexIndex + 1];
-    const secondEdgeZ = positions[vertexIndex + 8] - positions[vertexIndex + 2];
-    const normalX = firstEdgeY * secondEdgeZ - firstEdgeZ * secondEdgeY;
-    const normalY = firstEdgeZ * secondEdgeX - firstEdgeX * secondEdgeZ;
-    const normalZ = firstEdgeX * secondEdgeY - firstEdgeY * secondEdgeX;
-    const normalLength = Math.hypot(normalX, normalY, normalZ) || 1;
-    for (let cornerIndex = 0; cornerIndex < 3; cornerIndex++) {
-      normals[vertexIndex + cornerIndex * 3] = normalX / normalLength;
-      normals[vertexIndex + cornerIndex * 3 + 1] = normalY / normalLength;
-      normals[vertexIndex + cornerIndex * 3 + 2] = normalZ / normalLength;
+  const count = indices?.length ?? positions.length / 3;
+  for (let triangle = 0; triangle + 2 < count; triangle += 3) {
+    const first = (indices?.[triangle] ?? triangle) * 3;
+    const second = (indices?.[triangle + 1] ?? triangle + 1) * 3;
+    const third = (indices?.[triangle + 2] ?? triangle + 2) * 3;
+    const firstEdgeX = positions[second] - positions[first];
+    const firstEdgeY = positions[second + 1] - positions[first + 1];
+    const firstEdgeZ = positions[second + 2] - positions[first + 2];
+    const secondEdgeX = positions[third] - positions[first];
+    const secondEdgeY = positions[third + 1] - positions[first + 1];
+    const secondEdgeZ = positions[third + 2] - positions[first + 2];
+    for (const offset of [first, second, third]) {
+      normals[offset] += firstEdgeY * secondEdgeZ - firstEdgeZ * secondEdgeY;
+      normals[offset + 1] += firstEdgeZ * secondEdgeX - firstEdgeX * secondEdgeZ;
+      normals[offset + 2] += firstEdgeX * secondEdgeY - firstEdgeY * secondEdgeX;
     }
+  }
+  for (let offset = 0; offset < normals.length; offset += 3) {
+    const length = Math.hypot(normals[offset], normals[offset + 1], normals[offset + 2]) || 1;
+    normals[offset] /= length;
+    normals[offset + 1] /= length;
+    normals[offset + 2] /= length;
   }
   return normals;
 }

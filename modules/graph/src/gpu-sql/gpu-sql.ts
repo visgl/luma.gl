@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by relational SQL semantics.
 
-import type {Expression} from '@math.gl/core/expressions';
-import {parseSQLExpression} from '@math.gl/core/sql';
+import {parseSQLExpression} from '@math.gl/expressions/sql';
+import type {Expression} from '@math.gl/expressions';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
 import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';

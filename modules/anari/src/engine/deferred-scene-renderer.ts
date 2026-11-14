@@ -58,6 +58,7 @@ export function supportsDeferredScene(options: SceneRenderOptions): boolean {
 
   return (
     !options.rasterPass &&
+    !options.camera.gpuOrigin &&
     !options.spotShadows &&
     options.surfaces.every(surface => {
       if (
