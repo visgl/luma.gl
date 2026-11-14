@@ -54,12 +54,25 @@ build graph.
 
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
-not implemented. Skeletal skinning, morph-target displacement, alpha blending, and
-other advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
+not implemented. Skeletal skinning, morph-target displacement, and alpha blending require a
+compatible raster renderer.
+
+## Material support
+
+| Material feature | Ray-traced support |
+| --- | --- |
+| Metallic-roughness | Base color, emissive, metallic-roughness, and triangle normal maps |
+| Visibility | Scalar and textured alpha cutouts for rendering, shadows, and hit queries |
+| Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
+| Dielectric specular | RGB color and alpha intensity maps |
+| Clearcoat | Red strength, green roughness, and independent triangle normal maps |
+| Ambient occlusion | Red channel and scalar strength applied to ambient lighting |
+| Sheen | RGB color and alpha roughness maps |
+| Thin-film iridescence | Red strength and green thickness maps, evaluated with an RGB approximation |
 
 Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
 with explicit LOD and up to 14 distinct textures per frame. Excess maps use material defaults,
-with existing maps allocated before iridescence maps. Primary triangle shading estimates
+with base-color maps prioritized for visibility. Primary triangle shading estimates
 a mip level from the projected pixel footprint and transformed UVs. Secondary shading, analytic
 spheres and alpha visibility still sample mip zero. `MASK` multiplies the
 base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
@@ -119,7 +132,7 @@ reprojection and camera-cut rejection.
 Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
 and multiple progressive frames for comparison. Small emitters can converge slowly under the default BSDF-only emission gathering.
 Opt-in explicit emitter sampling, opaque GGX transport and spatial denoising are available;
-MIS, transmissive transport, advanced temporal denoising and volumes remain planned.
+Multiple importance sampling, rough transmission, advanced temporal denoising, and volumes remain open.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction policy, see

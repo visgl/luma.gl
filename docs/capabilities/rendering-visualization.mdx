@@ -201,15 +201,20 @@ Explore the [ANARI Playground](/examples/anari/scenes), or read about
 | Transform-aware acceleration refits | Experimental | WebGPU | `@luma.gl/anari` | Reuse retained leaf permutations and refit compatible scene hierarchies when only instance transforms change. |
 | Triangle-level mesh acceleration | Experimental | WebGPU | `@luma.gl/anari` | Build and reuse GPU Morton-sorted bottom-level acceleration structures (BLAS) over supported mesh triangles. |
 | Nearest-hit and shadow traversal | Experimental | WebGPU | `@luma.gl/anari` | Traverse the scene hierarchy for primary intersections and bounded early-exit direct-light shadow rays. |
-| Progressive ray accumulation | Experimental | WebGPU | `@luma.gl/anari` | Accumulate compatible direct-light samples across unchanged frames; this does not imply multi-bounce transport. |
+| Progressive ray accumulation | Experimental | WebGPU | `@luma.gl/anari` | Accumulate direct and indirect lighting samples across compatible frames. |
 | Adaptive ray-tracing resolution | Experimental | WebGPU | `@luma.gl/anari` | Adjust internal resolution, sampled-pixel phases, and rotating shadow work toward an explicit frame budget. |
 | Ray-traced temporal reprojection | Experimental | WebGPU | `@luma.gl/anari` | Reuse compatible retained history and reject invalid camera, depth, normal, or scene changes. |
 | HDR ray-tracing presentation | Experimental | WebGPU | `@luma.gl/anari` | Resolve and upsample supported floating-point ray-traced output to compatible presentation targets. |
 | Advanced acceleration topology | Opportunity | WebGPU | `@luma.gl/anari` | Extend existing Morton-sorted TLAS/BLAS hierarchies with SAH/Karras topology and richer traversal diagnostics. |
-| Multi-bounce path tracing | Opportunity | WebGPU | `@luma.gl/anari` | Extend existing direct-light ray tracing with indirect transport, physically based bounces, and denoising. |
-| Ray-traced animated materials | Opportunity | WebGPU | `@luma.gl/anari` | Extend supported ray tracing toward textured PBR, transmission, skeletal deformation, and animated morph targets. |
+| Multi-bounce path tracing | Experimental | WebGPU | `@luma.gl/anari` | Trace up to eight diffuse or PBR bounces, including opaque GGX reflection, smooth dielectric refraction and absorption, and optional emissive geometry sampling. |
+| Ray-traced PBR materials | Experimental | WebGPU | `@luma.gl/anari` | Sample retained PBR textures and alpha cutouts. Supported extensions include dielectric specular, clearcoat, ambient occlusion, sheen, and thin-film iridescence. |
+| Guided spatial denoising | Experimental | WebGPU | `@luma.gl/anari` | Filter the displayed image using hit identity, depth, and normals. |
+| Ray hit inspection and composition | Experimental | WebGPU | `@luma.gl/anari` | Pick retained instances, capture full-resolution hit channels, and composite raster overlays using projected ray depth. |
+| Tiled offscreen export | Experimental | WebGPU | `@luma.gl/anari` | Stream deterministic RGBA8 image tiles with bounded readback. |
+| Advanced light sampling and refraction | Opportunity | WebGPU | `@luma.gl/anari` | Add multiple importance sampling, environment lighting, rough refraction, and nested media. |
+| Ray-traced mesh deformation | Opportunity | WebGPU | `@luma.gl/anari` | Extend ray tracing to skeletal deformation and animated morph targets. |
 
-Read the [ANARI ray-tracing renderer](/docs/api-reference/anari/anari-rendering) and the
+Read the [ANARI ray-tracing renderer](/docs/api-reference/anari/ray-tracing-renderer) and the
 [retained rendering architecture](/docs/api-guide/engine/anari-rendering).
 
 ### Gaussian splats and captured-scene rendering
