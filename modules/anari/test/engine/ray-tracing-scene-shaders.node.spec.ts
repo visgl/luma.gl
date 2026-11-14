@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Geometry} from '@luma.gl/engine';
+import {Texture} from '@luma.gl/core';
+import type {SceneSurface} from '../../src/engine/scene-renderer';
+import {getRayMaterialTextures} from '../../src/engine/ray-tracing-material-textures';
 import {describe, expect, test} from 'vitest';
 import {ResourceType, WgslReflect} from 'wgsl_reflect';
 import {
@@ -44,7 +48,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'primitiveMaxima', binding: 3},
       {name: 'blasNodes', binding: 4}
     ]);
-    expect(reflection.storage[0].format?.size).toBe(352);
+    expect(reflection.storage[0].format?.size).toBe(368);
     expect(reflection.storage.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.uniforms.length + reflection.storage.length).toBe(5);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
@@ -138,7 +142,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'blasTriangleIds', binding: 8}
     ]);
     expect(storageBuffers).toHaveLength(8);
-    expect(storageBuffers[0].format?.size).toBe(352);
+    expect(storageBuffers[0].format?.size).toBe(368);
     expect(storageBuffers.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(11);
     expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(12);
@@ -517,8 +521,14 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(functionSource).toContain('let roughness = clamp(primitive.properties.x, 0.04, 1.0)');
     expect(functionSource).toContain('let metallic = clamp(primitive.emissive.w, 0.0, 1.0)');
     expect(functionSource).toContain('getGrazingReflectance(primitive, reflectance, metallic)');
-    expect(functionSource).toContain('grazingReflectance - reflectance');
-    expect(functionSource).toContain('pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0)');
+    expect(functionSource).toContain(
+      'evaluateBaseFresnel(primitive, reflectance, grazingReflectance, viewHalf)'
+    );
+    const fresnelStart = RAY_TRACING_SCENE_SHADER.indexOf('fn evaluateBaseFresnel(');
+    const fresnelEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', fresnelStart + 1);
+    const fresnelSource = RAY_TRACING_SCENE_SHADER.slice(fresnelStart, fresnelEnd);
+    expect(fresnelSource).toContain('(grazingReflectance - reflectance) * pow(1.0 - cosine, 5.0)');
+    expect(fresnelSource).toContain('if (film.x <= 0.0 || film.w <= 0.0) { return baseFresnel; }');
     expect(functionSource).toContain(
       '(normalHalf * alphaRoughnessSquared - normalHalf) * normalHalf + 1.0'
     );
@@ -801,4 +811,34 @@ test('primary-hit diagnostics keep presentation within sampled-texture bindings'
     expect(reflection.storage).toEqual([]);
     expect(reflection.uniforms).toEqual([]);
   }
+});
+
+test('ray material texture budgets preserve opacity maps and prioritize existing maps', () => {
+  const textures: Texture[] = Array.from({length: 15}, () => Object.create(Texture.prototype));
+  const geometry = new Geometry({topology: 'triangle-list', vertexCount: 0, attributes: {}});
+  const surfaces: SceneSurface[] = [
+    {
+      id: 'iridescent',
+      transforms: [],
+      geometry,
+      material: {
+        id: 'film',
+        bindings: {
+          pbr_iridescenceSampler: textures[0],
+          pbr_iridescenceThicknessSampler: textures[1]
+        }
+      }
+    },
+    ...textures.slice(2).map((texture, index) => ({
+      id: `surface-${index}`,
+      transforms: [],
+      geometry,
+      material: {id: `material-${index}`, bindings: {pbr_baseColorSampler: texture}}
+    }))
+  ];
+  const selected = getRayMaterialTextures(surfaces);
+  expect(selected).toHaveLength(14);
+  expect(selected[13]).toBe(textures[0]);
+  expect(selected).not.toContain(textures[1]);
+  expect(getRayMaterialTextures(surfaces, true)).toEqual(textures.slice(2));
 });

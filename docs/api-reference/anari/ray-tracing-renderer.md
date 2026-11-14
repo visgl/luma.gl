@@ -58,7 +58,8 @@ not implemented. Skeletal skinning, morph-target displacement, alpha blending, a
 other advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
 
 Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
-with explicit LOD and up to 14 distinct textures per frame. Primary triangle shading estimates
+with explicit LOD and up to 14 distinct textures per frame. Excess maps use material defaults,
+with existing maps allocated before iridescence maps. Primary triangle shading estimates
 a mip level from the projected pixel footprint and transformed UVs. Secondary shading, analytic
 spheres and alpha visibility still sample mip zero. `MASK` multiplies the
 base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
@@ -89,6 +90,11 @@ Sheen adds a grazing reflection below clearcoat in direct lighting and opaque PB
 The color map contributes RGB after texture-format color decoding, and the roughness map
 uses alpha. The lobe uses a Charlie distribution with approximate visibility and base-layer
 attenuation. Opaque bounce sampling uses the existing diffuse/GGX mixture.
+
+Thin-film iridescence modifies the base Fresnel response for direct lighting and opaque PBR paths.
+The strength map uses red and the thickness map uses green to interpolate the specified thickness
+range in nanometers. Without a thickness map the renderer uses the maximum thickness. The film
+model approximates spectral reflectance at three RGB wavelengths.
 
 Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
 increment the scene material version (or commit its retained ANARI material) before rendering.
