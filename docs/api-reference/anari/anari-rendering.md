@@ -106,10 +106,10 @@ implements that feature. Registered custom renderers define their own support.
 | Perspective and orthographic cameras | Yes | Yes | Yes | Yes |
 | Retained meshes and instancing | Yes | Yes | Triangle meshes; analytic spheres | Yes |
 | Matte and scalar metallic-roughness materials | Yes | Yes | Yes; diffuse or opaque GGX transport | Diagnostic output |
-| Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | Base color, emissive, metallic-roughness, transmission and triangle mesh normals; UV0/UV1 transforms | Shared raster surface inputs; diagnostic output |
+| Material image maps | Canonical PBR maps and UV transforms | Base color, normal, metallic-roughness, emissive, occlusion; advanced materials use fallback | [Supported ray maps](/docs/api-reference/anari/ray-tracing-renderer#material-support) with UV0/UV1 transforms | Shared raster surface inputs; diagnostic output |
 | Alpha masking | Scalar and texture alpha | Scalar and texture alpha | Scalar and texture alpha, including shadows and queries | Shared raster mask behavior |
 | Alpha blending | Yes; sorted forward draws | Fallback | No | Shared raster blend behavior |
-| Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | Smooth dielectric transmission in PBR paths; other extensions unsupported | Diagnostic output, not physical transport |
+| Transmission and advanced PBR extensions | Yes; supported extensions and captured opaque-scene transmission | Fallback | Smooth dielectric transmission and absorption; specular, clearcoat, occlusion, sheen, iridescence, and anisotropy | Diagnostic output, not physical transport |
 | Skeletal skinning and morph targets | Yes | Yes through shared raster geometry | No | Yes through shared raster geometry |
 | Ambient, directional and point lights | Yes | Yes; one directional and up to 64 point lights, otherwise fallback | Yes | No lighting; normals or depth |
 | Spot lights | Yes | Fallback | Yes | No lighting |
@@ -483,14 +483,14 @@ area/luminance-weighted emitter selection; uniform selection remains the default
 
 ### Ray material textures and smooth dielectrics
 
-The ray renderer samples base-color, emissive, metallic/roughness, transmission, and triangle mesh normal maps.
+The ray renderer samples the [supported PBR and extension maps](/docs/api-reference/anari/ray-tracing-renderer#material-support).
 Each map uses its canonical PBR UV transform and UV-set selector (`TEXCOORD_0` or
 `TEXCOORD_1`). Analytic spheres synthesize longitude/latitude UV0. Texture formats control
 color decoding: use sRGB formats for color maps and linear formats for data maps. Sampling
 uses explicit LOD inside divergent traversal and honors the texture's sampler. Primary triangle
 shading estimates its footprint from the camera and transformed UVs. Secondary hits, analytic
 spheres, and cutout tests use mip zero.
-At most fourteen distinct material textures may be bound to one frame with CORE limits.
+The ray renderer binds up to fourteen distinct material textures per frame. Excess maps use the underlying material values.
 Textures are borrowed and must remain alive until their submitted GPU work finishes.
 
 Replacing textures or samplers, changing UV metadata, or changing a material version rebuilds
@@ -500,8 +500,8 @@ the material version to invalidate accumulated lighting.
 With `transportMode: 'pbr'` and positive `maxBounces`, `transmissionFactor` and `ior` enable
 smooth dielectric continuation with Fresnel reflection, refraction, total internal reflection,
 and radiance transport scaling. Use closed meshes with outward winding for entry/exit IOR
-handling. Rough transmission, nested dielectric media, and
-extension maps are not implemented. Base-color texture alpha masks apply to primary/secondary
+handling. See [ray material support](/docs/api-reference/anari/ray-tracing-renderer#material-support)
+for the supported extension maps. Rough transmission and nested dielectric media remain open. Base-color texture alpha masks apply to primary/secondary
 rays, shadows, explicit emitter samples, picking and channels. Alpha blending and transparent
 shadow transport remain unsupported.
 
