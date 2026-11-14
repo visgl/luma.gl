@@ -34,6 +34,7 @@ const exampleConfig = {};
 
 const loadAnimationApp = () => import('../../examples/api/animation/app');
 const loadBlendingApp = () => import('../../examples/api/blending/app');
+const loadBakedCornellBoxApp = () => import('../../examples/api/baked-cornell-box/app');
 const loadLightmapBakingApp = () => import('../../examples/api/lightmap-baking/app');
 const loadPBRShadowsApp = () => import('../../examples/api/pbr-shadows/app');
 const loadPrefilteredEnvironmentApp = () => import('../../examples/api/prefiltered-environment/app');
@@ -3053,6 +3054,18 @@ export const LightmapBakingExample: React.FC<WebsiteExampleProps> = props => (
     loadTemplate={loadLightmapBakingApp}
     config={exampleConfig}
     devices={['webgl2', 'webgpu']}
+    {...props}
+  />
+);
+
+export const BakedCornellBoxExample: React.FC<WebsiteExampleProps> = props => (
+  <LumaExample
+    id="baked-cornell-box"
+    title="Baked Cornell Box"
+    directory="api"
+    loadTemplate={loadBakedCornellBoxApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     {...props}
   />
 );

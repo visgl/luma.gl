@@ -8,6 +8,7 @@ import {
   type GPUDataEvaluatorInput
 } from '../operation/gpu-data-evaluator';
 import {Operation} from '../operation/operation';
+import type {ColorOutputFormat} from '../../gpu-data/color-conversion';
 
 export type ColorInputFormat =
   | 'uint8x3'
@@ -17,13 +18,17 @@ export type ColorInputFormat =
   | 'float32x3'
   | 'float32x4';
 
+export type {ColorOutputFormat} from '../../gpu-data/color-conversion';
+
 export type ConvertColorsProps = {
+  format?: ColorOutputFormat;
   inputFormat?: ColorInputFormat;
 };
 
 export type ConvertColorsInputs = {
   source: GPUDataEvaluator;
   inputFormat: ColorInputFormat;
+  outputFormat: ColorOutputFormat;
 };
 
 class ConvertColorsOperation extends Operation<ConvertColorsInputs> {
@@ -31,15 +36,24 @@ class ConvertColorsOperation extends Operation<ConvertColorsInputs> {
 
   output: GPUDataEvaluator;
 
-  constructor(source: GPUDataEvaluator, inputFormat: ColorInputFormat) {
-    super({source, inputFormat});
+  constructor(
+    source: GPUDataEvaluator,
+    inputFormat: ColorInputFormat,
+    outputFormat: ColorOutputFormat
+  ) {
+    super({source, inputFormat, outputFormat});
 
     this.output = new GPUDataEvaluator({
       id: `convertColors(${source})`,
-      type: 'uint8',
+      type:
+        outputFormat === 'unorm8x4'
+          ? 'uint8'
+          : outputFormat === 'float16x4'
+            ? 'float16'
+            : 'float32',
       size: 4,
-      normalized: true,
-      format: 'unorm8x4',
+      normalized: outputFormat === 'unorm8x4',
+      format: outputFormat,
       length: source.length,
       source: this
     });
@@ -50,14 +64,15 @@ class ConvertColorsOperation extends Operation<ConvertColorsInputs> {
   }
 }
 
-/** Converts one fixed-width GPU data range to normalized Uint8 RGBA values. */
+/** Converts one fixed-width color range to RGBA8, binary16 or binary32 RGBA storage. */
 export function convertColorData(
   source: GPUDataEvaluatorInput,
   props: ConvertColorsProps = {}
 ): GPUDataEvaluator {
   const sourceEvaluator = getGPUDataEvaluator(source);
   const inputFormat = props.inputFormat ?? getColorInputFormat(sourceEvaluator);
-  return new ConvertColorsOperation(sourceEvaluator, inputFormat).output;
+  return new ConvertColorsOperation(sourceEvaluator, inputFormat, props.format ?? 'unorm8x4')
+    .output;
 }
 
 function getColorInputFormat(source: GPUDataEvaluator): ColorInputFormat {

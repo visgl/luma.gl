@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-const dot = (first, second) => first.reduce((sum, value, axis) => sum + value * second[axis], 0);
+const dot = (first, second) =>
+  first.reduce((sum, value, axis) => sum + value * second[axis], 0);
 const subtract = (first, second) => first.map((value, axis) => value - second[axis]);
 const cross = (first, second) => [
   first[1] * second[2] - first[2] * second[1],
@@ -25,7 +26,9 @@ export function boxPenetration(first, firstState, second, secondState) {
   for (const axis of [
     ...firstAxes,
     ...secondAxes,
-    ...firstAxes.flatMap(firstAxis => secondAxes.map(secondAxis => cross(firstAxis, secondAxis)))
+    ...firstAxes.flatMap(firstAxis =>
+      secondAxes.map(secondAxis => cross(firstAxis, secondAxis))
+    )
   ]) {
     const length = Math.hypot(...axis);
     if (length < 1e-8) continue;
@@ -68,13 +71,18 @@ export function mechanicalEnergy(fixture, states) {
     const inertia = body.halfExtents.map(
       (_, axis) =>
         (body.mass / 3) *
-        body.halfExtents.reduce((sum, extent, index) => sum + (index === axis ? 0 : extent ** 2), 0)
+        body.halfExtents.reduce(
+          (sum, extent, index) => sum + (index === axis ? 0 : extent ** 2),
+          0
+        )
     );
     return (
       energy +
-      body.mass * (dot(state.velocity, state.velocity) / 2 - dot(fixture.gravity, state.position)) +
+      body.mass *
+        (dot(state.velocity, state.velocity) / 2 - dot(fixture.gravity, state.position)) +
       axes.reduce(
-        (sum, axis, index) => sum + (inertia[index] * dot(axis, state.angularVelocity) ** 2) / 2,
+        (sum, axis, index) =>
+          sum + (inertia[index] * dot(axis, state.angularVelocity) ** 2) / 2,
         0
       )
     );
@@ -104,6 +112,8 @@ export function measureQuality(fixture, frames, timeStep) {
     )
   );
   const initialEnergy = mechanicalEnergy(fixture, initialStates(fixture));
+  let maximumLateralDrift = 0;
+  const stack = ['matchedStack', 'matchedLoaded'].includes(fixture.scene);
   let maximumPenetration = 0,
     maximumJointError = 0,
     maximumBallisticError = 0,
@@ -123,6 +133,14 @@ export function measureQuality(fixture, frames, timeStep) {
             0
           )
         );
+        if (stack && body.mass)
+          maximumLateralDrift = Math.max(
+            maximumLateralDrift,
+            Math.hypot(
+              state.position[0] - body.position[0],
+              state.position[1] - body.position[1]
+            )
+          );
         maximumQuaternionError = Math.max(
           maximumQuaternionError,
           Math.abs(Math.hypot(...state.orientation) - 1)
@@ -166,7 +184,8 @@ export function measureQuality(fixture, frames, timeStep) {
           ) ||
           [1, 2].some(
             axis =>
-              left.maximum[axis] < right.minimum[axis] || right.maximum[axis] < left.minimum[axis]
+              left.maximum[axis] < right.minimum[axis] ||
+              right.maximum[axis] < left.minimum[axis]
           )
         )
           continue;
@@ -201,6 +220,7 @@ export function measureQuality(fixture, frames, timeStep) {
     valid: true,
     finiteState: true,
     sampledFrames: frames.length,
+    maximumLateralDrift,
     maximumPenetration,
     penetration: summarize(penetrationSamples),
     maximumJointError,
@@ -221,6 +241,7 @@ export function measureQuality(fixture, frames, timeStep) {
 }
 
 export const QUALITY_BUDGETS = {
+  maximumLateralDrift: 0.12,
   maximumPenetration: 0.03,
   maximumJointError: 0.02,
   maximumBallisticError: 0.2,

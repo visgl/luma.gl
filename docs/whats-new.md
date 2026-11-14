@@ -1,5 +1,12 @@
 # What's New
 
+## Ray-traced texture cutouts
+
+ANARI ray tracing now applies base-color texture alpha masks consistently to visible surfaces,
+secondary paths, shadows, sampled emitters, picking and depth/normal/identity channels.
+UV transforms and retained texture changes update cutout visibility. See the
+[ray-tracing renderer](./api-reference/anari/ray-tracing-renderer.md) for supported maps and limits.
+
 ## Explicit resource ownership
 
 A device-independent `Resource` base supports exclusive ownership, atomic ownership transfer,
@@ -10,14 +17,21 @@ and statistics. See [Resource ownership](/docs/api-guide/gpu/resource-ownership)
 
 ### Static lightmap workflows
 
-A dedicated two-room [Lightmap Baking example](/examples/api/lightmap-baking) demonstrates fixed colored
-lights, shadowed environment sampling, and portable HDR export/reload. Point-shadow cube projections now match WebGPU texture coordinates, correcting misplaced shadows from off-axis occluders. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
+The [Lightmap Baking example](/examples/api/lightmap-baking) offers six static scenes, with Courtyard & Arcade as the default and Two Rooms retained. It demonstrates fixed colored lights, shadowed environment sampling, WebGPU indirect diffuse transport, and scene-checked HDR export/reload. Point-shadow cube projections now match WebGPU texture coordinates, correcting misplaced shadows from off-axis occluders. See [lightmap baking](./api-reference/engine/lighting/lightmap-baker.md).
 
 ### Lighting workflow hardening
 
 Combined PBR receiving and shared-frame regressions now cover visibility, baked results, resize,
 reset, resource reuse and allocation-failure recovery. The [lighting guide](./api-guide/engine/lighting-effects.md#frame-and-resource-lifecycle)
 explains frame ordering, ownership and reproducible performance measurements.
+
+### Scenegraph snapshots and indirect transport
+
+`makeANARIWorldFromScenegraph` and `makeScenegraphFromANARIWorld` convert static scenegraphs and ANARI worlds with copied CPU data, shared geometry/material snapshots, and borrowed textures. Ray tracing accepts scenegraphs through the same retained surface adapter. Receiver-space irradiance sampling reuses the ray tracer's diffuse transport for baking. See [scenegraph snapshots](./api-reference/anari/anari-scene.md#scenegraph-snapshots) and [irradiance sampling](./api-reference/anari/ray-tracing-renderer.md#receiver-space-irradiance-samples).
+
+### Lightmap atlas preparation
+
+`createLightmapAtlas` generates independent UV charts, world-space texel density, deterministic multi-mesh packing and gutter ownership. Explicit validation and chart preview data help inspect allocations before baking. See [atlas preparation](./api-reference/engine/lighting/lightmap-baker.md#preparing-atlas-uvs).
 
 ### Progressive lightmap baking
 
@@ -28,6 +42,9 @@ The optional lighting entry now exposes UV-space diffuse bake models, progressiv
 
 PBR material and model factories now infer lightmap flags from `pbr_lightmapSampler`. See [baked lightmaps](./api-reference/engine/lighting/pbr-material.md#baked-lightmaps) for irradiance, UV and ownership conventions.
 
+### Color storage precision
+
+Color conversion supports Float16/Float32 RGBA output, source preservation with consumer format constraints, CPUVector conversion without GPU transfers, and scoped WebGPU encoding. See [color conversion](./api-reference/arrow/arrow-conversion.mdx#color-columns).
 
 ### Reusable clustered light lists
 
@@ -411,8 +428,8 @@ Target Release Date: Q3, 2026
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
-- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.7 grouped
-  packages and loaders.gl 5.0.0-beta.7 grouped packages. Arrow adapters expose
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.8 grouped
+  packages and loaders.gl 5.0.0-beta.8 grouped packages. Arrow adapters expose
   `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector`
   for native GeoArrow chunks and rows without copying coordinate buffers. Views
   use math.gl’s shared adapter, including field extension metadata and canonical

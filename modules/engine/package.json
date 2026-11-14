@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "10.0.0-alpha.12",
+  "version": "10.0.0-alpha.14",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -128,20 +128,20 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.12",
-    "@luma.gl/shaders": "~10.0.0-alpha.12",
+    "@luma.gl/core": "~10.0.0-alpha.14",
+    "@luma.gl/shaders": "~10.0.0-alpha.14",
     "apache-arrow": ">=17.0.0"
   },
   "dependencies": {
-    "@luma.gl/graph": "10.0.0-alpha.12",
+    "@luma.gl/graph": "10.0.0-alpha.14",
     "@mapbox/tiny-sdf": "^2.0.7",
-    "@math.gl/core": "~5.0.0-beta.7",
-    "@math.gl/geometry": "~5.0.0-beta.7",
+    "@math.gl/core": "~5.0.0-beta.8",
+    "@math.gl/geometry": "~5.0.0-beta.8",
     "probe.gl": "^5.0.0"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e",
   "devDependencies": {
-    "@luma.gl/anari": "10.0.0-alpha.12"
+    "@luma.gl/anari": "10.0.0-alpha.14"
   },
   "peerDependenciesMeta": {
     "apache-arrow": {

@@ -54,13 +54,84 @@ build graph.
 
 The Morton-sorted TLAS accelerates object and instance selection, while intersected meshes traverse
 GPU-built Morton-sorted triangle BLASes. Hardware ray tracing and SAH/Karras hierarchy topology are
-not implemented. Skeletal skinning, morph-target displacement, material textures, alpha blending/
-transmission, and advanced PBR material extensions require raster rendering; deferred uses its forward fallback for unsupported materials.
+not implemented. Skeletal skinning, morph-target displacement, and alpha blending require a
+compatible raster renderer.
+
+## Material support
+
+| Material feature | Ray-traced support |
+| --- | --- |
+| Metallic-roughness | Base color, emissive, metallic-roughness, and triangle normal maps |
+| Visibility | Scalar and textured alpha cutouts for rendering, shadows, and hit queries |
+| Diffuse transmission | Tint and strength for backlighting and diffuse bounces through thin surfaces in PBR mode |
+| Smooth glass | Transmission map, IOR, and distance-based absorption for closed, non-nested meshes |
+| Dielectric specular | RGB color and alpha intensity maps |
+| Clearcoat | Red strength, green roughness, and independent triangle normal maps |
+| Ambient occlusion | Red channel and scalar strength applied to ambient lighting |
+| Sheen | RGB color and alpha roughness maps |
+| Thin-film iridescence | Red strength and green thickness maps, evaluated with an RGB approximation |
+| Anisotropy | UV-aligned GGX for direct lighting and opaque bounces. Map RGB encodes direction in red and green and scales strength in blue. |
+
+Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
+with explicit LOD and up to 14 distinct textures per frame. Excess maps use material defaults,
+with base-color maps prioritized for visibility. Primary triangle shading estimates
+a mip level from the projected pixel footprint and transformed UVs. Secondary shading, analytic
+spheres and alpha visibility still sample mip zero. `MASK` multiplies the
+base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
+Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, picking and primary-hit
+channels. Rejected triangles do not hide deeper triangles in the same mesh, and analytic spheres
+check both interfaces. `OPAQUE` ignores texture alpha.
+
+Triangle mesh normal maps use linear RGB and a tangent frame derived from the
+transformed UV chart. They affect lighting and opaque bounce shading. Analytic spheres and
+degenerate UV charts use the surface normal, which also remains the normal for picking, hit
+channels and smooth dielectric refraction. The tangent frame is derived from the triangle UVs
+and does not use authored vertex tangents.
+Dielectric specular color and intensity factors affect direct lighting and opaque PBR bounce
+shading. The color map uses RGB with texture-format color decoding, and the intensity map uses
+alpha. Both use the same UV selection and transforms as the other material maps. Smooth dielectric
+refraction continues to use its IOR-based Fresnel model.
+
+Clearcoat adds a dielectric glossy layer to direct lighting and opaque PBR paths. The strength
+map uses red, and the roughness map uses green. Both support the shared UV sets and transforms.
+Triangle clearcoat normal maps use their own UV chart and linear RGB. The coat uses the unperturbed
+surface normal when the map is absent. Opaque bounce sampling still follows the
+base shading distribution.
+
+Ambient occlusion maps use the red channel and the material's `occlusionStrength` to
+attenuate ambient light. Direct lights, emission, and ray visibility are unaffected.
+
+Sheen adds a grazing reflection below clearcoat in direct lighting and opaque PBR paths.
+The color map contributes RGB after texture-format color decoding, and the roughness map
+uses alpha. The lobe uses a Charlie distribution with approximate visibility and base-layer
+attenuation. Opaque bounce sampling uses the existing diffuse/GGX mixture.
+
+Thin-film iridescence modifies the base Fresnel response for direct lighting and opaque PBR paths.
+The strength map uses red and the thickness map uses green to interpolate the specified thickness
+range in nanometers. Without a thickness map the renderer uses the maximum thickness. The film
+model approximates spectral reflectance at three RGB wavelengths.
+
+Anisotropy stretches opaque GGX reflections along a triangle's UV tangent frame. The rotation
+is in radians. The map uses red and green for tangent-space direction and blue to scale strength.
+Mapped surfaces use the selected UV chart and transform. Scalar anisotropy uses UV0. Analytic
+primitives and triangles without a usable UV frame use isotropic reflection.
+
+Diffuse transmission diverts part of the diffuse reflection lobe to the opposite side of a thin
+surface. In PBR mode it receives direct and sampled emissive lighting, and a positive bounce
+budget allows cosine-weighted transmission paths. The strength map uses alpha, and the tint map
+uses RGB after color decoding. This lobe models surface scattering without entering a volume.
+
+Replacing a map or changing its UV metadata or normal scale invalidates history. After an in-place texture upload,
+increment the scene material version (or commit its retained ANARI material) before rendering.
 Diffuse secondary transport is opt-in through `maxBounces` (0–8). Each bounce samples a
 cosine-weighted hemisphere and gathers emission and existing direct lighting at the next hit,
 so matte surfaces receive color bleeding and emissive illumination. The scalar diffuse
 throughput in `transportMode: 'diffuse'` is base color × 0.96 × (1 − metallic).
-`transportMode: 'pbr'` additionally samples opaque GGX reflection; transmission is not sampled. Misses contribute no indirect radiance: `background` is a display color, not an
+`transportMode: 'pbr'` additionally samples GGX reflection and smooth dielectric transmission with IOR. For closed, non-nested dielectrics, `attenuationColor` specifies the fraction of linear RGB light
+remaining after traveling `attenuationDistance` world units. The path applies Beer–Lambert
+absorption along each segment inside the object, including segments after internal reflection.
+The camera path must enter the medium through a refracted hit. Nonpositive or infinite distance
+disables absorption. Rough transmission and nested media are not implemented. Misses contribute no indirect radiance: `background` is a display color, not an
 environment light. Ambient lights and fog retain the existing per-hit approximations.
 
 `samplingSeed` controls primary and diffuse paths. Pixel, frame, sample, and bounce indices
@@ -73,7 +144,7 @@ reprojection and camera-cut rejection.
 Use a stationary scene, full resolution, disabled adaptive resolution and temporal reprojection,
 and multiple progressive frames for comparison. Small emitters can converge slowly under the default BSDF-only emission gathering.
 Opt-in explicit emitter sampling, opaque GGX transport and spatial denoising are available;
-MIS, transmissive transport, advanced temporal denoising and volumes remain planned.
+Multiple importance sampling, rough transmission, advanced temporal denoising, and volumes remain open.
 
 For the rationale behind the TLAS/BLAS split, Morton ordering, refit policy, megakernel execution,
 and temporal reconstruction policy, see
@@ -81,3 +152,30 @@ and temporal reconstruction policy, see
 
 Applications can also
 [register custom renderer runtimes](/docs/api-reference/anari/anari-device#registering-renderer-runtimes).
+
+### Receiver-space irradiance samples
+
+`RayTracingSceneRenderer.encodeIrradiance(frameId, positions, normals, output)`
+encodes one cosine-weighted hemisphere sample for each covered receiver texel.
+Call `render()` and submit first to prepare the retained scene and acceleration
+structures. This method reuses that scene's diffuse transport, material textures,
+lights, seed, sample-frame index, and bounce settings. The initial receiver ray
+adds one bounce to `maxBounces`.
+
+`positions` and `normals` are same-size floating-point textures in world space.
+Position alpha contains a positive chart ID; zero marks uncovered texels.
+Normals must be unit length. `output` is a same-size `rgba16float` storage texture
+containing linear indirect irradiance and the receiver's chart ID in alpha.
+Uncovered texels are cleared. Receiver albedo is not multiplied into irradiance;
+the receiving PBR material applies it when displaying the bake.
+
+This is the indirect term: rays that escape the scene contribute zero. Combine
+it with direct-light and environment samples, then accumulate and dilate using
+`LightmapBaker`. Advance `samplingFrameIndex` on the retained render to obtain
+new samples; the same scene, seed, and frame index reproduce a sample. Do not use
+a camera denoiser on atlas texels, which have unrelated neighbors across charts.
+
+The caller owns all textures and command submission. The renderer caches the
+computation and releases it with `destroyFrame()` or `destroy()`. Keep borrowed
+textures alive through command completion. Changing receiver content requires
+resetting the application's accumulation history.

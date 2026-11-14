@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Geometry} from '@luma.gl/engine';
+import {Texture} from '@luma.gl/core';
+import type {SceneSurface} from '../../src/engine/scene-renderer';
+import {getRayMaterialTextures} from '../../src/engine/ray-tracing-material-textures';
 import {describe, expect, test} from 'vitest';
 import {ResourceType, WgslReflect} from 'wgsl_reflect';
 import {
@@ -44,7 +48,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'primitiveMaxima', binding: 3},
       {name: 'blasNodes', binding: 4}
     ]);
-    expect(reflection.storage[0].format?.size).toBe(288);
+    expect(reflection.storage[0].format?.size).toBe(400);
     expect(reflection.storage.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.uniforms.length + reflection.storage.length).toBe(5);
     expect(RAY_TRACING_BOUNDS_SHADER).toContain('@workgroup_size(128)');
@@ -138,7 +142,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'blasTriangleIds', binding: 8}
     ]);
     expect(storageBuffers).toHaveLength(8);
-    expect(storageBuffers[0].format?.size).toBe(288);
+    expect(storageBuffers[0].format?.size).toBe(400);
     expect(storageBuffers.find(({name}) => name === 'blasNodes')?.format?.size).toBe(32);
     expect(reflection.storage.find(({name}) => name === 'outputImage')?.binding).toBe(11);
     expect(reflection.storage.find(({name}) => name === 'outputMetadata')?.binding).toBe(12);
@@ -485,12 +489,12 @@ describe('graph-accelerated ray tracing shaders', () => {
       )
     ).toHaveLength(1);
     for (const invariant of [
-      'let dielectricReflectance = vec3<f32>(0.04)',
+      'let dielectricReflectance = getDielectricReflectance(primitive)',
       'let reflectance = mix(dielectricReflectance, baseColor, metallic)',
-      'let grazingReflectance = vec3<f32>(clamp(maximumReflectance * 25.0, 0.0, 1.0))',
+      'let grazingReflectance = getGrazingReflectance(primitive, reflectance, metallic)',
       'let alphaRoughness = roughness * roughness',
       'let alphaRoughnessSquared = alphaRoughness * alphaRoughness',
-      'let diffuse = baseColor * (vec3<f32>(1.0) - dielectricReflectance)',
+      'let diffuse = (1.0 - diffuseTransmission) * baseColor * (vec3<f32>(1.0) - dielectricReflectance)',
       'let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0)',
       'let lightSampleWeight = f32(directLightCount) / f32(max(shadowSampleCount, 1u))'
     ]) {
@@ -516,11 +520,15 @@ describe('graph-accelerated ray tracing shaders', () => {
 
     expect(functionSource).toContain('let roughness = clamp(primitive.properties.x, 0.04, 1.0)');
     expect(functionSource).toContain('let metallic = clamp(primitive.emissive.w, 0.0, 1.0)');
+    expect(functionSource).toContain('getGrazingReflectance(primitive, reflectance, metallic)');
     expect(functionSource).toContain(
-      'let maximumReflectance = max(reflectance.r, max(reflectance.g, reflectance.b))'
+      'evaluateBaseFresnel(primitive, reflectance, grazingReflectance, viewHalf)'
     );
-    expect(functionSource).toContain('grazingReflectance - reflectance');
-    expect(functionSource).toContain('pow(clamp(1.0 - viewHalf, 0.0, 1.0), 5.0)');
+    const fresnelStart = RAY_TRACING_SCENE_SHADER.indexOf('fn evaluateBaseFresnel(');
+    const fresnelEnd = RAY_TRACING_SCENE_SHADER.indexOf('\nfn ', fresnelStart + 1);
+    const fresnelSource = RAY_TRACING_SCENE_SHADER.slice(fresnelStart, fresnelEnd);
+    expect(fresnelSource).toContain('(grazingReflectance - reflectance) * pow(1.0 - cosine, 5.0)');
+    expect(fresnelSource).toContain('if (film.x <= 0.0 || film.w <= 0.0) { return baseFresnel; }');
     expect(functionSource).toContain(
       '(normalHalf * alphaRoughnessSquared - normalHalf) * normalHalf + 1.0'
     );
@@ -529,14 +537,13 @@ describe('graph-accelerated ray tracing shaders', () => {
     );
     expect(functionSource).toContain('let lightVisibility = 2.0 * normalLight');
     expect(functionSource).toContain('let viewVisibility = 2.0 * normalView');
-    expect(functionSource).toContain('let geometricOcclusion = lightVisibility * viewVisibility');
     expect(functionSource).toContain(
       'let diffuseContribution = (vec3<f32>(1.0) - fresnel) * diffuse'
     );
     expect(functionSource).toContain(
-      'let specular = fresnel * geometricOcclusion * distribution /'
+      'let specular = fresnel * baseVisibility * baseDistribution /'
     );
-    expect(functionSource).toContain('(4.0 * normalLight * normalView)');
+    expect(functionSource).toContain('(4.0 * max(normalLight, 0.000001) * normalView)');
     expect(functionSource).toContain('result += baseColor * lightColor');
     expect(functionSource).not.toContain('specularPower');
     expect(functionSource).not.toContain('pow(normalHalf,');
@@ -580,7 +587,7 @@ describe('graph-accelerated ray tracing shaders', () => {
       'for (var sampleIndex = 0u; sampleIndex < sampleCount; sampleIndex++)'
     );
     const jitteredRayIndex = mainSource.indexOf('let ray = makeCameraRay(pixel, sampleIndex)');
-    const tracedHitIndex = mainSource.indexOf('let hit = intersectScene(ray, RAY_INFINITY)');
+    const tracedHitIndex = mainSource.indexOf('var hit = intersectScene(ray, RAY_INFINITY)');
 
     expect(guideHitIndex).toBeGreaterThan(0);
     expect(loopIndex).toBeGreaterThan(guideHitIndex);
@@ -803,4 +810,34 @@ test('primary-hit diagnostics keep presentation within sampled-texture bindings'
     expect(reflection.storage).toEqual([]);
     expect(reflection.uniforms).toEqual([]);
   }
+});
+
+test('ray material texture budgets preserve opacity maps and prioritize existing maps', () => {
+  const textures: Texture[] = Array.from({length: 15}, () => Object.create(Texture.prototype));
+  const geometry = new Geometry({topology: 'triangle-list', vertexCount: 0, attributes: {}});
+  const surfaces: SceneSurface[] = [
+    {
+      id: 'iridescent',
+      transforms: [],
+      geometry,
+      material: {
+        id: 'film',
+        bindings: {
+          pbr_iridescenceSampler: textures[0],
+          pbr_iridescenceThicknessSampler: textures[1]
+        }
+      }
+    },
+    ...textures.slice(2).map((texture, index) => ({
+      id: `surface-${index}`,
+      transforms: [],
+      geometry,
+      material: {id: `material-${index}`, bindings: {pbr_baseColorSampler: texture}}
+    }))
+  ];
+  const selected = getRayMaterialTextures(surfaces);
+  expect(selected).toHaveLength(14);
+  expect(selected[13]).toBe(textures[0]);
+  expect(selected).not.toContain(textures[1]);
+  expect(getRayMaterialTextures(surfaces, true)).toEqual(textures.slice(2));
 });
