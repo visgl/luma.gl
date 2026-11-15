@@ -44,6 +44,7 @@
 - Do not rely on `yarn test-node` as a substitute for `yarn build` or `yarn test`; run all three when table or shared package APIs change.
  
 ## Code style
+- Add TSDoc comments to all source code declarations, including functions, classes, methods, types, interfaces, fields, and constants.
 - TypeScript strict mode
 - We end lines with semicolons
 - Single quotes
@@ -101,6 +102,7 @@
 - Generic layout synthesis should reject `vertex-list<...>` unless a model or adapter explicitly handles expansion or storage consumption.
 
 ## Documentation
+- Describe current API behavior and usage in API documentation. Record changes in the release notes and migration guidance in the upgrade guide.
 - `docs/upgrade-guide.md` should focus on breaking changes and deprecations only.
 - Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.
 
