@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-alpha.15
+
+- Add a vector DataFrame AST bridge and layout planning, Arrow column format validation, kernel inspection, and parallel segmented scan and reduction, scatter, and sparse graph operations.
+- Upgrade math.gl and loaders.gl to beta.10. Use math.gl's typed SELECT parser and adapt Parquet and Gaussian splat loading to the updated APIs.
+- Expand ANARI ray-traced materials with alpha masks, normal maps, dielectric absorption and specular maps, clearcoat, sheen, iridescence, anisotropy, transmission, and ambient occlusion textures.
+- Add budgeted GPU reflection probes and expand lightmap baking with atlas packing, tiled baking, and portable GLB export.
+- Add G8 manifold contact solving and a 3D Physics Stress Lab, and qualify glTF GPU physics geometry and dynamics.
+- Support typed shader color inputs and short integer WebGL vertex constants, and fix GPU grid cell assignment across zero.
+
 ### v10.0.0-alpha.14
 
 - Preserve graph color precision and support Float16 output.
