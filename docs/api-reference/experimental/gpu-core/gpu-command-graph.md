@@ -928,3 +928,18 @@ retained in preflight reports and traces.
 
 See [Buffers and textures](/docs/api-reference/experimental/gpu-core/resources) for logical values,
 views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+## Inspecting compute kernels
+
+Pass `{kernelMetadata: 'layout'}` to `graph.compile()` or `graph.compileAsync()` to include
+declared entry points, workgroup dimensions, and binding layouts in preflight. Use `'source'`
+to also include available WGSL. Default compilation omits these details.
+
+```ts
+const compiled = graph.compile({kernelMetadata: 'layout'});
+inspector.registerGraph(compiled);
+const nodes = inspector.getSnapshot().graphs[0].preflight?.nodes;
+```
+
+`GPUScan` and `GPUSegmentedScan` supply metadata. Custom compute nodes can supply a `kernel`
+declaration through `graph.addComputePass()` or `createGPUComputeCommandNode()`.

@@ -53,6 +53,8 @@ export {
   type GPUCommandGraphNodeConditionPreflight,
   type GPUCommandGraphNodeEncodingStats,
   type GPUCommandGraphNodePreflight,
+  type GPUCommandGraphCompileOptions,
+  type GPUCommandGraphKernelMetadata,
   type GPUCommandGraphResourceSummary,
   type GPUCommandGraphNodePublication,
   type GPUCommandGraphNodeTiming,

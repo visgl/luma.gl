@@ -4,6 +4,8 @@
 
 export {
   convertArrowColumnToGPUVector,
+  getArrowConversionFormat,
+  type ArrowColumnFormatOptions,
   type ArrowColumnGPUVectorOptions,
   type PreparedArrowColumnGPUVector
 } from './gpu/arrow-column-gpu-vector';

@@ -202,7 +202,7 @@ const vitestConfig = getVitestConfig({
     optimizeDeps: {
       exclude: ['@deck.gl/core', '@deck.gl/layers', '@luma.gl/shadertools'],
       // Keep source packages visible while bundling their CommonJS dependencies.
-      include: ['@deck.gl/layers > earcut', '@math.gl/dggs > open-location-code'],
+      include: ['@deck.gl/layers > earcut', '@math.gl/dggs > open-location-code', '@math.gl/geospatial > cdt2d'],
       noDiscovery: true
     }
   },

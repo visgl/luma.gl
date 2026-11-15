@@ -453,7 +453,7 @@ export default class GaussianSplatsAnimationLoopTemplate extends AnimationLoopTe
     ]);
     const loaded = await load(configuration.sourceUrl, [GLTFLoader, SPZLoader], {
       signal,
-      splats: {shape: 'arrow-table', targetCoordinateSystem: 'LUF'}
+      splats: {shape: 'arrow', targetCoordinateSystem: 'LUF'}
     });
     signal.throwIfAborted();
     const gltf = gltfModule.postProcessGLTF(
