@@ -113,15 +113,18 @@ export function normalizeByteColor4(
 }
 
 function usesByteColors(color: ColorInput, useByteColors: boolean): boolean {
+  // BYTES_PER_ELEMENT is realm-independent; all supported one-byte inputs are byte colors.
   return Array.isArray(color)
     ? useByteColors
-    : color instanceof Uint8Array || color instanceof Uint8ClampedArray;
+    : 'BYTES_PER_ELEMENT' in color && color.BYTES_PER_ELEMENT === 1;
 }
 
 function isFloatColor(color: ColorInput): color is FloatColor {
+  const tag = Object.prototype.toString.call(color);
   return (
-    color instanceof Float32Array ||
-    color instanceof Float64Array ||
-    (typeof Float16Array !== 'undefined' && color instanceof Float16Array)
+    ArrayBuffer.isView(color) &&
+    (tag === '[object Float16Array]' ||
+      tag === '[object Float32Array]' ||
+      tag === '[object Float64Array]')
   );
 }
