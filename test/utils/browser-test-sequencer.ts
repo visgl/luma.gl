@@ -10,6 +10,7 @@ const DEFAULT_BROWSER_TEST_WEIGHT = 3;
 // Seconds measured on release 43742289461 and PR 43742246776 (2026-11-15),
 // plus one second per file for page/import overhead. Material cases retain their
 // individual timings after splitting the former 20-minute monolithic suite.
+// Preserve previous Linux weights for files without a completed current measurement.
 export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/anari/test/anari-diffuse.spec.ts': 29,
   'modules/anari/test/anari-emitter-sampling.spec.ts': 42,
@@ -35,6 +36,15 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/anari/test/engine/ray-tracing-image-export.spec.ts': 34,
   'modules/anari/test/engine/scene-renderer-lighting-parity.spec.ts': 30,
   'modules/anari/test/engine/scenegraph-transforms.spec.ts': 12,
+  'modules/deck-arrow-layers/test/gpu-graph-deck.spec.ts': 8,
+  'modules/deck-arrow-layers/test/layers/arrow-layers.spec.ts': 16,
+  'modules/deck-gpu-layers/test/globe-cloud-layer.spec.ts': 6,
+  'modules/deck-gpu-layers/test/gpu-spatial-geographic-point-query-effect.spec.ts': 5,
+  'modules/deck-gpu-layers/test/gpu-spatial-point-layer.spec.ts': 4,
+  'modules/deck-gpu-layers/test/scene-buffer-effect.spec.ts': 7,
+  'modules/deck-gpu-layers/test/shader-pass-effect.spec.ts': 6,
+  'modules/deck-gpu-layers/test/sky-body-layers.spec.ts': 10,
+  'modules/deck-gpu-layers/test/wind-particle-layer.spec.ts': 4,
   'modules/engine/test/gltf/gltf/gltf-area-lights-render.spec.ts': 31,
   'modules/engine/test/gltf/gltf/gltf-materials-scatter-render.spec.ts': 5,
   'modules/engine/test/gltf/physics/gltf-physics-properties.spec.ts': 8,
@@ -46,6 +56,7 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/engine/test/lighting/lighting-workflow.spec.ts': 5,
   'modules/engine/test/lighting/lightmap-baker.spec.ts': 38,
   'modules/engine/test/lighting/pbr-shadow.spec.ts': 6,
+  'modules/graph/test/arrow/arrow-gpu-analytics-adapters.spec.ts': 5,
   'modules/graph/test/arrow/dggs-gpu-polygons.spec.ts': 6,
   'modules/graph/test/geospatial/geospatial-projection-distance.spec.ts': 7,
   'modules/graph/test/gpu-core/gpu-batch-conformance.spec.ts': 11,
@@ -88,14 +99,20 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/graph/test/gpu-physics/rigid-body-convex-continuous.spec.ts': 50,
   'modules/graph/test/gpu-physics/rigid-body-convex.spec.ts': 117,
   'modules/graph/test/gpu-physics/rigid-body-coverage.spec.ts': 18,
+  'modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts': 135,
   'modules/graph/test/gpu-physics/rigid-body-fast-motion.spec.ts': 44,
   'modules/graph/test/gpu-physics/rigid-body-gameplay.spec.ts': 15,
   'modules/graph/test/gpu-physics/rigid-body-general-joints.spec.ts': 57,
   'modules/graph/test/gpu-physics/rigid-body-geometry-robustness.spec.ts': 18,
   'modules/graph/test/gpu-physics/rigid-body-impact-continuity.spec.ts': 26,
   'modules/graph/test/gpu-physics/rigid-body-joints.spec.ts': 134,
+  'modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts': 123,
+  'modules/graph/test/gpu-physics/rigid-body-mesh-pairs.spec.ts': 116,
   'modules/graph/test/gpu-physics/rigid-body-mutations.spec.ts': 19,
+  'modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts': 87,
   'modules/graph/test/gpu-physics/rigid-body-parallel-joints.spec.ts': 16,
+  'modules/graph/test/gpu-physics/rigid-body-parallel.spec.ts': 16,
+  'modules/graph/test/gpu-physics/rigid-body-persistent-anchors.spec.ts': 14,
   'modules/graph/test/gpu-physics/rigid-body-plane.spec.ts': 17,
   'modules/graph/test/gpu-physics/rigid-body-qualification.spec.ts': 15,
   'modules/graph/test/gpu-physics/rigid-body-recovery.spec.ts': 26,
@@ -122,8 +139,10 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/three/test/gltf-renderer.spec.ts': 16,
   'modules/three/test/overlay-renderer.spec.ts': 5,
   'modules/three/test/physical-renderer.spec.ts': 21,
+  'test/examples/algebraic-varieties.spec.ts': 4,
   'test/examples/gpu-dataframe-analysis.spec.ts': 8,
-  'test/examples/gpu-dataframe-derived-columns.spec.ts': 6
+  'test/examples/gpu-dataframe-derived-columns.spec.ts': 6,
+  'test/examples/luvs-live-benchmark.spec.ts': 4
 };
 
 // Native Apple Silicon coverage timings from run 43742246776 (2026-11-15).

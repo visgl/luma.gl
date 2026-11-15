@@ -178,3 +178,7 @@ speedup. Measure both the longest job and total worker time after the change lan
 The presentation canary runs once in its dedicated job and once per coverage worker;
 repeating it in the dedicated job adds little coverage. Release jobs install Chromium only,
 matching their browser project.
+
+Keep the previous weight for any file missing from a new measurement, especially when a
+shard was cancelled. An absent result is not evidence that a suite became fast. Remove a
+weight only when the file is removed or a completed measurement replaces it.
