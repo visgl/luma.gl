@@ -395,3 +395,11 @@ Streaming helpers preserve batch and buffer boundaries by creating one immutable
 uploaded into a new `GPUData` with its own buffer, and `GPUTable` aggregate
 vectors expose the logical column through `GPUVector.data[]`.
 instead of merging previous batches into one larger buffer.
+
+### Checking a column schema
+
+`getArrowConversionFormat(type, options)` checks Arrow type metadata against
+the numeric vertex conversion rules and returns the GPU format. Pass
+`semantic: 'position'` to require numeric XY or XYZ rows, or
+`semantic: 'color'` to require RGB or RGBA rows. The check needs no device
+and reads no row values. Conversion still checks nulls and transformed widths.

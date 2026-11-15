@@ -627,7 +627,7 @@ export class LocalGaussianSplatRADPageSource {
           signal,
           radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
         });
-      const arrowSource = this.options.decodePage
+      const decodedPage = this.options.decodePage
         ? await this.options.decodePage({
             chunkIndex: request.chunkIndex,
             sourceUrl: this.configuration.sourceUrl,
@@ -637,6 +637,7 @@ export class LocalGaussianSplatRADPageSource {
             decodeDefault
           })
         : await decodeDefault();
+      const arrowSource = normalizeGaussianSplatArrowSource(decodedPage);
       signal.throwIfAborted();
 
       if (!isGaussianSplatArrowSource(arrowSource)) {
@@ -788,7 +789,7 @@ export async function openLocalGaussianSplatRADPageSource(
         worker: false,
         fetch: fetchSource,
         core: {batchSize: GAUSSIAN_SPLAT_ARROW_BATCH_SIZE},
-        splats: {shape: 'arrow-table'}
+        splats: {shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow'}
       }
     );
     if (!isGaussianSplatRADSource(source)) {
@@ -919,11 +920,16 @@ export async function loadLocalGaussianSplatArrowSource(
   configuration: LocalGaussianSplatLoadersConfiguration
 ): Promise<GPUSplatArrowSource> {
   const {coreModule, loader, loaderName} = await loadLocalGaussianSplatLoaderModules(configuration);
-  const arrowSource: unknown = await coreModule.load(configuration.sourceUrl, loader, {
-    worker: false,
-    ply: {shape: 'arrow-table', pointCloud: true},
-    splats: {shape: 'arrow-table'}
-  });
+  const arrowSource: unknown = normalizeGaussianSplatArrowSource(
+    await coreModule.load(configuration.sourceUrl, loader, {
+      worker: false,
+      ply: {
+        shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow',
+        pointCloud: true
+      },
+      splats: {shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow'}
+    })
+  );
   if (!isGaussianSplatArrowSource(arrowSource)) {
     throw new Error(`${loaderName} did not return a Gaussian Apache Arrow table.`);
   }
@@ -1017,8 +1023,11 @@ async function* loadGaussianSplatSourceUrls(
       worker: false,
       fetch: fetchSource,
       core: {batchSize: GAUSSIAN_SPLAT_ARROW_BATCH_SIZE},
-      ply: {shape: 'arrow-table', pointCloud: true},
-      splats: {shape: 'arrow-table'}
+      ply: {
+        shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow',
+        pointCloud: true
+      },
+      splats: {shape: configuration.loaderMode === 'bundled' ? 'arrow-table' : 'arrow'}
     };
 
     if (configuration.sourceFormat === 'RAD') {
@@ -1061,10 +1070,12 @@ async function* loadGaussianSplatSourceUrls(
         ) {
           break;
         }
-        const arrowSource = await source.getChunkTable(chunkIndex, {
-          ...(options.signal ? {signal: options.signal} : {}),
-          radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
-        });
+        const arrowSource = normalizeGaussianSplatArrowSource(
+          await source.getChunkTable(chunkIndex, {
+            ...(options.signal ? {signal: options.signal} : {}),
+            radChunk: {includeLoDTree: true, includeSphericalHarmonics: true}
+          })
+        );
         if (!isGaussianSplatArrowSource(arrowSource)) {
           throw new Error('RADSourceLoader did not return a Gaussian Arrow page.');
         }
@@ -1105,7 +1116,8 @@ async function* loadGaussianSplatSourceUrls(
         loaderModules.loader,
         loaderOptions
       );
-      for await (const arrowSource of arrowSources) {
+      for await (const batch of arrowSources) {
+        const arrowSource = normalizeGaussianSplatArrowSource(batch);
         if (!isGaussianSplatArrowSource(arrowSource)) {
           throw new Error(`${loaderModules.loaderName} did not return a Gaussian Arrow batch.`);
         }
@@ -1115,10 +1127,8 @@ async function* loadGaussianSplatSourceUrls(
         yield arrowSource;
       }
     } else {
-      const arrowSource: unknown = await loaderModules.coreModule.load(
-        sourceUrl,
-        loaderModules.loader,
-        loaderOptions
+      const arrowSource: unknown = normalizeGaussianSplatArrowSource(
+        await loaderModules.coreModule.load(sourceUrl, loaderModules.loader, loaderOptions)
       );
       if (!isGaussianSplatArrowSource(arrowSource)) {
         throw new Error(
@@ -1166,12 +1176,32 @@ async function loadLocalGaussianSplatLoaderModules(
   );
   const formatModuleUrl = makeLocalLoadersFileUrl(
     configuration.loadersRoot,
-    `modules/${configuration.sourceFormat === 'PLY' ? 'ply' : 'splats'}/src/index.ts`
+    `modules/${configuration.sourceFormat === 'PLY' ? 'pointclouds' : 'splats'}/src/index.ts`
   );
   const [coreModule, formatModule] = await Promise.all([
     import(/* webpackIgnore: true */ /* @vite-ignore */ coreModuleUrl),
     import(/* webpackIgnore: true */ /* @vite-ignore */ formatModuleUrl)
   ]);
+  if (configuration.sourceFormat === 'RAD') {
+    const sourceModuleUrl = makeLocalLoadersFileUrl(
+      configuration.loadersRoot,
+      'modules/splats/src/rad-source-loader.ts'
+    );
+    const {createRADSource} = await import(
+      /* webpackIgnore: true */ /* @vite-ignore */ sourceModuleUrl
+    );
+    if (createRADSource) {
+      return {
+        coreModule: {
+          ...coreModule,
+          load: (url: string, _loader: unknown, options: Record<string, unknown>) =>
+            createRADSource(url, options)
+        },
+        loader: createRADSource,
+        loaderName
+      };
+    }
+  }
   const loader: unknown = formatModule[loaderName];
   if (!loader) {
     throw new Error(`The local loaders.gl checkout does not export ${loaderName}.`);
@@ -1242,6 +1272,13 @@ function getGaussianSplatSourceLabel(sourceUrl: string): string {
 
 function makeLocalLoadersFileUrl(loadersRoot: string, relativePath: string): string {
   return `/@fs${loadersRoot}/${relativePath}`;
+}
+
+function normalizeGaussianSplatArrowSource(value: unknown): unknown {
+  if (value && typeof value === 'object' && 'numRows' in value && 'schema' in value) {
+    return {data: value};
+  }
+  return value;
 }
 
 function isGaussianSplatArrowSource(value: unknown): value is {

@@ -8,7 +8,7 @@ import {getWebGLTestDevice} from '@luma.gl/core/test-utils';
 import '@loaders.gl/core/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {loadImageTexture} from '@loaders.gl/images/load-image';
+import {ImageLoader} from '@loaders.gl/images';
 import {
   postProcessGLTF,
   type GLTFPostprocessed,
@@ -88,7 +88,7 @@ it('gltf#environment', async () => {
   const environment = loadPBREnvironment(webglDevice, {
     loadImage: url => {
       loadedUrls.push(url);
-      return loadImageTexture(url);
+      return load(url, ImageLoader);
     },
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
