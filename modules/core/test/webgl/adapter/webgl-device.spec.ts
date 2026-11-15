@@ -5,6 +5,25 @@
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {expect, it, vi} from 'vitest';
 
+it('WebGLDevice sets signed and unsigned integer constants with fewer than four components', async () => {
+  const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
+  const {gl} = device;
+
+  try {
+    device.setConstantAttributeWebGL(0, new Int32Array([-12, 3]));
+    expect(gl.getError()).toBe(gl.NO_ERROR);
+    expect(gl.getVertexAttrib(0, gl.CURRENT_VERTEX_ATTRIB)).toEqual(new Int32Array([-12, 3, 0, 1]));
+
+    device.setConstantAttributeWebGL(1, new Uint32Array([0xffffffff]));
+    expect(gl.getError()).toBe(gl.NO_ERROR);
+    expect(gl.getVertexAttrib(1, gl.CURRENT_VERTEX_ATTRIB)).toEqual(
+      new Uint32Array([0xffffffff, 0, 0, 1])
+    );
+  } finally {
+    device.destroy();
+  }
+});
+
 // TODO - duplicates core spec?
 it('WebGLDevice#lost (Promise)', async () => {
   const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
