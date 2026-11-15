@@ -549,6 +549,10 @@ export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOp
 
   const pbrMaterialProps = {...options.parsedPPBRMaterial.uniforms};
   delete pbrMaterialProps.camera;
+  // Environment controls belong to the scene uniforms of each model, not to the material.
+  delete pbrMaterialProps.environmentIntensity;
+  delete pbrMaterialProps.environmentRotation;
+  delete pbrMaterialProps.environmentMipCount;
   const materialBindings = Object.fromEntries(
     Object.entries({
       ...pbrMaterialProps,

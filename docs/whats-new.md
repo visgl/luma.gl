@@ -108,7 +108,9 @@ compose their own transforms and picking/shadow passes with the shared mesh shad
 `@luma.gl/engine/lighting` exposes typed PBR material factories and borrowed environment
 bindings for generated and precomputed lighting. The glTF entry point can resolve loaded
 environment textures after upload; material and environment resources retain explicit
-ownership. Existing ANARI material exports remain compatible. See
+ownership. The glTF `imageBasedLightingEnvironment` option also accepts a
+`PBRLightingEnvironment` directly and then uses the linear-light scene environment path.
+Existing ANARI material exports remain compatible. See
 [PBR materials](./api-reference/engine/lighting/pbr-material.md) and
 [environment bindings](./api-reference/engine/lighting/pbr-environment.md).
 
