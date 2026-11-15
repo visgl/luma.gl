@@ -182,10 +182,11 @@ If cubemap faces and a BRDF lookup texture have already been generated offline, 
 
 ```ts
 import {loadPBREnvironment} from '@luma.gl/engine/gltf';
-import {loadImageTexture} from '@loaders.gl/images/load-image';
+import {load} from '@loaders.gl/core';
+import {ImageLoader} from '@loaders.gl/images';
 
 const loadedEnvironment = loadPBREnvironment(device, {
-  loadImage: loadImageTexture,
+  loadImage: url => load(url, ImageLoader),
   brdfLutUrl: '/environments/studio/brdf-lut.png',
   getTexUrl: (name, face, level) => `/environments/studio/${name}-${face}-${level}.png`,
   specularMipLevels: 6
