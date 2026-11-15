@@ -1,5 +1,11 @@
 # What's New
 
+## Typed color normalization
+
+The JavaScript color helpers now decode byte typed arrays and borrow normalized Float16,
+Float32, and Float64 arrays when no component-count or alpha repair is needed. Plain arrays
+retain their existing convention. See [color helpers](./api-reference/shaders/shader-modules/float-colors.md#javascript-color-helpers).
+
 ## Ray-traced texture cutouts
 
 ANARI ray tracing now applies base-color texture alpha masks consistently to visible surfaces,
