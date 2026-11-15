@@ -3,6 +3,14 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {
+  getGPUVectorWGSLLayout,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
+
+/** Numeric values, including fixed-width vectors. */
+export type GPUExpressionNumericValue = number | readonly number[] | null;
+
 /** Portable scalar values accepted by GPU-resident dataframe expressions. */
 export type GPUExpressionValue = number | boolean | null;
 
@@ -26,6 +34,12 @@ export type GPUExpressionBinaryOperator =
 
 /** Immutable, renderer-independent dataframe expression syntax. */
 export type GPUExpressionNode =
+  | Readonly<{
+      kind: 'vector';
+      format: GPUExpressionNumericFormat;
+      components: readonly GPUExpressionNode[];
+    }>
+  | Readonly<{kind: 'cast'; format: GPUExpressionNumericFormat; operand: GPUExpressionNode}>
   | Readonly<{kind: 'column'; name: string}>
   | Readonly<{kind: 'literal'; value: GPUExpressionValue}>
   | Readonly<{kind: 'parameter'; name: string; value: GPUExpressionValue}>
@@ -236,6 +250,18 @@ export function getGPUExpressionColumnNames(expression: GPUExpression<any, strin
 /** Clones every closed node so caller-owned child objects cannot alter an immutable query plan. */
 function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNode {
   switch (node.kind) {
+    case 'vector':
+      return Object.freeze({
+        kind: 'vector',
+        format: node.format,
+        components: Object.freeze(node.components.map(cloneFrozenGPUExpressionNode))
+      });
+    case 'cast':
+      return Object.freeze({
+        kind: 'cast',
+        format: node.format,
+        operand: cloneFrozenGPUExpressionNode(node.operand)
+      });
     case 'column':
       return Object.freeze({kind: 'column', name: node.name});
     case 'literal':
@@ -262,6 +288,13 @@ function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNod
 
 function collectGPUExpressionColumnNames(node: GPUExpressionNode, columnNames: Set<string>): void {
   switch (node.kind) {
+    case 'vector':
+      for (const component of node.components)
+        collectGPUExpressionColumnNames(component, columnNames);
+      break;
+    case 'cast':
+      collectGPUExpressionColumnNames(node.operand, columnNames);
+      break;
     case 'column':
       columnNames.add(node.name);
       break;
@@ -305,5 +338,107 @@ function assertValidExpressionValue(
     (typeof value !== 'number' || !Number.isFinite(value))
   ) {
     throw new Error(`GPUDataFrame ${kind} values must be finite numbers, booleans, or null`);
+  }
+}
+
+/**
+ * Constructs a fixed-width numeric vector. A null component makes the whole row null.
+ *
+ * @example
+ * ```ts
+ * const position = vector('float32x3', [column('x'), column('y'), column('z')]);
+ * ```
+ */
+export function vector<Columns extends string>(
+  format: GPUExpressionNumericFormat,
+  components: readonly GPUExpression<number | null, Columns>[]
+): GPUExpression<readonly number[] | null, Columns> {
+  const width = getGPUVectorWGSLLayout(format).components;
+  if (![2, 3, 4].includes(width) || components.length !== width)
+    throw new Error('Vector width must match its format');
+  return new GPUExpression({
+    kind: 'vector',
+    format,
+    components: components.map(component => component.node)
+  });
+}
+
+/**
+ * Converts a numeric expression to the requested format while preserving its width.
+ *
+ * @example
+ * ```ts
+ * const position = vector('sint32x2', [column('x'), column('y')]);
+ * const floatPosition = cast(position, 'float32x2');
+ * ```
+ */
+export function cast<Value extends GPUExpressionNumericValue, Columns extends string>(
+  expression: GPUExpression<Value, Columns>,
+  format: GPUExpressionNumericFormat
+): GPUExpression<Value, Columns> {
+  return new GPUExpression(makeGPUCastNode(expression.node, format));
+}
+
+export function makeGPUCastNode<Format extends GPUExpressionNumericFormat>(
+  operand: GPUExpressionNode,
+  format: Format
+): {kind: 'cast'; format: Format; operand: GPUExpressionNode} {
+  const width = getGPUVectorWGSLLayout(format).components;
+  const operandWidth = getKnownExpressionWidth(operand);
+  if (operandWidth !== undefined && operandWidth !== width) {
+    throw new Error('Numeric casts must preserve width');
+  }
+  return {kind: 'cast', format, operand};
+}
+
+function getKnownExpressionWidth(node: GPUExpressionNode): number | undefined {
+  switch (node.kind) {
+    case 'vector':
+    case 'cast':
+      return getGPUVectorWGSLLayout(node.format).components;
+    case 'literal':
+    case 'parameter':
+      return node.value === null ? undefined : 1;
+    case 'unary':
+      return node.operator === 'negate' ? getKnownExpressionWidth(node.operand) : 1;
+    case 'binary': {
+      if (isBooleanExpressionNode(node)) {
+        return 1;
+      }
+      const leftWidth = getKnownExpressionWidth(node.left);
+      const rightWidth = getKnownExpressionWidth(node.right);
+      if (leftWidth !== undefined && rightWidth !== undefined && leftWidth !== rightWidth) {
+        throw new Error('Numeric arithmetic requires matching widths');
+      }
+      return leftWidth ?? rightWidth;
+    }
+    case 'column':
+      return undefined;
+  }
+}
+
+/** Checks whether the expression produces a boolean result. */
+export function isBooleanExpressionNode(node: GPUExpressionNode): boolean {
+  switch (node.kind) {
+    case 'column':
+      return false;
+    case 'literal':
+    case 'parameter':
+      return typeof node.value === 'boolean';
+    case 'unary':
+      return node.operator === 'not' || node.operator === 'is-valid' || node.operator === 'is-null';
+    case 'binary':
+      return (
+        node.operator === 'equal' ||
+        node.operator === 'not-equal' ||
+        node.operator === 'greater-than' ||
+        node.operator === 'greater-than-or-equal' ||
+        node.operator === 'less-than' ||
+        node.operator === 'less-than-or-equal' ||
+        node.operator === 'and' ||
+        node.operator === 'or'
+      );
+    default:
+      return false;
   }
 }

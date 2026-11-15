@@ -197,3 +197,25 @@ the underlying WebGPU execution infrastructure.
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU tables](/docs/api-reference/experimental/gpu-tables)
 - [GPU data analysis example](/examples/experimental/gpu-data-analysis)
+
+## Vector expressions
+
+DataFrame expressions use packed rows for compute and rendering. The compiler
+accesses those rows through scalar storage arrays so Arrow FixedSizeList and
+vertex consumers can use the same bytes. See [GPUVectorFormat and WGSL storage](/docs/api-reference/graph/gpu-vector-format#wgsl-storage-layout)
+for the shared layout rules.
+
+`vector('float32x3', [column('x'), column('y'), column('z')])` creates immutable
+syntax. `cast(expression, format)` requests an explicit numeric conversion.
+`makeGPUExpressionFromPortableAST(parseSQLExpression('ARRAY[x,y,z]::REAL[3]'))`
+bridges math.gl's portable AST. Supported nodes are numeric/boolean/null literals,
+columns, arithmetic, comparisons, boolean operators, unary negation/not,
+`array_float32` of width 2–4, and `cast` to float32/int32. Other nodes fail closed.
+The bridge does not parse SQL itself or execute arbitrary callbacks.
+Pass `makeGPUPredicateFromPortableAST(parseSQLExpression('x > 0'))` to
+`frame.filter()` to require a boolean result.
+
+This first tranche provides syntax and layout planning. Vector execution and cast
+lowering are supplied by the dependent execution PR. Unsupported scope includes
+float64, normalized/packed integer formats, arbitrary lists, CASE/functions,
+implicit scalar broadcasting, vector ordering and SQL unsigned array syntax.
