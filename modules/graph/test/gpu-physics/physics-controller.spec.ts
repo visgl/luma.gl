@@ -256,3 +256,52 @@ it('a path-attached static plane supports a falling sphere with default geometry
     await physics.destroy();
   }
 });
+
+it('attaches wheels by scene path and publishes suspension on the chassis frame', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip();
+  const ground = new ScenegraphNode({id: 'terrain', position: [0, 0, -0.5]});
+  const chassis = new ScenegraphNode({id: 'chassis', position: [0, 0, 0.8]});
+  const scene = new GroupNode([ground, new GroupNode({id: 'buggy', children: [chassis]})]);
+  const physics = new PhysicsController(device, {scene, gravity: [0, 0, -10]});
+  physics.addBody('terrain', {
+    motion: 'static',
+    collider: {type: 'box', halfExtents: [12, 12, 0.5]}
+  });
+  physics.addBody('buggy/chassis', {
+    mass: 400,
+    collider: {type: 'box', halfExtents: [1.3, 0.6, 0.16]}
+  });
+  physics.setVehicle('buggy/chassis', 'terrain', {
+    wheels: [1, -1].flatMap(x => [0.8, -0.8].map(y => ({mount: [x, y, 0] as const, drive: true}))),
+    radius: 0.4,
+    travel: 0.5,
+    springRate: 10000,
+    damping: 1500,
+    grip: 1,
+    motorTorque: 200,
+    brakeTorque: 500,
+    wheelInertia: 1
+  });
+  try {
+    await physics.prepare();
+    physics.setVehicleControls(0, 0, 0);
+    physics.update(1 / 60);
+    const poses = physics.vehicleWheelPoses!;
+    const matrices = new Float32Array(
+      (await poses.buffer.readAsync(poses.byteOffset, poses.byteLength)).buffer
+    );
+    expect(matrices[14]).toBeCloseTo(-0.4, 2);
+    await physics.prepare();
+    const rebuilt = physics.vehicleWheelPoses!;
+    const rebuiltMatrices = new Float32Array(
+      (await rebuilt.buffer.readAsync(rebuilt.byteOffset, rebuilt.byteLength)).buffer
+    );
+    expect(rebuiltMatrices).toEqual(matrices);
+    expect(physics.removeBody('buggy/chassis')).toBe(true);
+    await physics.prepare({preserveState: false});
+    expect(physics.vehicleWheelPoses).toBeNull();
+  } finally {
+    await physics.destroy();
+  }
+});

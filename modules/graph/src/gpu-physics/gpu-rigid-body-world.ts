@@ -76,6 +76,8 @@ import {
 import {addRigidBodyPosePublication, type GPURigidBodyBounds} from './rigid-body-publication';
 import {getRigidBodyShader} from './rigid-body-shaders';
 
+import {VEHICLE_SHADER, type GPURigidBodyVehicle} from './rigid-body-vehicle';
+
 type Vector3 = readonly [number, number, number];
 import {
   decodeRigidBodyContactEvents,
@@ -128,6 +130,8 @@ export type GPURigidBodyWorldProps = {
   /** Up to 64 joints. Parallel solving supports static-anchored distance joints only. */
   joints?: readonly GPURigidBodyJoint[];
   gravity?: Vector3;
+  /** Optional four-wheel suspension evaluated against static terrain each fixed step. */
+  vehicle?: GPURigidBodyVehicle;
   timeStep?: number;
   iterations?: number;
   contactSlop?: number;
@@ -228,6 +232,7 @@ export class GPURigidBodyWorld {
   private eventRead: Promise<GPURigidBodyContactBatch> | null = null;
   private queryComputation: BoundKernel | null = null;
   private queryReduction: BoundKernel | null = null;
+  private vehicleBuffer: Buffer | null = null;
   private querySettings: Buffer | null = null;
   private querySelection: Buffer | null = null;
   private queryOutput: Buffer | null = null;
@@ -505,8 +510,35 @@ export class GPURigidBodyWorld {
     }
     // Clone together so collider edits preserve geometry identity in captured body definitions.
     const definitions = structuredClone({colliders, props});
-    this.colliders = definitions.colliders;
     this.props = definitions.props;
+    this.colliders = definitions.colliders;
+    const vehicle = this.props.vehicle;
+    if (vehicle) {
+      const terrain = this.colliders[vehicle.terrainCollider];
+      const chassis = this.props.bodies[vehicle.chassis];
+      const ground = terrain && this.props.bodies[terrain.body];
+      if (
+        !chassis ||
+        !ground ||
+        vehicle.chassis === terrain.body ||
+        (chassis.mode ?? (chassis.mass === 0 ? 'static' : 'dynamic')) !== 'dynamic' ||
+        (ground.mode ?? (ground.mass === 0 ? 'static' : 'dynamic')) !== 'static' ||
+        vehicle.wheels.length !== 4 ||
+        this.props.failurePolicy === 'rollback' ||
+        this.props.ensembleBodiesPerInstance ||
+        ![vehicle.radius, vehicle.travel, vehicle.springRate, vehicle.wheelInertia].every(
+          value => Number.isFinite(value) && value > 0
+        ) ||
+        ![vehicle.damping, vehicle.grip, vehicle.motorTorque, vehicle.brakeTorque].every(
+          value => Number.isFinite(value) && value >= 0
+        ) ||
+        vehicle.wheels.some(
+          wheel => wheel.mount.length !== 3 || !wheel.mount.every(Number.isFinite)
+        )
+      )
+        throw new Error('Invalid vehicle configuration');
+    }
+
     if (props.ensembleBodiesPerInstance)
       this.initialEnsembleBodies = this.props.bodies.slice(0, props.ensembleBodiesPerInstance);
   }
@@ -541,6 +573,8 @@ export class GPURigidBodyWorld {
         this.props.ensembleBodiesPerInstance ? this.count / this.props.ensembleBodiesPerInstance : 0
       )
     };
+    if (this.props.vehicle)
+      storage.buffers.push({name: 'vehicle', byteLength: 512, uniform: false});
     if (this.props.continuous?.mode === 'convex') {
       storage.buffers = storage.buffers.filter(buffer => buffer.name !== 'continuous-previous');
       storage.buffers.push({name: 'continuous-dispatch', byteLength: 16, uniform: false});
@@ -1235,6 +1269,120 @@ export class GPURigidBodyWorld {
       parallelMarkSleep: 'Identify islands whose bodies are quiet enough to sleep.',
       parallelSleep: 'Put quiet constraint islands to sleep.'
     };
+    const vehicle = this.props.vehicle;
+    if (vehicle) {
+      const data = new Float32Array(128);
+      data.set(
+        [
+          vehicle.radius,
+          vehicle.travel,
+          vehicle.springRate,
+          vehicle.damping,
+          vehicle.grip,
+          vehicle.motorTorque,
+          vehicle.brakeTorque,
+          vehicle.wheelInertia
+        ],
+        4
+      );
+      new Uint32Array(data.buffer).set([vehicle.chassis, vehicle.terrainCollider], 12);
+      vehicle.wheels.forEach((wheel, index) => {
+        const offset = 16 + index * 12;
+        data.set(wheel.mount, offset);
+        data.set([Number(Boolean(wheel.steer)), Number(Boolean(wheel.drive))], offset + 4);
+        data[offset + 10] = vehicle.travel;
+        data.set(
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            wheel.mount[0],
+            wheel.mount[1],
+            wheel.mount[2] - vehicle.travel,
+            1
+          ],
+          64 + 16 * index
+        );
+      });
+      this.vehicleBuffer = allocate('vehicle', data);
+      const vehicleBindings = [
+        ...bindings.filter(binding =>
+          [
+            'settings',
+            'positions',
+            'orientations',
+            'velocities',
+            'angularVelocities',
+            'bodies',
+            'sleepStates'
+          ].includes(binding.name)
+        ),
+        {
+          name: 'vehicle',
+          location: 12,
+          buffer: this.vehicleBuffer,
+          resource: graph.importBuffer(
+            {id: this.id + '-vehicle', byteLength: data.byteLength, usage: Buffer.STORAGE},
+            this.vehicleBuffer
+          )
+        }
+      ];
+      const properties: BoundKernelProps = {
+        id: this.id + '-suspension',
+        source: source + RIGID_BODY_QUERY_GEOMETRY_SHADER + VEHICLE_SHADER,
+        entryPoint: 'advanceVehicle',
+        shaderLayout: {
+          bindings: vehicleBindings.map(
+            ({name, location}): BindingDeclaration =>
+              name === 'settings'
+                ? {name, location, group: 0, type: 'uniform'}
+                : {
+                    name,
+                    location,
+                    group: 0,
+                    type: name === 'bodies' ? 'read-only-storage' : 'storage'
+                  }
+          )
+        }
+      };
+      const executable = (
+        computation: BoundKernel
+      ): GPUCommandGraphComputeExecutable<Parameters> => ({
+        encode: ({computePass, getBuffer}) => {
+          Object.assign(
+            computation.bindings,
+            Object.fromEntries(
+              vehicleBindings.map(binding => [binding.name, getBuffer(binding.resource)])
+            )
+          );
+          computation.kernel.dispatch(computePass, {bindings: computation.bindings, x: 1});
+        },
+        destroy: () => computation.kernel.destroy()
+      });
+      graph.addComputePass({
+        id: properties.id!,
+        resources: vehicleBindings.map(binding => ({
+          buffer: binding.resource,
+          usage:
+            binding.name === 'settings'
+              ? 'uniform'
+              : binding.name === 'bodies'
+                ? 'storage-read'
+                : 'storage-read-write'
+        })),
+        compile: () => executable(createBoundKernel(graph.device, properties)),
+        compileAsync: async () => executable(await createBoundKernelAsync(graph.device, properties))
+      });
+    }
     for (const entryPoint of [
       ...(this.ensembleBuffer
         ? ['ensembleClear', 'ensembleMark', 'ensembleCompact', 'ensembleDispatch']
@@ -1986,6 +2134,76 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return definition
       ? (definition.mode ?? ((definition.mass ?? 1) === 0 ? 'static' : 'dynamic'))
       : undefined;
+  }
+
+  /** Set signed throttle, steering angle in radians and brake fraction for upcoming substeps. */
+  setVehicleControls(throttle: number, steering: number, brake: number): void {
+    if (
+      !this.vehicleBuffer ||
+      this.destroyed ||
+      ![throttle, steering, brake].every(Number.isFinite)
+    )
+      throw new Error('Invalid vehicle controls');
+    this.vehicleBuffer.write(
+      new Float32Array([
+        Math.max(-1, Math.min(1, throttle)),
+        steering,
+        Math.max(0, Math.min(1, brake)),
+        0
+      ])
+    );
+  }
+
+  /** Borrow four column-major wheel transforms relative to the chassis node, ordered by mount. */
+  get vehicleWheelPoses() {
+    return this.vehicleBuffer && !this.destroyed
+      ? {buffer: this.vehicleBuffer, byteOffset: 256, byteLength: 256}
+      : null;
+  }
+
+  /** Transfer wheel motion between rebuilt worlds for wheels with matching chassis-local mounts. */
+  copyVehicleMotionFrom(previous: GPURigidBodyWorld): void {
+    const sourceBuffer = previous.vehicleBuffer;
+    const destinationBuffer = this.vehicleBuffer;
+    const previousVehicle = previous.props.vehicle;
+    if (!this.device || !sourceBuffer || !destinationBuffer || !previousVehicle) return;
+    const encoder = this.device.createCommandEncoder();
+    this.props.vehicle?.wheels.forEach((wheel, index) => {
+      const sourceIndex = previousVehicle.wheels.findIndex(source =>
+        source.mount.every((coordinate, axis) => coordinate === wheel.mount[axis])
+      );
+      if (sourceIndex < 0) return;
+      encoder.copyBufferToBuffer({
+        sourceBuffer,
+        destinationBuffer,
+        sourceOffset: 96 + sourceIndex * 48,
+        destinationOffset: 96 + index * 48,
+        size: 16
+      });
+      encoder.copyBufferToBuffer({
+        sourceBuffer,
+        destinationBuffer,
+        sourceOffset: 256 + sourceIndex * 64,
+        destinationOffset: 256 + index * 64,
+        size: 64
+      });
+    });
+    this.device.submit(encoder.finish());
+  }
+
+  /** Read wheel spin, angle, suspension length and normal load after submitted steps. */
+  async readVehicleWheels() {
+    if (!this.vehicleBuffer || this.destroyed) throw new Error('Vehicle unavailable');
+    const values = new Float32Array((await this.vehicleBuffer.readAsync(0, 256)).buffer);
+    return Array.from({length: 4}, (_, index) => {
+      const offset = 24 + index * 12;
+      return {
+        speed: values[offset],
+        angle: values[offset + 1],
+        length: values[offset + 2],
+        load: values[offset + 3]
+      };
+    });
   }
 
   /** Submit an impulse at a world-space point, or the current GPU center of mass when omitted. */

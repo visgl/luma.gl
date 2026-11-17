@@ -1,0 +1,17 @@
+---
+title: Off-road Buggy
+description: Drive a four-wheel buggy over uneven terrain with WebGPU suspension and tire forces.
+sidebar_custom_props:
+  backends: [webgpu]
+  difficulty: advanced
+  maturity: experimental
+  mobile: unsupported
+  mobileProfile: standard
+  mobileUnsupportedReason: Manual driving requires a keyboard.
+  topics: [physics, compute]
+---
+import {OffroadBuggyExample} from '@site/src/examples';
+
+<OffroadBuggyExample />
+
+Use W/S for throttle and reverse, A/D to steer, and Space to brake. Steering or throttle takes over from the automatic lap. Open Suspension to see each wheel’s compression and normal load.

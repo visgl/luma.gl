@@ -46,7 +46,7 @@ export type PhysicsBodyOptions = Pick<
 };
 export type PhysicsControllerProps = Omit<
   GPURigidBodyWorldProps,
-  'bodies' | 'publicationBounds' | 'publishPoses' | 'joints'
+  'bodies' | 'publicationBounds' | 'publishPoses' | 'joints' | 'vehicle'
 > & {
   scene: GroupNode;
   /** Bound catch-up work; excess elapsed time is reported, not silently simulated. */
@@ -80,6 +80,11 @@ export class PhysicsController {
   private readonly definitions = new Map<ScenegraphNode, PhysicsBodyOptions>();
   private readonly handles = new Map<ScenegraphNode, PhysicsBody>();
   private readonly manualTargets = new Set<ScenegraphNode>();
+  private vehicleAttachment?: {
+    chassis: ScenegraphNode;
+    terrain: ScenegraphNode;
+    options: Omit<NonNullable<GPURigidBodyWorldProps['vehicle']>, 'chassis' | 'terrainCollider'>;
+  };
   private readonly joints: ScenegraphJoint[] = [];
   private indices: ReadonlyMap<ScenegraphNode, number> = new Map();
   private session?: ScenegraphPhysicsSession;
@@ -195,10 +200,40 @@ export class PhysicsController {
     this.assertEditable();
     const node = this.resolveNode(reference);
     if (!node || !this.definitions.delete(node)) return false;
+    if (this.vehicleAttachment?.chassis === node || this.vehicleAttachment?.terrain === node)
+      this.vehicleAttachment = undefined;
     this.handles.delete(node);
     this.manualTargets.delete(node);
     this.dirty = true;
     return true;
+  }
+
+  /** Attach a four-wheel suspension to two registered body nodes or scene paths. */
+  setVehicle(
+    chassis: PhysicsNodeReference,
+    terrain: PhysicsNodeReference,
+    options: Omit<NonNullable<GPURigidBodyWorldProps['vehicle']>, 'chassis' | 'terrainCollider'>
+  ): void {
+    this.assertEditable();
+    const chassisNode = this.resolveNode(chassis),
+      terrainNode = this.resolveNode(terrain);
+    if (!chassisNode || !terrainNode) throw new Error('Missing vehicle attachment');
+    this.vehicleAttachment = {
+      chassis: chassisNode,
+      terrain: terrainNode,
+      options: structuredClone(options)
+    };
+    this.dirty = true;
+  }
+
+  /** Borrow wheel transforms relative to the registered chassis after preparation. */
+  get vehicleWheelPoses() {
+    return this.requireReady().world.vehicleWheelPoses;
+  }
+
+  /** Update controls for subsequent fixed steps. */
+  setVehicleControls(throttle: number, steering: number, brake: number): void {
+    this.requireReady().world.setVehicleControls(throttle, steering, brake);
   }
 
   addJoint(options: PhysicsJointOptions): ScenegraphJoint {
@@ -239,6 +274,25 @@ export class PhysicsController {
           this.worldOptions,
           this.joints
         );
+        if (this.vehicleAttachment) {
+          const chassis = scene.definition.bodies.get(this.vehicleAttachment.chassis);
+          const terrain = scene.definition.bodies.get(this.vehicleAttachment.terrain);
+          const bodies = scene.definition.world.bodies;
+          if (
+            chassis === undefined ||
+            terrain === undefined ||
+            (bodies[terrain].colliders?.length ?? 1) !== 1
+          )
+            throw new Error('Vehicle requires attached chassis and single-collider terrain');
+          const terrainCollider = bodies
+            .slice(0, terrain)
+            .reduce((count, body) => count + (body.colliders?.length ?? 1), 0);
+          scene.definition.world.vehicle = {
+            ...this.vehicleAttachment.options,
+            chassis,
+            terrainCollider
+          };
+        }
         if (this.session) await this.session.rebuild(async () => scene, preserveState);
         else this.session = await ScenegraphPhysicsSession.create(this.device, scene);
         this.indices = scene.definition.bodies;

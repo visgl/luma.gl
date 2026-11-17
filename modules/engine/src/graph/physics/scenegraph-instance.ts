@@ -227,6 +227,16 @@ export class ScenegraphPhysicsInstance {
       }
       const replacement = await compile(this.device, props);
       try {
+        if (preserveState && props.vehicle && this.definition.world.vehicle) {
+          const previousChassis = this.definition.world.vehicle.chassis;
+          for (const [node, index] of authored.bodies) {
+            if (
+              index === props.vehicle.chassis &&
+              this.definition.bodies.get(node) === previousChassis
+            )
+              replacement.world.copyVehicleMotionFrom(this.world);
+          }
+        }
         prepare?.(replacement.world);
         replacement.world.publishPoses();
         await this.finishSubmission();

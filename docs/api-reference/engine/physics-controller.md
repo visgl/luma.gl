@@ -152,3 +152,28 @@ See the [walkthrough](/docs/api-guide/physics/getting-started) for a complete ap
 outside the controlled scene. `destroy()` is idempotent, waits for pending operations and
 GPU work, and releases the owned session. Scene nodes, source geometry, models and materials
 remain application-owned. Existing handles reject commands after destruction.
+
+### Four-wheel vehicles
+
+Register a dynamic chassis and a single static terrain collider, then attach the suspension before calling `prepare()`. Wheel mount coordinates are meters in the chassis node frame (+X forward, +Y left, +Z up). Each fixed step sweeps the four wheels against the terrain and applies tire and suspension impulses to the chassis.
+
+```ts
+physics.addBody('buggy/chassis', {mass: 420});
+physics.addBody('course', {motion: 'static', geometryMode: 'triangle-mesh'});
+physics.setVehicle('buggy/chassis', 'course', {
+  wheels: [
+    {mount: [1, 0.8, 0], steer: true, drive: true},
+    {mount: [1, -0.8, 0], steer: true, drive: true},
+    {mount: [-1, 0.8, 0], drive: true},
+    {mount: [-1, -0.8, 0], drive: true}
+  ],
+  radius: 0.38, travel: 0.5, springRate: 11500, damping: 1450,
+  grip: 1.05, motorTorque: 220, brakeTorque: 550, wheelInertia: 1.25
+});
+await physics.prepare();
+physics.setVehicleControls(0.6, 0.2, 0); // throttle fraction, steering radians, brake fraction
+```
+
+The first implementation supports one chassis and one static terrain collider per world. Wheels use sphere sweeps and a load-limited friction model. Rigid chassis collisions continue through the world solver. Vehicle state supports explicit GPU checkpoints. Ensemble scheduling and rollback recovery are outside the supported vehicle configuration.
+
+At the world level, `vehicleWheelPoses` exposes a borrowed GPU buffer range containing four column-major transforms relative to the chassis node. Compose these with the published chassis matrix to draw the wheels. `readVehicleWheels()` provides asynchronous telemetry in mount order for diagnostics.
