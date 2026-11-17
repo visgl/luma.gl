@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {createDashboard} from './dashboard';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {luma} from '@luma.gl/core';
@@ -11,6 +12,9 @@ import {GPURigidBodyWorld, makeTriangleMeshGeometry} from '@luma.gl/graph/gpu-ph
 
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
+const suspensionTravel = 0.5;
+const updateDashboard = createDashboard(suspensionTravel);
+const chassisAngles = new THREE.Euler(0, 0, 0, 'ZYX');
 const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
 renderer.shadowMap.enabled = true;
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -285,7 +289,7 @@ async function start() {
       terrainCollider: 0,
       wheels: mounts.map((mount, index) => ({mount, steer: index < 2, drive: true})),
       radius: 0.38,
-      travel: 0.5,
+      travel: suspensionTravel,
       springRate: 11500,
       damping: 1450,
       grip: 1.05,
@@ -358,19 +362,15 @@ async function start() {
         connect(wheel.shock, wheel.anchor, lowerMount);
         connect(wheel.spring, wheel.anchor, lowerMount);
       });
-      document.querySelector('#wheels')!.textContent = contacts
-        .map(
-          (contact, index) =>
-            ['FL', 'FR', 'RL', 'RR'][index] +
-            '  ' +
-            Math.round((0.5 - contact.length) * 100) +
-            ' cm   ' +
-            Math.round(contact.load) +
-            ' N'
-        )
-        .join('\n');
-      status.value =
-        (demo ? 'Demo lap' : 'Manual') + ' · ' + Math.round(chassis.userData.speed * 3.6) + ' km/h';
+      chassisAngles.setFromQuaternion(chassis.quaternion);
+      updateDashboard(
+        now,
+        chassis.userData.speed,
+        -THREE.MathUtils.radToDeg(chassisAngles.y),
+        THREE.MathUtils.radToDeg(chassisAngles.x),
+        demo,
+        contacts
+      );
     }
     if (chase) {
       const offset = point(-5, -2.4, 2.15).applyAxisAngle(point(0, 0, 1), yaw);

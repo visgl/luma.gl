@@ -1,0 +1,29 @@
+html, body { margin: 0; height: 100%; overflow: hidden; }
+#view { width: 100%; height: 100%; display: block; touch-action: none; }
+#info { position: fixed; inset: 12px; pointer-events: none; z-index: 10; }
+#info .luma-example-infobox { pointer-events: auto; }
+#dashboard { font: 13px/1.45 system-ui, sans-serif; font-variant-numeric: tabular-nums; color: var(--luma-example-text); }
+#dashboard h2 { font-size: 13px; margin: 0 0 8px; }
+.speed { display: flex; gap: 6px; align-items: baseline; color: var(--luma-example-text-muted); }
+.speed strong { font-size: 32px; color: var(--luma-example-text); line-height: 1.15; }
+.speed output { margin-left: auto; }
+.instruments { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+.attitude { position: relative; width: 66px; height: 66px; overflow: hidden; border: 1px solid var(--luma-example-border); border-radius: 50%; margin-bottom: 5px; }
+#horizon { position: absolute; inset: -150%; background: linear-gradient(to bottom, #376180 49.6%, #e3ebed 49.6% 50.4%, #614f3d 50.4%); }
+.attitude i { position: absolute; inset: 50% 12% auto; border-top: 2px dashed white; }
+#suspension { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+#suspension label { display: grid; font-size: 12px; }
+#suspension meter { width: 100%; height: 12px; accent-color: var(--luma-example-accent); }
+#angles, #load { font-size: 12px; }
+.axle-track { display: flex; height: 6px; border-radius: 4px; overflow: hidden; background: #ce9e67; margin-bottom: 5px; }
+.axle-track i { background: var(--luma-example-accent); width: 0; }
+.axle-track:has(i[hidden]) { background: var(--luma-example-border); }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 12px; }
+.actions button { font: inherit; background: var(--luma-example-surface-raised); color: inherit; border: 1px solid var(--luma-example-border); border-radius: 5px; padding: 4px 8px; cursor: pointer; }
+.actions button:focus-visible, .actions button:hover { border-color: var(--luma-example-accent); }
+
+#motion { display: block; width: 100%; height: 40px; background: var(--luma-example-surface-raised); }
+#dashboard small { font-size: 11px; font-weight: normal; color: var(--luma-example-text-muted); }
+.legend { display: flex; gap: 12px; margin: 3px 0 10px; font-size: 11px; }
+.legend span::before { content: ''; display: inline-block; width: 12px; margin: 0 5px 3px 0; border-top: 2px solid #38bdf8; }
+.legend span + span::before { border-color: #ce9e67; }
