@@ -12,7 +12,7 @@ export default defineConfig({
       '@luma.gl/engine/physics': `${__dirname}/../../../modules/engine/src/graph/physics`,
       '@luma.gl/engine/tables': `${__dirname}/../../../modules/engine/src/graph/tables`,
       ...Object.fromEntries(
-        ['core', 'engine', 'shaders', 'webgpu', 'constants', 'graph'].map(name => [
+        ['core', 'engine', 'shaders', 'webgpu', 'constants', 'graph', 'anari'].map(name => [
           `@luma.gl/${name}`,
           `${__dirname}/../../../modules/${name}/src`
         ])
