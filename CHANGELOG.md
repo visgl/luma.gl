@@ -2,6 +2,12 @@
 
 ## v10.0
 
+### v10.0.0-alpha.16
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.11 across active packages and examples.
+- Migrate GPU SQL and portable expression parsing to the new `@math.gl/sql` package and its dedicated parser and expression entry points.
+- Recognize Arrow tables and record batches across package instances when resolving nested column paths, preserving their source data.
+
 ### v10.0.0-alpha.15
 
 - Add a vector DataFrame AST bridge and layout planning, Arrow column format validation, kernel inspection, and parallel segmented scan and reduction, scatter, and sparse graph operations.
