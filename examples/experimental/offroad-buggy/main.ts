@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {createBuggyAudio} from './audio';
 import {createDashboard} from './dashboard';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -92,6 +93,10 @@ const perimeter = [0, 1, 2, 3].map(side => {
   ];
   return {mass: 0, position, shape: {type: 'box' as const, halfExtents}};
 });
+const audio = createBuggyAudio(
+  document.querySelector<HTMLButtonElement>('#sound')!,
+  perimeter.map(barrier => barrier.position)
+);
 const barrierMaterial = new THREE.MeshStandardMaterial({color: 0x8a8274, roughness: 0.95});
 for (const barrier of perimeter) {
   const [width, depth, height] = barrier.shape.halfExtents;
@@ -279,6 +284,7 @@ window.onkeydown = event => {
     ].includes(event.code)
   ) {
     event.preventDefault();
+    audio.unlock();
     keys.add(event.code);
     setDemo(false);
   }
@@ -300,6 +306,8 @@ async function start() {
   const world = new GPURigidBodyWorld({
     id: 'buggy',
     timeStep: step,
+    eventCapacity: 64,
+    impactImpulseThreshold: 120,
     gravity: [0, 0, -9.81],
     bodies: [
       {mass: 0, position: [0, 0, 0], shape: {type: 'triangle-mesh', geometry: terrainShape}},
@@ -343,6 +351,7 @@ async function start() {
     x = THREE.MathUtils.clamp(x, -clearance, clearance);
     y = THREE.MathUtils.clamp(y, -clearance, clearance);
     checkpoint.restore();
+    audio.reset();
     world.setBodyParameters(1, {mode: 'kinematic'});
     world.setKinematicTarget(
       1,
@@ -358,6 +367,7 @@ async function start() {
   async function frame(now: number) {
     if (reset) {
       checkpoint.restore();
+      audio.reset();
       reset = false;
       invertedSince = undefined;
       steering = 0;
@@ -377,13 +387,10 @@ async function start() {
       ? Math.atan2(Math.sin(angle), Math.cos(angle))
       : 0.55 * (pressed('KeyA', 'ArrowLeft') - pressed('KeyD', 'ArrowRight'));
     steering = THREE.MathUtils.damp(steering, THREE.MathUtils.clamp(turn, -0.55, 0.55), 9, elapsed);
-    world.setVehicleControls(
-      demo
-        ? THREE.MathUtils.clamp((5 - speed) * 0.35, 0, 1)
-        : pressed('KeyW', 'ArrowUp') - pressed('KeyS', 'ArrowDown'),
-      steering,
-      keys.has('Space') ? 1 : 0
-    );
+    const throttle = demo
+      ? THREE.MathUtils.clamp((5 - speed) * 0.35, 0, 1)
+      : pressed('KeyW', 'ArrowUp') - pressed('KeyS', 'ArrowDown');
+    world.setVehicleControls(throttle, steering, keys.has('Space') ? 1 : 0);
     if (accumulator >= step) {
       const encoder = device.createCommandEncoder();
       while (accumulator >= step) {
@@ -391,8 +398,15 @@ async function start() {
         accumulator -= step;
       }
       device.submit(encoder.finish());
-      const [states, contacts] = await Promise.all([world.readState(), world.readVehicleWheels()]);
+      const [states, contacts, collisions] = await Promise.all([
+        world.readState(),
+        world.readVehicleWheels(),
+        world.readContactEvents()
+      ]);
+      const wheelSpeed =
+        contacts.reduce((sum, wheel) => sum + Math.abs(wheel.speed), 0) / contacts.length;
       const state = states[1];
+      audio.update(throttle, wheelSpeed, state.position, state.velocity, collisions.events);
       chassis.position.fromArray(state.position);
       chassis.quaternion.fromArray(state.orientation);
       chassis.userData.speed = Math.hypot(...state.velocity);
