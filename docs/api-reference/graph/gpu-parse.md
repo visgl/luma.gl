@@ -226,7 +226,7 @@ loader contract contains no luma.gl device or graph types.
 Install loaders.gl explicitly when using this optional adapter:
 
 ```sh
-yarn add @loaders.gl/core@5.0.0-beta.10 @loaders.gl/tables@5.0.0-beta.10
+yarn add @loaders.gl/core@5.0.0-beta.11 @loaders.gl/tables@5.0.0-beta.11
 ```
 
 Request encoded pages and preserve only codecs that `gpu-parse` can decompress:

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
-import {validateExpressionAST, type Expression} from '@math.gl/expressions';
+import {validateExpressionAST, type Expression} from '@math.gl/sql/expressions';
 import {
   GPUExpression,
   isBooleanExpressionNode,
@@ -18,7 +18,7 @@ import {
  *
  * @example
  * ```ts
- * import {parseSQLExpression} from '@math.gl/expressions/sql';
+ * import {parseSQLExpression} from '@math.gl/sql/parser';
  *
  * const position = makeGPUExpressionFromPortableAST(
  *   parseSQLExpression('ARRAY[x,y,z]::REAL[3]')

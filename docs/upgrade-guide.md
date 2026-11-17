@@ -208,7 +208,7 @@ metadata instead of relying on luma.gl's former sequential child IDs.
 
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.10. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.11. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
 `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection
 imports move under `@math.gl/geospatial`. GeoArrow imports move to `@math.gl/arrow`. Sun imports move to
@@ -220,9 +220,10 @@ DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from
 `@math.gl/arrow/geoarrow-utils`. TypeScript projects using `Float16Array` must include
 `ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
 
-Expression parsing now lives in `@math.gl/expressions`. Replace imports from
+The former `@math.gl/expressions` package is now `@math.gl/sql`. Expression parsing
+lives in `@math.gl/sql/expressions`; SQL parsing lives in `@math.gl/sql/parser`. Replace imports from
 `@math.gl/core/expressions` and `@math.gl/core/sql` with
-`@math.gl/expressions` and `@math.gl/expressions/sql`, respectively.
+`@math.gl/sql/expressions` and `@math.gl/sql/parser`, respectively.
 
 
 ### Scene controllers move to engine
