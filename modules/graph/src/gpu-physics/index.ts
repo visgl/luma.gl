@@ -116,3 +116,4 @@ export type {GPURigidBodyJointLimit, GPURigidBodyJointDrive} from './joint-types
 
 export {rotateRigidBodyVector, normalizeRigidBodyRotation} from './rigid-body-properties';
 export type {GPURigidBodyGeneralConstraint} from './rigid-body-general-joints';
+export type {GPURigidBodyVehicle} from './rigid-body-vehicle';

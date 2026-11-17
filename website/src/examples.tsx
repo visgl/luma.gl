@@ -2991,6 +2991,13 @@ export const GPURigidBodyWorldExample: React.FC<{scene?: RigidBodyScene; title?:
   </ExamplePage>;
 };
 
+export const OffroadBuggyExample: React.FC = () => {
+  const source = useBaseUrl('/standalone-examples/offroad-buggy/index.html');
+  return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
+    <iframe title="Off-road Buggy" src={source} style={{border: 0, height: '100%', inset: 0, position: 'absolute', width: '100%'}} />
+  </ExamplePage>;
+};
+
 export const PhysicsStressExample: React.FC = () => {
   const source = useBaseUrl('/standalone-examples/physics-stress/index.html');
   return <ExamplePage style={{background: '#101820', minHeight: '720px'}}>
