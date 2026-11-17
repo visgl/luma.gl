@@ -175,3 +175,5 @@ physics.setVehicleControls(0.6, 0.2, 0); // throttle fraction, steering radians,
 ```
 
 The first implementation supports one chassis and one static terrain collider per world. Wheels use sphere sweeps and a load-limited friction model. Rigid chassis collisions continue through the world solver. Vehicle state supports explicit GPU checkpoints. Ensemble scheduling and rollback recovery are outside the supported vehicle configuration.
+
+At the world level, `vehicleWheelPoses` exposes a borrowed GPU buffer range containing four column-major transforms relative to the chassis node. Compose these with the published chassis matrix to draw the wheels. `readVehicleWheels()` provides asynchronous telemetry in mount order for diagnostics.

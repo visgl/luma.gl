@@ -200,6 +200,8 @@ export class PhysicsController {
     this.assertEditable();
     const node = this.resolveNode(reference);
     if (!node || !this.definitions.delete(node)) return false;
+    if (this.vehicleAttachment?.chassis === node || this.vehicleAttachment?.terrain === node)
+      this.vehicleAttachment = undefined;
     this.handles.delete(node);
     this.manualTargets.delete(node);
     this.dirty = true;
@@ -222,6 +224,11 @@ export class PhysicsController {
       options: structuredClone(options)
     };
     this.dirty = true;
+  }
+
+  /** Borrow wheel transforms relative to the registered chassis after preparation. */
+  get vehicleWheelPoses() {
+    return this.requireReady().world.vehicleWheelPoses;
   }
 
   /** Update controls for subsequent fixed steps. */

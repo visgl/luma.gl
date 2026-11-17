@@ -27,6 +27,8 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 const orbit = new OrbitControls(camera, canvas);
+orbit.enablePan = false;
+const orbitTranslation = new THREE.Vector3();
 const sun = new THREE.DirectionalLight(0xffe1b3, 3);
 sun.position.set(-15, -20, 35);
 sun.castShadow = true;
@@ -56,8 +58,8 @@ for (let y = -32; y <= 32; y += 1)
     const color = new THREE.Color(track ? 0xba8e60 : 0x958253).multiplyScalar(shade);
     colors.push(color.r, color.g, color.b);
     if (x < 32 && y < 32) {
-      const i = positions.length / 3 - 1;
-      indices.push(i, i + 1, i + 65, i + 1, i + 66, i + 65);
+      const index = positions.length / 3 - 1;
+      indices.push(index, index + 1, index + 65, index + 1, index + 66, index + 65);
     }
   }
 const geometry = new THREE.BufferGeometry();
@@ -83,12 +85,12 @@ const orange = material(0xf26216),
 function part(
   parent: THREE.Group,
   geometry: THREE.BufferGeometry,
-  mat: THREE.Material,
+  surfaceMaterial: THREE.Material,
   x: number,
   y: number,
   z: number
 ) {
-  const mesh = new THREE.Mesh(geometry, mat);
+  const mesh = new THREE.Mesh(geometry, surfaceMaterial);
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -99,15 +101,27 @@ part(chassis, new THREE.BoxGeometry(2.7, 1.25, 0.28), orange, 0, 0, -0.08);
 part(chassis, new THREE.BoxGeometry(0.78, 1.15, 0.27), orange, 0.9, 0, 0.15);
 part(chassis, new THREE.BoxGeometry(0.6, 0.65, 0.55), rubber, -0.35, 0, 0.24);
 const up = new THREE.Vector3(0, 1, 0);
-function connect(mesh: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3) {
-  const delta = b.clone().sub(a);
-  mesh.position.copy(a).lerp(b, 0.5);
+function connect(mesh: THREE.Mesh, startPoint: THREE.Vector3, endPoint: THREE.Vector3) {
+  const delta = endPoint.clone().sub(startPoint);
+  mesh.position.copy(startPoint).lerp(endPoint, 0.5);
   mesh.scale.y = delta.length();
   mesh.quaternion.setFromUnitVectors(up, delta.normalize());
 }
-function bar(a: THREE.Vector3, b: THREE.Vector3, r = 0.045, mat = steel) {
-  const mesh = part(chassis, new THREE.CylinderGeometry(r, r, 1, 10), mat, 0, 0, 0);
-  connect(mesh, a, b);
+function bar(
+  startPoint: THREE.Vector3,
+  endPoint: THREE.Vector3,
+  radius = 0.045,
+  surfaceMaterial = steel
+) {
+  const mesh = part(
+    chassis,
+    new THREE.CylinderGeometry(radius, radius, 1, 10),
+    surfaceMaterial,
+    0,
+    0,
+    0
+  );
+  connect(mesh, startPoint, endPoint);
   return mesh;
 }
 const point = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -118,7 +132,7 @@ for (const side of [-0.53, 0.53]) {
     point(0.28, side, 0.85),
     point(0.85, side, 0.02)
   ];
-  for (let i = 1; i < cage.length; i++) bar(cage[i - 1], cage[i]);
+  for (let index = 1; index < cage.length; index++) bar(cage[index - 1], cage[index]);
 }
 for (const x of [-0.48, 0.28]) bar(point(x, -0.53, 0.86), point(x, 0.53, 0.86));
 // Bolt-on trail equipment is visual geometry in the chassis frame.
@@ -194,8 +208,8 @@ const wheels = mounts.map(([x, y, z]) => {
   const rotor = new THREE.Group();
   group.add(rotor);
   part(rotor, new THREE.CylinderGeometry(0.38, 0.38, 0.29, 32), rubber, 0, 0, 0);
-  for (let i = 0; i < 14; i++) {
-    const angle = (i * Math.PI) / 7;
+  for (let index = 0; index < 14; index++) {
+    const angle = (index * Math.PI) / 7;
     part(
       rotor,
       new THREE.BoxGeometry(0.14, 0.32, 0.064),
@@ -213,7 +227,7 @@ const wheels = mounts.map(([x, y, z]) => {
 });
 const keys = new Set<string>();
 let demo = true,
-  chase = true,
+  chase = false,
   reset = false;
 const demoButton = document.querySelector<HTMLButtonElement>('#demo')!;
 function setDemo(value: boolean) {
@@ -269,7 +283,7 @@ async function start() {
     vehicle: {
       chassis: 1,
       terrainCollider: 0,
-      wheels: mounts.map((mount, i) => ({mount, steer: i < 2, drive: true})),
+      wheels: mounts.map((mount, index) => ({mount, steer: index < 2, drive: true})),
       radius: 0.38,
       travel: 0.5,
       springRate: 11500,
@@ -285,8 +299,9 @@ async function start() {
   const graph = await definition.compileAsync();
   const checkpoint = world.createGPUCheckpoint();
   checkpoint.save();
-  camera.position.set(-6, -18, 4);
-  orbit.target.set(0, -11, 0);
+  chassis.position.set(0, -11, elevation(0, -11) + 0.84);
+  orbit.target.copy(chassis.position);
+  camera.position.copy(orbit.target).add(point(-5, -3.5, 2.6));
   orbit.update();
   let previous = performance.now(),
     accumulator = 0,
@@ -305,7 +320,8 @@ async function start() {
     const phase = Math.atan2(chassis.position.y / 11, chassis.position.x / 18);
     const target = point(18 * Math.cos(phase + 0.23), 11 * Math.sin(phase + 0.23), 0);
     const angle = Math.atan2(target.y - chassis.position.y, target.x - chassis.position.x) - yaw;
-    const pressed = (a: string, b: string) => Number(keys.has(a) || keys.has(b));
+    const pressed = (key: string, alternate: string) =>
+      Number(keys.has(key) || keys.has(alternate));
     const speed = Number(chassis.userData.speed ?? 0);
     const turn = demo
       ? Math.atan2(Math.sin(angle), Math.cos(angle))
@@ -331,11 +347,11 @@ async function start() {
       chassis.quaternion.fromArray(state.orientation);
       chassis.userData.speed = Math.hypot(...state.velocity);
       if (state.position[2] < -5) reset = true;
-      contacts.forEach((contact, i) => {
-        const wheel = wheels[i];
-        wheel.group.position.fromArray(mounts[i]);
+      contacts.forEach((contact, index) => {
+        const wheel = wheels[index];
+        wheel.group.position.fromArray(mounts[index]);
         wheel.group.position.z -= contact.length;
-        wheel.group.rotation.z = i < 2 ? steering : 0;
+        wheel.group.rotation.z = index < 2 ? steering : 0;
         wheel.rotor.rotation.y = contact.angle;
         const lowerMount = wheel.group.position.clone();
         lowerMount.y *= 0.84;
@@ -344,12 +360,12 @@ async function start() {
       });
       document.querySelector('#wheels')!.textContent = contacts
         .map(
-          (c, i) =>
-            ['FL', 'FR', 'RL', 'RR'][i] +
+          (contact, index) =>
+            ['FL', 'FR', 'RL', 'RR'][index] +
             '  ' +
-            Math.round((0.5 - c.length) * 100) +
+            Math.round((0.5 - contact.length) * 100) +
             ' cm   ' +
-            Math.round(c.load) +
+            Math.round(contact.load) +
             ' N'
         )
         .join('\n');
@@ -359,13 +375,16 @@ async function start() {
     if (chase) {
       const offset = point(-5, -2.4, 2.15).applyAxisAngle(point(0, 0, 1), yaw);
       camera.position.lerp(chassis.position.clone().add(offset), 1 - Math.exp(-elapsed * 4));
-      orbit.target.copy(chassis.position);
+    } else {
+      orbitTranslation.subVectors(chassis.position, orbit.target);
+      camera.position.add(orbitTranslation);
     }
+    orbit.target.copy(chassis.position);
     orbit.enabled = !chase;
     orbit.update();
 
     renderer.render(scene, camera);
-    requestAnimationFrame(t => void frame(t).catch(fail));
+    requestAnimationFrame(timestamp => void frame(timestamp).catch(fail));
   }
   await frame(previous);
 }

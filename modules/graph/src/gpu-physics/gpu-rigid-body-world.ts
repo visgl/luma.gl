@@ -130,6 +130,7 @@ export type GPURigidBodyWorldProps = {
   /** Up to 64 joints. Parallel solving supports static-anchored distance joints only. */
   joints?: readonly GPURigidBodyJoint[];
   gravity?: Vector3;
+  /** Optional four-wheel suspension evaluated against static terrain each fixed step. */
   vehicle?: GPURigidBodyVehicle;
   timeStep?: number;
   iterations?: number;
@@ -572,6 +573,8 @@ export class GPURigidBodyWorld {
         this.props.ensembleBodiesPerInstance ? this.count / this.props.ensembleBodiesPerInstance : 0
       )
     };
+    if (this.props.vehicle)
+      storage.buffers.push({name: 'vehicle', byteLength: 512, uniform: false});
     if (this.props.continuous?.mode === 'convex') {
       storage.buffers = storage.buffers.filter(buffer => buffer.name !== 'continuous-previous');
       storage.buffers.push({name: 'continuous-dispatch', byteLength: 16, uniform: false});
@@ -1268,8 +1271,7 @@ export class GPURigidBodyWorld {
     };
     const vehicle = this.props.vehicle;
     if (vehicle) {
-      const chassis = this.props.bodies[vehicle.chassis];
-      const data = new Float32Array(64);
+      const data = new Float32Array(128);
       data.set(
         [
           vehicle.radius,
@@ -1286,12 +1288,30 @@ export class GPURigidBodyWorld {
       new Uint32Array(data.buffer).set([vehicle.chassis, vehicle.terrainCollider], 12);
       vehicle.wheels.forEach((wheel, index) => {
         const offset = 16 + index * 12;
-        data.set(
-          wheel.mount.map((value, axis) => value - (chassis.centerOfMass?.[axis] ?? 0)),
-          offset
-        );
+        data.set(wheel.mount, offset);
         data.set([Number(Boolean(wheel.steer)), Number(Boolean(wheel.drive))], offset + 4);
         data[offset + 10] = vehicle.travel;
+        data.set(
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            wheel.mount[0],
+            wheel.mount[1],
+            wheel.mount[2] - vehicle.travel,
+            1
+          ],
+          64 + 16 * index
+        );
       });
       this.vehicleBuffer = allocate('vehicle', data);
       const vehicleBindings = [
@@ -2134,10 +2154,47 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     );
   }
 
+  /** Borrow four column-major wheel transforms relative to the chassis node, ordered by mount. */
+  get vehicleWheelPoses() {
+    return this.vehicleBuffer && !this.destroyed
+      ? {buffer: this.vehicleBuffer, byteOffset: 256, byteLength: 256}
+      : null;
+  }
+
+  /** Transfer wheel motion between rebuilt worlds for wheels with matching chassis-local mounts. */
+  copyVehicleMotionFrom(previous: GPURigidBodyWorld): void {
+    const sourceBuffer = previous.vehicleBuffer;
+    const destinationBuffer = this.vehicleBuffer;
+    const previousVehicle = previous.props.vehicle;
+    if (!this.device || !sourceBuffer || !destinationBuffer || !previousVehicle) return;
+    const encoder = this.device.createCommandEncoder();
+    this.props.vehicle?.wheels.forEach((wheel, index) => {
+      const sourceIndex = previousVehicle.wheels.findIndex(source =>
+        source.mount.every((coordinate, axis) => coordinate === wheel.mount[axis])
+      );
+      if (sourceIndex < 0) return;
+      encoder.copyBufferToBuffer({
+        sourceBuffer,
+        destinationBuffer,
+        sourceOffset: 96 + sourceIndex * 48,
+        destinationOffset: 96 + index * 48,
+        size: 16
+      });
+      encoder.copyBufferToBuffer({
+        sourceBuffer,
+        destinationBuffer,
+        sourceOffset: 256 + sourceIndex * 64,
+        destinationOffset: 256 + index * 64,
+        size: 64
+      });
+    });
+    this.device.submit(encoder.finish());
+  }
+
   /** Read wheel spin, angle, suspension length and normal load after submitted steps. */
   async readVehicleWheels() {
     if (!this.vehicleBuffer || this.destroyed) throw new Error('Vehicle unavailable');
-    const values = new Float32Array((await this.vehicleBuffer.readAsync()).buffer);
+    const values = new Float32Array((await this.vehicleBuffer.readAsync(0, 256)).buffer);
     return Array.from({length: 4}, (_, index) => {
       const offset = 24 + index * 12;
       return {
