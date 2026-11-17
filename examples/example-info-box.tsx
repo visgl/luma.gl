@@ -48,6 +48,8 @@ export type InfoBoxProps = React.PropsWithChildren<
     extraTabs?: {id: string; label: string}[];
     /** Visual treatment shared by the InfoBox chrome and its panel content. */
     appearance?: InfoBoxAppearance;
+    /** Override the initial desktop expansion state for examples with live controls. */
+    initiallyCollapsed?: boolean;
     panel?: Panel;
     style?: CSSProperties;
   }
@@ -133,7 +135,7 @@ export function InfoBoxView(props: InfoBoxViewProps) {
   const title = getExampleTitle(props.id, props.title);
   const [isCollapsed, setIsCollapsed] = useState(
     () =>
-      isInfoBoxCollapsedByDefault ||
+      (props.initiallyCollapsed ?? isInfoBoxCollapsedByDefault) ||
       (typeof window !== 'undefined' && window.matchMedia(MOBILE_EXAMPLE_MEDIA_QUERY).matches)
   );
   const [activeTab, setActiveTab] = useState<string>(() => props.extraTabs?.[0]?.id || 'info');

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {createBuggyAudio} from './audio';
+import {createDashboard} from './dashboard';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {luma} from '@luma.gl/core';
@@ -11,6 +13,9 @@ import {GPURigidBodyWorld, makeTriangleMeshGeometry} from '@luma.gl/graph/gpu-ph
 
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
+const suspensionTravel = 0.5;
+const updateDashboard = createDashboard(suspensionTravel);
+const chassisAngles = new THREE.Euler(0, 0, 0, 'ZYX');
 const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
 renderer.shadowMap.enabled = true;
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -74,6 +79,35 @@ const terrain = new THREE.Mesh(
 terrain.receiveShadow = true;
 scene.add(terrain);
 const terrainShape = makeTriangleMeshGeometry(positions, indices);
+// Four closed rails share the same dimensions in rendering and collision detection.
+const railCenter = 31.5;
+const railThickness = 0.4;
+const perimeter = [0, 1, 2, 3].map(side => {
+  const alongX = side < 2;
+  const offset = side % 2 === 0 ? -railCenter : railCenter;
+  const position: [number, number, number] = [alongX ? 0 : offset, alongX ? offset : 0, 0.65];
+  const halfExtents: [number, number, number] = [
+    alongX ? railCenter + railThickness : railThickness,
+    alongX ? railThickness : railCenter - railThickness,
+    1.65
+  ];
+  return {mass: 0, position, shape: {type: 'box' as const, halfExtents}};
+});
+const audio = createBuggyAudio(
+  document.querySelector<HTMLButtonElement>('#sound')!,
+  perimeter.map(barrier => barrier.position)
+);
+const barrierMaterial = new THREE.MeshStandardMaterial({color: 0x8a8274, roughness: 0.95});
+for (const barrier of perimeter) {
+  const [width, depth, height] = barrier.shape.halfExtents;
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 2, depth * 2, height * 2),
+    barrierMaterial
+  );
+  mesh.position.fromArray(barrier.position);
+  mesh.castShadow = mesh.receiveShadow = true;
+  scene.add(mesh);
+}
 const chassis = new THREE.Group();
 chassis.name = 'chassis';
 scene.add(chassis);
@@ -250,6 +284,7 @@ window.onkeydown = event => {
     ].includes(event.code)
   ) {
     event.preventDefault();
+    audio.unlock();
     keys.add(event.code);
     setDemo(false);
   }
@@ -271,6 +306,8 @@ async function start() {
   const world = new GPURigidBodyWorld({
     id: 'buggy',
     timeStep: step,
+    eventCapacity: 64,
+    impactImpulseThreshold: 120,
     gravity: [0, 0, -9.81],
     bodies: [
       {mass: 0, position: [0, 0, 0], shape: {type: 'triangle-mesh', geometry: terrainShape}},
@@ -278,14 +315,15 @@ async function start() {
         position: [0, -11, elevation(0, -11) + 0.84],
         mass: 420,
         shape: {type: 'box', halfExtents: [1.35, 0.625, 0.16]}
-      }
+      },
+      ...perimeter
     ],
     vehicle: {
       chassis: 1,
       terrainCollider: 0,
       wheels: mounts.map((mount, index) => ({mount, steer: index < 2, drive: true})),
       radius: 0.38,
-      travel: 0.5,
+      travel: suspensionTravel,
       springRate: 11500,
       damping: 1450,
       grip: 1.05,
@@ -306,10 +344,32 @@ async function start() {
   let previous = performance.now(),
     accumulator = 0,
     steering = 0;
+  let invertedSince: number | undefined;
+  function recoverAt(x: number, y: number, heading: number) {
+    // Leave sufficient space for the wheels when recovering alongside either rail.
+    const clearance = railCenter - railThickness - 1.65;
+    x = THREE.MathUtils.clamp(x, -clearance, clearance);
+    y = THREE.MathUtils.clamp(y, -clearance, clearance);
+    checkpoint.restore();
+    audio.reset();
+    world.setBodyParameters(1, {mode: 'kinematic'});
+    world.setKinematicTarget(
+      1,
+      [x, y, elevation(x, y) + 0.95],
+      [0, 0, Math.sin(heading / 2), Math.cos(heading / 2)]
+    );
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    world.setBodyParameters(1, {mode: 'dynamic', velocity: [0, 0, 0], angularVelocity: [0, 0, 0]});
+    invertedSince = undefined;
+  }
   async function frame(now: number) {
     if (reset) {
       checkpoint.restore();
+      audio.reset();
       reset = false;
+      invertedSince = undefined;
       steering = 0;
       accumulator = 0;
     }
@@ -327,13 +387,10 @@ async function start() {
       ? Math.atan2(Math.sin(angle), Math.cos(angle))
       : 0.55 * (pressed('KeyA', 'ArrowLeft') - pressed('KeyD', 'ArrowRight'));
     steering = THREE.MathUtils.damp(steering, THREE.MathUtils.clamp(turn, -0.55, 0.55), 9, elapsed);
-    world.setVehicleControls(
-      demo
-        ? THREE.MathUtils.clamp((5 - speed) * 0.35, 0, 1)
-        : pressed('KeyW', 'ArrowUp') - pressed('KeyS', 'ArrowDown'),
-      steering,
-      keys.has('Space') ? 1 : 0
-    );
+    const throttle = demo
+      ? THREE.MathUtils.clamp((5 - speed) * 0.35, 0, 1)
+      : pressed('KeyW', 'ArrowUp') - pressed('KeyS', 'ArrowDown');
+    world.setVehicleControls(throttle, steering, keys.has('Space') ? 1 : 0);
     if (accumulator >= step) {
       const encoder = device.createCommandEncoder();
       while (accumulator >= step) {
@@ -341,12 +398,31 @@ async function start() {
         accumulator -= step;
       }
       device.submit(encoder.finish());
-      const [states, contacts] = await Promise.all([world.readState(), world.readVehicleWheels()]);
+      const [states, contacts, collisions] = await Promise.all([
+        world.readState(),
+        world.readVehicleWheels(),
+        world.readContactEvents()
+      ]);
+      const wheelSpeed =
+        contacts.reduce((sum, wheel) => sum + Math.abs(wheel.speed), 0) / contacts.length;
       const state = states[1];
+      audio.update(throttle, wheelSpeed, state.position, state.velocity, collisions.events);
       chassis.position.fromArray(state.position);
       chassis.quaternion.fromArray(state.orientation);
       chassis.userData.speed = Math.hypot(...state.velocity);
-      if (state.position[2] < -5) reset = true;
+      chassisAngles.setFromQuaternion(chassis.quaternion);
+      const {x, y, z} = chassis.position;
+      const upZ = 1 - 2 * (chassis.quaternion.x ** 2 + chassis.quaternion.y ** 2);
+      const observedAt = performance.now();
+      invertedSince = upZ < -0.35 ? (invertedSince ?? observedAt) : undefined;
+      // Also catch jumps that clear a rail and falls below the terrain.
+      if (
+        (invertedSince !== undefined && observedAt - invertedSince >= 3000) ||
+        Math.max(Math.abs(x), Math.abs(y)) > railCenter ||
+        z < -5
+      ) {
+        recoverAt(x, y, chassisAngles.z);
+      }
       contacts.forEach((contact, index) => {
         const wheel = wheels[index];
         wheel.group.position.fromArray(mounts[index]);
@@ -358,19 +434,14 @@ async function start() {
         connect(wheel.shock, wheel.anchor, lowerMount);
         connect(wheel.spring, wheel.anchor, lowerMount);
       });
-      document.querySelector('#wheels')!.textContent = contacts
-        .map(
-          (contact, index) =>
-            ['FL', 'FR', 'RL', 'RR'][index] +
-            '  ' +
-            Math.round((0.5 - contact.length) * 100) +
-            ' cm   ' +
-            Math.round(contact.load) +
-            ' N'
-        )
-        .join('\n');
-      status.value =
-        (demo ? 'Demo lap' : 'Manual') + ' · ' + Math.round(chassis.userData.speed * 3.6) + ' km/h';
+      updateDashboard(
+        now,
+        chassis.userData.speed,
+        -THREE.MathUtils.radToDeg(chassisAngles.y),
+        THREE.MathUtils.radToDeg(chassisAngles.x),
+        demo,
+        contacts
+      );
     }
     if (chase) {
       const offset = point(-5, -2.4, 2.15).applyAxisAngle(point(0, 0, 1), yaw);
