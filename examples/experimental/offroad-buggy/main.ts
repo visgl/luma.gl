@@ -9,7 +9,11 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {GPURigidBodyWorld, makeTriangleMeshGeometry} from '@luma.gl/graph/gpu-physics';
+import {
+  GPURigidBodyWorld,
+  makeTriangleMeshGeometry,
+  type GPURigidBodyCollider
+} from '@luma.gl/graph/gpu-physics';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
@@ -159,6 +163,19 @@ function bar(
   return mesh;
 }
 const point = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+const chassisColliders: GPURigidBodyCollider[] = [
+  {shape: {type: 'box', halfExtents: [1.35, 0.625, 0.16]}}
+];
+function addCageBar(startPoint: THREE.Vector3, endPoint: THREE.Vector3): void {
+  const radius = 0.045;
+  const mesh = bar(startPoint, endPoint, radius);
+  // Use the same center, orientation and length as the rendered tube.
+  chassisColliders.push({
+    position: mesh.position.toArray(),
+    orientation: mesh.quaternion.toArray(),
+    shape: {type: 'cylinder', height: mesh.scale.y, radiusBottom: radius, radiusTop: radius}
+  });
+}
 for (const side of [-0.53, 0.53]) {
   const cage = [
     point(-1.25, side, 0.02),
@@ -166,9 +183,9 @@ for (const side of [-0.53, 0.53]) {
     point(0.28, side, 0.85),
     point(0.85, side, 0.02)
   ];
-  for (let index = 1; index < cage.length; index++) bar(cage[index - 1], cage[index]);
+  for (let index = 1; index < cage.length; index++) addCageBar(cage[index - 1], cage[index]);
 }
-for (const x of [-0.48, 0.28]) bar(point(x, -0.53, 0.86), point(x, 0.53, 0.86));
+for (const x of [-0.48, 0.28]) addCageBar(point(x, -0.53, 0.86), point(x, 0.53, 0.86));
 // Bolt-on trail equipment is visual geometry in the chassis frame.
 const gunmetal = new THREE.MeshStandardMaterial({
   color: 0x43505a,
@@ -314,7 +331,7 @@ async function start() {
       {
         position: [0, -11, elevation(0, -11) + 0.84],
         mass: 420,
-        shape: {type: 'box', halfExtents: [1.35, 0.625, 0.16]}
+        colliders: chassisColliders
       },
       ...perimeter
     ],

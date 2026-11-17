@@ -77,7 +77,6 @@
       "experimental/offroad-buggy",
       "experimental/physics-stress",
       "experimental/physics-batch",
-      "experimental/space-salvage",
       "gltf/physics",
       "gltf/authored-scene-stress"
     ]
