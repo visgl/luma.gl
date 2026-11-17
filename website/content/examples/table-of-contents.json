@@ -74,7 +74,6 @@
       "experimental/newtons-cradle",
       "experimental/dominoes",
       "experimental/wrecking-ball",
-      "experimental/offroad-buggy",
       "experimental/physics-stress",
       "experimental/physics-batch",
       "gltf/physics",
@@ -231,7 +230,7 @@
     "label": "Three.js",
     "items": [
       "three/galactic-vortex",
-      "three/domino-junction",
+      "experimental/offroad-buggy",
       "three/deck-layers",
       "experimental/three"
     ]

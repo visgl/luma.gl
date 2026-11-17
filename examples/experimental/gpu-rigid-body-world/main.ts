@@ -25,6 +25,7 @@ import {
   makeRigidBodyScene,
   getRigidBodySceneGravity,
   isRigidBodyScene,
+  isDominoScene,
   RIGID_BODY_SCENES,
   DOMINO_PHYSICS
 } from './scenes';
@@ -103,7 +104,7 @@ try {
     const sceneName = isRigidBodyScene(scene.value) ? scene.value : 'stack';
     if (sceneName !== previousSceneName) {
       iterations.value = sceneName === 'cradle' ? '8' : sceneName === 'wreckingBall' ? '16' : '32';
-      if (sceneName === 'dominoSpiral' || sceneName === 'wreckingBall') solver.value = 'parallel';
+      if (isDominoScene(sceneName) || sceneName === 'wreckingBall') solver.value = 'parallel';
       previousSceneName = sceneName;
     }
     const mechanism = makeMechanism(sceneName);
@@ -126,7 +127,7 @@ try {
             })
           : undefined,
       joints: mechanism?.joints,
-      ...(sceneName === 'dominoSpiral'
+      ...(isDominoScene(sceneName)
         ? {...DOMINO_PHYSICS, eventCapacity: 512, impactImpulseThreshold: 0.15}
         : {}),
       ...(sceneName === 'wreckingBall' ? WRECKING_BALL_PHYSICS : {}),
@@ -137,7 +138,7 @@ try {
           ? 1 / 480
           : sceneName === 'wreckingBall'
             ? WRECKING_BALL_TIME_STEP
-            : sceneName === 'dominoSpiral'
+            : isDominoScene(sceneName)
               ? 1 / 60
               : 1 / 120,
       ...(sceneName === 'cradle'
@@ -159,7 +160,7 @@ try {
     const meshVerticesData: number[] = [];
     const longitudeSegments = sceneName === 'cradle' ? 64 : 16;
     const latitudeSegments = sceneName === 'cradle' ? 32 : 12;
-    let vertexCount = sceneName === 'dominoSpiral' ? 36 : longitudeSegments * latitudeSegments * 6;
+    let vertexCount = isDominoScene(sceneName) ? 36 : longitudeSegments * latitudeSegments * 6;
     const shapes = device.createBuffer({
       data: new Float32Array(
         bodies.flatMap(body => {
@@ -222,7 +223,7 @@ fn surfaceGrain(point:vec2f)->f32{
  var colorValue=input.color*band;
 
  ${
-   sceneName === 'dominoSpiral'
+   isDominoScene(sceneName)
      ? `
 
  let distanceToPip=min(length(input.localPoint.yz-vec2f(0,0.38)),length(input.localPoint.yz+vec2f(0,0.38)));
@@ -442,7 +443,13 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
           camera.position.set(
             resources.sceneName === 'mixed' ? 24 : 11,
             resources.sceneName === 'mixed' ? -30 : -16,
-            resources.sceneName === 'mixed' ? 25 : resources.sceneName === 'dominoSpiral' ? 19 : 12
+            resources.sceneName === 'mixed'
+              ? 25
+              : isDominoScene(resources.sceneName)
+                ? resources.sceneName === 'dominoJunction'
+                  ? 25
+                  : 19
+                : 12
           );
           controls.target.set(0, 0, 2);
         }
@@ -547,7 +554,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
     if (!loading && !paused && advanceAt === null) {
       accumulator = Math.min(
         accumulator + elapsed,
-        resources.sceneName === 'dominoSpiral' || resources.sceneName === 'wreckingBall'
+        isDominoScene(resources.sceneName) || resources.sceneName === 'wreckingBall'
           ? 4 / 60
           : 4 / 120
       );
@@ -632,7 +639,7 @@ const endpoints = array<vec2u, ${tethers.length}>(${tethers.map(joint => `vec2u(
       !loading &&
       !audioRead &&
       dominoAudio.enabled &&
-      resources.sceneName === 'dominoSpiral' &&
+      isDominoScene(resources.sceneName) &&
       now - lastAudioRead > 50
     ) {
       lastAudioRead = now;
