@@ -163,9 +163,11 @@ function bar(
   return mesh;
 }
 const point = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+/** Compound shape comprising the body shell and the roll cage tubes. */
 const chassisColliders: GPURigidBodyCollider[] = [
   {shape: {type: 'box', halfExtents: [1.35, 0.625, 0.16]}}
 ];
+/** Build a tube and its cylinder collider from the same chassis-local endpoints. */
 function addCageBar(startPoint: THREE.Vector3, endPoint: THREE.Vector3): void {
   const radius = 0.045;
   const mesh = bar(startPoint, endPoint, radius);
