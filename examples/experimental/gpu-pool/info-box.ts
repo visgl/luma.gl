@@ -25,33 +25,35 @@ export function createPoolInfoBox(graph: CompiledGPUCommandGraph<void>) {
     ? 'GPU timings are sampled while this tab is visible.'
     : 'GPU timestamp queries are unavailable; CPU encoding timings remain available.';
   let inspectorHost: HTMLElement | null = null;
-  applyExampleTheme(host, 'light');
+  applyExampleTheme(host, 'cinematic');
   const container = new BoxPanelContainer({
     id: 'pool-info-box',
-    title: 'luma.gl · GPU Pool',
-    placement: 'top-right',
-    widthPx: 420,
+    title: 'GPU Pool Practice',
+    placement: 'top-left',
+    widthPx: 340,
+    onOpenChange: open => document.body.toggleAttribute('data-inspector-open', open),
     collapsible: true,
     defaultOpen: false,
     panel: makeExampleTabbedPanel({
       id: 'pool-info-tabs',
-      theme: 'light',
+      theme: 'dark',
       panels: [
         makeHtmlCustomPanel({
           id: 'pool-about',
           title: 'About',
           html: `<p>Free practice: pot any ball, in any order. A scratched cue ball returns after the shot.</p>
-            <p>Move to aim. Hold Shoot to charge and release to shoot; Escape cancels. New Rack restores the table. Choose a practice setup to compare follow, draw and cushion spin.</p>
+            <p>Drag on the table to aim. Release to hold that angle. Hold Shoot to charge and release to shoot; Escape cancels. New Rack restores the table. Choose a practice setup to compare follow, draw and cushion spin.</p>
+            <p>The white guide shows the cue ball and bank angles. Gold shows the first object ball. The guide uses geometry, so spin and pace can change the shot you see.</p>
             <p>Physics stays on the GPU. Step-local triggers capture pockets; small snapshots check when balls settle. Cloth friction converts sliding to rolling, while cushions exchange spin and lose more rebound pace on harder impacts.</p>
-            <p>Throw controls isolate linear and angular surface slip. These are experimental approximations, not measured billiards calibration. Shots are capped at 12 table units/s; exhausted collision budgets report discarded time.</p>`,
-          onRender: root => configurePanelHostElement(root, 'light')
+            <p>Throw controls isolate linear and angular surface slip. These are experimental approximations, not measured billiards calibration. Shots are capped at 18 table units/s; exhausted collision budgets report discarded time.</p>`,
+          onRender: root => configurePanelHostElement(root, 'cinematic')
         }),
         makeHtmlCustomPanel({
           id: 'pool-graph',
           title: 'GPU graph inspector',
           html: '<p data-pool-timing-status></p><div data-pool-graph-inspector></div>',
           onRender: root => {
-            configurePanelHostElement(root, 'light');
+            configurePanelHostElement(root, 'cinematic');
             inspectorHost = root;
             root.querySelector<HTMLElement>('[data-pool-timing-status]')!.textContent =
               timingMessage;
