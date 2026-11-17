@@ -61,7 +61,7 @@ jobs:
         run: yarn exec playwright install --with-deps chromium
       - name: Require WebGPU and WebGL presentation
         timeout-minutes: 2
-        run: yarn test-presentation
+        run: xvfb-run -a yarn test-presentation
       - name: Run full material matrix
         shell: bash
         run: |

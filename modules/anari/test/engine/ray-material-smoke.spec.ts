@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Geometry} from '@luma.gl/engine';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it} from 'vitest';
 import {createMaterialFixture} from './ray-material-fixture';
@@ -19,6 +20,13 @@ it('ray materials preserve texture coordinates, replacement, and normal response
     replacement.writeData(new Uint8Array([255, 128, 200, 255, 255, 128, 200, 255]));
     const normalSurface = {
       ...surface,
+      geometry: new Geometry({
+        topology: 'triangle-list',
+        attributes: {
+          ...surface.geometry.attributes,
+          TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 1, 0, 0.5, 1])}
+        }
+      }),
       material: {
         id: 'normal-smoke',
         uniforms: {

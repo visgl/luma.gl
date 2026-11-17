@@ -137,6 +137,9 @@ test('full material conformance remains scheduled and cannot silently omit a cas
   expect(
     steps.find((step: {name: string}) => step.name === 'Require WebGPU and WebGL presentation')
   ).toBeDefined();
+  expect(
+    steps.find((step: {name: string}) => step.name === 'Require WebGPU and WebGL presentation').run
+  ).toBe('xvfb-run -a yarn test-presentation');
   const command = steps.find(
     (step: {name: string}) => step.name === 'Run full material matrix'
   ).run;
