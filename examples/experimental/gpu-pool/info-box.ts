@@ -43,7 +43,7 @@ export function createPoolInfoBox(graph: CompiledGPUCommandGraph<void>) {
           title: 'About',
           html: `<p>Free practice: pot any ball, in any order. A scratched cue ball returns after the shot.</p>
             <p>Drag on the table to aim. Release to hold that angle. Hold Shoot to charge and release to shoot; Escape cancels. New Rack restores the table. Choose a practice setup to compare follow, draw and cushion spin.</p>
-            <p>The white guide shows the cue ball and bank angles. Gold shows the first object ball. The guide uses geometry, so spin and pace can change the shot you see.</p>
+            <p>After you pause aiming, the guide previews up to six seconds with the selected spin, power and throw settings. White tracks the cue ball and gold tracks the object balls that move.</p>
             <p>Physics stays on the GPU. Step-local triggers capture pockets; small snapshots check when balls settle. Cloth friction converts sliding to rolling, while cushions exchange spin and lose more rebound pace on harder impacts.</p>
             <p>Throw controls isolate linear and angular surface slip. These are experimental approximations, not measured billiards calibration. Shots are capped at 18 table units/s; exhausted collision budgets report discarded time.</p>`,
           onRender: root => configurePanelHostElement(root, 'cinematic')

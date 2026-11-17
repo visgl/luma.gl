@@ -8,6 +8,7 @@ import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPUSphereWorld,
   decodeGPUSphereWorldDiagnostics,
+  type GPUSphereWorldProps,
   type GPUSphereBodyState
 } from '@luma.gl/graph/gpu-physics';
 import {
@@ -19,7 +20,7 @@ import {
   findCuePosition,
   isShotSettled
 } from './table';
-import {traceAimGuide} from './aim-guide';
+import {createShotForecast, makePoolStrike, MAX_SHOT_SPEED} from './shot-forecast';
 import {createPoolRenderer} from './render';
 import {createPoolInfoBox} from './info-box';
 import {PoolAudio} from './audio';
@@ -37,8 +38,7 @@ const angle = element<HTMLInputElement>('angle');
 const practice = element<HTMLSelectElement>('practice');
 const aimGuide = document.querySelector<SVGGElement>('#aim-guide')!;
 const aimLine = document.querySelector<SVGPolylineElement>('#aim-line')!;
-const objectLine = document.querySelector<SVGPolylineElement>('#object-line')!;
-const ghostBall = document.querySelector<SVGCircleElement>('#ghost-ball')!;
+const objectLine = document.querySelector<SVGPathElement>('#object-line')!;
 const guideToggle = element<HTMLButtonElement>('guides');
 let guidesEnabled = true;
 guideToggle.onclick = () => {
@@ -49,7 +49,6 @@ const cueTrail = document.querySelector<SVGPolylineElement>('#cue-trail')!;
 const recentCueTrail = document.querySelector<SVGPolylineElement>('#cue-trail-recent')!;
 const cueStyle = element<HTMLSelectElement>('cue-style');
 const audio = new PoolAudio();
-const MAX_SHOT_SPEED = 18;
 
 try {
   let failure: Error | null = null;
@@ -73,7 +72,7 @@ try {
   }
   const velocities = createBuffer(velocityData);
   const orientations = createBuffer(orientationData);
-  const world = new GPUSphereWorld({
+  const worldProps: GPUSphereWorldProps = {
     count: 16,
     continuous: true,
     warmStarting: true,
@@ -98,10 +97,12 @@ try {
     sleepAngularSpeed: 0.12,
     restitutionThreshold: 0.08,
     planes: TABLE_PLANES
-  });
+  };
+  const world = new GPUSphereWorld(worldProps);
   const definition = new GPUCommandGraph<void>(device);
   world.addToGraph(definition);
   const graph = await definition.compileAsync();
+  const forecast = await createShotForecast(device, world, worldProps);
   const infoBox = createPoolInfoBox(graph);
   const renderer = createPoolRenderer(device, element<HTMLCanvasElement>('cue-preview'));
   let states: GPUSphereBodyState[] = await world.readState();
@@ -247,11 +248,13 @@ try {
   element('cut-throw').onclick = () => {
     cutInducedThrow = !cutInducedThrow;
     world.update({cutInducedThrow});
+    forecast.setThrow(cutInducedThrow, spinInducedThrow);
     element('cut-throw').setAttribute('aria-pressed', String(cutInducedThrow));
   };
   element('spin-throw').onclick = () => {
     spinInducedThrow = !spinInducedThrow;
     world.update({spinInducedThrow});
+    forecast.setThrow(cutInducedThrow, spinInducedThrow);
     element('spin-throw').setAttribute('aria-pressed', String(spinInducedThrow));
   };
   function getExtent(): [number, number] {
@@ -604,20 +607,14 @@ try {
       const elapsed = Math.min((now - previous) / 1000, 0.05);
       previous = now;
       if (phase === 'striking' && !reset.disabled && now - strikeStart >= 180) {
-        const speed = 0.3 + (MAX_SHOT_SPEED - 0.3) * (Number(power.value) / 100) ** 1.35;
-        audio.playCue(speed / MAX_SHOT_SPEED);
-        const forward = [Math.cos(direction), Math.sin(direction)];
-        const depth = Math.sqrt(1 - contactPoint[0] ** 2 - contactPoint[1] ** 2);
-        const center = states[0].position;
-        world.applyImpulse(
-          0,
-          [forward[0] * speed, forward[1] * speed, 0],
-          [
-            center[0] + BALL_RADIUS * (-forward[0] * depth + forward[1] * contactPoint[0]),
-            center[1] + BALL_RADIUS * (-forward[1] * depth - forward[0] * contactPoint[0]),
-            center[2] + BALL_RADIUS * contactPoint[1]
-          ]
+        const strike = makePoolStrike(
+          states[0].position,
+          direction,
+          contactPoint,
+          Number(power.value)
         );
+        audio.playCue(strike.speed / MAX_SHOT_SPEED);
+        world.applyImpulse(0, strike.impulse, strike.point);
         phase = 'rolling';
         shotCount++;
         shotStart = now;
@@ -656,37 +653,38 @@ try {
       recentCueTrail.setAttribute('points', trailScreenPoints.slice(-12).join(' '));
       const showCue = (phase === 'aiming' || phase === 'striking') && !reset.disabled;
       let cueTip: [number, number] | undefined;
-      aimGuide.style.display = showCue && phase === 'aiming' && guidesEnabled ? '' : 'none';
+      const showForecast = showCue && phase === 'aiming' && guidesEnabled && states[0].enabled;
+      aimGuide.style.display = showForecast ? '' : 'none';
+      if (!showForecast) forecast.cancel();
       if (showCue) {
         const point = states[0].position;
         const vector = [Math.cos(direction), Math.sin(direction)];
         const pullback = 0.15 + (Number(power.value) / 100) * 0.65;
         const pull =
           phase === 'striking' ? Math.max(0, 1 - (now - strikeStart) / 180) * pullback : pullback;
-        const extent = getExtent();
-        const scale = canvas.clientWidth / (extent[0] * 2);
         cueTip = [point[0] - vector[0] * (0.21 + pull), point[1] - vector[1] * (0.21 + pull)];
-        if (phase === 'aiming' && guidesEnabled) {
-          const guide = traceAimGuide(states, direction);
-          const screen = (point: number[]) => [
-            ((point[0] / extent[0] + 1) * canvas.clientWidth) / 2,
-            ((1 - point[1] / extent[1]) * canvas.clientHeight) / 2
-          ];
-          aimLine.setAttribute(
-            'points',
-            guide.path.map(point => screen(point).join(',')).join(' ')
-          );
+        if (showForecast) {
+          const selectedPower = Number(power.value);
+          const strike = makePoolStrike(point, direction, contactPoint, selectedPower);
+          const revision = [
+            direction,
+            ...contactPoint,
+            selectedPower,
+            cutInducedThrow,
+            spinInducedThrow
+          ].join(',');
+          const paths = forecast.update(now, states, revision, strike);
+          const screen = (position: number[]) =>
+            `${((position[0] / extent[0] + 1) * canvas.clientWidth) / 2},${((1 - position[1] / extent[1]) * canvas.clientHeight) / 2}`;
+          aimLine.setAttribute('points', paths[0].map(screen).join(' '));
           objectLine.setAttribute(
-            'points',
-            guide.target.map(point => screen(point).join(',')).join(' ')
+            'd',
+            paths
+              .slice(1)
+              .filter(path => path.length > 1)
+              .map(path => 'M' + path.map(screen).join(' L'))
+              .join(' ')
           );
-          ghostBall.style.display = guide.ghost ? '' : 'none';
-          if (guide.ghost) {
-            const [horizontal, vertical] = screen(guide.ghost);
-            ghostBall.setAttribute('cx', String(horizontal));
-            ghostBall.setAttribute('cy', String(vertical));
-            ghostBall.setAttribute('r', String(BALL_RADIUS * scale));
-          }
         }
       }
       renderer.draw(extent, states, cueTip, direction, cueStyle.value, now, phase === 'rolling');
@@ -707,7 +705,7 @@ try {
       inputEvents.abort();
       cancelCharge();
       cancelAnimationFrame(animation);
-      void Promise.allSettled([snapshot, infoBoxCleanup]).then(() => {
+      void Promise.allSettled([snapshot, infoBoxCleanup, forecast.destroy()]).then(() => {
         audio.destroy();
         renderer.destroy();
         graph.destroy();
