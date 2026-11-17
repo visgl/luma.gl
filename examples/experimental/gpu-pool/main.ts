@@ -36,6 +36,7 @@ const reset = element<HTMLButtonElement>('reset');
 const power = element<HTMLInputElement>('power');
 const angle = element<HTMLInputElement>('angle');
 const practice = element<HTMLSelectElement>('practice');
+const forecastStatus = element<HTMLOutputElement>('forecast-status');
 const aimGuide = document.querySelector<SVGGElement>('#aim-guide')!;
 const aimLine = document.querySelector<SVGPolylineElement>('#aim-line')!;
 const objectLine = document.querySelector<SVGPathElement>('#object-line')!;
@@ -655,7 +656,10 @@ try {
       let cueTip: [number, number] | undefined;
       const showForecast = showCue && phase === 'aiming' && guidesEnabled && states[0].enabled;
       aimGuide.style.display = showForecast ? '' : 'none';
-      if (!showForecast) forecast.cancel();
+      if (!showForecast) {
+        forecast.cancel();
+        forecastStatus.hidden = true;
+      }
       if (showCue) {
         const point = states[0].position;
         const vector = [Math.cos(direction), Math.sin(direction)];
@@ -673,7 +677,8 @@ try {
             cutInducedThrow,
             spinInducedThrow
           ].join(',');
-          const paths = forecast.update(now, states, revision, strike);
+          const {paths, failed} = forecast.update(now, states, revision, strike);
+          forecastStatus.hidden = !failed;
           const screen = (position: number[]) =>
             `${((position[0] / extent[0] + 1) * canvas.clientWidth) / 2},${((1 - position[1] / extent[1]) * canvas.clientHeight) / 2}`;
           aimLine.setAttribute('points', paths[0].map(screen).join(' '));

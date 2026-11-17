@@ -74,6 +74,8 @@ type Forecast = {
   steps: number;
   /** Consecutive batches without visible planar motion. */
   stationaryBatches: number;
+  /** Indicates the preview could not finish. */
+  failed: boolean;
 };
 
 /** Replay a prospective shot in a separate GPU sphere world with the same solver settings. */
@@ -82,11 +84,17 @@ export async function createShotForecast(
   liveWorld: GPUSphereWorld,
   props: GPUSphereWorldProps
 ) {
+  /** Packed position, velocity, or orientation byte size for all balls. */
   const byteLength = liveWorld.count * 16;
+  /** Allow the solver and the snapshot copies to share the forecast buffers. */
   const usage = Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST;
+  /** Independent position and signed radius buffer for the forecast world. */
   const positions = device.createBuffer({byteLength, usage});
+  /** Independent velocity and inverse mass buffer for the forecast world. */
   const velocities = device.createBuffer({byteLength, usage});
+  /** Consecutive position snapshots read together after one submission. */
   const samples = device.createBuffer({byteLength: byteLength * SAMPLES_PER_BATCH, usage});
+  /** Shadow simulation initialized from the same settings as the live table. */
   const world = new GPUSphereWorld({
     ...props,
     id: 'pool-shot-forecast',
@@ -98,11 +106,16 @@ export async function createShotForecast(
     diagnostics: undefined,
     eventCapacity: 64
   });
+  /** Graph definition for a fixed step of the forecast world. */
   const definition = new GPUCommandGraph<void>(device);
   world.addToGraph(definition);
+  /** Compiled forecast step reused for all candidate shots. */
   const graph = await definition.compileAsync();
+  /** Latest forecast, including any partial path available for display. */
   let current: Forecast | undefined;
+  /** The single submitted forecast batch that is awaiting readback. */
   let pending: Promise<void> | undefined;
+  /** Fixed steps covered by the preview time limit. */
   const maximumSteps = Math.round(FORECAST_SECONDS / world.timeStep);
 
   /** Copy the live inputs before a strike. Applying an impulse clears the warm-start cache. */
@@ -174,7 +187,7 @@ export async function createShotForecast(
       states: readonly GPUSphereBodyState[],
       revision: string,
       strike: PoolStrike
-    ): readonly Point[][] {
+    ): Pick<Forecast, 'paths' | 'failed'> {
       if (current?.states !== states || current.revision !== revision) {
         current = {
           states,
@@ -183,6 +196,7 @@ export async function createShotForecast(
           requestedAt: now,
           steps: 0,
           stationaryBatches: 0,
+          failed: false,
           paths: states.map(state =>
             state.enabled ? [[state.position[0], state.position[1]]] : []
           )
@@ -198,13 +212,14 @@ export async function createShotForecast(
         pending = advance(forecast)
           .catch(() => {
             for (const path of forecast.paths) path.length = 0;
+            forecast.failed = true;
             forecast.steps = maximumSteps;
           })
           .finally(() => {
             pending = undefined;
           });
       }
-      return current.paths;
+      return current;
     },
     /** Discard a forecast when the table resets or play starts. */
     cancel(): void {
