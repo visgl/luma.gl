@@ -124,7 +124,7 @@ try {
   let alive = true;
   let animation = 0;
   let chargeStart: number | null = null;
-  let chargeOffset = 0;
+  let startingPower = 0;
   let chargePointer: number | null = null;
   let aimPointer: number | null = null;
   let chargeKeyboard: 'Space' | 'Enter' | null = null;
@@ -153,7 +153,7 @@ try {
     if (phase !== 'aiming' || chargeStart !== null) return;
     audio.unlock();
     chargeStart = performance.now();
-    chargeOffset = (Number(power.value) / 100) * 1600;
+    startingPower = Number(power.value);
     shoot.textContent = 'Release';
     shoot.setAttribute('aria-pressed', 'true');
     status.value = 'Charging — release to shoot · Esc to cancel';
@@ -596,8 +596,7 @@ try {
     if (!alive) return;
     try {
       if (failure) throw failure;
-      if (chargeStart !== null)
-        setPower(getShotCharge(Math.max(0, now - chargeStart) + chargeOffset));
+      if (chargeStart !== null) setPower(getShotCharge(now - chargeStart, startingPower));
       if (rackAt && now >= rackAt && !reset.disabled) {
         rackAt = 0;
         void resetTable();
@@ -690,7 +689,7 @@ try {
           }
         }
       }
-      renderer.draw(extent, states, cueTip, direction, cueStyle.value, now);
+      renderer.draw(extent, states, cueTip, direction, cueStyle.value, now, phase === 'rolling');
       animation = requestAnimationFrame(frame);
     } catch (error) {
       status.value = `Pool stopped: ${String(error)}`;

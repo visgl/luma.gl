@@ -11,18 +11,26 @@ import {
   type Geometry
 } from '@luma.gl/engine';
 import {SceneMeshNode, SceneRenderer, type SceneMaterial} from '@luma.gl/anari';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4, Quaternion} from '@math.gl/core';
 import type {GPUSphereBodyState} from '@luma.gl/graph/gpu-physics';
 import {BALL_RADIUS, POCKETS, TABLE_PLANES} from './table';
 
+/** World-space vector or linear RGB triplet. */
 type Vector = [number, number, number];
+/** Length of the cue mesh before scaling to table units. */
 const CUE_LENGTH = 3.4;
+/** Convert a 58-inch cue to the length of the seven-foot playfield. */
 const PLAYING_CUE_SCALE = (12 * 58) / (84 * CUE_LENGTH);
+/** Convert the butt diameter to 1¼ inches at the playfield scale. */
 const CUE_WIDTH_SCALE = (12 * 1.25) / (84 * 2 * 0.103);
+/** Shared unit box for table surfaces and sights. */
 const BOX = new CubeGeometry();
+/** Shared capped cylinder with its axis normal to the cloth. */
 const DISK = new CylinderGeometry({verticalAxis: 'z', nradial: 48, topCap: true});
+/** Shared UV sphere for the numbered ball textures. */
 const BALL = new SphereGeometry({nlat: 28, nlong: 48});
 
+/** Describe an engine PBR surface with optional lacquer and metalness. */
 function surface(
   id: string,
   color: Vector,
@@ -41,6 +49,7 @@ function surface(
   };
 }
 
+/** Add a retained PBR mesh using its authored local matrix. */
 function addMesh(
   root: GroupNode,
   id: string,
@@ -53,6 +62,7 @@ function addMesh(
   return node;
 }
 
+/** Place a unit box scaled to the requested half extents. */
 function addBox(
   root: GroupNode,
   id: string,
@@ -70,6 +80,7 @@ function addBox(
   );
 }
 
+/** Build the apron, rails, cushion jaws and pockets around the physics playfield. */
 function addTable(root: GroupNode, woodTexture: Texture) {
   const cloth = surface('cloth', [0.022, 0.21, 0.135], 0.96);
   const cushion = surface('cushion', [0.015, 0.125, 0.075], 0.84);
@@ -81,14 +92,18 @@ function addTable(root: GroupNode, woodTexture: Texture) {
   addBox(root, 'apron', wood, [0, 0, -0.2], [6.69, 3.69, 0.14]);
   addBox(root, 'slate', cloth, [0, 0, -0.15], [6.02, 3.02, 0.15]);
   for (const [index, rail] of TABLE_PLANES.slice(1).entries()) {
-    const [x, y] = rail.center!;
+    const [horizontalPosition, verticalPosition] = rail.center!;
     const [normalX, normalY] = rail.normal!;
     const angle = Math.atan2(-normalX, normalY);
     addBox(
       root,
       `cushion-${index}`,
       cushion,
-      [x - Math.sin(-angle) * 0.12, y - Math.cos(angle) * 0.12, 0.052],
+      [
+        horizontalPosition + Math.sin(angle) * 0.12,
+        verticalPosition - Math.cos(angle) * 0.12,
+        0.052
+      ],
       [rail.halfExtents![1], 0.12, 0.11],
       angle
     );
@@ -125,40 +140,44 @@ function addTable(root: GroupNode, woodTexture: Texture) {
       );
     }
   }
-  for (const [index, [x, y]] of POCKETS.entries()) {
+  for (const [index, [horizontalPosition, verticalPosition]] of POCKETS.entries()) {
     addMesh(
       root,
       `pocket-rim-${index}`,
       DISK,
       leather,
-      new Matrix4().translate([x, y, 0.08]).scale([0.47, 0.47, 0.2])
+      new Matrix4().translate([horizontalPosition, verticalPosition, 0.08]).scale([0.47, 0.47, 0.2])
     );
     addMesh(
       root,
       `pocket-well-${index}`,
       DISK,
       pocket,
-      new Matrix4().translate([x, y, 0.182]).scale([0.38, 0.38, 0.025])
+      new Matrix4()
+        .translate([horizontalPosition, verticalPosition, 0.182])
+        .scale([0.38, 0.38, 0.025])
     );
   }
   const spot = surface('spot', [0.41, 0.49, 0.4], 0.95);
-  for (const x of [-3, 2]) {
+  for (const horizontalPosition of [-3, 2]) {
     addMesh(
       root,
-      `spot-${x}`,
+      `spot-${horizontalPosition}`,
       DISK,
       spot,
-      new Matrix4().translate([x, 0, 0.001]).scale([0.031, 0.031, 0.003])
+      new Matrix4().translate([horizontalPosition, 0, 0.001]).scale([0.031, 0.031, 0.003])
     );
   }
 }
 
+/** Trilinear filtering for surfaces viewed at grazing angles. */
 const FILTERED_SURFACE = {
   usage: Texture.SAMPLE | Texture.COPY_DST | Texture.RENDER,
   sampler: {magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: 8}
 } as const;
 
 /** Lined hardwood albedo and a woven normal map for the grip. */
+/** Build hardwood albedo and a woven normal map for the grip. */
 function makeSurfaceTextures(device: Device) {
   const size = 128;
   const wood = new Uint8Array(size * size * 4);
@@ -204,6 +223,7 @@ function makeSurfaceTextures(device: Device) {
   return textures;
 }
 
+/** Paint a numbered ball skin in spherical UV coordinates. */
 function ballTexture(device: Device, index: number): Texture {
   const width = 256;
   const height = 128;
@@ -249,6 +269,7 @@ function ballTexture(device: Device, index: number): Texture {
   });
 }
 
+/** Assemble a two-piece cue shared by the table and turntable scenegraphs. */
 function buildCue(
   root: GroupNode,
   materials: {
@@ -261,6 +282,7 @@ function buildCue(
     tip: SceneMaterial;
   }
 ) {
+  /** Place a tapered cue section between two axial coordinates. */
   function section(
     id: string,
     material: SceneMaterial,
@@ -311,6 +333,7 @@ function buildCue(
   }
 }
 
+/** Resolution shared by veneer textures and their full mip chains. */
 const VENEER_SIZE = 512;
 
 /** Paint the veneer in unwrapped cylinder coordinates so its finish stays flush. */
@@ -351,6 +374,7 @@ function drawVeneers(style: string, butt: boolean): Uint8Array {
   return new Uint8Array(context.getImageData(0, 0, VENEER_SIZE, VENEER_SIZE).data);
 }
 
+/** Render both pool views on a single device and own their scene resources. */
 export function createPoolRenderer(device: Device, previewCanvas: HTMLCanvasElement) {
   const renderer = new SceneRenderer(device);
   const preview = device.createCanvasContext({
@@ -426,6 +450,11 @@ export function createPoolRenderer(device: Device, previewCanvas: HTMLCanvasElem
       })
     );
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const interpolatedOrientation = new Quaternion();
+  let previousStates: readonly GPUSphereBodyState[] = [];
+  let renderedStates: readonly GPUSphereBodyState[] = [];
+  let snapshotTime = 0;
+  let snapshotInterval = 1000 / 30;
   let lastStyle = '';
   let lastPreview = -Infinity;
   return {
@@ -435,17 +464,36 @@ export function createPoolRenderer(device: Device, previewCanvas: HTMLCanvasElem
       tip: [number, number] | undefined,
       direction: number,
       style: string,
-      now: number
+      now: number,
+      rolling: boolean
     ) {
+      if (!rolling) {
+        previousStates = renderedStates = states;
+        snapshotTime = now;
+      } else if (renderedStates !== states) {
+        snapshotInterval = Math.max(16, Math.min(60, now - snapshotTime));
+        snapshotTime = now;
+        previousStates = renderedStates;
+        renderedStates = states;
+      }
+      const blend = Math.min(1, (now - snapshotTime) / snapshotInterval);
       for (const state of states) {
-        balls[state.index].display = state.enabled;
+        const ball = balls[state.index];
+        ball.display = state.enabled;
         if (!state.enabled) continue;
-        const matrix = new Matrix4().fromQuaternion(state.orientation);
-        matrix.scale(state.radius || BALL_RADIUS);
-        matrix[12] = state.position[0];
-        matrix[13] = state.position[1];
-        matrix[14] = state.position[2];
-        balls[state.index].setMatrix(matrix, false);
+        const previous = previousStates[state.index];
+        const interpolate = rolling && previous?.enabled;
+        const orientation = interpolate
+          ? interpolatedOrientation.slerp(previous.orientation, state.orientation, blend)
+          : state.orientation;
+        const matrix = new Matrix4().fromQuaternion(orientation).scale(state.radius || BALL_RADIUS);
+        for (let axis = 0; axis < 3; axis++) {
+          const position = state.position[axis];
+          matrix[12 + axis] = interpolate
+            ? previous.position[axis] + (position - previous.position[axis]) * blend
+            : position;
+        }
+        ball.setMatrix(matrix, false);
       }
       cue.setMatrix(
         new Matrix4()

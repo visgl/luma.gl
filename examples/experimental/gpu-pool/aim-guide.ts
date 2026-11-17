@@ -4,13 +4,17 @@
 import type {GPUSphereBodyState} from '@luma.gl/graph/gpu-physics';
 import {BALL_RADIUS, POCKET_RADIUS, POCKETS, TABLE_PLANES} from './table';
 
+/** Two-dimensional point or direction in the plane of the cloth. */
 type Point = [number, number];
+/** Dot product used by the circle and cushion intersection tests. */
 const dot = (first: Point, second: Point) => first[0] * second[0] + first[1] * second[1];
+/** Move from a point along a ray by a distance in table units. */
 const advance = (point: Point, direction: Point, length: number): Point => [
   point[0] + direction[0] * length,
   point[1] + direction[1] * length
 ];
 
+/** Find the near intersection of a unit ray with a circle. */
 function hitCircle(origin: Point, direction: Point, center: readonly number[], radius: number) {
   const offset: Point = [center[0] - origin[0], center[1] - origin[1]];
   const projection = dot(offset, direction);
@@ -18,6 +22,7 @@ function hitCircle(origin: Point, direction: Point, center: readonly number[], r
   return projection > 0 && discriminant >= 0 ? projection - Math.sqrt(discriminant) : Infinity;
 }
 
+/** Find the first radius-adjusted contact on a finite inward-facing cushion. */
 function hitCushion(origin: Point, direction: Point) {
   let distance = Infinity;
   let normal: Point = [0, 0];
@@ -26,15 +31,30 @@ function hitCushion(origin: Point, direction: Point) {
     const length = Math.hypot(horizontal, vertical);
     const inward: Point = [horizontal / length, vertical / length];
     const approach = dot(direction, inward);
-    if (approach >= -1e-6) continue;
     const center = plane.center!;
     const offset: Point = [origin[0] - center[0], origin[1] - center[1]];
-    const hit = (BALL_RADIUS - dot(offset, inward)) / approach;
-    const contact = advance(offset, direction, hit);
     const tangent: Point = [-inward[1], inward[0]];
-    if (hit > 1e-4 && hit < distance && Math.abs(dot(contact, tangent)) <= plane.halfExtents![1]) {
+    const halfLength = plane.halfExtents![1];
+    if (approach < -1e-6) {
+      const hit = (BALL_RADIUS - dot(offset, inward)) / approach;
+      const contact = advance(offset, direction, hit);
+      if (hit > 1e-4 && hit < distance && Math.abs(dot(contact, tangent)) <= halfLength) {
+        distance = hit;
+        normal = inward;
+      }
+    }
+    for (const side of [-1, 1]) {
+      const endpoint = advance([center[0], center[1]], tangent, side * halfLength);
+      const hit = hitCircle(origin, direction, endpoint, BALL_RADIUS);
+      if (hit <= 1e-4 || hit >= distance) continue;
+      const contact = advance(origin, direction, hit);
+      const radial: Point = [
+        (contact[0] - endpoint[0]) / BALL_RADIUS,
+        (contact[1] - endpoint[1]) / BALL_RADIUS
+      ];
+      if (dot(radial, inward) < 0 || side * dot(radial, tangent) < 0) continue;
       distance = hit;
-      normal = inward;
+      normal = radial;
     }
   }
   return {distance, normal};
