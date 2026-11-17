@@ -19,15 +19,15 @@ export function createDashboard(travel: number) {
   const frontLoad = dashboard.querySelector<HTMLElement>('#front-load')!;
   const load = dashboard.querySelector<HTMLElement>('#load')!;
   const status = dashboard.querySelector<HTMLOutputElement>('#status')!;
+  const template = document.querySelector<HTMLTemplateElement>('#wheel-instrument')!;
+  const suspension = dashboard.querySelector<HTMLElement>('#suspension')!;
   const wheels = ['FL', 'FR', 'RL', 'RR'].map(name => {
-    const label = document.createElement('label');
-    const reading = document.createElement('span');
-    const meter = document.createElement('meter');
-    meter.max = travel;
-    reading.textContent = name + ' —';
-    label.append(reading, meter);
-    dashboard.querySelector('#suspension')!.append(label);
-    return {name, reading, meter};
+    const fragment = template.content.cloneNode(true) as DocumentFragment;
+    const coil = fragment.querySelector<SVGGElement>('.shock-coil')!;
+    const reading = fragment.querySelector<HTMLElement>('.wheel-travel')!;
+    fragment.querySelector('.wheel-label')!.textContent = name;
+    suspension.append(fragment);
+    return {coil, reading};
   });
   frontLoad.hidden = true;
   applyExampleTheme(host, 'cinematic');
@@ -110,8 +110,10 @@ export function createDashboard(travel: number) {
     angles.textContent = `Pitch ${Math.round(pitch)}° · Roll ${Math.round(roll)}°`;
     contacts.forEach((contact, index) => {
       const wheel = wheels[index];
-      wheel.meter.value = travel - contact.length;
-      wheel.reading.textContent = `${wheel.name} ${Math.round(wheel.meter.value * 100)} cm`;
+      const compression = Math.max(0, Math.min(travel, travel - contact.length));
+      // Keep adjacent turns distinguishable even at the bump stop.
+      wheel.coil.style.transform = `scaleY(${1 - (0.68 * compression) / travel})`;
+      wheel.reading.textContent = `${Math.round(compression * 100)} cm`;
     });
     const total = contacts.reduce((sum, contact) => sum + contact.load, 0);
     const percent =
