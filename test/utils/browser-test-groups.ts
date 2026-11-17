@@ -7,6 +7,7 @@ export type BrowserTestGroup =
   | 'all'
   | 'release'
   | 'physics-endurance'
+  | 'render-conformance'
   | (typeof BROWSER_TEST_GROUPS)[number];
 export const PHYSICS_ENDURANCE_TEST_PATTERNS = [
   'modules/graph/test/gpu-physics/rigid-body-block-contacts-endurance.spec.ts',
@@ -15,6 +16,13 @@ export const PHYSICS_ENDURANCE_TEST_PATTERNS = [
   'modules/graph/test/gpu-physics/rigid-body-offset-stacks.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-stack-stability-endurance.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-rotating-contact-endurance.spec.ts'
+];
+/** Full material transport matrices run nightly and when their implementation changes. */
+export const RENDER_CONFORMANCE_TEST_PATTERNS = [
+  'modules/anari/test/engine/ray-material-maps.spec.ts',
+  'modules/anari/test/engine/ray-material-normals.spec.ts',
+  'modules/anari/test/engine/ray-material-dielectrics.spec.ts',
+  'modules/anari/test/engine/ray-material-diffuse-transmission.spec.ts'
 ];
 export const PHYSICS_TEST_PATTERNS = ['modules/graph/test/gpu-physics/**/*.spec.{ts,js}'];
 export const PHYSICS_QUALIFICATION_TEST_PATTERNS = [
@@ -26,7 +34,8 @@ export const COMPUTE_TEST_PATTERNS = ['modules/graph/test/**/!(gpu-graph-explore
 
 export function getBrowserTestGroup(value: string | undefined): BrowserTestGroup {
   if (value === undefined || value === 'all') return 'all';
-  if (value === 'physics-endurance' || value === 'release') return value;
+  if (value === 'physics-endurance' || value === 'render-conformance' || value === 'release')
+    return value;
   if (value === 'general' || value === 'compute' || value === 'physics') return value;
   throw new Error(`Unknown browser test group: ${value}`);
 }
