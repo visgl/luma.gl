@@ -10,6 +10,7 @@ import {
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 
+/** Returns a fresh layout with uniform, texture and sampler bindings in three groups */
 function makeBindings(): BindingDeclaration[] {
   return [
     {name: 'app', type: 'uniform', group: 0, location: 0},
@@ -47,7 +48,7 @@ it('getShaderLayoutBinding does not lower-case names again for a name it already
   const toLowerCase = vi.spyOn(String.prototype, 'toLowerCase');
   const toLocaleLowerCase = vi.spyOn(String.prototype, 'toLocaleLowerCase');
   try {
-    for (let i = 0; i < 100; i++) {
+    for (let lookupCount = 0; lookupCount < 100; lookupCount++) {
       expect(getShaderLayoutBinding(shaderLayout, 'pbrMaterialUniforms')).toBe(first);
     }
     expect(toLowerCase).not.toHaveBeenCalled();

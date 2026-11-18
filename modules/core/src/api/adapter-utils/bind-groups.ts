@@ -15,7 +15,9 @@ type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
 /** A resolved name: the bindings up to and including its match, and their names at the time */
 type ResolvedBindingName = {
+  /** Layout bindings from the first one up to and including the matched binding */
   bindings: BindingDeclaration[];
+  /** Names of those bindings when the name was resolved, to notice in-place renames */
   names: string[];
 };
 
@@ -81,12 +83,19 @@ function findShaderLayoutBinding(
   return bindings[index];
 }
 
+/**
+ * Returns true while the bindings up to and including a resolved match are the same objects with
+ * the same names, so that the cached match is still the first match.
+ */
 function isResolvedBindingNameCurrent(
   bindings: readonly BindingDeclaration[],
   resolved: ResolvedBindingName
 ): boolean {
-  for (let i = 0; i < resolved.bindings.length; i++) {
-    if (bindings[i] !== resolved.bindings[i] || bindings[i].name !== resolved.names[i]) {
+  for (let bindingIndex = 0; bindingIndex < resolved.bindings.length; bindingIndex++) {
+    if (
+      bindings[bindingIndex] !== resolved.bindings[bindingIndex] ||
+      bindings[bindingIndex].name !== resolved.names[bindingIndex]
+    ) {
       return false;
     }
   }
