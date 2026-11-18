@@ -10,8 +10,14 @@ import {
   type CommandEncoder,
   type Device
 } from '@luma.gl/core';
+import {
+  GPUData,
+  GPUVector,
+  getGPUVectorWGSLLayout,
+  type GPUConstant,
+  type GPUVectorWGSLFormat as GPUExpressionNumericFormat
+} from '@luma.gl/graph/gpu-data';
 import {Kernel} from '../execution/compute/kernel';
-import {GPUData, GPUVector, type GPUConstant} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUField, type GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import {
   type CompiledGPUCommandGraph,
@@ -29,16 +35,13 @@ import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import {
   encodeGPUQueryExpressionControls,
-  getGPUQueryShaderType,
   makeGPUQueryExpressionShaderPlan,
   type GPUQueryExpressionColumn,
   type GPUQueryExpressionOutput,
-  type GPUQueryExpressionShaderPlan,
-  type GPUQueryScalarFormat
+  type GPUQueryExpressionShaderPlan
 } from './gpu-expression-shader';
 
 const LU_QUERY_WORKGROUP_SIZE = 256;
-const UINT32_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT;
 
 /** Caller-owned scalar values supplied to an already compiled dataframe filter. */
 export type GPUDataFrameQueryParameters = Readonly<Record<string, number | boolean | null>>;
@@ -50,12 +53,12 @@ type GPUQuerySourceView = {
 
 type GPUQueryDerivedOutput = {
   plan: GPUQueryExpressionOutput;
-  values: GPUVector<GPUQueryScalarFormat>;
+  values: GPUVector<GPUExpressionNumericFormat>;
   validity?: GPUVector<'uint32'>;
 };
 
 type GPUQueryDerivedView = {
-  values: GraphVectorView<GPUQueryScalarFormat>;
+  values: GraphVectorView<GPUExpressionNumericFormat>;
   validity?: GraphVectorView<'uint32'>;
 };
 
@@ -421,7 +424,7 @@ function validateGPUQueryBindingCapacity(
 }
 
 /** Creates one independently owned fixed-width GPU output chunk for every source batch. */
-function createGPUQueryOutputVector<Format extends GPUQueryScalarFormat>(
+function createGPUQueryOutputVector<Format extends GPUExpressionNumericFormat>(
   device: Device,
   name: string,
   lengths: readonly number[],
@@ -434,7 +437,7 @@ function createGPUQueryOutputVector<Format extends GPUQueryScalarFormat>(
     for (const [batchIndex, length] of lengths.entries()) {
       const buffer = device.createBuffer({
         id: `${name}-batch-${batchIndex}`,
-        byteLength: Math.max(length, 1) * UINT32_BYTE_LENGTH,
+        byteLength: Math.max(length, 1) * getGPUVectorWGSLLayout(format).packedByteStride,
         usage:
           Buffer.STORAGE |
           Buffer.COPY_SRC |
@@ -507,7 +510,13 @@ function createGPUQueryDerivedTable<Result extends GPUTypeMap>(
   const layouts: BufferLayout[] = selectedColumns.flatMap(name => {
     const output = outputsByName.get(name);
     if (output) {
-      return [{name, format: output.plan.format, byteStride: UINT32_BYTE_LENGTH}];
+      return [
+        {
+          name,
+          format: output.plan.format,
+          byteStride: getGPUVectorWGSLLayout(output.plan.format).packedByteStride
+        }
+      ];
     }
     return selectedSource.bufferLayout
       .filter(layout => layout.name === name)
@@ -690,7 +699,16 @@ function addGPUQueryPredicatePass(
       `const INPUT_${column.index}_OFFSET: u32 = ${getViewElementOffset(values)}u;`
     );
     declarations.push(
-      `@group(0) @binding(${bindingIndex++}) var<storage, read> input${column.index}: array<${getGPUQueryShaderType(column.format)}>;`
+      `@group(0) @binding(${bindingIndex++}) var<storage, read> input${column.index}: array<${getGPUVectorWGSLLayout(column.format).scalarType}>;`
+    );
+    const layout = getGPUVectorWGSLLayout(column.format);
+    const components = Array.from(
+      {length: layout.components},
+      (_, component) =>
+        `input${column.index}[INPUT_${column.index}_OFFSET + row * ${layout.components}u + ${component}u]`
+    );
+    declarations.push(
+      `fn readInput${column.index}(row: u32) -> ${layout.shaderType} { return ${layout.components === 1 ? components[0] : `${layout.shaderType}(${components.join(', ')})`}; }`
     );
     bindings[`input${column.index}`] = values;
     resources.push({buffer: values, usage: 'storage-read'});
@@ -731,13 +749,16 @@ function addGPUQueryPredicatePass(
       `const DERIVED_${output.index}_OFFSET: u32 = ${getViewElementOffset(values)}u;`
     );
     declarations.push(
-      `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derived${output.index}: array<${getGPUQueryShaderType(output.format)}>;`
+      `@group(0) @binding(${bindingIndex++}) var<storage, read_write> derived${output.index}: array<${getGPUVectorWGSLLayout(output.format).scalarType}>;`
     );
     bindings[`derived${output.index}`] = values;
     resources.push({buffer: values, usage: 'storage-write'});
-    derivedWrites.push(
-      `derived${output.index}[DERIVED_${output.index}_OFFSET + index] = ${output.value};`
-    );
+    const layout = getGPUVectorWGSLLayout(output.format);
+    for (let component = 0; component < layout.components; component++) {
+      derivedWrites.push(
+        `derived${output.index}[DERIVED_${output.index}_OFFSET + index * ${layout.components}u + ${component}u] = ${layout.components === 1 ? output.value : `${output.value}[${component}]`};`
+      );
+    }
 
     if (output.nullable) {
       const validity = views?.validity?.data[props.batchIndex];
@@ -774,6 +795,7 @@ function addGPUQueryPredicatePass(
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.output.length}u;
 ${declarations.join('\n')}
+${props.plan.helpers.join('\n')}
 
 @compute @workgroup_size(${LU_QUERY_WORKGROUP_SIZE})
 fn main(

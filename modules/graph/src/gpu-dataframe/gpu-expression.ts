@@ -78,7 +78,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   add<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  add<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  add<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('add', this, expression);
   }
 
@@ -86,7 +94,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   subtract<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  subtract<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  subtract<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('subtract', this, expression);
   }
 
@@ -94,7 +110,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   multiply<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  multiply<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  multiply<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('multiply', this, expression);
   }
 
@@ -102,7 +126,15 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
   divide<OtherColumns extends string>(
     this: GPUExpression<number | null, Columns>,
     expression: GPUExpression<number | null, OtherColumns>
-  ): GPUExpression<number | null, Columns | OtherColumns> {
+  ): GPUExpression<number | null, Columns | OtherColumns>;
+  divide<OtherColumns extends string>(
+    this: GPUExpression<readonly number[] | null, Columns>,
+    expression: GPUExpression<readonly number[] | null, OtherColumns>
+  ): GPUExpression<readonly number[] | null, Columns | OtherColumns>;
+  divide<OtherColumns extends string>(
+    this: GPUExpression<GPUExpressionNumericValue, Columns>,
+    expression: GPUExpression<GPUExpressionNumericValue, OtherColumns>
+  ): GPUExpression<GPUExpressionNumericValue, Columns | OtherColumns> {
     return makeBinaryExpression('divide', this, expression);
   }
 
@@ -191,10 +223,21 @@ export class GPUExpression<Value = unknown, Columns extends string = string> {
 
 /** References a named source column without accessing GPU storage. */
 export function column<Name extends string>(name: Name): GPUExpression<number | null, Name> {
+  return new GPUExpression(makeColumnNode(name));
+}
+
+/** References a packed vector column. The query planner resolves its format from the schema. */
+export function vectorColumn<Name extends string>(
+  name: Name
+): GPUExpression<readonly number[] | null, Name> {
+  return new GPUExpression(makeColumnNode(name));
+}
+
+function makeColumnNode(name: string): GPUExpressionNode {
   if (typeof name !== 'string' || name.length === 0) {
     throw new Error('GPUDataFrame expression columns require a nonempty name');
   }
-  return new GPUExpression({kind: 'column', name});
+  return {kind: 'column', name};
 }
 
 /** Creates one immutable portable scalar literal without embedding it in generated WGSL. */
@@ -372,11 +415,20 @@ export function vector<Columns extends string>(
  * const floatPosition = cast(position, 'float32x2');
  * ```
  */
-export function cast<Value extends GPUExpressionNumericValue, Columns extends string>(
+export function cast<
+  Value extends GPUExpressionNumericValue,
+  Columns extends string,
+  Format extends GPUExpressionNumericFormat
+>(
   expression: GPUExpression<Value, Columns>,
-  format: GPUExpressionNumericFormat
-): GPUExpression<Value, Columns> {
-  return new GPUExpression(makeGPUCastNode(expression.node, format));
+  format: Format
+): GPUExpression<Value, Columns> & {
+  readonly node: {readonly kind: 'cast'; readonly format: Format};
+} {
+  const result = new GPUExpression<Value, Columns>(makeGPUCastNode(expression.node, format));
+  return result as GPUExpression<Value, Columns> & {
+    readonly node: {readonly kind: 'cast'; readonly format: Format};
+  };
 }
 
 export function makeGPUCastNode<Format extends GPUExpressionNumericFormat>(
