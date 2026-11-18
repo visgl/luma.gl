@@ -7,13 +7,15 @@ import {
   IBLBindings,
   PBRMaterialBindings,
   PBRMaterialUniforms,
-  PBRProjectionProps
+  PBRProjectionProps,
+  PBRSceneUniforms
 } from '@luma.gl/shaders';
 
-type ParsedPBRMaterialUniforms = Partial<PBRProjectionProps & PBRMaterialUniforms> & {
-  clearcoatRoughnessMapEnabled?: boolean;
-  sheenRoughnessMapEnabled?: boolean;
-};
+type ParsedPBRMaterialUniforms = Partial<PBRProjectionProps & PBRMaterialUniforms> &
+  Pick<PBRSceneUniforms, 'environmentIntensity' | 'environmentRotation' | 'environmentMipCount'> & {
+    clearcoatRoughnessMapEnabled?: boolean;
+    sheenRoughnessMapEnabled?: boolean;
+  };
 
 /** Material state extracted from a glTF primitive for consumption by the PBR shader module. */
 export type ParsedPBRMaterial = {
@@ -21,7 +23,7 @@ export type ParsedPBRMaterial = {
   readonly defines: Record<string, boolean>;
   /** Texture and sampler bindings for the PBR shader module. */
   readonly bindings: Partial<PBRMaterialBindings<Texture> & IBLBindings<Texture>>;
-  /** Uniform values for the projection and PBR shader modules. */
+  /** Uniform values for the projection, PBR material and PBR scene shader modules. */
   readonly uniforms: ParsedPBRMaterialUniforms;
   /** Render pipeline parameters derived from the glTF material. */
   readonly parameters: Parameters;
