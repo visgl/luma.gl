@@ -408,6 +408,8 @@ and reads no row values. Conversion still checks nulls and transformed widths.
 
 `convertArrowColumnsToGPUVectors(device, source, columnOptions, {signal})` converts
 an iterable, async iterable, or bare async iterator of Arrow vectors. Each yielded
+result supports format inference and position, scalar, or color validation through
+`semantic`. Null rows are rejected unless `preserveNulls` is enabled. Each yielded
 result has the same `vector`, optional `residualVector` and `validityVector`, and
 `destroy()` contract as `convertArrowColumnToGPUVector`, plus
 `sourceBatchIndex` and `sourceRowIndexOffset`. Column options retain `format`,

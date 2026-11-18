@@ -7,6 +7,8 @@ import type {Vector} from 'apache-arrow';
 import {getArrowVectorByPath} from '../arrow-utils/arrow-paths';
 import {
   convertArrowColumnToGPUVector,
+  getArrowConversionFormat,
+  type ArrowColumnFormatOptions,
   type ArrowColumnGPUVectorOptions,
   type PreparedArrowColumnGPUVector
 } from './arrow-column-gpu-vector';
@@ -29,8 +31,24 @@ export type PreparedArrowGPUColumnChunk = PreparedArrowColumnGPUVector & {
   sourceRowIndexOffset: number;
 };
 
+/** Fixed-width stream options with format inference from the Arrow schema. */
+export type ArrowColumnStreamOptions = Partial<ArrowColumnGPUVectorOptions> &
+  ArrowColumnFormatOptions;
+
+/** Resolves the format and null handling before uploading a column. */
+function convertStreamColumn(device: Device, vector: Vector, options: ArrowColumnStreamOptions) {
+  const semantic = options.semantic ?? (options.color ? 'color' : 'auto');
+  const format = getArrowConversionFormat(vector.type, {...options, semantic});
+  return convertArrowColumnToGPUVector(device, vector, {
+    ...options,
+    format,
+    color: options.color ?? (semantic === 'color' || format === 'unorm8x4'),
+    preserveNulls: options.preserveNulls ?? false
+  });
+}
+
 /** Named fixed-width column conversion within each source record batch. */
-export type ArrowGPUColumnStreamColumn = ArrowColumnGPUVectorOptions & {
+export type ArrowGPUColumnStreamColumn = ArrowColumnStreamOptions & {
   /** Unique output column name. */
   name: string;
   /** Arrow field path; defaults to the output name. */
@@ -59,7 +77,7 @@ export type PreparedArrowGPUColumnBatch = {
 export async function* convertArrowColumnsToGPUVectors(
   device: Device,
   source: ArrowColumnConversionSource,
-  columnOptions: ArrowColumnGPUVectorOptions,
+  columnOptions: ArrowColumnStreamOptions = {},
   options: ArrowConversionStreamOptions = {}
 ): AsyncGenerator<PreparedArrowGPUColumnChunk> {
   const formats = new Map<string, string | undefined>();
@@ -68,7 +86,7 @@ export async function* convertArrowColumnsToGPUVectors(
   yield* convertArrowStream(
     source,
     vector => ({
-      ...convertArrowColumnToGPUVector(device, vector, columnOptions),
+      ...convertStreamColumn(device, vector, columnOptions),
       sourceBatchIndex,
       sourceRowIndexOffset
     }),
@@ -112,7 +130,12 @@ export async function* convertArrowRecordBatchesToGPUColumns(
       try {
         for (const column of columns) {
           const vector = getArrowVectorByPath(batch, column.source ?? column.name);
-          preparedColumns[column.name] = convertArrowColumnToGPUVector(device, vector, column);
+          if (vector.length !== batch.numRows) {
+            throw new Error(
+              `Arrow column "${column.source ?? column.name}" rows do not match the batch`
+            );
+          }
+          preparedColumns[column.name] = convertStreamColumn(device, vector, column);
         }
         return {
           columns: preparedColumns,

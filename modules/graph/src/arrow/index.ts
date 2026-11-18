@@ -221,6 +221,7 @@ export {
   convertArrowRecordBatchesToGPUColumns,
   type ArrowColumnConversionSource,
   type ArrowGPUColumnStreamColumn,
+  type ArrowColumnStreamOptions,
   type PreparedArrowGPUColumnChunk,
   type PreparedArrowGPUColumnBatch
 } from './gpu/arrow-column-stream';
