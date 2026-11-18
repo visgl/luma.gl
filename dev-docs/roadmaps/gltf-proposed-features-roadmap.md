@@ -213,8 +213,9 @@ Acceptance:
 ## Shared PR verification and review
 
 Each implementation PR records the actual results of `nvm use`, `yarn install`, `yarn lint fix`,
-`yarn build`, `yarn test`, `yarn website:build`, and `(cd website && yarn build)`, plus focused tests
-and reference evidence appropriate to its behavior. Run build and tests after final source/format
+`yarn build`, both phases of `yarn test`, and `yarn website:build`, plus focused tests and reference
+evidence appropriate to its behavior. Follow `AGENTS.md` to reuse the full node phase if the
+commit hook already ran it. Run build and tests after final source/format
 changes. Run expensive checks in dependency order so a clean build does not remove artifacts while
 another check is using them.
 
