@@ -2,6 +2,13 @@
 
 ## v10.0
 
+### v10.0.0-alpha.17
+
+- Upgrade math.gl and loaders.gl to 5.0.0-beta.12. Adopt the consolidated Arrow, GeoArrow tessellation, and Parquet entry points.
+- Accept a PBR lighting environment for scene-level glTF image-based lighting and make optional scene uniforms explicit.
+- Add GPU suspension and tire dynamics for the off-road buggy, and add GPU physics shot prediction and PBR rendering to GPU Pool Practice.
+- Expand PBR use in examples and add sun reflections to riverfront windows.
+
 ### v10.0.0-alpha.16
 
 - Upgrade math.gl and loaders.gl to 5.0.0-beta.11 across active packages and examples.
