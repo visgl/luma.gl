@@ -213,6 +213,9 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
         'SELECT fare FROM trips WHERE fare IS NULL OR NOT (fare < 4 AND fare IS NOT NULL)'
       )
     ).toBeInstanceOf(GPUSQLQuery);
+    expect(() =>
+      context.query('SELECT * FROM trips CROSS JOIN UNNEST(fare) AS other(value)')
+    ).toThrow(/does not support JOIN UNNEST/i);
     expect(() => context.query('DELETE FROM trips')).toThrow(/SELECT/i);
     expect(() => context.query('SELECT missing FROM trips')).toThrow(/exist/i);
     expect(() => context.query('SELECT fare FROM missing')).toThrow(/registered/i);

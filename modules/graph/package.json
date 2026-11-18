@@ -252,10 +252,10 @@
     }
   },
   "dependencies": {
-    "@math.gl/arrow": "~5.0.0-beta.11",
-    "@math.gl/core": "~5.0.0-beta.11",
-    "@math.gl/geospatial": "~5.0.0-beta.11",
-    "@math.gl/sql": "~5.0.0-beta.11",
+    "@math.gl/core": "~5.0.0-beta.12",
+    "@math.gl/geometry": "~5.0.0-beta.12",
+    "@math.gl/geospatial": "~5.0.0-beta.12",
+    "@math.gl/sql": "~5.0.0-beta.12",
     "probe.gl": "^5.0.0"
   }
 }

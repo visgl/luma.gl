@@ -5,6 +5,7 @@
 import {readFileSync} from 'node:fs';
 
 import {projectionEngine} from '@math.gl/geospatial/projection';
+import {lngLatToEPSG3857 as projectWebMercator} from '@math.gl/geospatial/web-mercator';
 import * as graphRootModule from '@luma.gl/graph';
 import * as projectionModule from '@luma.gl/graph/gpu-project';
 import type {GraphDataView} from '@luma.gl/graph/gpu-core';
@@ -34,9 +35,6 @@ const GPU_PROJECT_RUNTIME_EXPORTS = [
   'WEB_MERCATOR_EARTH_RADIUS',
   'WEB_MERCATOR_MAX_LATITUDE'
 ] as const;
-
-const EARTH_RADIUS_METERS = 6_378_137;
-const DEGREES_TO_RADIANS = Math.PI / 180;
 
 /** Compile-time coverage for precision-discriminated projection outputs. */
 export function checkGPUProjectionTypes(
@@ -562,12 +560,3 @@ describe('CPU projection plan compilation', () => {
     expect(float32MaximumY).toBeLessThanOrEqual(plan.bounds[3]);
   });
 });
-
-function projectWebMercator(coordinates: number[]): number[] {
-  const longitudeRadians = coordinates[0] * DEGREES_TO_RADIANS;
-  const latitudeRadians = coordinates[1] * DEGREES_TO_RADIANS;
-  return [
-    EARTH_RADIUS_METERS * longitudeRadians,
-    EARTH_RADIUS_METERS * Math.log(Math.tan(Math.PI / 4 + latitudeRadians / 2))
-  ];
-}

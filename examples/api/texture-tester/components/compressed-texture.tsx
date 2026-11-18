@@ -6,8 +6,8 @@ import * as React from 'react';
 
 import {load, registerLoaders, selectLoader, fetchFile, type LoaderOptions} from '@loaders.gl/core';
 import {BasisLoader, CompressedTextureLoader, CrunchLoader} from '@loaders.gl/images';
-import {BASIS_EXTERNAL_LIBRARIES} from '@loaders.gl/images/basis-module-loader';
-import {CRUNCH_EXTERNAL_LIBRARIES} from '@loaders.gl/images/crunch-module-loader';
+import {BASIS_EXTERNAL_LIBRARIES} from '@loaders.gl/images/basis';
+import {CRUNCH_EXTERNAL_LIBRARIES} from '@loaders.gl/images/crunch';
 import type {GPUTextureFormat} from '@loaders.gl/core/schema';
 import {ImageLoader, type ImageType} from '@loaders.gl/images';
 

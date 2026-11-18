@@ -185,6 +185,13 @@ Load images with `load(url, ImageLoader)` and use explicit decoder entries such 
 now flat: for example, replace `@loaders.gl/tables/parquet/parquet-source-loader`
 with `@loaders.gl/tables/parquet-source-loader`.
 
+### loaders.gl beta.12 format imports
+
+Import `createParquetSource` from `@loaders.gl/tables/parquet`. This replaces
+the `@loaders.gl/tables/parquet-source-loader` entry. Import the Basis and Crunch
+decoder helpers from `@loaders.gl/images/basis` and `@loaders.gl/images/crunch`,
+respectively.
+
 ### Audio loading ownership
 
 loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.gl's
@@ -208,16 +215,17 @@ metadata instead of relying on luma.gl's former sequential child IDs.
 
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.11. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-beta.12. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
 `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection
-imports move under `@math.gl/geospatial`. GeoArrow imports move to `@math.gl/arrow`. Sun imports move to
+imports move under `@math.gl/geospatial`. The standalone `@math.gl/arrow` package
+moves to `@math.gl/core/arrow`. Sun imports move to
 `@math.gl/earth/sun`. Install the package root when using these subpaths.
 
 The beta also removes alpha subpaths: import array types and `mat4`/`vec2`/`vec3`/`vec4`
 from `@math.gl/core`, parametric geometry and polygon helpers from `@math.gl/geometry`,
-DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from
-`@math.gl/arrow/geoarrow-utils`. TypeScript projects using `Float16Array` must include
+DGGS helpers from `@math.gl/dggs`, GeoArrow codecs from `@math.gl/core/arrow`,
+and GeoArrow tessellation from `@math.gl/geometry/arrow`. TypeScript projects using `Float16Array` must include
 `ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
 
 The former `@math.gl/expressions` package is now `@math.gl/sql`. Expression parsing
