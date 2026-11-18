@@ -3,5 +3,5 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 export const LIGHTING_INFO_HTML = `
-<p>Drawing a phong-shaded cube with multiple colored spot lights aimed at the cube</p>
+<p>A textured PBR cube lit by four colored spotlights, a directional light, and ambient light.</p>
 `;

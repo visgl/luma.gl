@@ -25,6 +25,7 @@ import {
 } from '@luma.gl/shaders';
 import {getMeterOffsetPosition, surfaceBuffer} from '@deck.gl-community/gpu-layers';
 import {makeCityMesh, type CityFeature} from './river-district-data';
+import {riverfrontWindows} from './riverfront-windows';
 
 type RiverDistrictLayerProps = LayerProps & {
   features: readonly CityFeature[];
@@ -32,6 +33,9 @@ type RiverDistrictLayerProps = LayerProps & {
   roughness?: number;
   lighting?: LightingProps | (() => LightingProps);
   material?: LambertMaterialProps;
+  windowSky?: [number, number, number];
+  /** World-space direction to the sun and its reflected color on architectural glass. */
+  windowSun?: {direction: readonly [number, number, number]; color: [number, number, number]};
   surfaceWeather?: SurfaceWeatherProps | (() => SurfaceWeatherProps);
 };
 
@@ -54,12 +58,12 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
   override updateState({props, oldProps}: UpdateParameters<this>): void {
     if (this.state.model && props.features === oldProps.features) return;
     this.destroyMesh();
-    const mesh = makeCityMesh(props.features);
+    const mesh = makeCityMesh(props.features, true);
     const vertices = this.context.device.createBuffer({data: mesh});
     // Water opts out of surface accumulation; callers can supply finer shelter masks in their own adapters.
-    const weights = new Float32Array(mesh.length / 10);
+    const weights = new Float32Array(mesh.length / 13);
     for (let vertexIndex = 0; vertexIndex < weights.length; vertexIndex++) {
-      weights[vertexIndex] = props.features[mesh[vertexIndex * 10 + 9]].kind === 'water' ? 0 : 1;
+      weights[vertexIndex] = props.features[mesh[vertexIndex * 13 + 9]].kind === 'water' ? 0 : 1;
     }
     const surfaceExposure = this.context.device.createBuffer({data: weights});
     try {
@@ -76,21 +80,23 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
             heightFog,
             surfaceWeather,
             surfaceBuffer,
-            districtMesh
+            districtMesh,
+            riverfrontWindows
           ]
         }),
         id: `${this.id}-mesh`,
         topology: 'triangle-list',
-        vertexCount: mesh.length / 10,
+        vertexCount: mesh.length / 13,
         bufferLayout: [
           {
             name: 'vertices',
-            byteStride: 40,
+            byteStride: 52,
             attributes: [
               {attribute: 'position', format: 'float32x3', byteOffset: 0},
               {attribute: 'normal', format: 'float32x3', byteOffset: 12},
               {attribute: 'color', format: 'float32x3', byteOffset: 24},
-              {attribute: 'featureIndex', format: 'float32', byteOffset: 36}
+              {attribute: 'featureIndex', format: 'float32', byteOffset: 36},
+              {attribute: 'facadeCoordinates', format: 'float32x3', byteOffset: 40}
             ]
           },
           {name: 'surfaceExposure', format: 'float32'}
@@ -123,6 +129,9 @@ export class RiverDistrictLayer extends Layer<RiverDistrictLayerProps> {
       },
       districtMesh: {
         roughness: this.props.roughness,
+        windowSky: this.props.windowSky ?? [1, 1, 1],
+        windowSunDirection: this.props.windowSun?.direction ?? [0, 0, 1],
+        windowSunColor: this.props.windowSun?.color ?? [0, 0, 0],
         cameraPosition: getMeterOffsetPosition(
           this.context.viewport,
           this.props.coordinateOrigin!,
@@ -171,14 +180,32 @@ const districtMesh = {
   source: `struct DistrictMeshUniforms {
   roughness: f32,
   cameraPosition: vec3f,
+  windowSky: vec3f,
+  windowSunDirection: vec3f,
+  windowSunColor: vec3f,
 };
 @group(3) @binding(auto) var<uniform> districtMesh: DistrictMeshUniforms;`,
   fs: `layout(std140) uniform districtMeshUniforms {
   float roughness;
   vec3 cameraPosition;
+  vec3 windowSky;
+  vec3 windowSunDirection;
+  vec3 windowSunColor;
 } districtMesh;`,
-  uniformTypes: {roughness: 'f32', cameraPosition: 'vec3<f32>'},
-  defaultUniforms: {roughness: 1, cameraPosition: [0, 0, 0]}
+  uniformTypes: {
+    roughness: 'f32',
+    cameraPosition: 'vec3<f32>',
+    windowSky: 'vec3<f32>',
+    windowSunDirection: 'vec3<f32>',
+    windowSunColor: 'vec3<f32>'
+  },
+  defaultUniforms: {
+    roughness: 1,
+    cameraPosition: [0, 0, 0],
+    windowSky: [1, 1, 1],
+    windowSunDirection: [0, 0, 1],
+    windowSunColor: [0, 0, 0]
+  }
 } as const satisfies ShaderModule;
 
 const SOURCE = /* wgsl */ `
@@ -190,10 +217,12 @@ struct CityVertex {
   @location(3) normal: vec3<f32>,
   @location(4) commonNormal: vec3<f32>,
   @location(5) exposure: f32,
+  @location(6) facade: vec3f,
 };
 @vertex fn vertexMain(
   @location(0) position: vec3<f32>, @location(1) normal: vec3<f32>,
-  @location(2) color: vec3<f32>, @location(3) featureIndex: f32, @location(4) surfaceExposure: f32
+  @location(2) color: vec3<f32>, @location(3) featureIndex: f32, @location(4) surfaceExposure: f32,
+  @location(5) facadeCoordinates: vec3f
 ) -> CityVertex {
   var output: CityVertex;
   output.position = project_position_to_clipspace(position, vec3<f32>(0.0), vec3<f32>(0.0));
@@ -202,12 +231,15 @@ struct CityVertex {
   output.commonNormal = project_normal(normal);
   output.color = color;
   output.exposure = surfaceExposure;
+  output.facade = facadeCoordinates;
   output.pickingColor = picking_getPickingColorFromIndex(u32(featureIndex));
   return output;
 }
 @fragment fn fragmentMain(input: CityVertex) -> @location(0) vec4<f32> {
+  let windowCoverage = riverfrontWindowCoverage(input.facade);
   if (surfaceBuffer.enabled != 0) {
-    return surfaceBuffer_encode(input.commonNormal, surfaceWeather_getRoughness(districtMesh.roughness, input.worldPosition, input.normal, input.exposure));
+    let roughness = mix(districtMesh.roughness, 0.16, windowCoverage);
+    return surfaceBuffer_encode(input.commonNormal, surfaceWeather_getRoughness(roughness, input.worldPosition, input.normal, input.exposure));
   }
   if (picking.isActive > 0.5) {
     if (picking_isColorZero(input.pickingColor)) { discard; }
@@ -218,6 +250,10 @@ struct CityVertex {
   var color = lighting_getLightColor2(albedo, cameraPosition, input.worldPosition, normalize(input.normal));
   color += surfaceWeather_getReflection(input.worldPosition, input.normal, cameraPosition,
     vec3f(-0.5, -0.3, 0.8), vec3f(1.0), input.exposure);
+  color = riverfrontWindowReflection(color, input.normal, cameraPosition - input.worldPosition,
+    districtMesh.windowSky, windowCoverage);
+  color += districtMesh.windowSunColor * windowCoverage *
+    riverfrontWindowSunGlare(input.normal, cameraPosition - input.worldPosition, districtMesh.windowSunDirection);
   if (picking.isHighlightActive > 0.5 && distance(input.pickingColor, picking_normalizeColor(picking.highlightedObjectColor)) < 0.00001) {
     color = mix(color, picking.highlightColor.rgb, picking.highlightColor.a);
   }
@@ -231,6 +267,8 @@ in vec3 normal;
 in vec3 color;
 in float featureIndex;
 in float surfaceExposure;
+in vec3 facadeCoordinates;
+out vec3 facade;
 out float exposure;
 out vec4 vertexColor;
 out vec3 worldPosition;
@@ -239,6 +277,7 @@ out vec3 commonNormal;
 void main() {
   worldPosition = position;
   exposure = surfaceExposure;
+  facade = facadeCoordinates;
   worldNormal = normal;
   commonNormal = project_normal(normal);
   geometry.worldPosition = position;
@@ -256,16 +295,23 @@ in vec3 worldPosition;
 in vec3 worldNormal;
 in vec3 commonNormal;
 in float exposure;
+in vec3 facade;
 out vec4 fragColor;
 void main() {
+  float windowCoverage = riverfrontWindowCoverage(facade);
   if (surfaceBuffer.enabled != 0) {
-    fragColor = surfaceBuffer_encode(commonNormal, surfaceWeather_getRoughness(districtMesh.roughness, worldPosition, worldNormal, exposure));
+    float roughness = mix(districtMesh.roughness, 0.16, windowCoverage);
+    fragColor = surfaceBuffer_encode(commonNormal, surfaceWeather_getRoughness(roughness, worldPosition, worldNormal, exposure));
     return;
   }
   vec3 albedo = surfaceWeather_getAlbedo(vertexColor.rgb, worldPosition, worldNormal, exposure);
   vec3 color = lighting_getLightColor(albedo, districtMesh.cameraPosition, worldPosition, normalize(worldNormal));
   color += surfaceWeather_getReflection(worldPosition, worldNormal, districtMesh.cameraPosition,
     vec3(-0.5, -0.3, 0.8), vec3(1.0), exposure);
+  color = riverfrontWindowReflection(color, worldNormal, districtMesh.cameraPosition - worldPosition,
+    districtMesh.windowSky, windowCoverage);
+  color += districtMesh.windowSunColor * windowCoverage *
+    riverfrontWindowSunGlare(worldNormal, districtMesh.cameraPosition - worldPosition, districtMesh.windowSunDirection);
   fragColor = heightFog_getColor(vec4(color, vertexColor.a), worldPosition, districtMesh.cameraPosition);
   DECKGL_FILTER_COLOR(fragColor, geometry);
 }
