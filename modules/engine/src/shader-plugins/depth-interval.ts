@@ -6,10 +6,10 @@ import type {ShaderPlugin} from '@luma.gl/shaders';
 
 /**
  * WebGPU depth-bound filtering for a caller-owned texture matching the render target.
- * Bind depthIntervalBound and a vec4<u32> uniform named depthIntervalCompare.
+ * Bind `depthIntervalBound` and a `vec4<u32>` uniform named `depthIntervalCompare`.
  * A nonzero first component selects greater; zero selects less-equal.
  * Pass framebuffer pixel coordinates, stored depth, and the host coverage mask.
- * For MSAA, write the result to the fragment's sample_mask output.
+ * For MSAA, write the result to the fragment's `sample_mask` output.
  */
 export function makeDepthIntervalPlugin(sampleCount: number, bindGroup = 1): ShaderPlugin {
   const multisampled = sampleCount > 1;
