@@ -119,39 +119,27 @@ for (const [samples, perSampleDepth] of [
         };
         try {
           if (perSampleDepth) {
-            // A different pipeline mask writes each sample's depth independently. Samples 1 and 3
-            // equal the splat depth and must belong to the less-equal interval.
-            for (const [sampleIndex, depth] of [0.25, 0.5, 0.75, 0.5].entries()) {
-              const shader = device.createShader({
-                stage: 'vertex',
-                source: `@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
-                  let x = select(-1.0, 3.0, index == 1u);
-                  let y = select(-1.0, 3.0, index == 2u);
-                  return vec4f(x, y, ${depth}, 1.0);
-                }`
-              });
-              const pipeline = device.createRenderPipeline({
-                vs: shader,
-                fs: null,
-                colorAttachmentFormats: [],
-                depthStencilAttachmentFormat: 'depth32float',
-                parameters: {
-                  sampleCount: 4,
-                  sampleMask: 1 << sampleIndex,
-                  depthWriteEnabled: true,
-                  depthCompare: 'always'
-                }
-              });
-              const pass = device.beginRenderPass({
-                framebuffer: boundFramebuffer,
-                clearDepth: sampleIndex === 0 ? 1 : false
-              });
-              pass.setPipeline(pipeline);
-              pass.draw({vertexCount: 3});
+            // Evaluate per sample so the depth texture has distinct values at one pixel.
+            const depthWriter = new Model(device, {
+              source: `
+@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+  return vec4f(select(-1.0, 3.0, index == 1u), select(-1.0, 3.0, index == 2u), 0.5, 1.0);
+}
+@fragment fn fragmentMain(@builtin(sample_index) sampleIndex: u32) -> @builtin(frag_depth) f32 {
+  return array(0.25, 0.5, 0.75, 0.5)[sampleIndex];
+}`,
+              vertexCount: 3,
+              colorAttachmentFormats: [],
+              depthStencilAttachmentFormat: 'depth32float',
+              parameters: {sampleCount: samples, depthWriteEnabled: true, depthCompare: 'always'}
+            });
+            try {
+              const pass = device.beginRenderPass({framebuffer: boundFramebuffer, clearDepth: 1});
+              depthWriter.draw(pass);
               pass.end();
               device.submit();
-              pipeline.destroy();
-              shader.destroy();
+            } finally {
+              depthWriter.destroy();
             }
           } else {
             const clearBound = device.beginRenderPass({
@@ -182,6 +170,7 @@ struct FragmentOutput {
               plugins: [makeDepthIntervalPlugin(samples)],
               bindings: {depthIntervalBound: bound, depthIntervalCompare: comparison},
               vertexCount: 3,
+              depthStencilAttachmentFormat: 'depth32float',
               parameters: {sampleCount: samples, depthCompare: 'always'}
             });
             try {
