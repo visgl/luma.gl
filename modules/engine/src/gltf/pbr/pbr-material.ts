@@ -11,11 +11,14 @@ import {
   PBRSceneUniforms
 } from '@luma.gl/shaders';
 
-type ParsedPBRMaterialUniforms = Partial<PBRProjectionProps & PBRMaterialUniforms> &
-  Pick<PBRSceneUniforms, 'environmentIntensity' | 'environmentRotation' | 'environmentMipCount'> & {
-    clearcoatRoughnessMapEnabled?: boolean;
-    sheenRoughnessMapEnabled?: boolean;
-  };
+type ParsedPBRMaterialUniforms = Partial<
+  PBRProjectionProps &
+    PBRMaterialUniforms &
+    Pick<PBRSceneUniforms, 'environmentIntensity' | 'environmentRotation' | 'environmentMipCount'>
+> & {
+  clearcoatRoughnessMapEnabled?: boolean;
+  sheenRoughnessMapEnabled?: boolean;
+};
 
 /** Material state extracted from a glTF primitive for consumption by the PBR shader module. */
 export type ParsedPBRMaterial = {
