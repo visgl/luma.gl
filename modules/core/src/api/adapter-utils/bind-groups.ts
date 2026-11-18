@@ -13,19 +13,20 @@ import {log} from '../utils/log';
 
 type AnyShaderLayout = Pick<ShaderLayout | ComputeShaderLayout, 'bindings'>;
 
-/** Name lookups already resolved for one shader layout's bindings array */
-type BindingNameCache = {
-  /** `bindings.length` when the cache was started, to notice bindings added or removed later */
-  length: number;
-  /** Bound name to the binding it resolved to and that binding's position in the array */
-  byName: Map<string, {index: number; binding: BindingDeclaration}>;
+/** A resolved name: the bindings up to and including its match, and their names at the time */
+type ResolvedBindingName = {
+  bindings: BindingDeclaration[];
+  names: string[];
 };
 
 /**
  * Bindings are resolved by name on every draw. Caching the result per bindings array avoids
  * scanning (and lower-casing) every layout binding for every bound name on each draw.
  */
-const bindingNameCaches = new WeakMap<readonly BindingDeclaration[], BindingNameCache>();
+const resolvedBindingNames = new WeakMap<
+  readonly BindingDeclaration[],
+  Map<string, ResolvedBindingName>
+>();
 
 export function getShaderLayoutBinding(
   shaderLayout: AnyShaderLayout,
@@ -43,23 +44,23 @@ export function getShaderLayoutBinding(
 
 /**
  * Returns the first binding whose name is `bindingName`, or whose lower-cased name followed by
- * `uniforms` is the lower-cased `bindingName`. A cached result is only used while the bindings
- * array has the same length and still holds the same binding at the same position; names that
- * match nothing are not cached, so they are always looked up again.
+ * `uniforms` is the lower-cased `bindingName`. The first match can only change when a binding up
+ * to and including it is replaced, renamed or removed, so a cached result is used only while
+ * those bindings are unchanged. Names that match nothing are not cached.
  */
 function findShaderLayoutBinding(
   bindings: readonly BindingDeclaration[],
   bindingName: string
 ): BindingDeclaration | undefined {
-  let cache = bindingNameCaches.get(bindings);
-  if (!cache || cache.length !== bindings.length) {
-    cache = {length: bindings.length, byName: new Map()};
-    bindingNameCaches.set(bindings, cache);
+  let resolvedNames = resolvedBindingNames.get(bindings);
+  if (!resolvedNames) {
+    resolvedNames = new Map();
+    resolvedBindingNames.set(bindings, resolvedNames);
   }
 
-  const cached = cache.byName.get(bindingName);
-  if (cached && bindings[cached.index] === cached.binding) {
-    return cached.binding;
+  const resolved = resolvedNames.get(bindingName);
+  if (resolved && isResolvedBindingNameCurrent(bindings, resolved)) {
+    return resolved.bindings[resolved.bindings.length - 1];
   }
 
   const lowerCaseName = bindingName.toLowerCase();
@@ -68,12 +69,28 @@ function findShaderLayoutBinding(
       binding.name === bindingName || `${binding.name.toLowerCase()}uniforms` === lowerCaseName
   );
   if (index < 0) {
-    cache.byName.delete(bindingName);
+    resolvedNames.delete(bindingName);
     return undefined;
   }
 
-  cache.byName.set(bindingName, {index, binding: bindings[index]});
+  const matchedBindings = bindings.slice(0, index + 1);
+  resolvedNames.set(bindingName, {
+    bindings: matchedBindings,
+    names: matchedBindings.map(binding => binding.name)
+  });
   return bindings[index];
+}
+
+function isResolvedBindingNameCurrent(
+  bindings: readonly BindingDeclaration[],
+  resolved: ResolvedBindingName
+): boolean {
+  for (let i = 0; i < resolved.bindings.length; i++) {
+    if (bindings[i] !== resolved.bindings[i] || bindings[i].name !== resolved.names[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function normalizeBindingsByGroup(

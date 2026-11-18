@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
 import {
   type BindingDeclaration,
   type Bindings,
@@ -17,25 +17,6 @@ function makeBindings(): BindingDeclaration[] {
     {name: 'textureSampler', type: 'sampler', group: 1, location: 2},
     {name: 'pbrMaterial', type: 'uniform', group: 2, location: 3}
   ];
-}
-
-/** Wraps bindings so that reads of `name` are counted */
-function countNameReads(bindings: BindingDeclaration[]): {
-  bindings: BindingDeclaration[];
-  reads: () => number;
-} {
-  let reads = 0;
-  const counted = bindings.map(binding => {
-    const {name, ...rest} = binding;
-    return Object.defineProperty({...rest}, 'name', {
-      enumerable: true,
-      get: () => {
-        reads++;
-        return name;
-      }
-    }) as BindingDeclaration;
-  });
-  return {bindings: counted, reads: () => reads};
 }
 
 it('getShaderLayoutBinding resolves exact names and case-insensitive `uniforms` aliases', () => {
@@ -59,18 +40,54 @@ it('getShaderLayoutBinding returns the first matching binding', () => {
   expect(getShaderLayoutBinding({bindings}, 'lightingUniforms')).toBe(bindings[0]);
 });
 
-it('getShaderLayoutBinding does not rescan the layout for a name it already resolved', () => {
-  const {bindings, reads} = countNameReads(makeBindings());
-  const shaderLayout = {bindings};
-
+it('getShaderLayoutBinding does not lower-case names again for a name it already resolved', () => {
+  const shaderLayout = {bindings: makeBindings()};
   const first = getShaderLayoutBinding(shaderLayout, 'pbrMaterialUniforms');
-  const readsAfterFirstLookup = reads();
-  expect(readsAfterFirstLookup).toBeGreaterThan(0);
 
-  for (let i = 0; i < 100; i++) {
-    expect(getShaderLayoutBinding(shaderLayout, 'pbrMaterialUniforms')).toBe(first);
+  const toLowerCase = vi.spyOn(String.prototype, 'toLowerCase');
+  const toLocaleLowerCase = vi.spyOn(String.prototype, 'toLocaleLowerCase');
+  try {
+    for (let i = 0; i < 100; i++) {
+      expect(getShaderLayoutBinding(shaderLayout, 'pbrMaterialUniforms')).toBe(first);
+    }
+    expect(toLowerCase).not.toHaveBeenCalled();
+    expect(toLocaleLowerCase).not.toHaveBeenCalled();
+  } finally {
+    toLowerCase.mockRestore();
+    toLocaleLowerCase.mockRestore();
   }
-  expect(reads()).toBe(readsAfterFirstLookup);
+});
+
+it('getShaderLayoutBinding sees an earlier binding that starts to match', () => {
+  const lightingUniforms: BindingDeclaration = {
+    name: 'lightingUniforms',
+    type: 'uniform',
+    group: 1,
+    location: 1
+  };
+  const bindings: BindingDeclaration[] = [
+    {name: 'other', type: 'uniform', group: 0, location: 0},
+    lightingUniforms
+  ];
+  const shaderLayout = {bindings};
+  const resource = {};
+
+  expect(getShaderLayoutBinding(shaderLayout, 'lightingUniforms')).toBe(lightingUniforms);
+
+  // Replaced: the alias of the new first binding now matches first
+  const lighting: BindingDeclaration = {name: 'lighting', type: 'uniform', group: 0, location: 0};
+  bindings[0] = lighting;
+  expect(getShaderLayoutBinding(shaderLayout, 'lightingUniforms')).toBe(lighting);
+  expect(
+    normalizeBindingsByGroup(shaderLayout, {lightingUniforms: resource} as unknown as Bindings)
+  ).toEqual({0: {lightingUniforms: resource}});
+
+  // Renamed in place: the earlier binding stops matching
+  lighting.name = 'unrelated';
+  expect(getShaderLayoutBinding(shaderLayout, 'lightingUniforms')).toBe(lightingUniforms);
+  // Renamed in place: the earlier binding matches again
+  lighting.name = 'LIGHTING';
+  expect(getShaderLayoutBinding(shaderLayout, 'lightingUniforms')).toBe(lighting);
 });
 
 it('getShaderLayoutBinding sees bindings added or replaced after a lookup', () => {
