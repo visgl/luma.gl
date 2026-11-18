@@ -4,6 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture} from '@luma.gl/core';
+import {makeDepthIntervalPlugin, Model} from '@luma.gl/engine';
 import {getTestDevices} from '@luma.gl/core/test-utils';
 import {makeGPUSplatData, SplatRenderer, type SplatDepthInterval} from '@luma.gl/engine/splats';
 
@@ -160,6 +161,45 @@ for (const [samples, perSampleDepth] of [
             clearBound.end();
           }
           device.submit();
+
+          if (perSampleDepth && depthConvention === 'standard') {
+            const comparison = device.createBuffer({
+              data: new Uint32Array(4),
+              usage: Buffer.UNIFORM
+            });
+            const triangle = new Model(device, {
+              source: `
+@vertex fn vertexMain(@builtin(vertex_index) index: u32) -> @builtin(position) vec4f {
+  return vec4f(select(-1.0, 3.0, index == 1u), select(-1.0, 3.0, index == 2u), 0.5, 1.0);
+}
+struct FragmentOutput {
+  @location(0) color: vec4f,
+  @builtin(sample_mask) coverage: u32,
+};
+@fragment fn fragmentMain(@builtin(position) position: vec4f) -> FragmentOutput {
+  return FragmentOutput(vec4f(1.0), filterDepthInterval(vec2i(position.xy), position.z, 5u));
+}`,
+              plugins: [makeDepthIntervalPlugin(samples)],
+              bindings: {depthIntervalBound: bound, depthIntervalCompare: comparison},
+              vertexCount: 3,
+              parameters: {sampleCount: samples, depthCompare: 'always'}
+            });
+            try {
+              const pass = device.beginRenderPass({
+                framebuffer,
+                clearColor: [0, 0, 0, 0],
+                resolveTargets: [color.view]
+              });
+              triangle.draw(pass);
+              pass.end();
+              const pixel = await readCenter();
+              // Less-equal retains samples 1, 2, and 3. Host coverage retains 0 and 2.
+              expect(pixel).toEqual([64, 64, 64, 64]);
+            } finally {
+              triangle.destroy();
+              comparison.destroy();
+            }
+          }
 
           draw(baseline);
           const unsplit = await readCenter();

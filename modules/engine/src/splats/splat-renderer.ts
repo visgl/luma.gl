@@ -16,6 +16,7 @@ import {ShaderInputs} from '@luma.gl/engine';
 import {GPUData} from '@luma.gl/graph/gpu-data';
 import {GPURecordBatch, GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
+import {makeDepthIntervalPlugin} from '../shader-plugins/depth-interval';
 import {GPUSplatData} from './splat-data';
 import {projectSplatCovarianceToScreen} from './splat-covariance';
 import {acceptsSplatSemantic, type SplatSemanticFilter} from './splat-filter';
@@ -36,7 +37,6 @@ import {
   SPLAT_STORAGE_SHADER_LAYOUT,
   SPLAT_STORAGE_WGSL_SHADER,
   SPLAT_VS_GLSL,
-  getSplatDepthIntervalShaderLayout,
   getSplatDepthIntervalWGSLShader,
   splatUniforms,
   type SplatUniforms
@@ -249,8 +249,8 @@ export class SplatRenderer {
   private hasExplicitToneMapping = false;
   private isDestroyed = false;
   private depthIntervalBindings?: {
-    splatDepthBound: Texture | TextureView;
-    splatDepthCompare: Buffer;
+    depthIntervalBound: Texture | TextureView;
+    depthIntervalCompare: Buffer;
   };
   private depthIntervalCompareBuffers?: Record<SplatDepthInterval['compare'], Buffer>;
 
@@ -310,8 +310,8 @@ export class SplatRenderer {
       };
     }
     this.depthIntervalBindings = {
-      splatDepthBound: interval.bound,
-      splatDepthCompare: this.depthIntervalCompareBuffers[interval.compare]
+      depthIntervalBound: interval.bound,
+      depthIntervalCompare: this.depthIntervalCompareBuffers[interval.compare]
     };
   }
 
@@ -641,11 +641,11 @@ export class SplatRenderer {
         : SPLAT_ATTRIBUTE_WGSL_SHADER,
       vs: SPLAT_VS_GLSL,
       fs: SPLAT_FS_GLSL,
-      shaderLayout: isWebGPU
-        ? this.props.depthIntervalSamples === undefined
-          ? SPLAT_STORAGE_SHADER_LAYOUT
-          : getSplatDepthIntervalShaderLayout(this.props.depthIntervalSamples)
-        : SPLAT_ATTRIBUTE_SHADER_LAYOUT,
+      shaderLayout: isWebGPU ? SPLAT_STORAGE_SHADER_LAYOUT : SPLAT_ATTRIBUTE_SHADER_LAYOUT,
+      plugins:
+        isWebGPU && this.props.depthIntervalSamples !== undefined
+          ? [makeDepthIntervalPlugin(this.props.depthIntervalSamples)]
+          : [],
       modules: [splatUniforms],
       shaderInputs: this.shaderInputs,
       table,
