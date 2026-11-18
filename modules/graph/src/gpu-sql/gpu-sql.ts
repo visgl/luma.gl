@@ -366,6 +366,8 @@ function parseGPUSQLStatement(
   const join = statement.joins[0];
   let loweredJoin: GPUSQLStatement['join'];
   if (join) {
+    if (join.unnest) throw new Error('GPUSQL does not support JOIN UNNEST');
+    if (join.type === 'cross') throw new Error('GPUSQL does not support CROSS JOIN');
     if (join.on.type !== 'BinaryExpression' || join.on.operator !== '==') {
       throw new Error('GPUSQL JOIN requires equality between two columns');
     }

@@ -226,13 +226,13 @@ loader contract contains no luma.gl device or graph types.
 Install loaders.gl explicitly when using this optional adapter:
 
 ```sh
-yarn add @loaders.gl/core@5.0.0-beta.11 @loaders.gl/tables@5.0.0-beta.11
+yarn add @loaders.gl/core@5.0.0-beta.12 @loaders.gl/tables@5.0.0-beta.12
 ```
 
 Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
 ```ts
-import {createParquetSource} from '@loaders.gl/tables/parquet-source-loader';
+import {createParquetSource} from '@loaders.gl/tables/parquet';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   addGPUParquetEncodedPageBatchToGraph,

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {isArrowRecordBatch, isArrowTable} from '@math.gl/arrow';
+import {isArrowRecordBatch, isArrowTable} from '@math.gl/core/arrow';
 
 import {Data, DataType, Field, RecordBatch, Schema, Table, Vector, makeVector} from 'apache-arrow';
 

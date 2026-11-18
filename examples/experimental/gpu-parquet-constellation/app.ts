@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {createParquetSource} from '@loaders.gl/tables/parquet-source-loader';
+import {createParquetSource} from '@loaders.gl/tables/parquet';
 import {Buffer, type Device, type Framebuffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model} from '@luma.gl/engine';
 import {

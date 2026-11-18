@@ -434,8 +434,8 @@ Target Release Date: Q3, 2026
 - **Graph resource inspection** - The graph inspector adds a Graph Resources tab with selectable buffer/texture views, a persistent content viewer, and on-demand hover previews. See [resource inspection](/docs/api-reference/experimental/gpu-core/debugging#graph-resources-inspect-buffers-and-textures).
 - **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](/docs/api-reference/experimental/gpu-core/resources).
 
-- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.11 grouped
-  packages and loaders.gl 5.0.0-beta.11 grouped packages. GPU SQL and portable
+- **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.12 grouped
+  packages and loaders.gl 5.0.0-beta.12 grouped packages. GPU SQL and portable
   expressions use the new `@math.gl/sql` parser and expression entry points. Arrow
   path adapters use shared structural guards to accept tables and record batches
   across Arrow package instances. Arrow adapters expose
