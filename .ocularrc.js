@@ -68,7 +68,6 @@ const config = {
         'wind': '/examples/deck/wind',
         'physics-batch': '/examples/experimental/physics-batch',
         'physics-stress': '/examples/experimental/physics-stress',
-        'space-salvage': '/examples/experimental/space-salvage',
         'sphere-world': '/examples/experimental/gpu-sphere-world',
         'webxr-kaleidoscope': '/examples/experimental/webxr-kaleidoscope',
         'external-context': '/examples/integrations/external-context',

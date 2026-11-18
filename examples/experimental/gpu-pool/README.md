@@ -8,7 +8,7 @@ yarn install
 yarn workspace luma.gl-examples-experimental-gpu-pool start
 ```
 
-Drag on the table and release to lock your aim. Set power on the right or hold **Shoot** or Space to charge, then release to shoot. Left/Right and the aim slider give fine adjustment. **Guides** show geometric cue-ball banks and first object-ball contact. **New rack** works during a shot. Pot balls in any
+Drag on the table and release to lock your aim. Set power on the right or hold **Shoot** or Space to charge, then release to shoot. Left/Right and the aim slider give fine adjustment. **Guides** replay up to six seconds in a separate GPU simulation using the selected power, spin and throw settings. White shows the cue ball and gold shows moving object balls. **New rack** works during a shot. Pot balls in any
 order. A scratch restores the cue ball to a clear position after the shot rests.
 
 The example owns the rack, cue animation, pocket triggers, score and shot state.

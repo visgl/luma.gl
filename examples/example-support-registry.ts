@@ -24,7 +24,6 @@ import authoredSceneStressSupport from './gltf/authored-scene-stress/mobile-supp
 import poolSupport from './experimental/gpu-pool/mobile-support';
 import sphereWorldSupport from './experimental/gpu-sphere-world/mobile-support';
 import sphereScaleSupport from './experimental/gpu-sphere-scale/mobile-support';
-import spaceSalvageSupport from './experimental/space-salvage/mobile-support';
 import vectorObservatorySupport from './experimental/vector-observatory/mobile-support';
 import physicsBatchSupport from './experimental/physics-batch/mobile-support';
 import offroadBuggySupport from './experimental/offroad-buggy/mobile-support';
@@ -240,7 +239,6 @@ export const EXAMPLE_SUPPORT_REGISTRY: Readonly<Record<string, ExampleSupportDef
   'experimental/physics-batch': physicsBatchSupport,
   'experimental/offroad-buggy': offroadBuggySupport,
   'experimental/physics-stress': physicsStressSupport,
-  'experimental/space-salvage': spaceSalvageSupport,
   'integrations/react-strict-mode': support46,
   'tutorials/hello-triangle': support47,
   'tutorials/hello-triangle-geometry': support48,
