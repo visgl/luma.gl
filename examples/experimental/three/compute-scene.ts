@@ -10,12 +10,14 @@ import {
   Color,
   DoubleSide,
   Mesh,
-  MeshBasicNodeMaterial,
+  MeshStandardNodeMaterial,
   PerspectiveCamera,
   Scene,
+  AmbientLight,
+  DirectionalLight,
   type WebGPURenderer
 } from 'three/webgpu';
-import {attribute, positionLocal, uniform, vec3, sin, cos} from 'three/tsl';
+import {attribute, positionLocal, uniform, vec3, sin, cos, transformNormalToView} from 'three/tsl';
 
 const GRID_SIZE = 65;
 const VERTEX_COUNT = GRID_SIZE * GRID_SIZE;
@@ -65,7 +67,17 @@ export function createComputeScene(device?: Device, renderer?: WebGPURenderer) {
   const geometry = new InstancedBufferGeometry();
   geometry.instanceCount = INSTANCE_COUNT;
   const phase = uniform(0);
-  const material = new MeshBasicNodeMaterial({color: '#32b6dc', side: DoubleSide});
+  const material = new MeshStandardNodeMaterial({
+    color: '#32b6dc',
+    side: DoubleSide,
+    roughness: 0.55,
+    metalness: 0.05
+  });
+  const waveX = positionLocal.x.mul(3).add(phase);
+  const waveZ = positionLocal.z.mul(2).sub(phase);
+  material.normalNode = transformNormalToView(
+    vec3(cos(waveX).mul(cos(waveZ)).mul(-1.35), 1, sin(waveX).mul(sin(waveZ)).mul(0.9))
+  );
   const instanceOffset = attribute<'vec3'>('instanceOffset', 'vec3');
   material.positionNode = positionLocal.add(instanceOffset);
   let bridge: ThreeBufferBridge | undefined;
@@ -129,6 +141,11 @@ export function createComputeScene(device?: Device, renderer?: WebGPURenderer) {
       }
     }
     geometry.setIndex(indices);
+    const waveX = positionLocal.x.mul(3).add(phase);
+    const waveZ = positionLocal.z.mul(2).sub(phase);
+    material.normalNode = transformNormalToView(
+      vec3(cos(waveX).mul(cos(waveZ)).mul(-1.35), 1, sin(waveX).mul(sin(waveZ)).mul(0.9))
+    );
     const instanceOffsets = new Float32Array(INSTANCE_COUNT * 3);
     for (let instance = 0; instance < INSTANCE_COUNT; instance++)
       instanceOffsets[instance * 3] = (instance - 1) * 4.5;
@@ -150,7 +167,9 @@ export function createComputeScene(device?: Device, renderer?: WebGPURenderer) {
   const mesh = new Mesh(geometry, material);
   // CPU metadata is intentionally stale: do not infer bounds from the placeholder array.
   mesh.frustumCulled = false;
-  scene.add(mesh);
+  const keyLight = new DirectionalLight(0xffeddb, 3);
+  keyLight.position.set(3, 5, 4);
+  scene.add(mesh, new AmbientLight(0xffffff, 0.55), keyLight);
   let disposed = false;
   return {
     scene,

@@ -74,7 +74,10 @@ export function makeCityFeatures(): CityFeature[] {
 }
 
 /** Interleaved position, normal, RGB color, and stable feature index for each triangle vertex. */
-export function makeCityMesh(features: readonly CityFeature[]): Float32Array {
+export function makeCityMesh(
+  features: readonly CityFeature[],
+  includeFacadeCoordinates = false
+): Float32Array {
   const vertices: number[] = [];
   features.forEach((feature, featureIndex) => {
     const [centerEast, centerNorth, base] = feature.center;
@@ -132,8 +135,20 @@ export function makeCityMesh(features: readonly CityFeature[]): Float32Array {
       );
     }
     function appendFace(corners: number[][], normal: number[]) {
+      const hasWindows = feature.kind === 'building' && normal[2] === 0;
+      const columns = Math.max(1, Math.round((normal[0] ? depth : width) / 16));
+      const floors = Math.max(1, Math.round(height / 10));
+      const facadeCoordinates = [
+        [0, 0],
+        [columns, 0],
+        [columns, floors],
+        [0, floors]
+      ];
       for (const cornerIndex of [0, 1, 2, 0, 2, 3]) {
         vertices.push(...corners[cornerIndex], ...normal, ...feature.color, featureIndex);
+        if (includeFacadeCoordinates) {
+          vertices.push(...facadeCoordinates[cornerIndex], Number(hasWindows));
+        }
       }
     }
   });

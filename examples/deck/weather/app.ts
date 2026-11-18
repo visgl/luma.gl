@@ -186,14 +186,28 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
       puddles: surfaceSettings.puddles
     };
   }
+  function getCloudCover() {
+    return cloudsEnabled ? (preset === 'clear' ? 0.25 : 0.65) : 0;
+  }
   function getSkyLighting() {
-    return getRiverfrontSkyLighting(hour, cloudsEnabled ? (preset === 'clear' ? 0.25 : 0.65) : 0);
+    return getRiverfrontSkyLighting(hour, getCloudCover());
   }
   function getDaylight() {
     return getSkyLighting().sunlight;
   }
   function getLighting(): LightingProps {
     return getSkyLighting().lights;
+  }
+  function getWindowSky(): [number, number, number] {
+    const {sunlight, moonIntensity} = getSkyLighting();
+    const brightness = Math.min(
+      1,
+      0.12 + sunlight.intensity + sunlight.diffuse.intensity * 2 + moonIntensity
+    );
+    const clouds = getCloudCover();
+    return [0, 1, 2].map(
+      channel => brightness * ((1 - clouds) * sunlight.diffuse.color[channel] + clouds * 0.78)
+    ) as [number, number, number];
   }
   function updateLayers(redraw = true) {
     if (!surfaceTexture) return;
@@ -212,7 +226,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
           sun: {radiusPixels: 14, radiance: 8, color: [255, 220, 18, 255]},
           moon: {radiusPixels: 18},
           stars: sun.altitude < 0 ? {brightness: 2} : false,
-          clouds: cloudsEnabled && {cover: preset === 'clear' ? 0.25 : 0.65, velocity: [14, 4]},
+          clouds: cloudsEnabled && {cover: getCloudCover(), velocity: [14, 4]},
           atmosphere: {
             // Blend a little of the muted canvas background into the dark horizon.
             opacity: 0.78,
@@ -227,6 +241,7 @@ export function createWeatherScene(parent: HTMLDivElement, options: DeckExampleD
           lighting: getLighting,
           fog: getFog,
           surfaceWeather: getSurfaceWeather,
+          windowSky: getWindowSky(),
           coordinateSystem: COORDINATE_SYSTEM.METER_OFFSETS,
           coordinateOrigin: CITY_ORIGIN
         }),
