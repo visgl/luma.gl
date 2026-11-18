@@ -15,9 +15,9 @@ import type {Buffer, RenderPass} from '@luma.gl/core';
 import type {Model, ModelNode} from '@luma.gl/engine';
 import {pbrMaterial} from '@luma.gl/shaders';
 import {
-  buildingPBRFragmentWGSL,
-  buildingPBRFragmentGLSL,
-  buildingPBRVertexGLSL,
+  BUILDING_FRAGMENT_WGSL,
+  BUILDING_FRAGMENT_GLSL,
+  BUILDING_VERTEX_GLSL,
   createPBRBuildingMesh,
   drawPBRBuildingMesh
 } from '../pbr-buildings';
@@ -80,7 +80,14 @@ export class BuildingMeshLayer extends Layer<BuildingMeshLayerProps> {
     return this.state.meshNode ? [this.state.meshNode.model] : [];
   }
   override draw({renderPass}: {renderPass: RenderPass}): void {
-    if (this.state.meshNode) drawPBRBuildingMesh(this.state.meshNode, renderPass);
+    if (this.state.meshNode) {
+      drawPBRBuildingMesh(this.state.meshNode, renderPass, {
+        viewport: this.context.viewport,
+        coordinateSystem: this.props.coordinateSystem,
+        coordinateOrigin: this.props.coordinateOrigin,
+        modelMatrix: this.props.modelMatrix
+      });
+    }
   }
   override getPickingInfo({info}: {info: PickingInfo}): PickingInfo {
     info.object = this.props.features[info.index];
@@ -120,7 +127,7 @@ struct CityVertex {
   output.pickingColor = picking_getPickingColorFromIndex(u32(featureIndex));
   return output;
 }
-${buildingPBRFragmentWGSL}
+${BUILDING_FRAGMENT_WGSL}
 @fragment fn fragmentMain(input: CityVertex) -> @location(0) vec4<f32> {
   let windowCoverage = riverfrontWindowCoverage(input.facade);
   if (picking.isActive > 0.5) {
@@ -148,7 +155,7 @@ void main() {
   geometry.pickingColor = picking_getPickingColorFromIndex(featureIndex);
   gl_Position = project_position_to_clipspace(position, vec3(0.0), vec3(0.0));
   DECKGL_FILTER_GL_POSITION(gl_Position, geometry);
-  ${buildingPBRVertexGLSL}
+  ${BUILDING_VERTEX_GLSL}
   facade = facadeCoordinates;
   vertexColor = vec4(color, layer.opacity);
   DECKGL_FILTER_COLOR(vertexColor, geometry);
@@ -159,7 +166,7 @@ precision highp float;
 in vec4 vertexColor;
 in vec3 facade;
 out vec4 fragColor;
-${buildingPBRFragmentGLSL}
+${BUILDING_FRAGMENT_GLSL}
 void main() {
   fragColor = shadeBuilding(facade, vertexColor);
   DECKGL_FILTER_COLOR(fragColor, geometry);

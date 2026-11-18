@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {project, type ProjectProps} from '@deck.gl/core';
 import type {Device, RenderPass} from '@luma.gl/core';
 import {MaterialFactory, Model, ModelNode, type ModelProps} from '@luma.gl/engine';
-import {pbrMaterial, type LightingProps, type PBRProjectionProps} from '@luma.gl/shaders';
+import {pbrMaterial, type LightingProps} from '@luma.gl/shaders';
 
-const lighting: LightingProps = {
+/** Daylight shared by the fixed-lighting façade demos. */
+const BUILDING_LIGHTING: LightingProps = {
   useByteColors: false,
   lights: [
     {type: 'ambient', color: [1, 1, 1], intensity: 0.45},
@@ -14,6 +16,7 @@ const lighting: LightingProps = {
   ]
 };
 
+/** Creates a building node that owns its PBR material and borrows the vertex buffer. */
 export function createPBRBuildingMesh(device: Device, props: ModelProps): ModelNode {
   const factory = new MaterialFactory(device, {modules: [pbrMaterial]});
   const material = factory.createMaterial();
@@ -24,7 +27,7 @@ export function createPBRBuildingMesh(device: Device, props: ModelProps): ModelN
       material,
       defines: {...props.defines, HAS_NORMALS: true, USE_LIGHTS: true}
     });
-    model.shaderInputs.setProps({lighting});
+    model.shaderInputs.setProps({lighting: BUILDING_LIGHTING});
     return new ModelNode({model, managedResources: [material]});
   } catch (error) {
     material.destroy();
@@ -32,18 +35,21 @@ export function createPBRBuildingMesh(device: Device, props: ModelProps): ModelN
   }
 }
 
-export function drawPBRBuildingMesh(node: ModelNode, renderPass: RenderPass): void {
-  // Deck updates its projection uniforms for each viewport and render pass.
-  const project = node.model.shaderInputs.getUniformValues()['project'] as
-    | {cameraPosition?: PBRProjectionProps['camera']}
-    | undefined;
-  node.model.shaderInputs.setProps({
-    pbrProjection: {camera: project?.cameraPosition ?? [0, 0, 0]}
-  });
+/** Draws a building with Deck's current camera in the shader's common coordinate space. */
+export function drawPBRBuildingMesh(
+  node: ModelNode,
+  renderPass: RenderPass,
+  projection: ProjectProps
+): void {
+  const uniforms = project.getUniforms(projection);
+  if ('cameraPosition' in uniforms) {
+    node.model.shaderInputs.setProps({pbrProjection: {camera: uniforms.cameraPosition}});
+  }
   node.draw(renderPass);
 }
 
-export const buildingPBRFragmentWGSL = /* wgsl */ `
+/** Shared WGSL material and window evaluation for a projected façade fragment. */
+export const BUILDING_FRAGMENT_WGSL = /* wgsl */ `
 fn shadeBuilding(input: CityVertex, windowCoverage: f32, baseColor: vec3f) -> vec3f {
   fragmentInputs.pbr_vPosition = input.commonPosition;
   fragmentInputs.pbr_vNormal = input.commonNormal;
@@ -55,14 +61,16 @@ fn shadeBuilding(input: CityVertex, windowCoverage: f32, baseColor: vec3f) -> ve
 }
 `;
 
-export const buildingPBRVertexGLSL = /* glsl */ `
+/** Writes the GLSL PBR interpolants in Deck common coordinates. */
+export const BUILDING_VERTEX_GLSL = /* glsl */ `
   pbr_vPosition = project_position(position);
   pbr_vNormal = project_normal(normal);
   pbr_vUV0 = vec2(0.0);
   pbr_vUV1 = vec2(0.0);
 `;
 
-export const buildingPBRFragmentGLSL = /* glsl */ `
+/** Shared GLSL material and window evaluation for a projected façade fragment. */
+export const BUILDING_FRAGMENT_GLSL = /* glsl */ `
 vec4 shadeBuilding(vec3 facade, vec4 baseColor) {
   vec4 color = pbr_filterColor(baseColor);
   color.rgb = riverfrontWindowReflection(color.rgb, pbr_vNormal,

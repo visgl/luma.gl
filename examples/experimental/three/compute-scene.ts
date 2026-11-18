@@ -73,8 +73,10 @@ export function createComputeScene(device?: Device, renderer?: WebGPURenderer) {
     roughness: 0.55,
     metalness: 0.05
   });
-  const waveX = positionLocal.x.mul(3).add(phase);
-  const waveZ = positionLocal.z.mul(2).sub(phase);
+  // Use the undisplaced position attribute so instance offsets cannot change the normal phase.
+  const wavePosition = attribute<'vec3'>('position', 'vec3');
+  const waveX = wavePosition.x.mul(3).add(phase);
+  const waveZ = wavePosition.z.mul(2).sub(phase);
   material.normalNode = transformNormalToView(
     vec3(cos(waveX).mul(cos(waveZ)).mul(-1.35), 1, sin(waveX).mul(sin(waveZ)).mul(0.9))
   );
@@ -141,11 +143,6 @@ export function createComputeScene(device?: Device, renderer?: WebGPURenderer) {
       }
     }
     geometry.setIndex(indices);
-    const waveX = positionLocal.x.mul(3).add(phase);
-    const waveZ = positionLocal.z.mul(2).sub(phase);
-    material.normalNode = transformNormalToView(
-      vec3(cos(waveX).mul(cos(waveZ)).mul(-1.35), 1, sin(waveX).mul(sin(waveZ)).mul(0.9))
-    );
     const instanceOffsets = new Float32Array(INSTANCE_COUNT * 3);
     for (let instance = 0; instance < INSTANCE_COUNT; instance++)
       instanceOffsets[instance * 3] = (instance - 1) * 4.5;
