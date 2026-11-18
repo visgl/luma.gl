@@ -136,8 +136,8 @@ export function makeCityMesh(
     }
     function appendFace(corners: number[][], normal: number[]) {
       const hasWindows = feature.kind === 'building' && normal[2] === 0;
-      const columns = Math.max(1, Math.round((normal[0] ? depth : width) / 16));
-      const floors = Math.max(1, Math.round(height / 10));
+      const columns = Math.max(1, Math.round((normal[0] ? depth : width) / 27));
+      const floors = Math.max(1, Math.round(height / 16));
       const facadeCoordinates = [
         [0, 0],
         [columns, 0],

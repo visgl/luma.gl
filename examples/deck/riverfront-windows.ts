@@ -4,7 +4,7 @@
 
 import type {ShaderModule} from '@luma.gl/shaders';
 
-/** A view-dependent sky approximation for recessed glass panes on building walls. */
+/** View-dependent sky color and direct sun glare for recessed glass panes. */
 export const riverfrontWindows = {
   name: 'riverfrontWindows',
   source: /* wgsl */ `
@@ -13,6 +13,18 @@ fn riverfrontWindowCoverage(facade: vec3f) -> f32 {
   let width = clamp(fwidth(facade.xy), vec2f(0.001), vec2f(0.2));
   let pane = vec2f(1.0) - smoothstep(vec2f(0.32, 0.29) - width, vec2f(0.32, 0.29) + width, edge);
   return pane.x * pane.y * facade.z;
+}
+
+fn riverfrontWindowSunGlare(normal: vec3f, toCamera: vec3f, sunDirection: vec3f) -> f32 {
+  let unitNormal = normalize(normal);
+  let ray = reflect(-normalize(toCamera), unitNormal);
+  let alignment = dot(ray.xy, sunDirection.xy) /
+    max(length(ray.xy) * length(sunDirection.xy), 0.001);
+  let elevationDelta = ray.z - sunDirection.z;
+  // The stretched lobe approximates glare on vertically textured architectural glass.
+  let glare = pow(max(alignment, 0.0), 14.0) * exp(-3.0 * elevationDelta * elevationDelta);
+  let reflection = pow(max(dot(ray, sunDirection), 0.0), 96.0);
+  return max(glare, reflection) * smoothstep(0.0, 0.35, dot(unitNormal, sunDirection));
 }
 
 fn riverfrontWindowReflection(
@@ -34,6 +46,17 @@ float riverfrontWindowCoverage(vec3 facade) {
   vec2 width = clamp(fwidth(facade.xy), vec2(0.001), vec2(0.2));
   vec2 pane = vec2(1.0) - smoothstep(vec2(0.32, 0.29) - width, vec2(0.32, 0.29) + width, edge);
   return pane.x * pane.y * facade.z;
+}
+
+float riverfrontWindowSunGlare(vec3 normal, vec3 toCamera, vec3 sunDirection) {
+  vec3 unitNormal = normalize(normal);
+  vec3 ray = reflect(-normalize(toCamera), unitNormal);
+  float alignment = dot(ray.xy, sunDirection.xy) /
+    max(length(ray.xy) * length(sunDirection.xy), 0.001);
+  float elevationDelta = ray.z - sunDirection.z;
+  float glare = pow(max(alignment, 0.0), 14.0) * exp(-3.0 * elevationDelta * elevationDelta);
+  float reflection = pow(max(dot(ray, sunDirection), 0.0), 96.0);
+  return max(glare, reflection) * smoothstep(0.0, 0.35, dot(unitNormal, sunDirection));
 }
 
 vec3 riverfrontWindowReflection(
