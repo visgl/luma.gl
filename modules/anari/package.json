@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/anari",
-  "version": "10.0.0-alpha.16",
+  "version": "10.0.0-alpha.17",
   "description": "ANARI-inspired declarative rendering for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -59,12 +59,12 @@
   ],
   "sideEffects": false,
   "peerDependencies": {
-    "@luma.gl/core": "~10.0.0-alpha.16",
-    "@luma.gl/engine": "~10.0.0-alpha.16",
-    "@luma.gl/shaders": "~10.0.0-alpha.16"
+    "@luma.gl/core": "~10.0.0-alpha.17",
+    "@luma.gl/engine": "~10.0.0-alpha.17",
+    "@luma.gl/shaders": "~10.0.0-alpha.17"
   },
   "dependencies": {
-    "@luma.gl/graph": "10.0.0-alpha.16",
+    "@luma.gl/graph": "10.0.0-alpha.17",
     "@math.gl/core": "5.0.0-beta.12",
     "@math.gl/geometry": "~5.0.0-beta.12",
     "zod": "^4.4.3"
