@@ -18,8 +18,8 @@ binds the logo as a base-color texture and sets metallic and roughness values to
 describe a moderately glossy dielectric surface.
 
 Set lights on the model's `ShaderInputs`. Positions and directions use world
-coordinates. A directional light's vector points toward the light source. A
-spotlight's vector points along its beam, and its cone angles are in radians.
+coordinates. Directional and spot light vectors point along the direction the light travels.
+Spotlight cone angles are in radians.
 
 ```typescript
 model.shaderInputs.setProps({

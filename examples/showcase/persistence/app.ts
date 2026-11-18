@@ -31,7 +31,7 @@ const lighting: LightingProps = {
   useByteColors: false,
   lights: [
     {type: 'ambient', color: [1, 1, 1], intensity: 0.15},
-    {type: 'directional', color: [1, 1, 1], direction: [1, 1, 2], intensity: 2}
+    {type: 'directional', color: [1, 1, 1], direction: [-1, -1, -2], intensity: 2}
   ]
 };
 
@@ -48,7 +48,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly nucleonInstances: Buffer;
   readonly electronPosition: NumericArray[] = [];
   readonly electronRotation: Matrix4[] = [];
-  readonly electronInstanceData = new Float32Array(ELECTRON_COUNT * 4);
+  readonly electronInstanceData = new Float32Array(ELECTRON_COUNT * 16);
 
   mainFramebuffer: Framebuffer;
   clearedPersistenceFramebuffer: Framebuffer;
@@ -71,7 +71,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       usage: Buffer.VERTEX | Buffer.COPY_DST,
       byteLength: this.electronInstanceData.byteLength
     });
-    const nucleonInstanceData = new Float32Array(CORE_COUNT * 4);
+    const nucleonInstanceData = new Float32Array(CORE_COUNT * 16);
     this.nucleonInstances = device.createBuffer({
       usage: Buffer.VERTEX | Buffer.COPY_DST,
       byteLength: nucleonInstanceData.byteLength
@@ -147,13 +147,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const theta = (4 / distanceFromCenter) * dt;
       const rot = new Matrix4().rotateAxis(theta, axis);
       this.electronRotation.push(rot);
+      this.electronInstanceData.set(new Matrix4().scale(0.06125), i * 16);
     }
 
     for (let index = 0; index < CORE_COUNT; index++) {
       const position = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5)
         .normalize()
         .scale(0.5);
-      nucleonInstanceData.set([position[0], position[1], position[2], 0.25], index * 4);
+      nucleonInstanceData.set(new Matrix4().translate(position).scale(0.25), index * 16);
     }
     this.nucleonInstances.write(nucleonInstanceData);
   }
@@ -203,7 +204,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     for (let index = 0; index < ELECTRON_COUNT; index++) {
       const position = this.electronRotation[index].transformAsVector(this.electronPosition[index]);
       this.electronPosition[index] = position;
-      this.electronInstanceData.set([position[0], position[1], position[2], 0.06125], index * 4);
+      this.electronInstanceData.set(position, index * 16 + 12);
     }
     this.electronInstances.write(this.electronInstanceData);
     this.nucleus.setMatrixComponents({rotation: [tick * 0.013, tick * 0.021, 0]});

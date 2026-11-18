@@ -57,7 +57,7 @@ const lighting: LightingProps = {
   useByteColors: false,
   lights: [
     {type: 'ambient', color: [1, 1, 1], intensity: 0.25},
-    {type: 'directional', color: [1, 1, 1], direction: [1, 1, 0.35], intensity: 2}
+    {type: 'directional', color: [1, 1, 1], direction: [-1, -1, -0.35], intensity: 2}
   ]
 };
 const NEAR = 0.1;

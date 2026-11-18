@@ -47,7 +47,7 @@ const lighting: LightingProps = {
       innerConeAngle: 0.25,
       outerConeAngle: 0.7
     },
-    {type: 'directional', color: [1, 1, 0.86], direction: [1, 0.5, 1]}
+    {type: 'directional', color: [1, 1, 0.86], direction: [-1, -0.5, -1]}
   ]
 };
 

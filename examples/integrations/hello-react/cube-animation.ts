@@ -13,7 +13,7 @@ const lighting: LightingProps = {
   useByteColors: false,
   lights: [
     {type: 'ambient', color: [1, 1, 1], intensity: 0.25},
-    {type: 'directional', color: [1, 0.9, 0.8], direction: [1, 1, -2], intensity: 2}
+    {type: 'directional', color: [1, 0.9, 0.8], direction: [-1, -1, 2], intensity: 2}
   ]
 };
 
