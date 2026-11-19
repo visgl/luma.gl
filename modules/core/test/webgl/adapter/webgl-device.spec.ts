@@ -181,3 +181,29 @@ it('detaches an exclusive wrapper when explicit context loss is unavailable', as
   replacement.destroy();
   gl.getExtension('WEBGL_lose_context')?.loseContext();
 });
+
+it('snapshots native WebGL state and avoids wrapping setters again after reattachment', async () => {
+  const gl = document.createElement('canvas').getContext('webgl2')!;
+  const read = gl.getParameter.bind(gl);
+  const setDepthMask = gl.depthMask.bind(gl);
+  setDepthMask(false);
+  const first = await webgl2Adapter.attach(gl);
+  gl.depthMask(true);
+  expect(read(gl.DEPTH_WRITEMASK)).toBe(true);
+  first.destroy();
+
+  setDepthMask(true);
+  const second = await webgl2Adapter.attach(gl);
+  gl.depthMask(false);
+  expect(read(gl.DEPTH_WRITEMASK)).toBe(false);
+  second.destroy();
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+});
+
+it('reports no ownership for implicit WebGL device reuse', async () => {
+  const device = await webgl2Adapter.create({createCanvasContext: true, _reuseDevices: true});
+  expect(device.ownsHandle).toBe(false);
+  device.destroy();
+  expect(device.isLost).toBe(false);
+  device.loseDevice();
+});

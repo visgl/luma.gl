@@ -212,6 +212,6 @@ Since WebGL2 is a essentially a superset of WebGL1, a library written for WebGL 
 
 ### Device ownership
 
-`device.ownsHandle` is fixed when the wrapper is created. By default a newly created device owns its native handle and a newly attached device borrows it. Pass `ownsHandle: true` when attaching to transfer ownership, or `ownsHandle: false` when creating to retain the native handle after wrapper teardown. Reattaching to an existing wrapper preserves its ownership.
+`device.ownsHandle` reports whether the wrapper owns its native handle. A newly created device owns its handle by default, except when using implicit WebGL device reuse. A newly attached device borrows the handle by default. Pass `ownsHandle: true` when attaching to transfer ownership, or `ownsHandle: false` when creating to retain the native handle after wrapper teardown. Reusing an existing wrapper uses its original ownership setting. When multiple consumers share a canvas, leave destruction to the canvas owner.
 
 Call `device.destroy()` once all consumers have finished. An owned WebGPU device destroys its native GPUDevice. An owned WebGL device requests context loss if the extension is available. Destroying a borrowed wrapper leaves its native handle available for another wrapper. Existing WebGL callers relying on implicit device reuse retain their previous teardown behavior until they specify ownership.

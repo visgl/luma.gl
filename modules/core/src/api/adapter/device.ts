@@ -386,7 +386,7 @@ export type DeviceProps = {
   id?: string;
   /** Properties for creating a default canvas context */
   createCanvasContext?: CanvasContextProps | true;
-  /** Whether destroy() releases the native handle. Defaults to true for creation and false for attachment. */
+  /** Whether destroy() releases the native handle. Defaults to true for creation and false for attachment or implicit WebGL reuse. */
   ownsHandle?: boolean;
   /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to the platform preference. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
@@ -523,7 +523,9 @@ export interface DeviceFactory {
  */
 export abstract class Device {
   /** Whether destroying this device also releases its native GPU handle. */
-  readonly ownsHandle: boolean;
+  get ownsHandle(): boolean {
+    return this.props.ownsHandle ?? !this.props._handle;
+  }
 
   static defaultProps: Required<DeviceProps> = {...DEVICE_DEFAULT_PROPS};
 
@@ -586,7 +588,6 @@ export abstract class Device {
   protected _debugGPUTimeQuery: QuerySet | null = null;
 
   constructor(props: DeviceProps) {
-    this.ownsHandle = props.ownsHandle ?? !props._handle;
     this.props = {...Device.defaultProps, ...props};
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }

@@ -255,10 +255,14 @@ export class WebGLDevice extends Device {
     }
 
     // Install context state tracking
-    const glState = new WebGLStateTracker(this.gl, {
-      log: (...args: any[]) => log.log(1, ...args)()
+    const glState =
+      WebGLStateTracker.get(this.gl) ||
+      new WebGLStateTracker(this.gl, {
+        log: (...args: any[]) => log.log(1, ...args)()
+      });
+    glState.trackState(this.gl, {
+      copyState: Boolean(externalGLContext || canvasContextProps.canvas)
     });
-    glState.trackState(this.gl, {copyState: false});
 
     // props.debug - instrument the WebGL context with Khronos debug tools
     // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
@@ -277,8 +281,16 @@ export class WebGLDevice extends Device {
     this.canvasContext._startObservers();
   }
 
+  override get ownsHandle(): boolean {
+    return (
+      this.props.ownsHandle ?? (!this.props._handle && !this.props._reuseDevices && !this._reused)
+    );
+  }
+
   /** Detaches an exclusive wrapper and releases its owned WebGL context when supported. */
   destroy(): void {
+    // Legacy callers may independently finalize the same reused wrapper. An explicit
+    // ownership setting leaves teardown to the caller that manages its lifetime.
     if (
       this.contextEvents.signal.aborted ||
       (this.props.ownsHandle === undefined && (this.props._reuseDevices || this._reused))
