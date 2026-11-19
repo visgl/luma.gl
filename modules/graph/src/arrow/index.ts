@@ -215,3 +215,14 @@ export {
   tessellateGeoArrowColumnToCPUVectors
 } from './cpu/arrow-cpu-pipelines';
 export {projectArrowCoordinates} from './cpu/arrow-coordinate-projection';
+
+export {
+  convertArrowColumnsToGPUVectors,
+  convertArrowRecordBatchesToGPUColumns,
+  type ArrowColumnConversionSource,
+  type ArrowGPUColumnStreamColumn,
+  type ArrowColumnStreamOptions,
+  type PreparedArrowGPUColumnChunk,
+  type PreparedArrowGPUColumnBatch
+} from './gpu/arrow-column-stream';
+export type {ArrowConversionStreamOptions} from './gpu/arrow-conversion-stream';
