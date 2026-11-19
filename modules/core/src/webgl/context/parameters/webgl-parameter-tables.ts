@@ -89,7 +89,11 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.UNPACK_IMAGE_HEIGHT]: 0,
   [GL.UNPACK_SKIP_PIXELS]: 0,
   [GL.UNPACK_SKIP_ROWS]: 0,
-  [GL.UNPACK_SKIP_IMAGES]: 0
+  [GL.UNPACK_SKIP_IMAGES]: 0,
+
+  // EXT_clip_control: the WebGL defaults. Only changed when the extension is present.
+  [GL.CLIP_ORIGIN_EXT]: GL.LOWER_LEFT_EXT,
+  [GL.CLIP_DEPTH_MODE_EXT]: GL.NEGATIVE_ONE_TO_ONE_EXT
 };
 
 // SETTER TABLES - ENABLES SETTING ANY PARAMETER WITH A COMMON API
@@ -208,6 +212,11 @@ export const GL_PARAMETER_SETTERS = {
   // EXT_depth_clamp https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
 
   [GL.DEPTH_CLAMP_EXT]: enable,
+
+  // EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/
+
+  [GL.CLIP_ORIGIN_EXT]: 'clipControl',
+  [GL.CLIP_DEPTH_MODE_EXT]: 'clipControl',
 
   // WEBGL_provoking_vertex https://registry.khronos.org/webgl/extensions/WEBGL_provoking_vertex/
 
@@ -342,8 +351,37 @@ function getValue(glEnum, values, cache) {
   return values[glEnum] !== undefined ? values[glEnum] : cache[glEnum];
 }
 
+/**
+ * Calls EXT_clip_control `clipControlEXT()` and records the values in the state tracker cache.
+ * Does nothing when the extension is not available, so the cache keeps the WebGL defaults.
+ * The extension method is not intercepted: direct calls to it bypass the state tracker.
+ */
+function setClipControl(gl: WebGL2RenderingContext, origin: GL, depthMode: GL): void {
+  const extension = gl.getExtension('EXT_clip_control');
+  if (!extension) {
+    return;
+  }
+  const stateTracker = gl.lumaState;
+  if (stateTracker) {
+    const {valueChanged} = stateTracker._updateCache({
+      [GL.CLIP_ORIGIN_EXT]: origin,
+      [GL.CLIP_DEPTH_MODE_EXT]: depthMode
+    });
+    if (!valueChanged) {
+      return;
+    }
+  }
+  extension.clipControlEXT(origin, depthMode);
+}
+
 // COMPOSITE_WEBGL_PARAMETER_
 export const GL_COMPOSITE_PARAMETER_SETTERS = {
+  clipControl: (gl: WebGL2RenderingContext, values, cache) =>
+    setClipControl(
+      gl,
+      getValue(GL.CLIP_ORIGIN_EXT, values, cache),
+      getValue(GL.CLIP_DEPTH_MODE_EXT, values, cache)
+    ),
   blendEquation: (gl: WebGL2RenderingContext, values, cache) =>
     gl.blendEquationSeparate(
       getValue(GL.BLEND_EQUATION_RGB, values, cache),
@@ -589,6 +627,9 @@ export const GL_HOOKED_SETTERS = {
 // GETTER TABLE - FOR READING OUT AN ENTIRE CONTEXT
 
 const isEnabled = (gl: WebGL2RenderingContext, key) => gl.isEnabled(key);
+/** EXT_clip_control enums are only valid after the extension is enabled. */
+const getClipControlParameter = (gl: WebGL2RenderingContext, key) =>
+  gl.getExtension('EXT_clip_control') ? gl.getParameter(key) : GL_PARAMETER_DEFAULTS[key];
 
 // Exceptions for any keys that cannot be queried by gl.getParameters
 export const GL_PARAMETER_GETTERS = {
@@ -601,7 +642,9 @@ export const GL_PARAMETER_GETTERS = {
   [GL.SAMPLE_COVERAGE]: isEnabled,
   [GL.SCISSOR_TEST]: isEnabled,
   [GL.STENCIL_TEST]: isEnabled,
-  [GL.RASTERIZER_DISCARD]: isEnabled
+  [GL.RASTERIZER_DISCARD]: isEnabled,
+  [GL.CLIP_ORIGIN_EXT]: getClipControlParameter,
+  [GL.CLIP_DEPTH_MODE_EXT]: getClipControlParameter
 };
 
 export const NON_CACHE_PARAMETERS = new Set([

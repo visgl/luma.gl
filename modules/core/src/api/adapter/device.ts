@@ -333,6 +333,7 @@ export type WebGLDeviceFeature =
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+  | 'clip-control-webgl' // RenderPassProps.clipDepthMode 'zero-to-one' (EXT_clip_control)
 
   // GLSL extension features
   | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
