@@ -223,11 +223,6 @@ export class WebGLDevice extends Device {
       this.canvasContext.destroy();
       this.contextEvents.abort();
       if (props._reuseDevices) {
-        log.log(
-          1,
-          `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
-          device
-        )();
         device._reused = true;
         return device;
       }
@@ -282,24 +277,18 @@ export class WebGLDevice extends Device {
     this.canvasContext._startObservers();
   }
 
-  private destroyed = false;
-
   /** Detaches an exclusive wrapper and releases its owned WebGL context when supported. */
   destroy(): void {
     if (
-      this.destroyed ||
+      this.contextEvents.signal.aborted ||
       (this.props.ownsHandle === undefined && (this.props._reuseDevices || this._reused))
     ) {
       return;
     }
-    this.destroyed = true;
     this.contextEvents.abort();
     this.commandEncoder?.destroy();
     this.canvasContext.destroy();
-    const data = getWebGLContextData(this.handle);
-    if (data.device === this) {
-      data.device = null;
-    }
+    getWebGLContextData(this.handle).device = null;
     if (this.ownsHandle) {
       this.loseDevice();
     }
@@ -347,7 +336,7 @@ export class WebGLDevice extends Device {
 
   private _assertContext(): void {
     // Reject allocation before resource constructors register an unusable resource.
-    if (this.destroyed || this.gl.isContextLost()) {
+    if (this.contextEvents.signal.aborted || this.gl.isContextLost()) {
       throw new Error('WebGL context is lost');
     }
   }
