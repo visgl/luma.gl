@@ -95,7 +95,8 @@ export class Luma {
     if (props._handle || props._reuseDevices) {
       throw new Error('DeviceOwner requires a new device. Use acquireDevice() to borrow a device.');
     }
-    return new DeviceOwner(() => this.createDevice({...props, _reuseDevices: false}));
+    const deviceProps = {...props, _reuseDevices: false};
+    return new DeviceOwner(() => this.createDevice(deviceProps));
   }
 
   /** Creates a device. Asynchronously. */

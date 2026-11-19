@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {assertDeviceCanBeDestroyed} from '../../api/adapter/device-owner';
 import type {
   DeviceProps,
   CanvasContextProps,
@@ -80,6 +81,12 @@ export class NullDevice extends Device {
    * @note Marks this test device as unusable even though there is no native context to lose.
    */
   destroy(): void {
+    assertDeviceCanBeDestroyed(this);
+    if (this._destroyed) {
+      return;
+    }
+    this._destroyed = true;
+    this.canvasContext.destroy();
     this._isLost = true;
     this.commandEncoder?.destroy();
   }

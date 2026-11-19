@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it, vi} from 'vitest';
-import type {Device} from '@luma.gl/core';
+import {luma, type Device} from '@luma.gl/core';
+import {nullAdapter} from '@luma.gl/core/test-utils';
 import {acquireDevice, DeviceOwner} from '../../src/api/adapter/device-owner';
 
 function mockDevice(): Device {
@@ -65,4 +66,18 @@ it('borrows an unmanaged raw device without destroying it', async () => {
   expect(await lease.device).toBe(device);
   lease.release();
   expect(device.destroy).not.toHaveBeenCalled();
+});
+
+it('enforces managed ownership on the null test backend', async () => {
+  const owner = luma.createDeviceOwner({
+    type: 'null',
+    adapters: [nullAdapter],
+    waitForPageLoad: false
+  });
+  const lease = owner.acquire();
+  const device = await lease.device;
+  expect(() => device.destroy()).toThrow(/lease/);
+  lease.release();
+  owner.dispose();
+  expect(device.isLost).toBe(true);
 });
