@@ -347,7 +347,7 @@ export class WebGLDevice extends Device {
 
   private _assertContext(): void {
     // Reject allocation before resource constructors register an unusable resource.
-    if (this.isLost) {
+    if (this.destroyed || this.gl.isContextLost()) {
       throw new Error('WebGL context is lost');
     }
   }
