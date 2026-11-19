@@ -312,7 +312,7 @@ export class WebGPUAdapter extends Adapter {
 
   /**
    * Wraps an application-created GPUDevice, keeping its requested limits and features.
-   * @note `device.destroy()` leaves the GPUDevice alive. Call `GPUDevice.destroy()` to release it.
+   * @note Set ownsHandle to true to transfer destruction of a newly attached GPUDevice to luma.gl.
    * @note Returns the existing wrapper if the GPUDevice is already attached or luma-created.
    */
   async attach(handle: GPUDevice | WebGPUDevice, props: DeviceProps = {}): Promise<WebGPUDevice> {

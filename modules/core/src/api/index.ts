@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-export {acquireDevice, type DeviceOwner, type DeviceLease} from './adapter/device-owner';
 export type {AttachDeviceProps, CreateDeviceProps} from './adapter/luma';
 
 export {luma} from './adapter/luma';

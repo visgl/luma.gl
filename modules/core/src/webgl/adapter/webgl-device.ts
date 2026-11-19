@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {assertDeviceCanBeDestroyed} from '../../api/adapter/device-owner';
 import type {TypedArray} from '@math.gl/core';
 import type {
   DeviceProps,
@@ -229,7 +228,6 @@ export class WebGLDevice extends Device {
           `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
           device
         )();
-        assertDeviceCanBeDestroyed(device);
         device._reused = true;
         return device;
       }
@@ -284,13 +282,17 @@ export class WebGLDevice extends Device {
     this.canvasContext._startObservers();
   }
 
+  private destroyed = false;
+
   /** Detaches an exclusive wrapper and releases its owned WebGL context when supported. */
   destroy(): void {
-    assertDeviceCanBeDestroyed(this);
-    if (this._destroyed || this.props._reuseDevices || this._reused) {
+    if (
+      this.destroyed ||
+      (this.props.ownsHandle === undefined && (this.props._reuseDevices || this._reused))
+    ) {
       return;
     }
-    this._destroyed = true;
+    this.destroyed = true;
     this.contextEvents.abort();
     this.commandEncoder?.destroy();
     this.canvasContext.destroy();
@@ -298,8 +300,7 @@ export class WebGLDevice extends Device {
     if (data.device === this) {
       data.device = null;
     }
-    const canvas = Device._getCanvasContextProps(this.props)?.canvas;
-    if (!this.props._handle && (!canvas || this.props.ownsCanvasContext)) {
+    if (this.ownsHandle) {
       this.loseDevice();
     }
     this._isLost = true;
@@ -346,7 +347,7 @@ export class WebGLDevice extends Device {
 
   private _assertContext(): void {
     // Reject allocation before resource constructors register an unusable resource.
-    if (this.gl.isContextLost()) {
+    if (this.isLost) {
       throw new Error('WebGL context is lost');
     }
   }

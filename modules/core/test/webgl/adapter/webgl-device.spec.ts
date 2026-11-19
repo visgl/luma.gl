@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {acquireDevice, luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {expect, it, vi} from 'vitest';
 
@@ -142,46 +141,35 @@ it('WebGLDevice rejects resource creation while its context is lost', async () =
   }
 });
 
-it('releases a transferred WebGL context only after the last managed lease', async () => {
-  const canvas = document.createElement('canvas');
-  const owner = luma.createDeviceOwner({
-    adapters: [webgl2Adapter],
-    type: 'webgl',
-    ownsCanvasContext: true,
-    createCanvasContext: {canvas}
-  });
-  const first = owner.acquire();
-  const device = await first.device;
-  const gl = canvas.getContext('webgl2')!;
-  const borrower = acquireDevice(device);
-  expect(() => device.destroy()).toThrow(/lease/);
-  first.release();
-  owner.dispose();
+it('preserves a borrowed context and releases an explicitly owned attachment', async () => {
+  const gl = document.createElement('canvas').getContext('webgl2')!;
+  const borrowed = await webgl2Adapter.attach(gl);
+  expect(borrowed.ownsHandle).toBe(false);
+  borrowed.destroy();
+  borrowed.destroy();
   expect(gl.isContextLost()).toBe(false);
-  borrower.release();
+
+  const owned = await webgl2Adapter.attach(gl, {ownsHandle: true});
+  expect(owned.ownsHandle).toBe(true);
+  owned.destroy();
+  owned.destroy();
   expect(gl.isContextLost()).toBe(true);
 });
 
-it('preserves the native context on a supplied reusable canvas', async () => {
+it('lets the owner destroy an explicitly owned reusable device', async () => {
   const canvas = document.createElement('canvas');
-  const device = await webgl2Adapter.create({createCanvasContext: {canvas}});
-  const gl = device.gl;
+  const props = {ownsHandle: true, _reuseDevices: true, createCanvasContext: {canvas}};
+  const device = await webgl2Adapter.create(props);
+  expect(await webgl2Adapter.create(props)).toBe(device);
   device.destroy();
-  device.destroy();
-  expect(gl.isContextLost()).toBe(false);
-  expect(() => device.createBuffer({byteLength: 16})).toThrow(/destroyed/);
-  const replacement = await webgl2Adapter.attach(gl);
-  expect(replacement).not.toBe(device);
-  replacement.destroy();
-  expect(gl.isContextLost()).toBe(false);
-  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  expect(device.gl.isContextLost()).toBe(true);
 });
 
 it('detaches an exclusive wrapper when explicit context loss is unavailable', async () => {
   const canvas = document.createElement('canvas');
   const device = await webgl2Adapter.create({
     createCanvasContext: {canvas},
-    ownsCanvasContext: true
+    ownsHandle: true
   });
   const gl = device.gl;
   const getExtension = vi.spyOn(device, 'getExtension').mockReturnValue({});

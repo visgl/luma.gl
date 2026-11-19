@@ -386,8 +386,8 @@ export type DeviceProps = {
   id?: string;
   /** Properties for creating a default canvas context */
   createCanvasContext?: CanvasContextProps | true;
-  /** Transfers permission to lose a supplied canvas's WebGL context on exclusive destruction. */
-  ownsCanvasContext?: boolean;
+  /** Whether destroy() releases the native handle. Defaults to true for creation and false for attachment. */
+  ownsHandle?: boolean;
   /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to the platform preference. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
@@ -522,8 +522,8 @@ export interface DeviceFactory {
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
-  /** @internal Set when wrapper destruction begins, including for borrowed native handles. */
-  _destroyed = false;
+  /** Whether destroying this device also releases its native GPU handle. */
+  readonly ownsHandle: boolean;
 
   static defaultProps: Required<DeviceProps> = {...DEVICE_DEFAULT_PROPS};
 
@@ -586,11 +586,12 @@ export abstract class Device {
   protected _debugGPUTimeQuery: QuerySet | null = null;
 
   constructor(props: DeviceProps) {
+    this.ownsHandle = props.ownsHandle ?? !props._handle;
     this.props = {...Device.defaultProps, ...props};
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }
 
-  /** Releases an exclusive wrapper and its owned native handle. Managed users release their lease. */
+  /** Releases the wrapper and its owned native handle. */
   abstract destroy(): void;
 
   // TODO - just expose the shadertypes decoders?

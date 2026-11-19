@@ -2,7 +2,7 @@
 
 ## Device ownership
 
-Manage shared devices with an owner and an idempotent lease per consumer. See [device ownership](./api-reference/core/luma.md#sharing-a-device-across-renderer-lifetimes).
+Select whether destroying a device releases the native WebGL or WebGPU handle with [device ownership](./api-reference/core/luma.md#device-ownership).
 
 ## Typed color normalization
 

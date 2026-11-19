@@ -155,9 +155,6 @@ export abstract class DeviceResource<
     if (!device) {
       throw new Error('no device');
     }
-    if (device._destroyed) {
-      throw new Error('Device has been destroyed');
-    }
     this._device = device;
     this.props = selectivelyMerge<Props>(props, defaultProps);
 
