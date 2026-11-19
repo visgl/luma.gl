@@ -259,6 +259,15 @@ describe('WebGPU device creation lifecycle', () => {
     await expect(getWebGPUAdapterInfo({} as GPUAdapter)).resolves.toEqual({});
   });
 
+  test('attach can take ownership of a native device', async () => {
+    const native = makeNativeDevice(makeDeferred<GPUDeviceLostInfo>().promise);
+    const device = await new MockWebGPUAdapter([]).attach(native.device, {ownsHandle: true});
+    expect(device.ownsHandle).toBe(true);
+    device.destroy();
+    device.destroy();
+    expect(native.device.destroy).toHaveBeenCalledTimes(1);
+  });
+
   test('attach does not destroy an application-owned device', async () => {
     const pendingLoss = makeDeferred<GPUDeviceLostInfo>();
     const nativeDevice = makeNativeDevice(pendingLoss.promise);

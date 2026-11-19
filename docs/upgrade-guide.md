@@ -1,5 +1,11 @@
 # Upgrade Guide
 
+### Reusing a WebGL canvas after device destruction
+
+Destroying a WebGL device created without device reuse now requests context loss by default.
+If the canvas must remain usable after destroying the wrapper, create the device with
+`ownsHandle: false`. An attached WebGL context is borrowed by default.
+
 ### Resource ownership base classes
 
 The former GPU `Resource<Props>` and `ResourceProps` are now `DeviceResource<Props>` and

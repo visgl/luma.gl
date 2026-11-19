@@ -386,6 +386,8 @@ export type DeviceProps = {
   id?: string;
   /** Properties for creating a default canvas context */
   createCanvasContext?: CanvasContextProps | true;
+  /** Whether destroy() releases the native handle. Defaults to true for creation and false for attachment or implicit WebGL reuse. */
+  ownsHandle?: boolean;
   /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to the platform preference. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
@@ -520,6 +522,11 @@ export interface DeviceFactory {
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
+  /** Whether destroying this device also releases its native GPU handle. */
+  get ownsHandle(): boolean {
+    return this.props.ownsHandle ?? !this.props._handle;
+  }
+
   static defaultProps: Required<DeviceProps> = {...DEVICE_DEFAULT_PROPS};
 
   get [Symbol.toStringTag](): string {
@@ -585,6 +592,7 @@ export abstract class Device {
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }
 
+  /** Releases the wrapper and its owned native handle. */
   abstract destroy(): void;
 
   // TODO - just expose the shadertypes decoders?

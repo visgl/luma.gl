@@ -90,8 +90,6 @@ export class WebGPUDevice extends Device {
   readonly adapter: GPUAdapter | null;
   /* The underlying WebGPU adapter's info */
   readonly adapterInfo: GPUAdapterInfo;
-  /** Whether `destroy()` destroys `handle`. `false` for GPUDevices passed to `attach()`, which the application owns. */
-  readonly ownsHandle: boolean;
 
   /** type of this device */
   readonly type = 'webgpu';
@@ -136,7 +134,7 @@ export class WebGPUDevice extends Device {
     adapterInfo: GPUAdapterInfo,
     ownsHandle: boolean = true
   ) {
-    super({...props, id: props.id || 'webgpu-device'});
+    super({...props, ownsHandle: props.ownsHandle ?? ownsHandle, id: props.id || 'webgpu-device'});
     const canvasContextProps = Device._getCanvasContextProps(props);
     this.preferredColorFormat =
       canvasContextProps?.colorFormat ??
@@ -144,7 +142,6 @@ export class WebGPUDevice extends Device {
     this.handle = device;
     this.adapter = adapter;
     this.adapterInfo = adapterInfo;
-    this.ownsHandle = ownsHandle;
     const webgpu = navigator.gpu as GPU & {wgslLanguageFeatures?: Iterable<string>};
     this.wgslLanguageFeatures = new Set(webgpu.wgslLanguageFeatures ?? []);
 
@@ -204,7 +201,6 @@ export class WebGPUDevice extends Device {
     if (devicesByHandle.get(this.handle) === this) {
       devicesByHandle.delete(this.handle);
     }
-    // Attached GPUDevices belong to the application
     if (this.ownsHandle) {
       this.handle.destroy();
     } else {

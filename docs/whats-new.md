@@ -1,5 +1,9 @@
 # What's New
 
+## Device ownership
+
+Select whether destroying a device releases the native WebGL or WebGPU handle with [device ownership](./api-reference/core/luma.md#device-ownership).
+
 ## Typed color normalization
 
 The JavaScript color helpers now decode byte typed arrays and borrow normalized Float16,

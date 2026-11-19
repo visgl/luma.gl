@@ -147,6 +147,8 @@ export class WebGLDevice extends Device {
     }
   }
 
+  private readonly contextEvents = new AbortController();
+
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
 
@@ -194,6 +196,7 @@ export class WebGLDevice extends Device {
       createBrowserContext(
         this.canvasContext.canvas,
         {
+          signal: this.contextEvents.signal,
           onContextLost: (_event: Event) =>
             this._resolveContextLost?.({
               reason: this._lossWasRequested ? 'destroyed' : 'unknown',
@@ -217,15 +220,9 @@ export class WebGLDevice extends Device {
     // This means that a newly created gl context may already have a device attached to it.
     device = WebGLDevice.getDeviceFromContext(gl);
     if (device) {
+      this.canvasContext.destroy();
+      this.contextEvents.abort();
       if (props._reuseDevices) {
-        log.log(
-          1,
-          `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
-          device
-        )();
-        // Destroy the orphaned canvas context that was created above (line 149)
-        // to prevent its ResizeObserver from firing callbacks with undefined device
-        this.canvasContext.destroy();
         device._reused = true;
         return device;
       }
@@ -258,10 +255,14 @@ export class WebGLDevice extends Device {
     }
 
     // Install context state tracking
-    const glState = new WebGLStateTracker(this.gl, {
-      log: (...args: any[]) => log.log(1, ...args)()
+    const glState =
+      WebGLStateTracker.get(this.gl) ||
+      new WebGLStateTracker(this.gl, {
+        log: (...args: any[]) => log.log(1, ...args)()
+      });
+    glState.trackState(this.gl, {
+      copyState: Boolean(externalGLContext || canvasContextProps.canvas)
     });
-    glState.trackState(this.gl, {copyState: false});
 
     // props.debug - instrument the WebGL context with Khronos debug tools
     // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
@@ -280,29 +281,30 @@ export class WebGLDevice extends Device {
     this.canvasContext._startObservers();
   }
 
-  /**
-   * Destroys the device
-   *
-   * @note "Detaches" from the WebGL context unless _reuseDevices is true.
-   *
-   * @note The underlying WebGL context is not immediately destroyed,
-   * but may be destroyed later through normal JavaScript garbage collection.
-   * This is a fundamental limitation since WebGL does not offer any
-   * browser API for destroying WebGL contexts.
-   */
+  override get ownsHandle(): boolean {
+    return (
+      this.props.ownsHandle ?? (!this.props._handle && !this.props._reuseDevices && !this._reused)
+    );
+  }
+
+  /** Detaches an exclusive wrapper and releases its owned WebGL context when supported. */
   destroy(): void {
-    // Note that deck.gl (especially in React strict mode) depends on being able
-    // to asynchronously create a Device against the same canvas (i.e. WebGL context)
-    // multiple times and getting the same device back. Since deck.gl is not aware
-    // of this sharing, it might call destroy() multiple times on the same device.
-    // Therefore we must do nothing in destroy() if props._reuseDevices is true
-    if (!this.props._reuseDevices && !this._reused) {
-      this._isLost = true;
-      this.commandEncoder?.destroy();
-      // Delete the reference to the device that we store on the WebGL context
-      const contextData = getWebGLContextData(this.handle);
-      contextData.device = null;
+    // Legacy callers may independently finalize the same reused wrapper. An explicit
+    // ownership setting leaves teardown to the caller that manages its lifetime.
+    if (
+      this.contextEvents.signal.aborted ||
+      (this.props.ownsHandle === undefined && (this.props._reuseDevices || this._reused))
+    ) {
+      return;
     }
+    this.contextEvents.abort();
+    this.commandEncoder?.destroy();
+    this.canvasContext.destroy();
+    getWebGLContextData(this.handle).device = null;
+    if (this.ownsHandle) {
+      this.loseDevice();
+    }
+    this._isLost = true;
   }
 
   get isLost(): boolean {
@@ -346,7 +348,7 @@ export class WebGLDevice extends Device {
 
   private _assertContext(): void {
     // Reject allocation before resource constructors register an unusable resource.
-    if (this.gl.isContextLost()) {
+    if (this.contextEvents.signal.aborted || this.gl.isContextLost()) {
       throw new Error('WebGL context is lost');
     }
   }
