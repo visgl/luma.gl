@@ -522,6 +522,9 @@ export interface DeviceFactory {
  * WebGPU Device/WebGL context abstraction
  */
 export abstract class Device {
+  /** @internal Set when wrapper destruction begins, including for borrowed native handles. */
+  _destroyed = false;
+
   static defaultProps: Required<DeviceProps> = {...DEVICE_DEFAULT_PROPS};
 
   get [Symbol.toStringTag](): string {

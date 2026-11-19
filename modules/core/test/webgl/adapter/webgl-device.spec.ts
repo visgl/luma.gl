@@ -169,9 +169,27 @@ it('preserves the native context on a supplied reusable canvas', async () => {
   device.destroy();
   device.destroy();
   expect(gl.isContextLost()).toBe(false);
+  expect(() => device.createBuffer({byteLength: 16})).toThrow(/destroyed/);
   const replacement = await webgl2Adapter.attach(gl);
   expect(replacement).not.toBe(device);
   replacement.destroy();
   expect(gl.isContextLost()).toBe(false);
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+});
+
+it('detaches an exclusive wrapper when explicit context loss is unavailable', async () => {
+  const canvas = document.createElement('canvas');
+  const device = await webgl2Adapter.create({
+    createCanvasContext: {canvas},
+    ownsCanvasContext: true
+  });
+  const gl = device.gl;
+  const getExtension = vi.spyOn(device, 'getExtension').mockReturnValue({});
+  device.destroy();
+  expect(getExtension).toHaveBeenCalledWith('WEBGL_lose_context');
+  expect(device.isLost).toBe(true);
+  expect(gl.isContextLost()).toBe(false);
+  const replacement = await webgl2Adapter.attach(gl);
+  replacement.destroy();
   gl.getExtension('WEBGL_lose_context')?.loseContext();
 });

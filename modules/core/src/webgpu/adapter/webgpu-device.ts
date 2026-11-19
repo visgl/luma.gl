@@ -110,7 +110,6 @@ export class WebGPUDevice extends Device {
   override canvasContext: WebGPUCanvasContext | null = null;
 
   private _isLost: boolean = false;
-  private isDestroyed: boolean = false;
   private _defaultSampler: WebGPUSampler | null = null;
   private _onUncapturedError = (event: Event): void => {
     event.preventDefault();
@@ -192,10 +191,10 @@ export class WebGPUDevice extends Device {
 
   destroy(): void {
     assertDeviceCanBeDestroyed(this);
-    if (this.isDestroyed) {
+    if (this._destroyed) {
       return;
     }
-    this.isDestroyed = true;
+    this._destroyed = true;
     this._isLost = true;
     this.commandEncoder?.destroy();
     this._defaultSampler?.destroy();

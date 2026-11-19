@@ -284,15 +284,13 @@ export class WebGLDevice extends Device {
     this.canvasContext._startObservers();
   }
 
-  private destroyed = false;
-
   /** Detaches an exclusive wrapper and releases its owned WebGL context when supported. */
   destroy(): void {
     assertDeviceCanBeDestroyed(this);
-    if (this.destroyed || this.props._reuseDevices || this._reused) {
+    if (this._destroyed || this.props._reuseDevices || this._reused) {
       return;
     }
-    this.destroyed = true;
+    this._destroyed = true;
     this.contextEvents.abort();
     this.commandEncoder?.destroy();
     this.canvasContext.destroy();
