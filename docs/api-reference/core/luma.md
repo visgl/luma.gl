@@ -209,3 +209,29 @@ Since WebGL2 is a essentially a superset of WebGL1, a library written for WebGL 
 ## Remarks
 
 - At least one backend must be imported and registered with `luma.registerAdapters()` for `luma.createDevice()` or `luma.attachDevice()` calls to succeed (unless `Device` implementations are supplied to those calls).
+
+### Sharing a device across renderer lifetimes
+
+Create one owner for the lifetime of the canvas. Each renderer acquires a separate lease, including renderers that start while device initialization is pending.
+
+```ts
+const owner = luma.createDeviceOwner({
+  type: 'webgl',
+  adapters: [webgl2Adapter],
+  createCanvasContext: {canvas},
+  ownsCanvasContext: true
+});
+const lease = owner.acquire();
+try {
+  const device = await lease.device;
+  // Render with device.
+} finally {
+  lease.release();
+}
+// When the canvas owner permanently discards the canvas:
+owner.dispose();
+```
+
+Release is idempotent. A later renderer can acquire from the same owner after all earlier leases end. Disposal closes acquisition immediately and destroys the device once initialization finishes and all leases have ended. Calling `device.destroy()` directly on a managed device throws. A consumer given a Device can call `acquireDevice(device)` to participate in its owner's lifetime. For a raw device, this simply borrows the device and leaves destruction to its creator.
+
+Exclusive WebGL device destruction requests native context loss for a canvas luma created, or when the canvas owner explicitly transferred that authority with `ownsCanvasContext: true`. A supplied canvas defaults to retaining its context. Attaching a native handle always preserves that handle. WebGPU destroys a native device it created. Existing WebGL callers using `_reuseDevices` retain their legacy destruction behavior.

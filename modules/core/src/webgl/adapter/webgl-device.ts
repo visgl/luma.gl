@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {assertDeviceCanBeDestroyed} from '../../api/adapter/device-owner';
 import type {TypedArray} from '@math.gl/core';
 import type {
   DeviceProps,
@@ -147,6 +148,8 @@ export class WebGLDevice extends Device {
     }
   }
 
+  private readonly contextEvents = new AbortController();
+
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
 
@@ -194,6 +197,7 @@ export class WebGLDevice extends Device {
       createBrowserContext(
         this.canvasContext.canvas,
         {
+          signal: this.contextEvents.signal,
           onContextLost: (_event: Event) =>
             this._resolveContextLost?.({
               reason: this._lossWasRequested ? 'destroyed' : 'unknown',
@@ -217,15 +221,15 @@ export class WebGLDevice extends Device {
     // This means that a newly created gl context may already have a device attached to it.
     device = WebGLDevice.getDeviceFromContext(gl);
     if (device) {
+      this.canvasContext.destroy();
+      this.contextEvents.abort();
       if (props._reuseDevices) {
         log.log(
           1,
           `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
           device
         )();
-        // Destroy the orphaned canvas context that was created above (line 149)
-        // to prevent its ResizeObserver from firing callbacks with undefined device
-        this.canvasContext.destroy();
+        assertDeviceCanBeDestroyed(device);
         device._reused = true;
         return device;
       }
@@ -280,29 +284,27 @@ export class WebGLDevice extends Device {
     this.canvasContext._startObservers();
   }
 
-  /**
-   * Destroys the device
-   *
-   * @note "Detaches" from the WebGL context unless _reuseDevices is true.
-   *
-   * @note The underlying WebGL context is not immediately destroyed,
-   * but may be destroyed later through normal JavaScript garbage collection.
-   * This is a fundamental limitation since WebGL does not offer any
-   * browser API for destroying WebGL contexts.
-   */
+  private destroyed = false;
+
+  /** Detaches an exclusive wrapper and releases its owned WebGL context when supported. */
   destroy(): void {
-    // Note that deck.gl (especially in React strict mode) depends on being able
-    // to asynchronously create a Device against the same canvas (i.e. WebGL context)
-    // multiple times and getting the same device back. Since deck.gl is not aware
-    // of this sharing, it might call destroy() multiple times on the same device.
-    // Therefore we must do nothing in destroy() if props._reuseDevices is true
-    if (!this.props._reuseDevices && !this._reused) {
-      this._isLost = true;
-      this.commandEncoder?.destroy();
-      // Delete the reference to the device that we store on the WebGL context
-      const contextData = getWebGLContextData(this.handle);
-      contextData.device = null;
+    assertDeviceCanBeDestroyed(this);
+    if (this.destroyed || this.props._reuseDevices || this._reused) {
+      return;
     }
+    this.destroyed = true;
+    this.contextEvents.abort();
+    this.commandEncoder?.destroy();
+    this.canvasContext.destroy();
+    const data = getWebGLContextData(this.handle);
+    if (data.device === this) {
+      data.device = null;
+    }
+    const canvas = Device._getCanvasContextProps(this.props)?.canvas;
+    if (!this.props._handle && (!canvas || this.props.ownsCanvasContext)) {
+      this.loseDevice();
+    }
+    this._isLost = true;
   }
 
   get isLost(): boolean {

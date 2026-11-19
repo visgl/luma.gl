@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
-import {type DeviceProps} from '@luma.gl/core';
+import {acquireDevice, luma, type DeviceProps} from '@luma.gl/core';
 import {WebGPUAdapter, getWebGPUAdapterInfo} from '../../../src/webgpu/adapter/webgpu-adapter';
 
 type Deferred<T> = {
@@ -314,6 +314,25 @@ describe('WebGPU device creation lifecycle', () => {
       message: expect.stringContaining('already lost')
     });
     expect(lostDevice.device.destroy).not.toHaveBeenCalled();
+  });
+
+  test('managed disposal waits for a borrower before destroying the native device', async () => {
+    const native = makeNativeDevice(makeDeferred<GPUDeviceLostInfo>().promise);
+    const adapter = new MockWebGPUAdapter([makeNativeAdapter(native.device).adapter]);
+    const owner = luma.createDeviceOwner({
+      type: 'webgpu',
+      adapters: [adapter],
+      waitForPageLoad: false
+    });
+    const lease = owner.acquire();
+    const device = await lease.device;
+    const borrower = acquireDevice(device);
+    expect(() => device.destroy()).toThrow(/lease/);
+    owner.dispose();
+    lease.release();
+    expect(native.device.destroy).not.toHaveBeenCalled();
+    borrower.release();
+    expect(native.device.destroy).toHaveBeenCalledTimes(1);
   });
 
   test('create destroys the device it requested', async () => {

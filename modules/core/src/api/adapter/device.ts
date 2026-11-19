@@ -386,6 +386,8 @@ export type DeviceProps = {
   id?: string;
   /** Properties for creating a default canvas context */
   createCanvasContext?: CanvasContextProps | true;
+  /** Transfers permission to lose a supplied canvas's WebGL context on exclusive destruction. */
+  ownsCanvasContext?: boolean;
   /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to the platform preference. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
@@ -585,6 +587,7 @@ export abstract class Device {
     this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
   }
 
+  /** Releases an exclusive wrapper and its owned native handle. Managed users release their lease. */
   abstract destroy(): void;
 
   // TODO - just expose the shadertypes decoders?

@@ -1,5 +1,9 @@
 # What's New
 
+## Device ownership
+
+Manage shared devices with an owner and an idempotent lease per consumer. See [device ownership](./api-reference/core/luma.md#sharing-a-device-across-renderer-lifetimes).
+
 ## Typed color normalization
 
 The JavaScript color helpers now decode byte typed arrays and borrow normalized Float16,

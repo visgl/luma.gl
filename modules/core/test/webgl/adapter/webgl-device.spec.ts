@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {acquireDevice, luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/core/webgl';
 import {expect, it, vi} from 'vitest';
 
@@ -139,4 +140,38 @@ it('WebGLDevice rejects resource creation while its context is lost', async () =
   } finally {
     device.destroy();
   }
+});
+
+it('releases a transferred WebGL context only after the last managed lease', async () => {
+  const canvas = document.createElement('canvas');
+  const owner = luma.createDeviceOwner({
+    adapters: [webgl2Adapter],
+    type: 'webgl',
+    ownsCanvasContext: true,
+    createCanvasContext: {canvas}
+  });
+  const first = owner.acquire();
+  const device = await first.device;
+  const gl = canvas.getContext('webgl2')!;
+  const borrower = acquireDevice(device);
+  expect(() => device.destroy()).toThrow(/lease/);
+  first.release();
+  owner.dispose();
+  expect(gl.isContextLost()).toBe(false);
+  borrower.release();
+  expect(gl.isContextLost()).toBe(true);
+});
+
+it('preserves the native context on a supplied reusable canvas', async () => {
+  const canvas = document.createElement('canvas');
+  const device = await webgl2Adapter.create({createCanvasContext: {canvas}});
+  const gl = device.gl;
+  device.destroy();
+  device.destroy();
+  expect(gl.isContextLost()).toBe(false);
+  const replacement = await webgl2Adapter.attach(gl);
+  expect(replacement).not.toBe(device);
+  replacement.destroy();
+  expect(gl.isContextLost()).toBe(false);
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
 });

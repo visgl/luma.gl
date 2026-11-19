@@ -44,6 +44,7 @@ export const DEVICE_DEFAULT_PROPS: Required<DeviceProps> = {
   debugSpectorJSUrl: undefined!,
 
   // Experimental
+  ownsCanvasContext: false,
   _reuseDevices: false,
   _cacheShaders: true,
   _destroyShaders: false,

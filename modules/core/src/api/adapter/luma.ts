@@ -5,6 +5,7 @@
 import type {Log} from 'probe.gl/log';
 import type {Device, DeviceProps} from './device';
 import {DEVICE_DEFAULT_PROPS} from './device-defaults';
+import {DeviceOwner} from './device-owner';
 import {Adapter} from './adapter';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
@@ -87,6 +88,14 @@ export class Luma {
     log.log(1, `${this.VERSION} - ${STARTUP_MESSAGE}`)();
 
     globalThis.luma = this;
+  }
+
+  /** Creates an owner for a new device. Share this owner across uses of the same canvas. */
+  createDeviceOwner(props: CreateDeviceProps = {}): DeviceOwner {
+    if (props._handle || props._reuseDevices) {
+      throw new Error('DeviceOwner requires a new device. Use acquireDevice() to borrow a device.');
+    }
+    return new DeviceOwner(() => this.createDevice({...props, _reuseDevices: false}));
   }
 
   /** Creates a device. Asynchronously. */

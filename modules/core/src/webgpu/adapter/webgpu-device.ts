@@ -5,6 +5,7 @@
 // biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
 
+import {assertDeviceCanBeDestroyed} from '../../api/adapter/device-owner';
 import {GPUClockCorrelator} from './helpers/gpu-clock-correlator';
 import type {
   Bindings,
@@ -190,6 +191,7 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    assertDeviceCanBeDestroyed(this);
     if (this.isDestroyed) {
       return;
     }
