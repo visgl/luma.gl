@@ -208,3 +208,4 @@ export {
   type SelectionOutlineProps,
   type SelectionOutlineUniforms
 } from './passes/screen-space/selection-outline';
+export * from './temporal-upscale';
