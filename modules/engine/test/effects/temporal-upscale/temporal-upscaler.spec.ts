@@ -4,13 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {
-  createTemporalScene,
-  measureComb,
-  measureRegion,
-  OUTPUT_SIZE,
-  psnr
-} from './temporal-scene-test-utils';
+import {createTemporalScene, measureRegion, OUTPUT_SIZE, psnr} from './temporal-scene-test-utils';
 
 it('static: 64 frames >=27 dB and >=3 dB improvement; native TAA improves raw input', async context => {
   const device = await getWebGPUTestDevice();
@@ -31,17 +25,6 @@ it('static: 64 frames >=27 dB and >=3 dB improvement; native TAA improves raw in
       const nativeReference = await native.readReference();
       const nativeInitial = psnr(raw, nativeReference);
       const nativeConverged = psnr(await native.readOutput(), nativeReference);
-      console.log(
-        'TEMPORAL_UPSCALER_METRICS',
-        JSON.stringify({
-          test: 'static',
-          initial,
-          converged,
-          improvement: converged - initial,
-          nativeInitial,
-          nativeConverged
-        })
-      );
       expect(converged, '64-frame PSNR >=27 dB').toBeGreaterThanOrEqual(27);
       expect(converged - initial, 'gain >=3 dB').toBeGreaterThanOrEqual(3);
       expect(nativeConverged, 'native TAA beats raw jittered frame').toBeGreaterThan(nativeInitial);
@@ -68,15 +51,6 @@ it('motion: 48 frames >=22 dB and correct velocity beats negated velocity by >=3
       fixture.destroy();
     }
   }
-  console.log(
-    'TEMPORAL_UPSCALER_METRICS',
-    JSON.stringify({
-      test: 'motion',
-      correct: scores[0],
-      negated: scores[1],
-      margin: scores[0] - scores[1]
-    })
-  );
   expect(scores[0], 'correct velocity PSNR >=22 dB').toBeGreaterThanOrEqual(22);
   expect(scores[0] - scores[1], 'sign-sensitive margin >=3 dB').toBeGreaterThanOrEqual(3);
 });
@@ -111,10 +85,6 @@ it('disocclusion: exact rejection mask, revealed MAE <0.01 and depth control >=0
   // history residue from inevitable single-frame aliasing against a supersampled reference.
   const rejectedError = measureRegion(outputs[0], outputs[3], revealed).mean;
   const controlError = measureRegion(outputs[1], outputs[3], revealed).mean;
-  console.log(
-    'TEMPORAL_UPSCALER_METRICS',
-    JSON.stringify({test: 'disocclusion', revealedMask, untouchedMask, rejectedError, controlError})
-  );
   expect(revealedMask, 'revealed area is white').toBe(0);
   expect(untouchedMask, 'untouched area is black').toBe(0);
   expect(rejectedError, 'revealed MAE <0.01').toBeLessThan(0.01);
@@ -138,7 +108,6 @@ it('reset: true matches frame 1 within 1/255 in every RGBA component', async con
       (error, value, index) => Math.max(error, Math.abs(value - first[index])),
       0
     );
-    console.log('TEMPORAL_UPSCALER_METRICS', JSON.stringify({test: 'reset', maximum}));
     expect(maximum, 'reset error <=1/255').toBeLessThanOrEqual(1 / 255);
   } finally {
     fixture.destroy();
@@ -152,7 +121,6 @@ it('responsiveness: a removed 3 px line leaves the history sooner at 1; static P
   // neighbourhood holds both colours, so the sample validation trusts it.
   const region: [number, number, number, number] = [13, 3, 21, 13];
   const metrics: {
-    responsiveness: number;
     staleFrames: number;
     staticPsnr: number;
     thinLinePeak: number;
@@ -208,9 +176,8 @@ it('responsiveness: a removed 3 px line leaves the history sooner at 1; static P
     } finally {
       fixture.destroy();
     }
-    metrics.push({responsiveness, staleFrames, staticPsnr, thinLinePeak});
+    metrics.push({staleFrames, staticPsnr, thinLinePeak});
   }
-  console.log('TEMPORAL_UPSCALER_METRICS', JSON.stringify({test: 'responsiveness', metrics}));
   for (const metric of metrics) {
     expect(metric.staleFrames, 'the residual falls below 4/255 in 256 frames').toBeLessThanOrEqual(
       256
@@ -233,10 +200,10 @@ it('responsiveness: a removed 3 px line leaves the history sooner at 1; static P
   ).toBeGreaterThan(0.2);
 });
 
-it('kernel sweep: 0.75 and 0.85 both converge >=27 dB; log comb without a ranking assertion', async context => {
+it('kernel sweep: 0.75 and 0.85 both converge >=27 dB', async context => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip();
-  const metrics: {kernelSharpness: number; converged: number; comb: number}[] = [];
+  const metrics: {kernelSharpness: number; converged: number}[] = [];
   for (const kernelSharpness of [0.75, 0.85]) {
     const fixture = createTemporalScene(device);
     try {
@@ -245,14 +212,12 @@ it('kernel sweep: 0.75 and 0.85 both converge >=27 dB; log comb without a rankin
       const reference = await fixture.readReference();
       metrics.push({
         kernelSharpness,
-        converged: psnr(result, reference),
-        comb: measureComb(result, reference)
+        converged: psnr(result, reference)
       });
     } finally {
       fixture.destroy();
     }
   }
-  console.log('TEMPORAL_UPSCALER_METRICS', JSON.stringify({test: 'kernel', metrics}));
   // The option must reach the shader: on this scene the narrower kernel is sharper.
   expect(
     metrics[1].converged - metrics[0].converged,

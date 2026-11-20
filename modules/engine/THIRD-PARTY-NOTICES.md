@@ -251,9 +251,11 @@ SOFTWARE.
 
 ## FSR 2 temporal upscaling
 
-AMD FidelityFX FSR 2 (MIT license).
+AMD FidelityFX FSR2 v2.2.1 (MIT license).
 
-Source: [FSR 2](https://github.com/GPUOpen-Effects/FidelityFX-FSR2).
+Source: [FidelityFX FSR2](https://github.com/GPUOpen-Effects/FidelityFX-FSR2).
+
+Revision: [v2.2.1](https://github.com/GPUOpen-Effects/FidelityFX-FSR2/releases/tag/v2.2.1).
 
 Adaptation: `src/effects/temporal-upscale` is an independently authored implementation
 inspired by FSR 2's dilation, reprojection, rectification, accumulation and RCAS
