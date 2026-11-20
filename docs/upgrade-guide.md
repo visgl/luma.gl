@@ -219,6 +219,12 @@ New dense-union output uses canonical GeoArrow IDs: XY point/line/polygon use
 1/2/3; XYZ adds 10, XYM adds 20, and XYZM adds 30. Read child fields and union
 metadata instead of relying on luma.gl's former sequential child IDs.
 
+### GPU SQL reserved column names
+
+GPU SQL now uses the math.gl parser directly. Double-quote reserved column names,
+for example `SELECT "limit", "order" FROM trips`. Column names still match the
+dataframe schema exactly.
+
 ### math.gl grouped packages
 
 luma.gl now uses math.gl 5.0.0-rc.2. Replace standalone math.gl dependencies

@@ -68,7 +68,9 @@ rendering and compute can use the compiled GPU resources directly. Call
 - `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`.
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
 
-SQL keywords are case-insensitive. Column names must match the dataframe schema exactly.
+SQL keywords and registered table names are case-insensitive. Column names must match the
+dataframe schema exactly, even when unquoted. Double-quote reserved names, such as `"limit"`
+and `"order"`. A period separates a table qualifier from a column name.
 
 Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous
 expressions, multiple sort/group keys, and `LIMIT` without ordering fail during CPU-only planning.
