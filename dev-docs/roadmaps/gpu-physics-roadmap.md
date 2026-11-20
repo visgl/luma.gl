@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: November 13, 2026
+Updated: November 20, 2026
 
 ## Goal and current status
 
@@ -433,6 +433,20 @@ convergence and energy error alongside timing. Include long-duration regression 
 Exit: published quality/performance comparisons against independent engines using
 matched scenes, timestep, approximation and error tolerances; no unsupported SOTA claim
 based solely on body count or a discovery benchmark.
+
+### Vehicle dynamics checkpoint across G9–G11
+
+The off-road buggy integrates GPU suspension and tire forces with live chassis
+rendering. The vehicle follow-up groups multiple four-wheel chassis into one
+suspension dispatch. Per-chassis controls and wheel pose ranges stay independent.
+The handling model adds optional Ackermann steering, paired anti-roll load
+transfer, and longitudinal/lateral slip gains.
+
+Qualification covers independent forward/reverse controls, inner/outer wheel
+angles, axle load conservation, checkpoint restoration, and a passive trailer
+coupled through an ordered hinge. The buggy shows live suspension and GPU graph
+timings. Broader articulated mechanisms, independent-world batching with vehicles,
+measured tire calibration, and cross-adapter fleet throughput remain open.
 
 ### G9. Articulations and mechanism quality
 

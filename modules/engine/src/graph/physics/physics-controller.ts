@@ -46,7 +46,7 @@ export type PhysicsBodyOptions = Pick<
 };
 export type PhysicsControllerProps = Omit<
   GPURigidBodyWorldProps,
-  'bodies' | 'publicationBounds' | 'publishPoses' | 'joints' | 'vehicle'
+  'bodies' | 'publicationBounds' | 'publishPoses' | 'joints' | 'vehicle' | 'vehicles'
 > & {
   scene: GroupNode;
   /** Bound catch-up work; excess elapsed time is reported, not silently simulated. */
