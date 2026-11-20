@@ -2,6 +2,12 @@
 
 ## v10.0
 
+### v10.0.0-beta.1
+
+- Upgrade math.gl to 5.0.0-rc.2 and loaders.gl to 5.0.0-rc.1. Use the updated zero-copy GeoArrow column view API.
+- Use math.gl as GPU SQL's tokenizer and parser. Double-quote reserved column names such as "limit" and "order". Column names still match the dataframe schema exactly.
+- Make native WebGPU and WebGL device handle ownership explicit so applications can control teardown for attached devices.
+
 ### v10.0.0-alpha.17
 
 - Upgrade math.gl and loaders.gl to 5.0.0-beta.12. Adopt the consolidated Arrow, GeoArrow tessellation, and Parquet entry points.
