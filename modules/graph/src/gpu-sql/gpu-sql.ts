@@ -3,12 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by relational SQL semantics.
 
-import {
-  parseSQLExpression,
-  parseSQLSelectStatement,
-  SQLParseError,
-  type SQLSelectStatement
-} from '@math.gl/sql/parser';
+import {parseSQLSelectStatement} from '@math.gl/sql/parser';
 import type {Expression} from '@math.gl/sql/expressions';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPUDataFrame} from '../gpu-dataframe/gpu-data-frame';
@@ -26,19 +21,12 @@ import type {
   GPUDataFrameQueryParameters
 } from '../gpu-dataframe/gpu-query-compiler';
 
-const MAXIMUM_SQL_LENGTH = 65_536;
-const MAXIMUM_SQL_TOKENS = 4_096;
-
 /** Explicit GPU dataframe registrations; Arrow remains exclusively an adapter boundary. */
 export type GPUSQLTables = Readonly<Record<string, GPUDataFrame>>;
 
 /** Defaults for named SQL parameters such as `:minimumFare`; values remain caller-controlled. */
 export type GPUSQLQueryOptions = Readonly<{parameters?: GPUDataFrameQueryParameters}>;
 
-type GPUSQLToken = Readonly<{
-  kind: 'identifier' | 'number' | 'parameter' | 'symbol';
-  value: string;
-}>;
 type GPUSQLSelectItem = Readonly<{
   expression?: GPUExpressionNode;
   aggregate?: 'count' | 'sum' | 'min' | 'max' | 'mean';
@@ -317,18 +305,9 @@ function parseGPUSQLStatement(
   source: string,
   parameters: GPUDataFrameQueryParameters
 ): GPUSQLStatement {
-  // Preserve GPUSQL's lexical limits and accepted input tokens.
-  const tokens = tokenizeGPUSQL(source);
-  let statement: SQLSelectStatement;
-  try {
-    statement = parseSQLSelectStatement(source, {
-      parseParameter: name => ({type: 'Identifier', name: `:${name}`})
-    });
-  } catch (error) {
-    // Older GPUSQL queries permit unquoted keyword-named columns, such as "limit".
-    if (!(error instanceof SQLParseError)) throw error;
-    return new GPUSQLParser(tokens, parameters).parse();
-  }
+  const statement = parseSQLSelectStatement(source, {
+    parseParameter: name => ({type: 'Identifier', name, gpuSQLParameter: true})
+  });
   if (statement.offset !== undefined) throw new Error('GPUSQL does not support OFFSET');
   if (statement.joins.length > 1) throw new Error('GPUSQL currently supports one JOIN');
   if ((statement.groupBy?.length ?? 0) > 1) {
@@ -353,17 +332,25 @@ function parseGPUSQLStatement(
           if (expression.arguments.length !== 1) {
             throw new Error('GPUSQL aggregates require one argument');
           }
-          const argument = readGPUSQLColumn(expression.arguments[0]);
-          if ((aggregate === 'count') !== (argument === '*')) {
+          const argument = expression.arguments[0] as Expression;
+          const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
+          if ((aggregate === 'count') !== wildcard) {
             throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
           }
-          return {aggregate, ...(argument !== '*' ? {aggregateColumn: argument} : {}), alias};
+          return {
+            aggregate,
+            ...(wildcard ? {} : {aggregateColumn: readGPUSQLColumn(argument)}),
+            alias
+          };
         }
       }
     }
     return {expression: lowerSQLExpression(expression, parameters), alias};
   }) ?? [{star: true}];
   const join = statement.joins[0];
+  if (statement.from.inputTable !== undefined || join?.table.inputTable !== undefined) {
+    throw new Error('GPUSQL does not support table functions');
+  }
   let loweredJoin: GPUSQLStatement['join'];
   if (join) {
     if (join.unnest) throw new Error('GPUSQL does not support JOIN UNNEST');
@@ -396,260 +383,30 @@ function parseGPUSQLStatement(
   };
 }
 
+/** Reads a source column name or a two-part qualified column reference. */
 function readGPUSQLColumn(node: Extract<Expression, {type: 'BinaryExpression'}>['left']): string {
   const expression = node as Expression;
-  if (expression.type === 'Identifier' && !expression.name.startsWith(':')) return expression.name;
+  if (
+    expression.type === 'Identifier' &&
+    !('gpuSQLParameter' in expression) &&
+    !expression.name.includes('.')
+  ) {
+    return expression.name;
+  }
   if (expression.type === 'MemberExpression' && !expression.computed) {
     const object = expression.object as Expression;
     const property = expression.property as Expression;
-    if (object.type === 'Identifier' && property.type === 'Identifier') {
+    if (
+      object.type === 'Identifier' &&
+      property.type === 'Identifier' &&
+      !('gpuSQLParameter' in object) &&
+      !object.name.includes('.') &&
+      !property.name.includes('.')
+    ) {
       return `${object.name}.${property.name}`;
     }
   }
   throw new Error('GPUSQL expected a table or column identifier');
-}
-
-class GPUSQLParser {
-  private readonly tokens: readonly GPUSQLToken[];
-  private readonly parameters: GPUDataFrameQueryParameters;
-  private position = 0;
-
-  constructor(tokens: readonly GPUSQLToken[], parameters: GPUDataFrameQueryParameters) {
-    this.tokens = tokens;
-    this.parameters = parameters;
-  }
-
-  parse(): GPUSQLStatement {
-    this.expectKeyword('SELECT');
-    const items: GPUSQLSelectItem[] = [];
-    do {
-      items.push(this.parseSelectItem());
-    } while (this.takeSymbol(','));
-    this.expectKeyword('FROM');
-    const table = this.parseIdentifier();
-    const alias = this.parseOptionalTableAlias();
-    const join = this.parseOptionalJoin();
-    const predicate = this.takeKeyword('WHERE') ? this.parseExpression() : undefined;
-    let groupBy: string | undefined;
-    if (this.takeKeyword('GROUP')) {
-      this.expectKeyword('BY');
-      groupBy = this.parseIdentifier();
-      if (this.takeSymbol(',')) throw new Error('GPUSQL currently supports one GROUP BY column');
-    }
-    let orderBy: GPUSQLStatement['orderBy'];
-    if (this.takeKeyword('ORDER')) {
-      this.expectKeyword('BY');
-      const sortColumn = this.parseIdentifier();
-      const direction = this.takeKeyword('DESC')
-        ? 'descending'
-        : (this.takeKeyword('ASC'), 'ascending');
-      let nulls: 'first' | 'last' | undefined;
-      if (this.takeKeyword('NULLS')) {
-        nulls = this.takeKeyword('FIRST') ? 'first' : this.expectKeyword('LAST') && 'last';
-      }
-      orderBy = {column: sortColumn, direction, ...(nulls ? {nulls} : {})};
-      if (this.takeSymbol(',')) throw new Error('GPUSQL currently supports one ORDER BY column');
-    }
-    let limit: number | undefined;
-    if (this.takeKeyword('LIMIT')) {
-      const token = this.take();
-      if (token?.kind !== 'number' || !/^\d+$/.test(token.value)) {
-        throw new Error('GPUSQL LIMIT requires a nonnegative integer');
-      }
-      limit = Number(token.value);
-      if (!Number.isSafeInteger(limit) || limit > 0xffffffff) {
-        throw new Error('GPUSQL LIMIT must fit an unsigned 32-bit row count');
-      }
-    }
-    this.takeSymbol(';');
-    if (this.peek())
-      throw new Error(`GPUSQL does not support unexpected token "${this.peek()!.value}"`);
-    return {
-      items,
-      table,
-      ...(alias ? {alias} : {}),
-      ...(join ? {join} : {}),
-      ...(predicate ? {predicate} : {}),
-      ...(groupBy ? {groupBy} : {}),
-      ...(orderBy ? {orderBy} : {}),
-      ...(limit !== undefined ? {limit} : {})
-    };
-  }
-
-  private parseSelectItem(): GPUSQLSelectItem {
-    if (this.takeSymbol('*')) return {star: true};
-    const token = this.peek();
-    if (
-      token?.kind === 'identifier' &&
-      /^(COUNT|SUM|MIN|MAX|AVG|MEAN)$/i.test(token.value) &&
-      this.tokens[this.position + 1]?.value === '('
-    ) {
-      this.take();
-      this.expectSymbol('(');
-      const aggregate = token.value.toLowerCase();
-      const aggregateColumn = this.takeSymbol('*') ? undefined : this.parseIdentifier();
-      this.expectSymbol(')');
-      if (!aggregateColumn && aggregate !== 'count') {
-        throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
-      }
-      if (aggregateColumn && aggregate === 'count') {
-        throw new Error('GPUSQL currently supports COUNT(*) but not nullable COUNT(column)');
-      }
-      return {
-        aggregate: aggregate === 'avg' ? 'mean' : (aggregate as GPUSQLSelectItem['aggregate']),
-        ...(aggregateColumn ? {aggregateColumn} : {}),
-        ...(this.takeKeyword('AS') ? {alias: this.parseIdentifier()} : {})
-      };
-    }
-    const expression = this.parseExpression();
-    return {
-      ...(expression ? {expression} : {}),
-      ...(this.takeKeyword('AS') ? {alias: this.parseIdentifier()} : {})
-    };
-  }
-
-  private parseOptionalJoin(): GPUSQLStatement['join'] {
-    let type: GPUDataFrameJoinType = 'inner';
-    if (this.takeKeyword('LEFT')) {
-      this.takeKeyword('OUTER');
-      type = 'left';
-    } else if (this.takeKeyword('SEMI')) {
-      type = 'semi';
-    } else if (this.takeKeyword('ANTI')) {
-      type = 'anti';
-    } else {
-      this.takeKeyword('INNER');
-    }
-    if (!this.takeKeyword('JOIN')) {
-      if (type !== 'inner') throw new Error('GPUSQL join modifier must be followed by JOIN');
-      return undefined;
-    }
-    const table = this.parseIdentifier();
-    const alias = this.parseOptionalTableAlias();
-    this.expectKeyword('ON');
-    const left = this.parseIdentifier();
-    this.expectSymbol('=');
-    const right = this.parseIdentifier();
-    return {type, table, ...(alias ? {alias} : {}), left, right};
-  }
-
-  private parseExpression(): GPUExpressionNode {
-    const tokens: string[] = [];
-    let depth = 0;
-    let expectsOperand: boolean = true;
-    for (let token = this.peek(); token; token = this.peek()) {
-      const value = token.value;
-      if (depth === 0) {
-        if (token.kind === 'symbol' && (value === ',' || value === ';')) break;
-        if (
-          token.kind === 'identifier' &&
-          !expectsOperand &&
-          /^(AS|FROM|GROUP|ORDER|LIMIT)$/i.test(value)
-        ) {
-          break;
-        }
-      }
-      switch (token.kind) {
-        case 'parameter':
-          // The shared AST leaves parameter binding to the GPU planner.
-          tokens.push(`":${value}"`);
-          expectsOperand = false;
-          break;
-        case 'identifier': {
-          const operator: boolean =
-            /^NOT$/i.test(value) || (!expectsOperand && /^(AND|OR|IS)$/i.test(value));
-          const keyword = operator || /^(NULL|TRUE|FALSE)$/i.test(value);
-          tokens.push(keyword ? value : `"${value}"`);
-          expectsOperand = operator;
-          break;
-        }
-        case 'symbol':
-          if (value === '(') depth++;
-          if (value === ')') depth--;
-          tokens.push(value);
-          expectsOperand = value !== ')';
-          break;
-        case 'number':
-          tokens.push(value);
-          expectsOperand = false;
-          break;
-      }
-      this.take();
-    }
-    return lowerSQLExpression(parseSQLExpression(tokens.join(' ')), this.parameters);
-  }
-
-  private parseOptionalTableAlias(): string | undefined {
-    if (this.takeKeyword('AS')) return this.parseIdentifier();
-    const token = this.peek();
-    return token?.kind === 'identifier' &&
-      !/^(WHERE|GROUP|ORDER|LIMIT|JOIN|INNER|LEFT|OUTER|SEMI|ANTI|ON)$/i.test(token.value)
-      ? this.parseIdentifier()
-      : undefined;
-  }
-
-  private parseIdentifier(): string {
-    const token = this.take();
-    if (token?.kind !== 'identifier')
-      throw new Error('GPUSQL expected a table or column identifier');
-    return token.value;
-  }
-
-  private expectKeyword(keyword: string): true {
-    if (!this.takeKeyword(keyword)) throw new Error(`GPUSQL expected ${keyword}`);
-    return true;
-  }
-
-  private takeKeyword(keyword: string): boolean {
-    const token = this.peek();
-    if (token?.kind !== 'identifier' || token.value.toUpperCase() !== keyword) return false;
-    this.position++;
-    return true;
-  }
-
-  private expectSymbol(symbol: string): void {
-    if (!this.takeSymbol(symbol)) throw new Error(`GPUSQL expected "${symbol}"`);
-  }
-
-  private takeSymbol(symbol: string): boolean {
-    const token = this.peek();
-    if (token?.kind !== 'symbol' || token.value !== symbol) return false;
-    this.position++;
-    return true;
-  }
-
-  private take(): GPUSQLToken | undefined {
-    const token = this.tokens[this.position];
-    if (token) this.position++;
-    return token;
-  }
-
-  private peek(): GPUSQLToken | undefined {
-    return this.tokens[this.position];
-  }
-}
-
-function tokenizeGPUSQL(source: string): GPUSQLToken[] {
-  if (typeof source !== 'string' || source.length === 0 || source.length > MAXIMUM_SQL_LENGTH) {
-    throw new Error('GPUSQL requires a nonempty, safely bounded SELECT statement');
-  }
-  const expression =
-    /\s+|(?:--[^\n\r]*)|(?::([A-Za-z_][A-Za-z0-9_]*))|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)|(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(<=|>=|<>|!=|[(),;*+\-/=<>])/gy;
-  const tokens: GPUSQLToken[] = [];
-  let cursor = 0;
-  while (cursor < source.length) {
-    expression.lastIndex = cursor;
-    const match = expression.exec(source);
-    if (!match) throw new Error(`GPUSQL contains an unsupported token at character ${cursor}`);
-    cursor = expression.lastIndex;
-    if (match[1]) tokens.push({kind: 'parameter', value: match[1]});
-    else if (match[2]) tokens.push({kind: 'identifier', value: match[2]});
-    else if (match[3]) tokens.push({kind: 'number', value: match[3]});
-    else if (match[4]) tokens.push({kind: 'symbol', value: match[4]});
-    if (tokens.length > MAXIMUM_SQL_TOKENS)
-      throw new Error('GPUSQL statement exceeds its safe token limit');
-  }
-  return tokens;
 }
 
 const SQL_BINARY_OPERATORS: Readonly<
@@ -677,8 +434,8 @@ function lowerSQLExpression(
   const expression = node as Expression;
   switch (expression.type) {
     case 'Identifier': {
-      if (!expression.name.startsWith(':')) return column(expression.name).node;
-      const name = expression.name.slice(1);
+      if (!('gpuSQLParameter' in expression)) return column(readGPUSQLColumn(expression)).node;
+      const name = expression.name;
       if (!Object.hasOwn(parameters, name)) {
         throw new Error(`GPUSQL parameter ":${name}" requires an explicit default`);
       }
