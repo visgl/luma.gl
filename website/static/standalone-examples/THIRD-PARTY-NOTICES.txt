@@ -779,6 +779,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+
+## FSR 2 temporal upscaling
+
+AMD FidelityFX FSR 2 (MIT license).
+
+Source: [FSR 2](https://github.com/GPUOpen-Effects/FidelityFX-FSR2).
+
+Adaptation: `src/effects/temporal-upscale` is an independently authored implementation
+inspired by FSR 2's dilation, reprojection, rectification, accumulation and RCAS
+sharpening structure and jitter phase rule. No upstream shader source is copied.
+The bounded contrast-adaptive sharpening weights are independently derived, not
+an implementation of the upstream RCAS coefficients. This is architectural credit,
+not a claim of feature or image-quality parity.
+
+Upstream terms: [AMD MIT license](https://github.com/GPUOpen-Effects/FidelityFX-FSR2/blob/master/LICENSE.txt).
+
 ===== modules/engine/licenses/cesium.txt =====
 
 Copyright 2011-2017 Cesium Contributors
