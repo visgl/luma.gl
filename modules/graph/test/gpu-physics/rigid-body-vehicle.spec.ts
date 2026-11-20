@@ -231,6 +231,18 @@ it('batches independently driven chassis and qualifies Ackermann steering and ax
     expect(second[1].load).toBeGreaterThan(first[1].load);
     expect(second[0].load + second[1].load).toBeCloseTo(first[0].load + first[1].load, 1);
 
+    world.setVehicleControls(0, 1.5, 0);
+    world.setVehicleControls(0, -1.5, 0, 1);
+    advanceFleet(1);
+    const [hardLeft, hardRight] = await Promise.all([
+      world.readVehicleWheels(),
+      world.readVehicleWheels(1)
+    ]);
+    expect(hardLeft[0].steering).toBeGreaterThan(hardLeft[1].steering);
+    expect(hardRight[1].steering).toBeLessThan(hardRight[0].steering);
+    expect(hardLeft[0].steering).toBeLessThan(Math.PI / 2);
+    expect(hardRight[1].steering).toBeGreaterThan(-Math.PI / 2);
+
     checkpoint.restore();
     expect((await world.readVehicleWheels(1)).every(wheel => wheel.steering === 0)).toBe(true);
     world.setVehicleControls(1, 0, 0);

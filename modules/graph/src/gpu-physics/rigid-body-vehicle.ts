@@ -65,8 +65,10 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
   let wheelbase=bitcast<f32>(settingsForVehicle.indices.z);
   let antiRollRate=bitcast<f32>(settingsForVehicle.indices.w);
   var contacts:array<SuspensionContact,4>;
+  var maximumSteeringOffset=0.0;
   for(var index=0u;index<4u;index++){
     let wheel=settingsForVehicle.wheels[index];
+    maximumSteeringOffset=max(maximumSteeringOffset,abs(wheel.mount.y)*wheel.flags.x);
     let mount=center+rotate(rotation,wheel.mount.xyz-bodyCenter(chassis));
     let hit=sweepSphere(terrain,colliderLocal(terrain,mount-colliderPosition(terrain)),colliderLocal(terrain,down),travel,radius,false);
     contacts[index].lengthNow=travel;
@@ -91,6 +93,8 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
       contacts[right].load-=bounded;
     }
   }
+  // Keep the center of the turn beyond the inside steered wheel on either side.
+  let steeringLimit=atan2(0.9*max(wheelbase,0.0001),maximumSteeringOffset);
   var impulse=vec3f(0);
   var torque=vec3f(0);
   for(var index=0u;index<4u;index++){
@@ -100,7 +104,7 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
     speed-=sign(speed)*min(abs(speed),settingsForVehicle.controls.z*settingsForVehicle.tire.z*timestep/settingsForVehicle.tire.w);
     var steering=settingsForVehicle.controls.y*wheel.flags.x;
     if(wheelbase>0.0){
-      let reference=clamp(steering,-1.5,1.5);
+      let reference=clamp(steering,-steeringLimit,steeringLimit);
       steering=atan2(sin(reference)*wheelbase,cos(reference)*wheelbase-wheel.mount.y*sin(reference));
     }
     let load=contact.load;
