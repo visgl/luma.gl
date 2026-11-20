@@ -2,6 +2,15 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+/** Default accumulation kernel sharpness; larger values narrow the sample footprint. */
+export const DEFAULT_KERNEL_SHARPNESS = 0.85;
+
+/**
+ * Default responsiveness. 0.5 halves the life of a stale feature (33 to 15 frames in the GPU test)
+ * and keeps about half of the contrast of a line that is half a render pixel wide.
+ */
+export const DEFAULT_RESPONSIVENESS = 0.5;
+
 /** A two-component coordinate in top-left UV space, unless documented otherwise. */
 export type TemporalVector2 = [number, number];
 /** A three-component color or velocity/depth value. */
@@ -167,14 +176,18 @@ export function isDisoccluded(
 }
 
 /**
- * Scale of the accumulation kernel, in render pixels: 1 without upscaling, 1.7 at half size.
+ * Scale of the accumulation kernel, in render pixels: at default sharpness, 1 at native size and 1.7 at half size.
  * A larger scale gives a narrower kernel, so a sample contributes only close to its centre.
- * The factor 0.85 makes the lobe a little wider than one output pixel. With a factor of 1, the
+ * Sharpness is clamped to [0.5,1]. The default factor 0.85 makes the lobe a little wider than one output pixel. With a factor of 1, the
  * neighbouring output pixels share too few samples, and edges show a one-pixel comb pattern.
  */
-export function getKernelScale(renderSize: TemporalVector2, outputSize: TemporalVector2): number {
+export function getKernelScale(
+  renderSize: TemporalVector2,
+  outputSize: TemporalVector2,
+  kernelSharpness = DEFAULT_KERNEL_SHARPNESS
+): number {
   const ratio = Math.min(outputSize[0] / renderSize[0], outputSize[1] / renderSize[1]);
-  return Math.min(2, Math.max(1, ratio * 0.85));
+  return Math.min(2, Math.max(1, ratio * Math.min(1, Math.max(0.5, kernelSharpness))));
 }
 
 /**
@@ -245,4 +258,54 @@ export function getHistoryTrust(
   const relative = Math.max(excess / Math.max(sample[0], historyMaximum[0], 0.02), alphaExcess);
   const t = Math.min(1, Math.max(0, (relative - 0.03) / (0.12 - 0.03)));
   return 1 - t * t * (3 - 2 * t);
+}
+
+/**
+ * Luminance disagreement outside the current 3x3 YCoCg Y range, before history clipping.
+ * Relative excess uses the larger absolute luminance with a 0.02 dark-noise floor.
+ * Smoothstep from 10% to 30% ignores small fluctuations; in-range history always returns zero.
+ */
+export function getLuminanceChange(
+  historyLuminance: number,
+  minimumLuminance: number,
+  maximumLuminance: number
+): number {
+  const excess = Math.max(
+    0,
+    minimumLuminance - historyLuminance,
+    historyLuminance - maximumLuminance
+  );
+  const relative =
+    excess /
+    Math.max(
+      Math.abs(historyLuminance),
+      Math.abs(minimumLuminance),
+      Math.abs(maximumLuminance),
+      0.02
+    );
+  const transition = Math.min(1, Math.max(0, (relative - 0.1) / 0.2));
+  return transition * transition * (3 - 2 * transition);
+}
+
+/**
+ * Fraction of the accumulated history weight to forget in one frame.
+ * `luminanceChange` is the result of `getLuminanceChange`. `sampleWeight` is the accumulation
+ * weight of the current frame at this output pixel. A frame is evidence for a change only when
+ * one of its samples lies close to the output pixel, so the weight gates the result with a
+ * smoothstep from 0.5 to 0.8. Without this gate, each frame whose samples miss a feature
+ * smaller than a render pixel would erase that feature from the history.
+ */
+export function getForgetting(
+  responsiveness: number,
+  luminanceChange: number,
+  sampleWeight: number
+): number {
+  const evidence = Math.min(1, Math.max(0, (sampleWeight - 0.5) / 0.3));
+  return (
+    Math.min(1, Math.max(0, responsiveness)) *
+    luminanceChange *
+    evidence *
+    evidence *
+    (3 - 2 * evidence)
+  );
 }

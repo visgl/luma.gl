@@ -13,12 +13,13 @@ export const temporalUpscaleVertex = /* wgsl */ `
 }
 `;
 
-/** Shared bindings, color math and rejection policy. Uniforms occupy three aligned vec4 slots. */
+/** Shared bindings, color math and rejection policy. Uniforms occupy four aligned vec4 slots. */
 const TEMPORAL_COMMON = /* wgsl */ `
 struct Settings {
   sizes: vec4f, // render width/height, output width/height
   jitterControls: vec4f, // render-pixel jitter, reset, sharpness
-  controls: vec4f, // history maximum, debug mode, sample validation, padding
+  controls: vec4f, // history maximum, debug mode, sample validation, kernel sharpness
+  tuning: vec4f, // responsiveness, padding, padding, padding
 };
 @group(0) @binding(0) var<uniform> settings: Settings;
 @group(0) @binding(1) var colorTexture: texture_2d<f32>;
@@ -98,11 +99,11 @@ fn lanczos2(value: f32) -> f32 {
 }
 // Scale of the accumulation kernel, in render pixels: 1 without upscaling, 1.7 at half size.
 // A larger scale gives a narrower kernel, so a sample contributes only close to its centre.
-// The factor 0.85 makes the lobe a little wider than one output pixel. With a factor of 1, the
+// The default factor 0.85 (kernel sharpness) makes the lobe a little wider than one output pixel. With a factor of 1, the
 // neighbouring output pixels share too few samples, and edges show a one-pixel comb pattern.
 fn kernelScale() -> f32 {
   let ratio = settings.sizes.zw / settings.sizes.xy;
-  return clamp(min(ratio.x, ratio.y) * 0.85, 1.0, 2.0);
+  return clamp(min(ratio.x, ratio.y) * clamp(settings.controls.w, 0.5, 1.0), 1.0, 2.0);
 }
 // Weight of one render sample at a distance (in render pixels) from the output pixel centre:
 // the main lobe of the Lanczos-2 kernel, narrowed by the kernel scale.
@@ -235,19 +236,28 @@ struct AccumulationOutput {
   let deviation = sqrt(max(vec3f(0.0), secondMoment - mean * mean));
   let boxMinimum = max(minimumYCoCg, mean - 1.25 * deviation);
   let boxMaximum = min(maximumYCoCg, mean + 1.25 * deviation);
-  let reprojection = reproject(uv);
+  var reprojection = reproject(uv);
   var color = reconstructed;
   // A pixel without history starts with the weight of an average frame.
   var weight = max(narrowWeight, 1.0 / (scale * scale));
   // Avoid reading uninitialized history color when reset (new textures are zero initialized).
   if (reprojection.valid) {
     let history = sampleHistory(reprojection.previousUV);
+    // Match getLuminanceChange and getForgetting: ignore in-range history and small relative
+    // fluctuations, and forget only where a sample of this frame lies close to this pixel.
+    let historyY = rgbToYCoCg(history.rgb).x;
+    let excess = max(0.0, max(minimumYCoCg.x - historyY, historyY - maximumYCoCg.x));
+    let relative = excess / max(0.02, max(abs(historyY), max(abs(minimumYCoCg.x), abs(maximumYCoCg.x))));
+    let forgetting = clamp(settings.tuning.x, 0.0, 1.0) * smoothstep(0.1, 0.3, relative) *
+      smoothstep(0.5, 0.8, narrowWeight);
+    reprojection.count *= 1.0 - forgetting;
     let clipped = vec4f(max(vec3f(0.0), yCoCgToRgb(clipToBox(rgbToYCoCg(history.rgb), boxMinimum, boxMaximum))),
       clamp(history.a, minimum.a, maximum.a));
     var rectified = clipped;
     if (settings.controls.z > 0.5) {
       let nearestColor = textureLoad(colorTexture, renderCoordinate(nearest), 0);
-      rectified = mix(clipped, history, historyTrust(uv, reprojection.previousUV, nearest, nearestColor));
+      rectified = mix(clipped, history,
+        historyTrust(uv, reprojection.previousUV, nearest, nearestColor) * (1.0 - forgetting));
     }
     color = mix(rectified, current, currentBlend(narrowWeight, reprojection));
     weight = min(min(reprojection.count, maximumWeight()) + narrowWeight, maximumWeight());
@@ -270,6 +280,7 @@ export const temporalUpscaleSharpen = /* wgsl */ `${TEMPORAL_COMMON}
       return vec4f(abs(reprojection.velocity.xy) * settings.sizes.zw * 0.5, rejected, 1.0);
     }
     if (settings.controls.y == 2.0) { return vec4f(vec3f(rejected), 1.0); }
+    // An estimate from the nearest sample. It does not include the responsiveness rule.
     let distance = fract(uv * settings.sizes.xy + settings.jitterControls.xy) - vec2f(0.5);
     return vec4f(vec3f(1.0 - currentBlend(sampleWeight(distance, kernelScale()), reprojection)), 1.0);
   }

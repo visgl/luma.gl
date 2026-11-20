@@ -4,6 +4,9 @@
 
 import {expect, it} from 'vitest';
 import {
+  DEFAULT_KERNEL_SHARPNESS,
+  getLuminanceChange,
+  getForgetting,
   halton,
   getJitterPhaseCount,
   getJitterOffset,
@@ -349,4 +352,40 @@ it('history trust is 1 inside the history range and falls to 0 outside it', () =
 
 it('phase count is never less than 1', () => {
   expect(getJitterPhaseCount(100, 0)).toBe(1);
+});
+
+it('kernel sharpness defaults to 0.85 and clamps sharpness and scale', () => {
+  expect(DEFAULT_KERNEL_SHARPNESS).toBe(0.85);
+  expect(getKernelScale([48, 32], [96, 64])).toBe(1.7);
+  expect(getKernelScale([48, 32], [96, 64], 0.75)).toBe(1.5);
+  expect(getKernelScale([48, 32], [48, 32], 1)).toBe(1);
+  expect(getKernelScale([48, 32], [96, 64], 0)).toBe(1);
+  expect(getKernelScale([48, 32], [96, 64], 2)).toBe(2);
+  expect(getKernelScale([48, 32], [192, 64], 0.75)).toBe(1.5);
+  expect(getKernelScale([48, 32], [384, 256], 0.75)).toBe(2);
+});
+
+it('luminance change ignores the range and smoothly responds at 10% to 30% relative excess', () => {
+  for (const luminance of [0.4, 0.5, 0.6]) expect(getLuminanceChange(luminance, 0.4, 0.6)).toBe(0);
+  expect(getLuminanceChange(0.9, 1, 1)).toBe(0);
+  expect(getLuminanceChange(0.8, 1, 1)).toBeCloseTo(0.5);
+  expect(getLuminanceChange(0.7, 1, 1)).toBe(1);
+  expect(getLuminanceChange(1, 0.8, 0.8)).toBeCloseTo(0.5);
+  expect(getLuminanceChange(1, 0.7, 0.7)).toBe(1);
+  expect(getLuminanceChange(0, 0, 0)).toBe(0);
+  expect(getLuminanceChange(0.001, 0, 0)).toBe(0);
+  expect(getLuminanceChange(0.004, 0, 0)).toBeCloseTo(0.5);
+  expect(getLuminanceChange(0.008, 0, 0)).toBe(1);
+});
+
+it('forgetting needs a luminance change and a sample close to the output pixel', () => {
+  expect(getForgetting(1, 1, 1)).toBe(1);
+  expect(getForgetting(1, 1, 0.5)).toBe(0);
+  expect(getForgetting(1, 1, 0.65)).toBeCloseTo(0.5);
+  expect(getForgetting(1, 1, 0.8)).toBe(1);
+  expect(getForgetting(1, 0, 1)).toBe(0);
+  expect(getForgetting(0, 1, 1)).toBe(0);
+  expect(getForgetting(0.5, 0.5, 1)).toBeCloseTo(0.25);
+  expect(getForgetting(2, 1, 1)).toBe(1);
+  expect(getForgetting(-1, 1, 1)).toBe(0);
 });
