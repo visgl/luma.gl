@@ -91,6 +91,21 @@ compiled.selectedCounts;
 groups, histograms, and joined row identifiers are also exposed as GPU-backed tables or vectors.
 No GPU Dataframe method submits the command encoder or performs implicit CPU readback.
 
+When consecutive batches have every predicate input, including validity, packed back to back in
+one shared buffer (for example, per-batch views sliced from one allocation), the filter evaluates
+each such run with a constant number of dispatches instead of a chain of passes per batch. Runs
+are split so that each input binding, output allocation, and batch lookup table fits the device's
+`maxStorageBufferBindingSize` and `maxBufferSize`. Batches in independent buffers, including the
+one-buffer-per-batch uploads from `makeGPUAnalyticsTableFromArrowTable()`, keep the per-batch
+path.
+
+The outputs keep one chunk per source batch. The chunks of a fused run are consecutive views of
+one buffer, owned by the run's first chunk, so consumers must honor each chunk's `byteOffset`.
+These offsets are exact but generally not multiples of `minStorageBufferOffsetAlignment`, and
+vertex attributes bound through `GPUTableShaderBindings` start at the buffer's first byte, so
+bind fused output chunks through command-graph views or `byteOffset`-aware readback. Trailing
+empty batches of a run keep independently allocated chunks.
+
 Compile each independent plan into a new `GPUCommandGraph`; a graph becomes immutable once
 compiled. Re-encode the same compiled query with new parameters for repeated interactions.
 
