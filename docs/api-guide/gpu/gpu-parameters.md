@@ -110,7 +110,8 @@ Browser support for `EXT_clip_control` (caniuse and web3dsurvey.com, November 20
 - Safari 17.4 and later, on macOS and iOS.
 - Firefox 159 and later.
 - The extension also depends on the GPU driver. web3dsurvey.com reports it on about 93% of
-  WebGL2 browsers, with less coverage on Linux and Android. SwiftShader can omit it.
+  WebGL2 browsers, with less coverage on Linux and Android.
+  Chrome's SwiftShader (ANGLE on Vulkan) exposes it.
 
 ## Next steps
 

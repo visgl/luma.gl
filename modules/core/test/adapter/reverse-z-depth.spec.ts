@@ -237,7 +237,7 @@ it('Reverse-Z resolves quads 100 units apart at 1e6 units, where standard depth 
       ).toBeLessThanOrEqual(PAIR_OFFSETS.length / 2);
 
       if (!device.features.has('clip-control-webgl')) {
-        // Some drivers (for example SwiftShader) do not expose EXT_clip_control.
+        // Some drivers do not expose EXT_clip_control.
         expect(
           () => device.beginRenderPass({clipDepthMode: 'zero-to-one'}),
           'webgl: zero-to-one throws without EXT_clip_control'
