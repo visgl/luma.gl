@@ -38,7 +38,9 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
   });
   const context = new GPUSQLContext({trips: frame});
   const filtered = context
-    .query('SELECT fare, category FROM trips WHERE fare IS NOT NULL')
+    .query(
+      'SELECT fare, category FROM trips WHERE fare IN (3, 8, 10, 11, NULL) AND fare NOT IN (9, 12)'
+    )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-filter'}));
   const ordered = context
     .query(

@@ -11,10 +11,10 @@ import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
 import {
   GPUExpression,
   column,
-  literal,
   parameter,
   type GPUExpressionNode
 } from '../gpu-dataframe/gpu-expression';
+import {lowerPortableExpression} from '../gpu-dataframe/portable-expression';
 import type {GPUDataFrameJoinType} from '../gpu-dataframe/gpu-join-query';
 import type {
   CompiledGPUDataFrameQuery,
@@ -409,86 +409,40 @@ function readGPUSQLColumn(node: Extract<Expression, {type: 'BinaryExpression'}>[
   throw new Error('GPUSQL expected a table or column identifier');
 }
 
-const SQL_BINARY_OPERATORS: Readonly<
-  Partial<Record<string, Extract<GPUExpressionNode, {kind: 'binary'}>['operator']>>
-> = {
-  '||': 'or',
-  '&&': 'and',
-  '==': 'equal',
-  '!=': 'not-equal',
-  '>': 'greater-than',
-  '>=': 'greater-than-or-equal',
-  '<': 'less-than',
-  '<=': 'less-than-or-equal',
-  '+': 'add',
-  '-': 'subtract',
-  '*': 'multiply',
-  '/': 'divide'
-};
-
 function lowerSQLExpression(
   node: Extract<Expression, {type: 'BinaryExpression'}>['left'],
   parameters: GPUDataFrameQueryParameters
 ): GPUExpressionNode {
-  // math.gl types child nodes as generic expressions, though the SQL parser emits the AST union.
   const expression = node as Expression;
-  switch (expression.type) {
-    case 'Identifier': {
-      if (!('gpuSQLParameter' in expression)) return column(readGPUSQLColumn(expression)).node;
-      const name = expression.name;
-      if (!Object.hasOwn(parameters, name)) {
-        throw new Error(`GPUSQL parameter ":${name}" requires an explicit default`);
+  try {
+    return lowerPortableExpression(expression, leaf => {
+      if (leaf.type === 'Identifier' && 'gpuSQLParameter' in leaf) {
+        const name = leaf.name;
+        if (!Object.hasOwn(parameters, name)) {
+          throw new Error(`GPUSQL parameter ":${name}" requires an explicit default`);
+        }
+        return parameter(name, parameters[name]).node;
       }
-      return parameter(name, parameters[name]).node;
+      if (leaf.type === 'Identifier' || leaf.type === 'MemberExpression') {
+        return column(readGPUSQLColumn(leaf)).node;
+      }
+      if (leaf.type === 'CallExpression' && leaf.callee.type === 'Identifier') {
+        const name = leaf.callee.name;
+        if (name !== 'isNull' && name !== 'isNotNull' && name !== 'in') {
+          throw new Error(`GPUSQL does not support SQL expression "${name}"`);
+        }
+      }
+      return undefined;
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'Unsupported portable GPU dataframe expression'
+    ) {
+      throw new Error(`GPUSQL does not support SQL expression "${expression.type}"`, {
+        cause: error
+      });
     }
-    case 'MemberExpression':
-      return column(readGPUSQLColumn(expression)).node;
-    case 'Literal': {
-      const value = expression.value;
-      if (
-        value === null ||
-        typeof value === 'boolean' ||
-        (typeof value === 'number' && Number.isFinite(value))
-      ) {
-        return literal(value).node;
-      }
-      break;
-    }
-    case 'UnaryExpression':
-      if (expression.operator === '!' || expression.operator === '-') {
-        return {
-          kind: 'unary',
-          operator: expression.operator === '!' ? 'not' : 'negate',
-          operand: lowerSQLExpression(expression.argument, parameters)
-        };
-      }
-      break;
-    case 'BinaryExpression': {
-      const operator = SQL_BINARY_OPERATORS[expression.operator];
-      if (operator) {
-        return {
-          kind: 'binary',
-          operator,
-          left: lowerSQLExpression(expression.left, parameters),
-          right: lowerSQLExpression(expression.right, parameters)
-        };
-      }
-      break;
-    }
-    case 'CallExpression':
-      if (
-        expression.arguments.length === 1 &&
-        (expression.callee['name'] === 'isNull' || expression.callee['name'] === 'isNotNull')
-      ) {
-        return {
-          kind: 'unary',
-          operator: expression.callee['name'] === 'isNull' ? 'is-null' : 'is-valid',
-          operand: lowerSQLExpression(expression.arguments[0], parameters)
-        };
-      }
-      break;
-    default:
-      break;
+    throw error;
   }
-  throw new Error(`GPUSQL does not support SQL expression "${expression.type}"`);
 }
