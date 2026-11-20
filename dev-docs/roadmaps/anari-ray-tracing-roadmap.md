@@ -109,3 +109,15 @@ implementation tranche.
 The lightmap-baking example owns a separate UV-space lighting pipeline. Diagnose blocky
 baked shadows by checking shadow-map projection/filtering and atlas texel density before
 changing ANARI's interactive ray tracer.
+
+### Next implementation tranches
+
+| Tranche | Scope | Acceptance |
+| --- | --- | --- |
+| M0d · Convergence baseline | Extend the deterministic capture workflow with a small emissive source and a textured glTF scene. Record linear HDR error, samples, elapsed time, and the browser and GPU used. | Reproduce a fixed-seed capture and publish error-versus-samples and error-versus-time measurements against an analytic or independently converged reference. Report GPU time when timestamps are available. |
+| M2g · Emissive geometry MIS | Pair existing emitter sampling with BSDF sampling, including the emitter-hit PDF under both uniform and power-weighted selection. Preserve the contribution of delta paths. | Verify mean radiance across seeds for both selection modes. Compare variance at equal GPU cost on the small-emitter fixture. |
+| M2h · Environment lighting | Add an explicit environment-light input and importance-sampled directions. Combine environment and BSDF samples with MIS. Keep the display backdrop independently configurable. | Compare constant-environment illumination against an analytic reference and test convergence with a small bright region in the environment map. Verify that changing the backdrop leaves illumination unchanged. |
+| M3r · Secondary-ray texture filtering | Propagate a footprint through secondary paths and use it for material mip selection on triangle hits. | Verify that receding texture detail filters in reflections and indirect illumination. Use the existing fixed-seed captures to check for regressions in primary shading. Track filtered cutout visibility separately because it affects intersection and picking behavior. |
+
+Use M0d to establish the reference scenes and measurements for M2g and M2h.
+M3r can proceed independently once the textured reference scene is available.
