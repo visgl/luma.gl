@@ -179,3 +179,18 @@ clamping agree at tile seams. The API keeps readback bounded to one tile,
 preserves the authored exposure, and cleans up on completion or cancellation.
 Applications provide full-image camera matrices and their own image encoder.
 This export API is separate from JSON playground scene-file export.
+
+### Measure small-emitter convergence
+
+With the playground server running, capture a reference at a higher frame count and use a
+different seed for the sweep. Keep dimensions, lighting and transport settings the same.
+
+```bash
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 17 --frames 256 --history 256 --output /tmp/ray-reference
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 31 --frame-sweep 1,8,32,128 --history 256 --reference /tmp/ray-reference/chart.png --output /tmp/ray-sweep
+```
+
+Each checkpoint starts a fresh page and records accumulated samples, display RGB error,
+and wall time to capture readiness in `convergence.json`. Wall time includes page startup
+and presentation. A high-sample reference is an estimate whose noise contributes to the
+measured error.
