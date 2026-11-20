@@ -94,7 +94,7 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
     }
   }
   // Keep the center of the turn beyond the inside steered wheel on either side.
-  let steeringLimit=atan2(0.9*max(wheelbase,0.0001),maximumSteeringOffset);
+  let steeringLimit=min(1.5,atan2(0.9*wheelbase,max(maximumSteeringOffset,0.0001)));
   var impulse=vec3f(0);
   var torque=vec3f(0);
   for(var index=0u;index<4u;index++){
