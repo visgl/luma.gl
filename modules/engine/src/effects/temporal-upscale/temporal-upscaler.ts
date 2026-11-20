@@ -14,6 +14,7 @@ import type {
   TextureFormatColor,
   TextureFormatDepthStencil
 } from '@luma.gl/core';
+import {DEFAULT_KERNEL_SHARPNESS, DEFAULT_RESPONSIVENESS} from './temporal-math';
 import type {TemporalVector2} from './temporal-math';
 import {
   temporalUpscaleVertex,
@@ -50,6 +51,15 @@ export type TemporalUpscalerRenderOptions = {
   target: Framebuffer | null;
   /** Sharpening strength in [0,1]; zero is an exact history copy (default). */
   sharpness?: number;
+  /** Accumulation kernel sharpness in [0.5,1], clamped; default 0.85. Larger values narrow the kernel. */
+  kernelSharpness?: number;
+  /**
+   * Forget a history whose luminance is outside the current neighbourhood range, in [0,1],
+   * clamped. Only a frame with a sample close to the output pixel forgets. Default 0.5. 0 keeps the
+   * plain accumulation. A higher value removes stale features sooner, and it keeps less of the
+   * detail that is smaller than a render pixel.
+   */
+  responsiveness?: number;
   /** Discard temporal history for this frame. */
   reset?: boolean;
   /** Maximum history contribution of a full-weight sample, default 0.95. */
@@ -87,7 +97,7 @@ export class TemporalUpscaler {
   private renderSize: TemporalVector2;
   /** Current output dimensions. */
   private outputSize: TemporalVector2;
-  /** Hand-packed three-vec4 uniform block. */
+  /** Hand-packed four-vec4 uniform block. */
   private readonly uniformBuffer: Buffer;
   /** Clamped bilinear history sampler. */
   private readonly sampler: Sampler;
@@ -124,7 +134,7 @@ export class TemporalUpscaler {
     this.outputSize = [...props.outputSize];
     this.uniformBuffer = device.createBuffer({
       id: `${this.id}-settings`,
-      byteLength: 48,
+      byteLength: 64,
       usage: Buffer.UNIFORM | Buffer.COPY_DST
     });
     this.sampler = device.createSampler({
@@ -151,7 +161,7 @@ export class TemporalUpscaler {
       })
     ];
     const bindings: ShaderLayout['bindings'] = [
-      {name: 'settings', type: 'uniform', group: 0, location: 0, minBindingSize: 48},
+      {name: 'settings', type: 'uniform', group: 0, location: 0, minBindingSize: 64},
       {name: 'colorTexture', type: 'texture', group: 0, location: 1, sampleType: 'float'},
       {name: 'depthTexture', type: 'texture', group: 0, location: 2, sampleType: 'depth'},
       {name: 'velocityTexture', type: 'texture', group: 0, location: 3, sampleType: 'float'},
@@ -235,6 +245,10 @@ export class TemporalUpscaler {
         options.historyWeightMax ?? 0.95,
         debugMode,
         Number(options.sampleValidation ?? true),
+        options.kernelSharpness ?? DEFAULT_KERNEL_SHARPNESS,
+        options.responsiveness ?? DEFAULT_RESPONSIVENESS,
+        0,
+        0,
         0
       ])
     );
