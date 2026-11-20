@@ -221,7 +221,7 @@ metadata instead of relying on luma.gl's former sequential child IDs.
 
 ### math.gl grouped packages
 
-luma.gl now uses math.gl 5.0.0-beta.12. Replace standalone math.gl dependencies
+luma.gl now uses math.gl 5.0.0-rc.2. Replace standalone math.gl dependencies
 with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`,
 `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection
 imports move under `@math.gl/geospatial`. The standalone `@math.gl/arrow` package
