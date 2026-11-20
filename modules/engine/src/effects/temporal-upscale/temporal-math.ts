@@ -5,10 +5,7 @@
 /** Default accumulation kernel sharpness; larger values narrow the sample footprint. */
 export const DEFAULT_KERNEL_SHARPNESS = 0.85;
 
-/**
- * Default responsiveness. 0.5 halves the life of a stale feature (33 to 15 frames in the GPU test)
- * and keeps about half of the contrast of a line that is half a render pixel wide.
- */
+/** Default responsiveness for reducing stale history. */
 export const DEFAULT_RESPONSIVENESS = 0.5;
 
 /** A two-component coordinate in top-left UV space, unless documented otherwise. */

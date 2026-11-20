@@ -7,9 +7,9 @@ import type {Device, Framebuffer, RenderPipeline} from '@luma.gl/core';
 import {
   TemporalUpscaler,
   getJitterOffset,
-  getJitterPhaseCount,
-  temporalUpscaleVertex
+  getJitterPhaseCount
 } from '../../../src/effects/temporal-upscale';
+import {temporalUpscaleVertex} from '../../../src/effects/temporal-upscale/temporal-upscale-shaders';
 import type {TemporalUpscalerRenderOptions} from '../../../src/effects/temporal-upscale';
 
 /** Output dimensions shared by the analytic scene and all metrics. */
@@ -76,7 +76,7 @@ const REFERENCE_FRAGMENT = /* wgsl */ `${SCENE}
 `;
 
 /** Deterministic scene controls; depth can retain the rectangle independently of color. */
-export type SceneOptions = {
+type SceneOptions = {
   /** Frame number used for camera translation. */
   time?: number;
   /** Scene displacement in output pixels per frame. */
@@ -92,7 +92,7 @@ export type SceneOptions = {
 };
 
 /** Per-frame public tuning knobs accepted by the fixture. */
-export type TuningOptions = Pick<
+type TuningOptions = Pick<
   TemporalUpscalerRenderOptions,
   'kernelSharpness' | 'responsiveness' | 'reset' | 'debugView'
 >;
@@ -289,29 +289,6 @@ export function psnr(actual: Float32Array, reference: Float32Array): number {
     if (index % 4 !== 3) squaredError += (actual[index] - reference[index]) ** 2;
   }
   return -10 * Math.log10(Math.max(squaredError / ((actual.length * 3) / 4), 1e-20));
-}
-
-/** Mean absolute horizontal plus vertical second difference of RGB reconstruction error. */
-export function measureComb(actual: Float32Array, reference: Float32Array): number {
-  const [width, height] = OUTPUT_SIZE;
-  let total = 0;
-  for (let vertical = 1; vertical < height - 1; vertical++) {
-    for (let horizontal = 1; horizontal < width - 1; horizontal++) {
-      for (let channel = 0; channel < 3; channel++) {
-        const center = (vertical * width + horizontal) * 4 + channel;
-        for (const stride of [4, width * 4]) {
-          total += Math.abs(
-            actual[center - stride] -
-              reference[center - stride] -
-              2 * (actual[center] - reference[center]) +
-              actual[center + stride] -
-              reference[center + stride]
-          );
-        }
-      }
-    }
-  }
-  return total / ((width - 2) * (height - 2) * 3);
 }
 
 /** RGB absolute errors in a half-open output-pixel rectangle, with a useful maximum for stale lines. */
