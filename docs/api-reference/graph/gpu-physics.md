@@ -559,3 +559,53 @@ boundary heights permits a slope change across the seam.
 
 Open Off-road Buggy with `?terrain=mixed` for adjacent 17×17 and 33×33 grids.
 The bundled provider serves the same stitched samples used to render the course.
+
+### Automatic terrain LOD and residency
+
+Use `GPURigidBodyTerrainSelector` when a provider has several resolutions of
+the same terrain. Give it the dataset's local metric XY bounds, the highest
+available quadtree level, and the collider indices reserved for streaming. The
+selector chooses the detail around a focus, keeps neighboring levels within one
+LOD, and provides the edge matches needed by the stream.
+
+```ts
+const selector = new GPURigidBodyTerrainSelector({
+  bounds: [-512, -512, 512, 512],
+  slots: terrainColliderIndices,
+  maximumLevel: 6,
+  getTileKey: ({level, column, row}) => catalog.get(`${level}/${column}/${row}`)
+});
+
+// Request during movement. The previous window stays active while tiles load.
+const window = selector.select({position: [vehicleEast, vehicleNorth], radius: 80});
+await terrainStream.prepare(window);
+
+// Publish between simulation submissions.
+terrainStream.apply();
+```
+
+- `radius` limits collision residency around the focus. Leave it out to keep
+  coarse coverage to the root boundary. Include enough distance for the
+  vehicle to travel while a new window loads.
+- `refinementDistance` controls the switch distance in tile widths. The
+  default hysteresis keeps recent detail briefly as the focus moves and
+  preserves collider assignments for retained addresses.
+- Return `undefined` for missing catalog entries. A missing child keeps its
+  parent resident. A missing root yields an empty selection. Change a key when
+  the corresponding provider content changes. Without a callback, the keys
+  are `level/column/row`.
+- When the slot budget prevents a split, the selection retains coarser leaves
+  and reports `slotLimitReached`. Use the same reserved slot list throughout
+  the life of the selector.
+- Sample within `getRigidBodyTerrainTileBounds(bounds, address)` with columns
+  and rows increasing along positive X and Y. Use a common grid with an even
+  number of cells per axis (for example, 33×33 samples) so the automatically
+  matched half-tile boundaries align. Fetch or generate the tiles in the same
+  local metric frame as the physics focus.
+- Call `selector.reset()` when restoring a starting selection after a teleport
+  or checkpoint reset. Coalesce identical requests before calling `prepare`
+  each frame. Use the latest committed `getTile(collider)` when rendering the
+  stitched collision surface.
+
+Open Off-road Buggy with `?terrain=auto` to see the active tiles and LODs
+change as the chassis moves. Its terrain panel reports the committed window.
