@@ -113,7 +113,9 @@ import {
   type GPURigidBodyQueryResult
 } from './rigid-body-queries';
 import {
+  canIndexRigidBodyCastCollider,
   createRigidBodyCastIndex,
+  estimateRigidBodyCastIndexBytes,
   getRigidBodyCastOrder,
   type RigidBodyCastOrder
 } from './rigid-body-cast-index';
@@ -290,6 +292,8 @@ export class GPURigidBodyWorld {
   private batchCastIndex: CompiledGPUCommandGraph<number> | null = null;
   /** Initial spatial order and stable collider ID mapping for indexed batches. */
   private batchCastOrder: RigidBodyCastOrder | null = null;
+  /** Query graph reservation before attachment, when the physical plan is unavailable. */
+  private readonly batchCastIndexEstimate: number;
   /** Reusable storage for a bounded list of ray and sweep commands. */
   private batchCastCommands: Buffer | null = null;
   /** Reusable GPU output with one compact result per batch command. */
@@ -623,6 +627,12 @@ export class GPURigidBodyWorld {
     const definitions = structuredClone({colliders, props});
     this.props = definitions.props;
     this.colliders = definitions.colliders;
+    this.batchCastIndexEstimate =
+      this.props.queryBatchIndex && this.colliderCount
+        ? estimateRigidBodyCastIndexBytes(
+            this.colliders.filter(canIndexRigidBodyCastCollider).length
+          )
+        : 0;
     this.ensembleTerrainSlots = new Set(this.props.ensembleTerrainSlots);
     if (
       this.ensembleTerrainSlots.size &&
@@ -971,7 +981,7 @@ export class GPURigidBodyWorld {
       throw new Error('Invalid ensemble instance');
   }
 
-  /** Allocation preflight without GPU allocation. Graph scratch and driver overhead are separate. */
+  /** World buffer sizes and private query scratch. Simulation graph scratch and driver overhead are separate. */
   getCapacityInfo(): GPURigidBodyCapacityInfo {
     const buffers = this.allocationPlan
       ? this.allocationPlan.map(buffer => ({...buffer}))
@@ -982,6 +992,8 @@ export class GPURigidBodyWorld {
       maximumPairs: this.maximumPairs,
       pairWorkgroups: Math.ceil(this.maximumPairs / 64),
       buffers,
+      queryIndexScratchBytes:
+        this.batchCastIndex?.stats.physicalTransientResourceBytes ?? this.batchCastIndexEstimate,
       ownedBufferBytes: buffers.reduce((total, buffer) => total + buffer.byteLength, 0)
     };
   }

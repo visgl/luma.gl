@@ -28,6 +28,26 @@ export type RigidBodyCastOrder = {
   indexedCount: number;
 };
 
+/** Index colliders whose exact intersection does not use a traversal budget. */
+export function canIndexRigidBodyCastCollider(collider: GPURigidBodyCollider): boolean {
+  return collider.shape.type === 'sphere' || collider.shape.type === 'box';
+}
+
+/** Size the implicit complete binary tree, including padded leaves. */
+function getCastIndexShape(indexedCount: number) {
+  /** Zero primitives require no private query graph. */
+  const leafCapacity = indexedCount ? 2 ** Math.ceil(Math.log2(indexedCount)) : 0;
+  return {leafCapacity, nodeCount: Math.max(0, leafCapacity * 2 - 1)};
+}
+
+/** Bound scratch before compilation and transient buffer aliasing. */
+export function estimateRigidBodyCastIndexBytes(indexedCount: number): number {
+  if (!indexedCount) return 0;
+  /** Source and node bounds have two float32x3 rows. Node children add two words. */
+  const {leafCapacity, nodeCount} = getCastIndexShape(indexedCount);
+  return indexedCount * 24 + nodeCount * 32 + leafCapacity * 4 + 8;
+}
+
 /** Sort primitive leaves by position once. GPU refits preserve this order as bodies move. */
 export function getRigidBodyCastOrder(
   colliders: readonly (GPURigidBodyCollider & {body: number})[],
@@ -42,7 +62,7 @@ export function getRigidBodyCastOrder(
   /** Authored center range for quantization. */
   const upper = [-Infinity, -Infinity, -Infinity];
   for (const [index, collider] of colliders.entries()) {
-    if (collider.shape.type !== 'sphere' && collider.shape.type !== 'box') {
+    if (!canIndexRigidBodyCastCollider(collider)) {
       extended.push(index);
       continue;
     }
@@ -155,10 +175,8 @@ export function createRigidBodyCastIndex(
       graph.importBuffer({id: name, byteLength: buffer.byteLength, usage: buffer.usage}, buffer)
     ])
   );
-  /** Size the implicit complete binary tree including padded leaves. */
-  const leafCapacity = 2 ** Math.ceil(Math.log2(indexedCount));
   /** Every internal and leaf row uses the same packed bounds format. */
-  const nodeCount = leafCapacity * 2 - 1;
+  const {leafCapacity, nodeCount} = getCastIndexShape(indexedCount);
   /** Allocate a packed scratch view owned by the query graph. */
   function createView<Format extends 'float32x3' | 'uint32x2' | 'uint32'>(
     name: string,

@@ -12,6 +12,8 @@ export type GPURigidBodyCapacityInfo = {
   maximumPairs: number;
   /** World-owned buffers only; excludes graph scratch, pipelines and driver allocation overhead. */
   ownedBufferBytes: number;
+  /** Private cast index scratch. Upper bound before attachment, physical allocation afterward. */
+  queryIndexScratchBytes: number;
   buffers: {name: string; byteLength: number; uniform: boolean}[];
   pairWorkgroups: number;
 };

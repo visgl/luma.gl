@@ -14,6 +14,7 @@ import {
   type GPURigidBodyCapture,
   type GPURigidBodyWorldProps
 } from './gpu-rigid-body-world';
+import type {GPURigidBodyCapacityInfo} from './rigid-body-capacity';
 
 export type GPUPhysicsWorldHandle = Readonly<{id: string; generation: number}>;
 export type GPUPhysicsBatchProps = {
@@ -34,6 +35,8 @@ type Slot = {
   checkpoint: GPURigidBodyGPUCheckpoint;
   bytes: number;
   worldBytes: number;
+  /** Physical scratch for the simulation graph and the world's private query graph. */
+  graphBytes: number;
   handle: GPUPhysicsWorldHandle | null;
   origin: [number, number, number];
   active: boolean;
@@ -72,7 +75,7 @@ export class GPUPhysicsBatch {
     const definition = structuredClone(props);
     const probe = new GPURigidBodyWorld(definition);
     try {
-      if (this.estimateResidentBytes(probe) > this.props.maximumResidentBytes)
+      if (this.estimateResidentBytes(probe.getCapacityInfo()) > this.props.maximumResidentBytes)
         throw new Error('World and reset snapshot exceed residency budget');
       this.templates.set(id, definition);
     } finally {
@@ -115,13 +118,18 @@ export class GPUPhysicsBatch {
         let graph: CompiledGPUCommandGraph<undefined> | undefined;
         let checkpoint: GPURigidBodyGPUCheckpoint | undefined;
         try {
-          const worldBytes = world.getCapacityInfo().ownedBufferBytes;
-          const expectedBytes = this.estimateResidentBytes(world);
-          this.makeRoom(expectedBytes);
+          this.makeRoom(this.estimateResidentBytes(world.getCapacityInfo()));
           const commands = new GPUCommandGraph<undefined>(this.props.device);
           world.addToGraph(commands);
           graph = await commands.compileAsync();
-          const bytes = expectedBytes + graph.stats.physicalTransientResourceBytes;
+          /** Attachment resolves scratch aliasing in the private cast index. */
+          const capacity = world.getCapacityInfo();
+          /** Graph scratch is resident, but is not copied to the reset snapshot. */
+          const graphBytes =
+            graph.stats.physicalTransientResourceBytes + capacity.queryIndexScratchBytes;
+          /** The admission estimate includes the private graph once. */
+          const bytes =
+            this.estimateResidentBytes(capacity) + graph.stats.physicalTransientResourceBytes;
           this.makeRoom(bytes);
           checkpoint = world.createGPUCheckpoint({includeRollbackScratch: false});
           checkpoint.save();
@@ -131,7 +139,8 @@ export class GPUPhysicsBatch {
             graph,
             checkpoint,
             bytes,
-            worldBytes,
+            worldBytes: capacity.ownedBufferBytes,
+            graphBytes,
             handle: null,
             origin: [0, 0, 0],
             active: true,
@@ -290,10 +299,7 @@ export class GPUPhysicsBatch {
       residentBytes: this.slots.reduce((sum, slot) => sum + slot.bytes, 0),
       worldBufferBytes: this.slots.reduce((sum, slot) => sum + slot.worldBytes, 0),
       checkpointBytes: this.slots.reduce((sum, slot) => sum + slot.checkpoint.byteLength, 0),
-      graphTransientBytes: this.slots.reduce(
-        (sum, slot) => sum + slot.graph.stats.physicalTransientResourceBytes,
-        0
-      ),
+      graphTransientBytes: this.slots.reduce((sum, slot) => sum + slot.graphBytes, 0),
       createdSlots: this.createdSlots,
       reusedSlots: this.reusedSlots,
       evictedSlots: this.evictedSlots
@@ -313,12 +319,12 @@ export class GPUPhysicsBatch {
     this.destroyed = true;
   }
 
-  private estimateResidentBytes(world: GPURigidBodyWorld): number {
-    const capacity = world.getCapacityInfo();
+  /** Account for one reset copy of owned buffers and one copy of query scratch. */
+  private estimateResidentBytes(capacity: GPURigidBodyCapacityInfo): number {
     const rollbackScratchBytes = capacity.buffers
       .filter(buffer => buffer.name.startsWith('checkpoint-'))
       .reduce((sum, buffer) => sum + buffer.byteLength, 0);
-    return capacity.ownedBufferBytes * 2 - rollbackScratchBytes;
+    return capacity.ownedBufferBytes * 2 - rollbackScratchBytes + capacity.queryIndexScratchBytes;
   }
 
   private makeRoom(bytes: number): void {

@@ -486,7 +486,10 @@ and planes, uses the existing direct path so it retains the same results and
 completion flags under its local traversal budgets.
 
 The index uses linear GPU scratch in the configured primitive count and refits
-in multiple compute passes. Large spatially localized batches benefit the most.
+in multiple compute passes. `getCapacityInfo().queryIndexScratchBytes` reports
+a conservative pre-attachment bound and the actual scratch allocation after
+attachment. Batch and ensemble residency budgets include this scratch.
+Large spatially localized batches benefit the most.
 Small or dense batches, and scenes where objects have moved far from their
 authored neighborhoods, may favor `{strategy: 'scan'}`.
 
