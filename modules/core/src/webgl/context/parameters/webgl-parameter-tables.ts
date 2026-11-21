@@ -41,6 +41,7 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.GENERATE_MIPMAP_HINT]: GL.DONT_CARE,
   [GL.LINE_WIDTH]: 1,
   [GL.POLYGON_OFFSET_FILL]: false,
+  [GL.POLYGON_OFFSET_CLAMP_EXT]: 0,
   [GL.POLYGON_OFFSET_FACTOR]: 0,
   [GL.POLYGON_OFFSET_UNITS]: 0,
   [GL.SAMPLE_ALPHA_TO_COVERAGE]: false,
@@ -177,6 +178,7 @@ export const GL_PARAMETER_SETTERS = {
   [GL.GENERATE_MIPMAP_HINT]: hint,
   [GL.LINE_WIDTH]: (gl: WebGL2RenderingContext, value) => gl.lineWidth(value),
   [GL.POLYGON_OFFSET_FILL]: enable,
+  [GL.POLYGON_OFFSET_CLAMP_EXT]: 'polygonOffset',
   [GL.POLYGON_OFFSET_FACTOR]: 'polygonOffset',
   [GL.POLYGON_OFFSET_UNITS]: 'polygonOffset',
   [GL.RASTERIZER_DISCARD]: enable,
@@ -380,11 +382,26 @@ export const GL_COMPOSITE_PARAMETER_SETTERS = {
       getValue(GL.BLEND_SRC_ALPHA, values, cache),
       getValue(GL.BLEND_DST_ALPHA, values, cache)
     ),
-  polygonOffset: (gl: WebGL2RenderingContext, values, cache) =>
-    gl.polygonOffset(
-      getValue(GL.POLYGON_OFFSET_FACTOR, values, cache),
-      getValue(GL.POLYGON_OFFSET_UNITS, values, cache)
-    ),
+  polygonOffset: (gl: WebGL2RenderingContext, values, cache) => {
+    const factor = getValue(GL.POLYGON_OFFSET_FACTOR, values, cache);
+    const units = getValue(GL.POLYGON_OFFSET_UNITS, values, cache);
+    const clamp = getValue(GL.POLYGON_OFFSET_CLAMP_EXT, values, cache);
+    if (!clamp) {
+      gl.polygonOffset(factor, units);
+      return;
+    }
+    const extension = gl.getExtension('EXT_polygon_offset_clamp');
+    if (
+      extension &&
+      gl.lumaState._updateCache({
+        [GL.POLYGON_OFFSET_FACTOR]: factor,
+        [GL.POLYGON_OFFSET_UNITS]: units,
+        [GL.POLYGON_OFFSET_CLAMP_EXT]: clamp
+      }).valueChanged
+    ) {
+      extension.polygonOffsetClampEXT(factor, units, clamp);
+    }
+  },
   sampleCoverage: (gl: WebGL2RenderingContext, values, cache) =>
     gl.sampleCoverage(
       getValue(GL.SAMPLE_COVERAGE_VALUE, values, cache),
@@ -545,7 +562,8 @@ export const GL_HOOKED_SETTERS = {
   polygonOffset: (update: UpdateFunc, factor, units) =>
     update({
       [GL.POLYGON_OFFSET_FACTOR]: factor,
-      [GL.POLYGON_OFFSET_UNITS]: units
+      [GL.POLYGON_OFFSET_UNITS]: units,
+      [GL.POLYGON_OFFSET_CLAMP_EXT]: 0
     }),
 
   sampleCoverage: (update: UpdateFunc, value, invert) =>
@@ -625,6 +643,8 @@ export const GL_PARAMETER_GETTERS = {
   [GL.DEPTH_CLAMP_EXT]: (gl: WebGL2RenderingContext) =>
     Boolean(gl.getExtension('EXT_depth_clamp')) && gl.isEnabled(GL.DEPTH_CLAMP_EXT),
   [GL.DITHER]: isEnabled,
+  [GL.POLYGON_OFFSET_CLAMP_EXT]: (gl: WebGL2RenderingContext) =>
+    gl.getExtension('EXT_polygon_offset_clamp') ? gl.getParameter(GL.POLYGON_OFFSET_CLAMP_EXT) : 0,
   [GL.POLYGON_OFFSET_FILL]: isEnabled,
   [GL.SAMPLE_ALPHA_TO_COVERAGE]: isEnabled,
   [GL.SAMPLE_COVERAGE]: isEnabled,

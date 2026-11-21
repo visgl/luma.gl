@@ -10,7 +10,8 @@ import {
   WebGLDevice,
   setDeviceParameters,
   getGLParameters,
-  resetGLParameters
+  resetGLParameters,
+  WebGLStateTracker
 } from '@luma.gl/core/webgl';
 
 // Settings test, could be beneficial to not reuse a context
@@ -268,6 +269,48 @@ it('restores depth clamping across a nested change', async () => {
       device.popState();
     }
     expect(device.gl.isEnabled(GL.DEPTH_CLAMP_EXT)).toBe(true);
+  } finally {
+    device.popState();
+  }
+});
+
+it('maps slope and constant depth bias and restores a nested clamp', async () => {
+  const device = await getOrSkipWebGLTestDevice();
+  if (!device) return;
+  const {gl} = device;
+  const tracker = WebGLStateTracker.get(gl);
+  const readNative = (parameter: number) => {
+    const enabled = tracker.enable;
+    try {
+      tracker.enable = false;
+      return gl.getParameter(parameter);
+    } finally {
+      tracker.enable = enabled;
+    }
+  };
+  device.pushState();
+  try {
+    setDeviceParameters(device, {depthBiasSlopeScale: 2});
+    expect(readNative(GL.POLYGON_OFFSET_FACTOR)).toBe(2);
+    expect(readNative(GL.POLYGON_OFFSET_UNITS)).toBe(0);
+    if (!device.features.has('polygon-offset-clamp-webgl')) {
+      expect(() => setDeviceParameters(device, {depthBiasClamp: 1})).toThrow(
+        'polygon-offset-clamp-webgl'
+      );
+      return;
+    }
+    setDeviceParameters(device, {depthBiasSlopeScale: 2, depthBias: 5, depthBiasClamp: -3});
+    expect(readNative(GL.POLYGON_OFFSET_CLAMP_EXT)).toBe(-3);
+    device.pushState();
+    try {
+      setDeviceParameters(device, {depthBiasSlopeScale: 2, depthBias: 5});
+      expect(readNative(GL.POLYGON_OFFSET_CLAMP_EXT)).toBe(0);
+    } finally {
+      device.popState();
+    }
+    expect(readNative(GL.POLYGON_OFFSET_FACTOR)).toBe(2);
+    expect(readNative(GL.POLYGON_OFFSET_UNITS)).toBe(5);
+    expect(readNative(GL.POLYGON_OFFSET_CLAMP_EXT)).toBe(-3);
   } finally {
     device.popState();
   }

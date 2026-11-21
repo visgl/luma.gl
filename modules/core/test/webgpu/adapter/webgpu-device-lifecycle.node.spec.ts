@@ -87,6 +87,9 @@ describe('WebGPU device creation lifecycle', () => {
     const device = await adapter.create({} as DeviceProps);
 
     expect(nativeAdapter.requestDevice).toHaveBeenCalledWith({});
+    expect(device.features.has('clip-control-webgl')).toBe(true);
+    expect(device.features.has('polygon-offset-clamp-webgl')).toBe(true);
+    expect(device.features.has('depth-clip-control')).toBe(false);
     device.destroy();
   });
 

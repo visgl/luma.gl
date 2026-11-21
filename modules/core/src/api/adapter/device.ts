@@ -331,6 +331,7 @@ export type WebGPUDeviceFeature =
 export type WebGLDeviceFeature =
   // webgl extension features
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
+  | 'polygon-offset-clamp-webgl'
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
   | 'clip-control-webgl' // RenderPassProps.clipDepthMode 'zero-to-one' (EXT_clip_control)
