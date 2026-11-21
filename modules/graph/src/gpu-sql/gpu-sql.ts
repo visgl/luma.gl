@@ -214,7 +214,8 @@ function buildGPUSQLPlan(
     }
     return query.aggregate(definitions);
   }
-  if (statement.groupBy) throw new Error('GPUSQL GROUP BY requires at least one aggregation');
+  if (statement.groupBy !== undefined)
+    throw new Error('GPUSQL GROUP BY requires at least one aggregation');
 
   const selected: string[] = [];
   for (const item of statement.items) {

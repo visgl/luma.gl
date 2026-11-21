@@ -268,6 +268,8 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     expect(() => context.query('SELECT fare + 1 FROM trips')).toThrow(/alias/i);
     expect(() => context.query('SELECT COUNT(fare) FROM trips')).toThrow(/COUNT\(\*\)/i);
     expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
+    expect(() => context.query('SELECT fare FROM trips GROUP BY 0')).toThrow(/aggregation/);
+
     expect(context.query('SELECT * FROM trips ORDER BY 1')).toBeInstanceOf(GPUSQLQuery);
     for (const position of [0, 1.5, 2]) {
       expect(() => context.query(`SELECT fare FROM trips ORDER BY ${position}`)).toThrow(
