@@ -91,10 +91,12 @@ export class StressSceneView {
     for (const [index, body] of props.bodies.entries()) {
       const colliders = body.colliders ?? [{shape: body.shape}];
       for (const [colliderIndex, collider] of colliders.entries()) {
+        const shape = collider.shape;
+        // The terrain source supplies height-field visuals, as in Off-road Buggy.
+        if (shape.type === 'height-field') continue;
         const localMatrix = new Matrix4()
           .translate(collider.position ?? [0, 0, 0])
           .multiplyRight(new Matrix4().fromQuaternion(collider.orientation ?? [0, 0, 0, 1]));
-        const shape = collider.shape;
         let geometry: Geometry;
         if (shape.type === 'box') {
           geometry = cube;
@@ -231,7 +233,10 @@ export class StressSceneView {
   }
 }
 
-function makeShapeGeometry(shape: Exclude<GPURigidBodyShape, {type: 'box' | 'sphere'}>): Geometry {
+/** Build a debug mesh for the remaining authored Stress Lab collider shapes. */
+function makeShapeGeometry(
+  shape: Exclude<GPURigidBodyShape, {type: 'box' | 'sphere' | 'height-field'}>
+): Geometry {
   if (shape.type === 'capsule') {
     const geometry = new CapsuleGeometry({
       height: shape.height,

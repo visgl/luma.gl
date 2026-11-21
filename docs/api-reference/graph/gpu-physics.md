@@ -442,7 +442,58 @@ closed dynamic meshes that need mass properties. For an existing scenegraph,
 `PhysicsController.addBody` also accepts the geometry with `motion: 'static'`
 and `geometryMode: 'triangle-mesh'`.
 
-Vehicle terrain candidates are supplied explicitly. Neighbor selection, tile
-residency, mixed-resolution seams, and source-to-metric conversion remain with
-the application. A native GPU height-field layout is a separate optimization
-that should match the authored triangle collision surface before replacing it.
+Vehicle terrain candidates are supplied explicitly. Neighbor selection,
+mixed-resolution seams, and source-to-metric conversion remain with the
+application.
+
+### Native height fields and tile residency
+
+Use `{type: 'height-field', field}` on a static body to store scalar heights and a
+small cell hierarchy instead of uploading a cooked triangle mesh. The GPU reconstructs
+the selected cell triangles for contacts, raycasts, sphere casts and suspension.
+Missing samples remove the triangles that use them. Affine XY steps, the cell diagonal,
+and an optional first-sample offset are retained in the collider-local Z-up frame.
+`makeRigidBodyHeightField(heightField, tileAnchor)` adapts the structural math.gl API
+and subtracts the anchor before converting vertices to float32. Choose a local metric
+frame with a common vertical datum before calling it.
+
+```typescript
+import {GPURigidBodyWorld, makeRigidBodyHeightField} from '@luma.gl/graph/gpu-physics';
+
+const world = new GPURigidBodyWorld({
+  bodies: [
+    {
+      mass: 0,
+      position: [0, 0, 0],
+      shape: {type: 'height-field', field: {width: 65, height: 65}}
+    }
+  ]
+});
+// Attach the world to a GPUCommandGraph and compile before loading a tile.
+world.setHeightFieldTiles([
+  {
+    collider: 0,
+    field: makeRigidBodyHeightField(heightField, tileAnchor),
+    position: tileAnchor
+  }
+]);
+
+// Evict the tile without destroying the collider or its reserved storage.
+world.setHeightFieldTiles([{collider: 0, field: null}]);
+```
+
+The example uses a zero-origin static body, so the collider position and tile anchor
+use the same coordinates. In general, pass the tile's placement in the **body-local**
+frame. If you rebase the simulation, the body and collider shift together. A slot
+keeps its width, height, collider ID, and GPU allocation for its lifetime. Submit
+encoded commands before changing residency. The world validates every edit before
+uploading any of the batch, then invalidates cached contacts and wakes the world once.
+The application owns fetching, slot assignment, and neighbor loading. GPU checkpoints
+restore the currently loaded tiles as well as body state.
+
+There is a cap of one million samples per tile, subject to adapter storage limits.
+Native height fields work with sphere/static CCD and through the triangle contact
+path. Moving-convex CCD continues to exclude terrain shapes. Ensembles can share
+immutable height fields, while independently resident worlds support streaming.
+Off-road Buggy streams collision tiles ahead of the chassis. Append `?terrain=mesh`
+to use the same rendered course with the cooked-mesh reference.

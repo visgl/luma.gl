@@ -483,9 +483,15 @@ closed-solid mass work. Load-time BVH construction reuses precomputed triangle b
 centroid keys. Off-road Buggy uses the shared geometry contract and tile-local collision
 coordinates without adding a terrain package dependency.
 
-Qualify authored holes, tile seams, and origin shifts before considering a native GPU height
-field. Native storage, runtime residency, mixed-resolution seam stitching, and terrain streaming
-remain open. Use the triangle surface path as the accuracy and throughput reference.
+The triangle surface path establishes the reference for authored holes, tile seams, and origin
+shifts. Native height fields now reconstruct cell triangles on the GPU from scalar samples
+and a stackless hierarchy. Fixed-size standalone collider slots can upload, move, and evict
+tiles without rebuilding the graph; checkpoints restore residency and body state together.
+Off-road Buggy uses a hysteresis window and retains a cooked-mesh reference mode.
+
+Provider fetch integration, mixed-resolution seam stitching, scoped invalidation, and streaming
+inside fused ensembles remain open. Qualify traversal and step cost across adapters before
+changing the default for existing mesh-based applications.
 
 ### G9. Articulations and mechanism quality
 

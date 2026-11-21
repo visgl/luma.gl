@@ -86,7 +86,10 @@ it('supports chassis weight and transfers load forward under braking', async con
   }
 });
 
-it('steers with loaded wheels over sloped triangle terrain', async context => {
+it.for([
+  'triangle-mesh',
+  'height-field'
+] as const)('steers with loaded wheels over sloped %s terrain', async (terrainType, context) => {
   const device = await getWebGPUTestDevice();
   if (!device) return context.skip('WebGPU unavailable');
   const geometry = makeTriangleMeshGeometry(
@@ -97,7 +100,24 @@ it('steers with loaded wheels over sloped triangle terrain', async context => {
     timeStep: 1 / 120,
     gravity: [0, 0, -10],
     bodies: [
-      {mass: 0, position: [0, 0, 0], shape: {type: 'triangle-mesh', geometry}},
+      {
+        mass: 0,
+        position: [0, 0, 0],
+        shape:
+          terrainType === 'height-field'
+            ? {
+                type: 'height-field',
+                field: {
+                  width: 2,
+                  height: 2,
+                  heights: new Float32Array([-0.4, 0, 0, 1.2]),
+                  origin: [-16, -16],
+                  columnStep: [32, 0],
+                  rowStep: [0, 32]
+                }
+              }
+            : {type: 'triangle-mesh', geometry}
+      },
       {mass: 400, position: [0, 0, 1.45], shape: {type: 'box', halfExtents: [1.3, 0.6, 0.16]}}
     ],
     vehicle: {

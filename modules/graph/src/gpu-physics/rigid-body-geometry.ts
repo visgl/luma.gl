@@ -3,13 +3,23 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {makeCoplanarFeatures} from './rigid-body-contact-features';
+import {packRigidBodyHeightField, type GPURigidBodyHeightField} from './rigid-body-height-field';
 import type {RigidBodyMeshGeometry} from './rigid-body-mesh';
 import type {GPURigidBodyCollider} from './rigid-body-properties';
 
-export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) {
+/** Pack collider metadata and its contiguous GPU geometry uploads. */
+export function packRigidBodyShapes(
+  colliders: readonly GPURigidBodyCollider[],
+  shareHeightFields = false
+) {
   const geometry: number[] = [];
   const packedMeshes = new Map<RigidBodyMeshGeometry, {padding: number[]; policies: number[]}>();
-  const shapes = colliders.map(({shape}) => {
+  const sharedHeightFields = new Map<
+    GPURigidBodyHeightField,
+    {padding: number[]; policies: number[]; extent: number[]}
+  >();
+  const heightFields = new Map<number, number>();
+  const shapes = colliders.map(({shape}, colliderIndex) => {
     const policies = [0, 0];
     const padding = [0, 0, 0, 0];
     let dimensions: number[];
@@ -24,7 +34,28 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
         shape.height,
         shape.type === 'capsule' ? 4 : 5
       ];
-    else {
+    else if (shape.type === 'height-field') {
+      const shared = sharedHeightFields.get(shape.field);
+      if (shared) {
+        padding.splice(0, padding.length, ...shared.padding);
+        policies.splice(0, policies.length, ...shared.policies);
+        dimensions = [...shared.extent, 3];
+      } else {
+        const packed = packRigidBodyHeightField(shape.field);
+        const offset = geometry.length / 4;
+        padding[0] = offset;
+        // Negative vertex count distinguishes implicit height-field triangles in the mesh kernels.
+        padding[1] = -shape.field.width;
+        padding[3] = packed.triangleCount;
+        policies[0] = offset + packed.nodeOffset;
+        policies[1] = packed.nodeCount;
+        dimensions = [...packed.extent, 3];
+        for (const value of packed.data) geometry.push(value);
+        if (shareHeightFields)
+          sharedHeightFields.set(shape.field, {padding, policies, extent: packed.extent});
+        else heightFields.set(colliderIndex, offset);
+      }
+    } else {
       const mesh = shape.geometry;
       const shared = packedMeshes.get(mesh);
       if (shared) {
@@ -75,5 +106,5 @@ export function packRigidBodyShapes(colliders: readonly GPURigidBodyCollider[]) 
     while (geometry.length % 4) geometry.push(0);
     return [start, excluded.length] as const;
   });
-  return {shapes, geometry, filters};
+  return {shapes, geometry, filters, heightFields};
 }

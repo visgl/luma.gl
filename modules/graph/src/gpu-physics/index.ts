@@ -26,6 +26,11 @@ export {
   makeStaticTriangleMeshGeometry,
   type RigidBodyMeshGeometry
 } from './rigid-body-mesh';
+export {
+  makeRigidBodyHeightField,
+  type GPURigidBodyHeightField,
+  type GPURigidBodyHeightFieldSource
+} from './rigid-body-height-field';
 export {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 export {
   getSphereClothReference,
@@ -82,6 +87,7 @@ export type {GPURigidBodyJoint, GPURigidBodyJointFrame} from './rigid-body-joint
 export type {
   GPURigidBodyCapture,
   GPURigidBodyGPUCheckpoint,
+  GPURigidBodyHeightFieldEdit,
   GPURigidBodyParameters
 } from './gpu-rigid-body-world';
 

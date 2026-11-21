@@ -217,6 +217,7 @@ struct TriggerRing {sequence:u32,step:u32,saturated:u32,reserved:u32,entries:arr
     for(var firstTriangle=0u;firstTriangle<firstCount&&!found;firstTriangle++){
       for(var secondTriangle=0u;secondTriangle<secondCount;secondTriangle++){
         if(tested>=MESH_TRAVERSAL_BUDGET){incomplete=true;break;}tested++;
+        if((firstMesh&&!meshTriangleActive(pair.x,firstTriangle))||(secondMesh&&!meshTriangleActive(pair.y,secondTriangle))){continue;}
         if(!permitsPlaneContact(pair.x,pair.y)||!permitsPlaneContact(pair.y,pair.x)){continue;}
         let hit=convexContact(pair.x,pair.y,select(-1,i32(firstTriangle),firstMesh),select(-1,i32(secondTriangle),secondMesh));
         incomplete=incomplete||hit.status==2u;

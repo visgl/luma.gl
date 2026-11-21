@@ -24,6 +24,7 @@ import {
   type GraphBufferHandle
 } from '../gpu-core/gpu-command-graph';
 import {shiftRigidBodyBuffers} from './rigid-body-origin';
+import {type GPURigidBodyHeightField, packRigidBodyHeightField} from './rigid-body-height-field';
 import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 import {addEnsembleStatus, readOnlyEnsembleShader} from './rigid-body-ensemble-shaders';
 import {makeEnsembleReset} from './rigid-body-ensemble-reset';
@@ -97,6 +98,16 @@ import {
   type GPURigidBodyOverlapQuery,
   type GPURigidBodyQueryResult
 } from './rigid-body-queries';
+
+/** One fixed-dimension slot update. A null field evicts the current tile. */
+export type GPURigidBodyHeightFieldEdit = {
+  /** Stable index of the reserved collider slot. */
+  collider: number;
+  /** Replacement samples and transform, or null to evict. */
+  field: GPURigidBodyHeightField | null;
+  /** Optional new placement in the collider's body-local frame. */
+  position?: Vector3;
+};
 
 /** In-memory, structured-cloneable debug capture; tied to this implementation's storage layout. */
 export type GPURigidBodyCapture = {
@@ -257,6 +268,8 @@ export class GPURigidBodyWorld {
   private readonly props: GPURigidBodyWorldProps;
   private readonly ownedBuffers: Buffer[] = [];
   private ensembleBuffer: Buffer | null = null;
+  /** Byte offsets of writable fixed-dimension height fields in the world metadata buffer. */
+  private heightFieldSlots = new Map<number, number>();
   private ensembleResetOrigin?: readonly number[];
   private ensembleReset?: ReturnType<typeof makeEnsembleReset>;
   private initialEnsembleBodies?: readonly GPURigidBody[];
@@ -361,6 +374,11 @@ export class GPURigidBodyWorld {
       const shapes: readonly GPURigidBodyCollider[] =
         body.colliders ?? (body.shape ? [{shape: body.shape}] : []);
       for (const collider of shapes) {
+        if (
+          collider.shape.type === 'height-field' &&
+          (body.mode ?? (body.mass === 0 ? 'static' : 'dynamic')) !== 'static'
+        )
+          throw new Error('Height fields require static bodies');
         const properties = getRigidBodyShapeProperties(collider.shape);
         if (
           !Number.isFinite(properties.volume) ||
@@ -490,7 +508,9 @@ export class GPURigidBodyWorld {
         (props.continuous.maximumCandidates ?? this.maximumPairs) > 0x40000000 ||
         (props.continuous.mode === 'convex' &&
           (Boolean(props.joints?.length) ||
-            colliders.some(collider => ['plane', 'triangle-mesh'].includes(collider.shape.type))))
+            colliders.some(collider =>
+              ['plane', 'triangle-mesh', 'height-field'].includes(collider.shape.type)
+            )))
       )
         throw new Error('Invalid continuous settings');
       for (const index of props.continuous.bodies) {
@@ -599,7 +619,10 @@ export class GPURigidBodyWorld {
   }
 
   private getStorageLayout() {
-    const packed = packRigidBodyShapes(this.colliders);
+    const packed = packRigidBodyShapes(
+      this.colliders,
+      Boolean(this.props.ensembleBodiesPerInstance)
+    );
     const sparse = this.broadPhase === 'hierarchical-grid';
     const extended = this.colliders.some(
       collider =>
@@ -915,6 +938,12 @@ export class GPURigidBodyWorld {
       : undefined;
     const metadata = new Float32Array(metadataLength);
     metadata.set(packed.geometry, geometryOffset);
+    this.heightFieldSlots = new Map(
+      Array.from(packed.heightFields, ([collider, offset]) => [
+        collider,
+        (geometryOffset + offset * 4) * 4
+      ])
+    );
     const bodyColliders: GPURigidBodyCollider[][] = Array.from({length: this.count}, () => []);
     if (this.colliderCount)
       for (const collider of this.colliders) bodyColliders[collider.body].push(collider);
@@ -1155,7 +1184,8 @@ export class GPURigidBodyWorld {
       this.props.compactContacts ?? true,
       this.props.collisionPartitionSize,
       this.props.ensembleBodiesPerInstance,
-      this.props.parallelContactSolver === 'block'
+      this.props.parallelContactSolver === 'block',
+      this.colliders.some(collider => collider.shape.type === 'height-field')
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
@@ -2491,7 +2521,8 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         indices.has(edit.collider) ||
         previous.type !== shape.type ||
         shape.type === 'convex-hull' ||
-        shape.type === 'triangle-mesh'
+        shape.type === 'triangle-mesh' ||
+        shape.type === 'height-field'
       )
         throw new Error('Shape edit requires a topology rebuild');
       indices.add(edit.collider);
@@ -2525,6 +2556,69 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       // Recalculate derived inertia while preserving simulated velocities and the node origin.
       this.setBodyParameters(body, {});
     }
+  }
+
+  /**
+   * Replace or evict fixed-dimension height-field tiles between submissions.
+   * Optional positions are in each collider's body-local frame. The caller owns
+   * tile selection and must submit already encoded steps before editing residency.
+   */
+  setHeightFieldTiles(edits: readonly GPURigidBodyHeightFieldEdit[]): void {
+    if (!edits.length) return;
+    const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`);
+    if (!metadata || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
+      throw new Error('Terrain streaming requires an idle attached world');
+    const seen = new Set<number>();
+    const replacements = edits.map(({collider: colliderIndex, field, position}) => {
+      const collider = this.colliders[colliderIndex];
+      const offset = this.heightFieldSlots.get(colliderIndex);
+      if (
+        offset === undefined ||
+        collider?.shape.type !== 'height-field' ||
+        seen.has(colliderIndex)
+      )
+        throw new Error('Invalid writable height-field slot');
+      seen.add(colliderIndex);
+      const previous = collider.shape.field;
+      const next = field
+        ? structuredClone(field)
+        : {...previous, heights: undefined, validity: undefined};
+      if (next.width !== previous.width || next.height !== previous.height)
+        throw new Error('Height-field slot dimensions are fixed');
+      const center = this.props.bodies[collider.body].centerOfMass ?? [0, 0, 0];
+      const localOffset = position?.map((value, axis) => value - center[axis]);
+      if (
+        position &&
+        (position.length !== 3 || !localOffset?.every(value => Number.isFinite(Math.fround(value))))
+      )
+        throw new Error('Invalid height-field tile position');
+      return {
+        collider,
+        colliderIndex,
+        offset,
+        field: next,
+        position,
+        localOffset,
+        packed: packRigidBodyHeightField(next)
+      };
+    });
+    const changedBodies = new Set<number>();
+    for (const replacement of replacements) {
+      const {collider, colliderIndex, offset, field, position, localOffset, packed} = replacement;
+      const base = this.count * 48 + colliderIndex * 96;
+      metadata.write(new Float32Array(packed.data), offset);
+      metadata.write(new Float32Array(packed.extent), base);
+      metadata.write(new Float32Array([packed.nodeCount]), base + 76);
+      metadata.write(new Float32Array([packed.triangleCount]), base + 92);
+      if (position && localOffset) {
+        metadata.write(new Float32Array(localOffset), base + 16);
+        collider.position = [...position];
+      }
+      collider.shape = {type: 'height-field', field};
+      changedBodies.add(collider.body);
+    }
+    for (const body of changedBodies) this.updateColliderDefinitions(body);
+    this.wake();
   }
 
   /** Change an existing collider material between submissions, invalidating cached friction. */
@@ -2680,7 +2774,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       validateRigidBodyJoints(this.props.joints, proposedBodies, this.solver);
     }
     const colliders = this.colliders.filter(collider => collider.body === bodyIndex);
-    for (const collider of colliders)
+    for (const collider of colliders) {
+      if (collider.shape.type === 'height-field' && mode !== 'static')
+        throw new Error('Height fields require static bodies');
       if (
         (collider.shape.type === 'convex-hull' || collider.shape.type === 'triangle-mesh') &&
         mode !== 'static' &&
@@ -2689,6 +2785,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
           !(getRigidBodyShapeProperties(collider.shape).volume > 0))
       )
         throw new Error('Dynamic meshes require closed positive-volume geometry');
+    }
     if (
       this.props.continuous?.bodies.includes(bodyIndex) &&
       (mode !== 'dynamic' ||
@@ -3422,7 +3519,13 @@ function serializeCaptureProps(props: GPURigidBodyWorldProps): string {
           shape:
             collider.shape?.type === 'convex-hull' || collider.shape?.type === 'triangle-mesh'
               ? collider.shape
-              : {type: collider.shape?.type},
+              : collider.shape?.type === 'height-field'
+                ? {
+                    type: collider.shape.type,
+                    width: collider.shape.field.width,
+                    height: collider.shape.field.height
+                  }
+                : {type: collider.shape?.type},
           material: undefined,
           position: undefined,
           orientation: undefined
