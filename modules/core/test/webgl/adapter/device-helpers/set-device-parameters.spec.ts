@@ -252,3 +252,23 @@ it('setDeviceParameters#stencilCompare always keeps stencil operations enabled',
     resetGLParameters(device.gl);
   }
 });
+
+it('restores depth clamping across a nested change', async () => {
+  const device = await getOrSkipWebGLTestDevice();
+  if (!device?.features.has('depth-clip-control')) return;
+  device.pushState();
+  try {
+    setDeviceParameters(device, {unclippedDepth: true});
+    expect(device.gl.isEnabled(GL.DEPTH_CLAMP_EXT)).toBe(true);
+    device.pushState();
+    try {
+      setDeviceParameters(device, {unclippedDepth: false});
+      expect(device.gl.isEnabled(GL.DEPTH_CLAMP_EXT)).toBe(false);
+    } finally {
+      device.popState();
+    }
+    expect(device.gl.isEnabled(GL.DEPTH_CLAMP_EXT)).toBe(true);
+  } finally {
+    device.popState();
+  }
+});

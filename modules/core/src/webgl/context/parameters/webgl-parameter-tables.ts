@@ -25,6 +25,7 @@ export const GL_PARAMETER_DEFAULTS: GLParameters = {
   [GL.CULL_FACE]: false,
   [GL.CULL_FACE_MODE]: GL.BACK,
   [GL.DEPTH_TEST]: false,
+  [GL.DEPTH_CLAMP_EXT]: false,
   [GL.DEPTH_CLEAR_VALUE]: 1,
   [GL.DEPTH_FUNC]: GL.LESS,
   [GL.DEPTH_RANGE]: new Float32Array([0, 1]), // TBD
@@ -211,7 +212,9 @@ export const GL_PARAMETER_SETTERS = {
 
   // EXT_depth_clamp https://registry.khronos.org/webgl/extensions/EXT_depth_clamp/
 
-  [GL.DEPTH_CLAMP_EXT]: enable,
+  [GL.DEPTH_CLAMP_EXT]: (gl: WebGL2RenderingContext, value: boolean) => {
+    if (gl.getExtension('EXT_depth_clamp')) enable(gl, value, GL.DEPTH_CLAMP_EXT);
+  },
 
   // EXT_clip_control https://registry.khronos.org/webgl/extensions/EXT_clip_control/
 
@@ -619,6 +622,8 @@ export const GL_PARAMETER_GETTERS = {
   [GL.BLEND]: isEnabled,
   [GL.CULL_FACE]: isEnabled,
   [GL.DEPTH_TEST]: isEnabled,
+  [GL.DEPTH_CLAMP_EXT]: (gl: WebGL2RenderingContext) =>
+    Boolean(gl.getExtension('EXT_depth_clamp')) && gl.isEnabled(GL.DEPTH_CLAMP_EXT),
   [GL.DITHER]: isEnabled,
   [GL.POLYGON_OFFSET_FILL]: isEnabled,
   [GL.SAMPLE_ALPHA_TO_COVERAGE]: isEnabled,
