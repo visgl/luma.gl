@@ -7,6 +7,7 @@ import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
 import {runBatchBenchmark, type BatchBenchmarkScene} from './batch-benchmark';
 import {runTerrainStreamingBenchmark} from './batch-terrain';
+import {runEnsembleRecoveryStress, type RecoveryStep} from './batch-recovery';
 
 const diagnostics = new GPUGraphDiagnostics();
 const panel = createRigidBodyPanel(
@@ -23,9 +24,24 @@ const button = document.querySelector<HTMLButtonElement>('#run')!;
 const exportButton = document.querySelector<HTMLButtonElement>('#export')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
+/** Workload selector shared by validation and control visibility. */
+const scenarioControl = document.querySelector<HTMLSelectElement>('#scene')!;
+/** Recovery uses a fixed four-body fixture and schedules every healthy world. */
+function updateScenarioControls(): void {
+  /** Only the independent recovery fixture ignores body and activity controls. */
+  const independentRecovery = scenarioControl.value === 'independent-recovery';
+  for (const id of ['bodies', 'pairs', 'active']) {
+    /** Hide the label and its control as a unit. */
+    const label = document.querySelector(`#${id}`)?.closest('label');
+    if (label) label.hidden = independentRecovery;
+  }
+}
+scenarioControl.addEventListener('change', updateScenarioControls);
+updateScenarioControls();
 let report:
   | Awaited<ReturnType<typeof runBatchBenchmark>>
   | Awaited<ReturnType<typeof runTerrainStreamingBenchmark>>
+  | Awaited<ReturnType<typeof runEnsembleRecoveryStress>>
   | undefined;
 const device = await luma.createDevice({
   adapters: [webgpuAdapter],
@@ -39,7 +55,41 @@ button.onclick = async () => {
   diagnostics.clear();
   status.textContent = 'Allocating and compiling resident worlds…';
   try {
-    if (document.querySelector<HTMLSelectElement>('#scene')!.value === 'streamed-terrain') {
+    /** Resolve the selected workload before compiling a graph. */
+    const scenario = scenarioControl.value;
+    if (scenario === 'independent-recovery') {
+      if (document.querySelector<HTMLSelectElement>('#submission')!.value !== 'ensemble')
+        throw new Error('Independent recovery requires fused ensemble submission');
+      /** Keep the timeline scale fixed for the duration of this run. */
+      const frames = number('frames');
+      /** Collect chart cells in attempted step order. */
+      const timeline: (readonly RecoveryStep[])[] = [];
+      /** Keep the completed workload report available for JSON export. */
+      const recovery = await runEnsembleRecoveryStress(
+        device,
+        number('worlds'),
+        frames,
+        ({step, failedAt, healthyStepsWhileHeld, outcomes}) => {
+          timeline.push(outcomes);
+          if (step === frames || step % Math.max(1, Math.floor(frames / 120)) === 0)
+            paintRecoveryTimeline(timeline, frames);
+          status.textContent = `Step ${step}/${frames}
+Failed instance: ${failedAt ? '2' : 'none'}
+Healthy steps during quarantine: ${healthyStepsWhileHeld}`;
+        },
+        diagnostics
+      );
+      report = recovery;
+      status.textContent = `Complete: ${recovery.complete}
+Instance ${recovery.subject + 1} rejected step: ${recovery.failedAt ?? 'none'}
+Reset before step: ${recovery.resetAt}
+Steps each sibling accepted during quarantine: ${recovery.healthyStepsWhileHeld}
+Steps the recovered instance accepted: ${recovery.recoveredSteps}
+Fixed allocation and graph: ${recovery.fixedAllocation}`;
+      exportButton.disabled = false;
+      return;
+    }
+    if (scenario === 'streamed-terrain') {
       if (document.querySelector<HTMLSelectElement>('#submission')!.value !== 'ensemble')
         throw new Error('Streamed terrain requires fused ensemble submission');
       const terrain = await runTerrainStreamingBenchmark(
@@ -183,7 +233,7 @@ exportButton.onclick = () => {
 
 /** Read the selected workload, falling back to sparse debris for an unknown selection. */
 function getScenario(): BatchBenchmarkScene {
-  const value = document.querySelector<HTMLSelectElement>('#scene')!.value;
+  const value = scenarioControl.value;
   return value === 'pile' ||
     value === 'sleeping' ||
     value === 'wake-storm' ||
@@ -211,5 +261,63 @@ function paintStreamedTerrain(terrain: Awaited<ReturnType<typeof runTerrainStrea
     context.beginPath();
     context.arc(position[0] * scale, position[1] * scale, scale * 0.5, 0, 2 * Math.PI);
     context.fill();
+  }
+}
+
+/** Draw one swimlane per displayed instance and one cell per attempted step. */
+function paintRecoveryTimeline(timeline: readonly (readonly RecoveryStep[])[], totalSteps: number) {
+  /** Use device pixels to keep the chart and text sharp. */
+  const canvasWidth = Math.round(innerWidth * devicePixelRatio);
+  /** Match the full-height scene canvas in device pixels. */
+  const canvasHeight = Math.round(innerHeight * devicePixelRatio);
+  if (canvas.width !== canvasWidth) canvas.width = canvasWidth;
+  if (canvas.height !== canvasHeight) canvas.height = canvasHeight;
+  /** Draw alongside the same controls and graph as the other Batch Lab workloads. */
+  const context = canvas.getContext('2d')!;
+  /** All recorded steps have the same ensemble membership. */
+  const instanceCount = timeline[0].length;
+  /** Cap visible rows while reporting counters for every world. */
+  const shown = Math.min(instanceCount, 12);
+  /** Leave room for the settings panel at the left of the canvas. */
+  const left = Math.min(canvas.width * 0.4, 410 * devicePixelRatio);
+  /** Keep the last step away from the viewport edge. */
+  const padding = 24 * devicePixelRatio;
+  /** Reserve room above the swimlanes for the displayed world count. */
+  const top = canvas.height * 0.25;
+  /** Keep every visible swimlane and its legend within the viewport. */
+  const rowHeight = Math.min(35 * devicePixelRatio, canvas.height / (shown + 5));
+  /** Use one horizontal unit per attempted step. */
+  const stepWidth = (canvas.width - left - padding) / totalSteps;
+  /** Encode accepted, rejected, held and resumed steps consistently with the legend. */
+  const colors: Record<RecoveryStep, string> = {
+    accepted: '#37a9b0',
+    rejected: '#ef795b',
+    held: '#584951',
+    recovered: '#9bc76d'
+  };
+  context.fillStyle = '#101820';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.font = `${12 * devicePixelRatio}px system-ui`;
+  for (let instance = 0; instance < shown; instance++) {
+    /** Place labels above an instance’s track to keep the step cells unobstructed. */
+    const row = top + instance * rowHeight;
+    context.fillStyle = '#253742';
+    context.fillRect(left, row, canvas.width - left - padding, rowHeight * 0.72);
+    context.fillStyle = '#dce8f0';
+    context.fillText(`World ${instance + 1}`, left, row - 2 * devicePixelRatio);
+    for (const [step, outcomes] of timeline.entries()) {
+      context.fillStyle = colors[outcomes[instance]];
+      context.fillRect(left + step * stepWidth, row, stepWidth, rowHeight * 0.72);
+    }
+  }
+  /** Draw labels using the same outcome colors as the cells. */
+  const legend = Object.entries(colors);
+  for (const [index, [label, color]] of legend.entries()) {
+    context.fillStyle = color;
+    context.fillText(label, left + index * 76 * devicePixelRatio, top + (shown + 0.35) * rowHeight);
+  }
+  if (shown < instanceCount) {
+    context.fillStyle = '#aabcc8';
+    context.fillText(`Showing ${shown} of ${instanceCount} worlds`, left, top - rowHeight);
   }
 }

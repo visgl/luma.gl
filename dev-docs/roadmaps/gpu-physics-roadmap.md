@@ -517,8 +517,11 @@ page when its last users update together. Qualification covers occupancy and buf
 savings, capacity rejection without partial publication, per-instance reset, origin
 shifting, GPU checkpoints, and capture restore.
 
-Independent step failure recovery and traversal/step-cost qualification across adapters
-remain open.
+Fused ensembles can opt into disjoint persistent contact caches and recover independently
+from local cache exhaustion. Failed instances are rolled back and held until a scoped reset
+while healthy instances publish poses and events. The Batch Lab exercises this on the same
+compiled graph. Shared discovery, mesh-work, solver, and nonfinite-state faults still reject
+the whole step. Qualification across adapters and broader fault attribution remain open.
 
 ### G9. Articulations and mechanism quality
 
