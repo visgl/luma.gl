@@ -129,6 +129,22 @@ test.each(domainFunctions)('$name agrees on valid inputs and writes null for inv
   expect(result?.get(5)).toBeNull();
 });
 
+test('binds quoted dotted columns separately from table-qualified columns', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = arrow.tableFromArrays({
+    'samples.score': Float32Array.of(9, 5, 2),
+    score: Float32Array.of(3, 4, 8)
+  });
+  const output = await executeGPUQuery(
+    device,
+    input,
+    'SELECT "samples.score", samples.score FROM samples WHERE samples."samples.score" > samples.score ORDER BY "samples.score"'
+  );
+  expect(Array.from(output.getChild('samples.score') ?? [])).toEqual([5, 9]);
+  expect(Array.from(output.getChild('score') ?? [])).toEqual([4, 3]);
+});
+
 /** Builds a native Arrow table with stable input types and nullable scores. */
 function makeSamples(identifiers: number[], scores: (number | null)[]): arrow.Table {
   return arrow.tableFromArrays({
