@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import type {Geometry} from '@math.gl/geometry';
 import {makeExactOrientation} from './rigid-body-orientation';
 
 export type RigidBodyMeshGeometry = {
@@ -152,6 +153,31 @@ export function makeTriangleMeshGeometry(
   positions: ArrayLike<number>,
   indices: ArrayLike<number>
 ): RigidBodyMeshGeometry {
+  return cookTriangleMeshGeometry(positions, indices, false);
+}
+
+/** Cook a CPU triangle surface, including a math.gl HeightFieldGeometry, for a static collider. */
+export function makeStaticTriangleMeshGeometry(geometry: Geometry): RigidBodyMeshGeometry {
+  const position = geometry.attributes['POSITION'];
+  if (geometry.topology !== 'triangle-list' || position?.size !== 3)
+    throw new Error('Static surfaces require triangle-list POSITION geometry');
+  const sourceIndices = geometry.indices?.value;
+  if (
+    geometry.vertexCount > Math.min(sourceIndices?.length ?? position.value.length / 3, 3_000_000)
+  )
+    throw new Error('Invalid mesh vertex count');
+  const indices =
+    sourceIndices?.subarray(0, geometry.vertexCount) ??
+    Array.from({length: geometry.vertexCount}, (_, index) => index);
+  return cookTriangleMeshGeometry(position.value, indices, true);
+}
+
+/** Build collision data from authored triangles, with optional mass properties for dynamic meshes. */
+function cookTriangleMeshGeometry(
+  positions: ArrayLike<number>,
+  indices: ArrayLike<number>,
+  staticSurface: boolean
+): RigidBodyMeshGeometry {
   if (
     !Number.isSafeInteger(positions.length) ||
     !Number.isSafeInteger(indices.length) ||
@@ -163,25 +189,34 @@ export function makeTriangleMeshGeometry(
     throw new Error('Incomplete mesh geometry');
   if (positions.length > 3_000_000 || indices.length > 3_000_000)
     throw new Error('Mesh geometry capacity exceeded');
-  const vertices = Array.from(positions, Math.fround);
   const triangles = Array.from(indices);
-  if (
-    !vertices.every(Number.isFinite) ||
-    triangles.some(index => !Number.isInteger(index) || index < 0 || index >= vertices.length / 3)
-  )
+  const vertexCount = positions.length / 3;
+  if (triangles.some(index => !Number.isInteger(index) || index < 0 || index >= vertexCount))
     throw new Error('Invalid mesh geometry');
+  const vertices = staticSurface
+    ? compactSurfaceVertices(positions, triangles)
+    : Array.from(positions, Math.fround);
+  if (!vertices.every(Number.isFinite)) throw new Error('Invalid mesh geometry');
   const point = (index: number): Point => [
     vertices[index * 3],
     vertices[index * 3 + 1],
     vertices[index * 3 + 2]
   ];
-  for (let triangle = 0; triangle < triangles.length; triangle += 3) {
-    const first = point(triangles[triangle]);
-    const normal = cross(
-      subtract(point(triangles[triangle + 1]), first),
-      subtract(point(triangles[triangle + 2]), first)
-    );
+  // Cache each face's bounds and centroid key once. BVH sorting must not allocate per comparison.
+  const triangleCount = triangles.length / 3;
+  const triangleBounds = new Float32Array(triangleCount * 6);
+  const triangleCentroids = new Float64Array(triangleCount * 3);
+  for (let triangle = 0; triangle < triangleCount; triangle++) {
+    const first = point(triangles[triangle * 3]);
+    const second = point(triangles[triangle * 3 + 1]);
+    const third = point(triangles[triangle * 3 + 2]);
+    const normal = cross(subtract(second, first), subtract(third, first));
     if (normal.every(value => value === 0)) throw new Error('Degenerate mesh triangle');
+    for (let axis = 0; axis < 3; axis++) {
+      triangleBounds[triangle * 6 + axis] = Math.min(first[axis], second[axis], third[axis]);
+      triangleBounds[triangle * 6 + axis + 3] = Math.max(first[axis], second[axis], third[axis]);
+      triangleCentroids[triangle * 3 + axis] = first[axis] + second[axis] + third[axis];
+    }
   }
   const minimum: Point = [Infinity, Infinity, Infinity],
     maximum: Point = [-Infinity, -Infinity, -Infinity];
@@ -198,36 +233,51 @@ export function makeTriangleMeshGeometry(
     const lower: Point = [Infinity, Infinity, Infinity],
       upper: Point = [-Infinity, -Infinity, -Infinity];
     for (const triangle of faces)
-      for (let corner = 0; corner < 3; corner++) {
-        const vertex = point(triangles[triangle * 3 + corner]);
-        for (let axis = 0; axis < 3; axis++) {
-          lower[axis] = Math.min(lower[axis], vertex[axis]);
-          upper[axis] = Math.max(upper[axis], vertex[axis]);
-        }
+      for (let axis = 0; axis < 3; axis++) {
+        lower[axis] = Math.min(lower[axis], triangleBounds[triangle * 6 + axis]);
+        upper[axis] = Math.max(upper[axis], triangleBounds[triangle * 6 + axis + 3]);
       }
     if (faces.length <= 4) {
       nodes[offset + 7] = faces.length;
       nodes[offset + 8] = ordered.length / 3;
       for (const triangle of faces)
-        ordered.push(...triangles.slice(triangle * 3, triangle * 3 + 3));
+        ordered.push(
+          triangles[triangle * 3],
+          triangles[triangle * 3 + 1],
+          triangles[triangle * 3 + 2]
+        );
     } else {
       let axis = 0;
       for (let candidate = 1; candidate < 3; candidate++)
         if (upper[candidate] - lower[candidate] > upper[axis] - lower[axis]) axis = candidate;
-      const centroid = (triangle: number) =>
-        triangles
-          .slice(triangle * 3, triangle * 3 + 3)
-          .reduce((sum, index) => sum + vertices[index * 3 + axis], 0);
-      faces.sort((first, second) => centroid(first) - centroid(second));
+      faces.sort(
+        (first, second) =>
+          triangleCentroids[first * 3 + axis] - triangleCentroids[second * 3 + axis]
+      );
       const middle = faces.length >> 1;
       build(faces.slice(0, middle));
       build(faces.slice(middle));
     }
-    nodes.splice(offset, 3, ...lower);
-    nodes.splice(offset + 4, 3, ...upper);
+    for (let axis = 0; axis < 3; axis++) {
+      nodes[offset + axis] = lower[axis];
+      nodes[offset + 4 + axis] = upper[axis];
+    }
     nodes[offset + 3] = nodes.length / 12;
   };
-  build(Array.from({length: triangles.length / 3}, (_, index) => index));
+  build(Array.from({length: triangleCount}, (_, index) => index));
+  if (staticSurface) {
+    return {
+      positions: vertices,
+      indices: ordered,
+      minimum,
+      maximum,
+      nodes,
+      closed: false,
+      volume: 0,
+      center: [0, 0, 0],
+      tensor: Array<number>(9).fill(0)
+    };
+  }
   // Weld by coordinates for topology checks: glTF often splits vertices at UV seams.
   const vertexKeys = Array.from({length: vertices.length / 3}, (_, index) =>
     point(index).join(',')
@@ -293,4 +343,25 @@ export function makeTriangleMeshGeometry(
     center: center.map((value, axis) => value + origin[axis]) as Point,
     tensor
   };
+}
+
+/** Remap a detached index list and retain only vertices referenced by the surface. */
+function compactSurfaceVertices(positions: ArrayLike<number>, triangles: number[]): number[] {
+  const remapped = new Int32Array(positions.length / 3);
+  remapped.fill(-1);
+  const vertices: number[] = [];
+  for (let index = 0; index < triangles.length; index++) {
+    const sourceVertex = triangles[index];
+    if (remapped[sourceVertex] < 0) {
+      remapped[sourceVertex] = vertices.length / 3;
+      const offset = sourceVertex * 3;
+      vertices.push(
+        Math.fround(positions[offset]),
+        Math.fround(positions[offset + 1]),
+        Math.fround(positions[offset + 2])
+      );
+    }
+    triangles[index] = remapped[sourceVertex];
+  }
+  return vertices;
 }

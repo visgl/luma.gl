@@ -475,6 +475,18 @@ terrain movement scoped to one instance, pause and resume, reset and shared cont
 The workload measures browser and adapter throughput without claiming calibrated tire response.
 Cross-adapter fleet results, streaming terrain residency and articulated ensembles remain open.
 
+### Height-field geometry bridge across G10–G12
+
+math.gl owns grid sampling and terrain triangulation. GPU physics accepts the resulting CPU
+triangle geometry through a static surface cooker that discards unused vertices and omits
+closed-solid mass work. Load-time BVH construction reuses precomputed triangle bounds and
+centroid keys. Off-road Buggy uses the shared geometry contract and tile-local collision
+coordinates without adding a terrain package dependency.
+
+Qualify authored holes, tile seams, and origin shifts before considering a native GPU height
+field. Native storage, runtime residency, mixed-resolution seam stitching, and terrain streaming
+remain open. Use the triangle surface path as the accuracy and throughput reference.
+
 ### G9. Articulations and mechanism quality
 
 Extend beyond proposal-joint conformance to demanding connected mechanisms. Evaluate

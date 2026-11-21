@@ -23,6 +23,7 @@ export {makeSphereBoxPlanes, getBodyInertia, type GPUSphereBox} from './sphere-s
 export {
   makeConvexHullGeometry,
   makeTriangleMeshGeometry,
+  makeStaticTriangleMeshGeometry,
   type RigidBodyMeshGeometry
 } from './rigid-body-mesh';
 export {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
