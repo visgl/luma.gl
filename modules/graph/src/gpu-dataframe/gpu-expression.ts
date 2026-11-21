@@ -22,7 +22,18 @@ export type GPUExpressionUnaryOperator =
   | 'negate'
   | GPUScalarFunction;
 
-const scalarFunctions = ['abs', 'floor', 'ceiling', 'round', 'trunc'] as const;
+const scalarFunctions = [
+  'abs',
+  'floor',
+  'ceiling',
+  'round',
+  'trunc',
+  'sqrt',
+  'ln',
+  'log10',
+  'asin',
+  'acos'
+] as const;
 
 /** Numeric functions supported by GPU DataFrame expressions. */
 export type GPUScalarFunction = (typeof scalarFunctions)[number];

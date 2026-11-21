@@ -10,7 +10,7 @@ import {
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {CompiledGPUDataFrameGlobalSort, GPUDataFrame} from '@luma.gl/graph/gpu-dataframe';
 import {GPUSQLContext} from '@luma.gl/graph/gpu-sql';
-import {ABS, ROUND} from '@math.gl/sql/math-functions';
+import {ABS, ACOS, ASIN, LN, LOG10, ROUND, SQRT} from '@math.gl/sql/math-functions';
 import {queryArrowSQL} from '@math.gl/sql/query';
 import * as arrow from 'apache-arrow';
 import {expect, test} from 'vitest';
@@ -93,6 +93,40 @@ test('GPU integer casts saturate where Arrow SQL reports overflow', async () => 
   const output = await executeGPUQuery(device, input, sql);
   expect(output.getChild('result')?.type).toBeInstanceOf(arrow.Uint32);
   expect(Array.from(output.getChild('result') ?? [])).toEqual([0xffffffff, 0, null]);
+});
+
+/** Float32 domains and finite values shared with math.gl Arrow. */
+const domainFunctions = [
+  {name: 'SQRT', implementation: SQRT, scores: [0, 4, -1, null]},
+  {name: 'LN', implementation: LN, scores: [1, 4, 0, null]},
+  {name: 'LOG10', implementation: LOG10, scores: [1, 100, -1, null]},
+  {name: 'ASIN', implementation: ASIN, scores: [-1, 1, 2, null]},
+  {name: 'ACOS', implementation: ACOS, scores: [-1, 1, -2, null]}
+];
+
+test.each(domainFunctions)('$name agrees on valid inputs and writes null for invalid rows', async ({
+  name,
+  implementation,
+  scores
+}) => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const input = makeSamples([1, 2, 3, 4, 5, 6], [...scores, Infinity, NaN]);
+  const projection = 'SELECT ' + name + '(score) AS result FROM samples';
+  const catalog = new Map([['samples', input]]);
+  const options = {functions: [implementation]};
+  const reference = queryArrowSQL(projection + ' WHERE id <= 2', catalog, options);
+  expect(() => queryArrowSQL(projection, catalog, options)).toThrow(/invalid argument/i);
+  const output = await executeGPUQuery(device, input, projection);
+  const result = output.getChild('result');
+  expect(result?.type).toBeInstanceOf(arrow.Float32);
+  for (const index of [0, 1]) {
+    expect(result?.get(index)).toBeCloseTo(reference.getChild('result')?.get(index), 5);
+  }
+  expect(result?.get(2)).toBeNull();
+  expect(result?.get(3)).toBeNull();
+  expect(result?.get(4)).toBeNull();
+  expect(result?.get(5)).toBeNull();
 });
 
 /** Builds a native Arrow table with stable input types and nullable scores. */
