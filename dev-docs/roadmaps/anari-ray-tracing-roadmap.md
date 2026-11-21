@@ -120,4 +120,7 @@ changing ANARI's interactive ray tracer.
 | M3r · Secondary-ray texture filtering | Propagate a footprint through secondary paths and use it for material mip selection on triangle hits. | Verify that receding texture detail filters in reflections and indirect illumination. Use the existing fixed-seed captures to check for regressions in primary shading. Track filtered cutout visibility separately because it affects intersection and picking behavior. |
 
 Use M0d to establish the reference scenes and measurements for M2g and M2h.
-M3r can proceed independently once the textured reference scene is available.
+The capture harness supports fixed-seed sweeps for the small-emitter and Antique Camera glTF
+scenes with display RGB comparisons and elapsed wall time. Linear HDR reference comparisons
+and GPU timing remain follow-ups. M3r carries the camera footprint to secondary triangle hits
+in both diffuse and PBR transport. Filtered cutout visibility remains a separate tranche.

@@ -194,3 +194,6 @@ Each checkpoint starts a fresh page and records accumulated samples, display RGB
 and wall time to capture readiness in `convergence.json`. Wall time includes page startup
 and presentation. A high-sample reference is an estimate whose noise contributes to the
 measured error.
+
+Use `--antique-camera` in place of `--small-emitter` in both commands to capture the textured
+Antique Camera glTF study. The capture waits for the model to load before counting frames.
