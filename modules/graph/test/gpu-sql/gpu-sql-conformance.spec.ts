@@ -15,49 +15,51 @@ import {queryArrowSQL} from '@math.gl/sql/query';
 import * as arrow from 'apache-arrow';
 import {expect, test} from 'vitest';
 
+/** Shared source rows, including equal sort keys in different batches. */
 const samples = new arrow.Table([
   ...makeSamples([1, 2, 3], [null, -2.5, -0.75]).batches,
   ...makeSamples([4, 5, 6], [1.5, 3.75, 1.5]).batches
 ]);
 
+/** Queries with independently specified expectations for the shared SQL subset. */
 const queries = [
   {
     name: 'IN keeps matches when the list contains null',
     sql: 'SELECT id FROM samples WHERE score IN (-2.5, 1.5, NULL)',
-    ids: [2, 4, 6]
+    expectedIdentifiers: [2, 4, 6]
   },
   {
     name: 'NOT IN excludes unknown results',
     sql: 'SELECT id FROM samples WHERE score NOT IN (1.5, NULL)',
-    ids: []
+    expectedIdentifiers: []
   },
   {
     name: 'CASE uses parameter defaults and preserves null output',
     sql: 'SELECT id, CASE WHEN score > :threshold THEN ROUND(score) ELSE NULL END AS result FROM samples',
-    ids: [1, 2, 3, 4, 5, 6],
-    values: [null, null, null, 2, 4, 2]
+    expectedIdentifiers: [1, 2, 3, 4, 5, 6],
+    expectedValues: [null, null, null, 2, 4, 2]
   },
   {
     name: 'COALESCE fills a null with a named parameter',
     sql: 'SELECT id, COALESCE(score, :fallback) AS result FROM samples',
-    ids: [1, 2, 3, 4, 5, 6],
-    values: [99, -2.5, -0.75, 1.5, 3.75, 1.5]
+    expectedIdentifiers: [1, 2, 3, 4, 5, 6],
+    expectedValues: [99, -2.5, -0.75, 1.5, 3.75, 1.5]
   },
   {
     name: 'integer CAST truncates toward zero on in-range inputs',
     sql: 'SELECT id, CAST(score AS INTEGER) AS result FROM samples',
-    ids: [1, 2, 3, 4, 5, 6],
-    values: [null, -2, 0, 1, 3, 1]
+    expectedIdentifiers: [1, 2, 3, 4, 5, 6],
+    expectedValues: [null, -2, 0, 1, 3, 1]
   },
   {
     name: 'ordered pagination retains stable ties across batches',
     sql: 'SELECT id, ABS(score) AS result FROM samples ORDER BY result DESC NULLS LAST LIMIT 3 OFFSET 1',
-    ids: [2, 4, 6],
-    values: [2.5, 1.5, 1.5]
+    expectedIdentifiers: [2, 4, 6],
+    expectedValues: [2.5, 1.5, 1.5]
   }
 ];
 
-test.each(queries)('$name', async ({sql, ids, values}) => {
+test.each(queries)('$name', async ({sql, expectedIdentifiers, expectedValues}) => {
   const device = await getWebGPUTestDevice();
   if (!device) return;
   const parameters = {threshold: 0, fallback: 99};
@@ -67,9 +69,9 @@ test.each(queries)('$name', async ({sql, ids, values}) => {
   });
   const actual = await executeGPUQuery(device, samples, sql, parameters);
 
-  expect(Array.from(expected.getChild('id') ?? [])).toEqual(ids);
-  if (values) {
-    expect(Array.from(expected.getChild('result') ?? [])).toEqual(values);
+  expect(Array.from(expected.getChild('id') ?? [])).toEqual(expectedIdentifiers);
+  if (expectedValues) {
+    expect(Array.from(expected.getChild('result') ?? [])).toEqual(expectedValues);
   }
   expect(actual.schema.fields.map(field => [field.name, String(field.type)])).toEqual(
     expected.schema.fields.map(field => [field.name, String(field.type)])
@@ -93,13 +95,15 @@ test('GPU integer casts saturate where Arrow SQL reports overflow', async () => 
   expect(Array.from(output.getChild('result') ?? [])).toEqual([0xffffffff, 0, null]);
 });
 
-function makeSamples(ids: number[], scores: (number | null)[]): arrow.Table {
+/** Builds a native Arrow table with stable input types and nullable scores. */
+function makeSamples(identifiers: number[], scores: (number | null)[]): arrow.Table {
   return arrow.tableFromArrays({
-    id: Uint32Array.from(ids),
+    id: Uint32Array.from(identifiers),
     score: arrow.vectorFromArray(scores, new arrow.Float32())
   });
 }
 
+/** Runs the GPU plan and reads back rows in the order exposed by that plan. */
 async function executeGPUQuery(
   device: NonNullable<Awaited<ReturnType<typeof getWebGPUTestDevice>>>,
   table: arrow.Table,
