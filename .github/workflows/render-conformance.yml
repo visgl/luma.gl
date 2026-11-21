@@ -16,6 +16,7 @@ on:
       - 'test/utils/**'
       - 'modules/anari/src/**'
       - 'modules/anari/test/anari-reflection.spec.ts'
+      - 'modules/anari/test/engine/ray-tracing-image-export.spec.ts'
       - 'modules/three/**'
       - 'examples/experimental/three/**'
       - 'modules/anari/test/anari-emitter-sampling*'
@@ -27,6 +28,7 @@ on:
       - 'modules/shaders/src/**'
       - 'modules/core/src/**'
       - 'modules/engine/src/**'
+      - 'modules/engine/test/gltf/gltf/gltf-area-lights-render.spec.ts'
 
 permissions:
   contents: read
@@ -80,7 +82,7 @@ jobs:
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
           const report = readFileSync('test-results/render-conformance.xml', 'utf8');
-          assert.match(report, /<testsuites\b[^>]*\btests="21"/);
+          assert.match(report, /<testsuites\b[^>]*\btests="35"/);
           assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
           NODE
       - name: Upload material results

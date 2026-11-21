@@ -30,6 +30,11 @@ const excludePatterns = [
 // These specs exercise pure data transforms, layouts, shader assembly, and validation. Running
 // them in Node preserves the assertions while avoiding one isolated browser page per file.
 const nodeOnlyTestPatterns = [
+  'test/examples/poisson-problem.spec.{ts,js}',
+  'modules/core/test/webgl/constants/webgl-constant-utils.spec.{ts,js}',
+  'modules/core/test/webgl/adapter/helpers/get-shader-layout-from-glsl.spec.{ts,js}',
+  'modules/engine/test/gltf/parsers/post-process-gltf-legacy.spec.{ts,js}',
+  'modules/shaders/test/modules/volume/volume-raymarch.spec.{ts,js}',
   'test/devtools/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-adjust-filters/**/*.spec.{ts,js}',
   'modules/engine/test/effects/passes/image-blur-filters/{gaussianblur,zoomblur,tiltshift,triangleblur}.spec.{ts,js}',
