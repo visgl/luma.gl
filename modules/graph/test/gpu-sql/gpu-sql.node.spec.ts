@@ -139,17 +139,24 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
       gpuData: {
         limit: createGPUSQLNodeData(device, Float32Array.of(4), 'float32'),
         Limit: createGPUSQLNodeData(device, Float32Array.of(6), 'float32'),
-        order: createGPUSQLNodeData(device, Float32Array.of(8), 'float32')
+        order: createGPUSQLNodeData(device, Float32Array.of(8), 'float32'),
+        'trips.limit': createGPUSQLNodeData(device, Float32Array.of(10), 'float32')
       },
       fields: [
         {name: 'limit', format: 'float32', nullable: false},
         {name: 'Limit', format: 'float32', nullable: false},
-        {name: 'order', format: 'float32', nullable: false}
+        {name: 'order', format: 'float32', nullable: false},
+        {name: 'trips.limit', format: 'float32', nullable: false}
       ]
     });
     const frame = new GPUDataFrame({table: new GPUTable({batches: [batch]}), ownership: 'owned'});
     const context = new GPUSQLContext({trips: frame});
 
+    expect(
+      context.query('SELECT "trips.limit", trips."limit" FROM trips ORDER BY "trips.limit"')
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(context.query('SELECT SUM(trips."trips.limit") FROM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT missing."trips.limit" FROM trips')).toThrow(/qualifier/);
     expect(context.query('sElEcT "limit", "Limit" fRoM trips')).toBeInstanceOf(GPUSQLQuery);
     expect(() => context.query('SELECT limit FROM trips')).toThrow(/SQL expression/i);
     expect(() => context.query('SELECT "LIMIT" FROM trips')).toThrow(/does not exist/);

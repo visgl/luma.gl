@@ -98,8 +98,9 @@ the branch. Numeric column branches must have the same scalar format. An omitted
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
 
 SQL keywords and registered table names are case-insensitive. Column names must match the
-dataframe schema exactly, even when unquoted. Double-quote reserved names, such as `"limit"`
-and `"order"`. A period separates a table qualifier from a column name.
+dataframe schema exactly, even when unquoted. Double-quote reserved names such as `"limit"`
+and `"order"`. A quoted identifier such as `"fare.total"` names a single field. In
+`trips."fare.total"`, `trips` qualifies the field. The period inside the quotes remains part of its name.
 
 Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous
 expressions, multiple sort/group keys, and pagination without ordering fail during CPU-only planning.

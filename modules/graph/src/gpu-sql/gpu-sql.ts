@@ -28,10 +28,13 @@ export type GPUSQLTables = Readonly<Record<string, GPUDataFrame>>;
 /** Defaults for named SQL parameters such as `:minimumFare`; values remain caller-controlled. */
 export type GPUSQLQueryOptions = Readonly<{parameters?: GPUDataFrameQueryParameters}>;
 
+/** A source column name with its optional, separately parsed table qualifier. */
+type GPUSQLColumnReference = Readonly<{name: string; qualifier?: string}>;
+
 type GPUSQLSelectItem = Readonly<{
-  expression?: GPUExpressionNode;
+  expression?: Expression;
   aggregate?: 'count' | 'sum' | 'min' | 'max' | 'mean';
-  aggregateColumn?: string;
+  aggregateColumn?: GPUSQLColumnReference;
   alias?: string;
   star?: boolean;
 }>;
@@ -43,13 +46,13 @@ type GPUSQLStatement = Readonly<{
     type: GPUDataFrameJoinType;
     table: string;
     alias?: string;
-    left: string;
-    right: string;
+    left: GPUSQLColumnReference;
+    right: GPUSQLColumnReference;
   }>;
-  predicate?: GPUExpressionNode;
-  groupBy?: string;
+  predicate?: Expression;
+  groupBy?: GPUSQLColumnReference;
   orderBy?: Readonly<{
-    column: string;
+    column: GPUSQLColumnReference;
     direction: 'ascending' | 'descending';
     nulls?: 'first' | 'last';
   }>;
@@ -116,8 +119,11 @@ export class GPUSQLContext {
 
   /** Parses and validates one immutable SELECT plan without touching registered GPU sources. */
   query(source: string, options: GPUSQLQueryOptions = {}): GPUSQLQuery {
-    const statement = parseGPUSQLStatement(source, options.parameters ?? {});
-    return new GPUSQLQuery(source, buildGPUSQLPlan(this.tables, statement));
+    const statement = parseGPUSQLStatement(source);
+    return new GPUSQLQuery(
+      source,
+      buildGPUSQLPlan(this.tables, statement, options.parameters ?? {})
+    );
   }
 }
 
@@ -142,16 +148,20 @@ export class GPUSQLQuery {
 
 function buildGPUSQLPlan(
   tables: Readonly<Record<string, GPUDataFrame>>,
-  statement: GPUSQLStatement
+  statement: GPUSQLStatement,
+  parameters: GPUDataFrameQueryParameters
 ): GPUSQLCompiledPlan {
   const frame = tables[statement.table.toLowerCase()];
   if (!frame) throw new Error(`GPUSQL table "${statement.table}" is not registered`);
   let query = new GPUDataFrameQuery(frame, [], frame.columnNames) as unknown as GPUSQLDynamicQuery;
   const qualifier = statement.alias ?? statement.table;
-  const resolve = (name: string): string => resolveGPUSQLColumn(name, qualifier, frame.columnNames);
+  const resolve = (reference: GPUSQLColumnReference): string =>
+    resolveGPUSQLColumn(reference, qualifier, frame.columnNames);
   if (statement.predicate) {
     query = query.filter(
-      new GPUExpression<boolean, string>(resolveGPUSQLExpression(statement.predicate, resolve))
+      new GPUExpression<boolean, string>(
+        lowerSQLExpression(statement.predicate, parameters, resolve)
+      )
     );
   }
 
@@ -167,7 +177,9 @@ function buildGPUSQLPlan(
     }
     const definitions: GPUSQLAggregationDefinitions = {};
     for (const item of aggregates) {
-      const name = item.alias ?? `${item.aggregate}_${item.aggregateColumn ?? 'all'}`;
+      const name =
+        item.alias ??
+        `${item.aggregate}_${item.aggregateColumn ? formatGPUSQLColumn(item.aggregateColumn) : 'all'}`;
       if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       definitions[name] =
         item.aggregate === 'count'
@@ -204,7 +216,7 @@ function buildGPUSQLPlan(
       selected.push(...frame.columnNames);
       continue;
     }
-    const node = resolveGPUSQLExpression(item.expression!, resolve);
+    const node = lowerSQLExpression(item.expression!, parameters, resolve);
     const name = item.alias ?? (node.kind === 'column' ? node.name : undefined);
     if (!name) throw new Error('GPUSQL computed SELECT expressions require an explicit AS alias');
     if (selected.includes(name)) throw new Error(`GPUSQL output column "${name}" is duplicated`);
@@ -245,7 +257,10 @@ function buildGPUSQLPlan(
 
   if (statement.orderBy) {
     const {column: requested, direction, nulls} = statement.orderBy;
-    const orderColumn = selected.includes(requested) ? requested : resolve(requested);
+    const orderColumn =
+      requested.qualifier === undefined && selected.includes(requested.name)
+        ? requested.name
+        : resolve(requested);
     if (!selected.includes(orderColumn)) {
       throw new Error('GPUSQL ORDER BY requires the sort column in the SELECT projection');
     }
@@ -262,61 +277,44 @@ function buildGPUSQLPlan(
   return query.select(selected);
 }
 
+/** Resolves the only non-aggregate item in a grouped projection. */
 function resolveGPUSQLProjectionName(
   item: GPUSQLSelectItem,
-  resolve: (name: string) => string
+  resolve: (reference: GPUSQLColumnReference) => string
 ): string {
-  if (item.expression?.kind !== 'column') {
+  if (item.expression?.type !== 'Identifier' && item.expression?.type !== 'MemberExpression') {
     throw new Error('GPUSQL grouped source expressions must reference the group key directly');
   }
-  return resolve(item.expression.name);
+  return resolve(readGPUSQLColumn(item.expression));
 }
 
-function resolveGPUSQLColumn(name: string, qualifier: string, columns: readonly string[]): string {
-  const parts = name.split('.');
+/** Formats the source spelling for diagnostics and default aggregate names. */
+function formatGPUSQLColumn({name, qualifier}: GPUSQLColumnReference): string {
+  return qualifier === undefined ? name : qualifier + '.' + name;
+}
+
+/** Binds a parsed reference to an exact dataframe field. */
+function resolveGPUSQLColumn(
+  reference: GPUSQLColumnReference,
+  qualifier: string,
+  columns: readonly string[]
+): string {
   if (
-    parts.length > 2 ||
-    (parts.length === 2 && parts[0].toLowerCase() !== qualifier.toLowerCase())
+    reference.qualifier !== undefined &&
+    reference.qualifier.toLowerCase() !== qualifier.toLowerCase()
   ) {
-    throw new Error(`GPUSQL column "${name}" has an unknown table qualifier`);
+    throw new Error(
+      'GPUSQL column "' + formatGPUSQLColumn(reference) + '" has an unknown table qualifier'
+    );
   }
-  const requested = parts[parts.length - 1];
-  if (!columns.includes(requested)) throw new Error(`GPUSQL column "${name}" does not exist`);
-  return requested;
+  if (!columns.includes(reference.name)) {
+    throw new Error('GPUSQL column "' + formatGPUSQLColumn(reference) + '" does not exist');
+  }
+  return reference.name;
 }
 
-function resolveGPUSQLExpression(
-  expression: GPUExpressionNode,
-  resolve: (name: string) => string
-): GPUExpressionNode {
-  switch (expression.kind) {
-    case 'column':
-      return {kind: 'column', name: resolve(expression.name)};
-    case 'conditional':
-      return {
-        ...expression,
-        condition: resolveGPUSQLExpression(expression.condition, resolve),
-        whenTrue: resolveGPUSQLExpression(expression.whenTrue, resolve),
-        otherwise: resolveGPUSQLExpression(expression.otherwise, resolve)
-      };
-    case 'cast':
-    case 'unary':
-      return {...expression, operand: resolveGPUSQLExpression(expression.operand, resolve)};
-    case 'binary':
-      return {
-        ...expression,
-        left: resolveGPUSQLExpression(expression.left, resolve),
-        right: resolveGPUSQLExpression(expression.right, resolve)
-      };
-    default:
-      return expression;
-  }
-}
-
-function parseGPUSQLStatement(
-  source: string,
-  parameters: GPUDataFrameQueryParameters
-): GPUSQLStatement {
+/** Parses the SQL subset supported by the GPU relational planner. */
+function parseGPUSQLStatement(source: string): GPUSQLStatement {
   const statement = parseSQLSelectStatement(source, {
     parseParameter: name => ({type: 'Identifier', name, gpuSQLParameter: true})
   });
@@ -359,7 +357,7 @@ function parseGPUSQLStatement(
         }
       }
     }
-    return {expression: lowerSQLExpression(expression, parameters), alias};
+    return {expression, alias};
   }) ?? [{star: true}];
   const join = statement.joins[0];
   if (statement.from.inputTable !== undefined || join?.table.inputTable !== undefined) {
@@ -386,7 +384,7 @@ function parseGPUSQLStatement(
     table: statement.from.name,
     alias: statement.from.alias,
     join: loweredJoin,
-    predicate: statement.where && lowerSQLExpression(statement.where, parameters),
+    predicate: statement.where as Expression | undefined,
     groupBy: statement.groupBy?.[0] && readGPUSQLColumn(statement.groupBy[0]),
     orderBy: sort && {
       column: readGPUSQLColumn(sort.expression),
@@ -399,14 +397,12 @@ function parseGPUSQLStatement(
 }
 
 /** Reads a source column name or a two-part qualified column reference. */
-function readGPUSQLColumn(node: Extract<Expression, {type: 'BinaryExpression'}>['left']): string {
+function readGPUSQLColumn(
+  node: Extract<Expression, {type: 'BinaryExpression'}>['left']
+): GPUSQLColumnReference {
   const expression = node as Expression;
-  if (
-    expression.type === 'Identifier' &&
-    !('gpuSQLParameter' in expression) &&
-    !expression.name.includes('.')
-  ) {
-    return expression.name;
+  if (expression.type === 'Identifier' && !('gpuSQLParameter' in expression)) {
+    return {name: expression.name};
   }
   if (expression.type === 'MemberExpression' && !expression.computed) {
     const object = expression.object as Expression;
@@ -415,10 +411,9 @@ function readGPUSQLColumn(node: Extract<Expression, {type: 'BinaryExpression'}>[
       object.type === 'Identifier' &&
       property.type === 'Identifier' &&
       !('gpuSQLParameter' in object) &&
-      !object.name.includes('.') &&
-      !property.name.includes('.')
+      !('gpuSQLParameter' in property)
     ) {
-      return `${object.name}.${property.name}`;
+      return {qualifier: object.name, name: property.name};
     }
   }
   throw new Error('GPUSQL expected a table or column identifier');
@@ -426,7 +421,8 @@ function readGPUSQLColumn(node: Extract<Expression, {type: 'BinaryExpression'}>[
 
 function lowerSQLExpression(
   node: Extract<Expression, {type: 'BinaryExpression'}>['left'],
-  parameters: GPUDataFrameQueryParameters
+  parameters: GPUDataFrameQueryParameters,
+  resolve: (reference: GPUSQLColumnReference) => string
 ): GPUExpressionNode {
   const expression = node as Expression;
   try {
@@ -439,7 +435,7 @@ function lowerSQLExpression(
         return parameter(name, parameters[name]).node;
       }
       if (leaf.type === 'Identifier' || leaf.type === 'MemberExpression') {
-        return column(readGPUSQLColumn(leaf)).node;
+        return column(resolve(readGPUSQLColumn(leaf))).node;
       }
       if (leaf.type === 'CallExpression' && leaf.callee.type === 'Identifier') {
         const name = leaf.callee['name'];
