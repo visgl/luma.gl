@@ -495,9 +495,14 @@ share the coarse piecewise-linear boundary, including partial-span seams and T-j
 Qualification covers fetched mixed-resolution tiles, failed and superseded windows, and
 capacity-neutral eviction and replacement.
 
-Automatic tile selection, scoped invalidation, and streaming inside fused ensembles
-remain open. Qualify traversal and step cost across adapters before changing the default
-for existing mesh-based applications.
+Automatic terrain selection bounds residency by fixed collider slots and optional focus
+radius. It balances neighboring quadtree LODs, retains slots with hysteresis, and emits
+seams for the provider stream. Qualification covers sparse manifests, slot budgets,
+mixed-level seams, and WebGPU ray continuity as a focus moves. Off-road Buggy exposes
+the active terrain window with `?terrain=auto`.
+
+Scoped invalidation, ensemble residency, and traversal and step-cost qualification across
+adapters remain open.
 
 ### G9. Articulations and mechanism quality
 

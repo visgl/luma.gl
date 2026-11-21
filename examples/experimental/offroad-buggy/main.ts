@@ -14,11 +14,15 @@ import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPURigidBodyWorld,
   GPURigidBodyTerrainStream,
+  GPURigidBodyTerrainSelector,
+  getRigidBodyTerrainTileBounds,
   stitchRigidBodyTerrainTiles,
   makeStaticTriangleMeshGeometry,
   type GPURigidBodyCollider,
   type GPURigidBodyHeightField,
   type GPURigidBodyTerrainSeam,
+  type GPURigidBodyTerrainSelection,
+  type GPURigidBodyTerrainTile,
   type GPURigidBodyShape
 } from '@luma.gl/graph/gpu-physics';
 
@@ -28,6 +32,10 @@ const terrainStatus = document.querySelector<HTMLOutputElement>('#terrain-tiles'
 /** The reference mode keeps the same render mesh while using pre-cooked collision triangles. */
 const terrainMode = new URLSearchParams(location.search).get('terrain');
 const useNativeTerrain = terrainMode !== 'mesh';
+const useAutomaticTerrain = terrainMode === 'auto';
+const terrainBounds = [-32, -32, 32, 32] as const;
+const terrainStart = [0, -11] as const;
+const automaticTerrain = new THREE.Group();
 const suspensionTravel = 0.5;
 /** Shared inspector for the GPU physics commands submitted by the buggy. */
 const diagnostics = new GPUGraphDiagnostics();
@@ -37,6 +45,7 @@ const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
 renderer.shadowMap.enabled = true;
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
+scene.add(automaticTerrain);
 scene.background = new THREE.Color(0xb9cdd2);
 scene.fog = new THREE.FogExp2(0xb9cdd2, 0.012);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 250);
@@ -135,8 +144,8 @@ function makeTerrainGeometry(field: GPURigidBodyHeightField): Geometry {
 }
 
 const terrainMaterial = new THREE.MeshStandardMaterial({vertexColors: true, roughness: 1});
-const terrainBodies = terrainTiles.map(({position, field}) => {
-  const surface = makeTerrainGeometry(field);
+/** Render the same samples, diagonal and position as the physics collider. */
+function makeTerrainMesh(surface: Geometry, position: GPURigidBodyTerrainTile['position']) {
   const positions = surface.attributes['POSITION'].value;
   const colors = new Float32Array(positions.length);
   for (let vertex = 0; vertex < positions.length; vertex += 3) {
@@ -155,12 +164,52 @@ const terrainBodies = terrainTiles.map(({position, field}) => {
   const terrain = new THREE.Mesh(geometry, terrainMaterial);
   terrain.position.fromArray(position);
   terrain.receiveShadow = true;
-  scene.add(terrain);
-  const shape: GPURigidBodyShape = useNativeTerrain
-    ? {type: 'height-field', field: {width: field.width, height: field.height}}
-    : {type: 'triangle-mesh', geometry: makeStaticTriangleMeshGeometry(surface)};
-  return {mass: 0, position: useNativeTerrain ? ([0, 0, 0] as const) : position, shape};
-});
+  return terrain;
+}
+
+/** Sample a quadtree tile on the common XY grid with 32 cells per edge. */
+function loadAutomaticTerrainTile(key: string): GPURigidBodyTerrainTile {
+  const [level, column, row] = key.split('/').map(Number);
+  const [west, south, east, north] = getRigidBodyTerrainTileBounds(terrainBounds, {
+    level,
+    column,
+    row
+  });
+  const width = 33;
+  const columnSpacing = (east - west) / (width - 1);
+  const rowSpacing = (north - south) / (width - 1);
+  return {
+    position: [west, south, 0],
+    field: {
+      width,
+      height: width,
+      heights: Float32Array.from({length: width * width}, (_, vertex) =>
+        elevation(
+          west + (vertex % width) * columnSpacing,
+          south + Math.floor(vertex / width) * rowSpacing
+        )
+      ),
+      columnStep: [columnSpacing, 0],
+      rowStep: [0, rowSpacing],
+      diagonal: '10-01'
+    }
+  };
+}
+
+const terrainBodies = useAutomaticTerrain
+  ? Array.from({length: 4}, () => ({
+      mass: 0,
+      position: [0, 0, 0] as const,
+      shape: {type: 'height-field' as const, field: {width: 33, height: 33}}
+    }))
+  : terrainTiles.map(({position, field}) => {
+      const surface = makeTerrainGeometry(field);
+      scene.add(makeTerrainMesh(surface, position));
+      const shape: GPURigidBodyShape = useNativeTerrain
+        ? {type: 'height-field', field: {width: field.width, height: field.height}}
+        : {type: 'triangle-mesh', geometry: makeStaticTriangleMeshGeometry(surface)};
+      return {mass: 0, position: useNativeTerrain ? ([0, 0, 0] as const) : position, shape};
+    });
 // Four closed rails share the same dimensions in rendering and collision detection.
 const railCenter = 31.5;
 const railThickness = 0.4;
@@ -404,7 +453,7 @@ async function start() {
   });
   const step = 1 / 120;
   // Remaining tile colliders follow the compound chassis and four rail colliders.
-  const terrainColliders = terrainTiles.map((_, index) =>
+  const terrainColliders = terrainBodies.map((_, index) =>
     index === 0 ? 0 : chassisColliders.length + perimeter.length + index
   );
   const world = new GPURigidBodyWorld({
@@ -449,15 +498,56 @@ async function start() {
         provider: {
           async loadTile(key, signal) {
             signal.throwIfAborted();
-            return terrainTiles[Number(key)];
+            return useAutomaticTerrain ? loadAutomaticTerrainTile(key) : terrainTiles[Number(key)];
           }
         }
       })
     : undefined;
   const allTiles = terrainColliders.map((collider, index) => ({collider, key: String(index)}));
+  const selector = useAutomaticTerrain
+    ? new GPURigidBodyTerrainSelector({
+        bounds: terrainBounds,
+        slots: terrainColliders,
+        maximumLevel: 3
+      })
+    : undefined;
+  let autoSelection: GPURigidBodyTerrainSelection | undefined;
+  let requestedWindow: string | undefined;
+
+  /** Publish the staged collision window and display its stitched geometry. */
+  function applyTerrain(): void {
+    if (!terrainStream) return;
+    if (terrainStream.apply() && autoSelection) {
+      for (const mesh of automaticTerrain.children) {
+        if (mesh instanceof THREE.Mesh) mesh.geometry.dispose();
+      }
+      automaticTerrain.clear();
+      for (const {collider} of autoSelection.tiles) {
+        const tile = terrainStream.getTile(collider)!;
+        automaticTerrain.add(makeTerrainMesh(makeTerrainGeometry(tile.field), tile.position));
+      }
+      const levels = [...new Set(autoSelection.tiles.map(tile => tile.address.level))].sort();
+      terrainStatus.value = `${terrainStream.residentTileCount} / ${terrainColliders.length} tiles · LOD ${levels.join(', ')}`;
+    } else if (!selector) {
+      terrainStatus.value = `${terrainStream.residentTileCount} / 4 height-field tiles`;
+    }
+  }
+
+  /** Request a new LOD only when the tile-to-slot assignment changes. */
+  async function prepareAutomaticTerrain(position: readonly [number, number]): Promise<void> {
+    const selection = selector!.select({position, radius: 12});
+    const signature = JSON.stringify(
+      selection.tiles.map(({collider, key}) => [collider, key]).sort()
+    );
+    if (signature === requestedWindow) return;
+    requestedWindow = signature;
+    if (await terrainStream!.prepare(selection)) autoSelection = selection;
+  }
+
   if (terrainStream) {
-    await terrainStream.prepare({tiles: allTiles});
-    terrainStream.apply();
+    if (selector) await prepareAutomaticTerrain(terrainStart);
+    else await terrainStream.prepare({tiles: allTiles});
+    applyTerrain();
   }
   const checkpoint = world.createGPUCheckpoint();
   checkpoint.save();
@@ -470,11 +560,15 @@ async function start() {
     steering = 0;
   let invertedSince: number | undefined;
   const requestedTiles = terrainTiles.map(() => true);
-  terrainStatus.value = useNativeTerrain ? '4 / 4 height-field tiles' : '4 mesh tiles';
+  if (!terrainStream) terrainStatus.value = '4 mesh tiles';
 
   /** Prefetch neighboring tiles before any wheel can reach the edge. */
   function updateTerrainResidency(): void {
     if (!terrainStream) return;
+    if (selector) {
+      void prepareAutomaticTerrain([chassis.position.x, chassis.position.y]).catch(fail);
+      return;
+    }
     let changed = false;
     for (const [index, tile] of terrainTiles.entries()) {
       const east = chassis.position.x - tile.position[0];
@@ -490,14 +584,25 @@ async function start() {
         .catch(fail);
   }
 
-  /** Restore the full resident starting window alongside the saved chassis state. */
-  async function restoreTerrain(): Promise<void> {
+  /** Restore the checkpoint's terrain window before recovering at the requested position. */
+  async function restoreTerrain(position: readonly [number, number] = terrainStart): Promise<void> {
     terrainStream?.cancel();
-    checkpoint.restore();
-    if (terrainStream) {
+    if (selector) {
+      selector.reset();
+      requestedWindow = undefined;
+      await prepareAutomaticTerrain(terrainStart);
+      applyTerrain();
+    } else if (terrainStream) {
       requestedTiles.fill(true);
       await terrainStream.prepare({tiles: allTiles});
-      terrainStream.apply();
+      applyTerrain();
+    }
+    checkpoint.restore();
+    if (selector && position !== terrainStart) {
+      // The checkpoint window is temporary. Allocate detail around the recovery pose.
+      selector.reset();
+      await prepareAutomaticTerrain(position);
+      applyTerrain();
     }
   }
 
@@ -506,7 +611,7 @@ async function start() {
     const clearance = railCenter - railThickness - 1.65;
     x = THREE.MathUtils.clamp(x, -clearance, clearance);
     y = THREE.MathUtils.clamp(y, -clearance, clearance);
-    await restoreTerrain();
+    await restoreTerrain([x, y]);
     audio.reset();
     world.setBodyParameters(1, {mode: 'kinematic'});
     world.setKinematicTarget(
@@ -529,10 +634,7 @@ async function start() {
       steering = 0;
       accumulator = 0;
     }
-    if (terrainStream) {
-      terrainStream.apply();
-      terrainStatus.value = `${terrainStream.residentTileCount} / 4 height-field tiles`;
-    }
+    applyTerrain();
     const elapsed = Math.min((now - previous) / 1000, 0.1);
     previous = now;
     accumulator += elapsed;

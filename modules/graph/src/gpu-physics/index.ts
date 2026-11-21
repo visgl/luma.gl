@@ -46,6 +46,16 @@ export {
   type GPURigidBodyTerrainStreamProps,
   type GPURigidBodyTerrainWindow
 } from './rigid-body-terrain-stream';
+export {
+  GPURigidBodyTerrainSelector,
+  getRigidBodyTerrainTileBounds,
+  type GPURigidBodyTerrainAddress,
+  type GPURigidBodyTerrainBounds,
+  type GPURigidBodySelectedTerrainTile,
+  type GPURigidBodyTerrainFocus,
+  type GPURigidBodyTerrainSelection,
+  type GPURigidBodyTerrainSelectorProps
+} from './rigid-body-terrain-lod';
 export {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 export {
   getSphereClothReference,
