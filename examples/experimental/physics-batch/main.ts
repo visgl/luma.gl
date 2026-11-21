@@ -6,6 +6,7 @@ import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
 import {runBatchBenchmark, type BatchBenchmarkScene} from './batch-benchmark';
+import {runTerrainStreamingBenchmark} from './batch-terrain';
 
 const diagnostics = new GPUGraphDiagnostics();
 const panel = createRigidBodyPanel(
@@ -22,7 +23,10 @@ const button = document.querySelector<HTMLButtonElement>('#run')!;
 const exportButton = document.querySelector<HTMLButtonElement>('#export')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
-let report: Awaited<ReturnType<typeof runBatchBenchmark>> | undefined;
+let report:
+  | Awaited<ReturnType<typeof runBatchBenchmark>>
+  | Awaited<ReturnType<typeof runTerrainStreamingBenchmark>>
+  | undefined;
 const device = await luma.createDevice({
   adapters: [webgpuAdapter],
   type: 'webgpu',
@@ -35,6 +39,39 @@ button.onclick = async () => {
   diagnostics.clear();
   status.textContent = 'Allocating and compiling resident worlds…';
   try {
+    if (document.querySelector<HTMLSelectElement>('#scene')!.value === 'streamed-terrain') {
+      if (document.querySelector<HTMLSelectElement>('#submission')!.value !== 'ensemble')
+        throw new Error('Streamed terrain requires fused ensemble submission');
+      const terrain = await runTerrainStreamingBenchmark(
+        device,
+        {
+          worlds: number('worlds'),
+          bodies: number('bodies'),
+          frames: number('frames'),
+          activeFraction: number('active'),
+          pairsPerBody: number('pairs')
+        },
+        frame => {
+          status.textContent = `Frame ${frame}/${number('frames')}`;
+        },
+        diagnostics
+      );
+      report = terrain;
+      status.textContent = `Complete: ${terrain.complete}
+Simulation rejection: ${terrain.firstIncompleteFrame ?? 'none'}
+Terrain sample error: ${terrain.sampledHeightError?.toExponential(2) ?? 'no hit'}
+Enabled worlds: ${terrain.activeWorlds}/${terrain.options.worlds}
+Last-step scheduled worlds: ${terrain.activity.at(-1)}
+Streamed instance windows: ${terrain.streamedWindows}
+Provider loads: ${terrain.providerLoads}
+Window staging and apply p95: ${terrain.streamP95.toFixed(2)} ms
+Fused step p95: ${terrain.stepP95.toFixed(2)} ms
+Fixed allocation: ${terrain.fixedAllocation}
+Resident: ${(terrain.residentBytes / 1048576).toFixed(1)} MiB`;
+      paintStreamedTerrain(terrain);
+      exportButton.disabled = false;
+      return;
+    }
     report = await runBatchBenchmark(
       device,
       {
@@ -151,4 +188,26 @@ function getScenario(): BatchBenchmarkScene {
     value === 'vehicle-fleet'
     ? value
     : 'sparse';
+}
+
+/** Draw the first instance's sampled terrain and spheres using the batch lab canvas. */
+function paintStreamedTerrain(terrain: Awaited<ReturnType<typeof runTerrainStreamingBenchmark>>) {
+  canvas.width = innerWidth * devicePixelRatio;
+  canvas.height = innerHeight * devicePixelRatio;
+  const context = canvas.getContext('2d')!;
+  const scale = Math.min(canvas.width, canvas.height) / (terrain.extent * 2.4);
+  context.fillStyle = '#101820';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.translate(canvas.width * 0.48, canvas.height / 2 - (terrain.extent * scale) / 2);
+  const extent = terrain.extent * scale;
+  context.fillStyle = '#31585a';
+  context.fillRect(0, 0, extent, extent);
+  context.fillStyle = '#254346';
+  context.fillRect(extent, 0, extent, extent);
+  context.fillStyle = '#a9dde7';
+  for (const {position} of terrain.states) {
+    context.beginPath();
+    context.arc(position[0] * scale, position[1] * scale, scale * 0.5, 0, 2 * Math.PI);
+    context.fill();
+  }
 }

@@ -119,6 +119,8 @@ export type GPURigidBodyCapture = {
   buffers: {name: string; data: Uint8Array}[];
   contactCursor: number;
   triggerCursor: number;
+  /** Last issued terrain edit stamp, for restoring into a different world. */
+  terrainRevision?: number;
   colliderShapeScales?: [number, number[]][];
 };
 
@@ -171,6 +173,8 @@ export type GPURigidBodyWorldProps = {
   collisionPartitionSize?: number;
   /** Equal body ranges for GPU-driven ensemble scheduling; requires parallel sparse partitions. */
   ensembleBodiesPerInstance?: number;
+  /** @internal Global collider indices reserved for writable terrain in a fused ensemble. */
+  ensembleTerrainSlots?: readonly number[];
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
   /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
   solver?: 'ordered' | 'parallel';
@@ -265,11 +269,17 @@ export class GPURigidBodyWorld {
   private targets: Buffer | null = null;
   private simulationStatistics: Buffer | null = null;
   private readonly colliders: readonly (GPURigidBodyCollider & {body: number})[];
+  private readonly bodyColliderStarts: Uint32Array;
+  private readonly ensembleTerrainSlots: ReadonlySet<number>;
   private readonly props: GPURigidBodyWorldProps;
   private readonly ownedBuffers: Buffer[] = [];
+  private allocationPlan?: GPURigidBodyCapacityInfo['buffers'];
   private ensembleBuffer: Buffer | null = null;
   /** Byte offsets of writable fixed-dimension height fields in the world metadata buffer. */
   private heightFieldSlots = new Map<number, number>();
+  /** Float32-exact edit stamp, restored together with the contact cache. */
+  private terrainRevision = 1;
+  private terrainWake: BoundKernel | null = null;
   private ensembleResetOrigin?: readonly number[];
   private ensembleReset?: ReturnType<typeof makeEnsembleReset>;
   private initialEnsembleBodies?: readonly GPURigidBody[];
@@ -546,6 +556,22 @@ export class GPURigidBodyWorld {
     const definitions = structuredClone({colliders, props});
     this.props = definitions.props;
     this.colliders = definitions.colliders;
+    this.ensembleTerrainSlots = new Set(this.props.ensembleTerrainSlots);
+    if (
+      this.ensembleTerrainSlots.size &&
+      (!this.props.ensembleBodiesPerInstance ||
+        [...this.ensembleTerrainSlots].some(
+          index => this.colliders[index]?.shape.type !== 'height-field'
+        ))
+    )
+      throw new Error('Invalid ensemble terrain slots');
+    this.bodyColliderStarts = new Uint32Array(this.count + 1);
+    let colliderIndex = 0;
+    for (let body = 0; body < this.count; body++) {
+      this.bodyColliderStarts[body] = colliderIndex;
+      while (this.colliders[colliderIndex]?.body === body) colliderIndex++;
+    }
+    this.bodyColliderStarts[this.count] = colliderIndex;
     if (this.props.vehicle && this.props.vehicles) throw new Error('Choose vehicle or vehicles');
     this.vehicles = this.props.vehicles ?? (this.props.vehicle ? [this.props.vehicle] : []);
     this.multiSurfaceVehicles = this.vehicles.some(
@@ -621,7 +647,8 @@ export class GPURigidBodyWorld {
   private getStorageLayout() {
     const packed = packRigidBodyShapes(
       this.colliders,
-      Boolean(this.props.ensembleBodiesPerInstance)
+      Boolean(this.props.ensembleBodiesPerInstance),
+      this.ensembleTerrainSlots
     );
     const sparse = this.broadPhase === 'hierarchical-grid';
     const extended = this.colliders.some(
@@ -736,7 +763,8 @@ export class GPURigidBodyWorld {
       this.props.ensembleBodiesPerInstance!,
       this.props.collisionPartitionSize!,
       this.maximumPairs,
-      this.vehiclesPerInstance
+      this.vehiclesPerInstance,
+      this.ensembleTerrainSlots
     );
     return this.ensembleReset.byteLength;
   }
@@ -748,41 +776,40 @@ export class GPURigidBodyWorld {
     const colliderStart = instance * this.props.collisionPartitionSize!;
     let colliderIndex = colliderStart;
     const restored = this.initialEnsembleBodies!.map(body => {
-      if (body.shape) {
-        const current = this.colliders[colliderIndex++].shape;
+      const {shape, colliders, ...properties} = body;
+      const resetCollider = (definition: GPURigidBodyCollider): GPURigidBodyCollider => {
+        const index = colliderIndex++;
+        const {body: _, ...current} = this.colliders[index];
+        if (this.ensembleTerrainSlots.has(index)) return current;
         return {
-          ...body,
+          ...definition,
           shape:
-            body.shape.type === 'convex-hull' || body.shape.type === 'triangle-mesh'
-              ? current
-              : body.shape
+            definition.shape.type === 'convex-hull' || definition.shape.type === 'triangle-mesh'
+              ? current.shape
+              : definition.shape,
+          excludedColliders: definition.excludedColliders?.map(index => index + colliderStart)
         };
-      }
-      return {
-        ...body,
-        colliders: body.colliders.map(collider => {
-          const current = this.colliders[colliderIndex++].shape;
-          return {
-            ...collider,
-            shape:
-              collider.shape.type === 'convex-hull' || collider.shape.type === 'triangle-mesh'
-                ? current
-                : collider.shape,
-            excludedColliders: collider.excludedColliders?.map(index => index + colliderStart)
-          };
-        })
       };
+      if (shape && !this.ensembleTerrainSlots.has(colliderIndex))
+        return {...body, shape: resetCollider({shape}).shape};
+      return {...properties, colliders: (colliders ?? [{shape: shape!}]).map(resetCollider)};
     });
-    const definitions = [...this.props.bodies];
+    const definitions = this.props.bodies as GPURigidBody[];
     definitions.splice(bodyStart, restored.length, ...restored);
-    this.props.bodies = definitions;
-    for (
-      let collider = colliderStart;
-      collider < colliderStart + this.props.collisionPartitionSize!;
-      collider++
-    )
-      this.colliderShapeScales.delete(collider);
-    this.restoreColliderDefinitions();
+    this.restoreColliderDefinitions(bodyStart, bodyStart + restored.length);
+    const metadata = this.ownedBuffers.find(buffer => buffer.id === `${this.id}-bodies`)!;
+    for (let index = colliderStart; index < colliderIndex; index++) {
+      this.colliderShapeScales.delete(index);
+      if (!this.ensembleTerrainSlots.has(index)) continue;
+      const collider = this.colliders[index];
+      const center = definitions[collider.body].centerOfMass ?? [0, 0, 0];
+      metadata.write(
+        new Float32Array(
+          (collider.position ?? [0, 0, 0]).map((value, axis) => value - center[axis])
+        ),
+        this.count * 48 + index * 96 + 16
+      );
+    }
     this.ensembleReset.reset(
       instance,
       this.origin.map((value, axis) => value - this.ensembleResetOrigin![axis])
@@ -860,7 +887,9 @@ export class GPURigidBodyWorld {
 
   /** Allocation preflight without GPU allocation. Graph scratch and driver overhead are separate. */
   getCapacityInfo(): GPURigidBodyCapacityInfo {
-    const {buffers} = this.getStorageLayout();
+    const buffers = this.allocationPlan
+      ? this.allocationPlan.map(buffer => ({...buffer}))
+      : this.getStorageLayout().buffers;
     return {
       bodyCount: this.count,
       colliderCount: this.colliderCount,
@@ -909,6 +938,7 @@ export class GPURigidBodyWorld {
       if (buffer.byteLength > Math.min(graph.device.limits.maxBufferSize, bindingLimit))
         throw new Error(`Rigid-body ${buffer.name} storage exceeds device limits`);
     }
+    this.allocationPlan = allocationPlan;
     this.device = graph.device;
     const allocate = (name: string, data: Float32Array | Uint32Array | number, uniform = false) => {
       const buffer = graph.device.createBuffer({
@@ -1012,7 +1042,10 @@ export class GPURigidBodyWorld {
           material?.restitutionCombine ? policies.indexOf(material.restitutionCombine) : 4,
           material?.frictionCombine ? policies.indexOf(material.frictionCombine) : 4,
           ...shape.policies,
-          ...shape.padding
+          shape.padding[0],
+          shape.padding[1],
+          this.ensembleTerrainSlots.has(index) ? 1 : shape.padding[2],
+          shape.padding[3]
         ],
         this.count * 12 + index * 24
       );
@@ -2238,6 +2271,52 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         )
       )
     });
+    if (this.heightFieldSlots.size && !this.ensembleBuffer) {
+      this.terrainWake = createBoundKernel(graph.device, {
+        id: `${this.id}-terrain-wake`,
+        entryPoint: 'wakeTerrain',
+        source:
+          controlProperties.source +
+          /* wgsl */ `
+@group(0) @binding(26) var<storage,read_write> terrainSleep:array<atomic<u32>>;
+@compute @workgroup_size(64) fn wakeTerrain(@builtin(global_invocation_id) invocation:vec3u) {
+ let collider=invocation.x;if(collider>=COLLIDER_COUNT){return;}
+ let body=colliderBody(collider);if(!dynamic(body)){return;}
+ let tile=command.bodyIndex.x;if(bodies.colliders[tile].padding.w==0.0){return;}
+ if(any(abs(colliderPosition(collider)-colliderPosition(tile))>shapeWorldExtent(collider)+shapeWorldExtent(tile)+vec3f(settings.solver.x))){return;}
+ // Several colliders on one sleeping body may all overlap the tile.
+ for(var axis=0u;axis<4u;axis++){atomicStore(&terrainSleep[body*4u+axis],0u);}
+}`,
+        shaderLayout: {
+          bindings: [
+            ...shaderLayout.bindings!.filter(binding =>
+              ['settings', 'positions', 'orientations', 'bodies'].includes(binding.name)
+            ),
+            {name: 'command', group: 0, location: 8, type: 'uniform'},
+            {name: 'terrainSleep', group: 0, location: 26, type: 'storage'}
+          ]
+        },
+        bindings: {
+          settings: buffers.settings,
+          positions: buffers.positions,
+          orientations: buffers.orientations,
+          bodies: buffers.bodies,
+          command: this.controlSettings,
+          terrainSleep: this.sleepStates!
+        }
+      });
+    }
+  }
+
+  /** Wake sleeping bodies overlapping one published terrain footprint. */
+  private wakeTerrainFootprint(collider: number): void {
+    const {kernel, bindings} = this.terrainWake!;
+    this.controlSettings!.write(new Uint32Array([collider]), 48);
+    const encoder = this.device!.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    kernel.dispatch(pass, {bindings, x: Math.ceil(this.colliderStorageCount / 64)});
+    pass.end();
+    this.device!.submit(encoder.finish());
   }
 
   private invalidateState(pass: Parameters<BoundKernel['kernel']['dispatch']>[0]): void {
@@ -2602,23 +2681,35 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         packed: packRigidBodyHeightField(next)
       };
     });
+    // Stamp once per validated edit batch. On float32 counter wrap, clear old impulses
+    // so a retained contact cannot confuse a new stamp with a very old revision.
+    if (this.terrainRevision === 0xffffff) {
+      this.wake();
+      this.terrainRevision = 1;
+    }
+    const revision = ++this.terrainRevision;
     const changedBodies = new Set<number>();
+    const affectedInstances = new Set<number>();
     for (const replacement of replacements) {
       const {collider, colliderIndex, offset, field, position, localOffset, packed} = replacement;
       const base = this.count * 48 + colliderIndex * 96;
+      if (this.terrainWake) this.wakeTerrainFootprint(colliderIndex);
       metadata.write(new Float32Array(packed.data), offset);
       metadata.write(new Float32Array(packed.extent), base);
       metadata.write(new Float32Array([packed.nodeCount]), base + 76);
-      metadata.write(new Float32Array([packed.triangleCount]), base + 92);
+      metadata.write(new Float32Array([revision, packed.triangleCount]), base + 88);
       if (position && localOffset) {
         metadata.write(new Float32Array(localOffset), base + 16);
         collider.position = [...position];
       }
       collider.shape = {type: 'height-field', field};
       changedBodies.add(collider.body);
+      if (this.terrainWake) this.wakeTerrainFootprint(colliderIndex);
+      if (this.props.ensembleBodiesPerInstance)
+        affectedInstances.add(Math.floor(collider.body / this.props.ensembleBodiesPerInstance));
     }
     for (const body of changedBodies) this.updateColliderDefinitions(body);
-    this.wake();
+    for (const instance of affectedInstances) this.wakeEnsembleInstance(instance);
   }
 
   /** Change an existing collider material between submissions, invalidating cached friction. */
@@ -2708,11 +2799,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   private updateColliderDefinitions(bodyIndex: number): void {
     const {shape, colliders, ...properties} = this.props.bodies[bodyIndex];
     const updated = this.colliders
-      .filter(candidate => candidate.body === bodyIndex)
+      .slice(this.bodyColliderStarts[bodyIndex], this.bodyColliderStarts[bodyIndex + 1])
       .map(({body, ...candidate}) => candidate);
-    const bodies = [...this.props.bodies];
-    bodies[bodyIndex] = {...properties, colliders: updated};
-    this.props.bodies = bodies;
+    (this.props.bodies as GPURigidBody[])[bodyIndex] = {...properties, colliders: updated};
   }
 
   getColliderMaterial(collider: number): GPURigidBodyMaterial {
@@ -2721,17 +2810,19 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return structuredClone(definition.material ?? {});
   }
 
-  private restoreColliderDefinitions(): void {
-    // Body definitions are already world-owned. Keep their shared geometry identities.
-    const definitions = this.props.bodies.flatMap(
-      body => body.colliders ?? (body.shape ? [{shape: body.shape}] : [])
-    );
-    for (const [index, definition] of definitions.entries()) {
-      const collider = this.colliders[index];
-      collider.shape = definition.shape;
-      collider.material = definition.material;
-      collider.position = definition.position;
-      collider.orientation = definition.orientation;
+  private restoreColliderDefinitions(first = 0, end = this.count): void {
+    // Body definitions are world-owned. Keep shared geometry identities.
+    for (let body = first; body < end; body++) {
+      const definition = this.props.bodies[body];
+      const colliders =
+        definition.colliders ?? (definition.shape ? [{shape: definition.shape}] : []);
+      for (const [index, source] of colliders.entries()) {
+        const collider = this.colliders[this.bodyColliderStarts[body] + index];
+        collider.shape = source.shape;
+        collider.material = source.material;
+        collider.position = source.position;
+        collider.orientation = source.orientation;
+      }
     }
   }
 
@@ -3218,6 +3309,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     let bodyDefinitions = structuredClone(this.props.bodies);
     let contactCursor = 0;
     let triggerCursor = 0;
+    let terrainRevision = this.terrainRevision;
     try {
       for (const buffer of checkpointBuffers)
         snapshots.push(
@@ -3256,6 +3348,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         publicationBounds = structuredClone(this.props.publicationBounds);
         contactCursor = this.eventCursor;
         triggerCursor = this.triggerCursor;
+        terrainRevision = this.terrainRevision;
         saved = true;
       },
       restore: () => {
@@ -3269,6 +3362,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         this.props.publicationBounds = structuredClone(publicationBounds);
         this.eventCursor = contactCursor;
         this.triggerCursor = triggerCursor;
+        this.terrainRevision = terrainRevision;
       },
       destroy: () => {
         if (released) return;
@@ -3295,6 +3389,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       colliderShapeScales: structuredClone([...this.colliderShapeScales]),
       contactCursor: this.eventCursor,
       triggerCursor: this.triggerCursor,
+      terrainRevision: this.terrainRevision,
       buffers: await Promise.all(
         this.getSnapshotBuffers(options.includeRollbackScratch).map(async buffer => ({
           name: buffer.id.slice(this.id.length + 1),
@@ -3307,6 +3402,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   /** Restore between submissions on the same configuration and implementation; no implicit wake. */
   restoreState(capture: GPURigidBodyCapture): void {
     const checkpointBuffers = this.getSnapshotBuffers(capture.includeRollbackScratch);
+    const terrainRevision = capture.terrainRevision ?? 1;
     if (
       !this.device ||
       this.destroyed ||
@@ -3314,6 +3410,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       this.eventRead ||
       this.triggerRead ||
       capture.version !== 1 ||
+      !Number.isInteger(terrainRevision) ||
+      terrainRevision < 1 ||
+      terrainRevision > 0xffffff ||
       (capture.origin !== undefined &&
         (capture.origin.length !== 3 || !capture.origin.every(Number.isFinite))) ||
       capture.buffers.length !== checkpointBuffers.length ||
@@ -3349,6 +3448,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.worldOrigin = [...(capture.origin ?? [0, 0, 0])];
     this.eventCursor = capture.contactCursor;
     this.triggerCursor = capture.triggerCursor;
+    this.terrainRevision = terrainRevision;
   }
 
   /** Stop submissions first. Reconstruct with these accepted poses and larger budgets after rollback. */
@@ -3495,6 +3595,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.destroyed = true;
     this.control?.kernel.destroy();
     this.invalidation?.kernel.destroy();
+    this.terrainWake?.kernel.destroy();
     this.queryComputation?.kernel.destroy();
     this.queryReduction?.kernel.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();

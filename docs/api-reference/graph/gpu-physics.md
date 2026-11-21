@@ -609,3 +609,67 @@ terrainStream.apply();
 
 Open Off-road Buggy with `?terrain=auto` to see the active tiles and LODs
 change as the chassis moves. Its terrain panel reports the committed window.
+
+### Terrain streaming in fused ensembles
+
+Reserve vacant native height-field colliders in the template and list their
+template-local collider indices in `terrainSlots` when creating
+`GPUPhysicsEnsemble`. The ensemble allocates writable sample and hierarchy
+storage for each reserved slot in each instance at creation. Authored height
+fields outside that list can still share their immutable GPU data. All slots
+remain fixed in shape and grid dimensions, and their allocation counts toward
+`maximumResidentBytes`.
+
+```ts
+const ensemble = await GPUPhysicsEnsemble.create(device, {
+  template,
+  instances: 64,
+  terrainSlots: [0, 1, 2, 3],
+  maximumPairs: 8192,
+  maximumResidentBytes: 128 * 1024 ** 2
+});
+const terrain = ensemble.createTerrainStreamer({
+  provider,
+  maximumConcurrentLoads: 8
+});
+
+// Give each moving instance its own selector and focus.
+const selector = new GPURigidBodyTerrainSelector({
+  bounds: [-256, -256, 256, 256],
+  slots: ensemble.terrainSlots,
+  maximumLevel: 4
+});
+const instance = 6;
+await terrain.prepare(instance, selector.select({position: [40, 72], radius: 24}));
+
+// Submit previously encoded work before applying a prepared window.
+terrain.apply(instance);
+```
+
+Each instance stages and publishes independently. All windows share the same
+provider concurrency limit and reuse requests and source samples by versioned
+key while any instance needs them. Stitching happens per instance. A failed or
+superseded request leaves that instance's committed tiles in place. Use
+`getTile(instance, collider)` to read a detached stitched surface for
+rendering. Use `getColliderIndex(instance, collider)` to target that slot in
+a query against the fused world.
+
+A terrain edit discards cached warm-start impulses when a contact next sees
+the edited collider. Standalone worlds wake dynamic bodies overlapping the
+old or new tile bounds, so removing support wakes resting bodies. In a fused
+ensemble the edit wakes only the affected partitions, and disabled instances
+stay disabled until explicitly enabled. The shared step rollback and contact
+capacity still apply to the full ensemble.
+
+`ensemble.reset(instance)` restores that instance's body state and keeps its
+committed terrain slots, including their local placement. Call
+`terrain.clear(instance)` to evict them, or `terrain.cancel(instance)` to
+discard pending work while keeping the current tiles. Destroying the
+ensemble cancels its outstanding provider requests. For already decoded
+tiles, use `ensemble.setHeightFieldTiles(instance, edits)` as the direct
+publication path. Choose one publication path for the reserved slots.
+Whole-world checkpoints and debug captures operate on GPU state and require
+application coordination with any live streamer's residency.
+
+Select **Streamed terrain (fused)** in Physics Batch Lab to measure window
+publication and solver time separately while changing one instance at a time.
