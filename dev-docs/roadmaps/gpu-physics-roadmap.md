@@ -374,8 +374,12 @@ Batched rays and sphere sweeps now share one GPU dispatch and readback, with
 per-command nearest-hit and completion reporting. Compact common selections
 and workgroup-local reduction bound the staging cost by query count. The Batch
 Lab collision scan compares a matched subset with scalar queries and presents a
-depth image for larger workloads. A world-level spatial index for queries,
-event compaction, and the remaining glTF behavior operations are open.
+depth image for larger workloads. Batched ray and sphere casts now support an
+opt-in GPU-refitted BVH for sphere and box colliders. The Batch Lab compares
+every cast with the matched direct scan. Extended geometry remains on the direct
+path to preserve local traversal completeness. Dynamic spatial reordering,
+extended geometry indexing, event compaction, and the remaining glTF behavior
+operations are open.
 
 Exit: original behavior graphs and synthetic simultaneous-entry/exit/query fixtures
 produce correct payloads and ordering without whole-world readback per operation.

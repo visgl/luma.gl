@@ -20,6 +20,7 @@ import {
 
 import {
   GPUCommandGraph,
+  type CompiledGPUCommandGraph,
   type GPUCommandGraphComputeExecutable,
   type GraphBufferHandle
 } from '../gpu-core/gpu-command-graph';
@@ -98,7 +99,7 @@ import {
 } from './rigid-body-events';
 import {
   RIGID_BODY_QUERY_SHADER,
-  RIGID_BODY_BATCH_CAST_SHADER,
+  getRigidBodyBatchCastShader,
   RIGID_BODY_CAST_COMMAND_BYTES,
   RIGID_BODY_BATCH_RESULT_BYTES,
   packRigidBodyBatchCasts,
@@ -111,6 +112,11 @@ import {
   type GPURigidBodyOverlapQuery,
   type GPURigidBodyQueryResult
 } from './rigid-body-queries';
+import {
+  createRigidBodyCastIndex,
+  getRigidBodyCastOrder,
+  type RigidBodyCastOrder
+} from './rigid-body-cast-index';
 
 /** One fixed-dimension slot update. A null field evicts the current tile. */
 export type GPURigidBodyHeightFieldEdit = {
@@ -213,6 +219,8 @@ export type GPURigidBodyWorldProps = {
   enableQueries?: boolean;
   /** Maximum commands per batched cast. Requires enableQueries. Defaults to zero. */
   queryBatchCapacity?: number;
+  /** Refit a GPU spatial index for batched sphere and box collider queries. Requires a batch capacity. */
+  queryBatchIndex?: boolean;
   /** Roll back poses and persistent contacts after an incomplete step; failures latch until reconstruction. */
   /** Bounded sphere/static-surface CCD; requires rollback failure policy. */
   continuous?: GPURigidBodyContinuousOptions;
@@ -278,6 +286,10 @@ export class GPURigidBodyWorld {
   private queryReduction: BoundKernel | null = null;
   /** Batched nearest-hit computation using the current world pose buffers. */
   private batchCast: BoundKernel | null = null;
+  /** Compiled query graph that refits the world BVH and then casts. */
+  private batchCastIndex: CompiledGPUCommandGraph<number> | null = null;
+  /** Initial spatial order and stable collider ID mapping for indexed batches. */
+  private batchCastOrder: RigidBodyCastOrder | null = null;
   /** Reusable storage for a bounded list of ray and sweep commands. */
   private batchCastCommands: Buffer | null = null;
   /** Reusable GPU output with one compact result per batch command. */
@@ -336,7 +348,8 @@ export class GPURigidBodyWorld {
       !Number.isSafeInteger(queryBatchCapacity) ||
       queryBatchCapacity < 0 ||
       queryBatchCapacity > 65535 ||
-      (queryBatchCapacity > 0 && !props.enableQueries)
+      (queryBatchCapacity > 0 && !props.enableQueries) ||
+      (props.queryBatchIndex && queryBatchCapacity === 0)
     )
       throw new Error('Invalid collision cast batch capacity');
     for (const damping of [props.linearDamping ?? 0, props.angularDamping ?? 0]) {
@@ -2292,28 +2305,42 @@ export class GPURigidBodyWorld {
           'query-batch-results',
           capacity * RIGID_BODY_BATCH_RESULT_BYTES
         );
+        /** Share external bindings between the scan and the indexed query graph. */
+        const batchBindings = {
+          positions: this.positions,
+          orientations: this.orientations,
+          bodies,
+          querySelection: this.querySelection,
+          batchCommands: this.batchCastCommands,
+          batchResults: this.batchCastResults
+        };
+        /** Batch commands and results use storage bindings, shared by both strategies. */
+        const batchLayout = [
+          ...queryProperties.shaderLayout.bindings.filter(binding =>
+            ['positions', 'orientations', 'bodies', 'querySelection'].includes(binding.name)
+          ),
+          {name: 'batchCommands', group: 0, location: 30, type: 'read-only-storage' as const},
+          {name: 'batchResults', group: 0, location: 31, type: 'storage' as const}
+        ];
         this.batchCast = createBoundKernel(graph.device, {
           id: `${this.id}-batched-casts`,
           entryPoint: 'castBatch',
-          source: queryProperties.source + RIGID_BODY_BATCH_CAST_SHADER,
-          shaderLayout: {
-            bindings: [
-              ...queryProperties.shaderLayout.bindings.filter(binding =>
-                ['positions', 'orientations', 'bodies', 'querySelection'].includes(binding.name)
-              ),
-              {name: 'batchCommands', group: 0, location: 30, type: 'read-only-storage'},
-              {name: 'batchResults', group: 0, location: 31, type: 'storage'}
-            ]
-          },
-          bindings: {
-            positions: this.positions,
-            orientations: this.orientations,
-            bodies,
-            querySelection: this.querySelection,
-            batchCommands: this.batchCastCommands,
-            batchResults: this.batchCastResults
-          }
+          source: queryProperties.source + getRigidBodyBatchCastShader(),
+          shaderLayout: {bindings: batchLayout},
+          bindings: batchBindings
         });
+        if (this.props.queryBatchIndex && this.colliderCount) {
+          this.batchCastOrder = getRigidBodyCastOrder(this.colliders, this.props.bodies);
+          if (this.batchCastOrder.indexedCount) {
+            this.batchCastIndex = createRigidBodyCastIndex(graph.device, {
+              id: `${this.id}-cast-index`,
+              source: queryProperties.source,
+              layout: batchLayout,
+              buffers: batchBindings,
+              indexedCount: this.batchCastOrder.indexedCount
+            });
+          }
+        }
       }
     }
     this.controlSettings = allocate('control-settings', 64, true);
@@ -3304,7 +3331,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
   }
 
   /**
-   * Query the closest hit for each ray or sphere cast with one dispatch and readback.
+   * Query the closest hit for each ray or sphere cast with one submission and readback.
    * Results follow input order. This snapshots already submitted poses, using one shared collider selection.
    */
   async castBatch(
@@ -3324,22 +3351,41 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     if (commands.length > this.props.queryBatchCapacity!)
       throw new Error('Collision cast batch exceeds capacity');
     if (!commands.length) return [];
-    /** Compact the shared selection once so each workgroup visits only selected colliders. */
+    if (options.strategy === 'indexed' && !this.props.queryBatchIndex)
+      throw new Error('Batched collision cast index is disabled');
+    /** The scan remains available for short or dense workloads and reference comparisons. */
+    const order = options.strategy === 'scan' ? null : this.batchCastOrder;
+    /** Deduplicate the shared selection before publishing any GPU input. */
     const selection = options.colliderIndices
       ? Uint32Array.from(new Set(this.validateQueryColliders(options.colliderIndices)))
-      : Uint32Array.from({length: this.colliderCount}, (_, index) => index);
-    /** Validate and encode every command before publishing any input. */
-    const data = packRigidBodyBatchCasts(commands, this.count, selection.length);
+      : (order?.indices ?? Uint32Array.from({length: this.colliderCount}, (_, index) => index));
+    /** The indexed prefix can be empty when a filter selects only extended geometry. */
+    let indexedCount = order?.indexedCount ?? 0;
+    if (order && options.colliderIndices) {
+      selection.sort((first, second) => order.ranks[first] - order.ranks[second]);
+      /** All selected primitives precede the extended collider fallback. */
+      const firstExtended = selection.findIndex(index => order.ranks[index] >= order.indexedCount);
+      indexedCount = firstExtended < 0 ? selection.length : firstExtended;
+    }
+    /** Validate and encode all commands before changing staging data. */
+    const data = packRigidBodyBatchCasts(commands, this.count, selection.length, indexedCount);
     this.queryPending = true;
     try {
       this.batchCastCommands.write(data);
       if (selection.length) this.querySelection.write(selection);
-      /** Submit the query after any preceding simulation work on the device queue. */
+      /** Submit after any preceding pose changes in device queue order. */
       const encoder = this.device.createCommandEncoder();
-      /** One workgroup handles one command and reduces its collider results locally. */
-      const pass = encoder.beginComputePass();
-      this.batchCast.kernel.dispatch(pass, {bindings: this.batchCast.bindings, x: commands.length});
-      pass.end();
+      if (this.batchCastIndex && indexedCount) {
+        this.batchCastIndex.encode(encoder, {parameters: commands.length});
+      } else {
+        /** One workgroup handles one command and reduces its collider results locally. */
+        const pass = encoder.beginComputePass();
+        this.batchCast.kernel.dispatch(pass, {
+          bindings: this.batchCast.bindings,
+          x: commands.length
+        });
+        pass.end();
+      }
       this.device.submit(encoder.finish());
       return decodeRigidBodyBatchCasts(
         await this.batchCastResults.readAsync(0, commands.length * RIGID_BODY_BATCH_RESULT_BYTES)
@@ -3845,6 +3891,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.terrainWake?.kernel.destroy();
     this.queryComputation?.kernel.destroy();
     this.queryReduction?.kernel.destroy();
+    this.batchCastIndex?.destroy();
     this.batchCast?.kernel.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers.length = 0;

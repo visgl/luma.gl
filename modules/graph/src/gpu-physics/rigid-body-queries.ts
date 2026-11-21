@@ -40,7 +40,10 @@ export type GPURigidBodyBatchCast = Omit<GPURigidBodyRayQuery, 'colliderIndices'
 };
 
 /** Optional collider selection shared by every command in a cast batch. */
-export type GPURigidBodyBatchCastOptions = Pick<GPURigidBodyQueryFilter, 'colliderIndices'>;
+export type GPURigidBodyBatchCastOptions = Pick<GPURigidBodyQueryFilter, 'colliderIndices'> & {
+  /** Override the world's default. Indexed casts require queryBatchIndex. */
+  strategy?: 'scan' | 'indexed';
+};
 
 /** Input command stride in bytes, matching the WGSL Query structure. */
 export const RIGID_BODY_CAST_COMMAND_BYTES = 48;
@@ -52,7 +55,8 @@ export const RIGID_BODY_BATCH_RESULT_BYTES = 64;
 export function packRigidBodyBatchCasts(
   commands: readonly GPURigidBodyBatchCast[],
   bodyCount: number,
-  selectedCount: number
+  selectedCount: number,
+  indexedCount = 0
 ): Uint8Array {
   /** Shared typed views for the command floats and integer flags. */
   const data = new ArrayBuffer(commands.length * RIGID_BODY_CAST_COMMAND_BYTES);
@@ -86,7 +90,7 @@ export function packRigidBodyBatchCasts(
       offset
     );
     words.set(
-      [radius === undefined ? 0 : 2, 1, excludeBody ?? 0xffffffff, selectedCount],
+      [radius === undefined ? 0 : 2, indexedCount, excludeBody ?? 0xffffffff, selectedCount],
       offset + 8
     );
   }
@@ -186,7 +190,8 @@ fn queryCollider(collider:u32,request:Query)->QueryHit {
 `;
 
 /** One workgroup per cast. Scratch is local to the group and scales with lane count. */
-export const RIGID_BODY_BATCH_CAST_SHADER = /* wgsl */ `
+export function getRigidBodyBatchCastShader(leafCapacity = 0): string {
+  return /* wgsl */ `
 struct BatchResult {header:vec4u,hit:QueryHit}
 @group(0) @binding(30) var<storage,read> batchCommands:array<Query>;
 @group(0) @binding(31) var<storage,read_write> batchResults:array<BatchResult>;
@@ -199,18 +204,24 @@ fn closer(first:QueryHit,second:QueryHit)->bool{
    first.point.w<second.point.w||
    (first.point.w==second.point.w&&first.identifiers.y<second.identifiers.y));
 }
+${leafCapacity ? getCastTraversalShader(leafCapacity) : ''}
+fn accumulateCast(
+ collider:u32,command:Query,best:ptr<function,QueryHit>,counts:ptr<function,vec2u>
+){
+ if(colliderBody(collider)==command.settings.z){return;}
+ let candidate=queryCollider(collider,command);
+ (*counts)+=vec2u(candidate.identifiers.z,select(0u,1u,candidate.identifiers.w==0u));
+ if(closer(candidate,*best)){*best=candidate;}
+}
 @compute @workgroup_size(64) fn castBatch(
  @builtin(workgroup_id) groupIndex:vec3u,
  @builtin(local_invocation_index) lane:u32
 ){
  let command=batchCommands[groupIndex.x];
  var best=QueryHit();var counts=vec2u(0);
- for(var work=lane;work<command.settings.w;work+=64u){
-  let collider=querySelection[work];
-  if(colliderBody(collider)==command.settings.z){continue;}
-  let candidate=queryCollider(collider,command);
-  counts+=vec2u(candidate.identifiers.z,select(0u,1u,candidate.identifiers.w==0u));
-  if(closer(candidate,best)){best=candidate;}
+ ${leafCapacity ? 'traverseCastBounds(lane,command,&best,&counts);' : ''}
+ for(var work=lane+command.settings.y;work<command.settings.w;work+=64u){
+  accumulateCast(querySelection[work],command,&best,&counts);
  }
  reducedHits[lane]=best;reducedCounts[lane]=counts;workgroupBarrier();
  for(var stride=32u;stride>0u;stride/=2u){
@@ -227,3 +238,41 @@ fn closer(first:QueryHit,second:QueryHit)->bool{
  }
 }
 `;
+}
+
+/** Traverse disjoint implicit subtrees without a private stack or a candidate buffer. */
+function getCastTraversalShader(leafCapacity: number): string {
+  return /* wgsl */ `
+@group(0) @binding(26) var<storage,read> nodeMinima:array<f32>;
+@group(0) @binding(27) var<storage,read> nodeMaxima:array<f32>;
+const CAST_LEAVES:u32=${leafCapacity}u;
+const CAST_SUBTREES:u32=min(CAST_LEAVES,8u);
+
+fn traverseCastBounds(
+ lane:u32,command:Query,best:ptr<function,QueryHit>,counts:ptr<function,vec2u>
+){
+ if(lane>=CAST_SUBTREES){return;}
+ // One-based heap addresses make sibling and parent navigation arithmetic.
+ let root=CAST_SUBTREES+lane;
+ var node=root;
+ // The world slab and local intersection use different arithmetic orders.
+ let directionRoundoff=command.direction.w*vec3f(2e-6);
+ let padding=command.origin.w*1.000002+abs(command.origin.xyz)*2e-6+directionRoundoff;
+ loop{
+  let offset=(node-1u)*3u;
+  let lower=vec3f(nodeMinima[offset],nodeMinima[offset+1u],nodeMinima[offset+2u]);
+  let upper=vec3f(nodeMaxima[offset],nodeMaxima[offset+1u],nodeMaxima[offset+2u]);
+  if(all(lower<=upper)&&intersectsSweepBounds(
+   command.origin.xyz,command.direction.xyz,command.direction.w,lower-padding,upper+padding
+  )){
+   if(node<CAST_LEAVES){node*=2u;continue;}
+   let row=node-CAST_LEAVES;
+   if(row<command.settings.y){accumulateCast(querySelection[row],command,best,counts);}
+  }
+  while(node>root&&(node&1u)!=0u){node/=2u;}
+  if(node==root){break;}
+  node+=1u;
+ }
+}
+`;
+}
