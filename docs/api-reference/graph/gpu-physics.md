@@ -402,3 +402,47 @@ A separate instrumented step reports CPU encoding and available GPU timestamp co
 it is excluded from throughput samples. Missing GPU timestamps are reported as unavailable.
 Destroy the ensemble after submitting its encoded work; do not independently destroy its borrowed
 world or graph. Destroying the ensemble releases its world, graph and any world-owned checkpoints.
+
+## Terrain from math.gl geometry
+
+Use the same indexed triangle surface for rendering and collision. If the source is a
+math.gl height field, create a `HeightFieldGeometry` with one origin per tile. Its
+triangles preserve sample registration, cell diagonals, and gaps for missing samples.
+The physics adapter accepts the existing `@math.gl/geometry` contract, so luma.gl
+does not need to load or depend on `@math.gl/terrain` to cook it. The snippet uses
+the math.gl terrain source API. Applications using released packages can pass any
+compatible CPU triangle geometry to the same cooker.
+
+```typescript
+import {HeightFieldGeometry} from '@math.gl/terrain/geometry';
+import {makeStaticTriangleMeshGeometry} from '@luma.gl/graph/gpu-physics';
+
+// field is a HeightField in a Z-up, local metric coordinate system.
+const surface = new HeightFieldGeometry(field, {origin: tileOrigin});
+const terrainBody = {
+  mass: 0,
+  position: surface.origin, // Relative to the physics world's current origin.
+  shape: {
+    type: 'triangle-mesh' as const,
+    geometry: makeStaticTriangleMeshGeometry(surface)
+  }
+};
+```
+
+Use the physics body's local frame when placing the rendered mesh. A geospatial
+application must first choose a local metric frame and common elevation reference.
+Apply the same rebasing to both paths so float32 GPU positions stay small. Do not
+pass longitude and latitude as distances.
+
+The static cooker takes XYZ `POSITION` data and authored triangle-list indices,
+retains only referenced vertices, and omits closed-solid mass properties. Skip
+fully empty tiles. Exclude render skirts from collision geometry unless they
+represent real walls. Use `makeTriangleMeshGeometry(positions, indices)` for
+closed dynamic meshes that need mass properties. For an existing scenegraph,
+`PhysicsController.addBody` also accepts the geometry with `motion: 'static'`
+and `geometryMode: 'triangle-mesh'`.
+
+Vehicle terrain candidates are supplied explicitly. Neighbor selection, tile
+residency, mixed-resolution seams, and source-to-metric conversion remain with
+the application. A native GPU height-field layout is a separate optimization
+that should match the authored triangle collision surface before replacing it.

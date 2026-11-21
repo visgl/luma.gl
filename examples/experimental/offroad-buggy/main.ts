@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Geometry} from '@math.gl/geometry';
 import {createBuggyAudio} from './audio';
 import {createDashboard} from './dashboard';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
@@ -12,7 +13,7 @@ import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {
   GPURigidBodyWorld,
-  makeTriangleMeshGeometry,
+  makeStaticTriangleMeshGeometry,
   type GPURigidBodyCollider
 } from '@luma.gl/graph/gpu-physics';
 
@@ -88,14 +89,15 @@ scene.add(terrain);
 /** Cook four adjoining collision tiles from the same vertices used by the rendered mesh. */
 const terrainBodies = [0, 32].flatMap(rowOrigin =>
   [0, 32].map(columnOrigin => {
+    const tileOrigin = [columnOrigin - 32, rowOrigin - 32, 0] as const;
     const tilePositions: number[] = [];
     const tileIndices: number[] = [];
     for (let row = 0; row <= 32; row++) {
       for (let column = 0; column <= 32; column++) {
         const sourceIndex = ((rowOrigin + row) * 65 + columnOrigin + column) * 3;
         tilePositions.push(
-          positions[sourceIndex],
-          positions[sourceIndex + 1],
+          positions[sourceIndex] - tileOrigin[0],
+          positions[sourceIndex + 1] - tileOrigin[1],
           positions[sourceIndex + 2]
         );
         if (row < 32 && column < 32) {
@@ -104,12 +106,17 @@ const terrainBodies = [0, 32].flatMap(rowOrigin =>
         }
       }
     }
+    const collisionSurface = new Geometry({
+      topology: 'triangle-list',
+      indices: new Uint16Array(tileIndices),
+      attributes: {POSITION: {size: 3, value: new Float32Array(tilePositions)}}
+    });
     return {
       mass: 0,
-      position: [0, 0, 0] as const,
+      position: tileOrigin,
       shape: {
         type: 'triangle-mesh' as const,
-        geometry: makeTriangleMeshGeometry(tilePositions, tileIndices)
+        geometry: makeStaticTriangleMeshGeometry(collisionSurface)
       }
     };
   })
