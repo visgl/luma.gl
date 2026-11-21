@@ -1811,7 +1811,8 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     let radius = sqrt(radialSample);
     let direction = tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
       normal * sqrt(max(1.0 - radialSample, 0.0));
-    let position = ray.origin + ray.direction * hit.distance;
+    let receiverDistance = hit.distance;
+    let position = ray.origin + ray.direction * receiverDistance;
     let surfaceNormal = getFaceNormal(hit, ray);
     if (dot(surfaceNormal, direction) <= 0.0) { break; }
     ray = Ray(position + surfaceNormal * 0.002, normalize(direction));
@@ -1828,9 +1829,15 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
       let emission = getShadedPrimitive(hit).emissive.rgb;
       if (any(emission > vec3<f32>(0.0))) {
         let density = max(dot(normal, ray.direction), 0.0) / PI;
-        let weight = getMISWeight(density, getEmitterHitDensity(ray, hit, position));
-        let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
-        illumination -= emission * ((1.0 - weight) * visibility);
+        let emitterDensity = getEmitterHitDensity(ray, hit, position);
+        if (emitterDensity > 0.0) {
+          let weight = getMISWeight(density, emitterDensity);
+          let fogDensity = max(uniforms.fog.w, 0.0);
+          // Match explicit connections, which apply fog on the incoming receiver segment.
+          let receiverVisibility = exp(-fogDensity * receiverDistance);
+          let hitVisibility = exp(-fogDensity * hit.distance);
+          illumination += emission * (weight * receiverVisibility - hitVisibility);
+        }
       }
       illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
         bounceIndex + 1u < min(uniforms.sampling.y, 8u));
