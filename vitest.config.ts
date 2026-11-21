@@ -224,7 +224,11 @@ const vitestConfig = getVitestConfig({
           ? {maxWorkers: Number(process.env.LUMA_TEST_NODE_MAX_WORKERS)}
           : {}),
         include: runNodeCoverage ? nodeCoveragePatterns : nodeIncludePatterns,
-        exclude: [...excludePatterns, ...nodeWrapperSourcePatterns]
+        exclude: [
+          ...excludePatterns,
+          ...nodeWrapperSourcePatterns,
+          ...(process.env.LUMA_TEST_NODE_SKIP_COVERED === 'true' ? nodeCoveragePatterns : [])
+        ]
       }
     },
     browser: {
