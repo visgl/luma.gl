@@ -11,18 +11,18 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
   if (!webgpuAdapter.isSupported()) return;
   const graphics = await webgpuAdapter.create({
     featureLevel: 'core',
-    createCanvasContext: {canvas: new OffscreenCanvas(16, 16)}
+    createCanvasContext: {canvas: new OffscreenCanvas(16, 8)}
   });
   const errors = vi.spyOn(graphics, 'reportError');
   const color = graphics.createTexture({
     width: 16,
-    height: 16,
+    height: 8,
     format: 'rgba32float',
     usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
   });
   const framebuffer = graphics.createFramebuffer({
     width: 16,
-    height: 16,
+    height: 8,
     colorAttachments: [color],
     depthStencilAttachment: 'depth24plus'
   });
@@ -111,7 +111,7 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     world,
     renderer,
     camera: device.newCamera('perspective', {position: [0, 0, 3], fovy: 0.05}),
-    size: [16, 16]
+    size: [16, 8]
   });
   const layout = color.computeMemoryLayout();
   const buffer = graphics.createBuffer({
@@ -128,7 +128,7 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     const mean = [0, 0, 0];
     for (let index = 0; index < pixels.length; index += 4)
       for (let component = 0; component < 3; component++)
-        mean[component] += pixels[index + component] / 256;
+        mean[component] += pixels[index + component] / (color.width * color.height);
     return {mean, pixels: pixels.slice(), statistics};
   };
   try {
@@ -166,7 +166,7 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     renderer.setParameter('fogColor', [0.1, 0.2, 0.3]).commitParameters();
     expect((await render()).mean[2]).toBeCloseTo(0.3 * (1 - Math.exp(-1.5)), 2);
     renderer.setParameter('fogDensity', 0).commitParameters();
-    expect((await frame.pick(8, 8))?.surface).toBe(receiver);
+    expect((await frame.pick(8, 4))?.surface).toBe(receiver);
     occluderMaterial.setParameter('baseColor', [0, 0, 0, 1]).commitParameters();
     expect((await render()).mean[0]).toBeLessThan(0.0001);
     renderer.setParameter('shadows', false).commitParameters();
@@ -219,13 +219,13 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     expect((await render()).statistics.rayTracing?.accumulatedSamples).toBe(16);
     foregroundMaterial.setParameter('opacity', 0.5).commitParameters();
     await render();
-    expect((await frame.pick(8, 8))?.surface).toBe(foreground);
+    expect((await frame.pick(8, 4))?.surface).toBe(foreground);
     foregroundMaterial.setParameter('opacity', 0.499).commitParameters();
     await render();
-    expect((await frame.pick(8, 8))?.surface).toBe(receiver);
+    expect((await frame.pick(8, 4))?.surface).toBe(receiver);
     const snapshot = frame.captureChannels()!;
     try {
-      snapshot.identifierTexture.readBuffer({x: 8, y: 8, width: 1, height: 1}, buffer);
+      snapshot.identifierTexture.readBuffer({x: 8, y: 4, width: 1, height: 1}, buffer);
       const bytes = await buffer.readAsync();
       const identifier = new Uint32Array(bytes.buffer, bytes.byteOffset, 1)[0];
       expect(snapshot.identifiers[identifier - 1].surface).toBe(receiver);
@@ -234,7 +234,7 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     }
     foregroundMaterial.setParameter('alphaMode', 'opaque').commitParameters();
     await render();
-    expect((await frame.pick(8, 8))?.surface).toBe(foreground);
+    expect((await frame.pick(8, 4))?.surface).toBe(foreground);
     expect(errors).not.toHaveBeenCalled();
   } finally {
     device.destroy();
