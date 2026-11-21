@@ -36,7 +36,9 @@ it('shares the provider cap, resident content, and outstanding requests between 
     },
     [3],
     () => {},
-    (instance, batch) => edits.push([instance, batch])
+    windows => {
+      for (const {instance, edits: batch} of windows) edits.push([instance, batch]);
+    }
   );
   try {
     const first = streamer.prepare(0, windowOf('shared'));

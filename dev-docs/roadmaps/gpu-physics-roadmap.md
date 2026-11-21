@@ -510,8 +510,15 @@ The Physics Batch Lab reports streaming and step latency, activity, provider reu
 resident bytes. Qualification covers scoped wake and cache behavior, capacity-neutral
 replacement, mixed-resolution seams, and reset after origin shifting.
 
-Remaining work includes sharing writable atlas pages across identical instance windows,
-independent step failure recovery, and traversal/step-cost qualification across adapters.
+An optional shared atlas now assigns one immutable GPU page to identical packed terrain
+payloads, including stitched seams. Fixed per-grid pools account for reserved bytes up
+front. Copy-on-write isolates diverging windows, and batched publication can hand off a
+page when its last users update together. Qualification covers occupancy and buffer
+savings, capacity rejection without partial publication, per-instance reset, origin
+shifting, GPU checkpoints, and capture restore.
+
+Independent step failure recovery and traversal/step-cost qualification across adapters
+remain open.
 
 ### G9. Articulations and mechanism quality
 

@@ -13,6 +13,8 @@
   textures, and pipelines for both WebGL2 and WebGPU.
 
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
+- Fused GPU physics ensembles can share packed terrain atlas pages across instances while
+  streaming and updating their tile windows independently. [GPU Physics](./api-reference/graph/gpu-physics.md)
 
 ## Version 9.4
 

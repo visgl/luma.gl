@@ -53,6 +53,7 @@ export async function runTerrainStreamingBenchmark(
   const ensemble = await GPUPhysicsEnsemble.create(device, {
     instances: worlds,
     terrainSlots: [0, 1],
+    terrainAtlas: [{width: resolution, height: resolution, pages: 2}],
     maximumPairs: 2 ** Math.ceil(Math.log2(Math.max(64, bodies * worlds * pairsPerBody))),
     maximumResidentBytes: 512 * 1024 * 1024,
     template: {
@@ -100,10 +101,9 @@ export async function runTerrainStreamingBenchmark(
     await Promise.all(
       Array.from({length: worlds}, (_, instance) => streamer.prepare(instance, window(false)))
     );
-    for (let instance = 0; instance < worlds; instance++) {
-      streamer.apply(instance);
-      if (instance >= activeWorlds) ensemble.setActive(instance, false);
-    }
+    streamer.applyMany(Array.from({length: worlds}, (_, instance) => instance));
+    for (let instance = activeWorlds; instance < worlds; instance++)
+      ensemble.setActive(instance, false);
     const heights = new Array<boolean>(activeWorlds).fill(false);
     const streamTimings: number[] = [];
     const stepTimings: number[] = [];
@@ -169,6 +169,7 @@ export async function runTerrainStreamingBenchmark(
       streamP95: percentile95(streamTimings),
       stepP95: percentile95(stepTimings),
       residentBytes: final.residentBytes,
+      terrainAtlas: final.terrainAtlas!,
       fixedAllocation: final.residentBytes === initial.residentBytes
     };
   } finally {

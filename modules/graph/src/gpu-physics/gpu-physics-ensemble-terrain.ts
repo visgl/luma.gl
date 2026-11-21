@@ -11,6 +11,14 @@ import {
 import type {GPURigidBodyHeightFieldEdit} from './gpu-rigid-body-world';
 import type {GPURigidBodyTerrainTile} from './rigid-body-terrain-stitch';
 
+/** A prepared instance window to publish using template-local indices. */
+type TerrainPublication = {
+  /** Ensemble instance that owns the edited colliders. */
+  instance: number;
+  /** Changes required to replace the committed window. */
+  edits: readonly GPURigidBodyHeightFieldEdit[];
+};
+
 /** Independent local terrain windows with one provider queue for a fused ensemble. */
 export class GPUPhysicsEnsembleTerrain {
   private readonly streams = new Map<number, GPURigidBodyTerrainStream>();
@@ -22,10 +30,7 @@ export class GPUPhysicsEnsembleTerrain {
     private readonly props: GPURigidBodyTerrainStreamProps,
     slots: readonly number[],
     private readonly validateInstance: (instance: number) => void,
-    private readonly publish: (
-      instance: number,
-      edits: readonly GPURigidBodyHeightFieldEdit[]
-    ) => void
+    private readonly publish: (windows: readonly TerrainPublication[]) => void
   ) {
     this.slots = new Set(slots);
     this.loads = new RigidBodyTerrainLoadQueue(props);
@@ -39,7 +44,7 @@ export class GPUPhysicsEnsembleTerrain {
     let stream = this.streams.get(instance);
     if (!stream) {
       stream = new GPURigidBodyTerrainStream(
-        {setHeightFieldTiles: edits => this.publish(instance, edits)},
+        {setHeightFieldTiles: edits => this.publish([{instance, edits}])},
         this.props,
         this.loads
       );
@@ -52,6 +57,27 @@ export class GPUPhysicsEnsembleTerrain {
   apply(instance: number): boolean {
     this.validateInstance(instance);
     return this.streams.get(instance)?.apply() ?? false;
+  }
+
+  /**
+   * Publish all ready windows in one transaction. Instances without a ready window are skipped.
+   * Use this for a shared-atlas handoff when the last users of an old page move together.
+   */
+  applyMany(instances: readonly number[]): number {
+    const windows: TerrainPublication[] = [];
+    const streams: GPURigidBodyTerrainStream[] = [];
+    for (const instance of new Set(instances)) {
+      this.validateInstance(instance);
+      const stream = this.streams.get(instance);
+      const edits = stream?.getPreparedEdits();
+      if (stream && edits) {
+        windows.push({instance, edits});
+        streams.push(stream);
+      }
+    }
+    if (windows.some(({edits}) => edits.length)) this.publish(windows);
+    for (const stream of streams) stream.commitPreparedWindow();
+    return streams.length;
   }
 
   /** Get the number of committed tiles in the selected instance. */

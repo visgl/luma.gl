@@ -11,7 +11,8 @@ import type {GPURigidBodyCollider} from './rigid-body-properties';
 export function packRigidBodyShapes(
   colliders: readonly GPURigidBodyCollider[],
   shareHeightFields = false,
-  writableHeightFields?: ReadonlySet<number>
+  writableHeightFields?: ReadonlySet<number>,
+  useTerrainAtlas = false
 ) {
   const geometry: number[] = [];
   const packedMeshes = new Map<RigidBodyMeshGeometry, {padding: number[]; policies: number[]}>();
@@ -20,6 +21,7 @@ export function packRigidBodyShapes(
     {padding: number[]; policies: number[]; extent: number[]}
   >();
   const heightFields = new Map<number, number>();
+  const atlasFields = new Map<number, ReturnType<typeof packRigidBodyHeightField>>();
   const writablePayloads = new Map<
     GPURigidBodyHeightField,
     ReturnType<typeof packRigidBodyHeightField>
@@ -49,6 +51,12 @@ export function packRigidBodyShapes(
       } else {
         const packed = writablePayloads.get(shape.field) ?? packRigidBodyHeightField(shape.field);
         if (shareHeightFields && writable) writablePayloads.set(shape.field, packed);
+        if (useTerrainAtlas && writable) {
+          padding[1] = -shape.field.width;
+          dimensions = [...packed.extent, 3];
+          if (packed.nodeCount) atlasFields.set(colliderIndex, packed);
+          return {dimensions, policies, padding};
+        }
         const offset = geometry.length / 4;
         padding[0] = offset;
         // Negative vertex count distinguishes implicit height-field triangles in the mesh kernels.
@@ -112,5 +120,5 @@ export function packRigidBodyShapes(
     while (geometry.length % 4) geometry.push(0);
     return [start, excluded.length] as const;
   });
-  return {shapes, geometry, filters, heightFields};
+  return {shapes, geometry, filters, heightFields, atlasFields};
 }
