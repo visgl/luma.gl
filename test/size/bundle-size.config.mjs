@@ -102,7 +102,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     // Unpack fast path trades ~0.6 KB minified for fewer upload allocations.
     // Scalar setters and deletion tracking together measure 141,425 B / 39,931 B gzip.
     // Resnapshotting native state on reattachment adds about 0.15 KB minified.
-    maximum: {minified: 141_650, gzip: 39_975, brotli: 34_200},
+    // Clip control, depth clamp and polygon offset clamp together measure 142,944 B / 40,366 B gzip.
+    maximum: {minified: 142_950, gzip: 40_400, brotli: 34_600},
     targetGzip: 30_000
   },
   {
@@ -118,7 +119,8 @@ export const BUNDLE_SIZE_FIXTURES = [
     label: 'core + WebGL',
     sum: ['core', 'webgl'],
     // Includes both allocation-saving changes; shared ceiling avoids merge-order regressions.
-    maximum: {minified: 246_000, gzip: 69_300, brotli: 59_975},
+    // Combined depth-extension stack: 247,308 B minified / 69,711 B gzip / 60,325 B Brotli.
+    maximum: {minified: 247_350, gzip: 69_750, brotli: 60_350},
     targetGzip: 54_000
   },
   {
