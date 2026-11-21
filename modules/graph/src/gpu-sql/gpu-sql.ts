@@ -297,6 +297,13 @@ function resolveGPUSQLExpression(
   switch (expression.kind) {
     case 'column':
       return {kind: 'column', name: resolve(expression.name)};
+    case 'conditional':
+      return {
+        ...expression,
+        condition: resolveGPUSQLExpression(expression.condition, resolve),
+        whenTrue: resolveGPUSQLExpression(expression.whenTrue, resolve),
+        otherwise: resolveGPUSQLExpression(expression.otherwise, resolve)
+      };
     case 'unary':
       return {...expression, operand: resolveGPUSQLExpression(expression.operand, resolve)};
     case 'binary':
