@@ -90,6 +90,7 @@ export async function createMaterialFixture() {
     adaptiveResolution: false,
     resolutionScale: 1
   };
+  /** Render once and average the RGB channels of adjacent pixels on the center row. */
   async function readMeanColor(pixelCount: 1 | 4): Promise<number[]> {
     renderer.render(options);
     device.submit();

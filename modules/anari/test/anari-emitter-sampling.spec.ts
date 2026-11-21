@@ -118,6 +118,7 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     byteLength: layout.byteLength,
     usage: Buffer.MAP_READ | Buffer.COPY_DST
   });
+  /** Render and submit one progressive sample frame without waiting for a CPU readback. */
   const renderFrame = () => {
     const statistics = frame.render();
     graphics.submit();
