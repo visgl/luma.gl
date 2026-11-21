@@ -66,7 +66,9 @@ export function compileGPUDataFrameAggregation<
 ): CompiledGPUDataFrameAggregation<Result> {
   validateGPUAnalyticsSource(
     source,
-    definitions.flatMap(definition => (definition.column ? [definition.column] : []))
+    definitions.flatMap(definition =>
+      definition.operation !== 'count' && definition.column ? [definition.column] : []
+    )
   );
   return compileGPUDataFrameQuery<
     Source,

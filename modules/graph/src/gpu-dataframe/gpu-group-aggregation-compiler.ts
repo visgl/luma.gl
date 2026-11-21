@@ -89,7 +89,9 @@ function validateGPUGroupingSourceColumns<Source extends GPUTypeMap>(
 ): void {
   const columnNames = new Set([
     key,
-    ...definitions.flatMap(definition => (definition.column ? [definition.column] : []))
+    ...definitions.flatMap(definition =>
+      definition.operation !== 'count' && definition.column ? [definition.column] : []
+    )
   ]);
   for (const name of columnNames) {
     if (source.table.gpuConstants[name]) {

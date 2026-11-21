@@ -328,6 +328,19 @@ it('SQL projection-only plans do not bind arbitrary source columns', async () =>
       }
     }
 
+    const packedCount = context
+      .query('SELECT COUNT(position) AS known FROM samples')
+      .compile(new GPUCommandGraph(device, {id: 'sql-packed-count'}));
+    try {
+      const encoder = device.createCommandEncoder();
+      packedCount.encode(encoder);
+      device.submit(encoder.finish());
+      const result = await makeArrowTableFromGPUAnalyticsTable({table: packedCount.table});
+      expect(result.getChild('known')?.get(0)).toBe(2);
+    } finally {
+      packedCount.destroy();
+    }
+
     const packedProjection = context
       .query('SELECT position FROM samples')
       .compile(new GPUCommandGraph(device, {id: 'sql-packed-projection'}));
