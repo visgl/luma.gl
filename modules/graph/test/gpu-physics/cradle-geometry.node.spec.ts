@@ -4,7 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {CubeGeometry, GroupNode} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   CradleGeometryNode,
   makeCradleFrame,

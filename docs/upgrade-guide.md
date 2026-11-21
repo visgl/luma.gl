@@ -24,6 +24,12 @@ packages together and regenerate your lockfile.
 Use the [package index](./packages.mdx) to find APIs formerly imported from
 `@luma.gl/experimental`. Scene rendering moved into `@luma.gl/anari`.
 
+For direct math.gl 5.0 imports, use the public subpaths. Use
+`@math.gl/core/matrix` for matrix and vector helpers, `@math.gl/core/types`
+for array types, and `@math.gl/geometry/primitives` for geometry classes.
+Use hyphenated projection subpaths such as
+`@math.gl/geospatial/projection-types`.
+
 ### Shaders and drawing
 
 - Create a `GLSLShaderAssembler` or `WGSLShaderAssembler` and pass it as

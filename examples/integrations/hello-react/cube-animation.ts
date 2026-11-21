@@ -5,7 +5,7 @@
 import {AnimationLoopTemplate, CubeGeometry, GroupNode} from '@luma.gl/engine';
 import type {AnimationProps} from '@luma.gl/engine';
 import type {LightingProps, PBRProjectionProps} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {createPBRMesh, drawPBRScene} from '../../pbr-scene';
 
 const camera: PBRProjectionProps['camera'] = [0, 0, -4];

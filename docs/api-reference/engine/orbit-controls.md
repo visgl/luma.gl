@@ -10,7 +10,7 @@ import {EngineDocsTabs} from '@site/src/components/docs/engine-docs-tabs';
 
 ```typescript
 import {OrbitControls} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
 const controls = new OrbitControls(canvas, {

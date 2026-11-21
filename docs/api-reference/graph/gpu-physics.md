@@ -408,13 +408,13 @@ world or graph. Destroying the ensemble releases its world, graph and any world-
 Use the same indexed triangle surface for rendering and collision. If the source is a
 math.gl height field, create a `HeightFieldGeometry` with one origin per tile. Its
 triangles preserve sample registration, cell diagonals, and gaps for missing samples.
-The physics adapter accepts the existing `@math.gl/geometry` contract, so luma.gl
+The physics adapter accepts the existing `@math.gl/geometry/primitives` contract, so luma.gl
 does not need to load or depend on `@math.gl/terrain` to cook it. The snippet uses
 the math.gl terrain source API. Applications using released packages can pass any
 compatible CPU triangle geometry to the same cooker.
 
 ```typescript
-import {HeightFieldGeometry} from '@math.gl/terrain/geometry';
+import {HeightFieldGeometry} from '@math.gl/geospatial/terrain';
 import {makeStaticTriangleMeshGeometry} from '@luma.gl/graph/gpu-physics';
 
 // field is a HeightField in a Z-up, local metric coordinate system.

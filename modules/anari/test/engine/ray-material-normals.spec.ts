@@ -3,7 +3,7 @@
 
 import {Geometry} from '@luma.gl/engine';
 import type {RayTracingSceneRenderOptions} from '@luma.gl/anari';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {expect, it} from 'vitest';
 import {createMaterialFixture} from './ray-material-fixture';

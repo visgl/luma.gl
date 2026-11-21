@@ -9,7 +9,8 @@ import {
   Texture,
   type TextureView
 } from '@luma.gl/core';
-import {Matrix4, type NumberArray3} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 import {PBR_ENVIRONMENT_FRAGMENT_WGSL, pbrEnvironmentFilter} from '@luma.gl/shaders';
 import {ClipSpace} from '../models/clip-space';
 import {ShaderInputs} from '../shader-inputs';

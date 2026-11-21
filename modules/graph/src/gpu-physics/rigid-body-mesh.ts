@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Geometry} from '@math.gl/geometry';
+import type {Geometry} from '@math.gl/geometry/primitives';
 import {makeExactOrientation} from './rigid-body-orientation';
 
 export type RigidBodyMeshGeometry = {

@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js ShapePath (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {Vector2} from '@math.gl/core';
+import {Vector2} from '@math.gl/core/matrix';
 import {Path, Shape} from './path';
 import {ShapeUtils} from './shape-utils';
 

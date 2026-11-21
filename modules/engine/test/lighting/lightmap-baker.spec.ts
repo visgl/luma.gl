@@ -175,7 +175,7 @@ test('dilation respects chart IDs and failed draws preserve accumulation', async
 test('bake models honor alpha cutouts and directional shadow maps', async context => {
   const devices = await getDevices();
   if (!devices.length) return context.skip('No GPU');
-  const {Matrix4} = await import('@math.gl/core');
+  const {Matrix4} = await import('@math.gl/core/matrix');
   const {ShadowMapRenderer, createPBRShadowModel} = await import('@luma.gl/engine/lighting');
   for (const device of devices) {
     const baker = new LightmapBaker(device, {width: 8, height: 8});

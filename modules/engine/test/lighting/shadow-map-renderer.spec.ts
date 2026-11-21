@@ -4,7 +4,7 @@
 
 import {expect, it, vi} from 'vitest';
 import {getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 import {ShadowMapRenderer, type ShadowRenderOptions} from '@luma.gl/engine/lighting';
 
 const CAMERA = {

@@ -11,8 +11,8 @@ import type {
   TextureView
 } from '@luma.gl/core';
 import {Device, Texture as TextureResource} from '@luma.gl/core';
-import {Matrix4, radians} from '@math.gl/core';
-import type {NumberArray3, NumberArray16} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
+import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 import {SHADOW_QUALITY_SETTINGS} from './shadow-quality';
 import type {
   DirectionalShadowLight,

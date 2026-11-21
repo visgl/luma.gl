@@ -500,7 +500,7 @@ use the authoritative CPU transform as an opaque oracle, and always produce adap
 They never infer native formulas from a custom engine's CRS labels.
 
 ```ts
-import {lazyProjectionEngine} from '@math.gl/geospatial/projection/projections/lazy';
+import {lazyProjectionEngine} from '@math.gl/geospatial/projection-projections-lazy';
 import {prepareCRSProjectionAsync} from '@luma.gl/graph/gpu-project-crs';
 
 const prepared = await prepareCRSProjectionAsync({

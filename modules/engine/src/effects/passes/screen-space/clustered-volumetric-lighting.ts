@@ -4,7 +4,7 @@
 
 import type {Buffer, Texture} from '@luma.gl/core';
 import type {ShaderPass, CompositeShaderPass} from '@luma.gl/shaders';
-import type {NumberArray3, NumberArray16} from '@math.gl/core';
+import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 import {depthAwareBlur} from './depth-aware-blur';
 
 /** Construction options for clustered participating-media integration. */

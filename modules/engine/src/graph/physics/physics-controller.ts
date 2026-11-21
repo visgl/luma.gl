@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, type Device} from '@luma.gl/core';
-import type {Geometry} from '@math.gl/geometry';
+import type {Geometry} from '@math.gl/geometry/primitives';
 import type {
   GPURigidBody,
   GPURigidBodyShape,

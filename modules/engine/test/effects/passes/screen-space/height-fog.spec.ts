@@ -11,7 +11,7 @@ import {
   type HeightFogPassUniforms
 } from '@luma.gl/engine/effects';
 import {heightFog, getShaderModuleUniformLayoutValidationResult} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {getTestDevice} from '@luma.gl/core/test-utils';
 import {makeShaderModuleRenderer} from '../../../../../shaders/test/modules/render-shader-module';
 

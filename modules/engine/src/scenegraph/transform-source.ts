@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {Buffer} from '@luma.gl/core';
-import type {NumericArray} from '@math.gl/core';
+import type {NumericArray} from '@math.gl/core/types';
 import type {ScenegraphNode} from './scenegraph-node';
 
 /** One visual node relative to a producer-owned world matrix. */

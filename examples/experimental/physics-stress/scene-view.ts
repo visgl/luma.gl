@@ -18,8 +18,8 @@ import type {
   GPURigidBodyWorld,
   GPURigidBodyWorldProps
 } from '@luma.gl/graph/gpu-physics';
-import {Matrix4, Vector3} from '@math.gl/core';
-import {CapsuleGeometry} from '@math.gl/geometry';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
+import {CapsuleGeometry} from '@math.gl/geometry/primitives';
 import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {createLabEnvironment} from '../gpu-rigid-body-world/lab-material';

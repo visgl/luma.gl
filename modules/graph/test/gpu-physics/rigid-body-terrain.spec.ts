@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Geometry} from '@math.gl/geometry';
+import {Geometry} from '@math.gl/geometry/primitives';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {GPUCommandGraph} from '../../src/gpu-core';

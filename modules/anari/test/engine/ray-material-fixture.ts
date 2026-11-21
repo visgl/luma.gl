@@ -5,7 +5,7 @@ import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {RayTracingSceneRenderer, type RayTracingSceneRenderOptions} from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 /** Creates isolated material state and GPU resources for a pixel regression. */
 export async function createMaterialFixture() {

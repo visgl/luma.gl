@@ -15,7 +15,7 @@ import {Texture} from '@luma.gl/core';
 import {AnimationAction} from '@luma.gl/engine';
 
 import {NullDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {describe, expect, test, vi} from 'vitest';
 
 async function loadFixture(

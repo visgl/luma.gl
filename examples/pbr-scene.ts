@@ -9,7 +9,7 @@ import type {Geometry} from '@luma.gl/engine';
 import {createPBRMaterial, createPBRModel} from '@luma.gl/engine/lighting';
 import type {PBRMaterialUniforms} from '@luma.gl/shaders';
 import type {LightingProps, PBRProjectionProps} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 /** Creates a lit mesh from geometry with positions, normals, and a UV set. */
 export function createPBRMesh(
