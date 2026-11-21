@@ -16,6 +16,7 @@ on:
       - 'test/utils/**'
       - 'modules/anari/src/**'
       - 'modules/anari/test/anari-reflection.spec.ts'
+      - 'modules/anari/test/engine/ray-tracing-image-export.spec.ts'
       - 'modules/three/**'
       - 'examples/experimental/three/**'
       - 'modules/anari/test/anari-emitter-sampling*'
@@ -80,7 +81,7 @@ jobs:
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
           const report = readFileSync('test-results/render-conformance.xml', 'utf8');
-          assert.match(report, /<testsuites\b[^>]*\btests="21"/);
+          assert.match(report, /<testsuites\b[^>]*\btests="30"/);
           assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
           NODE
       - name: Upload material results
