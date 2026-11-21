@@ -35,6 +35,9 @@ Use the [package index](./packages.mdx) to find APIs formerly imported from
 
 ### Resources and assets
 
+- Destroying an owned WebGL device requests context loss. If you need to reuse
+  the canvas and its context after destroying the wrapper, create the device
+  with `ownsHandle: false`. An attached WebGL context is borrowed by default.
 - Narrow `userData` and glTF `extras` before reading properties. These values use
   TypeScript’s `unknown` type.
 - Supply an image-loading callback to `loadPBREnvironment()`. Install loaders.gl
