@@ -26,6 +26,14 @@ Use **GPU Graph** for logical operations and **GPU Graph Timeline** for timings.
 
 The wrecking-ball example qualifies both 60 Hz and 120 Hz for pre-impact pile stability, block displacement, suspension length and complete diagnostics. Its default 60 Hz setting is a scene-specific quality choice, not a new global solver default or a general CCD claim.
 
+## Choose how contact patches are solved[​](#choose-how-contact-patches-are-solved "Direct link to Choose how contact patches are solved")
+
+A box resting on a table can have several contact points. Those points are coupled: an impulse at one corner changes the motion seen by the others. The parallel solver normally updates each point with conservative relaxation, then gathers all changes for each body.
+
+For difficult piles, try `parallelContactSolver: 'block'` with `solver: 'parallel'`. It works through each contact patch twice before sharing the resulting change with other patches. This spends more arithmetic locally but can reduce the number of whole-world iterations needed for a given error budget. It does not add collision substeps or remove the need to propagate loads through a tall stack.
+
+Start by keeping your existing timestep and iteration count. Measure penetration, drift and residual motion, then compare fewer iterations if the results permit it. The default remains `'scalar'`; block solving is an explicit alternative. The [G8 comparison report](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/physics-g8.md) and matched Box3D runner record both quality and cost. The Stress Lab lets you switch between these modes and orbit the same scene in 3D.
+
 ## Qualification is part of optimization[​](#qualification-is-part-of-optimization "Direct link to Qualification is part of optimization")
 
 Check both positive behavior and failure cases. Useful measurements include penetration, settling drift, energy behavior, joint error, missed fast impacts, event loss and capacity overflow. Compare equivalent workloads and quality budgets when comparing solvers or engines.
@@ -33,3 +41,5 @@ Check both positive behavior and failure cases. Useful measurements include pene
 `getCapacityInfo()` estimates planned allocation. Runtime diagnostics report whether bounded work completed. With rollback enabled, rejected steps retain the previous state; successful publication does not mean every attempted step succeeded. Check lifetime counters rather than just the latest rendered frame. Other failure policies can publish incomplete work.
 
 The [collision matrix](https://luma.gl/next/docs/api-reference/graph/gpu-physics-collision-coverage.md), [Physics Stress Lab](https://luma.gl/next/examples/experimental/physics-stress), and [roadmap](https://github.com/visgl/luma.gl/blob/master/dev-docs/roadmaps/gpu-physics-roadmap.md) provide the current evidence and remaining boundaries. Record device/backend, settings, scene counts and failure counters with every performance claim.
+
+The [G7 glTF physics qualification report](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/gltf-physics-g7.md) records which draft features have passing evidence, how the upstream samples were checked, and the hardware and workload limits of the measurements.

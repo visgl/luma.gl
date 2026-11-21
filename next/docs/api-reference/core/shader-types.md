@@ -1,4 +1,4 @@
-# Shader Types
+# @luma.gl/core/shadertypes
 
 [Shader Types](https://luma.gl/next/docs/api-reference/core/shader-types.md)[Vertex Formats](https://luma.gl/next/docs/api-reference/core/vertex-formats.md)[Texture Formats](https://luma.gl/next/docs/api-reference/core/texture-formats.md)
 

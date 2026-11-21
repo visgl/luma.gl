@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Streamed luma layout → Three.js</title>  <script type="module" crossorigin src="/next/standalone-examples/three/assets/streamed-B5t4caWT.js"></script>
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/render-pipeline-C-8x3_RN.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/buffer-layout-utils-Cp_2PobD.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/three.webgpu-DxN3IWBu.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/texture-CfvD1k1H.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/fence-CGybqq0g.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/wgsl-binding-scan-Ckv0q_Df.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/external-texture-DEwn3S48.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/wgsl-interface-scan-Cs0f8csX.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/webgpu-device-BMPm2LpD.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/webgpu-adapter-BI08JqHu.js">
+  <link rel="modulepreload" crossorigin href="/next/standalone-examples/three/assets/interop-Jq4e0mpO.js">
+</head>
+  <body style="margin:0;background:#101820;color:white;font-family:system-ui">
+    <p>WebGPU required. Deterministic synthetic batches arrive every second (12 batches retained) → GPU logarithmic layout → Three.js. Each batch is uploaded once.</p>
+    <button id="append">Append batch</button><button id="reset">Reset</button><span id="status"></span>
+    <canvas style="display:block;width:100%;height:80vh"></canvas>
+  </body>
+</html>

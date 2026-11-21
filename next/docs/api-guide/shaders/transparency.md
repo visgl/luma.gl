@@ -43,7 +43,7 @@ Optical materials shade the surface first; the transparency plugin captures the 
 ```
 import {ShaderInputs} from '@luma.gl/engine';
 
-import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental-materials';
 
 import {aBuffer, aBufferPlugin} from '@luma.gl/anari';
 

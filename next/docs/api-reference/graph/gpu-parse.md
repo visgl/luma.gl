@@ -156,13 +156,13 @@ loaders.gl 5.0.0-alpha.4 implements the transport-neutral boundary through `Parq
 Install loaders.gl explicitly when using this optional adapter:
 
 ```
-yarn add @loaders.gl/core@5.0.0-beta.4 @loaders.gl/tables@5.0.0-beta.4
+yarn add @loaders.gl/core@5.0.0-rc.1 @loaders.gl/tables@5.0.0-rc.1
 ```
 
 Request encoded pages and preserve only codecs that `gpu-parse` can decompress:
 
 ```
-import {ParquetSourceLoader} from '@loaders.gl/tables/parquet-source-loader';
+import {createParquetSource} from '@loaders.gl/tables/parquet';
 
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 
@@ -178,7 +178,7 @@ import {
 
 
 
-const source = ParquetSourceLoader.createDataSource(parquetBlob, {});
+const source = createParquetSource(parquetBlob, {});
 
 
 

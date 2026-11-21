@@ -1,6 +1,6 @@
 # gouraudMaterial
 
-[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
+[unlitMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md)[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
 
 The `gouraudMaterial` shader module provides functions to apply Gouraud shading with a simple specular model per vertex. It is typically faster than `phongMaterial`, but highlight quality is lower because lighting is evaluated at vertices instead of fragments.
 

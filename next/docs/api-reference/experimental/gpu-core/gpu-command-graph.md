@@ -874,3 +874,17 @@ Tooltips also show declared resource inputs and outputs, access modes, buffer by
 ## Buffer and texture management[​](#buffer-and-texture-management "Direct link to Buffer and texture management")
 
 See [Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md) for logical values, views, imported and transient ownership, hazard tracking, history, resizing, and encoding contracts.
+
+## Inspecting compute kernels[​](#inspecting-compute-kernels "Direct link to Inspecting compute kernels")
+
+Pass `{kernelMetadata: 'layout'}` to `graph.compile()` or `graph.compileAsync()` to include declared entry points, workgroup dimensions, and binding layouts in preflight. Use `'source'` to also include available WGSL. Default compilation omits these details.
+
+```
+const compiled = graph.compile({kernelMetadata: 'layout'});
+
+inspector.registerGraph(compiled);
+
+const nodes = inspector.getSnapshot().graphs[0].preflight?.nodes;
+```
+
+`GPUScan` and `GPUSegmentedScan` supply metadata. Custom compute nodes can supply a `kernel` declaration through `graph.addComputePass()` or `createGPUComputeCommandNode()`.

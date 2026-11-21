@@ -1,6 +1,6 @@
 # Using GPU parameters
 
-[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
+[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Depth buffers](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
 
 GPU parameters control culling, depth and stencil tests, blending, and rasterization. Choose the owner from when the value needs to change:
 
@@ -55,6 +55,10 @@ model.draw(renderPass);
 ```
 
 Viewport and scissor coordinates use drawing-buffer pixels, not CSS pixels. Use `scissorRect` to restrict writes; changing a viewport alone does not clip to its rectangle.
+
+## Reverse-Z depth[​](#reverse-z-depth "Direct link to Reverse-Z depth")
+
+See [Depth buffers](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md#reverse-z) for the projection, attachment, clear value and comparison to use together.
 
 ## Next steps[​](#next-steps "Direct link to Next steps")
 

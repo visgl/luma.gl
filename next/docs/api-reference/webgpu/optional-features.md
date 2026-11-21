@@ -42,6 +42,12 @@ const canMeasureGPUTime = device.features.has('timestamp-query');
 
 Device features cannot be added to an existing device. If code later needs a supported feature that was not requested, it must create another device with that feature in its creation options.
 
+### Depth features[​](#depth-features "Direct link to Depth features")
+
+Zero-to-one clip depth and polygon depth bias (including `depthBiasClamp`) are built into WebGPU. An application using reverse-Z can use both on a core device. Request `'depth-clip-control'` when a pipeline needs `unclippedDepth: true` to disable clipping at the near and far planes. The WebGL equivalents and capability checks are listed in the [depth-buffer guide](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md#backend-mappings).
+
+WGSL conservative fragment depth is a language capability. Check `device.wgslLanguageFeatures.has('fragment_depth')` before compiling a shader with a directional `frag_depth` declaration. For a packed 32-bit floating-point depth and 8-bit stencil attachment, request the separate device feature `'depth32float-stencil8'`. [WGSL fragment depth](https://gpuweb.github.io/gpuweb/wgsl/#builtin-values-frag_depth) · [WebGPU feature index](https://gpuweb.github.io/gpuweb/#feature-index)
+
 ### Feature levels[​](#feature-levels "Direct link to Feature levels")
 
 Use `featureLevel` to select a broader feature and limit policy:

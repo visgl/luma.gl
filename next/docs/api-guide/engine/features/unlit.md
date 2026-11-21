@@ -24,6 +24,10 @@ s
 
 Scroll page · Ctrl/⌘ + scroll to interact
 
+## Always-unlit shaders[​](#always-unlit-shaders "Direct link to Always-unlit shaders")
+
+For raster imagery and custom shaders that never need lighting, use [`unlitMaterial`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md) from `@luma.gl/shaders`. It preserves RGBA without lighting dependencies or material uniforms. Texture sampling remains application-owned. The existing PBR unlit path below retains its material schema and texture processing for imported assets.
+
 ## PBRMaterial reference[​](#pbrmaterial-reference "Direct link to PBRMaterial reference")
 
 `PBRMaterial` from `@luma.gl/anari` is a typed engine `Material` backed by the shared `pbrMaterial` shader module. Its material fields are defined by `PBRMaterialUniforms` from `@luma.gl/shaders`. Pass them through `createPBRMaterial(device, {uniforms})` or update them with `material.setProps({pbrMaterial: {...}})`.

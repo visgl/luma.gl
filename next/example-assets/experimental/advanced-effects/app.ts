@@ -21,7 +21,7 @@ import {
   createVolumetricFogCompositeShaderPass,
   depthAwareBlurCompositeShaderPass
 } from '@luma.gl/engine/effects';
-import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental-controls';
 import {
   createContactShadowCompositeShaderPass,
   GBuffer,

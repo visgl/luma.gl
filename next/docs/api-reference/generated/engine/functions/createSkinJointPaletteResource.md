@@ -1,6 +1,6 @@
 # Function: createSkinJointPaletteResource()
 
-> **createSkinJointPaletteResource**(`device`, `id`, `jointMatrices`): `Buffer` | `Texture`
+> **createSkinJointPaletteResource**(`device`, `id`, `jointMatrices`): `Texture` | `Buffer`
 
 Defined in: [modules/engine/src/scenegraph/controllers/skin-controller.ts:100](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/skin-controller.ts#L100)
 
@@ -20,4 +20,4 @@ Defined in: [modules/engine/src/scenegraph/controllers/skin-controller.ts:100](h
 
 ## Returns[​](#returns "Direct link to Returns")
 
-`Buffer` | `Texture`
+`Texture` | `Buffer`

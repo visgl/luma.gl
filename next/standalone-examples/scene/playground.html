@@ -379,6 +379,14 @@
         pointer-events: none;
       }
 
+      #scene-refinement-statistic { flex: 0 0 22ch; }
+      #scene-refinement-progress {
+        width: 100%; height: 5px; margin-top: 7px;
+        accent-color: #a594ff;
+      }
+      #scene-refinement-progress::-webkit-progress-bar { background: rgba(180, 170, 255, 0.14); border-radius: 4px; }
+      #scene-refinement-progress::-webkit-progress-value { background: #a594ff; border-radius: 4px; }
+
       .preview-heading {
         top: 24px;
         right: 26px;
@@ -486,12 +494,16 @@
       }
 
       .preview-footer {
+        left: 26px;
         right: 25px;
-        bottom: 24px;
+        bottom: 45px;
       }
 
       .preview-statistics {
-        gap: 24px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 12px 20px;
+        font-size: 10px;
         text-align: right;
       }
 
@@ -569,21 +581,24 @@
         }
       }
     </style>
-    <script type="module" crossorigin src="./assets/playground-DNPCXQmz.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/preload-helper-Ds0ikemP.js">
+    <script type="module" crossorigin src="./assets/playground-DYu-xq6v.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/log-6ICLTgtF.js">
-    <link rel="modulepreload" crossorigin href="./assets/buffer-layout-utils-B1oxazus.js">
-    <link rel="modulepreload" crossorigin href="./assets/debug-hooks-DHo42mqP.js">
-    <link rel="modulepreload" crossorigin href="./assets/wgsl-interface-scan-D9SUns-i.js">
-    <link rel="modulepreload" crossorigin href="./assets/gltf-loader-types-DcZAIH3N.js">
-    <link rel="modulepreload" crossorigin href="./assets/globals-BcB9gCXy.js">
-    <link rel="modulepreload" crossorigin href="./assets/log-C4RiOGbE.js">
-    <link rel="modulepreload" crossorigin href="./assets/path-CzlAVaEb.js">
-    <link rel="modulepreload" crossorigin href="./assets/globals-1Bfzcouj.js">
-    <link rel="modulepreload" crossorigin href="./assets/usd-samples-5-KJKedV.js">
-    <link rel="modulepreload" crossorigin href="./assets/memory-copy-utils-B1HQtq9h.js">
+    <link rel="modulepreload" crossorigin href="./assets/log-DnKhAaMU.js">
+    <link rel="modulepreload" crossorigin href="./assets/buffer-layout-utils-C86dOL7x.js">
+    <link rel="modulepreload" crossorigin href="./assets/debug-hooks-C2APmH94.js">
+    <link rel="modulepreload" crossorigin href="./assets/wgsl-interface-scan-By1Re5ol.js">
+    <link rel="modulepreload" crossorigin href="./assets/globals-DyEwXBnI.js">
+    <link rel="modulepreload" crossorigin href="./assets/native-arrow-CNL9Ruw3.js">
     <link rel="modulepreload" crossorigin href="./assets/chunk-BRNzzbbm.js">
-    <link rel="modulepreload" crossorigin href="./assets/editor.api-CPRyPlcq.js">
+    <link rel="modulepreload" crossorigin href="./assets/draco-loader-types-DW-bpNjg.js">
+    <link rel="modulepreload" crossorigin href="./assets/version-xLc06qUi.js">
+    <link rel="modulepreload" crossorigin href="./assets/image-loader-types-CKelYk1i.js">
+    <link rel="modulepreload" crossorigin href="./assets/globals-FwFvE75L.js">
+    <link rel="modulepreload" crossorigin href="./assets/basis-loader-types-AeZKB5ju.js">
+    <link rel="modulepreload" crossorigin href="./assets/gltf-loader-C2LCENOs.js">
+    <link rel="modulepreload" crossorigin href="./assets/usd-samples-DmZbwATk.js">
+    <link rel="modulepreload" crossorigin href="./assets/gltf-DmrGGCw_.js">
+    <link rel="modulepreload" crossorigin href="./assets/editor.api-DndMM8sp.js">
     <link rel="stylesheet" crossorigin href="./assets/editor-CJEeZjoM.css">
   </head>
   <body>
@@ -761,6 +776,11 @@
               <div id="scene-ray-tracing-frame-statistic" hidden>
                 <div class="statistic-label">RAY FRAME</div>
                 <div id="scene-ray-tracing-frame" class="statistic-value">—</div>
+              </div>
+              <div id="scene-refinement-statistic" hidden title="Sample accumulation toward the configured history target; reaching it does not guarantee a noise-free image.">
+                <div class="statistic-label">REFINEMENT TARGET</div>
+                <div id="scene-refinement-value" class="statistic-value">0%</div>
+                <progress id="scene-refinement-progress" max="100" value="0" aria-label="Refinement sample target"></progress>
               </div>
               <div id="scene-ray-memory-statistic" hidden>
                 <div class="statistic-label">OWNED GPU MEMORY</div>

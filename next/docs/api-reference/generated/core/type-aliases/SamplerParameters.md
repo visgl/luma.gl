@@ -1,5 +1,5 @@
 # Type Alias: SamplerParameters
 
-> **SamplerParameters** = `Omit`<[`SamplerProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SamplerProps.md), keyof [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+> **SamplerParameters** = `Omit`<[`SamplerProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SamplerProps.md), keyof [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md)>
 
 Defined in: [modules/core/src/api/adapter/resources/sampler.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/sampler.ts#L16)

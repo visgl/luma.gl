@@ -1,6 +1,6 @@
 # Type Alias: FramebufferProps
 
-> **FramebufferProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **FramebufferProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/framebuffer.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/framebuffer.ts#L16)
 

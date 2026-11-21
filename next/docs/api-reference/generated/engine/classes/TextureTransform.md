@@ -218,7 +218,7 @@ Defined in: [modules/engine/src/compute/texture-transform.ts:101](https://github
 
 ##### options?[​](#options "Direct link to options?")
 
-`ResourceProps` & `object` & `object`
+`DeviceResourceProps` & `object` & `object`
 
 #### Returns[​](#returns-9 "Direct link to Returns")
 

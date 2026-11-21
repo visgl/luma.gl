@@ -1,6 +1,6 @@
 # dirlight
 
-[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
+[unlitMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md)[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
 
 The `dirlight` shader module is a lightweight alternative to the full [`lighting`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md) module. It applies a single directional-light dot product and is intended for simple materials or examples that do not need multiple light sources.
 

@@ -102,3 +102,29 @@ Compile each independent plan into a new `GPUCommandGraph`; a graph becomes immu
 * [GPU Dataframe overview](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe.md)
 * [GPU Dataframe operations index](https://luma.gl/next/docs/api-reference/experimental/gpu-dataframe-operations.md)
 * [GPU tables](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md)
+
+### Conditional scalar values[​](#conditional-scalar-values "Direct link to Conditional scalar values")
+
+Use `caseWhen` from `@luma.gl/graph/gpu-dataframe` to derive a numeric value from a Boolean condition. A null condition selects the fallback. The selected branch supplies both the result and its validity.
+
+```
+const fare = column('fare');
+
+const fareBucket = caseWhen(fare.greaterThan(literal(10)), literal(1), literal(0));
+
+const query = frame.withColumn('fareBucket', fareBucket);
+```
+
+### Scalar numeric functions[​](#scalar-numeric-functions "Direct link to Scalar numeric functions")
+
+Use `scalarFunction('round', column('fare'))` to derive a numeric value or compose a filter. The supported names are `abs`, `floor`, `ceiling`, `round`, and `trunc`. Functions preserve the input format and nulls. `round` rounds halfway values away from zero. `abs` supports Float32 and Uint32. The rounding functions also accept Int32 and return integer inputs unchanged.
+
+### Null handling[​](#null-handling "Direct link to Null handling")
+
+`coalesce(value, fallback)` returns the first valid numeric value. `nullIf(value, sentinel)` returns null when both values are valid and equal. A null sentinel leaves the input value and validity intact. Both operations require matching scalar column formats.
+
+### Scalar casts[​](#scalar-casts "Direct link to Scalar casts")
+
+Use `cast(column('fare'), 'sint32')` to convert between `float32`, `sint32`, and `uint32`. When declaring a derived column, pass its target format to `withColumn` to keep the TypeScript schema precise. Casts preserve nulls and saturate finite values outside the destination integer range. Float inputs truncate toward zero for integer destinations, with non-finite values becoming null.
+
+`scalarFunction` also accepts `sqrt`, `ln`, `log10`, `asin`, and `acos` for Float32 input. Invalid domains, non-finite input, and null input yield null. Inverse trigonometric results are in radians.

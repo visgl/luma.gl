@@ -1,8 +1,8 @@
 # Type Alias: TextureProps
 
-> **TextureProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **TextureProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:180](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L180)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L190)
 
 Texture properties
 

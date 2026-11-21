@@ -8,7 +8,7 @@
 
 Experimental APIsWebGPU features available
 
-Use the matching public package and explicit subpath for each API. Public scene renderers and their lighting, shadow, and transparency helpers now live in `@luma.gl/anari`. Controls, material plugins, texture helpers, and WebXR APIs live under `@luma.gl/engine/experimental/*`. Path/polygon models live under `@luma.gl/engine/models`; simulation code lives under `@luma.gl/graph/experimental/simulation`.
+Use the matching public package and explicit subpath for each API. Public scene renderers and their lighting, shadow, and transparency helpers now live in `@luma.gl/anari`. Controls, material plugins, texture helpers, and WebXR APIs live under `@luma.gl/engine/experimental-*`. Path/polygon models live under `@luma.gl/engine/models`; simulation code lives under `@luma.gl/graph/experimental-simulation`.
 
 ## When to use it[​](#when-to-use-it "Direct link to When to use it")
 
@@ -46,7 +46,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | [`@luma.gl/graph/gpu-data`](https://luma.gl/next/docs/api-reference/graph/gpu-data.md)                     | Primitive GPU chunks, views, vectors, constants, memory formats, and basic layout helpers.                             |
 | [`@luma.gl/graph/gpu-tables`](https://luma.gl/next/docs/api-reference/experimental/gpu-tables.md)          | GPU record batches, tables, schemas, bindings, computations, and generic table planners.                               |
-| `@luma.gl/engine/models`                                                                                        | Experimental path and polygon rendering models. GPU input preparation remains in `@luma.gl/graph/experimental/models`. |
+| `@luma.gl/engine/models`                                                                                        | Experimental path and polygon rendering models. GPU input preparation remains in `@luma.gl/graph/experimental-models`. |
 | [`@luma.gl/graph/gpu-core`](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)              | Schedule reusable GPU algorithms, validate resource dependencies, reuse transient storage, and drive indirect work.    |
 | [`@luma.gl/graph/gpu-graph-algorithms`](https://luma.gl/next/docs/api-reference/experimental/gpu-graph.md) | GPU-resident topology, traversal, connectivity, ranking, community, and layout algorithms.                             |
 | [GPU Raster](https://luma.gl/next/docs/api-reference/experimental/gpu-raster.md)                           | Validity-aware raster overviews, statistics, filters, morphology, contours, and bounded residency.                     |

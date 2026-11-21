@@ -77,13 +77,13 @@ Focused packages and optional engine subpaths for text, computation, effects, as
 
 Explore scene APIs, shader languages, and rendering integrations under active development. These APIs and supported workflows may change.
 
-* [![](/next/images/examples/deck/city-scene.jpg)](https://luma.gl/next/docs/api-reference/scene)
-  ### [@luma.gl/<!-- -->anari](https://luma.gl/next/docs/api-reference/scene)
-  [Exploratory](https://luma.gl/next/docs/api-reference/scene)
+* [![](/next/images/examples/deck/city-scene.jpg)](https://luma.gl/next/docs/api-reference/anari.md)
+  ### [@luma.gl/<!-- -->anari](https://luma.gl/next/docs/api-reference/anari.md)
+  [Exploratory](https://luma.gl/next/docs/api-reference/anari.md)
 
-  [Describe 3D scenes and switch renderers through an ANARI-inspired scene API.](https://luma.gl/next/docs/api-reference/scene)
+  [Describe retained 3D scenes and switch between raster rendering and progressive WebGPU ray tracing.](https://luma.gl/next/docs/api-reference/anari.md)
 
-  [API reference →](https://luma.gl/next/docs/api-reference/scene)
+  [API reference →](https://luma.gl/next/docs/api-reference/anari.md)
 * [![](/next/images/examples/tutorials/slang-shaders.jpg)](https://luma.gl/next/docs/api-reference/slang.md)
   ### [@luma.gl/<!-- -->slang](https://luma.gl/next/docs/api-reference/slang.md)
   [Exploratory](https://luma.gl/next/docs/api-reference/slang.md)

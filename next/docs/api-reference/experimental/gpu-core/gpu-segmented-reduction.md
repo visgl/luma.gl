@@ -60,6 +60,10 @@ This is useful for totals per group, edge-weight totals per graph vertex, statis
 Given offsets `[o0, o1, ... oN]`, output row `i` reduces `input[oi..o(i+1))`.
 
 ```
+import {GPUSegmentedReduction} from '@luma.gl/graph/gpu-core';
+
+
+
 graph.add(new GPUSegmentedReduction({
 
   input: values,
@@ -73,9 +77,9 @@ graph.add(new GPUSegmentedReduction({
 }));
 ```
 
-The initial implementation accepts packed `uint32`, `sint32`, and `float32` values and supports `sum`, `min`, and `max`. `segmentOffsets.length` must equal `output.length + 1`. Empty segments produce zero.
+The primitive accepts packed `uint32`, `sint32`, and `float32` values and supports `sum`, `min`, and `max`. `segmentOffsets.length` must equal `output.length + 1`. Empty segments produce zero.
 
-Offsets are expected to be monotonically nondecreasing and within input bounds. These GPU-resident invariants are normally guaranteed by the producer rather than validated through CPU readback.
+Offsets are nondecreasing and relative to the input view. Offsets beyond its length are clamped. A terminal offset below the input length can exclude a sorted tail. The output uses the input format and a separate buffer. Use an exactly sized subview when the output allocation has spare capacity.
 
 ## Composition[​](#composition "Direct link to Composition")
 
@@ -101,6 +105,6 @@ Use `GPUReduction` for one global aggregate and `GPUSegmentedReduction` when the
 
 ## Performance notes[​](#performance-notes "Direct link to Performance notes")
 
-The first implementation assigns one 256-thread workgroup to each segment. Threads stride through the segment and perform a workgroup-tree reduction. This is effective for many small and medium segments.
+One 256-thread workgroup handles each segment. Threads stride through the segment and combine their partial results with a fixed binary tree. Floating-point sums use ordinary float32 rounding. Integer sums use 32-bit arithmetic.
 
 Very large or highly skewed segments may need hierarchical multi-workgroup partials; subgroup operations can reduce barrier cost. Those optimizations preserve the offset-delimited API.

@@ -1,6 +1,6 @@
 # ScientificFlowTracer (Experimental)
 
-`ScientificFlowTracer` traces explicitly seeded particles through regular 2D vector fields on WebGPU. It adds adaptive embedded Runge–Kutta–Fehlberg 4(5) integration and persistent termination states alongside the visualization-oriented `ScientificFlowGraph`. Import it from `@luma.gl/graph/experimental/simulation`.
+`ScientificFlowTracer` traces explicitly seeded particles through regular 2D vector fields on WebGPU. It adds adaptive embedded Runge–Kutta–Fehlberg 4(5) integration and persistent termination states alongside the visualization-oriented `ScientificFlowGraph`. Import it from `@luma.gl/graph/experimental-simulation`.
 
 ```
 const tracer = new ScientificFlowTracer(device, {

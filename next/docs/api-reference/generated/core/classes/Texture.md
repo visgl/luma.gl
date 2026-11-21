@@ -1,12 +1,12 @@
 # Abstract Class: Texture
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:211](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L211)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L221)
 
 Abstract Texture interface Texture Object <https://gpuweb.github.io/gpuweb/#gputexture>
 
 ## Extends[​](#extends "Direct link to Extends")
 
-* [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`TextureProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureProps.md)>
+* [`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md)<[`TextureProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureProps.md)>
 
 ## Constructors[​](#constructors "Direct link to Constructors")
 
@@ -14,7 +14,7 @@ Abstract Texture interface Texture Object <https://gpuweb.github.io/gpuweb/#gput
 
 > **new Texture**(`device`, `props`, `backendProps?`): `Texture`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:268](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L268)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:278](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L278)
 
 Do not use directly. Create with device.createTexture()
 
@@ -40,7 +40,7 @@ Do not use directly. Create with device.createTexture()
 
 #### Overrides[​](#overrides "Direct link to Overrides")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`constructor`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#constructor)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`constructor`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#constructor)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -48,7 +48,7 @@ Do not use directly. Create with device.createTexture()
 
 > `readonly` **baseDimension**: `"1d"` | `"2d"` | `"3d"`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:231](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L231)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:241](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L241)
 
 base dimension of this texture
 
@@ -58,7 +58,7 @@ base dimension of this texture
 
 > `readonly` **byteAlignment**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:245](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L245)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:255](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L255)
 
 Rows are multiples of this length, padded with extra bytes if needed
 
@@ -68,23 +68,9 @@ Rows are multiples of this length, padded with extra bytes if needed
 
 > `readonly` **depth**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:239](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L239)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:249](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L249)
 
 depth of this texture
-
-***
-
-### destroyed[​](#destroyed "Direct link to destroyed")
-
-> **destroyed**: `boolean` = `false`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
-
-Whether this resource has been destroyed
-
-#### Inherited from[​](#inherited-from "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroyed`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroyed)
 
 ***
 
@@ -92,13 +78,13 @@ Whether this resource has been destroyed
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L127)
 
 The device that this resource is associated with
 
-#### Inherited from[​](#inherited-from-1 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#device)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`device`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#device)
 
 ***
 
@@ -106,7 +92,7 @@ The device that this resource is associated with
 
 > `readonly` **dimension**: `"1d"` | `"2d"` | `"2d-array"` | `"cube"` | `"cube-array"` | `"3d"`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:229](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L229)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:239](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L239)
 
 dimension of this texture
 
@@ -116,7 +102,7 @@ dimension of this texture
 
 > `readonly` **format**: [`TextureFormat`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureFormat.md)
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:233](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L233)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:243](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L243)
 
 format of this texture
 
@@ -126,13 +112,13 @@ format of this texture
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L129)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
-#### Inherited from[​](#inherited-from-2 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-1 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`handle`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#handle)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`handle`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#handle)
 
 ***
 
@@ -140,7 +126,7 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > `readonly` **height**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:237](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L237)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:247](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L247)
 
 height in pixels of this texture
 
@@ -150,13 +136,13 @@ height in pixels of this texture
 
 > **id**: `string`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:121](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L121)
 
 props.id, for debugging.
 
-#### Inherited from[​](#inherited-from-3 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-2 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`id`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#id)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`id`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#id)
 
 ***
 
@@ -164,7 +150,7 @@ props.id, for debugging.
 
 > `readonly` **isReady**: `boolean` = `true`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:254](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L254)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:264](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L264)
 
 isReady is always true. It is provided for type compatibility with DynamicTexture.
 
@@ -174,7 +160,7 @@ isReady is always true. It is provided for type compatibility with DynamicTextur
 
 > `readonly` **mipLevels**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:241](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L241)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:251](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L251)
 
 mip levels in this texture
 
@@ -184,13 +170,13 @@ mip levels in this texture
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L123)
 
 The props that this resource was created with
 
-#### Inherited from[​](#inherited-from-4 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-3 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`props`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#props-1)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`props`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#props-1)
 
 ***
 
@@ -198,7 +184,7 @@ The props that this resource was created with
 
 > `readonly` **ready**: `Promise`<`Texture`>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:252](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L252)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:262](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L262)
 
 The ready promise is always resolved. It is provided for type compatibility with DynamicTexture.
 
@@ -208,7 +194,7 @@ The ready promise is always resolved. It is provided for type compatibility with
 
 > `abstract` **sampler**: [`Sampler`](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md)
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:247](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L247)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:257](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L257)
 
 Default sampler for this texture
 
@@ -218,7 +204,7 @@ Default sampler for this texture
 
 > `readonly` **samples**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:243](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L243)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:253](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L253)
 
 sample count
 
@@ -228,7 +214,7 @@ sample count
 
 > **updateTimestamp**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:257](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L257)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:267](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L267)
 
 "Time" of last update. Monotonically increasing timestamp. TODO move to DynamicTexture?
 
@@ -238,13 +224,13 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:257](https://gith
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:125](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L125)
 
 User data object, reserved for the application
 
-#### Inherited from[​](#inherited-from-5 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-4 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`userData`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#userdata)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`userData`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#userdata)
 
 ***
 
@@ -252,7 +238,7 @@ User data object, reserved for the application
 
 > `abstract` **view**: [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md)
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:249](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L249)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:259](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L259)
 
 Default view for this texture
 
@@ -262,7 +248,7 @@ Default view for this texture
 
 > `readonly` **width**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:235](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L235)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:245](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L245)
 
 width in pixels of this texture
 
@@ -272,7 +258,7 @@ width in pixels of this texture
 
 > `static` **COPY\_DST**: `number` = `0x02`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L221)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:231](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L231)
 
 he texture can be used as the destination of a copy or write operation
 
@@ -282,7 +268,7 @@ he texture can be used as the destination of a copy or write operation
 
 > `static` **COPY\_SRC**: `number` = `0x01`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:219](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L219)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:229](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L229)
 
 The texture can be used as the source of a copy operation
 
@@ -292,13 +278,13 @@ The texture can be used as the source of a copy operation
 
 > `static` **defaultProps**: `Required`<[`TextureProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureProps.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:707](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L707)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:730](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L730)
 
 Default properties for resource
 
 #### Overrides[​](#overrides-1 "Direct link to Overrides")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`defaultProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#defaultprops)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`defaultProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#defaultprops)
 
 ***
 
@@ -306,7 +292,7 @@ Default properties for resource
 
 > `static` **RENDER**: `number` = `0x10`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:217](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L217)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:227](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L227)
 
 The texture can be used as a color or depth/stencil attachment in a render pass
 
@@ -316,7 +302,7 @@ The texture can be used as a color or depth/stencil attachment in a render pass
 
 > `static` **RENDER\_ATTACHMENT**: `number` = `0x10`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:226](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L226)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:236](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L236)
 
 #### Deprecated[​](#deprecated "Direct link to Deprecated")
 
@@ -328,7 +314,7 @@ Use Texture.RENDER
 
 > `static` **SAMPLE**: `number` = `0x04`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:213](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L213)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:223](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L223)
 
 The texture can be bound for use as a sampled texture in a shader
 
@@ -338,7 +324,7 @@ The texture can be bound for use as a sampled texture in a shader
 
 > `static` **STORAGE**: `number` = `0x08`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:215](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L215)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:225](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L225)
 
 The texture can be bound for use as a storage texture in a shader
 
@@ -348,7 +334,7 @@ The texture can be bound for use as a storage texture in a shader
 
 > `static` **TEXTURE**: `number` = `0x04`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:224](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L224)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:234](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L234)
 
 #### Deprecated[​](#deprecated-1 "Direct link to Deprecated")
 
@@ -362,7 +348,7 @@ Use Texture.SAMPLE
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:259](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L259)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:269](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L269)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -370,47 +356,107 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:259](https://gith
 
 #### Overrides[​](#overrides-2 "Direct link to Overrides")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`[toStringTag]`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#tostringtag)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`[toStringTag]`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#tostringtag)
 
 ***
 
-### isHandleBorrowed[​](#ishandleborrowed "Direct link to isHandleBorrowed")
+### destroyed[​](#destroyed "Direct link to destroyed")
 
 #### Get Signature[​](#get-signature-1 "Direct link to Get Signature")
 
-> **get** **isHandleBorrowed**(): `boolean`
+> **get** **destroyed**(): `boolean`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L26)
 
-Whether luma.gl may only reference the opaque externally owned resource handle.
+Whether destruction has completed, including when cleanup reported an error.
 
 ##### Returns[​](#returns-2 "Direct link to Returns")
 
 `boolean`
 
-#### Inherited from[​](#inherited-from-6 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-5 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`isHandleBorrowed`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#ishandleborrowed)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroyed`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroyed)
 
 ***
 
-### ownsHandle[​](#ownshandle "Direct link to ownsHandle")
+### isHandleBorrowed[​](#ishandleborrowed "Direct link to isHandleBorrowed")
 
 #### Get Signature[​](#get-signature-2 "Direct link to Get Signature")
 
-> **get** **ownsHandle**(): `boolean`
+> **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L146)
 
-Whether luma.gl created and owns the underlying resource handle.
+Whether luma.gl may only reference the opaque externally owned resource handle.
 
 ##### Returns[​](#returns-3 "Direct link to Returns")
 
 `boolean`
 
+#### Inherited from[​](#inherited-from-6 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`isHandleBorrowed`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#ishandleborrowed)
+
+***
+
+### ownedResources[​](#ownedresources "Direct link to ownedResources")
+
+#### Get Signature[​](#get-signature-3 "Direct link to Get Signature")
+
+> **get** **ownedResources**(): readonly [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)\[]
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L21)
+
+A snapshot of this resource's children. Mutating the snapshot cannot change ownership.
+
+##### Returns[​](#returns-4 "Direct link to Returns")
+
+readonly [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)\[]
+
 #### Inherited from[​](#inherited-from-7 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`ownsHandle`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#ownshandle)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`ownedResources`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#ownedresources)
+
+***
+
+### owner[​](#owner "Direct link to owner")
+
+#### Get Signature[​](#get-signature-4 "Direct link to Get Signature")
+
+> **get** **owner**(): [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md) | `null`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L16)
+
+The resource responsible for destroying this resource, or null for caller-managed lifetime.
+
+##### Returns[​](#returns-5 "Direct link to Returns")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md) | `null`
+
+#### Inherited from[​](#inherited-from-8 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`owner`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#owner)
+
+***
+
+### ownsHandle[​](#ownshandle "Direct link to ownsHandle")
+
+#### Get Signature[​](#get-signature-5 "Direct link to Get Signature")
+
+> **get** **ownsHandle**(): `boolean`
+
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L139)
+
+Whether luma.gl created and owns the underlying resource handle.
+
+##### Returns[​](#returns-6 "Direct link to Returns")
+
+`boolean`
+
+#### Inherited from[​](#inherited-from-9 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`ownsHandle`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#ownshandle)
 
 ## Methods[​](#methods "Direct link to Methods")
 
@@ -418,7 +464,7 @@ Whether luma.gl created and owns the underlying resource handle.
 
 > **\_initializeData**(`data`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:460](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L460)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:477](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L477)
 
 Initialize texture with supplied props
 
@@ -428,7 +474,7 @@ Initialize texture with supplied props
 
 [`ExternalImage`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ExternalImage.md) | [`TypedArray`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TypedArray.md) | `null` | `undefined`
 
-#### Returns[​](#returns-4 "Direct link to Returns")
+#### Returns[​](#returns-7 "Direct link to Returns")
 
 `void`
 
@@ -436,9 +482,9 @@ Initialize texture with supplied props
 
 ### \_normalizeCopyElementImageOptions()[​](#_normalizecopyelementimageoptions "Direct link to _normalizeCopyElementImageOptions()")
 
-> **\_normalizeCopyElementImageOptions**(`options_`): `Required`<[`CopyElementImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md)>
+> **\_normalizeCopyElementImageOptions**(`options_`, `result?`): `Required`<[`CopyElementImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:522](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L522)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:550](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L550)
 
 #### Parameters[​](#parameters-2 "Direct link to Parameters")
 
@@ -446,7 +492,11 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:522](https://gith
 
 [`CopyElementImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md)
 
-#### Returns[​](#returns-5 "Direct link to Returns")
+##### result?[​](#result "Direct link to result?")
+
+`Required`<[`CopyElementImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md)> = `...`
+
+#### Returns[​](#returns-8 "Direct link to Returns")
 
 `Required`<[`CopyElementImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md)>
 
@@ -454,9 +504,9 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:522](https://gith
 
 ### \_normalizeCopyExternalImageOptions()[​](#_normalizecopyexternalimageoptions "Direct link to _normalizeCopyExternalImageOptions()")
 
-> **\_normalizeCopyExternalImageOptions**(`options_`): `Required`<[`CopyExternalImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md)>
+> **\_normalizeCopyExternalImageOptions**(`options_`, `result?`): `Required`<[`CopyExternalImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:502](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L502)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:528](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L528)
 
 #### Parameters[​](#parameters-3 "Direct link to Parameters")
 
@@ -464,7 +514,11 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:502](https://gith
 
 [`CopyExternalImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md)
 
-#### Returns[​](#returns-6 "Direct link to Returns")
+##### result?[​](#result-1 "Direct link to result?")
+
+`Required`<[`CopyExternalImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md)> = `...`
+
+#### Returns[​](#returns-9 "Direct link to Returns")
 
 `Required`<[`CopyExternalImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md)>
 
@@ -472,9 +526,11 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:502](https://gith
 
 ### \_normalizeCopyImageDataOptions()[​](#_normalizecopyimagedataoptions "Direct link to _normalizeCopyImageDataOptions()")
 
-> **\_normalizeCopyImageDataOptions**(`options_`): `Required`<[`CopyImageDataOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md)>
+> **\_normalizeCopyImageDataOptions**(`options_`, `result?`): `Required`<[`CopyImageDataOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:493](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L493)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:511](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L511)
+
+The optional result is caller-owned scratch storage; every result field is overwritten.
 
 #### Parameters[​](#parameters-4 "Direct link to Parameters")
 
@@ -482,7 +538,11 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:493](https://gith
 
 [`CopyImageDataOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md)
 
-#### Returns[​](#returns-7 "Direct link to Returns")
+##### result?[​](#result-2 "Direct link to result?")
+
+`Required`<[`CopyImageDataOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md)> = `...`
+
+#### Returns[​](#returns-10 "Direct link to Returns")
 
 `Required`<[`CopyImageDataOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md)>
 
@@ -490,9 +550,9 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:493](https://gith
 
 ### \_normalizeTextureReadOptions()[​](#_normalizetexturereadoptions "Direct link to _normalizeTextureReadOptions()")
 
-> **\_normalizeTextureReadOptions**(`options_`): `Required`<[`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)>
+> **\_normalizeTextureReadOptions**(`options_`, `result?`): `Required`<[`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:539](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L539)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:570](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L570)
 
 #### Parameters[​](#parameters-5 "Direct link to Parameters")
 
@@ -500,7 +560,11 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:539](https://gith
 
 [`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)
 
-#### Returns[​](#returns-8 "Direct link to Returns")
+##### result?[​](#result-3 "Direct link to result?")
+
+`Required`<[`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)> = `...`
+
+#### Returns[​](#returns-11 "Direct link to Returns")
 
 `Required`<[`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)>
 
@@ -508,9 +572,9 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:539](https://gith
 
 ### \_normalizeTextureWriteOptions()[​](#_normalizetexturewriteoptions "Direct link to _normalizeTextureWriteOptions()")
 
-> **\_normalizeTextureWriteOptions**(`options_`): `Required`<[`TextureWriteOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md)>
+> **\_normalizeTextureWriteOptions**(`options_`, `result?`): `Required`<[`TextureWriteOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:623](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L623)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:652](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L652)
 
 #### Parameters[​](#parameters-6 "Direct link to Parameters")
 
@@ -518,33 +582,39 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:623](https://gith
 
 [`TextureWriteOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md)
 
-#### Returns[​](#returns-9 "Direct link to Returns")
+##### result?[​](#result-4 "Direct link to result?")
+
+`Required`<[`TextureWriteOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md)> = `...`
+
+#### Returns[​](#returns-12 "Direct link to Returns")
 
 `Required`<[`TextureWriteOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureWriteOptions.md)>
 
 ***
 
-### attachResource()[​](#attachresource "Direct link to attachResource()")
+### ~~attachResource()~~[​](#attachresource "Direct link to attachresource")
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
-
-Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L90)
 
 #### Parameters[​](#parameters-7 "Direct link to Parameters")
 
 ##### resource[​](#resource "Direct link to resource")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)
 
-#### Returns[​](#returns-10 "Direct link to Returns")
+#### Returns[​](#returns-13 "Direct link to Returns")
 
 `void`
 
-#### Inherited from[​](#inherited-from-8 "Direct link to Inherited from")
+#### Deprecated[​](#deprecated-2 "Direct link to Deprecated")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`attachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#attachresource)
+Use resource.transferOwnershipTo(this).
+
+#### Inherited from[​](#inherited-from-10 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`attachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#attachresource)
 
 ***
 
@@ -552,7 +622,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > **clone**(`size?`): `Texture`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:314](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L314)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:324](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L324)
 
 Create a new texture with the same parameters and optionally a different size
 
@@ -568,7 +638,7 @@ Create a new texture with the same parameters and optionally a different size
 
 `number`
 
-#### Returns[​](#returns-11 "Direct link to Returns")
+#### Returns[​](#returns-14 "Direct link to Returns")
 
 `Texture`
 
@@ -584,23 +654,25 @@ Does not copy contents of the texture
 
 ### computeMemoryLayout()[​](#computememorylayout "Direct link to computeMemoryLayout()")
 
-> **computeMemoryLayout**(`options_?`): [`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
+> **computeMemoryLayout**(`options_?`, `result?`): [`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:353](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L353)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:364](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L364)
 
-Calculates the memory layout of the texture, required when reading and writing data.
+The optional result is caller-owned; internal scratch never escapes this call.
 
 #### Parameters[​](#parameters-9 "Direct link to Parameters")
 
 ##### options\_?[​](#options_-5 "Direct link to options_?")
 
-[`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md) = `{}`
+[`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md) = `emptyTextureReadOptions`
 
-#### Returns[​](#returns-12 "Direct link to Returns")
+##### result?[​](#result-5 "Direct link to result?")
 
 [`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
 
-the backend-aligned linear layout, in particular bytesPerRow which includes any required padding for buffer copy/read paths
+#### Returns[​](#returns-15 "Direct link to Returns")
+
+[`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
 
 ***
 
@@ -608,7 +680,7 @@ the backend-aligned linear layout, in particular bytesPerRow which includes any 
 
 > `abstract` **copyElementImage**(`options`): `object`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:330](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L330)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:340](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L340)
 
 Copy live DOM element pixels into the texture when supported by the current browser backend.
 
@@ -618,7 +690,7 @@ Copy live DOM element pixels into the texture when supported by the current brow
 
 [`CopyElementImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyElementImageOptions.md)
 
-#### Returns[​](#returns-13 "Direct link to Returns")
+#### Returns[​](#returns-16 "Direct link to Returns")
 
 `object`
 
@@ -636,7 +708,7 @@ Copy live DOM element pixels into the texture when supported by the current brow
 
 > `abstract` **copyExternalImage**(`options`): `object`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:327](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L327)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:337](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L337)
 
 Copy an image (e.g an ImageBitmap) into the texture
 
@@ -646,7 +718,7 @@ Copy an image (e.g an ImageBitmap) into the texture
 
 [`CopyExternalImageOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyExternalImageOptions.md)
 
-#### Returns[​](#returns-14 "Direct link to Returns")
+#### Returns[​](#returns-17 "Direct link to Returns")
 
 `object`
 
@@ -664,7 +736,7 @@ Copy an image (e.g an ImageBitmap) into the texture
 
 > **copyImageData**(`options`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:341](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L341)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:351](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L351)
 
 Copy raw image data (bytes) into the texture.
 
@@ -674,7 +746,7 @@ Copy raw image data (bytes) into the texture.
 
 [`CopyImageDataOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/CopyImageDataOptions.md)
 
-#### Returns[​](#returns-15 "Direct link to Returns")
+#### Returns[​](#returns-18 "Direct link to Returns")
 
 `void`
 
@@ -694,7 +766,7 @@ Tightly packed CPU uploads can omit `bytesPerRow` and `rowsPerImage`.
 
 If the CPU source rows are padded, pass explicit `bytesPerRow` and `rowsPerImage`.
 
-#### Deprecated[​](#deprecated-2 "Direct link to Deprecated")
+#### Deprecated[​](#deprecated-3 "Direct link to Deprecated")
 
 Use writeData()
 
@@ -704,7 +776,7 @@ Use writeData()
 
 > `abstract` **createView**(`props`): [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md)
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:324](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L324)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:334](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L334)
 
 Create a texture view for this texture
 
@@ -714,7 +786,7 @@ Create a texture view for this texture
 
 [`TextureViewProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureViewProps.md)
 
-#### Returns[​](#returns-16 "Direct link to Returns")
+#### Returns[​](#returns-19 "Direct link to Returns")
 
 [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md)
 
@@ -724,19 +796,19 @@ Create a texture view for this texture
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:84](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L84)
 
-#### Returns[​](#returns-17 "Direct link to Returns")
+#### Returns[​](#returns-20 "Direct link to Returns")
 
 `this`
 
-#### Deprecated[​](#deprecated-3 "Direct link to Deprecated")
+#### Deprecated[​](#deprecated-4 "Direct link to Deprecated")
 
-Use destroy()
+Use destroy().
 
-#### Inherited from[​](#inherited-from-9 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-11 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`delete`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#delete)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`delete`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#delete)
 
 ***
 
@@ -744,83 +816,89 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L49)
 
-destroy can be called on any resource to release it before it is garbage collected.
-
-#### Returns[​](#returns-18 "Direct link to Returns")
-
-`void`
-
-#### Inherited from[​](#inherited-from-10 "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroy`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroy)
-
-***
-
-### destroyAttachedResource()[​](#destroyattachedresource "Direct link to destroyAttachedResource()")
-
-> **destroyAttachedResource**(`resource`): `void`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
-
-Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
-
-#### Parameters[​](#parameters-14 "Direct link to Parameters")
-
-##### resource[​](#resource-1 "Direct link to resource")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
-
-#### Returns[​](#returns-19 "Direct link to Returns")
-
-`void`
-
-#### Inherited from[​](#inherited-from-11 "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroyAttachedResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroyattachedresource)
-
-***
-
-### destroyAttachedResources()[​](#destroyattachedresources "Direct link to destroyAttachedResources()")
-
-> **destroyAttachedResources**(): `void`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
-
-Destroy all owned resources. Make sure the resources are no longer needed before calling.
-
-#### Returns[​](#returns-20 "Direct link to Returns")
-
-`void`
-
-#### Inherited from[​](#inherited-from-12 "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroyAttachedResources`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroyattachedresources)
-
-***
-
-### detachResource()[​](#detachresource "Direct link to detachResource()")
-
-> **detachResource**(`resource`): `void`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
-
-Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
-
-#### Parameters[​](#parameters-15 "Direct link to Parameters")
-
-##### resource[​](#resource-2 "Direct link to resource")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+Destroy children before this resource. Subclasses implement hooks instead of overriding.
 
 #### Returns[​](#returns-21 "Direct link to Returns")
 
 `void`
 
+#### Inherited from[​](#inherited-from-12 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroy`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroy)
+
+***
+
+### ~~destroyAttachedResource()~~[​](#destroyattachedresource "Direct link to destroyattachedresource")
+
+> **destroyAttachedResource**(`resource`): `void`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L102)
+
+#### Parameters[​](#parameters-14 "Direct link to Parameters")
+
+##### resource[​](#resource-1 "Direct link to resource")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)
+
+#### Returns[​](#returns-22 "Direct link to Returns")
+
+`void`
+
+#### Deprecated[​](#deprecated-5 "Direct link to Deprecated")
+
+Check resource.owner and call resource.destroy().
+
 #### Inherited from[​](#inherited-from-13 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`detachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#detachresource)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroyAttachedResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroyattachedresource)
+
+***
+
+### ~~destroyAttachedResources()~~[​](#destroyattachedresources "Direct link to destroyattachedresources")
+
+> **destroyAttachedResources**(): `void`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L109)
+
+#### Returns[​](#returns-23 "Direct link to Returns")
+
+`void`
+
+#### Deprecated[​](#deprecated-6 "Direct link to Deprecated")
+
+Destroy individually owned resources, or destroy the owner.
+
+#### Inherited from[​](#inherited-from-14 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroyAttachedResources`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroyattachedresources)
+
+***
+
+### ~~detachResource()~~[​](#detachresource "Direct link to detachresource")
+
+> **detachResource**(`resource`): `void`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L95)
+
+#### Parameters[​](#parameters-15 "Direct link to Parameters")
+
+##### resource[​](#resource-2 "Direct link to resource")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)
+
+#### Returns[​](#returns-24 "Direct link to Returns")
+
+`void`
+
+#### Deprecated[​](#deprecated-7 "Direct link to Deprecated")
+
+Use resource.transferOwnershipTo(null). Only detaches a child owned by this.
+
+#### Inherited from[​](#inherited-from-15 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`detachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#detachresource)
 
 ***
 
@@ -828,11 +906,11 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > **generateMipmapsWebGL**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:437](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L437)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:454](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L454)
 
 Generate mipmaps (WebGL only)
 
-#### Returns[​](#returns-22 "Direct link to Returns")
+#### Returns[​](#returns-25 "Direct link to Returns")
 
 `void`
 
@@ -842,19 +920,19 @@ Generate mipmaps (WebGL only)
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L174)
 
 Combines a map of user props and default props, only including props from defaultProps
 
-#### Returns[​](#returns-23 "Direct link to Returns")
+#### Returns[​](#returns-26 "Direct link to Returns")
 
 `object`
 
 returns a map of overridden default props
 
-#### Inherited from[​](#inherited-from-14 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-16 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`getProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#getprops)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`getProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#getprops)
 
 ***
 
@@ -862,7 +940,7 @@ returns a map of overridden default props
 
 > **readBuffer**(`options?`, `buffer?`): [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:380](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L380)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:397](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L397)
 
 Read the contents of a texture into a GPU Buffer.
 
@@ -876,7 +954,7 @@ Read the contents of a texture into a GPU Buffer.
 
 [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
-#### Returns[​](#returns-24 "Direct link to Returns")
+#### Returns[​](#returns-27 "Direct link to Returns")
 
 [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
 
@@ -912,7 +990,7 @@ On WebGL, luma.gl emulates the same logical readback behavior.
 
 > **readDataAsync**(`options?`): `Promise`<`ArrayBuffer`>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:392](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L392)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:409](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L409)
 
 Reads data from a texture into an ArrayBuffer.
 
@@ -922,7 +1000,7 @@ Reads data from a texture into an ArrayBuffer.
 
 [`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)
 
-#### Returns[​](#returns-25 "Direct link to Returns")
+#### Returns[​](#returns-28 "Direct link to Returns")
 
 `Promise`<`ArrayBuffer`>
 
@@ -936,7 +1014,7 @@ The memory layout of the texture data is determined by the texture format and di
 
 The application can call Texture.computeMemoryLayout() to compute the layout.
 
-#### Deprecated[​](#deprecated-4 "Direct link to Deprecated")
+#### Deprecated[​](#deprecated-8 "Direct link to Deprecated")
 
 Use Texture.readBuffer() with an explicit destination buffer, or DynamicTexture.readAsync() for convenience readback.
 
@@ -946,7 +1024,7 @@ Use Texture.readBuffer() with an explicit destination buffer, or DynamicTexture.
 
 > **readDataSyncWebGL**(`options?`): `ArrayBuffer` | `ArrayBufferView`<`ArrayBufferLike`>
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:432](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L432)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:449](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L449)
 
 WebGL can read data synchronously.
 
@@ -956,7 +1034,7 @@ WebGL can read data synchronously.
 
 [`TextureReadOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureReadOptions.md)
 
-#### Returns[​](#returns-26 "Direct link to Returns")
+#### Returns[​](#returns-29 "Direct link to Returns")
 
 `ArrayBuffer` | `ArrayBufferView`<`ArrayBufferLike`>
 
@@ -970,7 +1048,7 @@ While it is convenient, the performance penalty is very significant
 
 > **setSampler**(`sampler`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:319](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L319)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:329](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L329)
 
 Set sampler props associated with this texture
 
@@ -980,7 +1058,7 @@ Set sampler props associated with this texture
 
 [`SamplerProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SamplerProps.md) | [`Sampler`](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md)
 
-#### Returns[​](#returns-27 "Direct link to Returns")
+#### Returns[​](#returns-30 "Direct link to Returns")
 
 `void`
 
@@ -990,17 +1068,17 @@ Set sampler props associated with this texture
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:116](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L116)
 
 Compact serialization for assertion diffs and structured debug logs.
 
-#### Returns[​](#returns-28 "Direct link to Returns")
+#### Returns[​](#returns-31 "Direct link to Returns")
 
 `string`
 
-#### Inherited from[​](#inherited-from-15 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-17 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`toJSON`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#tojson)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`toJSON`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#tojson)
 
 ***
 
@@ -1008,15 +1086,41 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:263](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L263)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:273](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L273)
 
-#### Returns[​](#returns-29 "Direct link to Returns")
+Returns a string representation of an object.
+
+#### Returns[​](#returns-32 "Direct link to Returns")
 
 `string`
 
 #### Overrides[​](#overrides-3 "Direct link to Overrides")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`toString`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#tostring)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`toString`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#tostring)
+
+***
+
+### transferOwnershipTo()[​](#transferownershipto "Direct link to transferOwnershipTo()")
+
+> **transferOwnershipTo**(`owner`): `this`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L31)
+
+Transfer exclusive ownership, or return lifetime responsibility to the caller with null.
+
+#### Parameters[​](#parameters-20 "Direct link to Parameters")
+
+##### owner[​](#owner-1 "Direct link to owner")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md) | `null`
+
+#### Returns[​](#returns-33 "Direct link to Returns")
+
+`this`
+
+#### Inherited from[​](#inherited-from-18 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`transferOwnershipTo`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#transferownershipto)
 
 ***
 
@@ -1024,11 +1128,11 @@ Defined in: [modules/core/src/api/adapter/resources/texture.ts:263](https://gith
 
 > **writeBuffer**(`buffer`, `options?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:406](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L406)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:423](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L423)
 
 Writes a GPU Buffer into a texture.
 
-#### Parameters[​](#parameters-20 "Direct link to Parameters")
+#### Parameters[​](#parameters-21 "Direct link to Parameters")
 
 ##### buffer[​](#buffer-1 "Direct link to buffer")
 
@@ -1042,7 +1146,7 @@ Source GPU buffer.
 
 Destination subresource, extent, and source layout options.
 
-#### Returns[​](#returns-30 "Direct link to Returns")
+#### Returns[​](#returns-34 "Direct link to Returns")
 
 `void`
 
@@ -1068,11 +1172,11 @@ On WebGL, luma.gl emulates the same destination and layout semantics.
 
 > **writeData**(`data`, `options?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/texture.ts:419](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L419)
+Defined in: [modules/core/src/api/adapter/resources/texture.ts:436](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture.ts#L436)
 
 Writes an array buffer into a texture.
 
-#### Parameters[​](#parameters-21 "Direct link to Parameters")
+#### Parameters[​](#parameters-22 "Direct link to Parameters")
 
 ##### data[​](#data-1 "Direct link to data")
 
@@ -1086,7 +1190,7 @@ Source texel data.
 
 Destination subresource, extent, and source layout options.
 
-#### Returns[​](#returns-31 "Direct link to Returns")
+#### Returns[​](#returns-35 "Direct link to Returns")
 
 `void`
 

@@ -72,7 +72,7 @@ device.submit();
 
 ### `CommandEncoderProps`[​](#commandencoderprops "Direct link to commandencoderprops")
 
-`CommandEncoderProps` extends [`ResourceProps`](https://luma.gl/next/docs/api-reference/core/resources/resource.md#resourceprops).
+`CommandEncoderProps` extends [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/core/resources/device-resource.md#deviceresourceprops).
 
 | Property                 | Type                      | Default         | Description                                                              |
 | ------------------------ | ------------------------- | --------------- | ------------------------------------------------------------------------ |

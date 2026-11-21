@@ -110,3 +110,7 @@ Choose [GTAO](https://luma.gl/next/docs/api-reference/shaders/shader-passes/gtao
 * [GTAO](https://luma.gl/next/docs/api-reference/shaders/shader-passes/gtao.md) adds horizon-based visibility, temporal history, and ambient-only composition.
 * [Depth-Aware Blur](https://luma.gl/next/docs/api-reference/shaders/shader-passes/depth-aware-blur.md) explains the bilateral denoising stages.
 * [Outlines](https://luma.gl/next/docs/api-reference/shaders/shader-passes/outlines.md) can consume the same depth and normal attachments.
+
+## Shared visibility and PBR workflow[​](#shared-visibility-and-pbr-workflow "Direct link to Shared visibility and PBR workflow")
+
+For a visibility texture rather than whole-color postprocessing, use [`AmbientOcclusionPass`](https://luma.gl/next/docs/api-reference/engine/lighting/ambient-occlusion.md). It reuses this evaluator with depth-aware filtering and no temporal history. The [lighting effects guide](https://luma.gl/next/docs/api-guide/engine/lighting-effects.md) explains none/cheap/good choices, input conventions, and composition with direct shadows and environment lighting.

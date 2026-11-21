@@ -1,6 +1,6 @@
 # Type Alias: RenderBundleEncoderProps
 
-> **RenderBundleEncoderProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **RenderBundleEncoderProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/render-bundle.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-bundle.ts#L15)
 

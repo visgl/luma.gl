@@ -98,7 +98,7 @@ Defined in: [modules/engine/src/animation-loop/animation-loop.ts:90](https://git
 
 ### canvas[​](#canvas "Direct link to canvas")
 
-> **canvas**: `OffscreenCanvas` | `HTMLCanvasElement` | `null` = `null`
+> **canvas**: `HTMLCanvasElement` | `OffscreenCanvas` | `null` = `null`
 
 Defined in: [modules/engine/src/animation-loop/animation-loop.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation-loop/animation-loop.ts#L87)
 

@@ -65,7 +65,7 @@ Use each world's control methods instead of writing buffers when possible. Direc
 
 ## Examples and qualification[​](#examples-and-qualification "Direct link to Examples and qualification")
 
-The Sphere World, Pool, Rigid Body Lab and Space Salvage examples use procedural scenes. Space Salvage exercises public collision events and queries for towing, docking and impact feedback. The glTF Physics example tests authored semantics through the separate `@luma.gl/engine/gltf-physics` adapter. Its supported draft profile and render integration limitations are documented in the [adapter reference](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/gltf/physics/README.md).
+Sphere World, Pool and Rigid Body Lab use procedural scenes. The glTF Physics example tests authored semantics through the separate `@luma.gl/engine/gltf-physics` adapter. Its supported draft profile and render integration limitations are documented in the [adapter reference](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/gltf/physics/README.md).
 
 [Qualification tooling](https://github.com/visgl/luma.gl/blob/master/scripts/physics/README.md) separates schema/import evidence, numerical behavior, capacity and performance. A successful import, finite poses or zero overflow alone is not proof of accuracy.
 
@@ -108,6 +108,28 @@ All external mutations must use `advance(commands)`. Do not encode `runner.graph
 Ticks with commands save pre-command state into a reusable GPU checkpoint for atomic rejection. These copies stay on the GPU; there is no full-state readback on commanded ticks. Checkpoint allocations count against the per-world memory budget. The runner reads compact diagnostics each tick and replays from initial conditions, not from a portable checkpoint. It is intended for bounded sessions, tools and qualification, not a zero-readback high-throughput simulation loop. Event rings retain their existing explicit overflow semantics; this runner does not guarantee delivery of every event across world replacement. Consumer event cursors must not be carried across replacements. Numerical/geometry failures and CCD impact-budget exhaustion are rejected instead of being disguised as capacity problems.
 
 The **Physics Stress Lab** exposes recovery counters, buffer capacities, completion p50/p95 and JSON reports. Independent GPU qualification tests cover rotated-box slab intersections, sphere ray intersections across scales, convex/capsule/cylinder/triangle surfaces, elastic momentum/energy, ballistic timestep convergence and analytic sphere/static-wall rebound positions. These qualify named cases; general mesh containment, rotational CCD, deep stacks and cross-device performance still require separate evidence.
+
+### Difficult contact patches[​](#difficult-contact-patches "Direct link to Difficult contact patches")
+
+With `solver: 'parallel'`, `parallelContactSolver: 'block'` opts into two local Gauss–Seidel sweeps over each manifold before the global velocity gather. The solver relaxes the whole patch once, rather than each contact increment. This can achieve a similar contact error with fewer global iterations, at the cost of more arithmetic and private state per invocation. `parallelContactSolver: 'scalar'` remains the default. Both modes retain compact queues, warm starts, island sleeping and exclusive output ownership. There is no additional CPU synchronization or pose readback.
+
+```
+const world = new GPURigidBodyWorld({
+
+  bodies,
+
+  solver: 'parallel',
+
+  parallelContactSolver: 'block',
+
+  iterations: 24,
+
+  timeStep: 1 / 240
+
+});
+```
+
+Compare error and cost for your scene before reducing iterations. More local sweeps are not equivalent to more substeps: collision geometry is still refreshed once per substep. See the [G8 comparison](https://github.com/visgl/luma.gl/blob/master/dev-docs/benchmarks/physics-g8.md) for the bounded workload, measurements and remaining performance limits.
 
 ### Awake solver work[​](#awake-solver-work "Direct link to Awake solver work")
 
@@ -207,18 +229,291 @@ const selectedBody = ensemble.getBodyIndex(42, 0);
 
 The ensemble forces the parallel solver, hierarchical broad phase and rollback failure policy. `maximumPairs` is a shared power-of-two capacity: exhaustion rejects the entire ensemble step, not just one instance. Total bodies and colliders must each fit within 65,535 and adapter buffer limits. Joints, authored triggers and CCD are currently rejected. Queries inspect every instance; map returned global body indices back to instance ranges. Eviction and per-instance streaming are not provided. Whole-world checkpoint/capture APIs remain available on `ensemble.world`.
 
+A template can include either `vehicle` or `vehicles`. Give each chassis and terrain collider an index within the template. The ensemble maps them to the matching body and colliders of each instance, including additional terrain tiles. Use instance-local controls and the existing GPU wheel-pose ranges to draw each vehicle.
+
+```
+ensemble.setVehicleControls(42, 0, 0.7, 0.1, 0); // Instance, vehicle, throttle, steering, brake
+
+const vehicle = ensemble.getVehicleIndex(42, 0);
+
+const wheelPoses = ensemble.world.getVehicleWheelPoses(vehicle);
+```
+
+Vehicle input schedules only the selected enabled instance. Inputs written while paused are applied on resume. A shared rejected step restores wheel telemetry and matrices, together with all participating bodies and their contact state. Standalone rigid-body worlds with `failurePolicy: 'rollback'` also retain vehicle state on rejected steps.
+
 `setActive(instance, false)` pauses an instance without changing its poses, velocities or cached contacts; `setActive(instance, true)` resumes it. A resumed sleeping instance remains asleep until `wake(instance)` or a world control wakes it. Kinematic instances remain scheduled even when stationary, so new targets can take effect. Apply controls between submissions: do not change activation or reset after encoding work but before submitting it.
 
-`await reset(instance)` restores its creation-time body state, materials, collider transforms and pose metadata, clears its contact cache and counters, and preserves its enabled flag. Other instances are unchanged. Reset respects the current origin after rebasing. The reset excludes shared simulation diagnostics: after a latched shared failure, reconstruct the ensemble instead. While reset is pending, ensemble encoding, control and destruction are rejected. Do not bypass this guard through the borrowed world. Reset invalidation scans shared contact capacity.
+`await reset(instance)` restores its creation-time body state, materials, collider transforms and pose metadata and vehicle controls and wheel state, clears its contact cache and counters, and preserves its enabled flag. Other instances are unchanged. Reset respects the current origin after rebasing. The reset excludes shared simulation diagnostics: after a latched shared failure, reconstruct the ensemble instead. While reset is pending, ensemble encoding, control and destruction are rejected. Do not bypass this guard through the borrowed world. Reset invalidation scans shared contact capacity.
 
 `await readStatus()` reports the most recently scheduled active instance/body count, plus each instance's enabled/active flags, accepted/rejected participation counters and shared-failure flag. Counters saturate at uint32 maximum and reset per instance. An active flag describes participation in the last step, not whether its bodies ended that step asleep. A shared failure is reported for all instances; this API does not identify which instance caused shared capacity exhaustion.
 
+`readWorkStatistics().vehicleSnapshotBytes` reports the vehicle rows copied for active instances during the last step. No wheel pose or telemetry readback is required for scheduling, rollback, or reset.
+
 One template-sized GPU reset image is retained automatically, regardless of instance count. `checkpointBytes` reports this image and its reset uniform. `residentBytes` includes it, world-owned buffers and graph scratch, excluding driver allocations and compilation peaks. Explicit checkpoints made through the borrowed world add allocations outside these statistics. Repeated references to the same cooked mesh object share packed vertex, triangle and BVH data within an ensemble; distinct mesh objects are not content-deduplicated. Shared metadata storage remains owned by the world.
 
-A GPU queue compacts enabled instances containing awake dynamic bodies or kinematics. Indirect integration, bounds generation and pose advancement visit only queued ranges. Broad-phase insertion and discovery use active collider hash buckets rather than sorting the whole population; collision domain and exact cell tests preserve isolation. Bucket traversal is separately bounded at 32 times `maximumCandidateTestsPerCollider`; exhausting either budget rejects the shared step and records an incomplete query. Sleeping/paused contacts retain their cache slots. Scheduling retains an awake flag per instance and consumes explicit wake notifications. Body-level sleep checks run only for participating instances. Instance flags and status still require an O(instance count) scan; controls on the borrowed world request reclassification of enabled instances. Per-instance linked contact lists prepare and compact only scheduled caches, using instance-local age counters so pauses do not expire contacts. Persistent hash storage clears only previously touched buckets after its initial full initialization.
+A GPU queue compacts enabled instances containing awake dynamic bodies or kinematics. Indirect integration, suspension, bounds generation and pose advancement visit only queued ranges. Broad-phase insertion and discovery use active collider hash buckets rather than sorting the whole population; collision domain and exact cell tests preserve isolation. Bucket traversal is separately bounded at 32 times `maximumCandidateTestsPerCollider`; exhausting either budget rejects the shared step and records an incomplete query. Sleeping/paused contacts retain their cache slots. Scheduling retains an awake flag per instance and consumes explicit wake notifications. Body-level sleep checks run only for participating instances. Instance flags and status still require an O(instance count) scan; controls on the borrowed world request reclassification of enabled instances. Per-instance linked contact lists prepare and compact only scheduled caches, using instance-local age counters so pauses do not expire contacts. Persistent hash storage clears only previously touched buckets after its initial full initialization.
 
 Rollback snapshots active body vectors and journals each changed manifold, cache key and link once. It saves only scheduled instance heads/epochs and a small header. It does not copy every reserved contact slot or kinematic target on each step. The whole ensemble still shares one rollback boundary; this optimization does **not** provide per-instance failure recovery. Journal storage is reserved at capacity, so reduced transfer volume does not imply proportional reduction of resident memory.
 
 `await ensemble.readWorkStatistics()` explicitly reads last-step counters outside encoding: `activeInstances`, `activeBodies`, `touchedBuckets`, `visitedContacts`, `claimedContacts`, `journaledContacts`, `bodySnapshotBytes`, `contactSnapshotBytes` and `allocatorSnapshotBytes`. Snapshot bytes count payload writes, not total memory-bus traffic or reads. Capacity fields report resident instances/bodies and contact slots. On rejection these counters describe attempted work. With multiple substeps they refer only to the last substep.
 
 The default compact solver uses scheduled body ranges and live-contact lists. The optional `compactContacts: false` fallback, contact-event scans, pose publication, selective reset invalidation, and explicit capture/readback can still scale with capacity. Per-instance list traversal is serial within each participating instance; very large individual worlds need separate qualification. The Physics Batch Lab and `scripts/physics/batch/run.mjs --active-fractions 0.01,0.1,0.5,1` measure this distinction with actual rounded active counts and active-body throughput. Sparse, dense, mostly sleeping and periodic wake-storm scenarios expose different scheduling costs. A separate instrumented step reports CPU encoding and available GPU timestamp costs by stage; it is excluded from throughput samples. Missing GPU timestamps are reported as unavailable. Destroy the ensemble after submitting its encoded work; do not independently destroy its borrowed world or graph. Destroying the ensemble releases its world, graph and any world-owned checkpoints.
+
+## Terrain from math.gl geometry[​](#terrain-from-mathgl-geometry "Direct link to Terrain from math.gl geometry")
+
+Use the same indexed triangle surface for rendering and collision. If the source is a math.gl height field, create a `HeightFieldGeometry` with one origin per tile. Its triangles preserve sample registration, cell diagonals, and gaps for missing samples. The physics adapter accepts the existing `@math.gl/geometry` contract, so luma.gl does not need to load or depend on `@math.gl/terrain` to cook it. The snippet uses the math.gl terrain source API. Applications using released packages can pass any compatible CPU triangle geometry to the same cooker.
+
+```
+import {HeightFieldGeometry} from '@math.gl/terrain/geometry';
+
+import {makeStaticTriangleMeshGeometry} from '@luma.gl/graph/gpu-physics';
+
+
+
+// field is a HeightField in a Z-up, local metric coordinate system.
+
+const surface = new HeightFieldGeometry(field, {origin: tileOrigin});
+
+const terrainBody = {
+
+  mass: 0,
+
+  position: surface.origin, // Relative to the physics world's current origin.
+
+  shape: {
+
+    type: 'triangle-mesh' as const,
+
+    geometry: makeStaticTriangleMeshGeometry(surface)
+
+  }
+
+};
+```
+
+Use the physics body's local frame when placing the rendered mesh. A geospatial application must first choose a local metric frame and common elevation reference. Apply the same rebasing to both paths so float32 GPU positions stay small. Do not pass longitude and latitude as distances.
+
+The static cooker takes XYZ `POSITION` data and authored triangle-list indices, retains only referenced vertices, and omits closed-solid mass properties. Skip fully empty tiles. Exclude render skirts from collision geometry unless they represent real walls. Use `makeTriangleMeshGeometry(positions, indices)` for closed dynamic meshes that need mass properties. For an existing scenegraph, `PhysicsController.addBody` also accepts the geometry with `motion: 'static'` and `geometryMode: 'triangle-mesh'`.
+
+Vehicle terrain candidates are supplied explicitly. Neighbor selection, mixed-resolution seams, and source-to-metric conversion remain with the application.
+
+### Native height fields and tile residency[​](#native-height-fields-and-tile-residency "Direct link to Native height fields and tile residency")
+
+Use `{type: 'height-field', field}` on a static body to store scalar heights and a small cell hierarchy instead of uploading a cooked triangle mesh. The GPU reconstructs the selected cell triangles for contacts, raycasts, sphere casts and suspension. Missing samples remove the triangles that use them. Affine XY steps, the cell diagonal, and an optional first-sample offset are retained in the collider-local Z-up frame. `makeRigidBodyHeightField(heightField, tileAnchor)` adapts the structural math.gl API and subtracts the anchor before converting vertices to float32. Choose a local metric frame with a common vertical datum before calling it.
+
+```
+import {GPURigidBodyWorld, makeRigidBodyHeightField} from '@luma.gl/graph/gpu-physics';
+
+
+
+const world = new GPURigidBodyWorld({
+
+  bodies: [
+
+    {
+
+      mass: 0,
+
+      position: [0, 0, 0],
+
+      shape: {type: 'height-field', field: {width: 65, height: 65}}
+
+    }
+
+  ]
+
+});
+
+// Attach the world to a GPUCommandGraph and compile before loading a tile.
+
+world.setHeightFieldTiles([
+
+  {
+
+    collider: 0,
+
+    field: makeRigidBodyHeightField(heightField, tileAnchor),
+
+    position: tileAnchor
+
+  }
+
+]);
+
+
+
+// Evict the tile without destroying the collider or its reserved storage.
+
+world.setHeightFieldTiles([{collider: 0, field: null}]);
+```
+
+The example uses a zero-origin static body, so the collider position and tile anchor use the same coordinates. In general, pass the tile's placement in the **body-local** frame. If you rebase the simulation, the body and collider shift together. A slot keeps its width, height, collider ID, and GPU allocation for its lifetime. Submit encoded commands before changing residency. The world validates every edit before uploading any of the batch, then invalidates cached contacts and wakes the world once. The application owns fetching, slot assignment, and neighbor loading. GPU checkpoints restore the currently loaded tiles as well as body state.
+
+There is a cap of one million samples per tile, subject to adapter storage limits. Native height fields work with sphere/static CCD and through the triangle contact path. Moving-convex CCD continues to exclude terrain shapes. Ensembles can share immutable height fields, while independently resident worlds support streaming. Off-road Buggy streams collision tiles ahead of the chassis. Append `?terrain=mesh` to use the same rendered course with the cooked-mesh reference.
+
+### Provider-backed terrain windows[​](#provider-backed-terrain-windows "Direct link to Provider-backed terrain windows")
+
+Use `GPURigidBodyTerrainStream` when the app has a tile provider and a set of fixed height-field slots. A window describes the desired collider IDs, versioned tile keys and neighboring edges. The provider can decode network assets, adapt a math.gl height field, or serve data from the application's tile cache. The stream owns concurrency and cancellation. The application selects tiles and LOD, and supplies slot placement in one shared local metric frame.
+
+```
+import {
+
+  GPURigidBodyTerrainStream,
+
+  makeRigidBodyTerrainFetchProvider,
+
+  makeRigidBodyHeightField
+
+} from '@luma.gl/graph/gpu-physics';
+
+
+
+const provider = makeRigidBodyTerrainFetchProvider({
+
+  getTileUrl: key => `/terrain/${encodeURIComponent(key)}.bin`,
+
+  async decode(response, key) {
+
+    const {heightField, tileAnchor} = await decodeTerrainTile(await response.arrayBuffer(), key);
+
+    return {
+
+      field: makeRigidBodyHeightField(heightField, tileAnchor),
+
+      position: tileAnchor
+
+    };
+
+  }
+
+});
+
+const stream = new GPURigidBodyTerrainStream(world, {provider, maximumConcurrentLoads: 4});
+
+
+
+// Slots 0 and 1 exist in the compiled world and match their tiles' sample dimensions.
+
+await stream.prepare({
+
+  tiles: [{collider: 0, key: 'west@3'}, {collider: 1, key: 'east@8'}],
+
+  seams: [{first: 0, firstEdge: 'last-column', second: 1, secondEdge: 'first-column'}]
+
+});
+
+
+
+// In the frame loop, between submissions and after pending queries:
+
+stream.apply();
+```
+
+The renderer can read the stitched CPU tile with `getTile(collider)`. Keep stream slots in the same body-local frame and reserve each slot at its expected resolution. For height fields in a global coordinate system, subtract the simulation origin from tile placement before publishing. Use one vertical datum and nearby tile anchors.
+
+A newer `prepare` cancels the previous request. It resolves to `false` for a canceled window and rejects on a provider or stitch error. The current window keeps supporting the simulation until `apply` publishes the replacement as a single slot-edit batch. Duplicated keys share a request across overlapping windows. Raw tiles are reused while their keys remain active. Change the key when the source content changes. Call `clear()` between submissions to cancel pending work and evict stream-owned slots. Use exclusive ownership of those slots, including when restoring checkpoints.
+
+Declared seams must have collinear boundaries, nested sample spacing, and a shared span that begins and ends at coarse sample knots. One coarse edge can meet multiple fine tiles. The fine boundary follows the coarse edge's piecewise-linear profile. The stitcher resolves coincident corner heights before interpolating intermediate samples, keeps missing-data gaps, and recomputes from raw samples when neighbors change. A slot with no declared seam uses its provider samples directly. Matching boundary heights permits a slope change across the seam.
+
+Open Off-road Buggy with `?terrain=mixed` for adjacent 17×17 and 33×33 grids. The bundled provider serves the same stitched samples used to render the course.
+
+### Automatic terrain LOD and residency[​](#automatic-terrain-lod-and-residency "Direct link to Automatic terrain LOD and residency")
+
+Use `GPURigidBodyTerrainSelector` when a provider has several resolutions of the same terrain. Give it the dataset's local metric XY bounds, the highest available quadtree level, and the collider indices reserved for streaming. The selector chooses the detail around a focus, keeps neighboring levels within one LOD, and provides the edge matches needed by the stream.
+
+```
+const selector = new GPURigidBodyTerrainSelector({
+
+  bounds: [-512, -512, 512, 512],
+
+  slots: terrainColliderIndices,
+
+  maximumLevel: 6,
+
+  getTileKey: ({level, column, row}) => catalog.get(`${level}/${column}/${row}`)
+
+});
+
+
+
+// Request during movement. The previous window stays active while tiles load.
+
+const window = selector.select({position: [vehicleEast, vehicleNorth], radius: 80});
+
+await terrainStream.prepare(window);
+
+
+
+// Publish between simulation submissions.
+
+terrainStream.apply();
+```
+
+* `radius` limits collision residency around the focus. Leave it out to keep coarse coverage to the root boundary. Include enough distance for the vehicle to travel while a new window loads.
+* `refinementDistance` controls the switch distance in tile widths. The default hysteresis keeps recent detail briefly as the focus moves and preserves collider assignments for retained addresses.
+* Return `undefined` for missing catalog entries. A missing child keeps its parent resident. A missing root yields an empty selection. Change a key when the corresponding provider content changes. Without a callback, the keys are `level/column/row`.
+* When the slot budget prevents a split, the selection retains coarser leaves and reports `slotLimitReached`. Use the same reserved slot list throughout the life of the selector.
+* Sample within `getRigidBodyTerrainTileBounds(bounds, address)` with columns and rows increasing along positive X and Y. Use a common grid with an even number of cells per axis (for example, 33×33 samples) so the automatically matched half-tile boundaries align. Fetch or generate the tiles in the same local metric frame as the physics focus.
+* Call `selector.reset()` when restoring a starting selection after a teleport or checkpoint reset. Coalesce identical requests before calling `prepare` each frame. Use the latest committed `getTile(collider)` when rendering the stitched collision surface.
+
+Open Off-road Buggy with `?terrain=auto` to see the active tiles and LODs change as the chassis moves. Its terrain panel reports the committed window.
+
+### Terrain streaming in fused ensembles[​](#terrain-streaming-in-fused-ensembles "Direct link to Terrain streaming in fused ensembles")
+
+Reserve vacant native height-field colliders in the template and list their template-local collider indices in `terrainSlots` when creating `GPUPhysicsEnsemble`. The ensemble allocates writable sample and hierarchy storage for each reserved slot in each instance at creation. Authored height fields outside that list can still share their immutable GPU data. All slots remain fixed in shape and grid dimensions, and their allocation counts toward `maximumResidentBytes`.
+
+```
+const ensemble = await GPUPhysicsEnsemble.create(device, {
+
+  template,
+
+  instances: 64,
+
+  terrainSlots: [0, 1, 2, 3],
+
+  maximumPairs: 8192,
+
+  maximumResidentBytes: 128 * 1024 ** 2
+
+});
+
+const terrain = ensemble.createTerrainStreamer({
+
+  provider,
+
+  maximumConcurrentLoads: 8
+
+});
+
+
+
+// Give each moving instance its own selector and focus.
+
+const selector = new GPURigidBodyTerrainSelector({
+
+  bounds: [-256, -256, 256, 256],
+
+  slots: ensemble.terrainSlots,
+
+  maximumLevel: 4
+
+});
+
+const instance = 6;
+
+await terrain.prepare(instance, selector.select({position: [40, 72], radius: 24}));
+
+
+
+// Submit previously encoded work before applying a prepared window.
+
+terrain.apply(instance);
+```
+
+Each instance stages and publishes independently. All windows share the same provider concurrency limit and reuse requests and source samples by versioned key while any instance needs them. Stitching happens per instance. A failed or superseded request leaves that instance's committed tiles in place. Use `getTile(instance, collider)` to read a detached stitched surface for rendering. Use `getColliderIndex(instance, collider)` to target that slot in a query against the fused world.
+
+A terrain edit discards cached warm-start impulses when a contact next sees the edited collider. Standalone worlds wake dynamic bodies overlapping the old or new tile bounds, so removing support wakes resting bodies. In a fused ensemble the edit wakes only the affected partitions, and disabled instances stay disabled until explicitly enabled. The shared step rollback and contact capacity still apply to the full ensemble.
+
+`ensemble.reset(instance)` restores that instance's body state and keeps its committed terrain slots, including their local placement. Call `terrain.clear(instance)` to evict them, or `terrain.cancel(instance)` to discard pending work while keeping the current tiles. Destroying the ensemble cancels its outstanding provider requests. For already decoded tiles, use `ensemble.setHeightFieldTiles(instance, edits)` as the direct publication path. Choose one publication path for the reserved slots. Whole-world checkpoints and debug captures operate on GPU state and require application coordination with any live streamer's residency.
+
+Select **Streamed terrain (fused)** in Physics Batch Lab to measure window publication and solver time separately while changing one instance at a time.

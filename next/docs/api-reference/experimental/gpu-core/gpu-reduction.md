@@ -118,3 +118,7 @@ Declares reduction levels and a final normalization pass. It does not compile, e
 An optional `uint32` mask selects rows by logical index: zero excludes a row and any nonzero value includes it. Input and mask must have equal logical lengths, but may use different chunk boundaries or mix a data view with a vector. Lowering creates borrowed slices at shared boundaries; it never concatenates or uploads input data. Empty chunks contribute no rows. The output is reinitialized on every encoding.
 
 See the [batch semantics contract](https://luma.gl/next/docs/api-guide/gpu/batch-semantics.md) for layout, alias, and empty-result rules.
+
+## Semantic graph operation[​](#semantic-graph-operation "Direct link to Semantic graph operation")
+
+Use [`GPUGraphReduction`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-graph.md#grouped-aggregation-and-scalar-reduction) for a scalar reduction over logical graph values. The compiler infers the result's format and one-row or two-row length and lowers to this primitive.

@@ -1,6 +1,6 @@
 # pbrMaterial
 
-[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
+[unlitMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md)[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
 
 Implements luma.gl's shared physically based microfacet surface shading. Materials can be configured directly or populated by importers such as the glTF converter.
 

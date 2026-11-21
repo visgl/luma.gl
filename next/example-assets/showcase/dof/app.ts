@@ -7,8 +7,7 @@
   Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
-import {makeGPUTableFromArrowTable} from '@luma.gl/graph/arrow';
-import {makeArrowMatrix4x4Vector} from '@luma.gl/graph/arrow';
+import {makeGPUTableFromArrowTable, makeArrowMatrix4x4Vector} from '@luma.gl/graph/arrow';
 import type {
   NumberArray,
   ShaderLayout,
@@ -16,17 +15,18 @@ import type {
   TextureFormatDepthStencil
 } from '@luma.gl/core';
 import {Framebuffer, Texture} from '@luma.gl/core';
+import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   CubeGeometry,
   loadImageBitmap,
-  ShaderInputs,
+  MaterialFactory,
+  ModelNode,
   ShaderPassRenderer
 } from '@luma.gl/engine';
-import {DynamicTexture} from '@luma.gl/core/dynamic';
 import {dofCompositeShaderPass} from '@luma.gl/engine/effects';
-import type {ShaderModule} from '@luma.gl/shaders';
+import {pbrMaterial, type LightingProps, type ShaderModule} from '@luma.gl/shaders';
 import {GPUTable, type GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
 import {Matrix4, radians} from '@math.gl/core';
@@ -52,6 +52,14 @@ const {SCENE_WGSL, SCENE_VERTEX_SHADER, SCENE_FRAGMENT_SHADER} = getShaderSource
 const NUM_ROWS = 5;
 const CUBES_PER_ROW = 20;
 const NUM_CUBES = NUM_ROWS * CUBES_PER_ROW;
+const CAMERA: [number, number, number] = [3, 1.5, 3];
+const lighting: LightingProps = {
+  useByteColors: false,
+  lights: [
+    {type: 'ambient', color: [1, 1, 1], intensity: 0.25},
+    {type: 'directional', color: [1, 1, 1], direction: [-1, -1, -0.35], intensity: 2}
+  ]
+};
 const NEAR = 0.1;
 const FAR = 30;
 const INSTANCE_MODEL_MATRIX_COMPONENT_COUNT = 16;
@@ -181,8 +189,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   readonly settingsPanel: ExampleSettingsPanelManager;
   readonly panels: ExamplePanelManager;
 
-  appShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
-
+  sceneNode: ModelNode;
   sceneModel: GPUTableModel;
   sceneTable: GPUTable;
   cubeTexture: DynamicTexture;
@@ -231,9 +238,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     );
 
+    const factory = new MaterialFactory(device, {modules: [pbrMaterial]});
+    const material = factory.createMaterial();
+    material.setProps({pbrMaterial: {metallicRoughnessValues: [0, 0.45]}});
     this.sceneModel = new GPUTableModel(device, {
       id: 'dof-scene',
-      shaderInputs: this.appShaderInputs,
+      modules: [appShaderModule, pbrMaterial],
+      material,
+      defines: {HAS_NORMALS: true, USE_LIGHTS: true},
       shaderLayout: sceneShaderLayout,
       gpuInputSchema: SCENE_GPU_INPUT_SCHEMA,
       table: this.sceneTable,
@@ -258,6 +270,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         cullMode: 'back'
       }
     });
+
+    this.sceneModel.shaderInputs.setProps({lighting, pbrProjection: {camera: CAMERA}});
+    this.sceneNode = new ModelNode({model: this.sceneModel, managedResources: [material]});
 
     this.sceneFramebuffer = device.createFramebuffer({
       width,
@@ -293,7 +308,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize(): void {
     this.settingsPanel.finalize();
     this.panels.finalize();
-    this.sceneModel.destroy();
+    this.sceneNode.destroy();
     this.sceneTable.destroy();
     this.cubeTexture.destroy();
     this.shaderPassRenderer.destroy();
@@ -315,9 +330,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       near: NEAR,
       far: FAR
     });
-    const viewMatrix = new Matrix4().lookAt({eye: [3, 1.5, 3], center: [0, 0, 0], up: [0, 1, 0]});
+    const viewMatrix = new Matrix4().lookAt({eye: CAMERA, center: [0, 0, 0], up: [0, 1, 0]});
 
-    this.appShaderInputs.setProps({
+    this.sceneModel.shaderInputs.setProps({
       app: {
         projectionMatrix,
         viewMatrix
@@ -332,7 +347,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearColor: [0, 0, 0, 1],
       clearDepth: 1
     });
-    this.sceneModel.draw(sceneRenderPass);
+    this.sceneNode.draw(sceneRenderPass);
     sceneRenderPass.end();
 
     const magnification =
@@ -413,7 +428,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   writeInstanceMatrices(): void {
-    this.sceneTable.gpuVectors.instanceModelMatrix?.data[0]?.buffer.write(
+    this.sceneTable.gpuVectors['instanceModelMatrix']?.data[0]?.buffer.write(
       this.instanceModelMatrices
     );
   }
@@ -557,6 +572,7 @@ function getShaderSources() {
     @location(0) normal: vec3<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) tint: vec3<f32>,
+    @location(3) worldPosition: vec3<f32>,
   };
 
   @vertex
@@ -579,6 +595,7 @@ function getShaderSources() {
     var outputs: VertexOutputs;
     outputs.position = app.projectionMatrix * app.viewMatrix * worldPosition;
     outputs.normal = worldNormal;
+    outputs.worldPosition = worldPosition.xyz;
     outputs.uv = inputs.texCoords;
     outputs.tint = mix(vec3<f32>(0.18, 0.55, 0.95), vec3<f32>(1.0, 0.56, 0.18), depthTint);
     return outputs;
@@ -588,8 +605,11 @@ function getShaderSources() {
   fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
     let textureColor = textureSample(cubeTexture, cubeTextureSampler, inputs.uv).rgb;
     let baseColor = mix(inputs.tint * 0.55, textureColor, 0.75);
-    let light = clamp(dot(normalize(inputs.normal), normalize(vec3<f32>(1.0, 1.0, 0.35))), 0.0, 1.0);
-    return vec4<f32>(baseColor * (light + 0.12), 1.0);
+    fragmentInputs.pbr_vPosition = inputs.worldPosition;
+    fragmentInputs.pbr_vNormal = inputs.normal;
+    fragmentInputs.pbr_vUV0 = inputs.uv;
+    fragmentInputs.pbr_vUV1 = vec2f(0.0);
+    return pbr_filterColor(vec4f(baseColor, 1.0));
   }
   `;
 
@@ -611,7 +631,6 @@ function getShaderSources() {
 
   uniform sampler2D cubeTexture;
 
-  out vec3 vNormal;
   out vec2 vUv;
   out vec3 vTint;
 
@@ -629,7 +648,10 @@ function getShaderSources() {
     vec3 worldNormal = normalize(mat3(modelMatrix) * normals);
     float depthTint = clamp((-modelMatrix[3].z) / 20.0, 0.0, 1.0);
 
-    vNormal = worldNormal;
+    pbr_vPosition = worldPosition.xyz;
+    pbr_vNormal = worldNormal;
+    pbr_vUV0 = texCoords;
+    pbr_vUV1 = vec2(0.0);
     vUv = texCoords;
     vTint = mix(vec3(0.18, 0.55, 0.95), vec3(1.0, 0.56, 0.18), depthTint);
   }
@@ -641,7 +663,6 @@ function getShaderSources() {
 
   uniform sampler2D cubeTexture;
 
-  in vec3 vNormal;
   in vec2 vUv;
   in vec3 vTint;
 
@@ -650,8 +671,7 @@ function getShaderSources() {
   void main(void) {
     vec3 textureColor = texture(cubeTexture, vec2(vUv.x, 1.0 - vUv.y)).rgb;
     vec3 baseColor = mix(vTint * 0.55, textureColor, 0.75);
-    float light = clamp(dot(normalize(vNormal), normalize(vec3(1.0, 1.0, 0.35))), 0.0, 1.0);
-    fragColor = vec4(baseColor * (light + 0.12), 1.0);
+    fragColor = pbr_filterColor(vec4(baseColor, 1.0));
   }
   `;
 

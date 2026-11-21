@@ -7,6 +7,7 @@ import {packSlangUniforms, type SlangTypeLayout} from '@luma.gl/slang';
 import {AnimationLoopTemplate, type AnimationProps, Model} from '@luma.gl/engine';
 import {GLSLShaderAssembler, WGSLShaderAssembler} from '@luma.gl/shaders';
 import {createSlangTranspiler} from './slang-transpiler';
+import {WGSL_EXAMPLES} from './wgsl-examples';
 import {createShaderViewer} from './shader-viewer';
 import {filmGrain} from './film-grain';
 import shaderSource from './shader.slang?raw';
@@ -17,7 +18,7 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
   static info = `    <h3>Slang: Orbital sculpture</h3>
     <p>Orbit an animated ray-marched sculpture, change its material and twist, or pause to inspect it.</p>
     <p>One Slang shader contains both render entry points and uses reusable Slang distance-field and material modules. The application supplies compiler registration and uniform packing on both backends.</p>
-    <p>Select <strong>Shaders</strong> to compare the main source and reusable modules with the generated WGSL or GLSL ES 300 code used by the active renderer. <strong>Native grain</strong> controls a direct call into the existing <code>valueNoise</code> shader module. Native code calls an explicitly exported Slang helper through a typed contract.</p>`;
+    <p>Select <strong>Shaders</strong> to compare the main source and reusable modules with the generated WGSL or GLSL ES 300 code used by the active renderer. Choose a <strong>WGSL</strong> source sample to run it through the lightweight WGSL-to-GLSL compiler in a WebGL 2 preview. <strong>Native grain</strong> controls a direct call into the existing <code>valueNoise</code> shader module. Native code calls an explicitly exported Slang helper through a typed contract.</p>`;
 
   readonly model: Model;
   readonly uniformBuffer: Buffer;
@@ -156,6 +157,7 @@ export default class SlangShadersExample extends AnimationLoopTemplate {
       infoBoxShaders || host,
       [
         {name: 'shader.slang', code: shaderSource},
+        ...WGSL_EXAMPLES,
         {name: 'geometry.slang', code: geometrySource},
         {name: 'palette.slang', code: paletteSource},
         {name: 'filmGrain · Slang declarations', code: filmGrain.declarations},

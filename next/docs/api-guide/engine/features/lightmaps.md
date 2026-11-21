@@ -1,6 +1,22 @@
 # Lightmaps
 
-Lightmaps add precomputed surface illumination to luma.gl materials. They are useful for static indirect lighting whose cost has already been paid by an offline bake. They use authored UVs and texture data rather than computing light transport at runtime.
+A lightmap stores the light arriving at a static surface. During rendering, the material samples the map with its lightmap UVs and uses the stored linear RGB irradiance to light the surface. Baking moves the cost of computing that light out of the rendering loop. The map can contain direct shadows, sky lighting, and color reflected from nearby surfaces.
+
+## Bake and reload a scene[​](#bake-and-reload-a-scene "Direct link to Bake and reload a scene")
+
+1. Open [Lightmap Baking](https://luma.gl/next/examples/api/lightmap-baking) on WebGPU. Select **Cornell Box (glTF) · Preview** for a quick bake or **High quality** for a 4096 × 4096 atlas. The high-quality preset bakes in tiles to limit GPU memory.
+2. Use **View UV charts** to inspect the atlas. Each chart has its own gutter so texture filtering does not draw light from neighboring surfaces.
+3. After the bake completes, choose **Export bake**. Open the resulting HDR `.lmb` in [Baked Cornell Box](https://luma.gl/next/examples/api/baked-cornell-box). The viewer checks the asset and atlas layout before uploading the texture.
+
+Bake static geometry and lighting that can stay fixed between frames. If you move an occluder or change a baked light, rebake the affected scene. Existing glTF assets can also carry authored lightmaps. The [glTF lightmap reference](https://luma.gl/next/docs/api-reference/gltf/gltf-lightmap.md) describes the draft extension and supported bindings.
+
+## Choose bake settings[​](#choose-bake-settings "Direct link to Choose bake settings")
+
+* **Atlas resolution and texel density** control spatial detail. Increase them when a shadow or narrow surface spans too few texels.
+* **Samples** control how well the bake averages indirect lighting. Increase the sample count when flat surfaces show speckle or unstable color bleed.
+* **Shadow map resolution** controls the detail available to the direct shadow bake. Linear filtering of a lightmap blends neighboring texels. It does not create the penumbra of a larger light source.
+
+For code, see [Progressive lightmap baking](https://luma.gl/next/docs/api-reference/engine/lighting/lightmap-baker.md) for atlas preparation, accumulation, resource ownership and HDR readback.
 
 ## Example[​](#example "Direct link to Example")
 
@@ -33,3 +49,23 @@ The authored Lightmapped Cornell Box demonstrates the existing material path. Th
 The lightmap supplies precomputed illumination; it does not create dynamic shadows or update when lights or geometry move. Keep the bake's lighting assumptions consistent with additional scene lights to avoid counting the same illumination twice.
 
 See [texture coordinates and transforms](https://luma.gl/next/docs/api-guide/engine/features/texture-coordinates.md), [environment lighting](https://luma.gl/next/docs/api-reference/anari/pbr-environment.md), and [glTF lightmap conversion](https://luma.gl/next/docs/api-reference/gltf/gltf-lightmap.md) for source mapping and support limits.
+
+## Indirect convergence measurements[​](#indirect-convergence-measurements "Direct link to Indirect convergence measurements")
+
+The opt-in WebGPU benchmark measures the indirect component on a 512 × 512 atlas at 12 texels per world unit. Each scene uses the same two point lights and a fixed sampling sequence. The table shows relative linear RGB RMS error against that scene's 384-sample result.
+
+| Scene              | 24 samples | 48 samples | 96 samples | 192 samples |
+| ------------------ | ---------- | ---------- | ---------- | ----------- |
+| Courtyard & Arcade | 27.3%      | 17.6%      | 10.2%      | 6.1%        |
+| Sculpture Gallery  | 13.5%      | 8.5%       | 4.6%       | 2.7%        |
+| Workshop           | 15.4%      | 10.0%      | 5.4%       | 3.1%        |
+
+The courtyard needed more samples for comparable error. A wider chart and normal gated 5 × 5 filter, tested at 96 samples, returned 8.8%, 4.9%, and 7.0% error respectively. It did not match the 192-sample baseline on any scene. The example uses its existing 3 × 3 chart filter and retains the original sample budgets. The measurements isolate indirect light and do not establish contact shadow or local color bleed parity for the wider filter.
+
+Run the benchmark from the repository root:
+
+```
+LUMA_TEST_BROWSER_BENCHMARKS=true yarn exec vitest run --project headless indirect-convergence --reporter=verbose --silent=false
+```
+
+Checkpoint times include GPU completion and readback. They are useful for comparisons on one device and do not predict full-scene bake time.

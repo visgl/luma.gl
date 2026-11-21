@@ -126,9 +126,9 @@ Backend modules are also available from dedicated endpoints. Use these imports w
 ```
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
 
-import * as webglBackend from '@luma.gl/graph/gpu-simple-graph/webgl';
+import * as webglBackend from '@luma.gl/graph/gpu-simple-graph-webgl';
 
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 
 
@@ -142,7 +142,7 @@ If you plan to use synchronous evaluation on a `webgl` or `webgpu` device, eager
 ```
 import {backendRegistry, cleanEvaluateSync, interleave} from '@luma.gl/graph/gpu-simple-graph';
 
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 
 
@@ -160,7 +160,7 @@ The same endpoints export individual backend operation handlers. Applications ca
 ```
 import {backendRegistry} from '@luma.gl/graph/gpu-simple-graph';
 
-import {interleave, swizzle} from '@luma.gl/graph/gpu-simple-graph/webgl';
+import {interleave, swizzle} from '@luma.gl/graph/gpu-simple-graph-webgl';
 
 import {customOpWebGL} from './custom-operation';
 
@@ -185,7 +185,7 @@ backendRegistry.add('webgl', {
 
 See [`Custom Operations`](https://luma.gl/next/docs/api-reference/graph/custom-operation.md) for a full operation and backend handler example.
 
-The CPU backend can be imported from `@luma.gl/graph/gpu-simple-graph/cpu` when explicitly registering CPU handlers for another device type.
+The CPU backend can be imported from `@luma.gl/graph/gpu-simple-graph-cpu` when explicitly registering CPU handlers for another device type.
 
 ## Concepts[​](#concepts "Direct link to Concepts")
 

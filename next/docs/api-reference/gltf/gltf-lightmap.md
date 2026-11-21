@@ -21,3 +21,9 @@ Node and instance bindings are preserved while switching between already lightma
 ```
 
 The standalone shared viewer accepts `?feature=lightmap&backend=webgl` or `?feature=lightmap&backend=webgpu` to select one backend explicitly.
+
+## Export a baked Cornell Box[​](#export-a-baked-cornell-box "Direct link to Export a baked Cornell Box")
+
+In [Lightmap Baking](https://luma.gl/next/examples/api/lightmap-baking), select a Cornell Box preset and finish the bake. **Export GLB** packages the static geometry, vertex colors, atlas UVs, and one embedded PNG. The material uses the `KHR_lightmap` draft binding. A renderer needs support for that draft to display the baked lighting.
+
+The PNG stores linear 8-bit RGB, with the irradiance scale stored in the binding's `intensity`. Values above 1 are reconstructed using that scale. Dark values can show quantization, especially when the bake contains bright highlights. **Export HDR bake** retains float irradiance in the `.lmb` format for the [Baked Cornell Box viewer](https://luma.gl/next/examples/api/baked-cornell-box).

@@ -48,7 +48,7 @@ This distinction helps keep material APIs focused:
   * `lambertMaterial`
   * `phongMaterial`
   * `gouraudMaterial`
-  * a possible future `unlitMaterial`
+  * `unlitMaterial`
   * a possible future `normalMaterial` used for debugging or inspection
 
 * Not-just-material concerns:
@@ -67,21 +67,33 @@ Some visual modes combine both layers. For example, wireframe rendering often ne
 
 The current built-in lighting materials target different tradeoffs:
 
-| Material          | Surface Model                                                             | Relative Cost                                  | Typical Use                                                                                |
-| ----------------- | ------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `lambertMaterial` | Diffuse-only matte shading with no specular highlights                    | Fastest of the lit stock materials             | Clean visualizations, extruded solids, and scenes where glossy highlights would add noise  |
-| `phongMaterial`   | Simple specular model with per-fragment lighting                          | Fast                                           | General-purpose lit surfaces when you want readable highlights without full PBR complexity |
-| `gouraudMaterial` | Simple specular model with per-vertex lighting                            | Faster than `phongMaterial`, but lower quality | Large or simple meshes where lower cost matters more than highlight accuracy               |
-| `pbrMaterial`     | Physically based material model with textures and richer surface response | Most expensive of the stock materials          | Asset rendering, glTF materials, and scenes that need more realistic surface behavior      |
+| Material                                                                                                 | Surface Model                                                             | Relative Cost                                  | Typical Use                                                                                |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [`unlitMaterial`](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md) | Preserves supplied RGBA without lighting                                  | No lighting dependencies or material uniforms  | Raster imagery, diagrams, UI surfaces, and baked artwork                                   |
+| `lambertMaterial`                                                                                        | Diffuse-only matte shading with no specular highlights                    | Fastest of the lit stock materials             | Clean visualizations, extruded solids, and scenes where glossy highlights would add noise  |
+| `phongMaterial`                                                                                          | Simple specular model with per-fragment lighting                          | Fast                                           | General-purpose lit surfaces when you want readable highlights without full PBR complexity |
+| `gouraudMaterial`                                                                                        | Simple specular model with per-vertex lighting                            | Faster than `phongMaterial`, but lower quality | Large or simple meshes where lower cost matters more than highlight accuracy               |
+| `pbrMaterial`                                                                                            | Physically based material model with textures and richer surface response | Most expensive of the stock materials          | Asset rendering, glTF materials, and scenes that need more realistic surface behavior      |
 
 In practice:
 
+* choose `unlitMaterial` when colors must remain independent of lights and the camera
 * choose `lambertMaterial` when you want a matte result and the cleanest visual output
 * choose `phongMaterial` when you want simple shiny highlights and solid default quality
 * choose `gouraudMaterial` when you want a cheaper approximation of Phong-style lighting
 * choose `pbrMaterial` when the scene or asset needs material textures and more realistic shading
 
-All four stock material families also support `unlit?: boolean` when you want to keep the same material family on a model but skip lighting calculations.
+The four lit stock material families also support `unlit?: boolean` when you want to keep the same material family on a model but skip lighting calculations.
+
+## Dedicated unlit shaders[​](#dedicated-unlit-shaders "Direct link to Dedicated unlit shaders")
+
+Add `unlitMaterial` to a `Model`'s shader modules and call `unlitMaterial_getColor(surfaceColor)` with RGBA in either WGSL or GLSL. It returns that color unchanged. The application still owns texture sampling, color factors, alpha blending, and output color-space conversion.
+
+Unlike a lit material with `{unlit: true}`, the dedicated module includes no light uniforms, material bindings, normal calculations, or lighting dependencies. This reduces the shader/resource requirements for surfaces that are always unlit; it does not promise a specific rendering speedup. Application-owned normal attributes and varyings must be removed separately if unused.
+
+Use the existing `unlit` flag when lighting needs to toggle without changing the shader. Selecting the dedicated module instead requires a matching shader/pipeline variant. Its common Phong/Gouraud evaluation functions support shader migration; include only one material family at a time. Existing PBR and glTF unlit materials continue to use their own flag and texture processing.
+
+See the [`unlitMaterial` reference](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md) for shader signatures and the resource contract.
 
 ## Materials In The Binding Model[​](#materials-in-the-binding-model "Direct link to Materials In The Binding Model")
 

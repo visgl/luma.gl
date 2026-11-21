@@ -1,6 +1,6 @@
 # Type Alias: TextureViewProps
 
-> **TextureViewProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **TextureViewProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/texture-view.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/texture-view.ts#L11)
 

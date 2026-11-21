@@ -484,11 +484,11 @@ Register the handler for each device type that should evaluate the operation. `b
 ```
 import {backendRegistry, type BackendModule} from '@luma.gl/graph/gpu-simple-graph';
 
-import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph-cpu';
 
-import * as webglBackend from '@luma.gl/graph/gpu-simple-graph/webgl';
+import * as webglBackend from '@luma.gl/graph/gpu-simple-graph-webgl';
 
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 
 

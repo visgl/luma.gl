@@ -1,6 +1,6 @@
 # Type Alias: ShaderProps
 
-> **ShaderProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **ShaderProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/shader.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/shader.ts#L15)
 

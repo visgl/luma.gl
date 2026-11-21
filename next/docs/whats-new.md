@@ -1,5 +1,97 @@
 # What's New
 
+## Reverse-Z depth on WebGL2[​](#reverse-z-depth-on-webgl2 "Direct link to Reverse-Z depth on WebGL2")
+
+The `clip-control-webgl` feature exposes `EXT_clip_control`, and `RenderPassProps.clipDepthMode: 'zero-to-one'` enables it for a pass. With `clearDepth: 0` and `depthCompare: 'greater'`, reverse-Z depth now works on WebGL2 as well as on WebGPU. See [reverse-Z depth](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md#reverse-z).
+
+## Device ownership[​](#device-ownership "Direct link to Device ownership")
+
+Select whether destroying a device releases the native WebGL or WebGPU handle with [device ownership](https://luma.gl/next/docs/api-reference/core/luma.md#device-ownership).
+
+## Typed color normalization[​](#typed-color-normalization "Direct link to Typed color normalization")
+
+The JavaScript color helpers now decode byte typed arrays and borrow normalized Float16, Float32, and Float64 arrays when no component-count or alpha repair is needed. Plain arrays retain their existing convention. See [color helpers](https://luma.gl/next/docs/api-reference/shaders/shader-modules/float-colors.md#javascript-color-helpers).
+
+## Ray-traced texture cutouts[​](#ray-traced-texture-cutouts "Direct link to Ray-traced texture cutouts")
+
+ANARI ray tracing now applies base-color texture alpha masks consistently to visible surfaces, secondary paths, shadows, sampled emitters, picking and depth/normal/identity channels. UV transforms and retained texture changes update cutout visibility. See the [ray-tracing renderer](https://luma.gl/next/docs/api-reference/anari/ray-tracing-renderer.md) for supported maps and limits.
+
+## Explicit resource ownership[​](#explicit-resource-ownership "Direct link to Explicit resource ownership")
+
+A device-independent `Resource` base supports exclusive ownership, atomic ownership transfer, and recursive cleanup. GPU resources now extend `DeviceResource`, which centralizes native cleanup and statistics. See [Resource ownership](https://luma.gl/next/docs/api-guide/gpu/resource-ownership.md) and the [upgrade guide](https://luma.gl/next/docs/upgrade-guide.md) for API migration details.
+
+### Static lightmap workflows[​](#static-lightmap-workflows "Direct link to Static lightmap workflows")
+
+The [Lightmap Baking example](https://luma.gl/next/examples/api/lightmap-baking) offers six static scenes, with Courtyard & Arcade as the default and Two Rooms retained. It demonstrates fixed colored lights, shadowed environment sampling, WebGPU indirect diffuse transport, and scene-checked HDR export/reload. Point-shadow cube projections now match WebGPU texture coordinates, correcting misplaced shadows from off-axis occluders. See [lightmap baking](https://luma.gl/next/docs/api-reference/engine/lighting/lightmap-baker.md).
+
+### Lighting workflow hardening[​](#lighting-workflow-hardening "Direct link to Lighting workflow hardening")
+
+Combined PBR receiving and shared-frame regressions now cover visibility, baked results, resize, reset, resource reuse and allocation-failure recovery. The [lighting guide](https://luma.gl/next/docs/api-guide/engine/lighting-effects.md#frame-and-resource-lifecycle) explains frame ordering, ownership and reproducible performance measurements.
+
+### Scenegraph snapshots and indirect transport[​](#scenegraph-snapshots-and-indirect-transport "Direct link to Scenegraph snapshots and indirect transport")
+
+`makeANARIWorldFromScenegraph` and `makeScenegraphFromANARIWorld` convert static scenegraphs and ANARI worlds with copied CPU data, shared geometry/material snapshots, and borrowed textures. Ray tracing accepts scenegraphs through the same retained surface adapter. Receiver-space irradiance sampling reuses the ray tracer's diffuse transport for baking. See [scenegraph snapshots](https://luma.gl/next/docs/api-reference/anari/anari-scene.md#scenegraph-snapshots) and [irradiance sampling](https://luma.gl/next/docs/api-reference/anari/ray-tracing-renderer.md#receiver-space-irradiance-samples).
+
+### Lightmap atlas preparation[​](#lightmap-atlas-preparation "Direct link to Lightmap atlas preparation")
+
+`createLightmapAtlas` generates independent UV charts, world-space texel density, deterministic multi-mesh packing and gutter ownership. Explicit validation and chart preview data help inspect allocations before baking. See [atlas preparation](https://luma.gl/next/docs/api-reference/engine/lighting/lightmap-baker.md#preparing-atlas-uvs).
+
+### Progressive lightmap baking[​](#progressive-lightmap-baking "Direct link to Progressive lightmap baking")
+
+The optional lighting entry now exposes UV-space diffuse bake models, progressive irradiance accumulation, chart-safe dilation and independent result copies. See [lightmap baking](https://luma.gl/next/docs/api-reference/engine/lighting/lightmap-baker.md).
+
+### Standalone PBR lightmaps[​](#standalone-pbr-lightmaps "Direct link to Standalone PBR lightmaps")
+
+PBR material and model factories now infer lightmap flags from `pbr_lightmapSampler`. See [baked lightmaps](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-material.md#baked-lightmaps) for irradiance, UV and ownership conventions.
+
+### Color storage precision[​](#color-storage-precision "Direct link to Color storage precision")
+
+Color conversion supports Float16/Float32 RGBA output, source preservation with consumer format constraints, CPUVector conversion without GPU transfers, and scoped WebGPU encoding. See [color conversion](https://luma.gl/next/docs/api-reference/arrow/arrow-conversion.md#color-columns).
+
+### Reusable clustered light lists[​](#reusable-clustered-light-lists "Direct link to Reusable clustered light lists")
+
+`@luma.gl/engine/lighting` now exposes `ClusteredLightGrid` for WebGPU renderers, with explicit point-light layout, deterministic overflow and borrowed inputs. Existing ANARI exports remain compatible. See [ClusteredLightGrid](https://luma.gl/next/docs/api-reference/engine/lighting/clustered-light-grid.md).
+
+`AmbientOcclusionPass` reuses SSAO/GTAO evaluation for standalone PBR ambient visibility. The existing PBR Shadows example compares none/cheap/good AO alongside contact and map shadows. See the [lighting effects guide](https://luma.gl/next/docs/api-guide/engine/lighting-effects.md).
+
+### Reusable directional contact shadows[​](#reusable-directional-contact-shadows "Direct link to Reusable directional contact shadows")
+
+`ContactShadowPass` traces and filters portable screen-space visibility from camera depth and view-space normals. Standalone PBR models can receive this visibility on their first directional light, combining it with shadow maps while preserving other lights, IBL, and emission. See [directional contact shadows](https://luma.gl/next/docs/api-reference/engine/lighting/contact-shadows.md).
+
+### Reusable PBR surface prepasses[​](#reusable-pbr-surface-prepasses "Direct link to Reusable PBR surface prepasses")
+
+`@luma.gl/engine/lighting` exposes camera depth and view-space normal targets through `PBRSurfacePass` and `createPBRSurfaceModel`. Native meshes retain skinning, instancing, alpha cutouts, and optional material normal maps on WebGPU and WebGL2. See [PBR surface prepasses](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-surface-pass.md).
+
+### Standalone PBR shadows[​](#standalone-pbr-shadows "Direct link to Standalone PBR shadows")
+
+Standalone PBR models can cast and receive directional, spot, and point shadows on WebGL2 and WebGPU. `createPBRShadowModel` shares transforms and alpha cutouts with visible meshes; `receiveShadows` applies per-light visibility while preserving ambient light, IBL, and emission. The [PBR Shadows example](https://luma.gl/next/examples/api/pbr-shadows) includes a ground plane, light and quality controls, and orbit navigation. See [PBR shadows](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-shadows.md).
+
+### Dedicated unlit material[​](#dedicated-unlit-material "Direct link to Dedicated unlit material")
+
+`@luma.gl/shaders` now exports `unlitMaterial` for surfaces that preserve RGBA without lighting dependencies, material uniforms, or light loops. GLSL and WGSL support both direct RGBA evaluation and the common Phong/Gouraud RGB entry point. Existing lit materials retain their runtime `unlit` flag. See the [Materials guide](https://luma.gl/next/docs/api-guide/engine/materials.md) and [API reference](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md).
+
+### Reusable shadow primitives[​](#reusable-shadow-primitives "Direct link to Reusable shadow primitives")
+
+`@luma.gl/engine/lighting` exposes shadow-map resources, light cameras, and quality settings; `@luma.gl/shaders` exposes portable shadow sampling. Applications retain caster selection and draw policy. See [ShadowMapRenderer](https://luma.gl/next/docs/api-reference/engine/lighting/shadow-map-renderer.md).
+
+### Standalone PBR models[​](#standalone-pbr-models "Direct link to Standalone PBR models")
+
+`@luma.gl/engine/lighting` exposes `createPBRModel` for native and loaded geometry, with shared PBR materials, explicit transforms, skinning, instancing, and environment lighting. The environment example now renders native sphere models. Instance/model normal transforms are consistent across WebGL and WebGPU, including nonuniform scales and reflected tangent frames. Retained scene adapters compose their own transforms and picking/shadow passes with the shared mesh shaders. See [standalone PBR models](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-model.md).
+
+### Reusable PBR materials and environment bindings[​](#reusable-pbr-materials-and-environment-bindings "Direct link to Reusable PBR materials and environment bindings")
+
+`@luma.gl/engine/lighting` exposes typed PBR material factories and borrowed environment bindings for generated and precomputed lighting. The glTF entry point can resolve loaded environment textures after upload; material and environment resources retain explicit ownership. The glTF `imageBasedLightingEnvironment` option also accepts a `PBRLightingEnvironment` directly and then uses the linear-light scene environment path. Existing ANARI material exports remain compatible. See [PBR materials](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-material.md) and [environment bindings](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-environment.md).
+
+### Three r187 compute interoperability[​](#three-r187-compute-interoperability "Direct link to Three r187 compute interoperability")
+
+`@luma.gl/three` targets Three 0.187.0. The shared-device buffer bridge supports upstream Three's standard drawing pipeline, with explicit buffer ownership and submission ordering. A streamed synthetic-data example computes layouts in luma and renders the resulting buffers in Three without intermediate CPU readback. See [Three integration](https://luma.gl/next/docs/api-reference/three.md).
+
+Reusable `GPUGraph` and `GPUSimpleGraph` support shared `GPUCPUOperation` callbacks with asynchronous CPU processing and dynamically sized, executor-allocated GPUVector outputs. See [CPU callbacks](https://luma.gl/next/docs/api-reference/graph/gpu-simple-graph.md#cpu-callbacks-and-dynamically-sized-results).
+
+### Reusable environment lighting[​](#reusable-environment-lighting "Direct link to Reusable environment lighting")
+
+The optional `@luma.gl/engine/lighting` entry point prepares GGX specular cubemaps, normalized diffuse irradiance, and split-sum BRDF lookups on WebGL and WebGPU. Generated textures have explicit ownership and can share a caller-owned LUT. ANARI retains its existing API through compatibility wrappers. See [PrefilteredEnvironment](https://luma.gl/next/docs/api-reference/engine/lighting/prefiltered-environment.md).
+
 ### Scoped model draw parameters[​](#scoped-model-draw-parameters "Direct link to Scoped model draw parameters")
 
 `GPUVectorModel.draw(renderPass, {parameters})` and inherited `Model.draw()` accept temporary viewport, scissor, blend constant, and stencil reference overrides. Values are restored after all internal batch draws, including on errors. Scoping is owned by engine models; core render passes expose no callback-based parameter wrapper. See [Model](https://luma.gl/next/docs/api-reference/engine/model.md) and [RenderPass](https://luma.gl/next/docs/api-reference/core/resources/render-pass.md).
@@ -15,6 +107,10 @@ Shader injection target descriptors define one stage and name with separate GLSL
 ### Reusable graph texture bindings[​](#reusable-graph-texture-bindings "Direct link to Reusable graph texture bindings")
 
 GPUGraph and WebGPU SimpleGraph accept named texture inputs and operation-produced texture copy results, including selected mip/layer views and borrowed output targets. GPUGraph custom lowerings can also produce textures with execution-sized or scaled extents. See [texture values and execution bindings](https://luma.gl/next/docs/api-reference/graph/gpu-graph-textures.md). Evaluator APIs remain unchanged.
+
+### Shared graph fullscreen shader passes[​](#shared-graph-fullscreen-shader-passes "Direct link to Shared graph fullscreen shader passes")
+
+`GPUShaderPassOperation` describes one fullscreen WGSL draw for both GPUGraph and WebGPU SimpleGraph, with named textures, scalar parameters, operation-owned results, and caller-owned encoding. See [fullscreen shader passes](https://luma.gl/next/docs/api-reference/graph/gpu-shader-pass-operation.md). The evaluator API is unchanged.
 
 ### Retained scenegraph physics rendering[​](#retained-scenegraph-physics-rendering "Direct link to Retained scenegraph physics rendering")
 
@@ -60,6 +156,10 @@ Graph expressions now also support packed rows of widths 1–4: component-wise f
 
 GPU expressions now support row-local `dot`, `length`, `equalAll`, and `select(condition, whenTrue, whenFalse)` on WebGL SimpleGraph and both WebGPU graph paths. See the [expression syntax reference](https://luma.gl/next/docs/api-reference/graph/gpu-expression-operation.md).
 
+## Semantic aggregation operations[​](#semantic-aggregation-operations "Direct link to Semantic aggregation operations")
+
+[`GPUGraphGroupAggregation` and `GPUGraphReduction`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-graph.md#grouped-aggregation-and-scalar-reduction) compose dense grouped statistics and scalar reductions with named graph inputs, inferred result shapes, and GPU-resident intermediate values.
+
 ## Shader plugin primary modules[​](#shader-plugin-primary-modules "Direct link to Shader plugin primary modules")
 
 ShaderPlugin now contributes one optional `module`, with supporting modules expressed through its dependencies. Material, filter, and clip plugins use this simpler shape; injection-only plugins remain supported. See the [plugin reference](https://luma.gl/next/docs/api-reference/shaders/shader-plugin.md#primary-module) and [migration guide](https://luma.gl/next/docs/upgrade-guide.md#shader-plugin-primary-module).
@@ -98,7 +198,7 @@ Gaussian splat data, rendering, picking, residency, and hierarchy helpers now li
 
 ## Experimental API ownership and graph-based fluids[​](#experimental-api-ownership-and-graph-based-fluids "Direct link to Experimental API ownership and graph-based fluids")
 
-The standalone `@luma.gl/experimental` package is removed. Scene renderers and their PBR, shadow, transparency, and composition helpers now belong to `@luma.gl/anari`. Independent utilities are exposed through `@luma.gl/engine/experimental/{controls,materials,textures,webxr}`. Graph owns path/polygon models under `/experimental/models` and flow/fluid simulations under `/experimental/simulation`.
+The standalone `@luma.gl/experimental` package is removed. Scene renderers and their PBR, shadow, transparency, and composition helpers now belong to `@luma.gl/anari`. Independent utilities are exposed through `@luma.gl/engine/experimental-{controls,materials,textures,webxr}`. Graph owns path/polygon models under `/experimental-models` and flow/fluid simulations under `/experimental-simulation`.
 
 `MLSMPMFluidSimulation` now records its four ordered stages through a compiled GPU command graph per substep. Particle-buffer ping-pong, CFL splitting, and the WGSL kernels are preserved; the compiled graph and latest encodings expose execution for inspection.
 
@@ -156,7 +256,7 @@ Target Release Date: Q3, 2026
 
 * **Program texture resources** - `GPUGraph` now describes texture storage and subresource views, with caller-owned imports and graph-owned transients. See [buffer and texture management](https://luma.gl/next/docs/api-reference/experimental/gpu-core/resources.md).
 
-* **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-beta.4 grouped packages and loaders.gl 5.0.0-beta.4 grouped packages. Arrow adapters expose `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector` for native GeoArrow chunks and rows without copying coordinate buffers. Views borrow source storage; keep it alive and do not mutate or detach it while in use.
+* **Shared math and loader APIs** - Dependencies use math.gl 5.0.0-rc.2 grouped packages and loaders.gl 5.0.0-rc.1 grouped packages. GPU SQL and portable expressions use the new `@math.gl/sql` parser and expression entry points. Arrow path adapters use shared structural guards to accept tables and record batches across Arrow package instances. Arrow adapters expose `iterateGeoArrowBatchesFromArrowVector` and `getGeoArrowRowViewFromArrowVector` for native GeoArrow chunks and rows without copying coordinate buffers. Views use math.gl’s shared adapter, including field extension metadata and canonical union IDs. Views borrow source storage; keep it alive and do not mutate or detach it while in use.
 
 * **Engine scene controllers** - Skinning, material variants, billboards, area lights, spatial audio, and interactivity use reusable engine APIs; glTF parsers map source data into those APIs. See [scene controllers](https://luma.gl/next/docs/api-guide/engine/scene-controllers.md).
 
@@ -441,7 +541,7 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **Opt-in native conic projections** - Bounded Lambert Conformal Conic 1SP/2SP and Albers forward/inverse formulas lower from explicit PROJJSON or pipelines with Float32 arithmetic opt-in, guarded inverse footprints and shared inline/graph execution. Default high-precision adaptive coverage is unchanged; equal-budget conic benchmarks qualify optimization trade-offs.
 * **Visualization projection qualification** - Spherical gnomonic/orthographic fixtures qualify prepared double-single plans, public-engine horizon/inverse-domain rejection, inline consumers and CPU/GPU table paths. Horizon-crossing geometry still requires explicit clipping; no new native visualization kernel is implied.
 * **Native Transverse Mercator and UTM** - Explicit Float32 forward/inverse programs support all 60 WGS84 UTM zones, EPSG 9807 PROJJSON conversions, and `utm`/`tmerc` pipelines. Domain and inverse-footprint checks reject unsupported branches. Default higher-precision execution continues to use double-single adaptive patches, now fitted from the normalized binary64 series reference for supported explicit CRS pairs.
-* **Projection metadata and CRS planning** - Projection programs expose immutable precision, domain, validity, inversion, and sampled-error metadata. The optional `@luma.gl/graph/gpu-project/crs` adapter lowers explicit axis/unit/affine PROJ pipelines and fits bounded CRS transformations through math.gl 5, with structured fallback reasons and independently bounded inverse plans.
+* **Projection metadata and CRS planning** - Projection programs expose immutable precision, domain, validity, inversion, and sampled-error metadata. The optional `@luma.gl/graph/gpu-project-crs` adapter lowers explicit axis/unit/affine PROJ pipelines and fits bounded CRS transformations through math.gl 5, with structured fallback reasons and independently bounded inverse plans.
 * **Caller-prepared projection planning** - `planProjection()` accepts application-owned synchronous transforms, including preloaded math.gl providers, without resolving their CRS again or importing a projection catalogue. It shares the existing double-single compiler and structured failures while leaving lazy loading with the caller.
 * **Native Web Mercator programs** - Explicitly opt into forward/inverse Float32 formulas through PROJJSON or `webmerc` pipelines, with checked domains, honest arithmetic metadata, and shared inline/graph execution. Default high-precision Web Mercator planning retains double-single adaptive fitting against the validated binary64 formula and declines lossy provider routes.
 * **Native CRS frame changes** - Explicit PROJJSON geographic frames and equivalent Transverse Mercator/Pseudo Mercator conversions now lower to double-single axis/unit/affine programs without sampling. The planner normalizes ellipsoids, prime meridians, conversion parameters, and false origins; preserves datum boundaries; and requires fitting bounds only on adaptive routes.
@@ -517,7 +617,7 @@ Version 9.4 expands luma.gl with portable GPU data processing and a broad experi
 * **Render-pass draw commands** - `RenderPass` now owns pipeline, binding, vertex-array, direct-draw, indirect-draw, and render-bundle commands. The former `RenderPipeline` draw and binding APIs remain as deprecated compatibility paths.
 * **WebGPU feature levels** - `DeviceProps.featureLevel` can now request `'core'`, the portable WebGPU default; `'max'`, which requests every adapter feature and supported limit; `'compatibility'`; or `'best-available'`, which upgrades compatibility to core when available. The effective level is reported as `device.info.featureLevel`.
 * **Stage-specific storage limits** - `device.limits` now reports storage buffer and storage texture availability separately for vertex and fragment stages, so applications can choose storage-backed rendering only where the requested device supports it.
-* **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper is available from `@luma.gl/engine/experimental/textures`.
+* **HTML-in-Canvas feature detection** - `device.features.has('html-in-canvas')` and `isHTMLInCanvasSupported()` report whether the active browser and backend expose the experimental DOM-to-texture rasterization path. The high-level `HTMLTexture` wrapper is available from `@luma.gl/engine/experimental-textures`.
 * **GPU data and buffer-layout utilities** - New exported helpers decode GPU data types, select native or emulated Float16 arrays, and resolve logical attributes over shared or composite buffer layouts.
 
 **@luma.gl/webgl**
@@ -949,3 +1049,9 @@ ShaderPlugins can provide render hooks with GLSL/WGSL parameter signatures as we
 ### Aligned per-batch shader uniforms[​](#aligned-per-batch-shader-uniforms "Direct link to Aligned per-batch shader uniforms")
 
 `GPUVectorModel.drawBatches()` and `Model.drawBatches()` use separate aligned regions of one engine-owned WebGPU uniform buffer for each batch. Set picking offsets or other uniforms in `onBatch` without managing the batch buffer yourself. The model reuses its allocation across submitted calls and grows it when needed. Matching chunk boundaries are still required. See [Per-batch uniforms](https://luma.gl/next/docs/api-reference/engine/model.md#per-batch-uniforms) for the submission and lifetime contract.
+
+`CPUProjectionOperation` provides math.gl CPU projection in reusable graphs. `CPUData` and `CPUVector` provide Arrow-independent borrowed CPU chunks using existing GPU memory formats.
+
+Reusable graphs accept CPUVector inputs and `outputLocations` for CPU results. CPU chains stay resident on the CPU, with uploads and readbacks cached per invocation when needed.
+
+Arrow↔CPUVector numeric/list adapters preserve chunk and validity metadata. Explicit CPU↔GPU transfers carry list offsets and validity; CPU projection and simple-ring tessellation helpers reuse math.gl and the existing polygon preparation pipeline.

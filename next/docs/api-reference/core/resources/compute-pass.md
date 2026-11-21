@@ -82,7 +82,7 @@ const computedData = new Int32Array(await workBuffer.readAsync());
 
 ### `ComputePassProps`[​](#computepassprops "Direct link to computepassprops")
 
-`ComputePassProps` extends [`ResourceProps`](https://luma.gl/next/docs/api-reference/core/resources/resource.md#resourceprops) and accepts the following fields.
+`ComputePassProps` extends [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/core/resources/device-resource.md#deviceresourceprops) and accepts the following fields.
 
 | Property               | Type       | Default     | Description                                                                                            |
 | ---------------------- | ---------- | ----------- | ------------------------------------------------------------------------------------------------------ |

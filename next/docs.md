@@ -2,6 +2,8 @@
 
 luma.gl is a TypeScript toolkit for high-performance GPU rendering and compute on the web. It provides one application-facing API with pluggable WebGPU and WebGL2 backends, plus higher-level building blocks for models, animation, shader composition, and GPU data processing.
 
+[![GitHub stars](https://img.shields.io/github/stars/visgl/luma.gl.svg?style=flat-square\&label=%E2%98%85\&logo=github\&logoColor=white\&color=24292f\&labelColor=24292f)](https://github.com/visgl/luma.gl) [![GitHub contributors](https://img.shields.io/github/contributors/visgl/luma.gl.svg?style=flat-square\&logo=github\&logoColor=white\&color=24292f\&labelColor=24292f)](https://github.com/visgl/luma.gl/graphs/contributors) [![Total GitHub pull requests](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Fsearch%2Fissues%3Fq%3Drepo%253Avisgl%252Fluma.gl%2520is%253Apr\&query=%24.total_count\&style=flat-square\&label=PRs\&logo=github\&logoColor=white\&color=24292f\&labelColor=24292f)](https://github.com/visgl/luma.gl/pulls?q=is%3Apr)
+
 ## Explore the documentation[​](#explore-the-documentation "Direct link to Explore the documentation")
 
 Follow a topic based on what you want to build. Start with the higher-level APIs and use the package reference when you need a specific class, method, or option.

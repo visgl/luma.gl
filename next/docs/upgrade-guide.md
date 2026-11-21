@@ -1,5 +1,21 @@
 # Upgrade Guide
 
+### Reusing a WebGL canvas after device destruction[​](#reusing-a-webgl-canvas-after-device-destruction "Direct link to Reusing a WebGL canvas after device destruction")
+
+Destroying a WebGL device created without device reuse now requests context loss by default. If the canvas must remain usable after destroying the wrapper, create the device with `ownsHandle: false`. An attached WebGL context is borrowed by default.
+
+### Resource ownership base classes[​](#resource-ownership-base-classes "Direct link to Resource ownership base classes")
+
+The former GPU `Resource<Props>` and `ResourceProps` are now `DeviceResource<Props>` and `DeviceResourceProps`. Update imports, GPU-specific type annotations, and backend subclasses. `Resource` is now a non-generic, device-independent lifetime base. Use `instanceof DeviceResource` when a check specifically requires a device-backed resource.
+
+Custom backends must move native cleanup from `destroy()` into protected `destroyHandle()`. Remove calls to `destroyResource()`, `removeStats()`, and assignments to `destroyed`; the shared lifecycle now owns cleanup ordering and bookkeeping. `destroyed` is read-only.
+
+Attachment methods are deprecated and now enforce exclusive ownership. Attaching an already-owned resource transfers it from its previous owner. Cycles and transfers during destruction throw. See [Resource ownership](https://luma.gl/next/docs/api-guide/gpu/resource-ownership.md) for migration examples.
+
+### Readonly shadertype metadata[​](#readonly-shadertype-metadata "Direct link to Readonly shadertype metadata")
+
+Texture, vertex-format, scalar-data-type, and shader-type decoders now return shared, readonly metadata. Results are frozen, including texture `bitsPerChannel` tuples. Copy metadata before modifying it; copy nested tuples separately when needed. Device-dependent texture capabilities and computed memory layouts remain caller-owned.
+
 ### Scoped model draw parameters[​](#scoped-model-draw-parameters "Direct link to Scoped model draw parameters")
 
 `RenderPass.withParameters()` is removed. Pass temporary dynamic state to `Model.draw(renderPass, {parameters})` or `GPUVectorModel.draw()` instead. Model drawing snapshots `renderPass.getParameters()` and restores it through `setParameters()` even when drawing fails. Custom render-pass backends must implement `getParameters()` and return detached parameter values.
@@ -85,7 +101,7 @@ Graph and gpgpu no longer depend on engine. Update these rendering integration i
 | -------------------------------------------------------------------------------- | ------------------------------------ | ------------------------- |
 | `GPUTableModel`, `GPUTableGeometry`, `TableTransform` and their associated types | `@luma.gl/graph/gpu-tables`          | `@luma.gl/engine/tables`  |
 | Scenegraph physics adapters, sessions, and `makePhysicsScenegraph`               | `@luma.gl/graph/gpu-physics`         | `@luma.gl/engine/physics` |
-| Path/polygon rendering models and polygon shaders                                | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models`  |
+| Path/polygon rendering models and polygon shaders                                | `@luma.gl/graph/experimental-models` | `@luma.gl/engine/models`  |
 
 GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. `Computation` and `ShaderInputs` remain owned by `@luma.gl/engine`; graph and gpgpu operations execute through Kernel and RenderKernel without these shader-module conveniences. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
 
@@ -93,12 +109,12 @@ GPU physics algorithms, tables, path expansion, and vector input preparation rem
 
 Remove `@luma.gl/experimental` from project dependencies and update imports:
 
-| Former APIs                                                                | New import                                                                       |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari`                                                                 |
-| Controls, material plugins, texture helpers, and WebXR                     | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
-| Path and polygon models                                                    | `@luma.gl/engine/models`                                                         |
-| Flow and fluid simulations                                                 | `@luma.gl/graph/experimental/simulation`                                         |
+| Former APIs                                                                | New import                                                                                                              |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari`                                                                                                        |
+| Controls, material plugins, texture helpers, and WebXR                     | `@luma.gl/engine/experimental-controls`, `/experimental-materials`, `/experimental-textures`, and `/experimental-webxr` |
+| Path and polygon models                                                    | `@luma.gl/engine/models`                                                                                                |
+| Flow and fluid simulations                                                 | `@luma.gl/graph/experimental-simulation`                                                                                |
 
 ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
 
@@ -112,17 +128,33 @@ The beta also groups glTF under `@loaders.gl/scene/gltf` and LAS under `@loaders
 
 ### loaders.gl beta.2 imports[​](#loadersgl-beta2-imports "Direct link to loaders.gl beta.2 imports")
 
-Replace `@loaders.gl/textures` dependencies and imports with `@loaders.gl/images`. Legacy texture helpers and decoder configuration use explicit entries such as `@loaders.gl/images/load-image`, `@loaders.gl/images/basis-module-loader`, and `@loaders.gl/images/crunch-module-loader`. Loader, writer, and source entries are now flat: for example, replace `@loaders.gl/tables/parquet/parquet-source-loader` with `@loaders.gl/tables/parquet-source-loader`.
+Replace `@loaders.gl/textures` dependencies and imports with `@loaders.gl/images`. Load images with `load(url, ImageLoader)` and use explicit decoder entries such as `@loaders.gl/images/basis-module-loader` and `@loaders.gl/images/crunch-module-loader`. Loader, writer, and source entries are now flat: for example, replace `@loaders.gl/tables/parquet/parquet-source-loader` with `@loaders.gl/tables/parquet-source-loader`.
+
+### loaders.gl beta.12 format imports[​](#loadersgl-beta12-format-imports "Direct link to loaders.gl beta.12 format imports")
+
+Import `createParquetSource` from `@loaders.gl/tables/parquet`. This replaces the `@loaders.gl/tables/parquet-source-loader` entry. Import the Basis and Crunch decoder helpers from `@loaders.gl/images/basis` and `@loaders.gl/images/crunch`, respectively.
 
 ### Audio loading ownership[​](#audio-loading-ownership "Direct link to Audio loading ownership")
 
 loaders.gl now decodes `KHR_audio_emitter` while loading glTF. When using luma.gl's `AudioController`, set `gltf.excludeExtensions: ['KHR_audio_emitter']` in loader options. This keeps encoded clip loading under the controller's active-scene and resource ownership rules, and preserves luma.gl's support for legacy draft attachments.
 
+### GeoArrow adapter validation and union IDs[​](#geoarrow-adapter-validation-and-union-ids "Direct link to GeoArrow adapter validation and union IDs")
+
+Arrow conversion now delegates to math.gl's shared adapter. For ambiguous list nesting, supply an explicit `encoding` or an Arrow `field` with GeoArrow extension metadata. For `convertGeoArrowTableToInterleaved`, select unannotated geometry columns with `geometryColumn`/`geometryColumns` and supply their `encoding` in the same options. Name three-component coordinate children `xyz` or `xym`, or supply `dimension` when adapting a vector directly. A `coordinateLayout` option must match physical storage; use the explicit interleaving conversion to change layouts.
+
+New dense-union output uses canonical GeoArrow IDs: XY point/line/polygon use 1/2/3; XYZ adds 10, XYM adds 20, and XYZM adds 30. Read child fields and union metadata instead of relying on luma.gl's former sequential child IDs.
+
+### GPU SQL reserved column names[​](#gpu-sql-reserved-column-names "Direct link to GPU SQL reserved column names")
+
+GPU SQL now uses the math.gl parser directly. Double-quote reserved column names, for example `SELECT "limit", "order" FROM trips`. Column names still match the dataframe schema exactly.
+
 ### math.gl grouped packages[​](#mathgl-grouped-packages "Direct link to math.gl grouped packages")
 
-luma.gl now uses math.gl 5.0.0-beta.4. Replace standalone math.gl dependencies with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`, `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS, projection, and GeoArrow imports move under `@math.gl/geospatial`. Sun imports move to `@math.gl/earth/sun`. Install the package root when using these subpaths.
+luma.gl now uses math.gl 5.0.0-rc.2. Replace standalone math.gl dependencies with their grouped package roots: `@math.gl/types` becomes `@math.gl/core`, `@math.gl/polygon` becomes `@math.gl/geometry`, and CRS and projection imports move under `@math.gl/geospatial`. The standalone `@math.gl/arrow` package moves to `@math.gl/core/arrow`. Sun imports move to `@math.gl/earth/sun`. Install the package root when using these subpaths.
 
-The beta also removes alpha subpaths: import array types and `mat4`/`vec2`/`vec3`/`vec4` from `@math.gl/core`, parametric geometry and polygon helpers from `@math.gl/geometry`, DGGS helpers from `@math.gl/dggs`, and GeoArrow codecs and tessellation from `@math.gl/geospatial/geoarrow`. TypeScript projects using `Float16Array` must include `ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
+The beta also removes alpha subpaths: import array types and `mat4`/`vec2`/`vec3`/`vec4` from `@math.gl/core`, parametric geometry and polygon helpers from `@math.gl/geometry`, DGGS helpers from `@math.gl/dggs`, GeoArrow codecs from `@math.gl/core/arrow`, and GeoArrow tessellation from `@math.gl/geometry/arrow`. TypeScript projects using `Float16Array` must include `ES2025.Float16` in their compiler libraries; math.gl no longer supplies a global shim.
+
+The former `@math.gl/expressions` package is now `@math.gl/sql`. Expression parsing lives in `@math.gl/sql/expressions`; SQL parsing lives in `@math.gl/sql/parser`. Replace imports from `@math.gl/core/expressions` and `@math.gl/core/sql` with `@math.gl/sql/expressions` and `@math.gl/sql/parser`, respectively.
 
 ### Scene controllers move to engine[​](#scene-controllers-move-to-engine "Direct link to Scene controllers move to engine")
 
@@ -321,7 +353,7 @@ This page only covers luma.gl v9 and later releases. For information on upgradin
 ## Module loader dependencies[​](#module-loader-dependencies "Direct link to Module loader dependencies")
 
 * `exportGLTF` and its `GLTFExport*` descriptor types moved from `@luma.gl/engine/gltf` to the shared `examples/gltf/gltf-exporter.ts` application helper. Copy it into your application when exporting assets; it uses loaders.gl for GLB encoding.
-* `loadPBREnvironment()` now requires a `loadImage` callback. Pass your application image loader, such as `loadImage: loadImageTexture` from `@loaders.gl/images/load-image`.
+* `loadPBREnvironment()` now requires a `loadImage` callback. Pass your application image loader, such as `loadImage: url => load(url, ImageLoader)`.
 * The loaders.gl SQL adapter exports (`planGPUDataFrameQuery`, `makeGPUExpressionFromSQLPredicate`, `GPU_DATAFRAME_TABLE_QUERY_CAPABILITIES`, and `GPUDataFrameTableQueryOptions`) moved from `@luma.gl/graph/gpu-sql` to `examples/experimental/gpu-data-analysis/src/loaders-sql-query.ts`. Native `GPUSQLContext` and `GPUSQLQuery` remain in the module.
 * Install loaders.gl packages explicitly in applications that use these integrations. Published luma.gl modules no longer install them transitively.
 
@@ -416,7 +448,7 @@ The v10 graph package now owns the former gpgpu APIs. The gpgpu package is remov
 | `@luma.gl/gpgpu` evaluator and operation exports                                 | `@luma.gl/graph/gpu-simple-graph`                          |
 | `@luma.gl/gpgpu` shared execution exports, including `Kernel` and `RenderKernel` | `@luma.gl/graph`                                           |
 | `@luma.gl/gpgpu/gpu-data`                                                        | `@luma.gl/graph/gpu-data`                                  |
-| `@luma.gl/gpgpu/cpu`, `/webgl`, `/webgpu`                                        | `@luma.gl/graph/gpu-simple-graph/cpu`, `/webgl`, `/webgpu` |
+| `@luma.gl/gpgpu/cpu`, `/webgl`, `/webgpu`                                        | `@luma.gl/graph/gpu-simple-graph-cpu`, `/webgl`, `/webgpu` |
 | `@luma.gl/gpgpu/arrow`                                                           | `@luma.gl/graph/arrow`                                     |
 
 Replace the package dependency with `@luma.gl/graph`. Apache Arrow remains an optional peer used only by the Arrow entry.

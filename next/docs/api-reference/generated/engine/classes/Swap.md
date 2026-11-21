@@ -21,7 +21,7 @@ the two resources can be destroyed by calling `destroy()`
 
 ### T[​](#t "Direct link to T")
 
-`T` *extends* `Resource`<`any`>
+`T` *extends* `DeviceResource`<`any`>
 
 ## Constructors[​](#constructors "Direct link to Constructors")
 

@@ -150,7 +150,7 @@ Run one transform loop.
 
 ##### options?[​](#options "Direct link to options?")
 
-`ResourceProps` & `object` & `object`
+`DeviceResourceProps` & `object` & `object`
 
 #### Returns[​](#returns-5 "Direct link to Returns")
 

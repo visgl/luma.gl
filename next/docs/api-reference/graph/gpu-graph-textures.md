@@ -173,7 +173,8 @@ For cancellation, abandon the encoder before destroying the prepared execution. 
 ## Backend scope[​](#backend-scope "Direct link to Backend scope")
 
 * GPUGraph supports texture copies and custom lowerings alongside numeric operations, through both `run()` and caller-owned `prepare()`/`encode()`.
-* SimpleGraph supports mixed numeric and texture-copy operations through `run()` on WebGPU. Its new `prepare()` path currently supports texture-copy-only programs; numeric evaluator preparation remains asynchronous and is not exposed through that path.
+* Both graphs support [fullscreen shader-pass operations](https://luma.gl/next/docs/api-reference/graph/gpu-shader-pass-operation.md) on WebGPU.
+* SimpleGraph supports mixed numeric, texture-copy and shader-pass operations through `run()` on WebGPU. Its `prepare()` path supports texture-copy and shader-pass programs; numeric evaluator preparation remains asynchronous and is not exposed through that path.
 * SimpleGraph texture programs reject WebGL at compilation. Existing numeric/evaluator WebGL execution remains unchanged.
 * Persistent texture state, effect adapters, scoped composition, automatic cross-effect sharing, texture allocation reuse, and common-producer discovery are subsequent work. This foundation allocates independent per-invocation texture storage.
 

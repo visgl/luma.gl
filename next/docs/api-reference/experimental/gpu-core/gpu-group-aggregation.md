@@ -126,3 +126,7 @@ The graph owns no persistent result buffer, performs no submission, and introduc
 ## Performance notes[​](#performance-notes "Direct link to Performance notes")
 
 On subgroup-capable devices, aggregations with at most 16 groups combine lanes carrying the same key before issuing count, sum, minimum, maximum, or mean atomics. This targets compact dictionaries with high contention. Larger dictionaries and devices without both subgroup capabilities retain the existing local-count or direct-global-atomic implementations.
+
+## Semantic graph operation[​](#semantic-graph-operation "Direct link to Semantic graph operation")
+
+Use [`GPUGraphGroupAggregation`](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-graph.md#grouped-aggregation-and-scalar-reduction) for named logical inputs and operation-defined results in `GPUGraph`. It lowers to this primitive and preserves its statistics, masks, chunking, and numerical behavior.

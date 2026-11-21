@@ -31,7 +31,7 @@ Scroll page · Ctrl/⌘ + scroll to interact
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {MLSMPMFluidSimulation} from '@luma.gl/graph/experimental/simulation';
+import {MLSMPMFluidSimulation} from '@luma.gl/graph/experimental-simulation';
 
 
 

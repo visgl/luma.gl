@@ -57,7 +57,7 @@ The current package is a focused proof of concept, not a complete ANARI implemen
 * Automatically generated triangle normals assume non-indexed triangle-list positions.
 * Group-attached lights are not transformed by their owning instance.
 * The `deferred` renderer is WebGPU-only and does not yet include clustered lighting, screen-space effects, bloom, or temporal velocity history.
-* The WebGPU-only `raytrace` renderer builds Morton-sorted object/instance TLAS and per-mesh triangle BLAS hierarchies on the GPU and supports scalar metallic/roughness direct lighting, optional bounded diffuse or opaque GGX reflective bounces, opt-in emissive geometry sampling, scalar alpha masks, and guided spatial presentation filtering. Hardware ray tracing, SAH/Karras hierarchy topology, skeletal/morph deformation, material textures, alpha blending/transmission, advanced PBR extensions, transmissive bounces, and advanced temporal denoising are unsupported.
+* The WebGPU-only [ray-tracing renderer](https://luma.gl/next/docs/api-reference/anari/ray-tracing-renderer.md) builds Morton-sorted acceleration structures on the GPU. It supports progressive HDR rendering, retained material maps and alpha cutouts, up to eight diffuse or PBR bounces, smooth glass with absorption, and guided spatial denoising. The [material support table](https://luma.gl/next/docs/api-reference/anari/ray-tracing-renderer.md#material-support) lists supported maps and transport limits.
 * Visibility, raster picking, volumes, clipping planes, raster shadow maps, and asynchronous frame mapping are not implemented; direct shadow rays are available only in the `raytrace` renderer.
 * Experimental OpenUSD import does not support binary USDC crates or complete USD composition semantics.
 * Imported glTF skin attributes require an application-supplied retained joint palette; automatic skin-palette binding in the showcase importer and animated glTF export are not yet implemented.
@@ -110,3 +110,17 @@ Choose **Chart Materials** to compare matte bars, metallic columns with increasi
 ### Bounded ray image export[​](#bounded-ray-image-export "Direct link to Bounded ray image export")
 
 The lower-level experimental scene renderer exposes [`exportRayTracingImage`](https://luma.gl/next/docs/api-reference/anari/scene-renderer.md#tiled-ray-image-export) for fixed-camera RGBA8 tile export. Tiles share global sample coordinates and include clipped spatial/history halos, so guided filtering and progressive clamping agree at tile seams. The API keeps readback bounded to one tile, preserves the authored exposure, and cleans up on completion or cancellation. Applications provide full-image camera matrices and their own image encoder. This export API is separate from JSON playground scene-file export.
+
+### Measure small-emitter convergence[​](#measure-small-emitter-convergence "Direct link to Measure small-emitter convergence")
+
+With the playground server running, capture a reference at a higher frame count and use a different seed for the sweep. Keep dimensions, lighting and transport settings the same.
+
+```
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 17 --frames 256 --history 256 --output /tmp/ray-reference
+
+node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 31 --frame-sweep 1,8,32,128 --history 256 --reference /tmp/ray-reference/chart.png --output /tmp/ray-sweep
+```
+
+Each checkpoint starts a fresh page and records accumulated samples, display RGB error, and wall time to capture readiness in `convergence.json`. Wall time includes page startup and presentation. A high-sample reference is an estimate whose noise contributes to the measured error.
+
+Use `--antique-camera` in place of `--small-emitter` in both commands to capture the textured Antique Camera glTF study. The capture waits for the model to load before counting frames.

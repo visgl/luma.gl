@@ -2,12 +2,12 @@
 
 From v10Experimental API
 
-`WebXRCameraTexture` is the experimental `@luma.gl/engine/experimental/webxr` binding source for WebXR Raw Camera Access. It wraps the browser-owned camera `WebGLTexture` for one `XRView` as a borrowed read-only luma [`Texture`](https://luma.gl/next/docs/api-reference/core/resources/texture.md).
+`WebXRCameraTexture` is the experimental `@luma.gl/engine/experimental-webxr` binding source for WebXR Raw Camera Access. It wraps the browser-owned camera `WebGLTexture` for one `XRView` as a borrowed read-only luma [`Texture`](https://luma.gl/next/docs/api-reference/core/resources/texture.md).
 
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {WebXRCameraTexture} from '@luma.gl/engine/experimental/webxr';
+import {WebXRCameraTexture} from '@luma.gl/engine/experimental-webxr';
 
 
 

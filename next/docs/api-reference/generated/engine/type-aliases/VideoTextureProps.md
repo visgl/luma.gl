@@ -1,8 +1,8 @@
 # Type Alias: VideoTextureProps
 
-> **VideoTextureProps** = `Pick`<`ResourceProps`, `"id"`> & `object`
+> **VideoTextureProps** = `Pick`<`DeviceResourceProps`, `"id"`> & `object`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L11)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L17)
 
 Properties for a live video binding source.
 

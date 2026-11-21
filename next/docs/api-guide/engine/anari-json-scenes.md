@@ -12,6 +12,8 @@ yarn workspace luma.gl-examples-showcase-scene start
 
 Open `/playground.html` on the reported development-server URL, or select **JSON LAB** in the Observatory. The playground provides a Monaco JSON editor with syntax highlighting, schema-aware completions, property documentation, red error indicators, animated example scenes, WebGPU/WebGL selection, a renderer selector for frame presentation, automatic HDR presentation when available, orbit controls, validation feedback, and live instance, draw-call, and triangle statistics.
 
+On WebGPU, choose **Ray tracing** in the renderer selector. **Chart Materials** shows a metal roughness sweep, glossy reflections, and matte surfaces. **Chart Lighting** and **Indirect Light Study** show emissive lighting, shadows, and color bleeding. **Antique Camera · Ray Study** adds an imported glTF asset. In the stationary lighting studies, the **Refinement** indicator shows accumulated samples toward the configured target. Image noise can remain at 100%, particularly around small emitters.
+
 Use **GLTF ↓** or **USD ↓** to download the currently valid retained scene. Export bakes procedural geometry, starfield distributions, and retained instances into a static snapshot; transfers mesh positions, normals, UVs, vertex colors, materials, texture images, camera, and supported lights; and emits standalone JSON glTF with embedded buffers/images or ASCII `.usda`. ANARI animation declarations, optional renderer presets, bloom, fog, and renderer-only HDR controls remain ANARI-specific and are not exported.
 
 Experimental playground format

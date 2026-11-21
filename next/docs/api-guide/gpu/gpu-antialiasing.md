@@ -1,6 +1,6 @@
 # Antialiasing and Multisampling
 
-[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
+[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Depth buffers](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
 
 Aliasing is not one problem with one switch. A jagged triangle edge, a shimmering checkerboard, an alpha-cutout leaf, a noisy shadow boundary, and a depth-aware postprocess halo come from different sampling problems and need different fixes.
 

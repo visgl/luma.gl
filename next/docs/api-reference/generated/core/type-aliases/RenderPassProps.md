@@ -1,8 +1,8 @@
 # Type Alias: RenderPassProps
 
-> **RenderPassProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **RenderPassProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L57)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L60)
 
 Properties for a RenderPass instance is a required parameter to all draw calls.
 
@@ -37,6 +37,12 @@ Clear value for depth attachment (true === `1`), or false to preserve the previo
 > `optional` **clearStencil?**: `number` | `false`
 
 Clear value for stencil attachment (true === `0`), or false to preserve the previous value. Converted to the type and number of LSBs as the number of bits in the stencil aspect
+
+### clipDepthMode?[​](#clipdepthmode "Direct link to clipDepthMode?")
+
+> `optional` **clipDepthMode?**: [`ClipDepthMode`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ClipDepthMode.md)
+
+Clip-space depth range of the projection used in this pass. Default: the backend's own range. WebGPU always uses `'zero-to-one'`. WebGL uses `'negative-one-to-one'`, and `'zero-to-one'` requires the `'clip-control-webgl'` feature. Use `'zero-to-one'` for reverse-Z depth.
 
 ### depthReadOnly?[​](#depthreadonly "Direct link to depthReadOnly?")
 

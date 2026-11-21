@@ -1,6 +1,6 @@
 # Type Alias: PipelineLayoutProps
 
-> **PipelineLayoutProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **PipelineLayoutProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/pipeline-layout.ts:9](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/pipeline-layout.ts#L9)
 

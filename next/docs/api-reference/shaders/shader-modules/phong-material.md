@@ -1,6 +1,6 @@
 # phongMaterial
 
-[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
+[unlitMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/unlit-material.md)[lighting](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lighting.md)[dirlight](https://luma.gl/next/docs/api-reference/shaders/shader-modules/dirlight.md)[lambertMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/lambert-material.md)[gouraudMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/gouraud-material.md)[phongMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/phong-material.md)[pbrMaterial](https://luma.gl/next/docs/api-reference/shaders/shader-modules/pbr-material.md)
 
 This `phongMaterial` shader module provides functions to apply Phong shading with a simple specular model per fragment. It is a good default when you want readable highlights without the cost or complexity of full PBR.
 

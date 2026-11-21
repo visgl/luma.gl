@@ -8,6 +8,8 @@ GPU resources are durable objects used by one or more submissions. Create them o
 
 Passes and command encoders are different: they record a unit of work and are not durable scene state.
 
+See [Resource ownership](https://luma.gl/next/docs/api-guide/gpu/resource-ownership.md) for ownership trees, transfers, and deterministic cleanup.
+
 ## Resource families[​](#resource-families "Direct link to Resource families")
 
 | Family                      | Purpose                                                        | Typical lifetime                                                 |

@@ -130,3 +130,9 @@ Extents and capacities are part of a compiled plan. After a resize that changes 
 The current execution backend is WebGPU. Resource descriptors and program values are reusable semantic concepts, but creating a program does not guarantee WebGL lowering for an operation. Render and copy nodes under GPU predicates are rejected rather than run unconditionally. Format-reinterpreting views, automatic usage inference, automatic resize expressions, automatic mipmap generation, cross-graph scheduling, and native heap residency are not provided here.
 
 For exact method contracts and examples, see [GPUCommandGraph](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-command-graph.md), [transient lifetimes](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-transient-lifetimes.md), and [texture history](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-texture-history.md).
+
+## Portable render primitives[​](#portable-render-primitives "Direct link to Portable render primitives")
+
+`GPURenderOperation` packages a factory of ordinary render nodes for both WebGPU `GPUCommandGraph` / `GPUGraph` and WebGL-capable `GPUSimpleGraph`. Its `GPURenderOperationResources` interface exposes the same buffer imports, texture imports, transient textures, and texture views described above. Each compilation creates independent handles and executable state. Declare resource reads and writes on each node; the containing graph owns scheduling, framebuffers, and transient textures, while imported resources remain borrowed.
+
+See [SimpleGraph shared render operations](https://luma.gl/next/docs/api-reference/graph/gpu-simple-graph.md#shared-render-operations) for the portable execution contract and an example.

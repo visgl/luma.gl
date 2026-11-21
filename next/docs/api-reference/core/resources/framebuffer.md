@@ -40,7 +40,7 @@ For canvas rendering, obtain the current framebuffer with `canvasContext.getCurr
 
 ### `FramebufferProps`[​](#framebufferprops "Direct link to framebufferprops")
 
-`FramebufferProps` extends [ResourceProps](https://luma.gl/next/docs/api-reference/core/resources/resource.md#resourceprops).
+`FramebufferProps` extends [DeviceResourceProps](https://luma.gl/next/docs/api-reference/core/resources/device-resource.md#deviceresourceprops).
 
 | Property                  | Type                                                          | Default | Description                                          |
 | ------------------------- | ------------------------------------------------------------- | ------- | ---------------------------------------------------- |

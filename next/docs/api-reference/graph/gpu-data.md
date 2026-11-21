@@ -6,6 +6,8 @@ From v9.4Experimental API
 
 `GPUData` describes one GPU buffer plus typed row metadata. It is the lowest-level storage object in `@luma.gl/graph/gpu-data`: each `GPUData` owns or borrows its own `Buffer` or `DynamicBuffer`, and higher-level table objects refer to buffers through `GPUData`.
 
+General-purpose CPU and Arrow uploads and packed table columns default to flexible WebGPU buffers with storage, vertex, index, uniform, indirect, query resolve, and copy usage. WebGL keeps the portable vertex buffer defaults because index buffers use a separate native target. A `GPUData` created around an existing buffer uses that buffer's original usage flags.
+
 [`GPUDataView`](https://luma.gl/next/docs/api-reference/graph/gpu-data-view.md) is the non-owning physical counterpart: one fixed-width format, value count, byte offset, and byte stride over any buffer-like resource.
 
 ## Usage[​](#usage "Direct link to Usage")

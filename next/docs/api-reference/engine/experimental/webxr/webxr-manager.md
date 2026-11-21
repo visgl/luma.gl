@@ -11,7 +11,7 @@ import type {Framebuffer} from '@luma.gl/core';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
-import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/engine/experimental/webxr';
+import {WebXRAnimationFrameProvider, WebXRManager} from '@luma.gl/engine/experimental-webxr';
 
 
 

@@ -46,14 +46,14 @@ In addition, the following `RenderPipeline` properties are not typically conside
 
 After the GPU completes stencil tests, depth tests and writes are performed. These can be controlled by the following parameters:
 
-| Function              | Description                             | Values                | WebGL counterpart                   |
-| --------------------- | --------------------------------------- | --------------------- | ----------------------------------- |
-| `depthWriteEnabled`   | Whether depth buffer is updated         | `boolean` **`false`** | `gl.depthMask`                      |
-| `depthCompare`        | If and how depth testing is done        | **`always`**, ...     | `gl.depthFunc`                      |
-| `depthBias`           | Small depth offset for polygons         | `float`               | `gl.polygonOffset`                  |
-| `depthBiasSlopeScale` | Small depth factor for polygons         | `float`               | `gl.polygonOffset`                  |
-| `depthBiasClamp`      | Max depth offset for polygons           | `float`               | N/A                                 |
-| `unclippedDepth`      | Disable depth value clipping to \[0, 1] | **false** boolean     | N/A - Requires `depth-clip-control` |
+| Function              | Description                                                  | Values                | WebGL counterpart                                                                   |
+| --------------------- | ------------------------------------------------------------ | --------------------- | ----------------------------------------------------------------------------------- |
+| `depthWriteEnabled`   | Whether depth buffer is updated                              | `boolean` **`false`** | `gl.depthMask`                                                                      |
+| `depthCompare`        | If and how depth testing is done                             | **`always`**, ...     | `gl.depthFunc`                                                                      |
+| `depthBias`           | Small depth offset for polygons                              | `float`               | `gl.polygonOffset`                                                                  |
+| `depthBiasSlopeScale` | Small depth factor for polygons                              | `float`               | `gl.polygonOffset`                                                                  |
+| `depthBiasClamp`      | Clamp polygon depth bias (zero disables clamping)            | `float`               | Nonzero values require `polygon-offset-clamp-webgl` (`EXT_polygon_offset_clamp`)    |
+| `unclippedDepth`      | Disable near/far clipping and clamp depth to the depth range | **false** boolean     | `gl.enable(GL.DEPTH_CLAMP_EXT)` - Requires `depth-clip-control` (`EXT_depth_clamp`) |
 
 * **Depth Bias** - Sometimes referred to as "polygon offset". Adds small offset to fragment depth values (by factor × DZ + r × units). Usually used as a heuristic to avoid z-fighting, but can also be used for effects like applying decals to surfaces, and for rendering solids with highlighted edges. The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
 

@@ -1,5 +1,7 @@
 # GPUGraph
 
+For portable fullscreen image processing on WebGPU, use [`GPUShaderPassOperation`](https://luma.gl/next/docs/api-reference/graph/gpu-shader-pass-operation.md) with named texture inputs and scalar parameters. The same operation description also runs on WebGPU GPUSimpleGraph.
+
 ## Overview[​](#overview "Direct link to Overview")
 
 `GPUGraph` describes operations and logical values without requiring a device during authoring. Its execution implementation currently requires WebGPU. `GPUCommandGraph` is the lower-level pass and resource graph produced by lowering. Start with the [graph tutorial](https://luma.gl/next/docs/api-reference/graph/getting-started.md) for reusable compilation and runtime inputs; this reference also covers the advanced, concrete-dimension compiler interface.
@@ -218,3 +220,61 @@ See [Buffers and textures](https://luma.gl/next/docs/api-reference/experimental/
 `graph.texture(id, props)` declares logical texture storage using the graph texture descriptor fields plus `external`. `graph.textureView(texture, props)` selects subresources without allocating storage. `GPUGraphCompiler.compile()` accepts optional `textures` defaults; imported textures may also be supplied when encoding. `compilation.textures` exposes logical graph texture handles. Custom lowerers resolve storage with `resolveTexture()` and views with `resolveTextureView()`.
 
 Reusable `compile(device)` programs also support named texture inputs and operation-produced texture results. See [texture values and execution bindings](https://luma.gl/next/docs/api-reference/graph/gpu-graph-textures.md).
+
+## Grouped aggregation and scalar reduction[​](#grouped-aggregation-and-scalar-reduction "Direct link to Grouped aggregation and scalar reduction")
+
+`GPUGraphGroupAggregation` and `GPUGraphReduction` are built-in semantic operations. They lower to the existing [GPUGroupAggregation](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-group-aggregation.md) and [GPUReduction](https://luma.gl/next/docs/api-reference/experimental/gpu-core/gpu-reduction.md) kernels without custom compiler registration:
+
+```
+import {
+
+  GPUGraph, GPUGraphGroupAggregation, GPUGraphReduction, gpuGraph
+
+} from '@luma.gl/graph/gpu-graph';
+
+
+
+const graph = new GPUGraph();
+
+graph.addInput('keys', gpuGraph.vector('uint32'));
+
+graph.addInput('weights', gpuGraph.vector('float32'));
+
+graph.addInput('selection', gpuGraph.vector('uint32'));
+
+graph.add([
+
+  new GPUGraphGroupAggregation({
+
+    keys: 'keys', values: 'weights', mask: 'selection',
+
+    output: 'groups', groupCount: 100, operation: 'sum'
+
+  }),
+
+  new GPUGraphReduction({input: 'groups', output: 'domain', operation: 'extent'})
+
+]);
+
+const compiled = graph.compile(device, {outputs: ['groups', 'domain']});
+
+const result = await compiled.run({inputs: {keys, weights, selection}});
+
+// Both outputs are GPUVectors. Readback is explicit.
+
+result.groups.destroy();
+
+result.domain.destroy();
+
+compiled.destroy();
+```
+
+### Inputs and outputs[​](#inputs-and-outputs "Direct link to Inputs and outputs")
+
+* `GPUGraphGroupAggregation` accepts dense `uint32` keys and an optional `uint32` mask. Nonzero mask values select rows; keys outside `[0, groupCount)` are ignored. `count` returns `uint32`; `sum`, `min`, `max`, and `mean` accept finite `float32` contributions and return `float32`. `groupCount` infers a packed result length. It can be omitted with the concrete compiler API when output dimensions are declared explicitly using `graph.vector(...)`.
+* `GPUGraphReduction` accepts scalar `uint32`, `sint32`, or `float32` inputs and an optional `uint32` mask. `sum`, `min`, and `max` return one row; `extent` returns two rows containing minimum and maximum. Output format matches input format.
+* Logical references may be names or typed `GPUGraphVector` objects. Inputs retain their supported chunk/stride layouts and masks may have independent partitions. Destinations must be one packed chunk. Use `outputTargets` for caller-owned result storage; operation-defined results cannot overwrite inputs or `addState()`.
+
+### Execution and ownership[​](#execution-and-ownership "Direct link to Execution and ownership")
+
+The compiler uses existing kernels and graph-owned scratch storage. Operations encode no CPU readback. Inputs and caller-provided targets remain borrowed; returned results belong to the caller. Repeated executions reset grouped statistics, including empty groups. Empty counts and sums are zero; empty min/max/mean groups are NaN. Scalar reductions retain the underlying kernel's masking and nonfinite-value rules.

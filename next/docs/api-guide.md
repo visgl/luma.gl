@@ -21,6 +21,8 @@ The experimental [`SceneRenderer`](https://luma.gl/next/docs/api-reference/anari
 
 For an experimental retained, renderer-independent scene contract, see [Declarative Scene Rendering](https://luma.gl/next/docs/api-guide/engine/anari-rendering.md). It introduces the experimental `@luma.gl/anari` package, scene objects, committed parameters, instancing, physically based lighting, and HDR presentation.
 
+The [Materials guide](https://luma.gl/next/docs/api-guide/engine/materials.md) compares Unlit, Lambert, Phong, Gouraud, and PBR shading and explains when to use a dedicated unlit shader versus a material's runtime `unlit` flag.
+
 ## Core[​](#core "Direct link to Core")
 
 The core luma.gl API is designed to expose the capabilities of the GPU and shader programming to web applications. It is a portable API, in the sense that the `@luma.gl/core` module provides an abstract API for writing application code that works with both WebGPU and/or WebGL depending on which adapter modules are installed (`@luma.gl/core/webgl` and/or `@luma.gl/core/webgpu`).

@@ -209,3 +209,9 @@ See the [complete supported-language list](https://github.com/visgl/luma.gl/blob
 | `@luma.gl/slang` | v10.0.0-alpha.8                                                         | Minified browser bundle | 106.77 kB    | 30.34 kB |
 
 The luma.gl figure bundles all runtime exports from the package source with esbuild 0.28.1, minified for browsers. The Slang figures measure the distributed WASM and JavaScript files separately; gzip sizes were measured locally at level 9. The Slang release ZIP is 10.45 MB and includes additional files. These are not equivalent implementations: the TypeScript compiler supports a smaller Slang subset, and actual application download sizes depend on bundling and compression.
+
+## WGSL input[​](#wgsl-input "Direct link to WGSL input")
+
+The separate [`@luma.gl/slang/wgsl` frontend](https://luma.gl/next/docs/api-reference/slang/wgsl.md) supports a small WGSL rendering subset using the shared compiler backend. Slang-only applications do not import its parser or analyzer.
+
+For source declaration metadata without code generation, see [Shader inspection](https://luma.gl/next/docs/api-reference/slang/inspect.md).

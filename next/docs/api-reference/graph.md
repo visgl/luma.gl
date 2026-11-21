@@ -8,19 +8,22 @@
 2. [Inputs, results, and state](https://luma.gl/next/docs/api-reference/graph/gpu-graph-values.md): types, dimensions, ownership, storage reuse, and caller-owned encoding.
 3. [Expression syntax](https://luma.gl/next/docs/api-reference/graph/gpu-expression-operation.md): arithmetic, functions, casts, components, and typed rows.
 4. [Upload and copy](https://luma.gl/next/docs/api-reference/graph/gpu-transfer-operations.md) and [capacity/count results](https://luma.gl/next/docs/api-reference/graph/gpu-compaction-operation.md): data movement and GPU-sized selection.
-5. [Operation contracts](https://luma.gl/next/docs/api-reference/graph/gpu-operation.md): extend the graph with explicit logical effects and lowerings.
-6. [Command-graph concepts](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md): scheduling and physical resources when implementing a lowering or diagnosing execution.
+5. [Texture values](https://luma.gl/next/docs/api-reference/graph/gpu-graph-textures.md) and [fullscreen shader passes](https://luma.gl/next/docs/api-reference/graph/gpu-shader-pass-operation.md): image inputs, operation-owned results, and shared WebGPU effects.
+6. [Operation contracts](https://luma.gl/next/docs/api-reference/graph/gpu-operation.md): extend the graph with explicit logical effects and lowerings.
+7. [Command-graph concepts](https://luma.gl/next/docs/api-reference/experimental/gpu-core/concepts.md): scheduling and physical resources when implementing a lowering or diagnosing execution.
+
+Read [CPU and GPU data flow](https://luma.gl/next/docs/api-reference/graph/data-flow.md) for residency, transfer diagrams, Arrow/GeoArrow adapters, and layer preparation.
 
 ## Choose an interface[​](#choose-an-interface "Direct link to Choose an interface")
 
-| Interface                             | Use it for                                                                           | Execution                                                                                 |
-| ------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `GPUGraph`                            | Named inputs/state and operation-defined results, including custom WebGPU operations | `compile(device)`, then `run(bindings)` or `prepare(bindings)` and caller-owned encoding  |
-| `GPUSimpleGraph` reusable expressions | Shared expression, upload, and copy operations on WebGL and WebGPU                   | `compile(device)`, then `run({inputs, outputTargets})`                                    |
-| `GPUSimpleGraph` evaluator recipes    | Lazy uploads and evaluator operations beyond the shared expression subset            | `new GPUSimpleGraph(device)`, then `compile()` and `run()`                                |
-| `GPUCommandGraph`                     | Explicit compute, render, and copy passes, textures, and advanced scheduling         | Compile fixed resource descriptors, encode into a caller-owned encoder, submit explicitly |
+| Interface                            | Use it for                                                                           | Execution                                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `GPUGraph`                           | Named inputs/state and operation-defined results, including custom WebGPU operations | `compile(device)`, then `run(bindings)` or `prepare(bindings)` and caller-owned encoding               |
+| `GPUSimpleGraph` reusable operations | Shared numeric operations; texture copies and shader passes on WebGPU                | `compile(device)`, then `run({inputs, outputTargets})`; texture-only programs also support `prepare()` |
+| `GPUSimpleGraph` evaluator recipes   | Lazy uploads and evaluator operations beyond the shared expression subset            | `new GPUSimpleGraph(device)`, then `compile()` and `run()`                                             |
+| `GPUCommandGraph`                    | Explicit compute, render, and copy passes, textures, and advanced scheduling         | Compile fixed resource descriptors, encode into a caller-owned encoder, submit explicitly              |
 
-These are related layers, not interchangeable APIs. Full `GPUGraph` execution currently requires WebGPU. SimpleGraph does not support full-graph custom lowerings, mutable state, or the prepared execution API. Its evaluator recipes also have different result ownership; see its [mode comparison](https://luma.gl/next/docs/api-reference/graph/gpu-simple-graph.md#choose-an-authoring-mode).
+These are related layers, not interchangeable APIs. Full `GPUGraph` execution currently requires WebGPU. SimpleGraph supports prepared texture-copy/shader-pass programs on WebGPU; numeric evaluator programs use asynchronous `run()`. It does not support full-graph custom lowerings or mutable state. Its evaluator recipes also have different result ownership; see its [mode comparison](https://luma.gl/next/docs/api-reference/graph/gpu-simple-graph.md#choose-an-authoring-mode).
 
 ## How the layers fit[​](#how-the-layers-fit "Direct link to How the layers fit")
 

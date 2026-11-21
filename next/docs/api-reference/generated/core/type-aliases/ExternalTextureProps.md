@@ -1,6 +1,6 @@
 # Type Alias: ExternalTextureProps
 
-> **ExternalTextureProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **ExternalTextureProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/external-texture.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/external-texture.ts#L10)
 

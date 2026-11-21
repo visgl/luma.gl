@@ -1,6 +1,6 @@
 # Type Alias: RenderPipelineProps
 
-> **RenderPipelineProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **RenderPipelineProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/render-pipeline.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pipeline.ts#L25)
 

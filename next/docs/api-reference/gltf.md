@@ -187,7 +187,7 @@ type ParseGLTFOptions = {
 
   pbrDebug?: boolean;
 
-  imageBasedLightingEnvironment?: PBREnvironment;
+  imageBasedLightingEnvironment?: PBREnvironment | PBRLightingEnvironment;
 
   lights?: boolean;
 
@@ -200,7 +200,7 @@ type ParseGLTFOptions = {
 
 * `modelOptions` supplies additional props to generated primitive models.
 * `pbrDebug` enables shader-level material debugging.
-* `imageBasedLightingEnvironment` supplies existing diffuse, specular, and BRDF lookup textures.
+* `imageBasedLightingEnvironment` supplies existing diffuse, specular, and BRDF lookup textures. It accepts a loaded `PBREnvironment`, or a linear-light [`PBRLightingEnvironment`](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-environment.md) such as the textures of `createPrefilteredEnvironment()`. See [image-based lighting](https://luma.gl/next/docs/api-reference/gltf/gltf-materials.md#image-based-lighting).
 * `lights` controls the generated material's punctual-light shader configuration. The returned `lights` array is still parsed from the source asset.
 * `useTangents` enables existing authored `TANGENT` attributes; it does not generate missing tangent data.
 * `useByteColors: false` keeps authored punctual-light colors in the linear `[0, 1]` range. The default preserves luma.gl's legacy byte-style light-color convention.

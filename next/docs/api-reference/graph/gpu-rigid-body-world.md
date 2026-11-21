@@ -204,7 +204,7 @@ A single GPU invocation updates these statistics after each step. Sampling never
 
 ## Game-facing collision APIs[​](#game-facing-collision-apis "Direct link to Game-facing collision APIs")
 
-Enable contact events with `eventCapacity` and queries with `enableQueries` before attaching the world. These optional allocations appear in `getCapacityInfo()`. The [Space Salvage example](https://github.com/visgl/luma.gl/tree/master/examples/experimental/space-salvage) uses these public APIs for targeting, docking and impact damage.
+Enable contact events with `eventCapacity` and queries with `enableQueries` before attaching the world. These optional allocations appear in `getCapacityInfo()`. The off-road buggy uses contact events to trigger impact audio at perimeter rails.
 
 ```
 const world = new GPURigidBodyWorld({bodies, eventCapacity: 1024, enableQueries: true});
@@ -294,7 +294,7 @@ Mark sensor colliders with `isTrigger: true` to exclude physical response while 
 
 `swept: true` requires sphere targets and detects complete crossings along relative center segments, emitting enter then exit in the same step. It does not track curved rotational trajectories or every intermediate transition through disjoint compound members. Non-sphere targets use discrete per-step overlap. Pair state is bounded to 65,536 configured source/target pairs; geometry exhaustion increments `incompleteTriggerQueries` and rejects the step. Publication is gated on successful simulation. Ring overwrite and saturation are explicit; concurrent reads share a snapshot/cursor. Resetting/reconstructing the world resets trigger state.
 
-Space Salvage uses these step-based events for docking. General sensor shapes, spatially batched queries, scalable event compaction and glTF behavior bindings remain separate qualification work.
+Applications can use these step-based events for docking. General sensor shapes, spatially batched queries, scalable event compaction and glTF behavior bindings remain separate qualification work.
 
 ## Troubleshooting and qualification boundaries[​](#troubleshooting-and-qualification-boundaries "Direct link to Troubleshooting and qualification boundaries")
 
@@ -371,7 +371,7 @@ Distance joints accept `spring: {stiffness, damping}`. Stiffness is force per un
 
 Hinge/slider motors accept `position`, optional `velocity` feed-forward (default 0), `stiffness` (default 30), `damping` (default 5), and `maximumForce`. Position is radians for a hinge and world units for a slider. The implicit drive uses these spring/damper coefficients and retains the force/torque cap across all iterations. Hinge targets use the same wrapped coordinate as limits; multi-turn control remains unsupported.
 
-`enabled: false` creates a dormant joint. `world.setJointEnabled(index, enabled)` submits an ordered GPU command between steps, invalidates cached impulses and wakes bodies. Disabling a joint restores its connected-body collision policy. Space Salvage uses this API for its spring tow attachment. Topology, coefficients and endpoints are construction-time properties; rebuild the world to change them.
+`enabled: false` creates a dormant joint. `world.setJointEnabled(index, enabled)` submits an ordered GPU command between steps, invalidates cached impulses and wakes bodies. Disabling a joint restores its connected-body collision policy. Topology, coefficients and endpoints are construction-time properties; rebuild the world to change them.
 
 ## Scenegraph geometry and GPU pose publication[​](#scenegraph-geometry-and-gpu-pose-publication "Direct link to Scenegraph geometry and GPU pose publication")
 

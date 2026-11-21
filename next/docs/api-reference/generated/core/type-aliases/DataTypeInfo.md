@@ -16,7 +16,7 @@ Returns information about a signed or normalized DataType
 
 ### byteLength[​](#bytelength "Direct link to byteLength")
 
-> **byteLength**: `DataTypeByteLengthT`<`T`>
+> `readonly` **byteLength**: `DataTypeByteLengthT`<`T`>
 
 Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L38)
 
@@ -24,7 +24,7 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:38](https://g
 
 ### integer[​](#integer "Direct link to integer")
 
-> **integer**: `DataTypeIsIntegerT`<`T`>
+> `readonly` **integer**: `DataTypeIsIntegerT`<`T`>
 
 Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L42)
 
@@ -32,7 +32,7 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:42](https://g
 
 ### normalized[​](#normalized "Direct link to normalized")
 
-> **normalized**: `DataTypeIsNormalizedT`<`T`>
+> `readonly` **normalized**: `DataTypeIsNormalizedT`<`T`>
 
 Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L40)
 
@@ -40,7 +40,7 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:40](https://g
 
 ### primitiveType[​](#primitivetype "Direct link to primitiveType")
 
-> **primitiveType**: [`PrimitiveDataTypeT`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/PrimitiveDataTypeT.md)<`T`>
+> `readonly` **primitiveType**: [`PrimitiveDataTypeT`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/PrimitiveDataTypeT.md)<`T`>
 
 Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L36)
 
@@ -50,7 +50,7 @@ The primitive data type (what the shader sees)
 
 ### signed[​](#signed "Direct link to signed")
 
-> **signed**: `DataTypeIsSignedT`<`T`>
+> `readonly` **signed**: `DataTypeIsSignedT`<`T`>
 
 Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L44)
 
@@ -58,7 +58,7 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:44](https://g
 
 ### signedType[​](#signedtype "Direct link to signedType")
 
-> **signedType**: [`SignedDataTypeT`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SignedDataTypeT.md)<`T`>
+> `readonly` **signedType**: [`SignedDataTypeT`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/SignedDataTypeT.md)<`T`>
 
 Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L34)
 

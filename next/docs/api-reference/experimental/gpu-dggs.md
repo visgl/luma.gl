@@ -106,7 +106,7 @@ The shared split-64-bit representation, validity handling, bounded dispatch, and
 The live page uses an isolated optional entry point, keeping measurement code out of application bundles:
 
 ```
-import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs/benchmarks';
+import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs-benchmarks';
 
 
 

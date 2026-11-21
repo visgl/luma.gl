@@ -101,3 +101,7 @@ GTAO creates five intermediate targets, including persistent occlusion and depth
 * [SSAO](https://luma.gl/next/docs/api-reference/shaders/shader-passes/ssao.md) provides a four-pass, non-temporal ambient-occlusion path.
 * [Screen-Space Global Illumination](https://luma.gl/next/docs/api-reference/shaders/shader-passes/screen-space-global-illumination.md) adds diffuse bounced light instead of removing ambient energy.
 * [Screen-Space Reflections](https://luma.gl/next/docs/api-reference/shaders/shader-passes/screen-space-reflections.md) resolves directional specular response.
+
+## Shared visibility and PBR workflow[​](#shared-visibility-and-pbr-workflow "Direct link to Shared visibility and PBR workflow")
+
+For a visibility texture rather than whole-color postprocessing, use [`AmbientOcclusionPass`](https://luma.gl/next/docs/api-reference/engine/lighting/ambient-occlusion.md). It reuses this evaluator with depth-aware filtering and no temporal history. The [lighting effects guide](https://luma.gl/next/docs/api-guide/engine/lighting-effects.md) explains none/cheap/good choices, input conventions, and composition with direct shadows and environment lighting.

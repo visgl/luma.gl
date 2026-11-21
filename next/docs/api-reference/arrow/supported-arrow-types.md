@@ -59,7 +59,7 @@ The [Points example](https://luma.gl/next/examples/arrow/arrow-points) demonstra
 
 `iterateGeoArrowBatchesFromArrowVector(vector, options)` exposes each physical chunk with its `chunkIndex` and logical `rowOffset`. `getGeoArrowRowViewFromArrowVector(vector, rowIndex, options)` selects one logical row across chunks and resolves mixed-geometry union dispatch. Both return borrowed math.gl views with a `column` descriptor, retain null rows, and allocate no coordinate buffers. Keep the source storage alive and do not mutate or detach it while views are in use. These APIs require native GeoArrow geometry; decode WKB/WKT before requesting views.
 
-`@luma.gl/graph/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from `@math.gl/geospatial/geoarrow`. `makeGeoArrowColumnFromArrowVector()` borrows the source buffers, while interleaving, WKB/WKT decoding, dense-union normalization, and polygon tessellation delegate to math.gl. Renderer-specific color expansion and GPU resource creation remain in luma.gl.
+`@luma.gl/graph/arrow` adapts Apache Arrow buffers to the runtime-neutral descriptors from `@math.gl/core/arrow`. `makeGeoArrowColumnFromArrowVector()` borrows the source buffers, while interleaving, WKB/WKT decoding, dense-union normalization, and polygon tessellation delegate to math.gl. Renderer-specific color expansion and GPU resource creation remain in luma.gl.
 
 ### Matrix-valued Columns[​](#matrix-valued-columns "Direct link to Matrix-valued Columns")
 

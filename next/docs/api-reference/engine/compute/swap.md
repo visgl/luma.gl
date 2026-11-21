@@ -18,7 +18,7 @@ swapBuffers.swap();
 
 ## Classes[​](#classes "Direct link to Classes")
 
-### `Swap<T extends Resource>`[​](#swapt-extends-resource "Direct link to swapt-extends-resource")
+### `Swap<T extends DeviceResource>`[​](#swapt-extends-deviceresource "Direct link to swapt-extends-deviceresource")
 
 Generic double-buffer helper for two structurally compatible resources.
 

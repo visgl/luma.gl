@@ -125,7 +125,7 @@ import {
 
   runGPUGraphAlgorithmsBenchmark
 
-} from '@luma.gl/graph/gpu-graph-algorithms/benchmarks';
+} from '@luma.gl/graph/gpu-graph-algorithms-benchmarks';
 
 
 

@@ -20,7 +20,7 @@ Each operation returns a new [`GPUDataEvaluator`](https://luma.gl/next/docs/api-
 * Strided inputs do not make outputs strided; operation results are packed unless an operation explicitly documents another layout.
 * Use `GPUVectorEvaluator.fromGPUVector(vector).mapGPUData(...)` to apply the same leaf operation independently across preserved `GPUVector.data[]` chunks.
 * The CPU backend is available by default. If no backend has been registered for a WebGL or WebGPU device, the matching backend is loaded automatically on first evaluation.
-* Backend operation handlers can also be imported from `@luma.gl/graph/gpu-simple-graph/webgl`, `@luma.gl/graph/gpu-simple-graph/webgpu`, or `@luma.gl/graph/gpu-simple-graph/cpu` for eager loading or custom subset registration.
+* Backend operation handlers can also be imported from `@luma.gl/graph/gpu-simple-graph-webgl`, `@luma.gl/graph/gpu-simple-graph-webgpu`, or `@luma.gl/graph/gpu-simple-graph-cpu` for eager loading or custom subset registration.
 
 ## Arithmetic[​](#arithmetic "Direct link to Arithmetic")
 

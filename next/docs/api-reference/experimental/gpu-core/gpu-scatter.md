@@ -40,6 +40,10 @@ output[indices[i]] = source[i]
 when the destination is in range. Out-of-range destinations are ignored. Source and output must use the same packed fixed-width GPU format.
 
 ```
+import {GPUScatter} from '@luma.gl/graph/gpu-core';
+
+
+
 graph.add(new GPUScatter({
 
   source,

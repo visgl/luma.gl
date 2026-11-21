@@ -61,7 +61,7 @@ let color = textureSampleBaseClampToEdge(videoTexture, videoTextureSampler, uv);
 ### `VideoTextureProps`[​](#videotextureprops "Direct link to videotextureprops")
 
 ```
-export type VideoTextureProps = Pick<ResourceProps, 'id'> & {
+export type VideoTextureProps = Pick<DeviceResourceProps, 'id'> & {
 
   source: HTMLVideoElement | VideoFrame;
 

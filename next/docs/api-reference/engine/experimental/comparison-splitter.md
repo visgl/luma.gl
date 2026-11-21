@@ -7,7 +7,7 @@ The divider owns its DOM elements and inline visual styling, so it works in stan
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental-controls';
 
 
 

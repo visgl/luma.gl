@@ -8,7 +8,7 @@ Class that helps applications work with texture formats
 
 ### computeMemoryLayout()[​](#computememorylayout "Direct link to computeMemoryLayout()")
 
-> **computeMemoryLayout**(`opts`): [`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
+> **computeMemoryLayout**(`opts`, `result?`): [`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
 
 Defined in: [modules/core/src/shadertypes/texture-types/texture-format-decoder.ts:80](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/texture-types/texture-format-decoder.ts#L80)
 
@@ -19,6 +19,10 @@ Computes the memory layout for a texture, in particular including row byte align
 ##### opts[​](#opts "Direct link to opts")
 
 `TextureMemoryLayoutOptions`
+
+##### result?[​](#result "Direct link to result?")
+
+[`TextureMemoryLayout`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/TextureMemoryLayout.md)
 
 #### Returns[​](#returns "Direct link to Returns")
 

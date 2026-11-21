@@ -7,7 +7,7 @@
 Environment reflections follow the camera-reflected view direction as the viewpoint moves. Output opacity is clamped to the full zero-to-one range, allowing translucent links and fully opaque metallic surfaces to share the same material.
 
 ```
-import {reflectiveMaterial, reflectiveMaterialPlugin, type ReflectiveMaterialProps, type ReflectiveMaterialUniforms} from '@luma.gl/engine/experimental/materials';
+import {reflectiveMaterial, reflectiveMaterialPlugin, type ReflectiveMaterialProps, type ReflectiveMaterialUniforms} from '@luma.gl/engine/experimental-materials';
 ```
 
 ## Properties[​](#properties "Direct link to Properties")
@@ -42,7 +42,7 @@ Install `opticalPointLightsPlugin` as well and call `reflectiveMaterial_getIllum
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
 
-import {reflectiveMaterial, reflectiveMaterialPlugin} from '@luma.gl/engine/experimental/materials';
+import {reflectiveMaterial, reflectiveMaterialPlugin} from '@luma.gl/engine/experimental-materials';
 
 
 

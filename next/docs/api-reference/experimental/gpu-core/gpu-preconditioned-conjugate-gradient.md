@@ -134,7 +134,7 @@ PCG is therefore a composition test for the GPU graph architecture rather than a
 `GPUJacobiPCG` accepts graph data or vector views for CSR row offsets, column indices, values, right-hand side and solution. The operands can have independent chunk boundaries. Solver scratch follows the right-hand side topology and remains graph-owned. Input storage is borrowed; only the solution and declared scratch are written.
 
 ```
-import {GPUJacobiPCG} from '@luma.gl/graph/gpu-core/gpu-pcg';
+import {GPUJacobiPCG} from '@luma.gl/graph/gpu-core';
 
 
 

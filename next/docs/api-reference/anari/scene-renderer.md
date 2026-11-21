@@ -426,13 +426,15 @@ Applications that already use the glTF environment loader can await its `Dynamic
 ```
 import {loadPBREnvironment} from '@luma.gl/engine/gltf';
 
-import {loadImageTexture} from '@loaders.gl/images/load-image';
+import {load} from '@loaders.gl/core';
+
+import {ImageLoader} from '@loaders.gl/images';
 
 
 
 const loadedEnvironment = loadPBREnvironment(device, {
 
-  loadImage: loadImageTexture,
+  loadImage: url => load(url, ImageLoader),
 
   brdfLutUrl: '/environments/studio/brdf-lut.png',
 
@@ -658,3 +660,11 @@ Breaking out of `for await`, calling iterator `return()`, or aborting releases e
 `iterateRayTracingImageTiles(width, height, tileSize, halo = 0)` exposes the lazy row-major tile plan. Each result contains interior `x`, `y`, `width`, `height` and padded `renderX`, `renderY`, `renderWidth`, `renderHeight`. Halo must be an integer from `0` to `257`.
 
 For custom offscreen pipelines, `RayTracingSceneRenderOptions.imageRegion` is `{offset: [x, y], fullSize: [width, height]}` in top-left full-image pixels. Its local target extent must lie within the full image. This mode forces full resolution and disables adaptive resolution and temporal reprojection. `samplingFrameIndex` optionally chooses the uint32 sampling sequence frame, independent of retained scheduling. Region changes reset accumulation; changing only the explicit sample frame advances sampling without clearing history. Default rendering omits both options and retains its existing behavior.
+
+### Moving reflection probes[​](#moving-reflection-probes "Direct link to Moving reflection probes")
+
+On WebGPU, use `ReflectionProbe` from `@luma.gl/engine/lighting` to capture moving geometry for a reflective surface. Call `probe.update()` before the main render. Pass the GPU pose buffer and the reflective object's matrix index. The draw callback receives a face framebuffer, a rotation-only view matrix and a GPU snapshot of the capture origin and scene matrices. Render the capture surfaces with those matrices and set `camera.gpuOrigin` to the supplied origin buffer. Use a stable render ID per face to keep the recorded uniforms independent. Set `rasterParameters: {frontFace: 'cw'}` because the cube projection flips Y. GPU-origin capture uses the forward color pass without scene transmission, spot shadows, picking, or depth-only rendering. Omit the reflective object from the capture to avoid self-reflection.
+
+Use the completed `probe.texture` as the surface environment's specular cubemap, alongside its diffuse environment and BRDF lookup. Submit the device after recording the frame. Release renderer bindings before destroying the probe.
+
+Incremental refresh uses measured frame headroom to schedule work and accepts directions toward multiple views to prioritize their faces. All faces use one GPU pose snapshot, and the probe publishes the cube after all faces are ready. For fast motion, set `refreshMode: 'same-frame'` to capture and publish on the same frame. With a frame timing estimate, this mode reduces roughness-filter samples under load and restores them as headroom returns. Capture resolution and refresh cadence stay fixed. A smaller face size or mip count reduces the peak per-frame workload.

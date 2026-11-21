@@ -1,6 +1,6 @@
 # Fence
 
-[Resource](https://luma.gl/next/docs/api-reference/core/resources/resource.md)[Buffer](https://luma.gl/next/docs/api-reference/core/resources/buffer.md)[CommandBuffer](https://luma.gl/next/docs/api-reference/core/resources/command-buffer.md)[QuerySet](https://luma.gl/next/docs/api-reference/core/resources/query-set.md)[Fence](https://luma.gl/next/docs/api-reference/core/resources/fence.md)[PipelineLayout](https://luma.gl/next/docs/api-reference/core/resources/pipeline-layout.md)
+[Resource](https://luma.gl/next/docs/api-reference/core/resources/resource.md)[DeviceResource](https://luma.gl/next/docs/api-reference/core/resources/device-resource.md)[Buffer](https://luma.gl/next/docs/api-reference/core/resources/buffer.md)[CommandBuffer](https://luma.gl/next/docs/api-reference/core/resources/command-buffer.md)[QuerySet](https://luma.gl/next/docs/api-reference/core/resources/query-set.md)[Fence](https://luma.gl/next/docs/api-reference/core/resources/fence.md)[PipelineLayout](https://luma.gl/next/docs/api-reference/core/resources/pipeline-layout.md)
 
 A GPU->CPU synchronization primitive that signals / resolves when any GPU commands submitted prior to the Fence have completed.
 
@@ -13,7 +13,7 @@ Remarks:
 
 ### `FenceProps`[​](#fenceprops "Direct link to fenceprops")
 
-`FenceProps` extends [`ResourceProps`](https://luma.gl/next/docs/api-reference/core/resources/resource.md#resourceprops) and accepts the following fields.
+`FenceProps` extends [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/core/resources/device-resource.md#deviceresourceprops) and accepts the following fields.
 
 | Property    | Type                  | Default       | Description                                                   |
 | ----------- | --------------------- | ------------- | ------------------------------------------------------------- |

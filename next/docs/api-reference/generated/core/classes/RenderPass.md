@@ -1,6 +1,6 @@
 # Abstract Class: RenderPass
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L102)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:112](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L112)
 
 A RenderPass instance is a required parameter to all draw calls.
 
@@ -12,7 +12,7 @@ It holds a combination of
 
 ## Extends[​](#extends "Direct link to Extends")
 
-* [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`RenderPassProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassProps.md)>
+* [`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md)<[`RenderPassProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassProps.md)>
 
 ## Extended by[​](#extended-by "Direct link to Extended by")
 
@@ -24,7 +24,7 @@ It holds a combination of
 
 > **new RenderPass**(`device`, `props`, `defaultProps?`): `RenderPass`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L114)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L124)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -46,35 +46,21 @@ Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:114](https://
 
 #### Overrides[​](#overrides "Direct link to Overrides")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`constructor`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#constructor)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`constructor`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#constructor)
 
 ## Properties[​](#properties "Direct link to Properties")
-
-### destroyed[​](#destroyed "Direct link to destroyed")
-
-> **destroyed**: `boolean` = `false`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
-
-Whether this resource has been destroyed
-
-#### Inherited from[​](#inherited-from "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroyed`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroyed)
-
-***
 
 ### device[​](#device-1 "Direct link to device")
 
 > `abstract` `readonly` **device**: [`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L127)
 
 The device that this resource is associated with
 
-#### Inherited from[​](#inherited-from-1 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#device)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`device`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#device)
 
 ***
 
@@ -82,13 +68,13 @@ The device that this resource is associated with
 
 > `abstract` `readonly` **handle**: `unknown`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L129)
 
 The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
-#### Inherited from[​](#inherited-from-2 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-1 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`handle`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#handle)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`handle`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#handle)
 
 ***
 
@@ -96,13 +82,13 @@ The handle for the underlying resource, e.g. WebGL object or WebGPU handle
 
 > **id**: `string`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:121](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L121)
 
 props.id, for debugging.
 
-#### Inherited from[​](#inherited-from-3 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-2 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`id`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#id)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`id`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#id)
 
 ***
 
@@ -110,13 +96,13 @@ props.id, for debugging.
 
 > `readonly` **props**: `Required`<`Props`>
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L123)
 
 The props that this resource was created with
 
-#### Inherited from[​](#inherited-from-4 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-3 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`props`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#props-1)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`props`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#props-1)
 
 ***
 
@@ -124,13 +110,13 @@ The props that this resource was created with
 
 > `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:125](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L125)
 
 User data object, reserved for the application
 
-#### Inherited from[​](#inherited-from-5 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-4 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`userData`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#userdata)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`userData`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#userdata)
 
 ***
 
@@ -138,7 +124,7 @@ User data object, reserved for the application
 
 > `static` **defaultClearColor**: \[`number`, `number`, `number`, `number`]
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L104)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L114)
 
 TODO - should be \[0, 0, 0, 0], update once deck.gl tests run clean
 
@@ -148,7 +134,7 @@ TODO - should be \[0, 0, 0, 0], update once deck.gl tests run clean
 
 > `static` **defaultClearDepth**: `number` = `1`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L106)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:116](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L116)
 
 Depth 1.0 represents the far plance
 
@@ -158,7 +144,7 @@ Depth 1.0 represents the far plance
 
 > `static` **defaultClearStencil**: `number` = `0`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L118)
 
 Clears all stencil bits
 
@@ -168,13 +154,13 @@ Clears all stencil bits
 
 > `static` **defaultProps**: `Required`<[`RenderPassProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassProps.md)>
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:180](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L180)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L190)
 
 Default properties for RenderPass
 
 #### Overrides[​](#overrides-1 "Direct link to Overrides")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`defaultProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#defaultprops)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`defaultProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#defaultprops)
 
 ## Accessors[​](#accessors "Direct link to Accessors")
 
@@ -184,7 +170,7 @@ Default properties for RenderPass
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L110)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L120)
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -192,71 +178,133 @@ Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:110](https://
 
 #### Overrides[​](#overrides-2 "Direct link to Overrides")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`[toStringTag]`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#tostringtag)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`[toStringTag]`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#tostringtag)
 
 ***
 
-### isHandleBorrowed[​](#ishandleborrowed "Direct link to isHandleBorrowed")
+### destroyed[​](#destroyed "Direct link to destroyed")
 
 #### Get Signature[​](#get-signature-1 "Direct link to Get Signature")
 
-> **get** **isHandleBorrowed**(): `boolean`
+> **get** **destroyed**(): `boolean`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L26)
 
-Whether luma.gl may only reference the opaque externally owned resource handle.
+Whether destruction has completed, including when cleanup reported an error.
 
 ##### Returns[​](#returns-2 "Direct link to Returns")
 
 `boolean`
 
-#### Inherited from[​](#inherited-from-6 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-5 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`isHandleBorrowed`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#ishandleborrowed)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroyed`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroyed)
 
 ***
 
-### ownsHandle[​](#ownshandle "Direct link to ownsHandle")
+### isHandleBorrowed[​](#ishandleborrowed "Direct link to isHandleBorrowed")
 
 #### Get Signature[​](#get-signature-2 "Direct link to Get Signature")
 
-> **get** **ownsHandle**(): `boolean`
+> **get** **isHandleBorrowed**(): `boolean`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L146)
 
-Whether luma.gl created and owns the underlying resource handle.
+Whether luma.gl may only reference the opaque externally owned resource handle.
 
 ##### Returns[​](#returns-3 "Direct link to Returns")
 
 `boolean`
 
+#### Inherited from[​](#inherited-from-6 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`isHandleBorrowed`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#ishandleborrowed)
+
+***
+
+### ownedResources[​](#ownedresources "Direct link to ownedResources")
+
+#### Get Signature[​](#get-signature-3 "Direct link to Get Signature")
+
+> **get** **ownedResources**(): readonly [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)\[]
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L21)
+
+A snapshot of this resource's children. Mutating the snapshot cannot change ownership.
+
+##### Returns[​](#returns-4 "Direct link to Returns")
+
+readonly [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)\[]
+
 #### Inherited from[​](#inherited-from-7 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`ownsHandle`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#ownshandle)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`ownedResources`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#ownedresources)
+
+***
+
+### owner[​](#owner "Direct link to owner")
+
+#### Get Signature[​](#get-signature-4 "Direct link to Get Signature")
+
+> **get** **owner**(): [`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md) | `null`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L16)
+
+The resource responsible for destroying this resource, or null for caller-managed lifetime.
+
+##### Returns[​](#returns-5 "Direct link to Returns")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md) | `null`
+
+#### Inherited from[​](#inherited-from-8 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`owner`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#owner)
+
+***
+
+### ownsHandle[​](#ownshandle "Direct link to ownsHandle")
+
+#### Get Signature[​](#get-signature-5 "Direct link to Get Signature")
+
+> **get** **ownsHandle**(): `boolean`
+
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L139)
+
+Whether luma.gl created and owns the underlying resource handle.
+
+##### Returns[​](#returns-6 "Direct link to Returns")
+
+`boolean`
+
+#### Inherited from[​](#inherited-from-9 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`ownsHandle`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#ownshandle)
 
 ## Methods[​](#methods "Direct link to Methods")
 
-### attachResource()[​](#attachresource "Direct link to attachResource()")
+### ~~attachResource()~~[​](#attachresource "Direct link to attachresource")
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
-
-Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L90)
 
 #### Parameters[​](#parameters-1 "Direct link to Parameters")
 
 ##### resource[​](#resource "Direct link to resource")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)
 
-#### Returns[​](#returns-4 "Direct link to Returns")
+#### Returns[​](#returns-7 "Direct link to Returns")
 
 `void`
 
-#### Inherited from[​](#inherited-from-8 "Direct link to Inherited from")
+#### Deprecated[​](#deprecated "Direct link to Deprecated")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`attachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#attachresource)
+Use resource.transferOwnershipTo(this).
+
+#### Inherited from[​](#inherited-from-10 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`attachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#attachresource)
 
 ***
 
@@ -264,7 +312,7 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > `abstract` **beginOcclusionQuery**(`queryIndex`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L164)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L174)
 
 Being an occlusion query. Value will be stored in the occlusionQuerySet at the index. Occlusion queries cannot be nested.
 
@@ -274,7 +322,7 @@ Being an occlusion query. Value will be stored in the occlusionQuerySet at the i
 
 `number`
 
-#### Returns[​](#returns-5 "Direct link to Returns")
+#### Returns[​](#returns-8 "Direct link to Returns")
 
 `void`
 
@@ -284,19 +332,19 @@ Being an occlusion query. Value will be stored in the occlusionQuerySet at the i
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:84](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L84)
 
-#### Returns[​](#returns-6 "Direct link to Returns")
+#### Returns[​](#returns-9 "Direct link to Returns")
 
 `this`
 
-#### Deprecated[​](#deprecated "Direct link to Deprecated")
+#### Deprecated[​](#deprecated-1 "Direct link to Deprecated")
 
-Use destroy()
+Use destroy().
 
-#### Inherited from[​](#inherited-from-9 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-11 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`delete`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#delete)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`delete`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#delete)
 
 ***
 
@@ -304,83 +352,89 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L49)
 
-destroy can be called on any resource to release it before it is garbage collected.
-
-#### Returns[​](#returns-7 "Direct link to Returns")
-
-`void`
-
-#### Inherited from[​](#inherited-from-10 "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroy`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroy)
-
-***
-
-### destroyAttachedResource()[​](#destroyattachedresource "Direct link to destroyAttachedResource()")
-
-> **destroyAttachedResource**(`resource`): `void`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
-
-Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
-
-#### Parameters[​](#parameters-3 "Direct link to Parameters")
-
-##### resource[​](#resource-1 "Direct link to resource")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
-
-#### Returns[​](#returns-8 "Direct link to Returns")
-
-`void`
-
-#### Inherited from[​](#inherited-from-11 "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroyAttachedResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroyattachedresource)
-
-***
-
-### destroyAttachedResources()[​](#destroyattachedresources "Direct link to destroyAttachedResources()")
-
-> **destroyAttachedResources**(): `void`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
-
-Destroy all owned resources. Make sure the resources are no longer needed before calling.
-
-#### Returns[​](#returns-9 "Direct link to Returns")
-
-`void`
-
-#### Inherited from[​](#inherited-from-12 "Direct link to Inherited from")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`destroyAttachedResources`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#destroyattachedresources)
-
-***
-
-### detachResource()[​](#detachresource "Direct link to detachResource()")
-
-> **detachResource**(`resource`): `void`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
-
-Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
-
-#### Parameters[​](#parameters-4 "Direct link to Parameters")
-
-##### resource[​](#resource-2 "Direct link to resource")
-
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+Destroy children before this resource. Subclasses implement hooks instead of overriding.
 
 #### Returns[​](#returns-10 "Direct link to Returns")
 
 `void`
 
+#### Inherited from[​](#inherited-from-12 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroy`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroy)
+
+***
+
+### ~~destroyAttachedResource()~~[​](#destroyattachedresource "Direct link to destroyattachedresource")
+
+> **destroyAttachedResource**(`resource`): `void`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L102)
+
+#### Parameters[​](#parameters-3 "Direct link to Parameters")
+
+##### resource[​](#resource-1 "Direct link to resource")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)
+
+#### Returns[​](#returns-11 "Direct link to Returns")
+
+`void`
+
+#### Deprecated[​](#deprecated-2 "Direct link to Deprecated")
+
+Check resource.owner and call resource.destroy().
+
 #### Inherited from[​](#inherited-from-13 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`detachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#detachresource)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroyAttachedResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroyattachedresource)
+
+***
+
+### ~~destroyAttachedResources()~~[​](#destroyattachedresources "Direct link to destroyattachedresources")
+
+> **destroyAttachedResources**(): `void`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L109)
+
+#### Returns[​](#returns-12 "Direct link to Returns")
+
+`void`
+
+#### Deprecated[​](#deprecated-3 "Direct link to Deprecated")
+
+Destroy individually owned resources, or destroy the owner.
+
+#### Inherited from[​](#inherited-from-14 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`destroyAttachedResources`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#destroyattachedresources)
+
+***
+
+### ~~detachResource()~~[​](#detachresource "Direct link to detachresource")
+
+> **detachResource**(`resource`): `void`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L95)
+
+#### Parameters[​](#parameters-4 "Direct link to Parameters")
+
+##### resource[​](#resource-2 "Direct link to resource")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md)
+
+#### Returns[​](#returns-13 "Direct link to Returns")
+
+`void`
+
+#### Deprecated[​](#deprecated-4 "Direct link to Deprecated")
+
+Use resource.transferOwnershipTo(null). Only detaches a child owned by this.
+
+#### Inherited from[​](#inherited-from-15 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`detachResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#detachresource)
 
 ***
 
@@ -388,7 +442,7 @@ Detach an attached resource. The resource will no longer be auto-destroyed when 
 
 > `abstract` **draw**(`options`): `boolean`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L148)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L158)
 
 Issues a draw using the currently selected pipeline, bindings, and vertex array.
 
@@ -398,7 +452,7 @@ Issues a draw using the currently selected pipeline, bindings, and vertex array.
 
 [`RenderPassDrawOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassDrawOptions.md)
 
-#### Returns[​](#returns-11 "Direct link to Returns")
+#### Returns[​](#returns-14 "Direct link to Returns")
 
 `boolean`
 
@@ -408,7 +462,7 @@ Issues a draw using the currently selected pipeline, bindings, and vertex array.
 
 > `abstract` **drawIndexedIndirect**(`indirectBuffer`, `indirectByteOffset?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L154)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L164)
 
 Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.
 
@@ -422,7 +476,7 @@ Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.
 
 `number`
 
-#### Returns[​](#returns-12 "Direct link to Returns")
+#### Returns[​](#returns-15 "Direct link to Returns")
 
 `void`
 
@@ -432,7 +486,7 @@ Issues an indexed draw using five 32-bit arguments stored in an indirect buffer.
 
 > `abstract` **drawIndirect**(`indirectBuffer`, `indirectByteOffset?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L151)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L161)
 
 Issues a non-indexed draw using four uint32 arguments stored in an indirect buffer.
 
@@ -446,7 +500,7 @@ Issues a non-indexed draw using four uint32 arguments stored in an indirect buff
 
 `number`
 
-#### Returns[​](#returns-13 "Direct link to Returns")
+#### Returns[​](#returns-16 "Direct link to Returns")
 
 `void`
 
@@ -456,11 +510,11 @@ Issues a non-indexed draw using four uint32 arguments stored in an indirect buff
 
 > `abstract` **end**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L124)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L134)
 
 Call when rendering is done in this pass.
 
-#### Returns[​](#returns-14 "Direct link to Returns")
+#### Returns[​](#returns-17 "Direct link to Returns")
 
 `void`
 
@@ -470,11 +524,11 @@ Call when rendering is done in this pass.
 
 > `abstract` **endOcclusionQuery**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L166)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:176](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L176)
 
 End an occlusion query. Stores result in the index specified in beginOcclusionQuery.
 
-#### Returns[​](#returns-15 "Direct link to Returns")
+#### Returns[​](#returns-18 "Direct link to Returns")
 
 `void`
 
@@ -484,7 +538,7 @@ End an occlusion query. Stores result in the index specified in beginOcclusionQu
 
 > `abstract` **executeBundles**(`bundles`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L161)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:171](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L171)
 
 Replays reusable draw commands recorded by one or more render bundle encoders.
 
@@ -496,7 +550,7 @@ Replays reusable draw commands recorded by one or more render bundle encoders.
 
 Bundles whose attachment formats and sample count are compatible with this pass.
 
-#### Returns[​](#returns-16 "Direct link to Returns")
+#### Returns[​](#returns-19 "Direct link to Returns")
 
 `void`
 
@@ -510,11 +564,11 @@ On backends other than WebGPU.
 
 > `abstract` **getParameters**(): [`RenderPassParameters`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassParameters.md)
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L130)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L140)
 
 Returns a detached snapshot of the current dynamic render-pass parameters.
 
-#### Returns[​](#returns-17 "Direct link to Returns")
+#### Returns[​](#returns-20 "Direct link to Returns")
 
 [`RenderPassParameters`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassParameters.md)
 
@@ -524,19 +578,19 @@ Returns a detached snapshot of the current dynamic render-pass parameters.
 
 > **getProps**(): `object`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L174)
 
 Combines a map of user props and default props, only including props from defaultProps
 
-#### Returns[​](#returns-18 "Direct link to Returns")
+#### Returns[​](#returns-21 "Direct link to Returns")
 
 `object`
 
 returns a map of overridden default props
 
-#### Inherited from[​](#inherited-from-14 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-16 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`getProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#getprops)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`getProps`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#getprops)
 
 ***
 
@@ -544,7 +598,7 @@ returns a map of overridden default props
 
 > `abstract` **insertDebugMarker**(`markerLabel`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:183](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L183)
 
 Marks a point in a stream of commands with a label
 
@@ -554,7 +608,7 @@ Marks a point in a stream of commands with a label
 
 `string`
 
-#### Returns[​](#returns-19 "Direct link to Returns")
+#### Returns[​](#returns-22 "Direct link to Returns")
 
 `void`
 
@@ -564,11 +618,11 @@ Marks a point in a stream of commands with a label
 
 > `abstract` **popDebugGroup**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:171](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L171)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L181)
 
 Ends the labeled debug group most recently started by pushDebugGroup()
 
-#### Returns[​](#returns-20 "Direct link to Returns")
+#### Returns[​](#returns-23 "Direct link to Returns")
 
 `void`
 
@@ -578,7 +632,7 @@ Ends the labeled debug group most recently started by pushDebugGroup()
 
 > `abstract` **pushDebugGroup**(`groupLabel`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:169](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L169)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:179](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L179)
 
 Begins a labeled debug group containing subsequent commands
 
@@ -588,7 +642,7 @@ Begins a labeled debug group containing subsequent commands
 
 `string`
 
-#### Returns[​](#returns-21 "Direct link to Returns")
+#### Returns[​](#returns-24 "Direct link to Returns")
 
 `void`
 
@@ -598,7 +652,7 @@ Begins a labeled debug group containing subsequent commands
 
 > `abstract` **setBindings**(`bindings`, `options?`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L139)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L149)
 
 Replaces the complete binding set used by subsequent draw commands. A pipeline must be selected first so bindings can be resolved against its shader layout.
 
@@ -612,7 +666,7 @@ Replaces the complete binding set used by subsequent draw commands. A pipeline m
 
 [`RenderPassBindingOptions`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassBindingOptions.md)
 
-#### Returns[​](#returns-22 "Direct link to Returns")
+#### Returns[​](#returns-25 "Direct link to Returns")
 
 `void`
 
@@ -622,7 +676,7 @@ Replaces the complete binding set used by subsequent draw commands. A pipeline m
 
 > `abstract` **setParameters**(`parameters`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L127)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L137)
 
 A few parameters can be changed at any time (viewport, scissorRect, blendColor, stencilReference)
 
@@ -632,7 +686,7 @@ A few parameters can be changed at any time (viewport, scissorRect, blendColor, 
 
 [`RenderPassParameters`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/RenderPassParameters.md)
 
-#### Returns[​](#returns-23 "Direct link to Returns")
+#### Returns[​](#returns-26 "Direct link to Returns")
 
 `void`
 
@@ -642,7 +696,7 @@ A few parameters can be changed at any time (viewport, scissorRect, blendColor, 
 
 > `abstract` **setPipeline**(`pipeline`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L133)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L143)
 
 Selects the pipeline used by subsequent binding and draw commands.
 
@@ -652,7 +706,7 @@ Selects the pipeline used by subsequent binding and draw commands.
 
 [`RenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md)
 
-#### Returns[​](#returns-24 "Direct link to Returns")
+#### Returns[​](#returns-27 "Direct link to Returns")
 
 `void`
 
@@ -662,7 +716,7 @@ Selects the pipeline used by subsequent binding and draw commands.
 
 > `abstract` **setVertexArray**(`vertexArray`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L145)
+Defined in: [modules/core/src/api/adapter/resources/render-pass.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/render-pass.ts#L155)
 
 Selects the vertex array used by subsequent draw commands.
 
@@ -672,7 +726,7 @@ Selects the vertex array used by subsequent draw commands.
 
 [`VertexArray`](https://luma.gl/next/docs/api-reference/generated/core/classes/VertexArray.md)
 
-#### Returns[​](#returns-25 "Direct link to Returns")
+#### Returns[​](#returns-28 "Direct link to Returns")
 
 `void`
 
@@ -682,17 +736,17 @@ Selects the vertex array used by subsequent draw commands.
 
 > **toJSON**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:116](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L116)
 
 Compact serialization for assertion diffs and structured debug logs.
 
-#### Returns[​](#returns-26 "Direct link to Returns")
+#### Returns[​](#returns-29 "Direct link to Returns")
 
 `string`
 
-#### Inherited from[​](#inherited-from-15 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-17 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`toJSON`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#tojson)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`toJSON`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#tojson)
 
 ***
 
@@ -700,12 +754,38 @@ Compact serialization for assertion diffs and structured debug logs.
 
 > **toString**(): `string`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
+Defined in: [modules/core/src/api/adapter/resources/device-resource.ts:111](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/device-resource.ts#L111)
 
-#### Returns[​](#returns-27 "Direct link to Returns")
+Returns a string representation of an object.
+
+#### Returns[​](#returns-30 "Direct link to Returns")
 
 `string`
 
-#### Inherited from[​](#inherited-from-16 "Direct link to Inherited from")
+#### Inherited from[​](#inherited-from-18 "Direct link to Inherited from")
 
-[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md).[`toString`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md#tostring)
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`toString`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#tostring)
+
+***
+
+### transferOwnershipTo()[​](#transferownershipto "Direct link to transferOwnershipTo()")
+
+> **transferOwnershipTo**(`owner`): `this`
+
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L31)
+
+Transfer exclusive ownership, or return lifetime responsibility to the caller with null.
+
+#### Parameters[​](#parameters-16 "Direct link to Parameters")
+
+##### owner[​](#owner-1 "Direct link to owner")
+
+[`Resource`](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md) | `null`
+
+#### Returns[​](#returns-31 "Direct link to Returns")
+
+`this`
+
+#### Inherited from[​](#inherited-from-19 "Direct link to Inherited from")
+
+[`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md).[`transferOwnershipTo`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md#transferownershipto)

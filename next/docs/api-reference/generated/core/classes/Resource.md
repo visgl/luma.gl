@@ -1,201 +1,92 @@
-# Abstract Class: Resource\<Props>
+# Abstract Class: Resource
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L97)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:8](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L8)
 
-Base class for GPU (WebGPU/WebGL) Resources
+A device-independent lifetime with exclusive ownership and deterministic cleanup.
 
 ## Extended by[​](#extended-by "Direct link to Extended by")
 
-* [`Buffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Buffer.md)
-* [`Texture`](https://luma.gl/next/docs/api-reference/generated/core/classes/Texture.md)
-* [`TextureView`](https://luma.gl/next/docs/api-reference/generated/core/classes/TextureView.md)
-* [`ExternalTexture`](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md)
-* [`Shader`](https://luma.gl/next/docs/api-reference/generated/core/classes/Shader.md)
-* [`Sampler`](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md)
-* [`Framebuffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md)
-* [`RenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md)
-* [`SharedRenderPipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/SharedRenderPipeline.md)
-* [`RenderPass`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPass.md)
-* [`RenderBundle`](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundle.md)
-* [`ComputePipeline`](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePipeline.md)
-* [`ComputePass`](https://luma.gl/next/docs/api-reference/generated/core/classes/ComputePass.md)
-* [`CommandEncoder`](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandEncoder.md)
-* [`CommandBuffer`](https://luma.gl/next/docs/api-reference/generated/core/classes/CommandBuffer.md)
-* [`VertexArray`](https://luma.gl/next/docs/api-reference/generated/core/classes/VertexArray.md)
-* [`TransformFeedback`](https://luma.gl/next/docs/api-reference/generated/core/classes/TransformFeedback.md)
-* [`QuerySet`](https://luma.gl/next/docs/api-reference/generated/core/classes/QuerySet.md)
-* [`Fence`](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md)
-* [`PipelineLayout`](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineLayout.md)
-
-## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
-
-### Props[​](#props "Direct link to Props")
-
-`Props` *extends* [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)
+* [`DeviceResource`](https://luma.gl/next/docs/api-reference/generated/core/classes/DeviceResource.md)
 
 ## Constructors[​](#constructors "Direct link to Constructors")
 
 ### Constructor[​](#constructor "Direct link to Constructor")
 
-> **new Resource**<`Props`>(`device`, `props`, `defaultProps`): `Resource`<`Props`>
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L154)
-
-Create a new Resource. Called from Subclass
-
-#### Parameters[​](#parameters "Direct link to Parameters")
-
-##### device[​](#device "Direct link to device")
-
-[`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)
-
-##### props[​](#props-1 "Direct link to props")
-
-`Props`
-
-##### defaultProps[​](#defaultprops "Direct link to defaultProps")
-
-`Required`<`Props`>
+> **new Resource**(): `Resource`
 
 #### Returns[​](#returns "Direct link to Returns")
 
-`Resource`<`Props`>
-
-## Properties[​](#properties "Direct link to Properties")
-
-### destroyed[​](#destroyed "Direct link to destroyed")
-
-> **destroyed**: `boolean` = `false`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L131)
-
-Whether this resource has been destroyed
-
-***
-
-### device[​](#device-1 "Direct link to device")
-
-> `abstract` `readonly` **device**: [`Device`](https://luma.gl/next/docs/api-reference/generated/core/classes/Device.md)
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L124)
-
-The device that this resource is associated with
-
-***
-
-### handle[​](#handle "Direct link to handle")
-
-> `abstract` `readonly` **handle**: `unknown`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L126)
-
-The handle for the underlying resource, e.g. WebGL object or WebGPU handle
-
-***
-
-### id[​](#id "Direct link to id")
-
-> **id**: `string`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L118)
-
-props.id, for debugging.
-
-***
-
-### props[​](#props-2 "Direct link to props")
-
-> `readonly` **props**: `Required`<`Props`>
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L120)
-
-The props that this resource was created with
-
-***
-
-### userData[​](#userdata "Direct link to userData")
-
-> `readonly` **userData**: `Record`<`string`, `unknown`> = `{}`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L122)
-
-User data object, reserved for the application
-
-***
-
-### defaultProps[​](#defaultprops-1 "Direct link to defaultProps")
-
-> `static` **defaultProps**: `Required`<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L99)
-
-Default properties for resource
+`Resource`
 
 ## Accessors[​](#accessors "Direct link to Accessors")
 
-### \[toStringTag][​](#tostringtag "Direct link to \[toStringTag]")
+### destroyed[​](#destroyed "Direct link to destroyed")
 
 #### Get Signature[​](#get-signature "Direct link to Get Signature")
 
-> **get** `abstract` **\[toStringTag]**(): `string`
+> **get** **destroyed**(): `boolean`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L106)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L26)
+
+Whether destruction has completed, including when cleanup reported an error.
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
-`string`
+`boolean`
 
 ***
 
-### isHandleBorrowed[​](#ishandleborrowed "Direct link to isHandleBorrowed")
+### ownedResources[​](#ownedresources "Direct link to ownedResources")
 
 #### Get Signature[​](#get-signature-1 "Direct link to Get Signature")
 
-> **get** **isHandleBorrowed**(): `boolean`
+> **get** **ownedResources**(): readonly `Resource`\[]
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L147)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L21)
 
-Whether luma.gl may only reference the opaque externally owned resource handle.
+A snapshot of this resource's children. Mutating the snapshot cannot change ownership.
 
 ##### Returns[​](#returns-2 "Direct link to Returns")
 
-`boolean`
+readonly `Resource`\[]
 
 ***
 
-### ownsHandle[​](#ownshandle "Direct link to ownsHandle")
+### owner[​](#owner "Direct link to owner")
 
 #### Get Signature[​](#get-signature-2 "Direct link to Get Signature")
 
-> **get** **ownsHandle**(): `boolean`
+> **get** **owner**(): `Resource` | `null`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L140)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L16)
 
-Whether luma.gl created and owns the underlying resource handle.
+The resource responsible for destroying this resource, or null for caller-managed lifetime.
 
 ##### Returns[​](#returns-3 "Direct link to Returns")
 
-`boolean`
+`Resource` | `null`
 
 ## Methods[​](#methods "Direct link to Methods")
 
-### attachResource()[​](#attachresource "Direct link to attachResource()")
+### ~~attachResource()~~[​](#attachresource "Direct link to attachresource")
 
 > **attachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:200](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L200)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L90)
 
-Attaches a resource. Attached resources are auto destroyed when this resource is destroyed Called automatically when sub resources are auto created but can be called by application
-
-#### Parameters[​](#parameters-1 "Direct link to Parameters")
+#### Parameters[​](#parameters "Direct link to Parameters")
 
 ##### resource[​](#resource "Direct link to resource")
 
-`Resource`<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+`Resource`
 
 #### Returns[​](#returns-4 "Direct link to Returns")
 
 `void`
+
+#### Deprecated[​](#deprecated "Direct link to Deprecated")
+
+Use resource.transferOwnershipTo(this).
 
 ***
 
@@ -203,15 +94,15 @@ Attaches a resource. Attached resources are auto destroyed when this resource is
 
 > **delete**(): `this`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L181)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:84](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L84)
 
 #### Returns[​](#returns-5 "Direct link to Returns")
 
 `this`
 
-#### Deprecated[​](#deprecated "Direct link to Deprecated")
+#### Deprecated[​](#deprecated-1 "Direct link to Deprecated")
 
-Use destroy()
+Use destroy().
 
 ***
 
@@ -219,9 +110,9 @@ Use destroy()
 
 > **destroy**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L173)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L49)
 
-destroy can be called on any resource to release it before it is garbage collected.
+Destroy children before this resource. Subclasses implement hooks instead of overriding.
 
 #### Returns[​](#returns-6 "Direct link to Returns")
 
@@ -229,96 +120,80 @@ destroy can be called on any resource to release it before it is garbage collect
 
 ***
 
-### destroyAttachedResource()[​](#destroyattachedresource "Direct link to destroyAttachedResource()")
+### ~~destroyAttachedResource()~~[​](#destroyattachedresource "Direct link to destroyattachedresource")
 
 > **destroyAttachedResource**(`resource`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:214](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L214)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L102)
 
-Destroys a resource (only if owned), and removes from the owned (auto-destroy) list for this resource.
-
-#### Parameters[​](#parameters-2 "Direct link to Parameters")
+#### Parameters[​](#parameters-1 "Direct link to Parameters")
 
 ##### resource[​](#resource-1 "Direct link to resource")
 
-`Resource`<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+`Resource`
 
 #### Returns[​](#returns-7 "Direct link to Returns")
 
 `void`
 
+#### Deprecated[​](#deprecated-2 "Direct link to Deprecated")
+
+Check resource.owner and call resource.destroy().
+
 ***
 
-### destroyAttachedResources()[​](#destroyattachedresources "Direct link to destroyAttachedResources()")
+### ~~destroyAttachedResources()~~[​](#destroyattachedresources "Direct link to destroyattachedresources")
 
 > **destroyAttachedResources**(): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:221](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L221)
-
-Destroy all owned resources. Make sure the resources are no longer needed before calling.
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L109)
 
 #### Returns[​](#returns-8 "Direct link to Returns")
 
 `void`
 
+#### Deprecated[​](#deprecated-3 "Direct link to Deprecated")
+
+Destroy individually owned resources, or destroy the owner.
+
 ***
 
-### detachResource()[​](#detachresource "Direct link to detachResource()")
+### ~~detachResource()~~[​](#detachresource "Direct link to detachresource")
 
 > **detachResource**(`resource`): `void`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:207](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L207)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L95)
 
-Detach an attached resource. The resource will no longer be auto-destroyed when this resource is destroyed.
-
-#### Parameters[​](#parameters-3 "Direct link to Parameters")
+#### Parameters[​](#parameters-2 "Direct link to Parameters")
 
 ##### resource[​](#resource-2 "Direct link to resource")
 
-`Resource`<[`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)>
+`Resource`
 
 #### Returns[​](#returns-9 "Direct link to Returns")
 
 `void`
 
+#### Deprecated[​](#deprecated-4 "Direct link to Deprecated")
+
+Use resource.transferOwnershipTo(null). Only detaches a child owned by this.
+
 ***
 
-### getProps()[​](#getprops "Direct link to getProps()")
+### transferOwnershipTo()[​](#transferownershipto "Direct link to transferOwnershipTo()")
 
-> **getProps**(): `object`
+> **transferOwnershipTo**(`owner`): `this`
 
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:190](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L190)
+Defined in: [modules/core/src/api/adapter/resources/resource.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L31)
 
-Combines a map of user props and default props, only including props from defaultProps
+Transfer exclusive ownership, or return lifetime responsibility to the caller with null.
+
+#### Parameters[​](#parameters-3 "Direct link to Parameters")
+
+##### owner[​](#owner-1 "Direct link to owner")
+
+`Resource` | `null`
 
 #### Returns[​](#returns-10 "Direct link to Returns")
 
-`object`
-
-returns a map of overridden default props
-
-***
-
-### toJSON()[​](#tojson "Direct link to toJSON()")
-
-> **toJSON**(): `string`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L113)
-
-Compact serialization for assertion diffs and structured debug logs.
-
-#### Returns[​](#returns-11 "Direct link to Returns")
-
-`string`
-
-***
-
-### toString()[​](#tostring "Direct link to toString()")
-
-> **toString**(): `string`
-
-Defined in: [modules/core/src/api/adapter/resources/resource.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/resource.ts#L108)
-
-#### Returns[​](#returns-12 "Direct link to Returns")
-
-`string`
+`this`

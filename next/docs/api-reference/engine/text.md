@@ -146,6 +146,22 @@ The attribute path supports row colors and per-character color lists. It expands
 
 Atlas-backed text requires a normalized `fontAtlas`. Use `@luma.gl/engine/text-fonts` to build browser-font atlases explicitly with `buildBitmapFontAtlas()` or `buildSdfFontAtlas()`, or load BMFont JSON MSDF atlases with `buildMsdfFontAtlas()` or `loadMsdfFontAtlas()` before constructing a text renderer or model.
 
+### Bidirectional text preparation[​](#bidirectional-text-preparation "Direct link to Bidirectional text preparation")
+
+`buildTextGlyphLayout()` reads code points in display order. For one-line labels, use `createTextCodePointSource(rows, toDisplayOrder)` to run your application's bidi processor once per row before layout. The callback receives the logical text and row index and returns a string in display order. If the rows are already in display order, omit the callback.
+
+```
+import {buildTextGlyphLayout, createTextCodePointSource} from '@luma.gl/engine/text';
+
+
+
+const source = createTextCodePointSource(logicalLabels, toDisplayOrder);
+
+const layout = buildTextGlyphLayout(source, {fontAtlas});
+```
+
+This adapter does not implement bidi reordering, line wrapping, or Arabic/OpenType shaping itself. The atlas must contain the resulting code points. The adapter does not change the default behavior of `TextRenderer` or Arrow/GPU text preparation.
+
 ## Storage Path[​](#storage-path "Direct link to Storage Path")
 
 Supported WebGPU inputs automatically use storage-backed text.

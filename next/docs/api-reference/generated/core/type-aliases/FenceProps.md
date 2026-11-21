@@ -1,5 +1,5 @@
 # Type Alias: FenceProps
 
-> **FenceProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md)
+> **FenceProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md)
 
 Defined in: [modules/core/src/api/adapter/resources/fence.ts:8](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/fence.ts#L8)

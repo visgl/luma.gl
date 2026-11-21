@@ -1,6 +1,6 @@
 # Type Alias: TransformFeedbackProps
 
-> **TransformFeedbackProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **TransformFeedbackProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/transform-feedback.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/transform-feedback.ts#L19)
 

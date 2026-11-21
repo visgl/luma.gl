@@ -1,6 +1,6 @@
 # Class: VideoTexture
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L26)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L32)
 
 Live video binding source.
 
@@ -16,7 +16,7 @@ GLSL `sampler2D` and WGSL `texture_2d` bindings resolve to copied luma textures.
 
 > **new VideoTexture**(`device`, `props`): `VideoTexture`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L81)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L87)
 
 Creates a live video binding source.
 
@@ -44,7 +44,7 @@ Live video source and copied texture options.
 
 > **destroyed**: `boolean` = `false`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L33)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L39)
 
 Whether this video binding source has been destroyed.
 
@@ -54,7 +54,7 @@ Whether this video binding source has been destroyed.
 
 > `readonly` **device**: `Device`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L28)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L34)
 
 Device used to create copied and native external texture bindings.
 
@@ -64,7 +64,7 @@ Device used to create copied and native external texture bindings.
 
 > **generation**: `number` = `0`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L35)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L41)
 
 Monotonic binding generation advanced when concrete draw bindings may need recreation.
 
@@ -78,7 +78,7 @@ Monotonic binding generation advanced when concrete draw bindings may need recre
 
 > `readonly` **id**: `string`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L30)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L36)
 
 Stable resource identifier used in loading and debug messages.
 
@@ -94,9 +94,9 @@ Stable resource identifier used in loading and debug messages.
 
 > **get** **\[toStringTag]**(): `string`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L66)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L72)
 
-Resource label used by debug output.
+DeviceResource label used by debug output.
 
 ##### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -110,7 +110,7 @@ Resource label used by debug output.
 
 > **get** **isReady**(): `boolean`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L54)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L60)
 
 Whether the current source exposes dimensions and a current frame.
 
@@ -130,15 +130,15 @@ Whether the source can resolve a concrete binding for the current draw.
 
 #### Get Signature[​](#get-signature-2 "Direct link to Get Signature")
 
-> **get** **source**(): `VideoFrame` | `HTMLVideoElement`
+> **get** **source**(): `HTMLVideoElement` | `VideoFrame`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L49)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:55](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L55)
 
 Current caller-owned live video source.
 
 ##### Returns[​](#returns-3 "Direct link to Returns")
 
-`VideoFrame` | `HTMLVideoElement`
+`HTMLVideoElement` | `VideoFrame`
 
 ***
 
@@ -148,7 +148,7 @@ Current caller-owned live video source.
 
 > **get** **updateTimestamp**(): `number`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L60)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L66)
 
 Device timestamp of the most recent source content or binding identity update.
 
@@ -168,7 +168,7 @@ Device timestamp of the most recent source content or binding identity update.
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L142)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L148)
 
 Releases owned copied/external bindings without closing the caller-owned source.
 
@@ -182,7 +182,7 @@ Releases owned copied/external bindings without closing the caller-owned source.
 
 > **resolveTextureBinding**(`bindingLayout`): `Texture` | `ExternalTexture` | `null`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:117](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L117)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L123)
 
 Resolves one reflected shader texture slot for the current video frame.
 
@@ -210,7 +210,7 @@ A copied texture, native external texture, or `null` while unavailable.
 
 > **setSampler**(`sampler`): `void`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L134)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L140)
 
 Replaces the default sampler used by copied and native external bindings.
 
@@ -232,7 +232,7 @@ Sampler instance or sampler properties to use for future resolutions.
 
 > **setSource**(`source`): `void`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L99)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L105)
 
 Replaces the caller-owned video source and invalidates resolved bindings.
 
@@ -240,7 +240,7 @@ Replaces the caller-owned video source and invalidates resolved bindings.
 
 ##### source[​](#source-1 "Direct link to source")
 
-`VideoFrame` | `HTMLVideoElement`
+`HTMLVideoElement` | `VideoFrame`
 
 Next caller-owned video source to follow.
 
@@ -254,7 +254,7 @@ Next caller-owned video source to follow.
 
 > **toString**(): `string`
 
-Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L71)
+Defined in: [modules/engine/src/dynamic-texture/video-texture.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/dynamic-texture/video-texture.ts#L77)
 
 Formats the current source dimensions and readiness for debug output.
 

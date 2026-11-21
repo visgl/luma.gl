@@ -117,5 +117,23 @@ The [generated <!-- -->Engine<!-- --> API index](https://luma.gl/next/docs/api-r
 [Shaders](https://luma.gl/next/docs/api-reference/shaders.md)[Engine](https://luma.gl/next/docs/api-reference/engine.md)[Core](https://luma.gl/next/docs/api-reference/core.md)[GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md)
 
 * Use [Core](https://luma.gl/next/docs/api-reference/core.md) for direct resource and command control.
+
 * Use [Shaders](https://luma.gl/next/docs/api-reference/shaders.md) for modules, hooks, and plugins.
+
 * Use [GPU Core](https://luma.gl/next/docs/api-reference/experimental/gpu-core.md) for scheduled multi-stage GPU work.
+
+* Use [directional contact shadows](https://luma.gl/next/docs/api-reference/engine/lighting/contact-shadows.md) for short screen-space visibility refinement.
+
+* Use [PBR surface prepasses](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-surface-pass.md) for reusable camera depth and view-space normal textures.
+
+* Use [PBR shadows](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-shadows.md) to cast and receive shadows with standalone mesh models.
+
+* Use [ShadowMapRenderer](https://luma.gl/next/docs/api-reference/engine/lighting/shadow-map-renderer.md) to record caller-owned shadow caster draws and share depth resources with receiver shaders.
+
+* Use [standalone PBR models](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-model.md) to render native or loaded meshes with explicit transforms and lighting.
+
+* Use [PBR materials](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-material.md) and [environment bindings](https://luma.gl/next/docs/api-reference/engine/lighting/pbr-environment.md) for shared physical materials and lighting resources.
+
+* Use [PrefilteredEnvironment](https://luma.gl/next/docs/api-reference/engine/lighting/prefiltered-environment.md) for reusable image-based lighting.
+
+* Use [ClusteredLightGrid](https://luma.gl/next/docs/api-reference/engine/lighting/clustered-light-grid.md) to build WebGPU light candidate lists. For choosing and combining environments, shadows, and AO, see the [lighting effects guide](https://luma.gl/next/docs/api-guide/engine/lighting-effects.md).

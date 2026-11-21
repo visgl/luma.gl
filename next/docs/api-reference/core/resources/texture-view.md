@@ -32,7 +32,7 @@ const textureView = texture.createView({...});
 
 ### TextureViewProps[​](#textureviewprops "Direct link to TextureViewProps")
 
-Views inherit [ResourceProps](https://luma.gl/next/docs/api-reference/core/resources/resource.md#resourceprops). `texture.createView()` accepts partial view properties; omitted ranges are resolved by the backend from the texture.
+Views inherit [DeviceResourceProps](https://luma.gl/next/docs/api-reference/core/resources/device-resource.md#deviceresourceprops). `texture.createView()` accepts partial view properties; omitted ranges are resolved by the backend from the texture.
 
 | Property          | Type                                                           | Description                                                                    |
 | ----------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |

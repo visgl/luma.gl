@@ -41,7 +41,7 @@ For moving emitters, `emissiveMaterial_getTrailColor(...)` applies a smooth axia
 ```
 import {Model, ShaderInputs} from '@luma.gl/engine';
 
-import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental-materials';
 
 
 
@@ -146,7 +146,7 @@ A full migration should first extend the retained scene renderer with per-instan
 `glassTransmissionPlugin` extends `glassMaterialPlugin` without changing the existing glass helper or adding iterative ray tracing. Render outward-facing sphere backfaces into an RGBA texture whose RGB channels contain the encoded world normal and whose alpha channel contains framebuffer depth. The opaque scene depth must remain available as a sampleable depth texture.
 
 ```
-import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/engine/experimental/materials';
+import {glassTransmission, glassTransmissionPlugin} from '@luma.gl/engine/experimental-materials';
 
 
 
@@ -208,7 +208,7 @@ Call `glassTransmission_getColor(...)`, or install `opticalPointLightsPlugin` an
 `opticalCausticsPlugin` installs an independent bounded lens array. Register the module alongside the receiving material, update nearby lens colors from actual scene lights, and add the returned RGB contribution to the receiver's fragment color.
 
 ```
-import {MAX_OPTICAL_CAUSTIC_LENSES, opticalCaustics, opticalCausticsPlugin} from '@luma.gl/engine/experimental/materials';
+import {MAX_OPTICAL_CAUSTIC_LENSES, opticalCaustics, opticalCausticsPlugin} from '@luma.gl/engine/experimental-materials';
 
 
 

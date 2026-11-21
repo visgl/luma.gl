@@ -1,6 +1,6 @@
 # How GPU rendering works
 
-[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
+[Overview](https://luma.gl/next/docs/api-guide/gpu.md)[Rendering](https://luma.gl/next/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/next/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/next/docs/api-guide/gpu/gpu-parameters.md)[Depth buffers](https://luma.gl/next/docs/api-guide/gpu/depth-buffers.md)[Bindings](https://luma.gl/next/docs/api-guide/gpu/gpu-bindings.md)
 
 A draw combines shaders and vertex data with a render target. A `RenderPass` owns the active draw state and target; a `Model` manages the pipeline and bindings for a reusable draw. Start with [Hello Triangle](https://luma.gl/next/docs/tutorials/hello-triangle.md) for a complete application.
 

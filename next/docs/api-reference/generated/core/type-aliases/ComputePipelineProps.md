@@ -1,6 +1,6 @@
 # Type Alias: ComputePipelineProps
 
-> **ComputePipelineProps** = [`ResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/ResourceProps.md) & `object`
+> **ComputePipelineProps** = [`DeviceResourceProps`](https://luma.gl/next/docs/api-reference/generated/core/type-aliases/DeviceResourceProps.md) & `object`
 
 Defined in: [modules/core/src/api/adapter/resources/compute-pipeline.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/compute-pipeline.ts#L13)
 
