@@ -31,6 +31,9 @@ export type GPUSQLQueryOptions = Readonly<{parameters?: GPUDataFrameQueryParamet
 /** A source column name with its optional, separately parsed table qualifier. */
 type GPUSQLColumnReference = Readonly<{name: string; qualifier?: string}>;
 
+/** A bound-column spelling or a one-based SELECT position. */
+type GPUSQLProjectionReference = GPUSQLColumnReference | number;
+
 type GPUSQLSelectItem = Readonly<{
   expression?: Expression;
   aggregate?: 'count' | 'sum' | 'min' | 'max' | 'mean';
@@ -50,9 +53,9 @@ type GPUSQLStatement = Readonly<{
     right: GPUSQLColumnReference;
   }>;
   predicate?: Expression;
-  groupBy?: GPUSQLColumnReference;
+  groupBy?: GPUSQLProjectionReference;
   orderBy?: Readonly<{
-    column: GPUSQLColumnReference;
+    column: GPUSQLProjectionReference;
     direction: 'ascending' | 'descending';
     nulls?: 'first' | 'last';
   }>;
@@ -189,8 +192,14 @@ function buildGPUSQLPlan(
               | {max: string}
               | {mean: string});
     }
-    if (statement.groupBy) {
-      const key = resolve(statement.groupBy);
+    if (statement.groupBy !== undefined) {
+      const key =
+        typeof statement.groupBy === 'number'
+          ? resolveGPUSQLProjectionName(
+              getGPUSQLProjectionItem(statement.items, statement.groupBy, 'GROUP BY'),
+              resolve
+            )
+          : resolve(statement.groupBy);
       const nonAggregates = statement.items.filter(item => !item.aggregate);
       if (
         nonAggregates.length !== 1 ||
@@ -205,7 +214,8 @@ function buildGPUSQLPlan(
     }
     return query.aggregate(definitions);
   }
-  if (statement.groupBy) throw new Error('GPUSQL GROUP BY requires at least one aggregation');
+  if (statement.groupBy !== undefined)
+    throw new Error('GPUSQL GROUP BY requires at least one aggregation');
 
   const selected: string[] = [];
   for (const item of statement.items) {
@@ -268,9 +278,11 @@ function buildGPUSQLPlan(
   if (statement.orderBy) {
     const {column: requested, direction, nulls} = statement.orderBy;
     const orderColumn =
-      requested.qualifier === undefined && selected.includes(requested.name)
-        ? requested.name
-        : resolve(requested);
+      typeof requested === 'number'
+        ? getGPUSQLProjectionItem(selected, requested, 'ORDER BY')
+        : requested.qualifier === undefined && selected.includes(requested.name)
+          ? requested.name
+          : resolve(requested);
     if (!selected.includes(orderColumn)) {
       throw new Error('GPUSQL ORDER BY requires the sort column in the SELECT projection');
     }
@@ -408,15 +420,37 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
     alias: statement.from.alias,
     join: loweredJoin,
     predicate: statement.where as Expression | undefined,
-    groupBy: statement.groupBy?.[0] && readGPUSQLColumn(statement.groupBy[0]),
+    groupBy: statement.groupBy?.[0] && readGPUSQLProjectionReference(statement.groupBy[0]),
     orderBy: sort && {
-      column: readGPUSQLColumn(sort.expression),
+      column: readGPUSQLProjectionReference(sort.expression),
       direction: sort.direction === 'desc' ? 'descending' : 'ascending',
       nulls: sort.nulls
     },
     offset: statement.offset,
     limit: statement.limit
   };
+}
+
+/** Resolves a one-based projection position with a clause-specific diagnostic. */
+function getGPUSQLProjectionItem<Item>(
+  projection: readonly Item[],
+  position: number,
+  clause: 'ORDER BY' | 'GROUP BY'
+): Item {
+  if (!Number.isSafeInteger(position) || position < 1 || position > projection.length) {
+    throw new Error('GPUSQL ' + clause + ' position must be a one-based SELECT column number');
+  }
+  return projection[position - 1];
+}
+
+/** Reads a numeric projection position or an ordinary column reference. */
+function readGPUSQLProjectionReference(
+  node: Extract<Expression, {type: 'BinaryExpression'}>['left']
+): GPUSQLProjectionReference {
+  const expression = node as Expression;
+  return expression.type === 'Literal' && typeof expression.value === 'number'
+    ? expression.value
+    : readGPUSQLColumn(node);
 }
 
 /** Reads a source column name or a two-part qualified column reference. */

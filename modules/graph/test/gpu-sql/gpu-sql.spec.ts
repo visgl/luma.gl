@@ -45,7 +45,7 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-filter'}));
   const ordered = context
     .query(
-      'SELECT fare, category, -fare * 2 AS Fare FROM trips WHERE fare >= :minimum ORDER BY Fare ASC LIMIT 2 OFFSET 1',
+      'SELECT fare, category, -fare * 2 AS Fare FROM trips WHERE fare >= :minimum ORDER BY 3 ASC LIMIT 2 OFFSET 1',
       {parameters: {minimum: 8}}
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-global-sort'}));
@@ -371,7 +371,7 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-aggregate'}));
   const grouped = context
     .query(
-      'SELECT category, COUNT(*) AS count, SUM(fare) AS total FROM trips WHERE fare IS NOT NULL GROUP BY category'
+      'SELECT category, COUNT(*) AS count, SUM(fare) AS total FROM trips WHERE fare IS NOT NULL GROUP BY 1'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-grouped'}));
 
