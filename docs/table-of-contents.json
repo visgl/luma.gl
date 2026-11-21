@@ -1633,9 +1633,7 @@
     "type": "category",
     "label": "Legacy Guides",
     "items": [
-      "legacy/porting-guide",
-      "legacy/legacy-upgrade-guide",
-      "legacy/legacy-whats-new"
+      "legacy/porting-guide"
     ]
   }
 ]
