@@ -231,6 +231,21 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         return this.emitControl(node.value, undefined, expected);
       case 'parameter':
         return this.emitControl(node.value, node.name, expected);
+      case 'conditional': {
+        const condition = this.emit(node.condition, 'boolean');
+        this.assertBoolean(condition);
+        const format =
+          this.inferFormat(node) ?? (expected === 'boolean' ? undefined : expected) ?? 'float32';
+        const whenTrue = this.emit(node.whenTrue, format);
+        const otherwise = this.emit(node.otherwise, format);
+        const match = `(${condition.valid} && ${condition.value})`;
+        return this.addValue(
+          format,
+          `select(${otherwise.value}, ${whenTrue.value}, ${match})`,
+          `select(${otherwise.valid}, ${whenTrue.valid}, ${match})`,
+          whenTrue.nullable || otherwise.nullable
+        );
+      }
       case 'unary':
         return this.emitUnary(node.operator, node.operand, expected);
       case 'binary':
@@ -389,6 +404,18 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'literal':
       case 'parameter':
         return typeof node.value === 'boolean' ? 'boolean' : undefined;
+      case 'conditional': {
+        const whenTrue = this.inferFormat(node.whenTrue);
+        const otherwise = this.inferFormat(node.otherwise);
+        if (
+          whenTrue === 'boolean' ||
+          otherwise === 'boolean' ||
+          (whenTrue && otherwise && whenTrue !== otherwise)
+        ) {
+          throw new Error('GPUDataFrame CASE branches require matching numeric formats');
+        }
+        return whenTrue ?? otherwise;
+      }
       case 'unary':
         return node.operator === 'negate' ? this.inferFormat(node.operand) : 'boolean';
       case 'binary':

@@ -40,6 +40,12 @@ export type GPUExpressionNode =
       components: readonly GPUExpressionNode[];
     }>
   | Readonly<{kind: 'cast'; format: GPUExpressionNumericFormat; operand: GPUExpressionNode}>
+  | Readonly<{
+      kind: 'conditional';
+      condition: GPUExpressionNode;
+      whenTrue: GPUExpressionNode;
+      otherwise: GPUExpressionNode;
+    }>
   | Readonly<{kind: 'column'; name: string}>
   | Readonly<{kind: 'literal'; value: GPUExpressionValue}>
   | Readonly<{kind: 'parameter'; name: string; value: GPUExpressionValue}>
@@ -262,6 +268,13 @@ function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNod
         format: node.format,
         operand: cloneFrozenGPUExpressionNode(node.operand)
       });
+    case 'conditional':
+      return Object.freeze({
+        kind: 'conditional',
+        condition: cloneFrozenGPUExpressionNode(node.condition),
+        whenTrue: cloneFrozenGPUExpressionNode(node.whenTrue),
+        otherwise: cloneFrozenGPUExpressionNode(node.otherwise)
+      });
     case 'column':
       return Object.freeze({kind: 'column', name: node.name});
     case 'literal':
@@ -294,6 +307,11 @@ function collectGPUExpressionColumnNames(node: GPUExpressionNode, columnNames: S
       break;
     case 'cast':
       collectGPUExpressionColumnNames(node.operand, columnNames);
+      break;
+    case 'conditional':
+      collectGPUExpressionColumnNames(node.condition, columnNames);
+      collectGPUExpressionColumnNames(node.whenTrue, columnNames);
+      collectGPUExpressionColumnNames(node.otherwise, columnNames);
       break;
     case 'column':
       columnNames.add(node.name);
@@ -415,6 +433,24 @@ function getKnownExpressionWidth(node: GPUExpressionNode): number | undefined {
     case 'column':
       return undefined;
   }
+}
+
+/** Selects a scalar value when the condition is true. A null condition selects the fallback. */
+export function caseWhen<
+  ConditionColumns extends string,
+  TrueColumns extends string,
+  OtherwiseColumns extends string
+>(
+  condition: GPUExpression<boolean, ConditionColumns>,
+  whenTrue: GPUExpression<number | null, TrueColumns>,
+  otherwise: GPUExpression<number | null, OtherwiseColumns>
+): GPUExpression<number | null, ConditionColumns | TrueColumns | OtherwiseColumns> {
+  return new GPUExpression({
+    kind: 'conditional',
+    condition: condition.node,
+    whenTrue: whenTrue.node,
+    otherwise: otherwise.node
+  });
 }
 
 /** Checks whether the expression produces a boolean result. */

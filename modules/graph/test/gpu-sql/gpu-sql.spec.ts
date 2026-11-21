@@ -39,7 +39,8 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
   const context = new GPUSQLContext({trips: frame});
   const filtered = context
     .query(
-      'SELECT fare, category FROM trips WHERE fare IN (3, 8, 10, 11, NULL) AND fare NOT IN (9, 12)'
+      'SELECT fare, category, CASE WHEN trips.fare > :threshold THEN 99 WHEN fare > 9 THEN fare WHEN fare < 4 THEN 0 END AS bucket FROM trips WHERE fare IN (3, 8, 10, 11, NULL) AND fare NOT IN (9, 12)',
+      {parameters: {threshold: null}}
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-filter'}));
   const ordered = context
@@ -76,6 +77,8 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
       'premium',
       'economy'
     ]);
+
+    expect(Array.from(filteredArrow.getChild('bucket') ?? [])).toEqual([null, 0, 10, 11]);
 
     const orderedArrow = await makeArrowTableFromGPUAnalyticsTable({
       table: ordered.table,

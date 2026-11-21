@@ -421,6 +421,12 @@ function assertSelectedQueryColumns(
 
 function isNumericExpressionNode(node: GPUExpressionNode): boolean {
   switch (node.kind) {
+    case 'conditional':
+      return (
+        isBooleanExpressionNode(node.condition) &&
+        isNumericExpressionNode(node.whenTrue) &&
+        isNumericExpressionNode(node.otherwise)
+      );
     case 'column':
       return true;
     case 'literal':

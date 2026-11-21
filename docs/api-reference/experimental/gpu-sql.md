@@ -60,6 +60,9 @@ rendering and compute can use the compiled GPU resources directly. Call
 
 ## Supported grammar
 
+Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Conditions that are null skip
+the branch. Numeric column branches must have the same scalar format. An omitted `ELSE` yields null.
+
 - `SELECT *`, named columns, numeric expressions, and explicit `AS` aliases.
 - One registered `FROM` table with optional aliases.
 - `WHERE` comparisons, `AND`, `OR`, `NOT`, parentheses, `IS NULL`, and `IS NOT NULL`.

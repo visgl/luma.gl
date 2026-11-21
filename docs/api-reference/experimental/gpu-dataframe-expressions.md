@@ -99,3 +99,15 @@ compiled. Re-encode the same compiled query with new parameters for repeated int
 - [GPU Dataframe overview](/docs/api-reference/experimental/gpu-dataframe)
 - [GPU Dataframe operations index](/docs/api-reference/experimental/gpu-dataframe-operations)
 - [GPU tables](/docs/api-reference/experimental/gpu-tables)
+
+### Conditional scalar values
+
+Use `caseWhen` from `@luma.gl/graph/gpu-dataframe` to derive a numeric value
+from a Boolean condition. A null condition selects the fallback. The selected
+branch supplies both the result and its validity.
+
+```ts
+const fare = column('fare');
+const fareBucket = caseWhen(fare.greaterThan(literal(10)), literal(1), literal(0));
+const query = frame.withColumn('fareBucket', fareBucket);
+```
