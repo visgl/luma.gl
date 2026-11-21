@@ -200,6 +200,22 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
       ).toBeInstanceOf(GPUSQLQuery);
     }
 
+    for (const equality of [
+      'target.identifier = source.identifier',
+      'target.identifier = identifier'
+    ]) {
+      expect(
+        context.query(
+          `SELECT source.identifier FROM trips AS source LEFT JOIN accounts AS target ON ${equality}`
+        )
+      ).toBeInstanceOf(GPUSQLQuery);
+    }
+    expect(() =>
+      context.query(
+        'SELECT source.identifier FROM trips AS source JOIN accounts AS target ON source.identifier = source.identifier'
+      )
+    ).toThrow(/qualifier/);
+
     left.frame.destroy();
     right.frame.destroy();
   });

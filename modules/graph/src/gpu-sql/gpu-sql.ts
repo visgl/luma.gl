@@ -223,9 +223,19 @@ function buildGPUSQLPlan(
     }
     const right = tables[statement.join.table.toLowerCase()];
     if (!right) throw new Error(`GPUSQL table "${statement.join.table}" is not registered`);
-    const leftKey = resolve(statement.join.left);
     const rightQualifier = statement.join.alias ?? statement.join.table;
-    const rightKey = resolveGPUSQLColumn(statement.join.right, rightQualifier, right.columnNames);
+    const {left: firstOperand, right: secondOperand} = statement.join;
+    const matchesLeft = (name: string) => matchesGPUSQLColumn(name, qualifier, frame.columnNames);
+    const matchesRight = (name: string) =>
+      matchesGPUSQLColumn(name, rightQualifier, right.columnNames);
+    const forward = matchesLeft(firstOperand) && matchesRight(secondOperand);
+    const reversed = !forward && matchesLeft(secondOperand) && matchesRight(firstOperand);
+    const leftKey = resolve(reversed ? secondOperand : firstOperand);
+    const rightKey = resolveGPUSQLColumn(
+      reversed ? firstOperand : secondOperand,
+      rightQualifier,
+      right.columnNames
+    );
     if (!selected.includes(leftKey)) {
       throw new Error('GPUSQL joins require the left join key to remain selected');
     }
@@ -270,6 +280,14 @@ function resolveGPUSQLProjectionName(
     throw new Error('GPUSQL grouped source expressions must reference the group key directly');
   }
   return resolve(item.expression.name);
+}
+
+/** Tests one join operand against a table's qualifier and schema. */
+function matchesGPUSQLColumn(name: string, qualifier: string, columns: readonly string[]): boolean {
+  const [first, second] = name.split('.');
+  return second === undefined
+    ? columns.includes(first)
+    : first.toLowerCase() === qualifier.toLowerCase() && columns.includes(second);
 }
 
 function resolveGPUSQLColumn(name: string, qualifier: string, columns: readonly string[]): string {

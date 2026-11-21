@@ -432,7 +432,7 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
   const context = new GPUSQLContext({trips: left, accounts: right});
   const joined = context
     .query(
-      'SELECT trips.identifier, trips.fare FROM trips LEFT JOIN accounts ON trips.identifier = accounts.identifier'
+      'SELECT trips.identifier, trips.fare FROM trips LEFT JOIN accounts ON accounts.identifier = trips.identifier'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-left-join'}));
   const unmatched = context
