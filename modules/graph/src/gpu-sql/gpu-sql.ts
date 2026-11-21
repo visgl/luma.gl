@@ -69,7 +69,7 @@ type GPUSQLCompiledPlan = Readonly<{
 
 type GPUSQLAggregationDefinitions = Record<
   string,
-  'count' | {sum: string} | {min: string} | {max: string} | {mean: string}
+  'count' | {count: string} | {sum: string} | {min: string} | {max: string} | {mean: string}
 >;
 
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
@@ -185,7 +185,9 @@ function buildGPUSQLPlan(
       if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       definitions[name] =
         item.aggregate === 'count'
-          ? 'count'
+          ? inputColumn === undefined
+            ? 'count'
+            : {count: inputColumn}
           : ({[item.aggregate!]: inputColumn!} as
               | {sum: string}
               | {min: string}
@@ -381,7 +383,7 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
           }
           const argument = expression.arguments[0] as Expression;
           const wildcard = argument.type === 'Identifier' && argument['sqlWildcard'] === true;
-          if ((aggregate === 'count') !== wildcard) {
+          if (wildcard && aggregate !== 'count') {
             throw new Error('GPUSQL only permits COUNT(*) as a wildcard aggregation');
           }
           return {

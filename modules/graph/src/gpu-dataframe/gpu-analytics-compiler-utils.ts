@@ -126,29 +126,26 @@ function validateGPUAnalyticsVectorLayout(vector: GPUVector, name: string): void
 export function getGPUAnalyticsSelectionMask<Selection extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
   name: string,
-  id: string
+  id: string,
+  baseMask = context.selectionMask
 ): GraphVectorView<'uint32'> {
   const field = context.table.schema.fields.find(candidate => candidate.name === name);
   if (!field?.nullable) {
-    return context.selectionMask;
+    return baseMask;
   }
   const validity = context.validity[name as keyof Selection & string];
   if (!validity) {
-    if (context.selectionMask.length === 0) {
-      return context.selectionMask;
+    if (baseMask.length === 0) {
+      return baseMask;
     }
     throw new Error(`GPUDataFrame nullable analytics column "${name}" requires GPU validity`);
   }
   const validityView = context.graph.importGPUVector(`${id}-validity`, validity);
-  const output = createTransientVectorView(
-    context.graph,
-    `${id}-combined-mask`,
-    context.selectionMask
-  );
+  const output = createTransientVectorView(context.graph, `${id}-combined-mask`, baseMask);
   context.graph.add(
     new GPUMask({
       id: `${id}-combine-validity`,
-      inputs: [context.selectionMask, validityView],
+      inputs: [baseMask, validityView],
       output
     })
   );

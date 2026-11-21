@@ -14,6 +14,7 @@ import {
   LU_ANALYTICS_WORKGROUP_SIZE,
   addGPUAnalyticsComputePass,
   getGPUAnalyticsInvocationIndexSource,
+  getGPUAnalyticsSelectionMask,
   validateGPUAnalyticsOutputLength
 } from './gpu-analytics-compiler-utils';
 import type {GPUDataFrame, GPUDataFrameDictionaries, GPUDataFrameValidity} from './gpu-data-frame';
@@ -168,7 +169,9 @@ function addGPUGroupedAggregationToGraph<Selection extends GPUTypeMap, Result ex
           new GPUGroupAggregation({
             id: metricId,
             keys,
-            mask: baseMask,
+            mask: definition.column
+              ? getGPUAnalyticsSelectionMask(context, definition.column, metricId, baseMask)
+              : baseMask,
             output: graph.importGPUVector(`${metricId}-output`, output).data[0],
             operation: 'count'
           })

@@ -245,7 +245,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     expect(() =>
       context.query('SELECT * FROM trips JOIN trips(trips) AS other ON trips.fare = other.fare')
     ).toThrow(/table functions/i);
-    expect(() => context.query('SELECT COUNT("*") FROM trips')).toThrow(/COUNT\(\*\)/i);
+    expect(() => context.query('SELECT COUNT("*") FROM trips')).toThrow(/does not exist/);
     expect(() => context.query('SELECT ":missing" FROM trips')).toThrow(/column.*does not exist/i);
     expect(() => context.query('DELETE FROM trips')).toThrow(/SELECT/i);
     expect(() => context.query('SELECT missing FROM trips')).toThrow(/exist/i);
@@ -266,7 +266,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
       /64 candidates/
     );
     expect(() => context.query('SELECT fare + 1 FROM trips')).toThrow(/alias/i);
-    expect(() => context.query('SELECT COUNT(fare) FROM trips')).toThrow(/COUNT\(\*\)/i);
+    expect(context.query('SELECT COUNT(fare) FROM trips')).toBeInstanceOf(GPUSQLQuery);
     expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
     expect(() => context.query('SELECT fare FROM trips GROUP BY 0')).toThrow(/aggregation/);
 
