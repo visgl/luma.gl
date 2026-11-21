@@ -323,6 +323,11 @@ export type GLValueParameters = {
   [GL.UNPACK_SKIP_PIXELS]?: number;
   [GL.UNPACK_SKIP_ROWS]?: number;
   [GL.UNPACK_SKIP_IMAGES]?: number;
+
+  /** EXT_clip_control: clip-space origin. */
+  [GL.CLIP_ORIGIN_EXT]?: GL.LOWER_LEFT_EXT | GL.UPPER_LEFT_EXT;
+  /** EXT_clip_control: clip-space depth range. */
+  [GL.CLIP_DEPTH_MODE_EXT]?: GL.NEGATIVE_ONE_TO_ONE_EXT | GL.ZERO_TO_ONE_EXT;
 };
 
 export type GLPackParameters = {

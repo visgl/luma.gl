@@ -85,6 +85,11 @@ export class WEBGLRenderPass extends RenderPass {
       }
     }
 
+    if (props.clipDepthMode === 'zero-to-one' && !device.features.has('clip-control-webgl')) {
+      // clipDepthMode 'zero-to-one' requires EXT_clip_control. Check device.features first.
+      throw new Error('clip-control-webgl');
+    }
+
     // TODO - do parameters (scissorRect) affect the clear operation?
     this.device.pushState();
     this.setParameters({viewport, ...this.props.parameters});
@@ -148,6 +153,14 @@ export class WEBGLRenderPass extends RenderPass {
     glParameters.stencilMask = this.props.stencilReadOnly ? 0 : 1;
 
     glParameters[GL.RASTERIZER_DISCARD] = this.props.discard;
+
+    if (this.props.clipDepthMode) {
+      glParameters[GL.CLIP_ORIGIN_EXT] = GL.LOWER_LEFT_EXT;
+      glParameters[GL.CLIP_DEPTH_MODE_EXT] =
+        this.props.clipDepthMode === 'zero-to-one'
+          ? GL.ZERO_TO_ONE_EXT
+          : GL.NEGATIVE_ONE_TO_ONE_EXT;
+    }
 
     // Map the four renderpass parameters to WebGL parameters
     if (parameters.viewport) {

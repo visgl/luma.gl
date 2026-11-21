@@ -73,6 +73,7 @@ export {ShaderFactory} from './api/index';
 export {_getDefaultBindGroupFactory} from './api/index';
 
 export type {
+  ClipDepthMode,
   RenderPassProps,
   RenderPassDrawOptions,
   RenderPassBindingOptions

@@ -1,5 +1,11 @@
 # What's New
 
+## Reverse-Z depth on WebGL2
+
+The `clip-control-webgl` feature exposes `EXT_clip_control`, and `RenderPassProps.clipDepthMode: 'zero-to-one'`
+enables it for a pass. With `clearDepth: 0` and `depthCompare: 'greater'`, reverse-Z depth now works on WebGL2
+as well as on WebGPU. See [reverse-Z depth](/docs/api-guide/gpu/gpu-parameters#reverse-z-depth).
+
 ## Device ownership
 
 Select whether destroying a device releases the native WebGL or WebGPU handle with [device ownership](./api-reference/core/luma.md#device-ownership).
