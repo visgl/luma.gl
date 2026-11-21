@@ -354,6 +354,8 @@ const raytraceRendererProperties = {
   maxBounces: z.number().int().nonnegative().optional(),
   progressive: z.boolean().optional(),
   shadows: z.boolean().optional(),
+  filteredCutouts: z.boolean().optional(),
+  transmissiveShadows: z.boolean().optional(),
   resolutionScale: positiveNumberSchema.max(1).optional(),
   minimumResolutionScale: positiveNumberSchema.max(1).optional(),
   adaptiveResolution: z.boolean().optional(),

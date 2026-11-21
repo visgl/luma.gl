@@ -60,7 +60,7 @@ import type {
 const PRIMITIVE_FLOAT_COUNT = 100;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
-const UNIFORM_FLOAT_COUNT = 88;
+const UNIFORM_FLOAT_COUNT = 92;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -509,6 +509,10 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   progressive?: boolean;
   /** Traces direct-light shadow rays when enabled. */
   shadows?: boolean;
+  /** Filters triangle alpha masks for camera rays and primary-hit queries. */
+  filteredCutouts?: boolean;
+  /** Approximates thin-material transmission in analytic-light shadows in PBR mode. */
+  transmissiveShadows?: boolean;
   /** Initial internal ray-tracing resolution relative to the display resolution. */
   resolutionScale?: number;
   /** Lowest internal resolution available to adaptive frame budgeting. */
@@ -633,6 +637,10 @@ type RayTracingPresentationOptions = {
 };
 
 type RayTracingShaderOptions = {
+  /** Whether the color pipeline computes alpha-mask footprints. */
+  filteredCutouts: boolean;
+  /** Whether analytic shadow rays support thin transmission. */
+  transmissiveShadows: boolean;
   environmentLighting: boolean;
   directionalEnvironment: boolean;
   pbrTransport: boolean;
@@ -804,6 +812,8 @@ export class RayTracingSceneRenderer {
     );
     const presentation = getRayTracingPresentationOptions(this.device, options);
     const shaderOptions: RayTracingShaderOptions = {
+      filteredCutouts: options.filteredCutouts === true,
+      transmissiveShadows: options.transmissiveShadows === true,
       environmentLighting: Boolean(
         options.environmentMap || options.environmentRadiance?.some(channel => channel > 0)
       ),
@@ -1120,6 +1130,8 @@ export class RayTracingSceneRenderer {
       materialTexturesChanged ||
       resources.shaderOptions.environmentLighting !== shaderOptions.environmentLighting ||
       resources.shaderOptions.directionalEnvironment !== shaderOptions.directionalEnvironment ||
+      resources.shaderOptions.filteredCutouts !== shaderOptions.filteredCutouts ||
+      resources.shaderOptions.transmissiveShadows !== shaderOptions.transmissiveShadows ||
       resources.shaderOptions.pbrTransport !== shaderOptions.pbrTransport ||
       resources.shaderOptions.hasBounces !== shaderOptions.hasBounces ||
       resources.shaderOptions.emitterSampling !== shaderOptions.emitterSampling ||
@@ -3393,6 +3405,11 @@ export class RayTracingSceneRenderer {
               String(props.shaderOptions.pbrTransport)
             )
               .replace('/* PATH_BOUNCES_ENABLED */ true', String(props.shaderOptions.hasBounces))
+              .replace('/* FILTERED_CUTOUTS */ true', String(props.shaderOptions.filteredCutouts))
+              .replace(
+                '/* TRANSMISSIVE_SHADOWS */ false',
+                String(props.shaderOptions.transmissiveShadows)
+              )
               .replace(
                 '/* ENVIRONMENT_LIGHTING_ENABLED */ false',
                 String(props.shaderOptions.environmentLighting)
@@ -3850,6 +3867,8 @@ function getRenderRevision(
     options.emitterSelection,
     options.progressive,
     options.shadows,
+    options.filteredCutouts,
+    options.transmissiveShadows,
     options.temporalReprojection,
     options.shadowSamplesPerFrame
   ]);
@@ -4278,6 +4297,7 @@ function makeUniformData(props: {
   data[82] = Math.max(0, environmentRadiance?.[2] ?? 0);
   unsignedData[84] = props.options.environmentMap?.width ?? 0;
   unsignedData[85] = props.options.environmentMap?.height ?? 0;
+  unsignedData[88] = Number(props.options.filteredCutouts ?? false);
   unsignedData[24] = props.internalWidth;
   unsignedData[25] = props.internalHeight;
   unsignedData[26] = props.primitiveCount;

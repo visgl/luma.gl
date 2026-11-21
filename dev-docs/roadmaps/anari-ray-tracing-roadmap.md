@@ -130,3 +130,8 @@ The first M2h increment adds constant environment radiance and pairs uniform-sol
 samples with diffuse and PBR continuation using MIS. The directional increment uses a
 luminance-weighted solid-angle distribution and verifies a single bright texel against an
 analytic irradiance reference.
+
+The visibility tranche adds opt-in camera-footprint filtering for mipmapped triangle
+cutouts, shared by primary color and queries. A separate PBR option approximates
+tinted straight-line shadows through thin diffuse-transmission layers for analytic
+lights. Secondary cutout filtering and refractive shadow transport remain open.
