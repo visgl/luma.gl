@@ -9,7 +9,7 @@ import {
   type RayTracingSceneRenderOptions
 } from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it, vi} from 'vitest';
 
 it('tiled seeded transport matches full-frame output across odd edges, denoise seams and camera projections', async () => {

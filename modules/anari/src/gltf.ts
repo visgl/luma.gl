@@ -18,7 +18,8 @@ import {
   getTextureTransformMatrix,
   type PBRTextureTransform
 } from '@luma.gl/engine/gltf';
-import {Matrix4, type NumberArray9} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray9} from '@math.gl/core/types';
 import type {
   ANARICamera,
   ANARIGeometry,

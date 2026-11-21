@@ -8,7 +8,7 @@ import {
   type LayerProps,
   type UpdateParameters
 } from '@deck.gl/core';
-import type {NumberArray3} from '@math.gl/core';
+import type {NumberArray3} from '@math.gl/core/types';
 import {
   getSunPosition,
   getSkyDirection,

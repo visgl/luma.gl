@@ -6,7 +6,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {Geometry, Model} from '@luma.gl/engine';
 import {createPBRMaterial, createPBRSurfaceModel, PBRSurfacePass} from '@luma.gl/engine/lighting';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 for (const getDevice of [getWebGLTestDevice, getWebGPUTestDevice]) {
   test(`PBR surface normals, depth, deformation, masks and lifetime (${getDevice.name})`, async context => {

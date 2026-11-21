@@ -26,7 +26,7 @@ import {dirlight, ShaderModule} from '@luma.gl/shaders';
 import {getGPUDataBuffersForLayout} from '@luma.gl/graph/gpu-data';
 import {GPURenderable, GPUTable} from '@luma.gl/graph/gpu-tables';
 import {GPUTableModel} from '@luma.gl/engine/tables';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import * as arrow from 'apache-arrow';
 
 const random = makeRandomGenerator();

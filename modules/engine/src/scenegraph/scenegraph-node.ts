@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Vector3, Matrix4, NumericArray} from '@math.gl/core';
+import {Vector3, Matrix4} from '@math.gl/core/matrix';
+import {NumericArray} from '@math.gl/core/types';
 import {uid} from '../utils/uid';
 
 function assert(condition: boolean, message?: string): asserts condition {

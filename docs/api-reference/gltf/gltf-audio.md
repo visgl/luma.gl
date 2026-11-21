@@ -8,7 +8,7 @@ Opt-in Web Audio playback of the **draft** `KHR_audio_emitter` extension. Render
 import {AudioController} from '@luma.gl/engine';
 import {parseGLTFAudio} from '@luma.gl/engine/gltf';
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const audioContext = new AudioContext();
 const audio = new AudioController(parseGLTFAudio({

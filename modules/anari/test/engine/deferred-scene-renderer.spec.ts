@@ -6,7 +6,7 @@ import {Buffer, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {DeferredSceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 it('DeferredSceneRenderer resolves generic instanced PBR surfaces within WebGPU core limits', async () => {

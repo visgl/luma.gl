@@ -48,6 +48,8 @@ const config = getDocusaurusConfig({
       '@docusaurus/plugin-client-redirects',
       {
         redirects: [
+          {from: "/docs/legacy/legacy-upgrade-guide", to: "/docs/upgrade-guide"},
+          {from: "/docs/legacy/legacy-whats-new", to: "/docs/whats-new"},
           {from: ["/docs/api-guide/shaders/writing-customizable-shaders"], to: "/docs/api-guide/shaders/shader-injection"},
           {from: ["/docs/tutorials/shader-hooks"], to: "/docs/tutorials/shader-injection"},
           {from: ["/examples/tutorials/shader-hooks"], to: "/examples/tutorials/shader-injection"},

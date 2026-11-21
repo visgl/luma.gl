@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 import {expect, it} from 'vitest';
 import {CubeGeometry, Geometry, GroupNode} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {PhysicsGeometryNode, makePhysicsScenegraph} from '@luma.gl/engine/physics';
 
 it('keeps visual transforms separate from overridden body frames and bounds', () => {

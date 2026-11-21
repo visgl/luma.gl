@@ -4,7 +4,7 @@
 
 import {assert} from '@luma.gl/core';
 import {GroupNode} from '../group-node';
-import {Matrix4, Vector3} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
 import type {AreaLight} from '@luma.gl/shaders';
 
 export type AreaLightDefinition = {

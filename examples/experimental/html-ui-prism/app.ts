@@ -7,7 +7,7 @@ import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, PlaneGeometry} from '@luma.gl/engine';
 import {HTMLTexture} from '@luma.gl/engine/experimental-textures';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {
   type Panel,
   type SettingsChangeDescriptor,

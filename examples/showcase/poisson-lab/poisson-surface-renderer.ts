@@ -4,7 +4,7 @@
 
 import type {Device, Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {Matrix4, radians} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core/matrix';
 
 const SHADER = `struct Frame{viewProjection:mat4x4<f32>,heightScale:f32,resolution:u32,interior:u32,pad:u32};
 @group(0)@binding(0)var<storage,read>solution:array<f32>;

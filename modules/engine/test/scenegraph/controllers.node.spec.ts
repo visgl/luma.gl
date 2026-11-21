@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {NullDevice} from '@luma.gl/core/test-utils';
 import {
   AreaLightController,

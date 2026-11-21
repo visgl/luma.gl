@@ -4,7 +4,7 @@
 
 import type {Device} from '@luma.gl/core';
 import {GroupNode} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {getGLTFNodeInstancing} from '../../../../gltf/gltf/gltf-instancing';
 import {makeVector} from 'apache-arrow';
 import type {GLTFPostprocessed} from '@luma.gl/engine/gltf';

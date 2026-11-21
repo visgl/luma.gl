@@ -23,7 +23,7 @@ import {
   type PBREnvironment
 } from '@luma.gl/engine/gltf';
 import {mergeGLTFModelCatalog} from './gltf-model-catalog';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {GLTF_SAMPLE_ASSETS_MODEL_URL} from './gltf-reference-source';
 import {
   GLTF_REFERENCE_EVIDENCE_SCHEMA,

@@ -14,7 +14,7 @@ import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {GPURigidBodyWorld} from '@luma.gl/graph/gpu-physics';
 import {PerspectiveCamera} from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {makeMechanism} from './mechanisms';
 import {WRECKING_BALL_PHYSICS, WRECKING_BALL_TIME_STEP} from './wrecking-ball';

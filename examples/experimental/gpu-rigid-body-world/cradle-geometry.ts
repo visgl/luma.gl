@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {CubeGeometry, GroupNode, type Geometry} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {type GPURigidBody} from '@luma.gl/graph/gpu-physics';
 
 import {PhysicsGeometryNode, makePhysicsScenegraph} from '@luma.gl/engine/physics';

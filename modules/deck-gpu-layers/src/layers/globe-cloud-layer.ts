@@ -5,7 +5,8 @@
 import {Layer, picking, _GlobeViewport, type LayerContext, type LayerProps} from '@deck.gl/core';
 import type {RenderPass} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {Matrix4, type NumberArray3} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray3} from '@math.gl/core/types';
 import {
   globeClouds,
   type CloudProps,

@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {expect, it} from 'vitest';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {shadow, type ShadowProps} from '@luma.gl/shaders';
 import {ShadowMapRenderer, SHADOW_QUALITY_SETTINGS} from '@luma.gl/engine/lighting';
 import {ShadowMapRenderer as compatibleRenderer} from '../../../anari/src/shadows/shadow-map-renderer';

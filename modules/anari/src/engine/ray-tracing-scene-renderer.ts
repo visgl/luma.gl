@@ -26,7 +26,8 @@ import {
 } from '@luma.gl/core';
 import {Computation, type Geometry, type GroupNode, Model} from '@luma.gl/engine';
 import {type Light, PBR_TONE_MAP_MODE} from '@luma.gl/shaders';
-import {Matrix4, type NumericArray} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumericArray} from '@math.gl/core/types';
 import {GPUBVH} from '@luma.gl/graph/gpu-core';
 import {
   type CompiledGPUCommandGraph,
