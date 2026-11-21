@@ -122,7 +122,8 @@ changing ANARI's interactive ray tracer.
 Use M0d to establish the reference scenes and measurements for M2g and M2h.
 The capture harness supports fixed-seed sweeps for the small-emitter and Antique Camera glTF
 scenes with display RGB and pre-presentation linear HDR comparisons and elapsed wall time.
-GPU timestamp measurements remain a follow-up. M3r carries the camera footprint to secondary triangle hits
+Optional WebGPU timestamps measure scene pass cost. Paired uniform and power emitter
+sweeps record linear RGB error over the common range of measured GPU costs. M3r carries the camera footprint to secondary triangle hits
 in both diffuse and PBR transport. Filtered cutout visibility remains a separate tranche.
 
 The first M2h increment adds constant environment radiance and pairs uniform-solid-angle

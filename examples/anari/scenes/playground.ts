@@ -10,6 +10,7 @@ import {
   getRayTracingQualityPreset,
   getRayTracingSceneCapabilities
 } from '@luma.gl/anari';
+import {timeCaptureFrame} from './ray-capture-timing';
 import {ChartLabels} from './chart-labels';
 import {ANARISceneSchema} from '@luma.gl/anari/schemas';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
@@ -58,6 +59,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private renderedFrameCount = 0;
   private captureFrameLimit = 0;
   private staticRadianceCapture = false;
+  /** Whether the capture harness requested optional GPU timestamps. */
+  private captureGpuTiming = false;
+  /** GPU durations recorded for each encoded frame of the current capture. */
+  private captureGpuTimes: Promise<number | null>[] = [];
   /** Suspends rendering until the requested capture asset has loaded. */
 
   private captureSceneLoading = false;
@@ -120,7 +125,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
                 ? 7
                 : preset === 'chart-lighting'
                   ? 8
-                  : preset === 'small-emitter'
+                  : preset === 'small-emitter' || preset === 'mixed-emitters'
                     ? 9
                     : 0
     );
@@ -139,7 +144,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       preset === 'chart-materials' ||
       preset === 'chart-shapes' ||
       preset === 'chart-lighting' ||
-      preset === 'small-emitter'
+      preset === 'small-emitter' ||
+      preset === 'mixed-emitters'
     ) {
       const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
         JSON.parse(this.editor.value)
@@ -158,9 +164,27 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     parameters: URLSearchParams
   ): void {
     const preset = parameters.get('preset');
-    if (preset === 'small-emitter') {
+    if (preset === 'small-emitter' || preset === 'mixed-emitters') {
       const emitter = sceneDescription.instances?.find(instance => instance['@@id'] === 'emitter');
       if (emitter) emitter.scale = [0.2, 0.2, 0.2];
+    }
+    if (preset === 'mixed-emitters' && sceneDescription.materials && sceneDescription.surfaces) {
+      sceneDescription.materials['dim-emitter'] = {
+        '@@type': 'physicallyBased',
+        baseColor: [0, 0, 0],
+        emissive: [0.45, 0.65, 1],
+        emissiveStrength: 0.08
+      };
+      sceneDescription.surfaces['dim-emitter'] = {geometry: 'sphere', material: 'dim-emitter'};
+      sceneDescription.instances = [
+        ...(sceneDescription.instances ?? []),
+        {
+          '@@id': 'dim-emitter',
+          surface: 'dim-emitter',
+          position: [-2.5, 3, -1.5],
+          scale: [0.7, 0.7, 0.7]
+        }
+      ];
     }
     const renderer =
       (['default', 'deferred', 'raytrace', 'debugNormals', 'debugDepth'] as const).find(
@@ -225,6 +249,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     const frameLimit = Number(parameters.get('captureFrames') ?? 0);
     if (Number.isInteger(frameLimit) && frameLimit > 0 && frameLimit <= 256)
       this.captureFrameLimit = frameLimit;
+    this.captureGpuTiming = parameters.has('captureGpuTiming') && Boolean(this.captureFrameLimit);
+    if (this.captureGpuTiming) {
+      Object.assign(this.canvas, {
+        readCaptureGpuTimes: () => Promise.all(this.captureGpuTimes)
+      });
+    }
     if (parameters.has('captureRadiance') && this.captureFrameLimit) {
       this.staticRadianceCapture = parameters.get('preset') !== 'chart-motion';
       Object.assign(this.canvas, {
@@ -315,7 +345,12 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         renderer.setParameters({adaptiveResolution: false}).commitParameters();
       }
     }
-    const statistics = scene.frame.render();
+    const timedFrame =
+      this.captureGpuTiming && this.rendererSubtype === 'raytrace'
+        ? timeCaptureFrame(device, () => scene.frame.render())
+        : undefined;
+    if (timedFrame) this.captureGpuTimes.push(timedFrame.gpuTime);
+    const statistics = timedFrame?.result ?? scene.frame.render();
     this.refinementSamples = statistics.rayTracing?.accumulatedSamples ?? 0;
     const showChartLabels = scene.name === 'CHART MOTION' && Boolean(this.chartLabels);
     if (
@@ -827,7 +862,10 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       getRequiredElement('resolution-selector', HTMLSelectElement).value = String(
         getRayTracingQualityPreset(preset).resolutionScale
       );
-      if (this.captureFrameLimit) this.renderedFrameCount = 0;
+      if (this.captureFrameLimit) {
+        this.renderedFrameCount = 0;
+        this.captureGpuTimes = [];
+      }
     } catch {
       this.applyEditorScene();
     }
