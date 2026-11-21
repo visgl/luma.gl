@@ -117,8 +117,8 @@ Set `environmentRadiance` to a constant linear RGB radiance, for example `[0.5, 
 
 The renderer samples each texel with probability proportional to its luminance and solid angle, with a 5% uniform-sphere component. Explicit directions and BSDF misses use the same solid-angle density for MIS. A map adds to `environmentRadiance` and works independently of `background`. The map represents piecewise-constant texel radiance.
 
-### Camera cutouts and thin-material shadows[​](#camera-cutouts-and-thin-material-shadows "Direct link to Camera cutouts and thin-material shadows")
+### Filtered cutouts and thin-material shadows[​](#filtered-cutouts-and-thin-material-shadows "Direct link to Filtered cutouts and thin-material shadows")
 
-Enable `filteredCutouts` to use a camera-ray footprint when sampling mipmapped triangle alpha masks. Primary color, picking, and primary-hit channels use the internal ray-tracing pixel spacing. Coverage comes from the authored mip chain and the existing alpha cutoff. Sphere masks, secondary rays and shadow rays use mip zero.
+Enable `filteredCutouts` to use a camera-ray footprint when sampling mipmapped triangle alpha masks. Primary color, picking, and primary-hit channels use the internal ray-tracing pixel spacing. Coverage comes from the authored mip chain and the existing alpha cutoff. Smooth dielectric reflection and refraction carry the footprint through to triangle cutouts. Sphere masks, non-delta secondary rays, and shadow rays use mip zero.
 
 With PBR transport, `transmissiveShadows` lets analytic lights pass attenuated RGB through thin diffuse-transmission materials. The renderer follows the original light direction and multiplies the transmission of up to eight layers. Opaque blockers, smooth refractive interfaces, and deeper stacks still block the connection. This approximation leaves emitter and environment visibility unchanged. Both settings are off by default.

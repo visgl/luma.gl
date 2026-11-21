@@ -8975,6 +8975,7 @@ fn evaluateEnvironmentRadiance(direction: vec3<f32>, receiverDistance: f32) -> v
 fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
   var ray = primaryRay;
   var hit = primaryHit;
+  var pathDistance = primaryHit.distance;
   var coneWidth = 0.0;
   var coneSpread = 0.0;
   if (MATERIAL_HAS_MIPMAPS && hit.footprint > 0.0) {
@@ -9015,6 +9016,11 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       }
     }
     ray = makeRay(position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
+    // Delta events have no competing explicit-light visibility estimate.
+    if (FILTERED_CUTOUTS && MATERIAL_HAS_MIPMAPS && uniforms.visibility.x != 0u && sample.delta) {
+      let spread = primaryRay.footprint.y;
+      ray.footprint = vec2<f32>(primaryRay.footprint.x + spread * pathDistance, spread);
+    }
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
       // A camera backdrop remains visible through smooth dielectric paths without
@@ -9030,6 +9036,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       }
       break;
     }
+    pathDistance += hit.distance;
     if (medium != 0xffffffffu) {
       let attenuation = primitives[medium].attenuation;
       let segmentLength = length(ray.origin + ray.direction * hit.distance - position);
