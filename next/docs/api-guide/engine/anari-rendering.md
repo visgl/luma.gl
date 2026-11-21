@@ -132,3 +132,17 @@ node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter 
 
 node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter --seed 31 --frame-sweep 1,8,32,64 --history 256 --reference /tmp/ray-hdr-reference/radiance.rgba16f --output /tmp/ray-hdr-sweep
 ```
+
+### Compare emitter selection at matched GPU cost[​](#compare-emitter-selection-at-matched-gpu-cost "Direct link to Compare emitter selection at matched GPU cost")
+
+Add `--gpu-timing` to request optional WebGPU timestamps. Each checkpoint reports the sum of the scene's recorded compute and render pass durations over its frames. Profiling records passes separately and can change their scheduling. A missing timing is reported as `null`. Browser startup, readback, and screenshots are outside the GPU measurements.
+
+Use `--compare-emitters` with a static linear HDR sweep to run both emitter selection modes with the same seed and rendering settings. Use a separate high-sample reference from the same scene with explicit emitter sampling enabled. The mixed-emitter fixture adds a large dim source alongside a small bright source.
+
+```
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --mixed-emitters --emitters on --seed 17 --frames 128 --history 256 --output /tmp/ray-emitter-reference
+
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --mixed-emitters --compare-emitters --seed 31 --frame-sweep 1,8,32,64 --history 256 --reference /tmp/ray-emitter-reference/radiance.rgba16f --output /tmp/ray-emitter-sweep
+```
+
+The output contains each mode's measured checkpoints and `emitter-comparison.json`. The comparison interpolates linear RGB RMSE within the overlapping measured GPU-cost ranges. It reports unavailable when timing support or overlap is missing. It does not extrapolate beyond either measured curve.
