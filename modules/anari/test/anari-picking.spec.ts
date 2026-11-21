@@ -35,17 +35,17 @@ it('ray channels and picking resolve nearest retained objects at full display re
   const frame = device.newFrame({
     world,
     renderer,
-    size: [64, 64],
+    size: [17, 17],
     camera: device.newCamera('perspective', {position: [0, 0, 5], fovy: Math.PI / 2})
   });
   try {
     expect(frame.captureChannels()).toBe(null);
-    expect(await frame.pick(32, 32)).toBe(null);
+    expect(await frame.pick(8, 8)).toBe(null);
     frame.render();
     graphicsDevice.submit();
     const [sphereHit, triangleHit, background] = await Promise.all([
-      frame.pick(32, 32),
-      frame.pick(50, 32),
+      frame.pick(8, 8),
+      frame.pick(13, 8),
       frame.pick(0, 0)
     ]);
     expect(sphereHit?.surface).toBe(sphere);
@@ -57,25 +57,25 @@ it('ray channels and picking resolve nearest retained objects at full display re
     expect(triangleHit?.instance).toBeUndefined();
     expect(triangleHit?.position[2]).toBeCloseTo(0);
     expect(background).toBe(null);
-    expect(await frame.pick(-1, 32)).toBe(null);
-    expect(await frame.pick(64, 32)).toBe(null);
-    expect(await frame.pick(NaN, 32)).toBe(null);
+    expect(await frame.pick(-1, 8)).toBe(null);
+    expect(await frame.pick(17, 8)).toBe(null);
+    expect(await frame.pick(NaN, 8)).toBe(null);
 
     const snapshot = frame.captureChannels()!;
     try {
-      expect(snapshot.identifierTexture.width).toBe(64);
-      expect(snapshot.identifierTexture.height).toBe(64);
-      const identifierBytes = await readChannelPixel(snapshot.identifierTexture, 32, 32);
+      expect(snapshot.identifierTexture.width).toBe(17);
+      expect(snapshot.identifierTexture.height).toBe(17);
+      const identifierBytes = await readChannelPixel(snapshot.identifierTexture, 8, 8);
       const identifier = new Uint32Array(identifierBytes.buffer)[0];
       expect(snapshot.identifiers[identifier - 1].instance).toBe(front);
-      const distanceBytes = await readChannelPixel(snapshot.distanceTexture, 32, 32);
+      const distanceBytes = await readChannelPixel(snapshot.distanceTexture, 8, 8);
       expect(new Float32Array(distanceBytes.buffer)[0]).toBeCloseTo(sphereHit!.distance, 5);
-      const normalBytes = await readChannelPixel(snapshot.normalTexture, 32, 32);
+      const normalBytes = await readChannelPixel(snapshot.normalTexture, 8, 8);
       const normal = new Float32Array(normalBytes.buffer);
       expect(Array.from(normal.slice(0, 3))).toEqual(sphereHit!.normal);
       expect(normal[3]).toBe(1);
       const projectedDepth = new Float32Array(
-        (await readChannelPixel(snapshot.projectedDepthTexture, 32, 32)).buffer
+        (await readChannelPixel(snapshot.projectedDepthTexture, 8, 8)).buffer
       )[0];
       const viewProjection = new Matrix4()
         .perspective({fovy: Math.PI / 2, aspect: 1, near: 0.05, far: 500})
@@ -99,29 +99,29 @@ it('ray channels and picking resolve nearest retained objects at full display re
     }
 
     const originalPlacementId = sphereHit?.placementId;
-    const pendingHit = frame.pick(32, 32);
+    const pendingHit = frame.pick(8, 8);
     // Reordering changes packed primitive indices while preserving retained identity.
     world.setParameter('instance', [back, front]).commitParameters();
     frame.render();
     graphicsDevice.submit();
     expect((await pendingHit)?.instance).toBe(front);
-    expect((await frame.pick(32, 32))?.placementId).toBe(originalPlacementId);
+    expect((await frame.pick(8, 8))?.placementId).toBe(originalPlacementId);
 
     front.setParameter('transform', new Matrix4().translate([-2, 0, 1])).commitParameters();
     frame.render();
     graphicsDevice.submit();
-    expect((await frame.pick(32, 32))?.instance).toBe(back);
+    expect((await frame.pick(8, 8))?.instance).toBe(back);
 
     world.setParameters({surface: [], instance: []}).commitParameters();
     frame.render();
     graphicsDevice.submit();
-    expect(await frame.pick(32, 32)).toBe(null);
+    expect(await frame.pick(8, 8)).toBe(null);
   } finally {
     frame.destroy();
     device.destroy();
     destroyGraphicsResources();
   }
-  expect(await frame.pick(32, 32)).toBe(null);
+  expect(await frame.pick(8, 8)).toBe(null);
 }, 120000);
 
 it('ray channels and picking follow orthographic cameras and resized display pixels', async () => {
@@ -136,46 +136,46 @@ it('ray channels and picking follow orthographic cameras and resized display pix
     world: device.newWorld({surface: [surface]}),
     camera: device.newCamera('orthographic', {position: [0, 0, 5], height: 4}),
     renderer: device.newRenderer('raytrace', {resolutionScale: 0.5, adaptiveResolution: false}),
-    size: [32, 32]
+    size: [17, 17]
   });
   try {
     frame.render();
     graphicsDevice.submit();
     const snapshot = frame.captureChannels()!;
-    const originalHit = await frame.pick(16, 16);
+    const originalHit = await frame.pick(8, 8);
     expect(originalHit?.surface).toBe(surface);
     const originalWorld = frame.getParameter('world');
     frame.setParameter('world', device.newWorld()).commitParameters();
     // Committing a replacement without rendering still queries the last rendered frame.
-    expect((await frame.pick(16, 16))?.surface).toBe(surface);
+    expect((await frame.pick(8, 8))?.surface).toBe(surface);
     frame.setParameter('world', originalWorld).commitParameters();
     frame
       .getParameter('camera')!
       .setParameters({position: [0, 0, 8], near: 0.1, far: 100})
       .commitParameters();
-    frame.setParameter('size', [64, 48]).commitParameters();
+    frame.setParameter('size', [25, 19]).commitParameters();
     frame.render();
     graphicsDevice.submit();
-    const resizedHit = await frame.pick(32, 24);
+    const resizedHit = await frame.pick(12, 9);
     const resizedSnapshot = frame.captureChannels()!;
     try {
-      expect(resizedSnapshot.identifierTexture.width).toBe(64);
-      expect(resizedSnapshot.identifierTexture.height).toBe(48);
-      expect(snapshot.identifierTexture.width).toBe(32);
+      expect(resizedSnapshot.identifierTexture.width).toBe(25);
+      expect(resizedSnapshot.identifierTexture.height).toBe(19);
+      expect(snapshot.identifierTexture.width).toBe(17);
       const originalIdentifier = new Uint32Array(
-        (await readChannelPixel(snapshot.identifierTexture, 16, 16)).buffer
+        (await readChannelPixel(snapshot.identifierTexture, 8, 8)).buffer
       )[0];
       expect(snapshot.identifiers[originalIdentifier - 1].surface).toBe(surface);
       const distance = new Float32Array(
-        (await readChannelPixel(resizedSnapshot.distanceTexture, 32, 24)).buffer
+        (await readChannelPixel(resizedSnapshot.distanceTexture, 12, 9)).buffer
       )[0];
       expect(distance).toBeCloseTo(resizedHit!.distance, 5);
       const depth = new Float32Array(
-        (await readChannelPixel(resizedSnapshot.projectedDepthTexture, 32, 24)).buffer
+        (await readChannelPixel(resizedSnapshot.projectedDepthTexture, 12, 9)).buffer
       )[0];
       expect(depth).toBeCloseTo((8 - resizedHit!.position[2] - 0.1) / (100 - 0.1), 6);
       const savedDepth = new Float32Array(
-        (await readChannelPixel(snapshot.projectedDepthTexture, 16, 16)).buffer
+        (await readChannelPixel(snapshot.projectedDepthTexture, 8, 8)).buffer
       )[0];
       expect(savedDepth).toBeCloseTo((5 - originalHit!.position[2] - 0.05) / (500 - 0.05), 6);
     } finally {
@@ -196,7 +196,7 @@ it('ray channels and picking follow orthographic cameras and resized display pix
     frame.setParameter('renderer', rayRenderer).commitParameters();
     expect(frame.captureChannels()).toBe(null);
     // The displayed raster frame must not expose the previous ray scene's hit.
-    expect(await frame.pick(32, 24)).toBe(null);
+    expect(await frame.pick(12, 9)).toBe(null);
   } finally {
     frame.destroy();
     device.destroy();
@@ -222,22 +222,22 @@ it('ray picking preserves integer identity beyond temporal guide encoding limits
     world: device.newWorld({instance: instances}),
     camera: device.newCamera('perspective', {position: [0, 0, 5]}),
     renderer: device.newRenderer('raytrace', {resolutionScale: 0.25, adaptiveResolution: false}),
-    size: [16, 16]
+    size: [9, 9]
   });
   try {
     frame.render();
     graphicsDevice.submit();
-    expect((await frame.pick(8, 8))?.instance).toBe(selectedInstance);
+    expect((await frame.pick(4, 4))?.instance).toBe(selectedInstance);
     const snapshot = frame.captureChannels()!;
     try {
       const identifier = new Uint32Array(
-        (await readChannelPixel(snapshot.identifierTexture, 8, 8)).buffer
+        (await readChannelPixel(snapshot.identifierTexture, 4, 4)).buffer
       )[0];
       expect(identifier).toBeGreaterThan(2048);
       expect(snapshot.identifiers[identifier - 1].instance).toBe(selectedInstance);
       frame.destroy();
       expect(
-        new Uint32Array((await readChannelPixel(snapshot.identifierTexture, 8, 8)).buffer)[0]
+        new Uint32Array((await readChannelPixel(snapshot.identifierTexture, 4, 4)).buffer)[0]
       ).toBe(identifier);
     } finally {
       snapshot.destroy();
@@ -252,12 +252,12 @@ it('ray picking preserves integer identity beyond temporal guide encoding limits
 async function makePickingTestDevice() {
   const graphicsDevice = await webgpuAdapter.create({
     featureLevel: 'core',
-    createCanvasContext: {canvas: new OffscreenCanvas(64, 64)},
+    createCanvasContext: {canvas: new OffscreenCanvas(25, 19)},
     debug: true
   });
   const framebuffer = graphicsDevice.createFramebuffer({
-    width: 64,
-    height: 64,
+    width: 25,
+    height: 19,
     colorAttachments: [graphicsDevice.preferredColorFormat],
     depthStencilAttachment: graphicsDevice.preferredDepthFormat
   });
