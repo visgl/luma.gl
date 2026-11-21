@@ -181,7 +181,6 @@ export function compileGPUDataFrameJoin<
       Selection,
       CompiledGPUDataFrameJoin<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
-      allowEmptyPredicates: true,
       prepare: context => addGPUJoinToGraph(context, retainedRight, options, joinType)
     });
   } catch (error) {
@@ -213,7 +212,6 @@ export function compileGPUDataFrameLookup<
       Selection,
       CompiledGPUDataFrameLookup<Selection, Right>
     >(source, predicates, selectedColumns, graph, derivedColumns, {
-      allowEmptyPredicates: true,
       prepare: context => addGPULookupToGraph(context, retainedRight, options)
     });
   } catch (error) {

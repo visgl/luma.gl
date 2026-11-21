@@ -105,7 +105,6 @@ export type GPUDataFrameQueryCompilationExtension<
   Result extends GPUTypeMap,
   Compiled extends CompiledGPUDataFrameQuery<Result> = CompiledGPUDataFrameQuery<Result>
 > = {
-  allowEmptyPredicates?: boolean;
   prepare: (
     context: GPUDataFrameQueryExtensionContext<Row>
   ) => GPUDataFrameQueryExtensionResult<Result, Compiled>;
@@ -217,8 +216,7 @@ export function compileGPUDataFrameQuery<
       retainedSource,
       predicates,
       derivedColumns,
-      selectedColumns,
-      predicates.length === 0 || extension?.allowEmptyPredicates === true
+      selectedColumns
     );
     validateGPUQueryBatchCapacity(retainedSource, graph);
     validateGPUQueryBindingCapacity(plan, graph);
