@@ -11,6 +11,8 @@ import {
 } from './ray-tracing-material-textures';
 import {ScenegraphSurfaces} from './scenegraph-surfaces';
 import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
+import {getEnvironmentMapDistribution, RAY_LIGHT_FLOAT_COUNT} from './ray-tracing-environment-map';
+import type {ANARIRayTracingEnvironmentMap} from '../anari-types';
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
   assert,
@@ -57,8 +59,7 @@ import type {
 const PRIMITIVE_FLOAT_COUNT = 100;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
-const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 84;
+const UNIFORM_FLOAT_COUNT = 88;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -501,6 +502,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   emitterSelection?: 'uniform' | 'power';
   /** Constant linear RGB environment illumination, independent of the camera backdrop. */
   environmentRadiance?: readonly [number, number, number];
+  /** Immutable directional radiance map. Replace the object to change illumination. */
+  environmentMap?: ANARIRayTracingEnvironmentMap;
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
   /** Traces direct-light shadow rays when enabled. */
@@ -630,6 +633,7 @@ type RayTracingPresentationOptions = {
 
 type RayTracingShaderOptions = {
   environmentLighting: boolean;
+  directionalEnvironment: boolean;
   pbrTransport: boolean;
   hasBounces: boolean;
   emitterSampling: boolean;
@@ -678,6 +682,7 @@ type RayTracingFrameResources = {
   transformRevision: string;
   materialRevision?: number;
   lightRevision: string;
+  environmentMap?: ANARIRayTracingEnvironmentMap;
   renderRevision: string;
   geometryLayouts: Map<string, RayTracingGeometryLayout>;
   retainedSurfaces: readonly SceneSurface[];
@@ -798,7 +803,10 @@ export class RayTracingSceneRenderer {
     );
     const presentation = getRayTracingPresentationOptions(this.device, options);
     const shaderOptions: RayTracingShaderOptions = {
-      environmentLighting: options.environmentRadiance?.some(channel => channel > 0) ?? false,
+      environmentLighting: Boolean(
+        options.environmentMap || options.environmentRadiance?.some(channel => channel > 0)
+      ),
+      directionalEnvironment: Boolean(options.environmentMap),
       pbrTransport: options.transportMode === 'pbr',
       hasBounces: (options.maxBounces ?? 0) >= 1,
       emitterSampling: options.emitterSampling ?? false
@@ -865,10 +873,14 @@ export class RayTracingSceneRenderer {
       const topologyChanged = resources.topologyRevision !== topologyRevision;
       const primitiveChanged = resources.primitiveRevision !== primitiveRevision;
       const transformChanged = resources.transformRevision !== transformRevision;
-      const lightsChanged = resources.lightRevision !== lightRevision;
+      const environmentMapChanged = resources.environmentMap !== options.environmentMap;
+      const lightsChanged = resources.lightRevision !== lightRevision || environmentMapChanged;
+      if (environmentMapChanged) resources.historyNeedsReset = true;
       // Primary-hit reprojection cannot validate illumination from secondary surfaces.
       if (
-        ((options.maxBounces ?? 0) > 0 || options.emitterSampling) &&
+        ((options.maxBounces ?? 0) > 0 ||
+          options.emitterSampling ||
+          shaderOptions.environmentLighting) &&
         (primitiveChanged || lightsChanged)
       ) {
         resources.historyNeedsReset = true;
@@ -1106,6 +1118,7 @@ export class RayTracingSceneRenderer {
     } else if (
       materialTexturesChanged ||
       resources.shaderOptions.environmentLighting !== shaderOptions.environmentLighting ||
+      resources.shaderOptions.directionalEnvironment !== shaderOptions.directionalEnvironment ||
       resources.shaderOptions.pbrTransport !== shaderOptions.pbrTransport ||
       resources.shaderOptions.hasBounces !== shaderOptions.hasBounces ||
       resources.shaderOptions.emitterSampling !== shaderOptions.emitterSampling ||
@@ -1128,6 +1141,7 @@ export class RayTracingSceneRenderer {
       resources.historyNeedsReset = true;
     }
 
+    resources.environmentMap = options.environmentMap;
     const progressive = options.progressive ?? true;
     const temporalReprojection = options.temporalReprojection ?? true;
     if (resources.historyNeedsReset) {
@@ -3357,6 +3371,10 @@ export class RayTracingSceneRenderer {
                 String(props.shaderOptions.environmentLighting)
               )
               .replace(
+                '/* DIRECTIONAL_ENVIRONMENT_ENABLED */ false',
+                String(props.shaderOptions.directionalEnvironment)
+              )
+              .replace(
                 '/* EMITTER_SAMPLING_ENABLED */ true',
                 String(props.shaderOptions.emitterSampling)
               )
@@ -3780,7 +3798,9 @@ function getRenderRevision(
   // Keep ordinary diffuse camera reprojection, but reset reflective paths on camera changes.
   const reflectiveTransport =
     options.transportMode === 'pbr' &&
-    ((options.maxBounces ?? 0) > 0 || options.emitterSampling === true);
+    ((options.maxBounces ?? 0) > 0 ||
+      options.emitterSampling === true ||
+      Boolean(options.environmentMap || options.environmentRadiance?.some(channel => channel > 0)));
   const cameraRevision =
     (options.temporalReprojection ?? true) && !reflectiveTransport
       ? undefined
@@ -4182,7 +4202,13 @@ function makeLightData(
       0
     );
   }
-  return makeStorageData(values, LIGHT_FLOAT_COUNT);
+  const map = options.environmentMap;
+  if (!map) return makeStorageData(values, RAY_LIGHT_FLOAT_COUNT);
+  const environmentDistribution = getEnvironmentMapDistribution(map);
+  const packed = new Float32Array(values.length + environmentDistribution.length);
+  packed.set(values);
+  packed.set(environmentDistribution, values.length);
+  return packed;
 }
 
 function makeStorageData(values: number[], minimumFloatCount: number): Float32Array {
@@ -4223,6 +4249,8 @@ function makeUniformData(props: {
   data[80] = Math.max(0, environmentRadiance?.[0] ?? 0);
   data[81] = Math.max(0, environmentRadiance?.[1] ?? 0);
   data[82] = Math.max(0, environmentRadiance?.[2] ?? 0);
+  unsignedData[84] = props.options.environmentMap?.width ?? 0;
+  unsignedData[85] = props.options.environmentMap?.height ?? 0;
   unsignedData[24] = props.internalWidth;
   unsignedData[25] = props.internalHeight;
   unsignedData[26] = props.primitiveCount;

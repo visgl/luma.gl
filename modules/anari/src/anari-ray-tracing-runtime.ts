@@ -46,6 +46,7 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       maxBounces: renderer.getParameter('maxBounces'),
       transportMode: renderer.getParameter('transportMode'),
       environmentRadiance: renderer.getParameter('environmentRadiance'),
+      environmentMap: renderer.getParameter('environmentMap'),
       emitterSampling: renderer.getParameter('emitterSampling'),
       emitterSelection: renderer.getParameter('emitterSelection'),
       progressive: renderer.getParameter('progressive'),

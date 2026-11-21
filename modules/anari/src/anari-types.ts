@@ -245,11 +245,20 @@ export type ANARICameraParameters = {
   far?: number;
 };
 
+/** Immutable row-major latitude–longitude map storing three linear HDR channels per texel. */
+export type ANARIRayTracingEnvironmentMap = {
+  readonly width: number;
+  readonly height: number;
+  readonly data: Float32Array | readonly number[];
+};
+
 export type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
   /** Constant linear RGB radiance illuminating ray-traced surfaces from infinity. */
   environmentRadiance?: ANARIVector3;
+  /** Directional linear RGB illumination added to the constant environment radiance. */
+  environmentMap?: ANARIRayTracingEnvironmentMap;
   environment?: {
     diffuseTexture?: Texture;
     specularTexture?: Texture;

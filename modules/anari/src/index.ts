@@ -44,6 +44,7 @@ export type {
   ANARIRayTracingGraphStageStatistics,
   ANARIRayTracingGraphStatistics,
   ANARIRendererParameters,
+  ANARIRayTracingEnvironmentMap,
   ANARIRendererSubtype,
   ANARISamplerParameters,
   ANARISamplerSubtype,

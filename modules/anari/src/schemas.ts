@@ -333,6 +333,16 @@ const rendererProperties = {
 const raytraceRendererProperties = {
   ...rendererProperties,
   environmentRadiance: ANARIVector3Schema.optional(),
+  environmentMap: z
+    .strictObject({
+      width: z.number().int().positive().max(2048),
+      height: z.number().int().positive().max(2048),
+      data: z.array(nonnegativeNumberSchema)
+    })
+    .refine(
+      map => map.width * map.height <= 1024 * 1024 && map.data.length === map.width * map.height * 3
+    )
+    .optional(),
   samplesPerPixel: z.number().int().positive().optional(),
   samplingSeed: z.number().int().min(0).max(0xffffffff).optional(),
   historySampleLimit: z.number().int().min(1).max(256).optional(),
