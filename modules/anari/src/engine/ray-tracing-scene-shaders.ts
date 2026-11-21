@@ -1768,7 +1768,9 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
-  radiance += evaluateEmitterLighting(ray, hit, pathSeed, uniforms.sampling.y > 0u);
+  // An unshadowed connection and an occlusion-tested continuation estimate different integrals.
+  let allowEmitterMIS = uniforms.settings.w > 0.5 && uniforms.emitters.y != 0u;
+  radiance += evaluateEmitterLighting(ray, hit, pathSeed, allowEmitterMIS && uniforms.sampling.y > 0u);
   for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
     dielectricOnly = dielectricOnly && sample.delta;
@@ -1777,7 +1779,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     let normal = select(getFaceNormal(hit, ray), faceForward(hit.normal, ray.direction, hit.normal), sample.delta);
     let receiverDistance = hit.distance;
     let position = ray.origin + ray.direction * receiverDistance;
-    let pairEmission = medium == 0xffffffffu && !sample.delta && uniforms.emitters.y != 0u;
+    let pairEmission = allowEmitterMIS && medium == 0xffffffffu && !sample.delta;
     if (sample.crossesInterface) {
       if (hit.entering && medium == 0xffffffffu) {
         let attenuation = primitives[hit.primitiveIndex].attenuation;
@@ -1818,7 +1820,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       illumination += emission * (weight * exp(-max(uniforms.fog.w, 0.0) * fogDistance));
     }
     illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
-      medium == 0xffffffffu && bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+      allowEmitterMIS && medium == 0xffffffffu && bounceIndex + 1u < min(uniforms.sampling.y, 8u));
     radiance += throughput * illumination;
   }
   return radiance;
