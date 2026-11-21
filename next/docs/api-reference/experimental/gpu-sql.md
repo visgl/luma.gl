@@ -78,11 +78,13 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 
 * Named `:parameter` values with planning defaults and encoding-time updates.
 
-* One `ORDER BY` column with direction, null ordering, and optional bounded `LIMIT`.
+* One `ORDER BY` column with direction, null ordering, and optional bounded `LIMIT`. A one-based position refers to the SELECT output, including computed aliases and expanded `*`.
 
 * For ordered queries, `OFFSET` skips globally sorted rows across batches before applying `LIMIT`.
 
-* `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`. Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
+* `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`. A one-based GROUP BY position must refer to the selected source key.
+
+  Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 
 * One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
 
