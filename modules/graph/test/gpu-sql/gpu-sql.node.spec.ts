@@ -228,6 +228,18 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     expect(() => context.query('SELECT fare FROM trips WHERE fare > :minimum')).toThrow(
       /parameter/i
     );
+    expect(() =>
+      context.query('SELECT fare FROM trips WHERE trips.fare NOT IN (:minimum, NULL)', {
+        parameters: {minimum: 4}
+      })
+    ).not.toThrow();
+    expect(() => context.query('SELECT fare FROM trips WHERE fare IN (identifier)')).toThrow(
+      /literal or parameter/
+    );
+    const oversized = Array.from({length: 65}, (_, index) => index).join(', ');
+    expect(() => context.query(`SELECT fare FROM trips WHERE fare IN (${oversized})`)).toThrow(
+      /64 candidates/
+    );
     expect(() => context.query('SELECT fare + 1 FROM trips')).toThrow(/alias/i);
     expect(() => context.query('SELECT COUNT(fare) FROM trips')).toThrow(/COUNT\(\*\)/i);
     expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
