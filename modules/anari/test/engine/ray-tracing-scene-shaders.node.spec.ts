@@ -10,6 +10,7 @@ import {describe, expect, test} from 'vitest';
 import {ResourceType, WgslReflect} from 'wgsl_reflect';
 import {
   getRayTracingScenePresentationShader,
+  getRayTracingMomentShader,
   RAY_TRACING_BOUNDS_SHADER,
   RAY_TRACING_HISTORY_CARRY_SHADER,
   RAY_TRACING_SCENE_SHADER,
@@ -791,6 +792,28 @@ test('full-frame channels fit CORE buffer and storage texture limits', () => {
       'channelViewProjection'
     ])
   );
+});
+
+test('optional variance history stays within the trace, carry, and presentation binding limits', () => {
+  for (const [source, carry, location] of [
+    [RAY_TRACING_SCENE_SHADER, false, 13],
+    [RAY_TRACING_HISTORY_CARRY_SHADER, true, 5]
+  ] as const) {
+    const reflection = new WgslReflect(getRayTracingMomentShader(source, carry));
+    expect(reflection.textures.find(texture => texture.name === 'historyMoments')?.binding).toBe(
+      location
+    );
+    expect(reflection.storage.find(texture => texture.name === 'outputMoments')?.binding).toBe(
+      location + 1
+    );
+  }
+  const presentation = new WgslReflect(
+    getRayTracingScenePresentationShader({toneMapMode: 0, outputEncoding: 0, debugView: 'variance'})
+  );
+  expect(presentation.textures.map(({name, binding}) => ({name, binding}))).toContainEqual({
+    name: 'momentsImage',
+    binding: 2
+  });
 });
 
 test('guided presentation adds only a sampled metadata binding', () => {

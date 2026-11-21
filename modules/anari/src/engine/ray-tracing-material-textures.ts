@@ -61,7 +61,8 @@ const MATERIAL_MAPS = [
 /** Borrowed material maps; ownership remains with the scene adapter. */
 export function getRayMaterialTextures(
   surfaces: readonly SceneSurface[],
-  opacityOnly = false
+  opacityOnly = false,
+  textureLimit = 14
 ): Texture[] {
   const textures: Texture[] = [];
   for (const [name, binding] of MATERIAL_MAPS) {
@@ -77,7 +78,7 @@ export function getRayMaterialTextures(
       if (texture instanceof Texture && !textures.includes(texture)) {
         textures.push(texture);
         // Temporal history occupies two of the 16 guaranteed sampled texture bindings.
-        if (textures.length === 14) return textures;
+        if (textures.length === textureLimit) return textures;
       }
     }
   }
@@ -109,9 +110,10 @@ export function getRayMaterialTextureRevision(surfaces: readonly SceneSurface[])
 export function getRayMaterialTextureShader(
   source: string,
   surfaces: readonly SceneSurface[],
-  opacityOnly = false
+  opacityOnly = false,
+  textureLimit = 14
 ): string {
-  const textures = getRayMaterialTextures(surfaces, opacityOnly);
+  const textures = getRayMaterialTextures(surfaces, opacityOnly, textureLimit);
   const declarations = textures
     .map(
       (texture, index) => `

@@ -347,7 +347,10 @@ const raytraceRendererProperties = {
   samplingSeed: z.number().int().min(0).max(0xffffffff).optional(),
   historySampleLimit: z.number().int().min(1).max(256).optional(),
   denoiseRadius: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional(),
-  debugView: z.enum(['color', 'normal', 'cameraDistance', 'identity', 'history']).optional(),
+  varianceGuidance: z.boolean().optional(),
+  debugView: z
+    .enum(['color', 'normal', 'cameraDistance', 'identity', 'history', 'variance'])
+    .optional(),
   transportMode: z.enum(['diffuse', 'pbr']).optional(),
   emitterSampling: z.boolean().optional(),
   emitterSelection: z.enum(['uniform', 'power']).optional(),

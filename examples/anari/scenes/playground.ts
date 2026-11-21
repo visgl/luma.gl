@@ -206,13 +206,16 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
         maxBounces <= 8
       )
         sceneDescription.renderer.maxBounces = maxBounces;
+      if (parameters.get('varianceGuidance') === '1')
+        sceneDescription.renderer.varianceGuidance = true;
       const debugView = parameters.get('view');
       if (
         debugView === 'color' ||
         debugView === 'normal' ||
         debugView === 'cameraDistance' ||
         debugView === 'identity' ||
-        debugView === 'history'
+        debugView === 'history' ||
+        debugView === 'variance'
       )
         sceneDescription.renderer.debugView = debugView;
       const emitterOverride = parameters.get('emitters');
@@ -590,7 +593,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
             debugView === 'normal' ||
             debugView === 'cameraDistance' ||
             debugView === 'identity' ||
-            debugView === 'history'
+            debugView === 'history' ||
+            debugView === 'variance'
           )
         )
           return;

@@ -19,6 +19,7 @@ const {values} = parseArgs({options: {
   'compare-emitters': {type: 'boolean'},
   'maximum-rmse': {type: 'string'},
   view: {type: 'string', default: 'color'},
+  'variance-guidance': {type: 'boolean'},
   'frame-sweep': {type: 'string'},
   'small-emitter': {type: 'boolean'},
   'mixed-emitters': {type: 'boolean'},
@@ -41,8 +42,8 @@ const {values} = parseArgs({options: {
 }});
 const maximumRootMeanSquaredError = values['maximum-rmse'] === undefined ? undefined : Number(values['maximum-rmse']);
 if (maximumRootMeanSquaredError !== undefined && (!values.reference || !Number.isFinite(maximumRootMeanSquaredError) || maximumRootMeanSquaredError < 0 || (!values['linear-hdr'] && maximumRootMeanSquaredError > 1))) throw new Error('maximum-rmse requires a reference and a finite nonnegative value (at most 1 for display RGB)');
-if (!['color', 'normal', 'cameraDistance', 'identity', 'history'].includes(values.view)) throw new Error('Unknown ray debug view');
-if (values.renderer !== 'raytrace' && values.view !== 'color') throw new Error('Debug views require raytrace');
+if (!['color', 'normal', 'cameraDistance', 'identity', 'history', 'variance'].includes(values.view)) throw new Error('Unknown ray debug view');
+if (values.renderer !== 'raytrace' && (values.view !== 'color' || values['variance-guidance'])) throw new Error('Debug views require raytrace');
 if (values.transport !== undefined && !['diffuse', 'pbr'].includes(values.transport)) throw new Error('transport must be diffuse or pbr');
 if (values.bounces !== undefined && (!Number.isInteger(Number(values.bounces)) || Number(values.bounces) < 0 || Number(values.bounces) > 8)) throw new Error('bounces must be an integer between 0 and 8');
 if (values.renderer !== 'raytrace' && (values.transport !== undefined || values.bounces !== undefined)) throw new Error('Transport overrides require raytrace');
@@ -91,6 +92,7 @@ url.searchParams.set('seed', String(seed));
 url.searchParams.set('denoise', String(denoise));
 url.searchParams.set('history', String(history));
 url.searchParams.set('view', values.view);
+if (values['variance-guidance']) url.searchParams.set('varianceGuidance', '1');
 if (values.transport !== undefined) url.searchParams.set('transport', values.transport);
 if (values.emitters !== undefined) url.searchParams.set('emitters', values.emitters);
 if (values['emitter-selection'] !== undefined) url.searchParams.set('emitterSelection', values['emitter-selection']);
