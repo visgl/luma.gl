@@ -256,6 +256,7 @@ export type GLValueParameters = {
   [GL.CULL_FACE]?: boolean;
   [GL.CULL_FACE_MODE]?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
   [GL.DEPTH_TEST]?: boolean;
+  [GL.DEPTH_CLAMP_EXT]?: boolean;
   [GL.DEPTH_CLEAR_VALUE]?: number;
   [GL.DEPTH_FUNC]?: GLFunction;
   [GL.DEPTH_RANGE]?: [number, number] | TypedArray;

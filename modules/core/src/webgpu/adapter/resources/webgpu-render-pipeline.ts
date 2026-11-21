@@ -231,7 +231,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
     }
 
     // Set parameters on the descriptor
-    applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
+    applyParametersToRenderPipelineDescriptor(
+      descriptor,
+      this.props.parameters,
+      this.device.features
+    );
     if (!fragment) {
       delete descriptor.fragment;
     }
