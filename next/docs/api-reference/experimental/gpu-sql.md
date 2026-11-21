@@ -82,7 +82,7 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 
 * For ordered queries, `OFFSET` skips globally sorted rows across batches before applying `LIMIT`.
 
-* `COUNT(*)`, `COUNT(column)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`. `COUNT(column)` counts valid values after filtering, while `COUNT(*)` counts all selected rows.
+* `COUNT(*)`, `COUNT(column)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`. `COUNT(column)` counts valid values after filtering, while `COUNT(*)` counts all selected rows. Numeric aggregate expressions such as `SUM(fare * 2) AS total` require an explicit output alias.
 
   A one-based GROUP BY position must refer to the selected source key.
 
