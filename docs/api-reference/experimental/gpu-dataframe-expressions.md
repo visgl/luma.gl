@@ -126,3 +126,11 @@ functions also accept Int32 and return integer inputs unchanged.
 `nullIf(value, sentinel)` returns null when both values are valid and equal.
 A null sentinel leaves the input value and validity intact. Both operations
 require matching scalar column formats.
+
+### Scalar casts
+
+Use `cast(column('fare'), 'sint32')` to convert between `float32`, `sint32`,
+and `uint32`. When declaring a derived column, pass its target format to
+`withColumn` to keep the TypeScript schema precise. Casts preserve nulls and
+saturate finite values outside the destination integer range. Float inputs
+truncate toward zero for integer destinations, with non-finite values becoming null.

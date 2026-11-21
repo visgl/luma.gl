@@ -60,6 +60,11 @@ rendering and compute can use the compiled GPU resources directly. Call
 
 ## Supported grammar
 
+`CAST` supports scalar Float32, Int32, and Uint32 results. Float-to-integer casts truncate toward zero
+and clamp out-of-range finite values to the target limits. Null and non-finite inputs produce null
+when converting from Float32 to an integer.
+
+
 `COALESCE` returns the first valid value from 2–64 scalar numeric arguments. `NULLIF`
 returns null when its two valid numeric arguments compare equal. Columns in either
 function use matching scalar formats.

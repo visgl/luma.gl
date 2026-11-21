@@ -7,7 +7,7 @@ import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import type {GPUDataFrameDictionary} from './gpu-data-frame';
 import type {GPUDataFrameQuery} from './gpu-data-frame-query';
-import {getGPUExpressionColumnNames} from './gpu-expression';
+import {getGPUExpressionResultFormats} from './gpu-expression';
 import {
   compileGPUDataFrameGroupedAggregation,
   type CompiledGPUDataFrameGroupedAggregation
@@ -249,8 +249,10 @@ function getGPUDataFrameQueryColumnFormats<
   );
 
   for (const definition of query.derivedColumns) {
-    const firstReference = getGPUExpressionColumnNames(definition.expression, false)[0];
-    formats.set(definition.name, definition.format ?? formats.get(firstReference) ?? 'float32');
+    const inferred = getGPUExpressionResultFormats(definition.expression.node, formats)
+      .values()
+      .next().value;
+    formats.set(definition.name, definition.format ?? inferred ?? 'float32');
   }
 
   return formats;

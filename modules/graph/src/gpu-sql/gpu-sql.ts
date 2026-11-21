@@ -305,6 +305,7 @@ function resolveGPUSQLExpression(
         whenTrue: resolveGPUSQLExpression(expression.whenTrue, resolve),
         otherwise: resolveGPUSQLExpression(expression.otherwise, resolve)
       };
+    case 'cast':
     case 'unary':
       return {...expression, operand: resolveGPUSQLExpression(expression.operand, resolve)};
     case 'binary':
@@ -454,6 +455,7 @@ function lowerSQLExpression(
           name !== 'isNull' &&
           name !== 'isNotNull' &&
           name !== 'in' &&
+          name !== 'cast' &&
           functionName !== 'coalesce' &&
           functionName !== 'nullif' &&
           !isGPUScalarFunction(functionName)

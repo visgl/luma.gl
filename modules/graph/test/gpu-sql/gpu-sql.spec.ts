@@ -181,6 +181,44 @@ it('GPU SQL fills missing values and nulls matching sentinels across Arrow batch
   }
 });
 
+it('casts projected numeric columns and sorts on the converted format', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  try {
+    const context = new GPUSQLContext({trips: frame});
+    const result = context
+      .query(
+        'SELECT CAST(-trips.fare - 0.75 AS INTEGER) AS signedFare, CAST(identifier AS REAL) AS floatIdentifier FROM trips ORDER BY signedFare NULLS LAST'
+      )
+      .compile(new GPUCommandGraph(device, {id: 'sql-scalar-casts'}));
+    try {
+      if (!(result instanceof CompiledGPUDataFrameGlobalSort))
+        throw new Error('Expected global SQL sort');
+      const encoder = device.createCommandEncoder();
+      result.encode(encoder);
+      device.submit(encoder.finish());
+      const output = await makeArrowTableFromGPUAnalyticsTable({
+        table: result.table,
+        validity: result.validity,
+        globalRowIndices: result.globalRowIndices,
+        globalSelectedCount: result.globalSelectedCount
+      });
+      expect(output.getChild('signedFare')?.type).toBeInstanceOf(arrow.Int32);
+      expect(Array.from(output.getChild('signedFare') ?? [])).toEqual([-11, -10, -8, -3, null]);
+      expect(output.getChild('floatIdentifier')?.type).toBeInstanceOf(arrow.Float32);
+      expect(Array.from(output.getChild('floatIdentifier') ?? [])).toEqual([50, 40, 20, 30, 10]);
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('loaders.gl SQL predicates compile into reusable GPU-resident dataframe results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
