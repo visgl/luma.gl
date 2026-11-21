@@ -148,11 +148,21 @@ test('full material conformance remains scheduled and cannot silently omit a cas
   const verification = steps.find(
     (step: {name: string}) => step.name === 'Verify the entire matrix executed'
   ).run;
-  expect(verification).toContain(`tests="${RENDER_CONFORMANCE_TEST_PATTERNS.length}"`);
+  expect(verification).toContain(`tests="${RENDER_CONFORMANCE_TEST_PATTERNS.length + 3}"`);
   expect(verification).toContain('<skipped');
   for (const path of RENDER_CONFORMANCE_TEST_PATTERNS) {
     const source = readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
-    expect(source.match(/^it\(/gm), path).toHaveLength(1);
+    if (
+      path.endsWith('ray-secondary-emitter-mis.spec.ts') ||
+      path.endsWith('ray-environment-lighting.spec.ts')
+    ) {
+      expect(source.match(/^it\.each\(/gm), path).toHaveLength(1);
+      expect(source.match(/^it\(/gm) ?? [], path).toHaveLength(
+        path.endsWith('ray-environment-lighting.spec.ts') ? 1 : 0
+      );
+    } else {
+      expect(source.match(/^it\(/gm), path).toHaveLength(1);
+    }
   }
   expect(getBrowserTestGroup('render-conformance')).toBe('render-conformance');
 });
