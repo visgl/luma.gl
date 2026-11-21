@@ -25,7 +25,7 @@ import {
   validateGPUAnalyticsSource,
   type GPUAnalyticsScalarFormat
 } from './gpu-analytics-compiler-utils';
-import type {GPUDataFrame} from './gpu-data-frame';
+import {GPUDataFrame} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import type {GPUExpression} from './gpu-expression';
 import {
@@ -84,7 +84,8 @@ export function compileGPUDataFrameGlobalSort<
   derivedColumns: readonly GPUDataFrameDerivedColumn[],
   column: keyof Selection & string,
   options: GPUDataFrameNormalizedSortOptions,
-  graph: GPUCommandGraph<GPUDataFrameQueryParameters>
+  graph: GPUCommandGraph<GPUDataFrameQueryParameters>,
+  resultColumns?: readonly (keyof Selection & string)[]
 ): CompiledGPUDataFrameGlobalSort<Selection> {
   validateGPUAnalyticsSource(source, [column]);
   validateGPUGlobalSortCapacity(source, graph);
@@ -94,7 +95,7 @@ export function compileGPUDataFrameGlobalSort<
     Selection,
     CompiledGPUDataFrameGlobalSort<Selection>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    prepare: context => addGPUGlobalSortToGraph(context, column, options)
+    prepare: context => addGPUGlobalSortToGraph(context, column, options, resultColumns)
   });
 }
 
@@ -128,7 +129,8 @@ function validateGPUGlobalSortCapacity<Source extends GPUTypeMap>(
 function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
   context: GPUDataFrameQueryExtensionContext<Selection>,
   column: keyof Selection & string,
-  options: GPUDataFrameNormalizedSortOptions
+  options: GPUDataFrameNormalizedSortOptions,
+  resultColumns?: readonly (keyof Selection & string)[]
 ): GPUDataFrameQueryExtensionResult<Selection, CompiledGPUDataFrameGlobalSort<Selection>> {
   const graph = context.graph;
   const prefix = `${context.queryId}-global-sort`;
@@ -255,10 +257,12 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
       }
     }
 
+    const projection = resultColumns && projectGPUGlobalSortResult(context, resultColumns);
     return {
-      table: context.table,
-      validity: context.validity,
-      dictionaries: context.dictionaries,
+      table: projection?.table ?? context.table,
+      validity: projection?.validity ?? context.validity,
+      dictionaries: projection?.dictionaries ?? context.dictionaries,
+      ownedTables: projection ? [projection] : [],
       ownedVectors,
       createCompiled: props =>
         new CompiledGPUDataFrameGlobalSort(
@@ -274,6 +278,24 @@ function addGPUGlobalSortToGraph<Selection extends GPUTypeMap>(
       vector.destroy();
     }
     throw error;
+  }
+}
+
+/** Borrows the requested SQL output columns while the sort plan owns its working table. */
+function projectGPUGlobalSortResult<Selection extends GPUTypeMap>(
+  context: GPUDataFrameQueryExtensionContext<Selection>,
+  columns: readonly (keyof Selection & string)[]
+): GPUDataFrame<Selection> {
+  const working = new GPUDataFrame<Selection>({
+    table: context.table,
+    validity: context.validity,
+    dictionaries: context.dictionaries,
+    ownership: 'borrowed'
+  });
+  try {
+    return working.select(columns) as GPUDataFrame<Selection>;
+  } finally {
+    working.destroy();
   }
 }
 

@@ -92,7 +92,9 @@ the branch. Numeric column branches must have the same scalar format. An omitted
 - `IN` and `NOT IN` compare a source column against up to 64 literals or named parameters.
   A null candidate makes a nonmatching result unknown, which `WHERE` excludes.
 - Named `:parameter` values with planning defaults and encoding-time updates.
-- One `ORDER BY` column with direction, null ordering, and optional bounded `LIMIT`.
+- One numeric `ORDER BY` expression with direction, null ordering, and optional bounded `LIMIT`.
+  Sort keys can use source fields outside the projection and are excluded from the output schema.
+
   A one-based position refers to the SELECT output, including computed aliases and expanded `*`.
 
 - For ordered queries, `OFFSET` skips globally sorted rows across batches before applying `LIMIT`.
