@@ -7,6 +7,7 @@ import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 import {createMaterialFixture} from './ray-material-fixture';
 
+/** Creates an orthographic camera with one world unit per fixture pixel. */
 function makeCamera(horizontalPosition: number) {
   const position: [number, number, number] = [horizontalPosition, 0, 4];
   return {
@@ -50,6 +51,7 @@ it('discounts history at a partially disoccluded subpixel footprint', async () =
         material: {id: 'occluder', uniforms: {emissiveFactor: [4, 1, 0]}}
       }
     ];
+    /** Reads the central pixel’s retained sample count from the RGBA16F alpha channel. */
     const readConfidence = async () => {
       const radiance = (await readRadiance())!;
       return new DataView(radiance.data.buffer).getFloat16((4 * radiance.width + 4) * 8 + 6, true);
