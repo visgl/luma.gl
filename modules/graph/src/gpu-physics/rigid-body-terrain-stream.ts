@@ -219,12 +219,17 @@ export class GPURigidBodyTerrainStream {
   private getLoad(key: string): Promise<GPURigidBodyTerrainTile> {
     const retained = this.loads.get(key);
     if (retained) return retained.tile;
-    const {promise, resolve, reject} = Promise.withResolvers<GPURigidBodyTerrainTile>();
-    const load = {controller: new AbortController(), tile: promise, resolve, reject};
+    let resolve!: TileLoad['resolve'];
+    let reject!: TileLoad['reject'];
+    const tile = new Promise<GPURigidBodyTerrainTile>((resolveTile, rejectTile) => {
+      resolve = resolveTile;
+      reject = rejectTile;
+    });
+    const load = {controller: new AbortController(), tile, resolve, reject};
     this.loads.set(key, load);
     this.queued.set(key, load);
     this.startQueuedLoads();
-    return promise;
+    return tile;
   }
 
   /** Release the waiting window promptly while retaining the active capacity reservation. */
