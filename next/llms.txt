@@ -1581,12 +1581,12 @@ luma.gl grows from the work of many people: library authors, graphics researcher
 
 ### upgrade-guide
 
-Reusing a WebGL canvas after device destruction
+Upgrading to v10.0
 
-- [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md): Reusing a WebGL canvas after device destruction
+- [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md): Upgrading to v10.0
 
 ### whats-new
 
-Reverse-Z depth on WebGL2
+Version 10.0
 
-- [What's New](https://luma.gl/next/docs/whats-new.md): Reverse-Z depth on WebGL2
+- [What's New](https://luma.gl/next/docs/whats-new.md): Version 10.0

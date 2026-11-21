@@ -8,7 +8,7 @@ For feature-specific literature and detailed scientific citations, see [Attribut
 
 ## Origins and community[​](#origins-and-community "Direct link to Origins and community")
 
-luma.gl began as an ES6 port of **Nicolas Garcia Belmonte's PhiloGL**, developed at **Sencha Labs**. Our [v1 release history](https://luma.gl/next/docs/legacy/legacy-whats-new#version-10) records that origin, and the repository license retains Sencha's notice. PhiloGL's approachable WebGL abstractions and examples provided a foundation for the project. We thank Nicolas and the PhiloGL contributors for making that work available.
+luma.gl began as an ES6 port of **Nicolas Garcia Belmonte's PhiloGL**, developed at **Sencha Labs**. Our [v1 release history](https://github.com/visgl/luma.gl/blob/v9.4.2/docs/legacy/legacy-whats-new.md#version-10) records that origin, and the repository license retains Sencha's notice. PhiloGL's approachable WebGL abstractions and examples provided a foundation for the project. We thank Nicolas and the PhiloGL contributors for making that work available.
 
 **Uber Technologies** developed and open sourced early luma.gl work; the retained 2015 copyright records that contribution. We thank the [luma.gl contributors](https://github.com/visgl/luma.gl/graphs/contributors), including maintainers, reviewers, documentation writers, issue reporters, and example authors, for its continued development. **vis.gl** and the **OpenJS Foundation** provide the project's community and organizational home.
 
