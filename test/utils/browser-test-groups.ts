@@ -20,6 +20,9 @@ export const PHYSICS_ENDURANCE_TEST_PATTERNS = [
 ];
 /** Full material transport matrices run nightly and when their implementation changes. */
 export const RENDER_CONFORMANCE_TEST_PATTERNS = [
+  'modules/anari/test/engine/ray-material-iridescence.spec.ts',
+  'modules/anari/test/engine/ray-material-anisotropy.spec.ts',
+  'modules/anari/test/engine/ray-material-sheen.spec.ts',
   'modules/anari/test/engine/ray-material-maps.spec.ts',
   'modules/anari/test/engine/ray-material-normals.spec.ts',
   'modules/anari/test/engine/ray-material-dielectrics.spec.ts',

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Buffer, Texture} from '@luma.gl/core';
+import {Buffer, type Device, Texture} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
 import {RayTracingSceneRenderer, type RayTracingSceneRenderOptions} from '@luma.gl/anari';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
@@ -39,24 +39,6 @@ export async function createMaterialFixture() {
     data: new Uint8Array([0, 255, 0, 255, 0, 255, 0, 255]),
     sampler: map.sampler
   });
-  const mipMap = device.createTexture({
-    width: 32,
-    height: 32,
-    mipLevels: 6,
-    format: 'rgba8unorm',
-    sampler: {minFilter: 'nearest', magFilter: 'nearest', mipmapFilter: 'nearest'}
-  });
-  for (let level = 0; level < 6; level++) {
-    const size = 32 >> level;
-    const texels = new Uint8Array(size * size * 4);
-    for (let offset = 0; offset < texels.length; offset += 4) {
-      texels.set(
-        level === 0 ? [255, 0, 0, 255] : level === 5 ? [0, 0, 255, 255] : [0, 255, 0, 255],
-        offset
-      );
-    }
-    mipMap.writeData(texels, {mipLevel: level, width: size, height: size});
-  }
   const color = device.createTexture({
     width: 8,
     height: 8,
@@ -124,14 +106,50 @@ export async function createMaterialFixture() {
       buffer.destroy();
     }
   }
+  let mipMap: Texture | undefined;
   function destroy(): void {
     renderer.destroy();
     framebuffer.destroy();
     color.destroy();
     map.destroy();
-    mipMap.destroy();
+    mipMap?.destroy();
     replacement.destroy();
     device.destroy();
   }
-  return {options, surface, geometry, renderer, replacement, map, mipMap, readPixel, destroy};
+  return {
+    options,
+    surface,
+    geometry,
+    renderer,
+    replacement,
+    map,
+    readPixel,
+    destroy,
+    get mipMap(): Texture {
+      mipMap ??= createMipMap(device);
+      return mipMap;
+    }
+  };
+}
+
+function createMipMap(device: Device): Texture {
+  const mipMap = device.createTexture({
+    width: 32,
+    height: 32,
+    mipLevels: 6,
+    format: 'rgba8unorm',
+    sampler: {minFilter: 'nearest', magFilter: 'nearest', mipmapFilter: 'nearest'}
+  });
+  for (let level = 0; level < 6; level++) {
+    const size = 32 >> level;
+    const texels = new Uint8Array(size * size * 4);
+    for (let offset = 0; offset < texels.length; offset += 4) {
+      texels.set(
+        level === 0 ? [255, 0, 0, 255] : level === 5 ? [0, 0, 255, 255] : [0, 255, 0, 255],
+        offset
+      );
+    }
+    mipMap.writeData(texels, {mipLevel: level, width: size, height: size});
+  }
+  return mipMap;
 }
