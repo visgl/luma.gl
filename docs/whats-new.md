@@ -16,6 +16,9 @@
   recover from local contact-cache exhaustion while healthy instances keep stepping.
   [GPU Physics](./api-reference/graph/gpu-physics.md)
 
+- GPU physics can batch rays and sphere sweeps with ordered nearest-hit results in one
+  GPU dispatch and compact readback. [Batched collision casts](./api-reference/graph/gpu-physics.md#batched-collision-casts)
+
 See the [Upgrade Guide](./upgrade-guide.md#upgrading-to-v100) to move from v9.
 
 ## Version 9.4

@@ -33,6 +33,100 @@ export type GPURigidBodyQueryResult = {
   complete: boolean;
 };
 
+/** One batched ray, or a sphere sweep when radius is supplied. Filters share the batch selection. */
+export type GPURigidBodyBatchCast = Omit<GPURigidBodyRayQuery, 'colliderIndices'> & {
+  /** Nonnegative sweep radius. Omit for a ray. */
+  radius?: number;
+};
+
+/** Optional collider selection shared by every command in a cast batch. */
+export type GPURigidBodyBatchCastOptions = Pick<GPURigidBodyQueryFilter, 'colliderIndices'>;
+
+/** Input command stride in bytes, matching the WGSL Query structure. */
+export const RIGID_BODY_CAST_COMMAND_BYTES = 48;
+
+/** One result header and one nearest-hit record per command, measured in bytes. */
+export const RIGID_BODY_BATCH_RESULT_BYTES = 64;
+
+/** Encode a batch without duplicating the collider selection per command. */
+export function packRigidBodyBatchCasts(
+  commands: readonly GPURigidBodyBatchCast[],
+  bodyCount: number,
+  selectedCount: number
+): Uint8Array {
+  /** Shared typed views for the command floats and integer flags. */
+  const data = new ArrayBuffer(commands.length * RIGID_BODY_CAST_COMMAND_BYTES);
+  /** Position, direction, segment length and sweep radius. */
+  const floats = new Float32Array(data);
+  /** Query kind and optional excluded body. */
+  const words = new Uint32Array(data);
+  for (const [index, command] of commands.entries()) {
+    /** Resolve the per-command segment and optional exclusion before packing. */
+    const {origin, direction, maximumDistance, radius, excludeBody} = command;
+    /** Normalize directions once on the CPU, retaining distance in world units. */
+    const length = Math.hypot(...direction);
+    if (
+      'colliderIndices' in command ||
+      origin.length !== 3 ||
+      !origin.every(value => Number.isFinite(Math.fround(value))) ||
+      direction.length !== 3 ||
+      !Number.isFinite(length) ||
+      length === 0 ||
+      !Number.isFinite(Math.fround(maximumDistance)) ||
+      maximumDistance < 0 ||
+      (radius !== undefined && (!Number.isFinite(Math.fround(radius)) || radius < 0)) ||
+      (excludeBody !== undefined &&
+        (!Number.isInteger(excludeBody) || excludeBody < 0 || excludeBody >= bodyCount))
+    )
+      throw new Error('Invalid batched collision cast');
+    /** Each row is independently aligned to one Query. */
+    const offset = (index * RIGID_BODY_CAST_COMMAND_BYTES) / 4;
+    floats.set(
+      [...origin, radius ?? 0, ...direction.map(value => value / length), maximumDistance],
+      offset
+    );
+    words.set(
+      [radius === undefined ? 0 : 2, 1, excludeBody ?? 0xffffffff, selectedCount],
+      offset + 8
+    );
+  }
+  return new Uint8Array(data);
+}
+
+/** Read one nearest hit, using the same layout for scalar and batched query results. */
+export function decodeRigidBodyQueryHit(
+  words: Uint32Array,
+  floats: Float32Array,
+  offset: number
+): GPURigidBodyQueryHit {
+  return {
+    body: words[offset],
+    collider: words[offset + 1],
+    point: [floats[offset + 4], floats[offset + 5], floats[offset + 6]],
+    distance: floats[offset + 7],
+    normal: [floats[offset + 8], floats[offset + 9], floats[offset + 10]]
+  };
+}
+
+/** Decode ordered results from one compact GPU readback. */
+export function decodeRigidBodyBatchCasts(bytes: Uint8Array): GPURigidBodyQueryResult[] {
+  /** Header and identifier words for every command. */
+  const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+  /** Nearest hit geometry for each result row. */
+  const floats = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+  return Array.from({length: bytes.byteLength / RIGID_BODY_BATCH_RESULT_BYTES}, (_, index) => {
+    /** A four-word header precedes the nearest-hit record. */
+    const offset = (index * RIGID_BODY_BATCH_RESULT_BYTES) / 4;
+    return {
+      hits: words[offset] ? [decodeRigidBodyQueryHit(words, floats, offset + 4)] : [],
+      totalHits: words[offset + 1],
+      truncated: false,
+      complete: words[offset + 2] === 0
+    };
+  });
+}
+
+/** Shared collider intersection code for scalar queries and batched casts. */
 export const RIGID_BODY_QUERY_SHADER = /* wgsl */ `
 struct Query { origin:vec4f, direction:vec4f, settings:vec4u }
 struct QueryHit { identifiers:vec4u, point:vec4f, normal:vec4f }
@@ -40,21 +134,18 @@ struct QueryOutput { count:u32, total:u32, reserved:vec2u, hits:array<QueryHit> 
 @group(0) @binding(12) var<uniform> query:Query;
 @group(0) @binding(13) var<storage,read> querySelection:array<u32>;
 @group(0) @binding(14) var<storage,read_write> queryOutput:QueryOutput;
-@compute @workgroup_size(64) fn queryColliders(@builtin(global_invocation_id) invocation:vec3u){
- let collider=invocation.x;if(collider>=COLLIDER_COUNT){return;}
- queryOutput.hits[collider]=QueryHit();
- if(querySelection[collider]==0u){return;}
+fn queryCollider(collider:u32,request:Query)->QueryHit {
   let shape=bodies.colliders[collider].shape;
-  let origin=colliderLocal(collider,query.origin.xyz-colliderPosition(collider));
-  let direction=colliderLocal(collider,query.direction.xyz);
+  let origin=colliderLocal(collider,request.origin.xyz-colliderPosition(collider));
+  let direction=colliderLocal(collider,request.direction.xyz);
   var point=origin;var normal=vec3f(0);var distance=0.0;var hit=false;
   var complete=1u;
-  if(query.settings.x==2u||shape.w>1.0){
-   if(query.settings.x==1u){let surface=closestSurface(collider,origin);hit=surface.distance<=query.origin.w;point=surface.point;normal=select(vec3f(0),(origin-point)/max(length(origin-point),1e-20),surface.distance>0.0);complete=surface.complete;if(shape.w==6.0&&shape.z==0.0&&origin.y<0.0){hit=false;}}
-   else{let sweep=sweepSphere(collider,origin,direction,query.direction.w,query.origin.w,false);hit=sweep.hit!=0u;point=sweep.point;normal=sweep.normal;distance=sweep.distance;complete=sweep.complete;}
-  }else if(query.settings.x==1u){
-   if(shape.w==0.0){let lengthFromCenter=length(origin);hit=lengthFromCenter<=shape.x+query.origin.w;normal=select(vec3f(1,0,0),origin/max(lengthFromCenter,1e-20),lengthFromCenter>1e-20);point=normal*shape.x;}
-   else {point=clamp(origin,-shape.xyz,shape.xyz);let separation=origin-point;let lengthFromSurface=length(separation);hit=lengthFromSurface<=query.origin.w;normal=separation/max(lengthFromSurface,1e-20);}
+  if(request.settings.x==2u||shape.w>1.0){
+   if(request.settings.x==1u){let surface=closestSurface(collider,origin);hit=surface.distance<=request.origin.w;point=surface.point;normal=select(vec3f(0),(origin-point)/max(length(origin-point),1e-20),surface.distance>0.0);complete=surface.complete;if(shape.w==6.0&&shape.z==0.0&&origin.y<0.0){hit=false;}}
+   else{let sweep=sweepSphere(collider,origin,direction,request.direction.w,request.origin.w,false);hit=sweep.hit!=0u;point=sweep.point;normal=sweep.normal;distance=sweep.distance;complete=sweep.complete;}
+  }else if(request.settings.x==1u){
+   if(shape.w==0.0){let lengthFromCenter=length(origin);hit=lengthFromCenter<=shape.x+request.origin.w;normal=select(vec3f(1,0,0),origin/max(lengthFromCenter,1e-20),lengthFromCenter>1e-20);point=normal*shape.x;}
+   else {point=clamp(origin,-shape.xyz,shape.xyz);let separation=origin-point;let lengthFromSurface=length(separation);hit=lengthFromSurface<=request.origin.w;normal=separation/max(lengthFromSurface,1e-20);}
   }else if(shape.w==0.0){
    let projection=dot(origin,direction);
    // Avoid cancellation between large squared distances for distant rays.
@@ -62,7 +153,7 @@ struct QueryOutput { count:u32, total:u32, reserved:vec2u, hits:array<QueryHit> 
    if(dot(origin,origin)<=shape.x*shape.x){hit=true;}
    else if(discriminant>=0.0){distance=-projection-sqrt(discriminant);hit=distance>=0.0;point=origin+direction*distance;normal=normalize(point);}
   }else{
-   var enter=0.0;var leave=query.direction.w;hit=true;
+   var enter=0.0;var leave=request.direction.w;hit=true;
    for(var coordinate=0u;coordinate<3u;coordinate++){
     if(direction[coordinate]==0.0){if(abs(origin[coordinate])>shape[coordinate]){hit=false;}}
     else{
@@ -74,7 +165,12 @@ struct QueryOutput { count:u32, total:u32, reserved:vec2u, hits:array<QueryHit> 
    }
    distance=enter;point=origin+direction*distance;hit=hit&&enter<=leave&&leave>=0.0;
   }
-  queryOutput.hits[collider]=QueryHit(vec4u(colliderBody(collider),collider,select(0u,1u,hit&&distance<=query.direction.w),complete),vec4f(colliderPosition(collider)+rotate(colliderRotation(collider),point),distance),vec4f(rotate(colliderRotation(collider),normal),0));
+  return QueryHit(vec4u(colliderBody(collider),collider,select(0u,1u,hit&&distance<=request.direction.w),complete),vec4f(colliderPosition(collider)+rotate(colliderRotation(collider),point),distance),vec4f(rotate(colliderRotation(collider),normal),0));
+}
+@compute @workgroup_size(64) fn queryColliders(@builtin(global_invocation_id) invocation:vec3u){
+ let collider=invocation.x;if(collider>=COLLIDER_COUNT){return;}
+ queryOutput.hits[collider]=QueryHit();
+ if(querySelection[collider]!=0u){queryOutput.hits[collider]=queryCollider(collider,query);}
 }
 @compute @workgroup_size(1) fn reduceQueries(){
  queryOutput.count=0u;queryOutput.total=0u;queryOutput.reserved=vec2u(0);var nearest=query.direction.w;
@@ -85,6 +181,49 @@ struct QueryOutput { count:u32, total:u32, reserved:vec2u, hits:array<QueryHit> 
   var slot=queryOutput.count;
   if(query.settings.x!=1u){if(candidate.point.w>nearest){continue;}if(queryOutput.count>0u&&candidate.point.w==nearest){continue;}nearest=candidate.point.w;slot=0u;}
   if(slot>=query.settings.y){continue;}queryOutput.hits[slot]=candidate;queryOutput.count=max(queryOutput.count,slot+1u);
+ }
+}
+`;
+
+/** One workgroup per cast. Scratch is local to the group and scales with lane count. */
+export const RIGID_BODY_BATCH_CAST_SHADER = /* wgsl */ `
+struct BatchResult {header:vec4u,hit:QueryHit}
+@group(0) @binding(30) var<storage,read> batchCommands:array<Query>;
+@group(0) @binding(31) var<storage,read_write> batchResults:array<BatchResult>;
+var<workgroup> reducedHits:array<QueryHit,64>;
+var<workgroup> reducedCounts:array<vec2u,64>;
+
+// Match the scalar reducer: prefer the smaller collider index at equal distance.
+fn closer(first:QueryHit,second:QueryHit)->bool{
+ return first.identifiers.z!=0u&&(second.identifiers.z==0u||
+   first.point.w<second.point.w||
+   (first.point.w==second.point.w&&first.identifiers.y<second.identifiers.y));
+}
+@compute @workgroup_size(64) fn castBatch(
+ @builtin(workgroup_id) groupIndex:vec3u,
+ @builtin(local_invocation_index) lane:u32
+){
+ let command=batchCommands[groupIndex.x];
+ var best=QueryHit();var counts=vec2u(0);
+ for(var work=lane;work<command.settings.w;work+=64u){
+  let collider=querySelection[work];
+  if(colliderBody(collider)==command.settings.z){continue;}
+  let candidate=queryCollider(collider,command);
+  counts+=vec2u(candidate.identifiers.z,select(0u,1u,candidate.identifiers.w==0u));
+  if(closer(candidate,best)){best=candidate;}
+ }
+ reducedHits[lane]=best;reducedCounts[lane]=counts;workgroupBarrier();
+ for(var stride=32u;stride>0u;stride/=2u){
+  if(lane<stride){
+   let neighbor=lane+stride;
+   if(closer(reducedHits[neighbor],reducedHits[lane])){reducedHits[lane]=reducedHits[neighbor];}
+   reducedCounts[lane]+=reducedCounts[neighbor];
+  }
+  workgroupBarrier();
+ }
+ if(lane==0u){
+  let hit=reducedHits[0];let counts=reducedCounts[0];
+  batchResults[groupIndex.x]=BatchResult(vec4u(hit.identifiers.z,counts.x,counts.y,0u),hit);
  }
 }
 `;

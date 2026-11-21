@@ -1,8 +1,10 @@
-import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
-import {RIGID_BODY_JOINT_STATE_BYTES} from './rigid-body-joints';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
+
+import {RIGID_BODY_CAST_COMMAND_BYTES, RIGID_BODY_BATCH_RESULT_BYTES} from './rigid-body-queries';
+import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
+import {RIGID_BODY_JOINT_STATE_BYTES} from './rigid-body-joints';
 
 export type GPURigidBodyCapacityInfo = {
   bodyCount: number;
@@ -29,7 +31,8 @@ export function getRigidBodyStorageLayout(
   continuous = false,
   jointCount = 0,
   ensembleInstances = 0,
-  independentRecovery = false
+  independentRecovery = false,
+  queryBatchCapacity = 0
 ) {
   const geometryOffset = Math.ceil((bodyCount * 12 + colliderCount * 26) / 4) * 4;
   const pairOffset = Math.ceil((geometryOffset + geometryWords) / 64) * 64;
@@ -76,6 +79,20 @@ export function getRigidBodyStorageLayout(
           {name: 'query-settings', byteLength: 48, uniform: true},
           {name: 'query-selection', byteLength: Math.max(4, colliderCount * 4), uniform: false},
           {name: 'query-output', byteLength: 16 + Math.max(1, colliderCount) * 48, uniform: false}
+        ]
+      : []),
+    ...(queryBatchCapacity
+      ? [
+          {
+            name: 'query-batch-commands',
+            byteLength: queryBatchCapacity * RIGID_BODY_CAST_COMMAND_BYTES,
+            uniform: false
+          },
+          {
+            name: 'query-batch-results',
+            byteLength: queryBatchCapacity * RIGID_BODY_BATCH_RESULT_BYTES,
+            uniform: false
+          }
         ]
       : []),
     ...(extended ? [{name: 'mesh-tasks', byteLength: 16 + 65536 * 48, uniform: false}] : []),

@@ -441,6 +441,47 @@ it is excluded from throughput samples. Missing GPU timestamps are reported as u
 Destroy the ensemble after submitting its encoded work; do not independently destroy its borrowed
 world or graph. Destroying the ensemble releases its world, graph and any world-owned checkpoints.
 
+## Batched collision casts
+
+Enable queries and reserve `queryBatchCapacity` to sample many rays and sphere
+sweeps against the same submitted poses. The result array follows command order.
+Each row contains the nearest hit, a count of all hit colliders, and a
+`complete` flag. A row can contain a known hit and still be incomplete if
+bounded traversal of another collider did not finish.
+
+```ts
+const world = new GPURigidBodyWorld({
+  bodies,
+  enableQueries: true,
+  queryBatchCapacity: 4096
+});
+world.addToGraph(commands);
+
+const [ray, sweptProbe] = await world.castBatch([
+  {origin: [0, 0, 8], direction: [0, 0, -1], maximumDistance: 20},
+  {origin: [2, 0, 8], direction: [0, 0, -1], maximumDistance: 20, radius: 0.25}
+], {colliderIndices: sensorTargets});
+```
+
+A batch uses one shared collider selection. Omit `colliderIndices` to scan all
+colliders, or provide a compact subset. Each command can exclude one body
+with `excludeBody`. Distances use world units regardless of input direction
+length. At equal distances the lower global collider index wins, matching the
+scalar queries. A command without a radius uses the ray path.
+
+Submit any previously encoded simulation work before querying. The batch uses
+one GPU dispatch and one compact readback, with 48 input bytes and 64 result
+bytes per reserved command. Results and CPU staging scale with command count.
+GPU intersection work still scales with the number of casts times the number of
+selected colliders. Each mesh uses its existing local traversal budget. The
+batch and scalar methods share a staging lock, so await one call before starting
+another or restoring the world. Oversized batches reject before submission.
+
+Select **Collision scan (batched)** in Physics Batch Lab to scan a field of
+spheres and rotated boxes, see the returned depth image, and compare a matched
+subset against sequential scalar queries. Set the sweep radius to zero for
+rays. The reported times include staging, submission, and readback.
+
 ## Terrain from math.gl geometry
 
 Use the same indexed triangle surface for rendering and collision. If the source is a

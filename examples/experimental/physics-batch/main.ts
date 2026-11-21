@@ -8,6 +8,7 @@ import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
 import {runBatchBenchmark, type BatchBenchmarkScene} from './batch-benchmark';
 import {runTerrainStreamingBenchmark} from './batch-terrain';
 import {runEnsembleRecoveryStress, type RecoveryStep} from './batch-recovery';
+import {runCollisionScan} from './batch-casts';
 
 const diagnostics = new GPUGraphDiagnostics();
 const panel = createRigidBodyPanel(
@@ -26,15 +27,32 @@ const status = document.querySelector<HTMLOutputElement>('#status')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 /** Workload selector shared by validation and control visibility. */
 const scenarioControl = document.querySelector<HTMLSelectElement>('#scene')!;
-/** Recovery uses a fixed four-body fixture and schedules every healthy world. */
+/** Display only the controls that affect this workload. */
 function updateScenarioControls(): void {
-  /** Only the independent recovery fixture ignores body and activity controls. */
+  /** Recovery uses a fixed body fixture and schedules all healthy worlds. */
   const independentRecovery = scenarioControl.value === 'independent-recovery';
-  for (const id of ['bodies', 'pairs', 'active']) {
-    /** Hide the label and its control as a unit. */
+  /** The scan uses one world, so it only needs collider and sampling controls. */
+  const scan = scenarioControl.value === 'collision-scan';
+  for (const id of [
+    'bodies',
+    'pairs',
+    'active',
+    'worlds',
+    'frames',
+    'submission',
+    'casts',
+    'scan-radius'
+  ]) {
+    /** Hide the associated label and control together. */
     const label = document.querySelector(`#${id}`)?.closest('label');
-    if (label) label.hidden = independentRecovery;
+    if (label) {
+      if (id === 'casts' || id === 'scan-radius') label.hidden = !scan;
+      else if (id === 'bodies') label.hidden = independentRecovery;
+      else if (id === 'worlds' || id === 'frames' || id === 'submission') label.hidden = scan;
+      else label.hidden = scan || independentRecovery;
+    }
   }
+  document.querySelector('#body-label')!.textContent = scan ? 'Colliders' : 'Bodies per world';
 }
 scenarioControl.addEventListener('change', updateScenarioControls);
 updateScenarioControls();
@@ -42,6 +60,7 @@ let report:
   | Awaited<ReturnType<typeof runBatchBenchmark>>
   | Awaited<ReturnType<typeof runTerrainStreamingBenchmark>>
   | Awaited<ReturnType<typeof runEnsembleRecoveryStress>>
+  | Awaited<ReturnType<typeof runCollisionScan>>
   | undefined;
 const device = await luma.createDevice({
   adapters: [webgpuAdapter],
@@ -57,6 +76,25 @@ button.onclick = async () => {
   try {
     /** Resolve the selected workload before compiling a graph. */
     const scenario = scenarioControl.value;
+    if (scenario === 'collision-scan') {
+      /** Keep the complete scan result available for export. */
+      const scan = await runCollisionScan(device, {
+        colliders: number('bodies'),
+        casts: number('casts'),
+        radius: number('scan-radius')
+      });
+      report = scan;
+      status.textContent = `Complete: ${scan.complete}
+Hits: ${scan.hitCount}/${scan.options.casts}
+Matches scalar sample: ${scan.matchesScalar}
+Full scan: ${scan.scanMilliseconds.toFixed(2)} ms
+Matched ${scan.sampleCount}-cast sample
+  Batched: ${scan.sampleBatchMilliseconds.toFixed(2)} ms
+  Sequential: ${scan.sampleScalarMilliseconds.toFixed(2)} ms`;
+      paintCollisionScan(scan);
+      exportButton.disabled = false;
+      return;
+    }
     if (scenario === 'independent-recovery') {
       if (document.querySelector<HTMLSelectElement>('#submission')!.value !== 'ensemble')
         throw new Error('Independent recovery requires fused ensemble submission');
@@ -320,4 +358,37 @@ function paintRecoveryTimeline(timeline: readonly (readonly RecoveryStep[])[], t
     context.fillStyle = '#aabcc8';
     context.fillText(`Showing ${shown} of ${instanceCount} worlds`, left, top - rowHeight);
   }
+}
+
+/** Display nearest distances as a top-down scan, with clear pixels marking misses. */
+function paintCollisionScan(scan: Awaited<ReturnType<typeof runCollisionScan>>) {
+  canvas.width = innerWidth * devicePixelRatio;
+  canvas.height = innerHeight * devicePixelRatio;
+  /** Render the fixed sample grid at its actual resolution before magnifying it. */
+  const image = new OffscreenCanvas(scan.width, scan.height);
+  /** The staged image preserves one pixel per ordered query result. */
+  const source = image.getContext('2d')!;
+  /** Store one opaque color per sample, including unsampled pixels in the final row. */
+  const pixels = source.createImageData(scan.width, scan.height);
+  for (const [index, distance] of scan.distances.entries()) {
+    /** Higher surfaces return sooner and appear brighter. */
+    const brightness = distance === null ? 0 : Math.max(0, Math.min(1, (6 - distance) / 4));
+    pixels.data.set(
+      distance === null
+        ? [18, 27, 35, 255]
+        : [38 + brightness * 150, 113 + brightness * 112, 162 + brightness * 78, 255],
+      index * 4
+    );
+  }
+  source.putImageData(pixels, 0, 0);
+  /** Center the scan in the plot area to the right of the workspace controls. */
+  const context = canvas.getContext('2d')!;
+  /** Leave space for the fixed settings column. */
+  const left = Math.min(canvas.width * 0.42, 420 * devicePixelRatio);
+  /** Keep a square plot inside the available viewport. */
+  const size = Math.min(canvas.height * 0.8, canvas.width - left - 32 * devicePixelRatio);
+  context.fillStyle = '#101820';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.imageSmoothingEnabled = false;
+  context.drawImage(image, left, (canvas.height - size) / 2, size, size);
 }

@@ -94,6 +94,8 @@ export type {
   GPURigidBodySphereCastQuery,
   GPURigidBodyOverlapQuery,
   GPURigidBodyQueryFilter,
+  GPURigidBodyBatchCast,
+  GPURigidBodyBatchCastOptions,
   GPURigidBodyQueryHit,
   GPURigidBodyQueryResult
 } from './rigid-body-queries';

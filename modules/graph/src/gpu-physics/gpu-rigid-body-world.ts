@@ -98,6 +98,14 @@ import {
 } from './rigid-body-events';
 import {
   RIGID_BODY_QUERY_SHADER,
+  RIGID_BODY_BATCH_CAST_SHADER,
+  RIGID_BODY_CAST_COMMAND_BYTES,
+  RIGID_BODY_BATCH_RESULT_BYTES,
+  packRigidBodyBatchCasts,
+  decodeRigidBodyBatchCasts,
+  decodeRigidBodyQueryHit,
+  type GPURigidBodyBatchCast,
+  type GPURigidBodyBatchCastOptions,
   type GPURigidBodyRayQuery,
   type GPURigidBodySphereCastQuery,
   type GPURigidBodyOverlapQuery,
@@ -203,6 +211,8 @@ export type GPURigidBodyWorldProps = {
   impactImpulseThreshold?: number;
   /** Enable GPU ray, sphere-overlap and sphere-sweep queries. */
   enableQueries?: boolean;
+  /** Maximum commands per batched cast. Requires enableQueries. Defaults to zero. */
+  queryBatchCapacity?: number;
   /** Roll back poses and persistent contacts after an incomplete step; failures latch until reconstruction. */
   /** Bounded sphere/static-surface CCD; requires rollback failure policy. */
   continuous?: GPURigidBodyContinuousOptions;
@@ -266,6 +276,12 @@ export class GPURigidBodyWorld {
   private eventRead: Promise<GPURigidBodyContactBatch> | null = null;
   private queryComputation: BoundKernel | null = null;
   private queryReduction: BoundKernel | null = null;
+  /** Batched nearest-hit computation using the current world pose buffers. */
+  private batchCast: BoundKernel | null = null;
+  /** Reusable storage for a bounded list of ray and sweep commands. */
+  private batchCastCommands: Buffer | null = null;
+  /** Reusable GPU output with one compact result per batch command. */
+  private batchCastResults: Buffer | null = null;
   /** Chassis definitions in GPU storage order. */
   private readonly vehicles: readonly GPURigidBodyVehicle[];
   /** Whether any chassis has more than one terrain candidate. */
@@ -314,6 +330,15 @@ export class GPURigidBodyWorld {
   private broadPhaseCounters: {buffer: Buffer; byteOffset: number} | null = null;
 
   constructor(props: GPURigidBodyWorldProps) {
+    /** Zero leaves the optional command and result buffers unallocated. */
+    const queryBatchCapacity = props.queryBatchCapacity ?? 0;
+    if (
+      !Number.isSafeInteger(queryBatchCapacity) ||
+      queryBatchCapacity < 0 ||
+      queryBatchCapacity > 65535 ||
+      (queryBatchCapacity > 0 && !props.enableQueries)
+    )
+      throw new Error('Invalid collision cast batch capacity');
     for (const damping of [props.linearDamping ?? 0, props.angularDamping ?? 0]) {
       if (!Number.isFinite(damping) || damping < 0) throw new Error('Invalid damping');
     }
@@ -721,7 +746,8 @@ export class GPURigidBodyWorld {
         this.props.ensembleBodiesPerInstance
           ? this.count / this.props.ensembleBodiesPerInstance
           : 0,
-        Boolean(this.props.ensemblePairsPerInstance)
+        Boolean(this.props.ensemblePairsPerInstance),
+        this.props.queryBatchCapacity
       )
     };
     if (this.vehicles.length) {
@@ -985,6 +1011,8 @@ export class GPURigidBodyWorld {
       if (buffer.byteLength > Math.min(graph.device.limits.maxBufferSize, bindingLimit))
         throw new Error(`Rigid-body ${buffer.name} storage exceeds device limits`);
     }
+    if ((this.props.queryBatchCapacity ?? 0) > graph.device.limits.maxComputeWorkgroupsPerDimension)
+      throw new Error('Collision cast batch exceeds device dispatch limits');
     this.allocationPlan = allocationPlan;
     this.device = graph.device;
     const allocate = (name: string, data: Float32Array | Uint32Array | number, uniform = false) => {
@@ -2253,6 +2281,40 @@ export class GPURigidBodyWorld {
           queryOutput: this.queryOutput
         }
       });
+      if (this.props.queryBatchCapacity) {
+        /** Fixed staging capacity keeps query dispatch independent of simulation allocations. */
+        const capacity = this.props.queryBatchCapacity;
+        this.batchCastCommands = allocate(
+          'query-batch-commands',
+          capacity * RIGID_BODY_CAST_COMMAND_BYTES
+        );
+        this.batchCastResults = allocate(
+          'query-batch-results',
+          capacity * RIGID_BODY_BATCH_RESULT_BYTES
+        );
+        this.batchCast = createBoundKernel(graph.device, {
+          id: `${this.id}-batched-casts`,
+          entryPoint: 'castBatch',
+          source: queryProperties.source + RIGID_BODY_BATCH_CAST_SHADER,
+          shaderLayout: {
+            bindings: [
+              ...queryProperties.shaderLayout.bindings.filter(binding =>
+                ['positions', 'orientations', 'bodies', 'querySelection'].includes(binding.name)
+              ),
+              {name: 'batchCommands', group: 0, location: 30, type: 'read-only-storage'},
+              {name: 'batchResults', group: 0, location: 31, type: 'storage'}
+            ]
+          },
+          bindings: {
+            positions: this.positions,
+            orientations: this.orientations,
+            bodies,
+            querySelection: this.querySelection,
+            batchCommands: this.batchCastCommands,
+            batchResults: this.batchCastResults
+          }
+        });
+      }
     }
     this.controlSettings = allocate('control-settings', 64, true);
     const controlProperties = {
@@ -3241,6 +3303,60 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     return this.runQuery(query);
   }
 
+  /**
+   * Query the closest hit for each ray or sphere cast with one dispatch and readback.
+   * Results follow input order. This snapshots already submitted poses, using one shared collider selection.
+   */
+  async castBatch(
+    commands: readonly GPURigidBodyBatchCast[],
+    options: GPURigidBodyBatchCastOptions = {}
+  ): Promise<GPURigidBodyQueryResult[]> {
+    if (
+      !this.device ||
+      !this.batchCast ||
+      !this.querySelection ||
+      !this.batchCastCommands ||
+      !this.batchCastResults ||
+      this.destroyed ||
+      this.queryPending
+    )
+      throw new Error('Batched collision casts are disabled or busy');
+    if (commands.length > this.props.queryBatchCapacity!)
+      throw new Error('Collision cast batch exceeds capacity');
+    if (!commands.length) return [];
+    /** Compact the shared selection once so each workgroup visits only selected colliders. */
+    const selection = options.colliderIndices
+      ? Uint32Array.from(new Set(this.validateQueryColliders(options.colliderIndices)))
+      : Uint32Array.from({length: this.colliderCount}, (_, index) => index);
+    /** Validate and encode every command before publishing any input. */
+    const data = packRigidBodyBatchCasts(commands, this.count, selection.length);
+    this.queryPending = true;
+    try {
+      this.batchCastCommands.write(data);
+      if (selection.length) this.querySelection.write(selection);
+      /** Submit the query after any preceding simulation work on the device queue. */
+      const encoder = this.device.createCommandEncoder();
+      /** One workgroup handles one command and reduces its collider results locally. */
+      const pass = encoder.beginComputePass();
+      this.batchCast.kernel.dispatch(pass, {bindings: this.batchCast.bindings, x: commands.length});
+      pass.end();
+      this.device.submit(encoder.finish());
+      return decodeRigidBodyBatchCasts(
+        await this.batchCastResults.readAsync(0, commands.length * RIGID_BODY_BATCH_RESULT_BYTES)
+      );
+    } finally {
+      this.queryPending = false;
+    }
+  }
+
+  /** Reject invalid indices before scalar or batch query buffers are written. */
+  private validateQueryColliders(indices: readonly number[]): readonly number[] {
+    for (const index of indices)
+      if (!Number.isInteger(index) || index < 0 || index >= this.colliderCount)
+        throw new Error('Invalid query collider');
+    return indices;
+  }
+
   private async runQuery(
     query: GPURigidBodyRayQuery | GPURigidBodyOverlapQuery | GPURigidBodySphereCastQuery
   ): Promise<GPURigidBodyQueryResult> {
@@ -3284,9 +3400,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     const selected =
       query.colliderIndices ?? Array.from({length: this.colliderCount}, (_, index) => index);
     const selection = new Uint32Array(this.colliderStorageCount);
-    for (const index of selected) {
-      if (!Number.isInteger(index) || index < 0 || index >= this.colliderCount)
-        throw new Error('Invalid query collider');
+    for (const index of this.validateQueryColliders(selected)) {
       const collider = this.colliders[index];
       if (collider.body === query.excludeBody) continue;
       selection[index] = 1;
@@ -3315,24 +3429,9 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       const bytes = await this.queryOutput.readAsync(0, 16 + maximumHits * 48);
       const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
       const floats = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
-      const hits = Array.from({length: words[0]}, (_, index) => {
-        const offset = 4 + index * 12;
-        return {
-          body: words[offset],
-          collider: words[offset + 1],
-          point: [floats[offset + 4], floats[offset + 5], floats[offset + 6]] as [
-            number,
-            number,
-            number
-          ],
-          distance: floats[offset + 7],
-          normal: [floats[offset + 8], floats[offset + 9], floats[offset + 10]] as [
-            number,
-            number,
-            number
-          ]
-        };
-      });
+      const hits = Array.from({length: words[0]}, (_, index) =>
+        decodeRigidBodyQueryHit(words, floats, 4 + index * 12)
+      );
       return {
         hits,
         totalHits: words[1],
@@ -3746,6 +3845,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     this.terrainWake?.kernel.destroy();
     this.queryComputation?.kernel.destroy();
     this.queryReduction?.kernel.destroy();
+    this.batchCast?.kernel.destroy();
     for (const buffer of this.ownedBuffers) buffer.destroy();
     this.ownedBuffers.length = 0;
   }
