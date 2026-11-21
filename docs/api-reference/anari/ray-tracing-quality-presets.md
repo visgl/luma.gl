@@ -264,9 +264,10 @@ solid-angle density for MIS. A map adds to `environmentRadiance` and works indep
 Enable `filteredCutouts` to use a camera-ray footprint when sampling mipmapped
 triangle alpha masks. Primary color, picking, and primary-hit channels use the
 internal ray-tracing pixel spacing. Coverage comes from the authored mip chain and
-the existing alpha cutoff. Smooth dielectric reflection and refraction carry the
-footprint through to triangle cutouts. Sphere masks, non-delta secondary rays,
-and shadow rays use mip zero.
+the existing alpha cutoff. Secondary paths and shadow rays carry the same footprint
+from each receiver, including explicit emitter and environment samples. Emitter
+endpoints use that footprint for alpha testing and mip zero for paired emission
+evaluation. Analytic sphere masks use mip zero.
 
 With PBR transport, `transmissiveShadows` lets analytic lights pass attenuated RGB
 through thin diffuse-transmission materials. The renderer follows the original

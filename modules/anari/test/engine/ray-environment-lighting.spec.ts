@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
+import {Geometry} from '@luma.gl/engine';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 import {createMaterialFixture} from './ray-material-fixture';
 
@@ -10,7 +12,8 @@ it.each([
   'pbr'
 ] as const)('preserves constant environment energy across %s sampling techniques', async transportMode => {
   if (!webgpuAdapter.isSupported()) return;
-  const {options, surface, readPixel, readMeanColor, destroy} = await createMaterialFixture();
+  const {options, surface, geometry, mipMap, readPixel, readMeanColor, destroy} =
+    await createMaterialFixture();
   try {
     options.surfaces = [
       {
@@ -57,6 +60,33 @@ it.each([
     expect(await readPixel()).toEqual(lit);
     options.environmentRadiance = [0, 0, 0];
     expect(await readPixel()).toEqual([0, 0, 0]);
+
+    mipMap.writeData(new Uint8Array(32 * 32 * 4), {width: 32, height: 32});
+    options.surfaces.push({
+      ...surface,
+      id: 'environment-cutout',
+      geometry: new Geometry({
+        topology: 'triangle-list',
+        attributes: {
+          ...geometry.attributes,
+          TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 512, 0, 256, 512])}
+        }
+      }),
+      transforms: [new Matrix4().translate([0, 0, 5]).scale([64, 64, 1])],
+      material: {
+        id: 'environment-mask',
+        alphaMode: 'MASK',
+        uniforms: {alphaCutoff: 0.5},
+        bindings: {pbr_baseColorSampler: mipMap}
+      }
+    });
+    options.environmentRadiance = [0.5, 0, 0];
+    expect(await estimate()).toBeCloseTo(combined, 2);
+    options.filteredCutouts = true;
+    for (const bounces of [0, 1]) {
+      options.maxBounces = bounces;
+      expect(await estimate()).toBeLessThan(0.02);
+    }
   } finally {
     destroy();
   }

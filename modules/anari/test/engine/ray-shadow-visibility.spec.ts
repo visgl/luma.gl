@@ -89,3 +89,44 @@ it('tints an analytic shadow through a thin layer and retains opaque blocking', 
     destroy();
   }
 }, 180_000);
+
+it('filters cutouts on analytic shadow rays while keeping the camera receiver visible', async () => {
+  if (!webgpuAdapter.isSupported()) return;
+  const {options, surface, geometry, mipMap, readPixel, destroy} = await createMaterialFixture();
+  try {
+    options.progressive = false;
+    options.samplingFrameIndex = 0;
+    options.lights = [
+      {type: 'directional', direction: [-1, 0, -1], color: [1, 1, 1], intensity: 2}
+    ];
+    options.surfaces = [{...surface, material: {id: 'white-receiver', uniforms: {}}}];
+    const lit = await readPixel();
+    expect(lit[0]).toBeGreaterThan(30);
+    mipMap.writeData(new Uint8Array(32 * 32 * 4), {width: 32, height: 32});
+    options.surfaces.push({
+      ...surface,
+      id: 'shadow-cutout',
+      geometry: new Geometry({
+        topology: 'triangle-list',
+        attributes: {
+          ...geometry.attributes,
+          TEXCOORD_0: {size: 2, value: new Float32Array([0, 0, 4, 0, 2, 4])}
+        }
+      }),
+      transforms: [new Matrix4().translate([1.5, 0, 1.5]).scale([0.22, 0.22, 0.22])],
+      material: {
+        id: 'shadow-mask',
+        alphaMode: 'MASK',
+        uniforms: {alphaCutoff: 0.5},
+        bindings: {pbr_baseColorSampler: mipMap}
+      }
+    });
+    expect(await readPixel()).toEqual(lit);
+    options.filteredCutouts = true;
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.shadows = false;
+    expect(await readPixel()).toEqual(lit);
+  } finally {
+    destroy();
+  }
+}, 180_000);
