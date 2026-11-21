@@ -8,10 +8,14 @@ export type RigidBodySparseShaderLayout = {
   diagnosticOffset: number;
 };
 
+/** Build sparse cache ownership and optional partition-local overflow reporting. */
 export function getRigidBodyCacheShader(
   layout: RigidBodySparseShaderLayout,
-  ensemble = false
+  ensemble = false,
+  pairsPerInstance?: number
 ): string {
+  // Disjoint ranges ensure a sibling cannot claim an address that a failed instance must restore.
+  const capacity = pairsPerInstance ? `${pairsPerInstance}u` : 'PAIR_CAPACITY';
   let source = /* wgsl */ `
 const EMPTY_PAIR:u32=0u;
 const DELETED_PAIR:u32=0xffffffffu;
@@ -24,11 +28,12 @@ fn claimManifold(first:u32,second:u32)->u32{
  let key=((first<<16u)|second)+1u;
  var mixed=(key^(key>>16u))*2246822519u;
  mixed=(mixed^(mixed>>13u))*3266489917u;
- let origin=(mixed^(mixed>>16u))&(PAIR_CAPACITY-1u);
+ ${pairsPerInstance ? `let instanceIndex=first/INSTANCE_COLLIDERS;let base=instanceIndex*${capacity};` : 'let base=0u;'}
+ let origin=(mixed^(mixed>>16u))&(${capacity}-1u);
  for(var attempt=0u;attempt<8u;attempt++){
   var reusable=DELETED_PAIR;var observed=DELETED_PAIR;
-  for(var probe=0u;probe<min(PAIR_CAPACITY,128u);probe++){
-   let slot=(origin+probe)&(PAIR_CAPACITY-1u);let stored=atomicLoad(&targets.keys[slot].key);
+  for(var probe=0u;probe<min(${capacity},128u);probe++){
+   let slot=base+((origin+probe)&(${capacity}-1u));let stored=atomicLoad(&targets.keys[slot].key);
    if(stored==key){targets.keys[slot].epoch=targets.frame;manifolds[slot].first=first;manifolds[slot].second=second;return slot;}
    if(stored==DELETED_PAIR&&reusable==DELETED_PAIR){reusable=slot;observed=DELETED_PAIR;}
    if(stored==EMPTY_PAIR){if(reusable==DELETED_PAIR){reusable=slot;observed=EMPTY_PAIR;}break;}
@@ -40,7 +45,12 @@ fn claimManifold(first:u32,second:u32)->u32{
    manifolds[reusable].first=first;manifolds[reusable].second=second;return reusable;
   }
  }
- atomicAdd(&targets.cacheDropped,1u);return DELETED_PAIR;
+ ${
+   pairsPerInstance
+     ? 'atomicStore(&targets.instanceFailures[instanceIndex],1u);atomicStore(&targets.instanceFailures[INSTANCE_COUNT],1u);'
+     : 'atomicAdd(&targets.cacheDropped,1u);'
+ }
+ return DELETED_PAIR;
 }
 var<workgroup> cacheEpoch:u32;
 @compute @workgroup_size(64) fn prepare(@builtin(local_invocation_index) invocation:u32){
@@ -86,11 +96,12 @@ fn journalManifold(pair:u32,key:u32){
  let count=atomicLoad(&targets.reserved0);
  for(var index=invocation;index<count;index+=64u){targets.journalMarks[targets.journalSlots[index]]=0u;}
  storageBarrier();
- if(invocation==0u){targets.frame++;atomicStore(&targets.reserved0,0u);atomicStore(&targets.reserved1,0u);atomicStore(&targets.reserved2,0u);atomicStore(&targets.cacheDropped,0u);}
+ if(invocation==0u){targets.frame++;atomicStore(&targets.reserved0,0u);atomicStore(&targets.reserved1,0u);atomicStore(&targets.reserved2,0u);atomicStore(&targets.cacheDropped,0u);${pairsPerInstance ? 'atomicStore(&targets.instanceFailures[INSTANCE_COUNT],0u);' : ''}}
 }
 @compute @workgroup_size(64) fn prepare(@builtin(global_invocation_id) invocation:vec3u){
  let work=invocation.x;if(work>=atomicLoad(&ensemble[0])){return;}
  let instance=atomicLoad(&ensemble[INSTANCE_QUEUE+work]);
+ ${pairsPerInstance ? 'atomicStore(&targets.instanceFailures[instance],0u);' : ''}
  targets.instanceFrames[instance]++;let epoch=targets.instanceFrames[instance];
  var previous=0u;var link=atomicLoad(&targets.instanceHeads[instance]);
  loop{

@@ -16,7 +16,8 @@ export function makeEnsembleReset(
   collidersPerInstance: number,
   maximumPairs: number,
   vehiclesPerInstance: number,
-  terrainSlots: ReadonlySet<number>
+  terrainSlots: ReadonlySet<number>,
+  pairsPerInstance?: number
 ) {
   const find = (name: string) => buffers.find(buffer => buffer.id === `${id}-${name}`)!;
   // A streamed collider row contains a private atlas address, revision and placement.
@@ -104,15 +105,21 @@ ${vehicle ? '@group(0) @binding(7) var<storage,read_write> vehicle:array<u32>;' 
  }`
      : ''
  }
- if(index>=${maximumPairs}u){return;}
- let key=targets[${bodyCount * 8 + 8}u+index*2u];
+ if(index>=${pairsPerInstance ?? maximumPairs}u){return;}
+ ${
+   pairsPerInstance
+     ? `let pair=(selection.x/${bodiesPerInstance}u)*${pairsPerInstance}u+index;`
+     : `let pair=index;
+ let key=targets[${bodyCount * 8 + 8}u+pair*2u];
  if(key==0u||key==0xffffffffu){return;}
- let address=index*104u;let collider=manifolds[address+97u];
- if(collider<selection.y||collider>=selection.y+${collidersPerInstance}u){return;}
+ let collider=manifolds[pair*104u+97u];
+ if(collider<selection.y||collider>=selection.y+${collidersPerInstance}u){return;}`
+ }
+ let address=pair*104u;
  for(var word=0u;word<104u;word++){manifolds[address+word]=0u;}
- targets[${bodyCount * 8 + 8}u+index*2u]=0xffffffffu;
- targets[${bodyCount * 8 + 9}u+index*2u]=0u;
- ${history ? 'for(var word=0u;word<4u;word++){history[index*4u+word]=0u;}' : ''}
+ targets[${bodyCount * 8 + 8}u+pair*2u]=${pairsPerInstance ? '0u' : '0xffffffffu'};
+ targets[${bodyCount * 8 + 9}u+pair*2u]=0u;
+ ${history ? 'for(var word=0u;word<4u;word++){history[pair*4u+word]=0u;}' : ''}
 }`,
       shaderLayout: {
         bindings: [
@@ -162,7 +169,12 @@ ${vehicle ? '@group(0) @binding(7) var<storage,read_write> vehicle:array<u32>;' 
         });
       const pass = encoder.beginComputePass();
       const groups = Math.ceil(
-        Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance, vehiclesPerInstance) / 64
+        Math.max(
+          pairsPerInstance ?? maximumPairs,
+          collidersPerInstance,
+          bodiesPerInstance,
+          vehiclesPerInstance
+        ) / 64
       );
       computation!.kernel.dispatch(pass, {
         bindings: computation!.bindings,

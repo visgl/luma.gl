@@ -28,7 +28,8 @@ export function getRigidBodyStorageLayout(
   rollback = false,
   continuous = false,
   jointCount = 0,
-  ensembleInstances = 0
+  ensembleInstances = 0,
+  independentRecovery = false
 ) {
   const geometryOffset = Math.ceil((bodyCount * 12 + colliderCount * 26) / 4) * 4;
   const pairOffset = Math.ceil((geometryOffset + geometryWords) / 64) * 64;
@@ -49,7 +50,8 @@ export function getRigidBodyStorageLayout(
     {
       name: 'targets',
       byteLength: ensembleInstances
-        ? getEnsembleContactLayout(bodyCount, ensembleInstances, maximumPairs).byteLength
+        ? getEnsembleContactLayout(bodyCount, ensembleInstances, maximumPairs, independentRecovery)
+            .byteLength
         : Math.ceil((bodyCount * 32 + (sparse ? 32 + maximumPairs * 8 : 16)) / 16) * 16 +
           jointCount * RIGID_BODY_JOINT_STATE_BYTES,
       uniform: false

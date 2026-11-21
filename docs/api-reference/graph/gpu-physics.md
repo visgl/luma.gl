@@ -313,11 +313,11 @@ const selectedBody = ensemble.getBodyIndex(42, 0);
 ```
 
 The ensemble forces the parallel solver, hierarchical broad phase and rollback failure policy.
-`maximumPairs` is a shared power-of-two capacity: exhaustion rejects the entire ensemble step,
-not just one instance. Total bodies and colliders must each fit within 65,535 and adapter buffer
-limits. Joints, authored triggers and CCD are currently rejected. Queries inspect every instance;
-map returned global body indices back to instance ranges. Eviction and per-instance streaming are
-not provided. Whole-world checkpoint/capture APIs remain available on `ensemble.world`.
+`maximumPairs` sets the shared power-of-two candidate capacity. With the default shared
+contact cache, its exhaustion rejects the whole ensemble step. Total bodies and colliders
+must each fit within 65,535 and adapter buffer limits. Joints, authored triggers and CCD are
+currently rejected. Queries inspect every instance. Map returned global body indices back to
+instance ranges. Streaming and whole-world checkpoint/capture APIs remain available.
 
 A template can include either `vehicle` or `vehicles`. Give each chassis and terrain collider
 an index within the template. The ensemble maps them to the matching body and colliders of
@@ -346,13 +346,14 @@ pose metadata and vehicle controls and wheel state, clears its contact cache and
 instances are unchanged. Reset respects the current origin after rebasing. The reset excludes
 shared simulation diagnostics: after a latched shared failure, reconstruct the ensemble instead.
 While reset is pending, ensemble encoding, control and destruction are rejected. Do not bypass
-this guard through the borrowed world. Reset invalidation scans shared contact capacity.
+this guard through the borrowed world. Reset invalidation scans the selected partition when a
+per-instance contact budget is configured, or the shared cache otherwise.
 
 `await readStatus()` reports the most recently scheduled active instance/body count, plus each
-instance's enabled/active flags, accepted/rejected participation counters and shared-failure flag.
-Counters saturate at uint32 maximum and reset per instance. An active flag describes participation
-in the last step, not whether its bodies ended that step asleep. A shared failure is reported for
-all instances; this API does not identify which instance caused shared capacity exhaustion.
+instance's enabled and active flags, accepted and rejected participation counters,
+`sharedFailure`, and a latched local `failure` reason. Counters saturate at uint32 maximum
+and reset per instance. The active flag describes scheduling in the last attempted step.
+A shared failure is reported for all instances.
 
 `readWorkStatistics().vehicleSnapshotBytes` reports the vehicle rows copied for active
 instances during the last step. No wheel pose or telemetry readback is required for scheduling,
@@ -380,9 +381,44 @@ touched buckets after its initial full initialization.
 
 Rollback snapshots active body vectors and journals each changed manifold, cache key and link once.
 It saves only scheduled instance heads/epochs and a small header. It does not copy every reserved
-contact slot or kinematic target on each step. The whole ensemble still shares one rollback boundary;
-this optimization does **not** provide per-instance failure recovery. Journal storage is reserved at
-capacity, so reduced transfer volume does not imply proportional reduction of resident memory.
+contact slot or kinematic target on each step. Journal storage is reserved at capacity,
+so allocating fixed per-instance ranges does not reduce the shared memory reservation.
+
+#### Recover one instance after contact cache exhaustion
+
+Set `maximumPairsPerInstance` to reserve a power-of-two persistent cache for each
+instance. The product of the instance count and the local budget must fit within
+`maximumPairs`. Give the shared candidate queue enough headroom for a dense instance
+to exceed its local cache. The persistent cache includes candidate pairs that pass body and
+collision filtering, even when narrow phase finds no contact.
+
+```ts
+const ensemble = await GPUPhysicsEnsemble.create(device, {
+  template,
+  instances: 64,
+  maximumPairs: 8192,
+  maximumPairsPerInstance: 64,
+  maximumResidentBytes: 128 * 1024 ** 2
+});
+
+// Inspect after submitting one or more steps.
+const status = await ensemble.readStatus();
+if (!status.instances[7].sharedFailure && status.instances[7].failure === 'contact-cache-capacity') {
+  await ensemble.reset(7);
+}
+```
+
+On a local exhaustion the step restores that instance's bodies, vehicle state, and
+persistent cache, and skips its contact event publication. Healthy siblings commit the
+same step. The scheduler holds the failed instance at its accepted state on subsequent
+steps, even if it receives a wake notification. Reset restores the template, clears
+quarantine, and preserves streamed terrain and the enabled flag. It reuses the compiled
+graph and fixed GPU allocations.
+
+Global broad-phase, mesh-work, solver, and state-validation failures still use shared
+rollback. A latched shared failure requires reconstruction. Use **Independent recovery
+(fused)** in Physics Batch Lab to watch one world run out of cache, hold while the others
+keep stepping, and resume after reset.
 
 `await ensemble.readWorkStatistics()` explicitly reads last-step counters outside encoding:
 `activeInstances`, `activeBodies`, `touchedBuckets`, `visitedContacts`, `claimedContacts`, `journaledContacts`,
@@ -658,8 +694,7 @@ A terrain edit discards cached warm-start impulses when a contact next sees
 the edited collider. Standalone worlds wake dynamic bodies overlapping the
 old or new tile bounds, so removing support wakes resting bodies. In a fused
 ensemble the edit wakes only the affected partitions, and disabled instances
-stay disabled until explicitly enabled. The shared step rollback and contact
-capacity still apply to the full ensemble.
+stay disabled until explicitly enabled. Shared discovery and solver failures still apply to the full ensemble.
 
 `ensemble.reset(instance)` restores that instance's body state and keeps its
 committed terrain slots, including their local placement. Call

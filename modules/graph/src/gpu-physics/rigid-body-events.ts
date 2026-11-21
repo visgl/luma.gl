@@ -53,10 +53,12 @@ export function decodeRigidBodyContactEvents(
   };
 }
 
+/** Publish contact transitions from committed instances in the current step. */
 export function getRigidBodyEventShader(
   capacity: number,
   impulseThreshold: number,
-  rollback = false
+  rollback = false,
+  pairsPerInstance?: number
 ): string {
   return /* wgsl */ `
 ${rollback ? '@group(0) @binding(14) var<storage,read> eventStatistics:array<u32>;' : ''}
@@ -73,6 +75,12 @@ fn emitContact(first:u32,second:u32,phase:u32,point:vec3f,normal:vec3f,impulse:f
  ${rollback ? 'if(eventStatistics[1]!=0u||eventStatistics[15]!=0u){return;}' : ''}
  if(contactEvents.step==0xffffffffu){contactEvents.saturated=1u;return;}contactEvents.step++;
  for(var pair=0u;pair<PAIR_CAPACITY;pair++){
+  ${
+    pairsPerInstance
+      ? `let instance=pair/${pairsPerInstance}u;
+  if(instance>=INSTANCE_COUNT||atomicLoad(&ensemble[16u+instance*8u+7u])!=0u){continue;}`
+      : ''
+  }
   let previous=contactHistory[pair];let hasContact=manifolds[pair].count>0u;
   let first=getFirstCollider(pair);let second=getSecondCollider(pair);
   if(!colliderScheduled(first)){continue;}

@@ -27,6 +27,7 @@ export type GPUPhysicsEnsembleProps = {
     | 'continuous'
     | 'collisionPartitionSize'
     | 'ensembleBodiesPerInstance'
+    | 'ensemblePairsPerInstance'
     | 'ensembleTerrainSlots'
     | 'ensembleTerrainAtlas'
     | 'maximumPairs'
@@ -38,6 +39,12 @@ export type GPUPhysicsEnsembleProps = {
   terrainAtlas?: readonly GPUPhysicsTerrainAtlasPool[];
   /** Shared power-of-two contact capacity. Overflow rejects the entire ensemble step. */
   maximumPairs: number;
+  /**
+   * Optional power-of-two persistent contact budget per instance. Cache exhaustion rolls back
+   * and quarantines only that instance until reset. Global discovery and solver faults still
+   * reject the shared step. All instance budgets must fit within maximumPairs.
+   */
+  maximumPairsPerInstance?: number;
   /** Retained world buffers plus compiled graph scratch; excludes driver and compilation peaks. */
   maximumResidentBytes: number;
 };
@@ -144,6 +151,7 @@ export class GPUPhysicsEnsemble {
       maximumPairs: props.maximumPairs,
       collisionPartitionSize: colliderCount,
       ensembleBodiesPerInstance: this.bodiesPerInstance,
+      ensemblePairsPerInstance: props.maximumPairsPerInstance,
       ensembleTerrainAtlas: props.terrainAtlas,
       ensembleTerrainSlots: this.terrainSlots.length
         ? Array.from({length: this.instances}, (_, instance) =>
@@ -276,6 +284,7 @@ export class GPUPhysicsEnsemble {
     this.world.wakeEnsembleInstance(instance);
   }
 
+  /** Restore the template and clear this instance’s quarantine between submissions. */
   async reset(instance: number): Promise<void> {
     this.getBodyIndex(instance, 0);
     this.preparing = true;
@@ -288,6 +297,7 @@ export class GPUPhysicsEnsemble {
     }
   }
 
+  /** Read the most recent scheduled participation and latched per-instance faults. */
   async readStatus() {
     const state = await this.world.readEnsembleState();
     return {
@@ -298,7 +308,8 @@ export class GPUPhysicsEnsemble {
         active: Boolean(state[17 + instance * 8]),
         acceptedSteps: state[18 + instance * 8],
         rejectedSteps: state[19 + instance * 8],
-        sharedFailure: Boolean(state[20 + instance * 8])
+        sharedFailure: Boolean(state[20 + instance * 8]),
+        failure: state[23 + instance * 8] ? ('contact-cache-capacity' as const) : null
       }))
     };
   }

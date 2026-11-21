@@ -180,6 +180,8 @@ export type GPURigidBodyWorldProps = {
   collisionPartitionSize?: number;
   /** Equal body ranges for GPU-driven ensemble scheduling; requires parallel sparse partitions. */
   ensembleBodiesPerInstance?: number;
+  /** @internal Disjoint persistent contact slots per instance for local capacity recovery. */
+  ensemblePairsPerInstance?: number;
   /** @internal Global collider indices reserved for writable terrain in a fused ensemble. */
   ensembleTerrainSlots?: readonly number[];
   /** @internal Optional fused atlas page capacity by reserved grid. */
@@ -521,6 +523,17 @@ export class GPURigidBodyWorld {
         (this.maximumPairs & (this.maximumPairs - 1)) !== 0)
     )
       throw new Error('Invalid rigid-body pair capacity');
+    const instancePairCapacity = props.ensemblePairsPerInstance;
+    if (
+      instancePairCapacity !== undefined &&
+      (!props.ensembleBodiesPerInstance ||
+        props.failurePolicy !== 'rollback' ||
+        !Number.isSafeInteger(instancePairCapacity) ||
+        instancePairCapacity < 1 ||
+        instancePairCapacity * (this.count / props.ensembleBodiesPerInstance) > this.maximumPairs ||
+        (instancePairCapacity & (instancePairCapacity - 1)) !== 0)
+    )
+      throw new Error('Invalid ensemble instance contact capacity');
     if (props.continuous) {
       if (
         props.failurePolicy !== 'rollback' ||
@@ -704,7 +717,10 @@ export class GPURigidBodyWorld {
         this.props.failurePolicy === 'rollback',
         Boolean(this.props.continuous),
         this.props.joints?.length ?? 0,
-        this.props.ensembleBodiesPerInstance ? this.count / this.props.ensembleBodiesPerInstance : 0
+        this.props.ensembleBodiesPerInstance
+          ? this.count / this.props.ensembleBodiesPerInstance
+          : 0,
+        Boolean(this.props.ensemblePairsPerInstance)
       )
     };
     if (this.vehicles.length) {
@@ -793,7 +809,8 @@ export class GPURigidBodyWorld {
       this.props.collisionPartitionSize!,
       this.maximumPairs,
       this.vehiclesPerInstance,
-      this.ensembleTerrainSlots
+      this.ensembleTerrainSlots,
+      this.props.ensemblePairsPerInstance
     );
     return this.ensembleReset.byteLength;
   }
@@ -843,7 +860,7 @@ export class GPURigidBodyWorld {
       instance,
       this.origin.map((value, axis) => value - this.ensembleResetOrigin![axis])
     );
-    this.ensembleBuffer!.write(new Uint32Array([0, 0, 0, 0, 1, 1]), (16 + instance * 8 + 1) * 4);
+    this.ensembleBuffer!.write(new Uint32Array([0, 0, 0, 0, 1, 1, 0]), (16 + instance * 8 + 1) * 4);
     if (this.encodePosePublication) {
       const encoder = this.device!.createCommandEncoder();
       this.encodePosePublication(encoder);
@@ -1113,7 +1130,8 @@ export class GPURigidBodyWorld {
         ? getEnsembleContactLayout(
             this.count,
             this.count / this.props.ensembleBodiesPerInstance,
-            this.maximumPairs
+            this.maximumPairs,
+            Boolean(this.props.ensemblePairsPerInstance)
           ).byteLength
         : Math.ceil((this.count * 32 + (sparse ? 32 + this.maximumPairs * 8 : 16)) / 16) * 16 +
             (this.props.joints?.length ?? 0) * RIGID_BODY_JOINT_STATE_BYTES
@@ -1267,7 +1285,8 @@ export class GPURigidBodyWorld {
       this.props.collisionPartitionSize,
       this.props.ensembleBodiesPerInstance,
       this.props.parallelContactSolver === 'block',
-      this.colliders.some(collider => collider.shape.type === 'height-field')
+      this.colliders.some(collider => collider.shape.type === 'height-field'),
+      this.props.ensemblePairsPerInstance
     );
     const parallelBindings: Record<string, readonly string[]> = {
       parallelReset: ['parallelState'],
@@ -1606,7 +1625,8 @@ export class GPURigidBodyWorld {
               vehicleResource && {
                 state: vehicleResource,
                 vehiclesPerInstance: this.vehiclesPerInstance
-              }
+              },
+              this.props.ensemblePairsPerInstance
             )
           : addRigidBodyCheckpoint(
               graph,
@@ -2079,7 +2099,18 @@ export class GPURigidBodyWorld {
         diagnosticBinding('bodies'),
         diagnosticBinding('sleepStates'),
         diagnosticBinding('ensemble'),
-        {buffer: this.simulationStatistics, resource: statisticsResource}
+        {buffer: this.simulationStatistics, resource: statisticsResource},
+        this.props.ensemblePairsPerInstance
+          ? {
+              ...diagnosticBinding('targets'),
+              wordOffset: getEnsembleContactLayout(
+                this.count,
+                this.count / this.props.ensembleBodiesPerInstance!,
+                this.maximumPairs,
+                true
+              ).failureOffset
+            }
+          : undefined
       );
     triggers?.publish();
     if (this.props.publicationBounds || this.props.publishPoses) {
@@ -2137,7 +2168,8 @@ export class GPURigidBodyWorld {
           getRigidBodyEventShader(
             this.props.eventCapacity,
             this.props.impactImpulseThreshold ?? 1,
-            this.props.failurePolicy === 'rollback'
+            this.props.failurePolicy === 'rollback',
+            this.props.ensemblePairsPerInstance
           ),
         entryPoint: 'recordContacts',
         shaderLayout: {
