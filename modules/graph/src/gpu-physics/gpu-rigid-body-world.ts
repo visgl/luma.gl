@@ -28,6 +28,11 @@ import {type GPURigidBodyHeightField, packRigidBodyHeightField} from './rigid-bo
 import {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 import {addEnsembleStatus, readOnlyEnsembleShader} from './rigid-body-ensemble-shaders';
 import {makeEnsembleReset} from './rigid-body-ensemble-reset';
+import {
+  RigidBodyTerrainAtlas,
+  type GPUPhysicsTerrainAtlasPool,
+  type GPUPhysicsTerrainAtlasStats
+} from './rigid-body-terrain-atlas';
 import {packRigidBodyShapes} from './rigid-body-geometry';
 import {
   getCompoundBodyInertia,
@@ -121,6 +126,8 @@ export type GPURigidBodyCapture = {
   triggerCursor: number;
   /** Last issued terrain edit stamp, for restoring into a different world. */
   terrainRevision?: number;
+  /** Exact collider-to-page assignments for a captured shared atlas. */
+  terrainAtlasLeases?: readonly (readonly [collider: number, page: number])[];
   colliderShapeScales?: [number, number[]][];
 };
 
@@ -175,6 +182,8 @@ export type GPURigidBodyWorldProps = {
   ensembleBodiesPerInstance?: number;
   /** @internal Global collider indices reserved for writable terrain in a fused ensemble. */
   ensembleTerrainSlots?: readonly number[];
+  /** @internal Optional fused atlas page capacity by reserved grid. */
+  ensembleTerrainAtlas?: readonly GPUPhysicsTerrainAtlasPool[];
   broadPhase?: 'all-pairs' | 'hierarchical-grid';
   /** Parallel block-Jacobi contact solving; ordered impulses remain the numerical oracle. */
   solver?: 'ordered' | 'parallel';
@@ -280,6 +289,9 @@ export class GPURigidBodyWorld {
   /** Float32-exact edit stamp, restored together with the contact cache. */
   private terrainRevision = 1;
   private terrainWake: BoundKernel | null = null;
+  private readonly terrainAtlas?: RigidBodyTerrainAtlas;
+  private terrainAtlasWord = 0;
+  private terrainGeometryWord = 0;
   private ensembleResetOrigin?: readonly number[];
   private ensembleReset?: ReturnType<typeof makeEnsembleReset>;
   private initialEnsembleBodies?: readonly GPURigidBody[];
@@ -565,6 +577,16 @@ export class GPURigidBodyWorld {
         ))
     )
       throw new Error('Invalid ensemble terrain slots');
+    if (this.props.ensembleTerrainAtlas) {
+      this.terrainAtlas = new RigidBodyTerrainAtlas(
+        this.props.ensembleTerrainAtlas,
+        Array.from(this.ensembleTerrainSlots, collider => {
+          const shape = this.colliders[collider].shape;
+          if (shape.type !== 'height-field') throw new Error('Invalid ensemble terrain slot');
+          return {collider, width: shape.field.width, height: shape.field.height};
+        })
+      );
+    }
     this.bodyColliderStarts = new Uint32Array(this.count + 1);
     let colliderIndex = 0;
     for (let body = 0; body < this.count; body++) {
@@ -648,8 +670,12 @@ export class GPURigidBodyWorld {
     const packed = packRigidBodyShapes(
       this.colliders,
       Boolean(this.props.ensembleBodiesPerInstance),
-      this.ensembleTerrainSlots
+      this.ensembleTerrainSlots,
+      Boolean(this.terrainAtlas)
     );
+    const geometryWords = packed.geometry.length + (this.terrainAtlas?.wordLength ?? 0);
+    if (this.terrainAtlas && geometryWords >= 2 ** 26)
+      throw new Error('Terrain atlas exceeds address capacity');
     const sparse = this.broadPhase === 'hierarchical-grid';
     const extended = this.colliders.some(
       collider =>
@@ -666,7 +692,7 @@ export class GPURigidBodyWorld {
         this.count,
         this.colliderStorageCount,
         this.maximumPairs,
-        packed.geometry.length,
+        geometryWords,
         sparse,
         extended,
         parallel,
@@ -968,6 +994,26 @@ export class GPURigidBodyWorld {
       : undefined;
     const metadata = new Float32Array(metadataLength);
     metadata.set(packed.geometry, geometryOffset);
+    if (this.terrainAtlas) {
+      this.terrainGeometryWord = geometryOffset;
+      this.terrainAtlasWord = geometryOffset + packed.geometry.length;
+      const {wordsByCollider, uploads} = this.terrainAtlas.bind(
+        Array.from(packed.atlasFields, ([collider, field]) => ({
+          collider,
+          data: new Float32Array(field.data)
+        }))
+      );
+      for (const {word, data} of uploads) metadata.set(data, this.terrainAtlasWord + word);
+      for (const [collider, word] of wordsByCollider) {
+        const field = packed.atlasFields.get(collider)!;
+        const address = (packed.geometry.length + word) / 4;
+        const shape = packed.shapes[collider];
+        shape.padding[0] = address;
+        shape.padding[3] = field.triangleCount;
+        shape.policies[0] = address + field.nodeOffset;
+        shape.policies[1] = field.nodeCount;
+      }
+    }
     this.heightFieldSlots = new Map(
       Array.from(packed.heightFields, ([collider, offset]) => [
         collider,
@@ -2648,21 +2694,29 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     if (!metadata || this.destroyed || this.queryPending || this.eventRead || this.triggerRead)
       throw new Error('Terrain streaming requires an idle attached world');
     const seen = new Set<number>();
+    const packedFields = this.terrainAtlas
+      ? new Map<
+          GPURigidBodyHeightField,
+          {
+            field: GPURigidBodyHeightField;
+            packed: ReturnType<typeof packRigidBodyHeightField>;
+            data: Float32Array | null;
+          }
+        >()
+      : undefined;
     const replacements = edits.map(({collider: colliderIndex, field, position}) => {
       const collider = this.colliders[colliderIndex];
       const offset = this.heightFieldSlots.get(colliderIndex);
       if (
-        offset === undefined ||
+        (offset === undefined &&
+          !(this.terrainAtlas && this.ensembleTerrainSlots.has(colliderIndex))) ||
         collider?.shape.type !== 'height-field' ||
         seen.has(colliderIndex)
       )
         throw new Error('Invalid writable height-field slot');
       seen.add(colliderIndex);
       const previous = collider.shape.field;
-      const next = field
-        ? structuredClone(field)
-        : {...previous, heights: undefined, validity: undefined};
-      if (next.width !== previous.width || next.height !== previous.height)
+      if (field && (field.width !== previous.width || field.height !== previous.height))
         throw new Error('Height-field slot dimensions are fixed');
       const center = this.props.bodies[collider.body].centerOfMass ?? [0, 0, 0];
       const localOffset = position?.map((value, axis) => value - center[axis]);
@@ -2671,16 +2725,21 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         (position.length !== 3 || !localOffset?.every(value => Number.isFinite(Math.fround(value))))
       )
         throw new Error('Invalid height-field tile position');
-      return {
-        collider,
-        colliderIndex,
-        offset,
-        field: next,
-        position,
-        localOffset,
-        packed: packRigidBodyHeightField(next)
-      };
+      let payload = field ? packedFields?.get(field) : undefined;
+      if (!payload) {
+        const next = field
+          ? structuredClone(field)
+          : {...previous, heights: undefined, validity: undefined};
+        const packed = packRigidBodyHeightField(next);
+        const data = packedFields && packed.nodeCount ? new Float32Array(packed.data) : null;
+        payload = {field: next, packed, data};
+        if (field) packedFields?.set(field, payload);
+      }
+      return {collider, colliderIndex, offset, position, localOffset, ...payload};
     });
+    const atlas = this.terrainAtlas?.bind(
+      replacements.map(({colliderIndex, data}) => ({collider: colliderIndex, data}))
+    );
     // Stamp once per validated edit batch. On float32 counter wrap, clear old impulses
     // so a retained contact cannot confuse a new stamp with a very old revision.
     if (this.terrainRevision === 0xffffff) {
@@ -2688,15 +2747,31 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       this.terrainRevision = 1;
     }
     const revision = ++this.terrainRevision;
+    for (const {word, data} of atlas?.uploads ?? [])
+      metadata.write(data, (this.terrainAtlasWord + word) * 4);
     const changedBodies = new Set<number>();
     const affectedInstances = new Set<number>();
     for (const replacement of replacements) {
       const {collider, colliderIndex, offset, field, position, localOffset, packed} = replacement;
       const base = this.count * 48 + colliderIndex * 96;
       if (this.terrainWake) this.wakeTerrainFootprint(colliderIndex);
-      metadata.write(new Float32Array(packed.data), offset);
+      if (atlas) {
+        const word = atlas.wordsByCollider.get(colliderIndex);
+        const address =
+          word === undefined ? 0 : (this.terrainAtlasWord - this.terrainGeometryWord + word) / 4;
+        metadata.write(
+          new Float32Array([
+            word === undefined ? 0 : address + packed.nodeOffset,
+            packed.nodeCount,
+            address
+          ]),
+          base + 72
+        );
+      } else {
+        metadata.write(new Float32Array(packed.data), offset!);
+        metadata.write(new Float32Array([packed.nodeCount]), base + 76);
+      }
       metadata.write(new Float32Array(packed.extent), base);
-      metadata.write(new Float32Array([packed.nodeCount]), base + 76);
       metadata.write(new Float32Array([revision, packed.triangleCount]), base + 88);
       if (position && localOffset) {
         metadata.write(new Float32Array(localOffset), base + 16);
@@ -2710,6 +2785,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     }
     for (const body of changedBodies) this.updateColliderDefinitions(body);
     for (const instance of affectedInstances) this.wakeEnsembleInstance(instance);
+  }
+
+  /** Shared atlas utilization, when the fused layout enabled page sharing. */
+  getTerrainAtlasStats(): GPUPhysicsTerrainAtlasStats | undefined {
+    return this.terrainAtlas?.getStats();
   }
 
   /** Change an existing collider material between submissions, invalidating cached friction. */
@@ -3310,6 +3390,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
     let contactCursor = 0;
     let triggerCursor = 0;
     let terrainRevision = this.terrainRevision;
+    let terrainAtlas = this.terrainAtlas?.snapshot();
     try {
       for (const buffer of checkpointBuffers)
         snapshots.push(
@@ -3349,6 +3430,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         contactCursor = this.eventCursor;
         triggerCursor = this.triggerCursor;
         terrainRevision = this.terrainRevision;
+        terrainAtlas = this.terrainAtlas?.snapshot();
         saved = true;
       },
       restore: () => {
@@ -3363,6 +3445,11 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         this.eventCursor = contactCursor;
         this.triggerCursor = triggerCursor;
         this.terrainRevision = terrainRevision;
+        if (terrainAtlas)
+          this.terrainAtlas!.restore(
+            terrainAtlas.leases,
+            (_word, _words, page) => terrainAtlas!.payloads.get(page)!
+          );
       },
       destroy: () => {
         if (released) return;
@@ -3390,6 +3477,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       contactCursor: this.eventCursor,
       triggerCursor: this.triggerCursor,
       terrainRevision: this.terrainRevision,
+      terrainAtlasLeases: this.terrainAtlas?.getLeases(),
       buffers: await Promise.all(
         this.getSnapshotBuffers(options.includeRollbackScratch).map(async buffer => ({
           name: buffer.id.slice(this.id.length + 1),
@@ -3410,6 +3498,7 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
       this.eventRead ||
       this.triggerRead ||
       capture.version !== 1 ||
+      Boolean(capture.terrainAtlasLeases) !== Boolean(this.terrainAtlas) ||
       !Number.isInteger(terrainRevision) ||
       terrainRevision < 1 ||
       terrainRevision > 0xffffff ||
@@ -3437,6 +3526,29 @@ struct Command { impulse: vec4f, point: vec4f, orientation: vec4f, bodyIndex: ve
         saved.data.byteLength !== buffer.byteLength
       )
         throw new Error('Incompatible rigid-body capture storage');
+    }
+    if (this.terrainAtlas && capture.terrainAtlasLeases) {
+      const metadata = capture.buffers.find(buffer => buffer.name === 'bodies')!.data;
+      const view = new DataView(metadata.buffer, metadata.byteOffset, metadata.byteLength);
+      const colliderBase = this.count * 48;
+      let active = 0;
+      for (const collider of this.ensembleTerrainSlots)
+        if (view.getFloat32(colliderBase + collider * 96 + 76, true) > 0) active++;
+      if (active !== capture.terrainAtlasLeases.length)
+        throw new Error('Incomplete captured terrain atlas leases');
+      this.terrainAtlas.restore(
+        capture.terrainAtlasLeases,
+        (word, words) => {
+          const first = (this.terrainAtlasWord + word) * 4;
+          return new Float32Array(metadata.slice(first, first + words * 4).buffer);
+        },
+        (collider, word) => {
+          const base = colliderBase + collider * 96;
+          const address = (this.terrainAtlasWord - this.terrainGeometryWord + word) / 4;
+          if (view.getFloat32(base + 76, true) <= 0 || view.getFloat32(base + 80, true) !== address)
+            throw new Error('Captured terrain collider has an invalid page address');
+        }
+      );
     }
     for (const [index, buffer] of checkpointBuffers.entries())
       buffer.write(capture.buffers[index].data);

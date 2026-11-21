@@ -207,12 +207,14 @@ export function stitchRigidBodyTerrainTiles(
     const tile = tiles.get(slot)!;
     const {field, position} = tile;
     if (!field.heights) continue;
-    const heights = Float64Array.from(field.heights);
+    let heights: Float64Array | undefined;
     for (const sample of tileSamples.values()) {
       const height = resolve(sample) - position[2];
+      if (!heights && Object.is(height, field.heights[sample.index])) continue;
+      heights ??= Float64Array.from(field.heights);
       heights[sample.index] = height;
     }
-    result.set(slot, {...tile, field: {...field, heights}});
+    if (heights) result.set(slot, {...tile, field: {...field, heights}});
   }
   return result;
 }

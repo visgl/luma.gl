@@ -64,6 +64,8 @@ Enabled worlds: ${terrain.activeWorlds}/${terrain.options.worlds}
 Last-step scheduled worlds: ${terrain.activity.at(-1)}
 Streamed instance windows: ${terrain.streamedWindows}
 Provider loads: ${terrain.providerLoads}
+Terrain atlas: ${terrain.terrainAtlas.residentPages}/${terrain.terrainAtlas.capacityPages} pages for ${terrain.terrainAtlas.residentSlots} tiles
+Terrain payload reserved: ${(terrain.terrainAtlas.reservedBytes / 1024).toFixed(1)} KiB (private: ${(terrain.terrainAtlas.privateSlotBytes / 1024).toFixed(1)} KiB)
 Window staging and apply p95: ${terrain.streamP95.toFixed(2)} ms
 Fused step p95: ${terrain.stepP95.toFixed(2)} ms
 Fixed allocation: ${terrain.fixedAllocation}

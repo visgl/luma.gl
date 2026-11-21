@@ -15,7 +15,8 @@ import {
 } from './gpu-rigid-body-world';
 import {GPUPhysicsEnsembleTerrain} from './gpu-physics-ensemble-terrain';
 import type {GPURigidBodyTerrainStreamProps} from './rigid-body-terrain-stream';
-import {getRigidBodyHeightFieldMinimumBytes} from './rigid-body-height-field';
+import {getRigidBodyHeightFieldPageWords} from './rigid-body-height-field';
+import {getTerrainAtlasBytes, type GPUPhysicsTerrainAtlasPool} from './rigid-body-terrain-atlas';
 
 export type GPUPhysicsEnsembleProps = {
   /** All instances share solver settings and topology, but have independent dynamic state. */
@@ -27,11 +28,14 @@ export type GPUPhysicsEnsembleProps = {
     | 'collisionPartitionSize'
     | 'ensembleBodiesPerInstance'
     | 'ensembleTerrainSlots'
+    | 'ensembleTerrainAtlas'
     | 'maximumPairs'
   >;
   instances: number;
   /** Template-local indices of vacant native height-field slots reserved per instance. */
   terrainSlots?: readonly number[];
+  /** Optional shared atlas pools. Omit to give every reserved slot private storage. */
+  terrainAtlas?: readonly GPUPhysicsTerrainAtlasPool[];
   /** Shared power-of-two contact capacity. Overflow rejects the entire ensemble step. */
   maximumPairs: number;
   /** Retained world buffers plus compiled graph scratch; excludes driver and compilation peaks. */
@@ -95,13 +99,13 @@ export class GPUPhysicsEnsemble {
         const shape = shapes[index];
         if (!Number.isSafeInteger(index) || shape?.type !== 'height-field' || shape.field.heights)
           throw new Error('Invalid ensemble terrain slot');
-        minimumTerrainBytes += getRigidBodyHeightFieldMinimumBytes(
-          shape.field.width,
-          shape.field.height
-        );
+        minimumTerrainBytes +=
+          4 * getRigidBodyHeightFieldPageWords(shape.field.width, shape.field.height);
       }
     }
-    this.minimumTerrainBytes = minimumTerrainBytes * this.instances;
+    this.minimumTerrainBytes = props.terrainAtlas
+      ? getTerrainAtlasBytes(props.terrainAtlas)
+      : minimumTerrainBytes * this.instances;
     // Repeated mesh references intentionally survive the world's single structured clone.
     const bodies = Array.from({length: props.instances}, (_, instance) =>
       template.bodies.map(body => {
@@ -140,6 +144,7 @@ export class GPUPhysicsEnsemble {
       maximumPairs: props.maximumPairs,
       collisionPartitionSize: colliderCount,
       ensembleBodiesPerInstance: this.bodiesPerInstance,
+      ensembleTerrainAtlas: props.terrainAtlas,
       ensembleTerrainSlots: this.terrainSlots.length
         ? Array.from({length: this.instances}, (_, instance) =>
             this.terrainSlots.map(collider => instance * colliderCount + collider)
@@ -201,7 +206,7 @@ export class GPUPhysicsEnsemble {
   /** Publish predecoded tiles directly to one instance between submissions. */
   setHeightFieldTiles(instance: number, edits: readonly GPURigidBodyHeightFieldEdit[]): void {
     if (this.terrainStreamer) throw new Error('Terrain slots are owned by the ensemble streamer');
-    this.publishTerrain(instance, edits);
+    this.publishTerrain([{instance, edits}]);
     this.directTerrain ||= edits.length > 0;
   }
 
@@ -216,19 +221,23 @@ export class GPUPhysicsEnsemble {
       instance => {
         this.getBodyIndex(instance, 0);
       },
-      (instance, edits) => this.publishTerrain(instance, edits)
+      windows => this.publishTerrain(windows)
     );
     return this.terrainStreamer;
   }
 
   /** Translate template-local edits only after every slot is validated. */
-  private publishTerrain(instance: number, edits: readonly GPURigidBodyHeightFieldEdit[]): void {
-    const start = this.getColliderIndex(instance, 0);
+  private publishTerrain(
+    windows: readonly {instance: number; edits: readonly GPURigidBodyHeightFieldEdit[]}[]
+  ): void {
     this.world.setHeightFieldTiles(
-      edits.map(edit => {
-        if (!this.terrainSlots.includes(edit.collider))
-          throw new Error('Invalid ensemble terrain slot');
-        return {...edit, collider: start + edit.collider};
+      windows.flatMap(({instance, edits}) => {
+        const start = this.getColliderIndex(instance, 0);
+        return edits.map(edit => {
+          if (!this.terrainSlots.includes(edit.collider))
+            throw new Error('Invalid ensemble terrain slot');
+          return {...edit, collider: start + edit.collider};
+        });
       })
     );
   }
@@ -326,7 +335,8 @@ export class GPUPhysicsEnsemble {
       worldBufferBytes,
       graphTransientBytes,
       residentBytes: worldBufferBytes + graphTransientBytes + this.resetBytes,
-      checkpointBytes: this.resetBytes
+      checkpointBytes: this.resetBytes,
+      terrainAtlas: this.world.getTerrainAtlasStats()
     };
   }
 

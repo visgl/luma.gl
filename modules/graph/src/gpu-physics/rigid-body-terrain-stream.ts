@@ -152,8 +152,17 @@ export class GPURigidBodyTerrainStream {
 
   /** Publish the fully staged window between submissions. Preserve it if upload validation fails. */
   apply(): boolean {
+    const edits = this.getPreparedEdits();
+    if (!edits) return false;
+    if (edits.length) this.world.setHeightFieldTiles(edits);
+    this.commitPreparedWindow();
+    return true;
+  }
+
+  /** @internal Plan the ready window without changing its publication status. */
+  getPreparedEdits(): GPURigidBodyHeightFieldEdit[] | undefined {
     const ready = this.ready;
-    if (!ready) return false;
+    if (!ready) return undefined;
     const edits: GPURigidBodyHeightFieldEdit[] = [];
     for (const collider of this.resident.stitched.keys()) {
       if (!ready.keys.has(collider)) edits.push({collider, field: null});
@@ -164,11 +173,15 @@ export class GPURigidBodyTerrainStream {
       if (keyChanged || !sameStitchedSamples(previous, tile))
         edits.push({collider, field: tile.field, position: tile.position});
     }
-    if (edits.length) this.world.setHeightFieldTiles(edits);
+    return edits;
+  }
+
+  /** @internal Commit only after the caller has published the corresponding edits. */
+  commitPreparedWindow(): void {
+    const ready = this.ready!;
     this.resident = ready;
     this.ready = undefined;
     this.loadQueue.setDemand(this, new Set(ready.source.keys()));
-    return true;
   }
 
   /** Number of slots in the committed window. */
