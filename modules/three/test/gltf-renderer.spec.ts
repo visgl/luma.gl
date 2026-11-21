@@ -31,7 +31,7 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
       forceWebGL: backendType === 'webgl',
       outputBufferType: UnsignedByteType
     });
-    const target = new RenderTarget(128, 128, {type: UnsignedByteType, generateMipmaps: false});
+    const target = new RenderTarget(64, 64, {type: UnsignedByteType, generateMipmaps: false});
     const referenceTarget = target.clone();
     const errors: string[] = [];
     const nativeDevice = device.handle as GPUDevice;
@@ -52,13 +52,19 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
       reference.setRenderTarget(referenceTarget);
       renderer.render(scene.scene, scene.camera);
       reference.render(referenceScene.scene, referenceScene.camera);
-      const pixels = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 128, 128);
+      const pixels = await renderer.readRenderTargetPixelsAsync(
+        target,
+        0,
+        0,
+        target.width,
+        target.height
+      );
       const referencePixels = await reference.readRenderTargetPixelsAsync(
         referenceTarget,
         0,
         0,
-        128,
-        128
+        referenceTarget.width,
+        referenceTarget.height
       );
       let difference = 0;
       let maximumDifference = 0;
@@ -73,7 +79,13 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
       scene.ground.receiveShadow = false;
       scene.ground.material.needsUpdate = true;
       renderer.render(scene.scene, scene.camera);
-      const withoutShadows = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 128, 128);
+      const withoutShadows = await renderer.readRenderTargetPixelsAsync(
+        target,
+        0,
+        0,
+        target.width,
+        target.height
+      );
       let shadowedPixelCount = 0;
       for (let index = 0; index < pixels.length; index += 4) {
         if (
@@ -92,13 +104,19 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       renderer.render(scene.scene, scene.camera);
       reference.render(referenceScene.scene, referenceScene.camera);
-      const movedLight = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 128, 128);
+      const movedLight = await renderer.readRenderTargetPixelsAsync(
+        target,
+        0,
+        0,
+        target.width,
+        target.height
+      );
       const referenceMovedLight = await reference.readRenderTargetPixelsAsync(
         referenceTarget,
         0,
         0,
-        128,
-        128
+        referenceTarget.width,
+        referenceTarget.height
       );
       expect(Array.from(movedLight)).not.toEqual(Array.from(pixels));
       let movedDifference = 0;
@@ -110,15 +128,33 @@ for (const backendType of ['webgpu', 'webgl'] as const) {
       expect(movedDifference).toBeLessThanOrEqual(2);
       scene.light.shadow.intensity = 0;
       renderer.render(scene.scene, scene.camera);
-      const disabledShadows = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 128, 128);
+      const disabledShadows = await renderer.readRenderTargetPixelsAsync(
+        target,
+        0,
+        0,
+        target.width,
+        target.height
+      );
       expect(Array.from(disabledShadows)).not.toEqual(Array.from(movedLight));
       scene.light.intensity = 0;
       renderer.render(scene.scene, scene.camera);
-      const withoutLight = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 128, 128);
+      const withoutLight = await renderer.readRenderTargetPixelsAsync(
+        target,
+        0,
+        0,
+        target.width,
+        target.height
+      );
       expect(Array.from(withoutLight)).not.toEqual(Array.from(pixels));
       scene.scene.environmentIntensity = 0;
       renderer.render(scene.scene, scene.camera);
-      const withoutEnvironment = await renderer.readRenderTargetPixelsAsync(target, 0, 0, 128, 128);
+      const withoutEnvironment = await renderer.readRenderTargetPixelsAsync(
+        target,
+        0,
+        0,
+        target.width,
+        target.height
+      );
       expect(Array.from(withoutEnvironment)).not.toEqual(Array.from(withoutLight));
       if (backendType === 'webgpu') await nativeDevice.queue.onSubmittedWorkDone();
       else {

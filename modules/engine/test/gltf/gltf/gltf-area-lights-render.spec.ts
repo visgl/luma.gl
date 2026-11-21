@@ -103,20 +103,20 @@ test.each([
             if (node instanceof ModelNode) models.push(node);
           });
           const color = device.createTexture({
-            width: 9,
-            height: 9,
+            width: 5,
+            height: 5,
             format: 'rgba8unorm',
             usage: Texture.RENDER | Texture.COPY_SRC
           });
           const depth = device.createTexture({
-            width: 9,
-            height: 9,
+            width: 5,
+            height: 5,
             format: 'depth24plus',
             usage: Texture.RENDER
           });
           const framebuffer = device.createFramebuffer({
-            width: 9,
-            height: 9,
+            width: 5,
+            height: 5,
             colorAttachments: [color],
             depthStencilAttachment: depth
           });
@@ -163,7 +163,7 @@ test.each([
             }
             pass.end();
             device.submit();
-            color.readBuffer({x: 4, y: 4, width: 1, height: 1}, readback);
+            color.readBuffer({x: 2, y: 2, width: 1, height: 1}, readback);
             const pixels = await readback.readAsync(0, layout.byteLength);
             return pixels[0];
           };
@@ -237,20 +237,20 @@ test.each([
       if (node instanceof ModelNode) models.push(node);
     });
     const color = device.createTexture({
-      width: 9,
-      height: 9,
+      width: 5,
+      height: 5,
       format: 'rgba8unorm',
       usage: Texture.RENDER | Texture.COPY_SRC
     });
     const depth = device.createTexture({
-      width: 9,
-      height: 9,
+      width: 5,
+      height: 5,
       format: 'depth24plus',
       usage: Texture.RENDER
     });
     const framebuffer = device.createFramebuffer({
-      width: 9,
-      height: 9,
+      width: 5,
+      height: 5,
       colorAttachments: [color],
       depthStencilAttachment: depth
     });
@@ -278,7 +278,7 @@ test.each([
       }
       pass.end();
       device.submit();
-      color.readBuffer({x: 4, y: 4, width: 1, height: 1}, readback);
+      color.readBuffer({x: 2, y: 2, width: 1, height: 1}, readback);
       const pixels = await readback.readAsync(0, layout.byteLength);
       return pixels[0];
     };

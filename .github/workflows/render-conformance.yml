@@ -15,6 +15,7 @@ on:
       - 'vitest.config.ts'
       - 'test/utils/**'
       - 'modules/anari/src/**'
+      - 'modules/anari/test/anari-emitter-sampling*'
       - 'modules/anari/test/engine/ray-material*'
       - 'modules/anari/test/engine/ray-alpha-pixels.spec.ts'
       - 'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts'
@@ -76,7 +77,7 @@ jobs:
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
           const report = readFileSync('test-results/render-conformance.xml', 'utf8');
-          assert.match(report, /<testsuites\b[^>]*\btests="15"/);
+          assert.match(report, /<testsuites\b[^>]*\btests="16"/);
           assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
           NODE
       - name: Upload material results

@@ -20,6 +20,7 @@ export const PHYSICS_ENDURANCE_TEST_PATTERNS = [
 ];
 /** Full material transport matrices run nightly and when their implementation changes. */
 export const RENDER_CONFORMANCE_TEST_PATTERNS = [
+  'modules/anari/test/anari-emitter-sampling-conformance.spec.ts',
   'modules/anari/test/engine/ray-alpha-pixels.spec.ts',
   'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts',
   'modules/anari/test/engine/ray-environment-lighting.spec.ts',
