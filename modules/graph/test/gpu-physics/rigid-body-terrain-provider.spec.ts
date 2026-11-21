@@ -98,6 +98,8 @@ it('publishes versioned mixed-resolution provider tiles into the same GPU graph'
       const coarse = await sample(0, 4, north);
       const fine = await sample(1, 4, north);
       expect(coarse.complete && fine.complete).toBe(true);
+      expect(coarse.hits, `coarse seam at north=${north}`).toHaveLength(1);
+      expect(fine.hits, `fine seam at north=${north}`).toHaveLength(1);
       expect(coarse.hits[0].point[2]).toBeCloseTo(north / 4, 5);
       expect(fine.hits[0].point[2]).toBeCloseTo(coarse.hits[0].point[2], 5);
     }
