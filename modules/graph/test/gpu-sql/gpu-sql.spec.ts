@@ -262,7 +262,7 @@ it('loaders.gl SQL predicates compile into reusable GPU-resident dataframe resul
   void 0;
 });
 
-it('loaders.gl projection-only plans do not bind arbitrary source columns', async () => {
+it('SQL projection-only plans do not bind arbitrary source columns', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     void 0;
@@ -303,25 +303,48 @@ it('loaders.gl projection-only plans do not bind arbitrary source columns', asyn
     table: new GPUTable({batches: [batch]}),
     ownership: 'owned'
   });
-  const compiled = planGPUDataFrameQuery(frame, {columns: ['category']}).compile(
-    new GPUCommandGraph(device, {id: 'loaders-sql-projection-only'})
-  );
-
   try {
-    const encoder = device.createCommandEncoder({id: 'loaders-sql-projection-only'});
-    compiled.encode(encoder);
-    device.submit(encoder.finish());
+    const context = new GPUSQLContext({samples: frame});
+    for (const plan of [
+      planGPUDataFrameQuery(frame, {columns: ['category']}),
+      context.query('SELECT category FROM samples')
+    ]) {
+      const compiled = plan.compile(new GPUCommandGraph(device, {id: 'sql-projection-only'}));
+      try {
+        const encoder = device.createCommandEncoder({id: 'loaders-sql-projection-only'});
+        compiled.encode(encoder);
+        device.submit(encoder.finish());
 
-    const result = await makeArrowTableFromGPUAnalyticsTable({
-      table: compiled.table,
-      validity: compiled.validity,
-      dictionaries: compiled.dictionaries,
-      rowIndices: compiled.rowIndices,
-      selectedCounts: compiled.selectedCounts
-    });
-    expect(Array.from(result.getChild('category') ?? []), '').toEqual([7, 9]);
+        const result = await makeArrowTableFromGPUAnalyticsTable({
+          table: compiled.table,
+          validity: compiled.validity,
+          dictionaries: compiled.dictionaries,
+          rowIndices: compiled.rowIndices,
+          selectedCounts: compiled.selectedCounts
+        });
+        expect(Array.from(result.getChild('category') ?? []), '').toEqual([7, 9]);
+      } finally {
+        compiled.destroy();
+      }
+    }
+
+    const packedProjection = context
+      .query('SELECT position FROM samples')
+      .compile(new GPUCommandGraph(device, {id: 'sql-packed-projection'}));
+    try {
+      expect(packedProjection.table.schema.fields.map(field => field.format)).toEqual([
+        'float32x3'
+      ]);
+      expect(packedProjection.table.gpuVectors['position']?.data[0].buffer).toBe(
+        frame.table.gpuVectors.position?.data[0].buffer
+      );
+      const encoder = device.createCommandEncoder();
+      packedProjection.encode(encoder);
+      device.submit(encoder.finish());
+    } finally {
+      packedProjection.destroy();
+    }
   } finally {
-    compiled.destroy();
     frame.destroy();
   }
 
