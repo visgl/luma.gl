@@ -177,14 +177,13 @@ function buildGPUSQLPlan(
     }
     const definitions: GPUSQLAggregationDefinitions = {};
     for (const item of aggregates) {
-      const name =
-        item.alias ??
-        `${item.aggregate}_${item.aggregateColumn ? formatGPUSQLColumn(item.aggregateColumn) : 'all'}`;
+      const inputColumn = item.aggregateColumn && resolve(item.aggregateColumn);
+      const name = item.alias ?? `${item.aggregate}_${inputColumn ?? 'all'}`;
       if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       definitions[name] =
         item.aggregate === 'count'
           ? 'count'
-          : ({[item.aggregate!]: resolve(item.aggregateColumn!)} as
+          : ({[item.aggregate!]: inputColumn!} as
               | {sum: string}
               | {min: string}
               | {max: string}
@@ -288,7 +287,7 @@ function resolveGPUSQLProjectionName(
   return resolve(readGPUSQLColumn(item.expression));
 }
 
-/** Formats the source spelling for diagnostics and default aggregate names. */
+/** Formats the source spelling for diagnostics. */
 function formatGPUSQLColumn({name, qualifier}: GPUSQLColumnReference): string {
   return qualifier === undefined ? name : qualifier + '.' + name;
 }

@@ -95,6 +95,8 @@ the branch. Numeric column branches must have the same scalar format. An omitted
 - One `ORDER BY` column with direction, null ordering, and optional bounded `LIMIT`.
 - For ordered queries, `OFFSET` skips globally sorted rows across batches before applying `LIMIT`.
 - `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`.
+  Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
+
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
 
 SQL keywords and registered table names are case-insensitive. Column names must match the

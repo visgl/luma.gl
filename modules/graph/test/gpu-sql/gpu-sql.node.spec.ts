@@ -155,7 +155,9 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     expect(
       context.query('SELECT "trips.limit", trips."limit" FROM trips ORDER BY "trips.limit"')
     ).toBeInstanceOf(GPUSQLQuery);
-    expect(context.query('SELECT SUM(trips."trips.limit") FROM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(
+      context.query('SELECT SUM("trips.limit"), SUM(trips."limit") FROM trips')
+    ).toBeInstanceOf(GPUSQLQuery);
     expect(() => context.query('SELECT missing."trips.limit" FROM trips')).toThrow(/qualifier/);
     expect(context.query('sElEcT "limit", "Limit" fRoM trips')).toBeInstanceOf(GPUSQLQuery);
     expect(() => context.query('SELECT limit FROM trips')).toThrow(/SQL expression/i);
