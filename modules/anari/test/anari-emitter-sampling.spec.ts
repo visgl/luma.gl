@@ -171,7 +171,14 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     expect((await render()).mean[0]).toBeLessThan(0.0001);
     renderer.setParameter('shadows', false).commitParameters();
     expect((await render()).mean[0]).toBeGreaterThan(lit.mean[0]);
-    renderer.setParameter('shadows', true).commitParameters();
+    renderer.setParameter('transportMode', 'pbr').commitParameters();
+    const unshadowedPBR = await render();
+    expect(unshadowedPBR.mean[0]).toBeGreaterThan(0.1);
+    renderer.setParameter('maxBounces', 1).commitParameters();
+    expect((await render()).pixels).toEqual(unshadowedPBR.pixels);
+    renderer
+      .setParameters({shadows: true, transportMode: 'diffuse', maxBounces: 0})
+      .commitParameters();
     occluderMaterial.setParameter('baseColor', [0, 0, 0, 0]).commitParameters();
     lightInstance
       .setParameter('transform', new Matrix4().translate([0.5, 0, 2]).scale([2, 1, 1]))
@@ -238,4 +245,4 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     errors.mockRestore();
     graphics.destroy();
   }
-});
+}, 180_000);

@@ -6,12 +6,21 @@ import {Matrix4} from '@math.gl/core';
 import {expect, it} from 'vitest';
 import {createMaterialFixture} from './ray-material-fixture';
 
-it('preserves diffuse emitter radiance when explicit sampling is enabled', async () => {
+it.each([
+  'diffuse',
+  'pbr'
+] as const)('preserves %s emitter radiance when explicit sampling is enabled', async transportMode => {
   if (!webgpuAdapter.isSupported()) return;
   const {options, surface, readPixel, destroy} = await createMaterialFixture();
   try {
     options.surfaces = [
-      {...surface, material: {id: 'diffuse-receiver'}},
+      {
+        ...surface,
+        material: {
+          id: 'mis-receiver',
+          uniforms: transportMode === 'pbr' ? {metallicRoughnessValues: [0.65, 0.45]} : {}
+        }
+      },
       {
         ...surface,
         id: 'large-emitter',
@@ -20,7 +29,7 @@ it('preserves diffuse emitter radiance when explicit sampling is enabled', async
       }
     ];
     options.lights = [];
-    options.transportMode = 'diffuse';
+    options.transportMode = transportMode;
     options.maxBounces = 1;
     options.samplesPerPixel = 16;
     options.samplingFrameIndex = 0;

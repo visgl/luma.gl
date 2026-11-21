@@ -7,11 +7,7 @@ import type {SceneSurface} from './scene-renderer';
 
 const MATERIAL_MAPS = [
   ['baseColor', 'pbr_baseColorSampler', 'primitive.baseColor *= sampled;'],
-  [
-    'emissive',
-    'pbr_emissiveSampler',
-    'primitive.emissive = vec4<f32>(primitive.emissive.rgb * sampled.rgb, primitive.emissive.w);'
-  ],
+  ['emissive', 'pbr_emissiveSampler', ''],
   [
     'metallicRoughness',
     'pbr_metallicRoughnessSampler',
@@ -141,6 +137,7 @@ export function getRayMaterialTextureShader(
     })
     .join('\n');
   const opacityMaterials: string[] = [];
+  const emissionMaterials: string[] = [];
   const normalMaterials: string[] = [];
   const clearcoatNormalMaterials: string[] = [];
   const anisotropyMaterials: string[] = [];
@@ -166,6 +163,14 @@ export function getRayMaterialTextureShader(
           texture.mipLevels > 1
             ? `getMaterialFootprint(hit, transform, ${uniforms?.[`${name}UVSet`] === 1})`
             : 'vec2<f32>(0.0)';
+        if (name === 'emissive') {
+          emissionMaterials.push(`case ${surfaceIndex}u: {
+            let transform = mat3x3<f32>(${matrix});
+            let coordinates = (transform * vec3<f32>(${coordinates}, 1.0)).xy;
+            emission *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, ${footprint}).rgb;
+          }`);
+          return '';
+        }
         if (name === 'normal' || name === 'clearcoatNormal') {
           const scale = name === 'normal' ? Number(uniforms?.normalScale ?? 1).toFixed(9) : '1.0';
           const cases = name === 'normal' ? normalMaterials : clearcoatNormalMaterials;
@@ -230,6 +235,7 @@ export function getRayMaterialTextureShader(
     .replace('/* MATERIAL_TEXTURE_CASES */', cases)
     .replace('/* MATERIAL_SURFACE_CASES */', materials)
     .replace('/* MATERIAL_OPACITY_CASES */', opacityMaterials.join('\n'))
+    .replace('/* MATERIAL_EMISSION_CASES */', emissionMaterials.join('\n'))
     .replace('/* MATERIAL_NORMAL_CASES */', normalMaterials.join('\n'))
     .replace('/* MATERIAL_CLEARCOAT_NORMAL_CASES */', clearcoatNormalMaterials.join('\n'))
     .replace('/* MATERIAL_ANISOTROPY_CASES */', anisotropyMaterials.join('\n'));
