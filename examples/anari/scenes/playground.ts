@@ -57,6 +57,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly chartLabels?: ChartLabels;
   private renderedFrameCount = 0;
   private captureFrameLimit = 0;
+  /** Suspends rendering until the requested capture asset has loaded. */
+
   private captureSceneLoading = false;
   private selectedPlacementId: string | null = null;
   private pointerStart: {x: number; y: number} | null = null;
@@ -147,6 +149,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     const dynamicRange = device.preferredColorFormat === 'rgba16float' ? 'HDR · DISPLAY P3' : 'SDR';
     setElementText('backend-label', `${device.type.toUpperCase()} · ${dynamicRange}`);
   }
+
+  /** Applies capture overrides to the scene and installs it in the playground. */
 
   private applyCaptureSettings(
     sceneDescription: ANARIJSONScene,
