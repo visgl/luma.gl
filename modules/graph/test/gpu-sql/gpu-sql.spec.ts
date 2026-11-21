@@ -141,6 +141,46 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
   void 0;
 });
 
+it('GPU SQL fills missing values and nulls matching sentinels across Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  try {
+    const context = new GPUSQLContext({trips: frame});
+    const plan = context.query(
+      'SELECT COALESCE(NULLIF(trips.fare, :sentinel), NULL, 99) AS filled, NULLIF(fare, NULL) AS unchanged FROM trips',
+      {parameters: {sentinel: 8}}
+    );
+    const result = plan.compile(new GPUCommandGraph(device, {id: 'sql-null-functions'}));
+    try {
+      for (const {sentinel, expected} of [
+        {sentinel: 8, expected: [99, 99, 3, 10, 11]},
+        {sentinel: null, expected: [99, 8, 3, 10, 11]}
+      ]) {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder, {sentinel});
+        device.submit(encoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(Array.from(output.getChild('filled') ?? [])).toEqual(expected);
+        expect(Array.from(output.getChild('unchanged') ?? [])).toEqual([null, 8, 3, 10, 11]);
+      }
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
 it('loaders.gl SQL predicates compile into reusable GPU-resident dataframe results', async () => {
   const device = await getWebGPUTestDevice();
   if (!device) {

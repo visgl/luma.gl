@@ -407,6 +407,22 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
     }
     const left = this.emit(leftNode, format);
     const right = this.emit(rightNode, format);
+    if (operator === 'coalesce') {
+      return this.addValue(
+        format,
+        `select(${right.value}, ${left.value}, ${left.valid})`,
+        `(${left.valid} || ${right.valid})`,
+        left.nullable && right.nullable
+      );
+    }
+    if (operator === 'nullif') {
+      return this.addValue(
+        format,
+        left.value,
+        `(${left.valid} && !(${right.valid} && ${left.value} == ${right.value}))`,
+        true
+      );
+    }
     const symbol = getGPUQueryBinaryOperator(operator);
     const value = `(${left.value} ${symbol} ${right.value})`;
     const valid = `${left.valid} && ${right.valid}`;
@@ -446,6 +462,8 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         return node.operator === 'negate' ? this.inferFormat(node.operand) : 'boolean';
       case 'binary':
         if (
+          node.operator === 'coalesce' ||
+          node.operator === 'nullif' ||
           node.operator === 'add' ||
           node.operator === 'subtract' ||
           node.operator === 'multiply' ||

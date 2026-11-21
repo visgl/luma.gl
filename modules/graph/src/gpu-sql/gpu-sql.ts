@@ -454,6 +454,8 @@ function lowerSQLExpression(
           name !== 'isNull' &&
           name !== 'isNotNull' &&
           name !== 'in' &&
+          functionName !== 'coalesce' &&
+          functionName !== 'nullif' &&
           !isGPUScalarFunction(functionName)
         ) {
           throw new Error(`GPUSQL does not support SQL expression "${name}"`);
