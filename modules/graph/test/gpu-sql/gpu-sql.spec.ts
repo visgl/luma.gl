@@ -328,6 +328,19 @@ it('SQL projection-only plans do not bind arbitrary source columns', async () =>
       }
     }
 
+    const packedCount = context
+      .query('SELECT COUNT(position) AS known FROM samples')
+      .compile(new GPUCommandGraph(device, {id: 'sql-packed-count'}));
+    try {
+      const encoder = device.createCommandEncoder();
+      packedCount.encode(encoder);
+      device.submit(encoder.finish());
+      const result = await makeArrowTableFromGPUAnalyticsTable({table: packedCount.table});
+      expect(result.getChild('known')?.get(0)).toBe(2);
+    } finally {
+      packedCount.destroy();
+    }
+
     const packedProjection = context
       .query('SELECT position FROM samples')
       .compile(new GPUCommandGraph(device, {id: 'sql-packed-projection'}));
@@ -366,12 +379,12 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
   const context = new GPUSQLContext({trips: frame});
   const aggregate = context
     .query(
-      'SELECT COUNT(*) AS rows, SUM(fare) AS total, AVG(fare) AS average FROM trips WHERE fare >= 8'
+      'SELECT COUNT(*) AS rows, COUNT(fare) AS known, SUM(fare) AS total, AVG(fare) AS average FROM trips WHERE fare >= 8 OR fare IS NULL'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-aggregate'}));
   const grouped = context
     .query(
-      'SELECT category, COUNT(*) AS count, SUM(fare) AS total FROM trips WHERE fare IS NOT NULL GROUP BY 1'
+      'SELECT category, COUNT(*) AS count, COUNT(fare) AS known, SUM(fare) AS total FROM trips GROUP BY 1'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-grouped'}));
 
@@ -388,7 +401,8 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
       validity: aggregate.validity,
       dictionaries: aggregate.dictionaries
     });
-    expect(Array.from(aggregateArrow.getChild('rows') ?? []), '').toEqual([3]);
+    expect(Array.from(aggregateArrow.getChild('rows') ?? [])).toEqual([4]);
+    expect(Array.from(aggregateArrow.getChild('known') ?? [])).toEqual([3]);
     expect(Array.from(aggregateArrow.getChild('total') ?? []), '').toEqual([29]);
     expect(
       Boolean(Math.abs(Number(aggregateArrow.getChild('average')?.get(0)) - 29 / 3) < 0.001),
@@ -401,7 +415,8 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
       dictionaries: grouped.dictionaries
     });
     expect(Array.from(groupedArrow.getChild('category') ?? []), '').toEqual(['economy', 'premium']);
-    expect(Array.from(groupedArrow.getChild('count') ?? []), '').toEqual([2, 2]);
+    expect(Array.from(groupedArrow.getChild('count') ?? [])).toEqual([3, 2]);
+    expect(Array.from(groupedArrow.getChild('known') ?? [])).toEqual([2, 2]);
     expect(Array.from(groupedArrow.getChild('total') ?? []), '').toEqual([14, 18]);
   } finally {
     aggregate.destroy();

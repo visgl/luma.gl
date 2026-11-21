@@ -66,7 +66,9 @@ export function compileGPUDataFrameAggregation<
 ): CompiledGPUDataFrameAggregation<Result> {
   validateGPUAnalyticsSource(
     source,
-    definitions.flatMap(definition => (definition.column ? [definition.column] : []))
+    definitions.flatMap(definition =>
+      definition.operation !== 'count' && definition.column ? [definition.column] : []
+    )
   );
   return compileGPUDataFrameQuery<
     Source,
@@ -108,7 +110,9 @@ function addGPUGlobalAggregationsToGraph<Selection extends GPUTypeMap, Result ex
         context.graph.add(
           new GPUReduction({
             id,
-            input: context.selectionMask,
+            input: definition.column
+              ? getGPUAnalyticsSelectionMask(context, definition.column, id)
+              : context.selectionMask,
             output: context.graph.importGPUVector(`${id}-output`, output).data[0],
             operation: 'sum'
           })

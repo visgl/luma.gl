@@ -31,6 +31,7 @@ export type GPUDataFrameGlobalAggregationValue<
   SelectedColumns extends keyof T & string
 > =
   | 'count'
+  | Readonly<{count: SelectedColumns}>
   | Readonly<{sum: GPUDataFrameScalarColumnNames<T, SelectedColumns>}>
   | Readonly<{min: GPUDataFrameScalarColumnNames<T, SelectedColumns>}>
   | Readonly<{max: GPUDataFrameScalarColumnNames<T, SelectedColumns>}>
@@ -43,7 +44,9 @@ export type GPUDataFrameGlobalAggregationDefinitions<
 > = Readonly<Record<string, GPUDataFrameGlobalAggregationValue<T, SelectedColumns>>>;
 
 /** Exact result scalar format retained for one requested global statistic. */
-type GPUDataFrameGlobalAggregationValueFormat<T extends GPUTypeMap, Value> = Value extends 'count'
+type GPUDataFrameGlobalAggregationValueFormat<T extends GPUTypeMap, Value> = Value extends
+  | 'count'
+  | {count: string}
   ? 'uint32'
   : Value extends {mean: string}
     ? 'float32'
@@ -168,13 +171,19 @@ function normalizeGPUDataFrameGlobalAggregations<
       throw new Error(`GPUDataFrame global aggregation "${name}" requires exactly one operation`);
     }
     const [operation, column] = entries[0];
-    if (operation !== 'sum' && operation !== 'min' && operation !== 'max' && operation !== 'mean') {
+    if (
+      operation !== 'count' &&
+      operation !== 'sum' &&
+      operation !== 'min' &&
+      operation !== 'max' &&
+      operation !== 'mean'
+    ) {
       throw new Error(`GPUDataFrame global aggregation "${name}" has an unsupported operation`);
     }
     if (typeof column !== 'string' || !query.selectedColumns.includes(column as SelectedColumns)) {
       throw new Error(`GPUDataFrame global aggregation "${name}" requires a selected input column`);
     }
-    if (!getGPUDataFrameAnalyticColumnFormat(query, column)) {
+    if (operation !== 'count' && !getGPUDataFrameAnalyticColumnFormat(query, column)) {
       throw new Error(`GPUDataFrame global aggregation "${name}" requires a scalar GPU column`);
     }
     normalized.push(Object.freeze({name, operation, column}));
