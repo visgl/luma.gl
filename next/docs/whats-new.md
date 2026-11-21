@@ -9,6 +9,8 @@
 
 See the [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md#upgrading-to-v100) to move from v9.
 
+* Fused GPU physics ensembles can share packed terrain atlas pages across instances while streaming and updating their tile windows independently. [GPU Physics](https://luma.gl/next/docs/api-reference/graph/gpu-physics.md)
+
 ## Version 9.4[​](#version-94 "Direct link to Version 9.4")
 
 Expanded GPU computation, text rendering, and scene and shader tools.

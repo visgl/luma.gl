@@ -517,3 +517,47 @@ A terrain edit discards cached warm-start impulses when a contact next sees the 
 `ensemble.reset(instance)` restores that instance's body state and keeps its committed terrain slots, including their local placement. Call `terrain.clear(instance)` to evict them, or `terrain.cancel(instance)` to discard pending work while keeping the current tiles. Destroying the ensemble cancels its outstanding provider requests. For already decoded tiles, use `ensemble.setHeightFieldTiles(instance, edits)` as the direct publication path. Choose one publication path for the reserved slots. Whole-world checkpoints and debug captures operate on GPU state and require application coordination with any live streamer's residency.
 
 Select **Streamed terrain (fused)** in Physics Batch Lab to measure window publication and solver time separately while changing one instance at a time.
+
+#### Shared terrain atlas pages[​](#shared-terrain-atlas-pages "Direct link to Shared terrain atlas pages")
+
+Set `terrainAtlas` when many fused instances reuse terrain. It reserves a fixed number of pages for each grid size used by `terrainSlots`. Specify a pool for every reserved grid size. Omit the option to keep one private page per reserved slot.
+
+```
+const ensemble = await GPUPhysicsEnsemble.create(device, {
+
+  template,
+
+  instances: 64,
+
+  terrainSlots: [0, 1], // Both colliders reserve a 33 × 33 grid.
+
+  terrainAtlas: [{width: 33, height: 33, pages: 12}],
+
+  maximumPairs: 8192,
+
+  maximumResidentBytes: 128 * 1024 ** 2
+
+});
+
+const terrain = ensemble.createTerrainStreamer({provider});
+
+
+
+await Promise.all([
+
+  terrain.prepare(0, firstWindow),
+
+  terrain.prepare(1, secondWindow)
+
+]);
+
+terrain.applyMany([0, 1]);
+```
+
+Pages share the packed sample and hierarchy data. The atlas compares the actual GPU payload after stitching, so adjacent tiles can make the same provider key produce different pages. Conversely, identical data can share a page across different keys or collider placements. Each collider keeps its own placement, material, and contact revision. A changed tile can reuse a matching page or allocate a new one while other colliders keep the old page. Evicting the last reference makes the page available for reuse.
+
+Size each pool for the maximum number of distinct payloads that must coexist at that resolution. If a window exceeds the pool, publication throws and keeps the committed windows and their collider references intact. You can stage several windows and use `applyMany(instances)` to publish them as one transaction when an old page can be released only by moving several of its users together. The method applies only ready windows and returns the number committed. Await each `prepare()` first when every window is required for a handoff.
+
+`ensemble.getStats().terrainAtlas` reports occupied pages, resident collider references, and reserved bytes alongside the equivalent private-slot payload size. Atlas pages count toward the world memory budget at creation. Instance reset preserves active leases. Full world captures and GPU checkpoints restore the exact page references along with their GPU data. Coordinate a full world restore with any provider window bookkeeping.
+
+The **Streamed terrain (fused)** Physics Batch Lab workload reports shared atlas occupancy and allocated payload bytes for comparison with private slots.
