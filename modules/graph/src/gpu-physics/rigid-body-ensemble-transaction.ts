@@ -106,6 +106,7 @@ export function addEnsembleCheckpoint<GraphParameters>(
   };
   const bodyAddress = `let work=invocation.x;if(work>=ensemble[0]*${bodiesPerInstance}u){return;}
  let body=ensemble[${16 + instances * 8}u+work/${bodiesPerInstance}u]*${bodiesPerInstance}u+work%${bodiesPerInstance}u;`;
+  /** Journal or restore contiguous vehicle rows for the scheduled instances. */
   const copyVehicleState = (restore: boolean) => {
     if (!vehicles || !vehicleSnapshot) return;
     const count = vehicles.vehiclesPerInstance;

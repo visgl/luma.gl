@@ -97,8 +97,13 @@ button.onclick = async () => {
           canvas.width / 2 + state.position[0] * scale,
           canvas.height / 2 - state.position[1] * scale
         );
-        const [x, y, z, w] = state.orientation;
-        context.rotate(-Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)));
+        const [orientationX, orientationY, orientationZ, orientationW] = state.orientation;
+        context.rotate(
+          -Math.atan2(
+            2 * (orientationW * orientationZ + orientationX * orientationY),
+            1 - 2 * (orientationY * orientationY + orientationZ * orientationZ)
+          )
+        );
         context.fillRect(-1.3 * scale, -0.65 * scale, 2.6 * scale, 1.3 * scale);
         context.restore();
       }
@@ -137,6 +142,7 @@ exportButton.onclick = () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+/** Read the selected workload, falling back to sparse debris for an unknown selection. */
 function getScenario(): BatchBenchmarkScene {
   const value = document.querySelector<HTMLSelectElement>('#scene')!.value;
   return value === 'pile' ||

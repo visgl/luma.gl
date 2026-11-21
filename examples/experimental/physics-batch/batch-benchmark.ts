@@ -10,6 +10,7 @@ import {
   type GPURigidBodyWorldProps
 } from '@luma.gl/graph/gpu-physics';
 
+/** Workloads available for matched independent-world throughput benchmarks. */
 export type BatchBenchmarkScene = 'sparse' | 'pile' | 'sleeping' | 'wake-storm' | 'vehicle-fleet';
 
 export type BatchBenchmarkOptions = {
