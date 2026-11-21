@@ -289,8 +289,11 @@ export class GPURigidBodyWorld {
   /** Float32-exact edit stamp, restored together with the contact cache. */
   private terrainRevision = 1;
   private terrainWake: BoundKernel | null = null;
+  /** Page ownership and live lease counts for an opt-in fused atlas. */
   private readonly terrainAtlas?: RigidBodyTerrainAtlas;
+  /** Start of the shared atlas in the GPU metadata buffer, measured in 32-bit words. */
   private terrainAtlasWord = 0;
+  /** Start of the shader geometry region in the GPU metadata buffer, measured in 32-bit words. */
   private terrainGeometryWord = 0;
   private ensembleResetOrigin?: readonly number[];
   private ensembleReset?: ReturnType<typeof makeEnsembleReset>;

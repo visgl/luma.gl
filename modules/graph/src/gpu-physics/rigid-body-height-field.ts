@@ -89,6 +89,7 @@ export function getRigidBodyHeightFieldPageWords(width: number, height: number):
   // Every row eventually uses the same bisection of its columns. Interleaving the
   // row splits changes traversal order, but the full binary tree has 2 * leaves - 1 nodes.
   const memo = new Map<number, number>();
+  /** Count single-row leaves after the same column bisection used by the packer. */
   const countLeaves = (columns: number): number => {
     if (columns <= CELLS_PER_LEAF) return 1;
     const cached = memo.get(columns);

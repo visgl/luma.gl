@@ -13,7 +13,9 @@ import {
   type GPURigidBodyTerrainWindow
 } from '../../src/gpu-physics';
 
+/** Coarse grid spanning one authored tile. */
 const coarse = {width: 3, height: 3};
+/** Fine grid spanning the same area at twice the cell resolution. */
 const fine = {width: 5, height: 5};
 
 /** Cover the same four-meter square at either resolution. */
@@ -27,6 +29,7 @@ function makeField(dimensions: typeof coarse, height: number): GPURigidBodyHeigh
   };
 }
 
+/** Fused fixture with a dynamic body and two vacant terrain slots per instance. */
 const props: GPUPhysicsEnsembleProps = {
   template: {
     enableQueries: true,
@@ -43,6 +46,7 @@ const props: GPUPhysicsEnsembleProps = {
   maximumResidentBytes: 32 * 1024 * 1024
 };
 
+/** Query one atlas-backed collider without other overlapping instances. */
 function readHeight(world: GPURigidBodyWorld, collider: number, east: number, north = 1.25) {
   return world
     .raycast({

@@ -11,8 +11,11 @@ import {
 import type {GPURigidBodyHeightFieldEdit} from './gpu-rigid-body-world';
 import type {GPURigidBodyTerrainTile} from './rigid-body-terrain-stitch';
 
+/** A prepared instance window to publish using template-local indices. */
 type TerrainPublication = {
+  /** Ensemble instance that owns the edited colliders. */
   instance: number;
+  /** Changes required to replace the committed window. */
   edits: readonly GPURigidBodyHeightFieldEdit[];
 };
 

@@ -16,43 +16,76 @@ export type GPUPhysicsTerrainAtlasPool = {
 
 /** Page capacity and live collider references across all atlas pools. */
 export type GPUPhysicsTerrainAtlasStats = {
+  /** Total page capacity across all grid pools, including unused pages. */
   capacityPages: number;
+  /** Distinct pages with at least one live collider reference. */
   residentPages: number;
+  /** Colliders referencing a page. Several colliders may count against one page. */
   residentSlots: number;
+  /** GPU bytes reserved for page payloads, including vacant pages and excluding collider metadata. */
   reservedBytes: number;
   /** Payload bytes that a page per reserved collider slot would require. */
   privateSlotBytes: number;
 };
 
+/** Contiguous page range dedicated to one height-field grid size. */
 type AtlasPool = {
+  /** Size of one packed page in 32-bit words. */
   words: number;
+  /** Number of page IDs in this range. */
   pages: number;
+  /** First global page ID for the grid. */
   firstPage: number;
+  /** Start of the grid range in atlas-relative 32-bit words. */
   firstWord: number;
+  /** Vacant global page IDs available for reuse. */
   free: Set<number>;
+  /** Live payloads grouped by hash. Exact comparison handles hash collisions. */
   byHash: Map<number, Set<AtlasPage>>;
 };
 
+/** Immutable packed terrain and the live reference count for its physical page. */
 type AtlasPage = {
+  /** Global page ID across grid pools. */
   index: number;
+  /** Grid pool that owns the page address. */
   pool: AtlasPool;
+  /** Fingerprint used to find matching payload candidates. */
   hash: number;
+  /** Exact GPU sample and hierarchy payload. */
   data: Float32Array;
+  /** Number of committed collider leases. */
   references: number;
 };
 
+/** Pending payload shared by edits in the same publication transaction. */
 type DraftPage = {
+  /** Fingerprint for matching additional edits during planning. */
   hash: number;
+  /** Data to upload when the transaction commits. */
   data: Float32Array;
+  /** Number of edits that will reference this page. */
   references: number;
+  /** Assigned page after the fit check succeeds for its grid pool. */
   page?: AtlasPage;
 };
 
-type AtlasEdit = {collider: number; data: Float32Array | null};
+/** One collider binding to install or remove during a transaction. */
+type AtlasEdit = {
+  /** Stable fused collider index. */
+  collider: number;
+  /** Packed data, or null to vacate the collider slot. */
+  data: Float32Array | null;
+};
+
+/** Stable fused collider index paired with its global physical page ID. */
 type AtlasLease = readonly [collider: number, page: number];
 
+/** Host-side bindings preserved alongside a GPU checkpoint. */
 export type RigidBodyTerrainAtlasSnapshot = {
+  /** Live collider-to-page assignments in the saved GPU image. */
   leases: AtlasLease[];
+  /** Immutable host payloads indexed by their saved physical page ID. */
   payloads: ReadonlyMap<number, Float32Array>;
 };
 
@@ -98,14 +131,22 @@ function hashPayload(data: Float32Array): number {
 
 /** Host-side reference counts for immutable GPU pages, grouped by fixed grid dimensions. */
 export class RigidBodyTerrainAtlas {
+  /** Fixed grid ranges keyed by dimensions. */
   private readonly pools = new Map<string, AtlasPool>();
+  /** Grid range compatible with each reserved collider. */
   private readonly slotPools = new Map<number, AtlasPool>();
+  /** Committed collider bindings. Vacant colliders have no lease. */
   private readonly leases = new Map<number, AtlasPage>();
+  /** Referenced pages addressed by global physical ID. */
   private readonly livePages = new Map<number, AtlasPage>();
+  /** Total GPU allocation in 32-bit words. */
   readonly wordLength: number;
+  /** Number of available physical page IDs across the pools. */
   private readonly capacity: number;
+  /** Equivalent private-slot GPU payload bytes for the reserved colliders. */
   private readonly privateSlotBytes: number;
 
+  /** Lay out fixed grid ranges and validate that each reserved collider has a compatible pool. */
   constructor(
     pools: readonly GPUPhysicsTerrainAtlasPool[],
     slots: readonly {collider: number; width: number; height: number}[]
@@ -147,7 +188,9 @@ export class RigidBodyTerrainAtlas {
 
   /** Plan and validate the full batch before changing leases or allocating page IDs. */
   bind(edits: readonly AtlasEdit[]): {
+    /** Atlas-relative addresses in 32-bit words for the edited colliders that have data. */
     wordsByCollider: ReadonlyMap<number, number>;
+    /** Newly installed payloads and their atlas-relative offsets in 32-bit words. */
     uploads: readonly {word: number; data: Float32Array}[];
   } {
     const deltas = new Map<AtlasPage, number>();
@@ -155,6 +198,7 @@ export class RigidBodyTerrainAtlas {
     const bindings = new Map<number, AtlasPage | DraftPage>();
     const edited = new Set<number>();
     const hashes = new Map<Float32Array, number>();
+    /** Stage reference changes without writing to the live page table. */
     const addDelta = (page: AtlasPage, delta: number) =>
       deltas.set(page, (deltas.get(page) ?? 0) + delta);
 
@@ -315,10 +359,12 @@ export class RigidBodyTerrainAtlas {
     };
   }
 
+  /** Translate a physical page ID to its atlas-relative address in 32-bit words. */
   private getPageWord(pool: AtlasPool, index: number): number {
     return pool.firstWord + (index - pool.firstPage) * pool.words;
   }
 
+  /** Mark a live page occupied and index it for matching future payloads. */
   private install(page: AtlasPage): void {
     let matches = page.pool.byHash.get(page.hash);
     if (!matches) {

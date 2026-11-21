@@ -9,7 +9,9 @@ import {
   packRigidBodyHeightField
 } from '../../src/gpu-physics/rigid-body-height-field';
 
+/** A small square grid used for sharing and capacity checks. */
 const grid = {width: 3, height: 3};
+/** An asymmetric grid in its own pool. */
 const otherGrid = {width: 17, height: 5};
 
 /** Deterministic fixed-size binary data as consumed by the GPU. */
