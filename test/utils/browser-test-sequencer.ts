@@ -10,7 +10,7 @@ const DEFAULT_BROWSER_TEST_WEIGHT = 3;
 // Linux seconds refreshed from PR run 44000588776 (2026-11-17),
 // plus one second per file for page/import overhead. Material cases retain their
 // individual timings after splitting the former 20-minute monolithic suite.
-// Preserve previous Linux weights for files without a completed current measurement.
+// Slow general suites refreshed from runs 44909280110 and 44911922451 on November 21.
 export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/anari/test/anari-diffuse.spec.ts': 29,
   'modules/anari/test/anari-emitter-sampling.spec.ts': 37,
@@ -21,19 +21,21 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/anari/test/anari-sampling.spec.ts': 32,
   'modules/anari/test/anari-shapes.spec.ts': 25,
   'modules/anari/test/chart-labels.spec.ts': 31,
-  'modules/anari/test/engine/ray-alpha-pixels.spec.ts': 108,
-  'modules/anari/test/engine/ray-irradiance.spec.ts': 58,
+  'modules/anari/test/engine/ray-alpha-pixels.spec.ts': 125,
+  'modules/anari/test/engine/ray-irradiance.spec.ts': 67,
   'modules/anari/test/engine/ray-material-anisotropy-bounce.spec.ts': 25,
   'modules/anari/test/engine/ray-material-anisotropy.spec.ts': 96,
   'modules/anari/test/engine/ray-material-dielectrics.spec.ts': 100,
   'modules/anari/test/engine/ray-material-diffuse-transmission.spec.ts': 106,
-  'modules/anari/test/engine/ray-material-iridescence.spec.ts': 100,
+  'modules/anari/test/engine/ray-material-iridescence.spec.ts': 88,
   'modules/anari/test/engine/ray-material-maps.spec.ts': 218,
   'modules/anari/test/engine/ray-material-normals.spec.ts': 234,
   'modules/anari/test/engine/ray-material-occlusion.spec.ts': 63,
   'modules/anari/test/engine/ray-material-sheen-bounce.spec.ts': 25,
-  'modules/anari/test/engine/ray-material-smoke.spec.ts': 89,
+  'modules/anari/test/engine/ray-material-smoke.spec.ts': 77,
   'modules/anari/test/engine/ray-material-sheen.spec.ts': 56,
+  'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts': 29,
+  'modules/anari/test/engine/ray-secondary-texture-filtering.spec.ts': 38,
   'modules/anari/test/engine/ray-tracing-image-export.spec.ts': 29,
   'modules/anari/test/engine/scene-renderer-lighting-parity.spec.ts': 29,
   'modules/anari/test/engine/scenegraph-transforms.spec.ts': 11,
@@ -133,7 +135,7 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/graph/test/gpu-vector-search/gpu-ivf-flat-index.spec.ts': 5,
   'modules/graph/test/gpu-vector-search/gpu-vector-search.spec.ts': 6,
   'modules/shaders/test/modules/geospatial/dggs.spec.ts': 5,
-  'modules/three/test/animated-renderer.spec.ts': 33,
+  'modules/three/test/animated-renderer.spec.ts': 25,
   'modules/three/test/deck-lantern-renderer.spec.ts': 11,
   'modules/three/test/deck-picking-renderer.spec.ts': 5,
   'modules/three/test/geographic-renderer.spec.ts': 12,
