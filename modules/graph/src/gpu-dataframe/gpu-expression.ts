@@ -15,7 +15,30 @@ export type GPUExpressionNumericValue = number | readonly number[] | null;
 export type GPUExpressionValue = number | boolean | null;
 
 /** Closed unary operations that can be lowered safely into generated WGSL. */
-export type GPUExpressionUnaryOperator = 'not' | 'is-valid' | 'is-null' | 'negate';
+export type GPUExpressionUnaryOperator =
+  | 'not'
+  | 'is-valid'
+  | 'is-null'
+  | 'negate'
+  | GPUScalarFunction;
+
+const scalarFunctions = ['abs', 'floor', 'ceiling', 'round', 'trunc'] as const;
+
+/** Numeric functions supported by GPU DataFrame expressions. */
+export type GPUScalarFunction = (typeof scalarFunctions)[number];
+
+/** Tests a canonical, lowercase scalar function name. @internal */
+export function isGPUScalarFunction(name: unknown): name is GPUScalarFunction {
+  return scalarFunctions.some(functionName => functionName === name);
+}
+
+/** Applies a supported numeric function while preserving the operand's format and nulls. */
+export function scalarFunction<Columns extends string>(
+  name: GPUScalarFunction,
+  expression: GPUExpression<number | null, Columns>
+): GPUExpression<number | null, Columns> {
+  return makeUnaryExpression(name, expression);
+}
 
 /** Closed binary operations that can be lowered safely into generated WGSL. */
 export type GPUExpressionBinaryOperator =

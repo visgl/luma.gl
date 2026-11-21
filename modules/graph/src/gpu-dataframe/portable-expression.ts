@@ -7,6 +7,7 @@ import {validateExpressionAST, type Expression} from '@math.gl/sql/expressions';
 import {
   GPUExpression,
   isBooleanExpressionNode,
+  isGPUScalarFunction,
   makeGPUCastNode,
   type GPUExpressionNode,
   type GPUExpressionBinaryOperator,
@@ -108,6 +109,13 @@ export function lowerPortableExpression(
       };
     case 'CallExpression': {
       const name = node.callee.name;
+      const functionName = node.sqlFunction === true ? name.toLowerCase() : name;
+      if (isGPUScalarFunction(functionName)) {
+        if (node.arguments.length !== 1) {
+          throw new Error(`GPU DataFrame ${name} requires one argument`);
+        }
+        return {kind: 'unary', operator: functionName, operand: convert(node.arguments[0])};
+      }
       if ((name === 'isNull' || name === 'isNotNull') && node.arguments.length === 1) {
         return {
           kind: 'unary',

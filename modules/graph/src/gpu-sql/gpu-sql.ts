@@ -11,6 +11,7 @@ import {GPUDataFrameQuery} from '../gpu-dataframe/gpu-data-frame-query';
 import {
   GPUExpression,
   column,
+  isGPUScalarFunction,
   parameter,
   type GPUExpressionNode
 } from '../gpu-dataframe/gpu-expression';
@@ -447,7 +448,14 @@ function lowerSQLExpression(
       }
       if (leaf.type === 'CallExpression' && leaf.callee.type === 'Identifier') {
         const name = leaf.callee['name'];
-        if (name !== 'isNull' && name !== 'isNotNull' && name !== 'in') {
+        const functionName =
+          typeof name === 'string' && leaf['sqlFunction'] === true ? name.toLowerCase() : name;
+        if (
+          name !== 'isNull' &&
+          name !== 'isNotNull' &&
+          name !== 'in' &&
+          !isGPUScalarFunction(functionName)
+        ) {
           throw new Error(`GPUSQL does not support SQL expression "${name}"`);
         }
       }
