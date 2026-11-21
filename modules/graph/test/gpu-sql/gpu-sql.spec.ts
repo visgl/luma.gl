@@ -379,12 +379,12 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
   const context = new GPUSQLContext({trips: frame});
   const aggregate = context
     .query(
-      'SELECT COUNT(*) AS rows, COUNT(fare) AS known, SUM(fare) AS total, AVG(fare) AS average FROM trips WHERE fare >= 8 OR fare IS NULL'
+      'SELECT COUNT(*) AS rows, COUNT(NULLIF(fare, 8)) AS known, SUM(fare * 2) AS total, AVG(fare) AS average FROM trips WHERE fare >= 8 OR fare IS NULL'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-aggregate'}));
   const grouped = context
     .query(
-      'SELECT category, COUNT(*) AS count, COUNT(fare) AS known, SUM(fare) AS total FROM trips GROUP BY 1'
+      'SELECT category, COUNT(*) AS count, COUNT(NULLIF(fare, 8)) AS known, SUM(fare + 1) AS total FROM trips GROUP BY 1'
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-grouped'}));
 
@@ -402,8 +402,8 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
       dictionaries: aggregate.dictionaries
     });
     expect(Array.from(aggregateArrow.getChild('rows') ?? [])).toEqual([4]);
-    expect(Array.from(aggregateArrow.getChild('known') ?? [])).toEqual([3]);
-    expect(Array.from(aggregateArrow.getChild('total') ?? []), '').toEqual([29]);
+    expect(Array.from(aggregateArrow.getChild('known') ?? [])).toEqual([2]);
+    expect(Array.from(aggregateArrow.getChild('total') ?? []), '').toEqual([58]);
     expect(
       Boolean(Math.abs(Number(aggregateArrow.getChild('average')?.get(0)) - 29 / 3) < 0.001),
       ''
@@ -416,8 +416,8 @@ it('GPUSQL lowers global and dictionary GROUP BY aggregates into GPU tables and 
     });
     expect(Array.from(groupedArrow.getChild('category') ?? []), '').toEqual(['economy', 'premium']);
     expect(Array.from(groupedArrow.getChild('count') ?? [])).toEqual([3, 2]);
-    expect(Array.from(groupedArrow.getChild('known') ?? [])).toEqual([2, 2]);
-    expect(Array.from(groupedArrow.getChild('total') ?? []), '').toEqual([14, 18]);
+    expect(Array.from(groupedArrow.getChild('known') ?? [])).toEqual([2, 1]);
+    expect(Array.from(groupedArrow.getChild('total') ?? []), '').toEqual([16, 20]);
   } finally {
     aggregate.destroy();
     grouped.destroy();
