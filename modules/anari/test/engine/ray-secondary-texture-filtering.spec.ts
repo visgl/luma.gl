@@ -11,7 +11,7 @@ it('selects a coarser mip for emission seen through a dielectric bounce', async 
   if (!webgpuAdapter.isSupported()) return;
   const {options, surface, geometry, mipMap, readPixel, destroy} = await createMaterialFixture();
   try {
-    const receiver = {
+    const receiver: (typeof options.surfaces)[number] = {
       ...surface,
       id: 'emissive-target',
       geometry: new Geometry({
@@ -42,8 +42,22 @@ it('selects a coarser mip for emission seen through a dielectric bounce', async 
     const filtered = await readPixel();
     expect(filtered[2]).toBeGreaterThan(100);
     expect(filtered.slice(0, 2)).toEqual([0, 0]);
+    const targetGeometry = receiver.geometry;
     receiver.geometry = geometry;
     expect(await readPixel()).toEqual([filtered[2], 0, 0]);
+
+    mipMap.writeData(new Uint8Array(32 * 32 * 4), {width: 32, height: 32});
+    receiver.material = {
+      ...receiver.material,
+      id: 'masked-mip-emitter',
+      alphaMode: 'MASK',
+      bindings: {pbr_emissiveSampler: mipMap, pbr_baseColorSampler: mipMap}
+    };
+    receiver.geometry = targetGeometry;
+    options.background = [0, 0, 0, 1];
+    expect(await readPixel()).toEqual([0, 0, 0]);
+    options.filteredCutouts = true;
+    expect(await readPixel()).toEqual(filtered);
   } finally {
     destroy();
   }

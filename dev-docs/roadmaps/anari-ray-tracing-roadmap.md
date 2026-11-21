@@ -134,4 +134,6 @@ analytic irradiance reference.
 The visibility tranche adds opt-in camera-footprint filtering for mipmapped triangle
 cutouts, shared by primary color and queries. A separate PBR option approximates
 tinted straight-line shadows through thin diffuse-transmission layers for analytic
-lights. Secondary cutout filtering and refractive shadow transport remain open.
+lights. Delta dielectric paths carry the footprint through to triangle cutouts.
+Filtering non-delta cutouts requires visibility to agree between continuation and
+explicit light sampling. Refractive shadow transport remains open.

@@ -509,7 +509,7 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   progressive?: boolean;
   /** Traces direct-light shadow rays when enabled. */
   shadows?: boolean;
-  /** Filters triangle alpha masks for camera rays and primary-hit queries. */
+  /** Filters triangle alpha masks for camera rays, primary-hit queries, and delta dielectric paths. */
   filteredCutouts?: boolean;
   /** Approximates thin-material transmission in analytic-light shadows in PBR mode. */
   transmissiveShadows?: boolean;
