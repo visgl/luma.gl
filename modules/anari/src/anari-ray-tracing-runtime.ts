@@ -7,7 +7,12 @@ import {RayTracingSceneRenderer, type RayTracingScenePrimitive} from './renderer
 import type {ANARIFrame} from './anari-objects';
 import type {ANARIRendererRuntime} from './anari-renderer-runtime';
 import {ANARISceneAdapter} from './anari-scene-adapter';
-import type {ANARIFrameStatistics, ANARIPickResult, ANARIFrameChannels} from './anari-types';
+import type {
+  ANARIFrameStatistics,
+  ANARIPickResult,
+  ANARIFrameChannels,
+  ANARIFrameRadiance
+} from './anari-types';
 
 /** Adapts retained ANARI objects into the reusable shared ray-tracing scene renderer. */
 export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
@@ -96,6 +101,10 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
         };
       })
     };
+  }
+
+  readRadiance(frame: ANARIFrame): Promise<ANARIFrameRadiance | null> {
+    return this.renderer.readRadiance(frame.id);
   }
 
   destroyFrame(frame: ANARIFrame): void {

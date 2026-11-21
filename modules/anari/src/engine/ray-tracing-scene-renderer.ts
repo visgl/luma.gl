@@ -12,7 +12,7 @@ import {
 import {ScenegraphSurfaces} from './scenegraph-surfaces';
 import {makeEmitterDistribution, type EmitterAreaCache} from './ray-tracing-emitter-distribution';
 import {getEnvironmentMapDistribution, RAY_LIGHT_FLOAT_COUNT} from './ray-tracing-environment-map';
-import type {ANARIRayTracingEnvironmentMap} from '../anari-types';
+import type {ANARIFrameRadiance, ANARIRayTracingEnvironmentMap} from '../anari-types';
 import type {RayTracingDebugView} from './ray-tracing-scene-capabilities';
 import {
   assert,
@@ -1370,6 +1370,32 @@ export class RayTracingSceneRenderer {
    * Submit render() first. This submits only its own commands and performs no CPU readback.
    * Snapshots remain valid across subsequent renders and frame destruction.
    */
+  /** Reads the latest submitted internal color history without tone mapping or denoising. */
+  async readRadiance(frameIdentifier: string): Promise<ANARIFrameRadiance | null> {
+    const resources = this.frames.get(frameIdentifier);
+    if (!resources) return null;
+    const texture = resources.colorHistory.previousTexture;
+    const {width, height} = texture;
+    const layout = texture.computeMemoryLayout({width, height});
+    const buffer = this.device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    try {
+      texture.readBuffer({width, height}, buffer);
+      const bytes = await buffer.readAsync();
+      const rowBytes = width * 8;
+      const data = new Uint8Array(rowBytes * height);
+      for (let row = 0; row < height; row++) {
+        const offset = row * layout.bytesPerRow;
+        data.set(bytes.subarray(offset, offset + rowBytes), row * rowBytes);
+      }
+      return {width, height, data};
+    } finally {
+      buffer.destroy();
+    }
+  }
+
   captureChannels(frameIdentifier: string): RayTracingSceneChannels | null {
     const resources = this.frames.get(frameIdentifier);
     if (!resources) return null;
@@ -1998,7 +2024,7 @@ export class RayTracingSceneRenderer {
       width,
       height,
       format: 'rgba16float',
-      usage: Texture.SAMPLE | Texture.STORAGE
+      usage: Texture.SAMPLE | Texture.STORAGE | (suffix === 'history' ? Texture.COPY_SRC : 0)
     });
   }
 

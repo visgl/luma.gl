@@ -136,6 +136,7 @@ export async function createMaterialFixture() {
     map,
     readPixel: () => readMeanColor(1),
     readMeanColor,
+    readRadiance: () => renderer.readRadiance(options.id),
     destroy,
     get mipMap(): Texture {
       mipMap ??= createMipMap(device);
