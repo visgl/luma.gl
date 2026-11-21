@@ -5,7 +5,7 @@
 /** Bounded rigid-body reference path. Pair discovery is parallel; impulses are ordered on GPU. */
 import {getEnsembleShader} from './rigid-body-ensemble-shaders';
 import {
-  RIGID_BODY_BOUNDS_SHADER,
+  getRigidBodyBoundsShader,
   RIGID_BODY_BOUND_PUBLICATION_SHADER
 } from './rigid-body-bounds-shaders';
 import {getRigidBodyParallelShader} from './rigid-body-parallel-shaders';
@@ -30,7 +30,8 @@ export function getRigidBodyShader(
   compactContacts = true,
   collisionPartitionSize?: number,
   ensembleBodiesPerInstance?: number,
-  blockContacts = false
+  blockContacts = false,
+  heightFields = false
 ): string {
   return /* wgsl */ `
 const COMPACT_CONTACTS:bool=${compactContacts};
@@ -210,11 +211,11 @@ fn contactFeature(collider:u32,point:vec3f,normal:vec3f)->u32 {
   let score=separation+(1.0-alignment)*settings.solver.w;
   if(score<nearest){nearest=score;feature=triangle;}
  }
- return u32(readGeometry(u32(bodies.colliders[collider].padding.z)+feature).w)/8u;
+ return meshTriangleData(collider,feature)/8u;
 }
 fn cookedContactFeature(collider:u32,triangle:i32,fallback:u32)->u32 {
  if(triangle<0){return fallback;}
- return u32(readGeometry(u32(bodies.colliders[collider].padding.z)+u32(triangle)).w)/8u;
+ return meshTriangleData(collider,u32(triangle))/8u;
 }
 fn storeFeatureContact(pair: u32, slot: u32, point: vec3f, normal: vec3f, depth: f32, previous: Manifold, firstCollider: u32, secondCollider: u32, firstTriangle:i32, secondTriangle:i32) {
  let first=colliderBody(firstCollider);let second=colliderBody(secondCollider);
@@ -285,7 +286,7 @@ fn clipBoxContact(reference:u32,incident:u32,faceAxis:u32,referenceNormal:vec3f,
 fn storeContact(pair:u32,slot:u32,point:vec3f,normal:vec3f,depth:f32,previous:Manifold,first:u32,second:u32){
  storeFeatureContact(pair,slot,point,normal,depth,previous,first,second,-1,-1);
 }
-${RIGID_BODY_BOUNDS_SHADER}
+${getRigidBodyBoundsShader(heightFields)}
 ${sparse ? RIGID_BODY_BOUND_PUBLICATION_SHADER : ''}
 ${
   extended

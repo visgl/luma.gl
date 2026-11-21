@@ -26,6 +26,11 @@ export {
   makeStaticTriangleMeshGeometry,
   type RigidBodyMeshGeometry
 } from './rigid-body-mesh';
+export {
+  makeRigidBodyHeightField,
+  type GPURigidBodyHeightField,
+  type GPURigidBodyHeightFieldSource
+} from './rigid-body-height-field';
 export {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 export {
   getSphereClothReference,

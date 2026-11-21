@@ -63,15 +63,17 @@ fn closestSurface(collider:u32,point:vec3f)->SurfacePoint{
   loop{
    if(node>=nodeCount){break;}if(work>=MESH_TRAVERSAL_BUDGET){complete=0u;break;}work++;
    let lower=readGeometry(nodeOffset+node*3u);let upper=readGeometry(nodeOffset+node*3u+1u);
-   if(distance(point,clamp(point,lower.xyz,upper.xyz))>best){node=u32(lower.w);continue;}
+   if(any(lower.xyz>upper.xyz)||distance(point,clamp(point,lower.xyz,upper.xyz))>best){node=u32(lower.w);continue;}
    if(upper.w>0.0){let start=u32(readGeometry(nodeOffset+node*3u+2u).x);
     for(var offset=0u;offset<u32(upper.w);offset++){
      if(work>=MESH_TRAVERSAL_BUDGET){complete=0u;break;}work++;
+     if(!meshTriangleActive(collider,start+offset)){continue;}
      let candidate=closestTriangle(point,triangleVertex(collider,start+offset,0u),triangleVertex(collider,start+offset,1u),triangleVertex(collider,start+offset,2u));
      let separation=distance(point,candidate);if(separation<best){best=separation;nearest=candidate;}
     }
    }if(complete==0u){break;}node++;
   }
+  if(best==3.402823e38){return SurfacePoint(point,best,complete);}
  }
  return SurfacePoint(nearest,select(distance(point,nearest),0.0,inside),complete);
 }
@@ -205,10 +207,11 @@ fn sweepMesh(collider:u32,origin:vec3f,direction:vec3f,maximumDistance:f32,radiu
  loop{
   if(node>=nodeCount){break;}if(work>=MESH_TRAVERSAL_BUDGET){result.complete=0u;return result;}work++;
   let lower=readGeometry(nodeOffset+node*3u);let upper=readGeometry(nodeOffset+node*3u+1u);
-  if(!intersectsSweepBounds(origin,direction,nearest,lower.xyz-vec3f(radius),upper.xyz+vec3f(radius))){node=u32(lower.w);continue;}
+  if(any(lower.xyz>upper.xyz)||!intersectsSweepBounds(origin,direction,nearest,lower.xyz-vec3f(radius),upper.xyz+vec3f(radius))){node=u32(lower.w);continue;}
   if(upper.w>0.0){let start=u32(readGeometry(nodeOffset+node*3u+2u).x);
    for(var offset=0u;offset<u32(upper.w);offset++){
     if(work>=MESH_TRAVERSAL_BUDGET){result.complete=0u;return result;}work++;
+    if(!meshTriangleActive(collider,start+offset)){continue;}
     let candidate=sweepTriangle(origin,direction,nearest,radius,triangleVertex(collider,start+offset,0u),triangleVertex(collider,start+offset,1u),triangleVertex(collider,start+offset,2u),skipSeparating);
     if(candidate.hit!=0u){nearest=candidate.distance;result=candidate;}
    }
