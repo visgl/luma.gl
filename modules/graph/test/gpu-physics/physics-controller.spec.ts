@@ -305,3 +305,65 @@ it('attaches wheels by scene path and publishes suspension on the chassis frame'
     await physics.destroy();
   }
 });
+
+it('controls scenegraph vehicles by chassis and preserves the survivor when fleet indices change', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip();
+  const left = new ScenegraphNode({id: 'left', position: [-4, 0, -0.5]});
+  const right = new ScenegraphNode({id: 'right', position: [4, 0, -0.5]});
+  const first = new ScenegraphNode({id: 'first', position: [-2, -2, 0.8]});
+  const second = new ScenegraphNode({id: 'second', position: [2, 2, 0.8]});
+  const scene = new GroupNode([
+    new GroupNode({id: 'terrain', children: [left, right]}),
+    new GroupNode({id: 'fleet', children: [first, second]})
+  ]);
+  const physics = new PhysicsController(device, {scene, gravity: [0, 0, -10]});
+  for (const terrain of [left, right])
+    physics.addBody(terrain, {motion: 'static', collider: {type: 'box', halfExtents: [4, 8, 0.5]}});
+  for (const chassis of [first, second])
+    physics.addBody(chassis, {mass: 400, collider: {type: 'box', halfExtents: [1.3, 0.6, 0.16]}});
+  const tuning = {
+    wheels: [1, -1].flatMap(longitudinal =>
+      [0.8, -0.8].map(lateral => ({
+        mount: [longitudinal, lateral, 0] as const,
+        drive: true,
+        steer: longitudinal > 0
+      }))
+    ),
+    radius: 0.4,
+    travel: 0.5,
+    springRate: 10000,
+    damping: 1500,
+    grip: 1,
+    motorTorque: 200,
+    brakeTorque: 500,
+    wheelInertia: 1
+  };
+  physics.addVehicle('fleet/first', ['terrain/left', 'terrain/right'], tuning);
+  physics.addVehicle(second, [left, right], tuning);
+  expect(() => physics.addVehicle(second, [right], tuning)).toThrow('duplicate');
+  try {
+    await physics.prepare();
+    physics.setVehicleControls(1, 0.18, 0, 'fleet/first');
+    physics.setVehicleControls(-1, -0.18, 0, second);
+    for (let frame = 0; frame < 20; frame++) physics.update(1 / 60);
+    const firstWheels = await physics.readVehicleWheels(first);
+    const secondWheels = await physics.readVehicleWheels('fleet/second');
+    expect(firstWheels[0].speed).toBeGreaterThan(0);
+    expect(secondWheels[0].speed).toBeLessThan(0);
+    expect(physics.getVehicleWheelPoses(second)?.byteOffset).toBeGreaterThan(
+      physics.vehicleWheelPoses!.byteOffset
+    );
+
+    expect(physics.removeVehicle(first)).toBe(true);
+    await physics.prepare();
+    expect(await physics.readVehicleWheels(second)).toEqual(secondWheels);
+    expect(physics.getVehicleWheelPoses('fleet/second')).toEqual(physics.vehicleWheelPoses);
+    expect(() => physics.getVehicleWheelPoses(first)).toThrow('not attached');
+    expect(physics.removeBody(right)).toBe(true);
+    await physics.prepare();
+    expect(physics.vehicleWheelPoses).toBeNull();
+  } finally {
+    await physics.destroy();
+  }
+});

@@ -76,7 +76,12 @@ import {
 import {addRigidBodyPosePublication, type GPURigidBodyBounds} from './rigid-body-publication';
 import {getRigidBodyShader} from './rigid-body-shaders';
 
-import {VEHICLE_SHADER, VEHICLE_STRIDE, type GPURigidBodyVehicle} from './rigid-body-vehicle';
+import {
+  getVehicleShader,
+  VEHICLE_STRIDE,
+  VEHICLE_TERRAIN_ROW_SIZE,
+  type GPURigidBodyVehicle
+} from './rigid-body-vehicle';
 
 type Vector3 = readonly [number, number, number];
 import {
@@ -236,6 +241,8 @@ export class GPURigidBodyWorld {
   private queryReduction: BoundKernel | null = null;
   /** Chassis definitions in GPU storage order. */
   private readonly vehicles: readonly GPURigidBodyVehicle[];
+  /** Whether any chassis has more than one terrain candidate. */
+  private readonly multiSurfaceVehicles: boolean;
   private vehicleBuffer: Buffer | null = null;
   private querySettings: Buffer | null = null;
   private querySelection: Buffer | null = null;
@@ -518,18 +525,27 @@ export class GPURigidBodyWorld {
     this.colliders = definitions.colliders;
     if (this.props.vehicle && this.props.vehicles) throw new Error('Choose vehicle or vehicles');
     this.vehicles = this.props.vehicles ?? (this.props.vehicle ? [this.props.vehicle] : []);
+    this.multiSurfaceVehicles = this.vehicles.some(
+      vehicle => vehicle.additionalTerrainColliders?.length
+    );
     const vehicleChassis = new Set<number>();
     for (const vehicle of this.vehicles) {
-      const terrain = this.colliders[vehicle.terrainCollider];
+      const terrainIndices = [
+        vehicle.terrainCollider,
+        ...(vehicle.additionalTerrainColliders ?? [])
+      ];
       const chassis = this.props.bodies[vehicle.chassis];
-      const ground = terrain && this.props.bodies[terrain.body];
       if (
         !chassis ||
         vehicleChassis.has(vehicle.chassis) ||
-        !ground ||
-        vehicle.chassis === terrain.body ||
+        terrainIndices.length > 4 ||
+        new Set(terrainIndices).size !== terrainIndices.length ||
+        terrainIndices.some(colliderIndex => {
+          const collider = this.colliders[colliderIndex];
+          const ground = collider && this.props.bodies[collider.body];
+          return !ground || collider.isTrigger || this.getBodyMode(collider.body) !== 'static';
+        }) ||
         (chassis.mode ?? (chassis.mass === 0 ? 'static' : 'dynamic')) !== 'dynamic' ||
-        (ground.mode ?? (ground.mass === 0 ? 'static' : 'dynamic')) !== 'static' ||
         vehicle.wheels.length !== 4 ||
         this.props.failurePolicy === 'rollback' ||
         this.props.ensembleBodiesPerInstance ||
@@ -595,6 +611,13 @@ export class GPURigidBodyWorld {
         byteLength: VEHICLE_STRIDE * this.vehicles.length,
         uniform: false
       });
+    if (this.multiSurfaceVehicles) {
+      storage.buffers.push({
+        name: 'vehicle-terrain',
+        byteLength: this.vehicles.length * VEHICLE_TERRAIN_ROW_SIZE,
+        uniform: false
+      });
+    }
     if (this.props.continuous?.mode === 'convex') {
       storage.buffers = storage.buffers.filter(buffer => buffer.name !== 'continuous-previous');
       storage.buffers.push({name: 'continuous-dispatch', byteLength: 16, uniform: false});
@@ -1371,9 +1394,33 @@ export class GPURigidBodyWorld {
           )
         }
       ];
+      if (this.multiSurfaceVehicles) {
+        const terrainRows = new Uint32Array(this.vehicles.length * (VEHICLE_TERRAIN_ROW_SIZE / 4));
+        terrainRows.fill(0xffffffff);
+        for (const [vehicleIndex, vehicle] of this.vehicles.entries())
+          terrainRows.set(
+            vehicle.additionalTerrainColliders ?? [],
+            vehicleIndex * (VEHICLE_TERRAIN_ROW_SIZE / 4)
+          );
+        const terrainBuffer = allocate('vehicle-terrain', terrainRows);
+        vehicleBindings.push({
+          name: 'vehicleTerrain',
+          location: 13,
+          buffer: terrainBuffer,
+          resource: graph.importBuffer(
+            {
+              id: this.id + '-vehicle-terrain',
+              byteLength: terrainRows.byteLength,
+              usage: Buffer.STORAGE
+            },
+            terrainBuffer
+          )
+        });
+      }
       const properties: BoundKernelProps = {
         id: this.id + '-suspension',
-        source: source + RIGID_BODY_QUERY_GEOMETRY_SHADER + VEHICLE_SHADER,
+        source:
+          source + RIGID_BODY_QUERY_GEOMETRY_SHADER + getVehicleShader(this.multiSurfaceVehicles),
         entryPoint: 'advanceVehicle',
         shaderLayout: {
           bindings: vehicleBindings.map(
@@ -1384,7 +1431,10 @@ export class GPURigidBodyWorld {
                     name,
                     location,
                     group: 0,
-                    type: name === 'bodies' ? 'read-only-storage' : 'storage'
+                    type:
+                      name === 'bodies' || name === 'vehicleTerrain'
+                        ? 'read-only-storage'
+                        : 'storage'
                   }
           )
         }
@@ -1414,7 +1464,7 @@ export class GPURigidBodyWorld {
           usage:
             binding.name === 'settings'
               ? 'uniform'
-              : binding.name === 'bodies'
+              : binding.name === 'bodies' || binding.name === 'vehicleTerrain'
                 ? 'storage-read'
                 : 'storage-read-write'
         })),

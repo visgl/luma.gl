@@ -6,8 +6,10 @@
 export type GPURigidBodyVehicle = {
   /** Index of the dynamic chassis body. */
   chassis: number;
-  /** Index of the static collider sampled by all wheels. */
+  /** Primary static collider sampled by all wheels. Wins equal-distance ties. */
   terrainCollider: number;
+  /** Up to three more static colliders to sweep, in tie-break order after the primary collider. */
+  additionalTerrainColliders?: readonly number[];
   /** Four independently suspended wheels, in rendering and telemetry order. */
   wheels: readonly {
     /** At full compression the wheel center is here, in chassis node coordinates (meters). */
@@ -44,17 +46,22 @@ export type GPURigidBodyVehicle = {
 /** Packed storage per chassis, including four wheel poses. */
 export const VEHICLE_STRIDE = 512;
 
+/** Byte size of one aligned row of optional terrain collider indices. */
+export const VEHICLE_TERRAIN_ROW_SIZE = 16;
+
 /** One workgroup owns one chassis. All wheels sample the same pre-step velocity. */
-export const VEHICLE_SHADER = /* wgsl */ `
+export function getVehicleShader(multiSurface: boolean): string {
+  return /* wgsl */ `
 struct Wheel { mount:vec4f, flags:vec4f, state:vec4f }
 struct Vehicle { controls:vec4f, geometry:vec4f, tire:vec4f, indices:vec4u, wheels:array<Wheel,4>, poses:array<mat4x4f,4> }
 @group(0) @binding(12) var<storage,read_write> vehicle:array<Vehicle>;
+${multiSurface ? '@group(0) @binding(13) var<storage,read> vehicleTerrain:array<vec4u>;' : ''}
 struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
 @compute @workgroup_size(1) fn advanceVehicle(@builtin(workgroup_id) group:vec3u) {
   let vehicleIndex=group.x;
   let settingsForVehicle=vehicle[vehicleIndex];
   let chassis=settingsForVehicle.indices.x;
-  let terrain=settingsForVehicle.indices.y;
+  let primaryTerrain=settingsForVehicle.indices.y;
   if(!dynamic(chassis)){return;}
   let rotation=orientations[chassis];
   let center=positions[chassis].xyz;
@@ -70,16 +77,23 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
     let wheel=settingsForVehicle.wheels[index];
     maximumSteeringOffset=max(maximumSteeringOffset,abs(wheel.mount.y)*wheel.flags.x);
     let mount=center+rotate(rotation,wheel.mount.xyz-bodyCenter(chassis));
-    let hit=sweepSphere(terrain,colliderLocal(terrain,mount-colliderPosition(terrain)),colliderLocal(terrain,down),travel,radius,false);
     contacts[index].lengthNow=travel;
-    if(hit.hit!=0u && hit.complete!=0u){
-      let normal=rotate(colliderRotation(terrain),hit.normal);
-      let support=dot(normal,-down);
-      if(support>0.15){
-        let lever=colliderPosition(terrain)+rotate(colliderRotation(terrain),hit.point)-center;
-        let velocity=velocities[chassis].xyz+cross(angularVelocities[chassis].xyz,lever);
-        let load=max(0.0,(travel-hit.distance)*settingsForVehicle.geometry.z-settingsForVehicle.geometry.w*dot(velocity,normal)/support);
-        contacts[index]=SuspensionContact(normal,lever,hit.distance,load);
+    var found=false;
+    for(var surfaceIndex=0u;surfaceIndex<${multiSurface ? '4u' : '1u'};surfaceIndex++){
+      var terrain=primaryTerrain;
+      ${multiSurface ? 'if(surfaceIndex>0u){terrain=vehicleTerrain[vehicleIndex][surfaceIndex-1u];if(terrain==0xffffffffu){break;}}' : ''}
+      if(bodies.bodies[colliderBody(terrain)].motion.x!=0.0){continue;}
+      let hit=sweepSphere(terrain,colliderLocal(terrain,mount-colliderPosition(terrain)),colliderLocal(terrain,down),travel,radius,false);
+      if(hit.hit!=0u && hit.complete!=0u){
+        let normal=rotate(colliderRotation(terrain),hit.normal);
+        let support=dot(normal,-down);
+        if(support>0.15 && (!found || hit.distance<contacts[index].lengthNow)){
+          let lever=colliderPosition(terrain)+rotate(colliderRotation(terrain),hit.point)-center;
+          let velocity=velocities[chassis].xyz+cross(angularVelocities[chassis].xyz,lever);
+          let load=max(0.0,(travel-hit.distance)*settingsForVehicle.geometry.z-settingsForVehicle.geometry.w*dot(velocity,normal)/support);
+          contacts[index]=SuspensionContact(normal,lever,hit.distance,load);
+          found=true;
+        }
       }
     }
   }
@@ -142,3 +156,4 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
   sleepStates[chassis]=vec4f(0);
 }
 `;
+}

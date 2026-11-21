@@ -321,3 +321,77 @@ it('keeps a passive four-wheel trailer coupled to a powered chassis through a tu
     world.destroy();
   }
 });
+
+it('keeps wheel support across terrain colliders and replays the crossing from a GPU checkpoint', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const tiles = [-8, 8].map(horizontal => ({
+    mass: 0,
+    position: [horizontal, 0, -0.5] as const,
+    shape: {type: 'box' as const, halfExtents: [8, 8, 0.5] as const}
+  }));
+  const props = {
+    timeStep: 1 / 120,
+    gravity: [0, 0, -10] as const,
+    bodies: [
+      ...tiles,
+      {
+        mass: 400,
+        position: [-2, 0, 0.8] as const,
+        shape: {type: 'box' as const, halfExtents: [1.3, 0.6, 0.16] as const}
+      }
+    ]
+  };
+  const vehicle = {...FLEET_SUSPENSION, chassis: 2, additionalTerrainColliders: [1]};
+  expect(
+    () =>
+      new GPURigidBodyWorld({
+        ...props,
+        vehicle: {...vehicle, additionalTerrainColliders: [0]}
+      })
+  ).toThrow('Invalid vehicle configuration');
+  expect(
+    () =>
+      new GPURigidBodyWorld({
+        ...props,
+        vehicle: {...vehicle, additionalTerrainColliders: [2]}
+      })
+  ).toThrow('Invalid vehicle configuration');
+  const world = new GPURigidBodyWorld({...props, vehicle});
+  const definition = new GPUCommandGraph(device);
+  world.addToGraph(definition);
+  const graph = await definition.compileAsync();
+  const checkpoint = world.createGPUCheckpoint();
+  /** Drive over the join and sample chassis state, telemetry and borrowed wheel poses. */
+  async function driveAcrossJoin() {
+    world.setVehicleControls(0.6, 0, 0);
+    const encoder = device.createCommandEncoder();
+    for (let step = 0; step < 250; step++) graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    const poses = world.vehicleWheelPoses!;
+    const [states, wheels, matrices] = await Promise.all([
+      world.readState(),
+      world.readVehicleWheels(),
+      poses.buffer.readAsync(poses.byteOffset, poses.byteLength)
+    ]);
+    return {
+      chassis: states[2],
+      wheels,
+      matrices: Array.from(
+        new Uint8Array(matrices.buffer, matrices.byteOffset, matrices.byteLength)
+      )
+    };
+  }
+  try {
+    checkpoint.save();
+    const first = await driveAcrossJoin();
+    expect(first.chassis.position[0]).toBeGreaterThan(1.5);
+    expect(first.wheels.every(wheel => wheel.load > 200)).toBe(true);
+    checkpoint.restore();
+    expect(await driveAcrossJoin()).toEqual(first);
+  } finally {
+    checkpoint.destroy();
+    graph.destroy();
+    world.destroy();
+  }
+});

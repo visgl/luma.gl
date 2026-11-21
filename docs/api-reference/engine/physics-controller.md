@@ -174,11 +174,30 @@ await physics.prepare();
 physics.setVehicleControls(0.6, 0.2, 0); // throttle fraction, steering radians, brake fraction
 ```
 
-A controller attachment uses one chassis and one static terrain collider. Enable Ackermann steering with `steeringWheelbase`, set `antiRollRate` for paired axles, and set `slipGain` to tune longitudinal and lateral tire response. Wheels use sphere sweeps and a load-limited friction model. Rigid chassis collisions continue through the world solver. Vehicle state supports explicit GPU checkpoints. Ensemble scheduling and rollback recovery are outside the supported vehicle configuration.
+A controller attachment uses one dynamic chassis and up to four static terrain colliders. Enable Ackermann steering with `steeringWheelbase`, set `antiRollRate` for paired axles, and set `slipGain` to tune longitudinal and lateral tire response. Wheels use sphere sweeps and a load-limited friction model. Rigid chassis collisions continue through the world solver. Vehicle state supports explicit GPU checkpoints. Ensemble scheduling and rollback recovery are outside the supported vehicle configuration.
+
+For a fleet, call `addVehicle` for each chassis. Each terrain reference resolves to a
+registered static body with one collider. The wheel sweeps choose the nearest
+supporting hit, with terrain order breaking equal-distance ties.
+
+```ts
+physics.addVehicle('fleet/buggy', ['terrain/west', 'terrain/east'], buggyTuning);
+physics.addVehicle('fleet/trailer', ['terrain/west', 'terrain/east'], trailerTuning);
+await physics.prepare();
+physics.setVehicleControls(0.6, 0.2, 0, 'fleet/buggy');
+const trailerPoses = physics.getVehicleWheelPoses('fleet/trailer');
+const trailerWheels = await physics.readVehicleWheels('fleet/trailer');
+```
+
+The controller keeps wheel state by chassis node identity when a state-preserving
+prepare changes fleet indices. Remove a vehicle with `removeVehicle` to retain
+the chassis body without its suspension. Removing a terrain body removes dependent
+attachments. Plain three-argument controls and `vehicleWheelPoses` address the first
+vehicle, and `setVehicle` replaces the fleet with one attachment.
 
 At the world level, pass `vehicles: [towVehicle, trailer]` to address multiple chassis
 in one suspension pass. Each entry must name a different dynamic chassis. They can
-sweep the same static terrain collider or use different ones. The compatibility
+sweep the same static terrain colliders or use different ones. Use `terrainCollider` for the primary surface and `additionalTerrainColliders` for up to three more. The compatibility
 property `vehicle` configures one chassis at index zero.
 
 ```ts
