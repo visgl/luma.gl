@@ -14,6 +14,8 @@ on:
       - 'yarn.lock'
       - 'test/utils/browser-process-shim.mjs'
       - 'modules/graph/test/gpu-physics/physics-test-utils.ts'
+      - 'modules/graph/test/gpu-physics/domino-spiral.spec.ts'
+      - 'examples/experimental/gpu-rigid-body-world/scenes.ts'
       - 'test/utils/browser-test-groups.ts'
       - 'vitest.config.ts'
       - 'modules/graph/test/gpu-physics/rigid-body-stack-*.ts'
@@ -76,7 +78,7 @@ jobs:
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
           const report = readFileSync('test-results/physics-endurance.xml', 'utf8');
-          assert.match(report, /<testsuites\b[^>]*\btests="18"/);
+          assert.match(report, /<testsuites\b[^>]*\btests="20"/);
           assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
           NODE
       - name: Upload endurance results

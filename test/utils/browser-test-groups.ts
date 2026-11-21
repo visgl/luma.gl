@@ -10,6 +10,7 @@ export type BrowserTestGroup =
   | 'render-conformance'
   | (typeof BROWSER_TEST_GROUPS)[number];
 export const PHYSICS_ENDURANCE_TEST_PATTERNS = [
+  'modules/graph/test/gpu-physics/domino-spiral.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-block-contacts-endurance.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-difficult-stacks.spec.ts',
   'modules/graph/test/gpu-physics/rigid-body-mass-ratio-stacks.spec.ts',
@@ -25,10 +26,6 @@ export const RENDER_CONFORMANCE_TEST_PATTERNS = [
   'modules/anari/test/engine/ray-material-diffuse-transmission.spec.ts'
 ];
 export const PHYSICS_TEST_PATTERNS = ['modules/graph/test/gpu-physics/**/*.spec.{ts,js}'];
-export const PHYSICS_QUALIFICATION_TEST_PATTERNS = [
-  ...PHYSICS_ENDURANCE_TEST_PATTERNS,
-  'modules/graph/test/gpu-physics/domino-spiral.spec.ts'
-];
 // Graph explorer exercises document/pointer state and retains full browser isolation.
 export const COMPUTE_TEST_PATTERNS = ['modules/graph/test/**/!(gpu-graph-explorer).spec.{ts,js}'];
 
@@ -42,5 +39,5 @@ export function getBrowserTestGroup(value: string | undefined): BrowserTestGroup
 
 /** Keep application-scale simulation qualification in physics CI, outside npm release gates. */
 export function getReleaseQualificationExcludes(group: BrowserTestGroup): string[] {
-  return group === 'release' ? PHYSICS_QUALIFICATION_TEST_PATTERNS : [];
+  return group === 'release' ? PHYSICS_ENDURANCE_TEST_PATTERNS : [];
 }
