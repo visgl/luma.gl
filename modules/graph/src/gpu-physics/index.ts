@@ -31,6 +31,21 @@ export {
   type GPURigidBodyHeightField,
   type GPURigidBodyHeightFieldSource
 } from './rigid-body-height-field';
+export {
+  stitchRigidBodyTerrainTiles,
+  type GPURigidBodyTerrainEdge,
+  type GPURigidBodyTerrainSeam,
+  type GPURigidBodyTerrainTile
+} from './rigid-body-terrain-stitch';
+export {
+  GPURigidBodyTerrainStream,
+  makeRigidBodyTerrainFetchProvider,
+  type GPURigidBodyTerrainFetchProps,
+  type GPURigidBodyTerrainProvider,
+  type GPURigidBodyTerrainSlot,
+  type GPURigidBodyTerrainStreamProps,
+  type GPURigidBodyTerrainWindow
+} from './rigid-body-terrain-stream';
 export {getRigidBodyShapeProperties} from './rigid-body-shape-properties';
 export {
   getSphereClothReference,

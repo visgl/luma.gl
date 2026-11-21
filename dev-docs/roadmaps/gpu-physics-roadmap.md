@@ -489,9 +489,15 @@ and a stackless hierarchy. Fixed-size standalone collider slots can upload, move
 tiles without rebuilding the graph; checkpoints restore residency and body state together.
 Off-road Buggy uses a hysteresis window and retains a cooked-mesh reference mode.
 
-Provider fetch integration, mixed-resolution seam stitching, scoped invalidation, and streaming
-inside fused ensembles remain open. Qualify traversal and step cost across adapters before
-changing the default for existing mesh-based applications.
+Provider-backed terrain windows bound fetch concurrency, cancel obsolete requests, and stage
+stitched samples for publication between submissions. Neighboring tiles with nested grids
+share the coarse piecewise-linear boundary, including partial-span seams and T-junctions.
+Qualification covers fetched mixed-resolution tiles, failed and superseded windows, and
+capacity-neutral eviction and replacement.
+
+Automatic tile selection, scoped invalidation, and streaming inside fused ensembles
+remain open. Qualify traversal and step cost across adapters before changing the default
+for existing mesh-based applications.
 
 ### G9. Articulations and mechanism quality
 
