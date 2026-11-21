@@ -3,13 +3,16 @@
 ## Version 10.0[​](#version-100 "Direct link to Version 10.0")
 
 * **GPU graphs.** [Graph](https://luma.gl/next/docs/api-reference/graph.md) composes compute and render operations, manages transient resources, and processes GPU vectors and tables.
+
 * **Shaders.** [Shaders](https://luma.gl/next/docs/api-reference/shaders.md) provides language-specific assemblers and reusable WGSL and GLSL shader modules.
+
 * **Rendering.** [Engine](https://luma.gl/next/docs/api-reference/engine.md) brings together models, glTF, scenegraphs, effects, text, and physics integration. [ANARI](https://luma.gl/next/docs/api-reference/anari.md) adds forward, deferred, ray-traced, and ray-marched rendering.
+
 * **GPU resources.** [Core](https://luma.gl/next/docs/api-reference/core.md) owns devices, buffers, textures, and pipelines for both WebGL2 and WebGPU.
 
-See the [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md#upgrading-to-v100) to move from v9.
+* Fused GPU physics ensembles can share packed terrain atlas pages across instances and recover from local contact-cache exhaustion while healthy instances keep stepping. [GPU Physics](https://luma.gl/next/docs/api-reference/graph/gpu-physics.md)
 
-* Fused GPU physics ensembles can share packed terrain atlas pages across instances while streaming and updating their tile windows independently. [GPU Physics](https://luma.gl/next/docs/api-reference/graph/gpu-physics.md)
+See the [Upgrade Guide](https://luma.gl/next/docs/upgrade-guide.md#upgrading-to-v100) to move from v9.
 
 ## Version 9.4[​](#version-94 "Direct link to Version 9.4")
 
