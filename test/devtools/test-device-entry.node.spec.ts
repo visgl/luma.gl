@@ -12,7 +12,7 @@ import {
   RENDER_CONFORMANCE_TEST_PATTERNS,
   getBrowserTestGroup,
   getReleaseQualificationExcludes,
-  PHYSICS_QUALIFICATION_TEST_PATTERNS
+  PHYSICS_ENDURANCE_TEST_PATTERNS
 } from '../utils/browser-test-groups';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -82,8 +82,8 @@ test('browser group selection fails closed on unknown values', () => {
   expect(() => getBrowserTestGroup('unknown')).toThrow();
 });
 
-test('release selection keeps simulation qualification in the ordinary physics suites', () => {
-  expect(getReleaseQualificationExcludes('release')).toEqual(PHYSICS_QUALIFICATION_TEST_PATTERNS);
+test('release selection keeps simulation qualification in the endurance suite', () => {
+  expect(getReleaseQualificationExcludes('release')).toEqual(PHYSICS_ENDURANCE_TEST_PATTERNS);
   expect(getReleaseQualificationExcludes('release')).toContain(
     'modules/graph/test/gpu-physics/domino-spiral.spec.ts'
   );
