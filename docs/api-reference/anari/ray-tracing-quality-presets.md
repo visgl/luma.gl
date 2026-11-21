@@ -241,3 +241,12 @@ Validated URL overrides accept `renderer=deferred`, `resolution=0.25` and
 `emitterSelection=power`. The capture harness accepts `--emitter-selection uniform|power`
 and `--resolution 0.25|0.5|0.75|1`; an explicit resolution overrides the still preset.
 Preserve seed, sample count, transport and exposure when comparing distributions.
+
+### Constant environment lighting
+
+Set `environmentRadiance` to a constant linear RGB radiance, for example `[0.5, 0.6, 0.8]`.
+The renderer samples directions at infinity and tests those rays against scene geometry.
+With bounces enabled, it pairs these samples with BSDF paths that escape the scene using
+multiple importance sampling. This works with both `diffuse` and `pbr` transport and defaults
+to zero. `background` continues to control the camera backdrop. Image-based environment
+sampling requires a separate directional radiance distribution.

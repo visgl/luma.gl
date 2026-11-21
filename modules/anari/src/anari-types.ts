@@ -248,6 +248,8 @@ export type ANARICameraParameters = {
 export type ANARIRendererParameters = {
   background?: ANARIVector4;
   ambientRadiance?: number;
+  /** Constant linear RGB radiance illuminating ray-traced surfaces from infinity. */
+  environmentRadiance?: ANARIVector3;
   environment?: {
     diffuseTexture?: Texture;
     specularTexture?: Texture;

@@ -332,6 +332,7 @@ const rendererProperties = {
 
 const raytraceRendererProperties = {
   ...rendererProperties,
+  environmentRadiance: ANARIVector3Schema.optional(),
   samplesPerPixel: z.number().int().positive().optional(),
   samplingSeed: z.number().int().min(0).max(0xffffffff).optional(),
   historySampleLimit: z.number().int().min(1).max(256).optional(),
