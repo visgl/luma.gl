@@ -82,11 +82,11 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 
 * For ordered queries, `OFFSET` skips globally sorted rows across batches before applying `LIMIT`.
 
-* `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`.
+* `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`. Default aggregate aliases use the bound field name, such as `sum_fare` for `SUM(trips.fare)`.
 
 * One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
 
-SQL keywords and registered table names are case-insensitive. Column names must match the dataframe schema exactly, even when unquoted. Double-quote reserved names, such as `"limit"` and `"order"`. A period separates a table qualifier from a column name.
+SQL keywords and registered table names are case-insensitive. Column names must match the dataframe schema exactly, even when unquoted. Double-quote reserved names such as `"limit"` and `"order"`. A quoted identifier such as `"fare.total"` names a single field. In `trips."fare.total"`, `trips` qualifies the field. The period inside the quotes remains part of its name.
 
 Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous expressions, multiple sort/group keys, and pagination without ordering fail during CPU-only planning. Applications still own command submission, synchronization, result readback, and cleanup.
 
