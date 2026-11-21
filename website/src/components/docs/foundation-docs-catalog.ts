@@ -40,6 +40,7 @@ export const FOUNDATION_DOCS_CATALOG = {
         {id: 'rendering', label: 'Rendering', href: '/docs/api-guide/gpu/gpu-rendering'},
         {id: 'antialiasing', label: 'Antialiasing', href: '/docs/api-guide/gpu/gpu-antialiasing'},
         {id: 'parameters', label: 'Parameters', href: '/docs/api-guide/gpu/gpu-parameters'},
+        {id: 'depth-buffers', label: 'Depth buffers', href: '/docs/api-guide/gpu/depth-buffers'},
         {id: 'bindings', label: 'Bindings', href: '/docs/api-guide/gpu/gpu-bindings'}
       ]
     },

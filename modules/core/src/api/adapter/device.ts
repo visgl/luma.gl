@@ -338,7 +338,7 @@ export type WebGLDeviceFeature =
 
   // GLSL extension features
   | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
-  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test
+  | 'shader-conservative-depth-webgl' // GLSL conservative depth qualifiers depth_less and depth_greater permit early depth optimizations
   | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
 
   // texture rendering

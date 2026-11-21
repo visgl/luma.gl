@@ -4,7 +4,7 @@ import {DocsPageTabs} from './docs-page-tabs';
 
 export type GpuGuideDocsTabId =
   | 'core-guide' | 'initialization' | 'resources' | 'data-processing'
-  | 'rendering' | 'antialiasing' | 'parameters' | 'bindings' | 'attributes'
+  | 'rendering' | 'antialiasing' | 'parameters' | 'depth-buffers' | 'bindings' | 'attributes'
   | 'uniforms' | 'textures' | 'video-textures' | 'tabular-data';
 export type GpuGuideDocsTabGroupId = 'lifecycle' | 'rendering' | 'shader-data';
 
