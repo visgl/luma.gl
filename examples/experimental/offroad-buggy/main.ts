@@ -599,6 +599,8 @@ async function start() {
     }
     checkpoint.restore();
     if (selector && position !== terrainStart) {
+      // The checkpoint window is temporary. Allocate detail around the recovery pose.
+      selector.reset();
       await prepareAutomaticTerrain(position);
       applyTerrain();
     }

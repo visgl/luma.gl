@@ -124,6 +124,21 @@ it('enforces residency radius and preserves positional and LOD hysteresis', () =
   expect(local.seams).toEqual([]);
 });
 
+it('recovers local detail after resetting hysteresis on a teleport', () => {
+  const selector = new GPURigidBodyTerrainSelector({
+    bounds: [-32, -32, 32, 32],
+    maximumLevel: 3,
+    slots: [0, 1, 2, 3]
+  });
+  selector.select({position: [0, -11], radius: 12});
+  const focus = {position: [-13, -29] as const, radius: 12};
+  const retained = selector.select(focus);
+  expect(Math.max(...retained.tiles.map(tile => tile.address.level))).toBe(2);
+  selector.reset();
+  const recovered = selector.select(focus);
+  expect(Math.max(...recovered.tiles.map(tile => tile.address.level))).toBe(3);
+});
+
 it('keeps a parent for unavailable children and retains slots across tile revisions', () => {
   let revision = 'a';
   const selector = new GPURigidBodyTerrainSelector({
