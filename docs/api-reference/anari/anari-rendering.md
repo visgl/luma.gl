@@ -488,8 +488,7 @@ Each map uses its canonical PBR UV transform and UV-set selector (`TEXCOORD_0` o
 `TEXCOORD_1`). Analytic spheres synthesize longitude/latitude UV0. Texture formats control
 color decoding: use sRGB formats for color maps and linear formats for data maps. Sampling
 uses explicit LOD inside divergent traversal and honors the texture's sampler. Primary triangle
-shading estimates its footprint from the camera and transformed UVs. Secondary hits, analytic
-spheres, and cutout tests use mip zero.
+shading estimates its footprint from the camera and transformed UVs. Secondary triangle hits use the propagated camera footprint. Analytic spheres and cutout tests use mip zero.
 The ray renderer binds up to fourteen distinct material textures per frame. Excess maps use the underlying material values.
 Textures are borrowed and must remain alive until their submitted GPU work finishes.
 

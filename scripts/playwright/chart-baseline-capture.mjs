@@ -18,6 +18,7 @@ const {values} = parseArgs({options: {
   view: {type: 'string', default: 'color'},
   'frame-sweep': {type: 'string'},
   'small-emitter': {type: 'boolean'},
+  'antique-camera': {type: 'boolean'},
   frames: {type: 'string', default: '8'}, seed: {type: 'string', default: '0'},
   width: {type: 'string', default: '960'}, height: {type: 'string', default: '720'},
   denoise: {type: 'string', default: '0'}, history: {type: 'string', default: '64'},
@@ -63,7 +64,7 @@ if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('s
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 320) throw new Error('viewport dimensions must be integers of at least 320 pixels');
 if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('renderer must be default or raytrace');
 const url = new URL(values.url);
-url.searchParams.set('preset', values['small-emitter'] ? 'small-emitter' : values.lighting ? 'chart-lighting' : values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
+url.searchParams.set('preset', values['antique-camera'] ? 'antique-camera' : values['small-emitter'] ? 'small-emitter' : values.lighting ? 'chart-lighting' : values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));

@@ -1669,9 +1669,27 @@ fn evaluateSecondaryLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
   return evaluateDirectLighting(ray, hit, uniforms.emitters.y == 0u);
 }
 
+// Carry the camera pixel cone through secondary paths using total travel distance.
+const MATERIAL_HAS_MIPMAPS = /* MATERIAL_HAS_MIPMAPS */ false;
+
+fn getSecondaryFootprint(ray: Ray, hit: RayHit, coneWidth: f32) -> f32 {
+  if (!MATERIAL_HAS_MIPMAPS || coneWidth <= 0.0 || hit.triangleIndex == 0xffffffffu) {
+    return 0.0;
+  }
+  return coneWidth / max(abs(dot(getFaceNormal(hit, ray), ray.direction)), 0.05);
+}
+
 fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
   var ray = primaryRay;
   var hit = primaryHit;
+  var coneWidth = 0.0;
+  var coneSpread = 0.0;
+  if (MATERIAL_HAS_MIPMAPS && hit.footprint > 0.0) {
+    coneWidth = hit.footprint * max(abs(dot(getFaceNormal(hit, ray), ray.direction)), 0.05);
+    if (uniforms.cameraPosition.w < 0.5) {
+      coneSpread = coneWidth / max(hit.distance, RAY_EPSILON);
+    }
+  }
   var radiance = evaluateDirectLighting(ray, hit, true);
   var throughput = vec3<f32>(1.0);
   var dielectricOnly = true;
@@ -1712,6 +1730,10 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       throughput *= pow(clamp(attenuation.rgb, vec3<f32>(0.0), vec3<f32>(1.0)),
         vec3<f32>(segmentLength / attenuation.w));
     }
+    if (MATERIAL_HAS_MIPMAPS) {
+      coneWidth += coneSpread * hit.distance;
+      hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
+    }
     radiance += throughput * (evaluateDirectLighting(ray, hit, sample.delta || uniforms.emitters.y == 0u) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u)));
   }
   return radiance;
@@ -1721,6 +1743,14 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
 fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
   var ray = primaryRay;
   var hit = primaryHit;
+  var coneWidth = 0.0;
+  var coneSpread = 0.0;
+  if (MATERIAL_HAS_MIPMAPS && hit.footprint > 0.0) {
+    coneWidth = hit.footprint * max(abs(dot(getFaceNormal(hit, ray), ray.direction)), 0.05);
+    if (uniforms.cameraPosition.w < 0.5) {
+      coneSpread = coneWidth / max(hit.distance, RAY_EPSILON);
+    }
+  }
   var radiance = evaluateDirectLighting(ray, hit, true);
   var throughput = vec3<f32>(1.0);
   let pixelIndex = getSamplingPixelIndex(pixel);
@@ -1751,6 +1781,10 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
       break;
+    }
+    if (MATERIAL_HAS_MIPMAPS) {
+      coneWidth += coneSpread * hit.distance;
+      hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
     }
     radiance += throughput * (evaluateSecondaryLighting(ray, hit) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u)));
   }
