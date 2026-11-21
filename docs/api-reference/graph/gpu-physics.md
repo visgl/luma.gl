@@ -544,7 +544,7 @@ tile placement before publishing. Use one vertical datum and nearby tile anchors
 A newer `prepare` cancels the previous request. It resolves to `false` for a canceled
 window and rejects on a provider or stitch error. The current window keeps
 supporting the simulation until `apply` publishes the replacement as a single
-slot-edit batch. Duplicated keys share a request and committed raw tiles are reused
+slot-edit batch. Duplicated keys share a request across overlapping windows. Raw tiles are reused
 while their keys remain active. Change the key when the source content changes.
 Call `clear()` between submissions to cancel pending work and evict stream-owned
 slots. Use exclusive ownership of those slots, including when restoring checkpoints.

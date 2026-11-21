@@ -74,10 +74,22 @@ type ResidentWindow = {
   stitched: ReadonlyMap<number, GPURigidBodyTerrainTile>;
 };
 
+/** A revisioned request that may be queued, active, or retained for publication. */
+type TileLoad = {
+  controller: AbortController;
+  tile: Promise<GPURigidBodyTerrainTile>;
+  resolve: (tile: GPURigidBodyTerrainTile) => void;
+  reject: (error: unknown) => void;
+};
+
 /** Bounded provider fetching with an explicit publication boundary between GPU submissions. */
 export class GPURigidBodyTerrainStream {
-  /** Active provider work, including requests that are still finishing after cancellation. */
-  private readonly running = new Set<Promise<void>>();
+  /** Active provider work, including aborted requests that have not settled. */
+  private activeLoads = 0;
+  /** Requests retained by the latest window, including completed but unapplied data. */
+  private readonly loads = new Map<string, TileLoad>();
+  /** Pending provider work in submission order. */
+  private readonly queued = new Map<string, TileLoad>();
   /** Shared concurrency limit. */
   private readonly maximumConcurrentLoads: number;
   /** Last request, used to ignore late completions. */
@@ -110,7 +122,16 @@ export class GPURigidBodyTerrainStream {
       if (!keys.has(seam.first) || !keys.has(seam.second))
         throw new Error('Terrain seam references an absent slot');
 
-    this.cancel();
+    this.controller?.abort();
+    this.ready = undefined;
+    const required = new Set(keys.values());
+    for (const [key, load] of this.loads) {
+      if (!required.has(key)) {
+        this.abortLoad(load);
+        this.loads.delete(key);
+        this.queued.delete(key);
+      }
+    }
     const controller = new AbortController();
     this.controller = controller;
     const signal = controller.signal;
@@ -120,24 +141,12 @@ export class GPURigidBodyTerrainStream {
     // Capture this revision's cache so a later publication cannot change the selected source.
     const residentSources = this.resident.source;
     const loadWindow = async (): Promise<boolean> => {
-      const source = new Map<string, GPURigidBodyTerrainTile>();
-      const missing: string[] = [];
-      for (const key of new Set(keys.values())) {
-        const cached = residentSources.get(key);
-        if (cached) source.set(key, cached);
-        else missing.push(key);
-      }
-      let nextTile = 0;
-      /** Take the next key only when this worker is free. */
-      const loadNext = async () => {
-        while (!signal.aborted && nextTile < missing.length) {
-          const key = missing[nextTile++];
-          const tile = await this.loadTile(key, signal, cancellation);
-          source.set(key, tile);
-        }
-      };
-      await Promise.all(
-        Array.from({length: Math.min(missing.length, this.maximumConcurrentLoads)}, loadNext)
+      const source = new Map(
+        await Promise.all(
+          [...required].map(
+            async key => [key, residentSources.get(key) ?? (await this.getLoad(key))] as const
+          )
+        )
       );
       if (signal.aborted) return false;
       const tiles = new Map(Array.from(keys, ([collider, key]) => [collider, source.get(key)!]));
@@ -149,7 +158,7 @@ export class GPURigidBodyTerrainStream {
       return await Promise.race([loadWindow(), cancellation]);
     } catch (error) {
       if (signal.aborted) return false;
-      controller.abort();
+      this.cancel();
       throw error;
     } finally {
       if (this.controller === controller) this.controller = undefined;
@@ -173,6 +182,7 @@ export class GPURigidBodyTerrainStream {
     if (edits.length) this.world.setHeightFieldTiles(edits);
     this.resident = ready;
     this.ready = undefined;
+    this.loads.clear();
     return true;
   }
 
@@ -192,6 +202,9 @@ export class GPURigidBodyTerrainStream {
     this.controller?.abort();
     this.controller = undefined;
     this.ready = undefined;
+    for (const load of this.loads.values()) this.abortLoad(load);
+    this.loads.clear();
+    this.queued.clear();
   }
 
   /** Release stream-owned slots after canceling fetches. Call between submissions. */
@@ -202,28 +215,42 @@ export class GPURigidBodyTerrainStream {
     this.resident = {keys: new Map(), source: new Map(), stitched: new Map()};
   }
 
-  /** Keep the provider concurrency bound even if an aborted provider ignores its signal. */
-  private async loadTile(
-    key: string,
-    signal: AbortSignal,
-    cancellation: Promise<false>
-  ): Promise<GPURigidBodyTerrainTile> {
-    while (this.running.size >= this.maximumConcurrentLoads && !signal.aborted)
-      await Promise.race([...this.running, cancellation]);
-    signal.throwIfAborted();
-    const loading = Promise.resolve().then(() => {
-      signal.throwIfAborted();
-      return this.props.provider.loadTile(key, signal);
-    });
-    const settled = loading.then(
-      () => {},
-      () => {}
-    );
-    this.running.add(settled);
-    try {
-      return structuredClone(await loading);
-    } finally {
-      this.running.delete(settled);
+  /** Reuse the same fetch when a superseding window still needs its revisioned key. */
+  private getLoad(key: string): Promise<GPURigidBodyTerrainTile> {
+    const retained = this.loads.get(key);
+    if (retained) return retained.tile;
+    const {promise, resolve, reject} = Promise.withResolvers<GPURigidBodyTerrainTile>();
+    const load = {controller: new AbortController(), tile: promise, resolve, reject};
+    this.loads.set(key, load);
+    this.queued.set(key, load);
+    this.startQueuedLoads();
+    return promise;
+  }
+
+  /** Release the waiting window promptly while retaining the active capacity reservation. */
+  private abortLoad(load: TileLoad): void {
+    load.controller.abort();
+    load.reject(load.controller.signal.reason);
+  }
+
+  /** Only active provider work consumes concurrency, even if the provider ignores abort. */
+  private startQueuedLoads(): void {
+    for (const [key, load] of this.queued) {
+      if (this.activeLoads >= this.maximumConcurrentLoads) break;
+      this.queued.delete(key);
+      this.activeLoads++;
+      const {signal} = load.controller;
+      void Promise.resolve()
+        .then(() => {
+          signal.throwIfAborted();
+          return this.props.provider.loadTile(key, signal);
+        })
+        .then(tile => load.resolve(structuredClone(tile)))
+        .catch(error => load.reject(error))
+        .finally(() => {
+          this.activeLoads--;
+          this.startQueuedLoads();
+        });
     }
   }
 }

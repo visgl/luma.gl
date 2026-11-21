@@ -208,3 +208,38 @@ it('forwards cancellation to fetch and reports HTTP errors before decoding', asy
   expect(transport).toHaveBeenCalledWith('https://terrain.example/patch@one', {signal});
   expect(decode).not.toHaveBeenCalled();
 });
+
+it('retains an in-flight revisioned tile across overlapping windows', async () => {
+  const requests = new Map<
+    string,
+    {signal: AbortSignal; resolve: (tile: GPURigidBodyTerrainTile) => void}
+  >();
+  const loadTile = vi.fn(
+    (key: string, signal: AbortSignal) =>
+      new Promise<GPURigidBodyTerrainTile>(resolve => requests.set(key, {signal, resolve}))
+  );
+  const publish = vi.fn();
+  const stream = new GPURigidBodyTerrainStream(
+    {setHeightFieldTiles: publish},
+    {provider: {loadTile}, maximumConcurrentLoads: 2}
+  );
+  const shared = {collider: 0, key: 'shared@1'};
+  const first = stream.prepare({tiles: [shared, {collider: 1, key: 'old@1'}]});
+  await vi.waitFor(() => expect(requests.size).toBe(2));
+  const latest = stream.prepare({tiles: [shared, {collider: 2, key: 'new@1'}]});
+  expect(await first).toBe(false);
+  expect(requests.get('shared@1')!.signal.aborted).toBe(false);
+  expect(requests.get('old@1')!.signal.aborted).toBe(true);
+  expect(requests.has('new@1')).toBe(false);
+  const tile = makeTile([0, 0, 0], 2, [0, 2, 4]);
+  requests.get('shared@1')!.resolve(tile);
+  await vi.waitFor(() => expect(requests.has('new@1')).toBe(true));
+  requests.get('new@1')!.resolve(tile);
+  expect(await latest).toBe(true);
+  expect(stream.apply()).toBe(true);
+  expect(
+    publish.mock.lastCall?.[0].map((edit: GPURigidBodyHeightFieldEdit) => edit.collider)
+  ).toEqual([0, 2]);
+  expect(loadTile.mock.calls.filter(([key]) => key === 'shared@1')).toHaveLength(1);
+  requests.get('old@1')!.resolve(tile);
+});
