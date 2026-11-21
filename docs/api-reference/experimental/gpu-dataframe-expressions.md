@@ -134,3 +134,7 @@ and `uint32`. When declaring a derived column, pass its target format to
 `withColumn` to keep the TypeScript schema precise. Casts preserve nulls and
 saturate finite values outside the destination integer range. Float inputs
 truncate toward zero for integer destinations, with non-finite values becoming null.
+
+`scalarFunction` also accepts `sqrt`, `ln`, `log10`, `asin`, and `acos` for
+Float32 input. Invalid domains, non-finite input, and null input yield null.
+Inverse trigonometric results are in radians.

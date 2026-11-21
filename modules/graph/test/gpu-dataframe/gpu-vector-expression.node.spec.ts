@@ -61,7 +61,7 @@ describe('GPU dataframe vector syntax', () => {
       'ARRAY[x]::REAL[1]',
       'ARRAY[x,y]::DOUBLE[2]',
       'CAST(x AS VARCHAR)',
-      'sqrt(x)'
+      'unsupported(x)'
     ]) {
       expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression(sql))).toThrow();
     }
