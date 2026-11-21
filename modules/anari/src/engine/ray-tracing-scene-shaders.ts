@@ -1031,9 +1031,14 @@ fn applyClearcoat(baseResponse: vec3<f32>, clearcoat: vec2<f32>, hit: RayHit,
 }
 
 const MATERIAL_HAS_DIFFUSE_TRANSMISSION = /* MATERIAL_HAS_DIFFUSE_TRANSMISSION */ false;
+const PATH_BOUNCES_ENABLED = /* PATH_BOUNCES_ENABLED */ true;
+
+fn usePBRTransport() -> bool {
+  return /* PBR_TRANSPORT_ENABLED */ uniforms.sampling.w > 0u;
+}
 
 fn getDiffuseTransmission(primitive: RayPrimitive) -> f32 {
-  if (!MATERIAL_HAS_DIFFUSE_TRANSMISSION || uniforms.sampling.w == 0u) { return 0.0; }
+  if (!MATERIAL_HAS_DIFFUSE_TRANSMISSION || !usePBRTransport()) { return 0.0; }
   return clamp(primitive.diffuseTransmission.w, 0.0, 1.0);
 }
 
@@ -1076,7 +1081,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
   let diffuse = (1.0 - diffuseTransmission) * baseColor * (vec3<f32>(1.0) - dielectricReflectance) *
     (1.0 - metallic) / PI;
   let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0);
-  let opaqueWeight = select(1.0, 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic), uniforms.sampling.w > 0u && uniforms.sampling.y > 0u);
+  let opaqueWeight = select(1.0, 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic), usePBRTransport() && PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u);
   var result = vec3<f32>(0.0);
   if (includeEmission) { result = getMaterialEmission(hit); }
   let directLightCount = u32(max(uniforms.temporal.y, 0.0));
@@ -1678,7 +1683,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   let faceLight = dot(face, direction);
   let receiver = getShadedPrimitive(hit);
   let diffuseTransmission = getDiffuseTransmission(receiver);
-  if ((normalLight <= 0.0 && uniforms.sampling.w == 0u) ||
+  if ((normalLight <= 0.0 && !usePBRTransport()) ||
       (faceLight <= 0.0 && diffuseTransmission <= 0.0)) { return vec3<f32>(0.0); }
   let shadowOrigin = position + face * select(-0.002, 0.002, faceLight > 0.0);
   let shadowOffset = lightPosition - shadowOrigin;
@@ -1686,7 +1691,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   if (uniforms.settings.w > 0.5 && shadowDistance > RAY_EPSILON && intersectsScene(Ray(shadowOrigin, shadowOffset / shadowDistance), shadowDistance - 0.002)) { return vec3<f32>(0.0); }
   var response = clamp(receiver.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * 0.96 *
     (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)) * normalLight / PI;
-  if (uniforms.sampling.w > 0u) {
+  if (usePBRTransport()) {
     if (faceLight < 0.0) {
       response = getDiffuseTransmissionTint(receiver, hit, -ray.direction, abs(dot(face, ray.direction)), -faceLight) *
         (-faceLight / PI) * diffuseTransmission;
@@ -1706,7 +1711,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   var weight = 1.0;
   if (EMITTER_MIS_ENABLED && compareContinuation) {
     var materialDensity = select(0.0, normalLight / PI, faceLight > 0.0);
-    if (uniforms.sampling.w > 0u) {
+    if (usePBRTransport()) {
       materialDensity = getPBRDirectionDensity(ray, hit, receiver, normal, direction, faceLight);
     }
     weight = getMISWeight(lightDensity, materialDensity);
@@ -1781,7 +1786,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   // An unshadowed connection and an occlusion-tested continuation estimate different integrals.
   let allowEmitterMIS = EMITTER_MIS_ENABLED && uniforms.settings.w > 0.5 && uniforms.emitters.y != 0u;
   radiance += evaluateEmitterLighting(ray, hit, pathSeed, allowEmitterMIS && uniforms.sampling.y > 0u);
-  for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
+  for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
     dielectricOnly = dielectricOnly && sample.delta;
     throughput *= sample.weight;
@@ -1854,7 +1859,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
   radiance += evaluateEmitterLighting(ray, hit, pathSeed, uniforms.sampling.y > 0u);
-  for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
+  for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let primitive = getShadedPrimitive(hit);
     throughput *= clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
       0.96 * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
@@ -1931,7 +1936,7 @@ fn main(@builtin(global_invocation_id) invocation: vec3<u32>) {
       if (hit.triangleIndex != 0xffffffffu) {
         /* MATERIAL_PRIMARY_FOOTPRINT */
       }
-      if (uniforms.sampling.w > 0u) {
+      if (usePBRTransport()) {
         color = evaluatePBRTransport(ray, hit, pixel, sampleIndex);
       } else {
         color = evaluateDiffuseTransport(ray, hit, pixel, sampleIndex);

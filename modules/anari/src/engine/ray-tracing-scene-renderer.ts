@@ -626,7 +626,11 @@ type RayTracingPresentationOptions = {
   debugView: RayTracingDebugView;
 };
 
-type RayTracingEmitterSamplingMode = 'disabled' | 'direct' | 'mis';
+type RayTracingShaderOptions = {
+  pbrTransport: boolean;
+  hasBounces: boolean;
+  emitterSampling: boolean;
+};
 
 type RayTracingFrameResources = {
   displayWidth: number;
@@ -665,7 +669,7 @@ type RayTracingFrameResources = {
   accelerationGraph: CompiledGPUCommandGraph;
   refitGraph: CompiledGPUCommandGraph;
   traceGraph: CompiledGPUCommandGraph<RayTracingTraceGraphParameters>;
-  emitterSamplingMode: RayTracingEmitterSamplingMode;
+  shaderOptions: RayTracingShaderOptions;
   topologyRevision: string;
   primitiveRevision: string;
   transformRevision: string;
@@ -790,11 +794,11 @@ export class RayTracingSceneRenderer {
           options.samplingFrameIndex <= 0xffffffff)
     );
     const presentation = getRayTracingPresentationOptions(this.device, options);
-    const emitterSamplingMode: RayTracingEmitterSamplingMode = !options.emitterSampling
-      ? 'disabled'
-      : (options.maxBounces ?? 0) >= 1
-        ? 'mis'
-        : 'direct';
+    const shaderOptions: RayTracingShaderOptions = {
+      pbrTransport: options.transportMode === 'pbr',
+      hasBounces: (options.maxBounces ?? 0) >= 1,
+      emitterSampling: options.emitterSampling ?? false
+    };
     const lights = options.lights ?? [];
     const quality = getQualityOptions(options);
     const viewProjection = new Matrix4(options.camera.projectionMatrix).multiplyRight(
@@ -830,7 +834,7 @@ export class RayTracingSceneRenderer {
       );
       resources = this.createFrameResources({
         frameIdentifier: options.id,
-        emitterSamplingMode,
+        shaderOptions,
         displayWidth,
         displayHeight,
         presentation,
@@ -951,7 +955,7 @@ export class RayTracingSceneRenderer {
         this.destroyFrame(options.id);
         resources = this.createFrameResources({
           frameIdentifier: options.id,
-          emitterSamplingMode,
+          shaderOptions,
           displayWidth,
           displayHeight,
           presentation,
@@ -1061,6 +1065,19 @@ export class RayTracingSceneRenderer {
     }
     updateRayTracingAdaptiveBudget(resources, currentTimeMilliseconds);
 
+    const materialTextureRevision = getRayMaterialTextureRevision(options.surfaces);
+    const materialTextures = getRayMaterialTextures(options.surfaces);
+    const materialTexturesChanged =
+      materialTextureRevision !== resources.materialTextureRevision ||
+      materialTextures.length !== resources.materialTextures.length ||
+      materialTextures.some(
+        (texture, index) =>
+          texture !== resources.materialTextures[index] ||
+          texture.sampler !== resources.materialSamplers[index]
+      );
+    if (materialTexturesChanged) {
+      resources.retainedSurfaces = options.surfaces;
+    }
     const internalDimensions = getInternalDimensions(
       displayWidth,
       displayHeight,
@@ -1080,17 +1097,18 @@ export class RayTracingSceneRenderer {
         internalDimensions.width,
         internalDimensions.height,
         presentation,
-        emitterSamplingMode
+        shaderOptions
       );
     } else if (
-      resources.emitterSamplingMode !== emitterSamplingMode ||
+      materialTexturesChanged ||
+      resources.shaderOptions.pbrTransport !== shaderOptions.pbrTransport ||
+      resources.shaderOptions.hasBounces !== shaderOptions.hasBounces ||
+      resources.shaderOptions.emitterSampling !== shaderOptions.emitterSampling ||
       !areRayTracingPresentationOptionsEqual(resources.presentation, presentation)
     ) {
-      this.recreateTraceGraph(options.id, resources, presentation, emitterSamplingMode);
+      this.recreateTraceGraph(options.id, resources, presentation, shaderOptions);
     }
 
-    const materialTextureRevision = getRayMaterialTextureRevision(options.surfaces);
-    const materialTextures = getRayMaterialTextures(options.surfaces);
     const materialContentRevision = JSON.stringify(
       options.surfaces.map(surface => surface.material.version)
     );
@@ -1098,17 +1116,7 @@ export class RayTracingSceneRenderer {
       resources.materialContentRevision = materialContentRevision;
       resources.historyNeedsReset = true;
     }
-    if (
-      materialTextureRevision !== resources.materialTextureRevision ||
-      materialTextures.length !== resources.materialTextures.length ||
-      materialTextures.some(
-        (texture, index) =>
-          texture !== resources.materialTextures[index] ||
-          texture.sampler !== resources.materialSamplers[index]
-      )
-    ) {
-      resources.retainedSurfaces = options.surfaces;
-      this.recreateTraceGraph(options.id, resources, presentation);
+    if (materialTexturesChanged) {
       resources.materialTextureRevision = materialTextureRevision;
       resources.materialTextures = materialTextures;
       resources.materialSamplers = materialTextures.map(texture => texture.sampler);
@@ -1638,7 +1646,7 @@ export class RayTracingSceneRenderer {
 
   private createFrameResources(props: {
     frameIdentifier: string;
-    emitterSamplingMode: RayTracingEmitterSamplingMode;
+    shaderOptions: RayTracingShaderOptions;
     displayWidth: number;
     displayHeight: number;
     presentation: RayTracingPresentationOptions;
@@ -1785,7 +1793,7 @@ export class RayTracingSceneRenderer {
     });
     const traceGraph = this.createTraceGraph({
       surfaces: props.surfaces,
-      emitterSamplingMode: props.emitterSamplingMode,
+      shaderOptions: props.shaderOptions,
       frameIdentifier,
       internalWidth: internalDimensions.width,
       internalHeight: internalDimensions.height,
@@ -1838,7 +1846,7 @@ export class RayTracingSceneRenderer {
       accelerationGraph,
       refitGraph,
       traceGraph,
-      emitterSamplingMode: props.emitterSamplingMode,
+      shaderOptions: props.shaderOptions,
       topologyRevision: '',
       primitiveRevision: '',
       transformRevision: '',
@@ -1882,7 +1890,7 @@ export class RayTracingSceneRenderer {
     internalWidth: number,
     internalHeight: number,
     presentation: RayTracingPresentationOptions,
-    emitterSamplingMode: RayTracingEmitterSamplingMode
+    shaderOptions: RayTracingShaderOptions
   ): void {
     resources.traceGraph.destroy();
     resources.colorHistory.destroy();
@@ -1901,7 +1909,7 @@ export class RayTracingSceneRenderer {
     );
     resources.traceGraph = this.createTraceGraph({
       surfaces: resources.retainedSurfaces,
-      emitterSamplingMode,
+      shaderOptions,
       frameIdentifier,
       internalWidth,
       internalHeight,
@@ -1919,7 +1927,7 @@ export class RayTracingSceneRenderer {
       metadataHistory: resources.metadataHistory
     });
     resources.displayWidth = displayWidth;
-    resources.emitterSamplingMode = emitterSamplingMode;
+    resources.shaderOptions = shaderOptions;
     resources.displayHeight = displayHeight;
     resources.presentation = presentation;
     resources.internalWidth = internalWidth;
@@ -1932,11 +1940,11 @@ export class RayTracingSceneRenderer {
     frameIdentifier: string,
     resources: RayTracingFrameResources,
     presentation: RayTracingPresentationOptions,
-    emitterSamplingMode = resources.emitterSamplingMode
+    shaderOptions: RayTracingShaderOptions
   ): void {
     const traceGraph = this.createTraceGraph({
       surfaces: resources.retainedSurfaces,
-      emitterSamplingMode,
+      shaderOptions,
       frameIdentifier,
       internalWidth: resources.internalWidth,
       internalHeight: resources.internalHeight,
@@ -1955,7 +1963,7 @@ export class RayTracingSceneRenderer {
     });
     resources.traceGraph.destroy();
     resources.traceGraph = traceGraph;
-    resources.emitterSamplingMode = emitterSamplingMode;
+    resources.shaderOptions = shaderOptions;
     resources.presentation = presentation;
   }
 
@@ -3081,7 +3089,7 @@ export class RayTracingSceneRenderer {
 
   private createTraceGraph(props: {
     surfaces: readonly SceneSurface[];
-    emitterSamplingMode: RayTracingEmitterSamplingMode;
+    shaderOptions: RayTracingShaderOptions;
     frameIdentifier: string;
     internalWidth: number;
     internalHeight: number;
@@ -3332,15 +3340,21 @@ export class RayTracingSceneRenderer {
       compile: ({device}) => {
         const computation = new Computation(device, {
           id: `${props.frameIdentifier}-ray-tracing-computation`,
-          // Avoid compiling the sampling paths the frame cannot use.
+          // Avoid compiling the transport and sampling paths the frame cannot use.
           source: getRayMaterialTextureShader(
             RAY_TRACING_SCENE_SHADER.replace(
-              '/* EMITTER_SAMPLING_ENABLED */ true',
-              String(props.emitterSamplingMode !== 'disabled')
-            ).replace(
-              '/* EMITTER_MIS_ENABLED */ true',
-              String(props.emitterSamplingMode === 'mis')
-            ),
+              '/* PBR_TRANSPORT_ENABLED */ uniforms.sampling.w > 0u',
+              String(props.shaderOptions.pbrTransport)
+            )
+              .replace('/* PATH_BOUNCES_ENABLED */ true', String(props.shaderOptions.hasBounces))
+              .replace(
+                '/* EMITTER_SAMPLING_ENABLED */ true',
+                String(props.shaderOptions.emitterSampling)
+              )
+              .replace(
+                '/* EMITTER_MIS_ENABLED */ true',
+                String(props.shaderOptions.emitterSampling && props.shaderOptions.hasBounces)
+              ),
             props.surfaces
           ),
           shaderLayout: {
