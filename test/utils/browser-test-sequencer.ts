@@ -13,7 +13,8 @@ const DEFAULT_BROWSER_TEST_WEIGHT = 3;
 // General shard weights use median file durations from runs 44927673461, 44933490379 and 44934810103.
 export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/anari/test/anari-diffuse.spec.ts': 13,
-  'modules/anari/test/anari-emitter-sampling.spec.ts': 43,
+  'modules/anari/test/anari-emitter-sampling.spec.ts': 12,
+  'modules/anari/test/anari-emitter-sampling-conformance.spec.ts': 41,
   'modules/anari/test/anari-picking.spec.ts': 18,
   'modules/anari/test/anari-reflection-bounces.spec.ts': 13,
   'modules/anari/test/anari-reflection.spec.ts': 24,
@@ -37,7 +38,7 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/anari/test/engine/ray-material-sheen.spec.ts': 56,
   'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts': 46,
   'modules/anari/test/engine/ray-secondary-texture-filtering.spec.ts': 38,
-  'modules/anari/test/engine/ray-tracing-image-export.spec.ts': 30,
+  'modules/anari/test/engine/ray-tracing-image-export.spec.ts': 26,
   'modules/anari/test/engine/scene-renderer-lighting-parity.spec.ts': 7,
   'modules/anari/test/engine/scenegraph-transforms.spec.ts': 11,
   'modules/deck-arrow-layers/test/gpu-graph-deck.spec.ts': 8,
@@ -142,7 +143,7 @@ export const SLOW_BROWSER_TEST_WEIGHTS: Readonly<Record<string, number>> = {
   'modules/three/test/geographic-renderer.spec.ts': 11,
   'modules/three/test/gltf-renderer.spec.ts': 16,
   'modules/three/test/overlay-renderer.spec.ts': 5,
-  'modules/three/test/physical-renderer.spec.ts': 23,
+  'modules/three/test/physical-renderer.spec.ts': 16,
   'test/examples/algebraic-varieties.spec.ts': 1,
   'test/examples/gpu-dataframe-analysis.spec.ts': 7,
   'test/examples/gpu-dataframe-derived-columns.spec.ts': 5,
