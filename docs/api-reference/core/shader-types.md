@@ -1,7 +1,3 @@
----
-slug: /api-reference/core/shader-types
----
-
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 

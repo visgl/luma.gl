@@ -91,7 +91,7 @@ describe('experimental GPU module naming', () => {
     }
     expect(graphPackage.exports['./gpu-graph-algorithms-benchmarks']).toBeDefined();
     for (const moduleName of EXPERIMENTAL_MODULES) {
-      expect(graphPackage.exports[`./experimental/${moduleName}`], moduleName).toBeDefined();
+      expect(graphPackage.exports[`./experimental-${moduleName}`], moduleName).toBeDefined();
     }
     for (const moduleName of UNPUBLISHED_WORKING_NAMES) {
       expect(graphPackage.exports[`./${moduleName}`]).toBeUndefined();
@@ -187,32 +187,36 @@ describe('experimental GPU module naming', () => {
   });
 
   test('groups shared data, kernels, and evaluator APIs under the graph reference', () => {
-    type DocumentationCategory = {label: string; items: Array<string | DocumentationCategory>};
+    type DocumentationCategory = {
+      label: string;
+      items: Array<string | DocumentationCategory>;
+      id?: string;
+    };
     const documentation = JSON.parse(
       readFileSync(path.join(process.cwd(), 'docs/table-of-contents.json'), 'utf8')
     ) as DocumentationCategory[];
-    const reference = documentation.find(category => category.label === 'API Reference');
+    const reference = documentation.find(category => category.label === 'Packages');
     const packageReference = reference?.items.find(
       (category): category is DocumentationCategory =>
         typeof category !== 'string' && category.label === '@luma.gl/graph'
     );
-    const moduleGroups: Record<string, string> = {'gpu-data': 'GPU Data'};
+    const moduleGroups: Record<string, string> = {'gpu-data': '@luma.gl/graph/gpu-data'};
     const graphReference = reference?.items.find(
       (category): category is DocumentationCategory =>
         typeof category !== 'string' && category.label === '@luma.gl/graph'
     );
     for (const label of [
-      'GPU Core',
+      '@luma.gl/graph/gpu-core',
       'Command graphs',
       'Kernels',
       'Evaluator APIs',
-      'GPU Graph Algorithms',
-      'GPU Tables',
-      'GPU Raster',
-      'GPU Project',
-      'GPU Trace',
-      'GPU Dataframe',
-      'GPU Crossfilter'
+      '@luma.gl/graph/gpu-graph-algorithms',
+      '@luma.gl/graph/gpu-tables',
+      '@luma.gl/graph/gpu-raster',
+      '@luma.gl/graph/gpu-project',
+      '@luma.gl/graph/gpu-trace',
+      '@luma.gl/graph/gpu-dataframe',
+      '@luma.gl/graph/gpu-crossfilter'
     ]) {
       expect(
         graphReference?.items.some(
@@ -234,7 +238,7 @@ describe('experimental GPU module naming', () => {
           typeof category !== 'string' && category.label === label
       );
       expect(group, label).toBeDefined();
-      expect(group?.items.length, label).toBeGreaterThan(0);
+      expect(group?.id, label).toBe('api-reference/graph/entry-points/gpu-data');
     }
   });
 
