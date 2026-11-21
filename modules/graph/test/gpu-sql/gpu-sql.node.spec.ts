@@ -267,6 +267,15 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     );
     expect(() => context.query('SELECT fare + 1 FROM trips')).toThrow(/alias/i);
     expect(context.query('SELECT COUNT(fare) FROM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(
+      context.query('SELECT SUM(fare * :scale) AS scaled FROM trips', {
+        parameters: {scale: 2}
+      })
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT SUM(fare * 2) FROM trips')).toThrow(/explicit AS alias/);
+    expect(() => context.query('SELECT SUM(missing * 2) AS total FROM trips')).toThrow(
+      /does not exist/
+    );
     expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
     expect(() => context.query('SELECT fare FROM trips GROUP BY 0')).toThrow(/aggregation/);
 

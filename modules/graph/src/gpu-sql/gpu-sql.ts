@@ -37,7 +37,7 @@ type GPUSQLProjectionReference = GPUSQLColumnReference | number;
 type GPUSQLSelectItem = Readonly<{
   expression?: Expression;
   aggregate?: 'count' | 'sum' | 'min' | 'max' | 'mean';
-  aggregateColumn?: GPUSQLColumnReference;
+  aggregateInput?: Expression;
   alias?: string;
   star?: boolean;
 }>;
@@ -179,8 +179,22 @@ function buildGPUSQLPlan(
       throw new Error('GPUSQL aggregate queries do not yet support joins, ordering, or pagination');
     }
     const definitions: GPUSQLAggregationDefinitions = {};
+    const reservedNames = new Set(frame.columnNames);
+    let inputIndex = 0;
     for (const item of aggregates) {
-      const inputColumn = item.aggregateColumn && resolve(item.aggregateColumn);
+      const input =
+        item.aggregateInput && lowerSQLExpression(item.aggregateInput, parameters, resolve);
+      let inputColumn = input?.kind === 'column' ? input.name : undefined;
+      if (input && input.kind !== 'column') {
+        if (!item.alias) {
+          throw new Error('GPUSQL computed aggregate inputs require an explicit AS alias');
+        }
+        do {
+          inputColumn = '__sqlAggregateInput' + inputIndex++;
+        } while (reservedNames.has(inputColumn));
+        reservedNames.add(inputColumn);
+        query = query.withColumn(inputColumn, new GPUExpression<number | null, string>(input));
+      }
       const name = item.alias ?? `${item.aggregate}_${inputColumn ?? 'all'}`;
       if (definitions[name]) throw new Error(`GPUSQL aggregate alias "${name}" is duplicated`);
       definitions[name] =
@@ -388,7 +402,7 @@ function parseGPUSQLStatement(source: string): GPUSQLStatement {
           }
           return {
             aggregate,
-            ...(wildcard ? {} : {aggregateColumn: readGPUSQLColumn(argument)}),
+            ...(wildcard ? {} : {aggregateInput: argument}),
             alias
           };
         }
