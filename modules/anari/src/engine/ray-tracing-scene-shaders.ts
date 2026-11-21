@@ -1598,11 +1598,13 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>,
   return applyClearcoat(layeredResponse, primitive.clearcoatOcclusion.xy, hit, viewDirection, direction, halfDirection, viewHalf);
 }
 
+const EMITTER_SAMPLING_ENABLED = /* EMITTER_SAMPLING_ENABLED */ true;
+
 // CDF emitter selection, uniform triangle selection and conditional area sampling. Visibility rejects far sides of spheres.
 // The sphere Jacobian supports nonuniform scales and general affine instance transforms.
 fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContinuation: bool) -> vec3<f32> {
   let emitterCount = uniforms.emitters.x;
-  if (uniforms.emitters.y == 0u || emitterCount == 0u) { return vec3<f32>(0.0); }
+  if (!EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u || emitterCount == 0u) { return vec3<f32>(0.0); }
   let emitterSample = makeRandom(randomSeed ^ 701u);
   var emitterIndex = min(u32(emitterSample * f32(emitterCount)), emitterCount - 1u);
   var inverseSelectionProbability = f32(emitterCount);
@@ -1776,7 +1778,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
   // An unshadowed connection and an occlusion-tested continuation estimate different integrals.
-  let allowEmitterMIS = uniforms.settings.w > 0.5 && uniforms.emitters.y != 0u;
+  let allowEmitterMIS = EMITTER_SAMPLING_ENABLED && uniforms.settings.w > 0.5 && uniforms.emitters.y != 0u;
   radiance += evaluateEmitterLighting(ray, hit, pathSeed, allowEmitterMIS && uniforms.sampling.y > 0u);
   for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
@@ -1816,7 +1818,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       coneWidth += coneSpread * hit.distance;
       hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
     }
-    var illumination = evaluateDirectLighting(ray, hit, sample.delta || uniforms.emitters.y == 0u);
+    var illumination = evaluateDirectLighting(ray, hit, sample.delta || !EMITTER_SAMPLING_ENABLED || uniforms.emitters.y == 0u);
     if (pairEmission && any(primitives[hit.primitiveIndex].emissive.rgb > vec3<f32>(0.0))) {
       let emitterDensity = getEmitterHitDensity(ray, hit, position);
       let weight = getMISWeight(sample.density, emitterDensity);
@@ -1882,7 +1884,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
       hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
     }
     var illumination = evaluateDirectLighting(ray, hit, true);
-    if (uniforms.emitters.y != 0u && uniforms.emitters.x > 0u) {
+    if (EMITTER_SAMPLING_ENABLED && uniforms.emitters.y != 0u && uniforms.emitters.x > 0u) {
       if (any(primitives[hit.primitiveIndex].emissive.rgb > vec3<f32>(0.0))) {
         let density = max(dot(normal, ray.direction), 0.0) / PI;
         let emitterDensity = getEmitterHitDensity(ray, hit, position);
