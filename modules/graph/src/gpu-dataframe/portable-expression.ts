@@ -99,6 +99,13 @@ export function lowerPortableExpression(
         return {kind: 'binary', operator, left: convert(node.left), right: convert(node.right)};
       break;
     }
+    case 'ConditionalExpression':
+      return {
+        kind: 'conditional',
+        condition: convert(node.test),
+        whenTrue: convert(node.consequent),
+        otherwise: convert(node.alternate)
+      };
     case 'CallExpression': {
       const name = node.callee.name;
       if ((name === 'isNull' || name === 'isNotNull') && node.arguments.length === 1) {

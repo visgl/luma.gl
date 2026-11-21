@@ -5,6 +5,7 @@
 import {describe, expect, test} from 'vitest';
 import {parseSQLExpression} from '@math.gl/sql/parser';
 import {
+  caseWhen,
   column,
   literal,
   not,
@@ -68,4 +69,14 @@ test('rejects scalar formats in vector constructors', () => {
   for (const format of ['float32', 'sint32', 'uint32'] as const) {
     expect(() => vector(format, [literal(1), literal(2)])).toThrow(/width/);
   }
+});
+
+test('lowers scalar SQL CASE into the typed DataFrame expression', () => {
+  const expression = makeGPUExpressionFromPortableAST(
+    parseSQLExpression('CASE WHEN x > 0 THEN x ELSE NULL END')
+  );
+  expect(expression.node).toEqual(
+    caseWhen(column('x').greaterThan(literal(0)), column('x'), literal(null)).node
+  );
+  expect(getGPUExpressionColumnNames(expression)).toEqual(['x']);
 });
