@@ -11,6 +11,7 @@ Arrow adapters handle upload and readback at the application boundary.
 | Cover packed vectors | Wire the existing portable vector syntax and layout metadata into execution. Verify Arrow round trips and direct vertex consumption with packed strides. |
 | Verify semantics | Run shared fixtures for null propagation, parameter binding, numeric coercion, and casts against math.gl Arrow and WebGPU. Record format limits and expected backend differences. |
 | Extend expressions | Add selected scalar functions and CASE after defining result types, null propagation, and numeric behavior for each operation. |
+| Paginate ordered results | Apply SQL OFFSET and LIMIT to a global GPU sort. Keep the dense permutation and per-batch selections consistent. |
 | Extend relational queries | Prioritize multi-column sorting and grouping, then evaluate wider join key and cardinality support. Check results across batches and preserve the GPU residency contract. |
 
 See the [GPU SQL reference](../../docs/api-reference/experimental/gpu-sql.md) for the

@@ -67,6 +67,7 @@ rendering and compute can use the compiled GPU resources directly. Call
   A null candidate makes a nonmatching result unknown, which `WHERE` excludes.
 - Named `:parameter` values with planning defaults and encoding-time updates.
 - One `ORDER BY` column with direction, null ordering, and optional bounded `LIMIT`.
+- For ordered queries, `OFFSET` skips globally sorted rows across batches before applying `LIMIT`.
 - `COUNT(*)`, `SUM`, `MIN`, `MAX`, and `AVG`, with an optional single-column `GROUP BY`.
 - One `INNER`, `LEFT`, `SEMI`, or `ANTI JOIN` over a single equality key.
 
@@ -75,7 +76,7 @@ dataframe schema exactly, even when unquoted. Double-quote reserved names, such 
 and `"order"`. A period separates a table qualifier from a column name.
 
 Unsupported statements, unknown columns, unregistered tables, unsupported strings, ambiguous
-expressions, multiple sort/group keys, and `LIMIT` without ordering fail during CPU-only planning.
+expressions, multiple sort/group keys, and pagination without ordering fail during CPU-only planning.
 Applications still own command submission, synchronization, result readback, and cleanup.
 
 The loaders.gl adapter currently supports predicate pushdown and output projection. It accepts
