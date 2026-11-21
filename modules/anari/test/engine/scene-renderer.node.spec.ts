@@ -5,7 +5,7 @@
 import {readFileSync} from 'node:fs';
 import type {RenderPass, Texture, TextureFormatColor} from '@luma.gl/core';
 import {Geometry} from '@luma.gl/engine';
-import {glassTransmission, opticalPointLights} from '@luma.gl/engine/experimental/materials';
+import {glassTransmission, opticalPointLights} from '@luma.gl/engine/experimental-materials';
 import {
   aBuffer,
   createPBRMaterial,

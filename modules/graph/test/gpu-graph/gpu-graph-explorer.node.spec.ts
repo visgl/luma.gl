@@ -352,7 +352,7 @@ describe('interactive GPU Graph explorer dependency-free rendering integration',
       'utf8'
     );
     expect(
-      documentationContents.match(/"api-reference\/experimental\/gpu-graph"[,\]]/g)
+      documentationContents.match(/"api-reference\/experimental\/gpu-graph"[,\]\s]/g)
     ).toHaveLength(1);
     const experimentalTabs = readFileSync(
       new URL(

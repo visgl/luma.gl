@@ -276,7 +276,7 @@ or `unknown`. Native scales propagate a preceding adaptive estimate in destinati
 adaptive stage reports unknown composed error because provider sensitivity and patch continuity
 are not established. Estimates exclude input/native/output rounding and are never certified bounds.
 
-The optional `@luma.gl/graph/gpu-project/crs` subpath uses public math.gl 5 APIs. Install
+The optional `@luma.gl/graph/gpu-project-crs` subpath uses public math.gl 5 APIs. Install
 `@math.gl/geospatial` version `~5.0.0-beta.1` as its optional peer to use:
 
 - `planProjectionPipeline({pipeline})`: parse a PROJ string or accept math.gl's AST, then lower
@@ -383,7 +383,7 @@ import {createWebMercatorProjection} from '@luma.gl/graph/gpu-project';
 import {
   runGPUProjectionBenchmark,
   runProjectionBenchmark
-} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 
 const options = {
   projection: createWebMercatorProjection(),

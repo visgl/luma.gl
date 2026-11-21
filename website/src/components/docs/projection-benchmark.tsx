@@ -6,7 +6,7 @@ import {
   type GPUProjectionBenchmarkPathReport,
   type GPUProjectionBenchmarkReport,
   type ProjectionBenchmarkPathReport
-} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 
 import {createDevice, useStore} from '../../react-luma/store/device-store';
 import {LiveBenchmarkPanel} from './live-benchmark-panel';

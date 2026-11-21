@@ -115,7 +115,7 @@ The live page uses an isolated optional entry point, keeping measurement code ou
 bundles:
 
 ```ts
-import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs/benchmarks';
+import {runGPUDGGSCellProjectionBenchmark} from '@luma.gl/graph/gpu-dggs-benchmarks';
 
 const report = await runGPUDGGSCellProjectionBenchmark(device, {
   family: 'h3',

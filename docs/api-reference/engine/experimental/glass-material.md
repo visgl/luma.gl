@@ -9,7 +9,7 @@ It combines captured scene-color transmission, Schlick Fresnel reflection, chrom
 Beer-Lambert absorption, and roughness-dependent highlights.
 
 ```ts
-import {glassMaterial, glassMaterialPlugin, glassTransmission, glassTransmissionPlugin, opticalLighting, type GlassMaterialBindings, type GlassMaterialProps, type GlassMaterialUniforms} from '@luma.gl/engine/experimental/materials';
+import {glassMaterial, glassMaterialPlugin, glassTransmission, glassTransmissionPlugin, opticalLighting, type GlassMaterialBindings, type GlassMaterialProps, type GlassMaterialUniforms} from '@luma.gl/engine/experimental-materials';
 ```
 
 ## Properties
@@ -113,7 +113,7 @@ cameraPosition)` and add its RGB result to the receiver's existing material colo
 
 ```ts
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental/materials';
+import {glassMaterial, glassMaterialPlugin} from '@luma.gl/engine/experimental-materials';
 
 const shaderInputs = new ShaderInputs({glassMaterial});
 

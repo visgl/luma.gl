@@ -1843,7 +1843,7 @@ diff --git a/src/lib/attribute/attribute-buffer-groups.ts b/src/lib/attribute/at
 -} from '@luma.gl/gpgpu';
 -import {interleave as webgpuInterleave} from '@luma.gl/gpgpu/webgpu';
 +} from '@luma.gl/graph/gpu-simple-graph';
-+import {interleave as webgpuInterleave} from '@luma.gl/graph/gpu-simple-graph/webgpu';
++import {interleave as webgpuInterleave} from '@luma.gl/graph/gpu-simple-graph-webgpu';
  import type {BufferAttributeLayout, BufferLayout, Device} from '@luma.gl/core';
 diff --git a/dist/lib/attribute/attribute-buffer-groups.js b/dist/lib/attribute/attribute-buffer-groups.js
 --- a/dist/lib/attribute/attribute-buffer-groups.js
@@ -1855,7 +1855,7 @@ diff --git a/dist/lib/attribute/attribute-buffer-groups.js b/dist/lib/attribute/
 -import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/gpgpu';
 -import { interleave as webgpuInterleave } from '@luma.gl/gpgpu/webgpu';
 +import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/graph/gpu-simple-graph';
-+import { interleave as webgpuInterleave } from '@luma.gl/graph/gpu-simple-graph/webgpu';
++import { interleave as webgpuInterleave } from '@luma.gl/graph/gpu-simple-graph-webgpu';
  /**
   * Packs explicitly grouped CPU-backed attributes into additional WebGPU vertex buffers.
   *
@@ -1869,7 +1869,7 @@ diff --git a/dist.webgl-only/lib/attribute/attribute-buffer-groups.js b/dist.web
 -import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/gpgpu';
 -import { interleave as webgpuInterleave } from '@luma.gl/gpgpu/webgpu';
 +import { backendRegistry, cleanEvaluateSync, GPUDataEvaluator, interleave as interleaveTables } from '@luma.gl/graph/gpu-simple-graph';
-+import { interleave as webgpuInterleave } from '@luma.gl/graph/gpu-simple-graph/webgpu';
++import { interleave as webgpuInterleave } from '@luma.gl/graph/gpu-simple-graph-webgpu';
  /**
   * Packs explicitly grouped CPU-backed attributes into additional WebGPU vertex buffers.
   *

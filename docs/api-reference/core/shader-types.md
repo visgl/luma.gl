@@ -1,7 +1,7 @@
 import {DocumentationBadge, DocumentationBadges} from '@site/src/components/docs/documentation-badges';
 import {CoreDocsTabs} from '@site/src/components/docs/core-docs-tabs';
 
-# Shader Types
+# @luma.gl/core/shadertypes
 
 <CoreDocsTabs group="shader-types" active="shader-types" />
 

@@ -15,7 +15,7 @@ import {
   POLYGON_GPU_INPUT_SCHEMA,
   type PolygonBatchProps,
   type PolygonGPUVectors
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/graph/experimental-models';
 import {
   POLYGON_ATTRIBUTE_SHADER_LAYOUT,
   POLYGON_ATTRIBUTE_VS_GLSL,

@@ -246,7 +246,7 @@ rejected because WebGL sampler bindings cannot represent those texture views. Re
 attachments may still select supported individual mip levels and layers.
 
 Before the first synchronous evaluator run, eagerly register its backend, for example
-`await backendRegistry.add('webgl', import('@luma.gl/graph/gpu-simple-graph/webgl'))` using
+`await backendRegistry.add('webgl', import('@luma.gl/graph/gpu-simple-graph-webgl'))` using
 `backendRegistry` from `@luma.gl/graph/gpu-simple-graph`. Synchronous execution cannot wait for lazy
 backend imports. Render-only graphs do not need evaluator backend registration.
 

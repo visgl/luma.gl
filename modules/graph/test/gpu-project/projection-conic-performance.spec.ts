@@ -5,8 +5,8 @@
 import {expect, it} from 'vitest';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {planCRSProjection, createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project/crs';
-import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {planCRSProjection, createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project-crs';
+import {runProjectionProgramBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import type {ProjectionBounds} from '@luma.gl/graph/gpu-project';
 import {makeConicCRS, geographicCRS, getConicOracleDefinition} from './projection-crs-fixtures';
 import {makePerformanceCoordinates, parsePerformanceSweep} from './projection-performance-fixtures';

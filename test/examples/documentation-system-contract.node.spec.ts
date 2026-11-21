@@ -16,7 +16,7 @@ import {
 
 type TocItem =
   | string
-  | {type: 'category'; label: string; items: TocItem[]}
+  | {type: 'category'; label: string; items: TocItem[]; link?: {type: 'doc'; id: string}}
   | {type: 'doc'; id: string; label?: string}
   | {type: 'link'; href: string; label: string};
 
@@ -36,6 +36,7 @@ function collectTocRoutes(items: readonly TocItem[], routes = new Set<string>())
       const route = resolveInternalRoute(item.href);
       if (route) routes.add(route);
     } else {
+      if (item.link) routes.add(item.link.id.replace(/\/README$/, ''));
       collectTocRoutes(item.items, routes);
     }
   }
@@ -145,7 +146,10 @@ describe('documentation system contracts', () => {
       for (const item of items) {
         if (typeof item === 'string') flattened.push(item.replace(/\/README$/, ''));
         else if (item.type === 'doc') flattened.push(item.id.replace(/\/README$/, ''));
-        else if (item.type === 'category') visit(item.items);
+        else if (item.type === 'category') {
+          if (item.link) flattened.push(item.link.id.replace(/\/README$/, ''));
+          visit(item.items);
+        }
       }
     };
     visit(TABLE_OF_CONTENTS);

@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {projectionEngine} from '@math.gl/geospatial/projection';
-import {planCRSProjection, createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project/crs';
+import {planCRSProjection, createCRSProjectionCPUBenchmarks} from '@luma.gl/graph/gpu-project-crs';
 import type {ProjectionBounds, ProjectionCoordinates} from '@luma.gl/graph/gpu-project';
-import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/graph/gpu-project/benchmarks';
+import type {ProjectionProgramBenchmarkOptions} from '@luma.gl/graph/gpu-project-benchmarks';
 import {
   geographicCRS,
   makeTransverseMercatorCRS,

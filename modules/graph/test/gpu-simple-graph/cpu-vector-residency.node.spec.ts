@@ -104,7 +104,7 @@ test('GPU input is read back once across CPU branches', async () => {
 test('CPU input uploads once for multiple GPU consumers', async () => {
   const {GPUExpressionOperation} = await import('@luma.gl/graph');
   const {backendRegistry} = await import('@luma.gl/graph/gpu-simple-graph');
-  const backend = await import('@luma.gl/graph/gpu-simple-graph/cpu');
+  const backend = await import('@luma.gl/graph/gpu-simple-graph-cpu');
   await backendRegistry.add('null', backend);
   const device = new NullDevice({});
   const create = vi.spyOn(device, 'createBuffer');

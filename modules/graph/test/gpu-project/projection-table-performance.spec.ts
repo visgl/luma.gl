@@ -8,8 +8,8 @@ import {
   prepareCRSProjection,
   ProjectionTableTransform,
   type ProjectionTableBatch
-} from '@luma.gl/graph/gpu-project/crs';
-import {runProjectionTableBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-crs';
+import {runProjectionTableBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import {
   makePerformancePositions,
   parsePerformanceSweep,

@@ -9,7 +9,7 @@ import {
   prepareCRSProjection,
   ProjectionTableTransform,
   type ProjectionTableBatch
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 
 export function makeTableTransform(precision: 'double-single' | 'local-f32' = 'double-single') {
   const prepared = prepareCRSProjection({
