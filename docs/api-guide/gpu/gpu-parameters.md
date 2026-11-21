@@ -68,7 +68,7 @@ On WebGL2, `clipDepthMode: 'zero-to-one'` calls `EXT_clip_control`.
 Check the `'clip-control-webgl'` feature first. The render pass throws if the feature is not present.
 
 ```ts
-const reverseZ = device.type === 'webgpu' || device.features.has('clip-control-webgl');
+const reverseZ = device.features.has('clip-control-webgl');
 
 model.setParameters({
   depthWriteEnabled: true,

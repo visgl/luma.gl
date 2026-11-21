@@ -281,6 +281,7 @@ export type GLValueParameters = {
   [GL.GENERATE_MIPMAP_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
   [GL.LINE_WIDTH]?: number;
   [GL.POLYGON_OFFSET_FILL]?: boolean;
+  [GL.POLYGON_OFFSET_CLAMP_EXT]?: number;
   [GL.POLYGON_OFFSET_FACTOR]?: number;
   [GL.POLYGON_OFFSET_UNITS]?: number;
   [GL.SAMPLE_ALPHA_TO_COVERAGE]?: boolean;

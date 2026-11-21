@@ -42,6 +42,7 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, WebGLFeatureDefinition>> = {
       }
     ).texElementImage2D === 'function',
   'polygon-mode-webgl': 'WEBGL_polygon_mode',
+  'polygon-offset-clamp-webgl': 'EXT_polygon_offset_clamp',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
   'shader-clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
   'shader-noperspective-interpolation-webgl': 'NV_shader_noperspective_interpolation',
