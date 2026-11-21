@@ -1350,7 +1350,9 @@ fn isHistoricalRayMetadataValid(
 fn clampHistoricalRayColor(
   historyPixel: vec2<i32>,
   historicalColor: vec3<f32>,
-  currentColor: vec3<f32>
+  currentColor: vec3<f32>,
+  hit: RayHit,
+  previousDistance: f32
 ) -> vec3<f32> {
   let maximumPixel = vec2<i32>(uniforms.dimensions.xy) - vec2<i32>(1);
   var minimumColor = currentColor;
@@ -1362,6 +1364,8 @@ fn clampHistoricalRayColor(
         vec2<i32>(0),
         maximumPixel
       );
+      let neighborhoodMetadata = textureLoad(historyMetadata, neighborhoodPixel, 0);
+      if (!isHistoricalRayMetadataValid(neighborhoodMetadata, hit, previousDistance)) { continue; }
       let neighborhoodColor = textureLoad(historyImage, neighborhoodPixel, 0);
       if (neighborhoodColor.a > 0.0) {
         minimumColor = min(minimumColor, neighborhoodColor.rgb);
@@ -1507,8 +1511,10 @@ fn getHistoricalRaySample(
     maximumPixel
   );
   return HistoricalRaySample(
-    clampHistoricalRayColor(nearestHistoryPixel, historicalColor / totalWeight, currentColor),
-    min(historicalSampleCount / totalWeight, getHistorySampleLimit()),
+    clampHistoricalRayColor(nearestHistoryPixel, historicalColor / totalWeight, currentColor,
+      hit, previousDistance),
+    // Normalize radiance, but discount confidence when part of the footprint was occluded.
+    min(historicalSampleCount, getHistorySampleLimit()),
     true
   );
 }
@@ -2279,8 +2285,11 @@ fn decodeGuidanceNormal(encoded: vec2<f32>) -> vec3<f32> {
 }
 fn loadGuidedColor(pixel: vec2<i32>) -> vec3<f32> {
   let center = textureLoad(metadata, pixel, 0);
-  let centerColor = textureLoad(image, pixel, 0).rgb;
-  if (center.a <= 0.0 || center.a >= 65504.0) { return centerColor; }
+  let centerSample = textureLoad(image, pixel, 0);
+  if (center.a <= 0.0 || center.a >= 65504.0 || centerSample.a <= 0.0) { return centerSample.rgb; }
+  // Preserve detail as the retained estimate accumulates samples.
+  let filterStrength = 1.0 - smoothstep(8.0, 64.0, centerSample.a);
+  if (filterStrength <= 0.0) { return centerSample.rgb; }
   let normal = decodeGuidanceNormal(center.xy);
   var color = vec3<f32>(0.0);
   var totalWeight = 0.0;
@@ -2294,13 +2303,15 @@ fn loadGuidedColor(pixel: vec2<i32>) -> vec3<f32> {
       let normalAgreement = dot(normal, decodeGuidanceNormal(neighbor.xy));
       let depthDifference = abs(center.z - neighbor.z) / max(center.z, 0.0001);
       if (neighbor.a != center.a || normalAgreement < 0.9 || depthDifference > 0.02) { continue; }
+      let neighborSample = textureLoad(image, neighborPixel, 0);
+      let confidence = min(neighborSample.a / centerSample.a, 1.0);
       let weight = exp(-0.5 * f32(dot(offset, offset))) * pow(max(normalAgreement, 0.0), 16.0)
-        * exp(-100.0 * depthDifference);
-      color += textureLoad(image, neighborPixel, 0).rgb * weight;
+        * exp(-100.0 * depthDifference) * confidence;
+      color += neighborSample.rgb * weight;
       totalWeight += weight;
     }
   }
-  return color / max(totalWeight, 0.0001);
+  return mix(centerSample.rgb, color / max(totalWeight, 0.0001), filterStrength);
 }`
     : ''
 }
