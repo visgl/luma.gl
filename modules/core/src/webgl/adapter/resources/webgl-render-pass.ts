@@ -149,7 +149,9 @@ export class WEBGLRenderPass extends RenderPass {
       glParameters.depthMask = !this.props.depthReadOnly;
     }
 
-    glParameters.stencilMask = this.props.stencilReadOnly ? 0 : 1;
+    if (this.props.stencilReadOnly) {
+      glParameters.stencilMask = 0;
+    }
 
     glParameters[GL.RASTERIZER_DISCARD] = this.props.discard;
 
