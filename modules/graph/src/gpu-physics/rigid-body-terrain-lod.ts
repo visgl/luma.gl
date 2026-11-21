@@ -27,14 +27,14 @@ export type GPURigidBodySelectedTerrainTile = GPURigidBodyTerrainSlot & {
 };
 
 /** A collider window and its quadtree selection diagnostics. */
-export type GPURigidBodyTerrainSelection = GPURigidBodyTerrainWindow & {
+export interface GPURigidBodyTerrainSelection extends GPURigidBodyTerrainWindow {
   /** Selected nonoverlapping leaves with stable assignments where possible. */
   tiles: readonly GPURigidBodySelectedTerrainTile[];
   /** Edge matches computed from the selected quadtree leaves. */
   seams: readonly GPURigidBodyTerrainSeam[];
   /** Refinement was limited by the reserved collider slots. */
   slotLimitReached: boolean;
-};
+}
 
 /** Dataset coverage and selection policy. */
 export type GPURigidBodyTerrainSelectorProps = {
