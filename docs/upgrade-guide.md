@@ -149,7 +149,7 @@ Graph and gpgpu no longer depend on engine. Update these rendering integration i
 | --- | --- | --- |
 | `GPUTableModel`, `GPUTableGeometry`, `TableTransform` and their associated types | `@luma.gl/graph/gpu-tables` | `@luma.gl/engine/tables` |
 | Scenegraph physics adapters, sessions, and `makePhysicsScenegraph` | `@luma.gl/graph/gpu-physics` | `@luma.gl/engine/physics` |
-| Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental/models` | `@luma.gl/engine/models` |
+| Path/polygon rendering models and polygon shaders | `@luma.gl/graph/experimental-models` | `@luma.gl/engine/models` |
 
 GPU physics algorithms, tables, path expansion, and vector input preparation remain in graph. `Computation` and `ShaderInputs` remain owned by `@luma.gl/engine`; graph and gpgpu operations execute through Kernel and RenderKernel without these shader-module conveniences. Engine `Model` still extends that single `GPUVectorModel`. Dynamic resources are owned by `@luma.gl/core/dynamic`, with compatibility exports retained.
 
@@ -160,9 +160,9 @@ Remove `@luma.gl/experimental` from project dependencies and update imports:
 | Former APIs | New import |
 | --- | --- |
 | Scene renderers, PBR helpers, shadows, transparency, and scene composition | `@luma.gl/anari` |
-| Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental/controls`, `/materials`, `/textures`, and `/webxr` |
+| Controls, material plugins, texture helpers, and WebXR | `@luma.gl/engine/experimental-controls`, `/experimental-materials`, `/experimental-textures`, and `/experimental-webxr` |
 | Path and polygon models | `@luma.gl/engine/models` |
-| Flow and fluid simulations | `@luma.gl/graph/experimental/simulation` |
+| Flow and fluid simulations | `@luma.gl/graph/experimental-simulation` |
 
 ANARI's `/forward`, `/deferred`, `/raytrace`, and `/raymarch` entry points remain available. The Engine root API is unchanged.
 
@@ -598,7 +598,7 @@ The v10 graph package now owns the former gpgpu APIs. The gpgpu package is remov
 | `@luma.gl/gpgpu` evaluator and operation exports | `@luma.gl/graph/gpu-simple-graph` |
 | `@luma.gl/gpgpu` shared execution exports, including `Kernel` and `RenderKernel` | `@luma.gl/graph` |
 | `@luma.gl/gpgpu/gpu-data` | `@luma.gl/graph/gpu-data` |
-| `@luma.gl/gpgpu/cpu`, `/webgl`, `/webgpu` | `@luma.gl/graph/gpu-simple-graph/cpu`, `/webgl`, `/webgpu` |
+| `@luma.gl/gpgpu/cpu`, `/webgl`, `/webgpu` | `@luma.gl/graph/gpu-simple-graph-cpu`, `/webgl`, `/webgpu` |
 | `@luma.gl/gpgpu/arrow` | `@luma.gl/graph/arrow` |
 
 Replace the package dependency with `@luma.gl/graph`. Apache Arrow remains an optional peer used only by the Arrow entry.

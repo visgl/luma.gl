@@ -4,11 +4,11 @@
 
 import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {prepareCRSProjection, ProjectionTableTransform} from '@luma.gl/graph/gpu-project/crs';
+import {prepareCRSProjection, ProjectionTableTransform} from '@luma.gl/graph/gpu-project-crs';
 import {
   runProjectionProgramBenchmark,
   runProjectionTableBenchmark
-} from '@luma.gl/graph/gpu-project/benchmarks';
+} from '@luma.gl/graph/gpu-project-benchmarks';
 import {makeVisualizationFixture} from './projection-visualization-fixtures';
 import {makePerformanceCoordinates} from './projection-performance-fixtures';
 

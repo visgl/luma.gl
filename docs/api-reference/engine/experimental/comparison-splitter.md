@@ -10,7 +10,7 @@ embedded documentation, and applications without loading a global stylesheet.
 ## Usage
 
 ```ts
-import {ComparisonSplitter} from '@luma.gl/engine/experimental/controls';
+import {ComparisonSplitter} from '@luma.gl/engine/experimental-controls';
 
 let comparisonSplit = 0.5;
 

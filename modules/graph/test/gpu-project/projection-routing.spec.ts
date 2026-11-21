@@ -9,7 +9,7 @@ import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {expect, it} from 'vitest';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {makeVisualizationFixture} from './projection-visualization-fixtures';
-import {runProjectionRoutingBenchmark} from '@luma.gl/graph/gpu-project/benchmarks';
+import {runProjectionRoutingBenchmark} from '@luma.gl/graph/gpu-project-benchmarks';
 import {
   compileProjectionPartition,
   compileProjectionPlan,

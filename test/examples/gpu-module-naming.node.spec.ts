@@ -4,7 +4,7 @@
 
 import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
-import * as experimentalRoot from '@luma.gl/graph/experimental/simulation';
+import * as experimentalRoot from '@luma.gl/graph/experimental-simulation';
 import * as simpleGraphRoot from '@luma.gl/graph/gpu-simple-graph';
 import * as executionGraph from '@luma.gl/graph/gpu-graph';
 import * as gpuCore from '@luma.gl/graph/gpu-core';
@@ -18,7 +18,7 @@ import * as gpuProject from '@luma.gl/graph/gpu-project';
 import * as gpuRaster from '@luma.gl/graph/gpu-raster';
 import * as gpuTables from '@luma.gl/graph/gpu-tables';
 import * as models from '@luma.gl/engine/models';
-import * as gpuModels from '@luma.gl/graph/experimental/models';
+import * as gpuModels from '@luma.gl/graph/experimental-models';
 import * as gpuTrace from '@luma.gl/graph/gpu-trace';
 import {describe, expect, test} from 'vitest';
 
@@ -89,7 +89,7 @@ describe('experimental GPU module naming', () => {
     for (const moduleName of DATA_MODULES) {
       expect(graphPackage.exports[`./${moduleName}`], moduleName).toBeDefined();
     }
-    expect(graphPackage.exports['./gpu-graph-algorithms/benchmarks']).toBeDefined();
+    expect(graphPackage.exports['./gpu-graph-algorithms-benchmarks']).toBeDefined();
     for (const moduleName of EXPERIMENTAL_MODULES) {
       expect(graphPackage.exports[`./experimental/${moduleName}`], moduleName).toBeDefined();
     }
@@ -134,11 +134,11 @@ describe('experimental GPU module naming', () => {
       '@luma.gl/graph/gpu-core',
       '@luma.gl/graph/gpu-graph-algorithms',
       '@luma.gl/graph/gpu-physics',
-      '@luma.gl/graph/gpu-graph-algorithms/benchmarks',
+      '@luma.gl/graph/gpu-graph-algorithms-benchmarks',
       '@luma.gl/graph/gpu-vector-search',
       '@luma.gl/graph/gpu-tables',
-      '@luma.gl/graph/experimental/models',
-      '@luma.gl/graph/experimental/simulation'
+      '@luma.gl/graph/experimental-models',
+      '@luma.gl/graph/experimental-simulation'
     ]) {
       expect(() => import.meta.resolve(packagePath), packagePath).not.toThrow();
     }

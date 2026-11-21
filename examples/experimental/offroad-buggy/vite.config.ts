@@ -3,9 +3,9 @@ import {defineConfig} from 'vite';
 export default defineConfig({
   resolve: {
     alias: {
-      '@luma.gl/graph/gpu-simple-graph/cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
-      '@luma.gl/graph/gpu-simple-graph/webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
-      '@luma.gl/graph/gpu-simple-graph/webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
+      '@luma.gl/graph/gpu-simple-graph-cpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/cpu`,
+      '@luma.gl/graph/gpu-simple-graph-webgl': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgl`,
+      '@luma.gl/graph/gpu-simple-graph-webgpu': `${__dirname}/../../../modules/graph/src/gpu-simple-graph/operations/webgpu`,
 
       '@luma.gl/graph/_internal': `${__dirname}/../../../modules/graph/src/execution`,
       '@luma.gl/engine/models': `${__dirname}/../../../modules/engine/src/graph/models`,

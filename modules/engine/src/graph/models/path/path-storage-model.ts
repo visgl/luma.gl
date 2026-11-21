@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import type {ModelDrawOptions} from '../../../model/gpu-vector-model';
-import type {GPUPathStorageInputProps} from '@luma.gl/graph/experimental/models';
+import type {GPUPathStorageInputProps} from '@luma.gl/graph/experimental-models';
 
 import {
   Buffer,
@@ -23,11 +23,11 @@ import {
   createGpuPathGeneratedState,
   createGpuPathRangeState,
   dispatchGpuPathExpansionCompute
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/graph/experimental-models';
 import {
   resolvePathStorageInputs,
   type PathStorageBatchInputs
-} from '@luma.gl/graph/experimental/models';
+} from '@luma.gl/graph/experimental-models';
 import type {GPUInputSchema} from '@luma.gl/graph/gpu-tables';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';

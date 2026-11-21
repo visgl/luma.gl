@@ -15,7 +15,7 @@ import {
   prepareCRSProjectionAsync,
   planCRSProjection,
   ProjectionPlanningError
-} from '@luma.gl/graph/gpu-project/crs';
+} from '@luma.gl/graph/gpu-project-crs';
 import {evaluateProjectionProgram, invertProjectionProgram} from '@luma.gl/graph/gpu-project';
 import {geographicCRS, makeWebMercatorCRS} from './projection-crs-fixtures';
 

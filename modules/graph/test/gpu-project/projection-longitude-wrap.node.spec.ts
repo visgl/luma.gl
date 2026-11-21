@@ -10,7 +10,7 @@ import {
   invertProjectionProgram,
   type ProjectionProgram
 } from '@luma.gl/graph/gpu-project';
-import {planCRSProjection} from '@luma.gl/graph/gpu-project/crs';
+import {planCRSProjection} from '@luma.gl/graph/gpu-project-crs';
 import {projectionEngine} from '@math.gl/geospatial/projection';
 import {geographicCRS, makeTransverseMercatorCRS} from './projection-crs-fixtures';
 

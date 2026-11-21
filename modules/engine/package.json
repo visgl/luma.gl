@@ -26,22 +26,22 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./experimental/controls": {
+    "./experimental-controls": {
       "types": "./dist/experimental/controls/index.d.ts",
       "import": "./dist/experimental/controls/index.js",
       "require": "./dist/experimental/controls/index.cjs"
     },
-    "./experimental/materials": {
+    "./experimental-materials": {
       "types": "./dist/experimental/materials/index.d.ts",
       "import": "./dist/experimental/materials/index.js",
       "require": "./dist/experimental/materials/index.cjs"
     },
-    "./experimental/textures": {
+    "./experimental-textures": {
       "types": "./dist/experimental/textures/index.d.ts",
       "import": "./dist/experimental/textures/index.js",
       "require": "./dist/experimental/textures/index.cjs"
     },
-    "./experimental/webxr": {
+    "./experimental-webxr": {
       "types": "./dist/experimental/webxr/index.d.ts",
       "import": "./dist/experimental/webxr/index.js",
       "require": "./dist/experimental/webxr/index.cjs"

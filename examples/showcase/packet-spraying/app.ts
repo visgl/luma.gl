@@ -53,7 +53,7 @@ import {
   type OpticalPointLight,
   type OpticalPointLightsProps,
   type ReflectiveMaterialProps
-} from '@luma.gl/engine/experimental/materials';
+} from '@luma.gl/engine/experimental-materials';
 import {
   ABufferRenderer,
   WBOITRenderer,

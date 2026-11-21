@@ -287,9 +287,9 @@ show the full effective handler set explicitly.
 
 ```ts
 import {backendRegistry, type BackendModule} from '@luma.gl/graph/gpu-simple-graph';
-import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph/cpu';
-import * as webglBackend from '@luma.gl/graph/gpu-simple-graph/webgl';
-import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph/webgpu';
+import * as cpuBackend from '@luma.gl/graph/gpu-simple-graph-cpu';
+import * as webglBackend from '@luma.gl/graph/gpu-simple-graph-webgl';
+import * as webgpuBackend from '@luma.gl/graph/gpu-simple-graph-webgpu';
 
 backendRegistry.add('cpu', {
   ...cpuBackend,

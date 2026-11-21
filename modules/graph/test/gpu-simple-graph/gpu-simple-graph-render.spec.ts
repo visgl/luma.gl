@@ -313,7 +313,7 @@ void main() { result = vec4(color, 0., 0., 1.); }`,
     const compiled = graph.compile({outputTargets: {colors: {buffer: colors}}});
     try {
       if (backend === 'webgl') {
-        await backendRegistry.add('webgl', import('@luma.gl/graph/gpu-simple-graph/webgl'));
+        await backendRegistry.add('webgl', import('@luma.gl/graph/gpu-simple-graph-webgl'));
         compiled.runSync();
       } else {
         const scope = new GPUEvaluationScope(device);

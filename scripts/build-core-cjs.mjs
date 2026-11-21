@@ -270,11 +270,24 @@ const simpleGraphEsm = await import('../modules/graph/dist/gpu-simple-graph/inde
 const evaluatorEsm = await import('../modules/graph/dist/gpu-simple-graph/operation/gpu-data-evaluator.js');
 assert.equal(simpleGraphEsm.GPUDataEvaluator, evaluatorEsm.GPUDataEvaluator);
 for (const backend of ['cpu', 'webgl', 'webgpu']) {
-  const entry = `@luma.gl/graph/gpu-simple-graph/${backend}`;
+  const entry = `@luma.gl/graph/gpu-simple-graph-${backend}`;
   assert.equal(typeof require(entry).interleave, 'function');
   assert.equal(typeof (await import(entry)).interleave, 'function');
 }
 process.stdout.write('Verified SimpleGraph evaluator identity and backend entries.\n');
+
+// Use Node's actual export resolver to catch accidental forwarding paths.
+for (const specifier of [
+  '@luma.gl/graph/gpu-simple-graph/cpu',
+  '@luma.gl/graph/gpu-project/graph',
+  '@luma.gl/engine/experimental/controls'
+]) {
+  assert.throws(() => require.resolve(specifier), {code: 'ERR_PACKAGE_PATH_NOT_EXPORTED'});
+  await assert.rejects(import(specifier), {code: 'ERR_PACKAGE_PATH_NOT_EXPORTED'});
+}
+assert.equal('OrbitControls' in require('@luma.gl/engine/experimental-controls'), false);
+assert.equal('OrbitControls' in await import('@luma.gl/engine/experimental-controls'), false);
+
 
 // The optional lighting entry must preserve constructor identity within each module system.
 const lightingApi = require('@luma.gl/engine/lighting');

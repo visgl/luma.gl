@@ -4,7 +4,7 @@
 
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {Texture, type Device} from '@luma.gl/core';
-import {HTMLTexture} from '@luma.gl/engine/experimental/textures';
+import {HTMLTexture} from '@luma.gl/engine/experimental-textures';
 import {getNullTestDevice} from '@luma.gl/core/test-utils';
 
 const TEXTURE_BINDING = {

@@ -20,11 +20,11 @@ export default defineConfig({
       '@luma.gl/engine': __dirname + '/../../../modules/engine/src',
       '@luma.gl/shaders': __dirname + '/../../../modules/shaders/src',
       '@luma.gl/graph/_internal': __dirname + '/../../../modules/graph/src/execution',
-      '@luma.gl/graph/gpu-simple-graph/cpu':
+      '@luma.gl/graph/gpu-simple-graph-cpu':
         __dirname + '/../../../modules/graph/src/gpu-simple-graph/operations/cpu',
-      '@luma.gl/graph/gpu-simple-graph/webgl':
+      '@luma.gl/graph/gpu-simple-graph-webgl':
         __dirname + '/../../../modules/graph/src/gpu-simple-graph/operations/webgl',
-      '@luma.gl/graph/gpu-simple-graph/webgpu':
+      '@luma.gl/graph/gpu-simple-graph-webgpu':
         __dirname + '/../../../modules/graph/src/gpu-simple-graph/operations/webgpu',
       '@luma.gl/graph/gpu-simple-graph': __dirname + '/../../../modules/graph/src/gpu-simple-graph',
       '@luma.gl/graph': __dirname + '/../../../modules/graph/src'
