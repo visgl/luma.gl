@@ -10,6 +10,7 @@ import {
   getGPUExpressionColumnNames,
   GPUExpression,
   isBooleanExpressionNode,
+  isGPUScalarFunction,
   type GPUExpressionNode
 } from './gpu-expression';
 import {
@@ -435,7 +436,7 @@ function isNumericExpressionNode(node: GPUExpressionNode): boolean {
     case 'parameter':
       return node.value === null || typeof node.value === 'number';
     case 'unary':
-      return node.operator === 'negate';
+      return node.operator === 'negate' || isGPUScalarFunction(node.operator);
     case 'binary':
       return (
         node.operator === 'add' ||

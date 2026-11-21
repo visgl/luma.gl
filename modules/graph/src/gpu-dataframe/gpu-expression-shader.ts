@@ -6,6 +6,7 @@
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUDataFrame} from './gpu-data-frame';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
+import {isGPUScalarFunction, type GPUExpressionUnaryOperator} from './gpu-expression';
 import type {
   GPUExpression,
   GPUExpressionBinaryOperator,
@@ -312,7 +313,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   }
 
   private emitUnary(
-    operator: 'not' | 'is-valid' | 'is-null' | 'negate',
+    operator: GPUExpressionUnaryOperator,
     operandNode: GPUExpressionNode,
     expected?: GPUQueryValueFormat
   ): GPUQueryExpressionShaderValue {
@@ -329,6 +330,28 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'is-null': {
         const operand = this.emit(operandNode, this.inferFormat(operandNode));
         return this.addValue('boolean', `!${operand.valid}`, 'true');
+      }
+      case 'abs':
+      case 'floor':
+      case 'ceiling':
+      case 'round':
+      case 'trunc': {
+        const format = this.inferFormat(operandNode) ?? expected ?? 'float32';
+        if (format === 'boolean' || (operator === 'abs' && format === 'sint32')) {
+          throw new Error('GPUDataFrame scalar function requires a supported numeric format');
+        }
+        const operand = this.emit(operandNode, format);
+        if (format !== 'float32') {
+          return operand;
+        }
+        const value = operand.value;
+        const functionName = operator === 'ceiling' ? 'ceil' : operator;
+        const rounded = `trunc(${value})`;
+        const result =
+          operator === 'round'
+            ? `(${rounded} + select(0.0, sign(${value}), abs(${value} - ${rounded}) >= 0.5))`
+            : `${functionName}(${value})`;
+        return this.addValue(format, result, operand.valid, operand.nullable);
       }
       case 'negate': {
         const format = this.inferFormat(operandNode) ?? expected ?? 'float32';
@@ -417,7 +440,9 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         return whenTrue ?? otherwise;
       }
       case 'unary':
-        return node.operator === 'negate' ? this.inferFormat(node.operand) : 'boolean';
+        return node.operator === 'negate' || isGPUScalarFunction(node.operator)
+          ? this.inferFormat(node.operand)
+          : 'boolean';
       case 'binary':
         if (
           node.operator === 'add' ||

@@ -111,3 +111,11 @@ const fare = column('fare');
 const fareBucket = caseWhen(fare.greaterThan(literal(10)), literal(1), literal(0));
 const query = frame.withColumn('fareBucket', fareBucket);
 ```
+
+### Scalar numeric functions
+
+Use `scalarFunction('round', column('fare'))` to derive a numeric value or
+compose a filter. The supported names are `abs`, `floor`, `ceiling`, `round`,
+and `trunc`. Functions preserve the input format and nulls. `round` rounds
+halfway values away from zero. `abs` supports Float32 and Uint32. The rounding
+functions also accept Int32 and return integer inputs unchanged.

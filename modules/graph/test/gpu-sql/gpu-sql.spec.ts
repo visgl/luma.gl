@@ -39,7 +39,7 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
   const context = new GPUSQLContext({trips: frame});
   const filtered = context
     .query(
-      'SELECT fare, category, CASE WHEN NULL THEN 100 WHEN :threshold THEN 99 WHEN category >= 0 AND trips.fare > 9 THEN fare WHEN fare < 4 THEN 0 END AS bucket FROM trips WHERE fare IN (3, 8, 10, 11, NULL) AND fare NOT IN (9, 12)',
+      `SELECT fare, category, CASE WHEN NULL THEN 100 WHEN :threshold THEN 99 WHEN category >= 0 AND trips.fare > 9 THEN fare WHEN fare < 4 THEN 0 END AS bucket FROM trips WHERE fare IN (3, 8, 10, 11, NULL) AND fare NOT IN (9, 12)`,
       {parameters: {threshold: null}}
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-filter'}));
@@ -94,6 +94,37 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
     expect(Array.from(orderedArrow.getChild('fare') ?? []), '').toEqual([10, 8]);
     expect(Array.from(orderedArrow.getChild('Fare') ?? []), '').toEqual([-20, -16]);
     expect(Array.from(orderedArrow.getChild('category') ?? []), '').toEqual(['premium', 'premium']);
+
+    const numericCases = [
+      {expression: 'ABS(-fare)', expected: [8, 3, 10, 11]},
+      {expression: 'FLOOR(-fare - 0.5)', expected: [-9, -4, -11, -12]},
+      {expression: 'CEILING(-fare - 0.5)', expected: [-8, -3, -10, -11]},
+      {
+        expression: 'ROUND(CASE WHEN fare > 3 THEN -fare - 0.5 END)',
+        expected: [-9, null, -11, -12]
+      },
+      {expression: 'TRUNC(-fare - 0.5)', expected: [-8, -3, -10, -11]},
+      {expression: 'FLOOR(category)', expected: [1, 0, 1, 0]}
+    ];
+    for (const {expression, expected} of numericCases) {
+      const result = context
+        .query(`SELECT ${expression} AS computed FROM trips WHERE fare IS NOT NULL`)
+        .compile(new GPUCommandGraph(device, {id: 'ludf-sql-numeric-function'}));
+      try {
+        const commandEncoder = device.createCommandEncoder();
+        result.encode(commandEncoder);
+        device.submit(commandEncoder.finish());
+        const output = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(Array.from(output.getChild('computed') ?? []), expression).toEqual(expected);
+      } finally {
+        result.destroy();
+      }
+    }
   } finally {
     filtered.destroy();
     ordered.destroy();

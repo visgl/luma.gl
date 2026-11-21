@@ -6,6 +6,7 @@ import {describe, expect, test} from 'vitest';
 import {parseSQLExpression} from '@math.gl/sql/parser';
 import {
   caseWhen,
+  scalarFunction,
   column,
   literal,
   not,
@@ -79,4 +80,13 @@ test('lowers scalar SQL CASE into the typed DataFrame expression', () => {
     caseWhen(column('x').greaterThan(literal(0)), column('x'), literal(null)).node
   );
   expect(getGPUExpressionColumnNames(expression)).toEqual(['x']);
+});
+
+test('shares numeric SQL functions with typed DataFrame expressions', () => {
+  expect(makeGPUExpressionFromPortableAST(parseSQLExpression('CeIlInG(x)')).node).toEqual(
+    scalarFunction('ceiling', column('x')).node
+  );
+  expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression('ROUND(x, 2)'))).toThrow(
+    /one argument/
+  );
 });

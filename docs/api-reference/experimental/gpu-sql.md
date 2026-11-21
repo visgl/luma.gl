@@ -60,6 +60,11 @@ rendering and compute can use the compiled GPU resources directly. Call
 
 ## Supported grammar
 
+`ABS`, `FLOOR`, `CEILING`, `ROUND`, and `TRUNC` accept one numeric argument and preserve nulls.
+`ROUND` rounds halfway values away from zero. `ABS` supports Float32 and Uint32. The rounding
+functions also accept Int32 and return integer inputs unchanged.
+
+
 Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Conditions that are null skip
 the branch. Numeric column branches must have the same scalar format. An omitted `ELSE` yields null.
 
