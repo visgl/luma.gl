@@ -94,7 +94,6 @@ export function compileGPUDataFrameGlobalSort<
     Selection,
     CompiledGPUDataFrameGlobalSort<Selection>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
     prepare: context => addGPUGlobalSortToGraph(context, column, options)
   });
 }

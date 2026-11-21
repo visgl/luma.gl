@@ -80,6 +80,8 @@ Searched `CASE WHEN … THEN … ELSE … END` can produce numeric columns. Cond
 the branch. Numeric column branches must have the same scalar format. An omitted `ELSE` yields null.
 
 - `SELECT *`, named columns, numeric expressions, and explicit `AS` aliases.
+  Projection-only queries can pass through packed GPU columns and retain their source buffers.
+
 - One registered `FROM` table with optional aliases.
 - `WHERE` comparisons, `AND`, `OR`, `NOT`, parentheses, `IS NULL`, and `IS NOT NULL`.
 - `IN` and `NOT IN` compare a source column against up to 64 literals or named parameters.

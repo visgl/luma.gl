@@ -74,7 +74,6 @@ export function compileGPUDataFrameAggregation<
     Result,
     CompiledGPUDataFrameAggregation<Result>
   >(source, predicates, selectedColumns, graph, derivedColumns, {
-    allowEmptyPredicates: true,
     prepare: context => addGPUGlobalAggregationsToGraph<Selection, Result>(context, definitions)
   });
 }

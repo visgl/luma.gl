@@ -68,7 +68,6 @@ type GPUSQLAggregationDefinitions = Record<
 
 /** Runtime-validated SQL names cross the strongly typed dataframe boundary exactly once. */
 type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
-  predicates: readonly GPUExpression<boolean, string>[];
   filter: (predicate: GPUExpression<boolean, string>) => GPUSQLDynamicQuery;
   select: (names: readonly string[]) => GPUSQLDynamicQuery;
   withColumn: (
@@ -260,11 +259,6 @@ function buildGPUSQLPlan(
   }
   if (statement.limit !== undefined || statement.offset !== undefined)
     throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
-  if (query.predicates.length === 0) {
-    const firstColumn = frame.columnNames[0];
-    if (!firstColumn) throw new Error('GPUSQL SELECT requires at least one GPU source column');
-    query = query.filter(column(firstColumn).isValid().or(column(firstColumn).isNull()));
-  }
   return query.select(selected);
 }
 

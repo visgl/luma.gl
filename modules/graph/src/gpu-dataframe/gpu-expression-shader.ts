@@ -77,13 +77,8 @@ export function makeGPUQueryExpressionShaderPlan<T extends GPUTypeMap>(
   source: GPUDataFrame<T>,
   predicates: readonly GPUExpression<boolean, string>[],
   derivedColumns: readonly GPUDataFrameDerivedColumn[] = [],
-  selectedColumns: readonly string[] = [],
-  allowEmptyPredicates = false
+  selectedColumns: readonly string[] = []
 ): GPUQueryExpressionShaderPlan {
-  if (predicates.length === 0 && derivedColumns.length === 0 && !allowEmptyPredicates) {
-    throw new Error('GPUDataFrame filtering requires at least one predicate');
-  }
-
   const planner = new GPUQueryExpressionShaderPlanner(source, derivedColumns);
   const outputs = selectedColumns.flatMap(name => {
     const derived = derivedColumns.find(column => column.name === name);
