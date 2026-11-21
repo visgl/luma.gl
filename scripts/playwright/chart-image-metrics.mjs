@@ -80,3 +80,54 @@ function decodeHalf(value) {
   if (exponent === 0) return sign * fraction * 2 ** -24;
   return sign * (1 + fraction / 1024) * 2 ** (exponent - 15);
 }
+
+/** Compare linear RMSE at costs covered by both recorded GPU timing curves. */
+export function compareEmitterGpuCosts(uniform, power) {
+  const uniformCurve = makeGpuCostCurve(uniform);
+  const powerCurve = makeGpuCostCurve(power);
+  if (uniformCurve.length < 2 || powerCurve.length < 2) {
+    return {status: 'unavailable', reason: 'Each mode needs two distinct GPU timing checkpoints'};
+  }
+  const minimum = Math.max(uniformCurve[0].gpuTimeMilliseconds, powerCurve[0].gpuTimeMilliseconds);
+  const maximum = Math.min(uniformCurve.at(-1).gpuTimeMilliseconds, powerCurve.at(-1).gpuTimeMilliseconds);
+  if (minimum > maximum) {
+    return {status: 'unavailable', reason: 'The measured GPU cost ranges do not overlap'};
+  }
+  const budgets = [...new Set([...uniformCurve, ...powerCurve]
+    .map(point => point.gpuTimeMilliseconds)
+    .filter(cost => cost >= minimum && cost <= maximum))].sort((first, second) => first - second);
+  return {
+    status: 'interpolated',
+    budgets: budgets.map(gpuTimeMilliseconds => ({
+      gpuTimeMilliseconds,
+      uniformRootMeanSquaredError: interpolateGpuError(uniformCurve, gpuTimeMilliseconds),
+      powerRootMeanSquaredError: interpolateGpuError(powerCurve, gpuTimeMilliseconds)
+    }))
+  };
+}
+
+/** Sort valid timing checkpoints and retain the largest sample count for duplicate costs. */
+function makeGpuCostCurve(measurements) {
+  const points = new Map();
+  for (const measurement of measurements) {
+    const cost = measurement.gpuTimeMilliseconds;
+    const error = measurement.comparison?.rootMeanSquaredError;
+    if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(error)) continue;
+    if (!points.has(cost) || points.get(cost).accumulatedSamples < measurement.accumulatedSamples) {
+      points.set(cost, measurement);
+    }
+  }
+  return [...points.values()].sort((first, second) => first.gpuTimeMilliseconds - second.gpuTimeMilliseconds);
+}
+
+/** Linearly interpolate within the measured range. */
+function interpolateGpuError(curve, cost) {
+  const upper = curve.findIndex(point => point.gpuTimeMilliseconds >= cost);
+  const following = curve[upper];
+  if (following.gpuTimeMilliseconds === cost) return following.comparison.rootMeanSquaredError;
+  const previous = curve[upper - 1];
+  const fraction = (cost - previous.gpuTimeMilliseconds) /
+    (following.gpuTimeMilliseconds - previous.gpuTimeMilliseconds);
+  return previous.comparison.rootMeanSquaredError * (1 - fraction) +
+    following.comparison.rootMeanSquaredError * fraction;
+}
