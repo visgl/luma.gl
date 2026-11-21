@@ -56,6 +56,8 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
       emitterSelection: renderer.getParameter('emitterSelection'),
       progressive: renderer.getParameter('progressive'),
       shadows: renderer.getParameter('shadows'),
+      filteredCutouts: renderer.getParameter('filteredCutouts'),
+      transmissiveShadows: renderer.getParameter('transmissiveShadows'),
       resolutionScale: renderer.getParameter('resolutionScale'),
       minimumResolutionScale: renderer.getParameter('minimumResolutionScale'),
       adaptiveResolution: renderer.getParameter('adaptiveResolution'),

@@ -22,6 +22,7 @@ struct RayTracingUniforms {
   emitters: vec4<u32>,
   environmentRadiance: vec4<f32>,
   environmentMap: vec4<u32>,
+  visibility: vec4<u32>,
 };
 
 struct RayPrimitive {
@@ -181,7 +182,12 @@ struct RayLight {
 struct Ray {
   origin: vec3<f32>,
   direction: vec3<f32>,
+  footprint: vec2<f32>,
 };
+
+fn makeRay(origin: vec3<f32>, direction: vec3<f32>) -> Ray {
+  return Ray(origin, direction, vec2<f32>(0.0));
+}
 
 struct RayHit {
   distance: f32,
@@ -248,25 +254,44 @@ fn makeCameraRayAtFullCoordinates(coordinates: vec2<f32>) -> Ray {
     let nearPoint = uniforms.inverseViewProjection * vec4<f32>(clipCoordinates, -1.0, 1.0);
     origin = nearPoint.xyz / nearPoint.w;
   }
-  return Ray(origin, normalize(farPosition - origin));
+  return makeRay(origin, normalize(farPosition - origin));
+}
+
+const FILTERED_CUTOUTS = /* FILTERED_CUTOUTS */ true;
+
+// Use the internal pixel spacing for visibility in both rendering and display-resolution queries.
+fn makeVisibilityCameraRay(coordinates: vec2<f32>, pixelStep: vec2<f32>) -> Ray {
+  var ray = makeCameraRayAtFullCoordinates(coordinates);
+  if (FILTERED_CUTOUTS && MATERIAL_HAS_MIPMAPS && uniforms.visibility.x != 0u) {
+    let horizontal = makeCameraRayAtFullCoordinates(coordinates + vec2<f32>(pixelStep.x, 0.0));
+    let vertical = makeCameraRayAtFullCoordinates(coordinates + vec2<f32>(0.0, pixelStep.y));
+    ray.footprint = vec2<f32>(
+      max(length(horizontal.origin - ray.origin), length(vertical.origin - ray.origin)),
+      max(length(horizontal.direction - ray.direction), length(vertical.direction - ray.direction))
+    );
+  }
+  return ray;
 }
 
 fn makeCameraRayAtCoordinates(coordinates: vec2<f32>) -> Ray {
   if (uniforms.imageRegion.z > 0u) {
-    return makeCameraRayAtFullCoordinates((coordinates * vec2<f32>(uniforms.displayPhase.xy)
-      + vec2<f32>(uniforms.imageRegion.xy)) / vec2<f32>(uniforms.imageRegion.zw));
+    let size = vec2<f32>(uniforms.imageRegion.zw);
+    return makeVisibilityCameraRay((coordinates * vec2<f32>(uniforms.displayPhase.xy)
+      + vec2<f32>(uniforms.imageRegion.xy)) / size, 1.0 / size);
   }
-  return makeCameraRayAtFullCoordinates(coordinates);
+  return makeVisibilityCameraRay(coordinates, 1.0 / vec2<f32>(uniforms.dimensions.xy));
+}
+
+fn getFullSampleCoordinates(pixel: vec2<u32>, offset: vec2<f32>) -> vec2<f32> {
+  if (uniforms.imageRegion.z > 0u) {
+    return (vec2<f32>(pixel + uniforms.imageRegion.xy) + offset) / vec2<f32>(uniforms.imageRegion.zw);
+  }
+  return (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy);
 }
 
 fn makeCameraRayAtOffset(pixel: vec2<u32>, offset: vec2<f32>) -> Ray {
-  if (uniforms.imageRegion.z > 0u) {
-    return makeCameraRayAtFullCoordinates((vec2<f32>(pixel + uniforms.imageRegion.xy) + offset)
-      / vec2<f32>(uniforms.imageRegion.zw));
-  }
-  return makeCameraRayAtFullCoordinates(
-    (vec2<f32>(pixel) + offset) / vec2<f32>(uniforms.dimensions.xy)
-  );
+  let size = select(uniforms.dimensions.xy, uniforms.imageRegion.zw, uniforms.imageRegion.z > 0u);
+  return makeVisibilityCameraRay(getFullSampleCoordinates(pixel, offset), 1.0 / vec2<f32>(size));
 }
 
 fn getSamplingPixelIndex(pixel: vec2<u32>) -> u32 {
@@ -431,7 +456,7 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
   let primitive = primitives[primitiveIndex];
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
-  let localRay = Ray(localOrigin, localDirection);
+  let localRay = makeRay(localOrigin, localDirection);
   let sphereRadius = primitive.properties.y;
   if (sphereRadius > 0.0) {
     var minimumDistance = RAY_EPSILON;
@@ -501,11 +526,15 @@ fn intersectPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> Ra
             }
             let worldNormal = normalize((transpose(primitive.inverseTransform) *
               vec4<f32>(localNormal, 0.0)).xyz);
-            let candidate = RayHit(intersection.x, worldNormal, primitiveIndex, entering,
+            var candidate = RayHit(intersection.x, worldNormal, primitiveIndex, entering,
               vec2<f32>(triangle.firstPosition.w, triangle.firstNormal.w) * normalWeight +
               vec2<f32>(triangle.secondPosition.w, triangle.secondNormal.w) * intersection.y +
               vec2<f32>(triangle.thirdPosition.w, triangle.thirdNormal.w) * intersection.z,
               triangle.secondaryCoordinates[0].xy * normalWeight + triangle.secondaryCoordinates[0].zw * intersection.y + triangle.secondaryCoordinates[1].xy * intersection.z, triangleIndex, 0.0);
+            if (FILTERED_CUTOUTS && MATERIAL_HAS_MIPMAPS && primitive.material.x >= 0.0 && any(ray.footprint > vec2<f32>(0.0))) {
+              let coneWidth = ray.footprint.x + ray.footprint.y * candidate.distance;
+              candidate.footprint = getSecondaryFootprint(ray, candidate, coneWidth);
+            }
             if (isMaterialVisible(candidate)) { closestHit = candidate; }
           }
         }
@@ -553,7 +582,7 @@ fn intersectsPrimitive(ray: Ray, primitiveIndex: u32, maximumDistance: f32) -> b
   }
   let localOrigin = (primitive.inverseTransform * vec4<f32>(ray.origin, 1.0)).xyz;
   let localDirection = (primitive.inverseTransform * vec4<f32>(ray.direction, 0.0)).xyz;
-  let localRay = Ray(localOrigin, localDirection);
+  let localRay = makeRay(localOrigin, localDirection);
   let sphereRadius = primitive.properties.y;
   if (sphereRadius > 0.0) {
     return intersectSphere(localRay, sphereRadius, RAY_EPSILON, maximumDistance) < maximumDistance;
@@ -1064,6 +1093,36 @@ fn getDiffuseTransmissionTint(primitive: RayPrimitive, hit: RayHit,
     (1.0 - clamp(primitive.emissive.w, 0.0, 1.0)) * sheenWeight * coatWeight;
 }
 
+const TRANSMISSIVE_SHADOWS = /* TRANSMISSIVE_SHADOWS */ false;
+
+// Straight-line visibility through thin diffuse-transmission layers. Closed dielectric
+// interfaces still occlude this connection because their transport changes direction.
+fn getAnalyticShadowTransmission(ray: Ray, maximumDistance: f32) -> vec3<f32> {
+  if (uniforms.settings.w <= 0.5) { return vec3<f32>(1.0); }
+  if (!TRANSMISSIVE_SHADOWS || !MATERIAL_HAS_DIFFUSE_TRANSMISSION || !usePBRTransport()) {
+    return vec3<f32>(select(1.0, 0.0, intersectsScene(ray, maximumDistance)));
+  }
+  var segment = ray;
+  var remaining = maximumDistance;
+  var transmission = vec3<f32>(1.0);
+  for (var layer = 0u; layer < 8u; layer++) {
+    let blocker = intersectScene(segment, remaining);
+    if (blocker.distance >= remaining) { return transmission; }
+    let material = getShadedPrimitive(blocker);
+    let fraction = getDiffuseTransmission(material);
+    if (fraction <= 0.0 || material.material.y > 0.0) { return vec3<f32>(0.0); }
+    let cosine = abs(dot(getFaceNormal(blocker, segment), segment.direction));
+    transmission *= fraction * getDiffuseTransmissionTint(
+      material, blocker, -segment.direction, cosine, cosine);
+    if (all(transmission <= vec3<f32>(0.0))) { return vec3<f32>(0.0); }
+    let advance = blocker.distance + RAY_EPSILON;
+    remaining -= advance;
+    if (remaining <= RAY_EPSILON) { return transmission; }
+    segment.origin += segment.direction * advance;
+  }
+  return select(transmission, vec3<f32>(0.0), intersectsScene(segment, remaining));
+}
+
 fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<f32> {
   let primitive = getShadedPrimitive(hit);
   let hitPosition = ray.origin + ray.direction * hit.distance;
@@ -1144,11 +1203,12 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
 
     let faceLight = dot(transmissionNormal, lightDirection);
     if (diffuseTransmission > 0.0 && faceLight < 0.0 && attenuation > 0.0) {
-      let shadowRay = Ray(hitPosition - transmissionNormal * 0.002, lightDirection);
+      let shadowRay = makeRay(hitPosition - transmissionNormal * 0.002, lightDirection);
       let shadowDistance = select(lightDistance - 0.003, RAY_INFINITY, lightType == 1u);
-      if (uniforms.settings.w <= 0.5 || !intersectsScene(shadowRay, shadowDistance)) {
+      let shadowTransmission = getAnalyticShadowTransmission(shadowRay, shadowDistance);
+      if (any(shadowTransmission > vec3<f32>(0.0))) {
         let tint = getDiffuseTransmissionTint(primitive, hit, viewDirection, abs(dot(transmissionNormal, viewDirection)), -faceLight);
-        result += tint * lightColor * (-faceLight / PI) * diffuseTransmission *
+        result += tint * lightColor * shadowTransmission * (-faceLight / PI) * diffuseTransmission *
           attenuation * lightSampleWeight * opaqueWeight;
       }
       continue;
@@ -1158,13 +1218,10 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
         dot(faceNormal, lightDirection) <= 0.0 || attenuation <= 0.0) {
       continue;
     }
-    if (uniforms.settings.w > 0.5) {
-      let shadowRay = Ray(hitPosition + faceNormal * 0.002, lightDirection);
-      let shadowDistance = select(lightDistance - 0.003, RAY_INFINITY, lightType == 1u);
-      if (intersectsScene(shadowRay, shadowDistance)) {
-        continue;
-      }
-    }
+    let shadowRay = makeRay(hitPosition + faceNormal * 0.002, lightDirection);
+    let shadowDistance = select(lightDistance - 0.003, RAY_INFINITY, lightType == 1u);
+    let shadowTransmission = getAnalyticShadowTransmission(shadowRay, shadowDistance);
+    if (all(shadowTransmission <= vec3<f32>(0.0))) { continue; }
 
     let halfDirection = normalize(lightDirection + viewDirection);
     let normalHalf = max(dot(normal, halfDirection), 0.0);
@@ -1190,7 +1247,7 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
       primitive.sheen, normalHalf, normalView, normalLight);
     let response = applyClearcoat(layeredResponse,
       primitive.clearcoatOcclusion.xy, hit, viewDirection, lightDirection, halfDirection, viewHalf);
-    result += response * lightColor *
+    result += response * lightColor * shadowTransmission *
       attenuation * lightSampleWeight * opaqueWeight;
   }
 
@@ -1690,7 +1747,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   let shadowOrigin = position + face * select(-0.002, 0.002, faceLight > 0.0);
   let shadowOffset = lightPosition - shadowOrigin;
   let shadowDistance = length(shadowOffset);
-  if (uniforms.settings.w > 0.5 && shadowDistance > RAY_EPSILON && intersectsScene(Ray(shadowOrigin, shadowOffset / shadowDistance), shadowDistance - 0.002)) { return vec3<f32>(0.0); }
+  if (uniforms.settings.w > 0.5 && shadowDistance > RAY_EPSILON && intersectsScene(makeRay(shadowOrigin, shadowOffset / shadowDistance), shadowDistance - 0.002)) { return vec3<f32>(0.0); }
   var response = clamp(receiver.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) * 0.96 *
     (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)) * normalLight / PI;
   if (usePBRTransport()) {
@@ -1829,7 +1886,7 @@ fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinua
   if (faceLight <= 0.0 && diffuseTransmission <= 0.0) { return vec3<f32>(0.0); }
   let position = ray.origin + ray.direction * hit.distance;
   let origin = position + face * select(-0.002, 0.002, faceLight > 0.0);
-  if (intersectsScene(Ray(origin, direction), RAY_INFINITY)) { return vec3<f32>(0.0); }
+  if (intersectsScene(makeRay(origin, direction), RAY_INFINITY)) { return vec3<f32>(0.0); }
   var response = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
     0.96 * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0)) * normalLight / PI;
   var materialDensity = normalLight / PI;
@@ -1906,7 +1963,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
         medium = 0xffffffffu;
       }
     }
-    ray = Ray(position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
+    ray = makeRay(position + normal * select(-0.002, 0.002, dot(normal, sample.direction) >= 0.0), sample.direction);
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
       // A camera backdrop remains visible through smooth dielectric paths without
@@ -1993,7 +2050,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     let position = ray.origin + ray.direction * receiverDistance;
     let surfaceNormal = getFaceNormal(hit, ray);
     if (dot(surfaceNormal, direction) <= 0.0) { break; }
-    ray = Ray(position + surfaceNormal * 0.002, normalize(direction));
+    ray = makeRay(position + surfaceNormal * 0.002, normalize(direction));
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
       if (ENVIRONMENT_LIGHTING_ENABLED) {
@@ -2368,7 +2425,7 @@ fn bakeIrradiance(@builtin(global_invocation_id) invocation: vec3u) {
   let reference = select(vec3f(0,0,1), vec3f(0,1,0), abs(normal.z) > 0.999);
   let tangent = normalize(cross(reference, normal));
   let direction = tangent * (sqrt(radial) * cos(angle)) + cross(normal,tangent) * (sqrt(radial) * sin(angle)) + normal * sqrt(1.0-radial);
-  let ray = Ray(position.xyz + normal * 0.002, direction);
+  let ray = makeRay(position.xyz + normal * 0.002, direction);
   let hit = intersectScene(ray, RAY_INFINITY);
   var irradiance = vec3f(0.0);
   if (hit.distance < RAY_INFINITY) {

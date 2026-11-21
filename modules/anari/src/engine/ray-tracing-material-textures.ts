@@ -189,8 +189,9 @@ export function getRayMaterialTextureShader(
         }
         if (name === 'baseColor') {
           opacityMaterials.push(`case ${surfaceIndex}u: {
-            let coordinates = (mat3x3<f32>(${matrix}) * vec3<f32>(${coordinates}, 1.0)).xy;
-            opacity *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, vec2<f32>(0.0)).a;
+            let transform = mat3x3<f32>(${matrix});
+            let coordinates = (transform * vec3<f32>(${coordinates}, 1.0)).xy;
+            opacity *= sampleMaterialTexture(${textures.indexOf(texture) + 1}u, coordinates, ${footprint}).a;
           }`);
         }
         return `{ let transform = mat3x3<f32>(${matrix});
@@ -221,8 +222,8 @@ export function getRayMaterialTextureShader(
       '/* MATERIAL_PRIMARY_FOOTPRINT */',
       textures.some(texture => texture.mipLevels > 1)
         ? `
-      let horizontal = makeCameraRayAtOffset(pixel, sampleOffset + vec2<f32>(1.0, 0.0));
-      let vertical = makeCameraRayAtOffset(pixel, sampleOffset + vec2<f32>(0.0, 1.0));
+      let horizontal = makeCameraRayAtFullCoordinates(getFullSampleCoordinates(pixel, sampleOffset + vec2<f32>(1.0, 0.0)));
+      let vertical = makeCameraRayAtFullCoordinates(getFullSampleCoordinates(pixel, sampleOffset + vec2<f32>(0.0, 1.0)));
       let position = ray.origin + ray.direction * hit.distance;
       let face = getFaceNormal(hit, ray);
       let horizontalOffset = horizontal.origin + horizontal.direction * hit.distance - position;
