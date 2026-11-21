@@ -118,7 +118,10 @@ async function captureFrameCount(browser, output, frames) {
     });
     await page.addStyleTag({content: '.preview-heading, .preview-statistics, .preview-hint {visibility: hidden !important}'});
     await mkdir(output, {recursive: true});
-    const capture = await page.locator('#playground-canvas').screenshot({path: `${output}/chart.png`, timeout: 60000});
+    const canvas = page.locator('#playground-canvas');
+    const clip = await canvas.boundingBox();
+    if (!clip) throw new Error('The capture canvas is hidden');
+    const capture = await page.screenshot({clip, path: `${output}/chart.png`, timeout: 60000});
     const comparison = referenceImage ? {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)} : undefined;
     if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
     await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
