@@ -21,6 +21,7 @@ struct RayTracingUniforms {
   imageRegion: vec4<u32>,
   emitters: vec4<u32>,
   environmentRadiance: vec4<f32>,
+  environmentMap: vec4<u32>,
 };
 
 struct RayPrimitive {
@@ -1769,13 +1770,55 @@ fn getSecondaryFootprint(ray: Ray, hit: RayHit, coneWidth: f32) -> f32 {
 const ENVIRONMENT_LIGHTING_ENABLED = /* ENVIRONMENT_LIGHTING_ENABLED */ false;
 const ENVIRONMENT_DIRECTION_DENSITY = 1.0 / (4.0 * PI);
 
-// A constant environment has uniform power per unit solid angle.
+const DIRECTIONAL_ENVIRONMENT_ENABLED = /* DIRECTIONAL_ENVIRONMENT_ENABLED */ false;
+const ENVIRONMENT_UNIFORM_FRACTION = 0.05;
+
+fn getEnvironmentMapOffset() -> u32 {
+  return uniforms.dimensions.w + uniforms.emitters.x;
+}
+
+fn getEnvironmentTexel(direction: vec3<f32>) -> vec4<f32> {
+  let dimensions = uniforms.environmentMap.xy;
+  let longitude = fract(atan2(direction.z, direction.x) / (2.0 * PI));
+  let latitude = acos(clamp(direction.y, -1.0, 1.0)) / PI;
+  let texel = min(vec2<u32>(vec2<f32>(longitude, latitude) * vec2<f32>(dimensions)), dimensions - vec2<u32>(1u));
+  return lights[getEnvironmentMapOffset() + texel.y * dimensions.x + texel.x].colorIntensity;
+}
+
+fn sampleEnvironmentDirection(seed: u32) -> vec3<f32> {
+  let vertical = makeRandom(seed ^ 1231u);
+  let horizontal = makeRandom(seed ^ 1597u);
+  var height = 1.0 - 2.0 * vertical;
+  var azimuth = 2.0 * PI * horizontal;
+  // The uniform component gives every direction support, even when adjacent CDF entries round together.
+  if (DIRECTIONAL_ENVIRONMENT_ENABLED && makeRandom(seed ^ 1879u) >= ENVIRONMENT_UNIFORM_FRACTION) {
+    let dimensions = uniforms.environmentMap.xy;
+    let tableOffset = getEnvironmentMapOffset();
+    let selection = min(makeRandom(seed ^ 2137u), 0.99999994);
+    var lower = 0u;
+    var upper = dimensions.x * dimensions.y - 1u;
+    while (lower < upper) {
+      let middle = lower + (upper - lower) / 2u;
+      if (selection < lights[tableOffset + middle].positionInnerCone.x) {
+        upper = middle;
+      } else {
+        lower = middle + 1u;
+      }
+    }
+    let column = lower % dimensions.x;
+    let row = lower / dimensions.x;
+    let north = cos(PI * f32(row) / f32(dimensions.y));
+    let south = cos(PI * f32(row + 1u) / f32(dimensions.y));
+    height = mix(north, south, vertical);
+    azimuth = 2.0 * PI * (f32(column) + horizontal) / f32(dimensions.x);
+  }
+  let radius = sqrt(max(1.0 - height * height, 0.0));
+  return vec3<f32>(radius * cos(azimuth), height, radius * sin(azimuth));
+}
+
 fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinuation: bool) -> vec3<f32> {
   if (!ENVIRONMENT_LIGHTING_ENABLED) { return vec3<f32>(0.0); }
-  let height = 1.0 - 2.0 * makeRandom(seed ^ 1231u);
-  let azimuth = 2.0 * PI * makeRandom(seed ^ 1597u);
-  let radius = sqrt(max(1.0 - height * height, 0.0));
-  let direction = vec3<f32>(radius * cos(azimuth), height, radius * sin(azimuth));
+  let direction = sampleEnvironmentDirection(seed);
   let face = getFaceNormal(hit, ray);
   let faceLight = dot(face, direction);
   let shadingNormal = getShadingNormal(hit);
@@ -1804,12 +1847,21 @@ fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinua
       materialDensity = getPBRDirectionDensity(ray, hit, primitive, normal, direction, faceLight);
     }
   }
-  let weight = getMISWeight(ENVIRONMENT_DIRECTION_DENSITY, select(0.0, materialDensity, compareContinuation));
-  return response * evaluateEnvironmentRadiance(hit.distance) * (weight / ENVIRONMENT_DIRECTION_DENSITY);
+  let environment = evaluateEnvironmentRadiance(direction, hit.distance);
+  let weight = getMISWeight(environment.w, select(0.0, materialDensity, compareContinuation));
+  return response * environment.rgb * (weight / environment.w);
 }
 
-fn evaluateEnvironmentRadiance(receiverDistance: f32) -> vec3<f32> {
-  return uniforms.environmentRadiance.rgb * exp(-max(uniforms.fog.w, 0.0) * receiverDistance);
+// The fourth component is the solid-angle density used by both estimators.
+fn evaluateEnvironmentRadiance(direction: vec3<f32>, receiverDistance: f32) -> vec4<f32> {
+  var radiance = uniforms.environmentRadiance.rgb;
+  var density = ENVIRONMENT_DIRECTION_DENSITY;
+  if (DIRECTIONAL_ENVIRONMENT_ENABLED) {
+    let texel = getEnvironmentTexel(direction);
+    radiance += texel.rgb;
+    density = mix(texel.w, density, ENVIRONMENT_UNIFORM_FRACTION);
+  }
+  return vec4<f32>(radiance * exp(-max(uniforms.fog.w, 0.0) * receiverDistance), density);
 }
 
 fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
@@ -1861,8 +1913,9 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       // turning it into diffuse environment illumination.
       if (medium == 0xffffffffu) {
         if (ENVIRONMENT_LIGHTING_ENABLED) {
-          let weight = select(getMISWeight(sample.density, ENVIRONMENT_DIRECTION_DENSITY), 1.0, sample.delta);
-          radiance += throughput * weight * evaluateEnvironmentRadiance(receiverDistance);
+          let environment = evaluateEnvironmentRadiance(ray.direction, receiverDistance);
+          let weight = select(getMISWeight(sample.density, environment.w), 1.0, sample.delta);
+          radiance += throughput * weight * environment.rgb;
         } else if (dielectricOnly) {
           radiance += throughput * uniforms.background.rgb;
         }
@@ -1945,8 +1998,9 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     if (hit.distance >= RAY_INFINITY) {
       if (ENVIRONMENT_LIGHTING_ENABLED) {
         let density = max(dot(normal, ray.direction), 0.0) / PI;
-        let weight = getMISWeight(density, ENVIRONMENT_DIRECTION_DENSITY);
-        radiance += throughput * weight * evaluateEnvironmentRadiance(receiverDistance);
+        let environment = evaluateEnvironmentRadiance(ray.direction, receiverDistance);
+        let weight = getMISWeight(density, environment.w);
+        radiance += throughput * weight * environment.rgb;
       }
       break;
     }

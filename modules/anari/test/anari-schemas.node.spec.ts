@@ -41,6 +41,7 @@ it('ANARI renderer schemas validate graph-based ray tracing settings', () => {
     targetFrameTimeMilliseconds: 33.3,
     temporalReprojection: true,
     shadowSamplesPerFrame: 1,
+    environmentMap: {width: 1, height: 1, data: [2, 1, 0.5]},
     exposure: 1.4
   };
 
@@ -52,6 +53,12 @@ it('ANARI renderer schemas validate graph-based ray tracing settings', () => {
     Boolean(ANARISceneSchema.safeParse({...PLAYGROUND_PRESETS[0].scene, renderer}).success),
     'complete retained scenes can declare the raytrace renderer'
   ).toBe(true);
+  expect(
+    ANARIRendererSchema.safeParse({
+      ...renderer,
+      environmentMap: {width: 2, height: 1, data: [2, 1, 0.5]}
+    }).success
+  ).toBe(false);
   expect(
     Boolean(ANARIRendererSchema.safeParse({...renderer, samplesPerPixel: 0}).success),
     'sample counts must be positive integers'

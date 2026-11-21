@@ -248,5 +248,13 @@ Set `environmentRadiance` to a constant linear RGB radiance, for example `[0.5, 
 The renderer samples directions at infinity and tests those rays against scene geometry.
 With bounces enabled, it pairs these samples with BSDF paths that escape the scene using
 multiple importance sampling. This works with both `diffuse` and `pbr` transport and defaults
-to zero. `background` continues to control the camera backdrop. Image-based environment
-sampling requires a separate directional radiance distribution.
+to zero. `background` continues to control the camera backdrop. To add directional lighting, set `environmentMap` to `{width, height, data}`. Supply three
+linear RGB values per texel in row-major latitude–longitude order. Row zero starts at the
++Y pole. Column zero starts at +X and longitude increases toward +Z. Dimensions are limited
+to 2,048 per axis and 1,048,576 texels total. Replace the map object to update lighting and
+reset progressive accumulation.
+
+The renderer samples each texel with probability proportional to its luminance and solid
+angle, with a 5% uniform-sphere component. Explicit directions and BSDF misses use the same
+solid-angle density for MIS. A map adds to `environmentRadiance` and works independently of
+`background`. The map represents piecewise-constant texel radiance.

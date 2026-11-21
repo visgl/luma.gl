@@ -25,7 +25,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(336);
+    expect(reflection.uniforms[0].size).toBe(352);
     expect(reflection.uniforms[0].members?.map(({name, offset}) => ({name, offset}))).toEqual([
       {name: 'inverseViewProjection', offset: 0},
       {name: 'cameraPosition', offset: 64},
@@ -41,7 +41,8 @@ describe('graph-accelerated ray tracing shaders', () => {
       {name: 'sampling', offset: 272},
       {name: 'imageRegion', offset: 288},
       {name: 'emitters', offset: 304},
-      {name: 'environmentRadiance', offset: 320}
+      {name: 'environmentRadiance', offset: 320},
+      {name: 'environmentMap', offset: 336}
     ]);
     expect(reflection.storage.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
@@ -73,7 +74,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(336);
+    expect(reflection.uniforms[0].size).toBe(352);
     expect(reflection.textures.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'historyImage', binding: 1},
       {name: 'historyMetadata', binding: 2}
@@ -131,7 +132,7 @@ describe('graph-accelerated ray tracing shaders', () => {
     expect(reflection.uniforms.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'uniforms', binding: 0}
     ]);
-    expect(reflection.uniforms[0].size).toBe(336);
+    expect(reflection.uniforms[0].size).toBe(352);
     expect(storageBuffers.map(({name, binding}) => ({name, binding}))).toEqual([
       {name: 'primitives', binding: 1},
       {name: 'triangles', binding: 2},
