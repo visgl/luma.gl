@@ -49,17 +49,24 @@ export const VEHICLE_STRIDE = 512;
 /** Byte size of one aligned row of optional terrain collider indices. */
 export const VEHICLE_TERRAIN_ROW_SIZE = 16;
 
-/** One workgroup owns one chassis. All wheels sample the same pre-step velocity. */
-export function getVehicleShader(multiSurface: boolean): string {
+/** Each invocation owns one chassis. All wheels sample the same pre-step velocity. */
+export function getVehicleShader(
+  vehicleCount: number,
+  multiSurface: boolean,
+  vehiclesPerInstance: number
+): string {
+  const vehicleRows = multiSurface ? 'vehicle.rows' : 'vehicle';
   return /* wgsl */ `
 struct Wheel { mount:vec4f, flags:vec4f, state:vec4f }
 struct Vehicle { controls:vec4f, geometry:vec4f, tire:vec4f, indices:vec4u, wheels:array<Wheel,4>, poses:array<mat4x4f,4> }
-@group(0) @binding(12) var<storage,read_write> vehicle:array<Vehicle>;
-${multiSurface ? '@group(0) @binding(13) var<storage,read> vehicleTerrain:array<vec4u>;' : ''}
+@group(0) @binding(12) var<storage,read_write> vehicle:${multiSurface ? 'VehicleStorage' : 'array<Vehicle>'};
+${multiSurface ? `struct VehicleStorage { rows:array<Vehicle,${vehicleCount}>, terrain:array<vec4u,${vehicleCount}> }` : ''}
 struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
-@compute @workgroup_size(1) fn advanceVehicle(@builtin(workgroup_id) group:vec3u) {
-  let vehicleIndex=group.x;
-  let settingsForVehicle=vehicle[vehicleIndex];
+${vehiclesPerInstance ? `const VEHICLES_PER_INSTANCE:u32=${vehiclesPerInstance}u;` : ''}
+@compute @workgroup_size(${vehiclesPerInstance ? 64 : 1}) fn advanceVehicle(@builtin(global_invocation_id) invocation:vec3u) {
+  var vehicleIndex=invocation.x;
+  ${vehiclesPerInstance ? 'if(invocation.x>=ensemble[0]*VEHICLES_PER_INSTANCE){return;} vehicleIndex=ensemble[INSTANCE_QUEUE+invocation.x/VEHICLES_PER_INSTANCE]*VEHICLES_PER_INSTANCE+invocation.x%VEHICLES_PER_INSTANCE;' : ''}
+  let settingsForVehicle=${vehicleRows}[vehicleIndex];
   let chassis=settingsForVehicle.indices.x;
   let primaryTerrain=settingsForVehicle.indices.y;
   if(!dynamic(chassis)){return;}
@@ -81,7 +88,7 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
     var found=false;
     for(var surfaceIndex=0u;surfaceIndex<${multiSurface ? '4u' : '1u'};surfaceIndex++){
       var terrain=primaryTerrain;
-      ${multiSurface ? 'if(surfaceIndex>0u){terrain=vehicleTerrain[vehicleIndex][surfaceIndex-1u];if(terrain==0xffffffffu){break;}}' : ''}
+      ${multiSurface ? 'if(surfaceIndex>0u){terrain=vehicle.terrain[vehicleIndex][surfaceIndex-1u];if(terrain==0xffffffffu){break;}}' : ''}
       if(bodies.bodies[colliderBody(terrain)].motion.x!=0.0){continue;}
       let hit=sweepSphere(terrain,colliderLocal(terrain,mount-colliderPosition(terrain)),colliderLocal(terrain,down),travel,radius,false);
       if(hit.hit!=0u && hit.complete!=0u){
@@ -142,13 +149,13 @@ struct SuspensionContact { normal:vec3f, lever:vec3f, lengthNow:f32, load:f32 }
     }
     let lengthNow=contact.lengthNow;
     let angle=wheel.state.y+speed*timestep;
-    vehicle[vehicleIndex].wheels[index].flags.w=steering;
-    vehicle[vehicleIndex].wheels[index].state=vec4f(speed,angle,lengthNow,load);
+    ${vehicleRows}[vehicleIndex].wheels[index].flags.w=steering;
+    ${vehicleRows}[vehicleIndex].wheels[index].state=vec4f(speed,angle,lengthNow,load);
     let heading=vec3f(cos(steering),sin(steering),0);
     let axle=vec3f(-sin(steering),cos(steering),0);
     let vertical=vec3f(0,0,1);
     let hub=wheel.mount.xyz-vertical*lengthNow;
-    vehicle[vehicleIndex].poses[index]=mat4x4f(vec4f(heading*cos(angle)-vertical*sin(angle),0),
+    ${vehicleRows}[vehicleIndex].poses[index]=mat4x4f(vec4f(heading*cos(angle)-vertical*sin(angle),0),
       vec4f(axle,0),vec4f(heading*sin(angle)+vertical*cos(angle),0),vec4f(hub,1));
   }
   velocities[chassis]=vec4f(velocities[chassis].xyz+impulse*velocities[chassis].w,velocities[chassis].w);

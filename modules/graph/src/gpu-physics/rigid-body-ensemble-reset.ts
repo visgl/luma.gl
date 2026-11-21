@@ -4,6 +4,7 @@
 
 import {type BoundKernel, createBoundKernel} from '../gpu-core/utils/bound-kernel';
 import {Buffer, type Device} from '@luma.gl/core';
+import {VEHICLE_STRIDE} from './rigid-body-vehicle';
 
 /** One template-sized GPU reset image; no per-instance snapshots or pose readback. */
 export function makeEnsembleReset(
@@ -13,7 +14,8 @@ export function makeEnsembleReset(
   bodyCount: number,
   bodiesPerInstance: number,
   collidersPerInstance: number,
-  maximumPairs: number
+  maximumPairs: number,
+  vehiclesPerInstance: number
 ) {
   const find = (name: string) => buffers.find(buffer => buffer.id === `${id}-${name}`)!;
   const plans = [
@@ -26,7 +28,10 @@ export function makeEnsembleReset(
     {name: 'bodies', offset: 0, size: bodiesPerInstance * 48},
     {name: 'bodies', offset: bodyCount * 48, size: collidersPerInstance * 96},
     {name: 'object-attributes', offset: 0, size: collidersPerInstance * 4},
-    {name: 'pose-metadata', offset: 0, size: bodiesPerInstance * 48}
+    {name: 'pose-metadata', offset: 0, size: bodiesPerInstance * 48},
+    ...(vehiclesPerInstance
+      ? [{name: 'vehicle', offset: 0, size: vehiclesPerInstance * VEHICLE_STRIDE}]
+      : [])
   ].filter(plan => find(plan.name));
   const snapshots: Buffer[] = [];
   const settings = device.createBuffer({byteLength: 32, usage: Buffer.UNIFORM | Buffer.COPY_DST});
@@ -48,6 +53,7 @@ export function makeEnsembleReset(
     }
     device.submit(encoder.finish());
     const history = find('contact-history');
+    const vehicle = vehiclesPerInstance ? find('vehicle') : null;
     computation = createBoundKernel(device, {
       source: /* wgsl */ `
 @group(0) @binding(0) var<uniform> settings:Settings;
@@ -58,6 +64,7 @@ struct Settings {selection:vec4u, shift:vec4f}
 @group(0) @binding(3) var<storage,read_write> manifolds:array<u32>;
 @group(0) @binding(4) var<storage,read_write> targets:array<u32>;
 ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' : ''}
+${vehicle ? '@group(0) @binding(7) var<storage,read_write> vehicle:array<u32>;' : ''}
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
  let index=invocation.x;let selection=settings.selection;
  if(index==0u){targets[${bodyCount * 8 + 8 + maximumPairs * 2}u+selection.x/${bodiesPerInstance}u]=0u;}
@@ -69,6 +76,15 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
   let collider=selection.y+index;let address=${bodyCount * 12}u+collider*24u+7u;
   metadata[address]=bitcast<u32>(bitcast<f32>(metadata[address])+f32(selection.x));
   attributes[collider]=(attributes[collider]&0xffff0000u)|((attributes[collider]&0xffffu)+selection.x);
+ }
+ ${
+   vehicle
+     ? `if(index<${vehiclesPerInstance}u){
+  let address=(selection.x/${bodiesPerInstance}u*${vehiclesPerInstance}u+index)*${VEHICLE_STRIDE / 4}u;
+  vehicle[address+12u]+=selection.x;
+  vehicle[address+13u]+=selection.y;
+ }`
+     : ''
  }
  if(index>=${maximumPairs}u){return;}
  let key=targets[${bodyCount * 8 + 8}u+index*2u];
@@ -84,6 +100,7 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
         bindings: [
           {name: 'settings', group: 0, location: 0, type: 'uniform'},
           {name: 'positions', group: 0, location: 6, type: 'storage'},
+          ...(vehicle ? [{name: 'vehicle', group: 0, location: 7, type: 'storage' as const}] : []),
           ...[
             'metadata',
             'attributes',
@@ -100,7 +117,8 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
         attributes: find('object-attributes'),
         manifolds: find('manifolds'),
         targets: find('targets'),
-        ...(history ? {history} : {})
+        ...(history ? {history} : {}),
+        ...(vehicle ? {vehicle} : {})
       }
     });
   } catch (error) {
@@ -127,7 +145,9 @@ ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' 
       const pass = encoder.beginComputePass();
       computation!.kernel.dispatch(pass, {
         bindings: computation!.bindings,
-        x: Math.ceil(Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance) / 64)
+        x: Math.ceil(
+          Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance, vehiclesPerInstance) / 64
+        )
       });
       pass.end();
       device.submit(encoder.finish());

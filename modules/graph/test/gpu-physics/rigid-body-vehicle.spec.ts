@@ -5,9 +5,11 @@ import {expect, it} from 'vitest';
 import {getWebGPUTestDevice} from '@luma.gl/core/test-utils';
 import {GPUCommandGraph} from '../../src/gpu-core';
 import {
+  GPUPhysicsEnsemble,
   GPURigidBodyWorld,
   makeTriangleMeshGeometry,
-  rotateRigidBodyVector
+  rotateRigidBodyVector,
+  type GPURigidBodyWorldProps
 } from '../../src/gpu-physics';
 
 it('supports chassis weight and transfers load forward under braking', async context => {
@@ -391,6 +393,173 @@ it('keeps wheel support across terrain colliders and replays the crossing from a
     expect(await driveAcrossJoin()).toEqual(first);
   } finally {
     checkpoint.destroy();
+    graph.destroy();
+    world.destroy();
+  }
+});
+
+/** Two static strips and a matched vehicle at the center of each lane. */
+function makeFleetTemplate(): GPURigidBodyWorldProps {
+  return {
+    gravity: [0, 0, -10],
+    timeStep: 1 / 120,
+    bodies: [
+      {mass: 0, position: [-8, -5, -0.5], shape: {type: 'box', halfExtents: [24, 5, 0.5]}},
+      {mass: 0, position: [-8, 5, -0.5], shape: {type: 'box', halfExtents: [24, 5, 0.5]}},
+      {mass: 400, position: [0, -4, 0.75], shape: {type: 'box', halfExtents: [1.3, 0.6, 0.16]}},
+      {mass: 400, position: [0, 4, 0.75], shape: {type: 'box', halfExtents: [1.3, 0.6, 0.16]}}
+    ],
+    vehicles: [
+      {...FLEET_SUSPENSION, chassis: 2, additionalTerrainColliders: [1]},
+      {...FLEET_SUSPENSION, chassis: 3, terrainCollider: 1, additionalTerrainColliders: [0]}
+    ]
+  };
+}
+
+it('isolates fleets with overlapping coordinates and resets one suspended instance', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: makeFleetTemplate(),
+    instances: 3,
+    maximumPairs: 64,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const {world} = ensemble;
+  const readWheelMatrices = (instance: number, vehicle: number) => {
+    const poses = world.getVehicleWheelPoses(ensemble.getVehicleIndex(instance, vehicle))!;
+    return poses.buffer.readAsync(poses.byteOffset, poses.byteLength);
+  };
+  const advance = (steps: number) => {
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder, steps);
+    device.submit(encoder.finish());
+  };
+  try {
+    expect(ensemble.vehiclesPerInstance).toBe(2);
+    expect(() => ensemble.getVehicleIndex(0, 2)).toThrow('Invalid ensemble vehicle');
+    const nodeOrder = ensemble.inspect().graph.stats.nodeOrder;
+    expect(nodeOrder.filter(id => id.endsWith('-suspension'))).toHaveLength(1);
+    const initial = await world.readState();
+    const initialWheels = await readWheelMatrices(1, 1);
+
+    ensemble.setActive(0, false);
+    ensemble.setVehicleControls(0, 0, 1, 0.2, 0);
+    ensemble.setVehicleControls(1, 0, 1, 0.2, 0);
+    ensemble.setVehicleControls(1, 1, -1, -0.2, 0);
+    ensemble.setVehicleControls(2, 1, 0.5, 0, 0);
+    advance(80);
+    const moving = await world.readState();
+    expect(moving.slice(0, 4)).toEqual(initial.slice(0, 4));
+    expect(moving[ensemble.getBodyIndex(1, 2)].velocity[0]).toBeGreaterThan(0.5);
+    expect(moving[ensemble.getBodyIndex(1, 3)].velocity[0]).toBeLessThan(-0.5);
+    expect(moving[ensemble.getBodyIndex(2, 3)].velocity[0]).toBeGreaterThan(0.2);
+    expect((await ensemble.readWorkStatistics()).vehicleSnapshotBytes).toBe(4 * 512);
+    const neighborWheels = await readWheelMatrices(2, 1);
+
+    await ensemble.reset(1);
+    expect(await readWheelMatrices(1, 1)).toEqual(initialWheels);
+    expect(await readWheelMatrices(2, 1)).toEqual(neighborWheels);
+    const reset = await world.readState();
+    expect(reset.slice(4, 8)).toEqual(initial.slice(4, 8));
+    expect(reset.slice(8)).toEqual(moving.slice(8));
+
+    ensemble.setActive(0, true);
+    advance(45);
+    const resumed = await world.readState();
+    expect(resumed[ensemble.getBodyIndex(0, 2)].velocity[0]).toBeGreaterThan(0.3);
+    expect(Math.abs(resumed[ensemble.getBodyIndex(1, 3)].velocity[0])).toBeLessThan(0.1);
+    const wheels = await world.readVehicleWheels(ensemble.getVehicleIndex(1, 1));
+    expect(wheels.every(wheel => wheel.load > 0)).toBe(true);
+
+    // Moving one world's two terrain colliders must remove support only in that world.
+    world.setColliderTransform(8, [0, 0, -3], [0, 0, 0, 1]);
+    world.setColliderTransform(9, [0, 0, -3], [0, 0, 0, 1]);
+    advance(1);
+    const unsupportedWheels = await world.readVehicleWheels(ensemble.getVehicleIndex(2, 1));
+    expect(unsupportedWheels.every(wheel => wheel.load === 0)).toBe(true);
+    const supportedWheels = await world.readVehicleWheels(ensemble.getVehicleIndex(1, 1));
+    expect(supportedWheels.every(wheel => wheel.load > 0)).toBe(true);
+    expect((await world.readSimulationDiagnostics()).complete).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('rolls back wheel speed, steering and pose along with chassis state on shared failure', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const template = makeFleetTemplate();
+  const ensemble = await GPUPhysicsEnsemble.create(device, {
+    template: {
+      ...template,
+      bodies: [
+        ...template.bodies,
+        ...Array.from({length: 6}, (_, index) => ({
+          position: [index * 0.01, 0, 5] as const,
+          shape: {type: 'sphere' as const, radius: 0.5}
+        }))
+      ]
+    },
+    instances: 2,
+    maximumPairs: 8,
+    maximumResidentBytes: 16 * 1024 * 1024
+  });
+  const {world} = ensemble;
+  const vehicle = ensemble.getVehicleIndex(1, 1);
+  const poses = world.getVehicleWheelPoses(vehicle)!;
+  try {
+    ensemble.setVehicleControls(1, 1, 1, 0.35, 0);
+    const before = await world.readState();
+    const beforeWheels = await world.readVehicleWheels(vehicle);
+    const beforeMatrices = await poses.buffer.readAsync(poses.byteOffset, poses.byteLength);
+    const encoder = device.createCommandEncoder();
+    ensemble.encode(encoder);
+    device.submit(encoder.finish());
+    expect((await world.readSimulationDiagnostics()).complete).toBe(false);
+    expect(await world.readState()).toEqual(before);
+    expect(await world.readVehicleWheels(vehicle)).toEqual(beforeWheels);
+    expect(await poses.buffer.readAsync(poses.byteOffset, poses.byteLength)).toEqual(
+      beforeMatrices
+    );
+    expect(
+      (await ensemble.readStatus()).instances.every(instance => instance.rejectedSteps === 1)
+    ).toBe(true);
+  } finally {
+    ensemble.destroy();
+  }
+});
+
+it('restores wheel state on a rejected step in a standalone rollback world', async context => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return context.skip('WebGPU unavailable');
+  const template = makeFleetTemplate();
+  const world = new GPURigidBodyWorld({
+    ...template,
+    broadPhase: 'hierarchical-grid',
+    solver: 'parallel',
+    failurePolicy: 'rollback',
+    maximumPairs: 8,
+    bodies: [
+      ...template.bodies,
+      ...Array.from({length: 6}, (_, index) => ({
+        position: [index * 0.01, 0, 5] as const,
+        shape: {type: 'sphere' as const, radius: 0.5}
+      }))
+    ]
+  });
+  const commands = new GPUCommandGraph(device);
+  world.addToGraph(commands);
+  const graph = await commands.compileAsync();
+  try {
+    world.setVehicleControls(1, 0.35, 0);
+    const initial = await world.readVehicleWheels();
+    const encoder = device.createCommandEncoder();
+    graph.encode(encoder, {parameters: undefined});
+    device.submit(encoder.finish());
+    expect((await world.readSimulationDiagnostics()).complete).toBe(false);
+    expect(await world.readVehicleWheels()).toEqual(initial);
+  } finally {
     graph.destroy();
     world.destroy();
   }
