@@ -370,6 +370,13 @@ collider/node identity, hit fraction and normal. Bind proposal-defined
 Specify fixed-step/tick ordering, repeated events between ticks and invalid-node
 handling. GPU events remain compact and bounded, with explicit overflow recovery.
 
+Batched rays and sphere sweeps now share one GPU dispatch and readback, with
+per-command nearest-hit and completion reporting. Compact common selections
+and workgroup-local reduction bound the staging cost by query count. The Batch
+Lab collision scan compares a matched subset with scalar queries and presents a
+depth image for larger workloads. A world-level spatial index for queries,
+event compaction, and the remaining glTF behavior operations are open.
+
 Exit: original behavior graphs and synthetic simultaneous-entry/exit/query fixtures
 produce correct payloads and ordering without whole-world readback per operation.
 
