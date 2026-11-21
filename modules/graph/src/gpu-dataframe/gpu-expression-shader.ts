@@ -357,6 +357,30 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         const operand = this.emit(operandNode, this.inferFormat(operandNode));
         return this.addValue('boolean', `!${operand.valid}`, 'true');
       }
+      case 'sqrt':
+      case 'ln':
+      case 'log10':
+      case 'asin':
+      case 'acos': {
+        const operand = this.emit(operandNode, this.inferFormat(operandNode) ?? 'float32');
+        if (operand.format !== 'float32') {
+          throw new Error('GPUDataFrame domain-sensitive functions require Float32 input');
+        }
+        const value = operand.value;
+        const domain =
+          operator === 'sqrt'
+            ? `${value} >= 0.0`
+            : operator === 'ln' || operator === 'log10'
+              ? `${value} > 0.0`
+              : `abs(${value}) <= 1.0`;
+        const valid = `(${operand.valid} && (bitcast<u32>(${value}) & 0x7fffffffu) < 0x7f800000u && (${domain}))`;
+        const input = `select(1.0, ${value}, ${valid})`;
+        const result =
+          operator === 'log10'
+            ? `(log2(${input}) / log2(10.0))`
+            : `${operator === 'ln' ? 'log' : operator}(${input})`;
+        return this.addValue('float32', result, valid, true);
+      }
       case 'abs':
       case 'floor':
       case 'ceiling':
