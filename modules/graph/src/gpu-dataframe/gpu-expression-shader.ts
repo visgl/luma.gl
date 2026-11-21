@@ -5,6 +5,7 @@
 
 import type {GPUTypeMap} from '@luma.gl/graph/gpu-tables';
 import type {GPUDataFrame} from './gpu-data-frame';
+import {getGPUExpressionCastWGSL} from '../gpu-core/gpu-expression-cast';
 import type {GPUDataFrameDerivedColumn} from './gpu-data-frame-query';
 import {isGPUScalarFunction, type GPUExpressionUnaryOperator} from './gpu-expression';
 import type {
@@ -53,6 +54,7 @@ export type GPUQueryExpressionShaderPlan = {
   controls: readonly GPUQueryExpressionControl[];
   outputs: readonly GPUQueryExpressionOutput[];
   statements: readonly string[];
+  usesCasts: boolean;
   condition: string;
 };
 
@@ -119,6 +121,7 @@ export function makeGPUQueryExpressionShaderPlan<T extends GPUTypeMap>(
     controls: planner.controls,
     outputs,
     statements: planner.statements,
+    usesCasts: planner.usesCasts,
     condition: conditions.join(' && ') || 'true'
   };
 }
@@ -179,6 +182,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
   readonly columns: GPUQueryExpressionColumn[] = [];
   readonly controls: GPUQueryExpressionControl[] = [];
   readonly statements: string[] = [];
+  usesCasts = false;
 
   private readonly source: GPUDataFrame<T>;
   private readonly columnsByName = new Map<string, GPUQueryExpressionColumn>();
@@ -232,6 +236,28 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         return this.emitControl(node.value, undefined, expected);
       case 'parameter':
         return this.emitControl(node.value, node.name, expected);
+      case 'cast': {
+        const format = node.format;
+        if (format !== 'float32' && format !== 'sint32' && format !== 'uint32') {
+          throw new Error('GPUDataFrame casts require scalar 32-bit formats');
+        }
+        const operand = this.emit(node.operand, this.inferFormat(node.operand) ?? 'float32');
+        if (operand.format === 'boolean') {
+          throw new Error('GPUDataFrame casts require numeric expressions');
+        }
+        const floatToInteger = operand.format === 'float32' && format !== 'float32';
+        const valid = floatToInteger
+          ? `(${operand.valid} && (bitcast<u32>(${operand.value}) & 0x7fffffffu) < 0x7f800000u)`
+          : operand.valid;
+        const input = floatToInteger ? `select(0.0, ${operand.value}, ${valid})` : operand.value;
+        this.usesCasts ||= floatToInteger;
+        return this.addValue(
+          format,
+          getGPUExpressionCastWGSL(input, operand.format, format, 'truncate'),
+          valid,
+          operand.nullable || floatToInteger
+        );
+      }
       case 'conditional': {
         const condition = this.emit(node.condition, 'boolean');
         this.assertBoolean(condition);
@@ -443,6 +469,11 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'literal':
       case 'parameter':
         return typeof node.value === 'boolean' ? 'boolean' : undefined;
+      case 'cast':
+        if (node.format === 'float32' || node.format === 'sint32' || node.format === 'uint32') {
+          return node.format;
+        }
+        throw new Error('GPUDataFrame casts require scalar 32-bit formats');
       case 'conditional': {
         const whenTrue = this.inferFormat(node.whenTrue);
         const otherwise = this.inferFormat(node.otherwise);

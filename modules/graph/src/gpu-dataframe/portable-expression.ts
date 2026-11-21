@@ -164,10 +164,10 @@ export function lowerPortableExpression(
       }
       if (name === 'cast' && node.arguments.length === 2 && node.arguments[1].type === 'Literal') {
         const target = node.arguments[1].value;
-        if (target === 'float32' || target === 'int32')
+        if (target === 'float32' || target === 'int32' || target === 'uint32')
           return makeGPUCastNode(
             convert(node.arguments[0]),
-            target === 'int32' ? 'sint32' : 'float32'
+            target === 'int32' ? 'sint32' : target
           );
       }
       break;

@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 // SPDX-FileComment: Independently implemented for WebGPU; inspired by NVIDIA RAPIDS cuDF.
 
+import {GPU_EXPRESSION_CAST_WGSL} from '../gpu-core/gpu-expression-cast';
 import {
   Buffer,
   type Binding,
@@ -774,6 +775,7 @@ function addGPUQueryPredicatePass(
   const source = /* wgsl */ `
 const ELEMENT_COUNT: u32 = ${props.output.length}u;
 ${declarations.join('\n')}
+${props.plan.usesCasts ? GPU_EXPRESSION_CAST_WGSL : ''}
 
 @compute @workgroup_size(${LU_QUERY_WORKGROUP_SIZE})
 fn main(
