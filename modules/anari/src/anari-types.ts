@@ -18,6 +18,16 @@ import type {
   ANARIWorld
 } from './anari-objects';
 
+/** CPU snapshot of the internal ray-tracing history before presentation. */
+export type ANARIFrameRadiance = {
+  /** Width of the internal history in pixels. */
+  width: number;
+  /** Height of the internal history in pixels. */
+  height: number;
+  /** Tightly packed little-endian RGBA16F rows, top-left origin. RGB includes exposure. */
+  data: Uint8Array;
+};
+
 /** Caller-owned full-resolution primary-hit GPU snapshot. Submit final GPU use before destroy(). */
 export type ANARIFrameChannels = {
   /** Texel identifier index + 1 resolves to this retained placement; zero denotes a miss. */

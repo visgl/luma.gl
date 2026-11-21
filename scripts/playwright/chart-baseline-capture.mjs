@@ -6,7 +6,7 @@ import {resolve} from 'node:path';
 import {parseArgs} from 'node:util';
 import {chromium} from 'playwright';
 import {PNG} from 'pngjs';
-import {compareChartImages} from './chart-image-metrics.mjs';
+import {compareChartImages, compareRadianceCaptures, decodeRadianceCapture} from './chart-image-metrics.mjs';
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 
 const {values} = parseArgs({options: {
@@ -14,6 +14,7 @@ const {values} = parseArgs({options: {
   output: {type: 'string', default: '/tmp/luma-chart-capture'},
   renderer: {type: 'string', default: 'raytrace'},
   reference: {type: 'string'},
+  'linear-hdr': {type: 'boolean'},
   'maximum-rmse': {type: 'string'},
   view: {type: 'string', default: 'color'},
   'frame-sweep': {type: 'string'},
@@ -36,7 +37,7 @@ const {values} = parseArgs({options: {
   'software-gpu': {type: 'boolean', default: false}
 }});
 const maximumRootMeanSquaredError = values['maximum-rmse'] === undefined ? undefined : Number(values['maximum-rmse']);
-if (maximumRootMeanSquaredError !== undefined && (!values.reference || !Number.isFinite(maximumRootMeanSquaredError) || maximumRootMeanSquaredError < 0 || maximumRootMeanSquaredError > 1)) throw new Error('maximum-rmse requires a reference and a finite value between 0 and 1');
+if (maximumRootMeanSquaredError !== undefined && (!values.reference || !Number.isFinite(maximumRootMeanSquaredError) || maximumRootMeanSquaredError < 0 || (!values['linear-hdr'] && maximumRootMeanSquaredError > 1))) throw new Error('maximum-rmse requires a reference and a finite nonnegative value (at most 1 for display RGB)');
 if (!['color', 'normal', 'cameraDistance', 'identity', 'history'].includes(values.view)) throw new Error('Unknown ray debug view');
 if (values.renderer !== 'raytrace' && values.view !== 'color') throw new Error('Debug views require raytrace');
 if (values.transport !== undefined && !['diffuse', 'pbr'].includes(values.transport)) throw new Error('transport must be diffuse or pbr');
@@ -63,7 +64,15 @@ const height = Number(values.height);
 if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('seed must be a uint32');
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 320) throw new Error('viewport dimensions must be integers of at least 320 pixels');
 if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('renderer must be default or raytrace');
+if (values['linear-hdr'] && (values.renderer !== 'raytrace' || values.view !== 'color')) {
+  throw new Error('Linear HDR capture requires the raytrace color view');
+}
 const url = new URL(values.url);
+if (values['linear-hdr']) {
+  url.searchParams.set('captureRadiance', '1');
+  url.searchParams.set('captureWidth', String(width));
+  url.searchParams.set('captureHeight', String(height));
+}
 url.searchParams.set('preset', values['antique-camera'] ? 'antique-camera' : values['small-emitter'] ? 'small-emitter' : values.lighting ? 'chart-lighting' : values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
@@ -78,7 +87,10 @@ if (values.resolution !== undefined) url.searchParams.set('resolution', values.r
 if (values.bounces !== undefined) url.searchParams.set('bounces', values.bounces);
 url.searchParams.set('editor', 'hidden');
 // Decode before any output is written, including when output aliases the reference.
-const referenceImage = values.reference ? PNG.sync.read(await readFile(resolve(values.reference))) : undefined;
+const referenceBytes = values.reference ? await readFile(resolve(values.reference)) : undefined;
+const referenceImage = referenceBytes
+  ? (values['linear-hdr'] ? decodeRadianceCapture(referenceBytes) : PNG.sync.read(referenceBytes))
+  : undefined;
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', softwareGpu: values['software-gpu']}));
 const measurements = [];
 const root = resolve(values.output);
@@ -122,15 +134,31 @@ async function captureFrameCount(browser, output, frames) {
     const clip = await canvas.boundingBox();
     if (!clip) throw new Error('The capture canvas is hidden');
     const capture = await page.screenshot({clip, path: `${output}/chart.png`, timeout: 60000});
-    const comparison = referenceImage ? {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)} : undefined;
+    let comparison;
+    let radianceSize;
+    if (values['linear-hdr']) {
+      const radiance = await canvas.evaluate(element => element.readCaptureRadiance());
+      if (!radiance) throw new Error('No ray-tracing history was available for linear HDR capture');
+      const header = Buffer.alloc(8);
+      header.writeUInt32LE(radiance.width, 0);
+      header.writeUInt32LE(radiance.height, 4);
+      const bytes = Buffer.concat([header, Buffer.from(radiance.base64, 'base64')]);
+      const linearImage = decodeRadianceCapture(bytes);
+      radianceSize = [linearImage.width, linearImage.height];
+      await writeFile(`${output}/radiance.rgba16f`, bytes);
+      if (referenceImage) comparison = {reference: resolve(values.reference), ...compareRadianceCaptures(linearImage, referenceImage)};
+    } else if (referenceImage) {
+      comparison = {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)};
+    }
     if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
     await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
+      comparisonSpace: values['linear-hdr'] ? 'linear-hdr' : 'display-rgb', radianceSize,
       hardware: values.hardware, browser: browser.version(), timeToCaptureMilliseconds, elapsedMilliseconds: performance.now() - started,
-      note: 'Elapsed time includes startup and screenshot; telemetry is CPU frame timing, not GPU timestamps. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
+      note: 'Elapsed time includes startup and output readback; telemetry is CPU frame timing, not GPU timestamps. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
     console.log(output);
-    if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`Display RGB RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
+    if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
     return {frames, accumulatedSamples: metadata.accumulatedSamples, browser: browser.version(),
-      hardware: values.hardware, timeToCaptureMilliseconds, comparison};
+      hardware: values.hardware, timeToCaptureMilliseconds, radianceSize, comparison};
   } finally {
     await page.close();
   }

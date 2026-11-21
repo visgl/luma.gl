@@ -27,6 +27,7 @@ export type {
   ANARIFrameParameters,
   ANARIFrameStatistics,
   ANARIFrameChannels,
+  ANARIFrameRadiance,
   ANARIGeometryParameters,
   ANARIGeometrySubtype,
   ANARIGroupParameters,

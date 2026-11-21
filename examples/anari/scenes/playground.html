@@ -597,17 +597,28 @@
       import {webgpuAdapter} from '@luma.gl/core/webgpu';
       import ANARIPlayground from './playground.ts';
 
-      const forceWebGL = new URLSearchParams(window.location.search).get('backend') === 'webgl';
+      const parameters = new URLSearchParams(window.location.search);
+      const forceWebGL = parameters.get('backend') === 'webgl';
       const supportsHighDynamicRange =
         !forceWebGL && window.matchMedia('(dynamic-range: high)').matches;
       const canvas = document.getElementById('playground-canvas');
+      const captureWidth = Number(parameters.get('captureWidth'));
+      const captureHeight = Number(parameters.get('captureHeight'));
+      const fixedCaptureSize = parameters.has('captureRadiance') &&
+        Number.isInteger(captureWidth) && Number.isInteger(captureHeight) &&
+        captureWidth > 0 && captureHeight > 0;
+      if (fixedCaptureSize) {
+        // Size the drawing buffer before creating the device or encoding the first frame.
+        canvas.width = captureWidth;
+        canvas.height = captureHeight;
+      }
       const canvasProperties = supportsHighDynamicRange
         ? {canvas, colorFormat: 'rgba16float', colorSpace: 'display-p3', toneMapping: 'extended'}
         : {canvas};
       const device = await luma.createDevice({
         id: 'anari-json-playground',
         adapters: forceWebGL ? [webgl2Adapter] : [webgpuAdapter, webgl2Adapter],
-        createCanvasContext: canvasProperties
+        createCanvasContext: fixedCaptureSize ? {...canvasProperties, autoResize: false} : canvasProperties
       });
       makeAnimationLoop(ANARIPlayground, {device}).start();
     </script>

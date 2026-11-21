@@ -309,6 +309,15 @@ geometry semantics. Scalar and textured alpha masks exclude below-cutoff interse
 The experimental `SelectionOutline` overlay draws visible selected placement boundaries.
 Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
+### `readRadiance()`
+
+After submitting a ray-traced frame, call `await frame.readRadiance()` to read the
+internal-resolution color history before tone mapping, denoising and upscaling.
+The returned `ANARIFrameRadiance` has `width`, `height` and tightly packed
+little-endian RGBA16F `data` in top-left row order. RGB includes the renderer's
+exposure. Alpha contains sample-history metadata. Unsupported renderers and
+frames without history return `null`.
+
 ### `captureChannels()`
 
 ```ts

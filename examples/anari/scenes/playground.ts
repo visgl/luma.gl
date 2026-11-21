@@ -57,6 +57,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
   private readonly chartLabels?: ChartLabels;
   private renderedFrameCount = 0;
   private captureFrameLimit = 0;
+  private staticRadianceCapture = false;
   /** Suspends rendering until the requested capture asset has loaded. */
 
   private captureSceneLoading = false;
@@ -224,6 +225,21 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     const frameLimit = Number(parameters.get('captureFrames') ?? 0);
     if (Number.isInteger(frameLimit) && frameLimit > 0 && frameLimit <= 256)
       this.captureFrameLimit = frameLimit;
+    if (parameters.has('captureRadiance') && this.captureFrameLimit) {
+      this.staticRadianceCapture = parameters.get('preset') !== 'chart-motion';
+      Object.assign(this.canvas, {
+        readCaptureRadiance: async () => {
+          const radiance = await this.scene?.frame.readRadiance();
+          if (!radiance) return null;
+          const chunks: string[] = [];
+          const chunkSize = 16384;
+          for (let offset = 0; offset < radiance.data.length; offset += chunkSize) {
+            chunks.push(String.fromCharCode(...radiance.data.subarray(offset, offset + chunkSize)));
+          }
+          return {width: radiance.width, height: radiance.height, base64: btoa(chunks.join(''))};
+        }
+      });
+    }
     this.editor.value = formatSceneJSON(sceneDescription);
     this.applyEditorScene();
   }
@@ -237,7 +253,8 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
     }
 
     const elapsedSeconds = this.captureFrameLimit ? this.renderedFrameCount / 60 : time * 0.001;
-    scene.update(elapsedSeconds);
+    const updateScene = !this.staticRadianceCapture || this.renderedFrameCount === 0;
+    if (updateScene) scene.update(elapsedSeconds);
     this.updateAnimationTime(scene);
 
     const currentSize = scene.frame.getParameter('size');
@@ -245,7 +262,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       scene.frame.setParameter('size', [width, height]).commitParameters();
     }
 
-    this.orbitControls.update(time);
+    if (updateScene) this.orbitControls.update(time);
     const target = scene.cameraTarget;
     const position: ANARIVector3 = this.orbitControls.getEyePosition();
     const direction: ANARIVector3 = [
@@ -253,7 +270,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       target[1] - position[1],
       target[2] - position[2]
     ];
-    scene.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
+    if (updateScene) {
+      scene.frame.getParameter('camera')?.setParameters({position, direction}).commitParameters();
+    }
 
     // Bound stationary refinement in the static lighting demonstration.
     if (
