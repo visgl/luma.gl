@@ -28,8 +28,10 @@ const canvas = document.querySelector<HTMLCanvasElement>('#world')!;
 const scenarioControl = document.querySelector<HTMLSelectElement>('#scene')!;
 /** Recovery uses a fixed four-body fixture and schedules every healthy world. */
 function updateScenarioControls(): void {
+  /** Only the independent recovery fixture ignores body and activity controls. */
   const independentRecovery = scenarioControl.value === 'independent-recovery';
   for (const id of ['bodies', 'pairs', 'active']) {
+    /** Hide the label and its control as a unit. */
     const label = document.querySelector(`#${id}`)?.closest('label');
     if (label) label.hidden = independentRecovery;
   }
@@ -53,12 +55,16 @@ button.onclick = async () => {
   diagnostics.clear();
   status.textContent = 'Allocating and compiling resident worlds…';
   try {
+    /** Resolve the selected workload before compiling a graph. */
     const scenario = scenarioControl.value;
     if (scenario === 'independent-recovery') {
       if (document.querySelector<HTMLSelectElement>('#submission')!.value !== 'ensemble')
         throw new Error('Independent recovery requires fused ensemble submission');
+      /** Keep the timeline scale fixed for the duration of this run. */
       const frames = number('frames');
+      /** Collect chart cells in attempted step order. */
       const timeline: (readonly RecoveryStep[])[] = [];
+      /** Keep the completed workload report available for JSON export. */
       const recovery = await runEnsembleRecoveryStress(
         device,
         number('worlds'),
@@ -260,18 +266,29 @@ function paintStreamedTerrain(terrain: Awaited<ReturnType<typeof runTerrainStrea
 
 /** Draw one swimlane per displayed instance and one cell per attempted step. */
 function paintRecoveryTimeline(timeline: readonly (readonly RecoveryStep[])[], totalSteps: number) {
+  /** Use device pixels to keep the chart and text sharp. */
   const canvasWidth = Math.round(innerWidth * devicePixelRatio);
+  /** Match the full-height scene canvas in device pixels. */
   const canvasHeight = Math.round(innerHeight * devicePixelRatio);
   if (canvas.width !== canvasWidth) canvas.width = canvasWidth;
   if (canvas.height !== canvasHeight) canvas.height = canvasHeight;
+  /** Draw alongside the same controls and graph as the other Batch Lab workloads. */
   const context = canvas.getContext('2d')!;
+  /** All recorded steps have the same ensemble membership. */
   const instanceCount = timeline[0].length;
+  /** Cap visible rows while reporting counters for every world. */
   const shown = Math.min(instanceCount, 12);
+  /** Leave room for the settings panel at the left of the canvas. */
   const left = Math.min(canvas.width * 0.4, 410 * devicePixelRatio);
+  /** Keep the last step away from the viewport edge. */
   const padding = 24 * devicePixelRatio;
+  /** Reserve room above the swimlanes for the displayed world count. */
   const top = canvas.height * 0.25;
+  /** Keep every visible swimlane and its legend within the viewport. */
   const rowHeight = Math.min(35 * devicePixelRatio, canvas.height / (shown + 5));
+  /** Use one horizontal unit per attempted step. */
   const stepWidth = (canvas.width - left - padding) / totalSteps;
+  /** Encode accepted, rejected, held and resumed steps consistently with the legend. */
   const colors: Record<RecoveryStep, string> = {
     accepted: '#37a9b0',
     rejected: '#ef795b',
@@ -282,6 +299,7 @@ function paintRecoveryTimeline(timeline: readonly (readonly RecoveryStep[])[], t
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.font = `${12 * devicePixelRatio}px system-ui`;
   for (let instance = 0; instance < shown; instance++) {
+    /** Place labels above an instance’s track to keep the step cells unobstructed. */
     const row = top + instance * rowHeight;
     context.fillStyle = '#253742';
     context.fillRect(left, row, canvas.width - left - padding, rowHeight * 0.72);
@@ -292,6 +310,7 @@ function paintRecoveryTimeline(timeline: readonly (readonly RecoveryStep[])[], t
       context.fillRect(left + step * stepWidth, row, stepWidth, rowHeight * 0.72);
     }
   }
+  /** Draw labels using the same outcome colors as the cells. */
   const legend = Object.entries(colors);
   for (const [index, [label, color]] of legend.entries()) {
     context.fillStyle = color;

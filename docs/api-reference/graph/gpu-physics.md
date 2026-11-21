@@ -415,8 +415,10 @@ steps, even if it receives a wake notification. Reset restores the template, cle
 quarantine, and preserves streamed terrain and the enabled flag. It reuses the compiled
 graph and fixed GPU allocations.
 
-Global broad-phase, mesh-work, solver, and state-validation failures still use shared
-rollback. A latched shared failure requires reconstruction. Use **Independent recovery
+Use `readStatus()` for local failures. `ensemble.world.readSimulationDiagnostics()`
+continues to report the shared failure latch, which stays clear when only a local cache
+exhausts. Global broad-phase, mesh-work, solver, and state-validation failures still use
+shared rollback. A latched shared failure requires reconstruction. Use **Independent recovery
 (fused)** in Physics Batch Lab to watch one world run out of cache, hold while the others
 keep stepping, and resume after reset.
 

@@ -15,6 +15,7 @@ export function getRigidBodyCacheShader(
   pairsPerInstance?: number
 ): string {
   // Disjoint ranges ensure a sibling cannot claim an address that a failed instance must restore.
+  /** Use the selected capacity as a power-of-two mask within the owning cache range. */
   const capacity = pairsPerInstance ? `${pairsPerInstance}u` : 'PAIR_CAPACITY';
   let source = /* wgsl */ `
 const EMPTY_PAIR:u32=0u;

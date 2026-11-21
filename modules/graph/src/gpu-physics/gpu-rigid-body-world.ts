@@ -523,6 +523,7 @@ export class GPURigidBodyWorld {
         (this.maximumPairs & (this.maximumPairs - 1)) !== 0)
     )
       throw new Error('Invalid rigid-body pair capacity');
+    /** Size each recoverable cache range independently of the shared candidate budget. */
     const instancePairCapacity = props.ensemblePairsPerInstance;
     if (
       instancePairCapacity !== undefined &&

@@ -39,8 +39,11 @@ export async function runEnsembleRecoveryStress(
   )
     throw new Error('Recovery requires 2–4,096 worlds and 20–2,000 frames');
 
+  /** Keep the failing instance near the top of the timeline when the display is capped. */
   const subject = 1;
+  /** Allow the selected instance to remain quarantined until the midpoint. */
   const resetAt = Math.floor(frames / 2);
+  /** Use a tight local cache and ample shared discovery space to isolate the injected fault. */
   const ensemble = await GPUPhysicsEnsemble.create(device, {
     instances: worlds,
     maximumPairs: Math.max(64, 2 ** Math.ceil(Math.log2(worlds * 16))),
@@ -59,13 +62,20 @@ export async function runEnsembleRecoveryStress(
     }
   });
 
+  /** Record the first attempted step that latched the local cache fault. */
   let failedAt: number | undefined;
+  /** Count steps that every sibling accepted while the failed world was unscheduled. */
   let healthyStepsWhileHeld = 0;
+  /** Treat divergence from the expected recovery sequence as a failed workload. */
   let complete = true;
+  /** Retain sampled outcomes for export, including the rejected step. */
   const timeline: RecoveryStep[][] = [];
   try {
+    /** Measure the residency to compare after reset. */
     const initial = ensemble.getStats().residentBytes;
+    /** Keep the graph identity to check that recovery did not rebuild it. */
     const graph = ensemble.inspect().graph;
+    /** Submit and observe one attempted step at a time so the timeline preserves transitions. */
     for (let step = 1; step <= frames; step++) {
       if (step === 3) {
         // Cause more candidate pairs than this instance's cache can hold.
@@ -77,12 +87,16 @@ export async function runEnsembleRecoveryStress(
         );
       }
       if (step === resetAt) await ensemble.reset(subject);
+      /** Encode one fused attempt before sampling its committed status. */
       const encoder = device.createCommandEncoder();
       ensemble.encode(encoder);
       device.submit(encoder.finish());
+      /** Read the scheduler once after this submission. */
       const sampled = await ensemble.readStatus();
+      /** Use this record to distinguish the rejected attempt from the subsequent hold. */
       const subjectStatus = sampled.instances[subject];
       if (subjectStatus.failure && failedAt === undefined) failedAt = step;
+      /** Require each healthy world to have committed every attempted step so far. */
       const siblingsAdvanced = sampled.instances.every(
         (instance, index) =>
           index === subject ||
@@ -91,6 +105,7 @@ export async function runEnsembleRecoveryStress(
       if (siblingsAdvanced && subjectStatus.failure && !subjectStatus.active)
         healthyStepsWhileHeld++;
       complete &&= siblingsAdvanced && !subjectStatus.sharedFailure;
+      /** Translate scheduler states to the four timeline categories. */
       const outcomes = sampled.instances.map<RecoveryStep>((instance, index) =>
         instance.failure
           ? instance.active
@@ -103,10 +118,14 @@ export async function runEnsembleRecoveryStress(
       timeline.push(outcomes);
       progress({step, failedAt, healthyStepsWhileHeld, outcomes});
     }
+    /** Capture final counters after the last fused submission. */
     const status = await ensemble.readStatus();
+    /** The reset clears counters, so this measures accepted steps after recovery. */
     const recoveredSteps = status.instances[subject].acceptedSteps;
+    /** Record the final graph encoding for the inspector before destroying the ensemble. */
     const {encoding} = ensemble.inspect();
     if (encoding) diagnostics.record(graph, encoding);
+    /** Check identity and allocated bytes independently of scheduling changes. */
     const fixedAllocation =
       ensemble.getStats().residentBytes === initial && ensemble.inspect().graph === graph;
     complete &&=
