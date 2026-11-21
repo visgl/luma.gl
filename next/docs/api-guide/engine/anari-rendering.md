@@ -124,3 +124,11 @@ node scripts/playwright/chart-baseline-capture.mjs --small-emitter --seed 31 --f
 Each checkpoint starts a fresh page and records accumulated samples, display RGB error, and wall time to capture readiness in `convergence.json`. Wall time includes page startup and presentation. A high-sample reference is an estimate whose noise contributes to the measured error.
 
 Use `--antique-camera` in place of `--small-emitter` in both commands to capture the textured Antique Camera glTF study. The capture waits for the model to load before counting frames.
+
+Use `--linear-hdr` on both commands and pass `radiance.rgba16f` as the reference to measure error before tone mapping, display conversion, denoising, and upscaling. The binary file starts with two little-endian uint32 dimensions followed by tightly packed RGBA16F rows at the internal ray-tracing resolution. RGB contains the authored exposure. The comparison ignores alpha and reports unnormalized linear RGB errors. Keep exposure and internal resolution fixed across the sweep.
+
+```
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter --seed 17 --frames 128 --history 256 --output /tmp/ray-hdr-reference
+
+node scripts/playwright/chart-baseline-capture.mjs --linear-hdr --small-emitter --seed 31 --frame-sweep 1,8,32,64 --history 256 --reference /tmp/ray-hdr-reference/radiance.rgba16f --output /tmp/ray-hdr-sweep
+```

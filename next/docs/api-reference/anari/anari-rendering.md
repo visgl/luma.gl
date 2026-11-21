@@ -369,6 +369,10 @@ type ANARIPickResult = {
 
 Picking uses the runtime that last rendered the frame, even if a different renderer has since been committed. Background, out-of-bounds or non-finite coordinates, unrendered/destroyed frames, and frames last rendered by a built-in raster renderer return `null`. Intersections use the ray renderer's opaque geometry semantics. Scalar and textured alpha masks exclude below-cutoff intersections. Picking does not follow refracted paths or alpha-blended layers. The experimental `SelectionOutline` overlay draws visible selected placement boundaries. Projected-depth transfer for raster overlays is available through `DepthTextureCopy`.
 
+### `readRadiance()`[​](#readradiance "Direct link to readradiance")
+
+After submitting a ray-traced frame, call `await frame.readRadiance()` to read the internal-resolution color history before tone mapping, denoising and upscaling. The returned `ANARIFrameRadiance` has `width`, `height` and tightly packed little-endian RGBA16F `data` in top-left row order. RGB includes the renderer's exposure. Alpha contains sample-history metadata. Unsupported renderers and frames without history return `null`.
+
 ### `captureChannels()`[​](#capturechannels "Direct link to capturechannels")
 
 ```
