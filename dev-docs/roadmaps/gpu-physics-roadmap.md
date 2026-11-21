@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: November 20, 2026
+Updated: November 21, 2026
 
 ## Goal and current status
 
@@ -447,6 +447,19 @@ angles, axle load conservation, checkpoint restoration, and a passive trailer
 coupled through an ordered hinge. The buggy shows live suspension and GPU graph
 timings. Broader articulated mechanisms, independent-world batching with vehicles,
 measured tire calibration, and cross-adapter fleet throughput remain open.
+
+### Fleet terrain and replay checkpoint across G9–G12
+
+Scenegraph controllers can register fleets by chassis and terrain path, target
+individual chassis, and preserve their wheel state across index-changing rebuilds.
+Vehicle sweeps select the nearest supporting hit across up to four static colliders.
+Off-road Buggy uses four adjoining collision tiles cooked from the rendered terrain.
+
+Qualification exercises shared terrain and separate controls, removes a chassis and
+rebuilds with the surviving chassis in a different slot, then replays an identical
+tile crossing from a GPU checkpoint. This is same-device checkpoint evidence.
+Cross-adapter repeatability, streaming terrain residency, and larger-scale throughput
+remain open.
 
 ### G9. Articulations and mechanism quality
 

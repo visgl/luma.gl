@@ -85,7 +85,35 @@ const terrain = new THREE.Mesh(
 );
 terrain.receiveShadow = true;
 scene.add(terrain);
-const terrainShape = makeTriangleMeshGeometry(positions, indices);
+/** Cook four adjoining collision tiles from the same vertices used by the rendered mesh. */
+const terrainBodies = [0, 32].flatMap(rowOrigin =>
+  [0, 32].map(columnOrigin => {
+    const tilePositions: number[] = [];
+    const tileIndices: number[] = [];
+    for (let row = 0; row <= 32; row++) {
+      for (let column = 0; column <= 32; column++) {
+        const sourceIndex = ((rowOrigin + row) * 65 + columnOrigin + column) * 3;
+        tilePositions.push(
+          positions[sourceIndex],
+          positions[sourceIndex + 1],
+          positions[sourceIndex + 2]
+        );
+        if (row < 32 && column < 32) {
+          const vertex = row * 33 + column;
+          tileIndices.push(vertex, vertex + 1, vertex + 33, vertex + 1, vertex + 34, vertex + 33);
+        }
+      }
+    }
+    return {
+      mass: 0,
+      position: [0, 0, 0] as const,
+      shape: {
+        type: 'triangle-mesh' as const,
+        geometry: makeTriangleMeshGeometry(tilePositions, tileIndices)
+      }
+    };
+  })
+);
 // Four closed rails share the same dimensions in rendering and collision detection.
 const railCenter = 31.5;
 const railThickness = 0.4;
@@ -335,17 +363,22 @@ async function start() {
     impactImpulseThreshold: 120,
     gravity: [0, 0, -9.81],
     bodies: [
-      {mass: 0, position: [0, 0, 0], shape: {type: 'triangle-mesh', geometry: terrainShape}},
+      terrainBodies[0],
       {
         position: [0, -11, elevation(0, -11) + 0.84],
         mass: 420,
         colliders: chassisColliders
       },
-      ...perimeter
+      ...perimeter,
+      ...terrainBodies.slice(1)
     ],
     vehicle: {
       chassis: 1,
       terrainCollider: 0,
+      // The remaining terrain colliders come after the compound chassis and perimeter rails.
+      additionalTerrainColliders: terrainBodies
+        .slice(1)
+        .map((_, index) => 1 + chassisColliders.length + perimeter.length + index),
       wheels: mounts.map((mount, index) => ({mount, steer: index < 2, drive: true})),
       radius: 0.38,
       travel: suspensionTravel,
