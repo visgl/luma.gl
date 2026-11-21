@@ -427,7 +427,7 @@ function lowerSQLExpression(
         return column(readGPUSQLColumn(leaf)).node;
       }
       if (leaf.type === 'CallExpression' && leaf.callee.type === 'Identifier') {
-        const name = leaf.callee.name;
+        const name = leaf.callee['name'];
         if (name !== 'isNull' && name !== 'isNotNull' && name !== 'in') {
           throw new Error(`GPUSQL does not support SQL expression "${name}"`);
         }
