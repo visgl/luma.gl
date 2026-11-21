@@ -53,6 +53,7 @@ type GPUSQLStatement = Readonly<{
     nulls?: 'first' | 'last';
   }>;
   limit?: number;
+  offset?: number;
 }>;
 
 type GPUSQLCompiledPlan = Readonly<{
@@ -80,7 +81,7 @@ type GPUSQLDynamicQuery = GPUSQLCompiledPlan & {
   sortByGlobal: (
     name: string,
     options: {direction: 'ascending' | 'descending'; nulls?: 'first' | 'last'}
-  ) => GPUSQLCompiledPlan & {topK: (limit: number) => GPUSQLCompiledPlan};
+  ) => GPUSQLCompiledPlan & {page: (offset: number, limit?: number) => GPUSQLCompiledPlan};
   innerJoin: (
     right: GPUDataFrame,
     options: {leftOn: string; rightOn: string}
@@ -156,8 +157,13 @@ function buildGPUSQLPlan(
 
   const aggregates = statement.items.filter(item => item.aggregate);
   if (aggregates.length > 0) {
-    if (statement.join || statement.orderBy || statement.limit !== undefined) {
-      throw new Error('GPUSQL aggregate queries do not yet support joins, ordering, or limits');
+    if (
+      statement.join ||
+      statement.orderBy ||
+      statement.limit !== undefined ||
+      statement.offset !== undefined
+    ) {
+      throw new Error('GPUSQL aggregate queries do not yet support joins, ordering, or pagination');
     }
     const definitions: GPUSQLAggregationDefinitions = {};
     for (const item of aggregates) {
@@ -212,8 +218,8 @@ function buildGPUSQLPlan(
   }
 
   if (statement.join) {
-    if (statement.orderBy || statement.limit !== undefined) {
-      throw new Error('GPUSQL joined results do not yet support ORDER BY or LIMIT');
+    if (statement.orderBy || statement.limit !== undefined || statement.offset !== undefined) {
+      throw new Error('GPUSQL joined results do not yet support ORDER BY or pagination');
     }
     const right = tables[statement.join.table.toLowerCase()];
     if (!right) throw new Error(`GPUSQL table "${statement.join.table}" is not registered`);
@@ -247,9 +253,12 @@ function buildGPUSQLPlan(
       direction,
       ...(nulls ? {nulls} : {})
     });
-    return statement.limit === undefined ? sort : sort.topK(statement.limit);
+    return statement.limit === undefined && statement.offset === undefined
+      ? sort
+      : sort.page(statement.offset ?? 0, statement.limit);
   }
-  if (statement.limit !== undefined) throw new Error('GPUSQL LIMIT currently requires ORDER BY');
+  if (statement.limit !== undefined || statement.offset !== undefined)
+    throw new Error('GPUSQL LIMIT or OFFSET currently requires ORDER BY');
   if (query.predicates.length === 0) {
     const firstColumn = frame.columnNames[0];
     if (!firstColumn) throw new Error('GPUSQL SELECT requires at least one GPU source column');
@@ -308,7 +317,9 @@ function parseGPUSQLStatement(
   const statement = parseSQLSelectStatement(source, {
     parseParameter: name => ({type: 'Identifier', name, gpuSQLParameter: true})
   });
-  if (statement.offset !== undefined) throw new Error('GPUSQL does not support OFFSET');
+  if (statement.offset !== undefined && statement.offset > 0xffffffff) {
+    throw new Error('GPUSQL OFFSET must fit an unsigned 32-bit row count');
+  }
   if (statement.joins.length > 1) throw new Error('GPUSQL currently supports one JOIN');
   if ((statement.groupBy?.length ?? 0) > 1) {
     throw new Error('GPUSQL currently supports one GROUP BY column');
@@ -379,6 +390,7 @@ function parseGPUSQLStatement(
       direction: sort.direction === 'desc' ? 'descending' : 'ascending',
       nulls: sort.nulls
     },
+    offset: statement.offset,
     limit: statement.limit
   };
 }

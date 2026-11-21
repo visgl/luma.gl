@@ -44,7 +44,7 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-filter'}));
   const ordered = context
     .query(
-      'SELECT fare, category, -fare * 2 AS Fare FROM trips WHERE fare >= :minimum ORDER BY Fare ASC LIMIT 2',
+      'SELECT fare, category, -fare * 2 AS Fare FROM trips WHERE fare >= :minimum ORDER BY Fare ASC LIMIT 2 OFFSET 1',
       {parameters: {minimum: 8}}
     )
     .compile(new GPUCommandGraph(device, {id: 'ludf-sql-arrow-global-sort'}));
@@ -88,9 +88,9 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
       orderedArrow.batches.map(batch => batch.numRows),
       ''
     ).toEqual([2]);
-    expect(Array.from(orderedArrow.getChild('fare') ?? []), '').toEqual([11, 10]);
-    expect(Array.from(orderedArrow.getChild('Fare') ?? []), '').toEqual([-22, -20]);
-    expect(Array.from(orderedArrow.getChild('category') ?? []), '').toEqual(['economy', 'premium']);
+    expect(Array.from(orderedArrow.getChild('fare') ?? []), '').toEqual([10, 8]);
+    expect(Array.from(orderedArrow.getChild('Fare') ?? []), '').toEqual([-20, -16]);
+    expect(Array.from(orderedArrow.getChild('category') ?? []), '').toEqual(['premium', 'premium']);
   } finally {
     filtered.destroy();
     ordered.destroy();
