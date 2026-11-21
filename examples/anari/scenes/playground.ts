@@ -116,7 +116,9 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
                 ? 7
                 : preset === 'chart-lighting'
                   ? 8
-                  : 0
+                  : preset === 'small-emitter'
+                    ? 9
+                    : 0
     );
     if (
       preset === 'chart' ||
@@ -124,11 +126,18 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
       preset === 'chart-diffuse' ||
       preset === 'chart-materials' ||
       preset === 'chart-shapes' ||
-      preset === 'chart-lighting'
+      preset === 'chart-lighting' ||
+      preset === 'small-emitter'
     ) {
       const sceneDescription: ANARIJSONScene = ANARISceneSchema.parse(
         JSON.parse(this.editor.value)
       );
+      if (preset === 'small-emitter') {
+        const emitter = sceneDescription.instances?.find(
+          instance => instance['@@id'] === 'emitter'
+        );
+        if (emitter) emitter.scale = [0.2, 0.2, 0.2];
+      }
       const renderer =
         (['default', 'deferred', 'raytrace', 'debugNormals', 'debugDepth'] as const).find(
           subtype => subtype === parameters.get('renderer')
@@ -341,6 +350,7 @@ export default class ANARIPlayground extends AnimationLoopTemplate {
           `${(rayTracing.memory.totalBytes / 1048576).toFixed(2)} MiB`
         );
       if (rayTracing) {
+        this.canvas.dataset.accumulatedSamples = String(rayTracing.accumulatedSamples);
         setElementText(
           'scene-ray-tracing-resolution',
           `${rayTracing.internalWidth} × ${rayTracing.internalHeight} · ${Math.round(rayTracing.resolutionScale * 100)}%`
