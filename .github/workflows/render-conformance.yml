@@ -17,6 +17,8 @@ on:
       - 'modules/anari/src/**'
       - 'modules/anari/test/engine/ray-material*'
       - 'modules/anari/test/engine/ray-alpha-pixels.spec.ts'
+      - 'modules/anari/test/engine/ray-secondary-emitter-mis.spec.ts'
+      - 'modules/anari/test/engine/ray-environment-lighting.spec.ts'
       - 'modules/anari/test/engine/ray-secondary-texture-filtering.spec.ts'
       - 'modules/shaders/src/**'
       - 'modules/core/src/**'
@@ -74,7 +76,7 @@ jobs:
           import assert from 'node:assert/strict';
           import {readFileSync} from 'node:fs';
           const report = readFileSync('test-results/render-conformance.xml', 'utf8');
-          assert.match(report, /<testsuites\b[^>]*\btests="10"/);
+          assert.match(report, /<testsuites\b[^>]*\btests="15"/);
           assert.doesNotMatch(report, /<skipped(?:\s|\/|>)/);
           NODE
       - name: Upload material results

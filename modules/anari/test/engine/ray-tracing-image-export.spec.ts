@@ -148,10 +148,12 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
         color.readBuffer({}, buffer);
         const reference = await buffer.readAsync();
         const stitched = new Uint8Array(width * height * 4);
+        // Denoising needs an interior tile. The unfiltered case only needs partial edges.
+        const exportTileSize = radius ? tileSize : 10;
         const tiles = exportRayTracingImage(device, scene, {
           width,
           height,
-          tileSize,
+          tileSize: exportTileSize,
           frames: 2
         });
         let tileCount = 0;
@@ -164,7 +166,7 @@ it('tiled seeded transport matches full-frame output across odd edges, denoise s
             );
           tileCount++;
         }
-        expect(tileCount).toBe(9);
+        expect(tileCount).toBe(radius ? 9 : 4);
         let maximumError = 0;
         for (let y = 0; y < height; y++) {
           for (let x = 0; x < width * 4; x++)

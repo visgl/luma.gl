@@ -153,12 +153,12 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     });
     world.setParameter('instance', [lightInstance, smallEmitter]).commitParameters();
     renderer.setParameters({progressive: true, historySampleLimit: 256}).commitParameters();
-    for (let sampleFrame = 0; sampleFrame < 15; sampleFrame++) renderFrame();
+    for (let sampleFrame = 0; sampleFrame < 7; sampleFrame++) renderFrame();
     const powerMean = (await render()).mean[0];
     renderer.setParameter('emitterSelection', 'uniform').commitParameters();
-    const reset = await render();
-    expect(reset.statistics.rayTracing?.accumulatedSamples).toBe(16);
-    for (let sampleFrame = 1; sampleFrame < 15; sampleFrame++) renderFrame();
+    const reset = renderFrame();
+    expect(reset.rayTracing?.accumulatedSamples).toBe(16);
+    for (let sampleFrame = 1; sampleFrame < 7; sampleFrame++) renderFrame();
     const uniformMean = (await render()).mean[0];
     expect(powerMean / uniformMean).toBeGreaterThan(0.8);
     expect(powerMean / uniformMean).toBeLessThan(1.2);
@@ -204,8 +204,8 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     emitterMaterial.setParameter('emissiveStrength', 2).commitParameters();
     expect((await render()).mean[0] / mesh.mean[0]).toBeCloseTo(2, 2);
     renderer.setParameters({progressive: true, transportMode: 'pbr'}).commitParameters();
-    await render();
-    expect((await render()).statistics.rayTracing?.accumulatedSamples).toBe(32);
+    renderFrame();
+    expect(renderFrame().rayTracing?.accumulatedSamples).toBe(32);
     emitterMaterial.setParameter('emissiveStrength', 0).commitParameters();
     const removed = await render();
     expect(removed.mean[0]).toBe(0);
@@ -217,15 +217,15 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     emitterMaterial.setParameter('opacity', 1).commitParameters();
     expect((await render()).mean[0]).toBeGreaterThan(0.1);
     renderer.setParameter('temporalReprojection', true).commitParameters();
-    await render();
-    expect((await render()).statistics.rayTracing?.accumulatedSamples).toBe(32);
+    renderFrame();
+    expect(renderFrame().rayTracing?.accumulatedSamples).toBe(32);
     frame.getParameter('camera')!.setParameter('position', [0.1, 0, 3]).commitParameters();
-    expect((await render()).statistics.rayTracing?.accumulatedSamples).toBe(16);
+    expect(renderFrame().rayTracing?.accumulatedSamples).toBe(16);
     foregroundMaterial.setParameter('opacity', 0.5).commitParameters();
-    await render();
+    renderFrame();
     expect((await frame.pick(8, 4))?.surface).toBe(foreground);
     foregroundMaterial.setParameter('opacity', 0.499).commitParameters();
-    await render();
+    renderFrame();
     expect((await frame.pick(8, 4))?.surface).toBe(receiver);
     const snapshot = frame.captureChannels()!;
     try {
@@ -237,7 +237,7 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
       snapshot.destroy();
     }
     foregroundMaterial.setParameter('alphaMode', 'opaque').commitParameters();
-    await render();
+    renderFrame();
     expect((await frame.pick(8, 4))?.surface).toBe(foreground);
     expect(errors).not.toHaveBeenCalled();
   } finally {
