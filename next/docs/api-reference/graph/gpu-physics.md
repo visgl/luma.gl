@@ -295,6 +295,40 @@ Use `readStatus()` for local failures. `ensemble.world.readSimulationDiagnostics
 
 The default compact solver uses scheduled body ranges and live-contact lists. The optional `compactContacts: false` fallback, contact-event scans, pose publication, selective reset invalidation, and explicit capture/readback can still scale with capacity. Per-instance list traversal is serial within each participating instance; very large individual worlds need separate qualification. The Physics Batch Lab and `scripts/physics/batch/run.mjs --active-fractions 0.01,0.1,0.5,1` measure this distinction with actual rounded active counts and active-body throughput. Sparse, dense, mostly sleeping and periodic wake-storm scenarios expose different scheduling costs. A separate instrumented step reports CPU encoding and available GPU timestamp costs by stage; it is excluded from throughput samples. Missing GPU timestamps are reported as unavailable. Destroy the ensemble after submitting its encoded work; do not independently destroy its borrowed world or graph. Destroying the ensemble releases its world, graph and any world-owned checkpoints.
 
+## Batched collision casts[​](#batched-collision-casts "Direct link to Batched collision casts")
+
+Enable queries and reserve `queryBatchCapacity` to sample many rays and sphere sweeps against the same submitted poses. The result array follows command order. Each row contains the nearest hit, a count of all hit colliders, and a `complete` flag. A row can contain a known hit and still be incomplete if bounded traversal of another collider did not finish.
+
+```
+const world = new GPURigidBodyWorld({
+
+  bodies,
+
+  enableQueries: true,
+
+  queryBatchCapacity: 4096
+
+});
+
+world.addToGraph(commands);
+
+
+
+const [ray, sweptProbe] = await world.castBatch([
+
+  {origin: [0, 0, 8], direction: [0, 0, -1], maximumDistance: 20},
+
+  {origin: [2, 0, 8], direction: [0, 0, -1], maximumDistance: 20, radius: 0.25}
+
+], {colliderIndices: sensorTargets});
+```
+
+A batch uses one shared collider selection. Omit `colliderIndices` to scan all colliders, or provide a compact subset. Each command can exclude one body with `excludeBody`. Distances use world units regardless of input direction length. At equal distances the lower global collider index wins, matching the scalar queries. A command without a radius uses the ray path.
+
+Submit any previously encoded simulation work before querying. The batch uses one GPU dispatch and one compact readback, with 48 input bytes and 64 result bytes per reserved command. Results and CPU staging scale with command count. GPU intersection work still scales with the number of casts times the number of selected colliders. Each mesh uses its existing local traversal budget. The batch and scalar methods share a staging lock, so await one call before starting another or restoring the world. Oversized batches reject before submission.
+
+Select **Collision scan (batched)** in Physics Batch Lab to scan a field of spheres and rotated boxes, see the returned depth image, and compare a matched subset against sequential scalar queries. Set the sweep radius to zero for rays. The reported times include staging, submission, and readback.
+
 ## Terrain from math.gl geometry[​](#terrain-from-mathgl-geometry "Direct link to Terrain from math.gl geometry")
 
 Use the same indexed triangle surface for rendering and collision. If the source is a math.gl height field, create a `HeightFieldGeometry` with one origin per tile. Its triangles preserve sample registration, cell diagonals, and gaps for missing samples. The physics adapter accepts the existing `@math.gl/geometry/primitives` contract, so luma.gl does not need to load or depend on `@math.gl/terrain` to cook it. The snippet uses the math.gl terrain source API. Applications using released packages can pass any compatible CPU triangle geometry to the same cooker.
