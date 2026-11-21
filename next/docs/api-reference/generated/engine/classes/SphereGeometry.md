@@ -1,6 +1,6 @@
 # Class: SphereGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L68)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L71)
 
 Compatibility adapter for math.gl CPU geometry with engine shader layout metadata.
 
@@ -14,7 +14,7 @@ Compatibility adapter for math.gl CPU geometry with engine shader layout metadat
 
 > **new SphereGeometry**(`props?`): `SphereGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:69](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L69)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L72)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

@@ -1,6 +1,6 @@
 # Class: CubeGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L40)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L43)
 
 Compatibility defaults and face metadata over the math.gl box tessellator.
 
@@ -14,7 +14,7 @@ Compatibility defaults and face metadata over the math.gl box tessellator.
 
 > **new CubeGeometry**(`props?`): `CubeGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L41)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L44)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

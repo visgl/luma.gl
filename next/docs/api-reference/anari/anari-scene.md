@@ -118,7 +118,7 @@ type ANARIMatrix4 = readonly number[];
 ```
 
 ```
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 
 
@@ -141,7 +141,7 @@ const right = anariDevice.newInstance({
 });
 ```
 
-`transform` is a 16-element, column-major affine matrix compatible with `@math.gl/core`'s `Matrix4`. If omitted, the identity matrix is used. A single instance can reference one group, an array of groups, or an `ANARIArray` containing groups.
+`transform` is a 16-element, column-major affine matrix compatible with `@math.gl/core/matrix`'s `Matrix4`. If omitted, the identity matrix is used. A single instance can reference one group, an array of groups, or an `ANARIArray` containing groups.
 
 All surfaces in the referenced groups receive the same instance transform. Group lights are collected, but their positions and directions are currently interpreted in world space rather than transformed by the instance.
 

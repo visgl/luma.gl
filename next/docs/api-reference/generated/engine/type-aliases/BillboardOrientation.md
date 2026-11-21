@@ -2,7 +2,7 @@
 
 > **BillboardOrientation** = `object`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L11)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L12)
 
 Camera-facing surface orientation and overlay behavior.
 
@@ -12,7 +12,7 @@ Camera-facing surface orientation and overlay behavior.
 
 > `optional` **overlay?**: `boolean`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L16)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L17)
 
 ***
 
@@ -20,7 +20,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:1
 
 > `optional` **rotationAxis?**: `"all"` | `"y"`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L15)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L16)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:1
 
 > `optional` **scaleWithDistance?**: `boolean`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L12)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L13)
 
 ***
 
@@ -36,7 +36,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:1
 
 > `optional` **up?**: \[`number`, `number`, `number`]
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L14)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L15)
 
 ***
 
@@ -44,4 +44,4 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:1
 
 > `optional` **viewDirection?**: \[`number`, `number`, `number`]
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L13)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L14)

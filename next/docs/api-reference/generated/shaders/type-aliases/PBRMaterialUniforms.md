@@ -2,7 +2,7 @@
 
 > **PBRMaterialUniforms** = `object`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L57)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L49)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:57](https://github.co
 
 > `optional` **alphaCutoff?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:78](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L78)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:70](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L70)
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:78](https://github.co
 
 > `optional` **alphaCutoffEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:77](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L77)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:69](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L69)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:77](https://github.co
 
 > `optional` **anisotropyDirection?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L124)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:116](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L116)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:124](https://github.c
 
 > `optional` **anisotropyMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:125](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L125)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:117](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L117)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:125](https://github.c
 
 > `optional` **anisotropyRotation?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L123)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:115](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L115)
 
 ***
 
@@ -50,7 +50,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:123](https://github.c
 
 > `optional` **anisotropyStrength?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:122](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L122)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L114)
 
 ***
 
@@ -58,7 +58,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:122](https://github.c
 
 > `optional` **anisotropyUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:165](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L165)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L157)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:165](https://github.c
 
 > `optional` **anisotropyUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L166)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L158)
 
 ***
 
@@ -74,7 +74,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:166](https://github.c
 
 > `optional` **attenuationColor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L105)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L97)
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:105](https://github.c
 
 > `optional` **attenuationDistance?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L104)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:96](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L96)
 
 ***
 
@@ -90,7 +90,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:104](https://github.c
 
 > `optional` **baseColorFactor?**: `Readonly`<`Vector4` | `NumberArray4`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L62)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L54)
 
 ***
 
@@ -98,7 +98,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:62](https://github.co
 
 > `optional` **baseColorMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L61)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L53)
 
 ***
 
@@ -106,7 +106,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:61](https://github.co
 
 > `optional` **baseColorUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L131)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:123](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L123)
 
 ***
 
@@ -114,7 +114,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:131](https://github.c
 
 > `optional` **baseColorUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:132](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L132)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:124](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L124)
 
 ***
 
@@ -122,7 +122,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:132](https://github.c
 
 > `optional` **bumpFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:169](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L169)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L161)
 
 Surface-height scale for the draft EXT\_materials\_bump extension.
 
@@ -132,7 +132,7 @@ Surface-height scale for the draft EXT\_materials\_bump extension.
 
 > `optional` **bumpMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:170](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L170)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:162](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L162)
 
 ***
 
@@ -140,7 +140,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:170](https://github.c
 
 > `optional` **bumpUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:182](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L182)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L174)
 
 ***
 
@@ -148,7 +148,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:182](https://github.c
 
 > `optional` **bumpUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:183](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L183)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:175](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L175)
 
 ***
 
@@ -156,7 +156,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:183](https://github.c
 
 > `optional` **clearcoatFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L107)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L99)
 
 ***
 
@@ -164,7 +164,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:107](https://github.c
 
 > `optional` **clearcoatMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L109)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L101)
 
 ***
 
@@ -172,7 +172,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:109](https://github.c
 
 > `optional` **clearcoatNormalUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L155)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L147)
 
 ***
 
@@ -180,7 +180,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:155](https://github.c
 
 > `optional` **clearcoatNormalUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:156](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L156)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L148)
 
 ***
 
@@ -188,7 +188,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:156](https://github.c
 
 > `optional` **clearcoatRoughnessFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:108](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L108)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:100](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L100)
 
 ***
 
@@ -196,7 +196,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:108](https://github.c
 
 > `optional` **clearcoatRoughnessMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L110)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:102](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L102)
 
 ***
 
@@ -204,7 +204,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:110](https://github.c
 
 > `optional` **clearcoatRoughnessUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L153)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L145)
 
 ***
 
@@ -212,7 +212,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:153](https://github.c
 
 > `optional` **clearcoatRoughnessUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L154)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L146)
 
 ***
 
@@ -220,7 +220,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:154](https://github.c
 
 > `optional` **clearcoatUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L151)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L143)
 
 ***
 
@@ -228,7 +228,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:151](https://github.c
 
 > `optional` **clearcoatUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L152)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L144)
 
 ***
 
@@ -236,7 +236,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:152](https://github.c
 
 > `optional` **diffuseTransmissionColorFactor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:174](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L174)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L166)
 
 ***
 
@@ -244,7 +244,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:174](https://github.c
 
 > `optional` **diffuseTransmissionColorMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:175](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L175)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:167](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L167)
 
 ***
 
@@ -252,7 +252,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:175](https://github.c
 
 > `optional` **diffuseTransmissionColorUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:186](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L186)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:178](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L178)
 
 ***
 
@@ -260,7 +260,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:186](https://github.c
 
 > `optional` **diffuseTransmissionColorUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:187](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L187)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:179](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L179)
 
 ***
 
@@ -268,7 +268,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:187](https://github.c
 
 > `optional` **diffuseTransmissionFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L172)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L164)
 
 Fraction of dielectric diffuse energy transmitted into the opposite hemisphere.
 
@@ -278,7 +278,7 @@ Fraction of dielectric diffuse energy transmitted into the opposite hemisphere.
 
 > `optional` **diffuseTransmissionMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L173)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:165](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L165)
 
 ***
 
@@ -286,7 +286,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:173](https://github.c
 
 > `optional` **diffuseTransmissionUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:184](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L184)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:176](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L176)
 
 ***
 
@@ -294,7 +294,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:184](https://github.c
 
 > `optional` **diffuseTransmissionUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:185](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L185)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L177)
 
 ***
 
@@ -302,7 +302,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:185](https://github.c
 
 > `optional` **dispersion?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:98](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L98)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L90)
 
 Chromatic transmission spread, expressed as 20 divided by the material Abbe number.
 
@@ -312,7 +312,7 @@ Chromatic transmission spread, expressed as 20 divided by the material Abbe numb
 
 > `optional` **emissiveFactor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:69](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L69)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L61)
 
 ***
 
@@ -320,7 +320,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:69](https://github.co
 
 > `optional` **emissiveMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L67)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:59](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L59)
 
 ***
 
@@ -328,7 +328,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:67](https://github.co
 
 > `optional` **emissiveStrength?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L127)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:119](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L119)
 
 ***
 
@@ -336,7 +336,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:127](https://github.c
 
 > `optional` **emissiveUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L139)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:131](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L131)
 
 ***
 
@@ -344,7 +344,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:139](https://github.c
 
 > `optional` **emissiveUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L141)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L133)
 
 ***
 
@@ -352,7 +352,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:141](https://github.c
 
 > `optional` **IBLenabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L81)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:73](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L73)
 
 ***
 
@@ -360,7 +360,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:81](https://github.co
 
 > `optional` **ior?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L95)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L87)
 
 ***
 
@@ -368,7 +368,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:95](https://github.co
 
 > `optional` **iridescenceFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:117](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L117)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:109](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L109)
 
 ***
 
@@ -376,7 +376,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:117](https://github.c
 
 > `optional` **iridescenceIor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L118)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:110](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L110)
 
 ***
 
@@ -384,7 +384,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:118](https://github.c
 
 > `optional` **iridescenceMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L120)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:112](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L112)
 
 ***
 
@@ -392,7 +392,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:120](https://github.c
 
 > `optional` **iridescenceThicknessRange?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:119](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L119)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:111](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L111)
 
 ***
 
@@ -400,7 +400,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:119](https://github.c
 
 > `optional` **iridescenceThicknessUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:163](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L163)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:155](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L155)
 
 ***
 
@@ -408,7 +408,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:163](https://github.c
 
 > `optional` **iridescenceThicknessUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:164](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L164)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:156](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L156)
 
 ***
 
@@ -416,7 +416,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:164](https://github.c
 
 > `optional` **iridescenceUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:161](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L161)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L153)
 
 ***
 
@@ -424,7 +424,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:161](https://github.c
 
 > `optional` **iridescenceUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:162](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L162)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L154)
 
 ***
 
@@ -432,7 +432,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:162](https://github.c
 
 > `optional` **lightmapIntensity?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L128)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L120)
 
 ***
 
@@ -440,7 +440,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:128](https://github.c
 
 > `optional` **lightmapMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:68](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L68)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:60](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L60)
 
 ***
 
@@ -448,7 +448,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:68](https://github.co
 
 > `optional` **lightmapUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L140)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:132](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L132)
 
 ***
 
@@ -456,7 +456,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:140](https://github.c
 
 > `optional` **lightmapUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L142)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L134)
 
 ***
 
@@ -464,7 +464,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:142](https://github.c
 
 > `optional` **metallicRoughnessMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:72](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L72)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L64)
 
 ***
 
@@ -472,7 +472,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:72](https://github.co
 
 > `optional` **metallicRoughnessUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L133)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:125](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L125)
 
 ***
 
@@ -480,7 +480,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:133](https://github.c
 
 > `optional` **metallicRoughnessUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L134)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:126](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L126)
 
 ***
 
@@ -488,7 +488,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:134](https://github.c
 
 > `optional` **metallicRoughnessValues?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:71](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L71)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:63](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L63)
 
 ***
 
@@ -496,7 +496,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:71](https://github.co
 
 > `optional` **multiscatterColorFactor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L177)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:169](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L169)
 
 Experimental multi-scatter albedo from the unratified volume-scattering draft.
 
@@ -506,7 +506,7 @@ Experimental multi-scatter albedo from the unratified volume-scattering draft.
 
 > `optional` **multiscatterColorMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:178](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L178)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:170](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L170)
 
 ***
 
@@ -514,7 +514,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:178](https://github.c
 
 > `optional` **multiscatterColorUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:188](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L188)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:180](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L180)
 
 ***
 
@@ -522,7 +522,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:188](https://github.c
 
 > `optional` **multiscatterColorUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:189](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L189)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:181](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L181)
 
 ***
 
@@ -530,7 +530,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:189](https://github.c
 
 > `optional` **normalMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:64](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L64)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:56](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L56)
 
 ***
 
@@ -538,7 +538,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:64](https://github.co
 
 > `optional` **normalScale?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:65](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L65)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:57](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L57)
 
 ***
 
@@ -546,7 +546,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:65](https://github.co
 
 > `optional` **normalUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:135](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L135)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L127)
 
 ***
 
@@ -554,7 +554,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:135](https://github.c
 
 > `optional` **normalUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L136)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L128)
 
 ***
 
@@ -562,7 +562,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:136](https://github.c
 
 > `optional` **occlusionMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L74)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:66](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L66)
 
 ***
 
@@ -570,7 +570,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:74](https://github.co
 
 > `optional` **occlusionStrength?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:75](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L75)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:67](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L67)
 
 ***
 
@@ -578,7 +578,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:75](https://github.co
 
 > `optional` **occlusionUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L137)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L129)
 
 ***
 
@@ -586,7 +586,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:137](https://github.c
 
 > `optional` **occlusionUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L138)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L130)
 
 ***
 
@@ -594,7 +594,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:138](https://github.c
 
 > `optional` **scaleDiffBaseMR?**: `Readonly`<`Vector4` | `NumberArray4`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:86](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L86)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:78](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L78)
 
 ***
 
@@ -602,7 +602,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:86](https://github.co
 
 > `optional` **scaleFGDSpec?**: `Readonly`<`Vector4` | `NumberArray4`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L87)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:79](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L79)
 
 ***
 
@@ -610,7 +610,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:87](https://github.co
 
 > `optional` **scaleIBLAmbient?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:82](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L82)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:74](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L74)
 
 ***
 
@@ -618,7 +618,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:82](https://github.co
 
 > `optional` **scatterAnisotropy?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:180](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L180)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L172)
 
 Henyey-Greenstein scattering anisotropy, ranging from -1 to 1.
 
@@ -628,7 +628,7 @@ Henyey-Greenstein scattering anisotropy, ranging from -1 to 1.
 
 > `optional` **scatterStrengthFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L129)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:121](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L121)
 
 ***
 
@@ -636,7 +636,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:129](https://github.c
 
 > `optional` **sheenColorFactor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:112](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L112)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L104)
 
 ***
 
@@ -644,7 +644,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:112](https://github.c
 
 > `optional` **sheenColorMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:114](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L114)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L106)
 
 ***
 
@@ -652,7 +652,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:114](https://github.c
 
 > `optional` **sheenColorUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L157)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L149)
 
 ***
 
@@ -660,7 +660,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:157](https://github.c
 
 > `optional` **sheenColorUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L158)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:150](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L150)
 
 ***
 
@@ -668,7 +668,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:158](https://github.c
 
 > `optional` **sheenRoughnessFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:113](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L113)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:105](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L105)
 
 ***
 
@@ -676,7 +676,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:113](https://github.c
 
 > `optional` **sheenRoughnessMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:115](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L115)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L107)
 
 ***
 
@@ -684,7 +684,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:115](https://github.c
 
 > `optional` **sheenRoughnessUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L159)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L151)
 
 ***
 
@@ -692,7 +692,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:159](https://github.c
 
 > `optional` **sheenRoughnessUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:160](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L160)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L152)
 
 ***
 
@@ -700,7 +700,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:160](https://github.c
 
 > `optional` **specularColorFactor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L90)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:82](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L82)
 
 ***
 
@@ -708,7 +708,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:90](https://github.co
 
 > `optional` **specularColorMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L92)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:84](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L84)
 
 ***
 
@@ -716,7 +716,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:92](https://github.co
 
 > `optional` **specularColorUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L143)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:135](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L135)
 
 ***
 
@@ -724,7 +724,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:143](https://github.c
 
 > `optional` **specularColorUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L144)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L136)
 
 ***
 
@@ -732,7 +732,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:144](https://github.c
 
 > `optional` **specularIntensityFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L91)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L83)
 
 ***
 
@@ -740,7 +740,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:91](https://github.co
 
 > `optional` **specularIntensityMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L93)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:85](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L85)
 
 ***
 
@@ -748,7 +748,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:93](https://github.co
 
 > `optional` **specularIntensityUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L145)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L137)
 
 ***
 
@@ -756,7 +756,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:145](https://github.c
 
 > `optional` **specularIntensityUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L146)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L138)
 
 ***
 
@@ -764,7 +764,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:146](https://github.c
 
 > `optional` **thicknessFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L103)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:95](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L95)
 
 ***
 
@@ -772,7 +772,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:103](https://github.c
 
 > `optional` **thicknessUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L149)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L141)
 
 ***
 
@@ -780,7 +780,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:149](https://github.c
 
 > `optional` **thicknessUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:150](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L150)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L142)
 
 ***
 
@@ -788,7 +788,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:150](https://github.c
 
 > `optional` **transmissionFactor?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:100](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L100)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:92](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L92)
 
 ***
 
@@ -796,7 +796,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:100](https://github.c
 
 > `optional` **transmissionMapEnabled?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:101](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L101)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L93)
 
 ***
 
@@ -804,7 +804,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:101](https://github.c
 
 > `optional` **transmissionUVSet?**: `number`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L147)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L139)
 
 ***
 
@@ -812,7 +812,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:147](https://github.c
 
 > `optional` **transmissionUVTransform?**: `Readonly`<`NumberArray9` | `Matrix3`>
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L148)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L140)
 
 ***
 
@@ -820,4 +820,4 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:148](https://github.c
 
 > `optional` **unlit?**: `boolean`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:58](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L58)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L50)

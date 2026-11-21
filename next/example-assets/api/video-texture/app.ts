@@ -7,7 +7,7 @@ import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CylinderGeometry, Model, VideoTexture} from '@luma.gl/engine';
 import {GPUCommandGraph, type CompiledGPUCommandGraph} from '@luma.gl/graph/gpu-core';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {Input, ALL_FORMATS, BlobSource, VideoSampleSink} from 'mediabunny';
 import {VIDEO_TEXTURE_INFO_HTML, VideoScrubber} from './app-ui';
 

@@ -261,10 +261,10 @@ The default compact solver uses scheduled body ranges and live-contact lists. Th
 
 ## Terrain from math.gl geometry[​](#terrain-from-mathgl-geometry "Direct link to Terrain from math.gl geometry")
 
-Use the same indexed triangle surface for rendering and collision. If the source is a math.gl height field, create a `HeightFieldGeometry` with one origin per tile. Its triangles preserve sample registration, cell diagonals, and gaps for missing samples. The physics adapter accepts the existing `@math.gl/geometry` contract, so luma.gl does not need to load or depend on `@math.gl/terrain` to cook it. The snippet uses the math.gl terrain source API. Applications using released packages can pass any compatible CPU triangle geometry to the same cooker.
+Use the same indexed triangle surface for rendering and collision. If the source is a math.gl height field, create a `HeightFieldGeometry` with one origin per tile. Its triangles preserve sample registration, cell diagonals, and gaps for missing samples. The physics adapter accepts the existing `@math.gl/geometry/primitives` contract, so luma.gl does not need to load or depend on `@math.gl/terrain` to cook it. The snippet uses the math.gl terrain source API. Applications using released packages can pass any compatible CPU triangle geometry to the same cooker.
 
 ```
-import {HeightFieldGeometry} from '@math.gl/terrain/geometry';
+import {HeightFieldGeometry} from '@math.gl/geospatial/terrain';
 
 import {makeStaticTriangleMeshGeometry} from '@luma.gl/graph/gpu-physics';
 

@@ -136,7 +136,7 @@ import type {ShaderModule, UniformTypes} from '@luma.gl/shaders';
 
 import {ShaderInputs} from '@luma.gl/engine';
 
-import type {NumberArray16} from '@math.gl/core';
+import type {NumberArray16} from '@math.gl/core/types';
 
 
 

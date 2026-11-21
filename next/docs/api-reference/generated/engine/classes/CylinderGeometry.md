@@ -1,6 +1,6 @@
 # Class: CylinderGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:117](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L117)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:120](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L120)
 
 Compatibility adapter for math.gl CPU geometry with engine shader layout metadata.
 
@@ -14,7 +14,7 @@ Compatibility adapter for math.gl CPU geometry with engine shader layout metadat
 
 > **new CylinderGeometry**(`props?`): `CylinderGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:118](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L118)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:121](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L121)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

@@ -21,7 +21,7 @@ import {SceneMeshNode, SceneRenderer} from '@luma.gl/anari';
 
 import {PhysicsController} from '@luma.gl/engine/physics';
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 
 

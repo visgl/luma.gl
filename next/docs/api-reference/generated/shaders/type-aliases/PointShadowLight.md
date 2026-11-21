@@ -2,7 +2,7 @@
 
 > **PointShadowLight** = [`ShadowBiasProps`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShadowBiasProps.md) & `object`
 
-Defined in: [modules/lighting/shadow/shadow-types.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow-types.ts#L43)
+Defined in: [modules/lighting/shadow/shadow-types.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow-types.ts#L44)
 
 Cube-array shadow configuration for an omnidirectional point light.
 

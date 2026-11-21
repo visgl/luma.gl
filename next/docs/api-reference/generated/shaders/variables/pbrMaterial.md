@@ -2,7 +2,7 @@
 
 > `const` **pbrMaterial**: `object`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:199](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L199)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:191](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L191)
 
 An implementation of PBR (Physically-Based Rendering). Physically Based Shading of a microfacet surface defined by a glTF material.
 

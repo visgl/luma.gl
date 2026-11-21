@@ -1,6 +1,6 @@
 # Class: TorusGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L24)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L27)
 
 Shared math.gl tessellation, including open partial sweeps around the Y axis.
 
@@ -14,7 +14,7 @@ Shared math.gl tessellation, including open partial sweeps around the Y axis.
 
 > **new TorusGeometry**(`props?`): `TorusGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L25)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L28)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

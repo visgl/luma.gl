@@ -2,7 +2,7 @@
 
 > **updateSkinJointMatrices**(`props`): `Float32Array`
 
-Defined in: [modules/engine/src/animation/skin.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L24)
+Defined in: [modules/engine/src/animation/skin.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L25)
 
 Evaluates joint matrices in mesh-local space without owning a skeleton or GPU resources.
 

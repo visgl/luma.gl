@@ -1,6 +1,6 @@
 # Class: PlaneGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L153)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:156](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L156)
 
 Adapts legacy plane axes and facing to math.gl's XZ plane.
 
@@ -14,7 +14,7 @@ Adapts legacy plane axes and facing to math.gl's XZ plane.
 
 > **new PlaneGeometry**(`props?`): `PlaneGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:154](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L154)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:157](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L157)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

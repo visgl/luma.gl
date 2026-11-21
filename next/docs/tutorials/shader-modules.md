@@ -23,7 +23,7 @@ The complete source for this example is shown below:
 The WGSL uses `@binding(auto)`, so shader module bindings are matched by name instead of hard-coded binding numbers.
 
 ```
-import {NumberArray3} from '@math.gl/core';
+import {NumberArray3} from '@math.gl/core/types';
 
 import {Buffer} from '@luma.gl/core';
 

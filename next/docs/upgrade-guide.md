@@ -22,6 +22,8 @@ This section covers upgrades from stable luma.gl 9.x to 10.0. Update the luma.gl
 
 Use the [package index](https://luma.gl/next/docs/packages.md) to find APIs formerly imported from `@luma.gl/experimental`. Scene rendering moved into `@luma.gl/anari`.
 
+For direct math.gl 5.0 imports, use the public subpaths. Use `@math.gl/core/matrix` for matrix and vector helpers, `@math.gl/core/types` for array types, and `@math.gl/geometry/primitives` for geometry classes. Use hyphenated projection subpaths such as `@math.gl/geospatial/projection-types`.
+
 ### Shaders and drawing[​](#shaders-and-drawing "Direct link to Shaders and drawing")
 
 * Create a `GLSLShaderAssembler` or `WGSLShaderAssembler` and pass it as `shaderAssembler` when an application needs shared hooks or modules.

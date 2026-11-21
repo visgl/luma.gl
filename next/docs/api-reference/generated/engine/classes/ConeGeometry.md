@@ -1,6 +1,6 @@
 # Class: ConeGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:129](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L129)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:132](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L132)
 
 Compatibility adapter for math.gl CPU geometry with engine shader layout metadata.
 
@@ -14,7 +14,7 @@ Compatibility adapter for math.gl CPU geometry with engine shader layout metadat
 
 > **new ConeGeometry**(`props?`): `ConeGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L130)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:133](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L133)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

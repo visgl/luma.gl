@@ -2,7 +2,7 @@
 
 > **BillboardBinding** = `object`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L32)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L33)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:3
 
 > **definition**: [`BillboardOrientation`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/BillboardOrientation.md)
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L34)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L35)
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:3
 
 > `optional` **matrixAuthored?**: `boolean`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L36)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L37)
 
 Matrix-authored nodes need scale decomposition; TRS nodes retain signed scales.
 
@@ -28,4 +28,4 @@ Matrix-authored nodes need scale decomposition; TRS nodes retain signed scales.
 
 > **node**: [`ScenegraphNode`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md)
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L33)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L34)

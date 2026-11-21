@@ -6,7 +6,7 @@ import {DynamicTexture} from '@luma.gl/core/dynamic';
 import type {AnimationProps, ModelNode} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, GroupNode, loadImageBitmap} from '@luma.gl/engine';
 import type {LightingProps, PBRProjectionProps} from '@luma.gl/shaders';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {createPBRMesh, drawPBRScene} from '../../pbr-scene';
 import {LIGHTING_INFO_HTML} from './app-ui';
 

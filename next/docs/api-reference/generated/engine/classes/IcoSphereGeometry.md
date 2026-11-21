@@ -1,6 +1,6 @@
 # Class: IcoSphereGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:96](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L96)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:99](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L99)
 
 Compatibility adapter for math.gl CPU geometry with engine shader layout metadata.
 
@@ -14,7 +14,7 @@ Compatibility adapter for math.gl CPU geometry with engine shader layout metadat
 
 > **new IcoSphereGeometry**(`props?`): `IcoSphereGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:97](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L97)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:100](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L100)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

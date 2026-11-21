@@ -2,7 +2,7 @@
 
 > **BillboardDrawEntry** = `object`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L24)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L25)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:2
 
 > **modelMatrix**: `Matrix4`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L27)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L28)
 
 Complete leaf transform, including its own matrix.
 
@@ -20,7 +20,7 @@ Complete leaf transform, including its own matrix.
 
 > **node**: [`ScenegraphNode`](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md)
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L25)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L26)
 
 ***
 
@@ -28,6 +28,6 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:2
 
 > **overlay**: `boolean`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L29)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L30)
 
 Draw after ordinary geometry, with depth testing/writing disabled.

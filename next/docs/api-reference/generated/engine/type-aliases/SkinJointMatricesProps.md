@@ -2,7 +2,7 @@
 
 > **SkinJointMatricesProps** = `object`
 
-Defined in: [modules/engine/src/animation/skin.ts:10](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L10)
+Defined in: [modules/engine/src/animation/skin.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L11)
 
 Format-independent inputs for evaluating a skinned mesh's joint palette.
 
@@ -12,7 +12,7 @@ Format-independent inputs for evaluating a skinned mesh's joint palette.
 
 > `optional` **inverseBindMatrices?**: `ArrayLike`<`number`>
 
-Defined in: [modules/engine/src/animation/skin.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L18)
+Defined in: [modules/engine/src/animation/skin.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L19)
 
 Optional column-major inverse bind matrix for each joint.
 
@@ -22,7 +22,7 @@ Optional column-major inverse bind matrix for each joint.
 
 > **joints**: readonly [`GroupNode`](https://luma.gl/next/docs/api-reference/generated/engine/classes/GroupNode.md)\[]
 
-Defined in: [modules/engine/src/animation/skin.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L12)
+Defined in: [modules/engine/src/animation/skin.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L13)
 
 Joints in their authored palette order.
 
@@ -32,7 +32,7 @@ Joints in their authored palette order.
 
 > `optional` **meshNode?**: [`GroupNode`](https://luma.gl/next/docs/api-reference/generated/engine/classes/GroupNode.md)
 
-Defined in: [modules/engine/src/animation/skin.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L14)
+Defined in: [modules/engine/src/animation/skin.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L15)
 
 Animated scenegraph node that owns the skinned mesh.
 
@@ -42,7 +42,7 @@ Animated scenegraph node that owns the skinned mesh.
 
 > `optional` **target?**: `Float32Array`
 
-Defined in: [modules/engine/src/animation/skin.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L20)
+Defined in: [modules/engine/src/animation/skin.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L21)
 
 Existing output storage that can be reused across animation frames.
 
@@ -52,6 +52,6 @@ Existing output storage that can be reused across animation frames.
 
 > **worldMatrices**: `ReadonlyMap`<[`GroupNode`](https://luma.gl/next/docs/api-reference/generated/engine/classes/GroupNode.md), `Readonly`<`NumericArray`>>
 
-Defined in: [modules/engine/src/animation/skin.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L16)
+Defined in: [modules/engine/src/animation/skin.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/animation/skin.ts#L17)
 
 World transforms collected once for the animated scene hierarchy.

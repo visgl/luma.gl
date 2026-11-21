@@ -156,7 +156,7 @@ loaders.gl 5.0.0-alpha.4 implements the transport-neutral boundary through `Parq
 Install loaders.gl explicitly when using this optional adapter:
 
 ```
-yarn add @loaders.gl/core@5.0.0-rc.1 @loaders.gl/tables@5.0.0-rc.1
+yarn add @loaders.gl/core@5.0.0-rc.2 @loaders.gl/tables@5.0.0-rc.2
 ```
 
 Request encoded pages and preserve only codecs that `gpu-parse` can decompress:

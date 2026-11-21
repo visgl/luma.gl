@@ -2,7 +2,7 @@
 
 > **SpotShadowLight** = [`ShadowBiasProps`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShadowBiasProps.md) & `object`
 
-Defined in: [modules/lighting/shadow/shadow-types.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow-types.ts#L33)
+Defined in: [modules/lighting/shadow/shadow-types.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow-types.ts#L34)
 
 Perspective shadow configuration for a spot light.
 

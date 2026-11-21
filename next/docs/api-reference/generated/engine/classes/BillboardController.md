@@ -1,6 +1,6 @@
 # Class: BillboardController
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L40)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L41)
 
 Camera-facing traversal over resolved scenegraph bindings.
 
@@ -10,7 +10,7 @@ Camera-facing traversal over resolved scenegraph bindings.
 
 > **new BillboardController**(`props`): `BillboardController`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L45)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L46)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 
@@ -28,7 +28,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:4
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:176](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L176)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:177](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L177)
 
 #### Returns[​](#returns-1 "Direct link to Returns")
 
@@ -40,7 +40,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:1
 
 > **getDrawEntries**(`options`): [`BillboardDrawEntry`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/BillboardDrawEntry.md)\[]
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:61](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L61)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:62](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L62)
 
 Derive transforms after animation, without mutating source or runtime node matrices.
 
@@ -70,7 +70,7 @@ Derive transforms after animation, without mutating source or runtime node matri
 
 > **resetCamera**(`cameraId?`): `void`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:172](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L172)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:173](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L173)
 
 Reset reference depths when replacing a camera or detaching/re-attaching a scene.
 

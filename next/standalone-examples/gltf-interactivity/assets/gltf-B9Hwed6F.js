@@ -1,1 +1,0 @@
-import"./draco-loader-types-BAmCFCMT.js";import"./log-Dpt7o4NC.js";import{t as e}from"./gltf-loader-Dq0PNte-.js";export{e as GLTFLoaderWithParser};

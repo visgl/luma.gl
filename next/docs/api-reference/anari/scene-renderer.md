@@ -80,7 +80,7 @@ import {Geometry} from '@luma.gl/engine';
 
 import {SceneRenderer, type SceneRenderOptions, type SceneSurface} from '@luma.gl/anari';
 
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 
 

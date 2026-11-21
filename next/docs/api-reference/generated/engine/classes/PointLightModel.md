@@ -826,7 +826,7 @@ Creates or replaces the render pipeline through the backend's asynchronous compi
 
 > **destroy**(): `void`
 
-Defined in: [modules/engine/src/models/light-model-utils.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L152)
+Defined in: [modules/engine/src/models/light-model-utils.ts:153](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L153)
 
 #### Returns[​](#returns-16 "Direct link to Returns")
 
@@ -842,7 +842,7 @@ Defined in: [modules/engine/src/models/light-model-utils.ts:152](https://github.
 
 > **draw**(`renderPass`, `options?`): `boolean`
 
-Defined in: [modules/engine/src/models/light-model-utils.ts:158](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L158)
+Defined in: [modules/engine/src/models/light-model-utils.ts:159](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L159)
 
 Issue one draw call.
 
@@ -1444,7 +1444,7 @@ Can trigger a pipeline rebuild / pipeline cache fetch on WebGPU. On WebGL, param
 
 > **setProps**(`props`): `void`
 
-Defined in: [modules/engine/src/models/light-model-utils.ts:165](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L165)
+Defined in: [modules/engine/src/models/light-model-utils.ts:166](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/models/light-model-utils.ts#L166)
 
 #### Parameters[​](#parameters-28 "Direct link to Parameters")
 

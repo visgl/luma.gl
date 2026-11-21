@@ -2,7 +2,7 @@
 
 > **PlaneGeometryProps** = `object`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L136)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L139)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:136](https://git
 
 > `optional` **attributes?**: `Record`<`string`, [`GeometryAttributeInput`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/GeometryAttributeInput.md)>
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L139)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L142)
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:139](https://git
 
 > `optional` **flipCull?**: `boolean`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:142](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L142)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L145)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:142](https://git
 
 > `optional` **id?**: `string`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L137)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L140)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:137](https://git
 
 > `optional` **nx?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L147)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:150](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L150)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:147](https://git
 
 > `optional` **ny?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L148)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:151](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L151)
 
 ***
 
@@ -50,7 +50,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:148](https://git
 
 > `optional` **nz?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L149)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:152](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L152)
 
 ***
 
@@ -58,7 +58,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:149](https://git
 
 > `optional` **offset?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L141)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L144)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:141](https://git
 
 > `optional` **radius?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L138)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:141](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L141)
 
 ***
 
@@ -74,7 +74,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:138](https://git
 
 > `optional` **type?**: `"x,y"` | `"x,z"` | `"y,z"`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:140](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L140)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L143)
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:140](https://git
 
 > `optional` **unpack?**: `boolean`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:143](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L143)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L146)
 
 ***
 
@@ -90,7 +90,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:143](https://git
 
 > `optional` **xlen?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:144](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L144)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:147](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L147)
 
 ***
 
@@ -98,7 +98,7 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:144](https://git
 
 > `optional` **ylen?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:145](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L145)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:148](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L148)
 
 ***
 
@@ -106,4 +106,4 @@ Defined in: [modules/engine/src/geometry/geometry-primitives.ts:145](https://git
 
 > `optional` **zlen?**: `number`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:146](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L146)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:149](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L149)

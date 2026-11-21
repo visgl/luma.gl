@@ -2,7 +2,7 @@
 
 > **WaterMaterialUniforms** = `object`
 
-Defined in: [modules/lighting/water-material/water-material.ts:11](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L11)
+Defined in: [modules/lighting/water-material/water-material.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L12)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:11](https://githu
 
 > `optional` **baseColor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/water-material/water-material.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L13)
+Defined in: [modules/lighting/water-material/water-material.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L14)
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:13](https://githu
 
 > `optional` **coordinateOffset?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/water-material/water-material.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L21)
+Defined in: [modules/lighting/water-material/water-material.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L22)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:21](https://githu
 
 > `optional` **coordinateScale?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/water-material/water-material.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L20)
+Defined in: [modules/lighting/water-material/water-material.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L21)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:20](https://githu
 
 > `optional` **fresnelColor?**: `Readonly`<`Vector3` | `NumberArray3`>
 
-Defined in: [modules/lighting/water-material/water-material.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L15)
+Defined in: [modules/lighting/water-material/water-material.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L16)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:15](https://githu
 
 > `optional` **fresnelPower?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:16](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L16)
+Defined in: [modules/lighting/water-material/water-material.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L17)
 
 ***
 
@@ -50,7 +50,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:16](https://githu
 
 > `optional` **mappingMode?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L19)
+Defined in: [modules/lighting/water-material/water-material.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L20)
 
 ***
 
@@ -58,7 +58,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:19](https://githu
 
 > `optional` **normalStrength?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L18)
+Defined in: [modules/lighting/water-material/water-material.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L19)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:18](https://githu
 
 > `optional` **opacity?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:14](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L14)
+Defined in: [modules/lighting/water-material/water-material.ts:15](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L15)
 
 ***
 
@@ -74,7 +74,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:14](https://githu
 
 > `optional` **specularIntensity?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L17)
+Defined in: [modules/lighting/water-material/water-material.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L18)
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:17](https://githu
 
 > `optional` **time?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:12](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L12)
+Defined in: [modules/lighting/water-material/water-material.ts:13](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L13)
 
 ***
 
@@ -90,7 +90,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:12](https://githu
 
 > `optional` **waveAAmplitude?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L25)
+Defined in: [modules/lighting/water-material/water-material.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L26)
 
 ***
 
@@ -98,7 +98,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:25](https://githu
 
 > `optional` **waveADirection?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/water-material/water-material.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L22)
+Defined in: [modules/lighting/water-material/water-material.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L23)
 
 ***
 
@@ -106,7 +106,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:22](https://githu
 
 > `optional` **waveAFrequency?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L24)
+Defined in: [modules/lighting/water-material/water-material.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L25)
 
 ***
 
@@ -114,7 +114,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:24](https://githu
 
 > `optional` **waveASpeed?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L23)
+Defined in: [modules/lighting/water-material/water-material.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L24)
 
 ***
 
@@ -122,7 +122,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:23](https://githu
 
 > `optional` **waveBAmplitude?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L29)
+Defined in: [modules/lighting/water-material/water-material.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L30)
 
 ***
 
@@ -130,7 +130,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:29](https://githu
 
 > `optional` **waveBDirection?**: `Readonly`<`Vector2` | `NumberArray2`>
 
-Defined in: [modules/lighting/water-material/water-material.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L26)
+Defined in: [modules/lighting/water-material/water-material.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L27)
 
 ***
 
@@ -138,7 +138,7 @@ Defined in: [modules/lighting/water-material/water-material.ts:26](https://githu
 
 > `optional` **waveBFrequency?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L28)
+Defined in: [modules/lighting/water-material/water-material.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L29)
 
 ***
 
@@ -146,4 +146,4 @@ Defined in: [modules/lighting/water-material/water-material.ts:28](https://githu
 
 > `optional` **waveBSpeed?**: `number`
 
-Defined in: [modules/lighting/water-material/water-material.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L27)
+Defined in: [modules/lighting/water-material/water-material.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/water-material/water-material.ts#L28)

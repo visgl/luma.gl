@@ -402,7 +402,7 @@ Render models with geometry and shader inputs, manage redraw and interaction, an
 - [Experimental WebXR](https://luma.gl/next/docs/api-reference/engine/experimental/webxr.md): From v10
 - [WebXRCameraTexture](https://luma.gl/next/docs/api-reference/engine/experimental/webxr/webxr-camera-texture.md): From v10
 - [WebXRManager](https://luma.gl/next/docs/api-reference/engine/experimental/webxr/webxr-manager.md): From v10
-- [Geometry](https://luma.gl/next/docs/api-reference/engine/geometry.md): Geometry is a compatibility adapter over the CPU-side container from @math.gl/geometry.
+- [Geometry](https://luma.gl/next/docs/api-reference/engine/geometry.md): Geometry is a compatibility adapter over the CPU-side container from @math.gl/geometry/primitives.
 - [Built-in Geometries](https://luma.gl/next/docs/api-reference/engine/geometry/geometries.md): @luma.gl/engine exports several ready-made geometry classes. All of them extend Geometry and populate standard glTF mesh attribute semantics such as POSITION, NORMAL, and TEXCOORD_0.
 - [GPUGeometry](https://luma.gl/next/docs/api-reference/engine/geometry/gpu-geometry.md): GPUGeometry is the GPU-backed counterpart to Geometry.
 - [makeStrokeGeometry](https://luma.gl/next/docs/api-reference/engine/geometry/stroke-geometry.md): Triangulates a connected path into a local XY stroke, with butt, square, or round caps and miter, bevel, or round joins. Optional vertex elevations are preserved. Width and distance use the same units as the input coordinates; convert geographic coordinates to a local Cartesian system before calling this helper.
@@ -801,13 +801,13 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: AudioGraph](https://luma.gl/next/docs/api-reference/generated/engine/classes/AudioGraph.md): Defined in47
 - [Class: AudioReverbBus](https://luma.gl/next/docs/api-reference/generated/engine/classes/AudioReverbBus.md): Defined in83
 - [Class: BackgroundTextureModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/BackgroundTextureModel.md): Defined in88
-- [Class: BillboardController](https://luma.gl/next/docs/api-reference/generated/engine/classes/BillboardController.md): Defined in40
+- [Class: BillboardController](https://luma.gl/next/docs/api-reference/generated/engine/classes/BillboardController.md): Defined in41
 - [Class: BufferTransform](https://luma.gl/next/docs/api-reference/generated/engine/classes/BufferTransform.md): Defined in47
 - [Class: ClipSpace](https://luma.gl/next/docs/api-reference/generated/engine/classes/ClipSpace.md): Defined in67
 - [Class: Computation](https://luma.gl/next/docs/api-reference/generated/engine/classes/Computation.md): Defined in81
-- [Class: ConeGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/ConeGeometry.md): Defined in129
-- [Class: CubeGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/CubeGeometry.md): Defined in40
-- [Class: CylinderGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/CylinderGeometry.md): Defined in117
+- [Class: ConeGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/ConeGeometry.md): Defined in132
+- [Class: CubeGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/CubeGeometry.md): Defined in43
+- [Class: CylinderGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/CylinderGeometry.md): Defined in120
 - [Class: DirectionalLightModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/DirectionalLightModel.md): Defined in22
 - [Class: DynamicBuffer](https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicBuffer.md): Defined in45
 - [Class: DynamicTexture](https://luma.gl/next/docs/api-reference/generated/engine/classes/DynamicTexture.md): Defined in37
@@ -817,7 +817,7 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: GPUVectorGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUVectorGeometry.md): Defined in19
 - [Class: GPUVectorModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/GPUVectorModel.md): Defined in216
 - [Class: GroupNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/GroupNode.md): Defined in36
-- [Class: IcoSphereGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/IcoSphereGeometry.md): Defined in96
+- [Class: IcoSphereGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/IcoSphereGeometry.md): Defined in99
 - [Class: Interactivity](https://luma.gl/next/docs/api-reference/generated/engine/classes/Interactivity.md): Defined in128
 - [Class: JointController](https://luma.gl/next/docs/api-reference/generated/engine/classes/JointController.md): Defined in41
 - [Class: KeyFrames<T>](https://luma.gl/next/docs/api-reference/generated/engine/classes/KeyFrames.md): Defined in9
@@ -830,26 +830,26 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Class: ModelNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/ModelNode.md): Defined in25
 - [Class: OrbitControls](https://luma.gl/next/docs/api-reference/generated/engine/classes/OrbitControls.md): Defined in66
 - [Class: PickingManager](https://luma.gl/next/docs/api-reference/generated/engine/classes/PickingManager.md): Defined in105
-- [Class: PlaneGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/PlaneGeometry.md): Defined in153
+- [Class: PlaneGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/PlaneGeometry.md): Defined in156
 - [Class: PointLightModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/PointLightModel.md): Defined in21
 - [Class: PunctualLightController](https://luma.gl/next/docs/api-reference/generated/engine/classes/PunctualLightController.md): Defined in31
 - [Class: RingGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/RingGeometry.md): Defined in25
 - [Class: ScenegraphAnimator<TClip>](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphAnimator.md): Defined in13
 - [Class: ScenegraphInteractionManager](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphInteractionManager.md): Defined in54
-- [Class: ScenegraphNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md): Defined in30
+- [Class: ScenegraphNode](https://luma.gl/next/docs/api-reference/generated/engine/classes/ScenegraphNode.md): Defined in31
 - [Class: SceneMetadata](https://luma.gl/next/docs/api-reference/generated/engine/classes/SceneMetadata.md): Defined in6
 - [Class: ShaderInputs<ShaderPropsT>](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderInputs.md): Defined in42
 - [Class: ShaderPassRenderer](https://luma.gl/next/docs/api-reference/generated/engine/classes/ShaderPassRenderer.md): Defined in89
 - [Class: SkinController](https://luma.gl/next/docs/api-reference/generated/engine/classes/SkinController.md): Defined in33
-- [Class: SphereGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/SphereGeometry.md): Defined in68
+- [Class: SphereGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/SphereGeometry.md): Defined in71
 - [Class: SpotLightModel](https://luma.gl/next/docs/api-reference/generated/engine/classes/SpotLightModel.md): Defined in22
 - [Class: Swap<T>](https://luma.gl/next/docs/api-reference/generated/engine/classes/Swap.md): Defined in14
 - [Class: SwapBuffers](https://luma.gl/next/docs/api-reference/generated/engine/classes/SwapBuffers.md): Defined in121
 - [Class: SwapFramebuffers](https://luma.gl/next/docs/api-reference/generated/engine/classes/SwapFramebuffers.md): Defined in43
 - [Class: TextureTransform](https://luma.gl/next/docs/api-reference/generated/engine/classes/TextureTransform.md): Defined in47
 - [Class: Timeline](https://luma.gl/next/docs/api-reference/generated/engine/classes/Timeline.md): Defined in41
-- [Class: TorusGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/TorusGeometry.md): Defined in24
-- [Class: TruncatedConeGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/TruncatedConeGeometry.md): Defined in103
+- [Class: TorusGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/TorusGeometry.md): Defined in27
+- [Class: TruncatedConeGeometry](https://luma.gl/next/docs/api-reference/generated/engine/classes/TruncatedConeGeometry.md): Defined in106
 - [Class: VideoTexture](https://luma.gl/next/docs/api-reference/generated/engine/classes/VideoTexture.md): Defined in32
 - [Function: applyMorphTargets()](https://luma.gl/next/docs/api-reference/generated/engine/functions/applyMorphTargets.md): applyMorphTargets(baseAttributes, targets, weights): MorphTargetAttributes
 - [Function: cancelAnimationFramePolyfill()](https://luma.gl/next/docs/api-reference/generated/engine/functions/cancelAnimationFramePolyfill.md): cancelAnimationFramePolyfill(timerId): void

@@ -2,7 +2,7 @@
 
 > **BillboardControllerProps** = `object`
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L19)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L20)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:1
 
 > **bindings**: readonly [`BillboardBinding`](https://luma.gl/next/docs/api-reference/generated/engine/type-aliases/BillboardBinding.md)\[]
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L21)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L22)
 
 ***
 
@@ -18,4 +18,4 @@ Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:2
 
 > **scenes**: readonly [`GroupNode`](https://luma.gl/next/docs/api-reference/generated/engine/classes/GroupNode.md)\[]
 
-Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L20)
+Defined in: [modules/engine/src/scenegraph/controllers/billboard-controller.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/scenegraph/controllers/billboard-controller.ts#L21)

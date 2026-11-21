@@ -4,7 +4,7 @@
 
 `@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](https://luma.gl/next/docs/api-reference/engine/geometry.md) and populate standard glTF mesh attribute semantics such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
 
-The engine exports are compatibility adapters over the tessellators in `@math.gl/geometry`. They retain legacy size defaults, plane axis options, and cube face identifiers. New code can import primitives directly from `@math.gl/geometry` and pass them to `Model`; use explicit sizes and radii because math.gl defaults follow glTF shape conventions. GPU buffer layouts and interleaving remain engine responsibilities.
+The engine exports are compatibility adapters over the tessellators in `@math.gl/geometry/primitives`. They retain legacy size defaults, plane axis options, and cube face identifiers. New code can import primitives directly from `@math.gl/geometry/primitives` and pass them to `Model`; use explicit sizes and radii because math.gl defaults follow glTF shape conventions. GPU buffer layouts and interleaving remain engine responsibilities.
 
 ## Overview[​](#overview "Direct link to Overview")
 
@@ -77,7 +77,7 @@ const geometry = new SphereGeometry({radius: 2});
 
 ### `TorusGeometry`[​](#torusgeometry "Direct link to torusgeometry")
 
-`TorusGeometry` wraps the shared `@math.gl/geometry` tessellator with luma.gl's CPU `Geometry` container. It preserves indexed `POSITION`, `NORMAL`, and `TEXCOORD_0` semantics and caller-provided attribute overrides.
+`TorusGeometry` wraps the shared `@math.gl/geometry/primitives` tessellator with luma.gl's CPU `Geometry` container. It preserves indexed `POSITION`, `NORMAL`, and `TEXCOORD_0` semantics and caller-provided attribute overrides.
 
 ```
 import {TorusGeometry} from '@luma.gl/engine';

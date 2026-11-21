@@ -19,7 +19,7 @@ Create the map first so MapLibre owns the WebGL canvas, then attach the device t
 ```
 import maplibregl from 'maplibre-gl'
 
-import {Matrix4} from '@math.gl/core'
+import {Matrix4} from '@math.gl/core/matrix'
 
 import {webgl2Adapter} from '@luma.gl/core/webgl'
 

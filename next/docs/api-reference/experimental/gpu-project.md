@@ -502,7 +502,7 @@ if (result.status === 'ready') {
 `prepareCRSProjection()` and `prepareCRSProjectionAsync()` accept upstream `ProjectionEngine` factories. The synchronous entry point never starts deferred loads; the async entry point awaits `engine.createProjectionAsync()` before synchronous fitting. Both require explicit source bounds, use the authoritative CPU transform as an opaque oracle, and always produce adaptive plans. They never infer native formulas from a custom engine's CRS labels.
 
 ```
-import {lazyProjectionEngine} from '@math.gl/geospatial/projection/projections/lazy';
+import {lazyProjectionEngine} from '@math.gl/geospatial/projection-projections-lazy';
 
 import {prepareCRSProjectionAsync} from '@luma.gl/graph/gpu-project-crs';
 

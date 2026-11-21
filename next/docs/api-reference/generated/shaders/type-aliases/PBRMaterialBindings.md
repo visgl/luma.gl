@@ -2,7 +2,7 @@
 
 > **PBRMaterialBindings**<`TextureT`> = `object`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L29)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L21)
 
 Non-uniform block bindings for pbr module
 
@@ -18,7 +18,7 @@ Non-uniform block bindings for pbr module
 
 > `optional` **pbr\_anisotropySampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:50](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L50)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L42)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:50](https://github.co
 
 > `optional` **pbr\_baseColorSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L31)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L23)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:31](https://github.co
 
 > `optional` **pbr\_bumpSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:51](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L51)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L43)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:51](https://github.co
 
 > `optional` **pbr\_clearcoatNormalSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L45)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L37)
 
 ***
 
@@ -50,7 +50,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:45](https://github.co
 
 > `optional` **pbr\_clearcoatRoughnessSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L44)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L36)
 
 ***
 
@@ -58,7 +58,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:44](https://github.co
 
 > `optional` **pbr\_clearcoatSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L43)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L35)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:43](https://github.co
 
 > `optional` **pbr\_diffuseTransmissionColorSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:53](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L53)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L45)
 
 ***
 
@@ -74,7 +74,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:53](https://github.co
 
 > `optional` **pbr\_diffuseTransmissionSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:52](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L52)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L44)
 
 ***
 
@@ -82,7 +82,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:52](https://github.co
 
 > `optional` **pbr\_emissiveSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L33)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L25)
 
 ***
 
@@ -90,7 +90,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:33](https://github.co
 
 > `optional` **pbr\_iridescenceSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L48)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L40)
 
 ***
 
@@ -98,7 +98,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:48](https://github.co
 
 > `optional` **pbr\_iridescenceThicknessSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L49)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L41)
 
 ***
 
@@ -106,7 +106,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:49](https://github.co
 
 > `optional` **pbr\_lightmapSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L34)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L26)
 
 ***
 
@@ -114,7 +114,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:34](https://github.co
 
 > `optional` **pbr\_metallicRoughnessSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L35)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L27)
 
 ***
 
@@ -122,7 +122,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:35](https://github.co
 
 > `optional` **pbr\_multiscatterColorSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:54](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L54)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L46)
 
 ***
 
@@ -130,7 +130,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:54](https://github.co
 
 > `optional` **pbr\_normalSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L32)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:24](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L24)
 
 ***
 
@@ -138,7 +138,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:32](https://github.co
 
 > `optional` **pbr\_occlusionSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L36)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L28)
 
 ***
 
@@ -146,7 +146,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:36](https://github.co
 
 > `optional` **pbr\_sheenColorSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L46)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L38)
 
 ***
 
@@ -154,7 +154,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:46](https://github.co
 
 > `optional` **pbr\_sheenRoughnessSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L47)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L39)
 
 ***
 
@@ -162,7 +162,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:47](https://github.co
 
 > `optional` **pbr\_specularColorSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L38)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L30)
 
 ***
 
@@ -170,7 +170,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:38](https://github.co
 
 > `optional` **pbr\_specularIntensitySampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L39)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L31)
 
 ***
 
@@ -178,7 +178,7 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:39](https://github.co
 
 > `optional` **pbr\_thicknessSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L41)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L33)
 
 ***
 
@@ -186,4 +186,4 @@ Defined in: [modules/lighting/pbr-material/pbr-material.ts:41](https://github.co
 
 > `optional` **pbr\_transmissionSampler?**: `TextureT` | `null`
 
-Defined in: [modules/lighting/pbr-material/pbr-material.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L40)
+Defined in: [modules/lighting/pbr-material/pbr-material.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/pbr-material/pbr-material.ts#L32)

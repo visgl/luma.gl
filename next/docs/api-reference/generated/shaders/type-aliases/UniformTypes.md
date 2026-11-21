@@ -2,7 +2,7 @@
 
 > **UniformTypes**<`PropsT`> = `{ [name in keyof PropsT]-?: UniformType<NonNullable<PropsT[name]>> & CompositeShaderType }`
 
-Defined in: [lib/utils/uniform-types.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/utils/uniform-types.ts#L87)
+Defined in: [lib/utils/uniform-types.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/lib/utils/uniform-types.ts#L83)
 
 ## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
 

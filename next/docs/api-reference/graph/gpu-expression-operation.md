@@ -1,6 +1,6 @@
 # GPUExpressionOperation
 
-`GPUExpressionOperation` describes a numeric expression over named graph declarations. Both `GPUGraph` and `GPUSimpleGraph` accept it through `graph.add()`. Expressions are parsed with `@math.gl/core`; its JavaScript evaluator is not used to execute GPU work. The same expression works on WebGL through SimpleGraph and on WebGPU through either graph.
+`GPUExpressionOperation` describes a numeric expression over named graph declarations. Both `GPUGraph` and `GPUSimpleGraph` accept it through `graph.add()`. Expressions are parsed with `@math.gl/sql/expressions`; its JavaScript evaluator is not used to execute GPU work. The same expression works on WebGL through SimpleGraph and on WebGPU through either graph.
 
 This page is the expression syntax reference as well as the operation API guide. For the complete authoring and execution lifecycle, start with [Getting started](https://luma.gl/next/docs/api-reference/graph/getting-started.md).
 
@@ -85,7 +85,7 @@ These are the complete supported operators and function names; JavaScript's broa
 The `expression` property accepts a string or the AST returned by math.gl's `parse()`:
 
 ```
-import {parse} from '@math.gl/core';
+import {parse} from '@math.gl/sql/expressions';
 
 const operation = new GPUExpressionOperation({
 

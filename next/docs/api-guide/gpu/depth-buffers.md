@@ -120,7 +120,7 @@ Use `device.features.has('clip-control-webgl')` to select this reverse-Z recipe 
 For a right-handed camera looking along negative Z, this column-major matrix gives an infinite far plane.
 
 ```
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 
 

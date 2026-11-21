@@ -1,6 +1,6 @@
 # Class: TruncatedConeGeometry
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:103](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L103)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:106](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L106)
 
 Compatibility adapter for math.gl CPU geometry with engine shader layout metadata.
 
@@ -19,7 +19,7 @@ Compatibility adapter for math.gl CPU geometry with engine shader layout metadat
 
 > **new TruncatedConeGeometry**(`props?`): `TruncatedConeGeometry`
 
-Defined in: [modules/engine/src/geometry/geometry-primitives.ts:104](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L104)
+Defined in: [modules/engine/src/geometry/geometry-primitives.ts:107](https://github.com/visgl/luma.gl/blob/master/modules/engine/src/geometry/geometry-primitives.ts#L107)
 
 #### Parameters[​](#parameters "Direct link to Parameters")
 

@@ -2,7 +2,7 @@
 
 > **DirectionalShadowLight** = [`ShadowBiasProps`](https://luma.gl/next/docs/api-reference/generated/shaders/type-aliases/ShadowBiasProps.md) & `object`
 
-Defined in: [modules/lighting/shadow/shadow-types.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow-types.ts#L22)
+Defined in: [modules/lighting/shadow/shadow-types.ts:23](https://github.com/visgl/luma.gl/blob/master/modules/shaders/src/modules/lighting/shadow/shadow-types.ts#L23)
 
 Directional light shadow configuration. `direction` points from a surface toward the light.
 
