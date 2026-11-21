@@ -60,6 +60,11 @@ rendering and compute can use the compiled GPU resources directly. Call
 
 ## Supported grammar
 
+`COALESCE` returns the first valid value from 2–64 scalar numeric arguments. `NULLIF`
+returns null when its two valid numeric arguments compare equal. Columns in either
+function use matching scalar formats.
+
+
 `ABS`, `FLOOR`, `CEILING`, `ROUND`, and `TRUNC` accept one numeric argument and preserve nulls.
 `ROUND` rounds halfway values away from zero. `ABS` supports Float32 and Uint32. The rounding
 functions also accept Int32 and return integer inputs unchanged. Calls on untyped literals or

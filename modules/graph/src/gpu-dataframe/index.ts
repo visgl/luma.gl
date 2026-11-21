@@ -51,10 +51,12 @@ export type {
 export {
   and,
   caseWhen,
+  coalesce,
   column,
   literal,
   GPUExpression,
   not,
+  nullIf,
   or,
   parameter,
   scalarFunction

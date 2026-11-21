@@ -119,3 +119,10 @@ compose a filter. The supported names are `abs`, `floor`, `ceiling`, `round`,
 and `trunc`. Functions preserve the input format and nulls. `round` rounds
 halfway values away from zero. `abs` supports Float32 and Uint32. The rounding
 functions also accept Int32 and return integer inputs unchanged.
+
+### Null handling
+
+`coalesce(value, fallback)` returns the first valid numeric value.
+`nullIf(value, sentinel)` returns null when both values are valid and equal.
+A null sentinel leaves the input value and validity intact. Both operations
+require matching scalar column formats.

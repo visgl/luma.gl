@@ -6,6 +6,8 @@ import {describe, expect, test} from 'vitest';
 import {parseSQLExpression} from '@math.gl/sql/parser';
 import {
   caseWhen,
+  coalesce,
+  nullIf,
   scalarFunction,
   column,
   literal,
@@ -88,5 +90,18 @@ test('shares numeric SQL functions with typed DataFrame expressions', () => {
   );
   expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression('ROUND(x, 2)'))).toThrow(
     /one argument/
+  );
+});
+
+test('shares SQL null-handling syntax with typed DataFrame expressions', () => {
+  const expression = makeGPUExpressionFromPortableAST(
+    parseSQLExpression('COALESCE(NULLIF(x, 0), y, 99)')
+  );
+  expect(expression.node).toEqual(
+    coalesce(nullIf(column('x'), literal(0)), coalesce(column('y'), literal(99))).node
+  );
+  expect(getGPUExpressionColumnNames(expression)).toEqual(['x', 'y']);
+  expect(() => makeGPUExpressionFromPortableAST(parseSQLExpression('NULLIF(x)'))).toThrow(
+    /two arguments/
   );
 });

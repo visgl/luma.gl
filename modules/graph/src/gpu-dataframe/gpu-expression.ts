@@ -42,6 +42,8 @@ export function scalarFunction<Columns extends string>(
 
 /** Closed binary operations that can be lowered safely into generated WGSL. */
 export type GPUExpressionBinaryOperator =
+  | 'coalesce'
+  | 'nullif'
   | 'add'
   | 'subtract'
   | 'multiply'
@@ -485,6 +487,22 @@ export function caseWhen<
     whenTrue: whenTrue.node,
     otherwise: otherwise.node
   });
+}
+
+/** Returns the first valid scalar value, falling back when the first input is null. */
+export function coalesce<LeftColumns extends string, RightColumns extends string>(
+  value: GPUExpression<number | null, LeftColumns>,
+  fallback: GPUExpression<number | null, RightColumns>
+): GPUExpression<number | null, LeftColumns | RightColumns> {
+  return makeBinaryExpression('coalesce', value, fallback);
+}
+
+/** Returns null when two valid scalar values compare equal. */
+export function nullIf<LeftColumns extends string, RightColumns extends string>(
+  value: GPUExpression<number | null, LeftColumns>,
+  sentinel: GPUExpression<number | null, RightColumns>
+): GPUExpression<number | null, LeftColumns | RightColumns> {
+  return makeBinaryExpression('nullif', value, sentinel);
 }
 
 /** Checks whether the expression produces a boolean result. */

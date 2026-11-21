@@ -110,6 +110,21 @@ export function lowerPortableExpression(
     case 'CallExpression': {
       const name = node.callee.name;
       const functionName = node.sqlFunction === true ? name.toLowerCase() : name;
+      if (functionName === 'coalesce' || functionName === 'nullif') {
+        const count = node.arguments.length;
+        if (functionName === 'nullif' ? count !== 2 : count < 2 || count > 64) {
+          throw new Error(
+            'GPU DataFrame NULLIF requires two arguments and COALESCE requires 2–64 arguments'
+          );
+        }
+        const arguments_: GPUExpressionNode[] = node.arguments.map(convert);
+        return arguments_.reduceRight((right, left) => ({
+          kind: 'binary',
+          operator: functionName,
+          left,
+          right
+        }));
+      }
       if (isGPUScalarFunction(functionName)) {
         if (node.arguments.length !== 1) {
           throw new Error(`GPU DataFrame ${name} requires one argument`);
