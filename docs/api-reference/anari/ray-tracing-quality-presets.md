@@ -178,11 +178,11 @@ This is off by default and works with both `diffuse` and `pbr` transport.
 Connections are shadow rays, so direct emissive lighting also works with
 `maxBounces: 0`. Analytic point/directional/spot lighting is unchanged. Emitter contributions
 follow the same per-hit distance-fog attenuation, with the fog background mixed
-once by the shared direct-light path. Explicit
-connections replace secondary emission gathering to avoid counting the same
-light twice; primary camera-visible emission is retained. The model has no
-delta mirrors (roughness has a `0.04` lower bound). MIS is not implemented; nearly mirror-like materials can still converge
-slowly. More primary samples/frames improve sampling of small emitters.
+once by the shared direct-light path. With diffuse transport, multiple importance sampling
+combines explicit emitter connections and cosine-weighted bounce hits using the power
+heuristic. The last vertex uses the full explicit estimate because it has no continuation.
+PBR transport retains its existing explicit connections and delta-path emission. Primary
+camera-visible emission is retained in both modes.
 
 `emitterSelection: 'uniform'` is the default. Opt-in `'power'` weights each emitter
 placement by world-space area times emitted luminance. Mesh area is summed from transformed

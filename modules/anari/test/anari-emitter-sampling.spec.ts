@@ -187,7 +187,8 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     expect(mesh.mean[0]).toBeGreaterThan(0.15);
     expect(mesh.mean[0]).toBeLessThan(0.35);
     renderer.setParameter('maxBounces', 1).commitParameters();
-    expect((await render()).pixels).toEqual(mesh.pixels);
+    // MIS redistributes the two estimates across pixels while preserving average radiance.
+    expect((await render()).mean[0] / mesh.mean[0]).toBeCloseTo(1, 2);
     renderer.setParameter('maxBounces', 0).commitParameters();
     emitterMaterial.setParameter('emissiveStrength', 2).commitParameters();
     expect((await render()).mean[0] / mesh.mean[0]).toBeCloseTo(2, 2);

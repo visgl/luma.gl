@@ -1562,7 +1562,7 @@ fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32>
 
 // CDF emitter selection, uniform triangle selection and conditional area sampling. Visibility rejects far sides of spheres.
 // The sphere Jacobian supports nonuniform scales and general affine instance transforms.
-fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> {
+fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareDiffuseSample: bool) -> vec3<f32> {
   let emitterCount = uniforms.emitters.x;
   if (uniforms.emitters.y == 0u || emitterCount == 0u) { return vec3<f32>(0.0); }
   let emitterSample = makeRandom(randomSeed ^ 701u);
@@ -1660,13 +1660,50 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32) -> vec3<f32> 
   let emitterHit = RayHit(0.0, lightNormal, primitiveIndex, true, emitterCoordinates, emitterSecondaryCoordinates, 0xffffffffu, 0.0);
   if (!isMaterialVisible(emitterHit)) { return vec3<f32>(0.0); }
   let shadedEmitter = getShadedPrimitive(emitterHit);
-  return response * shadedEmitter.emissive.rgb * abs(dot(lightNormal, -direction)) * inverseAreaDensity / distanceSquared * visibility;
+  let lightCosine = abs(dot(lightNormal, -direction));
+  if (lightCosine <= 0.0) { return vec3<f32>(0.0); }
+  let lightDensity = distanceSquared / (lightCosine * inverseAreaDensity);
+  var weight = 1.0;
+  if (compareDiffuseSample && faceLight > 0.0) {
+    weight = getMISWeight(lightDensity, normalLight / PI);
+  }
+  return response * shadedEmitter.emissive.rgb * (weight / lightDensity) * visibility;
 }
 
-// Explicit connections replace secondary emission gathering to avoid double counting.
-// Smooth dielectric delta paths gather secondary emission; opaque lobes use explicit connections.
-fn evaluateSecondaryLighting(ray: Ray, hit: RayHit) -> vec3<f32> {
-  return evaluateDirectLighting(ray, hit, uniforms.emitters.y == 0u);
+// Scale before squaring to keep the power heuristic finite for grazing connections.
+fn getMISWeight(sampledDensity: f32, otherDensity: f32) -> f32 {
+  let ratio = otherDensity / max(sampledDensity, 1e-20);
+  return 1.0 / (1.0 + ratio * ratio);
+}
+
+fn getEmitterHitDensity(ray: Ray, hit: RayHit, sourcePosition: vec3<f32>) -> f32 {
+  let primitive = primitives[hit.primitiveIndex];
+  let position = ray.origin + ray.direction * hit.distance;
+  var inverseArea: f32;
+  if (hit.triangleIndex == 0xffffffffu) {
+    let localPosition = (primitive.inverseTransform * vec4<f32>(position, 1.0)).xyz;
+    let localNormal = normalize(localPosition);
+    let transformedNormal = (transpose(primitive.inverseTransform) * vec4<f32>(localNormal, 0.0)).xyz;
+    let linearTransform = mat3x3<f32>(primitive.transform[0].xyz, primitive.transform[1].xyz, primitive.transform[2].xyz);
+    inverseArea = 4.0 * PI * primitive.properties.y * primitive.properties.y *
+      abs(determinant(linearTransform)) * length(transformedNormal);
+  } else {
+    let triangle = triangles[hit.triangleIndex];
+    let firstEdge = (primitive.transform * vec4<f32>(triangle.secondPosition.xyz - triangle.firstPosition.xyz, 0.0)).xyz;
+    let secondEdge = (primitive.transform * vec4<f32>(triangle.thirdPosition.xyz - triangle.firstPosition.xyz, 0.0)).xyz;
+    inverseArea = 0.5 * length(cross(firstEdge, secondEdge)) * primitive.properties.w;
+  }
+  let offset = position - sourcePosition;
+  let cosine = abs(dot(getFaceNormal(hit, ray), normalize(offset)));
+  if (inverseArea <= 0.0 || cosine <= 0.0) { return 0.0; }
+  for (var index = 0u; index < uniforms.emitters.x; index++) {
+    let entry = lights[uniforms.dimensions.w + index].colorIntensity;
+    if (u32(entry.x) == hit.primitiveIndex) {
+      let probability = select(1.0 / f32(uniforms.emitters.x), entry.y, uniforms.emitters.z > 0u);
+      return probability * dot(offset, offset) / (inverseArea * cosine);
+    }
+  }
+  return 0.0;
 }
 
 // Carry the camera pixel cone through secondary paths using total travel distance.
@@ -1697,7 +1734,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
-  radiance += evaluateEmitterLighting(ray, hit, pathSeed);
+  radiance += evaluateEmitterLighting(ray, hit, pathSeed, false);
   for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
     dielectricOnly = dielectricOnly && sample.delta;
@@ -1734,7 +1771,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       coneWidth += coneSpread * hit.distance;
       hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
     }
-    radiance += throughput * (evaluateDirectLighting(ray, hit, sample.delta || uniforms.emitters.y == 0u) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u)));
+    radiance += throughput * (evaluateDirectLighting(ray, hit, sample.delta || uniforms.emitters.y == 0u) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u), false));
   }
   return radiance;
 }
@@ -1756,7 +1793,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
   let pixelIndex = getSamplingPixelIndex(pixel);
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
-  radiance += evaluateEmitterLighting(ray, hit, pathSeed);
+  radiance += evaluateEmitterLighting(ray, hit, pathSeed, uniforms.sampling.y > 0u);
   for (var bounceIndex = 0u; bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let primitive = getShadedPrimitive(hit);
     throughput *= clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
@@ -1774,7 +1811,8 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     let radius = sqrt(radialSample);
     let direction = tangent * (radius * cos(angle)) + bitangent * (radius * sin(angle)) +
       normal * sqrt(max(1.0 - radialSample, 0.0));
-    let position = ray.origin + ray.direction * hit.distance;
+    let receiverDistance = hit.distance;
+    let position = ray.origin + ray.direction * receiverDistance;
     let surfaceNormal = getFaceNormal(hit, ray);
     if (dot(surfaceNormal, direction) <= 0.0) { break; }
     ray = Ray(position + surfaceNormal * 0.002, normalize(direction));
@@ -1786,7 +1824,25 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
       coneWidth += coneSpread * hit.distance;
       hit.footprint = getSecondaryFootprint(ray, hit, coneWidth);
     }
-    radiance += throughput * (evaluateSecondaryLighting(ray, hit) + evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u)));
+    var illumination = evaluateDirectLighting(ray, hit, true);
+    if (uniforms.emitters.y != 0u && uniforms.emitters.x > 0u) {
+      let emission = getShadedPrimitive(hit).emissive.rgb;
+      if (any(emission > vec3<f32>(0.0))) {
+        let density = max(dot(normal, ray.direction), 0.0) / PI;
+        let emitterDensity = getEmitterHitDensity(ray, hit, position);
+        if (emitterDensity > 0.0) {
+          let weight = getMISWeight(density, emitterDensity);
+          let fogDensity = max(uniforms.fog.w, 0.0);
+          // Match explicit connections, which apply fog on the incoming receiver segment.
+          let receiverVisibility = exp(-fogDensity * receiverDistance);
+          let hitVisibility = exp(-fogDensity * hit.distance);
+          illumination += emission * (weight * receiverVisibility - hitVisibility);
+        }
+      }
+      illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
+        bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+    }
+    radiance += throughput * illumination;
   }
   return radiance;
 }
