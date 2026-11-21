@@ -75,8 +75,9 @@ compatible raster renderer.
 Base-color, emissive, metallic/roughness, transmission and normal maps support UV sets 0/1 and UV transforms,
 with explicit LOD and up to 14 distinct textures per frame. Excess maps use material defaults,
 with base-color maps prioritized for visibility. Primary triangle shading estimates
-a mip level from the projected pixel footprint and transformed UVs. Secondary shading, analytic
-spheres and alpha visibility still sample mip zero. `MASK` multiplies the
+a mip level from the projected pixel footprint and transformed UVs. Secondary triangle shading
+projects the carried camera footprint at each hit. For perspective cameras, the footprint grows
+with travel distance. Analytic spheres and alpha visibility still sample mip zero. `MASK` multiplies the
 base-color factor alpha by the sampled base-color map alpha before comparing with `alphaCutoff`.
 Cutouts apply to primary/secondary rays, shadows, explicit emitter samples, picking and primary-hit
 channels. Rejected triangles do not hide deeper triangles in the same mesh, and analytic spheres

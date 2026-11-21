@@ -209,6 +209,10 @@ export function getRayMaterialTextureShader(
     )
     .replace('/* MATERIAL_HAS_ANISOTROPY */ false', String(hasAnisotropy))
     .replace(
+      '/* MATERIAL_HAS_MIPMAPS */ false',
+      String(textures.some(texture => texture.mipLevels > 1))
+    )
+    .replace(
       '/* MATERIAL_PRIMARY_FOOTPRINT */',
       textures.some(texture => texture.mipLevels > 1)
         ? `

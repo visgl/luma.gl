@@ -16,6 +16,9 @@ const {values} = parseArgs({options: {
   reference: {type: 'string'},
   'maximum-rmse': {type: 'string'},
   view: {type: 'string', default: 'color'},
+  'frame-sweep': {type: 'string'},
+  'small-emitter': {type: 'boolean'},
+  'antique-camera': {type: 'boolean'},
   frames: {type: 'string', default: '8'}, seed: {type: 'string', default: '0'},
   width: {type: 'string', default: '960'}, height: {type: 'string', default: '720'},
   denoise: {type: 'string', default: '0'}, history: {type: 'string', default: '64'},
@@ -48,16 +51,20 @@ const denoise = Number(values.denoise);
 const history = Number(values.history);
 if (![0, 1, 2].includes(denoise)) throw new Error('denoise must be 0, 1 or 2');
 if (!Number.isInteger(history) || history < 1 || history > 256) throw new Error('history must be an integer between 1 and 256');
-const frames = Number(values.frames);
+const frameCounts = (values['frame-sweep'] ?? values.frames).split(',').map(Number);
+if (frameCounts.some((frames, index) => !Number.isInteger(frames) || frames < 1 || frames > 256 ||
+  (index > 0 && frames <= frameCounts[index - 1]))) {
+  throw new Error('Frame counts must be strictly increasing integers between 1 and 256');
+}
+if (values['frame-sweep'] && !values.reference) throw new Error('frame-sweep requires a reference image');
 const seed = Number(values.seed);
 const width = Number(values.width);
 const height = Number(values.height);
-if (!Number.isInteger(frames) || frames < 1 || frames > 256) throw new Error('frames must be an integer between 1 and 256');
 if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('seed must be a uint32');
 if (!Number.isInteger(width) || !Number.isInteger(height) || width < 320 || height < 320) throw new Error('viewport dimensions must be integers of at least 320 pixels');
 if (!['default', 'raytrace'].includes(values.renderer)) throw new Error('renderer must be default or raytrace');
 const url = new URL(values.url);
-url.searchParams.set('preset', values.lighting ? 'chart-lighting' : values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
+url.searchParams.set('preset', values['antique-camera'] ? 'antique-camera' : values['small-emitter'] ? 'small-emitter' : values.lighting ? 'chart-lighting' : values.shapes ? 'chart-shapes' : values.materials ? 'chart-materials' : values.diffuse ? 'chart-diffuse' : values.motion ? 'chart-motion' : 'chart');
 url.searchParams.set('renderer', values.renderer);
 url.searchParams.set('quality', 'still');
 url.searchParams.set('seed', String(seed));
@@ -69,39 +76,62 @@ if (values.emitters !== undefined) url.searchParams.set('emitters', values.emitt
 if (values['emitter-selection'] !== undefined) url.searchParams.set('emitterSelection', values['emitter-selection']);
 if (values.resolution !== undefined) url.searchParams.set('resolution', values.resolution);
 if (values.bounces !== undefined) url.searchParams.set('bounces', values.bounces);
-url.searchParams.set('captureFrames', String(frames));
 url.searchParams.set('editor', 'hidden');
 // Decode before any output is written, including when output aliases the reference.
 const referenceImage = values.reference ? PNG.sync.read(await readFile(resolve(values.reference))) : undefined;
 const browser = await chromium.launch(getPlaywrightLaunchOptions({backend: 'webgpu', softwareGpu: values['software-gpu']}));
+const measurements = [];
+const root = resolve(values.output);
 try {
+  for (const frames of frameCounts) {
+    url.searchParams.set('captureFrames', String(frames));
+    const output = values['frame-sweep'] ? resolve(root, String(frames)) : root;
+    measurements.push(await captureFrameCount(browser, output, frames));
+  }
+  if (values['frame-sweep']) {
+    await writeFile(resolve(root, 'convergence.json'), JSON.stringify(measurements, null, 2));
+  }
+} finally {
+  await browser.close();
+}
+
+async function captureFrameCount(browser, output, frames) {
   const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
-  const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-  const started = performance.now();
-  await page.goto(url.href);
-  await page.waitForFunction(expected => Number(document.querySelector('#playground-canvas')?.dataset.renderedFrames) === expected, frames, {timeout: 120000});
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const metadata = await page.evaluate(() => {
-    const canvas = document.querySelector('#playground-canvas');
-    return {rayTracingCapabilities: JSON.parse(canvas.dataset.rayTracingCapabilities ?? 'null'), drawingBuffer: [canvas.width, canvas.height], renderedFrames: Number(canvas.dataset.renderedFrames),
-      backend: document.querySelector('#backend-label').textContent,
-      scene: JSON.parse(document.querySelector('#scene-editor').value),
-      rayResolution: document.querySelector('#scene-ray-tracing-resolution').textContent,
-      rayFrame: document.querySelector('#scene-ray-tracing-frame').textContent,
-      ownedMemory: document.querySelector('#scene-ray-memory').textContent,
-      sceneError: document.querySelector('#scene-error').textContent};
-  });
-  await page.addStyleTag({content: '.preview-heading, .preview-statistics, .preview-hint {visibility: hidden !important}'});
-  const output = resolve(values.output);
-  await mkdir(output, {recursive: true});
-  const capture = await page.locator('#playground-canvas').screenshot({path: `${output}/chart.png`, timeout: 60000});
-  const comparison = referenceImage ? {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)} : undefined;
-  if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
-  await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
-    hardware: values.hardware, browser: browser.version(), elapsedMilliseconds: performance.now() - started,
-    note: 'Elapsed time includes startup and screenshot; telemetry is CPU frame timing, not GPU timestamps. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
-  console.log(output);
-  if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`Display RGB RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
-} finally { await browser.close(); }
+  try {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+    const started = performance.now();
+    await page.goto(url.href);
+    await page.waitForFunction(expected => Number(document.querySelector('#playground-canvas')?.dataset.renderedFrames) === expected, frames, {timeout: 120000});
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const timeToCaptureMilliseconds = performance.now() - started;
+    const metadata = await page.evaluate(() => {
+      const canvas = document.querySelector('#playground-canvas');
+      return {accumulatedSamples: canvas.dataset.accumulatedSamples === undefined ? null : Number(canvas.dataset.accumulatedSamples), rayTracingCapabilities: JSON.parse(canvas.dataset.rayTracingCapabilities ?? 'null'), drawingBuffer: [canvas.width, canvas.height], renderedFrames: Number(canvas.dataset.renderedFrames),
+        backend: document.querySelector('#backend-label').textContent,
+        scene: JSON.parse(document.querySelector('#scene-editor').value),
+        rayResolution: document.querySelector('#scene-ray-tracing-resolution').textContent,
+        rayFrame: document.querySelector('#scene-ray-tracing-frame').textContent,
+        ownedMemory: document.querySelector('#scene-ray-memory').textContent,
+        sceneError: document.querySelector('#scene-error').textContent};
+    });
+    await page.addStyleTag({content: '.preview-heading, .preview-statistics, .preview-hint {visibility: hidden !important}'});
+    await mkdir(output, {recursive: true});
+    const canvas = page.locator('#playground-canvas');
+    const clip = await canvas.boundingBox();
+    if (!clip) throw new Error('The capture canvas is hidden');
+    const capture = await page.screenshot({clip, path: `${output}/chart.png`, timeout: 60000});
+    const comparison = referenceImage ? {reference: resolve(values.reference), ...compareChartImages(PNG.sync.read(capture), referenceImage)} : undefined;
+    if (errors.length || metadata.sceneError) throw new Error(JSON.stringify({errors, sceneError: metadata.sceneError}));
+    await writeFile(`${output}/metadata.json`, JSON.stringify({...metadata, comparison, seed, frames, viewport: [width, height],
+      hardware: values.hardware, browser: browser.version(), timeToCaptureMilliseconds, elapsedMilliseconds: performance.now() - started,
+      note: 'Elapsed time includes startup and screenshot; telemetry is CPU frame timing, not GPU timestamps. Owned memory is a logical allocation estimate, not measured VRAM; hardware convergence benchmarks remain separate.'}, null, 2));
+    console.log(output);
+    if (comparison && maximumRootMeanSquaredError !== undefined && comparison.rootMeanSquaredError > maximumRootMeanSquaredError) throw new Error(`Display RGB RMSE ${comparison.rootMeanSquaredError} exceeds ${maximumRootMeanSquaredError}`);
+    return {frames, accumulatedSamples: metadata.accumulatedSamples, browser: browser.version(),
+      hardware: values.hardware, timeToCaptureMilliseconds, comparison};
+  } finally {
+    await page.close();
+  }
+}

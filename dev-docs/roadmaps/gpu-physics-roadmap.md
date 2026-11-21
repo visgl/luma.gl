@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: November 13, 2026
+Updated: November 21, 2026
 
 ## Goal and current status
 
@@ -433,6 +433,47 @@ convergence and energy error alongside timing. Include long-duration regression 
 Exit: published quality/performance comparisons against independent engines using
 matched scenes, timestep, approximation and error tolerances; no unsupported SOTA claim
 based solely on body count or a discovery benchmark.
+
+### Vehicle dynamics checkpoint across G9–G11
+
+The off-road buggy integrates GPU suspension and tire forces with live chassis
+rendering. The vehicle follow-up groups multiple four-wheel chassis into one
+suspension dispatch. Per-chassis controls and wheel pose ranges stay independent.
+The handling model adds optional Ackermann steering, paired anti-roll load
+transfer, and longitudinal/lateral slip gains.
+
+Qualification covers independent forward/reverse controls, inner/outer wheel
+angles, axle load conservation, checkpoint restoration, and a passive trailer
+coupled through an ordered hinge. The buggy shows live suspension and GPU graph
+timings. Broader articulated mechanisms, independent-world batching with vehicles,
+measured tire calibration, and cross-adapter fleet throughput remain open.
+
+### Fleet terrain and replay checkpoint across G9–G12
+
+Scenegraph controllers can register fleets by chassis and terrain path, target
+individual chassis, and preserve their wheel state across index-changing rebuilds.
+Vehicle sweeps select the nearest supporting hit across up to four static colliders.
+Off-road Buggy uses four adjoining collision tiles cooked from the rendered terrain.
+
+Qualification exercises shared terrain and separate controls, removes a chassis and
+rebuilds with the surviving chassis in a different slot, then replays an identical
+tile crossing from a GPU checkpoint. This is same-device checkpoint evidence.
+Cross-adapter repeatability, streaming terrain residency, and larger-scale throughput
+remain open.
+
+### Independent-world vehicle qualification across G10–G12
+
+Vehicle templates replicate chassis indices and terrain tile indices per collision partition.
+A single indirect suspension pass visits scheduled instances. Shared-step rollback restores
+wheel state and chassis state together, and individual reset restores vehicle inputs, telemetry
+and GPU wheel poses from the template image.
+
+The Physics Batch Lab compares a tiled vehicle workload across fused, batched and separate
+submissions. It reports active vehicle steps per second, wheel snapshot bytes and suspension
+timing when adapter timestamps are available. Qualification covers overlapping fleet coordinates,
+terrain movement scoped to one instance, pause and resume, reset and shared contact overflow.
+The workload measures browser and adapter throughput without claiming calibrated tire response.
+Cross-adapter fleet results, streaming terrain residency and articulated ensembles remain open.
 
 ### G9. Articulations and mechanism quality
 

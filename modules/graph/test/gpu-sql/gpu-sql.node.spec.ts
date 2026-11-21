@@ -133,7 +133,7 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     frame.destroy();
   });
 
-  test('matches column case exactly and distinguishes column names from clause boundaries', () => {
+  test('matches quoted column names exactly and keeps SQL keywords case-insensitive', () => {
     const device = new NullDevice({id: 'ludf-sql-keyword-columns'});
     const batch = new GPURecordBatch({
       gpuData: {
@@ -150,13 +150,13 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     const frame = new GPUDataFrame({table: new GPUTable({batches: [batch]}), ownership: 'owned'});
     const context = new GPUSQLContext({trips: frame});
 
-    expect(context.query('sElEcT limit, Limit fRoM trips')).toBeInstanceOf(GPUSQLQuery);
-    expect(() => context.query('SELECT LIMIT FROM trips')).toThrow(/does not exist/);
-    expect(() => context.query('SELECT limit, Limit FROM trips ORDER BY LIMIT')).toThrow(
-      /does not exist/
-    );
+    expect(context.query('sElEcT "limit", "Limit" fRoM trips')).toBeInstanceOf(GPUSQLQuery);
+    expect(() => context.query('SELECT limit FROM trips')).toThrow(/SQL expression/i);
+    expect(() => context.query('SELECT "LIMIT" FROM trips')).toThrow(/does not exist/);
     expect(
-      context.query('SELECT limit, order FROM trips WHERE order > limit ORDER BY order LIMIT 1')
+      context.query(
+        'SELECT trips."limit", "order" FROM trips WHERE "order" > "limit" ORDER BY "order" LIMIT 1'
+      )
     ).toBeInstanceOf(GPUSQLQuery);
 
     frame.destroy();
@@ -216,21 +216,46 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     expect(() =>
       context.query('SELECT * FROM trips CROSS JOIN UNNEST(fare) AS other(value)')
     ).toThrow(/does not support JOIN UNNEST/i);
+    expect(() => context.query('SELECT * FROM trips(trips)')).toThrow(/table functions/i);
+    expect(() =>
+      context.query('SELECT * FROM trips JOIN trips(trips) AS other ON trips.fare = other.fare')
+    ).toThrow(/table functions/i);
+    expect(() => context.query('SELECT COUNT("*") FROM trips')).toThrow(/COUNT\(\*\)/i);
+    expect(() => context.query('SELECT ":missing" FROM trips')).toThrow(/column.*does not exist/i);
     expect(() => context.query('DELETE FROM trips')).toThrow(/SELECT/i);
     expect(() => context.query('SELECT missing FROM trips')).toThrow(/exist/i);
     expect(() => context.query('SELECT fare FROM missing')).toThrow(/registered/i);
     expect(() => context.query('SELECT fare FROM trips WHERE fare > :minimum')).toThrow(
       /parameter/i
     );
+    expect(() =>
+      context.query('SELECT fare FROM trips WHERE trips.fare NOT IN (:minimum, NULL)', {
+        parameters: {minimum: 4}
+      })
+    ).not.toThrow();
+    expect(() => context.query('SELECT fare FROM trips WHERE fare IN (identifier)')).toThrow(
+      /literal or parameter/
+    );
+    const oversized = Array.from({length: 65}, (_, index) => index).join(', ');
+    expect(() => context.query(`SELECT fare FROM trips WHERE fare IN (${oversized})`)).toThrow(
+      /64 candidates/
+    );
     expect(() => context.query('SELECT fare + 1 FROM trips')).toThrow(/alias/i);
     expect(() => context.query('SELECT COUNT(fare) FROM trips')).toThrow(/COUNT\(\*\)/i);
     expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
+    expect(() => context.query('SELECT fare FROM trips OFFSET 1')).toThrow(/ORDER BY/i);
+    expect(() => context.query('SELECT fare FROM trips ORDER BY fare OFFSET 1')).not.toThrow();
+    expect(() => context.query('SELECT fare FROM trips ORDER BY fare OFFSET 4294967296')).toThrow(
+      /OFFSET.*32-bit/i
+    );
     expect(() => context.query('SELECT fare FROM trips ORDER BY fare, identifier')).toThrow(
       /one ORDER BY/i
     );
-    expect(() => context.query('SELECT * FROM trips; DROP TABLE trips')).toThrow(/unexpected/i);
+    expect(() => context.query('SELECT * FROM trips; DROP TABLE trips')).toThrow(
+      /unsupported SQL query syntax/i
+    );
     expect(() => context.query("SELECT fare FROM trips WHERE fare = 'unsafe'")).toThrow(
-      /unsupported token/i
+      /does not support SQL expression/i
     );
     expect(() => new GPUSQLContext({'invalid-name': frame})).toThrow(/valid names/i);
 

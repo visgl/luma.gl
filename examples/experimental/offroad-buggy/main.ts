@@ -4,6 +4,7 @@
 
 import {createBuggyAudio} from './audio';
 import {createDashboard} from './dashboard';
+import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {luma} from '@luma.gl/core';
@@ -18,7 +19,9 @@ import {
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 const status = document.querySelector<HTMLOutputElement>('#status')!;
 const suspensionTravel = 0.5;
-const updateDashboard = createDashboard(suspensionTravel);
+/** Shared inspector for the GPU physics commands submitted by the buggy. */
+const diagnostics = new GPUGraphDiagnostics();
+const updateDashboard = createDashboard(suspensionTravel, diagnostics);
 const chassisAngles = new THREE.Euler(0, 0, 0, 'ZYX');
 const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
 renderer.shadowMap.enabled = true;
@@ -82,7 +85,35 @@ const terrain = new THREE.Mesh(
 );
 terrain.receiveShadow = true;
 scene.add(terrain);
-const terrainShape = makeTriangleMeshGeometry(positions, indices);
+/** Cook four adjoining collision tiles from the same vertices used by the rendered mesh. */
+const terrainBodies = [0, 32].flatMap(rowOrigin =>
+  [0, 32].map(columnOrigin => {
+    const tilePositions: number[] = [];
+    const tileIndices: number[] = [];
+    for (let row = 0; row <= 32; row++) {
+      for (let column = 0; column <= 32; column++) {
+        const sourceIndex = ((rowOrigin + row) * 65 + columnOrigin + column) * 3;
+        tilePositions.push(
+          positions[sourceIndex],
+          positions[sourceIndex + 1],
+          positions[sourceIndex + 2]
+        );
+        if (row < 32 && column < 32) {
+          const vertex = row * 33 + column;
+          tileIndices.push(vertex, vertex + 1, vertex + 33, vertex + 1, vertex + 34, vertex + 33);
+        }
+      }
+    }
+    return {
+      mass: 0,
+      position: [0, 0, 0] as const,
+      shape: {
+        type: 'triangle-mesh' as const,
+        geometry: makeTriangleMeshGeometry(tilePositions, tileIndices)
+      }
+    };
+  })
+);
 // Four closed rails share the same dimensions in rendering and collision detection.
 const railCenter = 31.5;
 const railThickness = 0.4;
@@ -320,7 +351,10 @@ document.querySelector<HTMLButtonElement>('#reset')!.onclick = () => {
   reset = true;
 };
 async function start() {
-  const device = await luma.createDevice({adapters: [webgpuAdapter]});
+  const device = await luma.createDevice({
+    adapters: [webgpuAdapter],
+    optionalFeatures: ['timestamp-query']
+  });
   const step = 1 / 120;
   const world = new GPURigidBodyWorld({
     id: 'buggy',
@@ -329,17 +363,22 @@ async function start() {
     impactImpulseThreshold: 120,
     gravity: [0, 0, -9.81],
     bodies: [
-      {mass: 0, position: [0, 0, 0], shape: {type: 'triangle-mesh', geometry: terrainShape}},
+      terrainBodies[0],
       {
         position: [0, -11, elevation(0, -11) + 0.84],
         mass: 420,
         colliders: chassisColliders
       },
-      ...perimeter
+      ...perimeter,
+      ...terrainBodies.slice(1)
     ],
     vehicle: {
       chassis: 1,
       terrainCollider: 0,
+      // The remaining terrain colliders come after the compound chassis and perimeter rails.
+      additionalTerrainColliders: terrainBodies
+        .slice(1)
+        .map((_, index) => 1 + chassisColliders.length + perimeter.length + index),
       wheels: mounts.map((mount, index) => ({mount, steer: index < 2, drive: true})),
       radius: 0.38,
       travel: suspensionTravel,
@@ -348,7 +387,10 @@ async function start() {
       grip: 1.05,
       motorTorque: 220,
       brakeTorque: 550,
-      wheelInertia: 1.25
+      wheelInertia: 1.25,
+      steeringWheelbase: Math.abs(mounts[0][0] - mounts[2][0]),
+      antiRollRate: 1800,
+      slipGain: [1.05, 1.6]
     }
   });
   const definition = new GPUCommandGraph(device);
@@ -378,7 +420,7 @@ async function start() {
       [0, 0, Math.sin(heading / 2), Math.cos(heading / 2)]
     );
     const encoder = device.createCommandEncoder();
-    graph.encode(encoder, {parameters: undefined});
+    diagnostics.encode(graph, encoder, {parameters: undefined});
     device.submit(encoder.finish());
     world.setBodyParameters(1, {mode: 'dynamic', velocity: [0, 0, 0], angularVelocity: [0, 0, 0]});
     invertedSince = undefined;
@@ -413,7 +455,7 @@ async function start() {
     if (accumulator >= step) {
       const encoder = device.createCommandEncoder();
       while (accumulator >= step) {
-        graph.encode(encoder, {parameters: undefined});
+        diagnostics.encode(graph, encoder, {parameters: undefined});
         accumulator -= step;
       }
       device.submit(encoder.finish());
@@ -446,7 +488,7 @@ async function start() {
         const wheel = wheels[index];
         wheel.group.position.fromArray(mounts[index]);
         wheel.group.position.z -= contact.length;
-        wheel.group.rotation.z = index < 2 ? steering : 0;
+        wheel.group.rotation.z = contact.steering;
         wheel.rotor.rotation.y = contact.angle;
         const lowerMount = wheel.group.position.clone();
         lowerMount.y *= 0.84;

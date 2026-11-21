@@ -227,14 +227,30 @@ export class ScenegraphPhysicsInstance {
       }
       const replacement = await compile(this.device, props);
       try {
-        if (preserveState && props.vehicle && this.definition.world.vehicle) {
-          const previousChassis = this.definition.world.vehicle.chassis;
-          for (const [node, index] of authored.bodies) {
-            if (
-              index === props.vehicle.chassis &&
-              this.definition.bodies.get(node) === previousChassis
-            )
-              replacement.world.copyVehicleMotionFrom(this.world);
+        if (preserveState) {
+          const previousProps = this.definition.world;
+          const previousVehicles =
+            previousProps.vehicles ?? (previousProps.vehicle ? [previousProps.vehicle] : []);
+          const vehicles = props.vehicles ?? (props.vehicle ? [props.vehicle] : []);
+          const previousVehicleIndices = new Map(
+            previousVehicles.map((vehicle, index) => [vehicle.chassis, index])
+          );
+          const vehicleIndices = new Map(
+            vehicles.map((vehicle, index) => [vehicle.chassis, index])
+          );
+          for (const [node, bodyIndex] of authored.bodies) {
+            const previousBodyIndex = this.definition.bodies.get(node);
+            const vehicleIndex = vehicleIndices.get(bodyIndex);
+            const previousVehicleIndex =
+              previousBodyIndex === undefined
+                ? undefined
+                : previousVehicleIndices.get(previousBodyIndex);
+            if (vehicleIndex !== undefined && previousVehicleIndex !== undefined)
+              replacement.world.copyVehicleMotionFrom(
+                this.world,
+                vehicleIndex,
+                previousVehicleIndex
+              );
           }
         }
         prepare?.(replacement.world);

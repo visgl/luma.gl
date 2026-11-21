@@ -102,10 +102,10 @@ export function createBuggyAudio(
       }
       let strongest = 0;
       for (const event of events) {
-        // Body 0 is terrain, body 1 is the chassis and the remaining bodies are rails.
+        // The rail bodies are immediately after chassis body 1.
         const [first, second] = event.bodies;
         const rail = first === 1 ? second : second === 1 ? first : 0;
-        if (rail < 2) continue;
+        if (rail < 2 || rail >= 2 + railPositions.length) continue;
         const approachSpeed = Math.abs(
           event.normal.reduce((sum, component, axis) => sum + component * previousVelocity[axis], 0)
         );

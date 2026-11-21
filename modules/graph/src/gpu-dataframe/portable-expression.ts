@@ -43,7 +43,7 @@ export function makeGPUPredicateFromPortableAST(expression: Expression): GPUExpr
 
 function convertPortableExpression(expression: Expression): GPUExpressionNode {
   validateExpressionAST(expression);
-  return convert(expression);
+  return lowerPortableExpression(expression);
 }
 
 const binaryOperators: Readonly<Record<string, GPUExpressionBinaryOperator>> = {
@@ -64,7 +64,13 @@ const binaryOperators: Readonly<Record<string, GPUExpressionBinaryOperator>> = {
 };
 
 /** Lowers one validated portable node and rejects unsupported operations. */
-function convert(expression: Expression): GPUExpressionNode {
+export function lowerPortableExpression(
+  expression: Expression,
+  resolveLeaf?: (expression: Expression) => GPUExpressionNode | undefined
+): GPUExpressionNode {
+  const resolved = resolveLeaf?.(expression);
+  if (resolved) return resolved;
+  const convert = (child: Expression) => lowerPortableExpression(child, resolveLeaf);
   // math.gl's public parser type includes nonportable nodes; validation above narrows at runtime.
   const node = expression as any;
   switch (node.type) {
@@ -95,6 +101,30 @@ function convert(expression: Expression): GPUExpressionNode {
     }
     case 'CallExpression': {
       const name = node.callee.name;
+      if ((name === 'isNull' || name === 'isNotNull') && node.arguments.length === 1) {
+        return {
+          kind: 'unary',
+          operator: name === 'isNull' ? 'is-null' : 'is-valid',
+          operand: convert(node.arguments[0])
+        };
+      }
+      if (name === 'in') {
+        const [subject, ...arguments_] = node.arguments as Expression[];
+        if (arguments_.length === 0 || arguments_.length > 64) {
+          throw new Error('GPU dataframe IN requires between 1 and 64 candidates');
+        }
+        const value = convert(subject);
+        const candidates = arguments_.map(convert);
+        if (
+          value.kind !== 'column' ||
+          candidates.some(
+            candidate => candidate.kind !== 'literal' && candidate.kind !== 'parameter'
+          )
+        ) {
+          throw new Error('GPU dataframe IN requires a column and literal or parameter candidates');
+        }
+        return makeMembershipPredicate(value, candidates);
+      }
       if (name === 'array_float32' && [2, 3, 4].includes(node.arguments.length)) {
         return {
           kind: 'vector',
@@ -114,4 +144,21 @@ function convert(expression: Expression): GPUExpressionNode {
     }
   }
   throw new Error('Unsupported portable GPU dataframe expression');
+}
+
+/** Balanced OR preserves three-valued comparisons and bounds tree depth. */
+function makeMembershipPredicate(
+  value: GPUExpressionNode,
+  candidates: readonly GPUExpressionNode[]
+): GPUExpressionNode {
+  if (candidates.length === 1) {
+    return {kind: 'binary', operator: 'equal', left: value, right: candidates[0]};
+  }
+  const middle = Math.floor(candidates.length / 2);
+  return {
+    kind: 'binary',
+    operator: 'or',
+    left: makeMembershipPredicate(value, candidates.slice(0, middle)),
+    right: makeMembershipPredicate(value, candidates.slice(middle))
+  };
 }
