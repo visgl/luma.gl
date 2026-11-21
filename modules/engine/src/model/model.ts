@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import type {Geometry} from '@math.gl/geometry';
+import type {Geometry} from '@math.gl/geometry/primitives';
 import type {CommandEncoder, Device, Binding, BindingsByGroup} from '@luma.gl/core';
 import {
   GPUVectorModel,

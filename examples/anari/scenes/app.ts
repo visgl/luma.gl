@@ -12,7 +12,7 @@ import {
   type ANARIWorld
 } from '@luma.gl/anari';
 import {AnimationLoopTemplate, OrbitControls, type AnimationProps} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {createANARIJSONScene, type ANARIJSONScene} from './playground-scene';
 import {loadSceneFile, loadSceneSample, SCENE_SAMPLES} from './usd-samples';
 

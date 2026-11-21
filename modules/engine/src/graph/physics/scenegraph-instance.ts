@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
 import {assert, type Device, type CommandEncoder} from '@luma.gl/core';
-import {Vector3} from '@math.gl/core';
+import {Vector3} from '@math.gl/core/matrix';
 import type {ScenegraphNode} from '../../index';
 import {GPUCommandGraph} from '@luma.gl/graph/gpu-core';
 import {

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix4, Vector3} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core/matrix';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import type {NumberArray3, NumberArray16} from '@math.gl/core';
+import type {NumberArray3, NumberArray16} from '@math.gl/core/types';
 
 const IDENTITY_MATRIX: Readonly<NumberArray16> = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 

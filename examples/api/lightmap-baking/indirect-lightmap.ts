@@ -4,7 +4,7 @@ import {Texture, type Device, type RenderPass} from '@luma.gl/core';
 import {ClipSpace, type Geometry} from '@luma.gl/engine';
 import type {LightmapAtlas} from '@luma.gl/engine/lighting';
 import {RayTracingSceneRenderer, ScenegraphSurfaces} from '@luma.gl/anari';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import type {Light} from '@luma.gl/shaders';
 import type {BakeTile} from './bake-tiles';
 import {makeBakingScenegraph} from './baking-scenegraph';

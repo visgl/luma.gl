@@ -5,7 +5,7 @@
 import {Device, Framebuffer} from '@luma.gl/core';
 import {picking} from '@luma.gl/shaders';
 import {ShaderInputs} from '../../shader-inputs';
-import {NumberArray3} from '@math.gl/core';
+import {NumberArray3} from '@math.gl/core/types';
 
 /**
  * Helper class for using the legacy picking module

@@ -29,7 +29,7 @@ engine geometry; a material describes appearance rather than a custom shader.
 import {CubeGeometry, GroupNode} from '@luma.gl/engine';
 import {SceneMeshNode, SceneRenderer} from '@luma.gl/anari';
 import {PhysicsController} from '@luma.gl/engine/physics';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 const geometry = new CubeGeometry(); // Extends from -1 to +1 on each axis.
 const box = new SceneMeshNode({

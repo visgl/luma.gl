@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {Matrix3} from '@math.gl/core';
+import {Matrix3} from '@math.gl/core/matrix';
 
 export type PBRTextureTransform = {
   offset: [number, number];

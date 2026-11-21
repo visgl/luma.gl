@@ -5,7 +5,7 @@
 import type {CommandEncoder, Device} from '@luma.gl/core';
 import {assert, Buffer} from '@luma.gl/core';
 import {Computation} from '../compute/computation';
-import type {Matrix4Like} from '@math.gl/core';
+import type {Matrix4Like} from '@math.gl/core/matrix';
 
 /** Byte layout of each point-light record. The grid ignores the consumer payload. */
 export const CLUSTERED_POINT_LIGHT_LAYOUT = Object.freeze({

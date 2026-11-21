@@ -7,7 +7,7 @@ import {Geometry} from '@luma.gl/engine';
 import {postProcessGLTF} from '@luma.gl/engine/gltf';
 import {createLightmapAtlas, validateLightmapAtlas} from '@luma.gl/engine/lighting';
 import {CORNELL_BAKE_PROFILES, type CornellBakeRecipe} from './cornell-bake-file';
-import {Matrix4, Quaternion, Vector3} from '@math.gl/core';
+import {Matrix4, Quaternion, Vector3} from '@math.gl/core/matrix';
 
 type CornellGLTF = ReturnType<typeof postProcessGLTF>;
 type CornellNode = CornellGLTF['nodes'][number];

@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: Copyright (c) three.js authors
 // Adapted from THREE.js ExtrudeGeometry (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {Vector2, Vector3} from '@math.gl/core';
+import {Vector2, Vector3} from '@math.gl/core/matrix';
 import {Shape} from './paths/path';
 import {ShapeUtils} from './paths/shape-utils';
 

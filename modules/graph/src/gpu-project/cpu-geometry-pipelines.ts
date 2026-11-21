@@ -5,7 +5,7 @@
 
 import {assert} from '@luma.gl/core';
 import {CPUData, CPUVector, getGPUVectorFormatInfo} from '@luma.gl/graph/gpu-data';
-import type {Projection} from '@math.gl/geospatial/projection/types';
+import type {Projection} from '@math.gl/geospatial/projection-types';
 import type {GeoArrowColumn} from '@math.gl/core/arrow';
 import {
   tessellateGeoArrowPolygons,

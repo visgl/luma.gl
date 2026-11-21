@@ -106,7 +106,7 @@ Use `device.features.has('clip-control-webgl')` to select this reverse-Z recipe 
 For a right-handed camera looking along negative Z, this column-major matrix gives an infinite far plane.
 
 ```ts
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 
 /** Reverse-Z perspective with an infinite far plane, for a zero-to-one clip depth range. */
 function getReverseInfinitePerspective(fovy: number, aspect: number, near: number): Matrix4 {

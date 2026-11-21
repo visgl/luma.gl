@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core';
+import {NumericArray, NumberArray4, NumberArray6} from '@math.gl/core/types';
 import type {
   Bindings,
   BindingsByGroup,

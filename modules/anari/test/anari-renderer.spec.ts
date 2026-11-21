@@ -1,7 +1,7 @@
 import {ANARIDevice} from '@luma.gl/anari';
 import type {Device} from '@luma.gl/core';
 import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/core/test-utils';
-import {Matrix4} from '@math.gl/core';
+import {Matrix4} from '@math.gl/core/matrix';
 import {expect, it} from 'vitest';
 
 it('ANARI renderer draws instanced physically based surfaces on available GPU backends', async () => {

@@ -4,16 +4,8 @@
 
 /* eslint-disable camelcase */
 
-import type {
-  Matrix3,
-  NumberArray2,
-  NumberArray3,
-  NumberArray4,
-  NumberArray9,
-  Vector2,
-  Vector3,
-  Vector4
-} from '@math.gl/core';
+import type {Matrix3, Vector2, Vector3, Vector4} from '@math.gl/core/matrix';
+import type {NumberArray2, NumberArray3, NumberArray4, NumberArray9} from '@math.gl/core/types';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {ibl} from '../ibl/ibl';

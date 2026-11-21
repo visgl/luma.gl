@@ -19,8 +19,9 @@ import {
   type PBRMaterialUniforms,
   pbrMaterial
 } from '@luma.gl/shaders';
-import {Matrix4, type NumberArray9} from '@math.gl/core';
-import {unpackIndexedGeometry} from '@math.gl/geometry';
+import {Matrix4} from '@math.gl/core/matrix';
+import {type NumberArray9} from '@math.gl/core/types';
+import {unpackIndexedGeometry} from '@math.gl/geometry/processing';
 import {
   ANARIArray,
   type ANARICamera,
