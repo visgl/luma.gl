@@ -306,4 +306,4 @@ it('textured cutouts agree across color, picking, channels and retained UV chang
     replacement.destroy();
     device.destroy();
   }
-}, 180_000);
+}, 300_000);

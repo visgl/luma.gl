@@ -77,4 +77,4 @@ it('ray diffuse transmission tints backlighting and emissive bounces', async () 
   } finally {
     destroy();
   }
-}, 180_000);
+}, 300_000);

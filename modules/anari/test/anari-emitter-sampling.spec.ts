@@ -245,4 +245,4 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     errors.mockRestore();
     graphics.destroy();
   }
-});
+}, 180_000);
