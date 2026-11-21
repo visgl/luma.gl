@@ -10,7 +10,7 @@ it.each([
   'pbr'
 ] as const)('preserves constant environment energy across %s sampling techniques', async transportMode => {
   if (!webgpuAdapter.isSupported()) return;
-  const {options, surface, readPixel, destroy} = await createMaterialFixture();
+  const {options, surface, readPixel, readMeanColor, destroy} = await createMaterialFixture();
   try {
     options.surfaces = [
       {
@@ -32,13 +32,14 @@ it.each([
     options.samplesPerPixel = 16;
     options.environmentRadiance = [0.5, 0, 0];
 
+    // The four central pixels see the same receiver and use independent pixel-indexed samples.
     const estimate = async () => {
       let radiance = 0;
-      for (let seed = 0; seed < 32; seed++) {
+      for (let seed = 0; seed < 8; seed++) {
         options.samplingSeed = seed;
-        radiance += (await readPixel())[0] / 255;
+        radiance += (await readMeanColor(4))[0] / 255;
       }
-      return radiance / 32;
+      return radiance / 8;
     };
     options.maxBounces = 0;
     const direct = await estimate();
@@ -63,7 +64,7 @@ it.each([
 
 it('converges to the irradiance of one bright directional texel', async () => {
   if (!webgpuAdapter.isSupported()) return;
-  const {options, surface, readPixel, destroy} = await createMaterialFixture();
+  const {options, surface, readPixel, readMeanColor, destroy} = await createMaterialFixture();
   try {
     const width = 16;
     const height = 8;
@@ -94,9 +95,9 @@ it('converges to the irradiance of one bright directional texel', async () => {
     for (const maxBounces of [0, 1]) {
       options.maxBounces = maxBounces;
       let average = 0;
-      for (let seed = 0; seed < 16; seed++) {
+      for (let seed = 0; seed < 4; seed++) {
         options.samplingSeed = seed;
-        average += (await readPixel())[0] / (16 * 255);
+        average += (await readMeanColor(4))[0] / (4 * 255);
       }
       expect(Math.abs(average - expected)).toBeLessThan(0.025);
     }

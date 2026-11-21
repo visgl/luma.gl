@@ -118,9 +118,13 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     byteLength: layout.byteLength,
     usage: Buffer.MAP_READ | Buffer.COPY_DST
   });
-  const render = async () => {
+  const renderFrame = () => {
     const statistics = frame.render();
     graphics.submit();
+    return statistics;
+  };
+  const render = async () => {
+    const statistics = renderFrame();
     color.readBuffer({}, buffer);
     const bytes = await buffer.readAsync();
     const pixels = new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
@@ -148,14 +152,13 @@ it('explicit emissive connections preserve energy, reject masked occluders and t
     });
     world.setParameter('instance', [lightInstance, smallEmitter]).commitParameters();
     renderer.setParameters({progressive: true, historySampleLimit: 256}).commitParameters();
-    let powerMean = 0;
-    for (let sampleFrame = 0; sampleFrame < 16; sampleFrame++) powerMean = (await render()).mean[0];
+    for (let sampleFrame = 0; sampleFrame < 15; sampleFrame++) renderFrame();
+    const powerMean = (await render()).mean[0];
     renderer.setParameter('emitterSelection', 'uniform').commitParameters();
     const reset = await render();
     expect(reset.statistics.rayTracing?.accumulatedSamples).toBe(16);
-    let uniformMean = reset.mean[0];
-    for (let sampleFrame = 1; sampleFrame < 16; sampleFrame++)
-      uniformMean = (await render()).mean[0];
+    for (let sampleFrame = 1; sampleFrame < 15; sampleFrame++) renderFrame();
+    const uniformMean = (await render()).mean[0];
     expect(powerMean / uniformMean).toBeGreaterThan(0.8);
     expect(powerMean / uniformMean).toBeLessThan(1.2);
     world.setParameter('instance', [lightInstance]).commitParameters();

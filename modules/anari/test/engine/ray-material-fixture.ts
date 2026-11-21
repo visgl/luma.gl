@@ -90,18 +90,28 @@ export async function createMaterialFixture() {
     adaptiveResolution: false,
     resolutionScale: 1
   };
-  async function readPixel(): Promise<number[]> {
+  async function readMeanColor(pixelCount: 1 | 4): Promise<number[]> {
     renderer.render(options);
     device.submit();
-    const layout = color.computeMemoryLayout({width: 1, height: 1});
+    const layout = color.computeMemoryLayout({width: pixelCount, height: 1});
     const buffer = device.createBuffer({
       byteLength: layout.byteLength,
       usage: Buffer.COPY_DST | Buffer.MAP_READ
     });
     try {
-      color.readBuffer({x: 4, y: 4, width: 1, height: 1}, buffer);
+      color.readBuffer(
+        {x: 4 - Math.floor(pixelCount / 2), y: 4, width: pixelCount, height: 1},
+        buffer
+      );
       const bytes = await buffer.readAsync();
-      return Array.from(new Uint8Array(bytes.buffer, bytes.byteOffset, 3));
+      const pixels = new Uint8Array(bytes.buffer, bytes.byteOffset, pixelCount * 4);
+      const mean = [0, 0, 0];
+      for (let pixel = 0; pixel < pixelCount; pixel++) {
+        for (let channel = 0; channel < 3; channel++) {
+          mean[channel] += pixels[4 * pixel + channel] / pixelCount;
+        }
+      }
+      return mean;
     } finally {
       buffer.destroy();
     }
@@ -123,7 +133,8 @@ export async function createMaterialFixture() {
     renderer,
     replacement,
     map,
-    readPixel,
+    readPixel: () => readMeanColor(1),
+    readMeanColor,
     destroy,
     get mipMap(): Texture {
       mipMap ??= createMipMap(device);
