@@ -247,9 +247,12 @@ export function not<Columns extends string>(
 }
 
 /** Collects exact source-column references for CPU-only query validation. @internal */
-export function getGPUExpressionColumnNames(expression: GPUExpression<any, string>): string[] {
+export function getGPUExpressionColumnNames(
+  expression: GPUExpression<any, string>,
+  includeConditions = true
+): string[] {
   const columnNames = new Set<string>();
-  collectGPUExpressionColumnNames(expression.node, columnNames);
+  collectGPUExpressionColumnNames(expression.node, columnNames, includeConditions);
   return Array.from(columnNames);
 }
 
@@ -299,19 +302,25 @@ function cloneFrozenGPUExpressionNode(node: GPUExpressionNode): GPUExpressionNod
   }
 }
 
-function collectGPUExpressionColumnNames(node: GPUExpressionNode, columnNames: Set<string>): void {
+function collectGPUExpressionColumnNames(
+  node: GPUExpressionNode,
+  columnNames: Set<string>,
+  includeConditions: boolean
+): void {
   switch (node.kind) {
     case 'vector':
       for (const component of node.components)
-        collectGPUExpressionColumnNames(component, columnNames);
+        collectGPUExpressionColumnNames(component, columnNames, includeConditions);
       break;
     case 'cast':
-      collectGPUExpressionColumnNames(node.operand, columnNames);
+      collectGPUExpressionColumnNames(node.operand, columnNames, includeConditions);
       break;
     case 'conditional':
-      collectGPUExpressionColumnNames(node.condition, columnNames);
-      collectGPUExpressionColumnNames(node.whenTrue, columnNames);
-      collectGPUExpressionColumnNames(node.otherwise, columnNames);
+      if (includeConditions) {
+        collectGPUExpressionColumnNames(node.condition, columnNames, includeConditions);
+      }
+      collectGPUExpressionColumnNames(node.whenTrue, columnNames, includeConditions);
+      collectGPUExpressionColumnNames(node.otherwise, columnNames, includeConditions);
       break;
     case 'column':
       columnNames.add(node.name);
@@ -320,11 +329,11 @@ function collectGPUExpressionColumnNames(node: GPUExpressionNode, columnNames: S
     case 'parameter':
       break;
     case 'unary':
-      collectGPUExpressionColumnNames(node.operand, columnNames);
+      collectGPUExpressionColumnNames(node.operand, columnNames, includeConditions);
       break;
     case 'binary':
-      collectGPUExpressionColumnNames(node.left, columnNames);
-      collectGPUExpressionColumnNames(node.right, columnNames);
+      collectGPUExpressionColumnNames(node.left, columnNames, includeConditions);
+      collectGPUExpressionColumnNames(node.right, columnNames, includeConditions);
       break;
     default:
       throw new Error('GPUDataFrame expression contains an unsupported operation');
@@ -414,6 +423,8 @@ function getKnownExpressionWidth(node: GPUExpressionNode): number | undefined {
     case 'vector':
     case 'cast':
       return getGPUVectorWGSLLayout(node.format).components;
+    case 'conditional':
+      return 1;
     case 'literal':
     case 'parameter':
       return node.value === null ? undefined : 1;
@@ -441,7 +452,7 @@ export function caseWhen<
   TrueColumns extends string,
   OtherwiseColumns extends string
 >(
-  condition: GPUExpression<boolean, ConditionColumns>,
+  condition: GPUExpression<boolean | null, ConditionColumns>,
   whenTrue: GPUExpression<number | null, TrueColumns>,
   otherwise: GPUExpression<number | null, OtherwiseColumns>
 ): GPUExpression<number | null, ConditionColumns | TrueColumns | OtherwiseColumns> {

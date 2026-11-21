@@ -337,7 +337,7 @@ function assertDataFrameDerivedColumns<T extends GPUTypeMap>(
     assertDataFrameDerivedExpression(derivedColumn.expression, logicalColumns);
 
     const referencedFormats = new Set(
-      getGPUExpressionColumnNames(derivedColumn.expression).map(columnName =>
+      getGPUExpressionColumnNames(derivedColumn.expression, false).map(columnName =>
         logicalFormats.get(columnName)
       )
     );
@@ -423,7 +423,9 @@ function isNumericExpressionNode(node: GPUExpressionNode): boolean {
   switch (node.kind) {
     case 'conditional':
       return (
-        isBooleanExpressionNode(node.condition) &&
+        (isBooleanExpressionNode(node.condition) ||
+          ((node.condition.kind === 'literal' || node.condition.kind === 'parameter') &&
+            node.condition.value === null)) &&
         isNumericExpressionNode(node.whenTrue) &&
         isNumericExpressionNode(node.otherwise)
       );

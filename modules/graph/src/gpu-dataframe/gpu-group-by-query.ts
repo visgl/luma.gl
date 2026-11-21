@@ -249,7 +249,7 @@ function getGPUDataFrameQueryColumnFormats<
   );
 
   for (const definition of query.derivedColumns) {
-    const firstReference = getGPUExpressionColumnNames(definition.expression)[0];
+    const firstReference = getGPUExpressionColumnNames(definition.expression, false)[0];
     formats.set(definition.name, definition.format ?? formats.get(firstReference) ?? 'float32');
   }
 
