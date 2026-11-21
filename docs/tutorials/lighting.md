@@ -1,18 +1,10 @@
 # Lighting
 
-[Modules](https://luma.gl/docs/tutorials/shader-modules.md)[Injection](https://luma.gl/docs/tutorials/shader-injection.md)[Plugins](https://luma.gl/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/docs/tutorials/lighting.md)
+[Modules](https://luma.gl/docs/tutorials/shader-modules.md)[Hooks](https://luma.gl/docs/tutorials/shader-hooks.md)[Plugins](https://luma.gl/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/docs/tutorials/lighting.md)
 
 Add Phong shading to a textured cube using luma.gl's shader module system.
 
 <!-- -->
-
-0
-
-<!-- -->
-
-s
-
-Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
@@ -47,13 +39,13 @@ import {
 
 } from '@luma.gl/engine';
 
-import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shaders';
+import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shadertools';
 
 import {Matrix4} from '@math.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl';
 
-import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 
 

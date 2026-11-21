@@ -13,7 +13,7 @@ import {Computation} from '@luma.gl/engine';
 
 
 
-const computation = await Computation.createAsync(device, {
+const computation = new Computation(device, {
 
   source: COMPUTE_SHADER_SOURCE,
 
@@ -84,10 +84,6 @@ Current `ShaderInputs` instance.
 ### `constructor(device: Device, props: ComputationProps)`[​](#constructordevice-device-props-computationprops "Direct link to constructordevice-device-props-computationprops")
 
 Creates a computation wrapper for one WebGPU device. Throws on non-WebGPU devices.
-
-### `Computation.createAsync(device: Device, props: ComputationProps): Promise<Computation>`[​](#computationcreateasyncdevice-device-props-computationprops-promisecomputation "Direct link to computationcreateasyncdevice-device-props-computationprops-promisecomputation")
-
-Creates the same computation through the device's asynchronous compute-pipeline path. Use this in an application loading phase, especially when several computations can be started together with `Promise.all()`. The returned computation is fully ready to dispatch. `GPUCommandGraph.compileAsync()` uses this behavior automatically for computations constructed by graph nodes.
 
 ### `destroy(): void`[​](#destroy-void "Direct link to destroy-void")
 

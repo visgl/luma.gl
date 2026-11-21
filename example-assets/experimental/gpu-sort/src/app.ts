@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {makeGPUVectorFromArrow} from '@luma.gl/graph/arrow';
+import {makeGPUVectorFromArrow} from '@luma.gl/arrow';
 import {Buffer, luma, type Device} from '@luma.gl/core';
 import {
   GPUBatchSort,
@@ -11,9 +11,9 @@ import {
   type CompiledGPUCommandGraph,
   type GPUSortAlgorithm,
   type GPUSortDirection
-} from '@luma.gl/graph/gpu-core';
-import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
-import {webgpuAdapter} from '@luma.gl/core/webgpu';
+} from '@luma.gl/gpgpu/gpu-core';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 import * as arrow from 'apache-arrow';
 import {mountGPUSortExampleUI, type GPUSortExampleElements} from './app-ui';
 
@@ -157,7 +157,7 @@ class GPUSortExample {
               algorithm,
               direction
             });
-      graph.add(sort);
+      sort.addToGraph(graph);
       const compileStart = performance.now();
       const compiled = graph.compile();
       const compileTime = performance.now() - compileStart;

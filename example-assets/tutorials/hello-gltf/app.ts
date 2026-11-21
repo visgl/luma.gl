@@ -5,10 +5,9 @@
 import {AnimationLoopTemplate, AnimationProps, ModelNode, OrbitControls} from '@luma.gl/engine';
 import {Color, Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/scene/gltf';
-import {postProcessGLTF} from '@luma.gl/engine/gltf';
-import {createScenegraphsFromGLTF} from '@luma.gl/engine/gltf';
-import {Light, LightingProps} from '@luma.gl/shaders';
+import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 import {INFO_HTML, showError} from './app-ui';
 
@@ -39,19 +38,10 @@ const lightSources = {
   ]
 } as const satisfies LightingProps;
 
-export type GLTFViewerOptions = {
-  modelUrl?: string;
-  animate?: boolean;
-  materialVariant?: string;
-  onLoad?: (scenegraphs: ReturnType<typeof createScenegraphsFromGLTF>) => void;
-  onUnload?: (scenegraphs: ReturnType<typeof createScenegraphsFromGLTF>) => void;
-};
-
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   device: Device;
-  readonly viewerOptions: GLTFViewerOptions;
   orbitControls: OrbitControls;
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
@@ -60,10 +50,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   sceneRadius = 1;
   isFinalized = false;
 
-  constructor({device}: AnimationProps, viewerOptions: GLTFViewerOptions = {}) {
+  constructor({device}: AnimationProps) {
     super();
     this.device = device;
-    this.viewerOptions = viewerOptions;
 
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     this.orbitControls = new OrbitControls(canvas, {
@@ -85,20 +74,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.isFinalized = true;
     this.orbitControls.destroy();
 
-    this.releaseScenegraphs();
-  }
-
-  private releaseScenegraphs(): void {
-    const scenegraphs = this.scenegraphsFromGLTF;
+    destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
-    try {
-      if (scenegraphs) {
-        this.viewerOptions.onUnload?.(scenegraphs);
-      }
-    } finally {
-      destroyScenegraphs(scenegraphs);
-    }
   }
 
   getClearColor(): Color {
@@ -109,12 +87,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
 
     try {
-      const modelUrl = this.viewerOptions.modelUrl || MODEL_URL;
-      log.log(0, 'Starting glTF load', {modelUrl})();
+      log.log(0, 'Starting tutorial glTF load', {modelUrl: MODEL_URL})();
       showError();
       canvas.style.opacity = '0.2';
 
-      const gltf = await load(modelUrl, GLTFLoader);
+      const gltf = await load(MODEL_URL, GLTFLoader);
       const processedGLTF = postProcessGLTF(gltf);
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
@@ -127,12 +104,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         return;
       }
 
-      this.releaseScenegraphs();
+      destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
-      if (this.viewerOptions.materialVariant) {
-        scenegraphsFromGLTF.variants.selectVariant(this.viewerOptions.materialVariant);
-      }
 
       const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
       this.center = [...sceneBounds.center];
@@ -147,7 +121,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
       canvas.style.opacity = '1';
       showError();
-      this.viewerOptions.onLoad?.(scenegraphsFromGLTF);
     } catch (error) {
       if (this.isFinalized) {
         return;
@@ -167,9 +140,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
-    if (this.viewerOptions.animate !== false) {
-      this.scenegraphsFromGLTF.animator?.setTime(time);
-    }
+    this.scenegraphsFromGLTF.animator?.setTime(time);
     this.orbitControls.update(time);
 
     const orbitDistance = this.orbitControls.distance;

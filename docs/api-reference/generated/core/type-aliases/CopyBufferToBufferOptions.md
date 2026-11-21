@@ -2,7 +2,7 @@
 
 > **CopyBufferToBufferOptions** = `object`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L32)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:17](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L17)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:32](https
 
 > **destinationBuffer**: [`Buffer`](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:35](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L35)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:20](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L20)
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:35](https
 
 > `optional` **destinationOffset?**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L36)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:21](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L21)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:36](https
 
 > **size**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L37)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:22](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L22)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:37](https
 
 > **sourceBuffer**: [`Buffer`](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L33)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:18](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L18)
 
 ***
 
@@ -42,4 +42,4 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:33](https
 
 > `optional` **sourceOffset?**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L34)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:19](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L19)

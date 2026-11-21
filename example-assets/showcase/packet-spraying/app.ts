@@ -11,10 +11,10 @@ import type {
   TextureFormatColor
 } from '@luma.gl/core';
 import {
-  bloomCompositeShaderPass,
-  createBloomCompositeShaderPass,
+  bloomShaderPassPipeline,
+  createBloomShaderPassPipeline,
   toneMapping
-} from '@luma.gl/engine/effects';
+} from '@luma.gl/effects';
 import type {AnimationProps, Geometry} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -32,12 +32,18 @@ import {
   TruncatedConeGeometry
 } from '@luma.gl/engine';
 import {
+  ABufferRenderer,
+  WBOITRenderer,
+  aBuffer,
+  aBufferPlugin,
   emissiveMaterial,
   emissiveMaterialPlugin,
   glassMaterial,
   glassMaterialPlugin,
   glassTransmission,
   glassTransmissionPlugin,
+  getABufferSupport,
+  getWBOITSupport,
   MAX_OPTICAL_CAUSTIC_LENSES,
   opticalCaustics,
   opticalCausticsPlugin,
@@ -45,6 +51,7 @@ import {
   opticalPointLightsPlugin,
   reflectiveMaterial,
   reflectiveMaterialPlugin,
+  type ABufferShaderModuleProps,
   type EmissiveMaterialProps,
   type GlassMaterialProps,
   type GlassTransmissionProps,
@@ -52,21 +59,12 @@ import {
   type OpticalCausticsProps,
   type OpticalPointLight,
   type OpticalPointLightsProps,
-  type ReflectiveMaterialProps
-} from '@luma.gl/engine/experimental/materials';
-import {
-  ABufferRenderer,
-  WBOITRenderer,
-  aBuffer,
-  aBufferPlugin,
-  getABufferSupport,
-  getWBOITSupport,
-  type ABufferShaderModuleProps,
+  type ReflectiveMaterialProps,
   type WBOITShaderModuleProps,
   wboit,
   wboitPlugin
-} from '@luma.gl/anari';
-import type {ShaderModule, CompositeShaderPass, ShaderPlugin} from '@luma.gl/shaders';
+} from '@luma.gl/experimental';
+import type {ShaderModule, ShaderPassPipeline, ShaderPlugin} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 import {type Panel, type SettingsChangeDescriptor} from '@deck.gl-community/panels';
 import {
@@ -317,7 +315,7 @@ const ADDITIVE_PARAMETERS = {
 
 const networkNodePickingPlugin = {
   name: 'networkNodePicking',
-  module: colorPicking as ShaderModule
+  modules: [colorPicking as ShaderModule]
 } as const satisfies ShaderPlugin;
 
 class InstancedMesh<
@@ -3741,15 +3739,15 @@ function makeBalancedEmissionColor(color: Color, alpha: number): Color {
 function makeBloomPipeline(
   colorFormat: TextureFormatColor,
   renderProfile: NetworkRenderProfile
-): CompositeShaderPass {
+): ShaderPassPipeline {
   const bloomPipeline = renderProfile.handheld
-    ? createBloomCompositeShaderPass({
+    ? createBloomShaderPassPipeline({
         blurAlgorithm: 'dual-kawase',
         colorFormat,
         quality: renderProfile.bloomQuality,
         resolutionScale: renderProfile.bloomResolutionScale
       })
-    : bloomCompositeShaderPass;
+    : bloomShaderPassPipeline;
 
   return {
     ...bloomPipeline,

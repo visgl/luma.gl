@@ -2,7 +2,7 @@
 
 > **CopyBufferToTextureOptions** = `object`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L40)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:25](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L25)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:40](https
 
 > `optional` **aspect?**: `"all"` | `"stencil-only"` | `"depth-only"`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:46](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L46)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L31)
 
 ***
 
@@ -18,7 +18,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:46](https
 
 > `optional` **byteOffset?**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L42)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:27](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L27)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:42](https
 
 > **bytesPerRow**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L47)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L32)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:47](https
 
 > **destinationTexture**: [`Texture`](https://luma.gl/docs/api-reference/generated/core/classes/Texture.md)
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L43)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:28](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L28)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:43](https
 
 > `optional` **mipLevel?**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L44)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L29)
 
 ***
 
@@ -50,7 +50,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:44](https
 
 > `optional` **origin?**: \[`number`, `number`, `number`]
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L45)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L30)
 
 ***
 
@@ -58,7 +58,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:45](https
 
 > **rowsPerImage**: `number`
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:48](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L48)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:33](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L33)
 
 ***
 
@@ -66,7 +66,7 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:48](https
 
 > **size**: \[`number`, `number`, `number`]
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L49)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L34)
 
 ***
 
@@ -74,4 +74,4 @@ Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:49](https
 
 > **sourceBuffer**: [`Buffer`](https://luma.gl/docs/api-reference/generated/core/classes/Buffer.md)
 
-Defined in: [modules/core/src/api/adapter/resources/command-encoder.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/resources/command-encoder.ts#L41)
+Defined in: [modules/core/src/adapter/resources/command-encoder.ts:26](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/resources/command-encoder.ts#L26)

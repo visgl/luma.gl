@@ -1,18 +1,10 @@
 # Shader Plugins
 
-[Modules](https://luma.gl/docs/tutorials/shader-modules.md)[Injection](https://luma.gl/docs/tutorials/shader-injection.md)[Plugins](https://luma.gl/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/docs/tutorials/lighting.md)
+[Modules](https://luma.gl/docs/tutorials/shader-modules.md)[Hooks](https://luma.gl/docs/tutorials/shader-hooks.md)[Plugins](https://luma.gl/docs/tutorials/shader-plugins.md)[Lighting](https://luma.gl/docs/tutorials/lighting.md)
 
 `ShaderPlugin` packages reusable shader behavior that can be attached to a `Model` or `Computation`. This example renders a grid of triangles from one base shader pair. One plugin adds procedural fill patterns, while `clipShaderPlugin` adds portable whole-instance and per-fragment clipping.
 
 <!-- -->
-
-0
-
-<!-- -->
-
-s
-
-Scroll page · Ctrl/⌘ + scroll to interact
 
 It is assumed you've set up your development environment as described in [Setup](https://luma.gl/docs/tutorials.md).
 
@@ -25,10 +17,10 @@ The base shaders keep the vertex interface explicit:
 
 The fill-pattern plugin does not add inputs, so the base shader declares its application-owned attributes explicitly. Plugins that need optional per-vertex data may declare the shader-facing name and type through `vertexInputs`; the model or table still owns the matching `bufferLayout`, buffer, and update lifecycle.
 
-One injection selects the GLSL or WGSL pattern implementation for `fs:#decl`. The base fragment shader calls that implementation without knowing how the GLSL or WGSL source differs.
+Each backend-specific plugin variant injects the pattern implementation into `fs:#decl`. The base fragment shader calls that implementation without knowing how the GLSL or WGSL source differs.
 
 ```
-import type {ShaderPlugin} from '@luma.gl/shaders';
+import type {ShaderPlugin} from '@luma.gl/shadertools';
 
 
 
@@ -36,7 +28,37 @@ const fillPatternPlugin: ShaderPlugin = {
 
   name: 'fill-pattern-plugin',
 
-  injections: [{stage: 'fragment', target: '#decl', glsl: GLSL_FILL_PATTERN_SOURCE, wgsl: WGSL_FILL_PATTERN_SOURCE}]
+  glsl: {
+
+    injections: [
+
+      {
+
+        target: 'fs:#decl',
+
+        injection: GLSL_FILL_PATTERN_SOURCE
+
+      }
+
+    ]
+
+  },
+
+  wgsl: {
+
+    injections: [
+
+      {
+
+        target: 'fs:#decl',
+
+        injection: WGSL_FILL_PATTERN_SOURCE
+
+      }
+
+    ]
+
+  }
 
 };
 ```
@@ -163,10 +185,7 @@ const model = new Model(device, {
 
 ## Portable Varyings and Clipping[​](#portable-varyings-and-clipping "Direct link to Portable Varyings and Clipping")
 
-`clipShaderPlugin` declares `clipCoordinates: vec2<f32>` as a smooth plugin varying. The application supplies each triangle's center and each vertex's position to a pair of named injection targets:
-
-* GLSL
-* WGSL
+`clipShaderPlugin` declares `clipCoordinates: vec2<f32>` as a smooth plugin varying. The application supplies each triangle's center and each vertex's position to a pair of named hooks:
 
 ```
 CLIP_POSITION(gl_Position, triangleCenter, position);
@@ -184,10 +203,10 @@ CLIP_POSITION(&output.position, triangleCenter, position);
 CLIP_COLOR(&color);
 ```
 
-The callable target signatures are registered for the active shader language:
+The hook signatures are registered for the active shader language:
 
 ```
-import {GLSLShaderAssembler} from '@luma.gl/shaders/glsl';
+import {GLSLShaderAssembler} from '@luma.gl/shadertools';
 
 
 
@@ -195,12 +214,16 @@ const shaderAssembler = new GLSLShaderAssembler();
 
 
 
-shaderAssembler.addShaderInjectionTarget({name: 'CLIP_POSITION', stage: 'vertex', glsl: {parameters: 'inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates'}});
+shaderAssembler.addShaderHook(
 
-shaderAssembler.addShaderInjectionTarget({name: 'CLIP_COLOR', stage: 'fragment', glsl: {parameters: 'inout vec4 color'}});
+  'vs:CLIP_POSITION(inout vec4 position, vec2 instanceCoordinates, vec2 geometryCoordinates)'
+
+);
+
+shaderAssembler.addShaderHook('fs:CLIP_COLOR(inout vec4 color)');
 ```
 
-For WGSL, create a `WGSLShaderAssembler` instead. Its target signatures use pointers for the mutable position and color. WGSL varying synthesis requires the selected vertex entry point to return a named stage-I/O struct and the fragment entry point to consume one named stage-I/O struct. The structs may be the same or separate. The assembler assigns unused locations and copies plugin values across the generated interface.
+For WGSL, create a `WGSLShaderAssembler` instead. Its hook signatures use pointers for the mutable position and color. WGSL varying synthesis requires the selected vertex entry point to return a named stage-I/O struct and the fragment entry point to consume one named stage-I/O struct. The structs may be the same or separate. The assembler assigns unused locations and copies plugin values across the generated interface.
 
 The clipping controls update only the plugin's shader inputs:
 
@@ -224,10 +247,8 @@ No buffers, models, shaders, or pipelines are recreated. In `instance` mode, the
 
 The plugin owns only shader-interface generation and clipping shader behavior. The application still owns coordinates and buffers. A future deck.gl adapter can connect these declarations to `AttributeManager` without moving deck.gl's events, resources, or layer lifecycle into `ShaderPlugin`.
 
-Prefer `ShaderPlugin` as the public composition layer. Shader injection targets are the lower-level contract a base shader can expose when it wants a named injection point. A plugin may target a registered hook such as `vs:OFFSET_POSITION` or `fs:FILTER_COLOR` instead of a `#decl` or `#main-*` anchor, but applications should normally attach plugins rather than coordinate hook injection directly.
+Prefer `ShaderPlugin` as the public composition layer. Shader hooks are the lower-level contract a base shader can expose when it wants a named injection point. A plugin may target a registered hook such as `vs:OFFSET_POSITION` or `fs:FILTER_COLOR` instead of a `#decl` or `#main-*` anchor, but applications should normally attach plugins rather than coordinate hook injection directly.
 
 The runnable example includes all nine pattern variants: `none`, `hash0`, `hash45`, `hash90`, `hash135`, `checker0`, `checker45`, `dotgrid`, and `dotgrid45`.
 
-Keep modules, defines, and shader interfaces at the plugin root. Each injection selects its `glsl` or `wgsl` source without merging a second plugin descriptor.
-
-For a plugin that declares an Arrow-backed scalar input and updates only `ShaderInputs` as its range changes, see [Arrow ShaderPlugin Filtering](https://luma.gl/examples/arrow/arrow-filtering).
+Use shared plugin fields when a contribution is backend-neutral. Use `glsl` or `wgsl` blocks when the shader language needs different code, defines, or modules.

@@ -2,7 +2,7 @@
 
 > **TextureBindingLayout** = `object`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:97
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:127](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L127)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:97
 
 > **group**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:102
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:132](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L132)
 
 Bind group index. Always 0 in WebGL
 
@@ -20,7 +20,7 @@ Bind group index. Always 0 in WebGL
 
 > **location**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:104
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:134](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L134)
 
 Binding index within the bind group
 
@@ -30,7 +30,7 @@ Binding index within the bind group
 
 > `optional` **multisampled?**: `boolean`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:109
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:139](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L139)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:109
 
 > **name**: `string`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:100
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:130](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L130)
 
 Name of the binding. Used by luma to map bindings by name
 
@@ -48,7 +48,7 @@ Name of the binding. Used by luma to map bindings by name
 
 > `optional` **sampleType?**: `"float"` | `"unfilterable-float"` | `"depth"` | `"sint"` | `"uint"`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:108
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:138](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L138)
 
 ***
 
@@ -56,7 +56,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:108
 
 > **type**: `"texture"`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:98
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:128](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L128)
 
 ***
 
@@ -64,7 +64,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:98
 
 > `optional` **viewDimension?**: `"1d"` | `"2d"` | `"2d-array"` | `"cube"` | `"cube-array"` | `"3d"`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:107
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:137](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L137)
 
 ***
 
@@ -72,6 +72,6 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:107
 
 > `optional` **visibility?**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:106
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:136](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L136)
 
 Which shader stages can access this binding

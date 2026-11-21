@@ -1,4 +1,4 @@
-# `@luma.gl/core/webgl-constants`
+# `@luma.gl/webgl/constants`
 
 [Overview](https://luma.gl/docs/api-reference/webgl.md)[Constants](https://luma.gl/docs/api-reference/webgl/constants.md)[WebGPU adapter](https://luma.gl/docs/api-reference/webgpu.md)
 
@@ -6,14 +6,14 @@ From v9.3
 
 info
 
-Before v9.3, these exports were provided by `@luma.gl/constants`; v9.3 and v9.4 used `@luma.gl/webgl/constants`. Starting in v10, use `@luma.gl/core/webgl-constants`.
+In luma.gl versions earlier than v9.3, these exports were provided by `@luma.gl/constants`. Use `@luma.gl/webgl/constants` going forward.
 
 Use this entry point when you need the raw numeric WebGL enums that luma.gl still uses internally for WebGL interop.
 
 ```
-import {GL} from '@luma.gl/core/webgl-constants';
+import {GL} from '@luma.gl/webgl/constants';
 
-import type {GLParameters, GLSamplerParameters} from '@luma.gl/core/webgl-constants';
+import type {GLParameters, GLSamplerParameters} from '@luma.gl/webgl/constants';
 ```
 
 ## Exports[​](#exports "Direct link to Exports")

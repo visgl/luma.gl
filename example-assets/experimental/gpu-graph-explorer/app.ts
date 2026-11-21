@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: Copyright (c) vis.gl contributors
 
-import {TabbedPanel} from '@deck.gl-community/panels';
 import {Buffer, Texture, type Device} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, type AnimationProps} from '@luma.gl/engine';
 import {
@@ -14,20 +13,20 @@ import {
   type CompiledGPUCommandGraph,
   type GPUReadbackTicket,
   type GraphBufferUse
-} from '@luma.gl/graph/gpu-core';
+} from '@luma.gl/gpgpu/gpu-core';
 import {
-  GPUGraphAlgorithmsData,
-  GPUGraphAlgorithmsBreadthFirstSearch,
-  GPUGraphAlgorithmsConnectedComponents,
-  GPUGraphAlgorithmsDegree,
-  GPUGraphAlgorithmsForceLayout,
-  GPUGraphAlgorithmsLabelPropagation,
-  GPUGraphAlgorithmsPageRank,
-  GPUGraphAlgorithmsSpatialForceLayout,
-  GPUGraphAlgorithmsTopology,
-  type GPUGraphAlgorithmsAdjacency
-} from '@luma.gl/graph/gpu-graph-algorithms';
-import {GPUData, GPUVector} from '@luma.gl/graph/gpu-data';
+  GPUGraph,
+  GPUGraphBreadthFirstSearch,
+  GPUGraphConnectedComponents,
+  GPUGraphDegree,
+  GPUGraphForceLayout,
+  GPUGraphLabelPropagation,
+  GPUGraphPageRank,
+  GPUGraphSpatialForceLayout,
+  GPUGraphTopology,
+  type GPUGraphAdjacency
+} from '@luma.gl/gpgpu/gpu-graph';
+import {GPUData, GPUVector} from '@luma.gl/gpgpu/gpu-data';
 import {
   ExamplePanelManager,
   makeExamplePanelHostHtml,
@@ -48,7 +47,6 @@ import {
   type GraphExplorerLayoutMode,
   type GraphExplorerNodeSizeMode
 } from './graph-data';
-import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {addGraphExplorerSampledLayoutToGraph} from './graph-scale-layout';
 import {
   GRAPH_EXPLORER_EDGE_SHADER,
@@ -96,15 +94,15 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   static props = {createFramebuffer: true, debug: true};
 
   readonly device: Device;
-  graph!: GPUGraphAlgorithmsData;
-  topology!: GPUGraphAlgorithmsTopology;
-  degree!: GPUGraphAlgorithmsDegree;
-  pageRank!: GPUGraphAlgorithmsPageRank;
-  components!: GPUGraphAlgorithmsConnectedComponents;
-  communities!: GPUGraphAlgorithmsLabelPropagation;
-  search!: GPUGraphAlgorithmsBreadthFirstSearch;
-  layout!: GPUGraphAlgorithmsForceLayout;
-  spatialLayout: GPUGraphAlgorithmsSpatialForceLayout | null = null;
+  graph!: GPUGraph;
+  topology!: GPUGraphTopology;
+  degree!: GPUGraphDegree;
+  pageRank!: GPUGraphPageRank;
+  components!: GPUGraphConnectedComponents;
+  communities!: GPUGraphLabelPropagation;
+  search!: GPUGraphBreadthFirstSearch;
+  layout!: GPUGraphForceLayout;
+  spatialLayout: GPUGraphSpatialForceLayout | null = null;
   activeLayoutMode: 'exact' | 'spatial' | 'sampled' = 'exact';
   pointMode = false;
   nodeModel!: Model;
@@ -121,7 +119,6 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   private readonly viewUniforms: Buffer;
   private readonly readbackRing: GPUReadbackRing;
   private readonly panels: ExamplePanelManager;
-  private readonly diagnostics = new GPUGraphDiagnostics();
   private readonly pointModeOverride: boolean | undefined;
   private readonly maxVisibleEdges: number;
   private seeds!: GPUVector<'uint32'>;
@@ -155,6 +152,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   private dragging = false;
   private lastPointer: [number, number] | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  private canvasTouchAction = '';
   private statusElement: HTMLElement | null = null;
   private graphSizeElement: HTMLElement | null = null;
   private controlsRoot: HTMLElement | null = null;
@@ -206,18 +204,11 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     }
     this.initializeGraph(initialDataset);
     this.panels = new ExamplePanelManager({
-      panel: new TabbedPanel({
-        id: 'graph-explorer-panels',
-        panels: [
-          makeHtmlCustomPanel({
-            id: 'gpu-graph-explorer-controls',
-            title: 'GPU Graph Explorer',
-            html: this.getControlsHtml(),
-            onRender: root => this.attachControls(root)
-          }),
-          this.diagnostics.inspectorPanel.panel,
-          this.diagnostics.tracePanel.panel
-        ]
+      panel: makeHtmlCustomPanel({
+        id: 'gpu-graph-explorer-controls',
+        title: 'GPU Graph Explorer',
+        html: this.getControlsHtml(),
+        onRender: root => this.attachControls(root)
       })
     });
     this.panels.mount();
@@ -300,7 +291,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
       this.pointModeOverride ?? dataset.vertexCount >= GRAPH_EXPLORER_POINT_VERTEX_COUNT;
     const sourceVertices = this.createChunkedVector('source-vertices', dataset.sourceChunks);
     const targetVertices = this.createChunkedVector('target-vertices', dataset.targetChunks);
-    this.graph = new GPUGraphAlgorithmsData({
+    this.graph = new GPUGraph({
       vertexCount: dataset.vertexCount,
       sourceVertices,
       targetVertices,
@@ -309,7 +300,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
 
     const forward = this.createAdjacency('forward', dataset.vertexCount, this.graph.edgeCount);
     const reverse = this.createAdjacency('reverse', dataset.vertexCount, this.graph.edgeCount);
-    this.topology = new GPUGraphAlgorithmsTopology({
+    this.topology = new GPUGraphTopology({
       id: 'gpu-graph-explorer-topology',
       graph: this.graph,
       forward,
@@ -317,12 +308,12 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
       invalidEdgeCount: this.createScalarVector('invalid-edges', 'uint32', 1)
     });
 
-    this.degree = new GPUGraphAlgorithmsDegree({
+    this.degree = new GPUGraphDegree({
       id: 'gpu-graph-explorer-degree',
       topology: this.topology,
       output: this.createScalarVector('vertex-degrees', 'uint32', dataset.vertexCount)
     });
-    this.pageRank = new GPUGraphAlgorithmsPageRank({
+    this.pageRank = new GPUGraphPageRank({
       id: 'gpu-graph-explorer-page-rank',
       topology: this.topology,
       output: this.createScalarVector('vertex-importance', 'float32', dataset.vertexCount),
@@ -333,14 +324,14 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
           ? 8
           : 16
     });
-    this.components = new GPUGraphAlgorithmsConnectedComponents({
+    this.components = new GPUGraphConnectedComponents({
       id: 'gpu-graph-explorer-components',
       topology: this.topology,
       output: this.createScalarVector('vertex-components', 'uint32', dataset.vertexCount),
       converged: this.createScalarVector('components-converged', 'uint32', 1),
       iterations: isLinearScale ? 4 : 12
     });
-    this.communities = new GPUGraphAlgorithmsLabelPropagation({
+    this.communities = new GPUGraphLabelPropagation({
       id: 'gpu-graph-explorer-communities',
       topology: this.topology,
       output: this.createScalarVector('community-labels', 'uint32', dataset.vertexCount),
@@ -358,7 +349,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
       'uint32',
       dataset.vertexCount
     );
-    this.search = new GPUGraphAlgorithmsBreadthFirstSearch({
+    this.search = new GPUGraphBreadthFirstSearch({
       id: 'gpu-graph-explorer-neighborhood',
       topology: this.topology,
       seeds: this.seeds,
@@ -380,7 +371,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     this.pinned = this.createScalarVector('pinned-vertices', 'uint32', dataset.vertexCount);
     this.reset = this.createScalarVector('reset-layout', 'uint32', 1, [0]);
     const useSampledForce = this.layoutMode === 'sampled' || isLinearScale;
-    this.layout = new GPUGraphAlgorithmsForceLayout({
+    this.layout = new GPUGraphForceLayout({
       id: 'gpu-graph-explorer-layout',
       topology: this.topology,
       positions,
@@ -406,7 +397,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     if (useSpatialLayout) {
       const gridSize = getGraphExplorerGridSize(dataset.vertexCount);
       const cellCount = gridSize[0] * gridSize[1];
-      this.spatialLayout = new GPUGraphAlgorithmsSpatialForceLayout({
+      this.spatialLayout = new GPUGraphSpatialForceLayout({
         id: 'gpu-graph-explorer-spatial-layout',
         layout: this.layout,
         gridSize,
@@ -443,6 +434,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   override async onInitialize({canvas}: AnimationProps): Promise<void> {
     if (canvas instanceof HTMLCanvasElement) {
       this.canvas = canvas;
+      this.canvasTouchAction = canvas.style.touchAction;
       canvas.style.cursor = 'grab';
       canvas.style.touchAction = 'none';
       canvas.addEventListener('pointerdown', this.handlePointerDown);
@@ -471,22 +463,17 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     this.writeViewUniforms(width, height);
 
     if (this.analyticsPending) {
-      const encoding = this.diagnostics.encode(this.analysisGraph, device.commandEncoder, {
-        parameters: undefined
-      });
+      const encoding = this.analysisGraph.encode(device.commandEncoder, {parameters: undefined});
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
       this.analyticsPending = false;
     } else if (this.nextAnalysisStage < this.analysisStages.length) {
-      const stage = this.analysisStages[this.nextAnalysisStage++];
-      const encoding = this.diagnostics.encode(stage, device.commandEncoder, {
+      const encoding = this.analysisStages[this.nextAnalysisStage++].encode(device.commandEncoder, {
         parameters: undefined
       });
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
     }
     if (this.searchGraph && this.searchPending) {
-      const encoding = this.diagnostics.encode(this.searchGraph, device.commandEncoder, {
-        parameters: undefined
-      });
+      const encoding = this.searchGraph.encode(device.commandEncoder, {parameters: undefined});
       cpuEncodeMilliseconds += encoding.stats.cpuEncodeTimeMilliseconds;
       this.searchPending = false;
     }
@@ -494,7 +481,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     const framebuffer = device
       .getDefaultCanvasContext()
       .getCurrentFramebuffer({depthStencilFormat: 'depth24plus'});
-    const frameEncoding = this.diagnostics.encode(this.frameGraph, device.commandEncoder, {
+    const frameEncoding = this.frameGraph.encode(device.commandEncoder, {
       parameters: {width, height},
       frameTextures: {
         [this.frameColorId]: {
@@ -516,7 +503,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
         const pointerSession = this.pendingPickSession;
         this.pendingPick = null;
         this.pendingPickSession = null;
-        const encoding = this.diagnostics.encode(this.pickingGraph, device.commandEncoder, {
+        const encoding = this.pickingGraph.encode(device.commandEncoder, {
           parameters: {pixel},
           buffers: {[this.pickingReadbackId]: ticket.buffer}
         });
@@ -542,6 +529,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
     this.pendingPick = null;
     this.pendingPickSession = null;
     if (this.canvas) {
+      this.canvas.style.touchAction = this.canvasTouchAction;
       this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
       this.canvas.removeEventListener('pointermove', this.handlePointerMove);
       this.canvas.removeEventListener('pointerup', this.handlePointerUp);
@@ -556,7 +544,6 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
 
   /** Releases graph-owned models and buffers exactly once while preserving the shared UI host. */
   private destroyGraph(): void {
-    this.diagnostics.clear();
     this.analysisGraph.destroy();
     this.frameGraph.destroy();
     this.pickingGraph.destroy();
@@ -948,11 +935,7 @@ export default class GPUGraphExplorerAnimationLoopTemplate extends AnimationLoop
   }
 
   /** Allocates every caller-owned topology/status vector without aliasing graph sources. */
-  private createAdjacency(
-    name: string,
-    vertexCount: number,
-    capacity: number
-  ): GPUGraphAlgorithmsAdjacency {
+  private createAdjacency(name: string, vertexCount: number, capacity: number): GPUGraphAdjacency {
     return {
       offsets: this.createScalarVector(`${name}-offsets`, 'uint32', vertexCount + 1),
       neighbors: this.createScalarVector(`${name}-neighbors`, 'uint32', capacity),

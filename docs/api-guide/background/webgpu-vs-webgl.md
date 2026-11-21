@@ -4,14 +4,14 @@
 
 Browsers expose two GPU APIs that matter to luma.gl applications: **WebGPU** and **WebGL 2**. WebGPU is the modern API and the direction browser GPU programming is moving. WebGL 2 is the older, widely deployed compatibility path. luma.gl supports both through the same `Device` API so applications can adopt WebGPU without giving up WebGL reach where it still matters.
 
-For most applications, register both backends and let luma.gl choose the best available device. `best-available` selects supported WebGPU before WebGL 2, independently of adapter array order. If the selected adapter fails during device creation, the promise rejects; applications that want to retry with WebGL 2 must do so explicitly.
+For most applications, register both backends and let luma.gl choose the best available device. luma.gl prefers WebGPU when the browser can create a WebGPU device, then falls back to WebGL.
 
 ```
 import {luma} from '@luma.gl/core';
 
-import {webgl2Adapter} from '@luma.gl/core/webgl';
+import {webglAdapter} from '@luma.gl/webgl';
 
-import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 
 
@@ -19,7 +19,7 @@ const device = await luma.createDevice({
 
   type: 'best-available',
 
-  adapters: [webgpuAdapter, webgl2Adapter],
+  adapters: [webgpuAdapter, webglAdapter],
 
   createCanvasContext: true
 

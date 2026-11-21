@@ -6,7 +6,7 @@ import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, PlaneGeometry} from '@luma.gl/engine';
-import {HTMLTexture} from '@luma.gl/engine/experimental/textures';
+import {HTMLTexture} from '@luma.gl/experimental';
 import {Matrix4} from '@math.gl/core';
 import {
   type Panel,
@@ -108,6 +108,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   });
   private readonly settingsPanel: ExampleSettingsPanelManager;
   private readonly canvas: HTMLInCanvasElement;
+  private readonly canvasTouchAction: string;
   private readonly supported: boolean;
   private activeFaceId: PrismFaceId = 'info';
   private dragPointerId: number | null = null;
@@ -131,6 +132,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
     this.canvas = device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     activePrismByCanvas.get(this.canvas)?.deactivateForReplacement();
+    this.canvasTouchAction = this.canvas.style.touchAction;
     activePrismByCanvas.set(this.canvas, this);
 
     this.supported = HTMLTexture.isSupported(device, this.canvas);
@@ -170,6 +172,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
     this.finalized = true;
+    this.canvas.style.touchAction = this.canvasTouchAction;
     this.settingsPanel.finalize();
     this.prismFaces.forEach(face => {
       renderExamplePanel(face.panelHostElement, null);

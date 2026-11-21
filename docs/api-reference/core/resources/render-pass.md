@@ -7,7 +7,7 @@
 To draw to the screen in luma.gl, simply create a `RenderPass` by calling `device.beginRenderPass()` and start rendering. When done rendering, call `renderPass.end()`
 
 ```
-  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext
+  // A renderpass without parameters uses the default framebuffer of the device's default CanvasContext 
 
   const renderPass = device.beginRenderPass();
 
@@ -18,17 +18,17 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling `devic
   device.submit();
 ```
 
-`device.getDefaultCanvasContext().getCurrentFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to:
+`device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to:
 
 ```
-  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getCurrentFramebuffer()});
+  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
 
   ...
 ```
 
 ### Clearing the screen[​](#clearing-the-screen "Direct link to Clearing the screen")
 
-`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Set a clear property to boolean `false` to preserve that attachment.
+`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Clearing can also be disabled by setting `loadOp='load'`.
 
 ```
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
@@ -64,7 +64,7 @@ Depth and stencil buffers are also cleared to default values:
 
 If no value for the `viewport` parameter is provided, the following defaults will be applied.
 
-* If no `framebuffer` is specified, the size of the canvas drawing buffer will be used (`device.getDefaultCanvasContext().getDrawingBufferSize()`)
+* If no `framebuffer` is specified, the size of the canvas drawing buffer will be used (`device.getCanvasContext().getDrawingBufferSize()`)
 * If a framebuffer is specified, the `width` and `height` of the framebuffer will be used.
 
 ## Types[​](#types "Direct link to Types")
@@ -76,7 +76,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 | Property               | Type                                  | Default        | Description                                                                                                   |
 | ---------------------- | ------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
 | `framebuffer?`         | `Framebuffer \| null`                 | `null`         | Render target that receives the output of the pass. When omitted, the default canvas framebuffer is used.     |
-| `parameters?`          | `RenderPassParameters`                | `undefined`    | Dynamic render-pass parameters such as viewport, scissor rectangle, blend constant and stencil reference.     |
+| `parameters?`          | `RenderPassParameters`                | `undefined`    | Mutable pipeline parameters such as viewport, scissor rectangle, blend constant and stencil reference.        |
 | `clearColor?`          | `NumberArray4 \| TypedArray \| false` | `[0, 0, 0, 1]` | Color used to clear the default color attachment. Set to `false` to preserve the previous value.              |
 | `clearColors?`         | `(TypedArray \| false)[]`             | `undefined`    | Per-attachment clear values for multiple color attachments. Takes precedence over `clearColor` when provided. |
 | `clearDepth?`          | `number \| false`                     | `1`            | Depth value used when clearing the depth attachment. Set to `false` to preserve the previous depth.           |
@@ -92,7 +92,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 ## Members[​](#members "Direct link to Members")
 
 * `device`: `Device` - holds a reference to the `Device` that created this `RenderPass`.
-* `handle`: `unknown` - holds the backend render-pass handle
+* `handle`: `unknown` - holds the underlying WebGL or WebGPU shader object
 * `props`: `RenderPassProps` - holds a copy of the `RenderPassProps` used to create this `RenderPass`.
 
 ## Methods[​](#methods "Direct link to Methods")
@@ -103,7 +103,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 
 ### `end(): void`[​](#end-void "Direct link to end-void")
 
-Ends command encoding for the pass. Submit the encoder to execute WebGPU work; ending a pass does not itself submit it. `AnimationLoop` submits the default encoder after `onRender` returns.
+Must be called after all draw calls have been completed to guarantee rendering. Frees up any GPU resources associated with this render pass.
 
 ### `setPipeline(pipeline: RenderPipeline): void`[​](#setpipelinepipeline-renderpipeline-void "Direct link to setpipelinepipeline-renderpipeline-void")
 
@@ -121,7 +121,7 @@ Selects the vertex and index data used by subsequent draws.
 
 Draws with the active pipeline, bindings, and vertex array. `options` contains draw counts and offsets such as `vertexCount`, `indexCount`, `instanceCount`, `firstVertex`, and `firstIndex`.
 
-For indexed draws, `indexCount` takes precedence. When it is omitted, the active backend may use `vertexCount` as the indexed draw count for compatibility. `firstIndex` is measured in index elements; `firstVertex` applies to non-indexed draws. WebGL requires an index buffer when `indexCount` is supplied. A vertex array can be omitted for attribute-less non-indexed draws. WebGL requires `isInstanced: true` to use `instanceCount`; WebGPU infers instancing from the count. `baseVertex` and `firstInstance` are supported only on WebGPU.
+For indexed draws, `indexCount` takes precedence. When it is omitted, the active backend may use `vertexCount` as the indexed draw count for compatibility.
 
 ```
 renderPass.setPipeline(pipeline);
@@ -160,9 +160,3 @@ Removes a debug group (implementation dependent).
 ### `insertDebugMarker(markerLabel: string): void`[​](#insertdebugmarkermarkerlabel-string-void "Direct link to insertdebugmarkermarkerlabel-string-void")
 
 Adds a debug marker (implementation dependent).
-
-### `withParameters(parameters: RenderPassParameters, callback: () => T): T`[​](#withparametersparameters-renderpassparameters-callback---t-t "Direct link to withparametersparameters-renderpassparameters-callback---t-t")
-
-Runs a synchronous callback with temporary `viewport`, `scissorRect`, `blendConstant`, and/or `stencilReference` values. Restores prior state in `finally`, including when parameter setup or the callback throws. Nested scopes are supported. Set state through luma APIs; direct native-handle changes are not tracked. Render bundle encoders reject this operation because dynamic state belongs to the executing pass.
-
-WebGPU tracks copied parameter values, initialized from the attached texture view extent (including its mip level), a blend constant of `[0, 0, 0, 0]`, and stencil reference `0`. WebGL uses its existing state tracker, preserving inherited state such as a disabled scissor test.

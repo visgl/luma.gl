@@ -56,9 +56,7 @@ const loop = new AnimationLoop({
 
   onRender() {
 
-    const modelReason = model.needsRedraw();
-
-    const reason = applicationReason || modelReason;
+    const reason = applicationReason || model.needsRedraw();
 
     applicationReason = false;
 

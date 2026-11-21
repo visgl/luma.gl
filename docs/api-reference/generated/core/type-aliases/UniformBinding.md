@@ -2,7 +2,7 @@
 
 > **UniformBinding** = `object`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:171
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:228](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L228)
 
 Describes a uniform (sampler etc) binding for a program
 
@@ -12,7 +12,7 @@ Describes a uniform (sampler etc) binding for a program
 
 > **isArray**: `boolean`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:176
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:233](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L233)
 
 ***
 
@@ -20,7 +20,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:176
 
 > **location**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:172
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:229](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L229)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:172
 
 > **name**: `string`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:173
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:230](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L230)
 
 ***
 
@@ -36,7 +36,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:173
 
 > **size**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:174
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:231](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L231)
 
 ***
 
@@ -44,4 +44,4 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:174
 
 > **type**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:175
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:232](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L232)

@@ -2,7 +2,7 @@
 
 > **UniformBufferBindingLayout** = `object`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:54
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:80](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L80)
 
 ## Properties[​](#properties "Direct link to Properties")
 
@@ -10,7 +10,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:54
 
 > **group**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:59
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:85](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L85)
 
 Bind group index. Always 0 in WebGL
 
@@ -20,7 +20,7 @@ Bind group index. Always 0 in WebGL
 
 > `optional` **hasDynamicOffset?**: `boolean`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:64
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:90](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L90)
 
 ***
 
@@ -28,7 +28,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:64
 
 > **location**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:61
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:87](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L87)
 
 Binding index within the bind group
 
@@ -38,7 +38,7 @@ Binding index within the bind group
 
 > `optional` **minBindingSize?**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:65
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:91](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L91)
 
 ***
 
@@ -46,7 +46,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:65
 
 > **name**: `string`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:57
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:83](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L83)
 
 Name of the binding. Used by luma to map bindings by name
 
@@ -56,7 +56,7 @@ Name of the binding. Used by luma to map bindings by name
 
 > **type**: `"uniform"`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:55
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:81](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L81)
 
 ***
 
@@ -64,7 +64,7 @@ Defined in: modules/shaders/dist/types/shader-layout.d.ts:55
 
 > `optional` **uniforms?**: [`UniformInfo`](https://luma.gl/docs/api-reference/generated/core/type-aliases/UniformInfo.md)\[]
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:67
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:93](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L93)
 
 The uniforms in this uniform buffer
 
@@ -74,6 +74,6 @@ The uniforms in this uniform buffer
 
 > `optional` **visibility?**: `number`
 
-Defined in: modules/shaders/dist/types/shader-layout.d.ts:63
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:89](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L89)
 
 Which shader stages can access this binding

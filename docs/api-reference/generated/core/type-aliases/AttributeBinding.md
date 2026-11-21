@@ -2,7 +2,7 @@
 
 > **AttributeBinding** = `object`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:29](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L29)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:237](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L237)
 
 ## Deprecated[​](#deprecated "Direct link to Deprecated")
 
@@ -12,7 +12,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:29](https://git
 
 > **accessor**: `AccessorObject`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L32)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:240](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L240)
 
 ***
 
@@ -20,7 +20,7 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:32](https://git
 
 > **location**: `number`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:31](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L31)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:239](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L239)
 
 ***
 
@@ -28,4 +28,4 @@ Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:31](https://git
 
 > **name**: `string`
 
-Defined in: [modules/core/src/api/adapter/types/shader-layout.ts:30](https://github.com/visgl/luma.gl/blob/master/modules/core/src/api/adapter/types/shader-layout.ts#L30)
+Defined in: [modules/core/src/adapter/types/shader-layout.ts:238](https://github.com/visgl/luma.gl/blob/master/modules/core/src/adapter/types/shader-layout.ts#L238)

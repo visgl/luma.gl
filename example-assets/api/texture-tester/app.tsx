@@ -7,8 +7,8 @@ import {createRoot, type Root} from 'react-dom/client';
 
 import {type Device, luma} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {webgl2Adapter} from '@luma.gl/core/webgl';
-import {webgpuAdapter} from '@luma.gl/core/webgpu';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 import {createModel} from './components/compressed-texture';
 import {TextureTesterUI} from './texture-tester-ui';

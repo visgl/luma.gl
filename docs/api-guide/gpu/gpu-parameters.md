@@ -1,63 +1,116 @@
-# Using GPU parameters
+# Using GPU Parameters
 
 [Overview](https://luma.gl/docs/api-guide/gpu.md)[Rendering](https://luma.gl/docs/api-guide/gpu/gpu-rendering.md)[Antialiasing](https://luma.gl/docs/api-guide/gpu/gpu-antialiasing.md)[Parameters](https://luma.gl/docs/api-guide/gpu/gpu-parameters.md)[Bindings](https://luma.gl/docs/api-guide/gpu/gpu-bindings.md)
 
-GPU parameters control culling, depth and stencil tests, blending, and rasterization. Choose the owner from when the value needs to change:
+luma.gl provides a unified API for controlling GPU parameters providing control of GPU pipeline features such as culling, depth and stencil buffers, blending, clipping etc.
 
-| State                                                          | Where to set it                  | When it can change                                                                |
-| -------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------- |
-| Culling, depth tests, blending, multisampling                  | `RenderPipelineProps.parameters` | Create a different pipeline; Engine `Model.setParameters()` manages this for you. |
-| Clear values and read-only attachments                         | `RenderPassProps`                | Begin a new pass.                                                                 |
-| Viewport, scissor rectangle, blend constant, stencil reference | `renderPass.setParameters()`     | Between draws in the same pass.                                                   |
+## Usage[​](#usage "Direct link to Usage")
 
-## Configure a model[​](#configure-a-model "Direct link to Configure a model")
+To set up depth testing
 
 ```
-model.setParameters({
+const value = device.createRenderPipeline({
 
-  depthWriteEnabled: true,
+  parameters: {
 
-  depthCompare: 'less-equal',
+    depthWriteEnabled: true,
 
-  cullMode: 'back'
+    depthCompare: 'less-equal'
+
+  },
+```
+
+```
+const value = device.createRenderPipeline({
+
+  parameters: {
+
+    depthWriteEnabled: true,
+
+    depthCompare: 'less-equal'
+
+  },
+
+  targets: [
+
+    {
+
+      blendColor: ...,
+
+
+
+    }
+
+  ]
 
 });
 
 
 
-const renderPass = device.beginRenderPass({
+const framebuffer = device.createFramebuffer({
 
-  clearColor: [0, 0, 0, 1],
+  colorAttachments: {clearColor: [1, 0, 0]},
 
-  clearDepth: 1
+})
 
-});
 
-model.draw(renderPass);
 
-renderPass.end();
+const device.beginRenderPass({
 
-device.submit();
+  framebuffer,
+
+  parameters: {
+
+
+
+  }
+
+})
+
+
+
+renderPass.setPipeline(pipeline);
+
+renderPass.setParameters({viewport: MAIN_MAP})
+
+renderPass.draw();
+
+renderPass.setParameters({viewport: MINI_MAP})
+
+renderPass.draw();
 ```
 
-The target must have a depth attachment compatible with the pipeline's `depthFormat`. Inside `AnimationLoop.onRender`, the loop handles submission.
+## GPU Pipeline Overview[​](#gpu-pipeline-overview "Direct link to GPU Pipeline Overview")
 
-## Change a viewport between draws[​](#change-a-viewport-between-draws "Direct link to Change a viewport between draws")
+Parameters control the GPU pipeline and can be GPU Pipeline Stages
 
-```
-renderPass.setParameters({viewport: [0, 0, 800, 600]});
+Describes luma.gl setting names and values
 
-model.draw(renderPass);
+1. Vertex Fetch (buffers)
+2. Vertex Shader
+3. Primitive assembly (`topology`)
+4. Rasterization ([multisampling parameters](https://luma.gl/docs/api-guide/gpu/gpu-antialiasing.md))
+5. Fragment shader `Framebuffer`
+6. Stencil test and operation (stencil parameters)
+7. Depth test and write (depth parameters)
+8. Output merging, controlled by `Framebuffer`
 
-renderPass.setParameters({viewport: [600, 0, 200, 150]});
+## Parameter Mutability[​](#parameter-mutability "Direct link to Parameter Mutability")
 
-model.draw(renderPass);
-```
+Most luma.gl parameters are stored on the `RenderPipeline` or `RenderPass` classes which are either fully or partially immutable, meaning that parameters are fixed when these objects are created, and cannot be changed without creating new resources. The following table summarizes the situation:
 
-Viewport and scissor coordinates use drawing-buffer pixels, not CSS pixels. Use `scissorRect` to restrict writes; changing a viewport alone does not clip to its rectangle.
+| Parameter Mutability              | Examples                                          | Constraint                                                  |
+| --------------------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
+| Dynamic `RenderPass` parameters   | `viewport`, `scissor`, `blendConstant`            | Can be freely changed between draw calls.                   |
+| Fixed `RenderPass` parameters     | `clearColors`, `discard`, `depthClearValue`...    | Can not be changed. A new `RenderPass` must be created.     |
+| Fixed `RenderPipeline` parameters | `cullMode`, `frontFace`, `depthWriteEnabled`, ... | Can not be changed. A new `RenderPipeline` must be created. |
 
-## Next steps[​](#next-steps "Direct link to Next steps")
+## Dynamic RenderPass Parameters[​](#dynamic-renderpass-parameters "Direct link to Dynamic RenderPass Parameters")
 
-* [GPU parameter reference](https://luma.gl/docs/api-reference/core/parameters.md) lists accepted values.
-* [Rendering](https://luma.gl/docs/api-guide/gpu/gpu-rendering.md) explains targets, passes, and submission.
-* [Antialiasing](https://luma.gl/docs/api-guide/gpu/gpu-antialiasing.md) explains sampling choices.
+The only parameters that can be changed at any time (using `renderPass.setParameters()`) are viewport size, scissor rectangle, and blend constant
+
+## Fixed RenderPass Parameters[​](#fixed-renderpass-parameters "Direct link to Fixed RenderPass Parameters")
+
+A `RenderPass` holds parameters specifying how color and depth / stencil attachments should be cleared (clear colors, values), discarded etc.
+
+Note that there is no explicit `clear` function in the luma.gl v9 API. Instead attachments are cleared when a `RenderPass` is created (begins),

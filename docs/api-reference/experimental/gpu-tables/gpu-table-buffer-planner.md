@@ -11,7 +11,13 @@ The planner does not inspect Arrow vectors, allocate GPU buffers, upload data, p
 ## Usage[​](#usage "Direct link to Usage")
 
 ```
-import {GPUTableBufferPlanner, type GPUTableColumnDescriptor} from '@luma.gl/graph/gpu-tables';
+import {
+
+  GPUTableBufferPlanner,
+
+  type GPUTableColumnDescriptor
+
+} from '@luma.gl/experimental/gpu-tables';
 
 
 

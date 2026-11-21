@@ -59,7 +59,7 @@ Treat `needsRedraw()` as an invalidation signal. State changes set it; reading i
 * Add [interaction](https://luma.gl/docs/api-guide/engine/interactivity.md) for orbit controls, GPU picking, and hover/selection feedback.
 * Add a [scenegraph](https://luma.gl/docs/api-guide/engine/scenegraph.md) when parent/child transforms and traversal are genuinely useful.
 * Add [animation](https://luma.gl/docs/api-guide/engine/animation.md) for clips, tracks, blending, and morphs.
-* Add [compute helpers](https://luma.gl/docs/api-guide/engine/transforms.md) for a bounded compute or transform workflow; use GPU Core for a multi-stage scheduled dataflow.
+* Add [compute helpers](https://luma.gl/docs/api-guide/engine/transforms.md) for a bounded compute or transform workflow; use GPU scheduling for a multi-stage scheduled dataflow.
 
 ## A minimal rendering shape[​](#a-minimal-rendering-shape "Direct link to A minimal rendering shape")
 
@@ -126,7 +126,7 @@ The exact shader source differs between WebGPU and WebGL 2. The lifecycle does n
 * **One model or a scenegraph?** Prefer a direct list of models until hierarchy, transform propagation, or traversal adds value.
 * **Continuous loop or on-demand frames?** Render continuously only for active animation or streaming. Otherwise schedule a frame when invalidated.
 * **Engine helper or Core?** Drop to Core when exact pass, resource, or synchronization control is the point of the work.
-* **Engine helper or GPU Core?** A helper suits one bounded operation. A graph suits several operations with shared resources, dependencies, indirect counts, or multi-frame budgets.
+* **Engine helper or GPU scheduling?** A helper suits one bounded operation. A graph suits several operations with shared resources, dependencies, indirect counts, or multi-frame budgets.
 
 ## Common mistakes[​](#common-mistakes "Direct link to Common mistakes")
 
@@ -142,4 +142,4 @@ The exact shader source differs between WebGPU and WebGL 2. The lifecycle does n
 * Start from the [Engine cookbook](https://luma.gl/docs/api-guide/engine/cookbook.md).
 * Use the [Engine API overview](https://luma.gl/docs/api-reference/engine.md) to find exact contracts.
 * Drop to the [Core programming guide](https://luma.gl/docs/api-guide/gpu.md) for resource and command control.
-* Move to [GPU Core](https://luma.gl/docs/api-reference/experimental/gpu-core.md) when the workload becomes a scheduled GPU pipeline rather than a collection of draws.
+* Move to GPU scheduling when the workload becomes a scheduled GPU pipeline rather than a collection of draws.

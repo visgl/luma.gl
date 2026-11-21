@@ -2,7 +2,7 @@
 
 > **DataTypeInfo**<`T`> = `object`
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:32](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L32)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:37](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L37)
 
 Returns information about a signed or normalized DataType
 
@@ -18,7 +18,7 @@ Returns information about a signed or normalized DataType
 
 > **byteLength**: `DataTypeByteLengthT`<`T`>
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:38](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L38)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:43](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L43)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:38](https://g
 
 > **integer**: `DataTypeIsIntegerT`<`T`>
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:42](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L42)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:47](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L47)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:42](https://g
 
 > **normalized**: `DataTypeIsNormalizedT`<`T`>
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:40](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L40)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:45](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L45)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:40](https://g
 
 > **primitiveType**: [`PrimitiveDataTypeT`](https://luma.gl/docs/api-reference/generated/core/type-aliases/PrimitiveDataTypeT.md)<`T`>
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:36](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L36)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:41](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L41)
 
 The primitive data type (what the shader sees)
 
@@ -52,7 +52,7 @@ The primitive data type (what the shader sees)
 
 > **signed**: `DataTypeIsSignedT`<`T`>
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:44](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L44)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:49](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L49)
 
 ***
 
@@ -60,6 +60,6 @@ Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:44](https://g
 
 > **signedType**: [`SignedDataTypeT`](https://luma.gl/docs/api-reference/generated/core/type-aliases/SignedDataTypeT.md)<`T`>
 
-Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:34](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L34)
+Defined in: [modules/core/src/shadertypes/data-types/data-types.ts:39](https://github.com/visgl/luma.gl/blob/master/modules/core/src/shadertypes/data-types/data-types.ts#L39)
 
 The corresponding data type without normalization

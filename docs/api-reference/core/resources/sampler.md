@@ -88,12 +88,6 @@ Mobile
 // Loading source…
 ```
 
-0
-
-<!-- -->
-
-s
-
 Scroll page · Ctrl/⌘ + scroll to interact
 
 #### Texture Wrapping[​](#texture-wrapping "Direct link to Texture Wrapping")
