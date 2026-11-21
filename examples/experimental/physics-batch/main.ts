@@ -5,7 +5,7 @@ import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/core/webgpu';
 import {GPUGraphDiagnostics} from '../../gpu-graph-diagnostics';
 import {createRigidBodyPanel} from '../gpu-rigid-body-world/info-box';
-import {runBatchBenchmark} from './batch-benchmark';
+import {runBatchBenchmark, type BatchBenchmarkScene} from './batch-benchmark';
 
 const diagnostics = new GPUGraphDiagnostics();
 const panel = createRigidBodyPanel(
@@ -65,12 +65,46 @@ button.onclick = async () => {
           `${name}: CPU ${timing.cpuEncodeMilliseconds.toFixed(2)} ms / GPU ${timing.gpuMilliseconds?.toFixed(2) ?? 'unavailable'} ms`
       )
       .join('\n');
-    status.textContent = `Active worlds: ${report.activeWorlds}/${report.options.worlds}\nComplete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds === null ? 'not retained' : `${report.reuseMilliseconds.toFixed(1)} ms`}\nReused slots: ${report.afterReuse.reusedSlots}\nLast-step active bodies: ${work?.activeBodies ?? 'unavailable'}\nVisited / journaled contacts: ${work?.visitedContacts ?? 'unavailable'} / ${work?.journaledContacts ?? 'unavailable'}\nTouched hash buckets: ${work?.touchedBuckets ?? 'unavailable'}\nSnapshot bytes: ${work ? work.bodySnapshotBytes + work.contactSnapshotBytes + work.allocatorSnapshotBytes : 'unavailable'}\n\nSeparate profiling sample:\n${breakdown}`;
+    status.textContent = `Active worlds: ${report.activeWorlds}/${report.options.worlds}\nComplete: ${report.complete}\nBatch p50 / p95: ${report.latencyMilliseconds.p50.toFixed(2)} / ${report.latencyMilliseconds.p95.toFixed(2)} ms\nBody-steps/s: ${report.bodyStepsPerSecond?.toFixed(0) ?? 'incomplete'}\nResident: ${(report.afterReuse.residentBytes / 1048576).toFixed(1)} MiB\nSetup: ${report.setupMilliseconds.toFixed(0)} ms\nRecycle: ${report.reuseMilliseconds === null ? 'not retained' : `${report.reuseMilliseconds.toFixed(1)} ms`}\nReused slots: ${report.afterReuse.reusedSlots}\nLast-step active bodies: ${work?.activeBodies ?? 'unavailable'}\nVisited / journaled contacts: ${work?.visitedContacts ?? 'unavailable'} / ${work?.journaledContacts ?? 'unavailable'}\nTouched hash buckets: ${work?.touchedBuckets ?? 'unavailable'}\nSnapshot bytes: ${work ? work.bodySnapshotBytes + work.contactSnapshotBytes + work.allocatorSnapshotBytes + work.vehicleSnapshotBytes : 'unavailable'}\n\nSeparate profiling sample:\n${breakdown}`;
+    if (report.vehiclesPerWorld)
+      status.textContent += `\nVehicle-steps/s: ${report.vehicleStepsPerSecond?.toFixed(0) ?? 'incomplete'}`;
     canvas.width = innerWidth * devicePixelRatio;
     canvas.height = innerHeight * devicePixelRatio;
     const context = canvas.getContext('2d')!;
     context.fillStyle = '#101820';
     context.fillRect(0, 0, canvas.width, canvas.height);
+    if (report.vehiclesPerWorld) {
+      const patchExtent = report.vehiclesPerWorld * 4;
+      const scale = Math.min(canvas.width, canvas.height) / Math.max(40, patchExtent + 8);
+      context.fillStyle = '#253742';
+      context.fillRect(
+        canvas.width / 2 - 100 * scale,
+        canvas.height / 2 - (patchExtent * scale) / 2,
+        200 * scale,
+        patchExtent * scale
+      );
+      context.fillStyle = '#6a8795';
+      context.fillRect(
+        canvas.width / 2 - 1,
+        canvas.height / 2 - (patchExtent * scale) / 2,
+        2,
+        patchExtent * scale
+      );
+      context.fillStyle = '#70bcdf';
+      for (const state of report.states.slice(2)) {
+        context.save();
+        context.translate(
+          canvas.width / 2 + state.position[0] * scale,
+          canvas.height / 2 - state.position[1] * scale
+        );
+        const [x, y, z, w] = state.orientation;
+        context.rotate(-Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)));
+        context.fillRect(-1.3 * scale, -0.65 * scale, 2.6 * scale, 1.3 * scale);
+        context.restore();
+      }
+      exportButton.disabled = false;
+      return;
+    }
     const width = Math.ceil(Math.sqrt(number('bodies')));
     const scale = Math.min(canvas.width, canvas.height) / (width * 2 + 4);
     context.fillStyle = '#70bcdf';
@@ -103,7 +137,12 @@ exportButton.onclick = () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-function getScenario(): 'sparse' | 'pile' | 'sleeping' | 'wake-storm' {
+function getScenario(): BatchBenchmarkScene {
   const value = document.querySelector<HTMLSelectElement>('#scene')!.value;
-  return value === 'pile' || value === 'sleeping' || value === 'wake-storm' ? value : 'sparse';
+  return value === 'pile' ||
+    value === 'sleeping' ||
+    value === 'wake-storm' ||
+    value === 'vehicle-fleet'
+    ? value
+    : 'sparse';
 }

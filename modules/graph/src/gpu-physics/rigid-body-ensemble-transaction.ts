@@ -10,6 +10,7 @@ import {
 
 import {Buffer} from '@luma.gl/core';
 
+import {VEHICLE_STRIDE} from './rigid-body-vehicle';
 import {getEnsembleContactLayout} from './rigid-body-ensemble-layout';
 import type {GPUCommandGraph, GraphBufferHandle} from '../gpu-core/gpu-command-graph';
 
@@ -25,7 +26,8 @@ export function addEnsembleCheckpoint<GraphParameters>(
   manifolds: Resource,
   bodiesPerInstance: number,
   maximumPairs: number,
-  allocate: (name: string, byteLength: number) => Buffer
+  allocate: (name: string, byteLength: number) => Buffer,
+  vehicles?: {state: Resource; vehiclesPerInstance: number}
 ) {
   const bodyCount = states[0].buffer.byteLength / 16;
   const instances = bodyCount / bodiesPerInstance;
@@ -53,6 +55,12 @@ export function addEnsembleCheckpoint<GraphParameters>(
   const snapshots = states
     .slice(0, 5)
     .map((state, index) => importAllocation(`checkpoint-${index}`, state.buffer.byteLength));
+  const vehicleSnapshot =
+    vehicles &&
+    importAllocation(
+      'checkpoint-vehicles',
+      instances * vehicles.vehiclesPerInstance * VEHICLE_STRIDE
+    );
   const validity = importAllocation('state-validity', bodyCount * 4);
   type Input = Resource & {name: string; writable?: boolean; atomic?: boolean};
   const addCompute = (name: string, inputs: Input[], source: string, indirect = false) => {
@@ -98,6 +106,28 @@ export function addEnsembleCheckpoint<GraphParameters>(
   };
   const bodyAddress = `let work=invocation.x;if(work>=ensemble[0]*${bodiesPerInstance}u){return;}
  let body=ensemble[${16 + instances * 8}u+work/${bodiesPerInstance}u]*${bodiesPerInstance}u+work%${bodiesPerInstance}u;`;
+  const copyVehicleState = (restore: boolean) => {
+    if (!vehicles || !vehicleSnapshot) return;
+    const count = vehicles.vehiclesPerInstance;
+    addCompute(
+      restore ? 'rollback-vehicles' : 'checkpoint-vehicles',
+      [
+        {...vehicles.state, name: 'vehicle', writable: restore},
+        {...vehicleSnapshot, name: 'snapshot', writable: !restore},
+        {...ensemble, name: 'ensemble'},
+        ...(restore ? [{...statistics, name: 'statistics'}] : [])
+      ],
+      `@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
+ ${restore ? 'if(statistics[1]==0u&&statistics[15]==0u){return;}' : ''}
+ let work=invocation.x;if(work>=ensemble[0]*${count}u){return;}
+ let row=(ensemble[${16 + instances * 8}u+work/${count}u]*${count}u+work%${count}u)*${VEHICLE_STRIDE / 4}u;
+ for(var word=0u;word<${VEHICLE_STRIDE / 4}u;word++){
+  ${restore ? 'vehicle[row+word]=snapshot[row+word];' : 'snapshot[row+word]=vehicle[row+word];'}
+ }
+}`,
+      true
+    );
+  };
   const save = () => {
     addCompute(
       'checkpoint-metadata',
@@ -117,6 +147,7 @@ export function addEnsembleCheckpoint<GraphParameters>(
  }
 }`
     );
+    copyVehicleState(false);
     states.slice(0, 5).forEach((state, index) =>
       addCompute(
         `checkpoint-${index}`,
@@ -177,6 +208,7 @@ export function addEnsembleCheckpoint<GraphParameters>(
  if(invocation.x<5u){targets[${bodyCount * 8}u+invocation.x]=targets[${savedHeaderOffset}u+invocation.x];}
 }`
     );
+    copyVehicleState(true);
     states.slice(0, 5).forEach((state, index) =>
       addCompute(
         `rollback-${index}`,

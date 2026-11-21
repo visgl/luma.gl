@@ -33,6 +33,8 @@ export class GPUPhysicsEnsemble {
   readonly world: GPURigidBodyWorld;
   readonly bodiesPerInstance: number;
   readonly instances: number;
+  /** Number of chassis in each copy of the template. */
+  readonly vehiclesPerInstance: number;
   private graph!: CompiledGPUCommandGraph<undefined>;
   private encoding?: GPUCommandGraphEncoding;
   private destroyed = false;
@@ -59,6 +61,9 @@ export class GPUPhysicsEnsemble {
       template.collisionPartitionSize
     )
       throw new Error('Invalid ensemble layout');
+    if (template.vehicle && template.vehicles) throw new Error('Choose vehicle or vehicles');
+    const templateVehicles = template.vehicles ?? (template.vehicle ? [template.vehicle] : []);
+    this.vehiclesPerInstance = templateVehicles.length;
     this.instances = props.instances;
     this.bodiesPerInstance = template.bodies.length;
     // Repeated mesh references intentionally survive the world's single structured clone.
@@ -79,6 +84,17 @@ export class GPUPhysicsEnsemble {
     this.world = new GPURigidBodyWorld({
       ...template,
       bodies,
+      vehicle: undefined,
+      vehicles: Array.from({length: props.instances}, (_, instance) =>
+        templateVehicles.map(vehicle => ({
+          ...vehicle,
+          chassis: vehicle.chassis + instance * this.bodiesPerInstance,
+          terrainCollider: vehicle.terrainCollider + instance * colliderCount,
+          additionalTerrainColliders: vehicle.additionalTerrainColliders?.map(
+            collider => collider + instance * colliderCount
+          )
+        }))
+      ).flat(),
       publicationBounds: template.publicationBounds
         ? Array.from({length: props.instances}, () => template.publicationBounds!).flat()
         : undefined,
@@ -123,6 +139,30 @@ export class GPUPhysicsEnsemble {
     )
       throw new Error('Invalid ensemble body');
     return instance * this.bodiesPerInstance + body;
+  }
+
+  /** Map a template vehicle to its index for telemetry and GPU wheel poses. */
+  getVehicleIndex(instance: number, vehicle: number): number {
+    this.getBodyIndex(instance, 0);
+    if (!Number.isSafeInteger(vehicle) || vehicle < 0 || vehicle >= this.vehiclesPerInstance)
+      throw new Error('Invalid ensemble vehicle');
+    return instance * this.vehiclesPerInstance + vehicle;
+  }
+
+  /** Update one vehicle, waking only its instance and respecting its enabled flag. */
+  setVehicleControls(
+    instance: number,
+    vehicle: number,
+    throttle: number,
+    steering: number,
+    brake: number
+  ): void {
+    this.world.setVehicleControls(
+      throttle,
+      steering,
+      brake,
+      this.getVehicleIndex(instance, vehicle)
+    );
   }
 
   setActive(instance: number, active: boolean): void {

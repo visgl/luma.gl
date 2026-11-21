@@ -461,6 +461,20 @@ tile crossing from a GPU checkpoint. This is same-device checkpoint evidence.
 Cross-adapter repeatability, streaming terrain residency, and larger-scale throughput
 remain open.
 
+### Independent-world vehicle qualification across G10–G12
+
+Vehicle templates replicate chassis indices and terrain tile indices per collision partition.
+A single indirect suspension pass visits scheduled instances. Shared-step rollback restores
+wheel state and chassis state together, and individual reset restores vehicle inputs, telemetry
+and GPU wheel poses from the template image.
+
+The Physics Batch Lab compares a tiled vehicle workload across fused, batched and separate
+submissions. It reports active vehicle steps per second, wheel snapshot bytes and suspension
+timing when adapter timestamps are available. Qualification covers overlapping fleet coordinates,
+terrain movement scoped to one instance, pause and resume, reset and shared contact overflow.
+The workload measures browser and adapter throughput without claiming calibrated tire response.
+Cross-adapter fleet results, streaming terrain residency and articulated ensembles remain open.
+
 ### G9. Articulations and mechanism quality
 
 Extend beyond proposal-joint conformance to demanding connected mechanisms. Evaluate

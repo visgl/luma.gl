@@ -38,11 +38,13 @@ export async function profileEnsemble(
           ? 'broadPhase'
           : /ensemble/.test(node.id)
             ? 'scheduling'
-            : /prepare|collide|mesh/.test(node.id)
-              ? 'contacts'
-              : /parallel|solve/.test(node.id)
-                ? 'solver'
-                : 'other';
+            : /suspension/.test(node.id)
+              ? 'suspension'
+              : /prepare|collide|mesh/.test(node.id)
+                ? 'contacts'
+                : /parallel|solve/.test(node.id)
+                  ? 'solver'
+                  : 'other';
       groups[category] ??= {
         cpuEncodeMilliseconds: 0,
         gpuMilliseconds: null,

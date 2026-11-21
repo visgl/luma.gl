@@ -319,6 +319,22 @@ limits. Joints, authored triggers and CCD are currently rejected. Queries inspec
 map returned global body indices back to instance ranges. Eviction and per-instance streaming are
 not provided. Whole-world checkpoint/capture APIs remain available on `ensemble.world`.
 
+A template can include either `vehicle` or `vehicles`. Give each chassis and terrain collider
+an index within the template. The ensemble maps them to the matching body and colliders of
+each instance, including additional terrain tiles. Use instance-local controls and the
+existing GPU wheel-pose ranges to draw each vehicle.
+
+```typescript
+ensemble.setVehicleControls(42, 0, 0.7, 0.1, 0); // Instance, vehicle, throttle, steering, brake
+const vehicle = ensemble.getVehicleIndex(42, 0);
+const wheelPoses = ensemble.world.getVehicleWheelPoses(vehicle);
+```
+
+Vehicle input schedules only the selected enabled instance. Inputs written while paused
+are applied on resume. A shared rejected step restores wheel telemetry and matrices,
+together with all participating bodies and their contact state. Standalone rigid-body
+worlds with `failurePolicy: 'rollback'` also retain vehicle state on rejected steps.
+
 `setActive(instance, false)` pauses an instance without changing its poses, velocities or cached
 contacts; `setActive(instance, true)` resumes it. A resumed sleeping instance remains asleep until
 `wake(instance)` or a world control wakes it. Kinematic instances remain scheduled even when
@@ -326,7 +342,7 @@ stationary, so new targets can take effect. Apply controls between submissions: 
 activation or reset after encoding work but before submitting it.
 
 `await reset(instance)` restores its creation-time body state, materials, collider transforms and
-pose metadata, clears its contact cache and counters, and preserves its enabled flag. Other
+pose metadata and vehicle controls and wheel state, clears its contact cache and counters, and preserves its enabled flag. Other
 instances are unchanged. Reset respects the current origin after rebasing. The reset excludes
 shared simulation diagnostics: after a latched shared failure, reconstruct the ensemble instead.
 While reset is pending, ensemble encoding, control and destruction are rejected. Do not bypass
@@ -338,6 +354,10 @@ Counters saturate at uint32 maximum and reset per instance. An active flag descr
 in the last step, not whether its bodies ended that step asleep. A shared failure is reported for
 all instances; this API does not identify which instance caused shared capacity exhaustion.
 
+`readWorkStatistics().vehicleSnapshotBytes` reports the vehicle rows copied for active
+instances during the last step. No wheel pose or telemetry readback is required for scheduling,
+rollback, or reset.
+
 One template-sized GPU reset image is retained automatically, regardless of instance count.
 `checkpointBytes` reports this image and its reset uniform. `residentBytes` includes it, world-owned
 buffers and graph scratch, excluding driver allocations and compilation peaks. Explicit checkpoints made
@@ -346,7 +366,7 @@ same cooked mesh object share packed vertex, triangle and BVH data within an ens
 mesh objects are not content-deduplicated. Shared metadata storage remains owned by the world.
 
 A GPU queue compacts enabled instances containing awake dynamic bodies or kinematics. Indirect
-integration, bounds generation and pose advancement visit only queued ranges. Broad-phase insertion
+integration, suspension, bounds generation and pose advancement visit only queued ranges. Broad-phase insertion
 and discovery use active collider hash buckets rather than sorting the whole population; collision
 domain and exact cell tests preserve isolation. Bucket traversal is separately bounded at 32 times
 `maximumCandidateTestsPerCollider`; exhausting either budget rejects the shared step and records
