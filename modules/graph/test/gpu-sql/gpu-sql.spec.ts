@@ -95,7 +95,14 @@ it('GPUSQL executes Arrow filters, derived columns, global ordering, and selecte
     expect(Array.from(orderedArrow.getChild('Fare') ?? []), '').toEqual([-20, -16]);
     expect(Array.from(orderedArrow.getChild('category') ?? []), '').toEqual(['premium', 'premium']);
 
+    expect(() =>
+      context
+        .query('SELECT fare FROM trips WHERE category = FLOOR(1.5)')
+        .compile(new GPUCommandGraph(device, {id: 'ludf-sql-numeric-mixed-format'}))
+    ).toThrow(/incompatible scalar column formats/);
+
     const numericCases = [
+      {expression: 'FLOOR(1.5)', expected: [1, 1, 1, 1]},
       {expression: 'ABS(-fare)', expected: [8, 3, 10, 11]},
       {expression: 'FLOOR(-fare - 0.5)', expected: [-9, -4, -11, -12]},
       {expression: 'CEILING(-fare - 0.5)', expected: [-8, -3, -10, -11]},

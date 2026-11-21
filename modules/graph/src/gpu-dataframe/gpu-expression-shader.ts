@@ -336,7 +336,7 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
       case 'ceiling':
       case 'round':
       case 'trunc': {
-        const format = this.inferFormat(operandNode) ?? expected ?? 'float32';
+        const format = this.inferFormat(operandNode) ?? 'float32';
         if (format === 'boolean' || (operator === 'abs' && format === 'sint32')) {
           throw new Error('GPUDataFrame scalar function requires a supported numeric format');
         }
@@ -440,9 +440,10 @@ class GPUQueryExpressionShaderPlanner<T extends GPUTypeMap> {
         return whenTrue ?? otherwise;
       }
       case 'unary':
-        return node.operator === 'negate' || isGPUScalarFunction(node.operator)
-          ? this.inferFormat(node.operand)
-          : 'boolean';
+        if (isGPUScalarFunction(node.operator)) {
+          return this.inferFormat(node.operand) ?? 'float32';
+        }
+        return node.operator === 'negate' ? this.inferFormat(node.operand) : 'boolean';
       case 'binary':
         if (
           node.operator === 'add' ||
