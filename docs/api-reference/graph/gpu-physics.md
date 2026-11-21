@@ -497,3 +497,65 @@ path. Moving-convex CCD continues to exclude terrain shapes. Ensembles can share
 immutable height fields, while independently resident worlds support streaming.
 Off-road Buggy streams collision tiles ahead of the chassis. Append `?terrain=mesh`
 to use the same rendered course with the cooked-mesh reference.
+
+### Provider-backed terrain windows
+
+Use `GPURigidBodyTerrainStream` when the app has a tile provider and a set of
+fixed height-field slots. A window describes the desired collider IDs, versioned
+tile keys and neighboring edges. The provider can decode network assets, adapt
+a math.gl height field, or serve data from the application's tile cache. The
+stream owns concurrency and cancellation. The application selects tiles and LOD,
+and supplies slot placement in one shared local metric frame.
+
+```typescript
+import {
+  GPURigidBodyTerrainStream,
+  makeRigidBodyTerrainFetchProvider,
+  makeRigidBodyHeightField
+} from '@luma.gl/graph/gpu-physics';
+
+const provider = makeRigidBodyTerrainFetchProvider({
+  getTileUrl: key => `/terrain/${encodeURIComponent(key)}.bin`,
+  async decode(response, key) {
+    const {heightField, tileAnchor} = await decodeTerrainTile(await response.arrayBuffer(), key);
+    return {
+      field: makeRigidBodyHeightField(heightField, tileAnchor),
+      position: tileAnchor
+    };
+  }
+});
+const stream = new GPURigidBodyTerrainStream(world, {provider, maximumConcurrentLoads: 4});
+
+// Slots 0 and 1 exist in the compiled world and match their tiles' sample dimensions.
+await stream.prepare({
+  tiles: [{collider: 0, key: 'west@3'}, {collider: 1, key: 'east@8'}],
+  seams: [{first: 0, firstEdge: 'last-column', second: 1, secondEdge: 'first-column'}]
+});
+
+// In the frame loop, between submissions and after pending queries:
+stream.apply();
+```
+
+The renderer can read the stitched CPU tile with `getTile(collider)`. Keep stream
+slots in the same body-local frame and reserve each slot at its expected resolution.
+For height fields in a global coordinate system, subtract the simulation origin from
+tile placement before publishing. Use one vertical datum and nearby tile anchors.
+
+A newer `prepare` cancels the previous request. It resolves to `false` for a canceled
+window and rejects on a provider or stitch error. The current window keeps
+supporting the simulation until `apply` publishes the replacement as a single
+slot-edit batch. Duplicated keys share a request across overlapping windows. Raw tiles are reused
+while their keys remain active. Change the key when the source content changes.
+Call `clear()` between submissions to cancel pending work and evict stream-owned
+slots. Use exclusive ownership of those slots, including when restoring checkpoints.
+
+Declared seams must have collinear boundaries, nested sample spacing, and a shared
+span that begins and ends at coarse sample knots. One coarse edge can meet multiple
+fine tiles. The fine boundary follows the coarse edge's piecewise-linear profile.
+The stitcher resolves coincident corner heights before interpolating intermediate
+samples, keeps missing-data gaps, and recomputes from raw samples when neighbors
+change. A slot with no declared seam uses its provider samples directly. Matching
+boundary heights permits a slope change across the seam.
+
+Open Off-road Buggy with `?terrain=mixed` for adjacent 17×17 and 33×33 grids.
+The bundled provider serves the same stitched samples used to render the course.
