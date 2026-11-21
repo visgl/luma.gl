@@ -20,6 +20,7 @@ struct RayTracingUniforms {
   sampling: vec4<u32>,
   imageRegion: vec4<u32>,
   emitters: vec4<u32>,
+  environmentRadiance: vec4<f32>,
 };
 
 struct RayPrimitive {
@@ -1765,6 +1766,52 @@ fn getSecondaryFootprint(ray: Ray, hit: RayHit, coneWidth: f32) -> f32 {
   return coneWidth / max(abs(dot(getFaceNormal(hit, ray), ray.direction)), 0.05);
 }
 
+const ENVIRONMENT_LIGHTING_ENABLED = /* ENVIRONMENT_LIGHTING_ENABLED */ false;
+const ENVIRONMENT_DIRECTION_DENSITY = 1.0 / (4.0 * PI);
+
+// A constant environment has uniform power per unit solid angle.
+fn evaluateEnvironmentLighting(ray: Ray, hit: RayHit, seed: u32, compareContinuation: bool) -> vec3<f32> {
+  if (!ENVIRONMENT_LIGHTING_ENABLED) { return vec3<f32>(0.0); }
+  let height = 1.0 - 2.0 * makeRandom(seed ^ 1231u);
+  let azimuth = 2.0 * PI * makeRandom(seed ^ 1597u);
+  let radius = sqrt(max(1.0 - height * height, 0.0));
+  let direction = vec3<f32>(radius * cos(azimuth), height, radius * sin(azimuth));
+  let face = getFaceNormal(hit, ray);
+  let faceLight = dot(face, direction);
+  let shadingNormal = getShadingNormal(hit);
+  let normal = select(shadingNormal, -shadingNormal, dot(hit.normal, ray.direction) > 0.0);
+  let normalLight = max(dot(normal, direction), 0.0);
+  let primitive = getShadedPrimitive(hit);
+  let diffuseTransmission = getDiffuseTransmission(primitive);
+  if (faceLight <= 0.0 && diffuseTransmission <= 0.0) { return vec3<f32>(0.0); }
+  let position = ray.origin + ray.direction * hit.distance;
+  let origin = position + face * select(-0.002, 0.002, faceLight > 0.0);
+  if (intersectsScene(Ray(origin, direction), RAY_INFINITY)) { return vec3<f32>(0.0); }
+  var response = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
+    0.96 * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0)) * normalLight / PI;
+  var materialDensity = normalLight / PI;
+  if (usePBRTransport()) {
+    if (faceLight < 0.0) {
+      response = getDiffuseTransmissionTint(primitive, hit, -ray.direction, abs(dot(face, ray.direction)), -faceLight) *
+        (-faceLight / PI) * diffuseTransmission;
+    } else {
+      response = evaluatePBRResponse(ray, hit, direction, primitive, normal);
+    }
+    if (PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u) {
+      response *= 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - clamp(primitive.emissive.w, 0.0, 1.0));
+    }
+    if (compareContinuation) {
+      materialDensity = getPBRDirectionDensity(ray, hit, primitive, normal, direction, faceLight);
+    }
+  }
+  let weight = getMISWeight(ENVIRONMENT_DIRECTION_DENSITY, select(0.0, materialDensity, compareContinuation));
+  return response * evaluateEnvironmentRadiance(hit.distance) * (weight / ENVIRONMENT_DIRECTION_DENSITY);
+}
+
+fn evaluateEnvironmentRadiance(receiverDistance: f32) -> vec3<f32> {
+  return uniforms.environmentRadiance.rgb * exp(-max(uniforms.fog.w, 0.0) * receiverDistance);
+}
+
 fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, sampleIndex: u32) -> vec3<f32> {
   var ray = primaryRay;
   var hit = primaryHit;
@@ -1786,6 +1833,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
   // An unshadowed connection and an occlusion-tested continuation estimate different integrals.
   let allowEmitterMIS = EMITTER_MIS_ENABLED && uniforms.settings.w > 0.5 && uniforms.emitters.y != 0u;
   radiance += evaluateEmitterLighting(ray, hit, pathSeed, allowEmitterMIS && uniforms.sampling.y > 0u);
+  radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u);
   for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let sample = samplePBRMaterial(ray, hit, pathSeed ^ (bounceIndex * 104729u));
     dielectricOnly = dielectricOnly && sample.delta;
@@ -1811,7 +1859,14 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     if (hit.distance >= RAY_INFINITY) {
       // A camera backdrop remains visible through smooth dielectric paths without
       // turning it into diffuse environment illumination.
-      if (dielectricOnly && medium == 0xffffffffu) { radiance += throughput * uniforms.background.rgb; }
+      if (medium == 0xffffffffu) {
+        if (ENVIRONMENT_LIGHTING_ENABLED) {
+          let weight = select(getMISWeight(sample.density, ENVIRONMENT_DIRECTION_DENSITY), 1.0, sample.delta);
+          radiance += throughput * weight * evaluateEnvironmentRadiance(receiverDistance);
+        } else if (dielectricOnly) {
+          radiance += throughput * uniforms.background.rgb;
+        }
+      }
       break;
     }
     if (medium != 0xffffffffu) {
@@ -1836,6 +1891,10 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
     }
     illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
       allowEmitterMIS && medium == 0xffffffffu && bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+    if (ENVIRONMENT_LIGHTING_ENABLED && medium == 0xffffffffu) {
+      illumination += evaluateEnvironmentLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
+        bounceIndex + 1u < min(uniforms.sampling.y, 8u));
+    }
     radiance += throughput * illumination;
   }
   return radiance;
@@ -1859,6 +1918,7 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
   let sequenceIndex = uniforms.acceleration.w * 16u + sampleIndex;
   let pathSeed = uniforms.sampling.x ^ (pixelIndex * 1973u) ^ (sequenceIndex * 26699u);
   radiance += evaluateEmitterLighting(ray, hit, pathSeed, uniforms.sampling.y > 0u);
+  radiance += evaluateEnvironmentLighting(ray, hit, pathSeed, PATH_BOUNCES_ENABLED && uniforms.sampling.y > 0u);
   for (var bounceIndex = 0u; PATH_BOUNCES_ENABLED && bounceIndex < min(uniforms.sampling.y, 8u); bounceIndex++) {
     let primitive = getShadedPrimitive(hit);
     throughput *= clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0)) *
@@ -1883,6 +1943,11 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
     ray = Ray(position + surfaceNormal * 0.002, normalize(direction));
     hit = intersectScene(ray, RAY_INFINITY);
     if (hit.distance >= RAY_INFINITY) {
+      if (ENVIRONMENT_LIGHTING_ENABLED) {
+        let density = max(dot(normal, ray.direction), 0.0) / PI;
+        let weight = getMISWeight(density, ENVIRONMENT_DIRECTION_DENSITY);
+        radiance += throughput * weight * evaluateEnvironmentRadiance(receiverDistance);
+      }
       break;
     }
     if (MATERIAL_HAS_MIPMAPS) {
@@ -1909,6 +1974,8 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
       illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
         bounceIndex + 1u < min(uniforms.sampling.y, 8u));
     }
+    illumination += evaluateEnvironmentLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
+      bounceIndex + 1u < min(uniforms.sampling.y, 8u));
     radiance += throughput * illumination;
   }
   return radiance;

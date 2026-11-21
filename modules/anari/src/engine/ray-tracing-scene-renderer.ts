@@ -58,7 +58,7 @@ const PRIMITIVE_FLOAT_COUNT = 100;
 const TRIANGLE_FLOAT_COUNT = 32;
 const BLAS_NODE_FLOAT_COUNT = 8;
 const LIGHT_FLOAT_COUNT = 16;
-const UNIFORM_FLOAT_COUNT = 80;
+const UNIFORM_FLOAT_COUNT = 84;
 const DEFAULT_RESOLUTION_SCALE = 0.5;
 const DEFAULT_MINIMUM_RESOLUTION_SCALE = 0.25;
 const DEFAULT_TARGET_FRAME_TIME_MILLISECONDS = 33.3;
@@ -499,6 +499,8 @@ export type RayTracingSceneRenderOptions = SceneRenderOptions & {
   emitterSampling?: boolean;
   /** Emitter selection distribution; defaults to uniform. Power uses area × luminance. */
   emitterSelection?: 'uniform' | 'power';
+  /** Constant linear RGB environment illumination, independent of the camera backdrop. */
+  environmentRadiance?: readonly [number, number, number];
   /** Accumulates primary-ray samples across unchanged committed frames. */
   progressive?: boolean;
   /** Traces direct-light shadow rays when enabled. */
@@ -627,6 +629,7 @@ type RayTracingPresentationOptions = {
 };
 
 type RayTracingShaderOptions = {
+  environmentLighting: boolean;
   pbrTransport: boolean;
   hasBounces: boolean;
   emitterSampling: boolean;
@@ -795,6 +798,7 @@ export class RayTracingSceneRenderer {
     );
     const presentation = getRayTracingPresentationOptions(this.device, options);
     const shaderOptions: RayTracingShaderOptions = {
+      environmentLighting: options.environmentRadiance?.some(channel => channel > 0) ?? false,
       pbrTransport: options.transportMode === 'pbr',
       hasBounces: (options.maxBounces ?? 0) >= 1,
       emitterSampling: options.emitterSampling ?? false
@@ -1101,6 +1105,7 @@ export class RayTracingSceneRenderer {
       );
     } else if (
       materialTexturesChanged ||
+      resources.shaderOptions.environmentLighting !== shaderOptions.environmentLighting ||
       resources.shaderOptions.pbrTransport !== shaderOptions.pbrTransport ||
       resources.shaderOptions.hasBounces !== shaderOptions.hasBounces ||
       resources.shaderOptions.emitterSampling !== shaderOptions.emitterSampling ||
@@ -3348,6 +3353,10 @@ export class RayTracingSceneRenderer {
             )
               .replace('/* PATH_BOUNCES_ENABLED */ true', String(props.shaderOptions.hasBounces))
               .replace(
+                '/* ENVIRONMENT_LIGHTING_ENABLED */ false',
+                String(props.shaderOptions.environmentLighting)
+              )
+              .replace(
                 '/* EMITTER_SAMPLING_ENABLED */ true',
                 String(props.shaderOptions.emitterSampling)
               )
@@ -3780,6 +3789,7 @@ function getRenderRevision(
     options.cameraProjection,
     cameraRevision,
     options.background,
+    options.environmentRadiance,
     options.exposure,
     options.fogColor,
     options.fogDensity,
@@ -4209,6 +4219,10 @@ function makeUniformData(props: {
   data.set(props.options.camera.position, 16);
   data[19] = props.options.cameraProjection === 'orthographic' ? 1 : 0;
   data.set(background, 20);
+  const environmentRadiance = props.options.environmentRadiance;
+  data[80] = Math.max(0, environmentRadiance?.[0] ?? 0);
+  data[81] = Math.max(0, environmentRadiance?.[1] ?? 0);
+  data[82] = Math.max(0, environmentRadiance?.[2] ?? 0);
   unsignedData[24] = props.internalWidth;
   unsignedData[25] = props.internalHeight;
   unsignedData[26] = props.primitiveCount;
