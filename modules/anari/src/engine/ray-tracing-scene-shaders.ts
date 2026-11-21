@@ -792,6 +792,15 @@ fn getMaterialOpacity(hit: RayHit) -> f32 {
   }
   return opacity;
 }
+fn getMaterialEmission(hit: RayHit) -> vec3<f32> {
+  let primitive = primitives[hit.primitiveIndex];
+  var emission = primitive.emissive.rgb;
+  switch u32(primitive.material.w) {
+    /* MATERIAL_EMISSION_CASES */
+    default: {}
+  }
+  return emission;
+}
 fn getShadedPrimitive(hit: RayHit) -> RayPrimitive {
   var primitive = primitives[hit.primitiveIndex];
   switch u32(primitive.material.w) {
@@ -1068,7 +1077,8 @@ fn evaluateDirectLighting(ray: Ray, hit: RayHit, includeEmission: bool) -> vec3<
     (1.0 - metallic) / PI;
   let normalView = clamp(abs(dot(normal, viewDirection)), 0.001, 1.0);
   let opaqueWeight = select(1.0, 1.0 - clamp(primitive.material.y, 0.0, 1.0) * (1.0 - metallic), uniforms.sampling.w > 0u && uniforms.sampling.y > 0u);
-  var result = select(vec3<f32>(0.0), primitive.emissive.rgb, includeEmission);
+  var result = vec3<f32>(0.0);
+  if (includeEmission) { result = getMaterialEmission(hit); }
   let directLightCount = u32(max(uniforms.temporal.y, 0.0));
   let boundedDirectLightCount = max(directLightCount, 1u);
   let requestedShadowSamples = u32(max(uniforms.temporal.z, 0.0));
@@ -1514,7 +1524,7 @@ fn samplePBRMaterial(ray: Ray, hit: RayHit, randomSeed: u32) -> RayMaterialSampl
   if (sampleDensity <= 0.0) {
     return RayMaterialSample(direction, vec3<f32>(0.0), false, false, 0.0);
   }
-  return RayMaterialSample(direction, evaluatePBRResponse(ray, hit, direction) / sampleDensity, false, false, (1.0 - transmission) * sampleDensity);
+  return RayMaterialSample(direction, evaluatePBRResponse(ray, hit, direction, primitive, normal) / sampleDensity, false, false, (1.0 - transmission) * sampleDensity);
 }
 
 // Conditional on selecting a continuous material event.
@@ -1552,15 +1562,13 @@ fn getPBRDirectionDensity(ray: Ray, hit: RayHit, primitive: RayPrimitive,
     anisotropic, alpha * alpha, specularProbability, diffuseTransmission);
 }
 
-fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>) -> vec3<f32> {
-  let primitive = getShadedPrimitive(hit);
+fn evaluatePBRResponse(ray: Ray, hit: RayHit, direction: vec3<f32>,
+    primitive: RayPrimitive, normal: vec3<f32>) -> vec3<f32> {
   let baseColor = clamp(primitive.baseColor.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
   let metallic = clamp(primitive.emissive.w, 0.0, 1.0);
   let roughness = clamp(primitive.properties.x, 0.04, 1.0);
   let alphaRoughness = roughness * roughness;
   let alphaSquared = alphaRoughness * alphaRoughness;
-  let shadingNormal = getShadingNormal(hit);
-  let normal = select(shadingNormal, -shadingNormal, dot(hit.normal, ray.direction) > 0.0);
   let viewDirection = -ray.direction;
   let normalView = clamp(dot(normal, viewDirection), 0.001, 1.0);
   let normalLight = max(dot(normal, direction), 0.0);
@@ -1680,7 +1688,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
       response = getDiffuseTransmissionTint(receiver, hit, -ray.direction, abs(dot(face, ray.direction)), -faceLight) *
         (-faceLight / PI) * diffuseTransmission;
     } else {
-      response = evaluatePBRResponse(ray, hit, direction);
+      response = evaluatePBRResponse(ray, hit, direction, receiver, normal);
     }
     response *= select(1.0,
       1.0 - clamp(receiver.material.y, 0.0, 1.0) * (1.0 - clamp(receiver.emissive.w, 0.0, 1.0)),
@@ -1689,7 +1697,6 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
   let visibility = exp(-max(uniforms.fog.w, 0.0) * hit.distance);
   let emitterHit = RayHit(0.0, lightNormal, primitiveIndex, true, emitterCoordinates, emitterSecondaryCoordinates, 0xffffffffu, 0.0);
   if (!isMaterialVisible(emitterHit)) { return vec3<f32>(0.0); }
-  let shadedEmitter = getShadedPrimitive(emitterHit);
   let lightCosine = abs(dot(lightNormal, -direction));
   if (lightCosine <= 0.0) { return vec3<f32>(0.0); }
   let lightDensity = distanceSquared / (lightCosine * inverseAreaDensity);
@@ -1701,7 +1708,7 @@ fn evaluateEmitterLighting(ray: Ray, hit: RayHit, randomSeed: u32, compareContin
     }
     weight = getMISWeight(lightDensity, materialDensity);
   }
-  return response * shadedEmitter.emissive.rgb * (weight / lightDensity) * visibility;
+  return response * getMaterialEmission(emitterHit) * (weight / lightDensity) * visibility;
 }
 
 // Scale before squaring to keep the power heuristic finite for grazing connections.
@@ -1815,7 +1822,7 @@ fn evaluatePBRTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32>, s
       let weight = getMISWeight(sample.density, emitterDensity);
       var emissionHit = hit;
       if (emitterDensity > 0.0) { emissionHit.footprint = 0.0; }
-      let emission = getShadedPrimitive(emissionHit).emissive.rgb;
+      let emission = getMaterialEmission(emissionHit);
       let fogDistance = select(hit.distance, receiverDistance, emitterDensity > 0.0);
       illumination += emission * (weight * exp(-max(uniforms.fog.w, 0.0) * fogDistance));
     }
@@ -1887,8 +1894,8 @@ fn evaluateDiffuseTransport(primaryRay: Ray, primaryHit: RayHit, pixel: vec2<u32
           let hitVisibility = exp(-fogDensity * hit.distance);
           var emissionHit = hit;
           emissionHit.footprint = 0.0;
-          illumination += getShadedPrimitive(emissionHit).emissive.rgb * (weight * receiverVisibility) -
-            getShadedPrimitive(hit).emissive.rgb * hitVisibility;
+          illumination += getMaterialEmission(emissionHit) * (weight * receiverVisibility) -
+            getMaterialEmission(hit) * hitVisibility;
         }
       }
       illumination += evaluateEmitterLighting(ray, hit, pathSeed ^ ((bounceIndex + 1u) * 1987u),
