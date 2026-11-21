@@ -87,6 +87,7 @@ export type {GPURigidBodyJoint, GPURigidBodyJointFrame} from './rigid-body-joint
 export type {
   GPURigidBodyCapture,
   GPURigidBodyGPUCheckpoint,
+  GPURigidBodyHeightFieldEdit,
   GPURigidBodyParameters
 } from './gpu-rigid-body-world';
 
