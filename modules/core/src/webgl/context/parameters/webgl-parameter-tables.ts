@@ -351,37 +351,20 @@ function getValue(glEnum, values, cache) {
   return values[glEnum] !== undefined ? values[glEnum] : cache[glEnum];
 }
 
-/**
- * Calls EXT_clip_control `clipControlEXT()` and records the values in the state tracker cache.
- * Does nothing when the extension is not available, so the cache keeps the WebGL defaults.
- * The extension method is not intercepted: direct calls to it bypass the state tracker.
- */
-function setClipControl(gl: WebGL2RenderingContext, origin: GL, depthMode: GL): void {
-  const extension = gl.getExtension('EXT_clip_control');
-  if (!extension) {
-    return;
-  }
-  const stateTracker = gl.lumaState;
-  if (stateTracker) {
-    const {valueChanged} = stateTracker._updateCache({
+// COMPOSITE_WEBGL_PARAMETER_
+export const GL_COMPOSITE_PARAMETER_SETTERS = {
+  clipControl: (gl: WebGL2RenderingContext, values, cache) => {
+    const extension = gl.getExtension('EXT_clip_control');
+    if (!extension) return;
+    const origin = getValue(GL.CLIP_ORIGIN_EXT, values, cache);
+    const depthMode = getValue(GL.CLIP_DEPTH_MODE_EXT, values, cache);
+    // Extension methods bypass the hooked context setters. Save both values for pop().
+    const {valueChanged} = gl.lumaState._updateCache({
       [GL.CLIP_ORIGIN_EXT]: origin,
       [GL.CLIP_DEPTH_MODE_EXT]: depthMode
     });
-    if (!valueChanged) {
-      return;
-    }
-  }
-  extension.clipControlEXT(origin, depthMode);
-}
-
-// COMPOSITE_WEBGL_PARAMETER_
-export const GL_COMPOSITE_PARAMETER_SETTERS = {
-  clipControl: (gl: WebGL2RenderingContext, values, cache) =>
-    setClipControl(
-      gl,
-      getValue(GL.CLIP_ORIGIN_EXT, values, cache),
-      getValue(GL.CLIP_DEPTH_MODE_EXT, values, cache)
-    ),
+    if (valueChanged) extension.clipControlEXT(origin, depthMode);
+  },
   blendEquation: (gl: WebGL2RenderingContext, values, cache) =>
     gl.blendEquationSeparate(
       getValue(GL.BLEND_EQUATION_RGB, values, cache),

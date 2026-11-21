@@ -54,13 +54,13 @@ export class WebGPURenderPass extends RenderPass {
     props: RenderPassProps = {},
     commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
   ) {
-    super(device, props);
-    this.device = device;
-    const {props: renderPassProps} = this;
-    if (renderPassProps.clipDepthMode === 'negative-one-to-one') {
+    if (props.clipDepthMode === 'negative-one-to-one') {
       // WebGPU clip-space depth is always 'zero-to-one'.
       throw new Error('clipDepthMode');
     }
+    super(device, props);
+    this.device = device;
+    const {props: renderPassProps} = this;
     this.framebuffer =
       (renderPassProps.framebuffer as WebGPUFramebuffer) ||
       device.getCanvasContext().getCurrentFramebuffer();

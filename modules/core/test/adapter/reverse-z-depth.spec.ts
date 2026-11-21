@@ -13,6 +13,9 @@ import {
 } from '@luma.gl/core';
 import {getTestDevices} from '@luma.gl/core/test-utils';
 
+import {GL} from '@luma.gl/core/webgl-constants';
+import {setGLParameters} from '@luma.gl/core/webgl/context/parameters/unified-parameter-api';
+
 const DEVICE_TYPES = ['webgl', 'webgpu'] as const;
 const EMPTY_SHADER_LAYOUT = {attributes: [], bindings: []};
 
@@ -260,22 +263,33 @@ it('WebGL clipDepthMode applies EXT_clip_control during the pass and restores it
   }
   const {gl} = device as unknown as {gl: WebGL2RenderingContext};
   const extension = gl.getExtension('EXT_clip_control')!;
-  const readNativeDepthMode = () => {
+  const readNativeParameter = (parameter: number) => {
     // Read the driver state, not the state tracker cache.
     const tracker = (gl as any).lumaState;
     tracker.enable = false;
     try {
-      return gl.getParameter(extension.CLIP_DEPTH_MODE_EXT);
+      return gl.getParameter(parameter);
     } finally {
       tracker.enable = true;
     }
   };
 
-  expect(readNativeDepthMode(), 'default before the pass').toBe(extension.NEGATIVE_ONE_TO_ONE_EXT);
-  const renderPass = device.beginRenderPass({clipDepthMode: 'zero-to-one'});
-  expect(readNativeDepthMode(), 'zero-to-one during the pass').toBe(extension.ZERO_TO_ONE_EXT);
-  renderPass.end();
-  expect(readNativeDepthMode(), 'default after end()').toBe(extension.NEGATIVE_ONE_TO_ONE_EXT);
+  setGLParameters(gl, {[GL.CLIP_ORIGIN_EXT]: GL.UPPER_LEFT_EXT});
+  try {
+    const renderPass = device.beginRenderPass({clipDepthMode: 'zero-to-one'});
+    try {
+      expect(readNativeParameter(extension.CLIP_DEPTH_MODE_EXT)).toBe(extension.ZERO_TO_ONE_EXT);
+      expect(readNativeParameter(extension.CLIP_ORIGIN_EXT)).toBe(extension.UPPER_LEFT_EXT);
+    } finally {
+      renderPass.end();
+    }
+    expect(readNativeParameter(extension.CLIP_DEPTH_MODE_EXT)).toBe(
+      extension.NEGATIVE_ONE_TO_ONE_EXT
+    );
+    expect(readNativeParameter(extension.CLIP_ORIGIN_EXT)).toBe(extension.UPPER_LEFT_EXT);
+  } finally {
+    setGLParameters(gl, {[GL.CLIP_ORIGIN_EXT]: GL.LOWER_LEFT_EXT});
+  }
 });
 
 it('WebGL clipDepthMode zero-to-one throws when clip-control-webgl is not available', async () => {
@@ -286,9 +300,12 @@ it('WebGL clipDepthMode zero-to-one throws when clip-control-webgl is not availa
   });
   try {
     expect(device.features.has('clip-control-webgl')).toBe(false);
+    const active = device.statsManager.getStats('GPU Resource Counts').get('Resources Active');
+    const count = active.count;
     expect(() => device.beginRenderPass({clipDepthMode: 'zero-to-one'})).toThrow(
       'clip-control-webgl'
     );
+    expect(active.count).toBe(count);
     // The default range needs no extension.
     expect(() =>
       device.beginRenderPass({clipDepthMode: 'negative-one-to-one'}).end()
@@ -305,7 +322,10 @@ it('WebGPU clipDepthMode accepts zero-to-one and rejects negative-one-to-one', a
   }
   expect(() => device.beginRenderPass({clipDepthMode: 'zero-to-one'}).end()).not.toThrow();
   device.submit();
+  const active = device.statsManager.getStats('GPU Resource Counts').get('Resources Active');
+  const count = active.count;
   expect(() => device.beginRenderPass({clipDepthMode: 'negative-one-to-one'})).toThrow(
     'clipDepthMode'
   );
+  expect(active.count).toBe(count);
 });

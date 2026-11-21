@@ -60,6 +60,10 @@ export class WEBGLRenderPass extends RenderPass {
   vertexArray: VertexArray | null = null;
 
   constructor(device: WebGLDevice, props: RenderPassProps) {
+    if (props.clipDepthMode === 'zero-to-one' && !device.features.has('clip-control-webgl')) {
+      // clipDepthMode 'zero-to-one' requires EXT_clip_control. Check device.features first.
+      throw new Error('clip-control-webgl');
+    }
     super(device, props);
     this.device = device;
     const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
@@ -83,11 +87,6 @@ export class WEBGLRenderPass extends RenderPass {
         const [width, height] = device.getDefaultCanvasContext().getDrawingBufferSize();
         viewport = [0, 0, width, height];
       }
-    }
-
-    if (props.clipDepthMode === 'zero-to-one' && !device.features.has('clip-control-webgl')) {
-      // clipDepthMode 'zero-to-one' requires EXT_clip_control. Check device.features first.
-      throw new Error('clip-control-webgl');
     }
 
     // TODO - do parameters (scissorRect) affect the clear operation?
@@ -155,7 +154,6 @@ export class WEBGLRenderPass extends RenderPass {
     glParameters[GL.RASTERIZER_DISCARD] = this.props.discard;
 
     if (this.props.clipDepthMode) {
-      glParameters[GL.CLIP_ORIGIN_EXT] = GL.LOWER_LEFT_EXT;
       glParameters[GL.CLIP_DEPTH_MODE_EXT] =
         this.props.clipDepthMode === 'zero-to-one'
           ? GL.ZERO_TO_ONE_EXT
