@@ -2,6 +2,15 @@
 
 ## v10.0
 
+### v10.0.0-beta.2
+
+- Upgrade to math.gl 5.0 and loaders.gl 5.0.0-rc.2. Use math.gl's published subpaths.
+- Flatten public luma.gl subpaths and consolidate the release notes and upgrade guide.
+- Expand GPU DataFrame SQL with scalar functions, casts, null handling, CASE expressions, and pagination. Fix column-only projections and preserve quoted column names.
+- Add reverse-Z depth controls and improve WebGL depth bias and depth clipping support.
+- Stream GPU physics terrain with automatic level-of-detail selection and independent terrain in batched worlds.
+- Improve ANARI ray tracing with directional environment sampling and emissive geometry lighting.
+
 ### v10.0.0-beta.1
 
 - Upgrade math.gl to 5.0.0-rc.2 and loaders.gl to 5.0.0-rc.1. Use the updated zero-copy GeoArrow column view API.
