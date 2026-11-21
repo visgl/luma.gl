@@ -103,6 +103,7 @@ export class ANARIRayTracingRuntime implements ANARIRendererRuntime {
     };
   }
 
+  /** Reads the submitted ray-tracing history before presentation. */
   readRadiance(frame: ANARIFrame): Promise<ANARIFrameRadiance | null> {
     return this.renderer.readRadiance(frame.id);
   }

@@ -71,6 +71,7 @@ export function compareRadianceCaptures(actual, reference) {
   };
 }
 
+/** Decode an IEEE 754 binary16 channel to a JavaScript number. */
 function decodeHalf(value) {
   const exponent = (value >> 10) & 31;
   const fraction = value & 1023;
