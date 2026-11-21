@@ -8,7 +8,14 @@ import {
   type CompiledGPUCommandGraph,
   type GPUCommandGraphEncoding
 } from '../gpu-core/gpu-command-graph';
-import {GPURigidBodyWorld, type GPURigidBodyWorldProps} from './gpu-rigid-body-world';
+import {
+  GPURigidBodyWorld,
+  type GPURigidBodyHeightFieldEdit,
+  type GPURigidBodyWorldProps
+} from './gpu-rigid-body-world';
+import {GPUPhysicsEnsembleTerrain} from './gpu-physics-ensemble-terrain';
+import type {GPURigidBodyTerrainStreamProps} from './rigid-body-terrain-stream';
+import {getRigidBodyHeightFieldMinimumBytes} from './rigid-body-height-field';
 
 export type GPUPhysicsEnsembleProps = {
   /** All instances share solver settings and topology, but have independent dynamic state. */
@@ -19,9 +26,12 @@ export type GPUPhysicsEnsembleProps = {
     | 'continuous'
     | 'collisionPartitionSize'
     | 'ensembleBodiesPerInstance'
+    | 'ensembleTerrainSlots'
     | 'maximumPairs'
   >;
   instances: number;
+  /** Template-local indices of vacant native height-field slots reserved per instance. */
+  terrainSlots?: readonly number[];
   /** Shared power-of-two contact capacity. Overflow rejects the entire ensemble step. */
   maximumPairs: number;
   /** Retained world buffers plus compiled graph scratch; excludes driver and compilation peaks. */
@@ -32,6 +42,9 @@ export type GPUPhysicsEnsembleProps = {
 export class GPUPhysicsEnsemble {
   readonly world: GPURigidBodyWorld;
   readonly bodiesPerInstance: number;
+  readonly collidersPerInstance: number;
+  /** Writable terrain slots in template-local collider order. */
+  readonly terrainSlots: readonly number[];
   readonly instances: number;
   /** Number of chassis in each copy of the template. */
   readonly vehiclesPerInstance: number;
@@ -40,6 +53,9 @@ export class GPUPhysicsEnsemble {
   private destroyed = false;
   private preparing = false;
   private resetBytes = 0;
+  private terrainStreamer?: GPUPhysicsEnsembleTerrain;
+  private directTerrain = false;
+  private readonly minimumTerrainBytes: number;
 
   private constructor(props: GPUPhysicsEnsembleProps) {
     const template: GPURigidBodyWorldProps = props.template;
@@ -66,6 +82,26 @@ export class GPUPhysicsEnsemble {
     this.vehiclesPerInstance = templateVehicles.length;
     this.instances = props.instances;
     this.bodiesPerInstance = template.bodies.length;
+    this.collidersPerInstance = colliderCount;
+    this.terrainSlots = Object.freeze([...(props.terrainSlots ?? [])]);
+    let minimumTerrainBytes = 0;
+    if (this.terrainSlots.length) {
+      const shapes = template.bodies.flatMap(body =>
+        body.shape ? [body.shape] : body.colliders.map(collider => collider.shape)
+      );
+      if (new Set(this.terrainSlots).size !== this.terrainSlots.length)
+        throw new Error('Invalid ensemble terrain slots');
+      for (const index of this.terrainSlots) {
+        const shape = shapes[index];
+        if (!Number.isSafeInteger(index) || shape?.type !== 'height-field' || shape.field.heights)
+          throw new Error('Invalid ensemble terrain slot');
+        minimumTerrainBytes += getRigidBodyHeightFieldMinimumBytes(
+          shape.field.width,
+          shape.field.height
+        );
+      }
+    }
+    this.minimumTerrainBytes = minimumTerrainBytes * this.instances;
     // Repeated mesh references intentionally survive the world's single structured clone.
     const bodies = Array.from({length: props.instances}, (_, instance) =>
       template.bodies.map(body => {
@@ -103,14 +139,27 @@ export class GPUPhysicsEnsemble {
       failurePolicy: 'rollback',
       maximumPairs: props.maximumPairs,
       collisionPartitionSize: colliderCount,
-      ensembleBodiesPerInstance: this.bodiesPerInstance
+      ensembleBodiesPerInstance: this.bodiesPerInstance,
+      ensembleTerrainSlots: this.terrainSlots.length
+        ? Array.from({length: this.instances}, (_, instance) =>
+            this.terrainSlots.map(collider => instance * colliderCount + collider)
+          ).flat()
+        : undefined
     });
   }
 
   static async create(device: Device, props: GPUPhysicsEnsembleProps): Promise<GPUPhysicsEnsemble> {
     const ensemble = new GPUPhysicsEnsemble(props);
     try {
-      if (ensemble.world.getCapacityInfo().ownedBufferBytes > props.maximumResidentBytes)
+      if (
+        ensemble.minimumTerrainBytes >
+        Math.min(device.limits.maxBufferSize, device.limits.maxStorageBufferBindingSize)
+      )
+        throw new Error('Ensemble terrain atlas exceeds device limits');
+      if (
+        ensemble.minimumTerrainBytes > props.maximumResidentBytes ||
+        ensemble.world.getCapacityInfo().ownedBufferBytes > props.maximumResidentBytes
+      )
         throw new Error('Ensemble residency budget exhausted');
       const commands = new GPUCommandGraph<undefined>(device);
       ensemble.world.addToGraph(commands);
@@ -139,6 +188,49 @@ export class GPUPhysicsEnsemble {
     )
       throw new Error('Invalid ensemble body');
     return instance * this.bodiesPerInstance + body;
+  }
+
+  /** Map a template collider to a fused world query or contact index. */
+  getColliderIndex(instance: number, collider: number): number {
+    this.getBodyIndex(instance, 0);
+    if (!Number.isSafeInteger(collider) || collider < 0 || collider >= this.collidersPerInstance)
+      throw new Error('Invalid ensemble collider');
+    return instance * this.collidersPerInstance + collider;
+  }
+
+  /** Publish predecoded tiles directly to one instance between submissions. */
+  setHeightFieldTiles(instance: number, edits: readonly GPURigidBodyHeightFieldEdit[]): void {
+    if (this.terrainStreamer) throw new Error('Terrain slots are owned by the ensemble streamer');
+    this.publishTerrain(instance, edits);
+    this.directTerrain ||= edits.length > 0;
+  }
+
+  /** Create the single provider streamer that owns this ensemble's reserved slots. */
+  createTerrainStreamer(props: GPURigidBodyTerrainStreamProps): GPUPhysicsEnsembleTerrain {
+    this.getBodyIndex(0, 0);
+    if (!this.terrainSlots.length || this.terrainStreamer || this.directTerrain)
+      throw new Error('Ensemble terrain streamer unavailable');
+    this.terrainStreamer = new GPUPhysicsEnsembleTerrain(
+      props,
+      this.terrainSlots,
+      instance => {
+        this.getBodyIndex(instance, 0);
+      },
+      (instance, edits) => this.publishTerrain(instance, edits)
+    );
+    return this.terrainStreamer;
+  }
+
+  /** Translate template-local edits only after every slot is validated. */
+  private publishTerrain(instance: number, edits: readonly GPURigidBodyHeightFieldEdit[]): void {
+    const start = this.getColliderIndex(instance, 0);
+    this.world.setHeightFieldTiles(
+      edits.map(edit => {
+        if (!this.terrainSlots.includes(edit.collider))
+          throw new Error('Invalid ensemble terrain slot');
+        return {...edit, collider: start + edit.collider};
+      })
+    );
   }
 
   /** Map a template vehicle to its index for telemetry and GPU wheel poses. */
@@ -241,6 +333,7 @@ export class GPUPhysicsEnsemble {
   destroy(): void {
     if (this.destroyed) return;
     if (this.preparing) throw new Error('Ensemble operation pending');
+    this.terrainStreamer?.release();
     this.graph?.destroy();
     this.world.destroy();
     this.destroyed = true;

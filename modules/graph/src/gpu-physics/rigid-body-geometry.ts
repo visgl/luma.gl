@@ -10,7 +10,8 @@ import type {GPURigidBodyCollider} from './rigid-body-properties';
 /** Pack collider metadata and its contiguous GPU geometry uploads. */
 export function packRigidBodyShapes(
   colliders: readonly GPURigidBodyCollider[],
-  shareHeightFields = false
+  shareHeightFields = false,
+  writableHeightFields?: ReadonlySet<number>
 ) {
   const geometry: number[] = [];
   const packedMeshes = new Map<RigidBodyMeshGeometry, {padding: number[]; policies: number[]}>();
@@ -19,6 +20,10 @@ export function packRigidBodyShapes(
     {padding: number[]; policies: number[]; extent: number[]}
   >();
   const heightFields = new Map<number, number>();
+  const writablePayloads = new Map<
+    GPURigidBodyHeightField,
+    ReturnType<typeof packRigidBodyHeightField>
+  >();
   const shapes = colliders.map(({shape}, colliderIndex) => {
     const policies = [0, 0];
     const padding = [0, 0, 0, 0];
@@ -35,13 +40,15 @@ export function packRigidBodyShapes(
         shape.type === 'capsule' ? 4 : 5
       ];
     else if (shape.type === 'height-field') {
-      const shared = sharedHeightFields.get(shape.field);
+      const writable = !shareHeightFields || writableHeightFields?.has(colliderIndex);
+      const shared = writable ? undefined : sharedHeightFields.get(shape.field);
       if (shared) {
         padding.splice(0, padding.length, ...shared.padding);
         policies.splice(0, policies.length, ...shared.policies);
         dimensions = [...shared.extent, 3];
       } else {
-        const packed = packRigidBodyHeightField(shape.field);
+        const packed = writablePayloads.get(shape.field) ?? packRigidBodyHeightField(shape.field);
+        if (shareHeightFields && writable) writablePayloads.set(shape.field, packed);
         const offset = geometry.length / 4;
         padding[0] = offset;
         // Negative vertex count distinguishes implicit height-field triangles in the mesh kernels.
@@ -51,9 +58,8 @@ export function packRigidBodyShapes(
         policies[1] = packed.nodeCount;
         dimensions = [...packed.extent, 3];
         for (const value of packed.data) geometry.push(value);
-        if (shareHeightFields)
-          sharedHeightFields.set(shape.field, {padding, policies, extent: packed.extent});
-        else heightFields.set(colliderIndex, offset);
+        if (writable) heightFields.set(colliderIndex, offset);
+        else sharedHeightFields.set(shape.field, {padding, policies, extent: packed.extent});
       }
     } else {
       const mesh = shape.geometry;

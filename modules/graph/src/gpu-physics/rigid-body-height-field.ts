@@ -75,6 +75,21 @@ const MISSING_HEIGHT = Math.fround(3.402823e38);
 /** Leaves cover a contiguous range from a single row of at most eight cells. */
 const CELLS_PER_LEAF = 8;
 
+/** Lower bound for atlas admission without building a hierarchy or allocating samples. */
+export function getRigidBodyHeightFieldMinimumBytes(width: number, height: number): number {
+  const sampleCount = width * height;
+  if (
+    !Number.isSafeInteger(width) ||
+    !Number.isSafeInteger(height) ||
+    width < 2 ||
+    height < 2 ||
+    sampleCount > 1_000_000
+  )
+    throw new Error('Invalid height-field grid');
+  const minimumLeaves = (height - 1) * Math.ceil((width - 1) / CELLS_PER_LEAF);
+  return (2 + Math.ceil(sampleCount / 4) + (2 * minimumLeaves - 1) * 3) * 16;
+}
+
 /** Pack scalar samples and a bounded stackless hierarchy, with no stored vertices or triangle indices. */
 export function packRigidBodyHeightField(field: GPURigidBodyHeightField) {
   const {width, height, heights, validity, diagonal = '00-11'} = field;

@@ -143,6 +143,7 @@ export type {
 } from './gpu-physics-batch';
 
 export {GPUPhysicsEnsemble, type GPUPhysicsEnsembleProps} from './gpu-physics-ensemble';
+export {GPUPhysicsEnsembleTerrain} from './gpu-physics-ensemble-terrain';
 
 export type {GPURigidBodyJointLimit, GPURigidBodyJointDrive} from './joint-types';
 

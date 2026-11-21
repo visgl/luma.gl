@@ -501,8 +501,17 @@ seams for the provider stream. Qualification covers sparse manifests, slot budge
 mixed-level seams, and WebGPU ray continuity as a focus moves. Off-road Buggy exposes
 the active terrain window with `?terrain=auto`.
 
-Scoped invalidation, ensemble residency, and traversal and step-cost qualification across
-adapters remain open.
+Terrain edits now invalidate warm-start impulses by collider revision. Standalone worlds
+wake sleeping bodies overlapping old and new tile footprints, and fused worlds wake only
+the partitions that receive tile edits. Fused instances can reserve private writable slots
+while continuing to share authored terrain. Their independent provider windows share
+fetches and concurrency, and a template reset preserves committed tile residency.
+The Physics Batch Lab reports streaming and step latency, activity, provider reuse, and
+resident bytes. Qualification covers scoped wake and cache behavior, capacity-neutral
+replacement, mixed-resolution seams, and reset after origin shifting.
+
+Remaining work includes sharing writable atlas pages across identical instance windows,
+independent step failure recovery, and traversal/step-cost qualification across adapters.
 
 ### G9. Articulations and mechanism quality
 

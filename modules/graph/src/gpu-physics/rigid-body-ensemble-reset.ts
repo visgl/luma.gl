@@ -15,10 +15,26 @@ export function makeEnsembleReset(
   bodiesPerInstance: number,
   collidersPerInstance: number,
   maximumPairs: number,
-  vehiclesPerInstance: number
+  vehiclesPerInstance: number,
+  terrainSlots: ReadonlySet<number>
 ) {
   const find = (name: string) => buffers.find(buffer => buffer.id === `${id}-${name}`)!;
-  const plans = [
+  // A streamed collider row contains a private atlas address, revision and placement.
+  // Snapshot only the template rows that reset with the body state.
+  const colliderRanges: {name: string; offset: number; size: number; stride: number}[] = [];
+  let first = 0;
+  for (let collider = 0; collider <= collidersPerInstance; collider++) {
+    if (collider < collidersPerInstance && !terrainSlots.has(collider)) continue;
+    if (first < collider)
+      colliderRanges.push({
+        name: 'bodies',
+        offset: bodyCount * 48 + first * 96,
+        size: (collider - first) * 96,
+        stride: collidersPerInstance * 96
+      });
+    first = collider + 1;
+  }
+  const plans: {name: string; offset: number; size: number; stride?: number}[] = [
     ...['positions', 'orientations', 'velocities', 'angular-velocities', 'sleep'].map(name => ({
       name,
       offset: 0,
@@ -26,7 +42,7 @@ export function makeEnsembleReset(
     })),
     {name: 'targets', offset: 0, size: bodiesPerInstance * 32},
     {name: 'bodies', offset: 0, size: bodiesPerInstance * 48},
-    {name: 'bodies', offset: bodyCount * 48, size: collidersPerInstance * 96},
+    ...colliderRanges,
     {name: 'object-attributes', offset: 0, size: collidersPerInstance * 4},
     {name: 'pose-metadata', offset: 0, size: bodiesPerInstance * 48},
     ...(vehiclesPerInstance
@@ -66,7 +82,7 @@ struct Settings {selection:vec4u, shift:vec4f}
 ${history ? '@group(0) @binding(5) var<storage,read_write> history:array<u32>;' : ''}
 ${vehicle ? '@group(0) @binding(7) var<storage,read_write> vehicle:array<u32>;' : ''}
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) invocation:vec3u){
- let index=invocation.x;let selection=settings.selection;
+ let index=invocation.x+invocation.y*4194240u;let selection=settings.selection;
  if(index==0u){targets[${bodyCount * 8 + 8 + maximumPairs * 2}u+selection.x/${bodiesPerInstance}u]=0u;}
  if(index<${bodiesPerInstance}u){
   let body=selection.x+index;positions[body]=vec4f(positions[body].xyz-settings.shift.xyz,positions[body].w);
@@ -74,7 +90,9 @@ ${vehicle ? '@group(0) @binding(7) var<storage,read_write> vehicle:array<u32>;' 
  }
  if(index<${collidersPerInstance}u){
   let collider=selection.y+index;let address=${bodyCount * 12}u+collider*24u+7u;
+  ${terrainSlots.size ? 'if(!(bitcast<f32>(metadata[address+14u])<0.0&&metadata[address+15u]!=0u)){' : ''}
   metadata[address]=bitcast<u32>(bitcast<f32>(metadata[address])+f32(selection.x));
+  ${terrainSlots.size ? '}' : ''}
   attributes[collider]=(attributes[collider]&0xffff0000u)|((attributes[collider]&0xffffu)+selection.x);
  }
  ${
@@ -139,15 +157,17 @@ ${vehicle ? '@group(0) @binding(7) var<storage,read_write> vehicle:array<u32>;' 
         encoder.copyBufferToBuffer({
           sourceBuffer: snapshots[index],
           destinationBuffer: find(plan.name),
-          destinationOffset: plan.offset + instance * plan.size,
+          destinationOffset: plan.offset + instance * (plan.stride ?? plan.size),
           size: plan.size
         });
       const pass = encoder.beginComputePass();
+      const groups = Math.ceil(
+        Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance, vehiclesPerInstance) / 64
+      );
       computation!.kernel.dispatch(pass, {
         bindings: computation!.bindings,
-        x: Math.ceil(
-          Math.max(maximumPairs, collidersPerInstance, bodiesPerInstance, vehiclesPerInstance) / 64
-        )
+        x: Math.min(65535, groups),
+        y: Math.ceil(groups / 65535)
       });
       pass.end();
       device.submit(encoder.finish());

@@ -84,14 +84,6 @@ type TileLoad = {
 
 /** Bounded provider fetching with an explicit publication boundary between GPU submissions. */
 export class GPURigidBodyTerrainStream {
-  /** Active provider work, including aborted requests that have not settled. */
-  private activeLoads = 0;
-  /** Requests retained by the latest window, including completed but unapplied data. */
-  private readonly loads = new Map<string, TileLoad>();
-  /** Pending provider work in submission order. */
-  private readonly queued = new Map<string, TileLoad>();
-  /** Shared concurrency limit. */
-  private readonly maximumConcurrentLoads: number;
   /** Last request, used to ignore late completions. */
   private controller?: AbortController;
   /** Fully fetched and stitched window waiting for publication. */
@@ -102,12 +94,10 @@ export class GPURigidBodyTerrainStream {
   /** Create a streamer that borrows a world's fixed slots and owns its provider requests. */
   constructor(
     private readonly world: Pick<GPURigidBodyWorld, 'setHeightFieldTiles'>,
-    private readonly props: GPURigidBodyTerrainStreamProps
-  ) {
-    this.maximumConcurrentLoads = props.maximumConcurrentLoads ?? 4;
-    if (!Number.isSafeInteger(this.maximumConcurrentLoads) || this.maximumConcurrentLoads < 1)
-      throw new Error('Invalid terrain provider concurrency');
-  }
+    props: GPURigidBodyTerrainStreamProps,
+    /** @internal One queue can serve multiple independent residency windows. */
+    private readonly loadQueue = new RigidBodyTerrainLoadQueue(props)
+  ) {}
 
   /** Stage the latest window. False indicates a newer window or cancellation superseded it. */
   async prepare(window: GPURigidBodyTerrainWindow): Promise<boolean> {
@@ -125,13 +115,7 @@ export class GPURigidBodyTerrainStream {
     this.controller?.abort();
     this.ready = undefined;
     const required = new Set(keys.values());
-    for (const [key, load] of this.loads) {
-      if (!required.has(key)) {
-        this.abortLoad(load);
-        this.loads.delete(key);
-        this.queued.delete(key);
-      }
-    }
+    this.loadQueue.setDemand(this, new Set([...this.resident.source.keys(), ...required]));
     const controller = new AbortController();
     this.controller = controller;
     const signal = controller.signal;
@@ -144,7 +128,8 @@ export class GPURigidBodyTerrainStream {
       const source = new Map(
         await Promise.all(
           [...required].map(
-            async key => [key, residentSources.get(key) ?? (await this.getLoad(key))] as const
+            async key =>
+              [key, residentSources.get(key) ?? (await this.loadQueue.getLoad(key))] as const
           )
         )
       );
@@ -182,7 +167,7 @@ export class GPURigidBodyTerrainStream {
     if (edits.length) this.world.setHeightFieldTiles(edits);
     this.resident = ready;
     this.ready = undefined;
-    this.loads.clear();
+    this.loadQueue.setDemand(this, new Set(ready.source.keys()));
     return true;
   }
 
@@ -202,9 +187,7 @@ export class GPURigidBodyTerrainStream {
     this.controller?.abort();
     this.controller = undefined;
     this.ready = undefined;
-    for (const load of this.loads.values()) this.abortLoad(load);
-    this.loads.clear();
-    this.queued.clear();
+    this.loadQueue.setDemand(this, new Set(this.resident.source.keys()));
   }
 
   /** Release stream-owned slots after canceling fetches. Call between submissions. */
@@ -212,11 +195,60 @@ export class GPURigidBodyTerrainStream {
     this.cancel();
     const edits = Array.from(this.resident.stitched.keys(), collider => ({collider, field: null}));
     if (edits.length) this.world.setHeightFieldTiles(edits);
+    this.release();
+  }
+
+  /** @internal Forget the window after its world has taken over resource disposal. */
+  release(): void {
+    this.cancel();
+    this.loadQueue.setDemand(this, new Set());
     this.resident = {keys: new Map(), source: new Map(), stitched: new Map()};
+  }
+}
+
+/** @internal Shared, ref-counted provider requests across independent windows. */
+export class RigidBodyTerrainLoadQueue {
+  /** Active provider work, including aborted requests that have not settled. */
+  private activeLoads = 0;
+  /** Requests retained by the latest window, including completed but unapplied data. */
+  private readonly loads = new Map<string, TileLoad>();
+  /** Pending provider work in submission order. */
+  private readonly queued = new Map<string, TileLoad>();
+  /** Shared concurrency limit. */
+  private readonly maximumConcurrentLoads: number;
+  private readonly demands = new Map<object, ReadonlySet<string>>();
+  private readonly references = new Map<string, number>();
+
+  constructor(private readonly props: GPURigidBodyTerrainStreamProps) {
+    this.maximumConcurrentLoads = props.maximumConcurrentLoads ?? 4;
+    if (!Number.isSafeInteger(this.maximumConcurrentLoads) || this.maximumConcurrentLoads < 1)
+      throw new Error('Invalid terrain provider concurrency');
+  }
+
+  /** Replace one owner's demand while keeping shared requests and resident content alive. */
+  setDemand(owner: object, keys: ReadonlySet<string>): void {
+    const previous = this.demands.get(owner);
+    for (const key of keys)
+      if (!previous?.has(key)) this.references.set(key, (this.references.get(key) ?? 0) + 1);
+    for (const key of previous ?? []) {
+      if (keys.has(key)) continue;
+      const remaining = this.references.get(key)! - 1;
+      if (remaining) {
+        this.references.set(key, remaining);
+      } else {
+        this.references.delete(key);
+        const load = this.loads.get(key);
+        if (load) this.abortLoad(load);
+        this.loads.delete(key);
+        this.queued.delete(key);
+      }
+    }
+    if (keys.size) this.demands.set(owner, keys);
+    else this.demands.delete(owner);
   }
 
   /** Reuse the same fetch when a superseding window still needs its revisioned key. */
-  private getLoad(key: string): Promise<GPURigidBodyTerrainTile> {
+  getLoad(key: string): Promise<GPURigidBodyTerrainTile> {
     const retained = this.loads.get(key);
     if (retained) return retained.tile;
     let resolve!: TileLoad['resolve'];
@@ -251,7 +283,10 @@ export class GPURigidBodyTerrainStream {
           return this.props.provider.loadTile(key, signal);
         })
         .then(tile => load.resolve(structuredClone(tile)))
-        .catch(error => load.reject(error))
+        .catch(error => {
+          if (this.loads.get(key) === load) this.loads.delete(key);
+          load.reject(error);
+        })
         .finally(() => {
           this.activeLoads--;
           this.startQueuedLoads();
