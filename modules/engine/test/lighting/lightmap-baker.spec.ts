@@ -359,18 +359,20 @@ test('long default bakes retain later samples in float32 history', {
   const {ClipSpace} = await import('@luma.gl/engine');
   for (const device of devices) {
     const baker = new LightmapBaker(device, {width: 1, height: 1});
-    const samples = [1, 2].map(
+    // After 256 samples of 1, the next update adds 0.125 / 257, below half a float16 ULP.
+    // Float16 history would stay at 1; float32 history converges to the exact mean.
+    const samples = ['1.0', '1.125'].map(
       value =>
         new ClipSpace(device, {
           colorAttachmentFormats: ['rgba16float'],
           parameters: {depthWriteEnabled: false},
-          source: `@fragment fn fragmentMain() -> @location(0) vec4f {return vec4f(${value}.0,0.0,0.0,1.0);}`,
-          fs: `#version 300 es\nout vec4 fragmentColor;\nvoid main(){fragmentColor=vec4(${value}.0,0.0,0.0,1.0);}`
+          source: `@fragment fn fragmentMain() -> @location(0) vec4f {return vec4f(${value},0.0,0.0,1.0);}`,
+          fs: `#version 300 es\nout vec4 fragmentColor;\nvoid main(){fragmentColor=vec4(${value},0.0,0.0,1.0);}`
         })
     );
     try {
-      for (let index = 0; index < 8192; index++) {
-        const model = samples[index < 4096 ? 0 : 1];
+      for (let index = 0; index < 512; index++) {
+        const model = samples[index < 256 ? 0 : 1];
         baker.update({
           drawSample: ({renderPass}) => {
             model.draw(renderPass);
@@ -380,9 +382,9 @@ test('long default bakes retain later samples in float32 history', {
         // Periodically drain the queue; do not retain thousands of pending GPU submissions.
         if (index % 256 === 255) await readPixel(device, baker.textures.lightmapTexture);
       }
-      expect(baker.sampleCount).toBe(8192);
+      expect(baker.sampleCount).toBe(512);
       expect((await readPixel(device, baker.textures.lightmapTexture))[0], device.type).toBeCloseTo(
-        1.5,
+        1.0625,
         2
       );
     } finally {
