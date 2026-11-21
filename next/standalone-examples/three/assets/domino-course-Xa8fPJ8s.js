@@ -1082,6 +1082,12 @@ fn sweepBox(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,extent:v
  if(result.hit!=0u){result.distance=nearest;result.point=origin+direction*nearest-result.normal*radius;}
  return result;
 }
+// Drop the dominant normal component for ray edge tests. An on-edge ray can
+// otherwise look outside when the computed plane intersection rounds off-plane.
+fn rayTriangleEdge(edge:vec3f,offset:vec3f,normal:vec3f,axis:u32)->bool{
+ let horizontal=(axis+1u)%3u;let vertical=(axis+2u)%3u;
+ return (edge[horizontal]*offset[vertical]-edge[vertical]*offset[horizontal])*normal[axis]>=0.0;
+}
 // A triangle's sphere expansion is convex. Ignore only a departing initial touch
 // on that triangle; other triangles in the same nonconvex mesh remain candidates.
 fn sweepTriangle(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,first:vec3f,second:vec3f,third:vec3f,skipSeparating:bool)->SphereSweep{
@@ -1118,9 +1124,18 @@ fn sweepTriangle(origin:vec3f,direction:vec3f,maximumDistance:f32,radius:f32,fir
   let travelled=(sign*radius-dot(origin-first,normal))/denominator;
   let point=origin+direction*travelled-normal*(sign*radius);
   if(travelled<0.0||travelled>nearest){continue;}
-  if(dot(cross((second-first)/edgeScale,(point-first)/edgeScale),normal)>=0.0&&dot(cross((third-second)/edgeScale,(point-second)/edgeScale),normal)>=0.0&&dot(cross((first-third)/edgeScale,(point-third)/edgeScale),normal)>=0.0){
-   nearest=travelled;result.hit=1u;result.normal=normal*sign;
+  let firstSide=(second-first)/edgeScale;let secondSide=(third-second)/edgeScale;let thirdSide=(first-third)/edgeScale;
+  let firstOffset=(point-first)/edgeScale;let secondOffset=(point-second)/edgeScale;let thirdOffset=(point-third)/edgeScale;
+  var inside=false;
+  if(radius==0.0){
+   let magnitude=abs(normal);
+   var axis=select(0u,1u,magnitude.y>magnitude.x);
+   if(magnitude.z>magnitude[axis]){axis=2u;}
+   inside=rayTriangleEdge(firstSide,firstOffset,normal,axis)&&rayTriangleEdge(secondSide,secondOffset,normal,axis)&&rayTriangleEdge(thirdSide,thirdOffset,normal,axis);
+  }else{
+   inside=dot(cross(firstSide,firstOffset),normal)>=0.0&&dot(cross(secondSide,secondOffset),normal)>=0.0&&dot(cross(thirdSide,thirdOffset),normal)>=0.0;
   }
+  if(inside){nearest=travelled;result.hit=1u;result.normal=normal*sign;}
  }}
  if(radius>0.0){
   var vertices=array<vec3f,3>(first,second,third);
