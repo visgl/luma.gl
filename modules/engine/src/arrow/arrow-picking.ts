@@ -44,7 +44,10 @@ export type ArrowRowIndexGPUVectorOptions = ArrowRowIndexVectorOptions & {
   id?: string;
 };
 
-/** Source metadata used to resolve picked Arrow rows. */
+/**
+ * Source metadata used to resolve picked Arrow rows. A `null` entry marks a batch that packs several
+ * source batches; an `undefined` entry keeps the raw picking batch index.
+ */
 export type ArrowPickingSource =
   | {
       table?: Pick<GPUTable, 'batches'> | null;
@@ -167,8 +170,8 @@ export function makeArrowRecordBatchSourceInfo({
 
 /**
  * Resolves a generic PickingManager result into Arrow source row identity.
- * Without a supplied source, the raw picking batch index is retained. When a supplied source has
- * no mapping (for example after packing), only the global row index is known.
+ * Without source metadata for the picked batch, the raw picking batch index is retained. A batch
+ * whose `sourceInfo` is `null` packs several source batches, so only the global row index is known.
  */
 export function resolveArrowPickInfo(
   pickInfo: PickInfo,
@@ -180,22 +183,25 @@ export function resolveArrowPickInfo(
 
   const sourceInfo = getArrowPickingSourceInfo(source, pickInfo.batchIndex);
   return {
-    batchIndex: sourceInfo?.sourceBatchIndex ?? (source ? null : pickInfo.batchIndex),
+    batchIndex: sourceInfo === null ? null : (sourceInfo?.sourceBatchIndex ?? pickInfo.batchIndex),
     rowIndex: pickInfo.objectIndex,
     batchRowIndex: getArrowBatchRowIndex(pickInfo.objectIndex, sourceInfo)
   };
 }
 
-/** Returns the source metadata for a picked render batch, when available. */
+/**
+ * Returns the source metadata for a picked render batch, when available. Returns `null` when the
+ * batch packs several source batches and has no single source identity.
+ */
 export function getArrowPickingSourceInfo(
   source: ArrowPickingSource | null | undefined,
   batchIndex: number
-): GPURecordBatchSourceInfo | undefined {
+): GPURecordBatchSourceInfo | null | undefined {
   if (!source) {
     return undefined;
   }
   if (Array.isArray(source)) {
-    return source[batchIndex] ?? undefined;
+    return source[batchIndex];
   }
   if ('batches' in source) {
     return source.batches[batchIndex]?.sourceInfo;
@@ -211,7 +217,7 @@ export function getArrowPickingSourceInfo(
 
 function getArrowBatchRowIndex(
   rowIndex: number,
-  sourceInfo: GPURecordBatchSourceInfo | undefined
+  sourceInfo: GPURecordBatchSourceInfo | null | undefined
 ): number | null {
   if (!sourceInfo) {
     return null;

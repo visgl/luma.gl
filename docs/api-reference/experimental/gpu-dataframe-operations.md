@@ -131,11 +131,12 @@ uploading and account for grouping overshoot; `minBatchSize` alone does not guar
 
 Packing at upload writes each Arrow chunk directly into its final buffer, with no JavaScript
 concatenation, GPU copy pass, or transient second allocation. Validity sidecars follow the packed
-batches, so nullable columns remain usable with `GPUDataFrame`. As with `GPUTable.packBatches()`,
-`sourceInfo` is omitted when an output batch spans multiple source batches. Dataframe queries retain
-global row indices; `resolveArrowPickInfo()` returns `null` for `batchIndex` and `batchRowIndex` when
-given a table without that batch's source mapping. Single-source batches retain their `sourceInfo`,
-and `nullCounts` stay in source record-batch order. `GPUTable.packBatches()` remains available for
+batches, so nullable columns remain usable with `GPUDataFrame`. Fixed-size-list columns pack the same
+way. An output batch that spans multiple source batches has `sourceInfo: null`, which marks it as
+having no single source batch. Dataframe queries retain global row indices; `resolveArrowPickInfo()`
+returns `null` for `batchIndex` and `batchRowIndex` in such a batch, and keeps the raw picking batch
+index for batches without any `sourceInfo`. Single-source batches retain their `sourceInfo`, and
+`nullCounts` stay in source record-batch order. `GPUTable.packBatches()` remains available for
 tables that are already on the GPU, but it does not repack separate validity sidecars.
 
 Applications with an existing generic GPU table can provide their own masks and dictionaries:

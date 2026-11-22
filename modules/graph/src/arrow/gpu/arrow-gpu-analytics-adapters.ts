@@ -202,7 +202,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
         fields: columns.map(column => makeGPUAnalyticsField(column)),
         numRows,
         metadata: new Map(recordBatches[0].schema.metadata),
-        // Groups spanning source batches have no single source identity, as in GPUTable.packBatches().
+        // `null` marks a group spanning source batches, which has no single source identity.
         sourceInfo:
           sourceBatchIndices.length === 1
             ? {
@@ -210,7 +210,7 @@ export function makeGPUAnalyticsTableFromArrowTable<T extends GPUTypeMap = GPUTy
                 sourceRowIndexOffset,
                 sourceRowCount: numRows
               }
-            : undefined,
+            : null,
         nullCount: recordBatches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0)
       });
       sourceRowIndexOffset += numRows;

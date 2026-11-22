@@ -52,8 +52,11 @@ export type GPUDataFrameOwnership = 'borrowed' | 'owned';
 export type GPUDataFrameColumn<Format extends GPUVectorFormat = GPUVectorFormat> =
   GPUColumn<Format>;
 
-/** Source-row identity retained for one dataframe batch, when supplied by the source adapter. */
-export type GPUDataFrameSourceInfo = GPURecordBatchSourceInfo | undefined;
+/**
+ * Source-row identity retained for one dataframe batch, when supplied by the source adapter.
+ * `null` marks a batch packed from several source batches, which has no single source identity.
+ */
+export type GPUDataFrameSourceInfo = GPURecordBatchSourceInfo | null | undefined;
 
 /** A source-row-aligned GPU validity mask for each explicitly nullable dataframe column. */
 export type GPUDataFrameValidity<T extends GPUTypeMap = GPUTypeMap> = Partial<{

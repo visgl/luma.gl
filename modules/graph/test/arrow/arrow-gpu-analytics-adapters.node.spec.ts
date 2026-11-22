@@ -247,7 +247,7 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     try {
       expect(result.table.numRows).toBe(5);
       expect(result.table.batches).toHaveLength(1);
-      expect(result.table.batches[0].sourceInfo).toBeUndefined();
+      expect(result.table.batches[0].sourceInfo, 'packed groups have no single source').toBeNull();
       expect(result.table.batches[0].nullCount).toBe(
         source.batches.reduce((nullCount, batch) => nullCount + batch.nullCount, 0)
       );
@@ -319,7 +319,7 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
       expect(result.table.batches.map(batch => batch.numRows)).toEqual([2, 3]);
       expect(result.table.batches.map(batch => batch.sourceInfo)).toEqual([
         {sourceBatchIndex: 0, sourceRowIndexOffset: 0, sourceRowCount: 2},
-        undefined
+        null
       ]);
       expect(await readWords(result.table.gpuVectors['zone'])).toEqual([
         [7, 8],
@@ -389,14 +389,13 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
     }
   });
 
-  test('keeps raw picking fallback only when no source mapping was supplied', () => {
+  test('keeps the raw picking batch index unless the picked batch is marked as packed', () => {
     const pickInfo = {batchIndex: 2, objectIndex: 3};
-    expect(resolveArrowPickInfo(pickInfo)).toEqual({
-      batchIndex: 2,
-      rowIndex: 3,
-      batchRowIndex: null
-    });
-    expect(resolveArrowPickInfo(pickInfo, [])).toEqual({
+    const rawPickInfo = {batchIndex: 2, rowIndex: 3, batchRowIndex: null};
+    expect(resolveArrowPickInfo(pickInfo)).toEqual(rawPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, [])).toEqual(rawPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, [undefined, undefined, undefined])).toEqual(rawPickInfo);
+    expect(resolveArrowPickInfo(pickInfo, [undefined, undefined, null])).toEqual({
       batchIndex: null,
       rowIndex: 3,
       batchRowIndex: null
@@ -406,6 +405,28 @@ describe('makeGPUAnalyticsTableFromArrowTable packed batches', () => {
       rowIndex: null,
       batchRowIndex: null
     });
+  });
+
+  test('keeps the raw picking batch index for a GPUTable that never carried sourceInfo', () => {
+    const device = new NullDevice({id: 'arrow-analytics-picking-no-source-info'});
+    const makeBatch = () =>
+      new GPURecordBatch({
+        gpuData: {
+          value: new GPUData({
+            buffer: device.createBuffer({byteLength: 8}),
+            format: 'float32',
+            length: 2,
+            ownsBuffer: true
+          })
+        },
+        numRows: 2
+      });
+    const table = new GPUTable({batches: [makeBatch(), makeBatch()]});
+    try {
+      expect(resolveArrowPickInfo({batchIndex: 1, objectIndex: 3}, table).batchIndex).toBe(1);
+    } finally {
+      table.destroy();
+    }
   });
 
   test('reads back sliced multi-batch tables the same with and without packing', async () => {
