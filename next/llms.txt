@@ -593,14 +593,14 @@ A catalog of incubating luma.gl renderers, GPU algorithms, simulations, and WebX
 - [Abstract Class: ExternalTexture](https://luma.gl/next/docs/api-reference/generated/core/classes/ExternalTexture.md): Defined in24
 - [Abstract Class: Fence](https://luma.gl/next/docs/api-reference/generated/core/classes/Fence.md): Defined in11
 - [Abstract Class: Framebuffer](https://luma.gl/next/docs/api-reference/generated/core/classes/Framebuffer.md): Defined in27
-- [Class: PipelineFactory](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineFactory.md): Defined in27
+- [Class: PipelineFactory](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineFactory.md): Defined in31
 - [Abstract Class: PipelineLayout](https://luma.gl/next/docs/api-reference/generated/core/classes/PipelineLayout.md): Defined in14
 - [Abstract Class: PresentationContext](https://luma.gl/next/docs/api-reference/generated/core/classes/PresentationContext.md): Defined in14
 - [Abstract Class: QuerySet](https://luma.gl/next/docs/api-reference/generated/core/classes/QuerySet.md): Defined in28
 - [Abstract Class: RenderBundle](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundle.md): Defined in53
 - [Abstract Class: RenderBundleEncoder](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderBundleEncoder.md): Defined in75
-- [Abstract Class: RenderPass](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPass.md): Defined in112
-- [Abstract Class: RenderPipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md): Defined in82
+- [Abstract Class: RenderPass](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPass.md): Defined in114
+- [Abstract Class: RenderPipeline](https://luma.gl/next/docs/api-reference/generated/core/classes/RenderPipeline.md): Defined in117
 - [Abstract Class: Resource](https://luma.gl/next/docs/api-reference/generated/core/classes/Resource.md): Defined in8
 - [Abstract Class: Sampler](https://luma.gl/next/docs/api-reference/generated/core/classes/Sampler.md): Defined in19
 - [Abstract Class: Shader](https://luma.gl/next/docs/api-reference/generated/core/classes/Shader.md): Defined in34

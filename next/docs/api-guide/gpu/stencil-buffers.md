@@ -114,7 +114,7 @@ pass.end();
 device.submit();
 ```
 
-The framebuffer allocates stencil storage. Each pipeline declares the matching format and describes how a draw uses it. The pass supplies the initial clear value and the current reference. Reuse the framebuffer and pipelines across frames, and destroy owned resources when finished.
+The framebuffer allocates stencil storage. Each pipeline can declare the matching format and describes how a draw uses it. A standalone pipeline with an active stencil comparison or operation defaults to `depth24plus-stencil8`. Specify the format when targeting a different stencil attachment. The pass supplies the initial clear value and the current reference. Reuse the framebuffer and pipelines across frames, and destroy owned resources when finished.
 
 ## Follow a sample through the tests[​](#follow-a-sample-through-the-tests "Direct link to Follow a sample through the tests")
 
@@ -140,9 +140,9 @@ Set masks independently. The read mask controls which bits enter the comparison.
 
 ## Preserve a mask across passes[​](#preserve-a-mask-across-passes "Direct link to Preserve a mask across passes")
 
-Use the same framebuffer and set `clearStencil: false` on later passes to load the existing mask. Set `clearDepth` independently. For instance, you can preserve stencil while clearing depth for a new draw sequence.
+Use the same framebuffer and set `clearStencil: false` on later passes to load the existing mask. Set `clearDepth` independently. For instance, you can preserve stencil while clearing depth for a new draw sequence. Stencil contents are stored by default. Set `stencilStoreOp: 'discard'` when no later pass needs the contents, and clear before reusing the discarded stencil aspect.
 
-For a pass that only compares stencil, use `stencilReadOnly: true` with a pipeline that keeps stencil values, and leave depth writable if the pass needs it. A numeric stencil clear fills the entire writable stencil attachment, regardless of the draw scissor, comparison, or write mask. Set `clearDepth: false` when clearing stencil alone on a packed depth/stencil attachment. To clear a region or a subset of bits portably, draw the region with color and depth writes disabled and the appropriate stencil operation and write mask.
+For a pass that only compares stencil, use `stencilReadOnly: true` with a pipeline that keeps stencil values or has a zero write mask, and leave depth writable if the pass needs it. A numeric stencil clear fills the entire writable stencil attachment, regardless of the draw scissor, comparison, or write mask. Set `clearDepth: false` when clearing stencil alone on a packed depth/stencil attachment. To clear a region or a subset of bits portably, draw the region with color and depth writes disabled and the appropriate stencil operation and write mask.
 
 The reference is dynamic pass state. Set it before draws that depend on it, including when returning to zero. You can reuse one pipeline for many reference values.
 

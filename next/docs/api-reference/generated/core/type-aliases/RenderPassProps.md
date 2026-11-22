@@ -92,6 +92,12 @@ Optional single-sample targets receiving resolved multisampled color attachments
 
 Indicates that the stencil component is read only.
 
+### stencilStoreOp?[​](#stencilstoreop "Direct link to stencilStoreOp?")
+
+> `optional` **stencilStoreOp?**: `"store"` | `"discard"`
+
+Whether writable stencil contents are preserved after this pass.
+
 ### timestampQuerySet?[​](#timestampqueryset "Direct link to timestampQuerySet?")
 
 > `optional` **timestampQuerySet?**: [`QuerySet`](https://luma.gl/next/docs/api-reference/generated/core/classes/QuerySet.md)
