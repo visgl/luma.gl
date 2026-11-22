@@ -4,6 +4,7 @@
 
 import {expect, it} from 'vitest';
 import {Buffer, Texture, type Device, type RenderPassParameters, type Shader} from '@luma.gl/core';
+import type {WebGLDevice} from '@luma.gl/core/webgl';
 import {getTestDevices} from '@luma.gl/core/test-utils';
 
 const DEVICE_TYPES = ['webgl', 'webgpu'] as const;
@@ -134,6 +135,34 @@ it('Device render passes accept zero-valued dynamic stencil state without a vert
       await readTexturePixels(device, colorTexture),
       `${device.type} applies stencilReference zero and draws without a vertex array`
     ).toEqual([255, 0, 0, 255]);
+
+    if (device.type === 'webgl') {
+      const {gl} = device as WebGLDevice;
+      const previousFrontMask = gl.getParameter(gl.STENCIL_WRITEMASK);
+      const previousBackMask = gl.getParameter(gl.STENCIL_BACK_WRITEMASK);
+      try {
+        gl.stencilMask(0);
+        const clearPass = device.beginRenderPass({
+          framebuffer,
+          clearColor: [0, 0, 0, 1],
+          clearStencil: 0x80
+        });
+        try {
+          expect(gl.getParameter(gl.STENCIL_WRITEMASK)).toBe(0);
+          expect(gl.getParameter(gl.STENCIL_BACK_WRITEMASK)).toBe(0);
+          clearPass.setPipeline(renderPipeline);
+          clearPass.setParameters({stencilReference: 0x80});
+          clearPass.draw({vertexCount: 3});
+        } finally {
+          clearPass.end();
+        }
+        device.submit();
+        expect(await readTexturePixels(device, colorTexture)).toEqual([255, 0, 0, 255]);
+      } finally {
+        gl.stencilMaskSeparate(gl.FRONT, previousFrontMask);
+        gl.stencilMaskSeparate(gl.BACK, previousBackMask);
+      }
+    }
 
     framebuffer.destroy();
     depthStencilTexture.destroy();

@@ -48,6 +48,8 @@ export type ParseGLTFOptions = {
   properties?: import('@luma.gl/engine').InteractivityPropertyAdapter | null;
   /** Borrowed rigid GPU matrices. The renderer selects a body and local transform per draw. */
   publishedTransforms?: Buffer | null;
+  /** Compile skinned meshes for a storage palette, including small WebGPU rigs. */
+  storageSkinPalettes?: boolean;
   /** Additional model props applied to each generated primitive model. */
   modelOptions?: Partial<ModelProps>;
   /** Enables shader-level PBR debug output. */
@@ -83,6 +85,7 @@ const defaultOptions: Required<ParseGLTFOptions> = {
   properties: null,
   billboards: null,
   publishedTransforms: null,
+  storageSkinPalettes: false,
   modelOptions: {},
   pbrDebug: false,
   imageBasedLightingEnvironment: undefined!,
@@ -459,10 +462,9 @@ function createNodeForGLTFPrimitive({
     vertexCount,
     bounds: [gltfPrimitive.attributes.POSITION.min, gltfPrimitive.attributes.POSITION.max],
     instanceMatrices: instancing?.matrices,
-    usesLargeSkinPalette: usesLargeSkinPalette(
-      gltfPrimitive.attributes.JOINTS_0,
-      gltfPrimitive.attributes.JOINTS_1
-    ),
+    usesLargeSkinPalette:
+      (options.storageSkinPalettes && device.type === 'webgpu') ||
+      usesLargeSkinPalette(gltfPrimitive.attributes.JOINTS_0, gltfPrimitive.attributes.JOINTS_1),
     morphTargets: morphTargetState?.targets
   });
 

@@ -284,6 +284,19 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
     );
     expect(() => context.query('SELECT fare FROM trips LIMIT 1')).toThrow(/ORDER BY/i);
     expect(() => context.query('SELECT fare FROM trips GROUP BY 0')).toThrow(/aggregation/);
+    expect(() =>
+      context.query(
+        'SELECT category, identifier, COUNT(*) FROM trips GROUP BY category, identifier'
+      )
+    ).not.toThrow();
+    expect(() =>
+      context.query('SELECT category, COUNT(*) FROM trips GROUP BY category, category')
+    ).toThrow(/each GROUP BY key exactly once/);
+    expect(() =>
+      context.query(
+        'SELECT category, identifier, fare, COUNT(*) FROM trips GROUP BY category, identifier, fare'
+      )
+    ).not.toThrow();
 
     expect(context.query('SELECT * FROM trips ORDER BY 1')).toBeInstanceOf(GPUSQLQuery);
     for (const position of [0, 1.5, 2]) {
@@ -291,6 +304,15 @@ describe('GPUSQL immutable GPU dataframe planning', () => {
         /one-based SELECT column/
       );
     }
+    expect(
+      context.query('SELECT FLOOR(fare) AS bucket, COUNT(*) FROM trips GROUP BY bucket')
+    ).toBeInstanceOf(GPUSQLQuery);
+    expect(() =>
+      context.query('SELECT FLOOR(fare) AS bucket, COUNT(*) FROM trips GROUP BY CEILING(fare)')
+    ).toThrow(/each GROUP BY key exactly once/);
+    expect(() => context.query('SELECT FLOOR(fare), COUNT(*) FROM trips GROUP BY 1')).toThrow(
+      /computed group keys require an explicit AS alias/
+    );
     expect(() => context.query('SELECT category, COUNT(*) FROM trips GROUP BY 2')).toThrow(
       /group key directly/
     );

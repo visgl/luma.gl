@@ -566,13 +566,423 @@ it('GPUSQL compiles left and anti joins over separately uploaded Arrow sources w
   void 0;
 });
 
-function createGPUSQLArrowTable(): arrow.Table {
+it('GPUSQL aggregates only observed dictionary pairs across Arrow batches', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const arrowTable = createGPUSQLArrowTable(true);
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, arrowTable),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+  const result = context
+    .query(
+      'SELECT COUNT(*) AS trips, service AS kind, category, COUNT(fare) AS known, SUM(fare) AS total FROM trips WHERE fare >= :minimum OR (fare IS NULL AND :includeMissing) GROUP BY category, 2',
+      {parameters: {minimum: 8, includeMissing: true}}
+    )
+    .compile(new GPUCommandGraph(device));
+
+  try {
+    for (const {minimum, includeMissing} of [
+      {minimum: 8, includeMissing: true},
+      {minimum: 12, includeMissing: true},
+      {minimum: 12, includeMissing: false}
+    ]) {
+      const encoder = device.createCommandEncoder();
+      result.encode(encoder, {minimum, includeMissing});
+      device.submit(encoder.finish());
+      const output = await makeArrowTableFromGPUAnalyticsTable({
+        table: result.table,
+        validity: result.validity,
+        dictionaries: result.dictionaries,
+        rowIndices: result.rowIndices,
+        selectedCounts: result.selectedCounts
+      });
+      const expected = new Map<
+        string,
+        {trips: number; kind: string; category: string; known: number; total: number | null}
+      >();
+      for (const row of arrowTable) {
+        const {category, service, fare} = row;
+        if (fare === null ? !includeMissing : fare < minimum) continue;
+        const key = category + '/' + service;
+        const group = expected.get(key) ?? {
+          trips: 0,
+          kind: service,
+          category,
+          known: 0,
+          total: null
+        };
+        group.trips++;
+        if (fare !== null) {
+          group.known++;
+          group.total = (group.total ?? 0) + fare;
+        }
+        expected.set(key, group);
+      }
+      expect(output.schema.fields.map(field => field.name)).toEqual([
+        'trips',
+        'kind',
+        'category',
+        'known',
+        'total'
+      ]);
+      expect(output.getChild('kind')?.type).toBeInstanceOf(arrow.Dictionary);
+      expect(output.getChild('category')?.type).toBeInstanceOf(arrow.Dictionary);
+      expect(output.toArray().map(row => row.toJSON())).toEqual(
+        [...expected.entries()]
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([, row]) => row)
+      );
+    }
+  } finally {
+    result.destroy();
+    frame.destroy();
+  }
+});
+
+it('GPUSQL groups nullable dictionary pairs across batches without confusing null with code zero', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const categoryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 21);
+  const serviceType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 22);
+  const fields = [
+    new arrow.Field('category', categoryType, true),
+    new arrow.Field('service', serviceType, true),
+    new arrow.Field('fare', new arrow.Float32(), true),
+    new arrow.Field('identifier', new arrow.Uint32(), false)
+  ];
+  const schema = new arrow.Schema(fields);
+  const vectors = [
+    arrow.vectorFromArray(['economy', null, null, 'premium', null, 'economy', null], categoryType),
+    arrow.vectorFromArray(['basic', null, null, null, 'basic', 'basic', 'plus'], serviceType),
+    arrow.vectorFromArray([2, null, 4, 8, 16, null, 32], new arrow.Float32()),
+    arrow.vectorFromArray([0, 1, 2, 3, 4, 5, 6], new arrow.Uint32())
+  ];
+  const input = new arrow.Table(
+    schema,
+    [
+      [0, 2],
+      [2, 2],
+      [2, 5],
+      [5, 7]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(fields),
+            length: end - start,
+            children: vectors.map(vector => vector.slice(start, end).data[0])
+          })
+        )
+    )
+  );
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, input),
+    ownership: 'owned'
+  });
+  try {
+    const result = new GPUSQLContext({trips: frame})
+      .query(
+        'SELECT service AS kind, COUNT(*) AS trips, category, COUNT(fare) AS known, SUM(fare) AS total FROM trips WHERE identifier >= :minimum GROUP BY category, kind',
+        {parameters: {minimum: 0}}
+      )
+      .compile(new GPUCommandGraph(device));
+    try {
+      for (const minimum of [0, 2, 7, 0]) {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder, {minimum});
+        device.submit(encoder.finish());
+        const rows = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        const expected = new Map<
+          string,
+          {
+            kind: string | null;
+            category: string | null;
+            trips: number;
+            known: number;
+            total: number | null;
+          }
+        >();
+        for (const {service, category, identifier, fare} of input) {
+          if (identifier < minimum) continue;
+          const key = JSON.stringify([service, category]);
+          const group = expected.get(key) ?? {
+            kind: service,
+            category,
+            trips: 0,
+            known: 0,
+            total: null
+          };
+          group.trips++;
+          if (fare !== null) {
+            group.known++;
+            group.total = (group.total ?? 0) + fare;
+          }
+          expected.set(key, group);
+        }
+
+        expect(rows.schema.fields.map(field => [field.name, field.nullable])).toEqual([
+          ['kind', true],
+          ['trips', false],
+          ['category', true],
+          ['known', false],
+          ['total', true]
+        ]);
+        expect(rows.getChild('kind')?.type).toBeInstanceOf(arrow.Dictionary);
+        expect(rows.getChild('category')?.type).toBeInstanceOf(arrow.Dictionary);
+        expect(rows.numRows).toBe(expected.size);
+        for (const row of rows) {
+          expect(row.toJSON()).toEqual(expected.get(JSON.stringify([row.kind, row.category])));
+        }
+      }
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
+it('GPUSQL groups by a computed key expression, alias, or SELECT position', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable()),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({trips: frame});
+  const bucket = 'CASE WHEN fare >= :cutoff THEN 1 WHEN fare IS NULL THEN NULL ELSE 0 END';
+  const qualified = bucket.replaceAll('fare', 'trips.fare');
+  try {
+    for (const reference of ['bucket', '2', qualified]) {
+      const result = context
+        .query(
+          `SELECT COUNT(*) AS trips, ${bucket} AS bucket, SUM(fare + 1) AS total FROM trips GROUP BY ${reference}`,
+          {parameters: {cutoff: 8}}
+        )
+        .compile(new GPUCommandGraph(device));
+      try {
+        for (const [cutoff, counts, sums] of [
+          [8, [1, 3, 1], [4, 32, null]],
+          [10, [2, 2, 1], [13, 23, null]]
+        ] as const) {
+          const encoder = device.createCommandEncoder();
+          result.encode(encoder, {cutoff});
+          device.submit(encoder.finish());
+          const rows = await makeArrowTableFromGPUAnalyticsTable({
+            table: result.table,
+            validity: result.validity,
+            dictionaries: result.dictionaries,
+            rowIndices: result.rowIndices,
+            selectedCounts: result.selectedCounts
+          });
+          expect(rows.schema.fields.map(field => field.name)).toEqual(['trips', 'bucket', 'total']);
+          expect(Array.from(rows.getChild('bucket') ?? [])).toEqual([0, 1, null]);
+          expect(Array.from(rows.getChild('trips') ?? [])).toEqual(counts);
+          expect(Array.from(rows.getChild('total') ?? [])).toEqual(sums);
+        }
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
+it('GPUSQL groups numeric keys across Arrow batches and preserves their storage types', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const columns = [
+    arrow.vectorFromArray([4294967295, null, 0, 4294967295, null, 0], new arrow.Uint32()),
+    arrow.vectorFromArray([-2147483648, -1, 2147483647, -2147483648, -1, null], new arrow.Int32()),
+    arrow.vectorFromArray([-0, NaN, Infinity, 0, NaN, null], new arrow.Float32()),
+    arrow.vectorFromArray(
+      ['other', 'basic', 'basic', 'other', 'basic', null],
+      new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 23)
+    ),
+    arrow.vectorFromArray([0, 1, 0, 0, 2, 0], new arrow.Uint32())
+  ];
+  const fields = ['unsignedKey', 'signedKey', 'floatKey', 'category', 'bucket'].map(
+    (name, index) => new arrow.Field(name, columns[index].type, true)
+  );
+  const schema = new arrow.Schema(fields);
+  const input = new arrow.Table(
+    schema,
+    [
+      [0, 3],
+      [3, 3],
+      [3, 6]
+    ].map(
+      ([start, end]) =>
+        new arrow.RecordBatch(
+          schema,
+          arrow.makeData({
+            type: new arrow.Struct(fields),
+            length: end - start,
+            children: columns.map(column => column.slice(start, end).data[0])
+          })
+        )
+    )
+  );
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, input),
+    ownership: 'owned'
+  });
+  const context = new GPUSQLContext({numbers: frame});
+  try {
+    for (const {sql, names, types, expected} of [
+      {
+        sql: 'SELECT floatKey, COUNT(*) AS rows FROM numbers GROUP BY floatKey',
+        names: ['floatKey', 'rows'],
+        types: [arrow.Float32, arrow.Uint32],
+        expected: [
+          [0, 2],
+          [Infinity, 1],
+          [NaN, 2],
+          [null, 1]
+        ]
+      },
+      {
+        sql: 'SELECT signedKey, unsignedKey, COUNT(*) AS rows FROM numbers GROUP BY unsignedKey, signedKey',
+        names: ['signedKey', 'unsignedKey', 'rows'],
+        types: [arrow.Int32, arrow.Uint32, arrow.Uint32],
+        expected: [
+          [2147483647, 0, 1],
+          [null, 0, 1],
+          [-2147483648, 4294967295, 2],
+          [-1, null, 2]
+        ]
+      },
+      {
+        sql: 'SELECT category AS label, unsignedKey, COUNT(*) AS rows FROM numbers GROUP BY label, unsignedKey',
+        names: ['label', 'unsignedKey', 'rows'],
+        types: [arrow.Dictionary, arrow.Uint32, arrow.Uint32],
+        expected: [
+          ['other', 4294967295, 2],
+          ['basic', 0, 1],
+          ['basic', null, 2],
+          [null, 0, 1]
+        ]
+      },
+      {
+        sql: 'SELECT category AS label, unsignedKey, signedKey, floatKey, bucket, COUNT(*) AS rows FROM numbers GROUP BY label, 2, numbers.signedKey, floatKey, bucket',
+        names: ['label', 'unsignedKey', 'signedKey', 'floatKey', 'bucket', 'rows'],
+        types: [
+          arrow.Dictionary,
+          arrow.Uint32,
+          arrow.Int32,
+          arrow.Float32,
+          arrow.Uint32,
+          arrow.Uint32
+        ],
+        expected: [
+          ['other', 4294967295, -2147483648, 0, 0, 2],
+          ['basic', 0, 2147483647, Infinity, 0, 1],
+          ['basic', null, -1, NaN, 1, 1],
+          ['basic', null, -1, NaN, 2, 1],
+          [null, 0, null, null, 0, 1]
+        ]
+      },
+      {
+        sql: 'SELECT unsignedKey, COUNT(*) AS rows FROM numbers WHERE unsignedKey IS NOT NULL GROUP BY unsignedKey',
+        names: ['unsignedKey', 'rows'],
+        types: [arrow.Uint32, arrow.Uint32],
+        expected: [
+          [0, 2],
+          [4294967295, 2]
+        ]
+      }
+    ]) {
+      const result = context.query(sql).compile(new GPUCommandGraph(device));
+      try {
+        const encoder = device.createCommandEncoder();
+        result.encode(encoder);
+        device.submit(encoder.finish());
+        const actual = await makeArrowTableFromGPUAnalyticsTable({
+          table: result.table,
+          validity: result.validity,
+          dictionaries: result.dictionaries,
+          rowIndices: result.rowIndices,
+          selectedCounts: result.selectedCounts
+        });
+        expect(actual.schema.fields.map(field => field.name)).toEqual(names);
+        types.forEach((type, index) =>
+          expect(actual.schema.fields[index].type).toBeInstanceOf(type)
+        );
+        expect(Array.from(actual, row => names.map(name => row[name]))).toEqual(expected);
+      } finally {
+        result.destroy();
+      }
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
+it('GPUSQL returns an empty observed group table for an empty Arrow source', async () => {
+  const device = await getWebGPUTestDevice();
+  if (!device) return;
+  const frame = new GPUDataFrame({
+    ...makeGPUAnalyticsTableFromArrowTable(device, createGPUSQLArrowTable(true, true)),
+    ownership: 'owned'
+  });
+  try {
+    const result = new GPUSQLContext({trips: frame})
+      .query(
+        'SELECT category, service, COUNT(*) AS trips, SUM(fare) AS total FROM trips GROUP BY category, service'
+      )
+      .compile(new GPUCommandGraph(device));
+    try {
+      const encoder = device.createCommandEncoder();
+      result.encode(encoder);
+      device.submit(encoder.finish());
+      const output = await makeArrowTableFromGPUAnalyticsTable({
+        table: result.table,
+        validity: result.validity,
+        dictionaries: result.dictionaries,
+        rowIndices: result.rowIndices,
+        selectedCounts: result.selectedCounts
+      });
+      expect(output.numRows).toBe(0);
+      expect(output.schema.fields.map(field => field.name)).toEqual([
+        'category',
+        'service',
+        'trips',
+        'total'
+      ]);
+    } finally {
+      result.destroy();
+    }
+  } finally {
+    frame.destroy();
+  }
+});
+
+function createGPUSQLArrowTable(includeService = false, empty = false): arrow.Table {
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 17, true);
   const dictionary = arrow.vectorFromArray(['economy', 'premium'], new arrow.Utf8());
   const fields = [
     new arrow.Field('identifier', new arrow.Uint32(), false),
     new arrow.Field('fare', new arrow.Float32(), true),
-    new arrow.Field('category', dictionaryType, false)
+    new arrow.Field('category', dictionaryType, false),
+    ...(includeService
+      ? [
+          new arrow.Field(
+            'service',
+            new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 18, true),
+            false
+          )
+        ]
+      : [])
   ];
   const schema = new arrow.Schema(fields, new Map([['dataset', 'sql-taxi']]));
   const identifiers = arrow.vectorFromArray(Uint32Array.of(10, 20, 30, 40, 50), new arrow.Uint32());
@@ -585,11 +995,22 @@ function createGPUSQLArrowTable(): arrow.Table {
       dictionary
     })
   ]);
-  const batches = [
-    [0, 2],
-    [2, 2],
-    [2, 5]
-  ].map(
+  const service = new arrow.Vector([
+    arrow.makeData({
+      type: new arrow.Dictionary(new arrow.Utf8(), new arrow.Uint32(), 18, true),
+      length: 5,
+      data: Uint32Array.of(0, 0, 1, 0, 1),
+      dictionary: arrow.vectorFromArray(['basic', 'plus', 'unused'], new arrow.Utf8())
+    })
+  ]);
+  const ranges = empty
+    ? [[0, 0]]
+    : [
+        [0, 2],
+        [2, 2],
+        [2, 5]
+      ];
+  const batches = ranges.map(
     ([start, end]) =>
       new arrow.RecordBatch(
         schema,
@@ -599,7 +1020,8 @@ function createGPUSQLArrowTable(): arrow.Table {
           children: [
             identifiers.slice(start, end).data[0],
             fares.slice(start, end).data[0],
-            categories.slice(start, end).data[0]
+            categories.slice(start, end).data[0],
+            ...(includeService ? [service.slice(start, end).data[0]] : [])
           ]
         })
       )

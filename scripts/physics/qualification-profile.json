@@ -1309,6 +1309,59 @@
       }
     },
     {
+      "id": "binding.live-analytic-export",
+      "tranche": "G6",
+      "fields": [
+        "settled analytic collider scale and child frames",
+        "native export after rebasing"
+      ],
+      "requiredChecks": [
+        "behavior"
+      ],
+      "checks": {
+        "behavior": [
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
+            "testPattern": "exports a settled animated collider frame and shared analytic scale without recooking"
+          },
+          {
+            "file": "modules/engine/test/gltf/physics/gltf-physics-session.spec.ts",
+            "testPattern": "exports absolute body poses after a physics origin shift"
+          }
+        ]
+      }
+    },
+    {
+      "id": "qualification.rendered-authored-lifecycle",
+      "tranche": "G7",
+      "fields": [
+        "Authored Scene Stress with GPU pose rendering, active simulation and native export outside timing"
+      ],
+      "requiredChecks": [
+        "performance"
+      ],
+      "checks": {
+        "performance": [
+          {
+            "benchmark": {
+              "stage": "authored-render",
+              "fixture": "AuthoredGrid",
+              "minimumObjectCount": 18,
+              "hardware": true
+            }
+          },
+          {
+            "benchmark": {
+              "stage": "authored-render",
+              "fixture": "AnimatedScale",
+              "minimumObjectCount": 2,
+              "hardware": true
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "qualification.external-assets",
       "tranche": "G7",
       "fields": [

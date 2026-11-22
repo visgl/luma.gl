@@ -39,6 +39,27 @@ The four [pinned upstream GLBs](https://github.com/eoineoineoin/glTF_Physics/tre
 
 [Asset evidence](./gltf-physics-g7-assets.json) includes source URLs, SHA-256 hashes, and the checkpoints used for the outcome checks.
 
+## Rendered authored scenes
+
+The rendered workload exercises the actual glTF PBR canvas and session at 960 × 640.
+It measures 60 browser frame intervals after 30 warmup frames while physics steps
+and publishes GPU matrices. Capture, recook, restore, canvas verification, and
+native export run outside the timed sample. The gate requires the scene to stay
+renderable across both revisions and record frame p95 at or below 50 ms.
+
+| Fixture | Bodies | GPU-bound models | Accepted steps | Frame p50 (ms) | Frame p95 (ms) | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Authored Grid | 19 | 57 | 80 | 16.6 | 18.1 | Pass |
+| Animated Scale | 3 | 9 | 123 | 16.7 | 17.6 | Pass |
+
+Both runs used Chromium 151.0.7922.34, WebGPU core, and Apple Metal 3 hardware.
+Frame intervals measure browser presentation cadence. The step count separately
+records completed simulation ticks and can exceed the number of rendered frames.
+[Raw rendered evidence](./gltf-physics-g7-authored-render.json) records adapter
+details and correctness outcomes. The G6–G7 selector run passed all 14 requested
+rows using fresh import and WebGPU tests, both rendered runs, and the retained
+asset, isolated-step, and pose-publication evidence.
+
 ## Release envelope
 
-The report covers one desktop browser and GPU family. Cross-vendor, mobile, dense workloads, and complete authored scenes with rendering still need separate qualification. The [reproduction commands](../../scripts/physics/README.md#g7-qualification-report) generate the per-feature matrix and accept the retained G1 discovery and G6 publication measurements as separate evidence.
+The report covers one desktop browser and GPU family. Cross-vendor, mobile, and larger dense workloads still need separate qualification. The [reproduction commands](../../scripts/physics/README.md#g7-qualification-report) generate the per-feature matrix and accept the retained G1 discovery and G6 publication measurements as separate evidence.

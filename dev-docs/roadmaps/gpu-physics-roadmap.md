@@ -1,6 +1,6 @@
 # GPU Physics Roadmap
 
-Updated: November 21, 2026
+Updated: November 22, 2026
 
 ## Goal and current status
 
@@ -29,6 +29,22 @@ Implementation references on master:
 - [Sphere world example](../../examples/experimental/gpu-sphere-world/)
 - [Pool example and controls](../../examples/experimental/gpu-pool/README.md)
 
+## glTF 2.1 composition and passive ragdolls
+
+The composed-scene adapter mounts independently owned instances of decoded external
+assets under their referencing nodes. It targets the Khronos
+[glTF 2.1 draft c330f9e5](https://github.com/KhronosGroup/glTF/tree/c330f9e5a324c9858145be183d2a1e63718fd3e8)
+and accepts core analytic shapes as an additional input profile for the existing
+[rigid-body review draft](https://github.com/KhronosGroup/glTF/pull/2424).
+The loaders.gl adapter handles file and GLB v3 decoding. An embedded external asset in
+a multi-chunk GLB is exercised end to end. Authored bounding volumes are resolved as
+scenegraph metadata.
+
+Marionette Theater uses the same glTF-authored joints and skins as the engine, with
+two independent physics sessions. A fixed-step animation release feeds live pose
+matrices to the standard skin palette on the GPU. Active ragdolls, progressive asset
+materialization, broader draft conformance, and cross-device limits remain open.
+
 ## G7 glTF physics qualification checkpoint
 
 The [G7 qualification report](../benchmarks/gltf-physics-g7.md) records the status
@@ -41,6 +57,10 @@ The next release qualification work is to reproduce these checks on additional
 hardware and browsers, then expand the timed envelope to dense worlds, moving
 meshes, and authored scenes with rendering active. G8 and later continue to track
 broader library capabilities separately from the pinned glTF profile.
+
+The rendered authored-scene gate adds capture, recook, restore, and native export
+to the GPU presentation qualification. It records frame intervals with rendering
+and simulation active. Cross-vendor and mobile evidence remain open.
 
 ## Authored qualification closure — October 24, 2026
 
@@ -73,9 +93,8 @@ The four broad G6 rows now have executable import/behavior/performance selectors
 Their pass status must come from the qualification report, not this roadmap. The
 publication benchmark measures 10,000 transforms and AABBs on Apple hardware and
 SwiftShader separately. This closes a bounded publication measurement obligation;
-it does not establish multi-vendor hardware or whole-step performance. Explicit
-recooking remains required for skin/morph topology changes and scale reconciliation
-before native export. Mutable animated nodes are instance-local; immutable resources
+it does not establish multi-vendor hardware or whole-step performance. Native export now reconciles settled analytic scale and collider frames in the live
+scene. Mesh deformation and topology changes still require explicit recooking. Mutable animated nodes are instance-local; immutable resources
 may be shared. Cross-device release qualification remains G7 work.
 
 ## Authored runtime and GPU execution checkpoint — October 23, 2026

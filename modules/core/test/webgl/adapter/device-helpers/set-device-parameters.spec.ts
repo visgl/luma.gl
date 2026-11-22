@@ -222,6 +222,22 @@ it.each([
   }
 });
 
+it('setDeviceParameters#stencilWriteMask accepts zero', async () => {
+  const device = await getOrSkipWebGLTestDevice();
+  if (!device) {
+    return;
+  }
+
+  resetGLParameters(device.gl);
+  try {
+    setDeviceParameters(device, {stencilWriteMask: 0});
+    expect(getGLParameter(device, GL.STENCIL_WRITEMASK)).toBe(0);
+    expect(getGLParameter(device, GL.STENCIL_BACK_WRITEMASK)).toBe(0);
+  } finally {
+    resetGLParameters(device.gl);
+  }
+});
+
 it('setDeviceParameters#stencilCompare always keeps stencil operations enabled', async () => {
   const device = await getOrSkipWebGLTestDevice();
   if (!device) {

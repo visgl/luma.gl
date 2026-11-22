@@ -33,6 +33,9 @@ export type SkinControllerProps = {
 export class SkinController {
   readonly bindings: readonly SkinBinding[];
 
+  /** Palettes owned by a GPU producer for the duration of their binding. */
+  private readonly gpuDriven = new Set<SkinBinding>();
+
   private readonly scenes: readonly GroupNode[];
 
   constructor(props: SkinControllerProps) {
@@ -43,7 +46,7 @@ export class SkinController {
 
   /** Re-evaluates every source skin after its animated node transforms have changed. */
   update(): void {
-    if (this.bindings.length === 0) {
+    if (this.gpuDriven.size === this.bindings.length) {
       return;
     }
 
@@ -57,6 +60,7 @@ export class SkinController {
     }
 
     for (const binding of this.bindings) {
+      if (this.gpuDriven.has(binding)) continue;
       updateSkinJointMatrices({
         joints: binding.joints,
         meshNode: binding.node,
@@ -82,6 +86,21 @@ export class SkinController {
         });
       }
     }
+  }
+
+  /** Borrow a WebGPU storage palette and suspend CPU writes until the lease is released. */
+  claimGPUPalette(binding: SkinBinding): () => void {
+    if (!this.bindings.includes(binding) || !(binding.skinJointMatrices instanceof Buffer))
+      throw new Error('GPU skinning requires an owned storage palette');
+    if (this.gpuDriven.has(binding)) throw new Error('Skin palette already has a GPU producer');
+    this.gpuDriven.add(binding);
+    /** Only this lease can remove its claim, even if its disposer is called twice. */
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.gpuDriven.delete(binding);
+    };
   }
 
   /** Finds the palette driven by a scenegraph node. */

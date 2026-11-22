@@ -246,10 +246,8 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     gl.clearDepth(parameters.clearDepth);
   }
 
-  if (parameters.stencilWriteMask) {
-    const mask = parameters.stencilWriteMask;
-    gl.stencilMaskSeparate(GL.FRONT, mask);
-    gl.stencilMaskSeparate(GL.BACK, mask);
+  if (parameters.stencilWriteMask !== undefined) {
+    gl.stencilMask(parameters.stencilWriteMask);
   }
 
   if (parameters.stencilReadMask) {
